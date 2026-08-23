@@ -50,7 +50,7 @@
  * (`cursorZoomStep`): a distance SCALE plus a world-space lateral pivot shift.
  * Only the follow arm drops the lateral — its slot is a scalar distance, and
  * following implies a pivot-pinned body, whose lateral the caller has already
- * routed into `clock.followPanOffset` (the only lateral channel the pin does
+ * routed into `clock.followPanStored` (the only lateral channel the pin does
  * not erase). No arm re-floors the distance at the body's surface: `step` was
  * already floored in eye currency where it was computed — see `zoomedPose`.
  */

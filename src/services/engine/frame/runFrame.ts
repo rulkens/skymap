@@ -408,7 +408,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Surface-fixed follow: the co-rotating frame (spec §4.6) ──────────────
   //
   // While engaged, everything the user authored (yaw/pitch decode basis,
-  // `clock.followPanOffset`) lives in the focused body's frame AS IT STOOD AT
+  // `clock.followPanStored`) lives in the focused body's frame AS IT STOOD AT
   // ENGAGE; `surfaceFollowCorotation`'s R̃ maps it to now. SINGLE resolution
   // point: consumers below take an `effective*` value, never the raw one. NOT
   // `cameraRuntime.upBasis.current` above — that box seeds the next
@@ -424,7 +424,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
     surfaceFollowFocus,
     simDays,
-    clock.followPanOffset,
+    clock.followPanStored,
   );
   // RAW basis against the STORED (un-mapped) pan, deliberately: R̃ maps BOTH
   // terms of `eye − centre`, so this altitude is invariant under it — and the
@@ -590,7 +590,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // started here.
   if (leavingCorotation !== null) {
     // The pan is the clock's, not a driver's, so it folds whoever won.
-    clock.followPanOffset = followPanWorld(clock, leavingCorotation);
+    clock.followPanStored = followPanWorld(clock, leavingCorotation);
     // Angles fold only if their author expressed them in the engage frame, and
     // `pivotsOnFocusedBody` IS that set (orbit drivers read yaw/pitch off `base`
     // / the drag register). A keyframing driver authors world-frame angles
@@ -632,7 +632,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // absolute (SETS the target), so baking `renderPose` into `base` on the next
   // commit-on-edge can never double-apply the body translation.
   //
-  // A right-drag STRAFE while following folds into `clock.followPanOffset` FIRST,
+  // A right-drag STRAFE while following folds into `clock.followPanStored` FIRST,
   // then the pin resolves the pivot to `bodyPosition + panWorld`. The offset —
   // not `cam.target`, which the pin overwrites — is the strafe's home, so the
   // shifted pivot still translate-follows the body.

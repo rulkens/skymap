@@ -5,7 +5,7 @@
  *
  * The distance-minus-radius shortcut only holds while the orbit `target`
  * sits exactly at the body's centre. It silently drifts wrong the moment a
- * pan strafes `target` away from centre (`followPanOffset`) or a future
+ * pan strafes `target` away from centre (`followPanStored`) or a future
  * zoom-to-cursor lets the eye slide independently of the pivot — see
  * `earthCameraDistanceMpc` (`earthLayer.ts`) for the same eye-based pattern
  * already proven for Earth's own layer.

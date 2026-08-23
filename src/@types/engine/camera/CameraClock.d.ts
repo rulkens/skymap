@@ -76,7 +76,7 @@ export type CameraClock = {
   // to the framing branch. Non-null with an unchanged focus ref means an approach
   // is (or was) in flight, so a not-follow-previous frame is a drag reactivation.
   followDistanceTarget: number | null;
-  // ── follow-body pan (strafe) offset ────────────────────────────────────────
+  // ── follow-body pan (strafe), in STORED frame ─────────────────────────────
   // A right-drag strafe while following a body cannot move `cam.target` (the
   // pivot-pin overwrites it with the body position every frame). Instead the
   // strafe accumulates here, and the pivot resolves to `bodyPosition + pan` — so
@@ -90,7 +90,7 @@ export type CameraClock = {
   // runs when followBody wins the frame. So an offset can outlive a focus switch
   // while a higher driver (e.g. autoRotate) holds the win; it clears the next
   // time followBody wins, and the new target starts centred from there.
-  followPanOffset: Vec3;
+  followPanStored: Vec3;
   // The `cam.target` recorded on the previous follow-drag frame, so the strafe is
   // folded in as the frame-to-frame DELTA of `cam.target` (which, during a drag,
   // is pure pan — orbit changes yaw/pitch, and the body's own motion never

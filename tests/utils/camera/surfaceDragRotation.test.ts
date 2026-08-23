@@ -356,7 +356,7 @@ describe('surfaceDragRotation', () => {
 
 describe('surfaceDragRotation — the trust bound on an accepted root (FW-D)', () => {
   // The user's captured re-gate pose, verbatim from the debug-panel JSON: Earth
-  // focused, eye 21,216 km up (3.33 body radii), pitch 51°. `followPanOffset`
+  // focused, eye 21,216 km up (3.33 body radii), pitch 51°. `followPanStored`
   // and the zoom lateral were both exactly zero in that capture, which is what
   // isolates the jump to this solve. Magnitudes are the real RTC ones — a body
   // 1e-16 Mpc across sitting 4e-12 Mpc from the origin — so the assertions stay

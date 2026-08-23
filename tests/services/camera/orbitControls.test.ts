@@ -954,7 +954,7 @@ describe('attachOrbitControls — surface drag rotation (spec §4.4 hit branch)'
   });
 
   it('solves against the PINNED target, not the drag register’s frozen one', () => {
-    // A wheel tick mid-drag writes its lateral to `clock.followPanOffset`, and
+    // A wheel tick mid-drag writes its lateral to `clock.followPanStored`, and
     // the frame loop renders `target = body centre + offset`. The register's
     // own target stays where gesture-start seeded it, so a solve measured from
     // it aims from an eye that is not on screen — every later move of that

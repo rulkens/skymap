@@ -131,7 +131,7 @@ describe('applyWheelZoom', () => {
     // frame loop does NOT pin (a static focus), the committed target is the only
     // place that shift can live — the follow arm below drops it precisely
     // because following implies a pinned body, whose lateral the caller has
-    // already put on `clock.followPanOffset`.
+    // already put on `clock.followPanStored`.
     const clock = createCameraClock();
     const result = applyWheelZoom(
       clock,

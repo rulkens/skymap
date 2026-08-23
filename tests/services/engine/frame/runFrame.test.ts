@@ -947,7 +947,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
   /**
    * Install a body as the store + EngineState focus and run one settle frame
    * at a disengaged distance, at CONST_J2000. This lets `followElapsed`'s
-   * fresh-focus-ref reset (which zeroes `followPanOffset` and nulls
+   * fresh-focus-ref reset (which zeroes `followPanStored` and nulls
    * `followFrom`/`followDistanceTarget`) run and clear BEFORE any test seeds
    * a probe pan or pins the follow distance — a value set before this frame
    * would otherwise be silently wiped by that reset.
@@ -1003,7 +1003,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     // scale — the FW-B zoom-to-cursor regime the root cause traces.
     const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
     const panOffset0: Vec3 = [radiusMpc, 0, 0];
-    state.cameraRuntime.clock.followPanOffset = [...panOffset0];
+    state.cameraRuntime.clock.followPanStored = [...panOffset0];
 
     // Engage frame: still at CONST_J2000 (the settle frame advanced no sim
     // time), so `orientationAtEngage` snapshots the SAME instant read below.
@@ -1059,7 +1059,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     pinFollowDistance(state, PINNED_ALTITUDE_MPC);
 
     const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
-    state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
+    state.cameraRuntime.clock.followPanStored = [radiusMpc, 0, 0];
     runFrame(state, deps, 1000); // engage frame — R̃ = I
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
     const orientationAtEngage = state.cameraRuntime.surfaceFollow.orientationAtEngage!;
@@ -1104,7 +1104,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     // so a coincidental zero can't mask a broken (non-identity) correction.
     const probeRadiusMpc = PHOBOS_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
     const PROBE_PAN: Vec3 = [0, probeRadiusMpc, 0];
-    state.cameraRuntime.clock.followPanOffset = [...PROBE_PAN];
+    state.cameraRuntime.clock.followPanStored = [...PROBE_PAN];
 
     runFrame(state, deps, 1000); // the engage transition frame
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
@@ -1112,7 +1112,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     const defaultBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
     expect(frameContextArgs.last!.poseBasis).toEqual(defaultBasis);
     expect(frameContextArgs.last!.upBasis).toEqual(defaultBasis);
-    expect(state.cameraRuntime.clock.followPanOffset).toEqual(PROBE_PAN);
+    expect(state.cameraRuntime.clock.followPanStored).toEqual(PROBE_PAN);
 
     const bodyPos = deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current).get(
       'phobos',
@@ -1141,7 +1141,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     pinFollowDistance(state, PINNED_ALTITUDE_MPC);
 
     const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
-    state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
+    state.cameraRuntime.clock.followPanStored = [radiusMpc, 0, 0];
     runFrame(state, deps, 1000); // engage frame, R̃ = I
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
     const orientationAtEngage = state.cameraRuntime.surfaceFollow.orientationAtEngage!;
@@ -1155,7 +1155,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     const orientationAtWrite = deriveBodyStates(simDaysAtWrite).get('earth')!.orientation;
     const corotationAtWrite = orientationWorldDelta(orientationAtEngage, orientationAtWrite);
     const worldPanBeforeWrite = rotateVec3ByTightMat3(
-      state.cameraRuntime.clock.followPanOffset,
+      state.cameraRuntime.clock.followPanStored,
       corotationAtWrite,
     );
 
@@ -1216,7 +1216,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     pinFollowDistance(state, PINNED_ALTITUDE_MPC);
 
     const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
-    state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
+    state.cameraRuntime.clock.followPanStored = [radiusMpc, 0, 0];
     runFrame(state, deps, 1000); // engage frame
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
 
@@ -1297,11 +1297,11 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
 
     // (f) Further sim time while disengaged leaves the (now world-frame) pan
     // alone — nothing kept a memory of the engage frame.
-    const panAfterFold = [...state.cameraRuntime.clock.followPanOffset] as Vec3;
+    const panAfterFold = [...state.cameraRuntime.clock.followPanStored] as Vec3;
     store.dispatch(setSimDays({ simDays: simDays + 500, nowMs: 4000 }));
     runFrame(state, deps, 4000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
-    expect(state.cameraRuntime.clock.followPanOffset).toEqual(panAfterFold);
+    expect(state.cameraRuntime.clock.followPanStored).toEqual(panAfterFold);
   });
 
   it('a frame roll saturating on the leaving frame does not wipe the disengage roll', () => {
@@ -1316,7 +1316,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     pinFollowDistance(state, PINNED_ALTITUDE_MPC);
 
     const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
-    state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
+    state.cameraRuntime.clock.followPanStored = [radiusMpc, 0, 0];
     runFrame(state, deps, 1000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
 
@@ -1354,7 +1354,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     pinFollowDistance(state, PINNED_ALTITUDE_MPC);
 
     const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
-    state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
+    state.cameraRuntime.clock.followPanStored = [radiusMpc, 0, 0];
     runFrame(state, deps, 1000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
 

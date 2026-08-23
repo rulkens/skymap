@@ -398,7 +398,7 @@ describe('wireInput', () => {
 
   it('hands the drag solve the PINNED target, offset and all', async () => {
     // §4.4's solve reconstructs its eye from a target. For a pinned focus the
-    // rendered target is `body centre + followPanOffset` — the slot a mid-drag
+    // rendered target is `body centre + followPanStored` — the slot a mid-drag
     // zoom's lateral lands in — so the frame has to carry it; the drag
     // register's own target is frozen at gesture start and cannot.
     const state = makeState();
@@ -420,7 +420,7 @@ describe('wireInput', () => {
       }),
     );
     const pan: [number, number, number] = [1e-17, -2e-17, 3e-17];
-    state.cameraRuntime.clock.followPanOffset = pan;
+    state.cameraRuntime.clock.followPanStored = pan;
 
     const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
     const frame = options?.dragPivotFrame?.();
@@ -433,8 +433,8 @@ describe('wireInput', () => {
     }
   });
 
-  it('routes a zoom tick over a followed body: distance to the follow slot, lateral to followPanOffset', async () => {
-    // The pivot-pin SETS `target = bodyPosition + followPanOffset` every frame
+  it('routes a zoom tick over a followed body: distance to the follow slot, lateral to followPanStored', async () => {
+    // The pivot-pin SETS `target = bodyPosition + followPanStored` every frame
     // for a moving focus, so the lateral half of a zoom-to-cursor tick survives
     // only on that offset — a committed pose's target is erased before it
     // renders. The distance half has its own slot while follow owns the pose.
@@ -487,7 +487,7 @@ describe('wireInput', () => {
     options!.onZoom!(0.9, { x: 460, y: 300 });
 
     expect(clock.followDistanceTarget!).toBeLessThan(distance);
-    expect(Math.hypot(...clock.followPanOffset)).toBeGreaterThan(0);
+    expect(Math.hypot(...clock.followPanStored)).toBeGreaterThan(0);
     // Nothing is committed while follow owns the distance — a base commit
     // would be invisible and re-asserted away next frame.
     expect(deps.cb.store.getState().camera.base.distance).not.toBe(clock.followDistanceTarget);
@@ -552,9 +552,9 @@ describe('wireInput', () => {
       const pendingEye = poseEyePositionMpc(
         {
           target: [
-            earth.positionMpc[0] + clock.followPanOffset[0],
-            earth.positionMpc[1] + clock.followPanOffset[1],
-            earth.positionMpc[2] + clock.followPanOffset[2],
+            earth.positionMpc[0] + clock.followPanStored[0],
+            earth.positionMpc[1] + clock.followPanStored[1],
+            earth.positionMpc[2] + clock.followPanStored[2],
           ],
           yaw: 0,
           pitch: 0,
@@ -568,7 +568,7 @@ describe('wireInput', () => {
     expect(minAltitude / standoffAltitude).toBeGreaterThanOrEqual(1 - 1e-9);
   });
 
-  it('a MID-GESTURE tick scales the drag register and still routes its lateral to followPanOffset', async () => {
+  it('a MID-GESTURE tick scales the drag register and still routes its lateral to followPanStored', async () => {
     // A tick can land between `onGestureStart` and the first rendered drag frame
     // — most easily via pinch, where the second finger lands within a frame of
     // the first. Leaving the lateral on the register's target and waiting for
@@ -615,7 +615,7 @@ describe('wireInput', () => {
     options!.onZoom!(0.9, { x: 460, y: 300 });
 
     expect(cam.distance).toBeLessThan(distance);
-    expect(Math.hypot(...state.cameraRuntime.clock.followPanOffset)).toBeGreaterThan(0);
+    expect(Math.hypot(...state.cameraRuntime.clock.followPanStored)).toBeGreaterThan(0);
     // NOT on the register's target — that write would be erased by the pin and
     // dropped by the diff chain on the gesture's first frame.
     expect([...cam.target]).toEqual(targetBefore);

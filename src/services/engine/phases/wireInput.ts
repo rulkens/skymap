@@ -455,7 +455,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // distance to it scales by `factor`, which `cursorZoomStep` splits into a
     // distance scale plus a lateral pivot shift (see that util).
     //
-    // The LATERAL half goes to `clock.followPanOffset` whenever the pivot-pin
+    // The LATERAL half goes to `clock.followPanStored` whenever the pivot-pin
     // is in effect, whether or not a gesture is running: `applyFocusedBodyPivot`
     // SETS `target = bodyPosition + pan` every frame for a moving focus, so a
     // lateral written anywhere else is erased before it renders. Writing the

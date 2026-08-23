@@ -32,7 +32,7 @@ export type CameraDebugSnapshot = {
    * what a zoom-to-cursor tick does (see `eyeAltitudeMpc`).
    */
   readonly altitudeMpc: number | null;
-  /** The pivot's accumulated world strafe (pan + zoom lateral), Mpc — `clock.followPanOffset`. */
+  /** The pivot's accumulated strafe (pan + zoom lateral), Mpc — `followPanWorld`, not the stored value. */
   readonly followPanOffsetMpc: Readonly<Vec3>;
   /** Last zoom tick's lateral pivot shift, Mpc. */
   readonly zoomLateralMpc: Readonly<Vec3>;

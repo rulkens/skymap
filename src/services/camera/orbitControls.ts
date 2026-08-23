@@ -522,7 +522,7 @@ export function attachOrbitControls(
       if (frame !== null && frame.bodyId === grabbedPoint.bodyId) {
         // The eye the solve measures from must be the one on SCREEN. For a
         // pivot-pinned focus the frame loop SETS `target = body centre +
-        // followPanOffset` every frame, so the drag register's `target` is
+        // followPanWorld(...)` every frame, so the drag register's `target` is
         // frozen at gesture start — a mid-drag zoom's lateral and the body's
         // own motion both land in the offset and nowhere else. Read-side
         // only: the register's target keeps `accumulateFollowPan`'s write
