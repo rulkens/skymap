@@ -9,7 +9,7 @@ A standing counter-bias against under-deletion: correctness reviewers must treat
 every line as potentially load-bearing — the wrong stance for finding surplus,
 which is why thorough reviews pass over hundreds of removable lines. This skill
 dispatches a read-only auditor with the burden of proof inverted: surplus is
-presumed until a line proves itself.
+presumed until proven.
 
 Calibration (13-audit experiment, 2026-08-23, PRs #623/#570): sonnet returned a
 false clean bill (~0–25 LOC) where opus found 255–430 on the identical diff —
@@ -23,10 +23,10 @@ framing multiplied capable models' findings without recklessness.
 2. **At /feature-done** — whole branch, before the DoD verdict (feature-done's
    audit list includes this step).
 3. **On demand** — "anything to delete in this PR/module?"
-4. **Existing code** — a module with no fresh diff: scope is a file list; the
-   legacy framing is literally true. Fence from the landmine docs, memory, and
-   deliberate-choice comments — expect more needs-ruling items. Findings land
-   as a dedicated cleanup PR.
+4. **Existing code** — no fresh diff: scope is a file list plus its test
+   mirror; legacy framing is literally true. Fence from landmine docs, memory,
+   and deliberate-choice comments — expect more needs-ruling items. Findings
+   land as a dedicated cleanup PR, the report in `docs/audits/`.
 
 ## How to run one
 
@@ -42,7 +42,7 @@ framing multiplied capable models' findings without recklessness.
    findings will be applied with little review, or on ground a prior audit
    covered, handing its report(s) to the fencing block). `--justify` = GREENFIELD
    (validates what stays — /feature-done on spec-bearing features).
-3. Persist the returned report to `<workspace>/deletion-audit-<scope>.md` beside
+3. Persist the report to `<workspace>/deletion-audit-<scope>.md` beside
    the ledger — its trap list and null results are the next audit's fencing —
    then triage and apply per
    [`docs/superpowers/conventions/leanness.md`](../../../docs/superpowers/conventions/leanness.md).
