@@ -16,9 +16,9 @@
 
 ## The zoom
 
-Skymap starts at Earth's surface, human scale, around 10⁷ meters, and ends past the observable universe's horizon, around 10²⁶ meters — nineteen orders of magnitude, rendered as one continuous scene rather than a series of jump cuts between separately-scaled views. Zoom out from Earth and you pass through the solar system's planets moving on a live clock, the S-stars circling Sagittarius A\*, a Milky Way built from real Gaia stars, the procedural galactic disk that marks "you are here," and out to the cosmic web: roughly three million real galaxies stretching toward the horizon, threaded by filaments and structure.
+Skymap starts at Earth's surface, around 10⁷ meters, and ends past the observable universe's horizon, around 10²⁶ meters — nineteen orders of magnitude, rendered as one continuous scene rather than a series of jump cuts between separately-scaled views. Zoom out from Earth and you pass the solar system's planets moving on a live clock, a stellar neighbourhood built from real Gaia stars, the galactic disk that marks "you are here" — the S-stars circling Sagittarius A\* at its centre — and out to the cosmic web: roughly three million real galaxies stretching toward the horizon, threaded by filaments and structure.
 
-A guided tour, "The Long Way Out," walks the whole descent with narration and timed camera moves. Outside the tour, free orbit controls and a Cmd+K search reach the same scene directly — useful for teaching large-scale structure, general astronomy outreach, or just browsing the underlying catalogs.
+A guided tour, "The Long Way Out," walks the whole descent with captions and timed camera moves. Outside the tour, free orbit controls and a Cmd+K search reach the same scene directly — useful for teaching large-scale structure, general astronomy outreach, or just browsing the underlying catalogs.
 
 ## Highlights
 
@@ -70,24 +70,24 @@ _Supercluster scale, hundreds of Mpc across — the galaxy point cloud, the DisP
 
 ## The data
 
-Every pixel traces back to a real catalog, survey, or mission dataset. This table is deliberately terse — [ATTRIBUTIONS.md](ATTRIBUTIONS.md) is the authoritative credit list, with full citations and license terms for everything below.
+Everything on screen is anchored to a real catalog, survey, or mission dataset; how catalogue brightness, colour, and survey selection effects become pixels is documented in [docs/science.md](docs/science.md). This table is deliberately terse — [ATTRIBUTIONS.md](ATTRIBUTIONS.md) is the authoritative credit list, with full citations and license terms for everything below.
 
 **Sky**
 
-| Source                           | Contributes                                                             |
-| -------------------------------- | ----------------------------------------------------------------------- |
-| SDSS DR17 (spectroscopic)        | Deep northern spectroscopic slice, ~500k galaxies                       |
-| 2MRS                             | All-sky near-IR redshift survey, local volume in every direction        |
-| GLADE v2.3                       | All-sky million-galaxy compilation, fills SDSS's footprint gaps         |
-| Milliquas v8                     | ~940k spectroscopic quasars and AGN; off by default                     |
-| DESI DR1 LSS                     | Deep pencil cones toward Corona Borealis; off by default                |
-| Gaia DR3 + GCNS + Hipparcos-2    | ~16.8M Milky Way stars, local 100 pc supplement, naked-eye bright stars |
-| Famous atlas                     | Curated Messier/NGC thumbnails and editorial descriptions               |
-| MCXC + MSCC + VizieR structures  | Cluster, supercluster, void, and group markers                          |
-| DisPerSE filaments               | Derived cosmic-web skeleton, computed offline from the point cloud      |
-| CF-4 density (Courtois 2025)     | Dark-matter density volume; off by default                              |
-| MCPM cosmic web VAC (Wilde 2023) | Slime-mould cosmic-web density volume                                   |
-| CF4++ flow field                 | Peculiar-velocity streamline field; off by default                      |
+| Source                           | Contributes                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| SDSS DR17 (spectroscopic)        | Deep northern spectroscopic slice, ~500k galaxies                               |
+| 2MRS                             | All-sky near-IR redshift survey, local volume in every direction                |
+| GLADE v2.3                       | All-sky million-galaxy compilation, fills SDSS's footprint gaps                 |
+| Milliquas v8                     | ~940k spectroscopic quasars and AGN                                             |
+| DESI DR1 LSS                     | Deep cone (Corona Borealis), wedge, and Sloan Great Wall slices; off by default |
+| Gaia DR3 + GCNS + Hipparcos-2    | ~16.8M Milky Way stars, local 100 pc supplement, naked-eye bright stars         |
+| Famous atlas                     | Curated Messier/NGC thumbnails and editorial descriptions                       |
+| MCXC + MSCC + VizieR structures  | Cluster, supercluster, void, and group markers                                  |
+| DisPerSE filaments               | Derived cosmic-web skeleton, computed offline from the point cloud              |
+| CF-4 density (Courtois 2025)     | Dark-matter density volume; off by default                                      |
+| MCPM cosmic web VAC (Wilde 2023) | Slime-mould cosmic-web density volume                                           |
+| CF4++ flow field                 | Peculiar-velocity streamline field; off by default                              |
 
 **Solar system**
 
@@ -105,7 +105,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — drag to orbit, scroll to zoom. Without any real data files present, the renderer falls back to 100,000 synthetic galaxies distributed in a sphere, enough to verify the pipeline end to end.
+Open http://localhost:5173 — drag to orbit, scroll to zoom; on touch devices, one-finger orbit and pinch to zoom. Without any real data files present, the renderer falls back to 100,000 synthetic galaxies distributed in a sphere, enough to verify the pipeline end to end.
 
 For real data, pull the prebuilt catalogs:
 
@@ -127,7 +127,7 @@ WebGPU and the per-frame render loop are inherently imperative, so they live in 
 - **SCFD v3** — scalar fields (density and flow volumes)
 - **FILA v1** — filaments
 
-See [docs/RENDERER.md](docs/RENDERER.md) for the renderer map and its hard-won WebGPU landmines, [docs/DATA.md](docs/DATA.md) for the data pipeline and binary format details, and [docs/adrs/](docs/adrs/) for the architectural decision records behind the engine/state split.
+See [docs/RENDERER.md](docs/RENDERER.md) for the renderer map and its hard-won WebGPU landmines, [docs/DATA.md](docs/DATA.md) for the data pipeline and binary format details, [docs/science.md](docs/science.md) for the rendering conventions behind the science, and [docs/adrs/](docs/adrs/) for the architectural decision records behind the engine/state split.
 
 ## Dev tools
 
