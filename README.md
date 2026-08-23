@@ -10,7 +10,7 @@
 
 <!-- TODO capture: replace with a fresh hero still or short descent GIF -->
 
-![skymap — descent from the cosmic web to Earth](docs/screenshots/hero.gif)
+![skymap: the descent from the cosmic web to Earth](docs/screenshots/hero.gif)
 
 **[Live demo →](https://skymap.rulkens.com)** &nbsp; · &nbsp; Chrome 113+ &nbsp; · &nbsp; Edge 113+ &nbsp; · &nbsp; Firefox 141+ (145+ on Apple Silicon macOS) &nbsp; · &nbsp; Safari 26+
 
@@ -114,21 +114,40 @@ npm run fetch-data
 
 This downloads the catalog, star, structure, and filament binaries from R2 into `public/data/`. They are the same files the live site serves. If you want to build them from the raw catalogs instead, see [docs/DATA.md](docs/DATA.md).
 
-The code is documented didactically throughout — if you're also looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
-
 ## How it works
 
 The render loop lives in a long-running imperative engine. React subscribes to it for the handful of state slices the UI needs and owns nothing that updates per frame. The engine renders on demand: input and loading events request a frame, and the loop goes idle when nothing is moving. Every visible pass draws into one `rgba16float` HDR target, tone-mapped to the display at the end of the frame. Reversed-Z depth and a floating-origin camera hold precision across the full 10⁷–10²⁶ m range.
 
 Catalog data ships in five binary formats, tiered, content-hashed, and streamed from R2 through a manifest fetched at boot:
 
-- **SKMP v9** — galaxies, 64 bytes per row
-- **SKST v1** — stars
-- **CCAT v1** — structures (clusters, superclusters, voids, groups)
-- **SCFD v3** — scalar fields (density and flow volumes)
-- **FILA v1** — filaments
+- **SKMP v9**: galaxies, 64 bytes per row
+- **SKST v1**: stars
+- **CCAT v1**: structures (clusters, superclusters, voids, groups)
+- **SCFD v3**: scalar fields (density and flow volumes)
+- **FILA v1**: filaments
 
 For more depth: [docs/RENDERER.md](docs/RENDERER.md) (renderer map, WebGPU landmines), [docs/DATA.md](docs/DATA.md) (pipeline, binary formats), [docs/science.md](docs/science.md) (rendering conventions), [docs/adrs/](docs/adrs/) (decision records).
+
+## Finding your way around
+
+The code is documented didactically throughout. If you're also looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
+
+```
+src/
+  components/   React UI shell (settings, info cards, tour, time bar)
+  services/
+    engine/     frame program, render scheduling, catalog loading
+    gpu/        renderers and the WGSL/WESL shaders
+    camera/     orbit camera, tweens, animation clips
+  state/        Redux Toolkit slices, selectors, sagas
+  data/         source registry and binary format specs
+  utils/        pure helpers, heavily tested
+tools/          data pipeline: fetchers, builders, workbenches, recorder
+data/raw/       raw catalog downloads (payloads gitignored)
+public/data/    built binaries the renderer loads (gitignored)
+docs/           DATA.md, RENDERER.md, science.md, adrs/, BACKLOG.md
+tests/          Vitest suite, mirrors src/
+```
 
 ## Dev tools
 
