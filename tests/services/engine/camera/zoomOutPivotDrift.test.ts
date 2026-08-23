@@ -7,7 +7,10 @@
  *
  * The loop is the at-rest wheel path as the engine actually runs it with Earth
  * focused (followBody wins, so the pivot is PINNED and the zoom's lateral is
- * routed into `clock.followPanStored`):
+ * routed into `clock.followPanStored`). `tick` below hand-transcribes
+ * `runFrame.ts:408-503` (co-rotation resolution), `:587-626` (the fold) and
+ * `:661-668` (PIVOT-PIN); those blocks carry a pointer back here, because an
+ * edit to any of them leaves this guard green while it tests a fossil.
  *
  *   runFrame's surface-follow block  → engage / disengage / fold
  *   applyFocusedBodyPivot            → target = earth + followPanWorld(...)
@@ -149,6 +152,11 @@ function tick(sim: Sim, factor: number, rotating: boolean): number {
 
   const corotation = surfaceFollowCorotation(surfaceFollow, simDays);
   const effectivePoseBasis = corotation === null ? POSE_BASIS : multiply3x3(corotation, POSE_BASIS);
+  // UP keeps the OUTGOING correction on the frame engagement is left, which is
+  // a different matrix from the pose basis on exactly the fold frame.
+  const upCorotation = leavingCorotation ?? corotation;
+  const effectiveUpBasis =
+    upCorotation === null ? POSE_BASIS : multiply3x3(upCorotation, POSE_BASIS);
 
   // ── runFrame: the disengage fold, exactly once ───────────────────────────
   let folded = orbitPose;
@@ -169,12 +177,7 @@ function tick(sim: Sim, factor: number, rotating: boolean): number {
   );
 
   // ── wireInput.onZoom, at rest, followBody owning the distance ────────────
-  const zoomCam = assembleOrbitCamera(
-    renderPose,
-    PROJECTION,
-    effectivePoseBasis,
-    effectivePoseBasis,
-  );
+  const zoomCam = assembleOrbitCamera(renderPose, PROJECTION, effectivePoseBasis, effectiveUpBasis);
   const step = cursorZoomStep(
     zoomCam,
     CURSOR,
@@ -215,27 +218,17 @@ function altitudeKm(sim: Sim): number {
 }
 
 /**
- * The pivot must stay ON the body it is pinned to. The bound is one radius, or
- * a few ulps of the eye's distance where that is coarser: the sweep rides all
- * the way to the zoom ceiling (`MAX_DISTANCE_MPC`, 30 Gpc ≈ 1e21 km), and one
- * Earth radius there is 7e-18 of the eye distance — a hundredth of a double's
- * resolution, so no lateral arithmetic can hold it. The drift under test ran at
- * 0.163 · altitude, thirteen decades above this bound.
+ * Zoom out `ticks` notches; the worst pivot offset seen, in km — the pivot must
+ * stay ON the body it is pinned to, at every tick, whatever the altitude.
  */
-function pivotBoundKm(altKm: number): number {
-  return Math.max(R_KM, 16 * Number.EPSILON * altKm);
-}
-
-/** Zoom out `ticks` notches; worst pivot offset seen, as a fraction of its bound. */
 function zoomOut(sim: Sim, rotating: boolean, ticks: number): { worst: number; where: string } {
   let worst = 0;
   let where = 'never off centre';
   for (let i = 0; i < ticks; i++) {
     const offsetKm = tick(sim, NOTCH_OUT, rotating);
     const alt = altitudeKm(sim);
-    const ratio = offsetKm / pivotBoundKm(alt);
-    if (ratio > worst) {
-      worst = ratio;
+    if (offsetKm > worst) {
+      worst = offsetKm;
       where = `offset ${offsetKm.toExponential(3)} km at altitude ${alt.toExponential(3)} km`;
     }
   }
@@ -243,16 +236,16 @@ function zoomOut(sim: Sim, rotating: boolean, ticks: number): { worst: number; w
 }
 
 describe('zoom-out pivot drift — the focus centre stays on Earth', () => {
-  it('holds the pivot on Earth across twenty decades of altitude', () => {
+  it('holds the pivot on Earth across seventeen decades of altitude', () => {
     const { sim, rotating } = makeSim(100, true);
     const { worst, where } = zoomOut(sim, rotating, 400);
-    expect(worst, where).toBeLessThan(1);
+    expect(worst, where).toBeLessThan(R_KM);
   });
 
   it('holds it with a frozen sim clock too (R̃ ≡ identity, no fold)', () => {
     const { sim } = makeSim(100, false);
     const { worst, where } = zoomOut(sim, false, 400);
-    expect(worst, where).toBeLessThan(1);
+    expect(worst, where).toBeLessThan(R_KM);
   });
 
   it('holds it when surface follow never engages — no snapshot, no R̃, no fold', () => {
@@ -261,7 +254,7 @@ describe('zoom-out pivot drift — the focus centre stays on Earth', () => {
     const { sim, rotating } = makeSim(5000, true);
     const { worst, where } = zoomOut(sim, rotating, 400);
     expect(sim.surfaceFollow.engaged).toBe(false);
-    expect(worst, where).toBeLessThan(1);
+    expect(worst, where).toBeLessThan(R_KM);
   });
 
   it('a round trip out and back leaves the pivot on Earth, so the descent lands on it', () => {

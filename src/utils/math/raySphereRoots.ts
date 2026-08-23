@@ -1,10 +1,9 @@
 /**
  * raySphereRoots — the two roots (tNear ≤ tFar) of
- * `|ro + t·rd − center|² = radius²`, or `null` on a miss. Hand-verified CPU
- * twin of `lib/util.wesl::raySphere`, checked by the tests here since WGSL and
- * TS share no compilation path. It diverges from that WESL sentinel posture on
- * both counts: `null` means a GENUINE miss only — a sphere entirely behind the
- * origin returns its two negative roots and an origin INSIDE returns
+ * `|ro + t·rd − center|² = radius²`, or `null` on a miss. CPU twin of
+ * `lib/util.wesl::raySphere`, and it diverges from that WESL sentinel posture
+ * on both counts: `null` means a GENUINE miss only — a sphere entirely behind
+ * the origin returns its two negative roots and an origin INSIDE returns
  * `tNear < 0 < tFar`, leaving the sign test to callers. `rd` must be unit
  * length, or every `t` comes back scaled by `|rd|`.
  */

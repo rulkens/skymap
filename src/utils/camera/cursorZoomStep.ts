@@ -3,11 +3,8 @@
  * where the cursor is. Re-picks the surface point under the cursor EVERY tick
  * and hands it to `zoomedEyeStep` as the anchor: the statelessness is the
  * point — no anchor is remembered between ticks, so no gesture boundary can
- * swap one out from under the camera.
- *
- * Zoom-out, and a cursor miss, fall back to the centre-directed anchor below.
- * No pivot surface at all → plain proportional distance scaling, unchanged
- * from deep-space behaviour.
+ * swap one out from under the camera. No pivot surface at all → plain
+ * proportional distance scaling, unchanged from deep-space behaviour.
  */
 
 import { cursorRayFromCamera } from './cursorRayFromCamera';
@@ -28,31 +25,40 @@ export function cursorZoomStep(
 ): ZoomStep {
   if (pivot === null) return { distanceScale: factor, lateralMpc: [0, 0, 0] };
 
+  const altitude = eyeAltitudeMpc(cam.position, pivot.centreMpc, pivot.radiusMpc);
+
+  // Anchored zoom is IN-ONLY, and reads like a missing feature. It is not: an
+  // anchor is the fixed point of the map the eye follows, so it attracts below
+  // `factor` 1 and REPELS above it, walking the pivot off the body by
+  // ~altitude·tan(cursor angle) per notch at every scale. Out is therefore the
+  // bare altitude taper along the view axis — the pivot does not move at all,
+  // and the growing altitude shrinks its angular offset back to nothing, which
+  // is the spec's "reverts cleanly to centre-directed zoom on zoom-out and on a
+  // cursor miss" (Goals, spec:73-75; acceptance criterion, spec:500). The zero
+  // is returned LITERALLY rather than left to fall out of the anchor algebra:
+  // `addFollowPan` of an exact zero leaves `followPanStored` byte-identical, and
+  // the rounding residual of the equivalent anchor route does not.
+  if (factor >= 1) {
+    return {
+      distanceScale: 1 + ((factor - 1) * altitude) / cam.distance,
+      lateralMpc: [0, 0, 0],
+    };
+  }
+
   const ray = cursorRayFromCamera(cam, cursorCss, canvasCssSize);
   const roots = raySphereRoots(ray.origin, ray.direction, pivot.centreMpc, pivot.radiusMpc);
   // `tNear` is the front-facing crossing; a negative one means the sphere is
   // behind the eye, which is not something the cursor is pointing at.
   const tNear = roots !== null && roots[0] > 0 ? roots[0] : null;
 
-  // The anchor is the fixed point of the map the eye follows, so the zoom
-  // DIRECTION decides which one the pivot can afford. Reads like a missing
-  // feature; is not (spec §4.2: "reverts cleanly to centre-directed zoom on
-  // zoom-out and on a cursor miss"). Zooming in pulls the eye ONTO the anchor,
-  // so the cursor point is safe and a miss aims at the body, dragging an
-  // off-body pivot back to it. Zooming out pushes the eye AWAY, multiplying any
-  // off-axis anchor offset by `factor` every notch — so out aims down the view
-  // axis, the one aim with no lateral at all, and the growing altitude shrinks
-  // the pivot's angular offset back to nothing.
   const anchorMpc: Vec3 =
-    factor >= 1
-      ? altitudeAnchorMpc(cam, cam.target, pivot.centreMpc, pivot.radiusMpc)
-      : tNear !== null
-        ? [
-            ray.origin[0] + tNear * ray.direction[0],
-            ray.origin[1] + tNear * ray.direction[1],
-            ray.origin[2] + tNear * ray.direction[2],
-          ]
-        : altitudeAnchorMpc(cam, pivot.centreMpc, pivot.centreMpc, pivot.radiusMpc);
+    tNear !== null
+      ? [
+          ray.origin[0] + tNear * ray.direction[0],
+          ray.origin[1] + tNear * ray.direction[1],
+          ray.origin[2] + tNear * ray.direction[2],
+        ]
+      : altitudeAnchorMpc(cam, pivot.centreMpc, altitude);
 
   return zoomedEyeStep(
     cam.position,
@@ -65,26 +71,19 @@ export function cursorZoomStep(
 }
 
 /**
- * A point one eye-ALTITUDE ahead along the eye→`aimMpc` line: zooming toward it
- * moves the eye by `altitude · (factor − 1)`, the centred taper expressed in
- * eye currency. Only the aim varies — the length is always measured against the
- * body — and the two aims are not interchangeable once the pivot has drifted
- * off the body, which is the whole reason the caller branches.
+ * The miss anchor: the body's surface point directly under the eye, one
+ * altitude along the eye→centre line. Aimed at the BODY, not at `cam.target` —
+ * the two coincide until a pan or an anchored zoom strafes the pivot off the
+ * body, and past that point aiming at the pivot makes the strafe permanent.
  */
-function altitudeAnchorMpc(
-  cam: OrbitCamera,
-  aimMpc: Readonly<Vec3>,
-  centreMpc: Readonly<Vec3>,
-  radiusMpc: number,
-): Vec3 {
-  const ax = aimMpc[0] - cam.position[0];
-  const ay = aimMpc[1] - cam.position[1];
-  const az = aimMpc[2] - cam.position[2];
-  const alen = Math.hypot(ax, ay, az) || 1;
-  const altitude = eyeAltitudeMpc(cam.position, centreMpc, radiusMpc);
+function altitudeAnchorMpc(cam: OrbitCamera, centreMpc: Readonly<Vec3>, altitude: number): Vec3 {
+  const cx = centreMpc[0] - cam.position[0];
+  const cy = centreMpc[1] - cam.position[1];
+  const cz = centreMpc[2] - cam.position[2];
+  const clen = Math.hypot(cx, cy, cz) || 1;
   return [
-    cam.position[0] + (ax / alen) * altitude,
-    cam.position[1] + (ay / alen) * altitude,
-    cam.position[2] + (az / alen) * altitude,
+    cam.position[0] + (cx / clen) * altitude,
+    cam.position[1] + (cy / clen) * altitude,
+    cam.position[2] + (cz / clen) * altitude,
   ];
 }

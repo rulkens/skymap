@@ -413,6 +413,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // point: consumers below take an `effective*` value, never the raw one. NOT
   // `cameraRuntime.upBasis.current` above — that box seeds the next
   // orientation-FRAME switch's `fromQuat`, a different concept.
+  //
+  // This block and the fold below are hand-transcribed by
+  // `tests/services/engine/camera/zoomOutPivotDrift.test.ts`; edits here that
+  // change the resolution order leave that guard green against a fossil.
   const surfaceFollow = state.cameraRuntime.surfaceFollow;
   const surfaceFollowFocus = state.selectionRows.focus;
   const clock = state.cameraRuntime.clock;
@@ -587,7 +591,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // baked is superseded by the same pose in the raw frame (placed above it, the
   // edge re-commit silently discards the fold). Sitting below the frame-roll
   // clear likewise keeps that guard's frame-start snapshot from wiping the roll
-  // started here.
+  // started here. Transcribed by `zoomOutPivotDrift.test.ts` — see the
+  // surface-follow block's header.
   if (leavingCorotation !== null) {
     // The pan is the clock's, not a driver's, so it folds whoever won.
     clock.followPanStored = followPanWorld(clock, leavingCorotation);
