@@ -1,8 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "types": ["node", "@webgpu/types", "vite/client"],
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
-  },
-  "include": ["src", "../../src", "../../tools/utils"]
+  "include": ["src", "../../src", "../../tools/utils"],
+  // Empty exclude is load-bearing — see tools/galaxy-renderer/tsconfig.json.
+  "exclude": []
 }
