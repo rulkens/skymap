@@ -1,16 +1,10 @@
 /**
- * surfaceFollowCorotation — the ONE correction surface-fixed follow derives:
- *
- *     R̃(t) = O_body(t) · O_body(t₀)⁻¹        (`orientationWorldDelta`)
- *
- * A pure function of `simDays` and the single engage snapshot — no accumulated
- * history to drift, no frame order to get wrong. `runFrame`'s surface-follow
- * block is the resolution point and owns the rest of the contract (spec §4.6).
- *
- * `null` means identity: disengaged, or the snapshot's body has left the derive
- * map. Keyed on `surfaceFollow.bodyId`, NOT the live focus row — on the frame a
- * focus switch leaves engagement, the correction to fold out belongs to the
- * body being left behind.
+ * surfaceFollowCorotation — surface-fixed follow's ONE correction,
+ * `R̃(t) = O_body(t) · O_body(t₀)⁻¹`; `null` is identity. A pure function of
+ * `simDays` and the single engage snapshot, so no history can drift;
+ * `runFrame`'s surface-follow block owns the contract (§4.6). Keyed on
+ * `surfaceFollow.bodyId`, NOT the live focus row — a focus switch must fold out
+ * the correction belonging to the body left behind.
  */
 
 import { deriveBodyStates } from '../frame/deriveBodyStates';

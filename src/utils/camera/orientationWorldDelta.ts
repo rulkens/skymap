@@ -1,11 +1,11 @@
 /**
- * orientationWorldDelta — `currentOrientation · inverse(orientationAtFlip)`,
- * the WORLD-SPACE rotation a focused body has picked up since the flip
+ * orientationWorldDelta — `currentOrientation · inverse(orientationAtEngage)`,
+ * the WORLD-SPACE rotation a focused body has picked up since the engage
  * snapshot. Surface-fixed follow (spec §4.6) left-multiplies this onto
  * `poseBasis`/`upBasis` so the camera co-rotates with the body's actual
  * spin axis in world space, holding a body-surface point fixed under it.
  *
- * ### Why NOT `inverse(orientationAtFlip) · currentOrientation`
+ * ### Why NOT `inverse(orientationAtEngage) · currentOrientation`
  *
  * A body's baked orientation is `O(t) = C · Rz(W(t))` (`rotationFromIau.ts`):
  * `Rz(W(t))` is the spin, composed in BODY-LOCAL coordinates (right operand),
@@ -24,8 +24,8 @@
  * `O₁⁻¹·(world direction)` constant requires the world direction itself to
  * pick up `O₂·O₁⁻¹` between the two instants.
  *
- * At the engage frame `orientationAtFlip === currentOrientation`, so the
- * delta is exactly `I` and the flip introduces no pose jump (the property
+ * At the engage frame `orientationAtEngage === currentOrientation`, so the
+ * delta is exactly `I` and engaging introduces no pose jump (the property
  * `runFrame.test.ts` pins) — true under either operand order, which is why
  * an identity-orientation regression alone (Phobos) cannot distinguish the
  * two; a tilted-pole body (Moon/Mars) is required.
@@ -39,10 +39,10 @@
 import type { Mat3 } from '../../@types/math/Mat3';
 
 export function orientationWorldDelta(
-  orientationAtFlip: Readonly<Mat3>,
+  orientationAtEngage: Readonly<Mat3>,
   currentOrientation: Readonly<Mat3>,
 ): Mat3 {
-  const a = orientationAtFlip;
+  const a = orientationAtEngage;
   const b = currentOrientation;
   // result[c*3+r] = (row r of b) · (row c of a) — column-major `B·Aᵀ`: row r
   // of a matrix occupies indices {r, 3+r, 6+r} (one entry per column), unlike

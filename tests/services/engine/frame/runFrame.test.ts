@@ -751,8 +751,8 @@ describe('runFrame — surface-fixed follow (Task 5, spec §4.6)', () => {
   it('the engage frame introduces no pose jump: corrected poseBasis/upBasis are bit-identical to the uncorrected values', () => {
     // Phobos carries no texture spec, so `orientationForBody` gives it
     // IDENTITY_MAT3 (see `orientationForBody.ts`) rather than a baked-from-trig
-    // rotation. That makes `orientationWorldDelta(orientationAtFlip,
-    // orientationAtFlip)` exact integer arithmetic (0s and 1s) instead of a
+    // rotation. That makes `orientationWorldDelta(orientationAtEngage,
+    // orientationAtEngage)` exact integer arithmetic (0s and 1s) instead of a
     // near-but-not-exactly-orthonormal float matrix self-multiply — the
     // fixture the "bit-identical" claim actually needs to hold to the letter,
     // not just to within float noise.
@@ -864,7 +864,7 @@ describe('runFrame — surface-fixed follow (Task 5, spec §4.6)', () => {
     // over `true` from the OLD body, so if the new body's altitude lands
     // inside its OWN hysteresis band (neither `<= engage` nor `>= disengage`),
     // `surfaceFollowEngaged` returns `wasEngaged` unchanged — `engaged` stays
-    // `true` WITHOUT re-taking the snapshot, leaving `orientationAtFlip` as
+    // `true` WITHOUT re-taking the snapshot, leaving `orientationAtEngage` as
     // the OLD body's orientation composed against the NEW body's live
     // orientation. Moon → Mars have unrelated poles (rotationElements.ts), so
     // that cross-body correction is far from identity; the fix must instead
@@ -1124,6 +1124,13 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
         9,
       );
     }
+
+    // Leaving an engagement that accumulated no rotation must not arm a roll:
+    // a full FRAME_TWEEN_MS of wake to slerp between two equal bases.
+    pinFollowDistance(state, disengageDistanceMpc(PHOBOS_RADIUS_KM));
+    runFrame(state, deps, 2000);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
+    expect(store.getState().camera.frameTween).toBeNull();
   });
 
   it('an external pan write mid-engagement composes: the world delta lands in the stored frame and co-rotates from there', () => {
@@ -1227,6 +1234,7 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
       yawPitchToDir(engagedYaw, engagedPitch),
       frameContextArgs.last!.poseBasis as Mat3,
     );
+    const engagedUpBasis = [...frameContextArgs.last!.upBasis] as Mat3;
 
     // Cross the disengage band at the SAME sim instant (pinned by re-anchoring
     // the clock to this frame's nowMs), so the body has not moved: any change
@@ -1271,13 +1279,138 @@ describe('runFrame — surface-fixed follow: the co-rotating frame (FW-G)', () =
     // ...and the residual up-roll rides the existing frame-roll tween.
     expect(store.getState().camera.frameTween).not.toBeNull();
 
-    // (d) Further sim time while disengaged leaves the (now world-frame) pan
+    // (d) UP does not snap on the frame the roll STARTS. The tween is stored
+    // after this frame's basis is already resolved, so it can only steer frame
+    // N+1 onward; letting up fall to raw here would snap the horizon and the
+    // tween would then jump it back and re-roll it (snap-and-reverse). The
+    // leaving frame must therefore still draw the OUTGOING corrected up.
+    expect(maxCellDiff(frameContextArgs.last!.upBasis, engagedUpBasis)).toBeLessThan(1e-12);
+    // Vacuous-pass guard: that value is nowhere near the raw basis, so the
+    // assertion cannot be satisfied by a pass-through.
+    expect(maxCellDiff(engagedUpBasis, rawBasis)).toBeGreaterThan(0.5);
+
+    // (e) ...and the next frame continues from there rather than jumping: one
+    // display frame into a 1 s ease, up has barely moved.
+    store.dispatch(setSimDays({ simDays, nowMs: 3016 }));
+    runFrame(state, deps, 3016);
+    expect(maxCellDiff(frameContextArgs.last!.upBasis, engagedUpBasis)).toBeLessThan(0.01);
+
+    // (f) Further sim time while disengaged leaves the (now world-frame) pan
     // alone — nothing kept a memory of the engage frame.
     const panAfterFold = [...state.cameraRuntime.clock.followPanOffset] as Vec3;
     store.dispatch(setSimDays({ simDays: simDays + 500, nowMs: 4000 }));
     runFrame(state, deps, 4000);
     expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
     expect(state.cameraRuntime.clock.followPanOffset).toEqual(panAfterFold);
+  });
+
+  it('a frame roll saturating on the leaving frame does not wipe the disengage roll', () => {
+    // The finished-roll guard reads the frame-START store snapshot, so it cannot
+    // see a descriptor stored later in the same frame. If the fold ran above it,
+    // an unrelated roll that happened to saturate here would clear the roll the
+    // fold just started, and the horizon would snap after all.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+    settleBodyFocus(store, state, deps, 'earth', EARTH_RADIUS_KM);
+    pinFollowDistance(state, PINNED_ALTITUDE_MPC);
+
+    const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
+    runFrame(state, deps, 1000);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    // An orientation roll that will have saturated exactly by the leaving frame,
+    // and enough spin that the residual clears the roll-worth-easing floor.
+    store.dispatch(
+      startFrameTween({
+        fromQuat: ORIENTATION_FRAME_QUATERNIONS[DEFAULT_ORIENTATION],
+        to: DEFAULT_ORIENTATION,
+        durationMs: 1000,
+        easing: 'easeInOutCubic',
+      }),
+    );
+    const simDays = CONST_J2000 + 90 / EARTH_SPIN_DEG_PER_DAY;
+    store.dispatch(setSimDays({ simDays, nowMs: 1500 }));
+    runFrame(state, deps, 1500); // arms the roll clock at 1500
+
+    pinFollowDistance(state, radiusMpc * 3);
+    store.dispatch(setSimDays({ simDays, nowMs: 2500 }));
+    runFrame(state, deps, 2500); // roll elapsed 1000 >= 1000 → the clear fires
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
+    expect(store.getState().camera.frameTween).not.toBeNull();
+  });
+
+  it('a driver switch on the leaving frame keeps the fold: commit-on-edge cannot re-commit engage-frame angles', () => {
+    // A focus switch (or any tween) off an engaged surface changes the winner
+    // on the very frame follow leaves — followBody declares `commitsOnEdge`, so
+    // the edge path re-commits the PREVIOUS frame's pose and overrides
+    // `renderPose` with it. Those angles are engage-frame; committed raw they
+    // are exactly the snap the fold exists to prevent, and last writer wins.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+    settleBodyFocus(store, state, deps, 'earth', EARTH_RADIUS_KM);
+    pinFollowDistance(state, PINNED_ALTITUDE_MPC);
+
+    const radiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    state.cameraRuntime.clock.followPanOffset = [radiusMpc, 0, 0];
+    runFrame(state, deps, 1000);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+
+    const simDays = CONST_J2000 + 90 / EARTH_SPIN_DEG_PER_DAY;
+    store.dispatch(setSimDays({ simDays, nowMs: 2000 }));
+    runFrame(state, deps, 2000);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(true);
+    expect(state.cameraRuntime.prevActiveId.current).toBe('followBody');
+    const engagedPose = state.cameraRuntime.lastPose.current;
+    const engagedDir = rotateVec3ByTightMat3(
+      yawPitchToDir(engagedPose.yaw, engagedPose.pitch),
+      frameContextArgs.last!.poseBasis as Mat3,
+    );
+
+    // Start a tween (priority 60 > followBody 10) whose `from` sits a long way
+    // off the body, so the winner changes AND the altitude leaves the band on
+    // the same frame. `tweenElapsed` is 0 on the arrival frame, so the produced
+    // pose is `from` exactly.
+    const FAR: CameraPose = { target: [0, 0, 0], yaw: 0.4, pitch: 0.2, distance: radiusMpc * 40 };
+    store.dispatch(
+      startCameraTween({
+        from: FAR,
+        to: FAR,
+        durationMs: 1000,
+        easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+    store.dispatch(setSimDays({ simDays, nowMs: 3000 }));
+    runFrame(state, deps, 3000);
+    expect(state.cameraRuntime.surfaceFollow.engaged).toBe(false);
+    // Precondition: the edge path really did fire this frame.
+    expect(state.cameraRuntime.prevActiveId.current).toBe('tween');
+
+    // The committed base must carry FOLDED angles — the departing driver's last
+    // pose re-expressed in the raw frame, not handed over untouched.
+    const rawBasis = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+    const base = store.getState().camera.base;
+    const committedDir = rotateVec3ByTightMat3(yawPitchToDir(base.yaw, base.pitch), rawBasis);
+    for (let i = 0; i < 3; i++) expect(committedDir[i]).toBeCloseTo(engagedDir[i]!, 9);
+    // ...and the same pose is what the frame rendered.
+    expect(state.cameraRuntime.lastPose.current.yaw).toBeCloseTo(base.yaw, 12);
+
+    // Vacuous-pass guard: un-folded angles through the raw basis aim somewhere
+    // plainly different.
+    const snapped = rotateVec3ByTightMat3(
+      yawPitchToDir(engagedPose.yaw, engagedPose.pitch),
+      rawBasis,
+    );
+    expect(
+      Math.hypot(
+        committedDir[0] - snapped[0],
+        committedDir[1] - snapped[1],
+        committedDir[2] - snapped[2],
+      ),
+    ).toBeGreaterThan(0.5);
   });
 });
 

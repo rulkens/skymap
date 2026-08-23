@@ -234,6 +234,13 @@ function surfaceFollowAltitudeMpc(driftPxPerS: number): number {
   return altitudeKm * SCALE_UNITS.KM_TO_MPC;
 }
 
+/**
+ * Residual-roll floor for the disengage ease: below ~0.06° of accumulated R̃
+ * skip the roll rather than hold the loop awake for FRAME_TWEEN_MS slerping
+ * between two equal bases. Compared against R̃'s TRACE (`1 + 2·cos θ`).
+ */
+const ROLL_WORTH_EASING = 1 + 2 * Math.cos(1e-3);
+
 export const SURFACE_FOLLOW_ENGAGE_ALTITUDE_MPC = surfaceFollowAltitudeMpc(
   SURFACE_FOLLOW_ENGAGE_DRIFT_PX_PER_S,
 );
@@ -400,28 +407,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Surface-fixed follow: the co-rotating frame (spec §4.6) ──────────────
   //
-  // While engaged, everything the user authored — the yaw/pitch decode basis
-  // and `clock.followPanOffset` — lives in the focused body's frame AS IT
-  // STOOD AT ENGAGE; `surfaceFollowCorotation`'s R̃ maps it to now. This is the
-  // SINGLE resolution point: every consumer below takes an `effective*` value,
-  // never the raw one. NOT `cameraRuntime.upBasis.current` above — that box
-  // seeds the NEXT orientation-FRAME switch's `fromQuat` (its own docblock), a
-  // different concept this must not leak into. `type === 'body'` only: the
-  // derive map carries scene bodies, not survey stars, which have no baked
-  // orientation to hold the camera fixed against.
+  // While engaged, everything the user authored (yaw/pitch decode basis,
+  // `clock.followPanOffset`) lives in the focused body's frame AS IT STOOD AT
+  // ENGAGE; `surfaceFollowCorotation`'s R̃ maps it to now. SINGLE resolution
+  // point: consumers below take an `effective*` value, never the raw one. NOT
+  // `cameraRuntime.upBasis.current` above — that box seeds the next
+  // orientation-FRAME switch's `fromQuat`, a different concept.
   const surfaceFollow = state.cameraRuntime.surfaceFollow;
   const surfaceFollowFocus = state.selectionRows.focus;
   const clock = state.cameraRuntime.clock;
-  // Pose-derived eye — NOT `ctx.cam.position`, which doesn't exist yet this
-  // early in the frame (`deriveFrameContext` hasn't run). `pose.target` alone
-  // is the wrong input for a MOVING focused body: it's the driver's raw
-  // (possibly frame-stale) target, corrected only later by step 3b's
-  // PIVOT-PIN. Rather than duplicate that correction's logic, run it here
-  // too — `applyFocusedBodyPivot` is pure, so an early + a late call is
-  // redundant arithmetic, not a hazard — to get the pose the render eye will
-  // actually use, THEN decode the eye from it (`updatePosition`'s math, via
-  // `poseEyePositionMpc`). A static focus (star, non-orbiting body) is never
-  // pivot-pinned, so this degenerates to `pose` unchanged.
+  // Pose-derived eye: `ctx.cam.position` doesn't exist yet and `pose.target` is
+  // stale for a MOVING focus until step 3b's PIVOT-PIN, which is pure — so
+  // previewing it here is redundant arithmetic, not a hazard.
   const pivotEyePose = applyFocusedBodyPivot(
     pose,
     deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
@@ -430,19 +427,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     clock.followPanOffset,
   );
   // RAW basis against the STORED (un-mapped) pan, deliberately: R̃ maps BOTH
-  // terms of `eye − centre`, so the altitude deciding engagement is invariant
-  // under it — and the un-mapped pair is the arm with no circular dependency on
-  // the engagement decision it feeds. Mapping one term alone would NOT be.
+  // terms of `eye − centre`, so this altitude is invariant under it — and the
+  // un-mapped pair is the arm with no circular dependency on the engagement
+  // decision it feeds. Mapping one term alone would NOT be invariant.
   const poseEyeMpc = poseEyePositionMpc(pivotEyePose, poseBasis);
-  // Generic body/star altitude (unlike `surfaceFollowBodyId` below, not
-  // restricted to bodies) — feeds `liveIdleTickMs` at the idle-tick
-  // scheduling site further down. EYE-based (`eyeAltitudeMpc`), not
-  // `distance − radius`: `pose.target` is not guaranteed to sit at the
-  // pivot's centre this early in the frame (PIVOT-PIN hasn't run yet, and a
-  // pan strafes it regardless of PIVOT-PIN) — see that util's header. The
-  // body case is filled in below, inside the `type === 'body'` branch,
-  // sharing the SAME eyeAltitudeMpc call the surface-follow hysteresis
-  // needs, rather than computing it twice.
+  // Altitude for `liveIdleTickMs` (further down), for a star or a body alike.
+  // EYE-based, not `distance − radius` — a pan strafes `target` off the pivot's
+  // centre regardless of PIVOT-PIN; see `eyeAltitudeMpc`'s header. The body arm
+  // below fills this in from the same call the follow hysteresis needs.
   let focusedPivotAltitudeMpc: number | null =
     surfaceFollowFocus?.type === 'star'
       ? eyeAltitudeMpc(
@@ -453,10 +445,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       : null;
   const surfaceFollowBodyId = surfaceFollowFocus?.type === 'body' ? surfaceFollowFocus.id : null;
   const surfaceFollowBodyChanged = surfaceFollowBodyId !== surfaceFollow.bodyId;
-  // A focus switch re-decides engagement from scratch. Carrying `engaged` over
-  // would compose a cross-body correction, and could wedge disengage (the NEW
-  // body's radius judged against a `pose.distance` the OLD body's hysteresis
-  // band was tuned to).
+  // A focus switch re-decides from scratch: carrying `engaged` over would
+  // compose a cross-body correction, and could wedge disengage.
   const engagedSeed = surfaceFollowBodyChanged ? false : surfaceFollow.engaged;
   let surfaceFollowEngagedNow = false;
   let liveBodyOrientation: Mat3 | null = null;
@@ -464,10 +454,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     const bodyState = deriveBodyStates(simDays).get(surfaceFollowFocus.id);
     if (bodyState) {
       const radiusMpc = surfaceFollowFocus.radiusKm * SCALE_UNITS.KM_TO_MPC;
-      // EYE-based altitude (`poseEyeMpc` above, already run through the
-      // early PIVOT-PIN preview), not `distance − radius` — see
-      // `eyeAltitudeMpc`'s header. Shared with `focusedPivotAltitudeMpc`,
-      // which `liveIdleTickMs` reads further down — one call serves both.
       const altitudeMpc = eyeAltitudeMpc(poseEyeMpc, bodyState.positionMpc, radiusMpc);
       focusedPivotAltitudeMpc = altitudeMpc;
       surfaceFollowEngagedNow = surfaceFollowEngaged(
@@ -480,8 +466,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
   // R̃ for the engagement being LEFT, resolved BEFORE the snapshot below moves:
-  // on a focus switch it belongs to the body left behind, which
-  // `surfaceFollow.bodyId` still names at this point.
+  // on a focus switch it belongs to the body `surfaceFollow.bodyId` still names.
   const leavingCorotation =
     surfaceFollow.engaged && (surfaceFollowBodyChanged || !surfaceFollowEngagedNow)
       ? surfaceFollowCorotation(surfaceFollow, simDays)
@@ -492,51 +477,25 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (!surfaceFollowEngagedNow) {
     surfaceFollow.orientationAtEngage = null;
   } else if (!engagedSeed && liveBodyOrientation !== null) {
-    // Copy, not alias: `bodyState.orientation` keeps changing every frame, so
-    // the engage snapshot must not follow it.
+    // Copy, not alias — the body's orientation changes every frame.
     surfaceFollow.orientationAtEngage = [...liveBodyOrientation] as Mat3;
   }
-  // Left-multiply: the bases decode LOCAL orbit angles into WORLD directions
-  // (`assembleOrbitCamera`: `dir_world = poseBasis · dir_local`), and R̃ is
-  // already a world-space rotation.
+  // Left-multiply: the bases decode LOCAL angles into WORLD directions
+  // (`assembleOrbitCamera`: `dir_world = poseBasis · dir_local`).
   const corotation = surfaceFollowCorotation(surfaceFollow, simDays);
   const effectivePoseBasis = corotation === null ? poseBasis : multiply3x3(corotation, poseBasis);
-  const effectiveUpBasis = corotation === null ? upBasis : multiply3x3(corotation, upBasis);
+  // UP keeps the OUTGOING correction on the frame engagement is left: the roll
+  // tween the fold starts is stored too late to steer this frame's own basis,
+  // so dropping to raw here would snap, then the tween would jump back and
+  // re-roll it.
+  const upCorotation = leavingCorotation ?? corotation;
+  const effectiveUpBasis = upCorotation === null ? upBasis : multiply3x3(upCorotation, upBasis);
 
   if (state.cam) {
     // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
     // controls, so there is no decode to keep in sync until then.
     state.cam.poseBasis = effectivePoseBasis;
     state.cam.upBasis = effectiveUpBasis;
-  }
-
-  // Leaving the engage frame: fold ONCE, so nothing downstream carries a memory
-  // of it. The pan returns to world (the pivot does not move), and the eye
-  // DIRECTION is re-expressed as yaw/pitch under the raw basis and committed
-  // through the ordinary pose-commit path.
-  let framePose = pose;
-  if (leavingCorotation !== null) {
-    clock.followPanOffset = followPanWorld(clock, leavingCorotation);
-    framePose = reencodePose(pose, multiply3x3(leavingCorotation, poseBasis), poseBasis);
-    deps.cb.store.dispatch(commitCameraPose(framePose));
-    if (activeId === 'orbitDrag' && state.cam) {
-      // The drag register authors its own angles, so it carries the same frame
-      // tag as `base` and folds with it — a pinch-zoom out through the band
-      // disengages mid-gesture, and `base` alone would not be what renders.
-      state.cam.yaw = framePose.yaw;
-      state.cam.pitch = framePose.pitch;
-      updatePosition(state.cam);
-    }
-    // yaw/pitch can only carry the eye direction; the residual UP-ROLL rides
-    // the existing orientation-frame roll rather than snapping.
-    deps.cb.store.dispatch(
-      startFrameTween({
-        fromQuat: matrixToQuaternion(multiply3x3(leavingCorotation, upBasis)),
-        to: rootState.settings.orientation,
-        durationMs: FRAME_TWEEN_MS,
-        easing: 'easeInOutCubic',
-      }),
-    );
   }
 
   // Clear a finished frame roll exactly once, mirroring the camera-tween
@@ -604,10 +563,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // exactly at the `desc.to` value.
   const { lastPose, prevActiveId } = state.cameraRuntime;
   const prev = prevActiveId.current;
-  // The pose this frame actually renders. Normally the freshly produced pose
-  // (or its once-folded twin from the surface-follow block above); on a
-  // deactivation edge it is overridden to the just-committed pose (below).
-  let renderPose = framePose;
+  // The pose this frame renders, plus the driver whose angles it carries (the
+  // surface-follow fold below needs to know); a deactivation edge overrides
+  // both to the departing driver's.
+  let renderPose = pose;
+  let renderPoseAuthorId = activeId;
   if (prev !== activeId && deps.drivers.find((d) => d.id === prev)?.commitsOnEdge) {
     deps.cb.store.dispatch(commitCameraPose(lastPose.current));
     // Commit-on-edge fires AFTER produce, so the produce step above ran the
@@ -617,6 +577,47 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // started for one frame. `lastPose.current` is the animation's final pose
     // and the value we just baked into `base`, so render THAT this frame instead.
     renderPose = lastPose.current;
+    renderPoseAuthorId = prev;
+  }
+
+  // ── Surface-follow fold: leave the engage frame exactly once ──────────────
+  //
+  // Sited AFTER the arbitration above, and that ORDERING IS THE CONTRACT: the
+  // fold is the last word on this frame's pose, so whatever the edge path just
+  // baked is superseded by the same pose in the raw frame (placed above it, the
+  // edge re-commit silently discards the fold). Sitting below the frame-roll
+  // clear likewise keeps that guard's frame-start snapshot from wiping the roll
+  // started here.
+  if (leavingCorotation !== null) {
+    // The pan is the clock's, not a driver's, so it folds whoever won.
+    clock.followPanOffset = followPanWorld(clock, leavingCorotation);
+    // Angles fold only if their author expressed them in the engage frame, and
+    // `pivotsOnFocusedBody` IS that set (orbit drivers read yaw/pitch off `base`
+    // / the drag register). A keyframing driver authors world-frame angles
+    // through its own pinned basis; rotating those by R̃ would mis-aim it.
+    if (deps.drivers.find((d) => d.id === renderPoseAuthorId)?.pivotsOnFocusedBody) {
+      renderPose = reencodePose(renderPose, multiply3x3(leavingCorotation, poseBasis), poseBasis);
+      deps.cb.store.dispatch(commitCameraPose(renderPose));
+      if (activeId === 'orbitDrag' && state.cam) {
+        // The drag register carries the same frame tag as `base` and folds with
+        // it — a pinch-zoom out through the band disengages mid-gesture.
+        state.cam.yaw = renderPose.yaw;
+        state.cam.pitch = renderPose.pitch;
+        updatePosition(state.cam);
+      }
+    }
+    // Re-encoding carries only the eye DIRECTION; the residual up-roll rides the
+    // orientation-frame roll, starting from where up is held this frame.
+    if (leavingCorotation[0] + leavingCorotation[4] + leavingCorotation[8] < ROLL_WORTH_EASING) {
+      deps.cb.store.dispatch(
+        startFrameTween({
+          fromQuat: matrixToQuaternion(effectiveUpBasis),
+          to: rootState.settings.orientation,
+          durationMs: FRAME_TWEEN_MS,
+          easing: 'easeInOutCubic',
+        }),
+      );
+    }
   }
 
   // ── (3b) PIVOT-PIN: re-centre the pose on a focused body ──────────────────
@@ -631,12 +632,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // absolute (SETS the target), so baking `renderPose` into `base` on the next
   // commit-on-edge can never double-apply the body translation.
   //
-  // A right-drag STRAFE while following is folded into the clock's
-  // `followPanOffset` FIRST (a follow-drag frame is orbitDrag winning over a body
-  // focus), then the pin resolves the pivot to `bodyPosition + panWorld`.
-  // The offset — not `cam.target`, which the pin overwrites — is the strafe's home,
-  // so the shifted pivot still translate-follows the body and a fresh focus zeroes
-  // it (in `followElapsed`).
+  // A right-drag STRAFE while following folds into `clock.followPanOffset` FIRST,
+  // then the pin resolves the pivot to `bodyPosition + panWorld`. The offset —
+  // not `cam.target`, which the pin overwrites — is the strafe's home, so the
+  // shifted pivot still translate-follows the body.
   // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
   // resolved against this frame), so the pin and the winner never disagree on
   // what is focused. A separate `focusRow` local below reads the EngineState
@@ -659,8 +658,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
     pivotFocus,
     simDays,
-    // Resolved AFTER the strafe accumulation above, so this frame's own drag
-    // delta is already in the offset it maps.
+    // Resolved after the accumulation above, so this frame's drag delta is in.
     followPanWorld(clock, corotation),
   );
 

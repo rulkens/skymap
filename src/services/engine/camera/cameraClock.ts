@@ -13,10 +13,9 @@
  * returns SECONDS (for `evaluateClip`). All take `nowMs` as a parameter — they
  * never read `performance.now()` or `Date.now()` themselves. The caller owns the
  * wall clock; this keeps the clock deterministic and testable. The pan trio
- * (`followPanWorld` / `addFollowPan` / `accumulateFollowPan`) is the odd one
- * out — no elapsed time involved — but it lives here because `followPanOffset`
- * is follow-runtime state the same resource owns and `followElapsed` zeroes on
- * a fresh focus.
+ * (`followPanWorld` / `addFollowPan` / `accumulateFollowPan`) involves no
+ * elapsed time, but lives here because `followPanOffset` is follow-runtime
+ * state the same resource owns and `followElapsed` zeroes on a fresh focus.
  *
  * One module for all four functions because they share the `CameraClock`
  * Resource: the halves are inseparable parts of one stateful computation.
@@ -206,13 +205,10 @@ export function followElapsed(
 }
 
 /**
- * Read `followPanOffset` in WORLD space.
- *
- * The offset is STORED in the frame its strafe was authored in: world while
- * surface-fixed follow is disengaged, the body-at-engage frame while it is
- * engaged. `corotation` is that frame's R̃ (`surfaceFollowCorotation`), null
- * for identity. Every site that places the pivot reads through here, so the
- * frame tag resolves in one function; `addFollowPan` is the writing half.
+ * Read `followPanOffset` in WORLD space. It is STORED in the frame its strafe
+ * was authored in — world while surface-fixed follow is disengaged, the
+ * body-at-engage frame while engaged (`corotation` = that R̃, null for
+ * identity). Every pivot-placing site reads through here; `addFollowPan` writes.
  */
 export function followPanWorld(clock: CameraClock, corotation: Readonly<Mat3> | null): Vec3 {
   return corotation === null
@@ -222,11 +218,9 @@ export function followPanWorld(clock: CameraClock, corotation: Readonly<Mat3> | 
 
 /**
  * Fold a WORLD-space strafe delta into `followPanOffset`, converting into the
- * stored frame on the way in — `followPanWorld`'s inverse, so a writer only
- * ever has to hold a world delta.
- *
- * R̃ is a rotation, so its inverse is its transpose: component `i` of the
- * stored delta is the dot of R̃'s COLUMN `i` with the world delta (the tight
+ * stored frame on the way in — `followPanWorld`'s inverse, so writers only ever
+ * hold world deltas. R̃ is a rotation, so its inverse is its transpose:
+ * component `i` is the dot of R̃'s COLUMN `i` with the delta (the tight
  * column-major convention `orbitAnglesLookingAlong` derives).
  */
 export function addFollowPan(
@@ -252,8 +246,7 @@ export function addFollowPan(
  * body's own motion never touches `cam.target`, so the delta isolates the strafe
  * with no body-motion contamination. Accumulating the delta (rather than reading
  * `cam.target - bodyPosition`) is what keeps the offset clean across a drag while
- * the body moves under it. The register's target is world-space, so the delta
- * goes through `addFollowPan`'s conversion like any other world write.
+ * the body moves under it.
  *
  * Off a follow-drag frame the delta chain is dropped (`lastPanTarget = null`) so
  * the next grab continues the existing offset instead of re-basing it — and the

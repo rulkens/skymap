@@ -1,6 +1,6 @@
 /**
  * orientationWorldDelta — unit tests for the surface-fixed-follow WORLD-space
- * basis correction (spec §4.6): `currentOrientation · inverse(orientationAtFlip)`.
+ * basis correction (spec §4.6): `currentOrientation · inverse(orientationAtEngage)`.
  *
  * The load-bearing property (equal inputs → identity) is why the mode's
  * engage frame introduces no pose jump — see `runFrame.test.ts` for the
@@ -38,17 +38,17 @@ describe('orientationWorldDelta', () => {
     expect(result).toEqual(IDENTITY_MAT3);
   });
 
-  it('with an identity orientationAtFlip, returns currentOrientation unchanged', () => {
+  it('with an identity orientationAtEngage, returns currentOrientation unchanged', () => {
     const result = orientationWorldDelta(IDENTITY_MAT3, ROT_90_Z);
     expect(result).toEqual(ROT_90_Z);
   });
 
   it('composes two same-axis rotations by hand-computable angle subtraction', () => {
-    const orientationAtFlip = rotZ(90);
+    const orientationAtEngage = rotZ(90);
     const currentOrientation = rotZ(150);
     const expected = rotZ(60); // 150° − 90°: same-axis rotations compose by angle subtraction.
 
-    const result = orientationWorldDelta(orientationAtFlip, currentOrientation);
+    const result = orientationWorldDelta(orientationAtEngage, currentOrientation);
     for (let i = 0; i < 9; i++) {
       expect(result[i]).toBeCloseTo(expected[i]!, 10);
     }

@@ -494,10 +494,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       const clock = state.cameraRuntime.clock;
       const pinned = bodyMovesThisFrame(focusRow);
       if (pinned) {
-        // A world-space delta through the clock's own mutator, which converts
-        // into whichever frame the offset is stored in — `simDays` is the last
-        // RENDERED instant, so the correction lags at most one frame
-        // (microradians of body spin).
+        // World delta in, stored frame out. `simDays` is the last RENDERED
+        // instant: at most one frame stale, microradians of body spin.
         addFollowPan(
           clock,
           step.lateralMpc,

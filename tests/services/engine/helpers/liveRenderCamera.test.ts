@@ -43,6 +43,10 @@ function makeState(overrides?: { cam?: unknown }): EngineState {
       lastPose: { current: { target: [1, 2, 3], yaw: 0.5, pitch: -0.2, distance: 10 } },
       projection: PROJECTION,
       upBasis: { current: UP_BASIS },
+      // Disengaged: the surface-follow correction resolves to identity, so the
+      // assembled bases are the raw registry ones this test compares against.
+      surfaceFollow: { engaged: false, orientationAtEngage: null, bodyId: null },
+      lastRenderedSimDays: { current: 0 },
     },
   } as unknown as EngineState;
 }

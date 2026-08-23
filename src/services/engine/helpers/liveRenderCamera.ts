@@ -13,14 +13,20 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
+import { surfaceFollowCorotation } from '../camera/surfaceFollowCorotation';
+import { multiply3x3 } from '../../../utils/math/multiply3x3';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 export function liveRenderCamera(state: EngineState): OrbitCamera | null {
   if (!state.cam) return null;
+  const { lastPose, projection, upBasis, surfaceFollow, lastRenderedSimDays } = state.cameraRuntime;
+  // Engaged, `lastPose` holds engage-frame angles: raw bases misreport by R̃⁻¹.
+  const corotation = surfaceFollowCorotation(surfaceFollow, lastRenderedSimDays.current);
+  const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
   return assembleOrbitCamera(
-    state.cameraRuntime.lastPose.current,
-    state.cameraRuntime.projection,
-    ORIENTATION_FRAMES[state.settings.orientation],
-    state.cameraRuntime.upBasis.current,
+    lastPose.current,
+    projection,
+    corotation === null ? poseBasis : multiply3x3(corotation, poseBasis),
+    corotation === null ? upBasis.current : multiply3x3(corotation, upBasis.current),
   );
 }
