@@ -1,0 +1,17 @@
+# Camera-pivot research (2026-08-24)
+
+Research input for the globe-anchored surface-camera pivot: how Cesium, OpenSpace,
+and MapLibre each anchor a camera to a rotating body's surface, and where skymap's
+current camera seams sit relative to those strategies.
+
+Reading order: [DESIGN-INPUT.md](DESIGN-INPUT.md) first — it is the synthesis and
+decision input for a grill session and spec. The notes files are its evidence base,
+read on demand via its citations: [cesium-notes.md](cesium-notes.md),
+[openspace-globebrowsing-notes.md](openspace-globebrowsing-notes.md),
+[openspace-camera-notes.md](openspace-camera-notes.md),
+[openspace-camera-comparison.md](openspace-camera-comparison.md),
+[maplibre-kml-notes.md](maplibre-kml-notes.md),
+[skymap-seam-map.md](skymap-seam-map.md).
+
+Caveat: `skymap-seam-map.md`'s `file:line` references are a snapshot of branch
+`earth-surface-navigation` as of this date, not necessarily `main`.
