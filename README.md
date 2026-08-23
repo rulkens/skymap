@@ -75,27 +75,27 @@ Every dataset skymap renders is listed below. [docs/science.md](docs/science.md)
 
 **Sky**
 
-| Source                           | Contributes                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------- |
-| SDSS DR17 (spectroscopic)        | Deep northern spectroscopic slice, ~500k galaxies                               |
-| 2MRS                             | All-sky near-IR redshift survey, local volume in every direction                |
-| GLADE v2.3                       | All-sky million-galaxy compilation, fills SDSS's footprint gaps                 |
-| Milliquas v8                     | ~940k spectroscopic quasars and AGN                                             |
-| DESI DR1 LSS                     | Deep cone (Corona Borealis), wedge, and Sloan Great Wall slices; off by default |
-| Gaia DR3 + GCNS + Hipparcos-2    | ~16.8M Milky Way stars, local 100 pc supplement, naked-eye bright stars         |
-| Famous atlas                     | Curated Messier/NGC thumbnails and editorial descriptions                       |
-| MCXC + MSCC + VizieR structures  | Cluster, supercluster, void, and group markers                                  |
-| DisPerSE filaments               | Derived cosmic-web skeleton, computed offline from the point cloud              |
-| CF-4 density (Courtois 2025)     | Dark-matter density volume; off by default                                      |
-| MCPM cosmic web VAC (Wilde 2023) | Slime-mould cosmic-web density volume                                           |
-| CF4++ flow field                 | Peculiar-velocity streamline field; off by default                              |
+| Source                                                                                                                                                                            | Contributes                                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [SDSS DR17](https://www.sdss4.org/dr17/) (spectroscopic)                                                                                                                          | Deep northern spectroscopic slice, ~500k galaxies                               |
+| [2MRS](https://lweb.cfa.harvard.edu/~dfabricant/huchra/2mass/)                                                                                                                    | All-sky near-IR redshift survey, local volume in every direction                |
+| [GLADE v2.3](http://glade.elte.hu/)                                                                                                                                               | All-sky million-galaxy compilation, fills SDSS's footprint gaps                 |
+| [Milliquas v8](https://quasars.org/milliquas.htm)                                                                                                                                 | ~940k spectroscopic quasars and AGN                                             |
+| [DESI DR1 LSS](https://data.desi.lbl.gov/doc/releases/dr1/)                                                                                                                       | Deep cone (Corona Borealis), wedge, and Sloan Great Wall slices; off by default |
+| [Gaia DR3](https://www.cosmos.esa.int/web/gaia/dr3) + [GCNS](https://www.cosmos.esa.int/web/gaia/edr3-gcns) + [Hipparcos-2](https://www.cosmos.esa.int/web/hipparcos/hipparcos-2) | ~16.8M Milky Way stars, local 100 pc supplement, naked-eye bright stars         |
+| Famous atlas                                                                                                                                                                      | Curated Messier/NGC thumbnails and editorial descriptions                       |
+| [MCXC](https://heasarc.gsfc.nasa.gov/W3Browse/rosat/mcxc.html) + [MSCC](https://cdsarc.cds.unistra.fr/viz-bin/ReadMe/J/MNRAS/445/4073?format=html) + VizieR structures            | Cluster, supercluster, void, and group markers                                  |
+| [DisPerSE](https://www2.iap.fr/users/sousbie/web/html/indexd41d.html) filaments                                                                                                   | Derived cosmic-web skeleton, computed offline from the point cloud              |
+| [CF-4 density](https://projets.ip2i.in2p3.fr/cosmicflows/) (Courtois 2025)                                                                                                        | Dark-matter density volume; off by default                                      |
+| [MCPM cosmic web VAC](https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold) (Wilde 2023)                    | Slime-mould cosmic-web density volume                                           |
+| [CF4++ flow field](https://projets.ip2i.in2p3.fr/cosmicflows/)                                                                                                                    | Peculiar-velocity streamline field; off by default                              |
 
 **Solar system**
 
-| Source                                        | Contributes                                                     |
-| --------------------------------------------- | --------------------------------------------------------------- |
-| Blue Marble Next Generation + EOX s2cloudless | Earth whole-globe imagery and a deeper Sentinel-2 tile band     |
-| Planet, moon, and ring textures               | Solar System Scope, USGS Astrogeology, and NASA mission mosaics |
+| Source                                                                                                                                             | Contributes                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Blue Marble Next Generation](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation) + [EOX s2cloudless](https://s2maps.eu) | Earth whole-globe imagery and a deeper Sentinel-2 tile band                                                                                     |
+| Planet, moon, and ring textures                                                                                                                    | [Solar System Scope](https://www.solarsystemscope.com/textures/), [USGS Astrogeology](https://astrogeology.usgs.gov/), and NASA mission mosaics |
 
 ## Quickstart
 
