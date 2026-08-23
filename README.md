@@ -165,6 +165,10 @@ tests/          Vitest suite, mirrors src/
 
 The live queue is [docs/BACKLOG.md](docs/BACKLOG.md).
 
+## Inspiration
+
+Skymap's framing comes from [Powers of Ten](https://www.youtube.com/watch?v=0fKBhvDjuy0) (Charles and Ray Eames, 1977), the nine-minute film that zooms from a picnic blanket out to the scale of the universe. Skymap tries the same journey with today's measured universe, and hands you the camera.
+
 ## Cite, credit, and license
 
 If you use skymap in a publication, talk, or derived work, please cite it via [CITATION.cff](CITATION.cff). GitHub's "Cite this repository" sidebar button exposes BibTeX and APA forms.
