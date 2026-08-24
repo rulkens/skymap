@@ -1,4 +1,4 @@
-# Grill Session: Earth-local render slab — 2026-08-21 (PAUSED)
+# Grill Session: Earth-local render slab — 2026-08-21 (CLOSED)
 
 Source: live debugging conversation on the RTC foundation branch (PR #617). After
 three separate f32-precision defects in the Mpc-magnitude near-Earth path (black
@@ -6,7 +6,14 @@ nadir blob, planner-matrix collapse, plus the still-open descent island), the
 user proposed a dedicated render slab for "everything Earth-related and down"
 instead of patching precision leaks one by one.
 
-**Status: PAUSED mid-Q3.** User ruled: ship #617 first, implement Plan 2
+**Status: CLOSED 2026-08-24 — absorbed by the globe-camera pivot grill**
+(`docs/grill-sessions/globe-camera-pivot-2026-08-24.md`): Q1 ratified as the
+two-provider pose seam (its S1), Q2 **superseded** — the slab went near-body
+generic, all planets and moons (its S4), Q3 revised — anchor-relative camera
+state with deep zoom in scope now, units metres (its S2/S3). Do not resume
+here.
+
+**Previous status (2026-08-21): PAUSED mid-Q3.** User ruled: ship #617 first, implement Plan 2
 (surface navigation), then revisit — the bug this was motivated by may not
 survive Plan 2, and Q3's recommendation deliberately places the camera-pose
 provider work inside Plan 2 anyway. Resume here afterwards.
@@ -54,7 +61,7 @@ or make the camera natively Earth-fixed in the near regime?
   truth at the flip).
 
 **Decision (recommended, not yet ratified — user pivoted to shipping before
-answering):** design the slab against an *anchor-relative camera-pose provider*
+answering):** design the slab against an _anchor-relative camera-pose provider_
 seam; ship provider (A) with the slab; land provider (B) inside Plan 2 where
 its real motivation (navigation semantics) lives. The user's last word was a
 worry — "if we do (a) now, we have to do (b) anyways later" — answered by the
@@ -84,10 +91,10 @@ whenever a second surfaced body actually exists.
 **Considerations:** The user asked "how far can we push it — zooming into the
 eye, would that fit?" Analysis: rendering precision is scale-invariant once
 geometry is camera-rebased (f32 error ≈ 6e-8 of distance-from-camera ≈ 0.01
-arcsec); the floor is the *stored camera pose*: heliocentric-Mpc f64 → ~14 µm;
+arcsec); the floor is the _stored camera pose_: heliocentric-Mpc f64 → ~14 µm;
 Earth-fixed-km f64 → ~0.7 nm (orbit → sub-µm in one slab, the full
 Eames-zoom-to-an-iris); below ~nm requires re-anchoring at the object being
-entered — a future *anchor parameter*, not a fourth slab.
+entered — a future _anchor parameter_, not a fourth slab.
 
 **Decision (proposed, unratified):** success criterion = camera at 1.7 m eye
 height rock solid, with the anchor seam explicit so headroom to ~µm is proven
@@ -95,7 +102,7 @@ and deeper regimes are future anchors, not future slabs. Confirm on resume.
 
 ---
 
-**On resume:** ratify Q1/Q3, then continue down the tree: what rides the slab
+**On resume (superseded — see status above):** ratify Q1/Q3, then continue down the tree: what rides the slab
 (tiles / base globe / atmosphere / clouds / glint; Moon stays NEAR0), units
 (km vs m), activation + handoff vs the base-globe fade, cross-slab occlusion
 (the hard one), planner/prepareEarthFrame becoming slab-native, and sequencing

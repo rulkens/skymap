@@ -9,6 +9,10 @@ Synthesis of `cesium-notes.md` (C), `openspace-globebrowsing-notes.md` (O),
 Citations are `C §2.4`-style into those files. This document is decision input for a grill
 session and then a spec; it is not a plan.
 
+**Ruled 2026-08-24:** every §7 decision is settled — see
+`docs/grill-sessions/globe-camera-pivot-2026-08-24.md`. Where the transcript
+diverges from the recommendations below, the transcript wins.
+
 **Binding given** (PLAN.md USER CONSTRAINT): body-related navigation state lives in a local
 body-fixed km/m frame. World-Mpc appears only at the regime boundary and in render composition.
 Not weighed below — assumed.
