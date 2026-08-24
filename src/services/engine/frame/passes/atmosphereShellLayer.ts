@@ -119,7 +119,6 @@ export const atmosphereShellLayer: ContentLayer = {
       // `ATMOSPHERE_PARAMS.earth.exposure`), so it reads the store value each frame
       // (`EngineState.settings` is a live getter — a drag overrides the limb
       // without a reload); every other body reads its own params-row `exposure`.
-      // sunIrradiance is the per-body params dial (fragment-unused today).
       const exposure =
         body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
       // The host's ring annulus in the proxy's LOCAL units (atmosphere top = 1),
@@ -138,7 +137,6 @@ export const atmosphereShellLayer: ContentLayer = {
           sun,
           camLocal,
           bottomRadius,
-          params.sunIrradiance,
           exposure,
           ringInnerRatio,
           ringOuterRatio,

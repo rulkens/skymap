@@ -35,7 +35,6 @@ for (let i = 0; i < 16; i++) MVP[i] = i + 1;
 const SUN_DIR: Vec3 = [0.5, 0.25, 0.75];
 const CAM_POS: Vec3 = [1.5, 2.5, 3.5];
 const BOTTOM_RADIUS = 0.96875; // planetRadiusKm / atmosphereTopKm ∈ (0,1)
-const SUN_IRRADIANCE = 17.25;
 const EXPOSURE = 0.625;
 const RING_INNER = 1.203125; // ring inner / atmosphere top (> 1: outside the shell)
 const RING_OUTER = 2.28125; // ring outer / atmosphere top
@@ -47,7 +46,6 @@ describe('AtmosphereUniforms byte offsets', () => {
       SUN_DIR,
       CAM_POS,
       BOTTOM_RADIUS,
-      SUN_IRRADIANCE,
       EXPOSURE,
       RING_INNER,
       RING_OUTER,
@@ -77,8 +75,8 @@ describe('AtmosphereUniforms byte offsets', () => {
     expect(rec[21]).toBe(CAM_POS[1]); // byte 84
     expect(rec[22]).toBe(CAM_POS[2]); // byte 88
 
-    // sunIrradiance fills camPosLocal's vec3 tail; exposure follows.
-    expect(rec[23]).toBe(SUN_IRRADIANCE); // byte 92
+    // the vec3 tail pad — was sunIrradiance, structural not content
+    expect(rec[23]).toBe(0); // byte 92
     expect(rec[24]).toBe(EXPOSURE); // byte 96
 
     // Ring ratios — the host's ring annulus in atmosphere-top units (0 = no

@@ -120,7 +120,7 @@ export type AtmosphereShellRenderer = Renderer & {
    *
    * `uniforms` is the 112-byte `AtmosphereUniforms` record from
    * `packAtmosphereUniforms` (MVP + body-local sun dir + bottomRadius +
-   * camPosLocal + sunIrradiance + exposure + ring ratios). THROWS on an unknown
+   * camPosLocal + exposure + ring ratios). THROWS on an unknown
    * `bodyId` (a programming error — callers only pass `atmosphereDrawList` ids).
    */
   draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void;

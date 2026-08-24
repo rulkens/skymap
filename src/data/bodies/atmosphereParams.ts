@@ -5,8 +5,7 @@
  * Bruneton/Hillaire reference set; the rest are physically motivated but eye-tuned, hence
  * untested — so Pluto's row tags each value [M]easured / [D]erived / [L]ook. `planetRadiusKm`
  * and `groundAlbedo` derive from the body's seed, keeping the shell concentric with the sphere
- * actually drawn. `sunIrradiance` is packed to match the WGSL struct but UNUSED by the
- * fragment; Earth's `exposure` seeds `settings.earth.atmosphereExposure` and is read there.
+ * actually drawn. Earth's `exposure` seeds `settings.earth.atmosphereExposure` and is read there.
  */
 
 import { SCENE_EARTH } from './sceneEarth';
@@ -54,7 +53,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     groundAlbedo: [0.3, 0.3, 0.3],
     twilightSoftness: 0.05,
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     exposure: 2.35,
   },
   venus: {
@@ -97,7 +95,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     groundAlbedo: seededPlanet('venus').albedo,
     twilightSoftness: 0.05,
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     exposure: 3.0,
   },
   mars: {
@@ -140,7 +137,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     groundAlbedo: seededPlanet('mars').albedo,
     twilightSoftness: 0.07,
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     exposure: 1.5,
   },
   jupiter: {
@@ -170,7 +166,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     groundAlbedo: seededPlanet('jupiter').albedo,
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     exposure: 1.3,
   },
   saturn: {
@@ -213,7 +208,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     groundAlbedo: seededPlanet('saturn').albedo,
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     exposure: 1.3,
   },
   titan: {
@@ -274,7 +268,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.12,
     // [L] 1.0 = the physical result; the surge already lives in the forward lobe.
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     // [L] Between Mars's 1.5 and Venus's 3.0. Scales in-scatter only, so it is NOT the dial for a
     // composite that reads too bright or too red — that is the seed albedo above.
     exposure: 2.0,
@@ -318,7 +311,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     groundAlbedo: seededPlanet('uranus').albedo,
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     exposure: 1.8,
   },
   neptune: {
@@ -368,7 +360,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     groundAlbedo: seededPlanet('neptune').albedo,
     twilightSoftness: 0.03,
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     exposure: 1.8,
   },
   pluto: {
@@ -422,7 +413,6 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     twilightSoftness: 0.1,
     // [L] 1.0 = the physical result, no band gain.
     twilightIntensity: 1.0,
-    sunIrradiance: 1.0,
     // [L] Earth's calibrated value as a start; two MEASURED anchors to tune against: at phase
     // ≳148° the ring must be at least as bright as the sunlit crescent (Cheng+17), at ~20°
     // barely detectable (I/F ~0.003, Gladstone+16). Obvious at both means this is too high.

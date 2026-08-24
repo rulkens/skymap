@@ -38,7 +38,7 @@
  *   f32 16..18 (byte  64..75):  sunDirLocal (vec3, 16-byte aligned)
  *   f32 19     (byte  76..79):  bottomRadius (fills sunDirLocal's vec3 tail)
  *   f32 20..22 (byte  80..91):  camPosLocal (vec3, 16-byte aligned)
- *   f32 23     (byte  92..95):  sunIrradiance (fills camPosLocal's vec3 tail)
+ *   f32 23     (byte  92..95):  _pad1 (zeroed; fills camPosLocal's vec3 tail)
  *   f32 24     (byte  96..99):  exposure
  *   f32 25     (byte 100..103): ringInnerRatio (ring inner / atmosphere top; 0 = none)
  *   f32 26     (byte 104..107): ringOuterRatio (ring outer / atmosphere top; 0 = none)
@@ -55,7 +55,6 @@
  * @param sunDirLocal    Sun direction in the body's local frame.
  * @param camPosLocal    Camera position in atmosphere-top-radius units, centre at origin.
  * @param bottomRadius   Ground/atmosphere-top radius ratio (`planetRadiusKm / atmosphereTopKm`), ∈ (0,1).
- * @param sunIrradiance  Sun brightness scale into HDR.
  * @param exposure       In-scatter intensity scale.
  * @param ringInnerRatio Ring inner radius / atmosphere-top radius (0 when no ring).
  * @param ringOuterRatio Ring outer radius / atmosphere-top radius; 0 ⇒ no ring.
@@ -73,7 +72,6 @@ export function packAtmosphereUniforms(
   sunDirLocal: Readonly<Vec3>,
   camPosLocal: Readonly<Vec3>,
   bottomRadius: number, // = planetRadiusKm / atmosphereTopKm
-  sunIrradiance: number,
   exposure: number,
   ringInnerRatio: number,
   ringOuterRatio: number,
@@ -85,7 +83,7 @@ export function packAtmosphereUniforms(
   out[20] = camPosLocal[0]; // byte 80 — vec3, 16-byte aligned
   out[21] = camPosLocal[1]; // byte 84
   out[22] = camPosLocal[2]; // byte 88
-  out[23] = sunIrradiance; // byte 92 — fills camPosLocal's vec3 tail
+  // out[23] (byte 92) stays zero — camPosLocal's vec3 tail pad.
   out[24] = exposure; // byte 96
   out[25] = ringInnerRatio; // byte 100
   out[26] = ringOuterRatio; // byte 104

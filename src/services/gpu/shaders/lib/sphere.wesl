@@ -409,10 +409,10 @@ struct CloudShellUniforms {
 // 'bottomRadius' alone: normalized altitude
 // 'h = (r_local - bottomRadius) / (1 - bottomRadius)'.
 //
-// Two vec3 tails are filled with REAL fields rather than padding, the same
+// One vec3 tail is filled with a REAL field rather than padding, the same
 // trick 'RingUniforms.planetRadiusRatio' uses:
-//   - 'bottomRadius'  fills 'sunDirLocal's trailing 4-byte slot (byte 76).
-//   - 'sunIrradiance' fills 'camPosLocal's trailing slot (byte 92).
+//   - 'bottomRadius' fills 'sunDirLocal's trailing 4-byte slot (byte 76).
+// 'camPosLocal's own trailing slot (byte 92) is plain '_pad1'.
 //
 // 'camPosLocal' (the camera in atmosphere-top-radius units, sphere centre at the
 // origin) is the view vector the in-scatter integral needs, which the lit prefix
@@ -424,7 +424,7 @@ struct CloudShellUniforms {
 //   offset  64..75:  sunDirLocal   (vec3<f32> -- 16-byte aligned at 64)
 //   offset  76..79:  bottomRadius  (f32 -- fills sunDirLocal's 4th slot)
 //   offset  80..91:  camPosLocal   (vec3<f32> -- 16-byte aligned at 80)
-//   offset  92..95:  sunIrradiance (f32 -- fills camPosLocal's 4th slot)
+//   offset  92..95:  _pad1         (f32 -- camPosLocal's trailing slot, zeroed)
 //   offset  96..99:  exposure       (f32 -- in-scatter intensity scale)
 //   offset 100..103: ringInnerRatio (f32 -- ring inner / atmosphere top; 0 = none)
 //   offset 104..107: ringOuterRatio (f32 -- ring outer / atmosphere top; 0 = none)
@@ -446,7 +446,7 @@ struct AtmosphereUniforms {
   sunDirLocal: vec3<f32>,
   bottomRadius: f32,
   camPosLocal: vec3<f32>,
-  sunIrradiance: f32,
+  _pad1: f32,
   exposure: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,
