@@ -10,7 +10,7 @@ How skymap turns measurements into a picture: where things get their positions, 
 
 ### Coordinate frame
 
-One right-handed equatorial Cartesian frame for everything, in megaparsecs: `+x` toward (RA 0°, Dec 0°), `+y` toward (RA 90°, Dec 0°), `+z` toward Dec +90° ([raDecZToCartesian.ts](../src/utils/math/raDecZToCartesian.ts)). Galaxies, stars, planets, and Earth share it, which is what makes the zoom continuous across scales.
+One right-handed equatorial Cartesian frame for everything, axes on the ICRS (J2000) equator and equinox, in megaparsecs: `+x` toward (RA 0°, Dec 0°), `+y` toward (RA 90°, Dec 0°), `+z` toward Dec +90° ([raDecZToCartesian.ts](../src/utils/math/raDecZToCartesian.ts)). Catalogue RA/Dec is used as published; JPL's ecliptic-referenced planetary elements are rotated into the frame by the 23.44° obliquity ([orbitPlaneFrames.ts](../src/data/bodies/orbitPlaneFrames.ts)). Galaxies, stars, planets, and Earth share it, which is what makes the zoom continuous across scales.
 
 ### Where things are
 
@@ -33,9 +33,9 @@ Per-survey flux limits and Schechter parameters live in the source modules under
 
 ### Measured, derived, or modelled
 
-Three kinds of content share the scene. Knowing which is which is the honest core of the visualization.
+Three kinds of content share the scene; this section says which is which.
 
-**Measured**: every catalogued position, magnitude, and redshift above; the Gaia star field; galaxy thumbnails (real SDSS DR18 and DSS imagery); the famous atlas photographs (credits in [ATTRIBUTIONS.md](../ATTRIBUTIONS.md)).
+**Measured**: the catalogued observables: sky positions, magnitudes, redshifts, and parallaxes; galaxy thumbnails (real SDSS DR18 and DSS imagery); the famous atlas photographs (credits in [ATTRIBUTIONS.md](../ATTRIBUTIONS.md)). The 3D positions built from them inherit the distance caveats above.
 
 **Derived**: reconstructions computed from measurements by a published algorithm.
 
@@ -52,7 +52,7 @@ Three kinds of content share the scene. Knowing which is which is the honest cor
 - **Accumulate then tone-map**: every layer draws into one `rgba16float` HDR target; a single composite pass applies a selectable curve, Linear, Reinhard, Asinh, Gamma 2.0, or ACES ([toneMapCurve.ts](../src/data/toneMapCurve.ts)).
 - **Bloom**: a five-level mip pyramid: soft-threshold prefilter, downsample chain, additive tent-filter upsample ([bloomPyramid.ts](../src/services/gpu/passes/bloomPyramid.ts)).
 - **Depth precision**: reversed-Z for the near-Earth pass, whose extreme near/far ratio would exhaust a classic depth buffer ([slabs.ts](../src/services/engine/frame/slabs.ts)).
-- **Floating origin**: camera matrices compose in float64 relative to a render origin and narrow to float32 only at upload.
+- **Floating origin**: camera matrices compose in float64 relative to a render origin and narrow to float32 only at upload ([computeForegroundViewProj.ts](../src/utils/camera/computeForegroundViewProj.ts)).
 - **HDR displays**: the swap chain switches to extended dynamic range when the display supports it ([applySwapFormat.ts](../src/services/engine/phases/applySwapFormat.ts)).
 
 ### Galaxies
