@@ -1,4 +1,4 @@
-# What the pixels mean
+# Science notes
 
 How skymap turns measurements into a picture: where every object's position comes from, how brightness and colour are derived, which survey biases are corrected, and which parts of the scene are measured, reconstructed, or modelled. Each section is short on purpose and links to the paper or source file that carries the detail.
 
