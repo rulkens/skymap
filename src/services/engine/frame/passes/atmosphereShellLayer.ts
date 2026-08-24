@@ -65,8 +65,6 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
-import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
-import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { atmosphereDrawList } from '../atmosphereDrawList';
@@ -88,7 +86,14 @@ export const atmosphereShellLayer: ContentLayer = {
     const renderer = state.gpu.atmosphereShellRenderer;
     if (renderer === null) return;
 
-    for (const { body, params, positionMpc, orientation } of atmosphereDrawList(state, ctx)) {
+    for (const {
+      body,
+      params,
+      positionMpc,
+      orientation,
+      camPosLocal: camLocal,
+      sunDirLocal: sun,
+    } of atmosphereDrawList(state, ctx)) {
       // Scale the unit proxy sphere to the ATMOSPHERE-TOP radius (the shell's
       // outer extent) from the slab's f64 vp (the f64 seam), folding in the entry's
       // resolved orientation so the sky-view frame co-registers with the surface.
@@ -100,17 +105,9 @@ export const atmosphereShellLayer: ContentLayer = {
         atmosphereTopMpc,
         orientation,
       );
-      // Sun rotated into the body's local frame (its resolved orientation carries
-      // the axial tilt), co-framed with the in-scatter integral's sun direction.
-      const sun = sunDirLocal(positionMpc, RENDER_ORIGIN_MPC, orientation);
-      // The camera in atmosphere-top-radius units — the view vector the in-scatter
-      // fragment marches along. `view.camPos` is a copy of `ctx.drawCamPos` (the
-      // rendered pose), the SAME vector `encodeAtmosphereSkyView` bakes the sky-view
-      // LUT from. Scaling by the atmosphere-top radius (NOT the surface radius) is
-      // what that SAME-radius LUT bake expects, so the baked view height and the
-      // fragment altitude agree (the bake packs |camPosLocal| × atmosphereTopKm from
-      // the same pose).
-      const camLocal = camPosLocal(view.camPos, positionMpc, atmosphereTopMpc, orientation);
+      // camLocal/sun destructured off the entry — atmosphereDrawList derives both
+      // once per body now (spec §5a hoist), so this draw and the sky-view bake read
+      // the same pair instead of each re-deriving it.
       // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
       // atmosphere top is the unit sphere and the ground sphere has this radius.
       const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;

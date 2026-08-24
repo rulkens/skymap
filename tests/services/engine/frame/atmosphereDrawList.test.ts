@@ -14,6 +14,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { atmosphereDrawList } from '../../../../src/services/engine/frame/atmosphereDrawList';
+import { camPosLocal } from '../../../../src/utils/camera/camPosLocal';
+import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -49,6 +51,18 @@ vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
       });
     return m;
   }),
+}));
+
+// Wiring assertion, not a mirror: pins that atmosphereDrawList calls each util
+// exactly once per qualifying body (the hoist this task performs), without
+// recomputing the real camPosLocal/sunDirLocal formula.
+const CAM_POS_LOCAL_STUB: Vec3 = [1, 2, 3];
+const SUN_DIR_LOCAL_STUB: Vec3 = [4, 5, 6];
+vi.mock('../../../../src/utils/camera/camPosLocal', () => ({
+  camPosLocal: vi.fn(() => CAM_POS_LOCAL_STUB),
+}));
+vi.mock('../../../../src/utils/camera/sunDirLocal', () => ({
+  sunDirLocal: vi.fn(() => SUN_DIR_LOCAL_STUB),
 }));
 
 // Test fixtures pairing the identity records with the J2000 state the snapshot
@@ -123,6 +137,17 @@ describe('atmosphereDrawList', () => {
     expect(list).toHaveLength(1);
     expect(list[0]!.body).toBe(SEEDED_EARTH);
     expect(list[0]!.params).toBe(ATMOSPHERE_PARAMS['earth']);
+  });
+
+  it('derives camPosLocal/sunDirLocal once per body, not per consumer', () => {
+    vi.mocked(camPosLocal).mockClear();
+    vi.mocked(sunDirLocal).mockClear();
+    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
+    expect(list).toHaveLength(1);
+    expect(camPosLocal).toHaveBeenCalledTimes(1);
+    expect(sunDirLocal).toHaveBeenCalledTimes(1);
+    expect(list[0]!.camPosLocal).toBe(CAM_POS_LOCAL_STUB);
+    expect(list[0]!.sunDirLocal).toBe(SUN_DIR_LOCAL_STUB);
   });
 
   it('excludes a body with no ATMOSPHERE_PARAMS row', () => {

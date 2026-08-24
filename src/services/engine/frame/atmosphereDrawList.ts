@@ -13,8 +13,11 @@ import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/Atmospher
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { camPosLocal } from '../../../utils/camera/camPosLocal';
+import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { FOREGROUND_MAX_DISTANCE_MPC } from './foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -47,12 +50,20 @@ export function atmosphereDrawList(
     const dy = bodyState.positionMpc[1] - ctx.drawCamPos[1];
     const dz = bodyState.positionMpc[2] - ctx.drawCamPos[2];
     const distanceMpc = Math.hypot(dx, dy, dz);
+    const atmosphereTopMpc = params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC;
     if (distanceMpc === 0) {
       entries.push({
         body,
         params,
         positionMpc: bodyState.positionMpc,
         orientation: bodyState.orientation,
+        camPosLocal: camPosLocal(
+          ctx.drawCamPos,
+          bodyState.positionMpc,
+          atmosphereTopMpc,
+          bodyState.orientation,
+        ),
+        sunDirLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
       });
       continue;
     }
@@ -68,6 +79,13 @@ export function atmosphereDrawList(
         params,
         positionMpc: bodyState.positionMpc,
         orientation: bodyState.orientation,
+        camPosLocal: camPosLocal(
+          ctx.drawCamPos,
+          bodyState.positionMpc,
+          atmosphereTopMpc,
+          bodyState.orientation,
+        ),
+        sunDirLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
       });
   }
   return entries;

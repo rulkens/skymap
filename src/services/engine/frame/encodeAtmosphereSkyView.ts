@@ -54,11 +54,6 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { camPosLocal } from '../../../utils/camera/camPosLocal';
-import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { atmosphereDrawList } from './atmosphereDrawList';
 
 /**
@@ -76,25 +71,14 @@ export function encodeAtmosphereSkyView(
   const renderer = state.gpu.atmosphereShellRenderer;
   if (renderer === null) return;
 
-  for (const { body, params, positionMpc, orientation } of atmosphereDrawList(state, ctx)) {
-    // Bake from the RENDERED pose (`ctx.drawCamPos`), NOT `state.cam.position`. The
-    // latter is the drag register, re-seeded only on pointer-down and so stale
-    // between gestures (scroll-zoom, tweens, tours) — baking the LUT for that
-    // altitude while the shell fragment samples it at the live one violates the
-    // AtmosphereShellRenderer sky-view MUST-equal contract. `ctx.drawCamPos` is the
-    // exact vector the fragment marches along (via `view.camPos`), so the two agree.
-    const camPosMpc: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
-    // The camera in atmosphere-top-radius units — the SAME rendered pose the shell
-    // fragment receives (same util, same atmosphere-top scale), so the LUT's baked
-    // view height and the fragment's local altitude cannot disagree.
-    const camLocal = camPosLocal(
-      camPosMpc,
-      positionMpc,
-      params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC,
-      orientation,
-    );
-    const sun = sunDirLocal(positionMpc, RENDER_ORIGIN_MPC, orientation);
-
+  for (const { body, params, camPosLocal: camLocal, sunDirLocal: sun } of atmosphereDrawList(
+    state,
+    ctx,
+  )) {
+    // camLocal/sun destructured off the entry — atmosphereDrawList derives both from
+    // the RENDERED pose (`ctx.drawCamPos`) once per body (spec §5a hoist), the SAME
+    // pair the shell fragment receives via `atmosphereShellLayer`, so the LUT's
+    // baked view height and the fragment's local altitude cannot disagree.
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
     // |camPosLocal| × atmosphereTopKm recovers the camera radius in km (camLocal is
     // in atmosphere-top-radius units), matching the km-baked LUT parametrisation.

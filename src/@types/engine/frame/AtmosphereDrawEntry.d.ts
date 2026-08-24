@@ -33,4 +33,10 @@ export type AtmosphereDrawEntry = {
   readonly positionMpc: Vec3;
   /** Live local → equatorial-world rotation — resolved from the per-frame snapshot. */
   readonly orientation: Mat3;
+  /** Camera position in atmosphere-top-radius units, body-local frame —
+   *  derived once here instead of independently by atmosphereShellLayer.draw
+   *  and encodeAtmosphereSkyView (was two call sites, same five inputs). */
+  readonly camPosLocal: Vec3;
+  /** Sun direction in the body's local frame — same hoist rationale. */
+  readonly sunDirLocal: Vec3;
 };
