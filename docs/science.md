@@ -14,7 +14,7 @@ Galaxies, stars, structures, the solar system, and Earth all share this one fram
 
 ## Distance model
 
-Distance from redshift uses Hubble's law: `d = cz/H₀`, with `H₀ = 70 km/s/Mpc`. This is the linear approximation, accurate only for `z ≪ 1`, but it holds to a few percent for the SDSS spectroscopic sample (most galaxies at `z < 0.3`) and is cheap enough to evaluate per galaxy at build time.
+Distance from redshift is the line-of-sight comoving distance in a flat ΛCDM cosmology: `d_C(z) = (c/H₀) ∫₀^z dz′/E(z′)` with `E(z) = √(Ω_m(1+z)³ + Ω_Λ)`, `H₀ = 70 km/s/Mpc`, and `Ω_m = 0.315` (Planck 2018). The integral is evaluated numerically with Simpson's rule in `src/utils/math/redshiftToDistanceMpc.ts`. The linear approximation `d = cz/H₀` would be wrong by tens of percent for the deep catalogs (Milliquas reaches `z ≈ 7`); it is used only for the handful of blueshifted rows below, where the two agree.
 
 Inside 30 Mpc, where peculiar velocities dominate the cosmological redshift signal and the linear approximation breaks down, the pipeline substitutes a measured distance from the Cosmicflows-4 program (or HyperLEDA's `mod0` where CF4 has no match) instead of deriving position from cz. The catalogued spectroscopic redshift is kept alongside the override so the InfoCard still shows the published value even though position comes from the measured distance.
 

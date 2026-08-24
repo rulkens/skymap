@@ -161,7 +161,7 @@ tests/          Vitest suite, mirrors src/
 ## Direction
 
 - More measured data where procedural stand-ins currently fill in
-- Comoving distance from a ΛCDM integration (currently linear Hubble's law)
+- Work further down the powers-of-ten scale, from Earth's surface toward human scale
 - Spatial chunking to get past the few-million-point ceiling; SDSS's full photometric catalog holds around a billion objects
 - Wider platform support as WebGPU lands in more browsers
 
