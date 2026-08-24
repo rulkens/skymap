@@ -337,29 +337,75 @@ export function createAtmosphereShellRenderer(
     });
   }
 
+  // Inside-shell state (camera inside the atmosphere top): a full-screen
+  // triangle, no vertex buffer, and an always-pass depth test — there is no
+  // scene depth to test against from inside (spec §4.4). NOT routed through
+  // `resolveDepthCompare`: that helper resolves a reversed-Z-dependent INTENT,
+  // and 'always' has no such intent to resolve.
+  const insideVertexState: GPUVertexState = { module: shellVsModule, entryPoint: 'insideVs' };
+  const insidePrimitiveState: GPUPrimitiveState = { topology: 'triangle-list' };
+  const insideDepthState: GPUDepthStencilState = {
+    format: depthFormat,
+    depthWriteEnabled: false,
+    depthCompare: 'always',
+  };
+
+  function createInsideShellPipeline(
+    label: string,
+    entryPoint: string,
+    blend: GPUBlendState,
+  ): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label,
+      layout: shellPipelineLayout,
+      vertex: insideVertexState,
+      fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
+      primitive: insidePrimitiveState,
+      depthStencil: insideDepthState,
+    });
+  }
+
   // Pass 1 — MULTIPLY. `dstFactor: 'src'` is a plain (non-dual-source) blend
   // factor taking the source's OWN component, so `out = 0*src + src*dst` is a
   // per-channel `dst *= transmittance`. This is the whole point of the split: one
   // alpha channel cannot attenuate three wavelengths differently, and a
   // luminance-collapsed alpha let a λ⁻⁴ Rayleigh ramp add blue to the disc
   // without removing blue from it (cyan wash).
+  //
+  // Hoisted (not inlined) so the inside pair below shares the SAME blend object —
+  // multiply/add semantics do not change between the outside proxy-mesh draw and
+  // the inside full-screen draw, only the vertex/depth state does.
+  const multiplyBlend: GPUBlendState = {
+    color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
+    alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
+  };
   const shellMultiplyPipeline = createShellPipeline(
     'atmosphere-shell-multiply-pipeline',
     'fsMultiply',
-    {
-      color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
-      alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
-    },
+    multiplyBlend,
   );
 
   // Pass 2 — ADD. Straight accumulation of the exposed in-scatter. Its alpha
   // contribution is the coverage complement, so the two passes together leave the
   // target alpha at the value the single OVER draw produced (the compositor reads
   // `foreground:0` as STRAIGHT alpha — it is the background weight, not decoration).
-  const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', {
+  const addBlend: GPUBlendState = {
     color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-  });
+  };
+  const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', addBlend);
+
+  // Inside pair — SAME blend objects as the outside pair (see above).
+  const shellInsideMultiplyPipeline = createInsideShellPipeline(
+    'atmosphere-shell-inside-multiply-pipeline',
+    'fsInsideMultiply',
+    multiplyBlend,
+  );
+  const shellInsideAddPipeline = createInsideShellPipeline(
+    'atmosphere-shell-inside-add-pipeline',
+    'fsInsideAdd',
+    addBlend,
+  );
 
   // ── Per-body bundles ───────────────────────────────────────────────────────
   //
@@ -601,19 +647,31 @@ export function createAtmosphereShellRenderer(
 
   // ── draw ───────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void {
+  function draw(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    inside: boolean,
+  ): void {
     // Write THIS body's own shell uniform buffer immediately before its draw — no
     // shared buffer for a later body's write to race (see the module header).
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.shellUniformBuffer, 0, uniforms);
     pass.setBindGroup(0, bundle.shellBindGroup);
+    // `inside` selects the full-screen no-scene-depth pipeline pair (camera past
+    // the atmosphere top, no proxy-mesh silhouette to rasterise) over the
+    // proxy-sphere pair. MULTIPLY strictly BEFORE ADD in both branches: the
+    // multiply pass scales whatever is already in the target, so running it
+    // second would attenuate this body's own in-scatter by its own transmittance.
+    if (inside) {
+      pass.setPipeline(shellInsideMultiplyPipeline);
+      pass.draw(3);
+      pass.setPipeline(shellInsideAddPipeline);
+      pass.draw(3);
+      return;
+    }
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
-    // MULTIPLY strictly BEFORE ADD: the multiply pass scales whatever is already
-    // in the target, so running it second would attenuate this body's own
-    // in-scatter by its own transmittance. The two pipelines share one pipeline
-    // layout, so the bind group + vertex/index state set above survives the
-    // `setPipeline` switch between them.
     pass.setPipeline(shellMultiplyPipeline);
     pass.drawIndexed(indexCount);
     pass.setPipeline(shellAddPipeline);

@@ -145,6 +145,10 @@ export const atmosphereShellLayer: ContentLayer = {
           ringInnerRatio,
           ringOuterRatio,
         ),
+        // Placeholder: Task 7 replaces this with `isInsideAtmosphereShell(camLocal)`.
+        // Hardcoded false keeps the two new inside pipelines dead code for one
+        // more commit rather than landing renderer + trigger as one commit.
+        false,
       );
     }
   },
