@@ -66,6 +66,7 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { mat4d } from 'wgpu-matrix';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { isInsideAtmosphereShell } from '../../../../utils/camera/isInsideAtmosphereShell';
 import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { atmosphereDrawList } from '../atmosphereDrawList';
@@ -131,6 +132,9 @@ export const atmosphereShellLayer: ContentLayer = {
       const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
       const ringInnerRatio = ring === undefined ? 0 : ring.innerRadiusKm / params.atmosphereTopKm;
       const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;
+      // camLocal is already atmosphere-top-radius units (Task 2's hoist), so this
+      // is the one comparison spec §4.1 calls for — no new per-frame derivation.
+      const inside = isInsideAtmosphereShell(camLocal);
       renderer.draw(
         pass,
         body.id,
@@ -145,10 +149,7 @@ export const atmosphereShellLayer: ContentLayer = {
           ringInnerRatio,
           ringOuterRatio,
         ),
-        // Placeholder: Task 7 replaces this with `isInsideAtmosphereShell(camLocal)`.
-        // Hardcoded false keeps the two new inside pipelines dead code for one
-        // more commit rather than landing renderer + trigger as one commit.
-        false,
+        inside,
       );
     }
   },
