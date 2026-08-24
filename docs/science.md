@@ -1,79 +1,72 @@
 # What the pixels mean
 
-The math and conventions behind skymap's galaxy rendering: where galaxies are placed, how catalogue brightness and colour become pixels, and what corrections are applied for survey selection effects.
+How skymap turns measurements into a picture: where every object's position comes from, how brightness and colour are derived, which survey biases are corrected, and which parts of the scene are measured, reconstructed, or modelled. Each section is short on purpose and links to the paper or source file that carries the detail.
 
-## Coordinate frame
+## The data
 
-Skymap uses a right-handed equatorial Cartesian frame, distances in megaparsecs (Mpc):
+### Coordinate frame
 
-- `+x` → (RA = 0°, Dec = 0°), the vernal equinox direction
-- `+y` → (RA = 90°, Dec = 0°)
-- `+z` → Dec = +90°, the celestial north pole
+One right-handed equatorial Cartesian frame for everything, in megaparsecs: `+x` toward (RA 0°, Dec 0°), `+y` toward (RA 90°, Dec 0°), `+z` toward Dec +90° ([raDecZToCartesian.ts](../src/utils/math/raDecZToCartesian.ts)). Galaxies, stars, planets, and Earth share it, which is what makes the zoom continuous across scales.
 
-Galaxies, stars, structures, the solar system, and Earth all share this one frame, which is what makes the zoom continuous across scales.
+### Where things are
 
-## Distance model
+- **Galaxies**: line-of-sight comoving distance in flat ΛCDM (`H₀ = 70 km/s/Mpc`, `Ω_m = 0.315`), integrated with Simpson's rule in [redshiftToDistanceMpc.ts](../src/utils/math/redshiftToDistanceMpc.ts). Inside 30 Mpc, where peculiar velocities swamp the Hubble flow, measured redshift-independent distances take over: a curated seed of 14 hand-verified nearby galaxies, then Cosmicflows-4 ([project page](https://projets.ip2i.in2p3.fr/cosmicflows/)), then HyperLEDA `mod0` ([catalogDistanceFor.ts](../tools/catalog/catalogDistanceFor.ts)). A blueshifted galaxy none of those covers is placed in its true sky direction at `|cz|/H₀`, never mirrored through the origin.
+- **Stars**: Bailer-Jones EDR3 distances, photogeometric estimate first, geometric fallback, GCNS as last resort; naive `1/parallax` is deliberately not used ([resolveStarDistancePc.ts](../tools/stars/resolveStarDistancePc.ts)). The bin covers Gaia DR3 to `G < 14` plus the GCNS 100 pc census and a Hipparcos-2 patch for the bright stars Gaia saturates on.
+- **Solar system**: Keplerian elements from JPL SSD's approximate-positions table (Pluto's from the Explanatory Supplement to the Astronomical Almanac, moons from JPL's satellite elements), propagated on the simulation clock ([orbitalElements.ts](../src/data/bodies/orbitalElements.ts), [keplerianPositionMpc.ts](../src/utils/orbit/keplerianPositionMpc.ts)).
+- **S-stars**: 39 orbits around Sagittarius A\* transcribed from Gillessen et al. 2017, ApJ 837, 30 ([sStarElements.ts](../src/data/bodies/sStarElements.ts)).
 
-Distance from redshift is the line-of-sight comoving distance in a flat ΛCDM cosmology: `d_C(z) = (c/H₀) ∫₀^z dz′/E(z′)` with `E(z) = √(Ω_m(1+z)³ + Ω_Λ)`, `H₀ = 70 km/s/Mpc`, and `Ω_m = 0.315` (Planck 2018). The integral is evaluated numerically with Simpson's rule in `src/utils/math/redshiftToDistanceMpc.ts`. The linear approximation `d = cz/H₀` would be wrong by tens of percent for the deep catalogs (Milliquas reaches `z ≈ 7`); it is used only for the handful of blueshifted rows below, where the two agree.
+### Survey bias
 
-Inside 30 Mpc, where peculiar velocities dominate the cosmological redshift signal, the pipeline substitutes a measured redshift-independent distance instead of deriving position from cz. The precedence is: a curated seed of hand-verified distances (14 nearby galaxies, Local Group members and Virgo infallers whose blueshift breaks the formula), then Cosmicflows-4, then HyperLEDA's `mod0`. The catalogued spectroscopic redshift is kept alongside the override so the InfoCard still shows the published value even though position comes from the measured distance.
+Flux-limited surveys over-represent nearby galaxies, because faint ones are only detectable when close (the Malmquist bias). Five runtime-selectable correction modes respond to it ([biasMode.ts](../src/data/galaxyCatalog/biasMode.ts)):
 
-A blueshifted row that none of those overrides covers is placed in its true sky direction at `|cz|/H₀`, never mirrored to the antipodal point, which is what a naive `cz/H₀` on a negative `cz` would produce.
+- **None**: raw catalogue.
+- **Volume-limited**: only galaxies brighter than a threshold `M_lim` (default −19), a uniformly-detectable subsample.
+- **1/V_max**: dim each galaxy by its inverse maximum-detection volume (Schmidt 1968), as alpha instead of a discard.
+- **Schechter LF**: dim by the inverse expected number density from each survey's Schechter luminosity function.
+- **Angular re-weight** (default): per catalogue, weight each galaxy by median versus local density in HEALPix-cell × distance-shell bins ([computeAngularWeights.ts](../src/services/engine/bake/computeAngularWeights.ts)). Corrects footprint artifacts such as GLADE's pencil-beam jets.
 
-## Brightness
+Per-survey flux limits and Schechter parameters live in the source modules under [src/data/sources/](../src/data/sources/), with their literature origins noted there (Blanton 2003, Kochanek 2001, Norberg 2002).
 
-Real catalogue galaxies span roughly ten magnitudes of apparent brightness (the brightest entries are on the order of 10⁴× brighter than the faintest), so drawing every galaxy as an identical dot throws away most of the visual information. Per-galaxy brightness is physical: each galaxy's catalogue magnitude and diameter bake into a surface-brightness amplitude (`galaxySbAmp`), so its light is spread over its actual apparent disk. Three Settings-panel controls then shape what reaches the screen:
+### Measured, derived, or modelled
 
-- **Galaxy brightness** (0.5–30, default 5): a uniform scale on the baked surface-brightness amplitude.
-- **Bloom ceiling** (1–100, default 30): clamps how bright any single galaxy may get in the HDR frame.
-- **Distance falloff** (strength 0–2, default 0.7, with an on/off toggle): dims unresolved galaxies by `pow(resolvedFraction, strength)`, where `resolvedFraction` is the galaxy's apparent pixel radius over the drawn point size. This tames the additive-overlap glow near the origin, where every sightline through Earth stacks hundreds of billboards on top of each other.
+Three kinds of content share the scene. Knowing which is which is the honest core of the visualization.
 
-These three controls are a display concern: they change how an individual galaxy looks, not what the catalogue represents. Density correction, below, is a separate concern; it corrects for what flux-limited surveys systematically over- or under-sample. Tone-mapping is a third: it operates on the accumulated HDR output of the entire frame, not on individual galaxies.
+**Measured**: every catalogued position, magnitude, and redshift above; the Gaia star field; galaxy thumbnails (real SDSS DR18 and DSS imagery); the famous atlas photographs (credits in [ATTRIBUTIONS.md](../ATTRIBUTIONS.md)).
 
-## Density correction (Malmquist bias)
+**Derived**: reconstructions computed from measurements by a published algorithm.
 
-Flux-limited surveys over-represent nearby galaxies, because faint ones are only detectable when close. Astronomers call this the Malmquist bias. At a fixed flux limit, only the intrinsically luminous galaxies in the back of the volume make it into the catalogue, so naive count-as-density rendering overweights nearby faint galaxies and distorts the apparent shape of large-scale structure. Skymap offers five runtime-selectable correction modes, in the Settings panel:
+- **Filaments**: ridges of the Delaunay-tessellated galaxy density field, extracted by [DisPerSE](https://www2.iap.fr/users/sousbie/web/html/indexd41d.html) ([Sousbie 2011](https://arxiv.org/abs/1009.4015)) with a 5σ persistence cut and 2 smoothing passes over the 2MRS+GLADE catalogs ([buildFilaments.ts](../tools/filaments/buildFilaments.ts)).
+- **MCPM cosmic web**: the Monte Carlo Physarum Machine ([Elek et al. 2022](https://arxiv.org/abs/2204.01256), implemented in [Polyphorm](https://github.com/CreativeCodingLab/Polyphorm)) fits a swarm of slime-mould-inspired agents to galaxy positions; the accumulated agent trace reconstructs the filamentary density field, an approach introduced for cosmology by [Burchett et al. 2020](https://doi.org/10.3847/2041-8213/ab700c). Skymap renders the SDSS DR17 Cosmic Slime value-added catalog ([Wilde et al. 2023](https://arxiv.org/abs/2301.02719), [VAC page](https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold)): a trace cube fit to ~325k SDSS galaxies between 44 and 476 Mpc, 712×1200×728 voxels at 0.78 Mpc per voxel, downsampled into three tiers and log-compressed at build time ([buildMcpmVolume.ts](../tools/volumes/buildMcpmVolume.ts)).
+- **CF-4 density and CF4++ flow**: a Bayesian reconstruction of the local density and peculiar-velocity fields from Cosmicflows-4++ distances ([Courtois et al. 2025](https://arxiv.org/abs/2502.01308)), a 128³ grid spanning 1000 Mpc in supergalactic coordinates. The density volume renders the mean density cube; the flow overlay renders the mean velocity cube from the same release ([buildFlowField.ts](../tools/flow/buildFlowField.ts)).
 
-- **None**: raw catalogue; apparent over-density is visible near the origin.
-- **Volume-limited**: show only galaxies brighter than a tunable absolute-magnitude threshold `M_lim`. Default `M_lim = −19`, matching SDSS's spectroscopic completeness near 750 Mpc. Honest in the sense that it shows a uniformly-detectable subsample without reweighting anything.
-- **1/V_max alpha**: keep all data, but dim each galaxy by its inverse maximum-detection volume (Schmidt 1968 weighting), applied as alpha instead of a discard.
-- **Schechter LF**: modulate per-distance alpha by the inverse of the expected number density predicted by each survey's Schechter luminosity function. The most aggressive correction; it visually flattens the local cluster into the wider cosmic web.
-- **Angular re-weight (HEALPix)** (default): bin the sky into HEALPix cells crossed with distance shells, per catalogue, and modulate per-galaxy alpha by the ratio of median cell density to local cell density (clamped to 0.3–1.2, asymmetric so sparse cells don't get over-boosted). This is a separate axis from the four modes above. It corrects footprint-shaped non-uniformity (in particular GLADE's pencil-beam "jets," which come from deep SDSS-DR12-only entries dominating outside SDSS's own footprint), and each catalogue is corrected against its own coverage so one survey's footprint can't contaminate another's correction.
+**Modelled**: the procedural Milky Way is a Gaussian-mixture fit to the Freudenreich 1998 COBE/DIRBE near-infrared emissivity model of the Galaxy, built analytically because no imaging of our own galaxy's exterior exists; the warp is currently not modelled ([research notes](research/milky-way/analytic-field.md)). The synthetic fallback catalog shown when no data files are present is random.
 
-A related build-time-only knob: running the catalogue builder with `--glade-isotropic` drops GLADE rows whose only parent catalogue is SDSS-DR12 before the binary files are even written. It removes the same radial jet structures as the angular re-weight mode, at the cost of discarding those rows outright instead of dimming them.
+## The rendering
 
-The flux limits and `(M*, α, φ*)` Schechter parameters are hard-coded per survey in the source modules under `src/data/sources/` (read through `src/data/galaxyCatalog/galaxyCatalogFluxLimits.ts`), based on:
+### Brightness
 
-- SDSS: Blanton et al. 2003 r-band luminosity function; `m_r ≤ 17.77` spectroscopic completeness.
-- 2MRS: Huchra et al. 2012 catalogue; `K_s ≤ 11.75`; Kochanek et al. 2001 K-band luminosity function.
-- GLADE: B-band parent samples (HyperLEDA, GWGC); Norberg et al. 2002 `b_J` Schechter function as the closest available proxy.
+Each galaxy's catalogue magnitude and diameter bake into a physical surface-brightness amplitude, so its light spreads over its actual apparent disk ([galaxySbAmp.ts](../src/utils/galaxy/galaxySbAmp.ts)). Three Settings-panel knobs shape the result: **Galaxy brightness** (a gain on that amplitude, default 5), **Bloom ceiling** (clamps any single galaxy's HDR contribution, default 30), and **Distance falloff** (dims unresolved galaxies by `pow(resolvedFraction, k)`, default k = 0.7, toggleable). The falloff tames the additive glow near the origin, where every sightline stacks hundreds of billboards.
 
-## Per-survey colour indices
+### Colour
 
-Each survey is coloured by its own most-informative photometric pair, since the five magnitude slots in the binary format carry different bands depending on the source. The raw colour difference is normalised to the shader's blue → white → red ramp at upload time, and a per-row K-correction coefficient compensates for redshift band-shifting before the ramp is sampled. Rows whose preferred bands aren't measured render with a fixed mid-ramp tint instead of poisoning the ramp with NaN.
+- **Galaxies**: each survey uses its most informative photometric pair, normalised onto a blue→white→red ramp with a per-row first-order K-correction for redshift band-shifting; rows missing their bands get a neutral mid-ramp tint ([colourIndex.ts](../src/data/galaxyCatalog/colourIndex.ts)). SDSS uses u−g (K = 3.0 per unit z), GLADE B−J (K = 1.0), 2MRS J−K (K = 0, near-infrared colours barely shift at its depth).
+- **Stars**: the Gaia point cloud tints by BP−RP through a piecewise ramp over spectral-class anchors ([starTintFromBpRp.ts](../src/utils/color/starTintFromBpRp.ts)); resolved bodies like the Sun use a blackbody-locus polynomial in temperature ([temperatureToLinearRgb.ts](../src/utils/color/temperatureToLinearRgb.ts)).
 
-| Survey | Colour | Natural range | K per unit z | Why this k                                                       |
-| ------ | ------ | ------------- | ------------ | ---------------------------------------------------------------- |
-| SDSS   | u−g    | 0.5 .. 2.0    | 3.0          | Calibrated against the SDSS spectroscopic sample.                |
-| GLADE  | B−J    | 0.5 .. 3.5    | 1.0          | Optical–NIR pair; B redshifts out of band slowly.                |
-| 2MRS   | J−K    | 0.7 .. 1.1    | 0.0          | NIR colours are nearly redshift-invariant in 2MRS's z ≲ 0.1 box. |
+### From dot to galaxy
 
-### K-correction
+A galaxy hands off through four tiers as its apparent size grows, so the network stays quiet until an object earns the fetch ([galaxyLodBands.ts](../src/data/galaxyLodBands.ts)):
 
-As redshift increases, a fixed observed photometric band samples progressively bluer rest-frame light: a galaxy's u−g colour at z=0.2 measures different rest-frame light than the same galaxy's u−g at z=0. The K-correction coefficient above is a first-order linear approximation of that shift, applied per row before the colour ramp is sampled, so a galaxy's rendered hue tracks its intrinsic colour instead of its redshift. 2MRS's K=0 reflects that near-infrared colours are close to redshift-invariant over the survey's shallow depth; SDSS's optical u−g band shifts fastest and gets the largest coefficient.
+- below 8 px: a point sprite
+- 8–14 px: crossfade into a procedural disk impostor, oriented by the catalogue's axis ratio and position angle
+- 24–40 px: crossfade into a real thumbnail (SDSS DR18, or DSS for the rest of the sky), cached in a 256-slot LRU atlas
+- 120–160 px, famous galaxies only: crossfade into a dedicated high-resolution texture
 
-## Galaxy level of detail
+Each crossfade is a smoothstep whose two sides sum to one, so total brightness holds steady through the handoff.
 
-Between the point-cloud dot and a downloaded thumbnail, skymap draws each galaxy through three passes that hand off as apparent size crosses fixed thresholds, chosen so the network stays quiet until a galaxy is worth the round trip.
+### One HDR frame
 
-**Below 8 px apparent size**: a screen-aligned billboard dot, coloured by the per-survey colour index above. Most on-screen galaxies are in this state at any given moment.
+Every pass draws into a single `rgba16float` HDR target; one composite pass tone-maps the frame with a runtime-selectable curve: Linear, Reinhard, Asinh (Lupton-style), Gamma 2.0, or ACES ([toneMapCurve.ts](../src/data/toneMapCurve.ts)).
 
-**8–24 px**: a procedural 3D-oriented disk impostor, rendered entirely on the GPU with no network fetch and no atlas slot. Each disk is a world-space quad oriented by the galaxy's catalogue axis ratio (b/a → inclination via cos i) and position angle (east of north); foreshortening falls out of the perspective projection naturally as the camera orbits. The shape is a soft elliptical disk with a brighter Gaussian bulge in the middle and an exponential falloff outward, hued from the same colour-index ramp the dot pass uses so a galaxy's procedural disk matches its companion dot's colour exactly.
+## Corrections welcome
 
-The dot-to-disk handoff crossfades over an 8–14 px band: a `t²(3 − 2t)` smoothstep ramps the disk in while the dot fades out by the complementary curve `1 − t²(3 − 2t)`. The two curves sum to exactly 1.0 across the band, so the per-galaxy HDR contribution stays constant through the transition (no double-bright donut at the boundary). Above 14 px the procedural disk is at full alpha.
-
-**Above 24 px**: a real thumbnail, crossfading in over a 24–40 px band, fetched from SDSS DR18 ImgCutout (the primary source, covering roughly a third of the sky) or CDS hips2fits (the all-sky fallback: lower resolution, monochrome DSS POSS-II red, but CORS-safe and covering every direction). Thumbnails live in a single 2048×2048 RGBA8 atlas of 128×128-pixel slots; when the atlas is full, the least-recently-visible slot is evicted. A priority fetch queue caps concurrency at 4 downloads and serves the largest-on-screen pending galaxies first. Each quad combines a corner-rounding radial mask with a luminance-based alpha gate that turns dark sky pixels transparent, so the JPEG square doesn't read as a hard rectangle against space.
-
-Curated famous galaxies get a fourth tier: past 120 px apparent size, the shared atlas tile crossfades into a dedicated high-resolution texture array, so nearby showpieces like M31 stay sharp at close approach.
-
-The middle pass exists because fetching a thumbnail for every galaxy past a few pixels would overwhelm the SDSS/CDS endpoints and thrash the atlas. The procedural disk carries "this is a galaxy with a bulge and a tilt" down to 8 px without touching the network; thumbnails are reserved for the few galaxies a user has actually zoomed in on.
+This page is a best effort to describe real astronomy faithfully. If you spot an error, a stale number, a misattributed dataset, or a better way to put any of it, please open an issue or a pull request; corrections from people who work with this data are especially appreciated.
