@@ -189,6 +189,14 @@ Planet/moon/ring textures and Earth's imagery are gitignored raw pulls with comm
 
 Earth's whole-globe base texture and its surface tile pyramid are two publications of one Blue Marble month (a 21600×10800 equirect and eight 21600×21600 quadrants, ~421 MB). The month is chosen once in [`bmngVintage.ts`](../tools/utils/io/bmngVintage.ts) and every registry path, upstream URL, and attribution string reads it from there. The tile layer falls back to the base outside its baked window, so a vintage split between the two would draw a visible seasonal seam along the tile frontier.
 
+### Earth surface tile pyramid
+
+The bake emits `public/data/images/earth-tiles/v3/surface/<z>/<x>/<y>.webp`: 512 px lossy WebP tiles whose alpha channel doubles as the land mask, plus two sidecars, `index.txt` (one path per line) and `manifest.json` (the band list the runtime reads). The manifest is written after the tiles, so an interrupted bake leaves no pointer to half-baked data ([`buildEarthTiles.ts`](../tools/textures/buildEarthTiles.ts)).
+
+The tiling is equirectangular: level `z` spans `512 << z` texels of width, i.e. `2^z` columns of tiles ([`earthTileParams.ts`](../src/data/bodies/earthTileParams.ts)). The whole-globe base textures sit on the same ladder (small tier z2, medium z3, large z4), and the runtime planner only streams tiles finer than the session's base level. Two bands fill the pyramid: Blue Marble globally at z3–z7, and EOX s2cloudless regional insets at z8–z13, harvested at z13 for the named boxes in [`eoxRegions.ts`](../tools/fetch/eoxRegions.ts), downsampled for the coarser levels, and underfilled from Blue Marble at box margins. Refinement past z7 happens only inside a region box.
+
+At runtime [`earthTileSubsystem.ts`](../src/services/engine/subsystems/earthTileSubsystem.ts) fetches the manifest (any failure degrades to the base globe, never an error), then streams tiles through a 256-slot LRU atlas (8192 px, 512 px slots) at 4 concurrent fetches. On R2 the tiles are immutable and bulk-uploaded via rclone; any re-bake that changes pixels bumps the `TILE_PREFIX` version, and the day-cached manifest uploads last ([`syncR2.ts`](../tools/deploy/syncR2.ts), [DEPLOY.md](DEPLOY.md)). Earth tiles never appear in the data `manifest.json`, so `npm run fetch-data` skips them by construction; dev serves whatever `public/data/images/earth-tiles/` holds locally.
+
 ## Data-refresh re-run orders
 
 Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (a worktree's `data/` is its own; see the deploy doc). The sync step is the deploy path, covered in [docs/DEPLOY.md](DEPLOY.md).
