@@ -43,29 +43,37 @@ Three kinds of content share the scene. Knowing which is which is the honest cor
 
 ## The rendering
 
-### Brightness
-
-Each galaxy's catalogue magnitude and diameter bake into a physical surface-brightness amplitude, so its light spreads over its actual apparent disk ([galaxySbAmp.ts](../src/utils/galaxy/galaxySbAmp.ts)). Three Settings-panel knobs shape the result: **Galaxy brightness** (a gain on that amplitude, default 5), **Bloom ceiling** (clamps any single galaxy's HDR contribution, default 30), and **Distance falloff** (dims unresolved galaxies by `pow(resolvedFraction, k)`, default k = 0.7, toggleable). The falloff tames the additive glow near the origin, where every sightline stacks hundreds of billboards.
-
-### Colour
-
-- **Galaxies**: each survey uses its most informative photometric pair, normalised onto a blue→white→red ramp with a per-row first-order K-correction for redshift band-shifting; rows missing their bands get a neutral mid-ramp tint ([colourIndex.ts](../src/data/galaxyCatalog/colourIndex.ts)). SDSS uses u−g (K = 3.0 per unit z), GLADE B−J (K = 1.0), 2MRS J−K (K = 0, near-infrared colours barely shift at its depth).
-- **Stars**: the Gaia point cloud tints by BP−RP through a piecewise ramp over spectral-class anchors ([starTintFromBpRp.ts](../src/utils/color/starTintFromBpRp.ts)); resolved bodies like the Sun use a blackbody-locus polynomial in temperature ([temperatureToLinearRgb.ts](../src/utils/color/temperatureToLinearRgb.ts)).
-
-### From dot to galaxy
-
-A galaxy hands off through four tiers as its apparent size grows, so the network stays quiet until an object earns the fetch ([galaxyLodBands.ts](../src/data/galaxyLodBands.ts)):
-
-- below 8 px: a point sprite
-- 8–14 px: crossfade into a procedural disk impostor, oriented by the catalogue's axis ratio and position angle
-- 24–40 px: crossfade into a real thumbnail (SDSS DR18, or DSS for the rest of the sky), cached in a 256-slot LRU atlas
-- 120–160 px, famous galaxies only: crossfade into a dedicated high-resolution texture
-
-Each crossfade is a smoothstep whose two sides sum to one, so total brightness holds steady through the handoff.
-
 ### One HDR frame
 
-Every pass draws into a single `rgba16float` HDR target; one composite pass tone-maps the frame with a runtime-selectable curve: Linear, Reinhard, Asinh (Lupton-style), Gamma 2.0, or ACES ([toneMapCurve.ts](../src/data/toneMapCurve.ts)).
+Every layer draws into a single `rgba16float` HDR accumulation target, and one composite pass tone-maps the frame with a runtime-selectable curve: Linear, Reinhard, Asinh (Lupton-style), Gamma 2.0, or ACES ([toneMapCurve.ts](../src/data/toneMapCurve.ts)). A five-level mip-pyramid bloom (soft-threshold prefilter, downsample chain, additive tent-filter upsample) feeds glow back before tone-mapping ([bloomPyramid.ts](../src/services/gpu/passes/bloomPyramid.ts)). Two precision techniques hold the 10⁷ to 10²⁶ m range together: reversed-Z depth for the near-Earth pass, whose extreme near/far ratio would exhaust a classic depth buffer ([slabs.ts](../src/services/engine/frame/slabs.ts)), and a floating origin in which camera matrices are composed in float64 relative to a render origin and narrowed to float32 only at upload. On HDR-capable displays the swap chain itself switches to extended dynamic range ([applySwapFormat.ts](../src/services/engine/phases/applySwapFormat.ts)).
+
+### Galaxies
+
+Each galaxy's catalogue magnitude and diameter bake into a physical surface-brightness amplitude, so its light spreads over its actual apparent disk ([galaxySbAmp.ts](../src/utils/galaxy/galaxySbAmp.ts)); Settings knobs scale it (brightness gain, a bloom ceiling, and a `pow(resolvedFraction, k)` falloff that tames the additive glow near the origin). Colour comes from each survey's most informative photometric pair on a blue→white→red ramp with a first-order K-correction: SDSS u−g, GLADE B−J, 2MRS J−K ([colourIndex.ts](../src/data/galaxyCatalog/colourIndex.ts)). A galaxy passes through four LOD tiers as it grows on screen ([galaxyLodBands.ts](../src/data/galaxyLodBands.ts)): a point sprite below 8 px, a procedural disk impostor from 8–14 px (oriented by the catalogue's axis ratio and position angle), a real SDSS/DSS thumbnail from a 256-slot LRU atlas at 24–40 px, and for famous galaxies a high-resolution texture from 120 px. Each crossfade is a smoothstep whose sides sum to one, so brightness holds steady through the handoffs.
+
+### Stars and the Sun
+
+The star bin is an octree walked best-first each frame: subtrees too small on screen collapse into flux-weighted aggregate points drawn to a half-resolution glow target, while resolved leaves draw as full-resolution additive sprites ([walkStarOctreeCut.ts](../src/services/gpu/renderers/starCatalog/walkStarOctreeCut.ts)). Flux follows the Pogson relation `10^(−0.4·M)` anchored at 10 pc with inverse-square dimming, run through a camera-distance exposure ramp so both the night sky and the whole galaxy stay legible ([starPhotometry.wesl](../src/services/gpu/shaders/lib/starPhotometry.wesl), [starExposureRamp.ts](../src/services/gpu/renderers/starCatalog/starExposureRamp.ts)). A star whose disc exceeds 4 px becomes a true-scale emissive sphere ([partitionStarsByResolution.ts](../src/services/engine/frame/partitionStarsByResolution.ts)); the Sun is simply the nearest such star, and the bloom threshold is calibrated so its resolved disc blooms. Point tint comes from BP−RP through spectral-class anchors ([starTintFromBpRp.ts](../src/utils/color/starTintFromBpRp.ts)); resolved spheres use a blackbody-locus polynomial in temperature ([temperatureToLinearRgb.ts](../src/utils/color/temperatureToLinearRgb.ts)).
+
+### Milky Way
+
+The procedural Milky Way is not raymarched: its disc, bulge, arm, dust, and HII components are instanced Gaussian ellipsoids drawn as camera-facing quads whose fragments evaluate the Gaussian along the view ray in closed form ([fieldSplat](../src/services/gpu/shaders/milkyWay/field/fieldSplat/fragment.wesl)). Emission accumulates additively into a reduced-resolution target; dust draws as a separate multiplicative pass, applying per-channel transmittance to everything behind it ([milkyWayCloudRenderer.ts](../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer.ts)). The analytic-galaxy approach was developed in its own workbench, deployed at [/galaxy/](https://skymap.rulkens.com/galaxy/) ([tools/galaxy-renderer/](../tools/galaxy-renderer/)), which renders full procedural Hubble-sequence galaxies with the same closed-form machinery.
+
+### Solar system
+
+Bodies render as ray-traced analytic spheres, flat-lit until their surface texture streams in ([planet](../src/services/gpu/shaders/bodies/planet/fragment.wesl), [texturedBody](../src/services/gpu/shaders/bodies/texturedBody/fragment.wesl)). Earth gets the full stack: a cubesphere with PBR albedo, roughness, ocean mask and normal relief, night lights as emission, a cloud shell that shadows the ground, and surface tiles streamed by screen density from a quadtree cut ([cutSurfaceTiles.ts](../src/utils/scene/cutSurfaceTiles.ts)). Atmospheres are physically based and not Earth-only: nine bodies carry constituent tables (per-channel scattering and absorption, Rayleigh or Henyey-Greenstein phase) rendered as a multiply-then-add shell pair over precomputed transmittance, multiple-scattering, and sky-view LUTs in the style of Hillaire 2020 ([atmosphereParams.ts](../src/data/bodies/atmosphereParams.ts)). Saturn's rings are a single-scattering Chandrasekhar slab with backscatter phase and an analytic planet shadow ([ring](../src/services/gpu/shaders/bodies/ring/fragment.wesl)). Moons too small to resolve draw as glints scaled by apparent size, albedo, and illuminated phase. Orbit trails are screen-space ribbons whose fragments evaluate the orbit's conic analytically, with a brightness lobe trailing the body's live position ([orbitTrail](../src/services/gpu/shaders/bodies/orbitTrail/fragment.wesl)). Axial rotation follows the IAU rotation models (Archinal et al. 2018) on the simulation clock ([rotationElements.ts](../src/data/bodies/rotationElements.ts)).
+
+### Large-scale overlays
+
+Filaments and constellation figures draw as instanced screen-aligned quad segments blended additively, since native line primitives are locked to one pixel ([filamentRenderer.ts](../src/services/gpu/renderers/filaments/filamentRenderer.ts), [constellationRenderer.ts](../src/services/gpu/renderers/constellations/constellationRenderer.ts)); constellation endpoints resolve to real catalogue stars at build time. Structure markers are world-sized halo-plus-ring billboards scaled by each structure's physical radius; voids draw only the ring, since a halo would imply matter where the structure is defined by absence ([structureMarkerRenderer.ts](../src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts)). The zone of avoidance is a reduced-resolution analytic raymarch of a galactic-latitude wedge, captioned in curved MSDF lettering ([band.wesl](../src/services/gpu/shaders/zoneOfAvoidance/band.wesl)). The horizon shell marks the particle horizon at 14.3 Gpc as a Fresnel-rimmed sphere evaluated analytically per fragment ([horizonShellRenderer.ts](../src/services/gpu/renderers/horizonShell/horizonShellRenderer.ts)).
+
+### Volumes and flow
+
+The MCPM and CF-4 cubes raymarch front-to-back in 128 jittered steps at half resolution, then upsample into HDR; each field carries its own palette (inferno for MCPM, coolwarm for CF-4) and intensity, contrast, trim, density, and exposure controls ([scalarVolume](../src/services/gpu/shaders/scalarVolume/fragment.wesl)). The in-app MCPM layer renders the pre-baked trace cube; the full MCPM simulation, a Woodcock-tracking volumetric path tracer, lives in its own workbench, deployed at [/mcpm/](https://skymap.rulkens.com/mcpm/) ([tools/mcpm-workbench/](../tools/mcpm-workbench/)). The flow overlay advects tracer particles through the CF4++ velocity texture in a compute pass and draws their trails as additive screen-space ribbons coloured by speed ([compute.wesl](../src/services/gpu/shaders/flow/compute.wesl)).
+
+### Labels and picking
+
+Text renders as multi-channel signed distance fields from a multi-font atlas array, including the arc-following curved lettering on the zone of avoidance ([msdf.wesl](../src/services/gpu/shaders/lib/msdf.wesl)). Picking runs a parallel integer render pass: every pickable layer writes a packed source-plus-index id into an `r32uint` target, so one readback identifies whatever is under the cursor.
 
 ## Corrections welcome
 
