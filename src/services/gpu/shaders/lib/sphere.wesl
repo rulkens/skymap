@@ -416,20 +416,27 @@ struct CloudShellUniforms {
 //
 // 'camPosLocal' (the camera in atmosphere-top-radius units, sphere centre at the
 // origin) is the view vector the in-scatter integral needs, which the lit prefix
-// does not carry.
+// does not carry. 'invMvp' is the CPU-side inverse of 'mvp' (computed in f64,
+// narrowed at the upload boundary like 'mvp' itself) -- read only by the
+// inside-shell fragment entry points to unproject a screen position back into
+// the shell's local frame, substituting for the mesh-interpolated local
+// position the outside path gets from its vertex stage. It is packed for
+// every body regardless of inside/outside: one struct, one packer, no
+// separate inside-only buffer.
 //
 // ## Byte layout (uniform address space)
 //
-//   offset   0..63:  mvp           (mat4x4<f32>, column-major, 64 bytes)
-//   offset  64..75:  sunDirLocal   (vec3<f32> -- 16-byte aligned at 64)
-//   offset  76..79:  bottomRadius  (f32 -- fills sunDirLocal's 4th slot)
-//   offset  80..91:  camPosLocal   (vec3<f32> -- 16-byte aligned at 80)
-//   offset  92..95:  _pad1         (f32 -- camPosLocal's trailing slot, zeroed)
-//   offset  96..99:  exposure       (f32 -- in-scatter intensity scale)
-//   offset 100..103: ringInnerRatio (f32 -- ring inner / atmosphere top; 0 = none)
-//   offset 104..107: ringOuterRatio (f32 -- ring outer / atmosphere top; 0 = none)
-//   offset 108..111: _pad0          (f32 -- rounds the struct to 112 / 16-byte)
-//   total: 112 bytes.
+//   offset   0..63:   mvp           (mat4x4<f32>, column-major, 64 bytes)
+//   offset  64..75:   sunDirLocal   (vec3<f32> -- 16-byte aligned at 64)
+//   offset  76..79:   bottomRadius  (f32 -- fills sunDirLocal's 4th slot)
+//   offset  80..91:   camPosLocal   (vec3<f32> -- 16-byte aligned at 80)
+//   offset  92..95:   _pad1         (f32 -- camPosLocal's trailing slot, zeroed)
+//   offset  96..99:   exposure       (f32 -- in-scatter intensity scale)
+//   offset 100..103:  ringInnerRatio (f32 -- ring inner / atmosphere top; 0 = none)
+//   offset 104..107:  ringOuterRatio (f32 -- ring outer / atmosphere top; 0 = none)
+//   offset 108..111:  _pad0          (f32 -- rounds the 112-byte prefix to 16-byte)
+//   offset 112..175:  invMvp         (mat4x4<f32>, column-major, 16-byte aligned)
+//   total: 176 bytes.
 //
 // The ring ratios express the host body's ring annulus in this mesh's LOCAL
 // units (atmosphere top == 1), so the shell fragment can ask 'does the ring
@@ -437,7 +444,7 @@ struct CloudShellUniforms {
 // frame. 'ringOuterRatio == 0' is the no-ring sentinel -- the same data-gate
 // 'TexturedBodyUniforms' uses -- so every ringless body short-circuits.
 //
-// The CPU side uploads 28 f32s. The single source of truth for that packing is
+// The CPU side uploads 44 f32s. The single source of truth for that packing is
 // 'utils/gpu/packAtmosphereUniforms.ts', which reuses 'packLitBodyUniforms' for
 // the shared 80-byte prefix.
 
@@ -451,6 +458,7 @@ struct AtmosphereUniforms {
   ringInnerRatio: f32,
   ringOuterRatio: f32,
   _pad0: f32,
+  invMvp: mat4x4<f32>,
 };
 
 // ── clip_from_local ──────────────────────────────────────────────────

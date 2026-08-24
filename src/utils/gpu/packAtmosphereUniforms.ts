@@ -32,7 +32,7 @@
  * sphere centre at the origin — the view vector the in-scatter integral needs,
  * which the lit prefix does not carry.
  *
- * ## Byte layout (uniform address space) — 112 bytes / 28 f32
+ * ## Byte layout (uniform address space) — 176 bytes / 44 f32
  *
  *   f32 0..15  (byte   0..63):  mvp (column-major mat4x4)
  *   f32 16..18 (byte  64..75):  sunDirLocal (vec3, 16-byte aligned)
@@ -42,7 +42,8 @@
  *   f32 24     (byte  96..99):  exposure
  *   f32 25     (byte 100..103): ringInnerRatio (ring inner / atmosphere top; 0 = none)
  *   f32 26     (byte 104..107): ringOuterRatio (ring outer / atmosphere top; 0 = none)
- *   f32 27     (byte 108..111): _pad0 (zeroed; rounds struct to 112 / 16-byte)
+ *   f32 27     (byte 108..111): _pad0 (zeroed; rounds the 112-byte prefix to 16-byte)
+ *   f32 28..43 (byte 112..175): invMvp (column-major mat4x4, 16-byte aligned)
  *
  * The ring ratios express the host body's ring annulus in the proxy's LOCAL
  * units (atmosphere top = 1), so the shell fragment can test whether the ring
@@ -51,7 +52,13 @@
  * opacity by the ring's blocking alpha). `ringOuterRatio == 0` is the no-ring
  * sentinel — the same data-gate `packTexturedBodyUniforms` uses.
  *
- * @param mvp            16-element column-major MVP (from `composeBodyMvp`).
+ * `invMvp` is the inverse of `mvp`, read only by the inside-shell fragment
+ * entry points (unprojecting a screen position back into the shell's local
+ * frame) but packed for every body regardless — one struct, one packer, no
+ * inside-only second buffer.
+ *
+ * @param mvp            16-element column-major MVP (from `composeBodyMvp`, narrowed).
+ * @param invMvp         16-element column-major inverse of `mvp` (narrowed).
  * @param sunDirLocal    Sun direction in the body's local frame.
  * @param camPosLocal    Camera position in atmosphere-top-radius units, centre at origin.
  * @param bottomRadius   Ground/atmosphere-top radius ratio (`planetRadiusKm / atmosphereTopKm`), ∈ (0,1).
@@ -64,11 +71,12 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of `AtmosphereUniforms` — 16 mvp + 4 (sun+bottom) + 4 (cam+irr) +
- *  exposure + 2 ring ratios + 1 pad. */
-export const ATMOSPHERE_UNIFORM_FLOATS = 28;
+ *  exposure + 2 ring ratios + 1 pad + 16 invMvp. */
+export const ATMOSPHERE_UNIFORM_FLOATS = 44;
 
 export function packAtmosphereUniforms(
   mvp: Float32Array,
+  invMvp: Float32Array,
   sunDirLocal: Readonly<Vec3>,
   camPosLocal: Readonly<Vec3>,
   bottomRadius: number, // = planetRadiusKm / atmosphereTopKm
@@ -88,5 +96,6 @@ export function packAtmosphereUniforms(
   out[25] = ringInnerRatio; // byte 100
   out[26] = ringOuterRatio; // byte 104
   // out[27] (bytes 108..111) stays zero — the tail pad rounding to 112.
+  out.set(invMvp.subarray(0, 16), 28); // f32 28..43, byte 112..175
   return out;
 }

@@ -64,6 +64,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
+import { mat4d } from 'wgpu-matrix';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -105,6 +106,11 @@ export const atmosphereShellLayer: ContentLayer = {
         atmosphereTopMpc,
         orientation,
       );
+      // Inverted from the UN-narrowed f64 mvp, mirroring labelLeaderLine.ts's
+      // mat4d.inverse(m) — dst-last, fresh Float64Array. Narrowing mvp to f32
+      // first would reintroduce the per-element rounding composeBodyMvp's
+      // header warns against, here for a different consumer.
+      const invMvp = mat4d.inverse(mvp);
       // camLocal/sun destructured off the entry — atmosphereDrawList derives both
       // once per body now (spec §5a hoist), so this draw and the sky-view bake read
       // the same pair instead of each re-deriving it.
@@ -131,6 +137,7 @@ export const atmosphereShellLayer: ContentLayer = {
         packAtmosphereUniforms(
           // Narrow here, at the GPU uniform write — composeBodyMvp returns f64.
           narrowMat4(mvp),
+          narrowMat4(invMvp),
           sun,
           camLocal,
           bottomRadius,

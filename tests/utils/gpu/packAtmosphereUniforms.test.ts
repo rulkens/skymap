@@ -28,6 +28,11 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 const MVP = new Float32Array(16);
 for (let i = 0; i < 16; i++) MVP[i] = i + 1;
 
+// A second recognisable matrix — 17..32, distinct from MVP's 1..16 — so a
+// swap between the two 16-float blocks is caught.
+const INV_MVP = new Float32Array(16);
+for (let i = 0; i < 16; i++) INV_MVP[i] = i + 17;
+
 // Distinct, non-unit vectors + scalars so a mis-mapped component perturbs a
 // byte the check would catch, and no two sentinels are equal (swap-proof).
 // Dyadic fractions — exactly representable in float32, so `toBe` stays exact
@@ -40,9 +45,10 @@ const RING_INNER = 1.203125; // ring inner / atmosphere top (> 1: outside the sh
 const RING_OUTER = 2.28125; // ring outer / atmosphere top
 
 describe('AtmosphereUniforms byte offsets', () => {
-  it('packs a 112-byte / 28-f32 record with bottomRadius filling the vec3 tail @76', () => {
+  it('packs a 176-byte / 44-f32 record with invMvp at offset 112', () => {
     const rec = packAtmosphereUniforms(
       MVP,
+      INV_MVP,
       SUN_DIR,
       CAM_POS,
       BOTTOM_RADIUS,
@@ -51,8 +57,8 @@ describe('AtmosphereUniforms byte offsets', () => {
       RING_OUTER,
     );
     expect(rec.length).toBe(ATMOSPHERE_UNIFORM_FLOATS);
-    expect(rec.length).toBe(28); // 112 bytes
-    expect(rec.byteLength).toBe(112);
+    expect(rec.length).toBe(44); // 176 bytes
+    expect(rec.byteLength).toBe(176);
 
     // mvp — all 16 floats verbatim at bytes 0..63.
     for (let i = 0; i < 16; i++) expect(rec[i]).toBe(MVP[i]);
@@ -86,5 +92,9 @@ describe('AtmosphereUniforms byte offsets', () => {
 
     // Trailing pad zeroed — rounds the struct to 112 / 16-byte alignment.
     expect(rec[27]).toBe(0); // byte 108
+
+    // invMvp — all 16 floats verbatim at bytes 112..175, distinct from MVP's
+    // sentinel so a swap of the two matrix blocks is caught.
+    for (let i = 0; i < 16; i++) expect(rec[28 + i]).toBe(INV_MVP[i]);
   });
 });
