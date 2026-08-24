@@ -16,7 +16,10 @@ read on demand via its citations: [cesium-notes.md](cesium-notes.md),
 Related: [`docs/grill-sessions/earth-local-slab-2026-08-21.md`](../../grill-sessions/earth-local-slab-2026-08-21.md)
 is the paused predecessor design (camera-rebased, Earth-fixed f64 anchor, km/m units)
 that this pivot design absorbs — DESIGN-INPUT.md treats its local-frame conclusion
-as a given.
+as a given. [probe-findings.md](probe-findings.md) — measured feel-probe results on the
+pre-pivot camera; empirical confirmation of DESIGN-INPUT.md §1's state-vector verdict
+(rolled horizon, nadir heading degeneracy, latitude-dependent sky ceiling — all the
+same missing thing).
 
 Caveat: `skymap-seam-map.md`'s `file:line` references are a snapshot of branch
 `earth-surface-navigation` as of this date, not necessarily `main`.
