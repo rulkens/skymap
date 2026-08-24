@@ -11,11 +11,19 @@
  * is a FOLD guard: the angle is measured with `acos`, so past the zenith it
  * would read smaller again and the drag would reverse.
  *
- * What the user meets FIRST is the caller's `PITCH_LIMIT` refusal, at
- * `π/2 + frame latitude`: tilting up swings the aim toward the frame pole, and
- * no yaw/pitch pose can look through it. So the sky is reachable by exactly the
- * eye's frame latitude above level — everything, at the pole; nothing, on the
- * frame equator. Its cure is the camera rewrite, not another clamp here.
+ * Two things this probe CANNOT deliver, both measured, both the rewrite's to
+ * fix (the reasoning is in the fix-round section of `fw-h-report.md`):
+ *
+ *  - A level horizon. Screen-up rolls about `frameUp(cam.upBasis)`, the
+ *    orientation frame's pole, so a tilted view is rolled by up to 90° (dead
+ *    east from the frame equator; 34° over Denmark). Only the standpoint's own
+ *    vertical levels it — and that vector is degenerate looking straight down,
+ *    which is where surface navigation lives, so it needs a HEADING held as
+ *    camera state. The produced pose has no such field, and the render camera
+ *    is rebuilt from the pose every frame.
+ *  - A latitude-independent sweep. `PITCH_LIMIT` refuses an aim within 0.57°
+ *    of the frame pole; that is a constraint on the POSE, untouched by any
+ *    up-vector choice, and it caps the sweep at `π/2 + frame latitude`.
  */
 
 /** Probe feel only: ~90° of tilt per 300 px of drag. */

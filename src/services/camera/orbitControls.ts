@@ -496,11 +496,14 @@ export function attachOrbitControls(
       const uz = -nz / nlen;
 
       // Each axis is admitted on its own, so a tilt pinned at its ceiling still
-      // lets the head turn. The ceiling is where the aim nears the frame pole:
-      // the screen basis is `aim × upRef`, which REVERSES across it — the tilt
-      // walks backwards and the horizon flips end over end. `PITCH_LIMIT` alone
-      // stops a degree short, deep inside the unusable zone; 0.1 rad (5.7°) is
-      // measured to be clear of it.
+      // lets the head turn. Both gestures are built on the STANDPOINT's frame,
+      // but the ceiling is not: it is where the aim nears the ORIENTATION
+      // frame's pole, because screen-up still rolls about that pole and the
+      // basis `aim × upRef` reverses across it — the tilt walks backwards and
+      // the horizon flips end over end. `PITCH_LIMIT` alone stops a degree
+      // short, deep inside the unusable zone; 0.1 rad (5.7°) is measured clear.
+      // That the ceiling depends on where you stand is the probe's finding, not
+      // a bug to patch here — `surfaceTiltAngle`'s header has the boundary.
       let aim: Vec3 = [forwardScratch[0], forwardScratch[1], forwardScratch[2]];
       let yawOut = cam.yaw;
       let pitchOut = cam.pitch;
