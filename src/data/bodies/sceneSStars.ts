@@ -20,6 +20,7 @@
 
 import { S_STAR_SEEDS } from './sStarElements';
 import { sStarAppearance } from './sStarAppearance';
+import { SCALE_UNITS } from '../scaleUnits';
 import { SOLAR_RADIUS_KM } from './solarRadiusKm';
 import { temperatureToLinearRgb } from '../../utils/color/temperatureToLinearRgb';
 import type { StarBody } from '../../@types/scene/StarBody';
@@ -31,6 +32,6 @@ export const SCENE_S_STARS: readonly StarBody[] = S_STAR_SEEDS.map((seed) => {
     label: seed.label,
     absMag,
     color: temperatureToLinearRgb(temperatureK),
-    radiusKm: radiusSolar * SOLAR_RADIUS_KM,
+    radiusM: radiusSolar * SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
   };
 });

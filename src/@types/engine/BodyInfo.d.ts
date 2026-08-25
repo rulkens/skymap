@@ -14,7 +14,7 @@
  *
  * `positionMpc` stays a `Vec3` (never a raw tuple) so it speaks the one absolute
  * heliocentric, f64-valued frame every other position site uses, letting the
- * focus button pivot without re-deriving xyz; `radiusKm` sets the framing
+ * focus button pivot without re-deriving xyz; `radiusM` sets the framing
  * distance.
  */
 
@@ -26,6 +26,6 @@ export type BodyInfo = {
   readonly id: string;
   readonly label: string;
   readonly positionMpc: Vec3;
-  readonly radiusKm: number;
+  readonly radiusM: number;
   readonly orbit?: BodyOrbitInfo;
 };

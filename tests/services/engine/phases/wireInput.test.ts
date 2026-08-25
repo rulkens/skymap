@@ -295,7 +295,7 @@ describe('wireInput', () => {
           id: 'earth',
           label: 'Earth',
           positionMpc: [0, 0, 0],
-          radiusKm: 6371,
+          radiusM: 6371000,
         },
       }),
     );

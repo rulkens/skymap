@@ -1,6 +1,6 @@
 /**
  * bodyTextureLoadRadius — the per-body camera distance (Mpc) at which a body's
- * surface texture is demanded, derived from that body's seeded `radiusKm`.
+ * surface texture is demanded, derived from that body's seeded `radiusM`.
  *
  * ### Why per-body, derived from the seed
  *
@@ -61,5 +61,5 @@ const LOAD_RADIUS_BODY_RADII = 1e4;
 
 export function loadRadiusMpc(id: BodyTextureId | RingTextureId): number {
   const body = findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureLoadRadius');
-  return body.radiusKm * SCALE_UNITS.KM_TO_MPC * LOAD_RADIUS_BODY_RADII;
+  return body.radiusM * SCALE_UNITS.M_TO_MPC * LOAD_RADIUS_BODY_RADII;
 }

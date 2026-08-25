@@ -34,23 +34,23 @@ const FOV_Y_RAD = Math.PI / 3;
 const CAM: Vec3 = [0, 0, 0];
 
 /**
- * A body of the given radius sitting `distanceKm` down +x from the camera at the
- * origin. `distanceKm = 5·radiusKm` subtends ~0.4 rad (hundreds of px, firmly
- * resolved); `distanceKm = 1 AU` subtends ~0.01 px (deep sub-pixel glint).
+ * A body of the given radius sitting `distanceM` down +x from the camera at the
+ * origin. `distanceM = 5·radiusM` subtends ~0.4 rad (hundreds of px, firmly
+ * resolved); `distanceM = 1 AU` subtends ~0.01 px (deep sub-pixel glint).
  */
-function bodyAt(id: string, radiusKm: number, distanceKm: number): SeededPlanet {
+function bodyAt(id: string, radiusM: number, distanceM: number): SeededPlanet {
   return {
     id,
     label: id,
-    positionMpc: [distanceKm * SCALE_UNITS.KM_TO_MPC, 0, 0],
-    radiusKm,
+    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+    radiusM,
     albedo: [0.5, 0.5, 0.5],
     orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   };
 }
 
-const CLOSE = (radiusKm: number) => radiusKm * 5; // resolved (~hundreds of px)
-const AU_KM = SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.KM_TO_MPC; // 1 AU in km → deep sub-pixel
+const CLOSE = (radiusM: number) => radiusM * 5; // resolved (~hundreds of px)
+const AU_M = SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.M_TO_MPC; // 1 AU in m → deep sub-pixel
 
 function partition(bodies: readonly SeededPlanet[], resident: (id: string) => boolean) {
   // The apparent-size test reads each body's position from the per-frame snapshot
@@ -75,10 +75,10 @@ function partition(bodies: readonly SeededPlanet[], resident: (id: string) => bo
 describe('partitionBodiesByPresentation', () => {
   it('is disjoint and covering — every body lands in exactly one bucket', () => {
     const bodies = [
-      bodyAt('mars', 3390, CLOSE(3390)), // resolved, registry
-      bodyAt('titan', 2575, CLOSE(2575)), // resolved, not registry
-      bodyAt('jupiter', 69911, AU_KM), // sub-pixel glint
-      bodyAt('io', 1822, CLOSE(1822)), // resolved, registry
+      bodyAt('mars', 3390000, CLOSE(3390000)), // resolved, registry
+      bodyAt('titan', 2575000, CLOSE(2575000)), // resolved, not registry
+      bodyAt('jupiter', 69911000, AU_M), // sub-pixel glint
+      bodyAt('io', 1822000, CLOSE(1822000)), // resolved, registry
     ];
     const { glints, flat, textured } = partition(bodies, () => true);
 
@@ -90,7 +90,7 @@ describe('partitionBodiesByPresentation', () => {
   });
 
   it('routes a resolved registry body to textured iff its texture is resident', () => {
-    const mars = bodyAt('mars', 3390, CLOSE(3390));
+    const mars = bodyAt('mars', 3390000, CLOSE(3390000));
 
     const resident = partition([mars], (id) => id === 'mars');
     expect(resident.textured).toEqual([mars]);
@@ -102,8 +102,8 @@ describe('partitionBodiesByPresentation', () => {
   });
 
   it('keeps a resolved non-registry body (Titan, an irregular moon) flat even when residency says yes', () => {
-    const titan = bodyAt('titan', 2575, CLOSE(2575));
-    const phobos = bodyAt('phobos', 11, CLOSE(11));
+    const titan = bodyAt('titan', 2575000, CLOSE(2575000));
+    const phobos = bodyAt('phobos', 11000, CLOSE(11000));
     // isTextureResident returns true for everything — membership in the registry,
     // not residency, is what keeps these flat.
     const { flat, textured, glints } = partition([titan, phobos], () => true);
@@ -113,7 +113,7 @@ describe('partitionBodiesByPresentation', () => {
   });
 
   it('routes a sub-3px body to glints regardless of registry membership', () => {
-    const jupiter = bodyAt('jupiter', 69911, AU_KM);
+    const jupiter = bodyAt('jupiter', 69911000, AU_M);
     const { glints, flat, textured } = partition([jupiter], () => true);
     expect(glints).toEqual([jupiter]);
     expect(flat).toEqual([]);
@@ -125,7 +125,7 @@ describe('partitionBodiesByPresentation', () => {
     // test would misread that as sub-pixel and glint the body the camera is
     // inside. The partition resolves distance 0 unconditionally, mirroring
     // planetsLayer's planetResolvesPx.
-    const mars = bodyAt('mars', 3390, 0);
+    const mars = bodyAt('mars', 3390000, 0);
     const { glints, textured } = partition([mars], () => true);
     expect(glints).toEqual([]);
     expect(textured).toEqual([mars]);

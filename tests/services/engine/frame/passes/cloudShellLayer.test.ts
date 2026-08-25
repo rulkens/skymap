@@ -65,7 +65,7 @@ const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orien
 const EARTH: SeededEarth = {
   id: 'earth',
   label: 'Earth',
-  radiusKm: 6371,
+  radiusM: 6371000,
   positionMpc: [0, 0, 0],
   orientation: IDENTITY_MAT3,
 };
@@ -99,7 +99,7 @@ function makeNear0View(): SlabView {
  * every test here isolates the descent-fade gate from the OTHER gates.
  */
 function ctxAtAltitude(altitudeRadii: number): ReadyFrameContext {
-  const radiusMpc = EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  const radiusMpc = EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
   const distanceMpc = radiusMpc * (1 + altitudeRadii);
   return {
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },

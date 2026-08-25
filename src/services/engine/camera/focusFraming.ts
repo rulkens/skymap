@@ -104,9 +104,9 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
     // to the shared bodyLikeFraming; the star's radius is the extractor-stamped
     // nominal solar radius (the bin has no per-star size).
     case 'body':
-      return bodyLikeFraming(row.positionMpc, row.radiusKm, fovYRad);
+      return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad);
     case 'star':
-      return bodyLikeFraming(row.positionMpc, row.radiusKm, fovYRad);
+      return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad);
     // The band carries no x/y/z (a line-of-sight effect, not a point), so it
     // has no pose to fabricate. UNREACHABLE BY CONSTRUCTION: every
     // `updateSelectionFocus` dispatch — InfoCard, double-click, keyboard

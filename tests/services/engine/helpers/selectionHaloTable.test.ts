@@ -48,7 +48,7 @@ describe('selectionHalo', () => {
   // A body's ring rides the NEAR0 slab (its parsec/AU-scale anchor falls inside
   // COSMO's near plane once rebased), so the body arm must yield a NEAR0-tagged
   // descriptor centred on the body — not null. It now carries the body's REAL
-  // physical radius (radiusKm → Mpc) so the ring can wrap the rendered sphere on
+  // physical radius (radiusM → Mpc) so the ring can wrap the rendered sphere on
   // close approach, not the old radiusMpc:0 fixed-px dot. A null here would leave
   // a picked planet with no ring; a COSMO tag would revive the writeBuffer race.
   it('returns a NEAR0 descriptor for a body row carrying its physical radius', () => {
@@ -57,7 +57,7 @@ describe('selectionHalo', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [4.8481e-12, 0, 0],
-      radiusKm: 6371,
+      radiusM: 6371000,
     };
     const halo = selectionHalo(bodyRow);
     expect(halo).not.toBeNull();
@@ -85,13 +85,13 @@ describe('selectionHalo', () => {
       positionMpc: [0.001, -0.002, 0.0005],
       absMag: 4.8,
       bpRp: 0.65,
-      radiusKm: SOLAR_RADIUS_KM,
+      radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
     };
     expect(selectionHalo(galaxyRow())!.slab).toBe(COSMO);
     expect(selectionHalo({ type: 'milkyWay' } as SelectionRow)!.slab).toBe(COSMO);
     const starHalo = selectionHalo(star)!;
     expect(starHalo.slab).toBe(NEAR0);
-    // The star arm must ride its REAL physical radius (radiusKm → Mpc), not the
+    // The star arm must ride its REAL physical radius (radiusM → Mpc), not the
     // old radiusMpc:0 fixed-px dot — mirror the body arm's assertion so this
     // FAILS if the star arm ever regresses to 0 while keeping its NEAR0 tag.
     expect(starHalo.radiusMpc).toBeCloseTo(SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC, 24);

@@ -8,7 +8,7 @@
  * whose apparent size clears `STAR_RESOLVE_PX` (the Sun included: below the
  * threshold it demotes to an additive point like any other star, so it
  * never vanishes) — each composed as a unit sphere scaled to the body's
- * equatorial radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
+ * equatorial radius (`radiusM` → Mpc via `SCALE_UNITS.M_TO_MPC`) and
  * translated to its `positionMpc` in the `RENDER_ORIGIN_MPC`-relative frame,
  * tinted by its blackbody colour — derived from its `temperatureK` via
  * `temperatureToLinearRgb`. A star's optional `oblateness` flattens
@@ -119,7 +119,7 @@ export const starSpheresLayer: ContentLayer = {
         view.slab.vp,
         star.positionMpc,
         RENDER_ORIGIN_MPC,
-        star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        star.radiusM * SCALE_UNITS.M_TO_MPC,
         IDENTITY_MAT3,
         star.oblateness,
       );
@@ -170,7 +170,7 @@ export const starSpheresLayer: ContentLayer = {
       drawFlooredSpherePick(pickRenderer, pass, {
         vp: view.slab.vp,
         positionMpc: star.positionMpc,
-        radiusMpc: star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        radiusMpc: star.radiusM * SCALE_UNITS.M_TO_MPC,
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: IDENTITY_MAT3,

@@ -88,8 +88,8 @@ const CAM_KM = 1_000_000;
 const CAM_POS: Vec3 = [CAM_KM * KM, 0, 0];
 
 /**
- * A body on the +x axis at `posKm` km from the Sun, radius `radiusKm`. With the
- * camera 1e6 km out and both bodies 1e5 km from it, `radiusKm = 160` subtends
+ * A body on the +x axis at `posKm` km from the Sun, radius `radiusM`. With the
+ * camera 1e6 km out and both bodies 1e5 km from it, `radiusM = 160` subtends
  * ~2 px — a mid-fade glint (sub-3 px, so in the glints branch; above 1 px, so
  * the cross-fade is partial). A body FARTHER from the Sun than the camera is lit
  * (camera on the sunlit side); one CLOSER than the camera shows its unlit far
@@ -100,7 +100,7 @@ function bodyAt(id: string, posKm: number, albedo: Vec3): SeededPlanet {
     id,
     label: id,
     positionMpc: [posKm * KM, 0, 0],
-    radiusKm: 160,
+    radiusM: 160000,
     albedo,
     orientation: IDENTITY,
   };
@@ -247,7 +247,7 @@ describe('bodyGlintsLayer.draw — far-dissolve brightness scaling', () => {
         id: 'jupiter',
         label: 'jupiter',
         positionMpc: [camX + OFF, 0, 0], // just beyond the camera → lit, ~2 px glint
-        radiusKm: 160,
+        radiusM: 160000,
         albedo: [0.8, 0.8, 0.8],
         orientation: IDENTITY,
       };
@@ -280,7 +280,7 @@ describe('bodyGlintsLayer.pickEnabled (Bug B — Earth-stamp-only frame stays in
     id: 'earth',
     label: 'Earth',
     positionMpc: [1_100_000 * KM, 0, 0],
-    radiusKm: 6371,
+    radiusM: 6371000,
     albedo: [0.2, 0.4, 0.8],
     orientation: IDENTITY,
   };
@@ -396,7 +396,7 @@ const EARTH_RESOLVED: SeededPlanet = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [1_100_000 * KM, 0, 0],
-  radiusKm: 6371,
+  radiusM: 6371000,
   albedo: [0.2, 0.4, 0.8],
   orientation: IDENTITY,
 };
@@ -480,7 +480,7 @@ describe('bodyGlintsLayer.drawPick', () => {
       id: 'mars',
       label: 'mars',
       positionMpc: [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, 0, 0],
-      radiusKm: 160,
+      radiusM: 160000,
       albedo: [0.6, 0.32, 0.23],
       orientation: IDENTITY,
     };
@@ -512,7 +512,7 @@ describe('bodyGlintsLayer.drawPick', () => {
       id: 'jupiter',
       label: 'jupiter',
       positionMpc: [camFar[0] + 1e5 * KM, 0, 0], // just beyond the camera → lit, ~2 px glint
-      radiusKm: 160,
+      radiusM: 160000,
       albedo: [0.8, 0.8, 0.8],
       orientation: IDENTITY,
     };
@@ -602,7 +602,7 @@ describe('bodyGlintsLayer.drawPick', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [1_100_000 * KM, 0, 0],
-      radiusKm: 6371,
+      radiusM: 6371000,
       albedo: [0.2, 0.4, 0.8],
       orientation: IDENTITY,
     };

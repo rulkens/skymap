@@ -16,7 +16,7 @@
  * snapshot (`sceneBodyStates`) at derivation, so the two consumers read one
  * resolved pairing and cannot drift to two positions. `body` is the union
  * `EarthBody | PlanetBody` carried for its authored identity alone — the derivation
- * reads only fields common to both (`id`, `radiusKm`), so an atmosphere body may be
+ * reads only fields common to both (`id`, `radiusM`), so an atmosphere body may be
  * Earth or any seeded planet with a params row.
  */
 

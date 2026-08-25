@@ -328,7 +328,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           // allocation-free, unlike `bodyLikeFraming`, which builds a FocusFraming
           // object + target array of which only `.distance` is read here. Computed
           // only in this branch, so the per-frame steady path skips the tan().
-          const radiusMpc = focus.radiusKm * SCALE_UNITS.KM_TO_MPC;
+          const radiusMpc = focus.radiusM * SCALE_UNITS.M_TO_MPC;
           clock.followDistanceTarget = bodyFocusDistance(
             radiusMpc,
             state.cameraRuntime.projection.fovYRad,

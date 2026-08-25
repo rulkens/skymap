@@ -15,6 +15,7 @@
  */
 import { extractGalaxyRow } from './extractGalaxyRow';
 import { resolveStarRecord } from './resolveStarRecord';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
@@ -58,7 +59,7 @@ const EXTRACT_ROW: {
       id: body.id,
       label: body.label,
       positionMpc: [p[0], p[1], p[2]],
-      radiusKm: body.radiusKm,
+      radiusM: body.radiusM,
     };
   },
   // The star's physical fields are resolved off the LIVE catalog through the
@@ -79,7 +80,7 @@ const EXTRACT_ROW: {
           bpRp: record.bpRp,
           // No per-star size in the bin — stamp the one representative radius
           // (the Sun's) so framing/gating treat the star as a discrete body.
-          radiusKm: SOLAR_RADIUS_KM,
+          radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
         }
       : null;
   },

@@ -218,7 +218,7 @@ describe('starSpheresLayer.draw', () => {
     // Position, render origin, and the km→Mpc radius carried through.
     expect(call[1]).toBe(SUN.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    expect(call[3]).toBe(SUN.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    expect(call[3]).toBe(SUN.radiusM * SCALE_UNITS.M_TO_MPC);
     // A star is a rotation-invariant emissive sphere — it forwards the identity.
     expect(call[4]).toBe(IDENTITY_MAT3);
 

@@ -19,17 +19,20 @@ const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
 const CAM: Vec3 = [0, 0, 0];
 
-/** A body of `radiusKm` sitting `distanceKm` down +x from the origin camera. */
-function at(radiusKm: number, distanceKm: number): {
+/** A body of `radiusM` sitting `distanceKm` down +x from the origin camera. */
+function at(
+  radiusM: number,
+  distanceKm: number,
+): {
   positionMpc: Vec3;
-  radiusKm: number;
+  radiusM: number;
   camPosMpc: Vec3;
   viewportHeightPx: number;
   fovYRad: number;
 } {
   return {
     positionMpc: [distanceKm * SCALE_UNITS.KM_TO_MPC, 0, 0],
-    radiusKm,
+    radiusM,
     camPosMpc: CAM,
     viewportHeightPx: VIEWPORT_HEIGHT_PX,
     fovYRad: FOV_Y_RAD,

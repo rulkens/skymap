@@ -30,7 +30,7 @@ export type SelectionRow =
       readonly id: string;
       readonly label: string;
       readonly positionMpc: Vec3;
-      readonly radiusKm: number;
+      readonly radiusM: number;
     }
   // Star arm — the self-contained display projection of a picked star, its
   // physical fields (`positionMpc`/`absMag`/`bpRp`) snapshotted off the loaded
@@ -47,5 +47,5 @@ export type SelectionRow =
       // position + photometry only, so a field star carries no measured size;
       // this representative radius is the one framing (bodyLikeFraming) and the
       // sphere gate read for a discrete near-field star.
-      readonly radiusKm: number;
+      readonly radiusM: number;
     };

@@ -154,7 +154,7 @@ function bodyLabel(
     // a scene-body caption reads at the same size as a nearby famous-galaxy
     // label — the "adopt the famous treatment" parity — and a future retune of
     // the famous band carries here automatically instead of silently drifting.
-    worldEmMpc: body.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    worldEmMpc: body.radiusM * SCALE_UNITS.M_TO_MPC,
     minPixelSize: FAMOUS_LABEL_STYLE.minPixelSize,
     maxPixelSize: FAMOUS_LABEL_STYLE.maxPixelSize,
     alignX: 'center',

@@ -41,7 +41,7 @@ const BUILD_FOCUSABLE: {
     id: row.id,
     label: row.label,
     positionMpc: row.positionMpc,
-    radiusKm: row.radiusKm,
+    radiusM: row.radiusM,
     // Undefined for every body with no elements. Looked up here rather than
     // carried on the stored row: five derived numbers off a compiled-in table
     // would be re-serialized into RTK state on every selection for no gain.

@@ -132,7 +132,7 @@ function computeEarthFrame(
   if (earth === null) return null;
 
   const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
-  const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  const radiusMpc = earth.radiusM * SCALE_UNITS.M_TO_MPC;
   // See the module header's "f64 seam" note for why view.slab.vp, not view.vp.
   const mvpLocal = composeBodyMvp(
     view.slab.vp,
@@ -171,7 +171,7 @@ export const earthLayer: ContentLayer = {
     const distanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
     if (distanceMpc === 0) return true;
     const diameterPx = apparentSizePx({
-      diameterKpc: (2 * earth.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
+      diameterKpc: (2 * earth.radiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
       distanceMpc,
       viewportHeightPx: ctx.canvasSize.height,
       fovYRad: ctx.fovYRad,
