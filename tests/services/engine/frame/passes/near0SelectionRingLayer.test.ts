@@ -111,7 +111,7 @@ function farClippingView(farMpc: number): SlabView {
       nearMpc: 1e-10,
       farMpc,
       vp: new Float64Array(16),
-      originRelative: true,
+      frame: { kind: 'world-mpc', originRelative: true },
       precision: 'f64',
       reversedZ: false,
     },

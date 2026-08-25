@@ -124,7 +124,7 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
     nearMpc: near,
     farMpc: far,
     vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };

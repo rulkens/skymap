@@ -46,7 +46,7 @@ function makeCtx(): ReadyFrameContext {
     nearMpc: 0.01,
     farMpc: 50000,
     vp: new Float64Array(16),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   });

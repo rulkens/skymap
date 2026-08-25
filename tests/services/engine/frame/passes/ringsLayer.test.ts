@@ -119,7 +119,7 @@ function makeNear0View(): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
