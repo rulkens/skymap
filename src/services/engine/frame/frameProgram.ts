@@ -85,84 +85,98 @@ import { CONTENT_LAYERS } from './passes';
  * strength/threshold change pixels without changing the frame's shape.
  */
 export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly FrameStep[] {
-  return [
-    { kind: 'compute', name: 'flow' },
-    // Atmosphere sky-view LUT bake — folds in this frame's camera altitude + sun
-    // direction, so it re-bakes every frame (unlike the once-baked transmittance
-    // + multi-scatter LUTs). In the compute prelude with `flow`, well ahead of the
-    // `foreground:0` render step, so the atmosphere shell samples this frame's
-    // table (WebGPU orders the compute write before the later fragment read).
-    // Like `flow`, a `'compute'` step contributes no timing slot, so TIMED_SLOTS
-    // is unaffected.
-    { kind: 'compute', name: 'atmosphereSkyView' },
-    { kind: 'render', target: 'volume', slab: COSMO },
-    // Zone-of-avoidance band raymarch into its own reduced-res offscreen —
-    // the twin of the volume render immediately above. Precedes the hdr
-    // COSMO step so `zoneOfAvoidanceUpsampleLayer` inside it can composite
-    // this offscreen back in; merged by a LAYER, never a `'composite'` step,
-    // so there is no `zoa→hdr` step either (same reasoning as `volume`).
-    { kind: 'render', target: 'zoa', slab: COSMO },
-    { kind: 'render', target: 'hdr', slab: COSMO },
-    // Survey-star AGGREGATE stream into its own half-res offscreen, projected
-    // through NEAR0 (the same parsec-scale anchors as the star catalog). Drawn
-    // BEFORE the hdr NEAR0 step so the `star-upsample` layer inside that step
-    // can composite this offscreen — the twin of the volume render preceding
-    // its `volume-upsample` layer. The aggregate glow field is the fill-bound
-    // half of the star pass; half-res quarters its fragment cost.
-    { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
-    // The Milky-Way twin of the star-aggregate offscreen: the procedural
-    // cloud's additive star billboards into their own reduced-resolution
-    // `mw-aggregate` target, projected through the same NEAR0 slab as the dust
-    // pass that follows them in HDR. Same reason as its sibling — a summed
-    // additive glow field is low-frequency, so rendering it at 1/scale drops
-    // fragment cost by the square of the divisor and costs only bilinear
-    // interpolation of something already smooth. Like `star-aggregates` it is
-    // merged into HDR by a *layer* (`milky-way-upsample`, inside the hdr NEAR0
-    // step below), not by a whole-texture `'composite'` step, so no
-    // `mw-aggregate→hdr` step exists. It must precede that hdr NEAR0 step: the
-    // consumer lives there, and it in turn must precede `milky-way`'s
-    // multiplicative dust draw so the dust extincts the cloud's own starlight.
-    { kind: 'render', target: 'mw-aggregate', slab: NEAR0 },
-    // Near-field star points into the SAME hdr accumulation, but projected
-    // through NEAR0: COSMO's near plane (0.01 Mpc — slabs.ts) would clip the
-    // parsec-scale star anchors, so the points ride their own slab while
-    // still accumulating into HDR BEFORE the tone-map composite below — one
-    // tone curve for stars and galaxies. The hdr target is already touched
-    // by the COSMO step above, so this pass loads rather than clears.
-    { kind: 'render', target: 'hdr', slab: NEAR0 },
-    // Near-field foreground bodies (zoom-to-earth fold). Rendered into their
-    // depth-bearing foreground target, then composited OVER hdr in LINEAR
-    // space (tone: null) so the Sun/Earth pixels join the HDR accumulator
-    // BEFORE tone-mapping and ride the SAME single tone curve as the stars and
-    // galaxies. No second tone-map: the lone hdr→swap replace-composite below
-    // is the frame's only tone-map, so there is one tone curve across the
-    // whole frame — no seam where the Sun's limb meets the cosmological scene.
-    { kind: 'render', target: 'foreground:0', slab: NEAR0 },
-    { kind: 'composite', step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null } },
-    // Screen-space bloom, gated on the master toggle. ONE step, not N render
-    // steps: `runBloom` opens the pyramid's ten passes (bright prefilter
-    // hdr → bloom0, a DESCENDING downsample chain bloom0 → bloom4, an ASCENDING
-    // additive upsample fold bloom4 → bloom0, and the strength-scaled fold back
-    // into HDR) in strict order. A ping-pong mip pyramid writes the same target
-    // twice with different ops (a downsample that clears, then an additive
-    // upsample that loads), which the executor's `(target, slab)` render-step
-    // model cannot express: it re-fires every layer matching a step's group, so
-    // a reused-target upsample would fire at its downsample step and read a
-    // stale, last-frame level. The single sequential step sidesteps that — see
-    // runBloom for the strict-order rationale. Placed after the foreground:0→hdr
-    // composite (the bright prefilter samples the composited HDR scene) and
-    // before the lone hdr→swap tone-map (the fold rides that one curve).
-    ...(bloomEnabled ? ([{ kind: 'bloom' }] as const) : []),
-    { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } },
-    // Cosmological + near-field swap overlays now draw AFTER the tone-map, on
-    // top of the tonemapped scene. The COSMO overlays (labels, marker-lines,
-    // selection-ring) occlude against the foreground bodies via the Prep A
-    // coverage test — frameProgram no longer relies on draw order to keep the
-    // opaque Sun/Earth in front of the cosmological labels. The NEAR0 swap
-    // render (Sun/Earth captions) follows so captions land on top of the bodies.
-    { kind: 'render', target: 'swap', slab: COSMO },
-    { kind: 'render', target: 'swap', slab: NEAR0 },
-  ];
+  const steps: FrameStep[] = [];
+
+  steps.push({ kind: 'compute', name: 'flow' });
+  // Atmosphere sky-view LUT bake — folds in this frame's camera altitude + sun
+  // direction, so it re-bakes every frame (unlike the once-baked transmittance
+  // + multi-scatter LUTs). In the compute prelude with `flow`, well ahead of the
+  // `foreground:0` render step, so the atmosphere shell samples this frame's
+  // table (WebGPU orders the compute write before the later fragment read).
+  // Like `flow`, a `'compute'` step contributes no timing slot, so TIMED_SLOTS
+  // is unaffected.
+  steps.push({ kind: 'compute', name: 'atmosphereSkyView' });
+
+  steps.push({ kind: 'render', target: 'volume', slab: COSMO });
+  // Zone-of-avoidance band raymarch into its own reduced-res offscreen —
+  // the twin of the volume render immediately above. Precedes the hdr
+  // COSMO step so `zoneOfAvoidanceUpsampleLayer` inside it can composite
+  // this offscreen back in; merged by a LAYER, never a `'composite'` step,
+  // so there is no `zoa→hdr` step either (same reasoning as `volume`).
+  steps.push({ kind: 'render', target: 'zoa', slab: COSMO });
+  steps.push({ kind: 'render', target: 'hdr', slab: COSMO });
+  // Survey-star AGGREGATE stream into its own half-res offscreen, projected
+  // through NEAR0 (the same parsec-scale anchors as the star catalog). Drawn
+  // BEFORE the hdr NEAR0 step so the `star-upsample` layer inside that step
+  // can composite this offscreen — the twin of the volume render preceding
+  // its `volume-upsample` layer. The aggregate glow field is the fill-bound
+  // half of the star pass; half-res quarters its fragment cost.
+  steps.push({ kind: 'render', target: 'star-aggregates', slab: NEAR0 });
+  // The Milky-Way twin of the star-aggregate offscreen: the procedural
+  // cloud's additive star billboards into their own reduced-resolution
+  // `mw-aggregate` target, projected through the same NEAR0 slab as the dust
+  // pass that follows them in HDR. Same reason as its sibling — a summed
+  // additive glow field is low-frequency, so rendering it at 1/scale drops
+  // fragment cost by the square of the divisor and costs only bilinear
+  // interpolation of something already smooth. Like `star-aggregates` it is
+  // merged into HDR by a *layer* (`milky-way-upsample`, inside the hdr NEAR0
+  // step below), not by a whole-texture `'composite'` step, so no
+  // `mw-aggregate→hdr` step exists. It must precede that hdr NEAR0 step: the
+  // consumer lives there, and it in turn must precede `milky-way`'s
+  // multiplicative dust draw so the dust extincts the cloud's own starlight.
+  steps.push({ kind: 'render', target: 'mw-aggregate', slab: NEAR0 });
+  // Near-field star points into the SAME hdr accumulation, but projected
+  // through NEAR0: COSMO's near plane (0.01 Mpc — slabs.ts) would clip the
+  // parsec-scale star anchors, so the points ride their own slab while
+  // still accumulating into HDR BEFORE the tone-map composite below — one
+  // tone curve for stars and galaxies. The hdr target is already touched
+  // by the COSMO step above, so this pass loads rather than clears.
+  steps.push({ kind: 'render', target: 'hdr', slab: NEAR0 });
+
+  // Near-field foreground bodies (zoom-to-earth fold). Rendered into their
+  // depth-bearing foreground target, then composited OVER hdr in LINEAR
+  // space (tone: null) so the Sun/Earth pixels join the HDR accumulator
+  // BEFORE tone-mapping and ride the SAME single tone curve as the stars and
+  // galaxies. No second tone-map: the lone hdr→swap replace-composite below
+  // is the frame's only tone-map, so there is one tone curve across the
+  // whole frame — no seam where the Sun's limb meets the cosmological scene.
+  //
+  // Assembled as a RUN in painter order (far → near) rather than one literal
+  // entry: per-body slabs expand it into several depth-bearing steps sharing
+  // this one target, and their ordering is the occlusion mechanism.
+  const foreground: FrameStep[] = [{ kind: 'render', target: 'foreground:0', slab: NEAR0 }];
+  steps.push(...foreground);
+
+  steps.push({
+    kind: 'composite',
+    step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
+  });
+  // Screen-space bloom, gated on the master toggle. ONE step, not N render
+  // steps: `runBloom` opens the pyramid's ten passes (bright prefilter
+  // hdr → bloom0, a DESCENDING downsample chain bloom0 → bloom4, an ASCENDING
+  // additive upsample fold bloom4 → bloom0, and the strength-scaled fold back
+  // into HDR) in strict order. A ping-pong mip pyramid writes the same target
+  // twice with different ops (a downsample that clears, then an additive
+  // upsample that loads), which the executor's `(target, slab)` render-step
+  // model cannot express: it re-fires every layer matching a step's group, so
+  // a reused-target upsample would fire at its downsample step and read a
+  // stale, last-frame level. The single sequential step sidesteps that — see
+  // runBloom for the strict-order rationale. Placed after the foreground:0→hdr
+  // composite (the bright prefilter samples the composited HDR scene) and
+  // before the lone hdr→swap tone-map (the fold rides that one curve).
+  if (bloomEnabled) steps.push({ kind: 'bloom' });
+  steps.push({ kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } });
+
+  // Cosmological + near-field swap overlays now draw AFTER the tone-map, on
+  // top of the tonemapped scene. The COSMO overlays (labels, marker-lines,
+  // selection-ring) occlude against the foreground bodies via the Prep A
+  // coverage test — frameProgram no longer relies on draw order to keep the
+  // opaque Sun/Earth in front of the cosmological labels. The NEAR0 swap
+  // render (Sun/Earth captions) follows so captions land on top of the bodies.
+  steps.push({ kind: 'render', target: 'swap', slab: COSMO });
+  steps.push({ kind: 'render', target: 'swap', slab: NEAR0 });
+
+  return steps;
 }
 
 /**
