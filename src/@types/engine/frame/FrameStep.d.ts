@@ -42,6 +42,18 @@ import type { CompositeStep } from './CompositeStep';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
-  | { kind: 'render'; target: string; slab: number }
+  | {
+      kind: 'render';
+      target: string;
+      slab: number;
+      /**
+       * Depth load-op for this step's pass. Absent ⇒ the same first-touch rule
+       * the colour attachment follows (clear on the frame's first pass against
+       * the target, load after). Steps that SHARE a depth target but must not
+       * share its depth — successive slabs drawn back-to-front into one
+       * foreground row — declare `'clear'` to restart depth mid-frame.
+       */
+      depthLoad?: 'clear' | 'load';
+    }
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };
