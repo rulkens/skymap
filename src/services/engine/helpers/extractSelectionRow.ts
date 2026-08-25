@@ -80,6 +80,7 @@ const EXTRACT_ROW: {
           bpRp: record.bpRp,
           // No per-star size in the bin — stamp the one representative radius
           // (the Sun's) so framing/gating treat the star as a discrete body.
+          // Wire/authored value is km; runtime convention is metres.
           radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
         }
       : null;

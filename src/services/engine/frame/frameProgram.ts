@@ -144,8 +144,7 @@ export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly Fra
   // Assembled as a RUN in painter order (far → near) rather than one literal
   // entry: per-body slabs expand it into several depth-bearing steps sharing
   // this one target, and their ordering is the occlusion mechanism.
-  const foreground: FrameStep[] = [{ kind: 'render', target: 'foreground:0', slab: NEAR0 }];
-  steps.push(...foreground);
+  steps.push({ kind: 'render', target: 'foreground:0', slab: NEAR0 });
 
   steps.push({
     kind: 'composite',

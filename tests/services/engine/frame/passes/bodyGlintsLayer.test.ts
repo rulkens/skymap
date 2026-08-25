@@ -89,7 +89,7 @@ const CAM_POS: Vec3 = [CAM_KM * KM, 0, 0];
 
 /**
  * A body on the +x axis at `posKm` km from the Sun, radius `radiusM`. With the
- * camera 1e6 km out and both bodies 1e5 km from it, `radiusM = 160` subtends
+ * camera 1e6 km out and both bodies 1e5 km from it, `radiusM = 160000` subtends
  * ~2 px — a mid-fade glint (sub-3 px, so in the glints branch; above 1 px, so
  * the cross-fade is partial). A body FARTHER from the Sun than the camera is lit
  * (camera on the sunlit side); one CLOSER than the camera shows its unlit far

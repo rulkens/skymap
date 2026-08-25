@@ -15,7 +15,7 @@
  * instant (`deriveBodyStates(simDays)`, the same source every render layer
  * reads). The clip player freezes the clock at clip start (02-core Task 13), so
  * the caller passes the frozen instant and the target lands where Earth is drawn.
- * `distance` is a few Earth-radii (km → Mpc via the one `SCALE_UNITS` table) and
+ * `distance` is a few Earth-radii (m → Mpc via the one `SCALE_UNITS` table) and
  * yaw/pitch are eye-tuned opening angles — both epoch-independent, so they stay
  * module constants.
  *

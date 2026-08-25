@@ -37,6 +37,7 @@ const SGR_A_STAR_DISTANCE_PC = 8178;
 export const SGR_A_STAR: AnchorPointBody = {
   id: SGR_A_STAR_ENTRY.id,
   label: SGR_A_STAR_ENTRY.label,
+  // Wire/authored value is km; runtime convention is metres.
   radiusM: SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM * SCALE_UNITS.KM_TO_M,
 };
 

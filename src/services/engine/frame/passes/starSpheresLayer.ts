@@ -110,7 +110,7 @@ export const starSpheresLayer: ContentLayer = {
 
     // Compose each resolved star's MVP from the slab's f64 vp — see the
     // module header's "f64 seam" note for why `view.slab.vp`, not `view.vp`.
-    // Radius is the authored kilometres resolved into Mpc at the draw site. A
+    // Radius is the authored metres resolved into Mpc at the draw site. A
     // star is a flat-emissive sphere — rotation-invariant — so it carries the
     // identity orientation rather than a baked facing; `oblateness` (absent ⇒
     // 0 ⇒ sphere) flattens the polar axis in the compose.

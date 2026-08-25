@@ -362,7 +362,7 @@ describe('earthLayer.draw', () => {
     // The load-bearing seam: first arg is the slab's Float64Array vp, NOT view.vp.
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
-    // Position, render origin, and the km→Mpc radius carried through.
+    // Position, render origin, and the m→Mpc radius carried through.
     expect(call[1]).toBe(SEEDED_EARTH.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
     expect(call[3]).toBe(SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC);

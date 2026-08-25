@@ -32,6 +32,7 @@ export const SCENE_S_STARS: readonly StarBody[] = S_STAR_SEEDS.map((seed) => {
     label: seed.label,
     absMag,
     color: temperatureToLinearRgb(temperatureK),
+    // Wire/authored value is km; runtime convention is metres.
     radiusM: radiusSolar * SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
   };
 });

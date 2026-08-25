@@ -1,5 +1,5 @@
 /**
- * SCALE_UNITS — unit conversion constants to Megaparsec (Mpc).
+ * SCALE_UNITS — unit conversion constants, named `<FROM>_TO_<TO>`.
  *
  * The renderer's per-object coordinate matrices are always expressed
  * in Megaparsecs (Mpc) — a scale that fits the ~300 Mpc observable
@@ -44,7 +44,6 @@ const KM_TO_MPC = PC_TO_MPC / PC_IN_KM;
 const AU_TO_MPC = AU_IN_KM * KM_TO_MPC;
 const LY_TO_MPC = PC_TO_MPC / PC_TO_LY;
 const M_TO_MPC = KM_TO_MPC / KM_TO_M;
-const MPC_TO_M = 1 / M_TO_MPC;
 
 /**
  * Unit conversion constants, named `<FROM>_TO_<TO>`.
@@ -65,7 +64,6 @@ export const SCALE_UNITS: Readonly<{
   readonly KM_TO_M: number;
   readonly M_TO_KM: number;
   readonly M_TO_MPC: number;
-  readonly MPC_TO_M: number;
 }> = {
   KM_TO_MPC,
   AU_TO_MPC,
@@ -77,5 +75,4 @@ export const SCALE_UNITS: Readonly<{
   KM_TO_M,
   M_TO_KM,
   M_TO_MPC,
-  MPC_TO_M,
 } as const;
