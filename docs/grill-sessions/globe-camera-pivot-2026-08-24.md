@@ -27,8 +27,7 @@ galaxy-to-surface range, given the binding local-frame constraint?
   through the same formula.
 - **Option B (one always-anchor-relative state):** OpenSpace's answer. Their
   route to it is a full scene graph (rejected as out of scope in the research
-  comparison), and their serialization boundary has been admitted-broken since
-  2023.
+  comparison), and their serialization boundary has been admitted-broken since 2023.
 - **Option C (status quo + corrections):** nine fix waves of evidence that this
   converges on a tenth wave, not a fix.
 
@@ -71,7 +70,7 @@ in body-fixed units, or the KML/Google `(target, range, heading, tilt)` tuple?
   rigid motion — exact, closed-form, ~8 lines. Heading/tilt/range become derived
   readouts at the target's ENU (KML semantics), computed once per frame. Nadir
   is continuous because the basis is stored, not derived.
-- **Option B (angles as state):** it *is* the product spec, so storing it
+- **Option B (angles as state):** it _is_ the product spec, so storing it
   removes a derivation — but every operator then needs a transport correction
   (rotating the target moves its ENU, so heading must be parallel-transported or
   the view twists): structurally the same correction-on-a-parameterization
@@ -79,7 +78,7 @@ in body-fixed units, or the KML/Google `(target, range, heading, tilt)` tuple?
   heading degeneracy) lives here.
 
 **Decision:** **A, firmly.** Cesium, OpenSpace, and MapLibre's globe all store
-pose/quaternion; only the KML *file format* stores angles. Angles stay
+pose/quaternion; only the KML _file format_ stores angles. Angles stay
 first-class as the derived readout.
 
 ## Q3: Is the look-at target persistent state or derived per frame?
@@ -139,7 +138,7 @@ horizon.
   **eye** (free-look), which pose+basis handles trivially and the feel probe
   proved out (tilt past horizon, eye pinned, heading live while pinned).
 - The probe's nadir-degeneracy finding (defect 3) is solved structurally by Q2's
-  stored basis; only the heading *readout* needs Cesium's escape (within ~0.08°
+  stored basis; only the heading _readout_ needs Cesium's escape (within ~0.08°
   of vertical, heading from the up vector's horizontal components, roll ≡ 0).
 
 **Decision:** **One altitude-dependent tilt ceiling, two gesture routes under
@@ -189,7 +188,7 @@ inertial; inside: ground nailed, sky sweeps).
 - **H1 (hard flip):** only observable is drift onset/cessation — far below
   perception at the 3.4 R band at real-time rate; visible under an accelerated
   clock as spin freezing/unfreezing.
-- **H2 (smoothstep the co-rotation *rate* over ~1 s):** +1 continuous state;
+- **H2 (smoothstep the co-rotation _rate_ over ~1 s):** +1 continuous state;
   pose still never tweens.
 - **H3 (user toggle):** rejected — knob proliferation is OpenSpace's named
   failure.
@@ -257,8 +256,8 @@ provider seam: (A) derived body-relative pose from the heliocentric f64 camera
 "A is not a stepping stone B replaces — B keeps A."
 
 **Decision:** **Ratified.** Under this grill's decisions the structure is a
-restatement: provider B *is* the pivot's surface state (inside the band),
-provider A *is* the conversion of the world-orbit pose (outside), the Q6 boolean
+restatement: provider B _is_ the pivot's surface state (inside the band),
+provider A _is_ the conversion of the world-orbit pose (outside), the Q6 boolean
 selects, both produce the same value at the flip. The slab consumes one
 interface ("give me the body-relative pose") and never does Mpc math itself.
 
@@ -279,7 +278,7 @@ important now — "I don't want to redo this."**
   (KSP krakensbane, Star Citizen zones, Unreal world rebasing) — used when one
   engine must hold across many orders of magnitude.
 - Content caveat stated: state-side precision becomes unbounded, but deep-zoom
-  *content* still needs data authored near the anchor. The camera stops being
+  _content_ still needs data authored near the anchor. The camera stops being
   the blocker forever; data becomes the only frontier.
 
 **Decision:** **Anchor in the state vector, in this spec and implementation.**
@@ -385,3 +384,32 @@ in a clean frame where its suspects are no longer confounded by precision.
 prep list, PR-packaging ask), then **two sequenced specs — spec 1: body render
 slabs (consuming provider A), spec 2: camera pivot (introducing provider B)** —
 each written against the post-refactor architecture.
+
+---
+
+## Addendum — post-checkpoint rulings (2026-08-25)
+
+Refactor-ground ran 2026-08-24/25 (seam maps + ideal-diff + greenfield
+cross-check); rulings taken at and after its checkpoint:
+
+- **T1 (radii units):** authored registry radii MIGRATE to `radiusM` (SI metres).
+  Boundary: baked wire rows (`FamousStarRow`, tools/ bake outputs) stay
+  `radiusKm`, converted once at their ingestion site — no data re-bake.
+- **Packaging:** prep P1–P4 (SlabFrame discriminant, frameProgram builder,
+  step-level depth load-op, M↔Mpc units + radiusM migration) land as a
+  **separate PR off main**, before spec 1's feature commits.
+- **T4 (keyframes):** minimal channel-based endpoints + `PoseFrame` tag (spec 2);
+  the greenfield `FramedPose` rewrite of the animation system is declined.
+- **T2 (camera state union vs both-states-synced):** deferred to spec 2.
+- **S5 refinement (glints):** `bodyGlintsLayer` stays one shared NEAR0/hdr
+  additive pass — light emission, not body geometry; the sphere↔glint partition
+  remains the single presentation seam. S5's min-size clamp recorded as a
+  slab-row parameter for later.
+- **S6 refinement (invariant wording):** literal always-disjoint intervals is
+  too strong (Jupiter+Io overlap at quadrature); the binding invariant is
+  **screen-overlapping pairs must have disjoint intervals** — what the painter
+  actually needs, guaranteed by non-interpenetration along a shared ray.
+- **S4 reading:** "incumbent sphere path deleted" = bodies; `composeBodyMvp`
+  survives narrowed to star spheres (S4 keeps stars out of body slabs).
+
+Spec 1: `docs/superpowers/specs/2026-08-25-body-render-slabs.md`.
