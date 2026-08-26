@@ -12,7 +12,7 @@
  * native-unit braid (km for planets, AU for orbits, Mpc for galaxies) ever
  * leaks into the composition path. Callers convert once at the call site:
  *
- *     radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC
+ *     radiusMpc = 6_371_000 * SCALE_UNITS.M_TO_MPC
  *
  * ### The model is `T · R · S` (translate · rotate · scale)
  *
@@ -89,7 +89,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * @param renderOrigin  The render origin (same value passed to
  *                      `computeForegroundViewProj`).
  * @param radiusMpc     Equatorial body radius in Mpc (e.g.
- *                      `6371 * SCALE_UNITS.KM_TO_MPC`).
+ *                      `6_371_000 * SCALE_UNITS.M_TO_MPC`).
  * @param orientation   The body's baked local→equatorial-world rotation `R`,
  *                      embedded between translate and scale (`T·R·S`). Pass
  *                      `IDENTITY_MAT3` for a rotation-invariant body (a flat

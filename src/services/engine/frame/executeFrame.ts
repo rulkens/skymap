@@ -116,15 +116,22 @@ function colorAttachment(
 }
 
 /**
+ * A render step's depth load-op. Absent `depthLoad` ⇒ the SAME first-touch
+ * `touched` fact that flips the colour load-op: the frame's first pass against
+ * a depth target clears, later passes load and so preserve the occlusion
+ * already written. A step that declares one overrides that — depth is the only
+ * attachment where sharing a target must not imply sharing its contents.
+ */
+function depthLoadOpFor(depthLoad: 'clear' | 'load' | undefined, touched: boolean): GPULoadOp {
+  if (depthLoad) return depthLoad;
+  return touched ? 'load' : 'clear';
+}
+
+/**
  * Depth attachment for a target row that declares `depth`, spread into the
- * pass descriptor — `{}` (no key) for depthless rows. The SAME first-touch
- * `touched` fact that flips the colour load-op flips depth: one fact, two
- * attachments. The first pass against a depth target clears depth to the far
- * plane (1.0) so the initial depth-test always passes; later passes (a second
- * render step, or `perLayerTimed` passes after the first) load, preserving the
- * occlusion already written this frame. Composite steps never call this —
- * their dest rows are depthless — so the depth budget is confined to the
- * opaque render passes that own it.
+ * pass descriptor — `{}` (no key) for depthless rows. Composite steps never
+ * call this — their dest rows are depthless — so the depth budget is confined
+ * to the opaque render passes that own it.
  *
  * `specOf` throws for an unknown target, but that's unreachable here:
  * `viewFor` throws first, at the top of `renderGroup`.
@@ -132,7 +139,7 @@ function colorAttachment(
 function depthAttachment(
   ctx: ReadyFrameContext,
   target: string,
-  touched: boolean,
+  depthLoadOp: GPULoadOp,
   reversedZ: boolean,
 ): { depthStencilAttachment?: GPURenderPassDepthStencilAttachment } {
   const spec = ctx.renderTargets.specOf(target);
@@ -144,7 +151,7 @@ function depthAttachment(
       // in depthClearValueFor so the clear and the depthCompare direction can
       // never disagree (a mismatch fights every fragment of the first draw).
       depthClearValue: depthClearValueFor(reversedZ),
-      depthLoadOp: touched ? 'load' : 'clear',
+      depthLoadOp,
       depthStoreOp: 'store',
     },
   };
@@ -215,6 +222,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           view,
           groupKey,
           alreadyTouched: touched.has(step.target),
+          depthLoadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
         });
         touched.add(step.target);
         break;
@@ -282,10 +290,22 @@ function renderGroup(
     view: SlabView;
     groupKey: string;
     alreadyTouched: boolean;
+    depthLoadOp: GPULoadOp;
   },
 ): void {
-  const { encoder, ctx, state, timing, swapView, target, group, view, groupKey, alreadyTouched } =
-    p;
+  const {
+    encoder,
+    ctx,
+    state,
+    timing,
+    swapView,
+    target,
+    group,
+    view,
+    groupKey,
+    alreadyTouched,
+    depthLoadOp,
+  } = p;
   const targetView = viewFor(target, ctx, swapView);
 
   if (strategy === 'merged') {
@@ -294,7 +314,7 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, alreadyTouched)],
-      ...depthAttachment(ctx, target, alreadyTouched, view.slab.reversedZ),
+      ...depthAttachment(ctx, target, depthLoadOp, view.slab.reversedZ),
       // Bill the whole group against its per-step group slot — the one honest
       // timing a single-pass shape can give (per-layer slots are the
       // `perLayerTimed` path's alone). A no-op timing service returns undefined,
@@ -311,14 +331,14 @@ function renderGroup(
   // perLayerTimed: one pass per layer so each carries its own timestampWrites.
   // The M1 OVER-coherency hazard (dst.color stale across pass boundaries — see
   // the module header) is the price of per-pass timing; this path runs only
-  // under ?gpuTimings. The first layer of an untouched target carries the
-  // clear; the rest load.
+  // under ?gpuTimings. The step's clear (colour or depth) belongs to the FIRST
+  // layer's pass only — the rest load, or each would wipe its predecessor.
   group.forEach((layer, i) => {
     const touchedBefore = alreadyTouched || i > 0;
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${layer.name}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],
-      ...depthAttachment(ctx, target, touchedBefore, view.slab.reversedZ),
+      ...depthAttachment(ctx, target, i === 0 ? depthLoadOp : 'load', view.slab.reversedZ),
       ...timestampSpread(timing, layer.name),
     });
     layer.draw(pass, view, ctx, state);

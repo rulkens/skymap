@@ -18,5 +18,5 @@ import type { EarthBody } from '../../@types/scene/EarthBody';
 export const SCENE_EARTH: EarthBody = {
   id: 'earth',
   label: 'Earth',
-  radiusKm: 6371,
+  radiusM: 6371000,
 };

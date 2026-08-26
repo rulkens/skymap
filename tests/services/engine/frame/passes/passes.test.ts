@@ -85,7 +85,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     nearMpc: 0.01,
     farMpc: 50000,
     vp: Float64Array.from(vp as unknown as Float32Array),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   };

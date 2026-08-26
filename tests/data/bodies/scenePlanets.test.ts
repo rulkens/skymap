@@ -21,8 +21,8 @@ const stateOf = (id: string) => states.get(id)!;
 
 describe('SCENE_PLANETS', () => {
   it('radii', () => {
-    expect(findPlanet('moon').radiusKm).toBe(1737);
-    expect(findPlanet('jupiter').radiusKm).toBe(69911);
+    expect(findPlanet('moon').radiusM).toBe(1737000);
+    expect(findPlanet('jupiter').radiusM).toBe(69911000);
   });
 
   it('carries identity-only records (no baked position or orientation)', () => {

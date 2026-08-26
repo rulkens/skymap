@@ -2,8 +2,8 @@
  * sgrAStarSchwarzschildRadiusKm — the one home for Sgr A*'s event-horizon scale
  * in kilometres, the sibling of `solarRadiusKm`.
  *
- * Sgr A* draws no geometry, so this is not a mesh size: it is the `radiusKm`
- * the body registry carries (and therefore the figure its InfoCard prints), and
+ * Sgr A* draws no geometry, so this is not a mesh size: it is the radius the
+ * body registry carries (in metres — the figure its InfoCard prints), and
  * the divisor that expresses an S-star pericentre in Schwarzschild radii. Two
  * readers, so one constant.
  *

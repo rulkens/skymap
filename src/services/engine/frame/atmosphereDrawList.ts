@@ -57,7 +57,7 @@ export function atmosphereDrawList(
       continue;
     }
     const diameterPx = apparentSizePx({
-      diameterKpc: (2 * body.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
+      diameterKpc: (2 * body.radiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
       distanceMpc,
       viewportHeightPx: ctx.canvasSize.height,
       fovYRad: ctx.fovYRad,

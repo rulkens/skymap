@@ -12,8 +12,8 @@ const hypot3 = (v: readonly [number, number, number]) => Math.hypot(v[0], v[1], 
 const earthState = deriveBodyStates(CONST_J2000).get('earth')!;
 
 describe('SCENE_EARTH', () => {
-  it('radius is 6371 km', () => {
-    expect(SCENE_EARTH.radiusKm).toBe(6371);
+  it('radius is 6371 km, authored in metres', () => {
+    expect(SCENE_EARTH.radiusM).toBe(6371000);
   });
 
   it('carries no baked position or orientation (identity-only record)', () => {

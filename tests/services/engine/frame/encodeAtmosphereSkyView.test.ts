@@ -133,7 +133,7 @@ function makeCtx(drawCamPos: Vec3, camDistance = 0): ReadyFrameContext {
 // centre, along +x from Earth's position, so camPosLocal has a clear non-zero
 // radius the packing can be checked against.
 const CAM_POS_RENDERED: Vec3 = [
-  SEEDED_EARTH.positionMpc[0] + 5 * SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+  SEEDED_EARTH.positionMpc[0] + 5 * SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC,
   SEEDED_EARTH.positionMpc[1],
   SEEDED_EARTH.positionMpc[2],
 ];
@@ -144,7 +144,7 @@ const CAM_POS_RENDERED: Vec3 = [
 const CAM_POS_STALE: Vec3 = [
   SEEDED_EARTH.positionMpc[0],
   SEEDED_EARTH.positionMpc[1],
-  SEEDED_EARTH.positionMpc[2] + 20 * SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+  SEEDED_EARTH.positionMpc[2] + 20 * SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC,
 ];
 
 describe('encodeAtmosphereSkyView', () => {

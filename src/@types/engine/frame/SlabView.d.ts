@@ -21,7 +21,7 @@ import type { Vec2 } from '../../math/Vec2';
 import type { Vec3 } from '../../math/Vec3';
 
 export type SlabView = {
-  /** The resolved slab — near/far, originRelative, precision — for the rare layer that cares. */
+  /** The resolved slab — near/far, frame, precision — for the rare layer that cares. */
   readonly slab: Slab;
   /** This slab's proj·view, already narrowed to f32 for upload. */
   readonly vp: Float32Array;

@@ -9,14 +9,14 @@
  * to turn an authored record into a drawn `StarBody`, plus the identity/name
  * fields the command palette and search index key on. Nothing here is derived —
  * every derived quantity (world-space `positionMpc`, linear-RGB `color`,
- * `radiusKm`) is a pure function of these primitives, computed by the maker so
+ * `radiusM`) is a pure function of these primitives, computed by the maker so
  * the authored data stays close to its catalogue units.
  *
  * The units are the units the catalogues publish, kept verbatim so a curator
  * reading the seed sees the same numbers as the source: sky angles in degrees,
  * distance in parsecs, temperature in kelvin, radius in solar radii. The maker
  * converts (RA/Dec/distance → `positionMpc`, `temperatureK` → linear RGB via
- * `temperatureToLinearRgb`, `radiusSolar` → `radiusKm`) at the boundary rather
+ * `temperatureToLinearRgb`, `radiusSolar` → `radiusM`) at the boundary rather
  * than baking pre-converted values, so the row remains legible against its
  * source and a unit change is one function, not a re-bake of the whole table.
  */
@@ -31,6 +31,6 @@ export type FamousStarRow = {
   readonly distancePc: number;
   readonly absMag: number;
   readonly temperatureK: number; // → color via temperatureToLinearRgb
-  readonly radiusSolar: number; // → radiusKm
+  readonly radiusSolar: number; // → radiusM
   readonly oblateness?: number; // → StarBody.oblateness (per-axis MVP scale)
 };

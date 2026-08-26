@@ -171,7 +171,7 @@ function makeCtx(): ReadyFrameContext {
     nearMpc: 0.01,
     farMpc: 50000,
     vp: new Float64Array(16),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   };
@@ -577,6 +577,30 @@ describe('executeFrame', () => {
       .depthStencilAttachment;
     expect(secondDepth?.view).toBe(FG_DEPTH_VIEW);
     expect(secondDepth?.depthLoadOp).toBe('load');
+  });
+
+  it("a step's explicit depthLoad overrides the first-touch rule in both directions", () => {
+    // Same two-step shape as above, but each step names its own depth op: the
+    // first loads where the rule would clear, the second clears where the rule
+    // would load (the restart a back-to-front slab run needs mid-frame).
+    const env = makeEncoderEnv();
+    const a = makeLayer({ name: 'a', target: 'foreground:0' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'load' },
+      { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'clear' },
+    ];
+    const { args } = makeArgs({ program, layers: [a], env });
+    executeFrame(args);
+
+    const depthOpOf = (pass: GPURenderPassEncoder): string | undefined =>
+      (
+        env.passes.find((p) => p.pass === pass)!.desc as {
+          depthStencilAttachment?: { depthLoadOp: string };
+        }
+      ).depthStencilAttachment?.depthLoadOp;
+
+    expect(depthOpOf(a.draw.mock.calls[0]![0] as GPURenderPassEncoder)).toBe('load');
+    expect(depthOpOf(a.draw.mock.calls[1]![0] as GPURenderPassEncoder)).toBe('clear');
   });
 
   it('opens no depthStencilAttachment for depthless targets', () => {

@@ -94,17 +94,17 @@ const CTX_STUB = {} as ReadyFrameContext;
 const IDENTITY_MAT3: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
- * A body of the given radius sitting `distanceKm` down +x from the origin.
- * `distanceKm = 5·radiusKm` subtends hundreds of px on the 720-tall/60° fixture
+ * A body of the given radius sitting `distanceM` down +x from the origin.
+ * `distanceM = 5·radiusM` subtends hundreds of px on the 720-tall/60° fixture
  * viewport (firmly resolved past the glint threshold).
  */
-function bodyAt(id: string, radiusKm: number, orientation: Mat3 = IDENTITY_MAT3): SeededPlanet {
-  const distanceKm = radiusKm * 5;
+function bodyAt(id: string, radiusM: number, orientation: Mat3 = IDENTITY_MAT3): SeededPlanet {
+  const distanceM = radiusM * 5;
   return {
     id,
     label: id,
-    positionMpc: [distanceKm * SCALE_UNITS.KM_TO_MPC, 0, 0],
-    radiusKm,
+    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+    radiusM,
     albedo: [0.5, 0.5, 0.5],
     orientation,
   };
@@ -130,7 +130,7 @@ function makeNear0View(): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
@@ -170,7 +170,7 @@ describe('texturedBodiesLayer.enabled', () => {
   });
 
   it('is false beyond the foreground gate even with a resident resolved body', () => {
-    const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390)]);
+    const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390000)]);
     expect(texturedBodiesLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
   });
 
@@ -178,12 +178,12 @@ describe('texturedBodiesLayer.enabled', () => {
     // Body present + resolved but its texture has not committed → hasMap says
     // not resident → the partition routes it to `flat`, so this layer draws
     // nothing.
-    const state = makeState(makeRendererSpy([]), [bodyAt('mars', 3390)]);
+    const state = makeState(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
     expect(texturedBodiesLayer.enabled(state, NEAR_CTX)).toBe(false);
   });
 
   it('is true when a resolved registry body is resident', () => {
-    const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390)]);
+    const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390000)]);
     expect(texturedBodiesLayer.enabled(state, NEAR_CTX)).toBe(true);
   });
 });
@@ -194,8 +194,8 @@ describe('texturedBodiesLayer.draw', () => {
     const renderer = makeRendererSpy(['mars', 'jupiter']);
     const view = makeNear0View();
     const marsOrient: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
-    const mars = bodyAt('mars', 3390, marsOrient);
-    const jupiter = bodyAt('jupiter', 69911);
+    const mars = bodyAt('mars', 3390000, marsOrient);
+    const jupiter = bodyAt('jupiter', 69911000);
     const state = makeState(renderer, [mars, jupiter]);
 
     texturedBodiesLayer.draw(PASS_STUB, view, NEAR_CTX, state);
@@ -208,7 +208,7 @@ describe('texturedBodiesLayer.draw', () => {
       expect(call[0]).not.toBe(view.vp);
       expect(call[1]).toBe(body.positionMpc);
       expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-      expect(call[3]).toBe(body.radiusKm * SCALE_UNITS.KM_TO_MPC);
+      expect(call[3]).toBe(body.radiusM * SCALE_UNITS.M_TO_MPC);
       expect(call[4]).toBe(body.orientation);
     });
 
@@ -249,7 +249,7 @@ describe('texturedBodiesLayer.draw', () => {
     const expectedCam = camPosLocal(
       view.camPos,
       mars.positionMpc,
-      mars.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      mars.radiusM * SCALE_UNITS.M_TO_MPC,
       mars.orientation,
     );
     expect(u0[24]).toBe(Math.fround(expectedCam[0]));
@@ -261,8 +261,8 @@ describe('texturedBodiesLayer.draw', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy(['saturn', 'mars']);
     const view = makeNear0View();
-    const saturn = bodyAt('saturn', 58232);
-    const mars = bodyAt('mars', 3390);
+    const saturn = bodyAt('saturn', 58232000);
+    const mars = bodyAt('mars', 3390000);
     const state = makeState(renderer, [saturn, mars]);
 
     texturedBodiesLayer.draw(PASS_STUB, view, NEAR_CTX, state);
@@ -270,8 +270,8 @@ describe('texturedBodiesLayer.draw', () => {
     const ring = SCENE_RINGS.find((r) => r.bodyId === 'saturn')!;
     const [, , saturnU] = renderer.draw.mock.calls[0]!;
     // Ring ratios at floats 20 (inner) and 21 (outer), planet-radius units.
-    expect(saturnU[20]).toBeCloseTo(ring.innerRadiusKm / saturn.radiusKm);
-    expect(saturnU[21]).toBeCloseTo(ring.outerRadiusKm / saturn.radiusKm);
+    expect(saturnU[20]).toBeCloseTo(ring.innerRadiusKm / (saturn.radiusM * SCALE_UNITS.M_TO_KM));
+    expect(saturnU[21]).toBeCloseTo(ring.outerRadiusKm / (saturn.radiusM * SCALE_UNITS.M_TO_KM));
 
     const [, , marsU] = renderer.draw.mock.calls[1]!;
     // Ringless body: the "no ring" sentinel (0) at both ratio slots.
@@ -281,7 +281,7 @@ describe('texturedBodiesLayer.draw', () => {
 
   it('is a no-op when the texturedBodyRenderer handle is null (pre-bootstrap)', () => {
     const view = makeNear0View();
-    const state = makeState(null, [bodyAt('mars', 3390)]);
+    const state = makeState(null, [bodyAt('mars', 3390000)]);
     expect(() => texturedBodiesLayer.draw(PASS_STUB, view, NEAR_CTX, state)).not.toThrow();
   });
 });

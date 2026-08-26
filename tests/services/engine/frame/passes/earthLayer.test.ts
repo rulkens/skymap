@@ -148,7 +148,7 @@ function makeNear0View(): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
@@ -362,10 +362,10 @@ describe('earthLayer.draw', () => {
     // The load-bearing seam: first arg is the slab's Float64Array vp, NOT view.vp.
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
-    // Position, render origin, and the km→Mpc radius carried through.
+    // Position, render origin, and the m→Mpc radius carried through.
     expect(call[1]).toBe(SEEDED_EARTH.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    expect(call[3]).toBe(SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    expect(call[3]).toBe(SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC);
     // The body's baked orientation is forwarded as the model's rotation factor.
     expect(call[4]).toBe(SEEDED_EARTH.orientation);
 
@@ -438,7 +438,7 @@ describe('earthLayer.draw', () => {
     const expectedCam = camPosLocal(
       view.camPos,
       SEEDED_EARTH.positionMpc,
-      SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC,
       SEEDED_EARTH.orientation,
     );
     expect(uniforms[20]).toBe(Math.fround(expectedCam[0]));
@@ -472,7 +472,7 @@ describe('earthLayer.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeNear0View();
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
-    const radiusMpc = SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const radiusMpc = SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
     const midAltitudeRadii =
       (CLOUD_SHELL_PARAMS.fadeStartAltitudeRadii + CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii) / 2;
     const closeCtx = {
@@ -630,7 +630,7 @@ describe('earthLayer.draw — base globe fade under the tile cut', () => {
   /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along
    *  +x — the shared fixture for the fade tests below. */
   function makeAltitudeCtx(altitudeKm: number): ReadyFrameContext {
-    const radiusMpc = SEEDED_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const radiusMpc = SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
     const altitudeMpc = altitudeKm * SCALE_UNITS.KM_TO_MPC;
     return {
       cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },

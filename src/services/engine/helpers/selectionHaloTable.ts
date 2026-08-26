@@ -7,7 +7,7 @@
  * A galaxy uses its catalog diameter (with a synthetic-fallback floor); the
  * Milky Way its disc radius anchored at the galactic centre; a scene body (a
  * planet, a famous star, Earth) and a survey star each carry a REAL physical
- * radius — `radiusKm` converted to Mpc — so the NEAR0 ring layer can wrap the
+ * radius — `radiusM` converted to Mpc — so the NEAR0 ring layer can wrap the
  * rendered sphere on close approach instead of floating a fixed-px dot inside
  * it (`near0RingRadiusPx` floors to a px minimum far away, then tracks 1.5× the
  * sphere's apparent radius once it resolves). A structure returns null because
@@ -88,21 +88,21 @@ const SELECTION_HALO_TABLE: {
   // galactic plane, not a point selection.
   zoneOfAvoidance: (_row) => null,
   // A scene body (planet / famous star / Earth) is drawn as a real sphere, so
-  // its ring rides its true physical radius — `radiusKm` → Mpc — letting the
+  // its ring rides its true physical radius — `radiusM` → Mpc — letting the
   // NEAR0 ring layer (§9) wrap the sphere on close approach (far away
   // `near0RingRadiusPx` floors it to a px minimum). The NEAR0 slab tag routes
   // it through `near0SelectionRingLayer` (not the COSMO layer), so the two
   // layers stay slab-exclusive on the shared renderer.
   body: (row) => ({
-    radiusMpc: row.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    radiusMpc: row.radiusM * SCALE_UNITS.M_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
     slab: NEAR0,
   }),
-  // A survey star carries the nominal solar radius (`radiusKm`, stamped by the
+  // A survey star carries the nominal solar radius (`radiusM`, stamped by the
   // extractor) and resolves to a sphere on close approach, so its ring rides
   // that physical radius in Mpc too — same NEAR0 treatment as a scene body.
   star: (row) => ({
-    radiusMpc: row.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    radiusMpc: row.radiusM * SCALE_UNITS.M_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
     slab: NEAR0,
   }),

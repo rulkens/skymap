@@ -136,7 +136,7 @@ function makeNear0View(): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
@@ -258,7 +258,7 @@ describe('planetsLayer.draw', () => {
       expect(call[0]).not.toBe(view.vp);
       expect(call[1]).toBe(planet.positionMpc);
       expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-      expect(call[3]).toBe(planet.radiusKm * SCALE_UNITS.KM_TO_MPC);
+      expect(call[3]).toBe(planet.radiusM * SCALE_UNITS.M_TO_MPC);
       // Each planet forwards its own baked orientation as the rotation factor.
       expect(call[4]).toBe(planet.orientation);
     });
@@ -433,7 +433,7 @@ describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable
     id: 'mars', // a real registry id → bodyTextureSpec('mars') !== null
     label: 'Mars',
     positionMpc: [0, 0, 0],
-    radiusKm: 6371,
+    radiusM: 6371000,
     albedo: [0.6, 0.32, 0.23],
     orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as SeededPlanet['orientation'],
   };
@@ -509,7 +509,7 @@ describe('planetsLayer.drawPick', () => {
       id: 'mercury',
       label: 'Mercury',
       positionMpc: [0, 0, 0],
-      radiusKm: 6371,
+      radiusM: 6371000,
       albedo: [0.3, 0.3, 0.3],
       orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as SeededPlanet['orientation'],
     };

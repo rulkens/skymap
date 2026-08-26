@@ -24,7 +24,7 @@ const MOVING_STAR = {
   label: 'Moving fixture',
   absMag: 4.83,
   color: [1, 1, 1],
-  radiusKm: 696340,
+  radiusM: 696340000,
 };
 
 const STATE = {

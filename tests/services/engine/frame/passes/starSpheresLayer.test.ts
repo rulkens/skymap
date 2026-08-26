@@ -132,7 +132,7 @@ function makeNear0View(camPos: Vec3): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
@@ -215,10 +215,10 @@ describe('starSpheresLayer.draw', () => {
     // The load-bearing seam: first arg is the slab's Float64Array vp, NOT view.vp.
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
-    // Position, render origin, and the km→Mpc radius carried through.
+    // Position, render origin, and the m→Mpc radius carried through.
     expect(call[1]).toBe(SUN.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    expect(call[3]).toBe(SUN.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    expect(call[3]).toBe(SUN.radiusM * SCALE_UNITS.M_TO_MPC);
     // A star is a rotation-invariant emissive sphere — it forwards the identity.
     expect(call[4]).toBe(IDENTITY_MAT3);
 

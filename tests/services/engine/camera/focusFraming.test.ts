@@ -113,13 +113,13 @@ describe('focusFraming', () => {
 
   // ── body arm ───────────────────────────────────────────────────────────────
 
-  const EARTH_RADIUS_KM = 6371;
+  const EARTH_RADIUS_M = 6_371_000;
   const bodyRow = (over: Partial<BodyRow> = {}): BodyRow => ({
     type: 'body',
     id: 'earth',
     label: 'Earth',
     positionMpc: [4.8481e-12, 0, 0], // ~1 AU in Mpc
-    radiusKm: EARTH_RADIUS_KM,
+    radiusM: EARTH_RADIUS_M,
     ...over,
   });
 
@@ -127,7 +127,7 @@ describe('focusFraming', () => {
     const row = bodyRow();
     const result = focusFraming(row, FOVY);
     expect(result.target).toEqual([4.8481e-12, 0, 0]);
-    expect(result.distance).toBe(bodyFocusDistance(EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC, FOVY));
+    expect(result.distance).toBe(bodyFocusDistance(EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC, FOVY));
   });
 
   it('body arm — distance is proportional to the physical radius (no clamp)', () => {
@@ -135,19 +135,19 @@ describe('focusFraming', () => {
     // distance, and at Earth scale (~2e-16 Mpc) the result stays proportional
     // instead of being swallowed by a Mpc-scale minimum like the galaxy /
     // structure helpers apply.
-    const single = focusFraming(bodyRow({ radiusKm: EARTH_RADIUS_KM }), FOVY).distance;
-    const double = focusFraming(bodyRow({ radiusKm: 2 * EARTH_RADIUS_KM }), FOVY).distance;
+    const single = focusFraming(bodyRow({ radiusM: EARTH_RADIUS_M }), FOVY).distance;
+    const double = focusFraming(bodyRow({ radiusM: 2 * EARTH_RADIUS_M }), FOVY).distance;
     expect(double / single).toBeCloseTo(2, 10);
     // Sanity of the regime: framing Earth lands within a handful of Earth
     // radii, i.e. far below any Mpc-scale clamp floor.
-    const earthRadiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    const earthRadiusMpc = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
     expect(single).toBeGreaterThan(earthRadiusMpc);
     expect(single).toBeLessThan(100 * earthRadiusMpc);
   });
 
   it('body arm — radius is the physical radius in Mpc (a real pass-by extent)', () => {
     const result = focusFraming(bodyRow(), FOVY);
-    expect(result.radius).toBeCloseTo(EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC, 20);
+    expect(result.radius).toBeCloseTo(EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC, 20);
   });
 
   it('body arm — target is a fresh array, not aliased from positionMpc', () => {
@@ -165,13 +165,13 @@ describe('focusFraming', () => {
     // Given the same position + physical radius they must yield the same pose —
     // pinning that the two arms share a single framing body, not two drifting copies.
     const positionMpc: Vec3 = [4.8481e-12, 0, 0];
-    const radiusKm = SOLAR_RADIUS_KM;
+    const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
     const bodyResult = focusFraming(
-      { type: 'body', id: 'x', label: 'X', positionMpc, radiusKm },
+      { type: 'body', id: 'x', label: 'X', positionMpc, radiusM },
       FOVY,
     );
     const starResult = focusFraming(
-      { type: 'star', index: 3, positionMpc, absMag: 4, bpRp: 0.5, radiusKm },
+      { type: 'star', index: 3, positionMpc, absMag: 4, bpRp: 0.5, radiusM },
       FOVY,
     );
     expect(starResult).toEqual(bodyResult);
