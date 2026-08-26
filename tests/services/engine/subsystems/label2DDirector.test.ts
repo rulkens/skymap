@@ -54,7 +54,7 @@ const NEAR0_SLAB: Slab = {
   nearMpc: 1e-6,
   farMpc: 1,
   vp: mat4d.identity() as Float64Array,
-  originRelative: true,
+  frame: { kind: 'world-mpc', originRelative: true },
   precision: 'f64',
   reversedZ: true,
 };

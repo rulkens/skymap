@@ -21,7 +21,7 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusKm: 6371,
+  radiusM: 6371000,
 };
 
 describe('pivotRadiusMpc', () => {
@@ -36,7 +36,7 @@ describe('pivotRadiusMpc', () => {
       positionMpc: [1, 2, 3],
       absMag: 4,
       bpRp: 0.6,
-      radiusKm: 696340,
+      radiusM: 696340000,
     };
     expect(pivotRadiusMpc(star)).toBeCloseTo(696340 * SCALE_UNITS.KM_TO_MPC, 30);
   });

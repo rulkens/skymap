@@ -27,6 +27,8 @@
  * instantiation (near-field bodies + cosmological scene) this spec ships.
  */
 
+import type { SlabFrame } from './SlabFrame';
+
 export type Slab = {
   /** 0 = nearest; higher = farther back. Composite order is high-to-low. */
   index: number;
@@ -36,8 +38,8 @@ export type Slab = {
   farMpc: number;
   /** proj·view for this slab (origin-relative for near slabs). */
   vp: Float64Array;
-  /** True ⇒ geometry deltas are computed as pos − renderOrigin. */
-  originRelative: boolean;
+  /** The frame and units `vp` and this slab's geometry are expressed in. */
+  frame: SlabFrame;
   /** f64 ⇒ MVP is composed in double precision, then narrowed (composeBodyMvp path). */
   precision: 'f32' | 'f64';
   /** true ⇒ this slab clears depth to 0, greater-wins, perspectiveReverseZ projection. */

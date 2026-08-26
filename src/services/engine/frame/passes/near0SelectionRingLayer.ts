@@ -48,7 +48,7 @@
  *
  * A NEAR0 target (a survey star, a planet, Earth, a scene star) is drawn as a
  * real sphere, so its `selectionHalo` descriptor carries a REAL physical
- * radius (`radiusKm` → Mpc) and `near0RingRadiusPx` sizes the halo like the
+ * radius (`radiusM` → Mpc) and `near0RingRadiusPx` sizes the halo like the
  * galaxy ring: `max(farFloor, 1.5 × apparentRadiusPx)`. Far away the sphere is
  * sub-pixel and the far floor wins — the same fixed-px `galaxyCatalogs.sizePx ·
  * 6` dot the COSMO helper produces at radius 0 — so nothing changes at

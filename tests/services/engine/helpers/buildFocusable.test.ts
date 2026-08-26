@@ -48,7 +48,7 @@ const starRow: SelectionRow = {
   id: 'sirius',
   label: 'Sirius',
   positionMpc: [1e-6, 2e-6, 3e-6],
-  radiusKm: 1_192_000,
+  radiusM: 1192000000,
 };
 
 const earthRow: SelectionRow = {
@@ -56,7 +56,7 @@ const earthRow: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusKm: 6371,
+  radiusM: 6371000,
 };
 
 const jupiterRow: SelectionRow = {
@@ -64,7 +64,7 @@ const jupiterRow: SelectionRow = {
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [4e-14, 0, 0],
-  radiusKm: 69_911,
+  radiusM: 69911000,
 };
 
 describe('buildFocusable', () => {
@@ -86,7 +86,7 @@ describe('buildFocusable', () => {
       id: 'sirius',
       label: 'Sirius',
       positionMpc: [1e-6, 2e-6, 3e-6],
-      radiusKm: 1_192_000,
+      radiusM: 1192000000,
     });
   });
   it('resolves Earth and a planet now the star-only guard is lifted', () => {
@@ -98,14 +98,14 @@ describe('buildFocusable', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [0, 0, 0],
-      radiusKm: 6371,
+      radiusM: 6371000,
     });
     expect(buildFocusable(jupiterRow)).toEqual({
       type: 'body',
       id: 'jupiter',
       label: 'Jupiter',
       positionMpc: [4e-14, 0, 0],
-      radiusKm: 69_911,
+      radiusM: 69911000,
     });
   });
 
@@ -121,7 +121,7 @@ describe('buildFocusable', () => {
       positionMpc: [10 * SCALE_UNITS.PC_TO_MPC, 0, 0],
       absMag,
       bpRp,
-      radiusKm: 696340,
+      radiusM: 696340000,
     }) as FieldStarInfo;
 
     expect(info.distancePc).toBeCloseTo(10, 9);

@@ -203,7 +203,7 @@ export const bodyGlintsLayer: ContentLayer = {
       const positionMpc = states.get(body.id)!.positionMpc;
       const diameterPx = bodyApparentDiameterPx({
         positionMpc,
-        radiusKm: body.radiusKm,
+        radiusM: body.radiusM,
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
         fovYRad: ctx.fovYRad,
@@ -371,7 +371,7 @@ export const bodyGlintsLayer: ContentLayer = {
       // drawn set and beyond it they match.
       const diameterPx = bodyApparentDiameterPx({
         positionMpc,
-        radiusKm: body.radiusKm,
+        radiusM: body.radiusM,
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
         fovYRad: ctx.fovYRad,

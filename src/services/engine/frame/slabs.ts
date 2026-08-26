@@ -184,13 +184,13 @@ export function deriveSlabs(
     nearMpc,
     farMpc,
     vp: nearFieldVp,
-    // `originRelative: true` is now live: the vp above is expressed relative to
-    // `RENDER_ORIGIN_MPC`, so any layer bound to this slab must upload
-    // origin-relative model matrices. `RENDER_ORIGIN_MPC` is the world origin
-    // today, which makes `ctx.drawCamPos` (derived from `cam.position`) already
-    // origin-relative; a future floating origin would re-derive a per-slab
-    // `camPos` in `slabViewOf`.
-    originRelative: true,
+    // The vp above is expressed relative to `RENDER_ORIGIN_MPC`, so any layer
+    // bound to this slab must upload origin-relative model matrices.
+    // `RENDER_ORIGIN_MPC` is the world origin today, which makes
+    // `ctx.drawCamPos` (derived from `cam.position`) already origin-relative; a
+    // future floating origin would re-derive a per-slab `camPos` in
+    // `slabViewOf`.
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   };
@@ -199,7 +199,7 @@ export function deriveSlabs(
     nearMpc: COSMO_NEAR_MPC,
     farMpc: COSMO_FAR_MPC,
     vp: Float64Array.from(cosmoVp),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: SLAB_REVERSED_Z[COSMO]!,
   };

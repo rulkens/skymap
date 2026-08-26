@@ -9,6 +9,7 @@
  * fragment; Earth's `exposure` seeds `settings.earth.atmosphereExposure` and is read there.
  */
 
+import { SCALE_UNITS } from '../scaleUnits';
 import { SCENE_EARTH } from './sceneEarth';
 import { SCENE_PLANETS } from './scenePlanets';
 import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';
@@ -23,10 +24,15 @@ const seededPlanet = (id: string): PlanetBody => {
   return body;
 };
 
+// This table (and the WGSL struct it packs into) is in km; body radii are
+// authored in metres. The boundary is crossed here and nowhere else.
+const seededRadiusKm = (id: string): number => seededPlanet(id).radiusM * SCALE_UNITS.M_TO_KM;
+const EARTH_RADIUS_KM = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_KM;
+
 export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
   earth: {
-    planetRadiusKm: SCENE_EARTH.radiusKm,
-    atmosphereTopKm: SCENE_EARTH.radiusKm + 100,
+    planetRadiusKm: EARTH_RADIUS_KM,
+    atmosphereTopKm: EARTH_RADIUS_KM + 100,
     constituents: [
       {
         // Molecules.
@@ -62,8 +68,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     // drawn texture is already unresolved cloud, and the 41 optical depths of blue Rayleigh
     // below it are unmarchable. `planetRadiusKm` therefore draws the shell 68 km low — 1.1%
     // of the radius, and raising it would desync the shell from the rasterised sphere.
-    planetRadiusKm: seededPlanet('venus').radiusKm,
-    atmosphereTopKm: seededPlanet('venus').radiusKm + 40, // [M] haze tops ~110 km = +41
+    planetRadiusKm: seededRadiusKm('venus'),
+    atmosphereTopKm: seededRadiusKm('venus') + 40, // [M] haze tops ~110 km = +41
     constituents: [
       {
         // [D] CO2/N2 at 50 mbar, 233 K (He+21 sigmas). tau(440) = 0.022 above the reference:
@@ -105,8 +111,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     // effects; tau_ext(880) = 0.40 [L on M], Gale's clear-season floor, is this row's one honest
     // dial — if the disc reads flat over an already-hazy mosaic lower tau, do NOT desaturate the
     // coefficients. No water-ice slot: that belt is seasonal and tropical, a shell is neither.
-    planetRadiusKm: seededPlanet('mars').radiusKm,
-    atmosphereTopKm: seededPlanet('mars').radiusKm + 60,
+    planetRadiusKm: seededRadiusKm('mars'),
+    atmosphereTopKm: seededRadiusKm('mars') + 60,
     constituents: [
       {
         // [D] CO2/N2/Ar Rayleigh at 610 Pa, 210 K (Bideau-Mehu n + He+21 King factor). Worth
@@ -146,8 +152,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
   jupiter: {
     // Cloud-tops-as-ground: no solid surface, so `planetRadiusKm` is the cloud-top radius
     // already drawn and the shell is a thin rim. Limb darkening dominates the look, not this.
-    planetRadiusKm: seededPlanet('jupiter').radiusKm,
-    atmosphereTopKm: seededPlanet('jupiter').radiusKm + 150,
+    planetRadiusKm: seededRadiusKm('jupiter'),
+    atmosphereTopKm: seededRadiusKm('jupiter') + 150,
     constituents: [
       {
         // [M/D] H2/He Rayleigh at the Galileo composition (x_He 0.1356) and 1-bar T (166 K).
@@ -175,8 +181,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
   },
   saturn: {
     // Cloud-tops-as-ground like Jupiter; pale gold, with a taller and thinner rim.
-    planetRadiusKm: seededPlanet('saturn').radiusKm,
-    atmosphereTopKm: seededPlanet('saturn').radiusKm + 300,
+    planetRadiusKm: seededRadiusKm('saturn'),
+    atmosphereTopKm: seededRadiusKm('saturn') + 300,
     constituents: [
       {
         // [M/D] H2/He Rayleigh, 35% stronger than Jupiter's at 1 bar (g_eff is 2.5x smaller).
@@ -224,10 +230,10 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     // Textureless: no visible-light mosaic of Titan exists, so the shell sits over a flat
     // Lambert sphere. Every number here, and what the disc should composite to:
     // docs/research/atmospheres/titan.md.
-    planetRadiusKm: seededPlanet('titan').radiusKm,
+    planetRadiusKm: seededRadiusKm('titan'),
     // [D] 7.8 aerosol scale heights (limb tau 0.009), and tall enough to contain the 500 km
     // detached haze, so the shell never has to grow.
-    atmosphereTopKm: seededPlanet('titan').radiusKm + 350,
+    atmosphereTopKm: seededRadiusKm('titan') + 350,
     constituents: [
       {
         // [D] N2/CH4 at 193 Pa, 172 K (HASI/Huygens; He+21 sigmas) — 0.2% of the extinction,
@@ -283,8 +289,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     // Cloud-tops-as-ground; the old row faked methane's red absorption with a suppressed-red
     // Rayleigh vector. That vector was already close to right — the real gap was that methane
     // (the thing that actually reddens/blues these planets) had no constituent at all.
-    planetRadiusKm: seededPlanet('uranus').radiusKm,
-    atmosphereTopKm: seededPlanet('uranus').radiusKm + 150,
+    planetRadiusKm: seededRadiusKm('uranus'),
+    atmosphereTopKm: seededRadiusKm('uranus') + 150,
     constituents: [
       {
         // [D] H2/He Rayleigh (Dalgarno & Williams 1962 sigma_H2 + Mansfield & Peck 1969 sigma_He)
@@ -324,8 +330,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
   neptune: {
     // Cloud-tops-as-ground like Uranus. Uses all 4 constituent slots — MAX_CONSTITUENTS is
     // exactly consumed, no headroom left on this row.
-    planetRadiusKm: seededPlanet('neptune').radiusKm,
-    atmosphereTopKm: seededPlanet('neptune').radiusKm + 120,
+    planetRadiusKm: seededRadiusKm('neptune'),
+    atmosphereTopKm: seededRadiusKm('neptune') + 120,
     constituents: [
       {
         // [D] H2/He Rayleigh, same cross sections as Uranus's. Only 5% above Uranus's — the higher
@@ -377,10 +383,10 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     // cancels and that factor 2.5 IS the tholin-aggregate cross-section's colour. Visible only
     // BACKLIT — eyeball at phase >160°, ~7 radii out. Papers, derivations and this model's known
     // caricatures: docs/superpowers/plans/completed/2026-08-16-add-pluto-charon.md.
-    planetRadiusKm: seededPlanet('pluto').radiusKm,
+    planetRadiusKm: seededRadiusKm('pluto'),
     // [D] LORRI's haze noise floor sits ~260 km up (Cheng+17); 250 km is also 5 haze scale
     // heights. 1.21x the radius, the table's thickest shell relative to its body — not a typo.
-    atmosphereTopKm: seededPlanet('pluto').radiusKm + 250,
+    atmosphereTopKm: seededRadiusKm('pluto') + 250,
     constituents: [
       {
         // [D] Earth's Rayleigh scaled by surface number density (11 µbar / 40 K = 7.82e-5 of sea

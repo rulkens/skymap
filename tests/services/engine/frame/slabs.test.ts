@@ -56,10 +56,10 @@ describe('deriveSlabs', () => {
 
   it('the near-field row is origin-relative and f64; the cosmological row is not origin-relative and f32', () => {
     const slabs = deriveSlabs(makeCam(100), makeCosmoVp());
-    expect(slabs[0]?.originRelative).toBe(true);
+    expect(slabs[0]?.frame).toEqual({ kind: 'world-mpc', originRelative: true });
     expect(slabs[0]?.precision).toBe('f64');
     expect(slabs[0]?.reversedZ).toBe(true);
-    expect(slabs[1]?.originRelative).toBe(false);
+    expect(slabs[1]?.frame).toEqual({ kind: 'world-mpc', originRelative: false });
     expect(slabs[1]?.precision).toBe('f32');
     expect(slabs[1]?.reversedZ).toBe(false);
   });

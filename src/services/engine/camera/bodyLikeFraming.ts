@@ -8,7 +8,7 @@
  * camera at the world position, and let `bodyFocusDistance` do the unclamped
  * screen-fill math. That shared body was the accidental duplication — two copies
  * of the same three lines that would have to change in lockstep. This helper is
- * its one home; both arms extract their own `positionMpc` + `radiusKm` and
+ * its one home; both arms extract their own `positionMpc` + `radiusM` and
  * delegate here.
  *
  * The distance is deliberately UNCLAMPED: at ~2e-16 Mpc (Earth) any Mpc-scale
@@ -23,12 +23,8 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FocusFraming } from './focusFraming';
 
-export function bodyLikeFraming(
-  positionMpc: Vec3,
-  radiusKm: number,
-  fovYRad: number,
-): FocusFraming {
-  const radiusMpc = radiusKm * SCALE_UNITS.KM_TO_MPC;
+export function bodyLikeFraming(positionMpc: Vec3, radiusM: number, fovYRad: number): FocusFraming {
+  const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
   return {
     target: [positionMpc[0], positionMpc[1], positionMpc[2]],
     distance: bodyFocusDistance(radiusMpc, fovYRad),

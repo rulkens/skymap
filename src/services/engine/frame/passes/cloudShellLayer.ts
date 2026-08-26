@@ -6,7 +6,7 @@
  * ### What it draws — the translucent deck over the opaque globe
  *
  * The single seeded `bodies.earth` record, composed as a unit sphere scaled to
- * `earth.radiusKm × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface) and
+ * `earth.radiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface) and
  * placed in the body's `RENDER_ORIGIN_MPC`-relative frame with the orientation
  * resolved this frame from the `BodyState` snapshot. The shared `cloudShellRenderer` textures that sphere with Earth's
  * equirectangular cloud map (RGB colour + `.a` coverage) and dims it by the same
@@ -103,7 +103,7 @@ function cloudShellDraw(state: EngineState, ctx: ReadyFrameContext): CloudShellD
   // Checked before the sub-pixel cull so it also covers that cull's
   // distanceMpc === 0 degenerate case: a camera at the body's centre is deep
   // inside the fade-out band already.
-  const bodyRadiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  const bodyRadiusMpc = earth.radiusM * SCALE_UNITS.M_TO_MPC;
   const deckFade = cloudDeckFade(distanceMpc, bodyRadiusMpc);
   if (deckFade <= 0) return null;
   // Sub-pixel cull on Earth's diameter (the shell is a hair larger, so the
@@ -112,7 +112,7 @@ function cloudShellDraw(state: EngineState, ctx: ReadyFrameContext): CloudShellD
   // resolved here since deckFade already handled that case above.
   if (distanceMpc === 0) return { earth, deckFade };
   const diameterPx = apparentSizePx({
-    diameterKpc: (2 * earth.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
+    diameterKpc: (2 * earth.radiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
     distanceMpc,
     viewportHeightPx: ctx.canvasSize.height,
     fovYRad: ctx.fovYRad,
@@ -150,7 +150,7 @@ export const cloudShellLayer: ContentLayer = {
     // Scale the unit sphere to the shell radius — just above the surface — from
     // the slab's f64 vp (the f64 seam), folding in Earth's resolved orientation so
     // the cloud map's equirectangular texels co-register with the surface.
-    const shellRadiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC * CLOUD_SHELL_PARAMS.radiusRatio;
+    const shellRadiusMpc = earth.radiusM * SCALE_UNITS.M_TO_MPC * CLOUD_SHELL_PARAMS.radiusRatio;
     const mvp = composeBodyMvp(
       view.slab.vp,
       earthState.positionMpc,

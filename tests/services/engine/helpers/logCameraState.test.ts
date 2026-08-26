@@ -19,8 +19,8 @@ import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamer
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 
-const EARTH_RADIUS_KM = 6371;
-const EARTH_RADIUS_MPC = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+const EARTH_RADIUS_M = 6_371_000;
+const EARTH_RADIUS_MPC = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
 const SIM_DAYS = 2461272.948547558; // an arbitrary live "now" instant, far from J2000
 
 function fakeCanvas(cssWidth: number, cssHeight: number): HTMLCanvasElement {
@@ -63,7 +63,7 @@ describe('logCameraState', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: cam.target,
-      radiusKm: EARTH_RADIUS_KM,
+      radiusM: EARTH_RADIUS_M,
     };
 
     logCameraState(cam, fakeCanvas(1920, 1080), focus, SIM_DAYS);
@@ -108,7 +108,7 @@ describe('logCameraState', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [3, 4, 0],
-      radiusKm: EARTH_RADIUS_KM,
+      radiusM: EARTH_RADIUS_M,
     };
 
     logCameraState(cam, fakeCanvas(800, 600), focus, SIM_DAYS);
