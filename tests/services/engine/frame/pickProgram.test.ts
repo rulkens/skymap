@@ -536,7 +536,12 @@ describe('createPickProgram', () => {
           enabled: true,
           drawPick: () => callLog.push('cosmo'),
         }),
-        makeLayer({ name: 'body', slab: 'body', enabled: true, drawPick: () => callLog.push('body') }),
+        makeLayer({
+          name: 'body',
+          slab: 'body',
+          enabled: true,
+          drawPick: () => callLog.push('body'),
+        }),
       ];
       const program = createPickProgram({
         device,
@@ -574,15 +579,15 @@ describe('createPickProgram', () => {
       expect(await program.pick(10, 10)).toEqual({ sourceCode: 5, localIdx: 10 });
     });
 
-    it('sorts a degenerate [0,0] NEAR0 range unknown-far, not nearest (Sun-disabled edge case)', async () => {
-      // No star sphere resolved this frame (starSphereRangeM null → [0, 0],
-      // slabs.ts) — must not let NEAR0 sort as nearest again.
+    it('sorts an unresolved NEAR0 range unknown-far, not nearest (Sun-disabled edge case)', async () => {
+      // No star sphere resolved this frame (starSphereRangeM null, slabs.ts) —
+      // must not let NEAR0 sort as nearest again.
       const base = makeCtx();
-      const degenerateNear0 = { ...base.slabs[0]!, distanceRangeM: [0, 0] as const };
+      const unresolvedNear0 = { ...base.slabs[0]!, distanceRangeM: null };
       const body = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'mars' as BodyId } });
       vi.mocked(pickFrameContext).mockReturnValue({
         ...base,
-        slabs: [degenerateNear0, base.slabs[1]!, body],
+        slabs: [unresolvedNear0, base.slabs[1]!, body],
       });
       const { device } = makeDevice();
 
@@ -594,7 +599,12 @@ describe('createPickProgram', () => {
           enabled: true,
           drawPick: () => callLog.push('near0'),
         }),
-        makeLayer({ name: 'body', slab: 'body', enabled: true, drawPick: () => callLog.push('body') }),
+        makeLayer({
+          name: 'body',
+          slab: 'body',
+          enabled: true,
+          drawPick: () => callLog.push('body'),
+        }),
       ];
       const program = createPickProgram({
         device,

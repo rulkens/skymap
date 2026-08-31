@@ -44,8 +44,13 @@ export type Slab = {
    * Camera-distance interval, in METRES, spanned by the depth-bearing content
    * this row contributes. Metres for EVERY row (including `world-mpc` ones) so
    * the painter sort compares across frames without a per-row unit branch.
+   *
+   * `null` when the row resolved no such content this frame (only NEAR0 can:
+   * its interval is the star spheres actually drawn, spec §7.1). Nullable
+   * rather than a degenerate `[0, 0]`, which a sort reads as "nearest" — the
+   * opposite of what an unresolved row wants (`foregroundChainOrder`).
    */
-  readonly distanceRangeM: readonly [number, number];
+  readonly distanceRangeM: readonly [number, number] | null;
   /** f64 ⇒ MVP is composed in double precision, then narrowed (composeBodyMvp path). */
   readonly precision: 'f32' | 'f64';
   /** true ⇒ this slab clears depth to 0, greater-wins, perspectiveReverseZ projection. */

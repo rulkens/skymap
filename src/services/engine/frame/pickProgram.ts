@@ -51,7 +51,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
-import { slabViewOf, foregroundChainOrder, NEAR0, COSMO } from './slabs';
+import { slabViewOf, foregroundChainOrder, COSMO } from './slabs';
 import { frontmostPick } from '../../../utils/picking/frontmostPick';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { unpackPick } from '../../../data/selectionEncoding';
@@ -227,8 +227,10 @@ export function createPickProgram(deps: {
 
   // Pickable layers grouped by slab, in the near→far order `frontmostPick`
   // needs. Reuses `foregroundChainOrder`'s distance ordering (the key the
-  // colour chain already sorts NEAR0 + body rows by, slabs.ts) reversed to
-  // near→far, with COSMO forced last — it never enters that chain, and its
+  // colour chain already sorts NEAR0 + body rows by, slabs.ts — including its
+  // unknown-far rule for a NEAR0 that resolved no sphere, which this path
+  // relies on: the star catalog and MW impostor are pickable without one)
+  // reversed to near→far, with COSMO forced last — it never enters that chain, and its
   // fixed 10 kpc–50 Gpc bracket is always farther than any near-field/body
   // content. Fixes the regression where a raw numeric-ascending slab-index
   // sort let any NEAR0(0) star hit beat a genuinely nearer body/planet hit,
@@ -258,15 +260,7 @@ export function createPickProgram(deps: {
     const candidateSlabs = new Set(
       hasBodyCandidate ? [...numericSlabs, ...bodySlabIndices] : numericSlabs,
     );
-    // A degenerate [0, 0] NEAR0 range (no star sphere resolved this frame,
-    // slabs.ts) must sort unknown-far, not nearest — NEAR0 can still hold a
-    // pickable star catalog / MW impostor with no sphere backing it.
-    const orderedSlabs = ctx.slabs.map((slab) =>
-      slab.index === NEAR0 && slab.distanceRangeM[0] === 0 && slab.distanceRangeM[1] === 0
-        ? { ...slab, distanceRangeM: [Infinity, Infinity] as const }
-        : slab,
-    );
-    const nearToFar = [...foregroundChainOrder(orderedSlabs)]
+    const nearToFar = [...foregroundChainOrder(ctx.slabs)]
       .reverse()
       .filter((index) => candidateSlabs.has(index));
     const slabIndices = candidateSlabs.has(COSMO) ? [...nearToFar, COSMO] : nearToFar;

@@ -116,9 +116,9 @@ describe('deriveSlabs', () => {
     },
   );
 
-  it('with no drawn star spheres, NEAR0 gets a zero-width distanceRangeM', () => {
+  it('with no drawn star spheres, NEAR0 has a null distanceRangeM', () => {
     const slabs = deriveSlabs(baseInput({ cam: makeCam(250), starSphereRangeM: null }));
-    expect(slabs[0]?.distanceRangeM).toEqual([0, 0]);
+    expect(slabs[0]?.distanceRangeM).toBeNull();
   });
 
   it("NEAR0's distanceRangeM is exactly the caller's starSphereRangeM when spheres are drawn", () => {
@@ -217,8 +217,8 @@ describe('deriveSlabs', () => {
     const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [near, far, mid] }));
 
     expect(slabs).toHaveLength(2 + 3);
-    expect(slabs[2]!.distanceRangeM[0]).toBeGreaterThan(slabs[3]!.distanceRangeM[0]);
-    expect(slabs[3]!.distanceRangeM[0]).toBeGreaterThan(slabs[4]!.distanceRangeM[0]);
+    expect(slabs[2]!.distanceRangeM![0]).toBeGreaterThan(slabs[3]!.distanceRangeM![0]);
+    expect(slabs[3]!.distanceRangeM![0]).toBeGreaterThan(slabs[4]!.distanceRangeM![0]);
     expect(slabs[2]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-far' });
     expect(slabs[3]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-mid' });
     expect(slabs[4]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-near' });
@@ -329,7 +329,7 @@ describe('deriveSlabs', () => {
     const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
     const row = slabs[2]!;
     expect(row.near).toBe(MIN_NEAR_M);
-    expect(row.distanceRangeM[0]).toBe(0);
+    expect(row.distanceRangeM![0]).toBe(0);
   });
 
   it("keys a body row's near plane off altitude above the SURFACE, not MIN_NEAR_M, once the camera is inside the outermost shell", () => {
@@ -421,6 +421,20 @@ describe('foregroundChainOrder', () => {
       baseInput({ pose, visibleBodies: [near, far], starSphereRangeM: [1e8, 1e8] }),
     );
     expect(foregroundChainOrder(slabs)).toEqual([2, NEAR0, 3]);
+  });
+
+  it('sorts a NEAR0 that resolved no star sphere FARTHEST, not nearest', () => {
+    // The rule `pickProgram` leans on (its NEAR0 candidates — the star catalog,
+    // the Milky Way impostor — are pickable with no sphere backing them, and
+    // must not claim the frontmost hit). Reading a null range as "distance 0"
+    // would sort it nearest, which is the regression this pins.
+    const body = makePlanet({ id: 'body-near' });
+    const pose: BodyPoseProvider = () => ({
+      eyeRelBodyM: [1e6, 0, 0],
+      basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    });
+    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body], starSphereRangeM: null }));
+    expect(foregroundChainOrder(slabs)).toEqual([NEAR0, 2]);
   });
 });
 

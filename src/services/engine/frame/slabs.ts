@@ -175,7 +175,15 @@ function bodySlabRow(input: {
   readonly fovYRad: number;
   readonly aspect: number;
   readonly viewportPx: Readonly<Vec2>;
-}): { readonly slab: Omit<Slab, 'index'>; readonly chainRow: Omit<ChainRow, 'index'> } | null {
+}): {
+  // A body row always spans a real interval (its own drawn radius about its own
+  // distance), so its `distanceRangeM` is narrowed back to non-null here —
+  // nullability on `Slab` exists for NEAR0 alone.
+  readonly slab: Omit<Slab, 'index' | 'distanceRangeM'> & {
+    readonly distanceRangeM: readonly [number, number];
+  };
+  readonly chainRow: Omit<ChainRow, 'index'>;
+} | null {
   const { body, pose, fovYRad, aspect, viewportPx } = input;
   const relPose = pose(body.id as BodyId);
   if (relPose === null) return null;
@@ -280,9 +288,7 @@ function bodySlabRow(input: {
  *
  * NEAR0's `distanceRangeM` comes from `starSphereRangeM` — the interval the
  * star spheres ACTUALLY drawn this frame span (spec §7.1), not the
- * foreground-frustum bracket. `null` (no sphere drawn) degrades to a
- * zero-width `[0, 0]` interval; excluding the row from the painter chain
- * entirely on that case is `foregroundChainOrder`'s caller's job.
+ * foreground-frustum bracket — and stays `null` when no sphere was drawn.
  */
 export function deriveSlabs(input: {
   readonly cam: OrbitCamera;
@@ -345,10 +351,10 @@ export function deriveSlabs(input: {
     // `slabViewOf`.
     frame: { kind: 'world-mpc', originRelative: true },
     // §7.1: the star spheres actually drawn this frame, not the frustum
-    // bracket — see `starSphereRangeM`. An empty drawn set (`null`) degrades
-    // to a zero-width interval; the painter-chain builder (Task 7) is what
-    // actually leaves an empty NEAR0 row out of the chain.
-    distanceRangeM: input.starSphereRangeM ?? [0, 0],
+    // bracket — see `starSphereRangeM`. `null` (empty drawn set) travels as
+    // itself; `foregroundChainOrder` is where "unresolved" gets its sort
+    // position.
+    distanceRangeM: input.starSphereRangeM,
     precision: 'f64',
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   };
@@ -406,8 +412,23 @@ export function foregroundChainOrder(slabs: readonly Slab[]): readonly number[] 
   return slabs
     .filter((slab) => slab.index === NEAR0 || slab.frame.kind === 'body-m')
     .slice()
-    .sort((a, b) => b.distanceRangeM[0] - a.distanceRangeM[0])
+    .sort((a, b) => nearestM(b) - nearestM(a))
     .map((slab) => slab.index);
+}
+
+/**
+ * A row's sort key: its nearest distance, or unknown-FAR for a row that
+ * resolved no depth-bearing content this frame (only NEAR0 can — `null`
+ * `distanceRangeM`). Unknown-far, not the `[0, 0]` this used to degrade to,
+ * because both consumers want it that way: the pick path can still hold NEAR0
+ * candidates with no sphere backing them (the star catalog, the Milky Way
+ * impostor) which must not claim NEAREST, and anything the render path can
+ * still paint into an unresolved NEAR0 (the Gaia field-star sphere, whose
+ * presence `starSphereRangeM` doesn't track) is parsecs away — behind every
+ * body row by construction.
+ */
+function nearestM(slab: Slab): number {
+  return slab.distanceRangeM?.[0] ?? Infinity;
 }
 
 /**
