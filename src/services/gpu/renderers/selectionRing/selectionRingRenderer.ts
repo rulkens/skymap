@@ -60,22 +60,18 @@ const SELECTION_UNIFORM_BYTES = 16;
  * this is the swap-chain format — passed EXPLICITLY rather than read off
  * `ctx.format`, so the target is legible at the construction site.
  *
- * `init.occludeAgainstDepth` opts this instance into per-pixel occlusion
- * behind an opaque solar-system body. When set, the pipeline gains a group(1)
- * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles a
- * discard-gated `fragmentOcclude.wesl` entry alongside the plain one; `draw`
- * then selects the occlude pipeline on any frame handed a scene colour view.
- * The mode picks the entry point — `'compare'` → `fs`, `'coverage'` →
- * `fsCoverage` — but both entries run the identical alpha-coverage test now
- * (see that file's header): the split is a naming hook for this call site,
- * not a live behavioural difference. The default (init omitted) keeps the
- * plain single-BGL, non-occluding pipeline the NEAR0 selection ring relies
+ * `init.occludeAgainstScene` opts this instance into per-pixel attenuation
+ * behind the solar-system bodies. When set, the pipeline gains a group(1)
+ * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
+ * `fragmentOcclude.wesl` alongside the plain entry; `draw` then selects the
+ * occlude pipeline on any frame handed a scene colour view. The default (init
+ * omitted) keeps the plain single-BGL pipeline the NEAR0 selection ring relies
  * on — byte-for-byte unchanged, since that sibling passes no colour view.
  */
 export function createSelectionRingRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
-  init?: { occludeAgainstDepth?: 'compare' | 'coverage' },
+  init?: { occludeAgainstScene?: boolean },
 ): SelectionRingRenderer {
   // The cast lets a test pass `device: null as unknown as GPUDevice`
   // through. Runtime null-checks below gate every GPU call.
@@ -84,7 +80,7 @@ export function createSelectionRingRenderer(
 
   // The occlusion instance builds BOTH pipelines and picks per-draw:
   // `plainPipeline` (single BGL) whenever no scene colour is supplied this
-  // frame, `occludePipeline` (two BGLs, discard-gated fragment) when it is. A
+  // frame, `occludePipeline` (two BGLs, scene-attenuated fragment) when it is. A
   // non-occlusion instance builds only `plainPipeline` and leaves the other
   // null — which is what keeps the NEAR0 sibling's draws byte-identical.
   let plainPipeline: GPURenderPipeline | null = null;
@@ -99,10 +95,7 @@ export function createSelectionRingRenderer(
   // branch.
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
 
-  // The occlude MODE, or undefined for a plain instance. Present ⇒ build the
-  // occlude pipeline + coverage BGL (exactly as the old boolean did); the mode
-  // then selects the fragment ENTRY POINT — see the factory docblock.
-  const occludeMode = init?.occludeAgainstDepth;
+  const occludesScene = init?.occludeAgainstScene === true;
 
   if (device) {
     const bindGroupLayout = device.createBindGroupLayout({
@@ -116,7 +109,7 @@ export function createSelectionRingRenderer(
     // Occlusion joint (opt-in): a second bind-group layout at group 1 (the
     // shared coverage joint). Retained so `draw` can rebuild its per-frame
     // bind group from the resize-recreated colour view.
-    if (occludeMode != null) {
+    if (occludesScene) {
       occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
     }
 
@@ -153,14 +146,7 @@ export function createSelectionRingRenderer(
           bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
         vertex: { module: vsModule, entryPoint: 'vs' },
-        fragment: {
-          module: fsOccludeModule,
-          // Both entries run the identical alpha-coverage test now — the
-          // 'compare'/'coverage' mode only picks which entry point compiles
-          // in, a naming hook for callers (see the factory docblock).
-          entryPoint: occludeMode === 'coverage' ? 'fsCoverage' : 'fs',
-          targets: colorTargets,
-        },
+        fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
         primitive: { topology: 'triangle-list' },
       });
     }

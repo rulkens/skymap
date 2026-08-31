@@ -124,7 +124,7 @@ export const GPU_HANDLE_ROWS = [
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, undefined, undefined, {
-        occludeAgainstDepth: 'coverage',
+        occludeAgainstScene: true,
       }),
   },
   {
@@ -132,7 +132,7 @@ export const GPU_HANDLE_ROWS = [
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
-        occludeAgainstDepth: 'coverage',
+        occludeAgainstScene: true,
       }),
   },
   {
@@ -146,7 +146,7 @@ export const GPU_HANDLE_ROWS = [
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createSelectionRingRenderer(deps.ctx, deps.ctx.format, {
-        occludeAgainstDepth: 'coverage',
+        occludeAgainstScene: true,
       }),
   },
   {
@@ -171,7 +171,7 @@ export const GPU_HANDLE_ROWS = [
         deps.fontAtlases,
         FOREGROUND_LABEL_CAPACITY,
         undefined,
-        { occludeAgainstDepth: 'compare' },
+        { occludeAgainstScene: true },
       ),
   },
   {
@@ -179,7 +179,7 @@ export const GPU_HANDLE_ROWS = [
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
-        occludeAgainstDepth: 'compare',
+        occludeAgainstScene: true,
       }),
   },
 

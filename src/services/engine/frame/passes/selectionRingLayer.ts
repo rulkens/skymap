@@ -81,7 +81,7 @@ export const selectionRingLayer: ContentLayer = {
 
     // Occlude the ring per-pixel behind an opaque body ONLY when the body pass
     // actually ran this frame — else the `foreground:0` colour is stale/absent
-    // and would spuriously discard the whole ring. When undefined, the
+    // and would spuriously blank the whole ring. When undefined, the
     // occlusion renderer falls back to its plain pipeline and draws the ring
     // un-occluded. Mirrors `markerLinesLayer`'s guard.
     const colorView = ctx.renderedTargets.has('foreground:0')

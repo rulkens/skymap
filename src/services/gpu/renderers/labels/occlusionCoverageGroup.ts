@@ -1,7 +1,7 @@
 /**
  * occlusionCoverageGroup — the shared group(1) occlusion joint that the
  * overlay renderers (labels, marker lines, selection ring) bind so their
- * fragments can discard where an opaque body already drew.
+ * fragments fall off where the foreground bodies already cover the background.
  *
  * ### The two halves of one contract
  *
@@ -19,8 +19,7 @@
  * buffer only ever holds the LAST row's value and is unusable for
  * cross-row occlusion. Alpha survives across rows (colour loads, not
  * clears, between chain steps) and accumulates under OVER compositing —
- * `coveredByScene` reads it at `> 0.5` so the opaque globe occludes but the
- * non-writing atmosphere/cloud shells do not.
+ * `sceneTransmittance` reads it as the overlay's attenuation factor.
  *
  * ### Why the bind group is rebuilt every frame
  *

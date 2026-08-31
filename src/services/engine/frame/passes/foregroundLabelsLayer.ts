@@ -40,7 +40,7 @@ export const foregroundLabelsLayer: ContentLayer = {
     const { vpF32, viewportPx } = near0LabelProjection(ctx);
 
     // Valid only when the body pass ran this frame — else `foreground:0`'s
-    // colour is stale/uninitialised and would discard every caption.
+    // colour is stale/uninitialised and would blank every caption.
     const colorView = ctx.renderedTargets.has('foreground:0')
       ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;

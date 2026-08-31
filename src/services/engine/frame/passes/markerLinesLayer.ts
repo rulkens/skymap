@@ -54,7 +54,7 @@ export const markerLinesLayer: ContentLayer = {
   draw(pass, view, ctx, state) {
     // Occlude the leader lines per-pixel behind an opaque body ONLY when the
     // body pass actually ran this frame — else the `foreground:0` colour is
-    // stale/uninitialised and would spuriously discard every line. When
+    // stale/uninitialised and would spuriously blank every line. When
     // undefined, the occlusion renderer falls back to its plain pipeline and
     // draws the lines un-occluded. Mirrors `foregroundLabelsLayer`'s guard.
     const colorView = ctx.renderedTargets.has('foreground:0')

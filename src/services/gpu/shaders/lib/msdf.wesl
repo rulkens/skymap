@@ -1,6 +1,7 @@
 // lib/msdf.wesl — shared MSDF (multi-channel signed distance field) glyph
 // shading: median3 + shadeMsdf, one source of truth for both labels/fragment
-// and labels/fragmentOcclude (which discard-gates before calling in).
+// and labels/fragmentOcclude (which scales what it returns by the scene's
+// transmittance).
 //
 // The atlas bindings live HERE, not in the caller, so the binding slots are a
 // contract the label3DRenderer's BGL can share (see lib/sceneDepth.wesl and

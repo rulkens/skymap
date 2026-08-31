@@ -25,12 +25,10 @@ export type SelectionRingRenderer = {
    * block on the swap-chain texture (premultiplied-OVER expects an LDR target).
    *
    * `sceneColorView` is consumed only by an instance created with
-   * `occludeAgainstDepth: 'compare' | 'coverage'`, where it feeds the group(1)
-   * coverage joint so fragments behind an opaque solar-system body are
-   * discarded (per-pixel body occlusion, read from the foreground colour
-   * target's alpha — see lib/sceneDepth.wesl).  The mode only picks which
-   * entry point compiles in; both run the identical coverage test.  A plain
-   * instance ignores it.
+   * `occludeAgainstScene: true`, where it feeds the group(1) coverage joint so
+   * fragments are attenuated by how much of the background the foreground
+   * bodies already cover (read from that target's alpha — see
+   * lib/sceneDepth.wesl).  A plain instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,

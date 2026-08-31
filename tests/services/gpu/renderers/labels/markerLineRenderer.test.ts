@@ -58,9 +58,9 @@ describe('MarkerLineRenderer colour target', () => {
 describe('MarkerLineRenderer occlusion variant', () => {
   it('builds both a plain single-BGL pipeline and a two-BGL occlusion pipeline', () => {
     // The plain path builds one BGL and a single-BGL pipeline layout; the
-    // occludeAgainstDepth path adds the group(1) depth joint AND still builds
+    // occludeAgainstScene path adds the group(1) coverage joint AND still builds
     // the plain pipeline, because `draw` falls back to it on a frame with no
-    // scene depth (no body drew). A device-only pipeline-validation error
+    // scene colour (no body drew). A device-only pipeline-validation error
     // (wrong group count) never surfaces in a headless suite, so pin the
     // two-pipeline / two-layout shape structurally here.
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
@@ -90,9 +90,9 @@ describe('MarkerLineRenderer occlusion variant', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    createMarkerLineRenderer(ctx, ctx.format, 64, { occludeAgainstDepth: 'coverage' });
+    createMarkerLineRenderer(ctx, ctx.format, 64, { occludeAgainstScene: true });
 
-    // Two BGLs: the marker-line BGL (shared by both pipelines) + the occlusion depth BGL.
+    // Two BGLs: the marker-line BGL (shared by both pipelines) + the coverage BGL.
     expect(bindGroupLayouts).toHaveLength(2);
     // Two pipeline layouts: the plain single-BGL layout and the two-BGL
     // occlusion layout — the occlusion instance builds both and picks per-draw.

@@ -125,23 +125,19 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * the "you are here" indicator plus any future tagged-object markers without
  * a follow-up resize.
  *
- * `opts.occludeAgainstDepth` opts this instance into per-pixel occlusion
- * behind an opaque solar-system body.  When set, the pipeline gains a
- * group(1) coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
- * a discard-gated `fragmentOcclude.wesl` entry instead of the plain
- * `fragment.wesl`; `draw` then consumes a per-frame scene colour view.  The
- * mode picks the entry point — `'compare'` → `fs`, `'coverage'` → `fsCoverage`
- * — but both entries run the identical alpha-coverage test now (see that
- * file's header): the split is a naming hook for this call site, not a live
- * behavioural difference.  The default (opts omitted) keeps the plain
- * single-BGL, non-occluding pipeline the Milky Way + structure leader lines
- * rely on — byte-for-byte unchanged.
+ * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
+ * behind the solar-system bodies.  When set, the pipeline gains a group(1)
+ * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
+ * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
+ * consumes a per-frame scene colour view.  The default (opts omitted) keeps
+ * the plain single-BGL pipeline the Milky Way + structure leader lines rely
+ * on — byte-for-byte unchanged.
  */
 export function createMarkerLineRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
   maxLines = 64,
-  opts?: { occludeAgainstDepth?: 'compare' | 'coverage' },
+  opts?: { occludeAgainstScene?: boolean },
 ): MarkerLineRenderer {
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
@@ -179,10 +175,7 @@ export function createMarkerLineRenderer(
   // occlusion branch.
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
 
-  // The occlude MODE, or undefined for a plain instance. Present ⇒ build the
-  // occlude pipeline + coverage BGL (exactly as the old boolean did); the mode
-  // then selects the fragment ENTRY POINT — see the factory docblock.
-  const occludeMode = opts?.occludeAgainstDepth;
+  const occludesScene = opts?.occludeAgainstScene === true;
 
   if (device) {
     // ── Bind group layout ─────────────────────────────────────────────────
@@ -200,12 +193,12 @@ export function createMarkerLineRenderer(
 
     // ── Occlusion joint (opt-in) ─────────────────────────────────────────
     //
-    // When this instance occludes against scene coverage, the pipeline gains a
-    // second bind-group layout at group 1 (the shared coverage joint) and
-    // compiles the discard-gated fragment entry.  `occlusionCoverageBGL` is
-    // retained so `draw` can rebuild its per-frame bind group (the colour
-    // view changes on every resize — see occlusionCoverageGroup.ts).
-    if (occludeMode != null) {
+    // When this instance attenuates against scene coverage, the pipeline gains
+    // a second bind-group layout at group 1 (the shared coverage joint).
+    // `occlusionCoverageBGL` is retained so `draw` can rebuild its per-frame
+    // bind group (the colour view changes on every resize — see
+    // occlusionCoverageGroup.ts).
+    if (occludesScene) {
       occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
     }
 
@@ -277,14 +270,7 @@ export function createMarkerLineRenderer(
           bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
         vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
-        fragment: {
-          module: fsOccludeModule,
-          // Both entries run the identical alpha-coverage test now — the
-          // 'compare'/'coverage' mode only picks which entry point compiles
-          // in, a naming hook for callers (see the factory docblock).
-          entryPoint: occludeMode === 'coverage' ? 'fsCoverage' : 'fs',
-          targets: colorTargets,
-        },
+        fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
         primitive: { topology: 'triangle-strip' },
       });
     }
