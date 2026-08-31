@@ -173,6 +173,10 @@ vi.mock('../../../../src/services/gpu/renderers/labels/labelRenderer', () => ({
   createLabelRenderer: vi.fn(() => makeStub('labelRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/labels/labelPickRenderer', () => ({
+  createLabelPickRenderer: vi.fn(() => makeStub('labelPickRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/labels/markerLineRenderer', () => ({
   createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
 }));

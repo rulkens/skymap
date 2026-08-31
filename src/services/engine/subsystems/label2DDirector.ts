@@ -97,16 +97,17 @@ import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DP
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 import type { Label2DDirectorConfig } from '../../../@types/engine/subsystems/Label2DDirectorConfig';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
+import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { ForwardProjectedPoint } from '../../../@types/camera/ForwardProjectedPoint';
 import { forwardProjectPoint } from '../../../utils/camera/forwardProjectPoint';
 import { smoothstep } from '../../../utils/math/smoothstep';
-import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 import {
   LABEL_MIN_PX_DEFAULT,
   LABEL_MAX_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
-} from '../../gpu/renderers/labels/labelRenderer';
+} from '../../../data/labels/labelSizingDefaults';
+import { labelScreenRect } from '../../../utils/labels/labelScreenRect';
 import { clampVec3Length } from '../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
 import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
@@ -235,30 +236,22 @@ function declutterByBboxOverlap(
   projection: Label2DProjection,
   padPx: number,
 ): Label2D[] {
-  type Rect = { x0: number; y0: number; x1: number; y1: number };
-  const halfViewportH = projection.viewportPx[1] * 0.5;
-  const rects: (Rect | null)[] = labels.map((label, i) => {
+  const viewportHeightPx = projection.viewportPx[1];
+  // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
+  // the pick path derives its hit boxes from the same function, so a label
+  // cannot be decluttered against one rect and clicked on another.
+  const rects: (ScreenRectPx | null)[] = labels.map((label, i) => {
     const p = projected[i]!;
     if (!p.screenPx) return null;
     const bbox = labelRenderer.measure(label);
     if (!bbox) return null;
-    // Reproduce the vertex shader's sizing exactly: worldLenToPx
-    // (worldLen / clipW · viewportH/2) clamped to [minPx, maxPx], then
-    // atlas px → screen px via displayEmPx / ATLAS_FONT_SIZE. The bbox is
-    // anchor-relative with +Y down, matching screen space (the shader's
-    // atlas-Y and NDC→screen flips cancel).
-    const pxPerEm = ((label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) / p.clipW) * halfViewportH;
-    const displayEmPx = Math.min(
-      Math.max(pxPerEm, label.minPixelSize ?? LABEL_MIN_PX_DEFAULT),
-      label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
-    );
-    const s = displayEmPx / ATLAS_FONT_SIZE;
-    return {
-      x0: p.screenPx[0] + bbox.minX * s,
-      y0: p.screenPx[1] + bbox.minY * s,
-      x1: p.screenPx[0] + bbox.maxX * s,
-      y1: p.screenPx[1] + bbox.maxY * s,
-    };
+    return labelScreenRect({
+      label,
+      bbox,
+      screenPx: p.screenPx,
+      clipW: p.clipW,
+      viewportHeightPx,
+    });
   });
 
   const order = sortByProminenceDesc(labels);

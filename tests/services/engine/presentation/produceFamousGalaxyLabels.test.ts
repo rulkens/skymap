@@ -11,6 +11,7 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { Source } from '../../../../src/data/sources';
+import { unpackPick } from '../../../../src/data/selectionEncoding';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -418,5 +419,25 @@ describe('produceFamousGalaxyLabels', () => {
     const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.maxPixelSize).toBeGreaterThan(60);
     expect(out.labels[0]!.maxPixelSize).toBeLessThan(FAMOUS_LABEL_STYLE.maxPixelSize);
+  });
+
+  it("stamps each label with its catalog row's pick id, size-gate skips included", () => {
+    // The point pick stamps `instance_index` — the CATALOG row. A label set
+    // that skipped a row below the size gate and then numbered its own output
+    // would resolve every later label to the previous galaxy.
+    const state = makeState();
+    seed(
+      state,
+      [{ id: 'a' }, { id: 'tiny' }, { id: 'c' }],
+      [5, 0, 0, 5, 0, 0, 5, 0, 0],
+      [120, 0.001, 120],
+    );
+    const labels = produceFamousGalaxyLabels(state, makeCtx()).labels;
+    expect(labels.map((l) => l.id)).toEqual(['famous-a', 'famous-c']);
+    for (const label of labels) {
+      const pick = unpackPick(label.pickId!)!;
+      expect(pick.sourceCode).toBe(Source.FamousGalaxy);
+      expect(state.famousGalaxiesMeta[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
+    }
   });
 });

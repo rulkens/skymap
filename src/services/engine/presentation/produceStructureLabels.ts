@@ -50,6 +50,9 @@ import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
+import { STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -96,7 +99,16 @@ export function produceStructureLabels(
   const focusedOnly = state.settings.labels.focusedOnly;
 
   const structures = state.data.structures;
+  // Running per-category ordinal over `all()`. THIS is the localIdx the ring
+  // pick stamps: `byCategory(cat)` is `all()` filtered, so the n-th record of a
+  // category in this walk is `byCategory(cat)[n]` — the index
+  // `resolveStructureFromPick` decodes back to a durable id. Counted for EVERY
+  // record, before any gate, because a skipped label must not shift the ordinal
+  // of the ones after it.
+  const seenPerCategory = new Map<StructureId, number>();
   for (const p of structures.all()) {
+    const categoryIndex = seenPerCategory.get(p.category) ?? 0;
+    seenPerCategory.set(p.category, categoryIndex + 1);
     if (focusedOnly && p.id !== focusedStructureId) continue;
     // Per-category label opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — emit while the
@@ -194,6 +206,9 @@ export function produceStructureLabels(
 
     labels.push({
       id: p.id,
+      // Byte-identical to what `ringPick.wesl` writes for this structure's own
+      // marker ring — the category's source code over the per-category index.
+      pickId: packSelection(STRUCTURE_ID_CODES[p.category], categoryIndex + PICK_SENTINEL_OFFSET),
       // Structures anchor at the ring centre, centred on both axes (only
       // famous galaxies lift their label off the dot).
       worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
