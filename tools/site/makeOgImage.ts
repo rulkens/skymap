@@ -22,8 +22,31 @@
  * via `npx tsx tools/makeOgImage.ts` whenever the source screenshot or
  * the headline copy changes.
  */
-import sharp from 'sharp';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// librsvg resolves SVG font names through fontconfig, which knows nothing of
+// the app's Google-hosted webfont. Point it at the repo-local Cormorant TTF
+// (plus the system dirs, so Menlo still resolves) via FONTCONFIG_FILE — which
+// must be set BEFORE libvips initialises, hence the dynamic sharp import.
+const fontDir = join(dirname(fileURLToPath(import.meta.url)), 'fonts');
+const confDir = join(tmpdir(), 'skymap-og-fontconfig');
+mkdirSync(confDir, { recursive: true });
+const confPath = join(confDir, 'fonts.conf');
+writeFileSync(
+  confPath,
+  `<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig>
+  <dir>${fontDir}</dir>
+  <dir>/System/Library/Fonts</dir>
+  <dir>/Library/Fonts</dir>
+  <dir>/usr/share/fonts</dir>
+  <cachedir>${confDir}/cache</cachedir>
+</fontconfig>`,
+);
+process.env.FONTCONFIG_FILE = confPath;
+const sharp = (await import('sharp')).default;
 
 const SRC = 'docs/screenshots/cosmic-web.png';
 const OUT = 'public/og-image.jpg';
@@ -35,9 +58,8 @@ const H = 630;
 // SVG composited as a transparent layer on top of the screenshot.  The
 // black gradient at the bottom keeps the headline readable regardless of
 // whatever stars happen to lie under the text in the source frame.
-// Font stack picks the most distinctive sans-serif Apple ships first, then
-// falls back through generic web-safe fonts; OS-level fontconfig picks
-// the closest match installed on whichever machine renders this.
+// Faces mirror the app: Cormorant Garamond SemiBold (the display serif baked
+// into the label atlas) for the wordmark, the mono stack for everything else.
 const overlay = Buffer.from(
   `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
     <defs>
@@ -48,14 +70,14 @@ const overlay = Buffer.from(
     </defs>
     <rect x="0" y="0" width="${W}" height="${H}" fill="url(#dark)"/>
     <text x="60" y="${H - 100}"
-          font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, sans-serif"
-          font-size="92" font-weight="700" letter-spacing="-2" fill="#ffffff">skymap</text>
+          font-family="'Cormorant Garamond', serif"
+          font-size="104" font-weight="600" fill="#ffffff">skymap</text>
     <text x="60" y="${H - 50}"
-          font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, sans-serif"
-          font-size="34" font-weight="400" fill="#a8d0ff" opacity="0.95">From Earth's surface to the edge of the observable universe</text>
+          font-family="Menlo, monospace"
+          font-size="28" font-weight="400" fill="#a8d0ff" opacity="0.95">From Earth's surface to the edge of the observable universe</text>
     <text x="60" y="${H - 12}"
-          font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, sans-serif"
-          font-size="22" font-weight="400" fill="#ffffff" opacity="0.65">SDSS · 2MRS · GLADE · Milliquas · ~3M galaxies · skymap.rulkens.com</text>
+          font-family="Menlo, monospace"
+          font-size="20" font-weight="400" fill="#ffffff" opacity="0.65">3M galaxies · 16.8M stars · planets · the cosmic web · skymap.rulkens.com</text>
   </svg>`,
 );
 
