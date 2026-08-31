@@ -1,6 +1,6 @@
 // labels/fragment.wesl — MSDF labels fragment stage. The shading body
 // (median3 + shadeMsdf, plus the atlas bindings) lives in lib/msdf.wesl —
-// shared with the depth-occluding variant in fragmentOcclude.wesl. This
+// shared with the scene-attenuated variant in fragmentOcclude.wesl. This
 // entry just unpacks VsOut into the scalar shadeMsdf call.
 
 import package::labels::io::VsOut;

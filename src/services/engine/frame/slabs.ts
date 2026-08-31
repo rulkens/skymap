@@ -420,12 +420,17 @@ export function foregroundChainOrder(slabs: readonly Slab[]): readonly number[] 
  * A row's sort key: its nearest distance, or unknown-FAR for a row that
  * resolved no depth-bearing content this frame (only NEAR0 can — `null`
  * `distanceRangeM`). Unknown-far, not the `[0, 0]` this used to degrade to,
- * because both consumers want it that way: the pick path can still hold NEAR0
- * candidates with no sphere backing them (the star catalog, the Milky Way
- * impostor) which must not claim NEAREST, and anything the render path can
- * still paint into an unresolved NEAR0 (the Gaia field-star sphere, whose
- * presence `starSphereRangeM` doesn't track) is parsecs away — behind every
- * body row by construction.
+ * which sorts NEAREST: the pick path holds NEAR0 candidates with no sphere
+ * behind them (the star catalog, the Milky Way impostor) that must not claim
+ * the frontmost hit.
+ *
+ * The render path can't be mis-ordered by the choice. The one thing that paints
+ * into `foreground:0` on NEAR0 without setting the range is the Gaia field-star
+ * sphere — and its presence query (`nearestResolvableStar`) needs a catalog star
+ * within ~an AU of the camera, i.e. the camera parsecs from the Sun, where every
+ * solar-system body is orders of magnitude under `SUB_PIXEL_BODY_CULL_PX` and no
+ * body row exists to be ordered against. The two are mutually exclusive; with
+ * body rows present and no sphere, NEAR0 paints nothing.
  */
 function nearestM(slab: Slab): number {
   return slab.distanceRangeM?.[0] ?? Infinity;
