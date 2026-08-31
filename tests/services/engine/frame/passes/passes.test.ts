@@ -467,15 +467,17 @@ describe('ringsLayer registry row', () => {
 });
 
 describe('cloudShellLayer registry row', () => {
-  it('draws into foreground:0 through NEAR0 with over, AFTER earth', () => {
+  it("rides the 'body' slab sentinel into foreground:0 with over, AFTER earth", () => {
     // Earth's cloud deck is the second translucent overlay of the (foreground:0,
-    // NEAR0) group: it blends OVER, so it must be ordered after the opaque surface
-    // earthLayer stamps, to depth-test against its z (far hemisphere occluded). It
-    // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) — it
-    // is the exception, alongside the ring.
+    // 'body') group: it blends OVER, so it must be ordered after the opaque
+    // surface earthLayer stamps, to depth-test against its z (far hemisphere
+    // occluded). Task 10 (body render slabs) moved it off the fixed NEAR0 index
+    // onto the same 'body' expansion earthLayer uses — see frameProgram.ts. It
+    // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) —
+    // it is the exception, alongside the ring.
     const cloud = CONTENT_LAYERS.find((layer) => layer.name === 'cloud-shell')!;
     expect(cloud).toBeDefined();
-    expect(cloud.slab).toBe(NEAR0);
+    expect(cloud.slab).toBe('body');
     expect(cloud.target).toBe('foreground:0');
     expect(cloud.blend).toBe('over');
 
@@ -486,16 +488,18 @@ describe('cloudShellLayer registry row', () => {
 });
 
 describe('atmosphereShellLayer registry row', () => {
-  it('draws into foreground:0 through NEAR0 with over, LAST — after the rings overlay', () => {
+  it("rides the 'body' slab sentinel into foreground:0 with over, LAST — after the rings overlay", () => {
     // Earth's in-scatter atmosphere is the outermost translucent overlay of the
-    // (foreground:0, NEAR0) group (spec §8.3): it blends OVER and must be ordered
-    // AFTER every opaque sphere AND the ring overlay, so it depth-tests against
-    // their stamped z (over-disc occluded, limb over space passes). It is
-    // deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) — it is
-    // the third exception, alongside the ring and cloud shell. Non-pickable.
+    // (foreground:0, 'body') group (spec §8.3): it blends OVER and must be
+    // ordered AFTER every opaque sphere AND the ring overlay, so it depth-tests
+    // against their stamped z (over-disc occluded, limb over space passes).
+    // Task 10 moved it off the fixed NEAR0 index onto the same 'body' expansion
+    // earthLayer uses. It is deliberately NOT in FOREGROUND_NAMES (that group's
+    // opaque assertion) — it is the third exception, alongside the ring and
+    // cloud shell. Non-pickable.
     const atmosphere = CONTENT_LAYERS.find((layer) => layer.name === 'atmosphere-shell')!;
     expect(atmosphere).toBeDefined();
-    expect(atmosphere.slab).toBe(NEAR0);
+    expect(atmosphere.slab).toBe('body');
     expect(atmosphere.target).toBe('foreground:0');
     expect(atmosphere.blend).toBe('over');
     expect(atmosphere.drawPick).toBeUndefined();
@@ -506,7 +510,7 @@ describe('atmosphereShellLayer registry row', () => {
     const idxAtmosphere = CONTENT_LAYERS.findIndex((layer) => layer.name === 'atmosphere-shell');
     expect(idxAtmosphere).toBeGreaterThan(idxRings);
     const fgIndices = CONTENT_LAYERS.map((layer, i) => ({ layer, i })).filter(
-      ({ layer }) => layer.target === 'foreground:0' && layer.slab === NEAR0,
+      ({ layer }) => layer.target === 'foreground:0',
     );
     expect(fgIndices[fgIndices.length - 1]!.layer).toBe(atmosphere);
   });
