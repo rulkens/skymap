@@ -144,7 +144,7 @@ tests/          Vitest suite, mirrors src/
 - Three renderer workbenches deploy next to the main app: [/galaxy/](https://skymap.rulkens.com/galaxy/) (procedural Hubble-sequence galaxy), [/mcpm/](https://skymap.rulkens.com/mcpm/) (MCPM cosmic-web workbench), [/flow/](https://skymap.rulkens.com/flow/) (CF4++ flow-field visualizer)
 - `npm run perf` measures per-pass GPU timings headlessly
 - `npm run record-tour` renders the guided tour to 4K video offline
-- ~1,150 test files under Vitest
+- The Vitest suite runs 7,500+ tests across 1,100+ files, mirroring the `src/` tree
 
 ## Direction
 
