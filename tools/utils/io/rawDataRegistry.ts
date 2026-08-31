@@ -936,14 +936,14 @@ export const RAW_DATA = {
       'Provenance for the EOX s2cloudless harvest — upstream URL, tile-index convention, fetch date, licence.',
   },
 
-  // ─── GeoDanmark orthophoto — pre-tiled z14-19 band over Søndermarken ───
+  // ─── GeoDanmark orthophoto — z19 band over Søndermarken ────────────────
 
   'geodanmark.dir': {
-    path: 'data/raw/geodanmark/soendermarken',
+    path: 'data/raw/geodanmark/soendermarken-z19-jpg',
     kind: 'directory',
     source: 'gitignored',
     description:
-      "GeoDanmark orthophoto WMS harvest, z14-19, already-tiled `<z>/<x>/<y>.webp` on skymap's own equirect grid — copied byte-for-byte into the pyramid rather than pyramided (see README).",
+      "GeoDanmark orthophoto WMS harvest, z19 only, `19/<x>/<y>.jpg` on skymap's own equirect grid, bbox snapped to the z14 tile grid — pyramided down to z14 at bake time like EOX (see README).",
     readme: 'geodanmark.readme',
   },
   'geodanmark.readme': {
