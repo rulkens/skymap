@@ -7,7 +7,7 @@
 The impostor is blown out at the Galactic Centre. Not a fade being overwhelmed
 by exposure — the fade never starts.
 
-`SCALE_FADE_BANDS.milkyWayApproach` (`scaleFadeBands.ts:101`) is
+`SCALE_FADE_BANDS.milkyWayApproachSun` (`scaleFadeBands.ts:101`) is
 `{ fullAt: 0.002, goneAt: 0.0002 }` — 2 kpc to 200 pc — and is evaluated against
 `Math.hypot(ctx.drawCamPos)` in `milkyWayCloudLiveness.ts:72,75`: the camera's
 distance from the **heliocentric render origin**. Its own comment states the one
@@ -78,7 +78,7 @@ machinery worth adding only once the Milky Way rendering itself is settled.
 
 Deliberately **not** fixed in the S-star branch (user's call, 2026-07-31): no
 new machinery until the Milky Way rendering is sorted, and the fix lands in its
-own PR off `main`. `worktree-s-star-orbits` never touched `milkyWayApproach` —
+own PR off `main`. `worktree-s-star-orbits` never touched `milkyWayApproachSun` —
 its `scaleFadeBands` diff is the `sgrAStarCaption` row plus the region-derived
 backdrop bands — so PR #528 neither caused this nor is blocked by it.
 

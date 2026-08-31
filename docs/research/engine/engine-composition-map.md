@@ -285,7 +285,7 @@ on the render and wiring side, not the math side.
 - `src/services/engine/frame/milkyWayCloudLiveness.ts` —
   `deriveMilkyWayCloudAlpha`, the ONE shared liveness and opacity
   derivation all three layers above gate on (far-side `milkyWayVisible`
-  plus apparent-size fade, near-side `milkyWayApproach` band, registry
+  plus apparent-size fade, near-side `milkyWayApproachSun` band, registry
   fade opacity).
 - `src/services/engine/galaxyGenerator/v1/*` — the generator itself:
   `milkyWayCloud.ts` (GPU compute generation, write-then-encode-then-submit),
@@ -514,7 +514,7 @@ shapes, already used together by the Milky Way's own liveness chain:
   (`presentation/scaleFadeBands.ts`)) — a named, tunable `{fullAt, goneAt}`
   style band evaluated fresh each frame against
   `Math.hypot(ctx.drawCamPos[...])`. Used by `milkyWayCloudLiveness.ts`'s
-  `milkyWayApproach` band, `volumeLiveness.ts`'s `surveyDeepZoom` band, and
+  `milkyWayApproachSun` band, `volumeLiveness.ts`'s `surveyDeepZoom` band, and
   the star-catalog crossfade's per-source `crossfadePc` band. This is the
   droppable-precision, camera-distance-only lever: cheap, no uniform
   upload, purely a CPU-side scalar multiplied into the draw call's alpha or

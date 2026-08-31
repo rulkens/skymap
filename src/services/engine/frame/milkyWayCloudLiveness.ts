@@ -32,12 +32,12 @@ export function deriveMilkyWayCloudAlpha(
 
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   // Two independent near-side approach fades, combined by MIN: the Sun's own
-  // descent (`milkyWayApproach`, keyed on the origin — the Sun sits there —
+  // descent (`milkyWayApproachSun`, keyed on the origin — the Sun sits there —
   // must still reach 0, the hand-off to the real Gaia star catalog) and the
   // galactic centre's (`milkyWayApproachGc`, keyed on distance from Sgr A*,
   // whose `floor` keeps it dimly visible instead of vanishing).
   const bodyStates = sceneBodyStates(state, ctx);
-  const sunApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc);
+  const sunApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproachSun, camDistMpc);
   const gcDistMpc = regionRelativeDistanceMpc(ctx.drawCamPos, GALACTIC_CENTRE_REGION, bodyStates);
   const gcApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproachGc, gcDistMpc);
   const approach = Math.min(sunApproach, gcApproach);

@@ -3,7 +3,7 @@
  * galactic-centre blowout: the GC gets its OWN approach band
  * (`milkyWayApproachGc`), wider than the Sun's, whose `floor` keeps the
  * impostor dimly visible there instead of vanishing outright (nothing else
- * covers the extincted bulge). The Sun's own descent (`milkyWayApproach`)
+ * covers the extincted bulge). The Sun's own descent (`milkyWayApproachSun`)
  * must still reach 0, unaffected by the GC.
  */
 

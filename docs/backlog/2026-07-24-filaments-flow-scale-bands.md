@@ -15,7 +15,7 @@ content instead of dissolving out like their siblings.
 - `src/services/engine/presentation/scaleFadeBands.ts` holds `SCALE_FADE_BANDS`,
   the declarative per-asset scale-visibility registry consumed via
   `fadeBand(band, value)` (`src/utils/math/fadeBand.ts`). Existing rows:
-  `surveyDeepZoom`, `milkyWayApproach`, `starCaption`, `starBackdrop`,
+  `surveyDeepZoom`, `milkyWayApproachSun`, `starCaption`, `starBackdrop`,
   `bodyGlintBackdrop`, `sunCaption`, `constellations`, `bodyGlint`.
 - `src/services/engine/frame/passes/filamentsLayer.ts:81-90` — `enabled()`
   reads only `state.settings.filaments.enabled` (plus the fade-out tail via

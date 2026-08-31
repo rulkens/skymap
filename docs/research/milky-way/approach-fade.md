@@ -2,7 +2,7 @@
 
 ## The approach fade never fires at the galactic centre
 
-**MEASURED.** `SCALE_FADE_BANDS.milkyWayApproach = { fullAt: 0.002, goneAt: 0.0002 }` — 2 kpc to
+**MEASURED.** `SCALE_FADE_BANDS.milkyWayApproachSun = { fullAt: 0.002, goneAt: 0.0002 }` — 2 kpc to
 200 pc (`scaleFadeBands.ts:77`) — is evaluated against
 `Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2])`
 (`milkyWayCloudLiveness.ts:72`), the camera's distance from the **heliocentric render origin**,
@@ -31,7 +31,7 @@ bite at boot.
 
 ## The fade braids two jobs
 
-**INFERRED (design analysis).** `milkyWayApproach` is doing two things at once:
+**INFERRED (design analysis).** `milkyWayApproachSun` is doing two things at once:
 
 1. A **Gaia handoff** — correctly Sun-anchored, because that is where the star catalog takes
    over. Present, calibrated, working.

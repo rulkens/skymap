@@ -64,7 +64,7 @@ export const SCALE_FADE_BANDS = {
   // starfield fills the near field. Outer edge = FOREGROUND_MAX_DISTANCE_MPC
   // (exactly where that starfield switches on); inner edge = 2 kpc, well
   // inside the disc. The MW impostor deliberately OUTLIVES this band — it
-  // rides its own deeper `milkyWayApproach` row below, dissolving against
+  // rides its own deeper `milkyWayApproachSun` row below, dissolving against
   // the Gaia starfield rather than with the surveys. Consumers: the survey
   // point clouds
   // (galaxyPointSpritesLayer, draw + pick — the famous catalog is exempt, its
@@ -75,7 +75,7 @@ export const SCALE_FADE_BANDS = {
   // (produceMilkyWayLabel — a COSMO-slab annotation anchored at the world
   // origin, which can't project once the camera is inside the cosmological near
   // plane; the MW IMPOSTOR itself outlives this band on its deeper
-  // `milkyWayApproach` row, since it lives on NEAR0 and CAN draw inside 10 kpc),
+  // `milkyWayApproachSun` row, since it lives on NEAR0 and CAN draw inside 10 kpc),
   // and scalar-volume liveness (deriveVolumeLiveness,
   // which zeroes every field so both volume layers disable by construction).
   surveyDeepZoom: { fullAt: FOREGROUND_MAX_DISTANCE_MPC, goneAt: 0.002 },
@@ -89,11 +89,11 @@ export const SCALE_FADE_BANDS = {
   // crossfade is fully faded in inside 8 kpc (gaia-stars crossfadePc) —
   // instead of vanishing while still hanging visibly above the starfield that
   // replaces them.
-  milkyWayApproach: { fullAt: 0.002, goneAt: 0.0002 },
+  milkyWayApproachSun: { fullAt: 0.002, goneAt: 0.0002 },
 
   // Keyed on: CAMERA distance from the `galactic-centre` region's anchor
   // (Sgr A*), Mpc. The GC gets its OWN approach band rather than sharing
-  // `milkyWayApproach` above: full ≥ 0.004 Mpc (4 kpc, twice as wide as the
+  // `milkyWayApproachSun` above: full ≥ 0.004 Mpc (4 kpc, twice as wide as the
   // Sun's band) because the impostor's blowout is worse this close to the
   // Centre, and — unlike the Sun's hand-off to the Gaia catalog — nothing
   // replaces the impostor here (Gaia's bulge coverage is extincted by dust),
