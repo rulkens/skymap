@@ -172,11 +172,27 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
 - **Reference:** van Leeuwen 2007, A&A 474, 653 (VizieR I/311).
 - **Licence:** Publicly released via CDS VizieR; cite the paper above.
 
+### MCXC — Meta-Catalogue of X-ray galaxy Clusters
+
+- **Use:** Cluster positions, redshifts, and X-ray-derived mass/radius
+  (VizieR J/A+A/534/A109), feeding the structure catalog
+  (`tools/structures/buildStructures.ts` → `public/data/structure-catalog/`).
+- **Reference:** Piffaretti et al. 2011, A&A 534, A109.
+- **Licence:** Publicly released via CDS VizieR; cite the paper above.
+
+### MSCC — Main SuperCluster Catalogue
+
+- **Use:** Friends-of-Friends supercluster groupings of Abell/ACO clusters
+  (VizieR J/MNRAS/445/4073), feeding the structure catalog
+  (`tools/structures/buildStructures.ts` → `public/data/structure-catalog/`).
+- **Reference:** Chow-Martínez et al. 2014, MNRAS 445, 4073.
+- **Licence:** Publicly released via CDS VizieR; cite the paper above.
+
 ## Volume reconstructions
 
-The two scalar-field overlays drawn underneath the point cloud (CF-4 DM
-density and MCPM Cosmic Web) are derived from third-party scientific
-reconstructions that carry their own citation requirements.
+The scalar-field overlays drawn underneath the point cloud (CF-4 DM density,
+MCPM Cosmic Web, and the Edenhofer dust volume) are derived from third-party
+scientific reconstructions that carry their own citation requirements.
 
 ### CF-4 / CF4++ — Cosmicflows-4 dark-matter density reconstruction
 
@@ -228,6 +244,20 @@ reconstructions that carry their own citation requirements.
   research-grade reader, not a runtime dependency of Skymap; the runtime
   consumes its f16-quantised SCFD output, not pyslime directly.
 
+### Edenhofer et al. 2024 — parsec-scale Galactic 3D dust map
+
+- **Use:** A continuous local-neighbourhood extinction-density
+  reconstruction out to 1.25 kpc from the Sun. Skymap rebakes the upstream
+  mean reconstruction into three tiered `.scfd` volumes
+  (`edenhofer-dust-{small,medium,large}.scfd`, tracked by `allowDataFile`)
+  and redistributes them from `public/data/scalar-field/`.
+- **Reference:** Edenhofer et al. 2024, "A parsec-scale Galactic 3D dust map
+  out to 1.25 kpc from the Sun", A&A 685, A82
+  (DOI [10.1051/0004-6361/202347628](https://doi.org/10.1051/0004-6361/202347628)).
+- **Source:** Zenodo [10.5281/zenodo.8187943](https://doi.org/10.5281/zenodo.8187943)
+  (`mean_and_std_healpix.fits`), fetched by `data/raw/edenhofer/fetch_edenhofer.sh`.
+- **Licence:** CC BY 4.0; cite the paper above.
+
 ## Imagery
 
 ### Curated galaxy thumbnails (`public/images/famous/*.webp`)
@@ -242,7 +272,7 @@ older auto-fetch path.
   famous-galaxy entry, selected through the curator tool
   (`tools/famous-curator`) and processed into a star-masked, radial-faded
   WebP trio under `public/images/famous-curated/<id>/`. The override index is
-  `data/famous_curated_overrides.json`, which records the **`sourceUrl`,
+  `data/seeds/famous_curated_overrides.json`, which records the **`sourceUrl`,
   `license`, and `author`/credit line for every curated image** — that file is
   the authoritative per-entry attribution record.
 - **Source institutions** present in the current override set:
@@ -253,6 +283,7 @@ older auto-fetch path.
     used with ESO's required attribution.
   - **Vera C. Rubin Observatory** ("RubinObs/NOIRLab/SLAC/NSF/DOE/AURA").
   - **ESA / Hubble & NASA** public-domain press releases.
+  - **ESA / Euclid / Euclid Consortium** (NGC 6822), CC BY-SA 3.0 IGO.
   - **Sloan Digital Sky Survey** image cutouts.
   - **Wikimedia Commons** uploads (most curated entries link an
     `en.wikipedia.org/.../media/File:` page), authored by individual
@@ -262,12 +293,14 @@ older auto-fetch path.
     dwarfs.
 - **Licences:** recorded per entry; the current set spans CC0, CC BY (2.0–4.0),
   CC BY-SA (3.0–4.0), and public domain.
-- **Unresolved licences:** two entries currently carry `"license": "unknown"`
+- **Unresolved licences:** three entries currently carry `"license": "unknown"`
   in the override file (at the time of writing: `c17` and `c18`, both DSS2 /
-  amateur frames via theskylive.com). These must be resolved to a concrete
-  licence — or the image replaced — before `public/images/famous*/` is
-  redistributed as a standalone published artefact. (All `noirlab.edu`-sourced
-  entries are CC BY 4.0 per NOIRLab's image licence.)
+  amateur frames via theskylive.com; and `c29`, a `noirlab.edu` sourceUrl that
+  is de-facto CC BY 4.0 per NOIRLab's blanket clause below but hasn't been
+  recorded as such). These must be resolved to a concrete licence — or the
+  image replaced — before `public/images/famous*/` is redistributed as a
+  standalone published artefact. (All `noirlab.edu`-sourced entries are CC BY
+  4.0 per NOIRLab's image licence.)
 
 #### Auto-fetch fallback (Wikipedia → DESI Legacy)
 
@@ -352,10 +385,13 @@ All public domain; NASA asks that credit go to the named observatory / program.
 
 #### EOX IT Services — EOxCloudless (Sentinel-2)
 
-- **Use:** A second, deeper surface tile band (z8–z13) over a small
-  Copenhagen-centre patch, layered on top of the whole-globe Blue Marble
-  band above — flying down over that one city resolves Sentinel-2 detail
-  instead of stopping at Blue Marble's z7 floor.
+- **Use:** A second, deeper surface tile band (z8–z13) over a set of
+  world-wide regions (cities including Copenhagen, Amsterdam, and Tokyo;
+  landmarks including the Grand Canyon and Mount Everest — see
+  [`eoxRegions.ts`](tools/fetch/eoxRegions.ts) for the full list), layered on
+  top of the whole-globe Blue Marble band above — flying down over one of
+  those regions resolves Sentinel-2 detail instead of stopping at Blue
+  Marble's z7 floor.
 - **Source:** <https://cloudless.eox.at>, EOX IT Services GmbH. Only the
   **2016** `s2cloudless` layer is used — the one release under CC BY 4.0
   (2018+ is CC BY-NC-SA, incompatible with this repo's licence; 2017 is
@@ -441,6 +477,17 @@ The volumetric raymarched fragment shader at the heart of
   post-processing (gamma, contrast, vignette) was deleted so the
   engine's HDR tone-map pass can run on a clean linear-light input.
 
+## Vendored data
+
+### d3-celestial — constellation line data
+
+- **Use:** IAU constellation stick-figure vertices, vendored at
+  `data/raw/constellations/constellations.lines.json` and resolved at build
+  time to real 3D star positions, shipped as `public/data/constellations.json`.
+- **Source:** [d3-celestial](https://github.com/ofrohn/d3-celestial) by
+  Olaf Frohn, `data/constellations.lines.json`.
+- **Licence:** BSD-3-Clause.
+
 ## External services / APIs
 
 These services are queried at build-time or read-only at runtime; no data
@@ -473,7 +520,7 @@ The runtime + build-time JavaScript dependencies are listed in
 [`package.json`](package.json). Notable third-party libraries:
 
 - **react / react-dom** (MIT) — UI framework.
-- **gl-matrix** (MIT) — vector / matrix math.
+- **wgpu-matrix** (MIT) — vector / matrix math.
 - **vite** (MIT) — dev server + bundler.
 - **vitest** (MIT) — test runner.
 - **@vitejs/plugin-react** (MIT) — React refresh / JSX transform.
