@@ -203,9 +203,11 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const group = layers.filter(
           (l) =>
             l.target === step.target &&
-            // A 'body' layer matches every body-slab step (frame.kind ===
-            // 'body-m'), not one fixed index — Task 7 emits one such step per
-            // body row.
+            // A 'body' layer matches every body-slab step, not one fixed
+            // index — Task 7 emits one such step per body row. `view.slab` is
+            // in hand here, so this reads `frame.kind` directly rather than
+            // going through `isBodySlabIndex` (slabs.ts) — the index-only
+            // sibling check `frameProgram.ts` uses where no `Slab` is in hand.
             (l.slab === step.slab || (l.slab === 'body' && view.slab.frame.kind === 'body-m')) &&
             l.enabled(state, ctx, view) &&
             disabledPasses[l.name] !== true,

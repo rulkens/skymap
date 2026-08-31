@@ -63,7 +63,7 @@
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
-import { COSMO, NEAR0, groupKeyOf, slabName } from './slabs';
+import { COSMO, NEAR0, groupKeyOf, isBodySlabIndex, slabName } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 
@@ -309,11 +309,13 @@ function timedSlotRowsOf(
       const groupKey = groupKeyOf(step.target, step.slab);
       for (const layer of layers) {
         // A 'body' layer has no fixed slab index — it matches every body-row
-        // step (index ≥ 2), the same widening `executeFrame` applies with
+        // step, the same widening `executeFrame` applies via
         // `view.slab.frame.kind === 'body-m'`. This derivation has no `ctx` to
-        // read a frame kind off, but body rows are exactly the indices ≥ 2
-        // (0 = NEAR0, 1 = COSMO — see slabs.ts), so the index bound is exact.
-        const matchesStep = layer.slab === step.slab || (layer.slab === 'body' && step.slab >= 2);
+        // resolve a frame kind from, so it reads the index layout directly
+        // through `isBodySlabIndex` — the one other legitimate reading of the
+        // same fact (slabs.ts).
+        const matchesStep =
+          layer.slab === step.slab || (layer.slab === 'body' && isBodySlabIndex(step.slab));
         if (layer.target === step.target && matchesStep) {
           rows.push({ name: layer.name, groupKey });
         }

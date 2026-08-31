@@ -48,6 +48,18 @@ export const NEAR0 = 0;
 export const COSMO = 1;
 
 /**
+ * True when `index` names a body-slab row (2, 3, … — `deriveSlabs` assigns
+ * them exactly where `frame.kind === 'body-m'`). The one place that knows
+ * this index layout: a call site holding a `Slab`/`SlabView` should read
+ * `frame.kind` directly instead (no layout knowledge needed there); this
+ * predicate exists for `frameProgram.ts`'s `timedSlotRowsOf`, which only has
+ * a step's numeric `slab` and no `ctx` to resolve a frame kind from.
+ */
+export function isBodySlabIndex(index: number): boolean {
+  return index >= 2;
+}
+
+/**
  * Human-readable slab name for debug surfaces: `'NEAR0'` | `'COSMO'` |
  * `'BODY[k]'` for a body row at array position `k + 2` — the painter
  * ordinal a body row's index already carries (see `deriveSlabs`'s body-row

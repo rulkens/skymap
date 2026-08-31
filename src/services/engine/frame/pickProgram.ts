@@ -247,7 +247,9 @@ export function createPickProgram(deps: {
     const candidates = layers.filter((l) => l.drawPick);
     // Every body-row slab index present this frame — a 'body' layer (none
     // declares `drawPick` yet; Tasks 9-11) contributes to each one, the same
-    // widening `executeFrame` applies via `view.slab.frame.kind === 'body-m'`.
+    // widening `executeFrame` applies. `ctx.slabs` holds full `Slab`s, so this
+    // reads `frame.kind` directly (the index-only sibling, `isBodySlabIndex`
+    // in slabs.ts, is for the one call site with no `Slab` in hand).
     const bodySlabIndices = ctx.slabs
       .filter((slab) => slab.frame.kind === 'body-m')
       .map((slab) => slab.index);
