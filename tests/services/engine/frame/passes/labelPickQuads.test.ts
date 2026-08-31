@@ -64,6 +64,26 @@ describe('labelPickQuads', () => {
     ]);
   });
 
+  it('widens the ink box by the painted outline fringe', () => {
+    // The visual shader expands each glyph quad by `outlineEmFrac *
+    // displayEmPx` screen px (labels/vertex.wesl) — the pick rect must cover
+    // that fringe too, on top of the grace padding, or a click on the
+    // painted outline (pickable styles set outlineEmFrac 0.16) misses.
+    const pad = LABEL_PICK_GRACE_PADDING_PX;
+    const fringe = 0.16 * ATLAS_FONT_SIZE;
+    expect(quads([label({ outlineEmFrac: 0.16 })])).toEqual([
+      {
+        packedId: 7,
+        rect: {
+          x0: 90 - pad - fringe,
+          y0: 64 - pad - fringe,
+          x1: 130 + pad + fringe,
+          y1: 89 + pad + fringe,
+        },
+      },
+    ]);
+  });
+
   it('skips a label that names nothing selectable', () => {
     // No pickId — the constellation captions' case. The geometry behind such a
     // label must stay clickable, so it contributes no quad at all.

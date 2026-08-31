@@ -13,19 +13,23 @@ import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { Label2DProjection } from '../../../../@types/rendering/Label2DProjection';
 import type { LabelBBox } from '../../../../@types/rendering/LabelBBox';
 import type { LabelPickQuad } from '../../../../@types/rendering/LabelPickQuad';
-import type { ForwardProjectedPoint } from '../../../../@types/camera/ForwardProjectedPoint';
-import { forwardProjectPoint } from '../../../../utils/camera/forwardProjectPoint';
 import { labelScreenRect } from '../../../../utils/labels/labelScreenRect';
+import { projectLabels } from '../../../../utils/labels/projectLabels';
 import { LABEL_PICK_GRACE_PADDING_PX } from '../../../../data/labels/labelPickGracePaddingPx';
 
 /**
- * Whether any label in the drawn set could take a click: it names a selectable
- * subject (`pickId`) and has opacity left. An invisible label is never
- * pickable — the fade is the affordance, so a label mid-fade-out stays
- * clickable exactly as long as it stays readable.
+ * Whether a label could take a click: it names a selectable subject
+ * (`pickId`) and has opacity left. An invisible label is never pickable —
+ * the fade is the affordance, so a label mid-fade-out stays clickable
+ * exactly as long as it stays readable. The one predicate both the cheap
+ * `hasPickableLabel` gate and the quad-emit loop below test.
  */
+function isPickableLabel(label: Label2D): boolean {
+  return label.pickId !== undefined && (label.fadeAlpha ?? 1) > 0;
+}
+
 export function hasPickableLabel(labels: readonly Label2D[]): boolean {
-  return labels.some((label) => label.pickId !== undefined && (label.fadeAlpha ?? 1) > 0);
+  return labels.some(isPickableLabel);
 }
 
 /**
@@ -37,8 +41,10 @@ export function hasPickableLabel(labels: readonly Label2D[]): boolean {
  * by only a few screen px of parallax and never enough to reorder two labels
  * a user could tell apart.
  *
- * Each rect is the measured ink box (`labelScreenRect`) inflated by the grace
- * padding.
+ * Each rect is the measured ink box (`labelScreenRect`) inflated by both the
+ * grace padding and the painted outline's fringe (`includeOutline`) — a
+ * pickable style's outline extends well past the ink, and an unclickable
+ * fringe would read as a dead zone right where the label looks solid.
  */
 export function labelPickQuads(args: {
   readonly labels: readonly Label2D[];
@@ -47,48 +53,37 @@ export function labelPickQuads(args: {
 }): LabelPickQuad[] {
   const { labels, projection, measure } = args;
   const viewportHeightPx = projection.viewportPx[1];
-  // One scratch for the whole loop — forwardProjectPoint mutates in place.
-  const scratch: ForwardProjectedPoint = {
-    clipX: 0,
-    clipY: 0,
-    clipZ: 0,
-    clipW: 0,
-    screenX: 0,
-    screenY: 0,
-    onScreen: false,
-  };
+  // Shared with the declutter arms (`label2DDirector`) — a label cannot be
+  // decluttered against one screen position and clicked at another.
+  const projected = projectLabels(labels, projection);
 
   const rows: { quad: LabelPickQuad; clipW: number }[] = [];
-  for (const label of labels) {
-    const packedId = label.pickId;
-    if (packedId === undefined) continue;
-    if ((label.fadeAlpha ?? 1) <= 0) continue;
+  for (let i = 0; i < labels.length; i++) {
+    const label = labels[i]!;
+    if (!isPickableLabel(label)) continue;
     const bbox = measure(label);
     if (bbox === null) continue; // lays out to no ink — nothing to click on
-    forwardProjectPoint(
-      projection.vp,
-      label.worldPos[0],
-      label.worldPos[1],
-      label.worldPos[2],
-      projection.viewportPx,
-      scratch,
-    );
+    const p = projected[i]!;
     // Behind the camera: no screen position. Not gated on `onScreen` — that
     // tests the ANCHOR, and a centred label whose anchor sits just past the
     // edge still draws (and so must still be clickable) half on screen.
-    if (scratch.clipW <= 0) continue;
+    if (p.screenPx === null) continue;
     rows.push({
-      clipW: scratch.clipW,
+      clipW: p.clipW,
       quad: {
         rect: labelScreenRect({
           label,
           bbox,
-          screenPx: [scratch.screenX, scratch.screenY],
-          clipW: scratch.clipW,
+          screenPx: p.screenPx,
+          clipW: p.clipW,
           viewportHeightPx,
           padPx: LABEL_PICK_GRACE_PADDING_PX,
+          // Outline styles paint up to `outlineEmFrac * displayEmPx` past the
+          // ink (labels/vertex.wesl's quad expansion) — the pick rect must
+          // cover that fringe too, or a click on the painted outline misses.
+          includeOutline: true,
         }),
-        packedId,
+        packedId: label.pickId!,
       },
     });
   }

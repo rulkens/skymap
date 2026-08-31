@@ -77,4 +77,57 @@ describe('labelScreenRect', () => {
     });
     expect(rect).toEqual({ x0: 82, y0: 172, x1: 138, y1: 213 });
   });
+
+  it('ignores outlineEmFrac unless includeOutline is set — the declutter path', () => {
+    // Same 84 px-per-em anchor as the first test; a wide outline must not
+    // move the declutter's overlap rect at all.
+    const rect = labelScreenRect({
+      label: label({ worldEmMpc: 1, minPixelSize: 1, maxPixelSize: 1000, outlineEmFrac: 0.16 }),
+      bbox: BBOX,
+      screenPx: [100, 200],
+      clipW: 1,
+      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
+    });
+    expect(rect).toEqual({ x0: 90, y0: 180, x1: 130, y1: 205 });
+  });
+
+  it('inflates by the outline fringe when includeOutline is set — the pick path', () => {
+    // displayEmPx is 84 (scale 1, per the first test); outlineEmFrac 0.16 ⇒
+    // a 0.16 · 84 = 13.44 px fringe, matching the vertex shader's
+    // `outlineEmFrac * displayEmPx` quad expansion (labels/vertex.wesl).
+    const rect = labelScreenRect({
+      label: label({ worldEmMpc: 1, minPixelSize: 1, maxPixelSize: 1000, outlineEmFrac: 0.16 }),
+      bbox: BBOX,
+      screenPx: [100, 200],
+      clipW: 1,
+      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
+      includeOutline: true,
+    });
+    const fringe = 0.16 * 84;
+    expect(rect).toEqual({
+      x0: 90 - fringe,
+      y0: 180 - fringe,
+      x1: 130 + fringe,
+      y1: 205 + fringe,
+    });
+  });
+
+  it('composes padPx and the outline fringe additively', () => {
+    const rect = labelScreenRect({
+      label: label({ worldEmMpc: 1, minPixelSize: 1, maxPixelSize: 1000, outlineEmFrac: 0.16 }),
+      bbox: BBOX,
+      screenPx: [100, 200],
+      clipW: 1,
+      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
+      padPx: 8,
+      includeOutline: true,
+    });
+    const inflate = 8 + 0.16 * 84;
+    expect(rect).toEqual({
+      x0: 90 - inflate,
+      y0: 180 - inflate,
+      x1: 130 + inflate,
+      y1: 205 + inflate,
+    });
+  });
 });

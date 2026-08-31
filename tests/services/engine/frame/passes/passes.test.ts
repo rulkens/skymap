@@ -922,11 +922,15 @@ describe('drawPick migration-table rows', () => {
     // filters by `drawPick` presence + `enabled`, never a hardcoded name
     // list — so this test is the ONLY place the fourteen names are asserted.
     //
-    // The two label rows are the exception to the ordering freedom above, and
-    // the reason their POSITION is pinned here: each binds its OWN @group(0),
-    // so 'labels' must stay the LAST COSMO pickable (it restores the shared
-    // point-pick camera prefix on the way out, but a row inserted after it
-    // would still be reading a rebound slot 0 mid-pass).
+    // The two label rows are the exception to the ordering freedom above —
+    // not because their pick aspect needs a fixed slot (each restores the
+    // shared point-pick camera prefix before returning, same postcondition
+    // `proceduralDisksLayer` already satisfies from mid-registry — see
+    // `ContentLayer.drawPick`), but because CONTENT_LAYERS is the ONE list
+    // both the visual and pick programs filter, and 'labels' visual row must
+    // sit last among the swap-target layers so its text composites over the
+    // marker-line stroke it sits over (`passes/index.ts`). The pick filter
+    // inherits that position for free rather than keeping a second order.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'zone-of-avoidance',

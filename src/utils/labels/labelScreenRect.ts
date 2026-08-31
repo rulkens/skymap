@@ -30,6 +30,13 @@ export function labelScreenRect(args: {
   readonly viewportHeightPx: number;
   /** Uniform outward inflation, device px. Defaults to 0 (the drawn ink). */
   readonly padPx?: number;
+  /**
+   * Also inflate by the painted outline's screen footprint
+   * (`label.outlineEmFrac * displayEmPx` — see `labels/vertex.wesl`'s quad
+   * expansion). The pick path sets this; the declutter arms never do, so
+   * their overlap test keeps reading the ink box alone.
+   */
+  readonly includeOutline?: boolean;
 }): ScreenRectPx {
   const { label, bbox, screenPx, clipW, viewportHeightPx } = args;
   const pad = args.padPx ?? 0;
@@ -40,10 +47,12 @@ export function labelScreenRect(args: {
     label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
   );
   const s = displayEmPx / ATLAS_FONT_SIZE;
+  const outlinePx = args.includeOutline ? (label.outlineEmFrac ?? 0) * displayEmPx : 0;
+  const inflate = pad + outlinePx;
   return {
-    x0: screenPx[0] + bbox.minX * s - pad,
-    y0: screenPx[1] + bbox.minY * s - pad,
-    x1: screenPx[0] + bbox.maxX * s + pad,
-    y1: screenPx[1] + bbox.maxY * s + pad,
+    x0: screenPx[0] + bbox.minX * s - inflate,
+    y0: screenPx[1] + bbox.minY * s - inflate,
+    x1: screenPx[0] + bbox.maxX * s + inflate,
+    y1: screenPx[1] + bbox.maxY * s + inflate,
   };
 }

@@ -22,8 +22,8 @@ const UNIFORM_BYTES = 16;
 
 /** Per-instance stride: rectPx (float32x4, 16) + packedId (u32, 4). */
 const INSTANCE_STRIDE = 20;
-/** Word count per instance (4 f32 + 1 u32). */
-const INSTANCE_WORDS = 5;
+/** Word count per instance (4 f32 + 1 u32) — derived so it can't drift from the stride. */
+const INSTANCE_WORDS = INSTANCE_STRIDE / 4;
 
 /**
  * @param depthFormat the pick target's depth attachment format for this slab

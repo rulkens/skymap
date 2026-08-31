@@ -97,10 +97,10 @@ import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DP
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 import type { Label2DDirectorConfig } from '../../../@types/engine/subsystems/Label2DDirectorConfig';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
+import type { Label2DProjected } from '../../../@types/rendering/Label2DProjected';
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { ForwardProjectedPoint } from '../../../@types/camera/ForwardProjectedPoint';
-import { forwardProjectPoint } from '../../../utils/camera/forwardProjectPoint';
+import { projectLabels } from '../../../utils/labels/projectLabels';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import {
   LABEL_MIN_PX_DEFAULT,
@@ -143,19 +143,6 @@ type ExponentialEnvelopeEntry = {
 };
 
 /**
- * One label's screen-space anchor, resolved ONCE per frame by `projectLabels`
- * and shared by whichever declutter arm runs — nothing downstream re-does
- * the matrix multiply. `screenPx` is set whenever
- * `clipW > 0` regardless of `onScreen`, matching what the vertex shader would
- * draw for an off-NDC-range anchor.
- */
-type Label2DProjected = {
-  readonly screenPx: Vec2 | null;
-  readonly clipW: number;
-  readonly onScreen: boolean;
-};
-
-/**
  * `declutter`'s result: the filtered survivor array (what `applySmoothstepEnvelope`
  * and the lift/flush stages consume) alongside a survivor-id set (what
  * `applyExponentialEnvelope` additionally needs — see its docblock for why
@@ -165,37 +152,6 @@ type DeclutterResult = {
   readonly survivors: readonly Label2D[];
   readonly survivorIds: ReadonlySet<string>;
 };
-
-function projectLabels(
-  labels: readonly Label2D[],
-  projection: Label2DProjection,
-): Label2DProjected[] {
-  const m = projection.vp;
-  const viewportPx = projection.viewportPx;
-  // One scratch reused across the whole loop — forwardProjectPoint mutates
-  // it in place rather than allocating, per label.
-  const scratch: ForwardProjectedPoint = {
-    clipX: 0,
-    clipY: 0,
-    clipZ: 0,
-    clipW: 0,
-    screenX: 0,
-    screenY: 0,
-    onScreen: false,
-  };
-  return labels.map((label) => {
-    const wx = label.worldPos[0];
-    const wy = label.worldPos[1];
-    const wz = label.worldPos[2];
-    forwardProjectPoint(m, wx, wy, wz, viewportPx, scratch);
-    if (scratch.clipW <= 0) return { screenPx: null, clipW: scratch.clipW, onScreen: false };
-    return {
-      screenPx: [scratch.screenX, scratch.screenY],
-      clipW: scratch.clipW,
-      onScreen: scratch.onScreen,
-    };
-  });
-}
 
 /**
  * `prominencePx` DESC, stable on input order — the one rank contract every
