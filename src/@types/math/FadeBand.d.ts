@@ -11,5 +11,9 @@
  * keeps the band a pair of anchor values a reader can read off directly and
  * makes an inconsistent "invert says rise but edges say drop" state
  * unrepresentable.
+ *
+ * `floor`, when present, is the alpha the fade bottoms out at instead of 0 —
+ * for a band whose content nothing else replaces at its dissolved end, so it
+ * must stay dimly visible rather than vanish outright. Omitted means 0.
  */
-export type FadeBand = { fullAt: number; goneAt: number };
+export type FadeBand = { fullAt: number; goneAt: number; floor?: number };

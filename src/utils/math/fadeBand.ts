@@ -31,12 +31,16 @@ import type { FadeBand } from '../../@types/math/FadeBand';
 import { smoothstep } from './smoothstep';
 
 export function fadeBand(band: FadeBand, value: number): number {
-  const { fullAt, goneAt } = band;
+  const { fullAt, goneAt, floor = 0 } = band;
   // smoothstep needs edge0 < edge1; feed it the sorted edges and let the
   // ordering of the ORIGINAL edges decide whether the ramp rises or is
   // mirrored. `fullAt > goneAt` (approach fade) uses the ramp as-is — 1 at the
   // high edge; otherwise (recede fade) the `1 -` flips it so full sits at the
   // low edge.
   const s = smoothstep(Math.min(fullAt, goneAt), Math.max(fullAt, goneAt), value);
-  return fullAt > goneAt ? s : 1 - s;
+  const raw = fullAt > goneAt ? s : 1 - s;
+  // Remap the OUTPUT, not the ramp: `floor` rescales [0, 1] to [floor, 1] so a
+  // band whose content nothing replaces at its dissolved end stays dimly
+  // visible instead of reaching 0.
+  return floor + (1 - floor) * raw;
 }

@@ -14,7 +14,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import { milkyWayVisible } from '../helpers/milkyWayVisible';
 import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS, MILKY_WAY_GC_FADE_FLOOR } from '../presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
 import { sceneBodyStates } from './sceneBodyStates';
 import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
@@ -34,18 +34,13 @@ export function deriveMilkyWayCloudAlpha(
   // Two independent near-side approach fades, combined by MIN: the Sun's own
   // descent (`milkyWayApproach`, keyed on the origin — the Sun sits there —
   // must still reach 0, the hand-off to the real Gaia star catalog) and the
-  // galactic centre's (`milkyWayApproachGc`, keyed on distance from Sgr A*).
-  // The GC band is blended against `MILKY_WAY_GC_FADE_FLOOR` rather than
-  // reaching 0 outright: nothing replaces the impostor at the GC, so it must
-  // stay dimly visible instead of vanishing.
+  // galactic centre's (`milkyWayApproachGc`, keyed on distance from Sgr A*,
+  // whose `floor` keeps it dimly visible instead of vanishing).
   const bodyStates = sceneBodyStates(state, ctx);
   const sunApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc);
   const gcDistMpc = regionRelativeDistanceMpc(ctx.drawCamPos, GALACTIC_CENTRE_REGION, bodyStates);
   const gcApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproachGc, gcDistMpc);
-  const approach = Math.min(
-    sunApproach,
-    MILKY_WAY_GC_FADE_FLOOR + (1 - MILKY_WAY_GC_FADE_FLOOR) * gcApproach,
-  );
+  const approach = Math.min(sunApproach, gcApproach);
   if (approach <= 0) return null;
 
   const alpha =

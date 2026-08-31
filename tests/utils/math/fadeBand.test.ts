@@ -69,3 +69,12 @@ describe('fadeBand — recede direction (fullAt < goneAt, fades out as value ris
     expect(b).toBeGreaterThan(c);
   });
 });
+
+describe('fadeBand — optional floor', () => {
+  it('remaps a floored band into [floor, 1] and leaves a floorless band reaching 0', () => {
+    const floored = { fullAt: 0.008, goneAt: 0.002, floor: 0.15 };
+    const floorless = { fullAt: 0.008, goneAt: 0.002 };
+    expect(fadeBand(floored, 0)).toBeCloseTo(0.15, 6);
+    expect(fadeBand(floorless, 0)).toBe(0);
+  });
+});
