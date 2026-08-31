@@ -15,7 +15,7 @@
  *      headline ("Skymap" + tagline) makes the card identifiable in a
  *      cramped link preview.
  *
- * Pipeline: take `docs/screenshots/wide-field.png` (the supercluster-scale
+ * Pipeline: take `docs/screenshots/cosmic-web.png` (the supercluster-scale
  * view), centre-crop to 1200×630, composite a bottom-anchored dark
  * gradient + an SVG text layer, encode as quality-85 JPEG.  Output is
  * committed so deploys don't depend on the script running in CI.  Re-run
@@ -25,7 +25,7 @@
 import sharp from 'sharp';
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const SRC = 'docs/screenshots/wide-field.png';
+const SRC = 'docs/screenshots/cosmic-web.png';
 const OUT = 'public/og-image.jpg';
 const W = 1200;
 const H = 630;
@@ -52,19 +52,19 @@ const overlay = Buffer.from(
           font-size="92" font-weight="700" letter-spacing="-2" fill="#ffffff">skymap</text>
     <text x="60" y="${H - 50}"
           font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, sans-serif"
-          font-size="34" font-weight="400" fill="#a8d0ff" opacity="0.95">Interactive WebGPU 3D galaxy explorer</text>
+          font-size="34" font-weight="400" fill="#a8d0ff" opacity="0.95">From Earth's surface to the edge of the observable universe</text>
     <text x="60" y="${H - 12}"
           font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, sans-serif"
-          font-size="22" font-weight="400" fill="#ffffff" opacity="0.65">SDSS · GLADE · 2MRS · ~2.5M galaxies · skymap.rulkens.com</text>
+          font-size="22" font-weight="400" fill="#ffffff" opacity="0.65">SDSS · 2MRS · GLADE · Milliquas · ~3M galaxies · skymap.rulkens.com</text>
   </svg>`,
 );
 
 const src = readFileSync(SRC);
 
 // `cover` resizes so the image fills 1200×630 and the centre is preserved
-// (cropping equally from any over-long sides).  The source is 1200×685 so
-// only ~28 px gets trimmed off the top — picture stays composed as it
-// looked in the screenshot.
+// (cropping equally from any over-long sides).  The 16:9 source is a touch
+// wider than 1200:630, so a thin slice comes off the left and right edges —
+// picture stays composed as it looked in the screenshot.
 const buf = await sharp(src)
   .resize(W, H, { fit: 'cover', position: 'centre' })
   .composite([{ input: overlay, top: 0, left: 0 }])

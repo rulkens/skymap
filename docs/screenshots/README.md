@@ -12,9 +12,8 @@ stills (1600×900), `.gif` for short loops.
 - `stars-milky-way.png` — the Gaia star field against the procedural Milky Way disk.
 - `local-volume.png` — famous galaxies with curated thumbnails, labels, filaments.
 - `cosmic-web.png` — point cloud, filament skeleton, and MCPM volume at supercluster scale.
-
-`wide-field.png` is not embedded in the README but feeds the social-share card
-via `tools/site/makeOgImage.ts`.
+  Also feeds the social-share card via `tools/site/makeOgImage.ts`; re-run that
+  script after re-capturing it.
 
 ## old/
 
