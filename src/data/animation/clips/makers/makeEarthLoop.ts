@@ -10,6 +10,7 @@
 
 import type { Clip } from '../../../../@types/animation/Clip';
 import type { ClipId } from '../../../../@types/animation/ClipId';
+import type { Ease } from '../../../../@types/animation/Ease';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { dollyTo, spin, all, seq, hold, hide } from '../../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
@@ -18,9 +19,8 @@ import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../scaleUnits';
 
-const FLIGHT_SEC = 70; // same pull-back window as earthFlyout
+const FLIGHT_SEC = 70; // default one-leg pull-back window, same as earthFlyout
 const HOLD_SEC = 4;
-const TOTAL_SEC = FLIGHT_SEC * 2 + HOLD_SEC * 2; // 148 — the spin's exact loop period
 
 const EARTH_RADIUS_MPC = SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
 const START_DISTANCE_MPC = EARTH_RADIUS_MPC * 3;
@@ -36,8 +36,20 @@ export function makeEarthLoop(opts: {
   label: string;
   farDistanceMpc: number;
   hideLabels?: boolean;
+  /**
+   * Optional multi-leg outbound path (must end at `farDistanceMpc`); the
+   * return leg mirrors it. Lets a clip crawl through a scale band — dolly
+   * tweens in LOG space, so a leg's pace is its decades-per-second. Omitted:
+   * one eased leg over FLIGHT_SEC.
+   */
+  outbound?: { toMpc: number; sec: number; ease?: Ease }[];
 }): (simDays: number) => Clip {
   const { id, label, farDistanceMpc, hideLabels } = opts;
+  const outbound = opts.outbound ?? [
+    { toMpc: farDistanceMpc, sec: FLIGHT_SEC, ease: 'easeInOutCubic' as Ease },
+  ];
+  const flightSec = outbound.reduce((s, leg) => s + leg.sec, 0);
+  const totalSec = flightSec * 2 + HOLD_SEC * 2;
   return function build(simDays: number): Clip {
     const earth = deriveBodyStates(simDays).get(SCENE_EARTH.id)!.positionMpc;
     const target: Vec3 = [earth[0], earth[1], earth[2]];
@@ -64,16 +76,26 @@ export function makeEarthLoop(opts: {
           ...(hideLabels ? [hide(['labels'], 0)] : []),
           all([
             seq([
-              dollyTo(farDistanceMpc, FLIGHT_SEC, 'easeInOutCubic'),
+              ...outbound.map((leg) => dollyTo(leg.toMpc, leg.sec, leg.ease)),
               hold(HOLD_SEC),
-              dollyTo(START_DISTANCE_MPC, FLIGHT_SEC, 'easeInOutCubic'),
+              // Mirror of the outbound path: each leg returns to the distance
+              // the corresponding outbound leg STARTED from, so the round trip
+              // retraces itself and ends exactly at the start pose.
+              ...outbound
+                .map((leg, i) => ({
+                  toMpc: i === 0 ? START_DISTANCE_MPC : outbound[i - 1]!.toMpc,
+                  sec: leg.sec,
+                  ease: leg.ease,
+                }))
+                .reverse()
+                .map((leg) => dollyTo(leg.toMpc, leg.sec, leg.ease)),
               hold(HOLD_SEC),
             ]),
-            // Exactly one full turn over the WHOLE cycle: yaw(TOTAL_SEC) ===
+            // Exactly one full turn over the WHOLE cycle: yaw(totalSec) ===
             // yaw(0) + 2π, so the loop seam is bit-for-bit invisible (pinned by
             // the seamlessness test). Linear, not eased — a constant turn rate,
             // so nothing lurches at the seam.
-            spin('yaw', { by: Math.PI * 2, over: TOTAL_SEC, ease: 'linear' }),
+            spin('yaw', { by: Math.PI * 2, over: totalSec, ease: 'linear' }),
           ]),
         ],
       },
