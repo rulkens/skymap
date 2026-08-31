@@ -354,6 +354,14 @@ function timedSlotRowsOf(
  * in first-appearance order. Rows keep their draw order within a group, and an
  * empty group is dropped — that's how the toggles list omits the "composites &
  * pick" group whose rows aren't togglable.
+ *
+ * A `slab: 'body'` layer matches every body-row step in the chain, so its row
+ * repeats once per capacity slot with the same `name` (its own group-key rows
+ * stay unique per step and are unaffected). The underlying `gpuTimingService`
+ * already collapses same-named slots onto one query index (`buildTimingSlotMap`:
+ * "names are assumed unique … a duplicate would collide on its index pair"),
+ * so every repeat reads the same sample — kept once per group here, first
+ * occurrence wins, for display only.
  */
 function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
   const titleOf = (groupKey: string): string => PASS_GROUP_TITLES[groupKey] ?? groupKey;
@@ -370,8 +378,16 @@ function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
   for (const row of rows) remember(titleOf(row.groupKey));
 
   const byTitle = new Map<string, TimedSlotRow[]>();
+  const namesSeenByTitle = new Map<string, Set<string>>();
   for (const row of rows) {
     const title = titleOf(row.groupKey);
+    let namesSeen = namesSeenByTitle.get(title);
+    if (namesSeen === undefined) {
+      namesSeen = new Set<string>();
+      namesSeenByTitle.set(title, namesSeen);
+    }
+    if (namesSeen.has(row.name)) continue;
+    namesSeen.add(row.name);
     const bucket = byTitle.get(title);
     if (bucket) bucket.push(row);
     else byTitle.set(title, [row]);

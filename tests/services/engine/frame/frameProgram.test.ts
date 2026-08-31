@@ -549,6 +549,32 @@ describe('timedSlotGroupsOf', () => {
     ]);
   });
 
+  it('dedupes a body-family layer to one row per group, though it matches every body-row step', () => {
+    // A `slab: 'body'` layer (e.g. `planetsLayer`) matches EVERY body-row
+    // step in the chain — with two body rows it would otherwise contribute
+    // two identical-name 'planets' rows to 'Foreground bodies · depth'. The
+    // underlying GPU timing already collapses these onto one query-set slot
+    // (`buildTimingSlotMap`'s "names are assumed unique" invariant), so the
+    // display list keeps only the first occurrence; the two rows' own
+    // group-key rows (unique per step) are untouched.
+    const bodyLayer: ContentLayer = {
+      name: 'planets',
+      slab: 'body',
+      target: 'foreground:0',
+      blend: 'over',
+      enabled: vi.fn<ContentLayer['enabled']>(() => true),
+      draw: vi.fn<ContentLayer['draw']>(),
+    };
+    const groups = timedSlotGroupsOf(frameProgram(TONE, false, [NEAR0, 2, 3]), [bodyLayer]);
+    const foreground = groups.find((g) => g.title === 'Foreground bodies · depth')!;
+    expect(foreground.rows.map((r) => r.name)).toEqual([
+      'foreground:0·NEAR0',
+      'planets',
+      'foreground:0·BODY[0]',
+      'foreground:0·BODY[1]',
+    ]);
+  });
+
   it('falls back to the raw groupKey as the title for an unmapped (target, slab) step', () => {
     // A genuinely new render target/slab the title table doesn't know: the
     // group still forms (self-maintaining), titled with the raw key rather
