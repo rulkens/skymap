@@ -1,42 +1,22 @@
 /**
- * earthLayer — the true-scale, Blue-Marble-textured Earth as a content-layer
- * row drawing into the depth-bearing `foreground:0` target: the base globe,
- * then the resident surface-tile detail patches over it.
+ * earthLayer — Earth's `'body'`-slab content row: the base globe, then the
+ * resident surface-tile detail patches over it, drawn into `foreground:0`.
  *
- * Draws the single seeded `bodies.earth` record as a unit sphere scaled to its
- * radius and translated to its position in the `RENDER_ORIGIN_MPC`-relative
- * frame, packing the 128-byte `EarthSurfaceUniforms` record (MVP + sun
- * direction + camera, all body-local, plus the PBR params including the
- * user-tunable `settings.earth.ambientLight` / `oceanRoughness` overrides).
- * `earthRenderer.draw` writes it into a single non-dynamic uniform buffer, so
- * this row must draw Earth's base globe AT MOST once per frame (see that
- * renderer's header for the `writeBuffer`-vs-`submit` race a second draw
- * would trigger) — the fade below rides that same write, never a second one.
- * The detail-tile draw follows, gated on `earthTiles`' last-cut being
- * non-empty and its atlas view being live — an empty cut is a legitimate
- * "nothing resident yet, base globe alone" frame, not a bug — and MUST come
- * after the base globe so the tile renderer's `nearer-or-equal` depth compare
- * resolves ties in its favour.
+ * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
+ * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`
+ * — the foreground-distance and sub-pixel checks below are now redundant with
+ * that row's own culling but stay as a cheap standalone guard.
  *
- * Once that tile gate is live, the base globe's alpha dissolves through
- * `baseGlobeFadeAlpha` (`EARTH_BASE_GLOBE_FADE_*_ALTITUDE_KM`) so the tile
- * mesh — which fully covers the cap by then — stops fighting the base
- * globe's non-RTC f32 depth for it at low altitude; the draw call itself is
- * skipped at alpha 0. Outside that gate alpha is pinned to 1, the failure
- * floor for every disengaged case (no manifest, empty cut, no atlas).
- *
- * Reads the slab's f64 `view.slab.vp`, not the f32-narrowed `view.vp`, like the
- * other near-field sphere layers: Earth sits ~4.85e-12 Mpc from the render
- * origin, a cancellation `composeBodyMvp` must resolve in double precision
- * BEFORE narrowing to f32, or Earth mis-places by more than its own radius.
- * The tile draw rebases the same f64 `vp` against the camera instead
- * (`rebaseViewProj` + `narrowMat4`), the `StarCatalogDrawArgs` convention.
- *
- * `enabled` gates on the `earthRenderer` GPU handle, the seeded `bodies.earth`
- * record, the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`),
- * and a sub-pixel cull (`SUB_PIXEL_BODY_CULL_PX`) — Earth spends most of the
- * descent under a pixel across, where the star-point backdrop already shows
- * it. `draw` re-checks both handles so a stale call is a harmless no-op.
+ * `earthRenderer.draw` writes ONE non-dynamic uniform buffer, so this row
+ * draws the base globe AT MOST once per frame (see that renderer's header for
+ * the `writeBuffer`-vs-`submit` race a second draw would trigger). The detail
+ * tiles draw AFTER it (gated on a non-empty last cut + a live atlas view — an
+ * empty cut is a legitimate "nothing resident yet" frame, not a bug), so the
+ * tile pipeline's `nearer-or-equal` depth compare resolves ties in its
+ * favour. Past that gate the base globe's alpha dissolves through
+ * `baseGlobeFadeAlpha` so the tile mesh — which fully covers the cap by
+ * then — stops fighting the base globe's depth for it; outside the gate
+ * alpha is pinned to 1, the failure floor for every disengaged case.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -44,16 +24,23 @@ import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFra
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { BodyState } from '../../../../@types/scene/BodyState';
+import type { SceneBody } from '../../../../@types/scene/SceneBody';
+import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
+import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
+import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
-import { camPosLocal } from '../../../../utils/camera/camPosLocal';
-import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/frameUp';
+import { normalize3 } from '../../../../utils/math/normalize3';
+import { mat3FromColumns } from '../../../../utils/math/mat3FromColumns';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
@@ -63,7 +50,8 @@ import { baseGlobeFadeAlpha } from '../../../../utils/scene/baseGlobeFadeAlpha';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
-import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
+import { bodyRelativePose } from '../../camera/bodyRelativePose';
+import { BODY_PICK_MIN_RADIUS_PX } from '../../helpers/minPickRadiusMpc';
 import { sceneBodyStates } from '../sceneBodyStates';
 
 /**
@@ -82,92 +70,135 @@ function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext):
 }
 
 /**
- * One Earth per-frame derivation, shared by `draw`, `drawPick`, and
- * `runFrame`'s tile planner — the three sites that each used to
- * independently look up `earthState` and (`draw`/the planner) recompute the
- * same body-local MVP + camera. Memoised per `ctx` (mirrors `prepareStarCut`
- * in `starCatalogLayer.ts`), so whichever call site reaches it first in a
- * frame does the work and the rest read the cache. `view` must be
- * `slabViewOf(ctx, NEAR0)` for the same `ctx` this is keyed on — a documented
- * precondition, not enforced by types, true at both real call sites.
+ * The registry record for `bodyId`, searched across every store the body-slab
+ * layers can seed a row from. Mirrors `sceneBodyStates`' own null-safety
+ * (missing ⇒ `null`, never a crash) rather than assuming Earth.
  */
-export type PreparedEarthFrame = {
-  readonly earthState: BodyState;
-  readonly radiusMpc: number;
-  /** f64, NOT narrowed — `runFrame`'s tile planner feeds this straight into
-   *  `cutSurfaceTiles`, which re-cancels its own large terms at low altitude
-   *  (see `composeBodyMvp`'s header). `draw` narrows its own copy at the GPU
-   *  upload site below; never narrow this field in place. */
+function sceneBodyForId(state: EngineState, bodyId: BodyId): SceneBody | null {
+  const { earth, planets, stars } = state.data.bodies;
+  if (earth !== null && earth.id === bodyId) return earth;
+  const planet = planets.find((p) => p.id === bodyId);
+  if (planet !== undefined) return planet;
+  return stars.find((s) => s.id === bodyId) ?? null;
+}
+
+/**
+ * The camera's right|up|forward basis in WORLD axes, roll 0 — the same
+ * `imagePlaneBasis`/`frameUp` seam `frameContext.ts`'s own `bodyPose` closure
+ * runs to build `camBasisWorld` for `deriveSlabs`. Duplicated here (not
+ * imported from `frameContext.ts`, which has no exported seam for it) so this
+ * layer's own `bodyRelativePose` call reads the SAME basis a body-slab row's
+ * `vp` was already built from.
+ */
+function camBasisWorldOf(cam: OrbitCamera): Mat3 {
+  const forward = normalize3([
+    cam.target[0] - cam.position[0],
+    cam.target[1] - cam.position[1],
+    cam.target[2] - cam.position[2],
+  ]);
+  const { right, up } = imagePlaneBasis(forward, 0, frameUp(cam.upBasis));
+  return mat3FromColumns(right, up, forward);
+}
+
+/**
+ * One body-slab-row derivation, shared by `draw`, `drawPick`, and
+ * `runFrame`'s tile planner — the three sites that each used to
+ * independently look up the body's state and recompute the same body-local
+ * MVP + camera. Memoised per `(ctx, bodyId)` (mirrors `prepareStarCut` in
+ * `starCatalogLayer.ts`), so whichever call site reaches it first in a frame
+ * does the work and the rest read the cache — keyed on `bodyId`, not just
+ * `ctx`, because a single ctx now serves every body-slab row and a `ctx`-only
+ * memo would return Earth's frame for any other body sharing the same frame.
+ */
+export type PreparedBodySurfaceFrame = {
+  readonly body: SceneBody;
+  readonly bodyState: BodyState;
+  readonly pose: BodyRelativePose;
+  readonly radiusM: number;
+  /** composeBodySlabMvp result — RAW f64; the tile planner needs it un-narrowed. */
   readonly mvpLocal: Float64Array;
+  /** bodySlabCamLocal result — dimensionless body-radius units. */
   readonly camLocal: Vec3;
-  /** Monotonic per-real-frame counter, forwarded to `earthSurfaceTileRenderer.draw`
-   *  for its mesh cache's LRU stamp — an integer index rather than `ctx.nowMs`
-   *  so a stepped/paused clock (tests, a recorder) can't collapse two frames'
-   *  stamps onto the same value. */
-  readonly frame: number;
 };
 
-const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedEarthFrame | null>();
+const preparedByCtx = new WeakMap<
+  ReadyFrameContext,
+  Map<BodyId, PreparedBodySurfaceFrame | null>
+>();
 
+// The tile mesh cache's LRU stamp — an integer index rather than `ctx.nowMs`
+// so a stepped/paused clock (tests, a recorder) can't collapse two frames'
+// stamps onto the same value. Advanced once per real tile draw, not memoised
+// alongside `PreparedBodySurfaceFrame` (unlike the old per-ctx frame field):
+// it has nothing to do with the pose derivation and would otherwise stay
+// stale across a (ctx, bodyId) cache hit.
 let earthFrameCounter = 0;
 
-export function prepareEarthFrame(
+export function prepareBodySurfaceFrame(
   state: EngineState,
   ctx: ReadyFrameContext,
   view: SlabView,
-): PreparedEarthFrame | null {
-  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
+): PreparedBodySurfaceFrame | null {
+  if (view.slab.frame.kind !== 'body-m') return null;
+  const bodyId = view.slab.frame.bodyId;
 
-  const result = computeEarthFrame(state, ctx, view);
-  preparedByCtx.set(ctx, result);
+  let byBody = preparedByCtx.get(ctx);
+  if (byBody === undefined) {
+    byBody = new Map();
+    preparedByCtx.set(ctx, byBody);
+  }
+  if (byBody.has(bodyId)) return byBody.get(bodyId)!;
+
+  const result = computeBodySurfaceFrame(state, ctx, view, bodyId);
+  byBody.set(bodyId, result);
   return result;
 }
 
-function computeEarthFrame(
+function computeBodySurfaceFrame(
   state: EngineState,
   ctx: ReadyFrameContext,
   view: SlabView,
-): PreparedEarthFrame | null {
-  const earth = state.data.bodies.earth;
-  if (earth === null) return null;
+  bodyId: BodyId,
+): PreparedBodySurfaceFrame | null {
+  const body = sceneBodyForId(state, bodyId);
+  if (body === null) return null;
+  const bodyState = sceneBodyStates(state, ctx).get(bodyId);
+  if (bodyState === undefined) return null;
 
-  const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
-  const radiusMpc = earth.radiusM * SCALE_UNITS.M_TO_MPC;
-  // See the module header's "f64 seam" note for why view.slab.vp, not view.vp.
-  const mvpLocal = composeBodyMvp(
-    view.slab.vp,
-    earthState.positionMpc,
-    RENDER_ORIGIN_MPC,
-    radiusMpc,
-    earthState.orientation,
-  );
-  const camLocal = camPosLocal(
-    view.camPos,
-    earthState.positionMpc,
-    radiusMpc,
-    earthState.orientation,
-  );
-  return { earthState, radiusMpc, mvpLocal, camLocal, frame: ++earthFrameCounter };
+  const pose = bodyRelativePose({
+    bodyId,
+    camPosMpc: ctx.cam.position,
+    camBasisWorld: camBasisWorldOf(ctx.cam),
+    bodyState,
+  });
+  const radiusM = body.radiusM;
+  // See composeBodySlabMvp's header: the seam already rotated the camera into
+  // the body's fixed axes, so view.slab.vp (built about the eye from that
+  // SAME basis) is what this composes against — never the f32-narrowed view.vp.
+  const mvpLocal = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, radiusM);
+  const camLocal = bodySlabCamLocal(pose.eyeRelBodyM, radiusM);
+  return { body, bodyState, pose, radiusM, mvpLocal, camLocal };
 }
 
 export const earthLayer: ContentLayer = {
   name: 'earth',
-  slab: NEAR0,
+  slab: 'body',
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state, ctx, _view) {
+  enabled(state, ctx, view) {
+    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== 'earth') return false;
     if (state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const earth = state.data.bodies.earth;
     if (earth === null) return false;
     // Live position from the per-frame snapshot, not the baked record field.
     const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
-    // Sub-pixel cull (see SUB_PIXEL_BODY_CULL_PX): Earth is the layer's only
-    // body, so this whole-layer gate is exact, unlike planetsLayer's per-body
-    // cull. Zero distance means the camera is INSIDE the body — apparentSizePx
-    // defensively returns 0 there, which would read as sub-pixel, so treat it
-    // as resolved.
+    // Sub-pixel cull (see SUB_PIXEL_BODY_CULL_PX): redundant with the body-slab
+    // row's own culling (Task 1) but cheap, and keeps this gate honest if the
+    // layer is ever probed standalone. Zero distance means the camera is
+    // INSIDE the body — apparentSizePx defensively returns 0 there, which
+    // would read as sub-pixel, so treat it as resolved.
     const distanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
     if (distanceMpc === 0) return true;
     const diameterPx = apparentSizePx({
@@ -183,12 +214,13 @@ export const earthLayer: ContentLayer = {
     const renderer = state.gpu.earthRenderer;
     if (renderer === null) return;
 
-    const prepared = prepareEarthFrame(state, ctx, view);
+    const prepared = prepareBodySurfaceFrame(state, ctx, view);
     if (prepared === null) return;
-    const { earthState, radiusMpc, mvpLocal, camLocal, frame } = prepared;
+    const { bodyState: earthState, radiusM, mvpLocal, camLocal } = prepared;
     // Narrow HERE, at the GPU-upload boundary — `prepared.mvpLocal` stays f64
-    // for the tile planner's own read of it (see PreparedEarthFrame's doc).
+    // for the tile planner's own read of it (see PreparedBodySurfaceFrame's doc).
     const mvp = narrowMat4(mvpLocal);
+    const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
 
     // Sun direction rotated into Earth's local frame (orientation carries the
     // axial tilt), so the fragment's lighting stays a plain dot product.
@@ -252,15 +284,14 @@ export const earthLayer: ContentLayer = {
     // `nearer-or-equal` depth compare on the tile pipeline needs the base
     // globe's depth already written — see the module header.
     if (tilesLive) {
-      const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
       tileRenderer!.draw(pass, {
         tiles,
-        frame,
-        camPosMpc: view.camPos,
-        bodyPositionMpc: earthState.positionMpc,
-        orientation: earthState.orientation,
-        radiusMpc,
-        vp: rebasedVp,
+        frame: ++earthFrameCounter,
+        // The slab vp is already eye-relative by construction (body-m rows
+        // build vp about the eye) — no rebase, unlike the old NEAR0 path.
+        vp: view.vp,
+        eyeRelBodyM: prepared.pose.eyeRelBodyM,
+        radiusM,
         sunDirLocal: sun,
         roughnessBase: EARTH_SURFACE_PARAMS.roughnessBase,
         f0: EARTH_SURFACE_PARAMS.f0,
@@ -281,30 +312,35 @@ export const earthLayer: ContentLayer = {
     }
   },
 
-  // Stamps Earth's packed identity into the NEAR0 r32uint pick pass. Earth is
-  // the sole body of Source.Earth, so its seed index is the constant 0; the
-  // packed id's PICK_SENTINEL_OFFSET keeps a real hit distinct from the
-  // cleared-to-zero no-hit texel.
+  // Stamps Earth's packed identity into the body-slab r32uint pick pass.
+  // Earth is the sole body of Source.Earth, so its seed index is the
+  // constant 0; the packed id's PICK_SENTINEL_OFFSET keeps a real hit
+  // distinct from the cleared-to-zero no-hit texel.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;
 
-    const prepared = prepareEarthFrame(state, ctx, view);
+    const prepared = prepareBodySurfaceFrame(state, ctx, view);
     if (prepared === null) return;
-    const { earthState, radiusMpc } = prepared;
+    const { pose, radiusM } = prepared;
 
-    // Floor the pick radius (drawFlooredSpherePick) so a far-edge Earth
-    // projecting to a couple of pixels stays clickable. Deliberately NOT
-    // `prepared.mvpLocal`/`camLocal` — those are composed against the true
-    // equatorial radius; drawFlooredSpherePick composes its own MVP/camPos
-    // internally against the floored pick radius.
-    drawFlooredSpherePick(pickRenderer, pass, {
-      vp: view.slab.vp,
-      positionMpc: earthState.positionMpc,
-      radiusMpc,
-      camPosMpc: view.camPos,
-      drawPxPerRad: ctx.drawPxPerRad,
-      orientation: earthState.orientation,
+    // Floor the pick radius (BODY_PICK_MIN_RADIUS_PX) so a far-edge Earth
+    // projecting to a couple of pixels stays clickable — the same recipe
+    // `drawFlooredSpherePick` shares among the NEAR0 sphere layers, composed
+    // here directly against the body-slab primitives instead: `view.slab.vp`
+    // is metres/eye-relative, not the Mpc/world-relative frame that helper's
+    // `composeBodyMvp` call expects.
+    const dM = Math.hypot(pose.eyeRelBodyM[0], pose.eyeRelBodyM[1], pose.eyeRelBodyM[2]);
+    const pickRadiusM = Math.max(radiusM, (BODY_PICK_MIN_RADIUS_PX / ctx.drawPxPerRad) * dM);
+    // Same pickRadiusM feeds both calls, the invariant drawFlooredSpherePick's
+    // header names: the mvp's model scale defines the frame camPosLocal is
+    // measured in, so both must come from the one radius.
+    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, pickRadiusM);
+    const pickCamLocal = bodySlabCamLocal(pose.eyeRelBodyM, pickRadiusM);
+
+    pickRenderer.drawSphere(pass, {
+      mvp: narrowMat4(mvp),
+      camPosLocal: pickCamLocal,
       packedId: packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
     });
   },

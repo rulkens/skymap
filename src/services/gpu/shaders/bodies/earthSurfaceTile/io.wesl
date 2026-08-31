@@ -17,11 +17,11 @@
 // side without the other moving is caught by
 // 'earthSurfaceTileLayout.test.ts'.
 struct NodeParams {
-  // Tile origin (the uv-origin corner direction, Earth-oriented and
-  // -scaled) minus the camera, subtracted CPU-side in f64 and narrowed
-  // once -- the 'rebaseViewProj'-style precision seam (see the renderer's
-  // module header).
-  originRelCamMpc: vec3<f32>,
+  // Tile origin (the uv-origin corner direction, scaled by radiusM, in the
+  // body's fixed axes) minus the eye, subtracted CPU-side in f64 and
+  // narrowed once -- the composeBodySlabMvp-style precision seam (see the
+  // renderer's module header).
+  originRelCamM: vec3<f32>,
   vertexBase: u32,
   // This tile's already-resolved atlas rect ('SurfaceCutTile.resident',
   // Task 2's ancestor-fallback resolution) -- no page-table indirection.
@@ -89,14 +89,21 @@ struct VSOut {
 // stage applies 'rot' to a tile-local delta ('rotCol0*x + rotCol1*y +
 // rotCol2*z'); the fragment applies its transpose ('dot' against each
 // column) to invert it -- valid because a rotation's inverse is its
-// transpose.
+// transpose. Under the body-slab frame the CPU side always packs the
+// IDENTITY here (see the renderer's module header): the pose seam already
+// expresses every position in the body's fixed axes, so this rotation is a
+// no-op kept only so the struct's byte layout (below) doesn't move.
 //
-// 'camPosRelBodyMpc' (Mpc, camera minus Earth-centre, f64-composed and
+// 'camPosRelBodyM' (metres, camera minus Earth-centre in the body's fixed
+// axes -- the body-slab pose seam's own 'eyeRelBodyM', f64-composed and
 // narrowed once) is the one camera-relative-to-Earth fact left here --
 // 'camPosLocal' (dimensionless, body-radius units) is GONE: its only
 // reader was the fragment's ocean-glint view vector, which subtracted two
-// near-unit f32 vectors and degenerated at metre-scale altitude (see
-// vertex.wesl's 'viewDirLocal', VSOut's cancellation-free replacement).
+// near-unit f32 vectors and degenerated at metre-scale altitude. In metres
+// that degeneration is structurally impossible -- the vector no longer
+// cancels, which is the point (see vertex.wesl's 'viewDirLocal', VSOut's
+// cancellation-free replacement, kept for the same reason it was needed
+// before).
 //
 // Byte layout (std140; the sibling-trick pattern 'lib/sphere.wesl' uses
 // throughout -- each vec3's trailing 4-byte pad is filled by the next
@@ -105,12 +112,12 @@ struct VSOut {
 //
 //   offset   0..63:  vp                  mat4x4<f32>
 //   offset  64..75:  rotCol0             vec3<f32>
-//   offset  76..79:  radiusMpc           f32
+//   offset  76..79:  radiusM             f32
 //   offset  80..91:  rotCol1             vec3<f32>
 //   offset  92..95:  vertsPerTile        u32
 //   offset  96..107: rotCol2             vec3<f32>
 //   offset 108..111: roughnessBase       f32
-//   offset 112..123: camPosRelBodyMpc    vec3<f32>
+//   offset 112..123: camPosRelBodyM      vec3<f32>
 //   offset 124..127: f0                  f32
 //   offset 128..139: sunDirLocal         vec3<f32>
 //   offset 140..143: sunIrradiance       f32
@@ -131,12 +138,12 @@ struct VSOut {
 struct SurfaceTileUniforms {
   vp: mat4x4<f32>,
   rotCol0: vec3<f32>,
-  radiusMpc: f32,
+  radiusM: f32,
   rotCol1: vec3<f32>,
   vertsPerTile: u32,
   rotCol2: vec3<f32>,
   roughnessBase: f32,
-  camPosRelBodyMpc: vec3<f32>,
+  camPosRelBodyM: vec3<f32>,
   f0: f32,
   sunDirLocal: vec3<f32>,
   sunIrradiance: f32,

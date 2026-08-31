@@ -73,8 +73,8 @@ import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { earthSurfaceTier } from './earthSurfaceTier';
 import { prepareStarCut } from './passes/starCatalogLayer';
-import { prepareEarthFrame, earthLayer } from './passes/earthLayer';
-import { NEAR0, slabViewOf } from './slabs';
+import { prepareBodySurfaceFrame, earthLayer } from './passes/earthLayer';
+import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
@@ -579,48 +579,57 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // ── Earth surface virtual texture — the tile planner ──────────────────────
-  // A CPU-side planner, sited with the disk planners above. The gate is
-  // `earthLayer.enabled` itself, not a hand-copied predicate, so the tiles and
-  // the layer they refine can never disagree about whether Earth is on screen.
+  // A CPU-side planner, sited with the disk planners above. Resolved off
+  // Earth's OWN body-slab row rather than a fixed NEAR0 index — no row this
+  // frame means Task 1 already culled Earth, so there is nothing to plan.
+  // Where a row DOES exist, the gate is still `earthLayer.enabled` itself,
+  // not a hand-copied predicate, so the tiles and the layer they refine can
+  // never disagree about whether Earth is on screen.
   const earthTiles = state.subsystems.earthTiles;
   const earth = state.data.bodies.earth;
-  // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
-  // module header), resolved once and reused below so the tiles the planner
-  // asks for never drift from the pixels the fragment samples them into.
-  const earthTilesView = slabViewOf(ctx, NEAR0);
-  if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx, earthTilesView)) {
-    // `earthSurfaceTier` reads the tier off the committed texture slot, not the
-    // app-wide request, so a tier swap in flight can't make the planner believe
-    // in detail that isn't on the GPU yet. Null until the manifest lands.
-    const params = earthTiles.plannerParams(earthSurfaceTier(state));
-    // Empty by default: overwritten below only on the path that actually
-    // resolves a fresh cut. `setLastCut` runs unconditionally at the bottom
-    // of this block so a null-params/null-prepared frame (a tier swap in
-    // flight) draws nothing stale rather than last frame's cut.
-    let cut: readonly SurfaceCutTile[] = [];
-    if (params !== null) {
-      // Skip when Earth's frame derivation is null — mirrors the `earth !==
-      // null` guard above (prepareEarthFrame returns null on exactly that
-      // condition); kept explicit so this block doesn't lean on the outer
-      // guard's reasoning to satisfy the type checker.
-      const prepared = prepareEarthFrame(state, ctx, earthTilesView);
-      if (prepared !== null) {
-        // The single walk: `cut` is what earthLayer.draw draws this frame,
-        // `requests` is what update()'s fetch loop drives — see
-        // cutSurfaceTiles's header for why one walk produces both rather
-        // than two independently re-deriving the same horizon/frustum logic.
-        const result = cutSurfaceTiles({
-          ...params,
-          camPosLocal: prepared.camLocal,
-          viewProjLocal: prepared.mvpLocal,
-          viewportPx: earthTilesView.viewportPx,
-          residentSlot: earthTiles.residentSlot,
-        });
-        cut = result.cut;
-        earthTiles.update({ plan: result.requests });
+  const earthSlab = ctx.slabs.find(
+    (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === 'earth',
+  );
+  if (earthTiles !== null && earth !== null && earthSlab !== undefined) {
+    // Same slab resolution `earthLayer.draw` uses, resolved once and reused
+    // below so the tiles the planner asks for never drift from the pixels
+    // the fragment samples them into.
+    const earthTilesView = slabViewOf(ctx, earthSlab.index);
+    if (earthLayer.enabled(state, ctx, earthTilesView)) {
+      // `earthSurfaceTier` reads the tier off the committed texture slot, not the
+      // app-wide request, so a tier swap in flight can't make the planner believe
+      // in detail that isn't on the GPU yet. Null until the manifest lands.
+      const params = earthTiles.plannerParams(earthSurfaceTier(state));
+      // Empty by default: overwritten below only on the path that actually
+      // resolves a fresh cut. `setLastCut` runs unconditionally at the bottom
+      // of this block so a null-params/null-prepared frame (a tier swap in
+      // flight) draws nothing stale rather than last frame's cut.
+      let cut: readonly SurfaceCutTile[] = [];
+      if (params !== null) {
+        // Skip when Earth's frame derivation is null — mirrors the `earth !==
+        // null` guard above (prepareBodySurfaceFrame returns null on exactly
+        // that condition); kept explicit so this block doesn't lean on the
+        // outer guard's reasoning to satisfy the type checker.
+        const prepared = prepareBodySurfaceFrame(state, ctx, earthTilesView);
+        if (prepared !== null) {
+          // The single walk: `cut` is what earthLayer.draw draws this frame,
+          // `requests` is what update()'s fetch loop drives — see
+          // cutSurfaceTiles's header for why one walk produces both rather
+          // than two independently re-deriving the same horizon/frustum logic.
+          const result = cutSurfaceTiles({
+            ...params,
+            camPosLocalM: prepared.pose.eyeRelBodyM,
+            viewProjLocal: prepared.mvpLocal,
+            radiusM: prepared.radiusM,
+            viewportPx: earthTilesView.viewportPx,
+            residentSlot: earthTiles.residentSlot,
+          });
+          cut = result.cut;
+          earthTiles.update({ plan: result.requests });
+        }
       }
+      earthTiles.setLastCut(cut);
     }
-    earthTiles.setLastCut(cut);
   }
 
   // Read OUTSIDE the gate above: `isAnimating()` is true while the manifest is

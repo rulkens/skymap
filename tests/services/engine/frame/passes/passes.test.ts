@@ -19,6 +19,7 @@ import {
   scalarVolumeLayer,
   galaxyPointSpritesLayer,
   filamentsLayer,
+  earthLayer,
   milkyWayLayer,
   horizonShellLayer,
   starPointsLayer,
@@ -208,13 +209,10 @@ const SWAP_NAMES = ['selection-ring', 'disk-radius-ring', 'marker-lines', 'label
 // `rings` overlays are NOT in this list: both target foreground:0 but blend
 // OVER, so they are pinned separately (see the ringsLayer registry-row test
 // below).
-const FOREGROUND_NAMES = [
-  'earth',
-  'star-spheres',
-  'field-star-sphere',
-  'planets',
-  'textured-bodies',
-];
+// Earth is excluded here: it rides the 'body' slab sentinel (Task 9, body
+// render slabs), not a fixed NEAR0 index — its own registry-row test below
+// pins it separately.
+const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere', 'planets', 'textured-bodies'];
 
 // The near-field hdr rows: the layers that pair the hdr target with the
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
@@ -320,7 +318,7 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
 
 describe('CONTENT_LAYERS migration table (foreground group)', () => {
   it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
-    // The near-field bodies (Earth, the Sun sphere, the planets) leave the
+    // The near-field bodies (the Sun sphere, the planets) leave the
     // cosmological slab: they project through NEAR0 into the depth-bearing
     // `foreground:0` target and are opaque (depth-tested), not additive. See
     // the renderer-unification design's migration table (spec line 215).
@@ -331,6 +329,15 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
       expect(layer.target).toBe('foreground:0');
       expect(layer.blend).toBe('opaque');
     }
+  });
+
+  it("earth rides the 'body' slab sentinel into foreground:0, opaque", () => {
+    // Task 9 (body render slabs): earthLayer expands into one render step
+    // per body-m row instead of a fixed NEAR0 index — see frameProgram.ts's
+    // 'body' expansion.
+    expect(earthLayer.slab).toBe('body');
+    expect(earthLayer.target).toBe('foreground:0');
+    expect(earthLayer.blend).toBe('opaque');
   });
 });
 

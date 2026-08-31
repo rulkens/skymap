@@ -41,16 +41,23 @@ const VIEWPORT: [number, number] = [2560, 1440];
  *  most tests below don't care about. */
 const NEVER_RESIDENT = (): null => null;
 
+// Fixtures below build camPosLocalM at radius 1 (`radiusM: 1`) — a
+// dimensionless "body-radii" world that degenerates the walk's metres-native
+// horizon math (`camLen > radiusM`, `acos(radiusM / camLen)`) back to the
+// original unit-sphere form, so every numeric assertion here is unchanged
+// from before the metres migration. The dedicated "in metres" tests below
+// scale camPosLocalM and radiusM together to a real Earth radius instead,
+// proving the walk doesn't silently assume radius 1.
 function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
   const d = 1 + altitudeKm / EARTH_RADIUS_KM;
   const lon = (lonDeg * Math.PI) / 180;
   const lat = (latDeg * Math.PI) / 180;
-  const camPosLocal: Vec3 = [
+  const camPosLocalM: Vec3 = [
     d * Math.cos(lat) * Math.cos(lon),
     d * Math.cos(lat) * Math.sin(lon),
     d * Math.sin(lat),
   ];
-  const view = mat4.lookAt(camPosLocal, [0, 0, 0], [0, 0, 1]);
+  const view = mat4.lookAt(camPosLocalM, [0, 0, 0], [0, 0, 1]);
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
   // f64 param type (see cutSurfaceTiles's doc) — these fixtures sit at
   // altitudes far above the low-altitude cancellation regime, so widening
@@ -58,8 +65,9 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
     kind: 'surface' as const,
-    camPosLocal,
+    camPosLocalM,
     viewProjLocal,
+    radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands: [{ uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: 13 }],
@@ -84,12 +92,12 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
   const d = 1 + altitudeM / 1000 / EARTH_RADIUS_KM;
   const lon = (lonDeg * Math.PI) / 180;
   const lat = (latDeg * Math.PI) / 180;
-  const camPosLocal: Vec3 = [
+  const camPosLocalM: Vec3 = [
     d * Math.cos(lat) * Math.cos(lon),
     d * Math.cos(lat) * Math.sin(lon),
     d * Math.sin(lat),
   ];
-  const up: Vec3 = [camPosLocal[0] / d, camPosLocal[1] / d, camPosLocal[2] / d];
+  const up: Vec3 = [camPosLocalM[0] / d, camPosLocalM[1] / d, camPosLocalM[2] / d];
   const east: Vec3 = [-Math.sin(lon), Math.cos(lon), 0];
   const north: Vec3 = [
     up[1] * east[2] - up[2] * east[1],
@@ -103,18 +111,19 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
     -up[2] * Math.cos(tiltRad) + north[2] * Math.sin(tiltRad),
   ];
   const target: Vec3 = [
-    camPosLocal[0] + forward[0],
-    camPosLocal[1] + forward[1],
-    camPosLocal[2] + forward[2],
+    camPosLocalM[0] + forward[0],
+    camPosLocalM[1] + forward[1],
+    camPosLocalM[2] + forward[2],
   ];
-  const view = mat4.lookAt(camPosLocal, target, up);
+  const view = mat4.lookAt(camPosLocalM, target, up);
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   const maxLevel = 19;
   return {
     kind: 'surface' as const,
-    camPosLocal,
+    camPosLocalM,
     viewProjLocal,
+    radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands: [
@@ -158,14 +167,15 @@ function tileGeometry(z: number, x: number, y: number) {
 function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: number) {
   const d = 1 + altitudeKm / EARTH_RADIUS_KM;
   const camDirUnit = equirectUvToDirection([0.5, camLatDeg / 180 + 0.5]);
-  const camPosLocal: Vec3 = [camDirUnit[0] * d, camDirUnit[1] * d, camDirUnit[2] * d];
-  const view = mat4.lookAt(camPosLocal, target, camDirUnit);
+  const camPosLocalM: Vec3 = [camDirUnit[0] * d, camDirUnit[1] * d, camDirUnit[2] * d];
+  const view = mat4.lookAt(camPosLocalM, target, camDirUnit);
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
     kind: 'surface' as const,
-    camPosLocal,
+    camPosLocalM,
     viewProjLocal,
+    radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands: [
@@ -607,7 +617,7 @@ describe('cutSurfaceTiles', () => {
     });
 
     it('returns nothing, not nonsense, from both products when the camera is on the surface', () => {
-      const result = cutSurfaceTiles({ ...nadirAt(1000), camPosLocal: [1, 0, 0] });
+      const result = cutSurfaceTiles({ ...nadirAt(1000), camPosLocalM: [1, 0, 0] });
       expect(result.requests.requests).toEqual([]);
       expect(result.cut).toEqual([]);
       // Still a meaningful sub-camera direction, not a zero vector NaN trap —
@@ -615,13 +625,13 @@ describe('cutSurfaceTiles', () => {
       expect(result.requests.subCameraDirLocal).toEqual([1, 0, 0]);
     });
 
-    it('reports subCameraDirLocal as the normalised camPosLocal, not a recomputed one', () => {
-      const { camPosLocal } = nadirAt(1000);
-      const len = Math.hypot(camPosLocal[0], camPosLocal[1], camPosLocal[2]);
+    it('reports subCameraDirLocal as the normalised camPosLocalM, not a recomputed one', () => {
+      const { camPosLocalM } = nadirAt(1000);
+      const len = Math.hypot(camPosLocalM[0], camPosLocalM[1], camPosLocalM[2]);
       const result = cutSurfaceTiles(nadirAt(1000));
-      expect(result.requests.subCameraDirLocal[0]).toBeCloseTo(camPosLocal[0] / len, 12);
-      expect(result.requests.subCameraDirLocal[1]).toBeCloseTo(camPosLocal[1] / len, 12);
-      expect(result.requests.subCameraDirLocal[2]).toBeCloseTo(camPosLocal[2] / len, 12);
+      expect(result.requests.subCameraDirLocal[0]).toBeCloseTo(camPosLocalM[0] / len, 12);
+      expect(result.requests.subCameraDirLocal[1]).toBeCloseTo(camPosLocalM[1] / len, 12);
+      expect(result.requests.subCameraDirLocal[2]).toBeCloseTo(camPosLocalM[2] / len, 12);
     });
 
     it('emits leaves on both sides of the antimeridian', () => {
@@ -642,7 +652,58 @@ describe('cutSurfaceTiles', () => {
     });
   });
 
-  describe('low-altitude planner input precision (the f64 seam)', () => {
+  describe('metres vs radii (unit-agnosticism, spec §8)', () => {
+    // Both tests scale ONE fixture's camPosLocalM/radiusM pair together to a
+    // real Earth radius, leaving viewProjLocal untouched (it already maps
+    // unit-sphere-local points — equirectUvToDirection's own output —
+    // straight to clip space regardless of what camPosLocalM/radiusM are in;
+    // that's the caller's model-scale choice, not this walk's). If the walk
+    // silently assumed radius 1 anywhere in the horizon test instead of
+    // reading `radiusM`, only the metres form would disagree with the radii
+    // form below.
+    const RADIUS_M = EARTH_RADIUS_KM * 1000;
+
+    function toMetres(radiiInput: ReturnType<typeof nadirAt>) {
+      return {
+        ...radiiInput,
+        camPosLocalM: radiiInput.camPosLocalM.map((c) => c * RADIUS_M) as Vec3,
+        radiusM: RADIUS_M,
+      };
+    }
+
+    it('refines to the same level in metres as in radii', () => {
+      const radiiResult = cutSurfaceTiles(nadirAt(1000));
+      const metresResult = cutSurfaceTiles(toMetres(nadirAt(1000)));
+      expect(metresResult.requests.zWin).toBe(radiiResult.requests.zWin);
+    });
+
+    it('culls beyond the horizon in metres, with an explicit radiusM', () => {
+      // A camera altitude hand-picked so a KNOWN coarse tile's centre sits
+      // just past the horizon cap (`capAngle = acos(radiusM / camLen)`):
+      // solve for the altitude at which the cap lands EXACTLY on the tile's
+      // centre angle, then back off 1 km so the tile falls just outside it.
+      const z = BASE_LEVEL;
+      const [tx, ty] = earthTileXyForUv([70 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const geo = tileGeometry(z, tx, ty);
+      const camDir = equirectUvToDirection([20 / 360 + 0.5, 15 / 180 + 0.5]); // nadirAt's own sub-camera point
+      const centreAngle = angleBetween(geo.centre, camDir);
+      const dAtCap = 1 / Math.cos(centreAngle); // body-radii units (radius 1)
+      const altitudeKm = (dAtCap - 1) * EARTH_RADIUS_KM - 1; // 1 km inside the cap boundary
+
+      const residentSlot = (tile: EarthTileId) =>
+        tile.z === z && tile.x === tx && tile.y === ty
+          ? { slot: 0, atlasUvOrigin: [0, 0] as const, atlasUvScale: [1, 1] as const, readyAtMs: 0 }
+          : null;
+      const result = cutSurfaceTiles({ ...toMetres(nadirAt(altitudeKm)), residentSlot });
+
+      expect(
+        result.cut.some((c) => c.id.z === z && c.id.x === tx && c.id.y === ty),
+        `z${z}/${tx}/${ty} sits just past the horizon and must be absent from cut`,
+      ).toBe(false);
+    });
+  });
+
+  describe('low-altitude planner input precision (the f64 belt-and-braces contract)', () => {
     // Reproduces the diagnosed bug: composeBodyMvp used to narrow its result to
     // f32 before this walk ever saw it. At low altitude the matrix's own
     // `w`-row cancels its radiusMpc-scale terms down to a tiny true value, so
@@ -650,12 +711,17 @@ describe('cutSurfaceTiles', () => {
     // test — an ancestor that truly straddles the frustum edge gets WRONGLY
     // rejected, dropping its whole (correctly-visible) subtree. See
     // cut-replay-exact-report.md (2026-08-20-earth-rtc-surface-foundation) for
-    // the full diagnosis. This drives the REAL composeBodyMvp at Earth-orbit
-    // (1 AU) scale, with a deliberately GENERIC (non-axis-aligned) body
-    // position, sub-camera direction and camera-up — an axis-aligned nadir
-    // pose (tried first) has enough incidental symmetry that no bbox ever
-    // straddles the frustum edge, so the bug never flips a decision there;
-    // production poses are never that symmetric.
+    // the full diagnosis. Earth's OWN production path no longer manufactures
+    // this cancellation (`composeBodySlabMvp` is metres-native, so the
+    // w-row never gets Mpc-scale large to begin with) — `viewProjLocal` stays
+    // `Float64Array` regardless, as a belt-and-braces contract, and this test
+    // keeps `cutSurfaceTiles`'s OWN bbox-cull honest against an adversarial
+    // w-row via the still-live `composeBodyMvp` (used by non-Earth bodies),
+    // at Earth-orbit (1 AU) scale, with a deliberately GENERIC (non-axis-
+    // aligned) body position, sub-camera direction and camera-up — an
+    // axis-aligned nadir pose (tried first) has enough incidental symmetry
+    // that no bbox ever straddles the frustum edge, so the bug never flips a
+    // decision there; production poses are never that symmetric.
     const RADIUS_KM = 6371;
     const radiusMpc = RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
     const bodyPosMpc: Vec3 = [
@@ -725,16 +791,19 @@ describe('cutSurfaceTiles', () => {
       return null;
     }
 
-    /** The exact production seam: `prepareEarthFrame`'s f64 `mvpLocal`, fed
-     *  straight into `cutSurfaceTiles` with no intermediate narrow. Camera
-     *  tilted off nadir (toward `genericUp`-derived axes) so the frustum
-     *  footprint reaches tiles whose bbox genuinely straddles the edge —
-     *  a pure nadir view's footprint is too well-conditioned to ever land
-     *  a bbox near that boundary (see the describe-block comment above). */
+    /** An adversarial-w-row `mvpLocal`, fed straight into `cutSurfaceTiles`
+     *  with no intermediate narrow — see the describe-block comment for why
+     *  this is no longer Earth's own production path but still a real
+     *  regression guard on the walk itself. Camera tilted off nadir (toward
+     *  `genericUp`-derived axes) so the frustum footprint reaches tiles
+     *  whose bbox genuinely straddles the edge — a pure nadir view's
+     *  footprint is too well-conditioned to ever land a bbox near that
+     *  boundary. `camPosLocalM` stays body-radii-scale (radiusM 1) here —
+     *  this test is about the VP's w-row, not the horizon check. */
     function buildInputs(altitudeM: number, tiltDeg: number, azDeg: number) {
       const camLen = 1 + altitudeM / (RADIUS_KM * 1000);
-      const camPosLocal: Vec3 = scale3(dirLocal0, camLen);
-      const eyeMpc = add3(bodyPosMpc, scale3(camPosLocal, radiusMpc));
+      const camPosLocalM: Vec3 = scale3(dirLocal0, camLen);
+      const eyeMpc = add3(bodyPosMpc, scale3(camPosLocalM, radiusMpc));
       const nadirDir = normalize3(sub3(bodyPosMpc, eyeMpc));
       const east = normalize3(cross3(nadirDir, genericUp));
       const north = normalize3(cross3(east, nadirDir));
@@ -771,16 +840,17 @@ describe('cutSurfaceTiles', () => {
         IDENTITY_MAT3,
       );
 
-      return { camPosLocal, viewProjLocal, viewportPx };
+      return { camPosLocalM, viewProjLocal, viewportPx };
     }
 
     it('does not collapse the cut at ~50 m altitude over a deep-band point', () => {
-      const { camPosLocal, viewProjLocal, viewportPx } = buildInputs(50, 10, 0);
+      const { camPosLocalM, viewProjLocal, viewportPx } = buildInputs(50, 10, 0);
 
       const result = cutSurfaceTiles({
         kind: 'surface',
-        camPosLocal,
+        camPosLocalM,
         viewProjLocal,
+        radiusM: 1,
         viewportPx,
         baseLevel: BASE_LEVEL,
         bands,

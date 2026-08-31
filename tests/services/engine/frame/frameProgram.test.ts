@@ -337,19 +337,22 @@ describe('timedSlotsOf', () => {
     // starfield, and star-upsample sits adjacent to the star-catalog leaf draw
     // it composites. The
     // foreground:0 body render now comes NEXT (before the composites) — one
-    // slot per body layer: earth, then Earth's translucent cloud-shell overlay
-    // (drawn right after the opaque surface), star-spheres, field-star-sphere,
-    // planets, textured-bodies, then the translucent rings overlay, then
-    // atmosphere-shell — so the bodies merge into HDR before the tone-map. The
-    // foreground:0→hdr LINEAR composite then precedes the hdr→swap tone-map (the
-    // frame's only tone-map), and the five swap overlays + the (swap, NEAR0)
-    // captions (near0-selection-ring, foreground-labels) draw AFTER it, with
-    // pick last.
+    // render STEP per foregroundChain entry (Task 9: earth rides the 'body'
+    // slab sentinel, a SEPARATE step from the still-NEAR0 rest, so the
+    // fixture below passes a body row (index 2) ahead of NEAR0 in the chain):
+    // earth alone in its own step, then a NEAR0 step carrying Earth's
+    // translucent cloud-shell overlay (drawn right after the opaque surface),
+    // star-spheres, field-star-sphere, planets, textured-bodies, the
+    // translucent rings overlay, then atmosphere-shell — so the bodies merge
+    // into HDR before the tone-map. The foreground:0→hdr LINEAR composite
+    // then precedes the hdr→swap tone-map (the frame's only tone-map), and
+    // the five swap overlays + the (swap, NEAR0) captions
+    // (near0-selection-ring, foreground-labels) draw AFTER it, with pick last.
     // Each render STEP trails its layers with its own '<target>·<SLAB>'
     // group-key slot (the merged-pass timing slot Joint 2 adds), so
     // 'volume·COSMO' follows scalar-volume, 'hdr·COSMO' follows the eight COSMO
     // hdr layers, and so on down to 'swap·NEAR0' after the near-field captions.
-    expect(timedSlotsOf(frameProgram(TONE, true, [NEAR0]), CONTENT_LAYERS)).toEqual([
+    expect(timedSlotsOf(frameProgram(TONE, true, [2, NEAR0]), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'volume·COSMO',
       'zone-of-avoidance',
@@ -377,7 +380,11 @@ describe('timedSlotsOf', () => {
       'star-upsample',
       'constellations',
       'hdr·NEAR0',
+      // Earth's own 'body' step (Task 9): the sole layer matching a body-m
+      // slab so far — cloud-shell/rings/atmosphere-shell stay on NEAR0 until
+      // Task 10 migrates them, so they sit in the NEXT (NEAR0) step instead.
       'earth',
+      'foreground:0·BODY[0]',
       'cloud-shell',
       'star-spheres',
       'field-star-sphere',
