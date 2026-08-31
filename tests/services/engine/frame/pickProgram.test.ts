@@ -502,6 +502,79 @@ describe('createPickProgram', () => {
     expect(program.renderForDebug()).toEqual([]);
   });
 
+  describe('slab fold order (near→far by real distance, not slab index)', () => {
+    // The regression: `pickablesBySlab` used to sort by raw numeric slab
+    // index, so NEAR0(0) always folded before any body row(2+) and COSMO(1)
+    // could even land ahead of a body row — regardless of which was actually
+    // nearer the camera. See pick-stars-investigation.md.
+    function makeNearBodyCtx(): ReadyFrameContext {
+      const base = makeCtx(); // NEAR0 distanceRangeM[0] = 0.01 Mpc (in metres)
+      const nearBody = makeSlab({
+        index: 2,
+        frame: { kind: 'body-m', bodyId: 'mars' as BodyId },
+        // Genuinely nearer than NEAR0's bracket above.
+        distanceRangeM: [0.0001 * SCALE_UNITS.MPC_TO_M, 0.0005 * SCALE_UNITS.MPC_TO_M],
+      });
+      return { ...base, slabs: [...base.slabs, nearBody] };
+    }
+
+    it('draws a nearer body row before NEAR0, and COSMO always last', async () => {
+      const { device } = makeDevice();
+      vi.mocked(pickFrameContext).mockReturnValue(makeNearBodyCtx());
+
+      const callLog: string[] = [];
+      const layers = [
+        makeLayer({
+          name: 'near0',
+          slab: NEAR0,
+          enabled: true,
+          drawPick: () => callLog.push('near0'),
+        }),
+        makeLayer({
+          name: 'cosmo',
+          slab: COSMO,
+          enabled: true,
+          drawPick: () => callLog.push('cosmo'),
+        }),
+        makeLayer({ name: 'body', slab: 'body', enabled: true, drawPick: () => callLog.push('body') }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      await program.pick(10, 10);
+      expect(callLog).toEqual(['body', 'near0', 'cosmo']);
+    });
+
+    it('resolves a body row pick hit over COSMO even though COSMO has the smaller slab index', async () => {
+      // No NEAR0 candidate here, so the two staging labels stay unambiguous
+      // ('pick:near0' == the body row, 'pick:cosmo' == COSMO) — this proves
+      // the FINAL decoded value, not just draw order, tracks real distance.
+      const bodyRaw = ((5 << SELECTION_SOURCE_SHIFT) | (10 + PICK_SENTINEL_OFFSET)) >>> 0;
+      const cosmoRaw = ((2 << SELECTION_SOURCE_SHIFT) | (7 + PICK_SENTINEL_OFFSET)) >>> 0;
+      const { device } = makeDevice({
+        stagingValueForLabel: (label) => (label.includes('cosmo') ? cosmoRaw : bodyRaw),
+      });
+      vi.mocked(pickFrameContext).mockReturnValue(makeNearBodyCtx());
+
+      const layers = [
+        makeLayer({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
+        makeLayer({ name: 'body', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      expect(await program.pick(10, 10)).toEqual({ sourceCode: 5, localIdx: 10 });
+    });
+  });
+
   it('returns null when the engine is not ready to pick', async () => {
     const { device, getCommandEncoderCount } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(null);

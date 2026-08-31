@@ -51,7 +51,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
-import { slabViewOf, COSMO } from './slabs';
+import { slabViewOf, foregroundChainOrder, COSMO } from './slabs';
 import { frontmostPick } from '../../../utils/picking/frontmostPick';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { unpackPick } from '../../../data/selectionEncoding';
@@ -225,13 +225,22 @@ export function createPickProgram(deps: {
     pass.end();
   }
 
-  // Pickable layers grouped by slab, near→far. Registry order is preserved
-  // within each slab (a `.filter()` keeps the array order), which is the
-  // @group(0) prefix contract: point-sprites runs first in the COSMO pass and
-  // leaves slot 0 bound to the shared pick camera for the ring / disk
-  // fold-ins. (The NEAR0 pickables — the Milky-Way impostor and the Gaia star
-  // catalog — share no such prefix: each binds its OWN complete slot-0 camera in
-  // its own draw, so their registry order carries no @group(0) dependence.)
+  // Pickable layers grouped by slab, in the near→far order `frontmostPick`
+  // needs. Reuses `foregroundChainOrder`'s distance ordering (the key the
+  // colour chain already sorts NEAR0 + body rows by, slabs.ts) reversed to
+  // near→far, with COSMO forced last — it never enters that chain, and its
+  // fixed 10 kpc–50 Gpc bracket is always farther than any near-field/body
+  // content. Fixes the regression where a raw numeric-ascending slab-index
+  // sort let any NEAR0(0) star hit beat a genuinely nearer body/planet hit,
+  // and even let COSMO(1) beat a body row(2+) — see
+  // .superpowers/sdd/2026-08-26-body-render-slabs/pick-stars-investigation.md.
+  // Registry order is preserved WITHIN each slab (a `.filter()` keeps the
+  // array order), which is the @group(0) prefix contract: point-sprites runs
+  // first in the COSMO pass and leaves slot 0 bound to the shared pick camera
+  // for the ring / disk fold-ins. (The NEAR0 pickables — the Milky-Way
+  // impostor and the Gaia star catalog — share no such prefix: each binds its
+  // OWN complete slot-0 camera in its own draw, so their registry order
+  // carries no @group(0) dependence.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; view: SlabView; layers: ContentLayer[] }[] {
@@ -244,9 +253,13 @@ export function createPickProgram(deps: {
       .map((slab) => slab.index);
     const numericSlabs = candidates.filter((l) => l.slab !== 'body').map((l) => l.slab as number);
     const hasBodyCandidate = candidates.some((l) => l.slab === 'body');
-    const slabIndices = [
-      ...new Set(hasBodyCandidate ? [...numericSlabs, ...bodySlabIndices] : numericSlabs),
-    ].sort((a, b) => a - b);
+    const candidateSlabs = new Set(
+      hasBodyCandidate ? [...numericSlabs, ...bodySlabIndices] : numericSlabs,
+    );
+    const nearToFar = [...foregroundChainOrder(ctx.slabs)]
+      .reverse()
+      .filter((index) => candidateSlabs.has(index));
+    const slabIndices = candidateSlabs.has(COSMO) ? [...nearToFar, COSMO] : nearToFar;
     return slabIndices
       .map((slabIndex) => {
         const view = slabViewOf(ctx, slabIndex);
