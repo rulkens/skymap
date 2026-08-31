@@ -19,6 +19,7 @@ import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer'
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ConstellationRenderer } from '../../rendering/ConstellationRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
+import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
@@ -201,6 +202,22 @@ export type EngineGpuHandles = {
    * Released and re-nulled by `destroy()`.
    */
   foregroundLabelRenderer: LabelRenderer | null;
+  /**
+   * The r32uint pick provider for the COSMO text labels — one screen-space
+   * rectangle per legible label, stamping its subject's packed id so clicking
+   * a name selects the thing it names. A SEPARATE instance from
+   * `foregroundLabelPickRenderer` for the reason the two label renderers are
+   * separate, plus one more: the two slabs' pick targets carry different depth
+   * formats and opposite depth conventions, both baked into the pipeline.
+   * Null until `initGpu` builds it; `labelsLayer.drawPick` null-checks at use.
+   */
+  labelPickRenderer: LabelPickRenderer | null;
+  /**
+   * The NEAR0 sibling of `labelPickRenderer`, for the foreground body
+   * captions. Same lifecycle and rationale; `foregroundLabelsLayer.drawPick`
+   * null-checks at use.
+   */
+  foregroundLabelPickRenderer: LabelPickRenderer | null;
   /**
    * Second thick screen-space line renderer, the leader-line sibling of
    * `foregroundLabelRenderer`.  A SEPARATE instance from `markerLineRenderer`

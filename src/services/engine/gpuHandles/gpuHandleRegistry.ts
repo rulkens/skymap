@@ -53,6 +53,7 @@ import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
+import { createLabelPickRenderer } from '../../gpu/renderers/labels/labelPickRenderer';
 import { createLabel3DRenderer } from '../../gpu/renderers/labels3d/label3DRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
@@ -60,7 +61,7 @@ import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/s
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
-import { createPickProgram } from '../frame/pickProgram';
+import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
 import { CONTENT_LAYERS } from '../frame/passes';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
 
@@ -180,6 +181,23 @@ export const GPU_HANDLE_ROWS = [
       createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
         occludeAgainstDepth: 'compare',
       }),
+  },
+
+  // The two label pick providers. NOT `rebuildOnSwapFormat` rows despite
+  // pairing with the two swap-format label renderers above: they draw into the
+  // pick program's r32uint targets, whose formats are fixed, so an HDR toggle
+  // leaves them valid. Each takes its slab's pick-target depth format from
+  // `pickDepthFormat` — the same function the program sizes the target with —
+  // plus that slab's depth convention.
+  {
+    key: 'labelPickRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createLabelPickRenderer(deps.ctx.device, pickDepthFormat(COSMO), SLAB_REVERSED_Z[COSMO]!),
+  },
+  {
+    key: 'foregroundLabelPickRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createLabelPickRenderer(deps.ctx.device, pickDepthFormat(NEAR0), SLAB_REVERSED_Z[NEAR0]!),
   },
 
   {

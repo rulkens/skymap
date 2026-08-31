@@ -125,4 +125,16 @@ export type Label2D = {
    * stage (`config.lift`) when present.
    */
   readonly lift?: Label2DLift;
+  /**
+   * The subject's fully-packed pick id — `packSelection(sourceCode, localIdx +
+   * PICK_SENTINEL_OFFSET)`, byte-identical to what the subject's OWN geometry
+   * pick stamps, so `resolvePick` needs no label-specific arm. Present ⇒ the
+   * label's text is clickable (`labelPickQuads`); absent ⇒ it is decoration
+   * that never takes a click (the constellation captions, which name no
+   * selectable object).
+   *
+   * The producer stamps it, so the id is derived once beside the record it
+   * came from rather than parsed back out of `id` at pick time.
+   */
+  readonly pickId?: number;
 };

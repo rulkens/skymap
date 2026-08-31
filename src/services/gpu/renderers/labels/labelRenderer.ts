@@ -87,22 +87,14 @@ import {
   OCCLUSION_COVERAGE_LAYOUT_DESC,
   createOcclusionCoverageBindGroup,
 } from './occlusionCoverageGroup';
+import {
+  LABEL_MAX_PX_DEFAULT,
+  LABEL_MIN_PX_DEFAULT,
+  LABEL_WORLD_EM_MPC_DEFAULT,
+} from '../../../../data/labels/labelSizingDefaults';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
-
-// ─── sizing defaults ───────────────────────────────────────────────────────
-
-/**
- * Defaults applied when a Label omits its sizing fields (see the
- * corresponding docstrings on the Label type).  Exported because the
- * label director's rect-based declutter reproduces the vertex shader's
- * `clamp(worldLenToPx(worldEmMpc), minPx, maxPx)` on the CPU — reading
- * the defaults from here keeps the two computations from drifting.
- */
-export const LABEL_WORLD_EM_MPC_DEFAULT = 0.01;
-export const LABEL_MIN_PX_DEFAULT = 8;
-export const LABEL_MAX_PX_DEFAULT = 64;
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 
@@ -227,6 +219,10 @@ export function createLabelRenderer(
   // by `setLabels`; read by `draw`, `glyphCount`, `labelCount`.
   let currentGlyphCount = 0;
   let currentLabelCount = 0;
+  // The rows `setLabels` actually packed, retained so the pick path can derive
+  // its hit rects from exactly what is on screen — `maxLabels`-truncated tail
+  // included, since a dropped row draws nothing and must not be clickable.
+  let currentLabels: readonly Label2D[] = [];
 
   // ── GPU resources (null when device is null) ─────────────────────────────
   //
@@ -486,6 +482,7 @@ export function createLabelRenderer(
     currentLabelCount = 0;
 
     const count = Math.min(labels.length, maxLabels);
+    currentLabels = count === labels.length ? labels : labels.slice(0, count);
     for (let li = 0; li < count; li++) {
       const label = labels[li]!;
       // Each label specifies its own font; layout reads the font's
@@ -691,6 +688,7 @@ export function createLabelRenderer(
     draw,
     glyphCount,
     labelCount,
+    packedLabels: () => currentLabels,
     destroy,
   };
   // `satisfies Renderer` confirms the shared label+destroy contract at

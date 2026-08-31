@@ -70,8 +70,13 @@ function pickTargetId(slabIndex: number): string {
   return slabIndex === COSMO ? 'pick:cosmo' : 'pick:near0';
 }
 
-/** Depth format for a slab's pick target — see the format constants above. */
-function pickDepthFormat(slabIndex: number): GPUTextureFormat {
+/**
+ * Depth format for a slab's pick target — see the format constants above.
+ * Exported because every pipeline drawing into that slab's pick pass must
+ * declare the SAME format, so the target and its pipelines read one source
+ * (`gpuHandleRegistry` sizes the label pick pipelines from it).
+ */
+export function pickDepthFormat(slabIndex: number): GPUTextureFormat {
   return slabIndex === COSMO ? COSMO_DEPTH_FORMAT : NEAR0_DEPTH_FORMAT;
 }
 

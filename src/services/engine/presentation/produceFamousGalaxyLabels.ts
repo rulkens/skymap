@@ -66,6 +66,7 @@ import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/La
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { focusedFamousIndex } from '../helpers/focusedFamousIndex';
 import { famousDisplayName } from '../helpers/famousDisplayName';
@@ -264,6 +265,10 @@ export function produceFamousGalaxyLabels(
     // with the lifted anchor.
     const label: Label2D = {
       id: p.id,
+      // Byte-identical to what the famous point batch's pick fragment writes:
+      // the meta ⋈ catalog join is index-aligned, so this loop index IS the
+      // catalog row the GPU stamps as `@builtin(instance_index)`.
+      pickId: packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET),
       worldPos: p.worldPos,
       text: p.name,
       font: 'cormorant',

@@ -97,16 +97,17 @@ import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DP
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 import type { Label2DDirectorConfig } from '../../../@types/engine/subsystems/Label2DDirectorConfig';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
+import type { Label2DProjected } from '../../../@types/rendering/Label2DProjected';
+import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { ForwardProjectedPoint } from '../../../@types/camera/ForwardProjectedPoint';
-import { forwardProjectPoint } from '../../../utils/camera/forwardProjectPoint';
+import { projectLabels } from '../../../utils/labels/projectLabels';
 import { smoothstep } from '../../../utils/math/smoothstep';
-import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 import {
   LABEL_MIN_PX_DEFAULT,
   LABEL_MAX_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
-} from '../../gpu/renderers/labels/labelRenderer';
+} from '../../../data/labels/labelSizingDefaults';
+import { labelScreenRect } from '../../../utils/labels/labelScreenRect';
 import { clampVec3Length } from '../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
 import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
@@ -142,19 +143,6 @@ type ExponentialEnvelopeEntry = {
 };
 
 /**
- * One label's screen-space anchor, resolved ONCE per frame by `projectLabels`
- * and shared by whichever declutter arm runs — nothing downstream re-does
- * the matrix multiply. `screenPx` is set whenever
- * `clipW > 0` regardless of `onScreen`, matching what the vertex shader would
- * draw for an off-NDC-range anchor.
- */
-type Label2DProjected = {
-  readonly screenPx: Vec2 | null;
-  readonly clipW: number;
-  readonly onScreen: boolean;
-};
-
-/**
  * `declutter`'s result: the filtered survivor array (what `applySmoothstepEnvelope`
  * and the lift/flush stages consume) alongside a survivor-id set (what
  * `applyExponentialEnvelope` additionally needs — see its docblock for why
@@ -164,37 +152,6 @@ type DeclutterResult = {
   readonly survivors: readonly Label2D[];
   readonly survivorIds: ReadonlySet<string>;
 };
-
-function projectLabels(
-  labels: readonly Label2D[],
-  projection: Label2DProjection,
-): Label2DProjected[] {
-  const m = projection.vp;
-  const viewportPx = projection.viewportPx;
-  // One scratch reused across the whole loop — forwardProjectPoint mutates
-  // it in place rather than allocating, per label.
-  const scratch: ForwardProjectedPoint = {
-    clipX: 0,
-    clipY: 0,
-    clipZ: 0,
-    clipW: 0,
-    screenX: 0,
-    screenY: 0,
-    onScreen: false,
-  };
-  return labels.map((label) => {
-    const wx = label.worldPos[0];
-    const wy = label.worldPos[1];
-    const wz = label.worldPos[2];
-    forwardProjectPoint(m, wx, wy, wz, viewportPx, scratch);
-    if (scratch.clipW <= 0) return { screenPx: null, clipW: scratch.clipW, onScreen: false };
-    return {
-      screenPx: [scratch.screenX, scratch.screenY],
-      clipW: scratch.clipW,
-      onScreen: scratch.onScreen,
-    };
-  });
-}
 
 /**
  * `prominencePx` DESC, stable on input order — the one rank contract every
@@ -235,30 +192,22 @@ function declutterByBboxOverlap(
   projection: Label2DProjection,
   padPx: number,
 ): Label2D[] {
-  type Rect = { x0: number; y0: number; x1: number; y1: number };
-  const halfViewportH = projection.viewportPx[1] * 0.5;
-  const rects: (Rect | null)[] = labels.map((label, i) => {
+  const viewportHeightPx = projection.viewportPx[1];
+  // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
+  // the pick path derives its hit boxes from the same function, so a label
+  // cannot be decluttered against one rect and clicked on another.
+  const rects: (ScreenRectPx | null)[] = labels.map((label, i) => {
     const p = projected[i]!;
     if (!p.screenPx) return null;
     const bbox = labelRenderer.measure(label);
     if (!bbox) return null;
-    // Reproduce the vertex shader's sizing exactly: worldLenToPx
-    // (worldLen / clipW · viewportH/2) clamped to [minPx, maxPx], then
-    // atlas px → screen px via displayEmPx / ATLAS_FONT_SIZE. The bbox is
-    // anchor-relative with +Y down, matching screen space (the shader's
-    // atlas-Y and NDC→screen flips cancel).
-    const pxPerEm = ((label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) / p.clipW) * halfViewportH;
-    const displayEmPx = Math.min(
-      Math.max(pxPerEm, label.minPixelSize ?? LABEL_MIN_PX_DEFAULT),
-      label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
-    );
-    const s = displayEmPx / ATLAS_FONT_SIZE;
-    return {
-      x0: p.screenPx[0] + bbox.minX * s,
-      y0: p.screenPx[1] + bbox.minY * s,
-      x1: p.screenPx[0] + bbox.maxX * s,
-      y1: p.screenPx[1] + bbox.maxY * s,
-    };
+    return labelScreenRect({
+      label,
+      bbox,
+      screenPx: p.screenPx,
+      clipW: p.clipW,
+      viewportHeightPx,
+    });
   });
 
   const order = sortByProminenceDesc(labels);

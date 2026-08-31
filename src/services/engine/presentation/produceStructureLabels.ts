@@ -50,6 +50,8 @@ import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import { STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -194,6 +196,13 @@ export function produceStructureLabels(
 
     labels.push({
       id: p.id,
+      // Byte-identical to what `ringPick.wesl` writes for this structure's own
+      // marker ring — the category's source code over the per-category index,
+      // both read from the store's single-sourced `categoryIndexOf`.
+      pickId: packSelection(
+        STRUCTURE_ID_CODES[p.category],
+        structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
+      ),
       // Structures anchor at the ring centre, centred on both axes (only
       // famous galaxies lift their label off the dot).
       worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],

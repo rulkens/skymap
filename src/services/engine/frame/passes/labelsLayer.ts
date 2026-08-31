@@ -40,6 +40,8 @@
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { COSMO } from '../slabs';
+import { cosmoLabelProjection } from '../cosmoLabelProjection';
+import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
 
 export const labelsLayer: ContentLayer = {
   name: 'labels',
@@ -52,6 +54,16 @@ export const labelsLayer: ContentLayer = {
     return state.gpu.labelRenderer.glyphCount() > 0;
   },
 
+  // Pick gate — NARROWER than `enabled`: a drawn label only invites a click
+  // when it names a selectable subject, and a frame of pure decoration (the
+  // constellation captions carry no `pickId`) must not pull an r32uint pick
+  // target into existence for a draw that would stamp nothing.
+  pickEnabled(state, _ctx) {
+    const renderer = state.gpu.labelRenderer;
+    if (renderer === null || renderer.glyphCount() === 0) return false;
+    return hasPickableLabel(renderer.packedLabels());
+  },
+
   draw(pass, view, ctx, state) {
     // Occlude the captions per-pixel behind an opaque body ONLY when the body
     // pass actually ran this frame — else the `foreground:0` colour is
@@ -62,5 +74,32 @@ export const labelsLayer: ContentLayer = {
       ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;
     state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, colorView);
+  },
+
+  // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with
+  // each subject's own packed id (see `labelPickQuads`), from the SAME
+  // projection the director declutters through, resolved fresh per pick call
+  // so the boxes track where the glyphs are now.
+  //
+  // Depth occlusion is deliberately NOT reproduced: the visual pass discards
+  // caption pixels behind a nearer body (`fragmentOcclude`), which the flat
+  // pick quad can't see — so an occluded label stays clickable. Pick wider
+  // than draw is the safe direction for a click affordance.
+  drawPick(pass, _view, ctx, state) {
+    const renderer = state.gpu.labelRenderer;
+    const pickRenderer = state.gpu.labelPickRenderer;
+    if (renderer === null || pickRenderer === null) return;
+
+    const projection = cosmoLabelProjection(ctx);
+    const quads = labelPickQuads({
+      labels: renderer.packedLabels(),
+      projection,
+      measure: (label) => renderer.measure(label),
+    });
+    pickRenderer.draw(pass, quads, projection.viewportPx);
+    // Postcondition: this row bound its OWN @group(0), so put the shared
+    // point-pick camera prefix back for anything recorded after it in the
+    // COSMO pick pass (see `ContentLayer.drawPick`).
+    state.gpu.galaxyPickRenderer?.bindCamera(pass);
   },
 };

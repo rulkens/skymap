@@ -42,7 +42,7 @@ If a bulk group has files but the credentials below are missing, `syncR2.ts` fai
 
 #### Earth tile versioning
 
-Tile keys sit under a versioned prefix (`earth-tiles/v2`, the `TILE_PREFIX` constant in `tools/textures/buildEarthTiles.ts`, named by `manifest.json` and read back by the runtime). The tiles are served `immutable` and never purged, so **re-baking changed pixels means bumping that version** — nothing in the code enforces this. Reusing a version after a pixel change leaves the CDN serving stale tiles against a new manifest for up to a day: not merely stale, but mismatched, since the manifest now names levels the edge hasn't updated.
+Tile keys sit under a versioned prefix (currently `earth-tiles/v3`; the `TILE_PREFIX` constant in `tools/textures/buildEarthTiles.ts` is the source of truth, named by `manifest.json` and read back by the runtime). The tiles are served `immutable` and never purged, so **re-baking changed pixels means bumping that version** — nothing in the code enforces this. Reusing a version after a pixel change leaves the CDN serving stale tiles against a new manifest for up to a day: not merely stale, but mismatched, since the manifest now names levels the edge hasn't updated.
 
 A manifest SHAPE change (not just pixels — e.g. `levels.surface` growing a second band) is a sharper case: `fetchEarthTileManifest`'s runtime guard rejects any manifest shape it doesn't recognise, so between a merge that changes the shape and the next `npm run sync-r2-secure`, every client fetches the stale R2 manifest, gets rejected, and Earth surface tiles are OFF in production entirely — the sync is a blocking merge step, not a follow-up.
 

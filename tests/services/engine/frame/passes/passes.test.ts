@@ -920,14 +920,15 @@ describe('galaxyPointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly the twelve pickables expose drawPick, in registry order', () => {
+  it('exactly the fourteen pickables expose drawPick, in registry order', () => {
     // Pins the spec's migration table: the six COSMO/near-field survey
     // pickables (pointSprites / zoneOfAvoidance / proceduralDisks /
     // structureMarkers / milkyWay / starCatalog) PLUS the six NEAR0 true-scale
     // foreground bodies (starPoints / bodyGlints / earth / starSpheres /
     // focusedFieldStarSphere / planets), the selection-gated
     // focused-field-star sphere's pick and the sub-pixel body glints' pick
-    // among them. Order is registry order: the COSMO pick pass leads with
+    // among them — plus the two label rows, whose text is a click target for
+    // the subject it names. Order is registry order: the COSMO pick pass leads with
     // point-sprites (the @group(0) prefix contract); zone-of-avoidance sits
     // right after it in the registry for exactly that reason — its own
     // 'zoa' render target keeps it out of every VISUAL group regardless of
@@ -937,7 +938,17 @@ describe('drawPick migration-table rows', () => {
     // relative order carries no @group(0) dependence (it is depth-resolved,
     // nearest-wins). The production code stays name-blind — the pick program
     // filters by `drawPick` presence + `enabled`, never a hardcoded name
-    // list — so this test is the ONLY place the twelve names are asserted.
+    // list — so this test is the ONLY place the fourteen names are asserted.
+    //
+    // The two label rows are the exception to the ordering freedom above —
+    // not because their pick aspect needs a fixed slot (each restores the
+    // shared point-pick camera prefix before returning, same postcondition
+    // `proceduralDisksLayer` already satisfies from mid-registry — see
+    // `ContentLayer.drawPick`), but because CONTENT_LAYERS is the ONE list
+    // both the visual and pick programs filter, and 'labels' visual row must
+    // sit last among the swap-target layers so its text composites over the
+    // marker-line stroke it sits over (`passes/index.ts`). The pick filter
+    // inherits that position for free rather than keeping a second order.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'zone-of-avoidance',
@@ -947,10 +958,12 @@ describe('drawPick migration-table rows', () => {
       'star-points',
       'body-glints',
       'star-catalog',
+      'labels',
       'earth',
       'star-spheres',
       'field-star-sphere',
       'planets',
+      'foreground-labels',
     ]);
   });
 });

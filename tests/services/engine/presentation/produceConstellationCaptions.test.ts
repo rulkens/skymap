@@ -99,4 +99,15 @@ describe('produceConstellationCaptions', () => {
     expect(orion.lift).toBeUndefined();
     expect(orion.fadeAlpha).toBeCloseTo(0.5);
   });
+
+  it('carries no pick id — a figure name is not a selectable object', () => {
+    // A `pickId` here would stamp a click box over the star field the figure
+    // spans, stealing clicks from the stars it connects. The absence IS the
+    // opt-out (`labelPickQuads` skips any label without one).
+    const out = produceConstellationCaptions(
+      makeState({ layerFade: 1 }),
+      makeCtx([5e-4, 0, 0], 5e-4),
+    );
+    for (const l of out.labels) expect(l.pickId).toBeUndefined();
+  });
 });
