@@ -401,6 +401,17 @@ All public domain; NASA asks that credit go to the named observatory / program.
   Copernicus Sentinel data 2016) released under Creative Commons
   Attribution 4.0 International License."
 
+#### GeoDanmark / Klimadatastyrelsen — orthophoto (Søndermarken)
+
+- **Use:** A third, deepest surface tile band (z14–z19) over Søndermarken,
+  Copenhagen, layered on top of the EOX band above — flying down over that
+  patch resolves 10 cm/px orthophoto detail instead of stopping at EOX's z13
+  floor. Leaving the patch drops back to EOX z13 with no on-screen indication.
+- **Source:** `wms.datafordeler.dk`, Datafordeler / Klimadatastyrelsen. Layer
+  `geodanmark_2025_10cm`, vintage forår (spring) 2025.
+- **Licence:** CC BY 4.0. Attribution: "Ortofoto © GeoDanmark /
+  Klimadatastyrelsen (CC BY 4.0)."
+
 #### USGS Astrogeology — Galilean moon mosaics
 
 - **Use:** Global surface mosaics for Io, Europa, Ganymede, and Callisto

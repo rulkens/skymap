@@ -48,6 +48,7 @@ import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import { eoxTileSource } from './eoxTileSource';
+import { geodanmarkTileSource } from './geodanmarkTileSource';
 import { underfillImagerySource } from './underfillImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
@@ -107,6 +108,12 @@ const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
  */
 const EOX_MIN_LEVEL = 8;
 
+/** GeoDanmark's own floor: one level deeper than EOX's own max (z13), same
+ *  "pick up where the shallower band stops" rule as `EOX_MIN_LEVEL` — also
+ *  the level the z19 harvest bbox is snapped to (`geodanmarkTileSource`'s
+ *  `minLevel`), so this is the ladder's single source of truth for both. */
+const GEODANMARK_MIN_LEVEL = 14;
+
 /** The only kind this tool bakes — relief, clouds, night lights and the
  *  material map carry no fine structure worth streaming. */
 const KIND: EarthTileKind = 'surface';
@@ -121,7 +128,7 @@ const TILE_ROOT = 'earth-tiles';
  * manifest for up to a day — mismatched, not merely stale. A new version is
  * new keys, which cost nothing extra and need no purge.
  */
-export const TILE_PREFIX = `${TILE_ROOT}/v3`;
+export const TILE_PREFIX = `${TILE_ROOT}/v4`;
 
 /** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
  *  raster's own north-first row order. */
@@ -315,6 +322,17 @@ function stitchBandIndex(
     .filter((line) => line.length > 0);
 
   for (const relPath of relPaths) {
+    // A stitched path carries the PRIOR run's TILE_PREFIX baked in (it's read
+    // verbatim off disk, never rewritten) — `--only` can only forward tiles
+    // that already live under today's prefix. A prefix bump therefore always
+    // needs a full bake; this catches the case loudly instead of writing a
+    // manifest at the new prefix pointing at index lines the new prefix never baked.
+    if (!relPath.startsWith(`${TILE_PREFIX}/`)) {
+      throw new Error(
+        `bakeAll: stitched band '${source.id}' index was written under a different TILE_PREFIX ` +
+          `than today's ${TILE_PREFIX} — '--only' can't carry tiles across a prefix bump, run a full bake`,
+      );
+    }
     if (!existsSync(join(outDir, relPath))) {
       throw new Error(
         `bakeAll: stitched band '${source.id}' is missing '${relPath}' on disk — run a full bake to repair it`,
@@ -488,8 +506,8 @@ async function main(): Promise<void> {
   const only = onlySourceId(argv);
   process.stderr.write(`buildEarthTiles: -> ${join(outDir, 'earth-tiles')}\n`);
   if (dev) {
-    // Whole-globe BMNG only — the EOX band needs the real harvest on disk,
-    // which `--dev` explicitly opts out of (see `devSource`).
+    // Whole-globe BMNG only — the EOX and GeoDanmark bands need real harvests
+    // on disk, which `--dev` explicitly opts out of (see `devSource`).
     await bakeAll([{ source: await devSource(), minLevel: BAKE_MIN_LEVEL }], outDir, { only });
   } else {
     // Shared instance, not two separate `deepSource()` calls: reuses BMNG's
@@ -504,6 +522,16 @@ async function main(): Promise<void> {
           source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
           minLevel: EOX_MIN_LEVEL,
           underfill: bmng,
+        },
+        {
+          source: await geodanmarkTileSource({
+            coverageDir: rawDataPath('geodanmark.dir'),
+            minLevel: GEODANMARK_MIN_LEVEL,
+          }),
+          minLevel: GEODANMARK_MIN_LEVEL,
+          // No underfill: the harvest bbox is snapped to this band's own
+          // minLevel grid (see `geodanmarkTileSource`), so every z14-18
+          // parent inside coverage already has all four children.
         },
       ],
       outDir,
