@@ -63,7 +63,7 @@
  * is a recede-direction `fadeBand` keyed on the camera's heliocentric parsec
  * distance, endpoints carried per-source in the registry row's `crossfadePc`
  * ({ inner, outer }): full inside `inner`, gone past `outer`. The MW impostor's
- * own `milkyWayApproach` band fades it in the complementary direction, so the
+ * own `milkyWayApproachSun` band fades it in the complementary direction, so the
  * two crossfade across the same kpc window. The band IS the far gate — there is
  * no `FOREGROUND_MAX_DISTANCE_MPC` cut, because the bubble extends well past the
  * ≤25 pc scene stars. V1 accepts a visible density seam (calibration deferred).
