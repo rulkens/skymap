@@ -511,3 +511,326 @@ promoting the two debug-sample files.
 
 **Packaging** — one PR (spec §PR packaging, RESOLVED), four commits: prep,
 move, consume, delete.
+
+## Appendix: the today-split
+
+Read-only analysis (Task 9). All file:line references are against the **main
+checkout** (`/Users/rulkens/Development/js/skymap/tools/galaxy-renderer/src/engine/`),
+whose content is behaviourally identical to this branch's pre-move tree.
+Shorthands below: `engine` = `createGalaxyEngine.ts`, `model` =
+`model/createGalaxyModel.ts`, `targets` = `gpu/createGalaxyRenderTargets.ts`.
+
+---
+
+### (a) What `setMixture` needs beyond `{ geometry, fieldTuning, seed }`
+
+**First, the good news: most of the rebuild really is a pure function of those
+three.** Every CPU builder on the field/ISM rebuild path already takes exactly
+`(geometry, fieldTuning, seed)` or a value derived inside the same call:
+
+| builder | call site | inputs |
+|---|---|---|
+| `buildGalaxyFieldMixture` | model:1269 | `(geometry, fieldTuning)` → components + `spurCloudReservation` + `armCloudReservation` |
+| `buildHiiShellsAndYoungWithSegments` | model:1326 | `(geometry, fieldTuning, starFormation, geometry.seed)` → components + segments + `shellFluxSum` + `recentEventCount` |
+| `computePlaceDustBudget` | model:731 | `(geometry, fieldTuning.dust)` |
+| `computeDigVeilBudget` | model:752 | `(geometry, fieldTuning, shellFluxSum, recentEventCount)` — both extras come from the HII build above, same synchronous call |
+| `deriveDustHeaderLanes` | model:728 | `(geometry, fieldTuning.dust, fieldTuning.dust.enabled)` |
+| `buildDigArmEnvelopeTable` | model:685 | `(geometry, fieldTuning, grid)`, grid from `ismMapGridRadiusOrDefault(geometry)` |
+| `ismMapGenerator.rebuild` | model:813-818 | **already literally `{ geometry, tuning, seed }`** (`ismMap/createIsmMapGenerator.ts:44-48`) |
+
+`starFormation` and `dust` are not separate arguments — model:431-432 resolve
+both off `fieldTuning` (`currentDust()` / `currentStarFormation()`), and
+`currentSeed()` (model:433) is `normalizeGenerationSeed(lastParams.shared.seed)`,
+i.e. exactly the spec's `seed`. `geometry` is `describeGalaxy(params)`
+(`sprites/generateGalaxy.ts:65,105`), a pure function — so a module could even
+derive it, and taking it as an argument is the right call anyway.
+
+**Four things cross that those three do not carry.**
+
+**1. `extras` — the scene's other galaxies. This is the big one.**
+`fieldComps` and `hiiComps` are **scene-wide GPU buffers, not one galaxy's**:
+
+- model:1147-1148 — `repackFieldComponents` writes central `fieldMixture`, then
+  `for (const e of extras) emission.push(...e.fieldMixture)`, then the central
+  dust reservation.
+- model:1195-1197, 1219-1226 — `repackHiiComponents` appends every extra's
+  `hiiMixture` as the trailing `'hii:extras'` span, and that span is what
+  gates the `hiiTex` pass and its composite push (engine:867, 956-967).
+- Each extra's mixtures are built at model:1567-1568 off its own
+  `generated.geometry` + `transform` (via `place()` /
+  `transformGalaxyFieldComponent`, model:1233-1240).
+
+So `setMixture` needs either
+`extras: readonly { geometry: GalaxyDescription; transform: Pick<ExtraGalaxySpec,'pos'|'scale'|'rotY'|'tiltX'> }[]`
+(module runs `place()` itself — `transformGalaxyFieldComponent` is already in
+`src/utils/galaxy/`, so this is legal under the dependency rule), or the
+already-transformed `{ fieldMixture, hiiMixture }` pairs. Either way, **the
+spec's "one instance per galaxy, MW is instance #1" framing does not describe
+today's artifact**: one instance owns the whole scene's component buffers.
+
+**2-3. The two orientation sigmas** — `render.orientationSigmaDerivTexels` /
+`render.orientationSigmaIntegTexels`, read live at model:606-607 for
+`orientation.dispatch`, and keyed at model:1590-1596 (`noteRenderChanged`) so a
+sigma drag re-invalidates the six-stage chain. These are render-bag knobs, not
+per-galaxy geometry, and the module owns the chain that consumes them.
+
+**4. `orientationViewWanted`** — `viewIntensity('orientation') > 0` (model:591)
+is half of `orientationTexRebuild`'s `wanted` predicate; the other half is
+`fieldTuning.ismMap.generator !== 'none'`. Without it, the orientation chain
+runs (or doesn't) on the wrong criterion when the generator is off.
+
+**Not needed by `setMixture`, but note where they went:**
+`onFieldCompsRegrow` / `onHiiCompsRegrow` (model:155-156, wired at
+engine:527-528) become **internal** once `fieldComps`/`hiiComps` and
+`createFieldPipelines` live in the same module — that is a genuine win of the
+extraction, one of the few places the seam gets simpler.
+
+`viewIntensity('bubble')` (model:791) gates `rebuildBubblePlacements`; see (b)
+for why the bubble overlay is a split case.
+
+---
+
+### (b) `createGalaxyModel`'s responsibilities: crossing vs staying
+
+**Crosses into the module** (it owns the GPU resources these write):
+
+- `fieldComps` / `hiiComps` grow-only record buffers (model:301-336) and both
+  repack functions (model:1146-1227), including `hiiSegments` and `digOffset`
+  — `digOffset` is decided *only* by `repackHiiComponents` (model:1210) and is
+  a `placeDigVeil` dispatch input (model:1051).
+- The two mixture captures — `centralFieldMixtureAndReservations` (model:1264),
+  `centralHiiMixtureAndSegments` (model:1312) — plus the cached
+  `fieldMixture`/`hiiMixture`/`hiiTierSegments`/`shellFluxSum`/
+  `recentEventCount`/`spurCloudReservation`/`armCloudReservation`/`dustBudget`/
+  `digBudget` (model:361-427).
+- `rebuildIsmMap` (model:813-847) and its two CDF scans
+  (`dispatchDustCdfScan` model:628-648, `dispatchDigCdfScan` model:669-695).
+- All five keyed rebuilds on the GPU path: `orientationTexRebuild` (590),
+  `dustPlacementRebuild` (861), `spurCloudPlacementRebuild` (933),
+  `armCloudPlacementRebuild` (987), `digPlacementRebuild` (1031) — and the
+  `ensureFresh()` ordering that consumes them (model:1599-1613). That method is
+  the spec's `stepIsmMap()` in all but name.
+- The header-lane getters the field UBO pack reads: `fieldCounts`,
+  `dustHeaderLanes`, `hiiTexture`, `armCloudReservation`, `spurCloudReservation`
+  (model:1618-1675).
+- `setFieldTuning`'s section-identity change detection (model:1415-1506) — every
+  branch of it drives module-owned work.
+
+**Stays tool-side:**
+
+- The whole v1 sprite tier: `createGenerationPipelines`/`genUbo` (model:288-293),
+  `generateGalaxy` (model:1351), `starBuf`/`dustBuf`/`starCount`,
+  `starInstances()`/`dustInstances()` (model:1819-1833), `onStats` (model:1394).
+- Extras **lifecycle** — per-extra UBO + generation submit (model:1531-1571),
+  `destroyExtras` (model:1509). Only their *geometry+transform* crosses (see (a)).
+- `createIsmMapReadbacks` (model:467) and `createOrientationDiagnostics`
+  (model:468), per the spec's tool-only table — **but see the leak below.**
+- All of `probe.*` (model:1677-1817) and `handle.probe` (engine:1145-1223).
+- The render bag, `setRender`, divisors, and target allocation (engine:509,
+  562-570, 591-595, 548-553).
+
+**Two things the spec's split cuts through the middle:**
+
+- **`youngStars` / `ismMapSeedingView` (model:1634-1668).** Both are *field
+  header lanes* the module must pack, and both are computed from
+  `readbacks.ismMapData` — the CPU readback the spec keeps tool-side
+  (`invMeanNormFor`, model:505-519; `ismMapGlobalMeanDust`, model:488-494). So
+  either `createIsmMapReadbacks` moves in (contradicting the spec's tool-only
+  table) or `{ youngStars, ismMapSeeding }` become per-frame inputs to `encode`.
+- **The bubble overlay.** `field/packBubbleInstances.ts` is in the spec's move
+  list, but `bubbleComps` (model:343-349) and `rebuildBubblePlacements`
+  (model:767-793) live in the model, while `bubblePresentPipe`/`bubblePresentBG`
+  are built inline in `createGalaxyEngine.ts` (engine:449-479) — and that bind
+  group binds **`fieldUbo`**, which moves into the module (engine:478).
+
+---
+
+### (c) The `GalaxyFieldRenderTargets` `encode` actually needs
+
+Against `targets`' current rows. Encode-path evidence: engine:869-967.
+
+| what encode touches | today | format | sized by | in the spec's type? |
+|---|---|---|---|---|
+| `fieldTex` — field splat attachment | engine:923, targets:164-178 | `rgba16float` (HDR) | `render.fieldDivisor` | yes |
+| `dustMapTex` — dustMap pass attachment **and** a sampled input of 4 bind groups | engine:887, targets:191-203 | `rgba16float` (`DUST_MAP_FORMAT`) | `render.dustDivisor` | yes |
+| `dustViewTex` — `encodeDustPresentPass` attachment (JWST view) | engine:900-907, targets:204-210 | `rgba16float` (HDR) | `render.dustDivisor` (shared with `dustMapTex` — targets:180-183: they **must** rebuild together) | **NO — missing** |
+| `hiiTex` — the `hii:extras` pass attachment | engine:962, targets:217-225 | `rgba16float` (HDR) | `render.extrasDivisor` | **NO — missing** (`hiiTiers` is a different thing) |
+| `tierTex('shells' \| 'young' \| 'dig')` ×3 | engine:945, targets:231-242 | `rgba16float` (HDR) | one divisor **each** (`shellsDivisor`/`youngDivisor`/`digDivisor`, `data/hiiTiers.ts:14-18`) | yes, as `hiiTiers` |
+
+Seven textures, not five. Beyond the two missing rows, three structural problems:
+
+1. **`GPUTextureView` is the wrong currency.** Every field/HII/tier UBO packs
+   `targetSizePx` off `targets.reducedSize(divisor)` (engine:792-799), and that
+   lane feeds `counts2.w`, which the shader's footprint/LOD gates read directly
+   (engine:257-261 — "a wrong one there is a silently wrong LOD/splat
+   footprint, not a crash"). A `GPUTextureView` exposes no dimensions. Pass
+   `GPUTexture` (which has `.width`/`.height`), or carry sizes alongside.
+2. **`dustMapTex` is sampled, not just written**, so the module needs the
+   texture object for its bind groups — and needs to be **told when the host
+   reallocates it**. That is `onDustMapRecreated` today (targets:71, 191-212,
+   wired at engine:548-553 → `fieldPipelines.rebuildDustMapDependents`), and its
+   own comment says the callback "must never be hoisted to a caller that may
+   skip it" because it also resets the `dustMapPopulated` latch, whose
+   correctness depends on the texture having *just* been created. Host-owned
+   allocation therefore requires a module method
+   (`onTargetsReallocated(targets)`), not just fresh views at `encode` time.
+3. **Three overlay draws are not in `encode`'s shape at all.** `ismMapPresent`,
+   `orientationPresent` (engine:1015-1028) and `bubblePresent` (engine:1039-1044)
+   are encoded into the host's **open `GPURenderPassEncoder`** for `sceneTex`,
+   using `ismMapGenerator.presentPipeline`/`presentBindGroup`,
+   `ismMapOrientation.presentPipeline`/`presentBindGroup`, and a pipeline bound
+   to `fieldUbo` — all module-owned after the move. `encode(encoder, targets)`
+   cannot express them; they need a second method
+   (`encodeOverlays(pass, weights)`) or the module leaks three pipelines.
+
+---
+
+### Construction-order constraints (the consume commit must reproduce one-for-one)
+
+1. `fieldUbo` (engine:235) → `hiiUbo` (243) → `tierUbo` per `HII_TIERS` (262-273).
+   All three are `FIELD_HEADER_BUFFER_SIZE`, **separate buffers by necessity**
+   (engine:254-261): two passes writing one frame both land before either runs.
+2. The three baked volumes, in order: `dustNoise` (312), `warpNoise` (321),
+   `starGrain` (330) — each `bakeVolumeTexture` returns `{texture, sampler}`.
+   `dustMapSampler` (346).
+3. `createIsmMapGenerator` (356, takes `fieldUbo`) → `createIsmMapOrientation`
+   (361, takes `fieldUbo` **and** `sourceTexture: ismMapGenerator.texture`) →
+   `createIsmMapRingReduce` (368, takes `ismMapGenerator.texture` +
+   `ringMeansBuffer`).
+4. `dustCdfScan` (375) and `digCdfScan` (386) — **two separate instances of the
+   same factory**, deliberately not shared (engine:380-385: one `prefixBuffer`
+   would let whichever deferred dispatch runs second clobber the first's input).
+5. `placeDust` (392), `placeArmSpurCloud` (394), `placeArmCloud` (396),
+   `placeDigVeil` (398).
+6. `createFieldPipelines` (415) — **must come after 1-5**: it takes `fieldUbo`,
+   `hiiUbo`, `tierUbo`, `ismMapGenerator`, all three noise textures + samplers,
+   `dustMapSampler`, and `ringReduce.{dustRenormBuffer, armCloudRenormBuffer,
+   spurCloudRenormBuffer}`. `getDustMapTex` is passed as a **thunk**
+   (engine:434) precisely because `targets` does not exist yet (engine:410-414).
+7. `createGalaxyModel` (515) — after 3-6.
+8. `fieldPipelines.rebuildDustMapBindGroup(model.fieldComps.buffer)` (540) —
+   after the model, before `targets`; it is the *only* one of the five bind
+   groups that doesn't reference `dustMapTex` (engine:536-539).
+9. `createGalaxyRenderTargets` (548) with the `rebuildDustMapDependents`
+   callback, then the unconditional `targets.rebuildAll(allDivisors())`
+   (engine:623) — deliberately not left to `resize`'s early return (engine:612-619).
+
+Per-frame order, also load-bearing:
+`model.ensureFresh()` **before the encoder exists** (engine:817 — a rebuild can
+destroy `bubbleComps`' buffer a recorded draw already holds, and the orientation
+chain submits its own encoder that must precede the frame's); inside it,
+bubbles → `orientationTexRebuild` → `orientationDataRebuild` → **dust placement
+strictly after orientation** (model:1604-1608) → spur → armCloud → dig. Then
+within `encode`: dustMap → dustPresent → field splat → the three tier passes in
+`HII_TIERS` row order → `hii:extras`. Cross-*submit* ordering is relied on
+without a barrier: `ringReduce.dispatchRingMeans` submits at model:826-827 and
+`dispatchDustCdfScan`'s later submit reads `ringMeansBuffer` (model:821-825).
+
+---
+
+### `own()`-ledger entries `dispose()` must release
+
+The engine's `owned[]` ledger (engine:211-215, walked in reverse at engine:1250).
+**Field/ISM half:**
+
+- `fieldUbo` (engine:235), `hiiUbo` (243), `tierUbo` ×3 (262-273)
+- `dustNoiseTex` (319), `warpNoiseTex` (328), `starGrainTex` (337)
+
+**Stays in the tool's ledger:** `quad` (218 — sprite passes only), `gradeBuf`
+(276), `starUbo`/`dustUbo` (295-296).
+
+**Self-owning modules disposed explicitly (engine:1229-1249)** that belong to
+the field/ISM half: `ismMapGenerator` (1232), `ismMapOrientation` (1233),
+`ringReduce` (1234), `dustCdfScan` (1235), `digCdfScan` (1236), `placeDust`
+(1237), `placeArmSpurCloud` (1238), `placeArmCloud` (1239), `placeDigVeil`
+(1240). Plus, from `model.destroy()` (model:1835-1847): `fieldComps` (1842),
+`hiiComps` (1843), `bubbleComps` (1844).
+
+Two notes:
+- `armRidgeDebugSample` (1241) and `ismMapDustCdfScanDebugSample` (1242) are
+  disposed here too. The spec classifies them tool-side (its own OPEN question),
+  but they are constructed unconditionally at engine:401/405 and live in
+  `field/`/`ismMap/` — if they stay, they stay wired to `makeShader` only, which
+  is fine; just don't let the move sweep them in silently.
+- Samplers (`dustNoiseSampler`, `warpNoiseSampler`, `starGrainSampler`,
+  `dustMapSampler`) have no `destroy()` and are absent from the ledger by
+  design; `createFieldPipelines` has no `dispose()` at all (pipelines and bind
+  groups aren't destroyable). So the module's `dispose()` is exactly the list
+  above — no new teardown surface is invented by the extraction.
+
+---
+
+### (d) ASSESSMENT
+
+**The `setMixture` semantic survives; `encode(encoder, targets)` does not.**
+
+The rebuild half of the spec is real and I'd keep it. Every builder on the
+field/ISM rebuild path already takes `(geometry, fieldTuning, seed)` and nothing
+else — `ismMapGenerator.rebuild` is *literally* that object today
+(`createIsmMapGenerator.ts:44-48`), and `starFormation`/`dust` are sections of
+`fieldTuning`, not separate inputs (model:431-432). A module that owns the
+mixtures, the budgets, the ISM map, the five keyed rebuilds and the two comps
+buffers is a coherent artifact, and it deletes real seam surface: the
+`onFieldCompsRegrow`/`onHiiCompsRegrow` callbacks (model:155-156) and the
+`getDustMapTex` thunk both become internal. This is **not** a
+pipeline-and-encode holder fed by the model — the model's field/ISM half is a
+clean lift, and leaving it behind would leave the app hand-porting exactly the
+~1250 lines the spec exists to avoid.
+
+But the *encode* half of the contract is under-specified by roughly one whole
+argument. The field, `hii:extras` and three tier UBOs are rewritten **every
+frame** from camera-derived `FieldHeaderInput`s (engine:776-811), and those same
+UBOs are constructor-time dependencies of both `createIsmMapGenerator`
+(engine:356-360) and `createFieldPipelines` (engine:415-435) — so they must be
+module-owned, while their content is per-frame host data. `encode` therefore
+needs a third argument the size of `FieldHeaderInputsDeps`
+(`field/buildFieldHeaderInputs.ts:48-56`). The forcing data, precisely: `eye`,
+`fov`, `shiftX`, the `FrameView`'s field-relevant lanes (`view`, `aspect`,
+`debugViews`, `galaxyWeight`, `ismMapChannels`, `dustSlices`,
+`analyticExposure`, `starGrainFeatureScale`), the `render.analyticField` gate
+(engine:854) and `debugViews.dust > 0` (engine:868), the per-target **pixel
+sizes** (engine:792-799 — unobtainable from a `GPUTextureView`, which is why the
+targets type must carry `GPUTexture` or sizes), the optional per-slot
+`timestampWrites` if the tool's HUD is to keep working (engine:886, 920, 944,
+960), and `{ youngStars, ismMapSeeding }` (model:1634-1668) unless the CPU
+readback moves in against the spec's tool-only table.
+
+**And one claim in the spec is factually wrong about today's code**: "one
+instance per galaxy" cannot describe a module that owns `fieldComps`/`hiiComps`,
+because those buffers are **scene-wide** — central mixture, then every extra's,
+then the central dust reservation (model:1147-1148), with the extras' HII as a
+trailing `'hii:extras'` span that gates its own pass and composite
+(model:1219-1226, engine:867/956-967). Per-galaxy instancing is a real future
+shape, but it is a *behavioural* change to the packed layout, and this spec is
+behaviour-neutral by construction.
+
+**The middle path, concretely — N = 4 extra `setMixture` inputs, plus one new
+`encode` argument and one new lifecycle method:**
+
+```
+setMixture({
+  geometry, fieldTuning, seed,          // the spec's three — sufficient for all CPU builders
+  extras,                               // 1. readonly {geometry, transform}[]  — model:1559-1569
+  sigmaDerivTexels,                     // 2. render.orientationSigmaDerivTexels — model:606,1590
+  sigmaIntegTexels,                     // 3. render.orientationSigmaIntegTexels — model:607,1591
+  orientationViewWanted,                // 4. viewIntensity('orientation') > 0  — model:591
+})
+stepIsmMap()                            // = model.ensureFresh(), ordering at model:1599-1613
+encode(encoder, targets, frame)         // frame = the FieldHeaderInputsDeps-shaped bag above
+encodeOverlays(pass, weights)           // ismMap / orientation / bubble present — engine:1015-1044
+onTargetsReallocated(targets)           // replaces onDustMapRecreated — targets:191-212
+dispose()
+```
+
+`GalaxyFieldRenderTargets` becomes seven `GPUTexture` rows (not five views):
+`fieldTex`, `dustMapTex`, `dustViewTex`, `hiiTex`, and `hiiTiers` keyed by the
+three `HiiTierKind`s.
+
+**This is a spec-contract question, not an implementer's call.** Three items
+need a ruling before Task 10: (i) `encode` gains a per-frame argument — accept,
+or split into `setFrame()` + `encode()`; (ii) `GalaxyFieldRenderTargets` gains
+two rows and switches views→textures; (iii) does `createIsmMapReadbacks` move in
+(so `youngStars`/`ismMapSeeding` stay internal), or do those two lane bags ride
+the frame argument? And the "one instance per galaxy" line in the spec should be
+struck or re-scoped to a future track — it is not true of the artifact this
+extraction produces.
