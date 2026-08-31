@@ -17,7 +17,7 @@ export function satelliteBody(spec: BodySpec): PlanetBody {
   return {
     id: spec.id,
     label: spec.label,
-    radiusKm: spec.radiusKm,
+    radiusM: spec.radiusM,
     albedo: spec.albedo,
   };
 }

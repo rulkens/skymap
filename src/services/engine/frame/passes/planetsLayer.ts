@@ -7,7 +7,7 @@
  *
  * One sphere per body in `sceneBodyPartition`'s `flat` branch (resolved bodies
  * whose surface texture is not resident), composed as a unit sphere scaled to
- * the body's radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
+ * the body's radius (`radiusM` → Mpc via `SCALE_UNITS.M_TO_MPC`) and
  * translated to its `positionMpc`, in the `RENDER_ORIGIN_MPC`-relative frame,
  * tinted by its flat `albedo`. A body with a resident texture is `textured`
  * (drawn by `texturedBodiesLayer`), and a sub-pixel body is a `glint` — so this
@@ -140,7 +140,7 @@ export const planetsLayer: ContentLayer = {
     for (let i = 0; i < limit; i++) {
       const planet = flat[i]!;
       const bodyState = states.get(planet.id)!;
-      const radiusMpc = planet.radiusKm * SCALE_UNITS.KM_TO_MPC;
+      const radiusMpc = planet.radiusM * SCALE_UNITS.M_TO_MPC;
       const mvp = composeBodyMvp(
         view.slab.vp,
         bodyState.positionMpc,
@@ -220,7 +220,7 @@ export const planetsLayer: ContentLayer = {
       drawFlooredSpherePick(pickRenderer, pass, {
         vp: view.slab.vp,
         positionMpc: bodyState.positionMpc,
-        radiusMpc: planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        radiusMpc: planet.radiusM * SCALE_UNITS.M_TO_MPC,
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: bodyState.orientation,

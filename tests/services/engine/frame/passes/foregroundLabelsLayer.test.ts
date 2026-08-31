@@ -93,7 +93,7 @@ function makeCtx(nowMs = 0): ReadyFrameContext {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };

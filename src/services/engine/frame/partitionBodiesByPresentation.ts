@@ -94,7 +94,7 @@ export function partitionBodiesByPresentation(input: {
       // Live position from the per-frame snapshot (keyed by id), not a baked
       // record field. Every seeded body has a snapshot state, so the lookup holds.
       positionMpc: bodyStates.get(body.id)!.positionMpc,
-      radiusKm: body.radiusKm,
+      radiusM: body.radiusM,
       camPosMpc,
       viewportHeightPx,
       fovYRad,

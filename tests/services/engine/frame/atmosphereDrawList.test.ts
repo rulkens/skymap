@@ -98,9 +98,9 @@ function makeCtx(drawCamPos: Vec3, camDistance = 0): ReadyFrameContext {
 }
 
 /** A camera pose `radii` Earth-radii out from `body` along +x — sets the disc size. */
-function camRadiiOut(body: { positionMpc: Vec3; radiusKm: number }, radii: number): Vec3 {
+function camRadiiOut(body: { positionMpc: Vec3; radiusM: number }, radii: number): Vec3 {
   return [
-    body.positionMpc[0] + radii * body.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    body.positionMpc[0] + radii * body.radiusM * SCALE_UNITS.M_TO_MPC,
     body.positionMpc[1],
     body.positionMpc[2],
   ];
@@ -111,7 +111,7 @@ const NO_ROW_PLANET: SeededPlanet = {
   id: 'atmosphereless-test-body',
   label: 'No Atmosphere',
   positionMpc: SEEDED_EARTH.positionMpc,
-  radiusKm: 6371,
+  radiusM: 6371000,
   albedo: [0.5, 0.5, 0.5],
   orientation: [...IDENTITY_MAT3] as Mat3,
 };

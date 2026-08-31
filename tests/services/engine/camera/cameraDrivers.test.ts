@@ -511,14 +511,14 @@ describe('runCameraDrivers — elapsed dispatch', () => {
 const FOLLOW_SIM_DAYS = CONST_J2000 + 3652.5; // ~10 years past epoch (not J2000).
 const FOLLOW_FOV = 1.0;
 
-/** A body focus row (radiusKm drives framing; positionMpc is unused — the driver
+/** A body focus row (radiusM drives framing; positionMpc is unused — the driver
  * targets the LIVE snapshot position, not the row's). */
 const EARTH_ROW = {
   type: 'body' as const,
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0] as [number, number, number],
-  radiusKm: 6371,
+  radiusM: 6371000,
 };
 
 /** Minimal EngineState carrying only the cameraRuntime fields the follow driver
@@ -618,7 +618,7 @@ describe('buildCameraDrivers — followBody', () => {
     // FOCUS_TWEEN_MS it has converged to the framing distance, monotonically.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
     const livePos = snapshot.get('earth')!.positionMpc;
-    const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusKm, FOLLOW_FOV).distance;
+    const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     const FROM: CameraPose = { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 };
 
@@ -662,7 +662,7 @@ describe('buildCameraDrivers — followBody', () => {
     // every frame (snap-back), which this test rejects.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
     const livePos = snapshot.get('earth')!.positionMpc;
-    const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusKm, FOLLOW_FOV).distance;
+    const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     // The user's committed drag-zoom — vastly larger than Earth's ~1e-15 Mpc
     // framing distance, so 'stuck to base' vs 'snapped to framing' is unambiguous.

@@ -40,7 +40,7 @@ function makeCtx(): ReadyFrameContext {
     nearMpc: near,
     farMpc: far,
     vp: near0Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: true,
   };

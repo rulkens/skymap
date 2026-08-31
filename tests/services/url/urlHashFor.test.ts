@@ -72,7 +72,7 @@ describe('URL_HASH_FOR', () => {
       id: 'sirius',
       label: 'Sirius',
       positionMpc: [1e-6, 2e-6, 3e-6],
-      radiusKm: 1_192_000,
+      radiusM: 1192000000,
     };
     const deps: ResolveDeps = {
       catalogs: { get: () => undefined },

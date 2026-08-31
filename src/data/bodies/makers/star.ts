@@ -8,7 +8,9 @@
  *   - `temperatureK` → linear-RGB `color` along the blackbody locus
  *     (`temperatureToLinearRgb`), replacing the retired spectral-class palette
  *     buckets — every star is tinted from its own effective temperature.
- *   - `radiusSolar` → `radiusKm` against the Sun's real radius.
+ *   - `radiusSolar` → `radiusM` against the Sun's real radius. The generated
+ *     row is a wire format in km; the authored/runtime convention is metres,
+ *     so this is the one place that boundary is crossed.
  *
  * The row's RA/Dec/distance are NOT read here: a star's position is a root of
  * the focus graph, so it becomes a `SCENE_ANCHORS` row via `starAnchor` rather
@@ -19,6 +21,7 @@
  * table change together.
  */
 
+import { SCALE_UNITS } from '../../scaleUnits';
 import { SOLAR_RADIUS_KM } from '../solarRadiusKm';
 import { temperatureToLinearRgb } from '../../../utils/color/temperatureToLinearRgb';
 import type { FamousStarRow } from '../../../@types/data/FamousStarRow';
@@ -30,7 +33,7 @@ export function star(row: FamousStarRow): StarBody {
     label: row.commonName,
     absMag: row.absMag,
     color: temperatureToLinearRgb(row.temperatureK),
-    radiusKm: row.radiusSolar * SOLAR_RADIUS_KM,
+    radiusM: row.radiusSolar * SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
     // Absent oblateness stays absent — no `oblateness: undefined` key.
     ...(row.oblateness !== undefined ? { oblateness: row.oblateness } : {}),
   };

@@ -9,20 +9,20 @@ const star = (id: string): StarBody => ({
   label: id,
   absMag: 4.83,
   color: [1, 1, 1],
-  radiusKm: 696340,
+  radiusM: 696340000,
 });
 
 const planet = (id: string): PlanetBody => ({
   id,
   label: id,
-  radiusKm: 6371,
+  radiusM: 6371000,
   albedo: [0.3, 0.3, 0.3],
 });
 
 const earthRecord: EarthBody = {
   id: 'earth',
   label: 'Earth',
-  radiusKm: 6371,
+  radiusM: 6371000,
 };
 
 describe('createBodyStore', () => {

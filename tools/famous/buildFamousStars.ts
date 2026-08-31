@@ -61,7 +61,7 @@ import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 
 /**
  * Project the seed entries onto the compact render + search rows the runtime
- * table exports.  Everything derived (world position, linear RGB, radiusKm) is a
+ * table exports.  Everything derived (world position, linear RGB, radiusM) is a
  * pure function of these primitives, computed later by the star maker, so the row
  * stays in the catalogue's own units.  `oblateness` is the sole optional key —
  * omitted entirely (never `null`/`0`) when the star is effectively spherical.

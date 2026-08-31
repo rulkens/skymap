@@ -51,7 +51,7 @@ const jupiter: BodyInfo = {
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [0, 0, 0],
-  radiusKm: 69911,
+  radiusM: 69911000,
 };
 
 const NEAR_DISTANCE_MPC = 3 * SCALE_UNITS.AU_TO_MPC;

@@ -27,7 +27,7 @@ const STAR_ROW: SelectionRow = {
   positionMpc: [0.001, -0.002, 0.0005],
   absMag: 4.8,
   bpRp: 0.65,
-  radiusKm: 696340,
+  radiusM: 696340000,
 };
 
 // A galaxy row — yields a NON-null halo, but tagged COSMO. It exercises the
@@ -98,7 +98,7 @@ const FAR_STAR_ROW: SelectionRow = {
   positionMpc: [3e-5, 4e-5, 0], // camera at origin ⇒ camDist 5e-5 Mpc
   absMag: 4.8,
   bpRp: 0.65,
-  radiusKm: 696340,
+  radiusM: 696340000,
 };
 
 // A SlabView with `slab.farMpc` BELOW the star's camDist. camPos at the origin
@@ -111,7 +111,7 @@ function farClippingView(farMpc: number): SlabView {
       nearMpc: 1e-10,
       farMpc,
       vp: new Float64Array(16),
-      originRelative: true,
+      frame: { kind: 'world-mpc', originRelative: true },
       precision: 'f64',
       reversedZ: false,
     },
@@ -175,7 +175,7 @@ describe('near0SelectionRingLayer.draw — live body position', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [1e-6, 0, 0],
-      radiusKm: 6371,
+      radiusM: 6371000,
     };
 
     const renderer = makeRendererSpy();
