@@ -7,11 +7,11 @@ stills (1600×900), `.gif` for short loops.
 ## Current assets
 
 - `hero.gif` — the descent from the cosmic web to Earth, short and loopable.
-- `earth-closeup.png` — Earth from low orbit: night lights, streamed surface tiles.
-- `solar-system.png` — the solar system at the current simulated time, orbit trails on.
-- `stars-milky-way.png` — the Gaia star field against the procedural Milky Way disk.
-- `local-volume.png` — famous galaxies with curated thumbnails, labels, filaments.
-- `cosmic-web.png` — point cloud, filament skeleton, and MCPM volume at supercluster scale.
+- `earth-closeup.jpg` — Earth from low orbit: night lights, streamed surface tiles.
+- `solar-system.jpg` — the solar system at the current simulated time, orbit trails on.
+- `stars-milky-way.jpg` — the Gaia star field against the procedural Milky Way disk.
+- `local-volume.jpg` — famous galaxies with curated thumbnails, labels, filaments.
+- `cosmic-web.jpg` — point cloud, filament skeleton, and MCPM volume at supercluster scale.
   Also feeds the social-share card via `tools/site/makeOgImage.ts`; re-run that
   script after re-capturing it.
 

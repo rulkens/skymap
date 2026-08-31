@@ -37,23 +37,23 @@ The framing owes everything to [Powers of Ten](https://www.youtube.com/watch?v=0
 
 ## Gallery
 
-![Earth close-up with night lights and streamed surface tiles](docs/screenshots/earth-closeup.png)
+![Earth close-up with night lights and streamed surface tiles](docs/screenshots/earth-closeup.jpg)
 
 _Earth from low orbit, with night lights and streamed surface tiles over the base map._
 
-![Solar system with orbit trails](docs/screenshots/solar-system.png)
+![Solar system with orbit trails](docs/screenshots/solar-system.jpg)
 
 _The solar system at the current simulated time._
 
-![Gaia star field and the procedural Milky Way](docs/screenshots/stars-milky-way.png)
+![Gaia star field and the procedural Milky Way](docs/screenshots/stars-milky-way.jpg)
 
 _The Gaia star field giving way to the procedural Milky Way disk._
 
-![Local volume with famous-galaxy thumbnails and labels](docs/screenshots/local-volume.png)
+![Local volume with famous-galaxy thumbnails and labels](docs/screenshots/local-volume.jpg)
 
 _The local volume: famous galaxies with curated thumbnails, structure labels, and filaments._
 
-![Cosmic web at supercluster scale](docs/screenshots/cosmic-web.png)
+![Cosmic web at supercluster scale](docs/screenshots/cosmic-web.jpg)
 
 _The point cloud, filament skeleton, and MCPM volume at supercluster scale._
 

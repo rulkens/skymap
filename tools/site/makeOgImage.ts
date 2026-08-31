@@ -15,7 +15,7 @@
  *      headline ("Skymap" + tagline) makes the card identifiable in a
  *      cramped link preview.
  *
- * Pipeline: take `docs/screenshots/cosmic-web.png` (the supercluster-scale
+ * Pipeline: take `docs/screenshots/cosmic-web.jpg` (the supercluster-scale
  * view), centre-crop to 1200×630, composite a bottom-anchored dark
  * gradient + an SVG text layer, encode as quality-85 JPEG.  Output is
  * committed so deploys don't depend on the script running in CI.  Re-run
@@ -48,7 +48,7 @@ writeFileSync(
 process.env.FONTCONFIG_FILE = confPath;
 const sharp = (await import('sharp')).default;
 
-const SRC = 'docs/screenshots/cosmic-web.png';
+const SRC = 'docs/screenshots/cosmic-web.jpg';
 const OUT = 'public/og-image.jpg';
 const W = 1200;
 const H = 630;
