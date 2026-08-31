@@ -14,10 +14,13 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import { milkyWayVisible } from '../helpers/milkyWayVisible';
 import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS, MILKY_WAY_GC_FADE_FLOOR } from '../presentation/scaleFadeBands';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
 import { sceneBodyStates } from './sceneBodyStates';
-import { nearestRegionAnchorDistanceMpc } from '../../../utils/scene/nearestRegionAnchorDistanceMpc';
+import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
+import { regionById } from '../../../utils/scene/regionById';
+
+const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
 export function deriveMilkyWayCloudAlpha(
   state: EngineState,
@@ -28,15 +31,21 @@ export function deriveMilkyWayCloudAlpha(
   }
 
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  // Near-side approach fade: shuts only deep inside the disc, once the Gaia star
-  // catalog has taken over — keyed on the NEAREST region anchor, not the origin,
-  // so the fade also closes descending on Sgr A* (8.2 kpc from the Sun, which
-  // origin-hypot alone would read as still "far").
-  const approachDistMpc = nearestRegionAnchorDistanceMpc(
-    ctx.drawCamPos,
-    sceneBodyStates(state, ctx),
+  // Two independent near-side approach fades, combined by MIN: the Sun's own
+  // descent (`milkyWayApproach`, keyed on the origin — the Sun sits there —
+  // must still reach 0, the hand-off to the real Gaia star catalog) and the
+  // galactic centre's (`milkyWayApproachGc`, keyed on distance from Sgr A*).
+  // The GC band is blended against `MILKY_WAY_GC_FADE_FLOOR` rather than
+  // reaching 0 outright: nothing replaces the impostor at the GC, so it must
+  // stay dimly visible instead of vanishing.
+  const bodyStates = sceneBodyStates(state, ctx);
+  const sunApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc);
+  const gcDistMpc = regionRelativeDistanceMpc(ctx.drawCamPos, GALACTIC_CENTRE_REGION, bodyStates);
+  const gcApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproachGc, gcDistMpc);
+  const approach = Math.min(
+    sunApproach,
+    MILKY_WAY_GC_FADE_FLOOR + (1 - MILKY_WAY_GC_FADE_FLOOR) * gcApproach,
   );
-  const approach = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, approachDistMpc);
   if (approach <= 0) return null;
 
   const alpha =

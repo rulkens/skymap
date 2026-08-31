@@ -53,6 +53,12 @@ const SGR_A_STAR_R0_MPC = Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc);
 const BACKDROP_FULL_AT_EXTENT_MULTIPLE = 2;
 const BACKDROP_GONE_AT_EXTENT_MULTIPLE = 10;
 
+// The galactic-centre approach never dissolves to nothing: unlike the Sun's
+// descent, nothing replaces the impostor at the GC (Gaia's bulge coverage is
+// extincted by dust), so `deriveMilkyWayCloudAlpha` blends `milkyWayApproachGc`
+// against this floor instead of letting it reach 0.
+export const MILKY_WAY_GC_FADE_FLOOR = 0.15;
+
 export const backdropBand = (regionExtentMpc: number): FadeBand => ({
   fullAt: regionExtentMpc * BACKDROP_FULL_AT_EXTENT_MULTIPLE,
   goneAt: regionExtentMpc * BACKDROP_GONE_AT_EXTENT_MULTIPLE,
@@ -90,6 +96,16 @@ export const SCALE_FADE_BANDS = {
   // instead of vanishing while still hanging visibly above the starfield that
   // replaces them.
   milkyWayApproach: { fullAt: 0.002, goneAt: 0.0002 },
+
+  // Keyed on: CAMERA distance from the `galactic-centre` region's anchor
+  // (Sgr A*), Mpc. The GC gets its OWN approach band rather than sharing
+  // `milkyWayApproach` above: full ≥ 0.004 Mpc (4 kpc, twice as wide as the
+  // Sun's band) because the impostor's blowout is worse this close to the
+  // Centre, and — unlike the Sun's hand-off to the Gaia catalog — nothing
+  // replaces the impostor here (Gaia's bulge coverage is extincted), so
+  // `deriveMilkyWayCloudAlpha` never lets this band alone reach 0; see
+  // `MILKY_WAY_GC_FADE_FLOOR`.
+  milkyWayApproachGc: { fullAt: 0.004, goneAt: 0.0002 },
 
   // Keyed on: the STAR's own distance from the camera, pc.
   // Local-star captions read as a neighbourhood MAP whose edges scale with the

@@ -1,8 +1,10 @@
 /**
  * deriveMilkyWayCloudAlpha's approach fade — regression coverage for the
- * galactic-centre blowout: `SCALE_FADE_BANDS.milkyWayApproach` must key on
- * the nearest region anchor (Sgr A* included), not on raw distance from the
- * heliocentric origin, or the fade never closes descending on the black hole.
+ * galactic-centre blowout: the GC gets its OWN approach band
+ * (`milkyWayApproachGc`), wider than the Sun's, blended against
+ * `MILKY_WAY_GC_FADE_FLOOR` so the impostor stays dimly visible there instead
+ * of vanishing outright (nothing else covers the extincted bulge). The Sun's
+ * own descent (`milkyWayApproach`) must still reach 0, unaffected by the GC.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -11,7 +13,10 @@ import type { Mat4 } from 'wgpu-matrix';
 import { deriveMilkyWayCloudAlpha } from '../../../../src/services/engine/frame/milkyWayCloudLiveness';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import {
+  SCALE_FADE_BANDS,
+  MILKY_WAY_GC_FADE_FLOOR,
+} from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -54,18 +59,20 @@ function nearGalacticCentre(distMpc: number): Vec3 {
   return [SGR_A_STAR_POS[0] + distMpc, SGR_A_STAR_POS[1], SGR_A_STAR_POS[2]];
 }
 
-describe('deriveMilkyWayCloudAlpha — approach fade anchor', () => {
-  it('fades fully out within 200 pc of Sgr A*, ~8.2 kpc short of where origin-distance alone would', () => {
-    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(50 * PC)));
-    expect(alpha).toBeNull();
+describe('deriveMilkyWayCloudAlpha — galactic-centre approach fade', () => {
+  it('holds at the dim floor within 100 pc of Sgr A* instead of culling the cloud', () => {
+    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(100 * PC)));
+    expect(alpha).not.toBeNull();
+    expect(alpha).toBeCloseTo(MILKY_WAY_GC_FADE_FLOOR, 6);
   });
 
   it('partially fades between the galactic-centre approach band edges', () => {
-    const distMpc = 1000 * PC; // between goneAt (200 pc) and fullAt (2 kpc)
+    const distMpc = 1000 * PC; // between goneAt (200 pc) and fullAt (4 kpc)
     const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(distMpc)));
-    const expected = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, distMpc);
-    expect(expected).toBeGreaterThan(0);
-    expect(expected).toBeLessThan(1);
+    const gcBand = fadeBand(SCALE_FADE_BANDS.milkyWayApproachGc, distMpc);
+    const expected = MILKY_WAY_GC_FADE_FLOOR + (1 - MILKY_WAY_GC_FADE_FLOOR) * gcBand;
+    expect(gcBand).toBeGreaterThan(0);
+    expect(gcBand).toBeLessThan(1);
     expect(alpha).toBeCloseTo(expected, 6);
   });
 
