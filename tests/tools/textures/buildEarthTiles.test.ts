@@ -1,11 +1,12 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
 import { bakeAll, bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildEarthTiles';
+import { scanPreTiledBand } from '../../../tools/textures/preTiledBand';
 import { earthTilePath } from '../../../src/utils/scene/earthTilePath';
 import type { EarthImagerySource } from '../../../tools/textures/EarthImagerySource';
 import type { EarthTileManifest } from '../../../src/@types/scene/EarthTileManifest';
@@ -557,6 +558,104 @@ describe('bakeAll', () => {
       await expect(
         bakeAll([{ source: west, minLevel: STUB_Z }], dir, { only: 'does-not-exist' }),
       ).rejects.toThrow(/stub-west/);
+    });
+  });
+
+  describe('pre-tiled band (GeoDanmark-shaped)', () => {
+    /** Raw fixture layout: `<sourceDir>/<z>/<x>/<y>.webp` — mirrors
+     *  `data/raw/geodanmark/soendermarken`'s on-disk shape, distinct from
+     *  `earthTilePath`'s pyramid-output shape; the mapping between the two
+     *  is exactly what `copyPreTiledBand` is under test for. */
+    function writeRawTile(
+      sourceDir: string,
+      z: number,
+      x: number,
+      y: number,
+      contents: string,
+    ): void {
+      const path = join(sourceDir, String(z), String(x), `${y}.webp`);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, contents);
+    }
+
+    const PRE_TILED_PROVENANCE = {
+      sourceId: 'test-geodanmark',
+      attribution: 'test attribution',
+      vintage: 'test-vintage',
+    };
+
+    function fixtureBand(sourceDir: string) {
+      writeRawTile(sourceDir, 3, 0, 0, 'nw-bytes');
+      writeRawTile(sourceDir, 3, 1, 0, 'ne-bytes');
+      writeRawTile(sourceDir, 3, 0, 1, 'sw-bytes');
+      writeRawTile(sourceDir, 3, 1, 1, 'se-bytes');
+      return scanPreTiledBand({
+        id: PRE_TILED_PROVENANCE.sourceId,
+        provenance: PRE_TILED_PROVENANCE,
+        sourceDir,
+        minLevel: 3,
+        maxLevel: 3,
+      });
+    }
+
+    it('copies files byte-for-byte, mapping the raw z/x/y layout onto earthTilePath', async () => {
+      const sourceDir = tmpDir();
+      const outDir = tmpDir();
+      const band = fixtureBand(sourceDir);
+
+      await bakeAll([{ preTiled: band }], outDir);
+
+      const outPath = join(
+        outDir,
+        earthTilePath({ kind: 'surface', z: 3, x: 1, y: 0 }, TILE_PREFIX),
+      );
+      expect(readFileSync(outPath, 'utf8')).toBe('ne-bytes');
+    });
+
+    it("writes a manifest entry from the band's own bounds/min/max/provenance, merged with a rendered band", async () => {
+      const sourceDir = tmpDir();
+      const outDir = tmpDir();
+      const band = fixtureBand(sourceDir);
+      const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
+
+      await bakeAll([{ source: west, minLevel: STUB_Z }, { preTiled: band }], outDir);
+
+      const manifest = JSON.parse(
+        readFileSync(join(outDir, 'earth-tiles/manifest.json'), 'utf8'),
+      ) as EarthTileManifest;
+      const geodanmarkEntry = manifest.levels.surface?.find(
+        (entry) => entry.builtFrom.sourceId === PRE_TILED_PROVENANCE.sourceId,
+      );
+      expect(geodanmarkEntry).toEqual({
+        bounds: band.coverage[0],
+        min: 3,
+        max: 3,
+        builtFrom: PRE_TILED_PROVENANCE,
+      });
+
+      const index = readFileSync(join(outDir, 'earth-tiles/index.txt'), 'utf8');
+      expect(index).toContain(earthTilePath({ kind: 'surface', z: 3, x: 0, y: 0 }, TILE_PREFIX));
+    });
+
+    it('stitches the band forward under --only without re-copying its files', async () => {
+      const sourceDir = tmpDir();
+      const outDir = tmpDir();
+      const band = fixtureBand(sourceDir);
+      const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const bands = [{ source: west, minLevel: STUB_Z }, { preTiled: band }];
+      await bakeAll(bands, outDir);
+
+      const copiedPath = join(
+        outDir,
+        earthTilePath({ kind: 'surface', z: 3, x: 0, y: 0 }, TILE_PREFIX),
+      );
+      const beforeMtime = statSync(copiedPath).mtimeMs;
+
+      await bakeAll(bands, outDir, { only: 'stub-west' });
+
+      expect(statSync(copiedPath).mtimeMs).toBe(beforeMtime);
+      const index = readFileSync(join(outDir, 'earth-tiles/index.txt'), 'utf8');
+      expect(index).toContain(earthTilePath({ kind: 'surface', z: 3, x: 0, y: 0 }, TILE_PREFIX));
     });
   });
 });

@@ -936,6 +936,24 @@ export const RAW_DATA = {
       'Provenance for the EOX s2cloudless harvest — upstream URL, tile-index convention, fetch date, licence.',
   },
 
+  // ─── GeoDanmark orthophoto — pre-tiled z14-19 band over Søndermarken ───
+
+  'geodanmark.dir': {
+    path: 'data/raw/geodanmark/soendermarken',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      "GeoDanmark orthophoto WMS harvest, z14-19, already-tiled `<z>/<x>/<y>.webp` on skymap's own equirect grid — copied byte-for-byte into the pyramid rather than pyramided (see README).",
+    readme: 'geodanmark.readme',
+  },
+  'geodanmark.readme': {
+    path: 'data/raw/geodanmark/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the GeoDanmark orthophoto harvest — WMS layer, licence, harvested region, tile grid, BBOX axis-order landmine.',
+  },
+
   // ─── Constellations (d3-celestial stick-figure lines) ─────────────────
 
   'constellations.lines': {

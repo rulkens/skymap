@@ -26,7 +26,7 @@
  * `public/data/` is gitignored — nothing here is committed.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -48,7 +48,9 @@ import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import { eoxTileSource } from './eoxTileSource';
+import { scanPreTiledBand, type PreTiledBand } from './preTiledBand';
 import { underfillImagerySource } from './underfillImagerySource';
+import type { EarthTileProvenance } from '../../src/@types/scene/EarthTileProvenance';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Default coverage for a caller that doesn't clamp — degenerates
@@ -107,6 +109,20 @@ const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
  */
 const EOX_MIN_LEVEL = 8;
 
+/** GeoDanmark's own floor: one level deeper than EOX's own max (z13), same
+ *  "pick up where the shallower band stops" rule as `EOX_MIN_LEVEL`. */
+const GEODANMARK_MIN_LEVEL = 14;
+
+/** Deepest level the Søndermarken harvest reaches (`data/raw/geodanmark/README.md`). */
+const GEODANMARK_MAX_LEVEL = 19;
+
+/** Verbatim from `data/raw/geodanmark/README.md`. */
+const GEODANMARK_PROVENANCE: EarthTileProvenance = {
+  sourceId: 'geodanmark-2025-10cm',
+  attribution: 'Ortofoto © GeoDanmark / Klimadatastyrelsen (CC BY 4.0)',
+  vintage: 'forår 2025',
+};
+
 /** The only kind this tool bakes — relief, clouds, night lights and the
  *  material map carry no fine structure worth streaming. */
 const KIND: EarthTileKind = 'surface';
@@ -121,7 +137,7 @@ const TILE_ROOT = 'earth-tiles';
  * manifest for up to a day — mismatched, not merely stale. A new version is
  * new keys, which cost nothing extra and need no purge.
  */
-export const TILE_PREFIX = `${TILE_ROOT}/v3`;
+export const TILE_PREFIX = `${TILE_ROOT}/v4`;
 
 /** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
  *  raster's own north-first row order. */
@@ -272,6 +288,23 @@ export async function bakeCoarserLevel(
   return written;
 }
 
+/**
+ * Copy a `PreTiledBand`'s files straight onto the pyramid — no encode, no
+ * compositing, byte-for-byte (see `preTiledBand.ts` for why a copy is the
+ * correct integration for already-tiled, already-opaque source data).
+ */
+function copyPreTiledBand(band: PreTiledBand, outDir: string): string[] {
+  const written: string[] = [];
+  for (const { z, x, y } of band.tiles) {
+    const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
+    const outPath = join(outDir, relPath);
+    mkdirSync(dirname(outPath), { recursive: true });
+    copyFileSync(join(band.sourceDir, String(z), String(x), `${y}.webp`), outPath);
+    written.push(relPath);
+  }
+  return written;
+}
+
 /** Per-band index path — local bake state read back by `--only` to stitch a
  *  skipped band forward; the deploy collector reads only the merged
  *  `index.txt` (`collectEarthTiles`), never these. */
@@ -300,7 +333,7 @@ function zFromTilePath(relPath: string): number {
  */
 function stitchBandIndex(
   outDir: string,
-  source: EarthImagerySource,
+  source: { readonly id: string; readonly maxLevel: number },
   minLevel: number,
 ): readonly string[] {
   const indexPath = perBandIndexPath(outDir, source.id);
@@ -315,6 +348,17 @@ function stitchBandIndex(
     .filter((line) => line.length > 0);
 
   for (const relPath of relPaths) {
+    // A stitched path carries the PRIOR run's TILE_PREFIX baked in (it's read
+    // verbatim off disk, never rewritten) — `--only` can only forward tiles
+    // that already live under today's prefix. A prefix bump therefore always
+    // needs a full bake; this catches the case loudly instead of writing a
+    // manifest at the new prefix pointing at index lines the new prefix never baked.
+    if (!relPath.startsWith(`${TILE_PREFIX}/`)) {
+      throw new Error(
+        `bakeAll: stitched band '${source.id}' index was written under a different TILE_PREFIX ` +
+          `than today's ${TILE_PREFIX} — '--only' can't carry tiles across a prefix bump, run a full bake`,
+      );
+    }
     if (!existsSync(join(outDir, relPath))) {
       throw new Error(
         `bakeAll: stitched band '${source.id}' is missing '${relPath}' on disk — run a full bake to repair it`,
@@ -336,6 +380,27 @@ function stitchBandIndex(
 }
 
 /**
+ * One band `bakeAll` bakes: either rendered from an `EarthImagerySource`
+ * level by level (BMNG, EOX), or copied byte-for-byte from an already-tiled
+ * `PreTiledBand` (GeoDanmark) — see `preTiledBand.ts` for why a copy, not a
+ * render, is the correct integration for the latter.
+ */
+type EarthTileBand =
+  | {
+      readonly source: EarthImagerySource;
+      readonly minLevel: number;
+      /** Global-band source to underfill this band's uncovered margins with,
+       *  at every level — see `underfillImagerySource` for why a regional
+       *  band's tiles must always come out fully opaque. */
+      readonly underfill?: EarthImagerySource;
+    }
+  | { readonly preTiled: PreTiledBand };
+
+function bandId(band: EarthTileBand): string {
+  return 'preTiled' in band ? band.preTiled.id : band.source.id;
+}
+
+/**
  * Bake every band's levels (`source.maxLevel` down to that band's own
  * `minLevel`) into `outDir`, then write ONE `index.txt` and ONE
  * `manifest.json` covering all bands — several imagery sources can share a
@@ -350,14 +415,7 @@ function stitchBandIndex(
  * skipped.
  */
 export async function bakeAll(
-  bands: ReadonlyArray<{
-    readonly source: EarthImagerySource;
-    readonly minLevel: number;
-    /** Global-band source to underfill this band's uncovered margins with,
-     *  at every level — see `underfillImagerySource` for why a regional
-     *  band's tiles must always come out fully opaque. */
-    readonly underfill?: EarthImagerySource;
-  }>,
+  bands: ReadonlyArray<EarthTileBand>,
   outDir: string,
   opts?: { readonly only?: string },
 ): Promise<void> {
@@ -365,13 +423,39 @@ export async function bakeAll(
   const written: string[] = [];
   const bandEntries: NonNullable<EarthTileManifest['levels'][typeof KIND]>[number][] = [];
 
-  if (opts?.only !== undefined && !bands.some((band) => band.source.id === opts.only)) {
+  if (opts?.only !== undefined && !bands.some((band) => bandId(band) === opts.only)) {
     throw new Error(
-      `bakeAll: --only '${opts.only}' matches no band — available: ${bands.map((band) => band.source.id).join(', ')}`,
+      `bakeAll: --only '${opts.only}' matches no band — available: ${bands.map(bandId).join(', ')}`,
     );
   }
 
-  for (const { source, minLevel, underfill } of bands) {
+  for (const band of bands) {
+    if ('preTiled' in band) {
+      const { preTiled } = band;
+      if (opts?.only !== undefined && preTiled.id !== opts.only) {
+        const stitched = stitchBandIndex(outDir, preTiled, preTiled.minLevel);
+        written.push(...stitched);
+        process.stderr.write(
+          `  ${preTiled.id}: stitched ${stitched.length} tiles from its prior index\n`,
+        );
+      } else {
+        const bandWritten = copyPreTiledBand(preTiled, outDir);
+        process.stderr.write(`  ${preTiled.id}: copied ${bandWritten.length} pre-tiled files\n`);
+        writePerBandIndex(outDir, preTiled.id, bandWritten);
+        written.push(...bandWritten);
+      }
+      for (const bounds of preTiled.coverage) {
+        bandEntries.push({
+          bounds,
+          min: preTiled.minLevel,
+          max: preTiled.maxLevel,
+          builtFrom: preTiled.provenance,
+        });
+      }
+      continue;
+    }
+
+    const { source, minLevel, underfill } = band;
     const maxLevel = source.maxLevel;
 
     // A source that can't beat its own band floor has nothing to contribute
@@ -488,8 +572,8 @@ async function main(): Promise<void> {
   const only = onlySourceId(argv);
   process.stderr.write(`buildEarthTiles: -> ${join(outDir, 'earth-tiles')}\n`);
   if (dev) {
-    // Whole-globe BMNG only — the EOX band needs the real harvest on disk,
-    // which `--dev` explicitly opts out of (see `devSource`).
+    // Whole-globe BMNG only — the EOX and GeoDanmark bands need real harvests
+    // on disk, which `--dev` explicitly opts out of (see `devSource`).
     await bakeAll([{ source: await devSource(), minLevel: BAKE_MIN_LEVEL }], outDir, { only });
   } else {
     // Shared instance, not two separate `deepSource()` calls: reuses BMNG's
@@ -504,6 +588,15 @@ async function main(): Promise<void> {
           source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
           minLevel: EOX_MIN_LEVEL,
           underfill: bmng,
+        },
+        {
+          preTiled: scanPreTiledBand({
+            id: GEODANMARK_PROVENANCE.sourceId,
+            provenance: GEODANMARK_PROVENANCE,
+            sourceDir: rawDataPath('geodanmark.dir'),
+            minLevel: GEODANMARK_MIN_LEVEL,
+            maxLevel: GEODANMARK_MAX_LEVEL,
+          }),
         },
       ],
       outDir,
