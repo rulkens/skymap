@@ -1,18 +1,21 @@
 /**
- * HII_TIERS — the ONE table `createGalaxyRenderTargets.ts` and
- * `createGalaxyEngine.ts` both loop over for the three HII sub-tiers that
- * each get their own render target, divisor and timing slot: shells, young
- * stars, and DIG (see `docs/research/milky-way/hii-regions.md`).
- * `'hii:extras'` stays its own thing (`hiiTex`'s single pass), not a fourth
- * row — see `HiiTierSpec`'s own doc.
- *
- * Row order is draw/composite/HUD order, shared with `timingSlots.ts` —
- * reordering a row here moves the HUD row and composite order together.
+ * HII_TIERS — each HII sub-tier's TOOL-ONLY lanes (its timing/segment label
+ * and the render-bag divisor key), in the shared draw/composite/HUD order.
+ * Membership and order both come from `src/data/hiiTiers.ts`, which the
+ * shared field renderer loops over too — so a fourth tier is one row here
+ * plus one entry there, and the two orders cannot drift.
  */
+import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
 import type { HiiTierSpec } from '../../@types/engine/HiiTierSpec';
+import { HII_TIER_KINDS } from '../../../../src/data/hiiTiers';
 
-export const HII_TIERS: readonly HiiTierSpec[] = [
-  { kind: 'shells', label: 'hii:shells', divisorKey: 'shellsDivisor' },
-  { kind: 'young', label: 'hii:young', divisorKey: 'youngDivisor' },
-  { kind: 'dig', label: 'hii:dig', divisorKey: 'digDivisor' },
-];
+const TIER_LANES: Record<HiiTier, Omit<HiiTierSpec, 'kind'>> = {
+  shells: { label: 'hii:shells', divisorKey: 'shellsDivisor' },
+  young: { label: 'hii:young', divisorKey: 'youngDivisor' },
+  dig: { label: 'hii:dig', divisorKey: 'digDivisor' },
+};
+
+export const HII_TIERS: readonly HiiTierSpec[] = HII_TIER_KINDS.map((kind) => ({
+  kind,
+  ...TIER_LANES[kind],
+}));

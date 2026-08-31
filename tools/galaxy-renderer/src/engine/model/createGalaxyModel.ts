@@ -104,10 +104,9 @@ export type GalaxyModel = {
    */
   ensureFresh(): { readonly bubblesLive: boolean };
 
-  /** `createGalaxyFieldRenderer`'s three host hooks — the CPU readback path it deliberately does not own. */
+  /** `createGalaxyFieldRenderer`'s two host hooks — the CPU readback path it deliberately does not own. */
   noteIsmMapRebuilt(grid: GalaxyIsmMapGridRadius): void;
   noteOrientationRebuilt(grid: GalaxyIsmMapGridRadius): void;
-  noteDustBudgetRebuilt(): void;
 
   readonly starCount: number;
   readonly fieldCounts: FieldSliceCounts;
@@ -295,11 +294,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     return invMeanNorm;
   }
 
-  /**
-   * Event-driven off two independent producers, not a per-frame poll: a
-   * readback landing (coherence, `hasData`/`generation`) and a dust rebuild
-   * (the delta pair).
-   */
+  /** Event-driven off the orientation readback landing, not a per-frame poll. */
   function reportOrientationDiagnostics(): void {
     deps.onOrientationDiagnostics?.(
       orientationDiagnostics.report({
@@ -513,16 +508,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         orientationDiagnostics.noteCoherence(data);
         reportOrientationDiagnostics();
       });
-    },
-
-    /**
-     * A dust rebuild ran. No per-particle `OrientationDeltaStats` exists any
-     * more (that was the deleted CPU sampler's out-param), so the report fires
-     * off a zeroed delta — the same honest "no CPU placement ran" default.
-     */
-    noteDustBudgetRebuilt(): void {
-      orientationDiagnostics.noteDelta({ count: 0, sumAbsDeltaDeg: 0, maxAbsDeltaDeg: 0 });
-      reportOrientationDiagnostics();
     },
 
     get starCount(): number {

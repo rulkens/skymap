@@ -3,8 +3,7 @@
  * field: the Gaussian-mixture + HII component buffers, the fluid ISM map and
  * its orientation/CDF/placement chain, the six splat pipelines and the
  * per-frame encode. The host owns the render targets, the camera, the sprite
- * tier and every CPU readback; everything else that used to be split between
- * `createGalaxyEngine.ts` and `model/createGalaxyModel.ts` lives here.
+ * tier and every CPU readback.
  *
  * Construction order below is load-bearing (`fieldUbo` before the ISM chain
  * before `createFieldPipelines`) — see the block comments at each step.
@@ -48,6 +47,8 @@ import { MAX_PARTICLE_COUNT } from '../../../engine/galaxyGenerator/v2/dustParti
 import { YOUNG_CHAIN_MAX_COMPONENTS } from '../../../engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../utils/galaxy/ismMapAmbientDust';
 import { transformGalaxyFieldComponent } from '../../../../utils/galaxy/transformGalaxyFieldComponent';
+
+import { HII_TIER_KINDS, mapHiiTiers } from '../../../../data/hiiTiers';
 
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { createKeyedRebuild } from '../../lib/createKeyedRebuild';
@@ -130,13 +131,6 @@ const STAR_GRAIN_TEX_SIZE = 128;
 /** Matches starGrainBake.wesl's `@workgroup_size(4, 4, 4)`. */
 const STAR_GRAIN_WORKGROUP_SIZE = 4;
 
-/**
- * Draw/composite/HUD order for the three HII sub-tiers, matching the host's
- * own `HII_TIERS` row order (which additionally carries the timing labels and
- * divisor keys this module has no business knowing).
- */
-const HII_TIER_KINDS: readonly HiiTier[] = ['shells', 'young', 'dig'];
-
 /** A background galaxy's contribution: its own geometry, plus the rigid transform placing it in the scene. */
 export type GalaxyFieldExtra = {
   readonly geometry: GalaxyDescription;
@@ -148,14 +142,12 @@ export type GalaxyFieldRendererDeps = {
   readonly hdrFormat: GPUTextureFormat;
   readonly dustMapFormat: GPUTextureFormat;
   /**
-   * The three hooks the CPU readback path keeps on the host side (its queue,
-   * decoders and diagnostics are host-owned — see the spec's tool-only
-   * table). Each fires from the one place inside this module that knows the
-   * value just became stale.
+   * The two hooks the CPU readback path keeps on the host side (its queue and
+   * decoders are host-owned — see the spec's tool-only table). Each fires from
+   * the one place inside this module that knows the copy just went stale.
    */
   readonly onIsmMapRebuilt?: (grid: GalaxyIsmMapGridRadius) => void;
   readonly onOrientationRebuilt?: (grid: GalaxyIsmMapGridRadius) => void;
-  readonly onDustBudgetRebuilt?: () => void;
 };
 
 /**
@@ -198,14 +190,11 @@ export type GalaxyFieldFrame = {
   readonly fov: number;
   readonly shiftX: number;
   readonly view: FieldHeaderFrameLanes;
-  readonly render: FieldHeaderRenderLanes;
+  /** `analyticField` gates every pass below, never the header writes. */
+  readonly render: FieldHeaderRenderLanes & { readonly analyticField: boolean };
   /** Host-owned because both are derived from the CPU ISM-map readback. */
   readonly ismMapSeeding: IsmMapSeedingLanes;
   readonly youngStars: YoungStarsLanes;
-  /** `render.analyticField` — gates every pass below, never the header writes. */
-  readonly analytic: boolean;
-  /** `debugViews.dust > 0` — the JWST presentation pass. */
-  readonly drawDustView: boolean;
   /**
    * `gpuTimingService.descriptorFor`. Called ONLY where a pass is actually
    * encoded: asking for a descriptor marks its slot consumed, which is what
@@ -359,18 +348,15 @@ export function createGalaxyFieldRenderer(
   // writes last its `targetSizePx` to every tier — and that lane feeds
   // `counts2.w`, which the shader's footprint gates read directly, so a wrong
   // one there is a silently wrong LOD/splat footprint, not a crash.
-  const tierUbo: Record<HiiTier, GPUBuffer> = Object.fromEntries(
-    HII_TIER_KINDS.map((kind) => [
-      kind,
-      own(
-        device.createBuffer({
-          label: `galaxy:hiiTierUniforms:${kind}`,
-          size: FIELD_HEADER_BUFFER_SIZE,
-          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        }),
-      ),
-    ]),
-  ) as Record<HiiTier, GPUBuffer>;
+  const tierUbo: Record<HiiTier, GPUBuffer> = mapHiiTiers((kind) =>
+    own(
+      device.createBuffer({
+        label: `galaxy:hiiTierUniforms:${kind}`,
+        size: FIELD_HEADER_BUFFER_SIZE,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      }),
+    ),
+  );
 
   // ---- three baked volumes, each baked ONCE via bakeVolumeTexture ----
   // All three are view- and param-independent (fixed octave bands, no
@@ -778,7 +764,6 @@ export function createGalaxyFieldRenderer(
     dustBudget =
       geometry && fieldTuning.dust.enabled ? computePlaceDustBudget(geometry, dust) : null;
     dispatchDustCdfScan();
-    deps.onDustBudgetRebuilt?.();
   }
 
   /**
@@ -1306,7 +1291,12 @@ export function createGalaxyFieldRenderer(
       rebuildForGeometry();
     } else if (tuningMoved) {
       rebuildForTuning(prevTuning);
-    } else if (extrasMoved) {
+    }
+    // Outside the chain, not an `else if` tail: a call that moves extras AND
+    // tuning would otherwise compute the extras' new components above and
+    // never write them, since `rebuildForTuning`'s own repacks are gated on
+    // which tuning section moved. `rebuildForGeometry` already repacked.
+    if (extrasMoved && !geometryMoved) {
       repackFieldComponents();
       repackHiiComponents();
     }
@@ -1376,12 +1366,10 @@ export function createGalaxyFieldRenderer(
         field: [frameTargets.fieldTex.width, frameTargets.fieldTex.height],
         dustMapHeightPx: frameTargets.dustMapTex.height,
         hii: [frameTargets.hiiTex.width, frameTargets.hiiTex.height],
-        tiers: Object.fromEntries(
-          HII_TIER_KINDS.map((kind) => [
-            kind,
-            [frameTargets.hiiTiers[kind].width, frameTargets.hiiTiers[kind].height],
-          ]),
-        ) as Record<HiiTier, Vec2>,
+        tiers: mapHiiTiers<Vec2>((kind) => [
+          frameTargets.hiiTiers[kind].width,
+          frameTargets.hiiTiers[kind].height,
+        ]),
       },
     });
     packFieldHeaderUniforms(headers.field, fieldData);
@@ -1393,8 +1381,12 @@ export function createGalaxyFieldRenderer(
       device.queue.writeBuffer(tierUbo[kind], 0, tierData);
     }
 
-    if (!frame.analytic) return;
+    if (!frame.render.analyticField) return;
     const timestampWrites = frame.timestampWrites ?? ((): undefined => undefined);
+    // The JWST view's own gate, read off the same `debugViews` the headers
+    // above were packed from — one lane per fact, so the pass and its header
+    // cannot disagree.
+    const drawDustView = frame.view.debugViews.dust > 0;
 
     // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
     // its own divisor-matched resolution (additive). Feeds
@@ -1407,7 +1399,7 @@ export function createGalaxyFieldRenderer(
     // has to run — as the clear that empties the map. Assigning the returned
     // latch is what carries that across; drop the assignment and the map
     // freezes at the previous galaxy's dust.
-    if (fieldCounts.dust > 0 || frame.drawDustView || fieldPipelines.dustMapPopulated) {
+    if (fieldCounts.dust > 0 || drawDustView || fieldPipelines.dustMapPopulated) {
       fieldPipelines.setDustMapPopulated(
         encodeDustMapPass({
           enc: encoder,
@@ -1424,7 +1416,7 @@ export function createGalaxyFieldRenderer(
     // alongside the emission splat below rather than replacing it: the four
     // debug views crossfade independently, and the scene pass sums whichever
     // of them are live.
-    if (frame.drawDustView) {
+    if (drawDustView) {
       encodeDustPresentPass({
         enc: encoder,
         targetView: frameTargets.dustViewTex.createView(),

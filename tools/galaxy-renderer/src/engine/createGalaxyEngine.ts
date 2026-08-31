@@ -62,6 +62,7 @@ import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/addi
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { HII_TIERS } from '../data/hiiTiers';
+import { mapHiiTiers } from '../../../../src/data/hiiTiers';
 
 // The star/dust sprite shader pairs live in `createCloudPipelines.ts`; every
 // field/HII/dustMap/dustPresent/bubble pair, and the three baked volumes,
@@ -168,16 +169,15 @@ export async function createGalaxyEngine(
   // ---- the analytic field: `createGalaxyFieldRenderer` ----
   // Every field/ISM resource in one instance, constructed in the order its own
   // header documents: the three header UBOs, the baked volumes, the ISM-map
-  // chain, then the splat pipelines. The three hooks are the CPU readback path
-  // it deliberately does not own — `model` is in scope by the time any of them
-  // can fire (nothing rebuilds at construction).
+  // chain, then the splat pipelines. The two hooks are the CPU readback path
+  // it deliberately does not own — `model` is in scope by the time either can
+  // fire (nothing rebuilds at construction).
   const field = createGalaxyFieldRenderer(device, {
     makeShader,
     hdrFormat: HDR,
     dustMapFormat: DUST_MAP_FORMAT,
     onIsmMapRebuilt: (grid) => model.noteIsmMapRebuilt(grid),
     onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
-    onDustBudgetRebuilt: () => model.noteDustBudgetRebuilt(),
   });
 
   // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
@@ -255,6 +255,13 @@ export async function createGalaxyEngine(
   //
   // Allocates nothing yet — the first `rebuildAll` is the unconditional one
   // below the ResizeObserver, once the canvas has adopted its backing size.
+  //
+  // The callback fires from INSIDE the dust allocation, so `dustMapTex` is the
+  // only row `fieldTargets()` can promise is fresh here — on the very first
+  // `rebuildAll` the hii/tier rows do not exist yet. That is fine because the
+  // module reads only `dustMapTex` off this snapshot (its own note at the
+  // `targets` declaration), but it makes `createGalaxyRenderTargets`' internal
+  // allocation ORDER load-bearing for this caller.
   const targets = createGalaxyRenderTargets(
     device,
     canvas,
@@ -274,9 +281,7 @@ export async function createGalaxyEngine(
       dustMapTex: targets.dustMapTex,
       dustViewTex: targets.dustViewTex,
       hiiTex: targets.hiiTex,
-      hiiTiers: Object.fromEntries(
-        HII_TIERS.map((tier) => [tier.kind, targets.tierTex(tier.kind)]),
-      ) as Record<HiiTier, GPUTexture>,
+      hiiTiers: mapHiiTiers((kind) => targets.tierTex(kind)),
     };
   }
 
@@ -554,8 +559,6 @@ export async function createGalaxyEngine(
       render,
       ismMapSeeding: model.ismMapSeedingView,
       youngStars: model.youngStars,
-      analytic,
-      drawDustView,
       timestampWrites: (slot) => timing.descriptorFor(slot),
     });
 
