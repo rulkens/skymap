@@ -28,7 +28,7 @@ export type EoxRegionName =
   | 'sjaelland';
 
 export const EOX_REGIONS: Readonly<Record<EoxRegionName, EoxBbox>> = {
-  copenhagen: { west: 12.2, south: 55.4, east: 13.05, north: 56.1 },
+  copenhagen: { west: 12.2, south: 54.93, east: 13.05, north: 56.14 },
   amsterdam: { west: 4.5, south: 52.2, east: 5.1, north: 52.5 },
   paris: { west: 2.1, south: 48.7, east: 2.6, north: 49.0 },
   chicago: { west: -87.95, south: 41.6, east: -87.5, north: 42.05 },
@@ -47,5 +47,5 @@ export const EOX_REGIONS: Readonly<Record<EoxRegionName, EoxBbox>> = {
   giza: { west: 31.0, south: 29.85, east: 31.5, north: 30.15 },
   // East edge abuts copenhagen's west edge at the z13 tile column boundary
   // (col 8746 vs 8747) — no duplicate tiles between the two region dirs.
-  sjaelland: { west: 10.85, south: 54.95, east: 12.18, north: 56.1 },
+  sjaelland: { west: 10.85, south: 54.93, east: 12.18, north: 56.14 },
 };
