@@ -80,7 +80,13 @@ export const FAR_MIN_MPC = 3e-11;
  */
 export const NEAR0_FAR_CLAMP_FRACTION = 0.99;
 
-const NEAR_RATIO = 1e-4;
+/**
+ * Near-plane ratio against altitude/distance. Exported so `bodySlabRow`
+ * (`slabs.ts`) can key a body-m row's near plane off the SAME ratio once the
+ * camera is inside the body's outermost drawn shell, instead of minting a
+ * second copy — see that call site for why raw distance stops working there.
+ */
+export const NEAR_RATIO = 1e-4;
 const FAR_RATIO = 100;
 
 export function foregroundFrustum(camDistanceMpc: number): { near: number; far: number } {

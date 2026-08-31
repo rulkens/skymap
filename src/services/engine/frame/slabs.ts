@@ -32,7 +32,7 @@ import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
-import { foregroundFrustum, MIN_NEAR_M } from '../../../utils/camera/foregroundFrustum';
+import { foregroundFrustum, MIN_NEAR_M, NEAR_RATIO } from '../../../utils/camera/foregroundFrustum';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
@@ -164,7 +164,15 @@ function bodySlabRow(input: {
 
   const dM = Math.hypot(eyeRelBodyM[0], eyeRelBodyM[1], eyeRelBodyM[2]);
   const rMaxM = bodyDrawRadiusM(body);
-  const near = Math.max(dM - rMaxM, MIN_NEAR_M);
+  // dM - rMaxM only well-conditions near while the camera sits OUTSIDE the
+  // outermost drawn shell (e.g. Earth's atmosphere top, 100 km up). Once
+  // inside, that term goes negative and the old `max(…, MIN_NEAR_M)` floor
+  // pinned near at a degenerate 1e-6 m for the whole descent, collapsing
+  // reversed-Z depth precision against the surface — see
+  // .superpowers/sdd/2026-08-26-body-render-slabs/label-window-investigation.md.
+  // The altitude-above-SURFACE term (main's own foregroundFrustum ratio)
+  // keeps near well-conditioned through that regime instead.
+  const near = Math.max(dM - rMaxM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
   const distanceRangeM: readonly [number, number] = [Math.max(dM - rMaxM, 0), dM + rMaxM];
 
   const forward: Vec3 = [basisM[6], basisM[7], basisM[8]];

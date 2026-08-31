@@ -23,7 +23,11 @@ import {
 } from '../../../../src/services/engine/frame/slabs';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
-import { foregroundFrustum, MIN_NEAR_M } from '../../../../src/utils/camera/foregroundFrustum';
+import {
+  foregroundFrustum,
+  MIN_NEAR_M,
+  NEAR_RATIO,
+} from '../../../../src/utils/camera/foregroundFrustum';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -253,6 +257,28 @@ describe('deriveSlabs', () => {
     const row = slabs[2]!;
     expect(row.near).toBe(MIN_NEAR_M);
     expect(row.distanceRangeM[0]).toBe(0);
+  });
+
+  it("keys a body row's near plane off altitude above the SURFACE, not MIN_NEAR_M, once the camera is inside the outermost shell", () => {
+    // Earth-shaped: radiusM 6.371e6 m, id 'earth' pulls the real
+    // ATMOSPHERE_PARAMS row so rMaxM (bodyDrawRadiusM) is the atmosphere top,
+    // ~100 km above the surface — the exact regression this guards
+    // (.superpowers/sdd/2026-08-26-body-render-slabs/label-window-investigation.md).
+    // Camera at 78 km altitude: inside the atmosphere shell (dM < rMaxM), so
+    // the old `max(dM - rMaxM, MIN_NEAR_M)` formula collapsed near to 1e-6 m.
+    const radiusM = 6.371e6;
+    const dM = 6.449e6; // altitude = dM - radiusM = 78,000 m
+    const body = makePlanet({ id: 'earth', radiusM });
+    const pose: BodyPoseProvider = () => ({
+      eyeRelBodyM: [dM, 0, 0],
+      basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    });
+    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const row = slabs[2]!;
+    const expectedNear = (dM - radiusM) * NEAR_RATIO;
+    expect(row.near).toBeCloseTo(expectedNear, 6);
+    expect(row.near).not.toBe(MIN_NEAR_M);
+    expect(row.near).toBeGreaterThan(1); // metres-scale, not the 1e-6 m floor
   });
 
   it("builds a body row's vp about the eye — RTC-native, no translation, body centre projects to screen centre", () => {
