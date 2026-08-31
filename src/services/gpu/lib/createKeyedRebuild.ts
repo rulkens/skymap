@@ -9,7 +9,7 @@
  * write-then-read dependencies exist.
  */
 
-import type { KeyedRebuild } from '../../@types/engine/KeyedRebuild';
+import type { KeyedRebuild } from '../../../@types/gpu/KeyedRebuild';
 
 export function createKeyedRebuild(deps: {
   readonly wanted: () => boolean;

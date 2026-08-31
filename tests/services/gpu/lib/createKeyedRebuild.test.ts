@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createKeyedRebuild } from '../../../../tools/galaxy-renderer/src/engine/createKeyedRebuild';
+import { createKeyedRebuild } from '../../../../src/services/gpu/lib/createKeyedRebuild';
 
 /** A gate whose `wanted` axis the test drives independently of `invalidate`. */
 function harness(initiallyWanted: boolean) {
