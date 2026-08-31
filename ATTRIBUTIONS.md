@@ -46,7 +46,7 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
   fetched via the `fG.cgi` JSON-ish endpoint at
   <http://atlas.obs-hp.fr/hyperleda/>. Used for both the GLADE orientation
   enrichment cache (`data/raw/hyperleda_pa.csv`) and the famous-galaxy
-  catalog metadata (`data/famous_galaxies.seed.json`).
+  catalog metadata (`data/seeds/famous_galaxies.seed.json`).
 - **Reference:** Paturel et al. 2003, A&A 412, 45; Makarov et al. 2014, A&A
   570, A13.
 - **Licence:** Publicly released; cite the papers above.
@@ -453,6 +453,20 @@ All public domain; NASA asks that credit go to the named observatory / program.
   derived against (not a build input, kept for reproducibility). **Source:**
   <https://science.nasa.gov/resource/true-colors-of-pluto/>. **Licence:**
   Public domain. **Credit:** NASA/JHUAPL/SwRI/Alex Parker.
+
+## Fonts
+
+### Cormorant Garamond — display serif
+
+- **Use:** The label font. Vendored as `CormorantGaramond-SemiBold.ttf` in two
+  places — `data/raw/fonts/` (baked into the MSDF label atlas by
+  `tools/fonts/buildFontAtlas.ts`) and `tools/site/fonts/` (rasterised into
+  `public/og-image.jpg` by `tools/site/makeOgImage.ts`) — and additionally
+  loaded live from Google Fonts by `index.html` for the 2D UI chrome
+  (`--font-family-display` in `src/styles/global.css`).
+- **Designer:** Christian Thalmann (Catharsis Fonts).
+- **Source:** <https://fonts.google.com/specimen/Cormorant+Garamond>.
+- **Licence:** SIL Open Font License 1.1.
 
 ## Shaders
 
