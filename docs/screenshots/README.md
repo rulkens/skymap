@@ -1,8 +1,8 @@
 # Screenshots
 
 Captures embedded in the top-level [`README.md`](../../README.md), recorded by
-hand from the dev build with real data. Lower-case kebab names, `.png` for
-stills (1600×900), `.gif` for short loops.
+hand from the dev build with real data. Lower-case kebab names, `.jpg` for
+stills (16:9, captured at 2× for retina), `.gif` for short loops.
 
 ## Current assets
 
