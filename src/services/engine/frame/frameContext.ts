@@ -189,11 +189,22 @@ export function deriveFrameContext(
   // returns this SAME Map by reference — no second cache, no drift.
   const bodyStates = deriveBodyStates(simDays);
 
+  // Computed here (ahead of `visibleSlabBodies`, which needs it for the
+  // frustum cull) rather than inline in the pose-provider seam below, so
+  // both consumers share one derivation.
+  const camForward = normalize3([
+    cam.target[0] - cam.position[0],
+    cam.target[1] - cam.position[1],
+    cam.target[2] - cam.position[2],
+  ]);
+
   const visibleBodies = visibleSlabBodies({
     earth: state.data.bodies.earth,
     planets: state.data.bodies.planets,
     bodyStates,
     camPosMpc: cam.position,
+    camForwardMpc: camForward,
+    viewportWidthPx: canvasSize.width,
     viewportHeightPx: canvasSize.height,
     fovYRad: cam.fovYRad,
   });
@@ -208,11 +219,6 @@ export function deriveFrameContext(
   // SAME closure, not a second one) so a body-slab layer's own pose read
   // (`prepareBodySurfaceFrame`) can never drift from the one `slabs` was
   // built from — see that field's doc.
-  const camForward = normalize3([
-    cam.target[0] - cam.position[0],
-    cam.target[1] - cam.position[1],
-    cam.target[2] - cam.position[2],
-  ]);
   const { right: camRight, up: camUp } = imagePlaneBasis(camForward, 0, frameUp(cam.upBasis));
   const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
   const bodyPose: BodyPoseProvider = (bodyId) => {
