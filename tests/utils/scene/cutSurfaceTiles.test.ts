@@ -653,14 +653,13 @@ describe('cutSurfaceTiles', () => {
   });
 
   describe('metres vs radii (unit-agnosticism, spec §8)', () => {
-    // Both tests scale ONE fixture's camPosLocalM/radiusM pair together to a
-    // real Earth radius, leaving viewProjLocal untouched (it already maps
+    // Both blocks below scale ONE fixture's camPosLocalM/radiusM pair together
+    // to a real Earth radius, leaving viewProjLocal untouched (it already maps
     // unit-sphere-local points — equirectUvToDirection's own output —
     // straight to clip space regardless of what camPosLocalM/radiusM are in;
     // that's the caller's model-scale choice, not this walk's). If the walk
-    // silently assumed radius 1 anywhere in the horizon test instead of
-    // reading `radiusM`, only the metres form would disagree with the radii
-    // form below.
+    // silently assumed radius 1 anywhere instead of reading `radiusM`, only
+    // the metres form would disagree with the radii form.
     const RADIUS_M = EARTH_RADIUS_KM * 1000;
 
     function toMetres(radiiInput: ReturnType<typeof nadirAt>) {
@@ -671,35 +670,72 @@ describe('cutSurfaceTiles', () => {
       };
     }
 
-    it('refines to the same level in metres as in radii', () => {
-      const radiiResult = cutSurfaceTiles(nadirAt(1000));
-      const metresResult = cutSurfaceTiles(toMetres(nadirAt(1000)));
-      expect(metresResult.requests.zWin).toBe(radiiResult.requests.zWin);
+    it('produces the identical tile-request list in metres as in radii', () => {
+      // The strong form of the unit-agnosticism claim: not just zWin (which
+      // is scale-invariant by construction and can't distinguish a dropped
+      // radiusM parameterisation — verified by hand: forcing radiusM to 1 on
+      // the metres fixture below still reports zWin 8, unchanged), but every
+      // requested tile. Forcing radiusM to 1 on the metres fixture changes
+      // the horizon threshold and the request COUNT (87 correct vs 89 forced)
+      // for this exact fixture — hand-verified, not asserted here since that
+      // would encode the bug's own number as a magic constant.
+      const radii = cutSurfaceTiles(nadirAt(1000));
+      const metres = cutSurfaceTiles(toMetres(nadirAt(1000)));
+      expect(metres.requests.requests).toEqual(radii.requests.requests);
     });
 
-    it('culls beyond the horizon in metres, with an explicit radiusM', () => {
-      // A camera altitude hand-picked so a KNOWN coarse tile's centre sits
-      // just past the horizon cap (`capAngle = acos(radiusM / camLen)`):
-      // solve for the altitude at which the cap lands EXACTLY on the tile's
-      // centre angle, then back off 1 km so the tile falls just outside it.
-      const z = BASE_LEVEL;
-      const [tx, ty] = earthTileXyForUv([70 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
-      const geo = tileGeometry(z, tx, ty);
-      const camDir = equirectUvToDirection([20 / 360 + 0.5, 15 / 180 + 0.5]); // nadirAt's own sub-camera point
-      const centreAngle = angleBetween(geo.centre, camDir);
-      const dAtCap = 1 / Math.cos(centreAngle); // body-radii units (radius 1)
-      const altitudeKm = (dAtCap - 1) * EARTH_RADIUS_KM - 1; // 1 km inside the cap boundary
+    describe('horizon cull in metres, at an empirically-located cull boundary', () => {
+      // A tile at MIN_TILE_LEVEL sharing the aimedAt camera's own meridian
+      // (both at lon 0°), so only latitude separation drives the horizon
+      // question. The boundary is located by BINARY SEARCH against the real
+      // METRES-form function (not a hand-derived centre-angle formula, and
+      // not the radii form narrowed afterward — right at a cull boundary the
+      // two forms can disagree by a fraction of a km, since that's exactly
+      // where a unit mismatch would show up) — the tile's own patch radius
+      // shifts the true boundary well past what a centre-angle-only formula
+      // predicts at this coarse a level (the reason the four-corner test
+      // above measures every corner, not just the centre).
+      const Z = MIN_TILE_LEVEL;
+      const [TX, TY] = earthTileXyForUv([0 / 360 + 0.5, 40 / 180 + 0.5], Z, EARTH_TILE_PX);
+      const CAM_LAT_DEG = 10;
+      const geo = tileGeometry(Z, TX, TY);
 
-      const residentSlot = (tile: EarthTileId) =>
-        tile.z === z && tile.x === tx && tile.y === ty
-          ? { slot: 0, atlasUvOrigin: [0, 0] as const, atlasUvScale: [1, 1] as const, readyAtMs: 0 }
-          : null;
-      const result = cutSurfaceTiles({ ...toMetres(nadirAt(altitudeKm)), residentSlot });
+      function hasTile(altitudeKm: number): boolean {
+        const result = cutSurfaceTiles(toMetres(aimedAt(CAM_LAT_DEG, altitudeKm, geo.centre, Z)));
+        return result.requests.requests.some(
+          (r) => r.tile.z === Z && r.tile.x === TX && r.tile.y === TY,
+        );
+      }
 
-      expect(
-        result.cut.some((c) => c.id.z === z && c.id.x === tx && c.id.y === ty),
-        `z${z}/${tx}/${ty} sits just past the horizon and must be absent from cut`,
-      ).toBe(false);
+      // Visibility is a BAND in altitude, not a one-way step: too low (below
+      // the horizon) is absent, but so is too high — the tile's SCREEN
+      // footprint eventually shrinks below MIN_TILE_LEVEL's own LOD
+      // requirement and the walk never refines into it. `hi` must sit
+      // INSIDE that band (hand-verified true at 2000 km for this fixture),
+      // not past its far edge, or the search converges on the LOD edge
+      // instead of the horizon edge.
+      let lo = -EARTH_RADIUS_KM * 0.99; // definitely too low: on/below the surface
+      let hi = 2000; // inside the visible-AND-LOD-eligible band
+      for (let i = 0; i < 60; i++) {
+        const mid = (lo + hi) / 2;
+        if (hasTile(mid)) hi = mid;
+        else lo = mid;
+      }
+      const insideAltitudeKm = hi + 1;
+      const outsideAltitudeKm = lo - 1;
+
+      it('requests the tile just inside the horizon cap, in metres with an explicit radiusM', () => {
+        expect(hasTile(insideAltitudeKm)).toBe(true);
+      });
+
+      it('drops the tile just outside the horizon cap, in metres with an explicit radiusM', () => {
+        // The catching assertion, hand-verified: at this altitude, forcing
+        // radiusM back to 1 (as if the horizon test dropped its
+        // parameterisation and still assumed a unit sphere while
+        // camPosLocalM stayed metres-scaled) flips this exact tile from
+        // absent to present. Restored to the real radiusM below.
+        expect(hasTile(outsideAltitudeKm)).toBe(false);
+      });
     });
   });
 

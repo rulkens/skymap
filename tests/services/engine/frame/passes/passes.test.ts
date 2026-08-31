@@ -110,6 +110,9 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     galaxyPointRenderer,
     renderTargets,
     texturedDisks,
+    // Nothing in this file reads bodyPose — a stub that never resolves a
+    // body is a safe default, overridable like every other field.
+    bodyPose: () => null,
     ...overrides,
   };
 }

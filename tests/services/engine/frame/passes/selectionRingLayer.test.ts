@@ -27,6 +27,8 @@ function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
     renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],

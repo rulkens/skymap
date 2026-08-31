@@ -38,6 +38,11 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { imagePlaneBasis } from '../../../../../src/utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../../../src/utils/camera/frameUp';
+import { normalize3 } from '../../../../../src/utils/math/normalize3';
+import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
+import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
@@ -57,6 +62,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
+import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { EarthSurfaceTileDrawArgs } from '../../../../../src/@types/rendering/EarthSurfaceTileRenderer';
 
@@ -116,6 +122,36 @@ const SEEDED_MARS: SeededBody = {
   orientation: MARS_STATE.orientation,
 };
 
+const BODY_STATES_BY_ID = new Map<string, BodyState>([
+  ['earth', toBodyState(SEEDED_EARTH)],
+  ['mars', toBodyState(SEEDED_MARS)],
+]);
+
+/**
+ * A real `BodyPoseProvider` for a given camera position/target — mirrors
+ * `frameContext.ts`'s own construction (camBasisWorld via
+ * imagePlaneBasis/frameUp at roll 0, then `bodyRelativePose` per body) so
+ * `ctx.bodyPose` here exercises the SAME seam `earthLayer.ts` now reads
+ * (Task 9 fix round 1, B2) instead of a bespoke double. Resolves both earth
+ * and mars unconditionally — a given test's `state.data.bodies` (via the
+ * mocked `sceneBodyStates` above) is the actual per-test gate on which body
+ * a call succeeds for.
+ */
+function makeBodyPose(camPosMpc: Vec3, target: Vec3): BodyPoseProvider {
+  const camForward = normalize3([
+    target[0] - camPosMpc[0],
+    target[1] - camPosMpc[1],
+    target[2] - camPosMpc[2],
+  ]);
+  const { right, up } = imagePlaneBasis(camForward, 0, frameUp(undefined));
+  const camBasisWorld = mat3FromColumns(right, up, camForward);
+  return (bodyId) => {
+    const bodyState = BODY_STATES_BY_ID.get(bodyId);
+    if (bodyState === undefined) return null;
+    return bodyRelativePose({ bodyId, camPosMpc, camBasisWorld, bodyState });
+  };
+}
+
 const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
 const camLocalMock = bodySlabCamLocal as unknown as ReturnType<typeof vi.fn>;
 
@@ -150,6 +186,7 @@ function makeCtx(distance: number): ReadyFrameContext {
   return {
     cam: { distance, position: drawCamPos, target: SEEDED_EARTH.positionMpc },
     drawCamPos,
+    bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
     canvasSize: { width: 1280, height: 720 },
     fovYRad: (60 * Math.PI) / 180,
     drawPxPerRad: 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
@@ -315,6 +352,7 @@ describe('earthLayer.enabled', () => {
         target: SEEDED_EARTH.positionMpc,
       },
       drawCamPos,
+      bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
@@ -547,6 +585,7 @@ describe('earthLayer.draw', () => {
         target: SEEDED_EARTH.positionMpc,
       },
       drawCamPos,
+      bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
@@ -717,6 +756,7 @@ describe('earthLayer.draw — base globe fade under the tile cut', () => {
         target: SEEDED_EARTH.positionMpc,
       },
       drawCamPos,
+      bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;

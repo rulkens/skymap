@@ -49,6 +49,8 @@ function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
     renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
     cam: {} as never,
     vp: Float32Array.from(near0Vp) as unknown as Mat4,
     // slabViewOf(ctx, NEAR0) indexes ctx.slabs[NEAR0] (index 0).

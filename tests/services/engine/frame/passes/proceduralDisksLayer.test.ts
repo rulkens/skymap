@@ -50,6 +50,9 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       lastOutput: { quads: [], disks: [] },
       hasInFlightWork: () => false,
     } as any,
+    // Nothing in this file reads bodyPose — a stub that never resolves a
+    // body is a safe default, overridable like every other field.
+    bodyPose: () => null,
     ...overrides,
   };
 }

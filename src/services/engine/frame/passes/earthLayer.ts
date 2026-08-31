@@ -27,8 +27,6 @@ import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../../@types/scene/SceneBody';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -37,10 +35,6 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { normalize3 } from '../../../../utils/math/normalize3';
-import { mat3FromColumns } from '../../../../utils/math/mat3FromColumns';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
@@ -50,7 +44,6 @@ import { baseGlobeFadeAlpha } from '../../../../utils/scene/baseGlobeFadeAlpha';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
-import { bodyRelativePose } from '../../camera/bodyRelativePose';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../helpers/minPickRadiusMpc';
 import { sceneBodyStates } from '../sceneBodyStates';
 
@@ -80,24 +73,6 @@ function sceneBodyForId(state: EngineState, bodyId: BodyId): SceneBody | null {
   const planet = planets.find((p) => p.id === bodyId);
   if (planet !== undefined) return planet;
   return stars.find((s) => s.id === bodyId) ?? null;
-}
-
-/**
- * The camera's right|up|forward basis in WORLD axes, roll 0 — the same
- * `imagePlaneBasis`/`frameUp` seam `frameContext.ts`'s own `bodyPose` closure
- * runs to build `camBasisWorld` for `deriveSlabs`. Duplicated here (not
- * imported from `frameContext.ts`, which has no exported seam for it) so this
- * layer's own `bodyRelativePose` call reads the SAME basis a body-slab row's
- * `vp` was already built from.
- */
-function camBasisWorldOf(cam: OrbitCamera): Mat3 {
-  const forward = normalize3([
-    cam.target[0] - cam.position[0],
-    cam.target[1] - cam.position[1],
-    cam.target[2] - cam.position[2],
-  ]);
-  const { right, up } = imagePlaneBasis(forward, 0, frameUp(cam.upBasis));
-  return mat3FromColumns(right, up, forward);
 }
 
 /**
@@ -164,13 +139,12 @@ function computeBodySurfaceFrame(
   if (body === null) return null;
   const bodyState = sceneBodyStates(state, ctx).get(bodyId);
   if (bodyState === undefined) return null;
-
-  const pose = bodyRelativePose({
-    bodyId,
-    camPosMpc: ctx.cam.position,
-    camBasisWorld: camBasisWorldOf(ctx.cam),
-    bodyState,
-  });
+  // The SAME pose-provider closure `deriveSlabs` was fed to build this
+  // body's slab row (see ReadyFrameContext.bodyPose's doc) — reading it here
+  // instead of re-deriving the pose is what keeps this layer's eyeRelBodyM
+  // from ever drifting off the basis `view.slab.vp` was actually built from.
+  const pose = ctx.bodyPose(bodyId);
+  if (pose === null) return null;
   const radiusM = body.radiusM;
   // See composeBodySlabMvp's header: the seam already rotated the camera into
   // the body's fixed axes, so view.slab.vp (built about the eye from that

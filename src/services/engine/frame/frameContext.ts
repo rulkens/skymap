@@ -204,7 +204,10 @@ export function deriveFrameContext(
   // type with `deriveSlabs` untouched. `camBasisWorld` reruns the roll-0
   // image-plane basis NEAR0's own vp derivation uses (`imagePlaneBasis` is
   // the shared seam both call, not a copy) so a body row's screen orientation
-  // matches NEAR0's.
+  // matches NEAR0's. Forwarded onto `ReadyFrameContext.bodyPose` below (the
+  // SAME closure, not a second one) so a body-slab layer's own pose read
+  // (`prepareBodySurfaceFrame`) can never drift from the one `slabs` was
+  // built from — see that field's doc.
   const camForward = normalize3([
     cam.target[0] - cam.position[0],
     cam.target[1] - cam.position[1],
@@ -276,6 +279,7 @@ export function deriveFrameContext(
     cam,
     vp,
     slabs,
+    bodyPose,
     canvasSize,
     drawCamPos,
     drawPxPerRad,

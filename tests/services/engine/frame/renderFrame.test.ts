@@ -391,6 +391,8 @@ function makeInput(
   const ctx = {
     isReady: true as const,
     renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
     cam,
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],

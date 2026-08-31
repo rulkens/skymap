@@ -39,6 +39,8 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
   return {
     isReady: true,
     renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
     cam: {} as never,
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],
