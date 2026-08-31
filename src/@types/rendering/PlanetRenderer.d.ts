@@ -18,6 +18,7 @@
  */
 
 import type { Renderer } from './Renderer';
+import type { BodyId } from '../data/body/BodyId';
 
 export type PlanetRenderer = Renderer & {
   /**
@@ -36,5 +37,5 @@ export type PlanetRenderer = Renderer & {
    * `count` must not exceed `instances.length / 28`, or `draw` throws rather
    * than read past the caller's array. A zero count is a no-op.
    */
-  draw(pass: GPURenderPassEncoder, bodyId: string, instances: Float32Array, count: number): void;
+  draw(pass: GPURenderPassEncoder, bodyId: BodyId, instances: Float32Array, count: number): void;
 };

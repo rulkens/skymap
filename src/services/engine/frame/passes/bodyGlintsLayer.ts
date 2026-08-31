@@ -289,9 +289,9 @@ export const bodyGlintsLayer: ContentLayer = {
   // so earth-over-planet-over-moon is an unconditional depth win and the ORDER the
   // points appear in this list carries no priority. See `starPointPick.wesl`.
   //
-  // `bodyPickRenderer.drawPoints` is safe to call once per caller per pass (it
-  // claims its own per-pass slot of buffers); this layer and `starPointsLayer` are
-  // its two callers, each calling exactly once per `drawPick`.
+  // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit
+  // (see its module header); this layer and `starPointsLayer` are its two
+  // callers, each calling exactly once per `drawPick`.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;

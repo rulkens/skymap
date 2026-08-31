@@ -5,8 +5,7 @@
  * It records pickable body geometry into an ALREADY-BEGUN r32uint pick pass
  * (owned by the pick program), stamping each body's caller-packed identity into
  * the texels it covers. Like `starCatalogPickRenderer`, it owns no pass, no
- * texture and no readback — it is one `drawPick` provider among the NEAR0
- * pickable rows.
+ * texture and no readback.
  *
  * ### Two geometries → two OWN pipelines
  *
@@ -20,76 +19,46 @@
  *     pick billboards, each expanded to a generous 18 px footprint (these are the
  *     ≤25 labelled scene stars and the sub-pixel solar-system body glints — sparse
  *     click-invited targets; the survey star pick keeps its minimal clamp for its
- *     dense field — see `starPointPick.wesl`). Called ONCE PER CALLER PER PASS,
- *     each caller claiming its own per-pass slot (see the drawPoints race note).
- *     The caller's `variant` selects the pick-depth semantics: `'sceneStar'`
- *     (default, the famous stars — `vs` min-clamps true depth) vs `'glint'` (the
- *     body glints + Earth stamp — `vsGlint` forces the shallow glint band so
- *     importance, not nearness, orders them). See the two-point-pipelines note
- *     below.
+ *     dense field — see `starPointPick.wesl`). Safe to call MULTIPLE times per
+ *     SUBMIT — see the writeBuffer-vs-submit section below. The caller's
+ *     `variant` selects the pick-depth semantics: `'sceneStar'` (default, the
+ *     famous stars — `vs` min-clamps true depth) vs `'glint'` (the body glints +
+ *     Earth stamp — `vsGlint` forces the shallow glint band so importance, not
+ *     nearness, orders them).
  *
  * The sphere and points paths each compile their OWN `GPUShaderModule` (never a
  * shared module across the sphere/points pipelines — the WebGPU 'auto'-layout
  * trap). WITHIN the points path the two variant pipelines (`vs`/`vsGlint`) share
- * ONE `GPUShaderModule` AND one EXPLICIT pipeline layout, so a per-pass slot's
- * bind group binds to either — an explicit shared layout is precisely the fix for
- * the 'auto'-layout trap, so no per-variant bind group is needed.
+ * ONE `GPUShaderModule` AND one EXPLICIT pipeline layout, so a per-submit slot's
+ * bind group binds to either.
  *
- * ### The writeBuffer-vs-submit trap, applied to `drawSphere`
+ * ### The writeBuffer-vs-submit trap — the one race this file guards, twice
  *
- * The pick program now records pickable layers into MULTIPLE render passes per
- * submit — one per body-m slab row (Earth, each flat planet) plus one NEAR0 pass
- * for the resolved star spheres — before ONE `queue.submit`. All `queue.writeBuffer`
- * calls made across every one of those passes are applied to their buffers BEFORE
- * the GPU runs any command — so if `drawSphere` wrote a SINGLE shared uniform once
- * per call, every recorded sphere draw would read the LAST call's mvp + packedId
- * and all sphere picks would collapse onto the final body, whichever pass drew it.
+ * A pick SUBMIT now records MULTIPLE render passes: one per body-m slab row
+ * (Earth, each flat planet) plus one NEAR0 pass for the star spheres/points.
+ * Every `queue.writeBuffer` made anywhere in that submit lands BEFORE the GPU
+ * runs any of its recorded commands, so a draw path that reused ONE shared
+ * buffer across calls would have every recorded draw read the LAST call's bytes
+ * — the exact "planets have no picking representation" bug.
  *
- * **Mechanism chosen: one uniform buffer + 256-byte-aligned DYNAMIC OFFSETS,
- * with a monotonically-advancing per-SUBMIT cursor.** Each `drawSphere` writes its
- * `{ mvp, camPosLocal, packedId }` into the cursor's OWN slot and binds it via a
- * dynamic offset, so no two draws in a submit share bytes — the race cannot
- * happen. The cursor resets to 0 only when the SUBMIT OWNER calls `beginSubmit()`
- * (once, before recording that submit's passes) — NOT on every new pass object:
- * a pass-identity reset is exactly the bug this renderer once had, because one
- * submit spanning several passes would silently re-zero the cursor mid-submit and
- * let a later pass's sphere draw reuse an earlier pass's slot.
+ * Both paths avoid it with a per-SUBMIT cursor (`sphereCursor` / `pointCursor`)
+ * that gives each call its own slot of bytes, never shared with another call:
+ * `drawSphere` writes a 256-byte-aligned DYNAMIC-OFFSET slot in one shared
+ * uniform buffer (the pick contract is one sphere per call, so there is no
+ * batch to instance the way the visual `planetRenderer` does); `drawPoints`
+ * claims a whole `{ uniformBuffer, bindGroup, instanceBuffer }` slot per
+ * CALLER, grown on demand — a per-body dynamic offset can't express its
+ * variable-length instance buffer, so it gets its own buffer set instead
+ * (`texturedBodyRenderer`'s own-buffer-per-body fix, keyed here by call order
+ * rather than a body id).
  *
- * Why dynamic offsets over the sibling patterns:
- *
- *   - The VISUAL `planetRenderer` instances every planet in one draw so each
- *     reads its own baked record — but the pick CONTRACT is one sphere per
- *     call (each body carries its own packed id), so there is no single batch to
- *     instance; a per-draw uniform is the shape the contract names.
- *   - A per-slot BUFFER POOL (one buffer + bind group per draw, grown on demand)
- *     also works and grows safely mid-pass, but costs N buffers + N bind groups;
- *     dynamic offsets need exactly ONE buffer + ONE bind group. The sphere-draw
- *     count in practice stays well under `MAX_SPHERE_DRAWS` (Earth + the seeded
- *     planets + however many scene-star spheres are RESOLVED this frame — most
- *     of the roster stays point billboards via `drawPoints`), so the single
- *     fixed-size buffer never needs to grow — the pool's only
- *     advantage does not arise here.
- *
- * `drawPoints` is instanced (per-instance posRelCamMpc + packedId baked into an
- * instance buffer), so WITHIN one draw every instance reads its OWN record — no
- * race there. The hazard is ACROSS draws: it rebuilds its instance buffer + camera
- * uniform with one `writeBuffer` each, so if two same-pass callers shared one
- * instance buffer the second write would clobber the first before the GPU ran
- * either draw, collapsing both point batches onto the last caller's data.
- *
- * **Mechanism chosen for multi-call: per-SUBMIT SLOTS, one own set of buffers per
- * caller.** Each `drawPoints` call claims the next slot (a `{ uniformBuffer,
- * bindGroup, instanceBuffer }` record, grown on demand) via a cursor that resets
- * alongside the sphere cursor in `beginSubmit()`. Two callers within one submit
- * — the scene stars (`starPointsLayer`) and the sub-pixel body glints
- * (`bodyGlintsLayer`) — therefore write DIFFERENT buffers, so no `writeBuffer`
- * races submit. This is `texturedBodyRenderer`'s own-buffer-per-body fix, keyed
- * here by a per-submit slot cursor rather than a body id; per-slot buffers (not the
- * sphere path's dynamic-offset uniform) because each call also needs its OWN
- * variable-length instance VERTEX buffer, which a dynamic uniform offset cannot
- * express. Slots are reused across submits (the prior submit already ran before
- * its slots are handed out again), so the allocation is bounded by the max
- * callers in any one submit (two today).
+ * Either way, the cursor resets to 0 ONLY when the submit owner calls
+ * `beginSubmit()` — never on pass identity. A pass-identity reset is the bug
+ * this renderer once had: `pick()` / `renderForDebug()` (`pickProgram.ts`) each
+ * begin several passes per submit, so resetting per pass re-zeroed the cursor
+ * mid-submit and let a later pass's draw reuse an earlier pass's slot. Slots
+ * ARE safely reused across submits — the prior submit already ran on the queue
+ * before its slots are handed out again.
  *
  * ### Depth-tested, r32uint, no blend
  *
@@ -140,14 +109,13 @@ const SPHERE_CAM_POS_LOCAL_F32_INDEX = 16;
 const SPHERE_PACKED_ID_U32_INDEX = 19;
 
 /**
- * Upper bound on sphere pick draws recorded into one pass. Earth (1) +
- * `SCENE_PLANETS` (21 today) leave comfortable headroom under this cap, but
- * `SCENE_STARS.length` (119, the full famous-star roster — not "≈25": only a
- * FEW of those resolve to sphere-pick draws at once, the rest stay point
- * billboards via `drawPoints`) means the real bound is data-dependent, not a
- * fixed sum. A hypothetical over-count draws the first `MAX_SPHERE_DRAWS` and
- * silently drops the tail (a dropped-tail pick beats a GPU validation error)
- * — raise this constant if a future roster ever approaches it.
+ * Upper bound on sphere pick draws recorded across one SUBMIT: every body-m
+ * row (Earth + `SCENE_PLANETS`, 21 today) plus whichever `SCENE_STARS` spheres
+ * are RESOLVED this frame — not the full 119-star roster, most of which stays
+ * point billboards via `drawPoints`. Data-dependent, not a fixed sum, but the
+ * seed roster leaves comfortable headroom. An over-count draws the first
+ * `MAX_SPHERE_DRAWS` and drops the tail (dropped-tail beats a GPU validation
+ * error) — raise this constant if a future roster ever approaches it.
  */
 const MAX_SPHERE_DRAWS = 64;
 
@@ -288,8 +256,8 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
 
   // ── Scene-star / body-glint point pick pipeline (instanced billboards) ─────
   // 20-float scratch: writeCameraPrefix fills [0..17]; [18..19] stay 0 pads.
-  // Shared across per-pass slots — writeBuffer copies it immediately, so reusing
-  // the CPU scratch between slot uploads is safe.
+  // Shared across per-submit slots — writeBuffer copies it immediately, so
+  // reusing the CPU scratch between slot uploads is safe.
   const pointUniformScratch = new Float32Array(POINT_UNIFORM_BYTES / 4);
 
   const pointBgl = device.createBindGroupLayout({
@@ -304,7 +272,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
   );
 
   // Both point pipelines share ONE explicit layout, so their bind groups are
-  // interchangeable — the per-pass slot's bind group binds correctly to either.
+  // interchangeable — the per-submit slot's bind group binds correctly to either.
   // (The 'auto'-layout trap does NOT arise here: it only bites pipelines whose
   // layout was inferred; an EXPLICIT shared layout is exactly the fix for it.)
   const pointPipelineLayout = device.createPipelineLayout({
@@ -364,22 +332,19 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     },
   ]);
 
-  // ── Per-pass point-pick slots (own buffers per caller → multi-call safe) ──
+  // ── Per-submit point-pick slots (own buffers per caller — module header) ──
   //
-  // Each `drawPoints` call in a pass takes the NEXT slot: its own uniform buffer +
-  // bind group + grow-only instance buffer. Two callers in one pass (the scene
-  // stars and the sub-pixel body glints) therefore write DIFFERENT buffers, so no
-  // `queue.writeBuffer` races submit — see the module header's drawPoints race
-  // note. Slots are created on first use and reused across passes (the prior pass
-  // was already submitted before its slots are handed out again).
+  // Each `drawPoints` call claims the NEXT slot: its own uniform buffer + bind
+  // group + grow-only instance buffer, created on first use and reused across
+  // submits.
   type PointSlot = {
     uniformBuffer: GPUBuffer;
     bindGroup: GPUBindGroup;
     instanceBuffer: GPUBuffer | null;
     // Allocated instance-buffer size in BYTES, NOT instance count. A slot is keyed
     // by CALL ORDER (pointCursor), not by caller, so the SAME slot can be claimed
-    // by a different-STRIDE variant across passes (a 16-byte scene-star batch one
-    // pass, a 20-byte glint batch the next). Tracking bytes — not count — lets the
+    // by a different-STRIDE variant across submits (a 16-byte scene-star batch one
+    // submit, a 20-byte glint batch the next). Tracking bytes — not count — lets the
     // grow check catch a stride widening that a count-only check would miss.
     byteCapacity: number;
   };
@@ -407,14 +372,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     return slot;
   }
 
-  // ── Per-submit cursors + reset ────────────────────────────────────────────
-  //
-  // The sphere cursor advances per draw across the WHOLE submit; the point
-  // cursor advances per drawPoints CALLER across the whole submit. Both reset
-  // only when the submit owner calls `beginSubmit()` — NOT per pass, because one
-  // submit now spans multiple passes (one per body-m slab row plus NEAR0); a
-  // pass-identity reset would re-zero the cursor mid-submit and let a later
-  // pass's draw silently reuse an earlier pass's slot (see the module header).
+  // ── Per-submit cursors + reset — see the module header ────────────────────
   let sphereCursor = 0;
   let pointCursor = 0;
 
@@ -424,8 +382,8 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
   }
 
   function drawSphere(pass: GPURenderPassEncoder, args: BodySpherePickArgs): void {
-    // Guard the fixed slot count. Never reached given the seed roster (~50 < 64);
-    // dropping a tail draw beats a dynamic-offset-out-of-range validation error.
+    // Guard the fixed slot count (MAX_SPHERE_DRAWS above); dropping a tail draw
+    // beats a dynamic-offset-out-of-range validation error.
     if (sphereCursor >= MAX_SPHERE_DRAWS) return;
 
     sphereScratchF32.set(args.mvp, 0);
@@ -451,9 +409,8 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     const n = points.length;
     if (n === 0) return;
 
-    // Claim THIS call's own slot for the pass, advancing the per-pass cursor so a
-    // second same-pass caller writes a DIFFERENT uniform + instance buffer — no
-    // in-pass writeBuffer race (see the module header's drawPoints race note).
+    // Claim THIS call's own slot, advancing the per-submit cursor (module
+    // header) so a second same-submit caller writes a DIFFERENT buffer pair.
     const slot = pointSlotAt(pointCursor);
     pointCursor += 1;
 
@@ -499,8 +456,8 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     // Grow-only, BYTE-aware reuse per slot: reallocate whenever the batch's
     // required BYTES outgrow this slot's allocation. Sizing the check by bytes (not
     // instance count) is load-bearing: a slot is claimed by call ORDER, so the same
-    // slot can be inherited by a WIDER-stride variant across passes — e.g. when
-    // starPointsLayer drops out of the pass (famous-stars toggle off, or the roster
+    // slot can be inherited by a WIDER-stride variant across submits — e.g. when
+    // starPointsLayer drops out of a submit (famous-stars toggle off, or the roster
     // resolves to spheres) and bodyGlintsLayer becomes the first point caller,
     // inheriting slot 0 that was last sized for 16-byte scene-star instances. A
     // count-only check (`n > capacity`) would keep the 16-byte buffer for 20-byte

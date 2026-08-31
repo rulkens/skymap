@@ -15,14 +15,14 @@
  *
  *   - `drawSphere` rasterises ONE body sphere per call (Earth, a planet, or a
  *     resolved scene-star sphere). Each call carries its OWN CPU-baked MVP + a
- *     fully-packed pick id, so the ≤10 sphere draws recorded into one pass each
- *     resolve to their OWN body.
+ *     fully-packed pick id, so the sphere draws recorded across one SUBMIT
+ *     each resolve to their OWN body — see `beginSubmit` below.
  *   - `drawPoints` rasterises a sub-pixel body POINT partition as one instanced
  *     draw of ≤25 pick billboards, each expanded to a generous 18 px clickable
  *     footprint (labelled scene stars and sub-pixel solar-system body glints —
  *     click-invited targets) so a sub-pixel body stays easily clickable at its
- *     true screen position. Called once per caller per pass, each caller claiming
- *     its own per-pass slot of buffers.
+ *     true screen position. Safe to call multiple times per submit — same
+ *     `beginSubmit` contract.
  *
  * ### Why own-uniform, not the COSMO shared pick camera
  *
@@ -138,26 +138,20 @@ export type BodyPickRenderer = Renderer & {
   /**
    * Reset the sphere + point slot cursors for a fresh submit. The submit owner
    * (`pickProgram.pick()` / `renderForDebug()`) calls this ONCE, before recording
-   * any of that submit's passes — NOT once per pass. A submit now spans MULTIPLE
-   * passes (one per body-m slab row plus NEAR0), so resetting on pass identity
-   * instead of submit identity would re-zero the cursors mid-submit and let a
-   * later pass's draw silently reuse an earlier pass's slot.
+   * any of that submit's passes — NOT once per pass, which is the bug this
+   * contract replaced (see `bodyPickRenderer`'s module header).
    */
   beginSubmit(): void;
   /**
-   * Record ONE body sphere into an already-begun r32uint pick pass. Each call
-   * writes its own dynamic-offset uniform slot (mvp + camPosLocal + packedId), so
-   * the ≤64 sphere draws recorded across a SUBMIT (`beginSubmit` to the next
-   * `beginSubmit`) never collapse onto the last body's id (the writeBuffer-vs-
-   * submit race) — even when those draws land in different passes.
+   * Record ONE body sphere into an already-begun r32uint pick pass; safe to
+   * call repeatedly across a submit (`beginSubmit` to the next `beginSubmit`)
+   * — each call gets its own slot, even across different passes.
    */
   drawSphere(pass: GPURenderPassEncoder, args: BodySpherePickArgs): void;
   /**
-   * Record a sub-pixel body POINT partition as one instanced pick-billboard draw.
-   * Safe to call MULTIPLE times per submit (once per caller: the scene stars +
-   * the body glints): each call claims its own per-submit slot of buffers, so no
-   * caller's `writeBuffer` races another's against submit. No-op on an empty
-   * batch (the cursor is not advanced, so the empty call costs no slot).
+   * Record a sub-pixel body POINT partition as one instanced pick-billboard
+   * draw; safe to call multiple times per submit (once per caller: the scene
+   * stars + the body glints). No-op on an empty batch (costs no slot).
    */
   drawPoints(pass: GPURenderPassEncoder, args: BodyPointPickArgs): void;
 };

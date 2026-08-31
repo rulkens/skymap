@@ -604,14 +604,15 @@ export type EngineGpuHandles = {
    * planets, and the ~25 seeded scene stars incl. the Sun) — the body-family
    * analogue of `starCatalogPickRenderer`.  Records ONE body sphere per
    * `drawSphere` call (via a 256-byte-aligned dynamic-offset uniform whose
-   * per-pass cursor sidesteps the writeBuffer/submit race) and the sub-pixel
-   * scene-star POINT partition as one instanced pick-billboard draw.  Depth-
-   * tested (`depth32float`, 'less') so overlapping bodies resolve nearest-wins.
-   * Constructed in `initGpu` alongside `starCatalogPickRenderer`; the body
-   * layers' `drawPick` rows (Task 11) drive it.  Excluded from `isEngineReady`
-   * and null-checked at use.  Released and re-nulled by `destroy()` (its sphere
-   * mesh VBO/IBO, the sphere dynamic-offset + point camera uniforms, and the
-   * grow-only point instance buffer).
+   * per-SUBMIT cursor sidesteps the writeBuffer/submit race — see
+   * `bodyPickRenderer`'s header) and the sub-pixel scene-star POINT partition
+   * as one instanced pick-billboard draw.  Depth-tested (`depth32float`,
+   * 'greater', the NEAR0 reversed-Z convention) so overlapping bodies resolve
+   * nearest-wins.  Constructed in `initGpu` alongside `starCatalogPickRenderer`;
+   * the body layers' `drawPick` rows (Task 11) drive it.  Excluded from
+   * `isEngineReady` and null-checked at use.  Released and re-nulled by
+   * `destroy()` (its sphere mesh VBO/IBO, the sphere dynamic-offset + point
+   * camera uniforms, and the grow-only point instance buffer).
    */
   bodyPickRenderer: BodyPickRenderer | null;
   /**

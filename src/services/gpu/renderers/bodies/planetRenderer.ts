@@ -44,6 +44,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PlanetRenderer } from '../../../../@types/rendering/PlanetRenderer';
+import type { BodyId } from '../../../../@types/data/body/BodyId';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import {
   BODY_SPHERE_RINGS,
@@ -202,13 +203,13 @@ export function createPlanetRenderer(
   // `draw` call has passed; a later smaller call reuses the larger buffer.
   // `destroy()` on an outgoing buffer is safe even if a prior frame referenced
   // it — WebGPU defers the actual release until in-flight work completes.
-  const bodies = new Map<string, { buffer: GPUBuffer; capacity: number }>();
+  const bodies = new Map<BodyId, { buffer: GPUBuffer; capacity: number }>();
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
   function draw(
     pass: GPURenderPassEncoder,
-    bodyId: string,
+    bodyId: BodyId,
     instances: Float32Array,
     count: number,
   ): void {

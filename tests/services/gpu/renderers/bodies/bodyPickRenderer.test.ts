@@ -316,27 +316,42 @@ const sphereArgs = (packedId: number) => ({
 });
 
 describe('bodyPickRenderer.drawSphere — per-submit slot cursor (the pick-clobber regression)', () => {
-  it('two drawSphere calls in DIFFERENT passes of the SAME submit get DISTINCT dynamic offsets', () => {
+  it('two drawSphere calls in DIFFERENT passes of the SAME submit write DISTINCT slots', () => {
     // The actual bug: `pickProgram` now records one pass PER BODY-M SLAB ROW
     // (Earth, each flat planet) inside one submit. The old `beginPassIfNew`
     // reset zeroed the sphere cursor on every new pass object, so every row's
-    // sphere pick wrote dynamic offset 0 — the farthest body's bytes won for
-    // every body. Without a `beginSubmit()` call between them, two passes in
-    // one submit must still advance to DIFFERENT slots.
+    // sphere pick wrote slot 0 — the farthest body's bytes won for every body.
+    // Without a `beginSubmit()` call between them, two passes in one submit
+    // must still advance to DIFFERENT slots: distinct `writeBuffer` targets
+    // (the actual clobber-proofing) AND a matching distinct bound offset (the
+    // bind group would otherwise read the wrong slot even if the write landed
+    // correctly).
     const device = mockDevice();
     const renderer = createBodyPickRenderer(device, false);
 
     const passEarth = mockPass();
     renderer.drawSphere(passEarth, sphereArgs(1));
-    const offsetEarth = (passEarth.setBindGroup as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]![2] as number[];
-
     const passMars = mockPass();
     renderer.drawSphere(passMars, sphereArgs(2));
+
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+    const sphereWrites = writeBuffer.mock.calls.filter(([buffer]) =>
+      (buffer as { label?: string }).label?.startsWith('body-pick-sphere-uniform'),
+    );
+    expect(sphereWrites).toHaveLength(2);
+    const [, offsetA] = sphereWrites[0]!;
+    const [, offsetB] = sphereWrites[1]!;
+    expect(offsetB).not.toBe(offsetA);
+
+    const offsetEarth = (passEarth.setBindGroup as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![2] as number[];
     const offsetMars = (passMars.setBindGroup as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0]![2] as number[];
-
     expect(offsetMars[0]).not.toBe(offsetEarth[0]);
+    // The bound offset matches the byte offset actually written — proves the
+    // two aren't just independently distinct but paired correctly.
+    expect(offsetEarth[0]).toBe(offsetA);
+    expect(offsetMars[0]).toBe(offsetB);
   });
 
   it('beginSubmit() resets the sphere cursor back to offset 0', () => {
@@ -355,27 +370,5 @@ describe('bodyPickRenderer.drawSphere — per-submit slot cursor (the pick-clobb
       .calls[0]![2] as number[];
 
     expect(secondOffset[0]).toBe(firstOffset[0]);
-  });
-
-  it('each drawSphere call writes its OWN dynamic-offset slot of the shared uniform buffer', () => {
-    // Distinct write targets — not just distinct offsets read back through the
-    // bind group — is the actual clobber-proofing: two writeBuffer calls at two
-    // different byte offsets into the SAME buffer never overlap.
-    const device = mockDevice();
-    const renderer = createBodyPickRenderer(device, false);
-    const passA = mockPass();
-    const passB = mockPass();
-
-    renderer.drawSphere(passA, sphereArgs(1));
-    renderer.drawSphere(passB, sphereArgs(2));
-
-    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
-    const sphereWrites = writeBuffer.mock.calls.filter(([buffer]) =>
-      (buffer as { label?: string }).label?.startsWith('body-pick-sphere-uniform'),
-    );
-    expect(sphereWrites).toHaveLength(2);
-    const [, offsetA] = sphereWrites[0]!;
-    const [, offsetB] = sphereWrites[1]!;
-    expect(offsetB).not.toBe(offsetA);
   });
 });
