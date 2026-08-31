@@ -322,21 +322,6 @@ export function createAtmosphereShellRenderer(
     depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
   };
 
-  function createShellPipeline(
-    label: string,
-    entryPoint: string,
-    blend: GPUBlendState,
-  ): GPURenderPipeline {
-    return device.createRenderPipeline({
-      label,
-      layout: shellPipelineLayout,
-      vertex: shellVertexState,
-      fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
-      primitive: shellPrimitiveState,
-      depthStencil: shellDepthState,
-    });
-  }
-
   // Inside-shell state (camera inside the atmosphere top): a full-screen
   // triangle, no vertex buffer, and an always-pass depth test — there is no
   // scene depth to test against from inside (spec §4.4). NOT routed through
@@ -350,18 +335,38 @@ export function createAtmosphereShellRenderer(
     depthCompare: 'always',
   };
 
-  function createInsideShellPipeline(
+  /** The outside (proxy-sphere) and inside (full-screen) draws differ only in
+   *  this triple — vertex/primitive/depthStencil are otherwise identical
+   *  across all four shell pipelines. */
+  type ShellPipelineState = {
+    vertex: GPUVertexState;
+    primitive: GPUPrimitiveState;
+    depthStencil: GPUDepthStencilState;
+  };
+  const outsideShellState: ShellPipelineState = {
+    vertex: shellVertexState,
+    primitive: shellPrimitiveState,
+    depthStencil: shellDepthState,
+  };
+  const insideShellState: ShellPipelineState = {
+    vertex: insideVertexState,
+    primitive: insidePrimitiveState,
+    depthStencil: insideDepthState,
+  };
+
+  function createShellPipeline(
     label: string,
     entryPoint: string,
     blend: GPUBlendState,
+    state: ShellPipelineState,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
       layout: shellPipelineLayout,
-      vertex: insideVertexState,
+      vertex: state.vertex,
       fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
-      primitive: insidePrimitiveState,
-      depthStencil: insideDepthState,
+      primitive: state.primitive,
+      depthStencil: state.depthStencil,
     });
   }
 
@@ -383,6 +388,7 @@ export function createAtmosphereShellRenderer(
     'atmosphere-shell-multiply-pipeline',
     'fsMultiply',
     multiplyBlend,
+    outsideShellState,
   );
 
   // Pass 2 — ADD. Straight accumulation of the exposed in-scatter. Its alpha
@@ -393,18 +399,25 @@ export function createAtmosphereShellRenderer(
     color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
   };
-  const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', addBlend);
+  const shellAddPipeline = createShellPipeline(
+    'atmosphere-shell-add-pipeline',
+    'fsAdd',
+    addBlend,
+    outsideShellState,
+  );
 
   // Inside pair — SAME blend objects as the outside pair (see above).
-  const shellInsideMultiplyPipeline = createInsideShellPipeline(
+  const shellInsideMultiplyPipeline = createShellPipeline(
     'atmosphere-shell-inside-multiply-pipeline',
     'fsInsideMultiply',
     multiplyBlend,
+    insideShellState,
   );
-  const shellInsideAddPipeline = createInsideShellPipeline(
+  const shellInsideAddPipeline = createShellPipeline(
     'atmosphere-shell-inside-add-pipeline',
     'fsInsideAdd',
     addBlend,
+    insideShellState,
   );
 
   // ── Per-body bundles ───────────────────────────────────────────────────────
