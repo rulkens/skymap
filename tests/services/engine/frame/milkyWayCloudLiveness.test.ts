@@ -1,10 +1,8 @@
 /**
  * deriveMilkyWayCloudAlpha's approach fade — regression coverage for the
  * galactic-centre blowout: the GC gets its OWN approach band
- * (`milkyWayApproachGc`), wider than the Sun's, whose `floor` keeps the
- * impostor dimly visible there instead of vanishing outright (nothing else
- * covers the extincted bulge). The Sun's own descent (`milkyWayApproachSun`)
- * must still reach 0, unaffected by the GC.
+ * (`milkyWayApproachGc`), wider than the Sun's, closing fully at the Centre.
+ * The Sun's own descent (`milkyWayApproachSun`) is unaffected by the GC.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -57,17 +55,16 @@ function nearGalacticCentre(distMpc: number): Vec3 {
 }
 
 describe('deriveMilkyWayCloudAlpha — galactic-centre approach fade', () => {
-  it('holds at the dim floor within 100 pc of Sgr A* instead of culling the cloud', () => {
+  it('culls the cloud entirely within 100 pc of Sgr A*', () => {
     const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(100 * PC)));
-    expect(alpha).not.toBeNull();
-    expect(alpha).toBeCloseTo(SCALE_FADE_BANDS.milkyWayApproachGc.floor, 6);
+    expect(alpha).toBeNull();
   });
 
   it('partially fades between the galactic-centre approach band edges', () => {
     const distMpc = 1000 * PC; // between goneAt (200 pc) and fullAt (4 kpc)
     const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(distMpc)));
     const expected = fadeBand(SCALE_FADE_BANDS.milkyWayApproachGc, distMpc);
-    expect(expected).toBeGreaterThan(SCALE_FADE_BANDS.milkyWayApproachGc.floor!);
+    expect(expected).toBeGreaterThan(0);
     expect(expected).toBeLessThan(1);
     expect(alpha).toBeCloseTo(expected, 6);
   });

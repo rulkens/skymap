@@ -65,10 +65,11 @@ export const SCALE_FADE_BANDS = {
   milkyWayApproachSun: { fullAt: 0.002, goneAt: 0.0002 },
 
   // Keyed on: CAMERA distance from the `galactic-centre` region's anchor
-  // (Sgr A*), Mpc. Wider than the Sun's band (the blowout is worse near the
-  // Centre), and floored: nothing replaces the impostor here — Gaia's bulge
-  // coverage is dust-extincted — so it bottoms out dim instead of vanishing.
-  milkyWayApproachGc: { fullAt: 0.004, goneAt: 0.0002, floor: 0.000015 },
+  // (Sgr A*), Mpc. Wider than the Sun's band — the blowout is worse near the
+  // Centre — and it fades fully to 0: a dim floor reads as over-bright star
+  // blobs this deep, so don't add one back; past `goneAt` the S-star cluster
+  // is the content.
+  milkyWayApproachGc: { fullAt: 0.004, goneAt: 0.0002 },
 
   // Keyed on: the STAR's own distance from the camera, pc. Caption edges scale
   // with the roster via FARTHEST_STAR_PC. Pop-free contract with the caption
