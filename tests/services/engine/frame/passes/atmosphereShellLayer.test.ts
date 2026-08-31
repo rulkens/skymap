@@ -153,17 +153,6 @@ describe('atmosphereShellLayer.enabled', () => {
     expect(atmosphereShellLayer.enabled(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
   });
 
-  it('is false when the view is not a body-m row', () => {
-    const state = makeState({ draw: vi.fn() });
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    expect(atmosphereShellLayer.enabled(state, makeCtx(), worldMpcView)).toBe(false);
-  });
-
   it('is false while the atmosphereShellRenderer handle is null, even for a bare ctx (handle short-circuits first)', () => {
     const state = makeState(null);
     expect(atmosphereShellLayer.enabled(state, CTX_STUB, makeBodyView('earth' as BodyId))).toBe(
@@ -234,18 +223,5 @@ describe('atmosphereShellLayer.draw', () => {
     const state = makeState(null);
     const view = makeBodyView('earth' as BodyId);
     expect(() => atmosphereShellLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
-
-  it('is a no-op when the view is not a body-m row', () => {
-    const drawSpy = vi.fn();
-    const state = makeState({ draw: drawSpy });
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    atmosphereShellLayer.draw(PASS_STUB, worldMpcView, makeCtx(), state);
-    expect(drawSpy).not.toHaveBeenCalled();
   });
 });

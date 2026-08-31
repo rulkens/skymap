@@ -22,20 +22,16 @@ import type { BodyId } from '../data/body/BodyId';
 
 export type PlanetRenderer = Renderer & {
   /**
-   * Draw `count` planets belonging to `bodyId` into the current (opaque,
-   * depth-tested) pass with a single instanced `drawIndexed`. `instances` is a
-   * packed Float32Array of `count` per-instance records, each 28 floats: floats
-   * 0..15 the body's column-major MVP (model T·R·S + view + projection),
-   * 16..18 linear-RGB albedo (+ pad at 19), 20..22 the sun direction in the
-   * body's local frame (+ pad at 23), 24..26 camPosLocal (+ pad at 27). `draw`
-   * uploads the first `count` records in ONE `queue.writeBuffer` and issues ONE
-   * draw — safe WITHIN this call, but `planetsLayer` calls `draw` once per
-   * body-m slab row, all inside one submit, so each `bodyId` gets its OWN
-   * grow-only instance buffer (the `texturedBodyRenderer` own-buffer-per-body
-   * precedent): two same-submit calls for different ids never share a write
-   * target, so neither can clobber the other before the GPU runs either draw.
-   * `count` must not exceed `instances.length / 28`, or `draw` throws rather
-   * than read past the caller's array. A zero count is a no-op.
+   * Draw the one planet belonging to `bodyId` into the current (opaque,
+   * depth-tested) pass. `instance` is a packed Float32Array of 28 floats:
+   * floats 0..15 the body's column-major MVP (model T·R·S + view +
+   * projection), 16..18 linear-RGB albedo (+ pad at 19), 20..22 the sun
+   * direction in the body's local frame (+ pad at 23), 24..26 camPosLocal (+
+   * pad at 27). `planetsLayer` calls `draw` once per body-m slab row, all
+   * inside one submit, so each `bodyId` gets its OWN instance buffer (the
+   * `texturedBodyRenderer` own-buffer-per-body precedent): two same-submit
+   * calls for different ids never share a write target, so neither can
+   * clobber the other before the GPU runs either draw.
    */
-  draw(pass: GPURenderPassEncoder, bodyId: BodyId, instances: Float32Array, count: number): void;
+  draw(pass: GPURenderPassEncoder, bodyId: BodyId, instance: Float32Array): void;
 };

@@ -224,7 +224,7 @@ export function deriveFrameContext(
   const bodyPose: BodyPoseProvider = (bodyId) => {
     const bodyState = bodyStates.get(bodyId);
     if (bodyState === undefined) return null;
-    return bodyRelativePose({ bodyId, camPosMpc: cam.position, camBasisWorld, bodyState });
+    return bodyRelativePose({ camPosMpc: cam.position, camBasisWorld, bodyState });
   };
 
   // NEAR0's distanceRangeM (spec §7.1): the star spheres actually drawn this
@@ -254,7 +254,6 @@ export function deriveFrameContext(
     cam,
     cosmoVp: vp,
     pivotRadiusMpc: pivotRadiusMpc(state.selectionRows.focus),
-    bodyStates,
     pose: bodyPose,
     visibleBodies,
     viewportPx: [canvasSize.width, canvasSize.height] as Vec2,

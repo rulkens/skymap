@@ -56,26 +56,8 @@
  * carries a large translation that nearly cancels it. Narrowing either
  * operand to f32 before the multiply loses the low-order bits that encode
  * the inter-body separation, misplacing the body by more than one radius.
- * `proj · view · model` is therefore computed entirely in f64 (`mat4d`).
- *
- * The result USED to narrow to f32 here too, on the reasoning that once the
- * cancellation above is resolved every element is "well-conditioned". That
- * held for every GPU-drawing caller (a sphere renderer's uniform write), but
- * Earth's now-retired `prepareEarthFrame` (`earthLayer.ts`, before the body
- * render slabs migration) also fed this SAME mvp to `cutSurfaceTiles`, a
- * CPU-side walk evaluating `mvp·p` at ground points metres from the camera.
- * There the `w`-row cancelled its OWN large terms (the `radiusMpc`-scale
- * entries this function's model factor writes) down to `w≈10⁻²¹` at ~60 m
- * altitude — a SECOND, independent cancellation, internal to this matrix
- * rather than to the position delta above; narrowing before that walk ran
- * reintroduced per-element f32 rounding at a magnitude that was a ~1%
- * relative error on `w`, enough to corrupt the walk's bbox-cull test and
- * drop tiles that were actually on screen — see
- * `.superpowers/sdd/2026-08-20-earth-rtc-surface-foundation/cut-replay-exact-report.md`.
- * Earth's tile planner is metres-native now (`composeBodySlabMvp`) and no
- * longer routes through this function at all, but the f64-return convention
- * stays for the remaining callers: a GPU-drawing caller narrows via
- * `narrowMat4` at its OWN upload site.
+ * `proj · view · model` is therefore computed entirely in f64 (`mat4d`) and
+ * returned un-narrowed — callers narrow at their own upload site.
  *
  * The `foregroundVp` produced by `computeForegroundViewProj` is already
  * renderOrigin-relative, so the model's translation delta must be expressed
@@ -107,9 +89,8 @@ import type { Vec3 } from '../../@types/math/Vec3';
  *                      so the flatten tilts with `orientation`. Defaults to `0`
  *                      (a true sphere), leaving uniform-radius callers unchanged.
  * @returns  A `Float64Array` of 16 values (column-major proj·view·model),
- *           composed entirely in f64. Narrow via `narrowMat4` before a GPU
- *           uniform write; a CPU-side consumer (the surface-tile planner)
- *           must keep it f64 — see the module header.
+ *           composed entirely in f64. Narrow via `narrowMat4` at the GPU
+ *           uniform write — see the module header.
  */
 export function composeBodyMvp(
   foregroundVp: Float64Array,

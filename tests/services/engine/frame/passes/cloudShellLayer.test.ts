@@ -169,17 +169,6 @@ describe('cloudShellLayer.enabled', () => {
       false,
     );
   });
-
-  it('is false when the view is not a body-m row', () => {
-    const state = makeState({ draw: vi.fn() }, true);
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10), worldMpcView)).toBe(false);
-  });
 });
 
 describe('cloudShellLayer.draw', () => {

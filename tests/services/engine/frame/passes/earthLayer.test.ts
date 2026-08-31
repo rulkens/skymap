@@ -148,7 +148,7 @@ function makeBodyPose(camPosMpc: Vec3, target: Vec3): BodyPoseProvider {
   return (bodyId) => {
     const bodyState = BODY_STATES_BY_ID.get(bodyId);
     if (bodyState === undefined) return null;
-    return bodyRelativePose({ bodyId, camPosMpc, camBasisWorld, bodyState });
+    return bodyRelativePose({ camPosMpc, camBasisWorld, bodyState });
   };
 }
 
@@ -332,31 +332,6 @@ describe('earthLayer.enabled', () => {
     expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), VIEW_STUB)).toBe(
       false,
     );
-  });
-
-  it('is disabled while Earth is sub-pixel, even inside the foreground band', () => {
-    // Camera inside the foreground gate (cam.distance small) but positioned
-    // ~1e-6 Mpc from Earth — the ~4e-16 Mpc globe subtends ~3e-7 px there,
-    // far under SUB_PIXEL_BODY_CULL_PX, so the layer must leave the pass
-    // plan: a sub-pixel sphere adds nothing the star backdrop doesn't.
-    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
-    const drawCamPos: Vec3 = [
-      SEEDED_EARTH.positionMpc[0] + 1e-6,
-      SEEDED_EARTH.positionMpc[1],
-      SEEDED_EARTH.positionMpc[2],
-    ];
-    const subPixelCtx = {
-      cam: {
-        distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
-        position: drawCamPos,
-        target: SEEDED_EARTH.positionMpc,
-      },
-      drawCamPos,
-      bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
-    expect(earthLayer.enabled(state, subPixelCtx, VIEW_STUB)).toBe(false);
   });
 });
 

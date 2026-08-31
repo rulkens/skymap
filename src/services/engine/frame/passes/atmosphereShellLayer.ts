@@ -39,11 +39,8 @@
  *
  * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis
  *
- * Same seam as `earthLayer` and every body-slab layer: this row's `pose =
- * ctx.bodyPose(bodyId)` is the SAME closure `deriveSlabs` built this row's
- * `view.slab.vp` from, so `composeBodySlabMvp`/`bodySlabCamLocal` compose
- * against the eye-relative metre offset that vp already expects — no
- * rotation term, no world translation (the seam carries both). See
+ * Same seam as every body-slab layer: this row's `pose = ctx.bodyPose(bodyId)`
+ * is the SAME closure `deriveSlabs` built this row's `view.slab.vp` from. See
  * `composeBodySlabMvp`'s module header.
  *
  * ### Which bodies draw this frame

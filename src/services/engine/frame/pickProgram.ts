@@ -234,8 +234,7 @@ export function createPickProgram(deps: {
   // fixed 10 kpc–50 Gpc bracket is always farther than any near-field/body
   // content. Fixes the regression where a raw numeric-ascending slab-index
   // sort let any NEAR0(0) star hit beat a genuinely nearer body/planet hit,
-  // and even let COSMO(1) beat a body row(2+) — see
-  // .superpowers/sdd/2026-08-26-body-render-slabs/pick-stars-investigation.md.
+  // and even let COSMO(1) beat a body row(2+).
   // Registry order is preserved WITHIN each slab (a `.filter()` keeps the
   // array order), which is the @group(0) prefix contract: point-sprites runs
   // first in the COSMO pass and leaves slot 0 bound to the shared pick camera
@@ -247,9 +246,9 @@ export function createPickProgram(deps: {
     ctx: ReadyFrameContext,
   ): { slabIndex: number; view: SlabView; layers: ContentLayer[] }[] {
     const candidates = layers.filter((l) => l.drawPick);
-    // Every body-row slab index present this frame — a 'body' layer (none
-    // declares `drawPick` yet; Tasks 9-11) contributes to each one, the same
-    // widening `executeFrame` applies. `ctx.slabs` holds full `Slab`s, so this
+    // Every body-row slab index present this frame — a 'body' layer's
+    // `drawPick` (`earthLayer`, `planetsLayer`) contributes to each one, the
+    // same widening `executeFrame` applies. `ctx.slabs` holds full `Slab`s, so this
     // reads `frame.kind` directly (the index-only sibling, `isBodySlabIndex`
     // in slabs.ts, is for the one call site with no `Slab` in hand).
     const bodySlabIndices = ctx.slabs

@@ -126,9 +126,7 @@ function makeBodyView(bodyId: BodyId): SlabView {
 
 function makeRendererSpy() {
   return {
-    draw: vi.fn<
-      (pass: GPURenderPassEncoder, bodyId: string, instances: Float32Array, count: number) => void
-    >(),
+    draw: vi.fn<(pass: GPURenderPassEncoder, bodyId: string, instance: Float32Array) => void>(),
   };
 }
 
@@ -171,17 +169,6 @@ describe('planetsLayer.enabled', () => {
     expect(planetsLayer.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(false);
     expect(planetsLayer.enabled(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
   });
-
-  it('is false when the view is not a body-m row', () => {
-    const state = makePartitionFixtureState();
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    expect(planetsLayer.enabled(state, makeCtx(), worldMpcView)).toBe(false);
-  });
 });
 
 describe('planetsLayer.draw — one body per row (partition boundary)', () => {
@@ -197,7 +184,6 @@ describe('planetsLayer.draw — one body per row (partition boundary)', () => {
     planetsLayer.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state); // flat row
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     expect(renderer.draw.mock.calls[0]![1]).toBe('mercury'); // this row's bodyId
-    expect(renderer.draw.mock.calls[0]![3]).toBe(1); // single-instance draw
   });
 
   it('texturedBodiesLayer and planetsLayer never both draw the same body', () => {
@@ -235,19 +221,6 @@ describe('planetsLayer.draw — one body per row (partition boundary)', () => {
     const view = makeBodyView('mercury' as BodyId);
     const state = { gpu: { planetRenderer: null } } as unknown as EngineState;
     expect(() => planetsLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
-
-  it('is a no-op when the view is not a body-m row', () => {
-    const state = makePartitionFixtureState();
-    const drawSpy = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    planetsLayer.draw(PASS_STUB, worldMpcView, makeCtx(), state);
-    expect(drawSpy.draw).not.toHaveBeenCalled();
   });
 });
 
@@ -287,9 +260,8 @@ describe('planetsLayer.draw — the f64 seam and packed record layout', () => {
 
     planetsLayer.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state);
 
-    const [, bodyId, staging, count] = renderer.draw.mock.calls[0]!;
+    const [, bodyId, staging] = renderer.draw.mock.calls[0]!;
     expect(bodyId).toBe('mercury');
-    expect(count).toBe(1);
     expect(staging).toHaveLength(INSTANCE_FLOATS);
     expect(staging[16]).toBeCloseTo(mercury.albedo[0]);
     expect(staging[17]).toBeCloseTo(mercury.albedo[1]);

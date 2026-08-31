@@ -26,7 +26,6 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
-import type { BodyState } from '../../../@types/scene/BodyState';
 import type { ChainRow } from '../../../@types/scene/ChainRow';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
@@ -147,9 +146,9 @@ const NEAR_MARGIN_EPS = 1e-3;
 
 /**
  * Build one body's slab row (index left at a placeholder — the caller assigns
- * the real painter-order index once every row is sorted), plus the screen
- * footprint the §7.2 overlap invariant needs (`chainRow`), or `null` when
- * `pose` reports the body has no pose this frame (culled).
+ * the real painter-order index once every row is sorted), plus the DEV-only
+ * screen footprint the §7.2 overlap invariant needs (`chainRow`), or `null`
+ * when `pose` reports the body has no pose this frame (culled).
  *
  * `vp` is built ABOUT THE EYE: `basisM`'s forward/up columns feed `mat4d.lookAt`
  * with the eye at the origin, so the rotation `lookAt` derives carries no
@@ -216,9 +215,9 @@ function bodySlabRow(input: {
   // The altitude-above-SURFACE term stays radial: it only wins once the
   // camera is inside the outermost shell (viewZ - marginM goes deeply
   // negative either way), and that regime is a close orbit/descent around
-  // THIS body, where θ ≈ 0 — see
-  // .superpowers/sdd/2026-08-26-body-render-slabs/label-window-investigation.md
-  // for why it must stay well-conditioned instead of falling to MIN_NEAR_M.
+  // THIS body, where θ ≈ 0. Dropping this term and falling straight to
+  // MIN_NEAR_M there measurably collapses the near-field label window at low
+  // altitude, so it must stay well-conditioned instead.
   const near = Math.max(viewZ - marginM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
   // distanceRangeM STAYS RADIAL — the painter sort and pick ordering key off
   // the body's actual distance, not its view-axis depth.
@@ -228,17 +227,21 @@ function bodySlabRow(input: {
   const proj = mat4d.perspectiveReverseZ(fovYRad, aspect, near);
   const vp = mat4d.multiply(proj, view) as Float64Array;
 
-  const centrePx =
-    projectToScreenPx([-eyeRelBodyM[0], -eyeRelBodyM[1], -eyeRelBodyM[2]], vp, viewportPx) ??
-    ([Infinity, Infinity] as const);
-  const radiusPx =
-    bodyApparentDiameterPx({
-      positionMpc: [dM * SCALE_UNITS.M_TO_MPC, 0, 0],
-      radiusM: rMaxM,
-      camPosMpc: [0, 0, 0],
-      viewportHeightPx: viewportPx[1],
-      fovYRad,
-    }) / 2;
+  // The §7.2 overlap scan below is DEV-only, so the screen footprint it needs
+  // is too — a prod frame skips both, not just the scan reading it.
+  const centrePx = import.meta.env.DEV
+    ? (projectToScreenPx([-eyeRelBodyM[0], -eyeRelBodyM[1], -eyeRelBodyM[2]], vp, viewportPx) ??
+      ([Infinity, Infinity] as const))
+    : ([0, 0] as const);
+  const radiusPx = import.meta.env.DEV
+    ? bodyApparentDiameterPx({
+        positionMpc: [dM * SCALE_UNITS.M_TO_MPC, 0, 0],
+        radiusM: rMaxM,
+        camPosMpc: [0, 0, 0],
+        viewportHeightPx: viewportPx[1],
+        fovYRad,
+      }) / 2
+    : 0;
 
   return {
     slab: {
@@ -279,12 +282,10 @@ function bodySlabRow(input: {
  * `null` pose — culled this frame — contributes no row), assigned indices
  * `2, 3, …` in back-to-front painter order (sorted by `distanceRangeM[0]`
  * descending, spec §4/§7) — so a body row's index doubles as its painter
- * ordinal and `slabName`/`groupKeyOf` need no extra parameter. `bodyStates`
- * is threaded through (not read here) so the caller's `pose` closure and this
- * frame's body layers are provably reading the SAME `simDays` snapshot — see
- * the module-level "one `R_body(t)` sample" rule. `viewportPx` feeds each body
- * row's screen-space footprint (`bodySlabRow`'s `chainRow`), which in DEV only
- * backs the `chainOverlapViolations` painter-order check (spec §7.2) below.
+ * ordinal and `slabName`/`groupKeyOf` need no extra parameter. `viewportPx`
+ * feeds each body row's screen-space footprint (`bodySlabRow`'s `chainRow`),
+ * computed only in DEV, where it backs the `chainOverlapViolations`
+ * painter-order check (spec §7.2) below.
  *
  * NEAR0's `distanceRangeM` comes from `starSphereRangeM` — the interval the
  * star spheres ACTUALLY drawn this frame span (spec §7.1), not the
@@ -294,7 +295,6 @@ export function deriveSlabs(input: {
   readonly cam: OrbitCamera;
   readonly cosmoVp: Mat4;
   readonly pivotRadiusMpc: number | null;
-  readonly bodyStates: ReadonlyMap<string, BodyState>;
   readonly pose: BodyPoseProvider;
   readonly visibleBodies: readonly SceneBody[];
   readonly viewportPx: Readonly<Vec2>;
@@ -411,7 +411,6 @@ export function deriveSlabs(input: {
 export function foregroundChainOrder(slabs: readonly Slab[]): readonly number[] {
   return slabs
     .filter((slab) => slab.index === NEAR0 || slab.frame.kind === 'body-m')
-    .slice()
     .sort((a, b) => nearestM(b) - nearestM(a))
     .map((slab) => slab.index);
 }

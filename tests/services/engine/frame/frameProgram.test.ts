@@ -204,7 +204,6 @@ describe('frameProgram', () => {
       cam: makeCam(),
       cosmoVp: new Float32Array(16) as unknown as Mat4,
       pivotRadiusMpc: null,
-      bodyStates: new Map(),
       pose: () => null,
       visibleBodies: [],
       viewportPx: [1920, 1080],

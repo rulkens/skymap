@@ -165,17 +165,6 @@ describe('texturedBodiesLayer.enabled', () => {
     expect(texturedBodiesLayer.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(true);
     expect(texturedBodiesLayer.enabled(state, ctx, makeBodyView('jupiter' as BodyId))).toBe(false);
   });
-
-  it('is false when the view is not a body-m row', () => {
-    const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390000)]);
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    expect(texturedBodiesLayer.enabled(state, makeCtx(), worldMpcView)).toBe(false);
-  });
 });
 
 describe('texturedBodiesLayer.draw', () => {
@@ -274,18 +263,5 @@ describe('texturedBodiesLayer.draw', () => {
     const view = makeBodyView('mars' as BodyId);
     const state = makeState(null, [bodyAt('mars', 3390000)]);
     expect(() => texturedBodiesLayer.draw(PASS_STUB, view, makeCtx(), state)).not.toThrow();
-  });
-
-  it('is a no-op when the view is not a body-m row', () => {
-    const renderer = makeRendererSpy(['mars']);
-    const state = makeState(renderer, [bodyAt('mars', 3390000)]);
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    texturedBodiesLayer.draw(PASS_STUB, worldMpcView, makeCtx(), state);
-    expect(renderer.draw).not.toHaveBeenCalled();
   });
 });

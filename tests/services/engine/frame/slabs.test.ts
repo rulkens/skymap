@@ -35,7 +35,6 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -72,7 +71,6 @@ function baseInput(
     cam: makeCam(100),
     cosmoVp: makeCosmoVp(),
     pivotRadiusMpc: null,
-    bodyStates: new Map<string, BodyState>(),
     pose: NO_POSE,
     visibleBodies: [],
     viewportPx: [1920, 1080] as Vec2,

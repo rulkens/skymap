@@ -3,9 +3,9 @@
  * resident surface-tile detail patches over it, drawn into `foreground:0`.
  *
  * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
- * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`
- * — the foreground-distance and sub-pixel checks below are now redundant with
- * that row's own culling but stay as a cheap standalone guard.
+ * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`;
+ * the foreground-distance check below is the one gate this layer still owns,
+ * shared with `planetsLayer`.
  *
  * `earthRenderer.draw` writes ONE non-dynamic uniform buffer, so this row
  * draws the base globe AT MOST once per frame (see that renderer's header for
@@ -41,10 +41,8 @@ import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { baseGlobeFadeAlpha } from '../../../../utils/scene/baseGlobeFadeAlpha';
-import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
-import { BODY_PICK_MIN_RADIUS_PX } from '../../helpers/minPickRadiusMpc';
+import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { sceneBodyStates } from '../sceneBodyStates';
 
 /**
@@ -164,24 +162,7 @@ export const earthLayer: ContentLayer = {
     if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== 'earth') return false;
     if (state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    const earth = state.data.bodies.earth;
-    if (earth === null) return false;
-    // Live position from the per-frame snapshot, not the baked record field.
-    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
-    // Sub-pixel cull (see SUB_PIXEL_BODY_CULL_PX): redundant with the body-slab
-    // row's own culling (Task 1) but cheap, and keeps this gate honest if the
-    // layer is ever probed standalone. Zero distance means the camera is
-    // INSIDE the body — apparentSizePx defensively returns 0 there, which
-    // would read as sub-pixel, so treat it as resolved.
-    const distanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
-    if (distanceMpc === 0) return true;
-    const diameterPx = apparentSizePx({
-      diameterKpc: (2 * earth.radiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
-      distanceMpc,
-      viewportHeightPx: ctx.canvasSize.height,
-      fovYRad: ctx.fovYRad,
-    });
-    return diameterPx >= SUB_PIXEL_BODY_CULL_PX;
+    return state.data.bodies.earth !== null;
   },
 
   draw(pass, view, ctx, state) {
@@ -298,23 +279,16 @@ export const earthLayer: ContentLayer = {
     if (prepared === null) return;
     const { pose, radiusM } = prepared;
 
-    // Floor the pick radius (BODY_PICK_MIN_RADIUS_PX) so a far-edge Earth
-    // projecting to a couple of pixels stays clickable — the same recipe
-    // `drawFlooredSpherePick` shares among the NEAR0 sphere layers, composed
-    // here directly against the body-slab primitives instead: `view.slab.vp`
-    // is metres/eye-relative, not the Mpc/world-relative frame that helper's
-    // `composeBodyMvp` call expects.
-    const dM = Math.hypot(pose.eyeRelBodyM[0], pose.eyeRelBodyM[1], pose.eyeRelBodyM[2]);
-    const pickRadiusM = Math.max(radiusM, (BODY_PICK_MIN_RADIUS_PX / ctx.drawPxPerRad) * dM);
-    // Same pickRadiusM feeds both calls, the invariant drawFlooredSpherePick's
-    // header names: the mvp's model scale defines the frame camPosLocal is
-    // measured in, so both must come from the one radius.
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, pickRadiusM);
-    const pickCamLocal = bodySlabCamLocal(pose.eyeRelBodyM, pickRadiusM);
+    const { mvp, camPosLocal } = bodySlabFlooredPick(
+      view.slab.vp,
+      pose.eyeRelBodyM,
+      radiusM,
+      ctx.drawPxPerRad,
+    );
 
     pickRenderer.drawSphere(pass, {
-      mvp: narrowMat4(mvp),
-      camPosLocal: pickCamLocal,
+      mvp,
+      camPosLocal,
       packedId: packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
     });
   },

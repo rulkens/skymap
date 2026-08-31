@@ -275,7 +275,6 @@ describe('deriveFrameContext — ready branch', () => {
       cam,
       cosmoVp: computeViewProj(cam),
       pivotRadiusMpc: null,
-      bodyStates: new Map(),
       pose: () => null,
       visibleBodies: [],
       viewportPx: [1920, 1080],

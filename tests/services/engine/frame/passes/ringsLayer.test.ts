@@ -189,17 +189,6 @@ describe('ringsLayer.enabled', () => {
     expect(ringsLayer.enabled(state, ctx, makeBodyView('earth' as BodyId))).toBe(false);
     expect(ringsLayer.enabled(state, ctx, makeBodyView('saturn' as BodyId))).toBe(true);
   });
-
-  it('is false when the view is not a body-m row', () => {
-    const state = makeState(makeRendererSpy(), [saturnBody()], ['saturn-ring']);
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    expect(ringsLayer.enabled(state, makeCtx(), worldMpcView)).toBe(false);
-  });
 });
 
 describe('ringsLayer.draw', () => {
@@ -281,18 +270,5 @@ describe('ringsLayer.draw', () => {
     const view = makeBodyView('saturn' as BodyId);
     const state = makeState(null, [saturnBody()], ['saturn-ring']);
     expect(() => ringsLayer.draw(PASS_STUB, view, makeCtx(), state)).not.toThrow();
-  });
-
-  it('is a no-op when the view is not a body-m row', () => {
-    const renderer = makeRendererSpy();
-    const state = makeState(renderer, [saturnBody()], ['saturn-ring']);
-    const worldMpcView: SlabView = {
-      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
-      vp: new Float32Array(16),
-      camPos: [0, 0, 0],
-      viewportPx: [1, 1],
-    };
-    ringsLayer.draw(PASS_STUB, worldMpcView, makeCtx(), state);
-    expect(renderer.draw).not.toHaveBeenCalled();
   });
 });

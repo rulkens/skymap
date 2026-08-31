@@ -19,22 +19,18 @@
  * planet in a shared NEAR0 frame. Under `'body'` slabs each body owns its OWN
  * `view.slab.vp` (a distinct near-field projection about that body's eye-
  * relative pose — see `bodySlabRow`), so there is no longer one shared vp to
- * batch multiple bodies against. `renderer.draw` still takes an instance
- * array + count, but this layer now calls it once per row with `count = 1`,
- * passing this row's `bodyId` so the renderer keys its instance buffer per
- * body — every row's call lands in ONE encoder + submit (`renderFrame.ts`),
- * so a buffer shared across rows would let a later row's `writeBuffer`
- * clobber an earlier row's bytes before the GPU drew either (see
- * `planetRenderer`'s header).
+ * batch multiple bodies against: this layer calls `renderer.draw` once per
+ * row, passing this row's `bodyId` so the renderer keys its instance buffer
+ * per body — every row's call lands in ONE encoder + submit
+ * (`renderFrame.ts`), so a buffer shared across rows would let a later row's
+ * `writeBuffer` clobber an earlier row's bytes before the GPU drew either
+ * (see `planetRenderer`'s header).
  *
  * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis
  *
- * Same seam as `earthLayer`/`atmosphereShellLayer`: this row's `pose =
- * ctx.bodyPose(bodyId)` is the SAME closure `deriveSlabs` built this row's
- * `view.slab.vp` from, so `composeBodySlabMvp`/`bodySlabCamLocal` compose
- * against the eye-relative metre offset that vp already expects — no
- * rotation term (the pose already rotated the offset into the body's fixed
- * axes), no world translation. See `composeBodySlabMvp`'s module header.
+ * Same seam as every body-slab layer: this row's `pose = ctx.bodyPose(bodyId)`
+ * is the SAME closure `deriveSlabs` built this row's `view.slab.vp` from. See
+ * `composeBodySlabMvp`'s module header.
  *
  * ### When it draws — the partition's flat branch, this row's body only
  *
@@ -57,7 +53,7 @@ import { sceneBodyStates } from '../sceneBodyStates';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { BODY_PICK_MIN_RADIUS_PX } from '../../helpers/minPickRadiusMpc';
+import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 
 // One instance record, reused across draws — a `'body'` row draws at most one
 // planet, so this needs no per-body indexing (unlike the retired N-planet
@@ -131,7 +127,7 @@ export const planetsLayer: ContentLayer = {
     staging[25] = cam[1];
     staging[26] = cam[2];
     staging[27] = 0; // camPosLocal pad — kept zeroed across frames
-    renderer.draw(pass, bodyId, staging, 1);
+    renderer.draw(pass, bodyId, staging);
   },
 
   // Pick aspect — stamps this row's body into the r32uint pick pass when it is
@@ -151,21 +147,16 @@ export const planetsLayer: ContentLayer = {
     const pose = ctx.bodyPose(bodyId);
     if (pose === null) return;
 
-    // Floor the pick radius (BODY_PICK_MIN_RADIUS_PX) so a far-edge planet
-    // projecting to a couple of pixels stays clickable — the same recipe
-    // `earthLayer.drawPick` uses, composed metre-native rather than through
-    // the Mpc-based `drawFlooredSpherePick` helper: `view.slab.vp` is
-    // eye-relative metres here, not that helper's Mpc/world-relative frame.
-    const dM = Math.hypot(pose.eyeRelBodyM[0], pose.eyeRelBodyM[1], pose.eyeRelBodyM[2]);
-    const pickRadiusM = Math.max(planet.radiusM, (BODY_PICK_MIN_RADIUS_PX / ctx.drawPxPerRad) * dM);
-    // Same pickRadiusM feeds both calls — the mvp's model scale defines the
-    // frame camPosLocal is measured in, so both must come from the one radius.
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, pickRadiusM);
-    const pickCamLocal = bodySlabCamLocal(pose.eyeRelBodyM, pickRadiusM);
+    const { mvp, camPosLocal } = bodySlabFlooredPick(
+      view.slab.vp,
+      pose.eyeRelBodyM,
+      planet.radiusM,
+      ctx.drawPxPerRad,
+    );
 
     pickRenderer.drawSphere(pass, {
-      mvp: narrowMat4(mvp),
-      camPosLocal: pickCamLocal,
+      mvp,
+      camPosLocal,
       packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
     });
   },

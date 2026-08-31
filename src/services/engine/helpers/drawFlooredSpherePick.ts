@@ -13,10 +13,10 @@
  * cam-distance → floored-MVP → drawSphere sequence is a single shared
  * mechanism; copied twice, a change to it (a different floor input, a new
  * compose argument) would have to be made in two places. Folding it here makes
- * it one. (`earthLayer` and `planetsLayer` used to share this recipe too, but
- * the body render slabs migration moved their pick pass onto
- * `composeBodySlabMvp`/`bodySlabCamLocal` — `view.slab.vp` there is
- * eye-relative metres, not this helper's Mpc/world-relative frame.)
+ * it one. (`earthLayer` and `planetsLayer` share the SAME recipe against the
+ * metre-native body-slab primitives instead — `bodySlabFlooredPick`, their
+ * `view.slab.vp` being eye-relative metres, not this helper's
+ * Mpc/world-relative frame.)
  *
  * ### What stays at the call site
  *

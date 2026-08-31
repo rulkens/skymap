@@ -74,7 +74,6 @@ describe('bodyRelativePose', () => {
       ];
 
       const { eyeRelBodyM } = bodyRelativePose({
-        bodyId: 'earth',
         camPosMpc,
         camBasisWorld: CAM_BASIS,
         bodyState,
@@ -110,13 +109,11 @@ describe('bodyRelativePose', () => {
     const camPosMpcPerturbed: Vec3 = [nextUlpUp(camX), 0, 0];
 
     const before = bodyRelativePose({
-      bodyId: 'earth',
       camPosMpc,
       camBasisWorld: CAM_BASIS,
       bodyState,
     });
     const after = bodyRelativePose({
-      bodyId: 'earth',
       camPosMpc: camPosMpcPerturbed,
       camBasisWorld: CAM_BASIS,
       bodyState,
@@ -134,7 +131,6 @@ describe('bodyRelativePose', () => {
     const bodyState = makeBodyState([0, 0, 0], NON_IDENTITY_ORIENTATION);
 
     const { basisM } = bodyRelativePose({
-      bodyId: 'earth',
       camPosMpc: [0, 0, 0],
       camBasisWorld,
       bodyState,
@@ -154,7 +150,6 @@ describe('bodyRelativePose', () => {
     // Under the identity orientation, basisM must equal camBasisWorld exactly.
     const identityBodyState = makeBodyState([0, 0, 0], IDENTITY);
     const { basisM: basisUnderIdentity } = bodyRelativePose({
-      bodyId: 'earth',
       camPosMpc: [0, 0, 0],
       camBasisWorld,
       bodyState: identityBodyState,

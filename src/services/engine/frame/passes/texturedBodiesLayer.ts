@@ -27,14 +27,11 @@
  *
  * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis
  *
- * Same seam as `earthLayer`/`planetsLayer`: this row's `pose =
- * ctx.bodyPose(bodyId)` is the SAME closure `deriveSlabs` built this row's
- * `view.slab.vp` from, so `composeBodySlabMvp`/`bodySlabCamLocal` compose
- * against the eye-relative metre offset that vp already expects — no
- * rotation term, no world translation. See `composeBodySlabMvp`'s module
- * header. `camPosLocal` (the Minnaert view cosine's camera) uses the SAME
- * `planet.radiusM` the mvp used, so both share one definition of "the frame
- * where this body is the unit sphere".
+ * Same seam as every body-slab layer: this row's `pose = ctx.bodyPose(bodyId)`
+ * is the SAME closure `deriveSlabs` built this row's `view.slab.vp` from — see
+ * `composeBodySlabMvp`'s module header. `camPosLocal` (the Minnaert view
+ * cosine's camera) uses the SAME `planet.radiusM` the mvp used, so both share
+ * one definition of "the frame where this body is the unit sphere".
  *
  * ### When it draws
  *

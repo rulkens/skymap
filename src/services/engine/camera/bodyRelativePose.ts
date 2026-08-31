@@ -12,7 +12,6 @@
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyRelativePose } from '../../../@types/engine/camera/BodyRelativePose';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
@@ -28,13 +27,10 @@ function rotateByTranspose(orientation: Readonly<Mat3>, v: Readonly<Vec3>): Vec3
 }
 
 export function bodyRelativePose(input: {
-  readonly bodyId: BodyId;
   readonly camPosMpc: Readonly<Vec3>;
   readonly camBasisWorld: Readonly<Mat3>;
   readonly bodyState: BodyState;
 }): BodyRelativePose {
-  // bodyId is carried for the caller's benefit (identity checks); it never
-  // enters the arithmetic below.
   const { camPosMpc, camBasisWorld, bodyState } = input;
   const { positionMpc, orientation } = bodyState;
 
@@ -55,11 +51,7 @@ export function bodyRelativePose(input: {
     camBasisWorld[1],
     camBasisWorld[2],
   ]);
-  const up = rotateByTranspose(orientation, [
-    camBasisWorld[3],
-    camBasisWorld[4],
-    camBasisWorld[5],
-  ]);
+  const up = rotateByTranspose(orientation, [camBasisWorld[3], camBasisWorld[4], camBasisWorld[5]]);
   const forward = rotateByTranspose(orientation, [
     camBasisWorld[6],
     camBasisWorld[7],
