@@ -16,18 +16,25 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
+import { mat4d } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
+import type { BodyState } from '../../../@types/scene/BodyState';
+import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
-import { foregroundFrustum } from '../../../utils/camera/foregroundFrustum';
+import { foregroundFrustum, MIN_NEAR_M } from '../../../utils/camera/foregroundFrustum';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
+import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
@@ -36,20 +43,19 @@ export const NEAR0 = 0;
 export const COSMO = 1;
 
 /**
- * Human-readable slab names, keyed by slab index, for debug surfaces. Kept
- * beside the NEAR0/COSMO index constants so a new slab row names itself here in
- * the same edit that assigns its index. `timedSlotRowsOf` (frameProgram.ts)
- * reads this to build each render slot's `groupKey` — `'<target>·<SLAB_NAME>'`,
- * e.g. `'hdr·COSMO'` — which the DebugPanel then buckets into a titled group.
- * A slab index missing here degrades gracefully: `SLAB_NAME[slab] ?? String(slab)`
- * yields a numeric key (e.g. `'hdr·5'`) whose unmapped title falls back to the
- * raw key rather than dropping the slot — so an unnamed slab reads as a
- * numerically-keyed group, never a lost one.
+ * Human-readable slab name for debug surfaces: `'NEAR0'` | `'COSMO'` |
+ * `'BODY[k]'` for a body row at array position `k + 2` — the painter
+ * ordinal a body row's index already carries (see `deriveSlabs`'s body-row
+ * sort). `timedSlotRowsOf` (frameProgram.ts) calls this to build each render
+ * slot's `groupKey` — `'<target>·<slabName>'`, e.g. `'hdr·COSMO'` — which the
+ * DebugPanel buckets into a titled group. Every non-negative index resolves
+ * to a name; the function is total, so `groupKeyOf` needs no fallback.
  */
-export const SLAB_NAME: Readonly<Record<number, string>> = {
-  [NEAR0]: 'NEAR0',
-  [COSMO]: 'COSMO',
-};
+export function slabName(index: number): string {
+  if (index === NEAR0) return 'NEAR0';
+  if (index === COSMO) return 'COSMO';
+  return `BODY[${index - 2}]`;
+}
 
 /**
  * The ONE definition of a merged group-timing slot key — the string a render
@@ -57,12 +63,11 @@ export const SLAB_NAME: Readonly<Record<number, string>> = {
  * allocates the slot under this key; `executeFrame`'s merged pass resolves it
  * via `descriptorFor(groupKey)`. The two sites must produce byte-identical
  * keys, so the format lives here rather than as twin inline templates that
- * could silently drift. The middle-dot separator (U+00B7) and the
- * `?? String(slab)` fallback (which keeps the key stable for a slab index
- * `SLAB_NAME` doesn't cover) are part of that wire format — do not vary them.
+ * could silently drift. The middle-dot separator (U+00B7) is part of that
+ * wire format — do not vary it.
  */
 export function groupKeyOf(target: string, slab: number): string {
-  return `${target}·${SLAB_NAME[slab] ?? String(slab)}`;
+  return `${target}·${slabName(slab)}`;
 }
 
 /**
@@ -118,8 +123,54 @@ const COSMO_NEAR_MPC = 0.01;
 const COSMO_FAR_MPC = 50000;
 
 /**
+ * Build one body's slab row (index left at a placeholder — the caller assigns
+ * the real painter-order index once every row is sorted), or `null` when
+ * `pose` reports the body has no pose this frame (culled).
+ *
+ * `vp` is built ABOUT THE EYE: `basisM`'s forward/up columns feed `mat4d.lookAt`
+ * with the eye at the origin, so the rotation `lookAt` derives carries no
+ * translation term — geometry drawn into this slab is expected already
+ * expressed relative to the eye (RTC-native, no rebase step; see the `Slab`
+ * type doc). `near` uses the reversed-Z infinite-far projection NEAR0 already
+ * uses (spec §4); `far` is `+∞` (spec §4's row-numbers table) — the row's
+ * FINITE far bound is `distanceRangeM[1]`, a distinct field used by the
+ * painter sort, not by this projection.
+ */
+function bodySlabRow(input: {
+  readonly body: SceneBody;
+  readonly pose: BodyPoseProvider;
+  readonly fovYRad: number;
+  readonly aspect: number;
+}): Omit<Slab, 'index'> | null {
+  const { body, pose, fovYRad, aspect } = input;
+  const relPose = pose(body.id as BodyId);
+  if (relPose === null) return null;
+  const { eyeRelBodyM, basisM } = relPose;
+
+  const dM = Math.hypot(eyeRelBodyM[0], eyeRelBodyM[1], eyeRelBodyM[2]);
+  const rMaxM = bodyDrawRadiusM(body);
+  const near = Math.max(dM - rMaxM, MIN_NEAR_M);
+  const distanceRangeM: readonly [number, number] = [Math.max(dM - rMaxM, 0), dM + rMaxM];
+
+  const forward: Vec3 = [basisM[6], basisM[7], basisM[8]];
+  const up: Vec3 = [basisM[3], basisM[4], basisM[5]];
+  const view = mat4d.lookAt([0, 0, 0], forward, up);
+  const proj = mat4d.perspectiveReverseZ(fovYRad, aspect, near);
+
+  return {
+    near,
+    far: Infinity,
+    vp: mat4d.multiply(proj, view) as Float64Array,
+    frame: { kind: 'body-m', bodyId: body.id as BodyId },
+    distanceRangeM,
+    precision: 'f64',
+    reversedZ: true,
+  };
+}
+
+/**
  * Derive this frame's slab table from the live camera and the already-computed
- * cosmological view-proj.
+ * cosmological view-proj: `[near0, cosmo, ...bodyRows]`.
  *
  * The near-field row's vp is an origin-relative f64 view-projection built by
  * `computeForegroundViewProj`: eye and target are subtracted from
@@ -133,16 +184,39 @@ const COSMO_FAR_MPC = 50000;
  * (`Float32Array.from(slab.vp)`) round-trips byte-equal to the original f32
  * matrix — which is why `slabViewOf` needs no COSMO special case below.
  *
- * `pivotRadiusMpc` (default `null`) is the orbit pivot's physical radius when
- * one is focused — see `foregroundFrustum`'s near-plane bracket for why the
- * near-field row keys off ALTITUDE above the pivot, not raw `cam.distance`,
+ * `pivotRadiusMpc` is the orbit pivot's physical radius when one is focused
+ * (`null` otherwise) — see `foregroundFrustum`'s near-plane bracket for why
+ * the near-field row keys off ALTITUDE above the pivot, not raw `cam.distance`,
  * once a pivot is known.
+ *
+ * Body rows: one per `visibleBodies` entry whose `pose(bodyId)` resolves (a
+ * `null` pose — culled this frame — contributes no row), assigned indices
+ * `2, 3, …` in back-to-front painter order (sorted by `distanceRangeM[0]`
+ * descending, spec §4/§7) — so a body row's index doubles as its painter
+ * ordinal and `slabName`/`groupKeyOf` need no extra parameter. `bodyStates`
+ * is threaded through (not read here) so the caller's `pose` closure and this
+ * frame's body layers are provably reading the SAME `simDays` snapshot — see
+ * the module-level "one `R_body(t)` sample" rule. `viewportPx` mirrors
+ * `cam.aspect`, which is what the body-row projection actually uses (matching
+ * NEAR0), so it is likewise unread here today.
+ *
+ * NEAR0's `distanceRangeM` comes from `starSphereRangeM` — the interval the
+ * star spheres ACTUALLY drawn this frame span (spec §7.1), not the
+ * foreground-frustum bracket. `null` (no sphere drawn) degrades to a
+ * zero-width `[0, 0]` interval; excluding the row from the painter chain
+ * entirely on that case is `foregroundChainOrder`'s caller's job.
  */
-export function deriveSlabs(
-  cam: OrbitCamera,
-  cosmoVp: Mat4,
-  pivotRadiusMpc: number | null = null,
-): readonly Slab[] {
+export function deriveSlabs(input: {
+  readonly cam: OrbitCamera;
+  readonly cosmoVp: Mat4;
+  readonly pivotRadiusMpc: number | null;
+  readonly bodyStates: ReadonlyMap<string, BodyState>;
+  readonly pose: BodyPoseProvider;
+  readonly visibleBodies: readonly SceneBody[];
+  readonly viewportPx: Readonly<Vec2>;
+  readonly starSphereRangeM: readonly [number, number] | null;
+}): readonly Slab[] {
+  const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies } = input;
   // The near-field slab's near/far are adaptive, sized from the camera's
   // ALTITUDE above a known pivot (else raw orbit distance) by
   // `foregroundFrustum`, so depth precision holds from galaxy scale down to
@@ -192,9 +266,11 @@ export function deriveSlabs(
     // future floating origin would re-derive a per-slab `camPos` in
     // `slabViewOf`.
     frame: { kind: 'world-mpc', originRelative: true },
-    // Task 4 replaces this with the §7.1 star-sphere derivation; this row's
-    // Mpc bracket is a placeholder until then.
-    distanceRangeM: [near * SCALE_UNITS.MPC_TO_M, far * SCALE_UNITS.MPC_TO_M],
+    // §7.1: the star spheres actually drawn this frame, not the frustum
+    // bracket — see `starSphereRangeM`. An empty drawn set (`null`) degrades
+    // to a zero-width interval; the painter-chain builder (Task 7) is what
+    // actually leaves an empty NEAR0 row out of the chain.
+    distanceRangeM: input.starSphereRangeM ?? [0, 0],
     precision: 'f64',
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   };
@@ -205,12 +281,38 @@ export function deriveSlabs(
     vp: Float64Array.from(cosmoVp),
     frame: { kind: 'world-mpc', originRelative: false },
     // COSMO never enters the painter chain (not a `foreground:0` target), so
-    // this fixed bracket is permanent — unlike NEAR0's placeholder above.
+    // this fixed bracket is permanent — unlike NEAR0's derived one above.
     distanceRangeM: [COSMO_NEAR_MPC * SCALE_UNITS.MPC_TO_M, COSMO_FAR_MPC * SCALE_UNITS.MPC_TO_M],
     precision: 'f32',
     reversedZ: SLAB_REVERSED_Z[COSMO]!,
   };
-  return [near0, cosmo];
+
+  // Body rows sort back-to-front by distanceRangeM[0] BEFORE indices are
+  // assigned, so index === painter ordinal (see the header note) — a body
+  // whose pose is null this frame (culled) contributes no row.
+  const bodyRows: Slab[] = visibleBodies
+    .map((body) => bodySlabRow({ body, pose, fovYRad: cam.fovYRad, aspect: cam.aspect }))
+    .filter((row): row is Omit<Slab, 'index'> => row !== null)
+    .sort((a, b) => b.distanceRangeM[0] - a.distanceRangeM[0])
+    .map((row, i) => ({ ...row, index: i + 2 }));
+
+  return [near0, cosmo, ...bodyRows];
+}
+
+/**
+ * Painter-ordered slab indices for the `foreground:0` chain, back-to-front:
+ * NEAR0 plus every body row, sorted by `distanceRangeM[0]` descending — the
+ * same key the body rows are already stored by, so a body-only chain is
+ * already in order and NEAR0 (the Sun's slab, spec §7.1) merges in by the one
+ * shared key with no `frame.kind` special case. COSMO never appears here — it
+ * is not a `foreground:0` target.
+ */
+export function foregroundChainOrder(slabs: readonly Slab[]): readonly number[] {
+  return slabs
+    .filter((slab) => slab.index === NEAR0 || slab.index >= 2)
+    .slice()
+    .sort((a, b) => b.distanceRangeM[0] - a.distanceRangeM[0])
+    .map((slab) => slab.index);
 }
 
 /**

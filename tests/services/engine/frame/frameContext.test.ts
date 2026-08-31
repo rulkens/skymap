@@ -89,6 +89,15 @@ function makeState(
     // null`, reproducing the pre-feature (raw cam.distance) near-field bracket
     // every arithmetic assertion below was written against.
     selectionRows: { hover: null, select: null, focus: null },
+    // No seeded bodies/stars — `visibleSlabBodies` and `visibleStars` (both
+    // read unconditionally past the ready gate now) get an empty registry, so
+    // every fixture below stays a 2-row (NEAR0+COSMO) slab table, matching
+    // what every assertion in this file was written against.
+    data: { bodies: { earth: null, planets: [], stars: [] } },
+    settings: {
+      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+      bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+    },
   } as unknown as EngineState;
 }
 
@@ -259,7 +268,19 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
-    const expected = deriveSlabs(cam, computeViewProj(cam));
+    // The fixture seeds no bodies/stars, so every new deriveSlabs input beyond
+    // cam/cosmoVp/pivotRadiusMpc is inert (empty registry, no star spheres) —
+    // matching what `deriveFrameContext` itself derives from `makeState()`.
+    const expected = deriveSlabs({
+      cam,
+      cosmoVp: computeViewProj(cam),
+      pivotRadiusMpc: null,
+      bodyStates: new Map(),
+      pose: () => null,
+      visibleBodies: [],
+      viewportPx: [1920, 1080],
+      starSphereRangeM: null,
+    });
     expect(ctx.slabs).toHaveLength(2);
     expect(ctx.slabs[0]?.index).toBe(NEAR0);
     expect(ctx.slabs[1]?.index).toBe(COSMO);

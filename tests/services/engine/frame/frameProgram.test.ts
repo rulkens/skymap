@@ -143,7 +143,16 @@ describe('frameProgram', () => {
     // dedicated slab, so every remaining render step projects through NEAR0 or
     // COSMO — the two rows deriveSlabs returns. A render step naming an index
     // outside that table would throw in `slabViewOf` the moment it runs.
-    const slabs = deriveSlabs(makeCam(), new Float32Array(16) as unknown as Mat4);
+    const slabs = deriveSlabs({
+      cam: makeCam(),
+      cosmoVp: new Float32Array(16) as unknown as Mat4,
+      pivotRadiusMpc: null,
+      bodyStates: new Map(),
+      pose: () => null,
+      visibleBodies: [],
+      viewportPx: [1920, 1080],
+      starSphereRangeM: null,
+    });
     for (const step of frameProgram(TONE, true)) {
       if (step.kind === 'render') {
         expect([NEAR0, COSMO]).toContain(step.slab);
