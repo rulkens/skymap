@@ -37,11 +37,14 @@ OpenSpace. Landing the slab first means spec 2 changes the _source_ of a pose
 the renderer already consumes, and nothing else (ruled, Q1b, S1).
 
 **The precision floor is a unit choice, not a technique.** The black-nadir
-denormal disc (WESL landmines) is arithmetic on a Mpc-magnitude radius: Earth's
-radius is ≈2.06e-21 Mpc, and a shader that squares it produces ≈4.3e-42 —
-inside f32's denormal range (smallest normal 1.18e-38), flushed to zero, disc
-goes black. The same square in metres is 4.06e13. The bug class stops being
-something to defend against and becomes unrepresentable.
+denormal disc (WESL landmines) is arithmetic on a Mpc-magnitude quantity: not
+Earth's radius itself (≈2.06e-16 Mpc, squaring to a comfortably normal
+≈4.26e-32) but the near-surface camera-to-surface DELTA a sphere-intersection
+varying squares — at the observed ~3.3 km altitude that delta is ≈1.07e-19
+Mpc, and squaring it lands at ≈1.14e-38, inside f32's denormal range (smallest
+normal 1.18e-38), flushed to zero, disc goes black. The same square in metres
+is ≈1.1e7 — nowhere near either float's denormal floor. The bug class stops
+being something to defend against and becomes unrepresentable.
 
 **The tile planner's frame is where the false-negative-cull family lived.**
 `prepareEarthFrame` + `cutSurfaceTiles` work today from the world-Mpc camera

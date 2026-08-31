@@ -1,15 +1,20 @@
 /**
  * camPosLocal — the camera's position expressed in the frame where a body is
- * the UNIT SPHERE.
+ * the UNIT SPHERE, in the world-mpc frame.
  *
  *   camera position + body position + radius + baked orientation + oblateness
  *                                                     →  local camera position
  *
- * The PBR fragment needs a view vector, and GGX glint is view-dependent, so it
- * forms `V = normalize(camPosLocal − surfacePosLocal)`. `surfacePosLocal` is the
- * interpolated `normalLocal` — a point on the unit sphere in the body's local
- * frame (`earth/io.wesl:27-35`). To subtract cleanly, the camera position must
- * land in that SAME frame and the SAME units, which is what this util produces.
+ * The body render slabs migration moved every GPU-drawn body (Earth, planets,
+ * textured bodies) onto `bodySlabCamLocal` — the metre-native, seam-relative
+ * sibling that reduces this same per-axis divide to its final step, once the
+ * seam has already subtracted the body centre and rotated into body axes. Its
+ * header cites this one for the oblateness derivation rather than repeating
+ * it, so this file's math stays live even though its own callers narrowed to
+ * two: `drawFlooredSpherePick`'s r32uint pick-pass ray origin (the world-mpc
+ * NEAR0 star-sphere layers) and `encodeAtmosphereSkyView`'s CPU-side altitude
+ * + sun-zenith scalar bake — neither a PBR fragment, but both POSITION
+ * consumers that need the same frame this util derives.
  *
  * ### What "local" means here — and when it is the model frame
  *

@@ -1,16 +1,22 @@
 /**
- * composeBodyMvp — compose a full proj·view·model MVP for a spherical body
- * (planet, star, Earth), entirely in f64. Callers narrow to f32 themselves,
- * at whichever point their OWN use actually needs f32 — see "Why f64 all the
- * way out" below.
+ * composeBodyMvp — compose a full proj·view·model MVP for a resolved star
+ * sphere in the world-mpc (NEAR0) frame, entirely in f64. Callers narrow to
+ * f32 themselves, at whichever point their OWN use actually needs f32 — see
+ * "Why f64 all the way out" below.
  *
- * ### One unit (Mpc) across all bodies
+ * The body render slabs migration moved every OTHER spherical body (Earth,
+ * planets, textured bodies, rings, cloud/atmosphere shells) onto the
+ * metre-native `composeBodySlabMvp` seam. This function's surviving callers —
+ * `starSpheresLayer`, `fieldStarSphereLayer`, and their shared
+ * `drawFlooredSpherePick` pick pass — stay in world-mpc deliberately: S4 keeps
+ * star spheres out of body slabs (there is no per-star seam to key one on).
  *
- * Every body — from Earth (radius ~6,371 km) to a gas giant — is represented
- * as a unit sphere scaled by `radiusMpc`. This keeps the model matrix in the
- * same coordinate frame (Megaparsecs) as the galaxy catalog, so no per-kind
- * native-unit braid (km for planets, AU for orbits, Mpc for galaxies) ever
- * leaks into the composition path. Callers convert once at the call site:
+ * ### One unit (Mpc) for star spheres
+ *
+ * A star is represented as a unit sphere scaled by `radiusMpc`. This keeps the
+ * model matrix in the same coordinate frame (Megaparsecs) as the galaxy
+ * catalog, so no native-unit braid leaks into the composition path. Callers
+ * convert once at the call site:
  *
  *     radiusMpc = 6_371_000 * SCALE_UNITS.M_TO_MPC
  *
@@ -31,8 +37,8 @@
  * is deliberately minimal) about flattening, the spheroid is baked into the
  * CPU-side model scale — the two equatorial axes scale by `radiusMpc`, the
  * polar (model-Z) axis by `radiusMpc·(1 − oblateness)`. A sphere is just the
- * `oblateness = 0` case, so the default leaves every uniform-radius caller
- * (Earth, planets) composing exactly the matrix they did before.
+ * `oblateness = 0` case, so the default leaves every uniform-radius star
+ * (most of them) composing exactly the matrix a true sphere would.
  *
  * Because the flatten lives in `S` — the INNERMOST model factor — the
  * orientation `R` rotates the ALREADY-flattened spheroid: a tilted oblate body
