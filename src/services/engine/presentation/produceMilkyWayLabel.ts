@@ -14,6 +14,8 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import { Source } from '../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from './liftedLabelPlacement';
@@ -70,6 +72,11 @@ export function produceMilkyWayLabel(
   // the final label carries; `worldPos` is provisional until the lift below.
   const label: Label2D = {
     id: 'milkyWay',
+    // The impostor is a singleton — no per-instance identity — so its pick is
+    // the source code over localIdx 0, exactly what `milkyWayPickRenderer`
+    // stamps. Note the impostor picks on NEAR0 while this label picks on
+    // COSMO; both decode to the same `{ type: 'milkyWay' }` selection.
+    pickId: packSelection(Source.MilkyWay, 0 + PICK_SENTINEL_OFFSET),
     worldPos: [0, 0, 0],
     text: LABEL_TEXT,
     font: 'cormorant',

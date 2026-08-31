@@ -3,7 +3,8 @@ import { produceStructureLabels } from '../../../../src/services/engine/presenta
 import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
-import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
+import { STRUCTURE_ID_CODES, STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
+import { unpackPick } from '../../../../src/data/selectionEncoding';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -298,5 +299,32 @@ describe('produceStructureLabels', () => {
     const alpha = out.labels[0]!.fadeAlpha!;
     expect(alpha).toBeGreaterThan(0);
     expect(alpha).toBeLessThan(1);
+  });
+
+  it('stamps each label with the pick id its own ring writes — a PER-CATEGORY index', () => {
+    // The ring pick's localIdx indexes `byCategory(cat)`, not `all()`. The
+    // fixture interleaves two categories and drops a non-featured record so a
+    // global counter, an emitted-labels counter, or an all()-position index
+    // each produce a DIFFERENT number here — and each would silently resolve a
+    // click to the wrong structure.
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('c1', { category: 'cluster' }),
+      rec('s1', { category: 'supercluster', worldPos: [0, 10, CAM_Z] }),
+      rec('c2', { category: 'cluster', featured: false }),
+      rec('c3', { category: 'cluster', worldPos: [0, -10, CAM_Z] }),
+      rec('s2', { category: 'supercluster', worldPos: [-10, 0, CAM_Z] }),
+    ]);
+    const labels = produceStructureLabels(state, makeCtx()).labels;
+    expect(labels.map((l) => l.id)).toEqual(['c1', 's1', 'c3', 's2']);
+
+    // Round-trip every emitted label through the decode side: unpack the
+    // stamped word and index the category table the source code names.
+    for (const label of labels) {
+      const record = state.data.structures.byId(label.id)!;
+      const pick = unpackPick(label.pickId!)!;
+      expect(pick.sourceCode).toBe(STRUCTURE_ID_CODES[record.category]);
+      expect(state.data.structures.byCategory(record.category)[pick.localIdx]?.id).toBe(label.id);
+    }
   });
 });

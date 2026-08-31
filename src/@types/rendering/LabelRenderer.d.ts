@@ -62,6 +62,13 @@ export type LabelRenderer = {
   glyphCount(): number;
   /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
   labelCount(): number;
+  /**
+   * The label rows `setLabels` actually packed — the drawn set, `maxLabels`
+   * truncation applied. The pick path derives its hit rects from this so a
+   * label is clickable exactly where it is legible; nothing else should read
+   * it (the GPU buffers hold the authoritative copy).
+   */
+  packedLabels(): readonly Label2D[];
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;
 };
