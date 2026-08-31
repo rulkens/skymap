@@ -584,7 +584,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the layer they refine can never disagree about whether Earth is on screen.
   const earthTiles = state.subsystems.earthTiles;
   const earth = state.data.bodies.earth;
-  if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx)) {
+  // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
+  // module header), resolved once and reused below so the tiles the planner
+  // asks for never drift from the pixels the fragment samples them into.
+  const earthTilesView = slabViewOf(ctx, NEAR0);
+  if (earthTiles !== null && earth !== null && earthLayer.enabled(state, ctx, earthTilesView)) {
     // `earthSurfaceTier` reads the tier off the committed texture slot, not the
     // app-wide request, so a tier swap in flight can't make the planner believe
     // in detail that isn't on the GPU yet. Null until the manifest lands.
@@ -595,15 +599,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // flight) draws nothing stale rather than last frame's cut.
     let cut: readonly SurfaceCutTile[] = [];
     if (params !== null) {
-      // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
-      // module header), so the tiles the planner asks for never drift from the
-      // pixels the fragment samples them into.
-      const view = slabViewOf(ctx, NEAR0);
       // Skip when Earth's frame derivation is null — mirrors the `earth !==
       // null` guard above (prepareEarthFrame returns null on exactly that
       // condition); kept explicit so this block doesn't lean on the outer
       // guard's reasoning to satisfy the type checker.
-      const prepared = prepareEarthFrame(state, ctx, view);
+      const prepared = prepareEarthFrame(state, ctx, earthTilesView);
       if (prepared !== null) {
         // The single walk: `cut` is what earthLayer.draw draws this frame,
         // `requests` is what update()'s fetch loop drives — see
@@ -613,7 +613,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
           ...params,
           camPosLocal: prepared.camLocal,
           viewProjLocal: prepared.mvpLocal,
-          viewportPx: view.viewportPx,
+          viewportPx: earthTilesView.viewportPx,
           residentSlot: earthTiles.residentSlot,
         });
         cut = result.cut;

@@ -156,7 +156,7 @@ export const earthLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     if (state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const earth = state.data.bodies.earth;

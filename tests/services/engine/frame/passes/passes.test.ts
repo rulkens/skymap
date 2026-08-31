@@ -538,9 +538,11 @@ describe('starAggregatesLayer registry row', () => {
 
 describe('galaxyPointSpritesLayer.enabled', () => {
   it('always returns true (no user-facing toggle for point-sprites)', () => {
-    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    const view = slabViewOf(ctx, COSMO);
+    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, ctx, view)).toBe(true);
     // Even when every other toggle is off, point-sprites still runs.
-    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, makeCtx())).toBe(true);
+    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, ctx, view)).toBe(true);
   });
 });
 
@@ -555,7 +557,8 @@ describe('filamentsLayer.enabled', () => {
       ...STATE_STUB,
       settings: { filaments: { enabled: true, intensity: 1 } },
     } as unknown as EngineState;
-    expect(filamentsLayer.enabled(stateOn, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(filamentsLayer.enabled(stateOn, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
   it('returns false when filaments.enabled is false AND fade opacity is 0', () => {
@@ -565,7 +568,8 @@ describe('filamentsLayer.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
-    expect(filamentsLayer.enabled(stateZeroFade, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(filamentsLayer.enabled(stateZeroFade, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('returns true when filaments.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
@@ -576,7 +580,8 @@ describe('filamentsLayer.enabled', () => {
       ...STATE_STUB,
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
-    expect(filamentsLayer.enabled(stateOffFading, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(filamentsLayer.enabled(stateOffFading, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 });
 
@@ -616,7 +621,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOn, ctx)).toBe(true);
+    expect(milkyWayLayer.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
   });
 
   it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
@@ -626,7 +631,8 @@ describe('milkyWayLayer.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
-    expect(milkyWayLayer.enabled(stateOffZeroFade, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(milkyWayLayer.enabled(stateOffZeroFade, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 
   it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
@@ -641,7 +647,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOffFading, ctx)).toBe(true);
+    expect(milkyWayLayer.enabled(stateOffFading, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
   });
 
   it('returns false once the disc shrinks past the GONE apparent size (no empty render pass)', () => {
@@ -656,7 +662,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [MW_GONE_DIST_MPC * 2, 0, 0] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOn, ctx)).toBe(false);
+    expect(milkyWayLayer.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 });
 
@@ -711,7 +717,8 @@ describe('horizonShellLayer.enabled', () => {
     // Camera at 5 Mpc is far below the shell's fade-in band (5% of
     // 14.3 Gpc ≈ 0.7 Gpc), so the layer is skipped — no empty
     // full-screen ray-march pass at galaxy-scale zoom.
-    expect(horizonShellLayer.enabled(STATE_STUB, makeCtx())).toBe(false);
+    const ctx0 = makeCtx();
+    expect(horizonShellLayer.enabled(STATE_STUB, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
   });
 
   it('returns true once the camera pulls back to cosmological scale', () => {
@@ -719,7 +726,7 @@ describe('horizonShellLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
-    expect(horizonShellLayer.enabled(STATE_STUB, ctx)).toBe(true);
+    expect(horizonShellLayer.enabled(STATE_STUB, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 });
 
@@ -941,14 +948,11 @@ describe('structureMarkersLayer.enabled', () => {
       gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 3 } },
     } as unknown as EngineState;
     // Default fixture camera: 5 Mpc from origin, far outside the band.
-    expect(structureMarkersLayer.enabled(state, makeCtx())).toBe(true);
+    const farCtx = makeCtx();
+    expect(structureMarkersLayer.enabled(state, farCtx, slabViewOf(farCtx, COSMO))).toBe(true);
     // Inside goneAt (0.002 Mpc) → disabled despite queued markers.
-    expect(
-      structureMarkersLayer.enabled(
-        state,
-        makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> }),
-      ),
-    ).toBe(false);
+    const nearCtx = makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> });
+    expect(structureMarkersLayer.enabled(state, nearCtx, slabViewOf(nearCtx, COSMO))).toBe(false);
   });
 });
 

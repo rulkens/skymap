@@ -132,31 +132,38 @@ describe('volumeUpsampleLayer.enabled', () => {
       volumeUpsampleLayer.enabled(
         livenessState({ volumesEnabled: false, masterOpacity: 0 }),
         makeCtx(),
+        VIEW_STUB,
       ),
     ).toBe(false);
   });
 
   it('returns false when no fields are active and no fade-out tail is in flight', () => {
     expect(
-      volumeUpsampleLayer.enabled(livenessState({ hasActiveFields: () => false }), makeCtx()),
+      volumeUpsampleLayer.enabled(
+        livenessState({ hasActiveFields: () => false }),
+        makeCtx(),
+        VIEW_STUB,
+      ),
     ).toBe(false);
   });
 
   it('returns false when volumeFieldRenderer is null (pre-bootstrap)', () => {
-    expect(volumeUpsampleLayer.enabled(livenessState({ renderer: null }), makeCtx())).toBe(false);
+    expect(
+      volumeUpsampleLayer.enabled(livenessState({ renderer: null }), makeCtx(), VIEW_STUB),
+    ).toBe(false);
   });
 
   it('stays enabled even when volumeUpsample is null (draw self-guards, not the gate)', () => {
     // The producer (scalar-volume raymarch) and this consumer share one gate;
     // volumeUpsample being null is a bootstrap-only case handled defensively in
     // draw, so it must NOT desync the two by hiding only this layer.
-    expect(volumeUpsampleLayer.enabled(livenessState({ volumeUpsample: null }), makeCtx())).toBe(
-      true,
-    );
+    expect(
+      volumeUpsampleLayer.enabled(livenessState({ volumeUpsample: null }), makeCtx(), VIEW_STUB),
+    ).toBe(true);
   });
 
   it('returns true when the shared liveness is non-null', () => {
-    expect(volumeUpsampleLayer.enabled(livenessState({}), makeCtx())).toBe(true);
+    expect(volumeUpsampleLayer.enabled(livenessState({}), makeCtx(), VIEW_STUB)).toBe(true);
   });
 });
 

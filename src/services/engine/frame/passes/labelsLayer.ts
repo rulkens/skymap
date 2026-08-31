@@ -47,7 +47,7 @@ export const labelsLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (state.gpu.labelRenderer === null) return false;
     return state.gpu.labelRenderer.glyphCount() > 0;
   },

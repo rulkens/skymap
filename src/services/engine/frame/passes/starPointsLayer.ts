@@ -140,7 +140,7 @@ export const starPointsLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first, distance second, backdrop-band third, partition last —
     // see the module header's gate note.
     if (state.gpu.starPointRenderer === null) return false;
@@ -176,9 +176,9 @@ export const starPointsLayer: ContentLayer = {
   // Composed over `enabled` rather than restating its gates. The handle guard
   // is `drawPick`'s, checked first so a pre-bootstrap frame never reaches the
   // body-state snapshot. See `ContentLayer.pickEnabled`.
-  pickEnabled(state, ctx) {
+  pickEnabled(state, ctx, view) {
     if (state.gpu.bodyPickRenderer === null) return false;
-    if (starPointsLayer.enabled(state, ctx)) return true;
+    if (starPointsLayer.enabled(state, ctx, view)) return true;
     return sgrAStarCaptionPickable(state, ctx);
   },
 

@@ -105,8 +105,10 @@ describe('filamentsLayer.enabled is unaffected by focus recession', () => {
   it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
     // Pass enabled=false via state; settings arg is unused by the layer.
     const state = makeState(0, { enabled: false });
-    expect(filamentsLayer.enabled(state, makeCtx(0))).toBe(false);
-    expect(filamentsLayer.enabled(state, makeCtx(1))).toBe(false);
+    const ctx0 = makeCtx(0);
+    const ctx1 = makeCtx(1);
+    expect(filamentsLayer.enabled(state, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
+    expect(filamentsLayer.enabled(state, ctx1, slabViewOf(ctx1, COSMO))).toBe(false);
   });
 });
 

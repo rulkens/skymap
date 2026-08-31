@@ -129,22 +129,30 @@ function makeNear0View(camPos: Vec3): SlabView {
 
 const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 
+// `enabled` never reads `view` — an arbitrary NEAR0 view satisfies the 3-arg
+// signature for every case below.
+const VIEW_STUB = makeNear0View([0, 0, 0]);
+
 describe('starCatalogLayer.enabled', () => {
   it('is false while the renderer handle is null (pre-bootstrap)', () => {
     const state = makeState(null);
-    expect(starCatalogLayer.enabled(state, CTX_STUB)).toBe(false);
+    expect(starCatalogLayer.enabled(state, CTX_STUB, VIEW_STUB)).toBe(false);
   });
 
   it('follows the master gate, the per-item toggle, and the crossfade band', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const insideCtx = makeCtx(camAtPc(inner + (outer - inner) * 0.25));
-    expect(starCatalogLayer.enabled(makeState(renderer), insideCtx)).toBe(true);
+    expect(starCatalogLayer.enabled(makeState(renderer), insideCtx, VIEW_STUB)).toBe(true);
 
     const beyondCtx = makeCtx(camAtPc(outer + 1000));
-    expect(starCatalogLayer.enabled(makeState(renderer), beyondCtx)).toBe(false);
+    expect(starCatalogLayer.enabled(makeState(renderer), beyondCtx, VIEW_STUB)).toBe(false);
 
-    expect(starCatalogLayer.enabled(makeState(renderer, { master: false }), insideCtx)).toBe(false);
-    expect(starCatalogLayer.enabled(makeState(renderer, { item: false }), insideCtx)).toBe(false);
+    expect(
+      starCatalogLayer.enabled(makeState(renderer, { master: false }), insideCtx, VIEW_STUB),
+    ).toBe(false);
+    expect(
+      starCatalogLayer.enabled(makeState(renderer, { item: false }), insideCtx, VIEW_STUB),
+    ).toBe(false);
   });
 });
 

@@ -154,23 +154,25 @@ describe('ringsLayer row profile', () => {
 
 describe('ringsLayer.enabled', () => {
   it('is false while the ringRenderer handle is null (bare ctx short-circuits)', () => {
-    expect(ringsLayer.enabled(makeState(null, [], []), CTX_STUB)).toBe(false);
+    expect(ringsLayer.enabled(makeState(null, [], []), CTX_STUB, makeNear0View())).toBe(false);
   });
 
   it('is false beyond the foreground gate even with a resident resolved ring', () => {
     const state = makeState(makeRendererSpy(), [saturnBody()], ['saturn-ring']);
-    expect(ringsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
+    expect(ringsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), makeNear0View())).toBe(
+      false,
+    );
   });
 
   it('is false when the ring strip is NOT resident', () => {
     // Host body present + resolved, but the radial strip has not committed.
     const state = makeState(makeRendererSpy(), [saturnBody()], []);
-    expect(ringsLayer.enabled(state, NEAR_CTX)).toBe(false);
+    expect(ringsLayer.enabled(state, NEAR_CTX, makeNear0View())).toBe(false);
   });
 
   it('is true when the strip is resident and the host body resolves', () => {
     const state = makeState(makeRendererSpy(), [saturnBody()], ['saturn-ring']);
-    expect(ringsLayer.enabled(state, NEAR_CTX)).toBe(true);
+    expect(ringsLayer.enabled(state, NEAR_CTX, makeNear0View())).toBe(true);
   });
 });
 

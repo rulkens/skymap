@@ -86,25 +86,37 @@ const PASS_STUB = {
 describe('flowFieldLayer.enabled', () => {
   it('returns false when the cube is not loaded (even if enabled)', () => {
     expect(
-      flowFieldLayer.enabled(makeState({ enabled: true, loaded: false, opacity: 1 }), makeCtx()),
+      flowFieldLayer.enabled(
+        makeState({ enabled: true, loaded: false, opacity: 1 }),
+        makeCtx(),
+        makeView(),
+      ),
     ).toBe(false);
   });
 
   it('returns true when enabled AND loaded', () => {
-    expect(flowFieldLayer.enabled(makeState({ enabled: true, loaded: true }), makeCtx())).toBe(
-      true,
-    );
+    expect(
+      flowFieldLayer.enabled(makeState({ enabled: true, loaded: true }), makeCtx(), makeView()),
+    ).toBe(true);
   });
 
   it('returns true when disabled but loaded and fade opacity > 0 (fade-out keep-alive)', () => {
     expect(
-      flowFieldLayer.enabled(makeState({ enabled: false, loaded: true, opacity: 0.3 }), makeCtx()),
+      flowFieldLayer.enabled(
+        makeState({ enabled: false, loaded: true, opacity: 0.3 }),
+        makeCtx(),
+        makeView(),
+      ),
     ).toBe(true);
   });
 
   it('returns false when disabled, loaded, and fade opacity is 0', () => {
     expect(
-      flowFieldLayer.enabled(makeState({ enabled: false, loaded: true, opacity: 0 }), makeCtx()),
+      flowFieldLayer.enabled(
+        makeState({ enabled: false, loaded: true, opacity: 0 }),
+        makeCtx(),
+        makeView(),
+      ),
     ).toBe(false);
   });
 });

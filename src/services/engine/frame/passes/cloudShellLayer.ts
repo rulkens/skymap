@@ -126,7 +126,7 @@ export const cloudShellLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'over',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first: the check short-circuits so pre-bootstrap fixtures (null
     // renderer, bare ctx) never touch ctx or the body inputs.
     if (state.gpu.cloudShellRenderer === null) return false;

@@ -17,7 +17,7 @@ export const foregroundLabelsLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state) {
+  enabled(state, _ctx, _view) {
     const renderer = state.gpu.foregroundLabelRenderer;
     return renderer !== null && renderer.glyphCount() > 0;
   },

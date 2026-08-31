@@ -229,16 +229,26 @@ export function createPickProgram(deps: {
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; layers: ContentLayer[] }[] {
-    // Filter by the PICK gate: `pickEnabled` when a layer declares one (its pick
-    // set differs from its draw set — planetsLayer's flat ∪ textured, the caption
-    // stamps, the Milky Way's narrower close-range gate), else `enabled` (pick
-    // set == draw set, the common case). See `ContentLayer.pickEnabled`.
-    const pickable = layers.filter((l) => l.drawPick && (l.pickEnabled ?? l.enabled)(state, ctx));
-    const slabIndices = [...new Set(pickable.map((l) => l.slab))].sort((a, b) => a - b);
-    return slabIndices.map((slabIndex) => ({
-      slabIndex,
-      layers: pickable.filter((l) => l.slab === slabIndex),
-    }));
+    // No body-slab layer declares `drawPick` yet (Tasks 9-11), so `'body'`
+    // layers are excluded up front rather than threaded through the
+    // per-slab view resolution below — a `'body'` layer has no single
+    // `slabIndex` to resolve a view against.
+    const candidates = layers.filter((l) => l.drawPick && l.slab !== 'body');
+    const slabIndices = [...new Set(candidates.map((l) => l.slab as number))].sort((a, b) => a - b);
+    return slabIndices
+      .map((slabIndex) => {
+        const view = slabViewOf(ctx, slabIndex);
+        // Filter by the PICK gate: `pickEnabled` when a layer declares one (its
+        // pick set differs from its draw set — planetsLayer's flat ∪ textured,
+        // the caption stamps, the Milky Way's narrower close-range gate), else
+        // `enabled` (pick set == draw set, the common case). See
+        // `ContentLayer.pickEnabled`.
+        const layers = candidates.filter(
+          (l) => l.slab === slabIndex && (l.pickEnabled ?? l.enabled)(state, ctx, view),
+        );
+        return { slabIndex, layers };
+      })
+      .filter((group) => group.layers.length > 0);
   }
 
   async function pick(pickXPx: number, pickYPx: number): Promise<PickResult | null> {

@@ -25,7 +25,7 @@ export const filamentsLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Either-or on purpose: the setting is intent, opacity is the visual state,
     // so a fade-out keeps drawing after the toggle flips off until it hits 0.
     if (state.settings.filaments.enabled) return true;

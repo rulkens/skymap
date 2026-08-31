@@ -178,13 +178,20 @@ describe('planetsLayer.enabled', () => {
     // Null handle. NOTE: deliberately no state.data and a bare ctx — the
     // handle check must short-circuit BEFORE either is touched (renderFrame
     // fixtures carry null handles and no bodies bag).
+    const view = makeNear0View();
     expect(
-      planetsLayer.enabled({ gpu: { planetRenderer: null } } as unknown as EngineState, CTX_STUB),
+      planetsLayer.enabled(
+        { gpu: { planetRenderer: null } } as unknown as EngineState,
+        CTX_STUB,
+        view,
+      ),
     ).toBe(false);
     // Renderer only, nothing seeded (camera inside the gate).
-    expect(planetsLayer.enabled(makeState(makeRendererSpy(), []), NEAR_CTX)).toBe(false);
+    expect(planetsLayer.enabled(makeState(makeRendererSpy(), []), NEAR_CTX, view)).toBe(false);
     // Both present, camera inside the gate.
-    expect(planetsLayer.enabled(makeState(makeRendererSpy(), SEEDED_PLANETS), NEAR_CTX)).toBe(true);
+    expect(planetsLayer.enabled(makeState(makeRendererSpy(), SEEDED_PLANETS), NEAR_CTX, view)).toBe(
+      true,
+    );
   });
 
   it('is disabled beyond the foreground gate even with planets seeded', () => {
@@ -194,8 +201,11 @@ describe('planetsLayer.enabled', () => {
     // Gate edge + a decade beyond it (cosmic scale), both derived from the gate
     // so a farther seed growing FOREGROUND_MAX_DISTANCE_MPC carries this check.
     const state = makeState(makeRendererSpy(), SEEDED_PLANETS);
-    expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
-    expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toBe(false);
+    const view = makeNear0View();
+    expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), view)).toBe(false);
+    expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), view)).toBe(
+      false,
+    );
   });
 
   it('is disabled while every seeded body is sub-pixel, even inside the foreground band', () => {
@@ -212,7 +222,7 @@ describe('planetsLayer.enabled', () => {
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
-    expect(planetsLayer.enabled(state, subPixelCtx)).toBe(false);
+    expect(planetsLayer.enabled(state, subPixelCtx, makeNear0View())).toBe(false);
   });
 
   it('is enabled once the camera is close enough for at least one body to resolve', () => {
@@ -228,7 +238,7 @@ describe('planetsLayer.enabled', () => {
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
-    expect(planetsLayer.enabled(state, resolvingCtx)).toBe(true);
+    expect(planetsLayer.enabled(state, resolvingCtx, makeNear0View())).toBe(true);
   });
 });
 
@@ -453,10 +463,11 @@ describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable
 
   it('is true while enabled is false — the flat branch is empty but textured is not', () => {
     const state = texturedState();
+    const view = makeNear0View();
     // enabled mirrors the VISUAL draw's flat-only branch → false (nothing flat).
-    expect(planetsLayer.enabled(state, texturedCtx)).toBe(false);
+    expect(planetsLayer.enabled(state, texturedCtx, view)).toBe(false);
     // pickEnabled admits the row because the textured branch is non-empty.
-    expect(planetsLayer.pickEnabled!(state, texturedCtx)).toBe(true);
+    expect(planetsLayer.pickEnabled!(state, texturedCtx, view)).toBe(true);
   });
 
   it('is false beyond the foreground gate even with a textured body', () => {
@@ -465,7 +476,7 @@ describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable
       ...texturedCtx,
       cam: { distance: FOREGROUND_MAX_DISTANCE_MPC },
     } as ReadyFrameContext;
-    expect(planetsLayer.pickEnabled!(state, farCtx)).toBe(false);
+    expect(planetsLayer.pickEnabled!(state, farCtx, makeNear0View())).toBe(false);
   });
 
   it('drawPick stamps the textured body as a sphere (the sole pick site for flat ∪ textured)', () => {

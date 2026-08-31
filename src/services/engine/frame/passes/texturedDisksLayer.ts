@@ -24,7 +24,7 @@ export const texturedDisksLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (!state.settings.thumbnails.enabled) return false;
     if (state.subsystems.texturedDisks === null) return false;
     return state.subsystems.texturedDisks.lastOutput.disks.length > 0;

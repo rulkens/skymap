@@ -89,7 +89,7 @@ export const planetsLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first, distance second, partition last: the handle check
     // short-circuits so pre-bootstrap fixtures (null renderer, bare ctx, no
     // bodies bag) never touch ctx or state.data. The target is a
@@ -109,7 +109,7 @@ export const planetsLayer: ContentLayer = {
   // resolve into `flat`) leaves no zero-body row in the VISUAL pass plan while
   // its sphere stays clickable. Handle + distance gates match `enabled`; only
   // the partition predicate differs. See `ContentLayer.pickEnabled`.
-  pickEnabled(state, ctx) {
+  pickEnabled(state, ctx, _view) {
     // Short-circuits on the DRAW handle (`planetRenderer`), not the pick handle
     // (`bodyPickRenderer` — which `drawPick` re-checks): the two GPU resources
     // bootstrap together, so the draw handle is a sound pre-bootstrap proxy, and

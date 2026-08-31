@@ -158,12 +158,14 @@ function makeRendererSpy(residentIds: readonly string[] = []) {
 
 describe('texturedBodiesLayer.enabled', () => {
   it('is false while the texturedBodyRenderer handle is null (bare ctx short-circuits)', () => {
-    expect(texturedBodiesLayer.enabled(makeState(null, []), CTX_STUB)).toBe(false);
+    expect(texturedBodiesLayer.enabled(makeState(null, []), CTX_STUB, makeNear0View())).toBe(false);
   });
 
   it('is false beyond the foreground gate even with a resident resolved body', () => {
     const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390000)]);
-    expect(texturedBodiesLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
+    expect(
+      texturedBodiesLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), makeNear0View()),
+    ).toBe(false);
   });
 
   it('is false when a resolved registry body is NOT resident (it is flat, drawn by planetsLayer)', () => {
@@ -171,12 +173,12 @@ describe('texturedBodiesLayer.enabled', () => {
     // not resident → the partition routes it to `flat`, so this layer draws
     // nothing.
     const state = makeState(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
-    expect(texturedBodiesLayer.enabled(state, NEAR_CTX)).toBe(false);
+    expect(texturedBodiesLayer.enabled(state, NEAR_CTX, makeNear0View())).toBe(false);
   });
 
   it('is true when a resolved registry body is resident', () => {
     const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390000)]);
-    expect(texturedBodiesLayer.enabled(state, NEAR_CTX)).toBe(true);
+    expect(texturedBodiesLayer.enabled(state, NEAR_CTX, makeNear0View())).toBe(true);
   });
 });
 

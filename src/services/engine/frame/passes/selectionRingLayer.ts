@@ -47,7 +47,7 @@ export const selectionRingLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const row = state.selectionRows.select;
     // A row drives THIS ring iff the table yields a COSMO-slab descriptor for

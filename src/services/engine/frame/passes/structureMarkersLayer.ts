@@ -34,7 +34,7 @@ export const structureMarkersLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     if (state.gpu.structureMarkerRenderer === null) return false;
     if (state.gpu.structureMarkerRenderer.markerCount() === 0) return false;
     // Opacity-zero gate: past the surveyDeepZoom goneAt edge every marker

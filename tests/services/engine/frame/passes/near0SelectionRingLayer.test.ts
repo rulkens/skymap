@@ -12,8 +12,9 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 
-// The enable gate never touches ctx — a bare cast stands in for the frame ctx.
+// The enable gate never touches ctx or view — bare casts stand in for both.
 const CTX = {} as unknown as ReadyFrameContext;
+const VIEW_STUB = {} as unknown as SlabView;
 
 // A minimal stand-in for the shared selection-ring renderer handle.
 function makeRendererSpy() {
@@ -60,21 +61,21 @@ function stateWith(row: SelectionRow | null, renderer: unknown = makeRendererSpy
 
 describe('near0SelectionRingLayer.enabled', () => {
   it('is true when a star row is selected and the renderer is present', () => {
-    expect(near0SelectionRingLayer.enabled(stateWith(STAR_ROW), CTX)).toBe(true);
+    expect(near0SelectionRingLayer.enabled(stateWith(STAR_ROW), CTX, VIEW_STUB)).toBe(true);
   });
 
   it('is false when the renderer is null (pre-bootstrap)', () => {
-    expect(near0SelectionRingLayer.enabled(stateWith(STAR_ROW, null), CTX)).toBe(false);
+    expect(near0SelectionRingLayer.enabled(stateWith(STAR_ROW, null), CTX, VIEW_STUB)).toBe(false);
   });
 
   it('is false when nothing is selected', () => {
-    expect(near0SelectionRingLayer.enabled(stateWith(null), CTX)).toBe(false);
+    expect(near0SelectionRingLayer.enabled(stateWith(null), CTX, VIEW_STUB)).toBe(false);
   });
 
   it('is false for a structure row (the marker pass owns that halo)', () => {
-    expect(near0SelectionRingLayer.enabled(stateWith(STRUCTURE_ROW as SelectionRow), CTX)).toBe(
-      false,
-    );
+    expect(
+      near0SelectionRingLayer.enabled(stateWith(STRUCTURE_ROW as SelectionRow), CTX, VIEW_STUB),
+    ).toBe(false);
   });
 
   // The race guard: a galaxy yields a NON-null halo, but tagged COSMO. If this
@@ -82,7 +83,7 @@ describe('near0SelectionRingLayer.enabled', () => {
   // layers would write the shared renderer in one frame. Gating on the slab
   // keeps it disabled so only the COSMO sibling draws.
   it('is false for a galaxy row (COSMO-tagged halo present, but not this slab)', () => {
-    expect(near0SelectionRingLayer.enabled(stateWith(GALAXY_ROW), CTX)).toBe(false);
+    expect(near0SelectionRingLayer.enabled(stateWith(GALAXY_ROW), CTX, VIEW_STUB)).toBe(false);
   });
 });
 

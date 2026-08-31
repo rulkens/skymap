@@ -141,30 +141,30 @@ describe('foregroundLabelsLayer.enabled', () => {
     // Demand present: a brand-new id seeds AT its target — no ramp needed —
     // so the very first flush already carries it.
     dir.runFrame(state, makeCtx(0));
-    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(0))).toBe(true);
+    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(0), VIEW_STUB)).toBe(true);
 
     // Demand drops (fadeAlpha → 0): a short dt later the envelope has only
     // PARTLY eased down — still emitted, so the gate stays open through the
     // fade-out tail exactly like the deleted layer-level demand-drop test.
     fadeAlpha = 0;
     dir.runFrame(state, makeCtx(50));
-    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(50))).toBe(true);
+    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(50), VIEW_STUB)).toBe(true);
 
     // Far enough later the envelope settles exactly on 0 — the label drops
     // from the flush and the gate finally closes.
     dir.runFrame(state, makeCtx(5050));
-    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(5050))).toBe(false);
+    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(5050), VIEW_STUB)).toBe(false);
 
     // Demand returns: the very next flush carries the label again (mid-ease
     // back toward 1, still nonzero), and the gate re-opens immediately —
     // the "latches false forever" bug this whole test exists to catch.
     fadeAlpha = 1;
     dir.runFrame(state, makeCtx(5100));
-    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(5100))).toBe(true);
+    expect(foregroundLabelsLayer.enabled(layerState, makeCtx(5100), VIEW_STUB)).toBe(true);
   });
 
   it('is false pre-bootstrap, before the renderer exists', () => {
-    expect(foregroundLabelsLayer.enabled(makeState(null), makeCtx())).toBe(false);
+    expect(foregroundLabelsLayer.enabled(makeState(null), makeCtx(), VIEW_STUB)).toBe(false);
   });
 });
 

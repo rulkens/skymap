@@ -34,7 +34,7 @@ export const proceduralDisksLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (!state.settings.thumbnails.enabled) return false;
     if (state.subsystems.proceduralDisks === null) return false;
     return state.subsystems.proceduralDisks.lastOutput.instances.length > 0;

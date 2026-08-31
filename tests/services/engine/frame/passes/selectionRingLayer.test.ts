@@ -138,32 +138,38 @@ describe('selectionRingLayer.enabled', () => {
       gpu: { selectionRingRenderer: null },
       selectionRows: { select: null, focus: null, hover: null },
     } as unknown as EngineState;
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('returns false when nothing is selected', () => {
     const state = makeStateWithSelection(null);
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('returns true when renderer is non-null and a galaxy row is selected', () => {
     const state = makeStateWithSelection(galaxyRow());
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
   it('is true when the Milky Way row is selected', () => {
     const state = makeStateWithSelection(MILKY_WAY_ROW);
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
   it('stays false for a structure row (marker pass owns that halo)', () => {
     const state = makeStateWithSelection(structureRow() as SelectionRow);
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('stays false for a star row (its NEAR0 halo belongs to the sibling layer)', () => {
     const state = makeStateWithSelection(STAR_ROW);
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 });
 
@@ -194,8 +200,9 @@ describe('selection-ring slab exclusivity (COSMO vs NEAR0)', () => {
   for (const { name, row, cosmo, near0 } of cases) {
     it(`${name}: never both layers, routes to the right slab`, () => {
       const state = makeStateWithSelection(row);
-      const cosmoEnabled = selectionRingLayer.enabled(state, ctx);
-      const near0Enabled = near0SelectionRingLayer.enabled(state, ctx);
+      const view = slabViewOf(ctx, COSMO);
+      const cosmoEnabled = selectionRingLayer.enabled(state, ctx, view);
+      const near0Enabled = near0SelectionRingLayer.enabled(state, ctx, view);
       expect(cosmoEnabled && near0Enabled).toBe(false);
       expect(cosmoEnabled).toBe(cosmo);
       expect(near0Enabled).toBe(near0);

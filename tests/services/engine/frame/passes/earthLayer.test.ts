@@ -210,29 +210,37 @@ function makeTileDrawState(input: {
   } as unknown as EngineState;
 }
 
+// `enabled` never reads `view` — an arbitrary NEAR0 view satisfies the 3-arg
+// signature for every gating case in this file.
+const VIEW_STUB = makeNear0View();
+
 describe('earthLayer.enabled', () => {
   it('is false while earthRenderer is null and while bodies.earth is null; true with both set', () => {
     const renderer = { draw: vi.fn() };
     // Neither present. Bare ctx: the handle check short-circuits first.
-    expect(earthLayer.enabled(makeState(null, null), CTX_STUB)).toBe(false);
+    expect(earthLayer.enabled(makeState(null, null), CTX_STUB, VIEW_STUB)).toBe(false);
     // Renderer only (camera inside the gate — the body is the missing gate).
-    expect(earthLayer.enabled(makeState(renderer, null), NEAR_CTX)).toBe(false);
+    expect(earthLayer.enabled(makeState(renderer, null), NEAR_CTX, VIEW_STUB)).toBe(false);
     // Body only. Bare ctx: the handle check short-circuits first.
-    expect(earthLayer.enabled(makeState(null, SEEDED_EARTH), CTX_STUB)).toBe(false);
+    expect(earthLayer.enabled(makeState(null, SEEDED_EARTH), CTX_STUB, VIEW_STUB)).toBe(false);
     // Both present, camera inside the gate.
-    expect(earthLayer.enabled(makeState(renderer, SEEDED_EARTH), NEAR_CTX)).toBe(true);
+    expect(earthLayer.enabled(makeState(renderer, SEEDED_EARTH), NEAR_CTX, VIEW_STUB)).toBe(true);
   });
 
   it('is disabled beyond the foreground gate and enabled below it', () => {
     const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
     // Below the gate → the handle + body gates decide (both pass).
-    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2))).toBe(true);
+    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), VIEW_STUB)).toBe(
+      true,
+    );
     // At and above the gate → off, however present the handles are: Earth is
     // a deep-sub-pixel speck at the galactic centre. Both the gate edge and a
     // full decade beyond it (cosmic scale) are derived, so the seed roster
     // growing the gate carries this assertion instead of stranding a literal.
-    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
-    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toBe(false);
+    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), VIEW_STUB)).toBe(false);
+    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), VIEW_STUB)).toBe(
+      false,
+    );
   });
 
   it('is disabled while Earth is sub-pixel, even inside the foreground band', () => {
@@ -251,7 +259,7 @@ describe('earthLayer.enabled', () => {
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
-    expect(earthLayer.enabled(state, subPixelCtx)).toBe(false);
+    expect(earthLayer.enabled(state, subPixelCtx, VIEW_STUB)).toBe(false);
   });
 });
 
@@ -286,7 +294,7 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
       CONTENT_LAYERS.filter(
-        (l) => l.target === 'foreground:0' && l.slab === NEAR0 && l.enabled(state, ctx),
+        (l) => l.target === 'foreground:0' && l.slab === NEAR0 && l.enabled(state, ctx, VIEW_STUB),
       );
 
     // Below the gate: earth draws (its two gates pass), so the group is

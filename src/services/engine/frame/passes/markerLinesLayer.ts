@@ -46,7 +46,7 @@ export const markerLinesLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (state.gpu.markerLineRenderer === null) return false;
     return state.gpu.markerLineRenderer.lineCount() > 0;
   },

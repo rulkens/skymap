@@ -74,7 +74,8 @@ describe('proceduralDisksLayer', () => {
       subsystems: { proceduralDisks: null },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(proceduralDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
@@ -82,7 +83,8 @@ describe('proceduralDisksLayer', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(proceduralDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns false when lastOutput.instances is empty', () => {
@@ -90,7 +92,8 @@ describe('proceduralDisksLayer', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(proceduralDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns true with a non-empty lastOutput', () => {
@@ -98,7 +101,8 @@ describe('proceduralDisksLayer', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(proceduralDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(true);
   });
 
   it('draw() forwards instances to state.gpu.proceduralDiskRenderer.draw', () => {

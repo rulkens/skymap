@@ -61,7 +61,7 @@ export const clipPathDebugLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (state.gpu.debugLineRenderer === null) return false;
     return state.subsystems.clipPathInspector.current() !== null;
   },

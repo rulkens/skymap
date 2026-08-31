@@ -157,6 +157,10 @@ function makeState(
   } as unknown as EngineState;
 }
 
+// `enabled` never reads `view` — an arbitrary NEAR0 view satisfies the 3-arg
+// signature for every gating case in this file.
+const VIEW_STUB = makeNear0View([0, 0, 0]);
+
 describe('starSpheresLayer.enabled', () => {
   it('is false while starRenderer is null and while no star resolves; true once one does', () => {
     const renderer = { draw: vi.fn() };
@@ -164,17 +168,25 @@ describe('starSpheresLayer.enabled', () => {
     // the handle check must short-circuit BEFORE either is touched
     // (renderFrame fixtures carry null handles and no bodies bag).
     expect(
-      starSpheresLayer.enabled({ gpu: { starRenderer: null } } as unknown as EngineState, CTX_STUB),
+      starSpheresLayer.enabled(
+        { gpu: { starRenderer: null } } as unknown as EngineState,
+        CTX_STUB,
+        VIEW_STUB,
+      ),
     ).toBe(false);
     // Renderer + below-gate camera: every star — the Sun included — is
     // sub-pixel at 5 kpc, so the spheres branch is empty (the Sun demotes to
     // a point rather than holding a row alive with an invisible sphere).
     const nearCtx = makeCtx(NEAR_FIELD_CAM);
-    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), nearCtx)).toBe(false);
+    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), nearCtx, VIEW_STUB)).toBe(
+      false,
+    );
     // Renderer + a camera half an AU off the Sun: the Sun resolves and the
     // spheres branch is non-empty.
     const sunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
-    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), sunCtx)).toBe(true);
+    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), sunCtx, VIEW_STUB)).toBe(
+      true,
+    );
   });
 
   it('is disabled beyond the foreground gate', () => {
@@ -182,10 +194,10 @@ describe('starSpheresLayer.enabled', () => {
     // gate turns the row off before the partition is computed, so the
     // (foreground:0, NEAR0) step can be skipped wholesale.
     const state = makeState({ draw: vi.fn() }, SCENE_STARS);
-    expect(starSpheresLayer.enabled(state, makeCtx([0, 0, 0.43]))).toBe(false);
-    expect(starSpheresLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toBe(
-      false,
-    );
+    expect(starSpheresLayer.enabled(state, makeCtx([0, 0, 0.43]), VIEW_STUB)).toBe(false);
+    expect(
+      starSpheresLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]), VIEW_STUB),
+    ).toBe(false);
   });
 });
 

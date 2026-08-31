@@ -119,12 +119,12 @@ function makeState(renderer: unknown, resident: boolean): EngineState {
 describe('cloudShellLayer.enabled', () => {
   it('is false while the clouds slot is not resident, even well above the fade band', () => {
     const state = makeState({ draw: vi.fn() }, false);
-    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10))).toBe(false);
+    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10), makeNear0View())).toBe(false);
   });
 
   it('is true when resident and well above the fade band', () => {
     const state = makeState({ draw: vi.fn() }, true);
-    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10))).toBe(true);
+    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10), makeNear0View())).toBe(true);
   });
 
   it('is false once the camera descends below the fade-out altitude — resident and well above sub-pixel notwithstanding', () => {
@@ -138,7 +138,7 @@ describe('cloudShellLayer.enabled', () => {
     // right at the boundary (see cloudDeckFade's own tests).
     const state = makeState({ draw: vi.fn() }, true);
     const belowFadeFloor = ctxAtAltitude(CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii / 2);
-    expect(cloudShellLayer.enabled(state, belowFadeFloor)).toBe(false);
+    expect(cloudShellLayer.enabled(state, belowFadeFloor, makeNear0View())).toBe(false);
   });
 });
 

@@ -81,19 +81,29 @@ function makeState(
 
 describe('zoneOfAvoidanceUpsampleLayer.enabled', () => {
   it('is enabled when the camera sits inside the visibility window', () => {
-    expect(zoneOfAvoidanceUpsampleLayer.enabled(makeState(), makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(zoneOfAvoidanceUpsampleLayer.enabled(makeState(), ctx, slabViewOf(ctx, COSMO))).toBe(
+      true,
+    );
   });
 
   it('is disabled once the camera is past the recede band', () => {
     const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
     const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
-    expect(zoneOfAvoidanceUpsampleLayer.enabled(makeState(), ctx)).toBe(false);
+    expect(zoneOfAvoidanceUpsampleLayer.enabled(makeState(), ctx, slabViewOf(ctx, COSMO))).toBe(
+      false,
+    );
   });
 
   it('is disabled when zoneOfAvoidanceRenderer is null (pre-bootstrap)', () => {
-    expect(zoneOfAvoidanceUpsampleLayer.enabled(makeState({ renderer: null }), makeCtx())).toBe(
-      false,
-    );
+    const ctx = makeCtx();
+    expect(
+      zoneOfAvoidanceUpsampleLayer.enabled(
+        makeState({ renderer: null }),
+        ctx,
+        slabViewOf(ctx, COSMO),
+      ),
+    ).toBe(false);
   });
 });
 

@@ -42,7 +42,7 @@ export const milkyWayAggregateLayer: ContentLayer = {
 
   // Shared with the upsample consumer and the dust row — see
   // `milkyWayCloudLiveness` on why all three must answer identically.
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     return deriveMilkyWayCloudAlpha(state, ctx) !== null;
   },
 

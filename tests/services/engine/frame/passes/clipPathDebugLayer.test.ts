@@ -113,17 +113,20 @@ const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 describe('clipPathDebugLayer.enabled', () => {
   it('is false when the renderer is null', () => {
     const state = makeState({ renderer: null, snapshot: SNAPSHOT });
-    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(clipPathDebugLayer.enabled(state, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 
   it('is false when there is no snapshot', () => {
     const state = makeState({ renderer: makeRendererSpy(), snapshot: null });
-    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(clipPathDebugLayer.enabled(state, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 
   it('is true when renderer + snapshot both present', () => {
     const state = makeState({ renderer: makeRendererSpy(), snapshot: SNAPSHOT });
-    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(clipPathDebugLayer.enabled(state, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
   });
 });
 

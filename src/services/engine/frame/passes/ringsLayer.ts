@@ -129,7 +129,7 @@ export const ringsLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'over',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first: the check short-circuits so pre-bootstrap fixtures (null
     // renderer, bare ctx) never touch ctx or the ring inputs.
     if (state.gpu.ringRenderer === null) return false;

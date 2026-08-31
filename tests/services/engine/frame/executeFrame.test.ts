@@ -17,8 +17,9 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { executeFrame } from '../../../../src/services/engine/frame/executeFrame';
-import { COSMO } from '../../../../src/services/engine/frame/slabs';
+import { COSMO, NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeSlab } from '../../../fixtures/makeSlab';
 import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/ExecuteFrameArgs';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
@@ -29,6 +30,7 @@ import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimi
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 
 // ── Encoder / pass recorder ──────────────────────────────────────────────────
 //
@@ -111,8 +113,11 @@ type SpyLayer = ContentLayer & {
 function makeLayer(init: {
   name: string;
   target: string;
-  slab?: number;
+  slab?: number | 'body';
   enabled?: boolean;
+  // Per-row gate for a 'body' layer: reads the resolved view (e.g. its
+  // `slab.frame.bodyId`) instead of the constant `enabled` flag above.
+  enabledFor?: (view: SlabView) => boolean;
   log?: string[];
 }): SpyLayer {
   return {
@@ -120,7 +125,9 @@ function makeLayer(init: {
     slab: init.slab ?? COSMO,
     target: init.target,
     blend: 'additive',
-    enabled: vi.fn<ContentLayer['enabled']>(() => init.enabled ?? true),
+    enabled: vi.fn<ContentLayer['enabled']>((_state, _ctx, view) =>
+      init.enabledFor ? init.enabledFor(view) : (init.enabled ?? true),
+    ),
     draw: vi.fn<ContentLayer['draw']>(() => {
       init.log?.push(`draw:${init.name}`);
     }),
@@ -205,6 +212,20 @@ function makeCtx(): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
+/**
+ * `makeCtx()` plus body-slab rows appended at indices 2, 3, … — matching
+ * `deriveSlabs`' real layout (NEAR0, COSMO, then body rows). Built with
+ * `makeSlab` overrides per the fixture convention, rather than a hand
+ * literal, so a future `Slab` field addition is one edit in the fixture.
+ */
+function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
+  const base = makeCtx();
+  const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', bodyId: bodyId as BodyId } }),
+  );
+  return { ...base, slabs: [...base.slabs, ...bodySlabs] };
+}
+
 type StateInit = {
   disabledPasses?: Record<string, boolean>;
   compositor?: { draw: ReturnType<typeof vi.fn> };
@@ -236,11 +257,12 @@ function makeArgs(over: {
   timing?: GpuTimingService;
   state?: EngineState;
   env?: ReturnType<typeof makeEncoderEnv>;
+  ctx?: ReadyFrameContext;
 }): { args: ExecuteFrameArgs; env: ReturnType<typeof makeEncoderEnv> } {
   const env = over.env ?? makeEncoderEnv();
   const args: ExecuteFrameArgs = {
     encoder: env.encoder,
-    ctx: makeCtx(),
+    ctx: over.ctx ?? makeCtx(),
     state: over.state ?? makeState(),
     program: over.program,
     layers: over.layers,
@@ -610,5 +632,71 @@ describe('executeFrame', () => {
     for (const rec of env.passes) {
       expect('depthStencilAttachment' in rec.desc).toBe(false);
     }
+  });
+
+  // ── 'body' slab layers ─────────────────────────────────────────────────
+  //
+  // A `slab: 'body'` layer matches every render step whose resolved slab is a
+  // body row (`frame.kind === 'body-m'`), not one fixed index — Task 7 emits
+  // one such step per body row in `deriveSlabs`' painter chain.
+
+  it("runs a 'body' layer once per body-slab step", () => {
+    const layer = makeLayer({ name: 'body-layer', target: 'foreground:0', slab: 'body' });
+    const ctx = makeBodyCtx(['mars', 'venus']);
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: 2 },
+      { kind: 'render', target: 'foreground:0', slab: 3 },
+    ];
+    const { args } = makeArgs({ program, layers: [layer], ctx });
+    executeFrame(args);
+    expect(layer.draw).toHaveBeenCalledTimes(2);
+    const bodyIdOf = (call: number): string => {
+      const view = layer.draw.mock.calls[call]![1] as SlabView;
+      const frame = view.slab.frame as { kind: 'body-m'; bodyId: string };
+      return frame.bodyId;
+    };
+    expect(bodyIdOf(0)).toBe('mars');
+    expect(bodyIdOf(1)).toBe('venus');
+  });
+
+  it("gates a 'body' layer per row", () => {
+    const layer = makeLayer({
+      name: 'body-layer',
+      target: 'foreground:0',
+      slab: 'body',
+      enabledFor: (view) =>
+        (view.slab.frame as { kind: 'body-m'; bodyId: string }).bodyId === 'mars',
+    });
+    const ctx = makeBodyCtx(['mars', 'venus']);
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: 2 },
+      { kind: 'render', target: 'foreground:0', slab: 3 },
+    ];
+    const { args } = makeArgs({ program, layers: [layer], ctx });
+    executeFrame(args);
+    expect(layer.draw).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes the resolved view to enabled', () => {
+    // Fails if a future change resolves the view twice (once for the filter,
+    // once for the group) instead of threading the same object through both.
+    const layer = makeLayer({ name: 'body-layer', target: 'foreground:0', slab: 'body' });
+    const ctx = makeBodyCtx(['mars']);
+    const program: FrameStep[] = [{ kind: 'render', target: 'foreground:0', slab: 2 }];
+    const { args } = makeArgs({ program, layers: [layer], ctx });
+    executeFrame(args);
+    const enabledView = layer.enabled.mock.calls[0]![2];
+    const drawView = layer.draw.mock.calls[0]![1];
+    expect(enabledView).toBe(drawView);
+  });
+
+  it("does not match a 'body' layer against a world-mpc step", () => {
+    const layer = makeLayer({ name: 'body-layer', target: 'foreground:0', slab: 'body' });
+    // The default fixture ctx's NEAR0 row is `frame.kind === 'world-mpc'`
+    // (makeCosmoSlab), so this step never matches a 'body' layer.
+    const program: FrameStep[] = [{ kind: 'render', target: 'foreground:0', slab: NEAR0 }];
+    const { args } = makeArgs({ program, layers: [layer] });
+    executeFrame(args);
+    expect(layer.draw).not.toHaveBeenCalled();
   });
 });

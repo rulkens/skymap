@@ -92,7 +92,7 @@ export const orbitTrailsLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;
     // Toggle off AND the fade fully receded means truly hidden, so the whole
     // (hdr, NEAR0) pass drops — opacity 0 ⇒ no render.

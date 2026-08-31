@@ -73,7 +73,8 @@ describe('texturedDisksLayer', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } },
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
-    expect(texturedDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(texturedDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns false when subsystem is null', () => {
@@ -81,7 +82,8 @@ describe('texturedDisksLayer', () => {
       subsystems: { texturedDisks: null },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(texturedDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns false when disks array is empty', () => {
@@ -89,7 +91,8 @@ describe('texturedDisksLayer', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(texturedDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns true when disks array is non-empty', () => {
@@ -97,7 +100,8 @@ describe('texturedDisksLayer', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(texturedDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(true);
   });
 
   it('draw() invokes state.gpu.texturedDiskRenderer.draw', () => {

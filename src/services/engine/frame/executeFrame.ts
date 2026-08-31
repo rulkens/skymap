@@ -194,18 +194,23 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // one whose gate returned false — hence the check follows the gate.
         // Empty in production, so the membership lookup is in the noise.
         const disabledPasses = state.settings.debug.disabledPasses;
+        // The frame's ONLY slab resolution — one SlabView per render step,
+        // threaded into every layer in the group. Resolved BEFORE the filter
+        // (not after, as before body slabs): a 'body' layer's `enabled` needs
+        // the view to read `view.slab.frame.bodyId`, and a step whose slab is
+        // a body row still resolves cheaply even when its group ends up empty.
+        const view = slabViewOf(ctx, step.slab);
         const group = layers.filter(
           (l) =>
             l.target === step.target &&
-            l.slab === step.slab &&
-            l.enabled(state, ctx) &&
+            // A 'body' layer matches every body-slab step (frame.kind ===
+            // 'body-m'), not one fixed index — Task 7 emits one such step per
+            // body row.
+            (l.slab === step.slab || (l.slab === 'body' && view.slab.frame.kind === 'body-m')) &&
+            l.enabled(state, ctx, view) &&
             disabledPasses[l.name] !== true,
         );
         if (group.length === 0) break;
-
-        // The frame's ONLY slab resolution — one SlabView per render step,
-        // threaded into every layer in the group.
-        const view = slabViewOf(ctx, step.slab);
         // The merged pass bills its whole group against this one slot. The key
         // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
         // definition `timedSlotRowsOf` allocates the slot under — so

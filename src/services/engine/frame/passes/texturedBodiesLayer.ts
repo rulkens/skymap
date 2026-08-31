@@ -107,7 +107,7 @@ export const texturedBodiesLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first: the check short-circuits so pre-bootstrap fixtures (null
     // renderer, bare ctx) never touch ctx or the partition inputs.
     if (state.gpu.texturedBodyRenderer === null) return false;
