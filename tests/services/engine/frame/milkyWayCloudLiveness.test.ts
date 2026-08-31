@@ -69,11 +69,14 @@ describe('deriveMilkyWayCloudAlpha — galactic-centre approach fade', () => {
     expect(alpha).toBeCloseTo(expected, 6);
   });
 
-  it('stays at full alpha past 2 kpc from the Sun with the galactic centre nowhere near', () => {
-    // The pre-fix calibration point this repoint must reproduce bit-for-bit:
-    // deep in the disc, well outside the Sun's own approach band, with Sgr A*
-    // itself far outside its own band too.
-    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx([0, 0, 0.005]));
+  it('stays at full alpha outside both approach bands', () => {
+    // The GC band's 12 kpc fullAt reaches past the Sun (R₀ = 8.2 kpc), so a
+    // pose outside BOTH bands must sit on the far side of the Sun from the
+    // Centre: 5 kpc anti-GC-ward is 13.2 kpc from Sgr A* and 5 kpc from the
+    // Sun — outside each band's fullAt.
+    const r0 = Math.hypot(SGR_A_STAR_POS[0], SGR_A_STAR_POS[1], SGR_A_STAR_POS[2]);
+    const awayFromGc = SGR_A_STAR_POS.map((c) => (-c / r0) * 0.005) as unknown as Vec3;
+    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(awayFromGc));
     expect(alpha).toBe(1);
   });
 });
