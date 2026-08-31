@@ -230,6 +230,7 @@ Per-task plan tree under [`superpowers/plans/2026-05-05-outreach-and-promotion/`
 - [ ] **RNAAS submission** `ready` — short note + PDF (Task 6).
 - [ ] **Remaining Reddit posts** `ready` — r/Astronomy (video), r/WebGPU (video), reschedule r/MapPorn (Task 4).
 - [ ] **Academic outreach emails** `ready` — SDSS, GLADE, AAS WWT, CDS, LVK EM (Task 5).
+- [ ] **Museum kiosk mode** `needs-design` — attract-loop + locked-down + offline install build; playback half exists (`?cinema`, recorder harness), robustness + offline thumbnails don't. → [details](backlog/2026-08-31-museum-kiosk-mode.md)
 
 ---
 
