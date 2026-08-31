@@ -41,12 +41,12 @@
  * near-equal to the NEAR0 view translation during the local-map approach: an
  * f32 subtraction cancels catastrophically and jitters the sprites. So the
  * walk rebases in f64 before narrowing — each box origin re-expressed
- * camera-relative (`computeStarCut` inlines that seam allocation-free, keyed on
- * `ctx.drawCamPos` which equals the NEAR0 view origin; the math mirrors
- * `starNodeOriginRelCamMpc`, still the standalone home `resolveStarRecord`
- * reuses) — and each layer narrows the vp via
- * `narrowMat4(rebaseViewProj(view.slab.vp, camPos))`. The renderer stays a dumb
- * f32 pipeline; the precision seam lives here.
+ * camera-relative (`computeStarCut` inlines that seam allocation-free, keyed
+ * on `ctx.drawCamPos` outside VR / the head pose in VR — see `originMpc` on
+ * `PreparedStarCut`; the math mirrors `starNodeOriginRelCamMpc`, still the
+ * standalone home `resolveStarRecord` reuses) — and each layer narrows the vp
+ * via `narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc))`. The
+ * renderer stays a dumb f32 pipeline; the precision seam lives here.
  *
  * ### The shared-vp invariant (load-bearing)
  *
@@ -143,6 +143,7 @@ import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRen
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
+import type { Slab } from '../../../../@types/engine/frame/Slab';
 import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatalogRenderer';
 import { NEAR0, slabViewOf } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -150,6 +151,8 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
+import { mat4d } from 'wgpu-matrix';
+import { vrOverride, viewFromBasis } from '../../../xr/vrSpikeState';
 import {
   walkStarOctreeCut,
   type StarCutFrustum,
@@ -288,13 +291,144 @@ function buildCutFrustum(
     cutPlanesPcScratch[b + 2] = planesMpc[b + 2]!;
     cutPlanesPcScratch[b + 3] = planesMpc[b + 3]! * MPC_TO_PC;
   }
-  const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
-  const radiansPerPx = ctx.fovYRad / ctx.canvasSize.height;
-  const leafPxRadius = STAR_GLOW_MIN_PX * sizeScale;
-  cutFrustumScratch.angularMarginRad =
-    Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
-  cutFrustumScratch.worldSpread = Math.max(1, sizeScale * glowOverlap);
+  const margins = cutFrustumMargins(sizePx, glowOverlap, ctx.fovYRad, ctx.canvasSize.height);
+  cutFrustumScratch.angularMarginRad = margins.angularMarginRad;
+  cutFrustumScratch.worldSpread = margins.worldSpread;
   return cutFrustumScratch;
+}
+
+/** Shared slack sizing for both `buildCutFrustum` and its VR twin below. */
+function cutFrustumMargins(
+  sizePx: number,
+  glowOverlap: number,
+  fovYRad: number,
+  viewportHeightPx: number,
+): { angularMarginRad: number; worldSpread: number } {
+  const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
+  const radiansPerPx = fovYRad / viewportHeightPx;
+  const leafPxRadius = STAR_GLOW_MIN_PX * sizeScale;
+  return {
+    angularMarginRad: Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx,
+    worldSpread: Math.max(1, sizeScale * glowOverlap),
+  };
+}
+
+/**
+ * VR ONLY — the head pose the once-per-frame walk keys off: the midpoint of
+ * both eyes' `vrOverride.eyes[].camPos` (world Mpc). `null` outside an active
+ * XR session. See `prepareStarCut`'s VR branch for why the walk keys off the
+ * HEAD rather than either eye.
+ */
+type VrHeadPose = { camPosMpc: Vec3; e0: VrEyeLike; e1: VrEyeLike };
+type VrEyeLike = { camPos: Vec3; viewNear0: Float64Array; tan: EyeTangentsLike };
+type EyeTangentsLike = { l: number; r: number; d: number; u: number };
+function vrHeadPose(): VrHeadPose | null {
+  if (!vrOverride.active || vrOverride.eyes.length === 0) return null;
+  const e0 = vrOverride.eyes[0]!;
+  const e1 = vrOverride.eyes[1] ?? e0;
+  return {
+    e0,
+    e1,
+    camPosMpc: [
+      (e0.camPos[0] + e1.camPos[0]) / 2,
+      (e0.camPos[1] + e1.camPos[1]) / 2,
+      (e0.camPos[2] + e1.camPos[2]) / 2,
+    ],
+  };
+}
+
+/**
+ * Slack added atop the union of both eyes' tangent extents when building the
+ * VR walk's widened frustum — a spike-grade constant, not eye-tuned: it only
+ * has to be generous enough that neither eye's toed-out FOV edge gets pruned,
+ * and over-inclusion here just walks a few extra off-screen nodes.
+ */
+const VR_FRUSTUM_TANGENT_PAD = 0.15;
+
+/** Reused scratch for the VR frustum's planes (mirrors `cutFrustumScratch`). */
+const vrCutFrustumScratch = {
+  planesPc: new Float64Array(24),
+  angularMarginRad: 0,
+  worldSpread: 1,
+};
+
+/**
+ * VR ONLY — the once-per-frame walk's off-screen-prune frustum, built from
+ * the HEAD pose instead of a single eye's vp. A per-eye frustum (what
+ * `buildCutFrustum` would compute from `ctx.slabs[NEAR0]`) is too narrow for
+ * the OTHER eye's toed-out view: a star just inside eye 1's cone can sit
+ * outside eye 0's, so culling by either eye alone pops stars at the view's
+ * edge as the walk's single result feeds both eyes' draws. Fix: union both
+ * eyes' tangent boxes (already known per-eye — `VrEye.tan` — and comparable
+ * directly because both eyes share one rotation basis, see
+ * `vrSpikeState.ts`'s `billboardBasisFromView`), pad it, and build ONE
+ * symmetric-enough frustum wide enough for either eye.
+ *
+ * The frustum is built directly in the CAMERA-RELATIVE frame the walk already
+ * works in (a rotation-only view — `viewFromBasis(..., eye: [0,0,0])` — takes
+ * no translation, so the input the plane test compares against is exactly
+ * `boxCenter - headPos`, matching `walkStarOctreeCut`'s `cx,cy,cz`), so no
+ * separate `rebaseViewProj` step is needed the way `buildCutFrustum` needs one
+ * (that one starts from an ALREADY origin-relative NEAR0 vp).
+ *
+ * The near/far planes `frustumPlanesFromViewProj` would extract from this
+ * synthetic projection are meaningless (the `near` scale here is an arbitrary
+ * placeholder, not a real distance) — overwritten to an always-pass plane so
+ * only the four side (angular) planes actually cull.
+ */
+function buildVrCutFrustum(
+  head: VrHeadPose,
+  sizePx: number,
+  glowOverlap: number,
+  ctx: ReadyFrameContext,
+): StarCutFrustum {
+  const { e0, e1 } = head;
+  const v = e0.viewNear0;
+  // Basis rows recovered from eye0's view matrix — row 0 = right (X), row 1 =
+  // up (Y), row 2 = back (Z) — the same extraction `billboardBasisFromView`
+  // (vrSpikeState.ts) uses, valid because rotation is identical across eyes.
+  const X: Vec3 = [v[0]!, v[4]!, v[8]!];
+  const Y: Vec3 = [v[1]!, v[5]!, v[9]!];
+  const Z: Vec3 = [v[2]!, v[6]!, v[10]!];
+  const rotationOnlyView = viewFromBasis(new Float64Array(16), X, Y, Z, [0, 0, 0]);
+
+  const wideTan: EyeTangentsLike = {
+    l: Math.min(e0.tan.l, e1.tan.l) - VR_FRUSTUM_TANGENT_PAD,
+    r: Math.max(e0.tan.r, e1.tan.r) + VR_FRUSTUM_TANGENT_PAD,
+    d: Math.min(e0.tan.d, e1.tan.d) - VR_FRUSTUM_TANGENT_PAD,
+    u: Math.max(e0.tan.u, e1.tan.u) + VR_FRUSTUM_TANGENT_PAD,
+  };
+  const wideProj = new Float64Array(16);
+  wideProj[0] = 2 / (wideTan.r - wideTan.l);
+  wideProj[5] = 2 / (wideTan.u - wideTan.d);
+  wideProj[8] = (wideTan.r + wideTan.l) / (wideTan.r - wideTan.l);
+  wideProj[9] = (wideTan.u + wideTan.d) / (wideTan.u - wideTan.d);
+  wideProj[11] = -1;
+  wideProj[14] = 1; // placeholder — only the l/r/d/u-derived side planes are used, see above
+
+  const vp = mat4d.multiply(wideProj, rotationOnlyView) as Float64Array;
+  const planesMpc = frustumPlanesFromViewProj(narrowMat4(vp), cutPlanesMpcScratch);
+  for (let b = 0; b < 16; b += 4) {
+    vrCutFrustumScratch.planesPc[b] = planesMpc[b]!;
+    vrCutFrustumScratch.planesPc[b + 1] = planesMpc[b + 1]!;
+    vrCutFrustumScratch.planesPc[b + 2] = planesMpc[b + 2]!;
+    vrCutFrustumScratch.planesPc[b + 3] = planesMpc[b + 3]! * MPC_TO_PC;
+  }
+  // Always-pass near/far slots (see the header) — zero normal, huge positive
+  // offset, so `n·p + d` can never fall below `-radius`.
+  vrCutFrustumScratch.planesPc[16] = 0;
+  vrCutFrustumScratch.planesPc[17] = 0;
+  vrCutFrustumScratch.planesPc[18] = 0;
+  vrCutFrustumScratch.planesPc[19] = 1e30;
+  vrCutFrustumScratch.planesPc[20] = 0;
+  vrCutFrustumScratch.planesPc[21] = 0;
+  vrCutFrustumScratch.planesPc[22] = 0;
+  vrCutFrustumScratch.planesPc[23] = 1e30;
+
+  const margins = cutFrustumMargins(sizePx, glowOverlap, ctx.fovYRad, ctx.canvasSize.height);
+  vrCutFrustumScratch.angularMarginRad = margins.angularMarginRad;
+  vrCutFrustumScratch.worldSpread = margins.worldSpread;
+  return vrCutFrustumScratch;
 }
 
 /**
@@ -528,6 +662,21 @@ export type PreparedStarCut = {
   glowOverlap: number;
   aggregateIntensityCap: number;
   anyNodeFading: boolean;
+  /**
+   * THE ORIGIN EVERY `originRelCamMpc` IN THIS CUT WAS SUBTRACTED AGAINST —
+   * outside VR this is `ctx.drawCamPos` (identical to `view.camPos`, so it was
+   * historically safe to drop and re-read `view.camPos` at draw time); in VR
+   * this is the HEAD pose (`vrHeadPose().camPosMpc`), which differs from
+   * either eye's own `view.camPos`. `rebaseViewProj` is an exact algebraic
+   * identity for ANY rebase origin (see its header) — it only requires the
+   * SAME origin on both sides of `pos - origin`. So a draw call MUST rebase
+   * its vp against THIS value, never `view.camPos` directly, or the two
+   * eyes' vp (correctly per-eye) and this cut's origins (head-pose, shared by
+   * both eyes) disagree by `headPos - eyePos`: every star renders offset by
+   * that constant world-space vector, which is what actually moved wrong
+   * on-device — see `drawStream`/`drawPick`.
+   */
+  originMpc: Vec3;
 };
 
 /** A fresh stream with backing arrays at `cap` node capacity (grown as needed). */
@@ -638,13 +787,44 @@ function streamsFor(catalog: StarCatalog): CatalogStreams {
 
 /**
  * Per-frame memo: `prepareStarCut` runs the walk + fade advance exactly once
- * per frame even though both the aggregate and leaf layers call it. Keyed on
- * the frame's `ctx` object — `deriveFrameContext` mints a fresh one each frame —
- * so a new frame recomputes and the previous entry is GC'd with its `ctx`. The
- * fade advance mutating `fadeStateByCatalog` is what makes the once-per-frame
- * guarantee load-bearing: a second dt-step would double-advance the ramps.
+ * per frame even though both the aggregate and leaf layers call it (and, in
+ * VR, both eyes' draws AND the runFrame planner call — three call sites).
+ *
+ * Outside VR, keyed on the NEAR0 `Slab` object (`ctx.slabs[NEAR0]`), NOT `ctx`
+ * itself — `deriveSlabs` mints one NEAR0 slab per frame, shared by the
+ * planner call and the single draw call, so this still collapses to one
+ * compute per frame. `preparedByCtxFallback` covers hand-built test contexts
+ * with no `slabs` (only ever a synthetic fixture — see `buildCutFrustum`'s
+ * identical fallback).
+ *
+ * Inside VR (`vrOverride.active`), keyed on `vrOverride.eyes` instead: three
+ * per-frame bugs, not one, ruled out this way —
+ *   1. `applyVrEyeToCtx` (vrSpikeState.ts) replaces `ctx.slabs` with a FRESH
+ *      pair of `Slab`s per eye, so a Slab-keyed memo would MISS on every one
+ *      of the three call sites and re-walk three times.
+ *   2. The runFrame planner call runs BEFORE `applyVrEyeToCtx` ever touches
+ *      `ctx` this frame, so `ctx.drawCamPos`/`ctx.slabs[NEAR0]` there are
+ *      whatever the flat 2D orbit camera last held — in a VR session that
+ *      camera is not head-tracked, so it reads as a STATIC perspective
+ *      unrelated to where the user is looking. A Slab-keyed re-walk at that
+ *      call site would select nodes for the wrong, frozen viewpoint.
+ *   3. Even if only the two (correct) eye-draw walks ran, each would
+ *      re-advance the SHARED per-catalog fade state (`fadeStateByCatalog`) —
+ *      membership computed from two DIFFERENT cameras in the same frame marks
+ *      nodes visible-from-eye-1-but-not-eye-0 (and vice versa) as spurious
+ *      newcomers/leavers, so stars fade in/out at the view's edges as the
+ *      head turns even though the actual box selection is otherwise correct.
+ *
+ * `vrOverride.eyes` is a fresh array minted once per real XR frame (vrSpike.ts
+ * assigns it right before calling `runFrame`), so keying on it collapses all
+ * three call sites to exactly one walk, computed from the HEAD pose (see
+ * `computeStarCut`'s `vrHeadPose` branch) rather than any single eye or the
+ * stale flat camera — fixing both the correctness bug and the CPU cost (one
+ * walk instead of three).
  */
-const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
+const preparedBySlab = new WeakMap<Slab, PreparedStarCut | null>();
+const preparedByCtxFallback = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
+const preparedByVrEyes = new WeakMap<object, PreparedStarCut | null>();
 
 /**
  * Walk every loaded catalog's octree, advance its per-node LOD fades, and
@@ -652,15 +832,30 @@ const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
  * and an aggregate stream (interior flux-mip nodes) by `childMask`. Returns the
  * per-source streams plus the shared shader scalars and the `anyNodeFading`
  * wake vote, or `null` when the star pass is not live (no renderer, master
- * off). Memoised on `ctx` (see `preparedByCtx`); the fade advance runs on the
- * first call for a frame only. The wake vote is DATA on the result — runFrame
- * forwards it to `shouldKeepTicking`, the single authority (see module header).
+ * off). Memoised per frame (see the doc above); the fade advance runs once
+ * per key only. The wake vote is DATA on the result — runFrame forwards it to
+ * `shouldKeepTicking`, the single authority (see module header).
  */
 export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
-  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
+  if (vrOverride.active && vrOverride.eyes.length > 0) {
+    const eyes = vrOverride.eyes;
+    if (preparedByVrEyes.has(eyes)) return preparedByVrEyes.get(eyes)!;
+    const result = computeStarCut(state, ctx);
+    preparedByVrEyes.set(eyes, result);
+    return result;
+  }
 
+  const slab = ctx.slabs?.[NEAR0];
+  if (slab !== undefined) {
+    if (preparedBySlab.has(slab)) return preparedBySlab.get(slab)!;
+    const result = computeStarCut(state, ctx);
+    preparedBySlab.set(slab, result);
+    return result;
+  }
+
+  if (preparedByCtxFallback.has(ctx)) return preparedByCtxFallback.get(ctx)!;
   const result = computeStarCut(state, ctx);
-  preparedByCtx.set(ctx, result);
+  preparedByCtxFallback.set(ctx, result);
   return result;
 }
 
@@ -670,10 +865,17 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
   if (!state.settings.starCatalogs.enabled) return null;
 
   // The camera-relative parsec position the walk keys off, and the heliocentric
-  // distance the crossfade + exposure ramp read. `ctx.drawCamPos` equals the
-  // NEAR0 view origin (RENDER_ORIGIN_MPC is the heliocentric origin), so the
-  // walk is a pure function of (state, ctx) — no SlabView needed here.
-  const camPos: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
+  // distance the crossfade + exposure ramp read. Outside VR, `ctx.drawCamPos`
+  // equals the NEAR0 view origin (RENDER_ORIGIN_MPC is the heliocentric
+  // origin), so the walk is a pure function of (state, ctx) — no SlabView
+  // needed here. In VR, `ctx.drawCamPos` is stale at this call's first (and
+  // memo-deciding) invocation — the runFrame planner call, BEFORE
+  // `applyVrEyeToCtx` ever runs this frame — so the head pose is read
+  // straight off `vrOverride.eyes` instead (see `prepareStarCut`'s doc).
+  const vrHead = vrHeadPose();
+  const camPos: Vec3 = vrHead
+    ? vrHead.camPosMpc
+    : [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
   const camPosPc: Vec3 = [camPos[0] * MPC_TO_PC, camPos[1] * MPC_TO_PC, camPos[2] * MPC_TO_PC];
   const camDistPc = Math.hypot(camPosPc[0], camPosPc[1], camPosPc[2]);
 
@@ -698,11 +900,13 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
   const glowOverlap = state.settings.starCatalogs.glowOverlap;
   const aggregateIntensityCap = state.settings.starCatalogs.aggregateIntensityCap;
 
-  // This frame's off-screen prune frustum — source-independent, built once from
-  // the NEAR0 rebased vp and handed to every source's walk. See `buildCutFrustum`
-  // and `walkStarOctreeCut`'s header for why pruning off-screen subtrees at their
-  // common ancestor is the dominant CPU win.
-  const cutFrustum = buildCutFrustum(ctx, sizePx, glowOverlap);
+  // This frame's off-screen prune frustum — source-independent, built once and
+  // handed to every source's walk. See `buildCutFrustum` (2D) / `buildVrCutFrustum`
+  // (VR, widened to cover both eyes) and `walkStarOctreeCut`'s header for why
+  // pruning off-screen subtrees at their common ancestor is the dominant CPU win.
+  const cutFrustum = vrHead
+    ? buildVrCutFrustum(vrHead, sizePx, glowOverlap, ctx)
+    : buildCutFrustum(ctx, sizePx, glowOverlap);
 
   const sources: PreparedStarSource[] = [];
   // Tracks whether ANY node is mid-fade across ALL sources this frame. Surfaced
@@ -853,7 +1057,15 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     sources.push({ source, leaf, aggregate });
   }
 
-  return { sources, sizePx, brightness, glowOverlap, aggregateIntensityCap, anyNodeFading };
+  return {
+    sources,
+    sizePx,
+    brightness,
+    glowOverlap,
+    aggregateIntensityCap,
+    anyNodeFading,
+    originMpc: camPos,
+  };
 }
 
 /**
@@ -871,7 +1083,11 @@ function drawStream(
   stream: StarDrawStream,
   fovYRad: number,
 ): void {
-  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+  // Rebase against `prep.originMpc`, NOT `view.camPos` — see the field's doc.
+  // In VR the two differ (head pose vs. this eye's own position); using the
+  // wrong one here reproduces the origin/vp mismatch that made stars parallax
+  // incorrectly (`originRelCamMpc` was already baked relative to `originMpc`).
+  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc));
   // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
   // exact matrix the GPU clips against, which is what makes the cull visually
   // lossless — and derive the leaf angular slack once. Both are source-independent
@@ -926,8 +1142,8 @@ export const starCatalogLayer: ContentLayer = {
   // Pick aspect — stamps every visible LEAF star's packed identity into the
   // NEAR0 r32uint pick pass. The pick pass runs on a FRESH `ctx` minted by
   // `pickFrameContext` (→ `deriveFrameContext` from `lastPose.current`, the pose
-  // the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
-  // (`preparedByCtx`) MISSES and recomputes the leaf cut here — a second octree
+  // the last frame actually rendered), so `prepareStarCut`'s per-Slab memo
+  // (`preparedBySlab`) MISSES and recomputes the leaf cut here — a second octree
   // walk, but against that same last-rendered camera, so the pick lands exactly
   // where the sprite drew. The alternative — threading the visual frame's cached
   // cut into the pick path — would braid pick into frame ordering (the pick pass
@@ -959,7 +1175,9 @@ export const starCatalogLayer: ContentLayer = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
 
-    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+    // Rebase against `prep.originMpc`, not `view.camPos` — see that field's
+    // doc on `PreparedStarCut` (the pick leaf origins were baked against it).
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc));
     // Same once-per-draw plane extraction as `drawStream`, off the identical
     // rebased vp — the pick cull must agree with the visual cull so a picked and
     // a drawn star always partition the frustum the same way. The margin uses the

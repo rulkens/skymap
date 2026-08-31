@@ -33,6 +33,7 @@ import { NEAR0 } from '../slabs';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
+import type { VrBillboardBasis } from '../../../xr/vrSpikeState';
 
 export const milkyWayAggregateLayer: ContentLayer = {
   name: 'milky-way-aggregate',
@@ -65,7 +66,10 @@ export const milkyWayAggregateLayer: ContentLayer = {
     // load-bearing rather than cosmetic.
     const { width: vw, height: vh } = ctx.renderTargets.sizeOf('mw-aggregate');
 
-    const { right: camRight, up: camUp } = cameraBillboardBasis(ctx.cam);
+    // Per-eye basis when the VR spike stamped one (see milkyWayLayer.ts for
+    // why `ctx.cam` alone is wrong under VR); mono orbit-camera basis otherwise.
+    const vrBasis = (ctx as unknown as { vrBillboardBasis?: VrBillboardBasis }).vrBillboardBasis;
+    const { right: camRight, up: camUp } = vrBasis ?? cameraBillboardBasis(ctx.cam);
 
     cloudRenderer.drawStars(pass, {
       vp: view.vp,

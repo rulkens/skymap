@@ -85,6 +85,32 @@ import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
 export function buildInitialSettings(): EngineSettingsState {
+  // THROWAWAY (vrSpike): `?vr` defaults the FLAT page to Earth-only (plus
+  // 2MRS, the one galaxy catalog light enough for the headset's frame
+  // budget) too, so the 2D view before/around a VR session doesn't fetch +
+  // GPU-upload every other galaxy/star catalog and the MCPM volume. Same
+  // URLSearchParams check as device.ts / startLoop.ts. The sidebar toggles
+  // stay live — this only changes the boot default, so re-enabling a source
+  // still loads it via the normal demand path. Delete with the spike.
+  const vrSpike =
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('vr');
+  // THROWAWAY (vrSpike): perf A/B knob for the on-device Quest fit — raising
+  // `refineThreshold` above `DEFAULT_REFINE_THRESHOLD` (0.16) makes the octree
+  // cut COARSER, not finer: a node refines only while `edge/distance` exceeds
+  // this threshold, so a HIGHER value delays refinement, walks/draws fewer
+  // nodes, and costs less. 0.3 trades a visibly boxier far field for headroom
+  // on the headset.
+  const VR_STAR_REFINE_THRESHOLD = 0.3;
+  // THROWAWAY (vrSpike): perf A/B knobs traded in from on-device Quest 3
+  // testing — the star draw is fragment-bound, so a flat 2px point plus half
+  // the default glow-overlap spread buys back frame budget at the cost of
+  // physical accuracy the headset viewer won't notice up close.
+  const VR_STAR_SIZE_PX = 2;
+  const VR_STAR_GLOW_OVERLAP = DEFAULT_STAR_GLOW_OVERLAP * 0.5;
+  const volumeItems = seedVolumeFields();
+  if (vrSpike && volumeItems[SOURCE_REGISTRY[Source.Mcpm].id]) {
+    volumeItems[SOURCE_REGISTRY[Source.Mcpm].id]!.enabled = false;
+  }
   return {
     // Camera orientation frame — the bare scalar "which pole is up" view
     // preference (spec §3.2). Seeded from `DEFAULT_ORIENTATION` so that file
@@ -119,7 +145,18 @@ export function buildInitialSettings(): EngineSettingsState {
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
           e.id,
-          { enabled: e.visible, labelEnabled: true },
+          // THROWAWAY (vrSpike): forced off under `?vr` — see the note above —
+          // except 2MRS (35k all-sky points, light enough for the Quest's
+          // frame budget) and Famous (the curated thumbnail set — no
+          // per-galaxy fetch cost until close approach, and this is the
+          // catalog the headset demo is built to fly through).
+          {
+            enabled: vrSpike
+              ? e.id === SOURCE_REGISTRY[Source.TwoMRS].id ||
+                e.id === SOURCE_REGISTRY[Source.FamousGalaxy].id
+              : e.visible,
+            labelEnabled: true,
+          },
         ]),
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
@@ -211,11 +248,20 @@ export function buildInitialSettings(): EngineSettingsState {
     // bin (the star renderer draws no per-star names). Per-row "loaded" is the
     // asset slot's own readiness — no data-layer store.
     starCatalogs: {
+      // NOT forced off under `?vr`, unlike the per-catalog rows below: this
+      // cluster's master is a real gate the per-item rows are ANDed against
+      // (`starCatalogVisible`), and the Stars section's header checkbox is
+      // the only sidebar control for it — easy to miss beside the per-catalog
+      // checkboxes. Forcing it off left a spike bug: re-enabling a star
+      // catalog's own row from the sidebar did nothing, because the master
+      // gate silently stayed off. Leaving it on costs nothing at boot — every
+      // row is still forced off below, so nothing fetches until the user
+      // picks one.
       enabled: true,
-      sizePx: DEFAULT_STAR_SIZE_PX,
+      sizePx: vrSpike ? VR_STAR_SIZE_PX : DEFAULT_STAR_SIZE_PX,
       brightness: DEFAULT_STAR_BRIGHTNESS,
-      refineThreshold: DEFAULT_REFINE_THRESHOLD,
-      glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
+      refineThreshold: vrSpike ? VR_STAR_REFINE_THRESHOLD : DEFAULT_REFINE_THRESHOLD,
+      glowOverlap: vrSpike ? VR_STAR_GLOW_OVERLAP : DEFAULT_STAR_GLOW_OVERLAP,
       exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
       exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
       exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
@@ -223,7 +269,14 @@ export function buildInitialSettings(): EngineSettingsState {
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
           e.id,
-          { enabled: e.visible, labelEnabled: true },
+          // THROWAWAY (vrSpike): forced off under `?vr` — see the note above —
+          // except the famous-star map, which stays on for the same reason
+          // as Famous galaxies: it's the curated set the headset demo flies
+          // through, not a bulk survey the Quest would choke fetching.
+          {
+            enabled: vrSpike ? e.id === SOURCE_REGISTRY[Source.FamousStar].id : e.visible,
+            labelEnabled: true,
+          },
         ]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
@@ -242,7 +295,8 @@ export function buildInitialSettings(): EngineSettingsState {
     },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,
-      items: seedVolumeFields(),
+      // THROWAWAY (vrSpike): `mcpm` row forced off under `?vr` above.
+      items: volumeItems,
     },
     // Flow is a singleton overlay layer: all its user-facing state (master
     // gate + look/motion knobs) lives here, spread from the single
@@ -261,7 +315,29 @@ export function buildInitialSettings(): EngineSettingsState {
       >,
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
-      disabledPasses: {},
+      // THROWAWAY (vrSpike): under `?vr` both selection-ring layers (COSMO +
+      // NEAR0 halo around the picked target) are pre-disabled — this record
+      // is the existing per-layer settings gate `executeFrame` already
+      // consults (see its `disabledPasses[l.name]` check), so reusing it here
+      // needs no new field. The ring reads as a distracting reticle in the
+      // headset; the DebugPanel toggle stays live so it can be flipped back
+      // on for the flat page.
+      //
+      // The three Label2D swap-target layers ('labels', 'marker-lines',
+      // 'foreground-labels') are NOT disabled here at boot: their
+      // projections (`cosmoLabelProjection.ts` / `near0LabelProjection.ts`)
+      // memoize per `ReadyFrameContext`, so they'd serve one eye's projection
+      // to both DURING an active VR session — but disabling them at boot also
+      // killed labels on the flat page whenever `?vr` was merely in the URL,
+      // outside any session. `vrSpike.ts` instead dispatches `setPassDisabled`
+      // for these three when a session starts, and un-disables them when it
+      // ends — session-scoped, not boot-scoped. Delete with the spike.
+      disabledPasses: vrSpike
+        ? {
+            'selection-ring': true,
+            'near0-selection-ring': true,
+          }
+        : {},
       // 'auto' reproduces the old timing-derived pass shape, so production +
       // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
       renderStrategy: 'auto',

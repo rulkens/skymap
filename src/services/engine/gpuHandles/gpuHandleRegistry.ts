@@ -258,6 +258,13 @@ export const GPU_HANDLE_ROWS = [
       createLabel3DRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
   },
   {
+    // THROWAWAY (vrSpike): second Label3D instance for planet-scale VR
+    // content — see EngineGpuHandles' docblock. Same factory, same target.
+    key: 'label3DRendererNear0',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createLabel3DRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
+  },
+  {
     key: 'filamentRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createFilamentRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),

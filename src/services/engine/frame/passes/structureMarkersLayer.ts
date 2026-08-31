@@ -61,7 +61,12 @@ export const structureMarkersLayer: ContentLayer = {
     // the additive target: pure GPU cost for zero contribution, and the
     // fade reaches 0 continuously before the skip engages, so no pop.
     if (surveyFade === 0) return;
-    state.gpu.structureMarkerRenderer!.draw(pass, view.vp, view.viewportPx, surveyFade);
+    // THROWAWAY (vrSpike): view.camPos is per-eye-correct in VR (SlabView is
+    // resolved fresh from ctx.drawCamPos, which applyVrEyeToCtx overwrites
+    // per eye before this layer's draw runs) — the VR ring pipeline needs it
+    // to orient each marker's upright disc toward whichever eye is drawing;
+    // the flat pipeline ignores the argument.
+    state.gpu.structureMarkerRenderer!.draw(pass, view.vp, view.viewportPx, surveyFade, view.camPos);
   },
 
   // Pick aspect — one ring-pick draw per structure category (cluster / SC

@@ -75,7 +75,15 @@ export async function initGpu(
   // (e.g. headless test environments, or a machine whose GPU is blocked by
   // a corporate driver policy). We treat that as a hard stop.
   // See: https://www.w3.org/TR/webgpu/#dom-gpu-requestadapter
-  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+  // THROWAWAY (vrSpike): XRGPUBinding requires a device from an xrCompatible
+  // adapter, and compatibility can only be requested here, at adapter time.
+  // Gated on `?vr` so the normal path's adapter request is byte-identical.
+  const xrCompatible =
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('vr');
+  const adapter = await navigator.gpu.requestAdapter({
+    powerPreference: 'high-performance',
+    ...(xrCompatible ? { xrCompatible: true } : {}),
+  } as GPURequestAdapterOptions);
   if (!adapter) throw new Error('No WebGPU adapter available.');
 
   // Step 2 — Request a device. `requestDevice` throws on a feature the

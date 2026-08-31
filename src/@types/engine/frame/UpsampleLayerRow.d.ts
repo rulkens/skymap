@@ -3,9 +3,11 @@
  * fields today's four upsample `ContentLayer`s vary on (name, slab, which
  * offscreen to blit, how to fetch this frame's handle, the shared liveness
  * gate), plus the one optional escape hatch — `postBlit` — for a consumer
- * that draws more than a blit into the same pass (ZoA's full-res captions).
- * `target: 'hdr'` and `blend: 'additive'` are NOT here: every row shares
- * them, so the factory bakes them in rather than repeating them per row.
+ * that needs to draw more than a blit into the same pass. Unused by any row
+ * today: ZoA's full-res captions rode it once, but moved to their own
+ * `labels3dLayer` so they're not gated on ZoA-band liveness. `target: 'hdr'`
+ * and `blend: 'additive'` are NOT here: every row shares them, so the
+ * factory bakes them in rather than repeating them per row.
  */
 
 import type { Upsample } from '../../rendering/Upsample';
@@ -25,11 +27,10 @@ export type UpsampleLayerRow = {
   /** Shared liveness gate; forwarded verbatim to `ContentLayer.enabled`. */
   enabled(state: EngineState, ctx: ReadyFrameContext): boolean;
   /**
-   * Extra draw work after the blit, into the same pass — e.g. ZoA's full-res
-   * curved lettering. Runs regardless of whether `handleOf` returned a
-   * handle this frame: the blit and `postBlit` guard themselves
-   * independently (see `zoneOfAvoidanceUpsampleLayer.ts:30-38`), so one
-   * being absent must never suppress the other.
+   * Extra draw work after the blit, into the same pass. Runs regardless of
+   * whether `handleOf` returned a handle this frame: the blit and `postBlit`
+   * must guard themselves independently, so one being absent never
+   * suppresses the other.
    */
   postBlit?(
     pass: GPURenderPassEncoder,

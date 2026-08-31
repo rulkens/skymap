@@ -254,22 +254,24 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, nine hdr, the two aggregate offscreens, the (hdr, NEAR0) group, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
+  it('derives the real registry slot list: scalar-volume, ten hdr, the two aggregate offscreens, the (hdr, NEAR0) group, foreground bodies, foreground:0→hdr, hdr→swap, five swap, near captions, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then
     // zone-of-avoidance (its own reduced-res 'zoa' step, the same shape as
-    // scalar-volume), then the nine COSMO hdr layers in registry order —
+    // scalar-volume), then the ten COSMO hdr layers in registry order —
     // zone-of-avoidance-upsample among them, beside volume-upsample, its
-    // closest sibling — then the two aggregate offscreens,
+    // closest sibling, followed immediately by labels3d (the shared Label3D
+    // draw site, its former host) — then the two aggregate offscreens,
     // each its OWN NEAR0 render step ahead of the hdr NEAR0 step:
     // star-aggregates, then milky-way-aggregate. The (hdr, NEAR0) step follows
     // with milky-way-upsample + milky-way + star-points + orbit-trails +
-    // star-catalog + star-upsample before the tone-map — milky-way-upsample
-    // precedes milky-way so the dust extincts the cloud's own starlight, that
-    // pair leads the group so the multiplicative dust never darkens the local
-    // starfield, and star-upsample sits adjacent to the star-catalog leaf draw
-    // it composites. The
+    // star-catalog + star-upsample + constellations + labels3d-near0 (the
+    // THROWAWAY vrSpike's planet-scale VR captions) before the tone-map —
+    // milky-way-upsample precedes milky-way so the dust extincts the cloud's
+    // own starlight, that pair leads the group so the multiplicative dust
+    // never darkens the local starfield, and star-upsample sits adjacent to
+    // the star-catalog leaf draw it composites. The
     // foreground:0 body render now comes NEXT (before the composites) — one
     // slot per body layer: earth, then Earth's translucent cloud-shell overlay
     // (drawn right after the opaque surface), star-spheres, field-star-sphere,
@@ -281,7 +283,7 @@ describe('timedSlotsOf', () => {
     // pick last.
     // Each render STEP trails its layers with its own '<target>·<SLAB>'
     // group-key slot (the merged-pass timing slot Joint 2 adds), so
-    // 'volume·COSMO' follows scalar-volume, 'hdr·COSMO' follows the eight COSMO
+    // 'volume·COSMO' follows scalar-volume, 'hdr·COSMO' follows the ten COSMO
     // hdr layers, and so on down to 'swap·NEAR0' after the near-field captions.
     expect(timedSlotsOf(frameProgram(TONE, true), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
@@ -295,6 +297,7 @@ describe('timedSlotsOf', () => {
       'flow',
       'volume-upsample',
       'zone-of-avoidance-upsample',
+      'labels3d',
       'horizon-shell',
       'structure-markers',
       'hdr·COSMO',
@@ -310,6 +313,7 @@ describe('timedSlotsOf', () => {
       'star-catalog',
       'star-upsample',
       'constellations',
+      'labels3d-near0',
       'hdr·NEAR0',
       'earth',
       'cloud-shell',

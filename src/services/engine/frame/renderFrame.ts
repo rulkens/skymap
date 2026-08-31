@@ -53,6 +53,7 @@ import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
+import { vrOverride, applyVrEyeToCtx } from '../../xr/vrSpikeState';
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -70,7 +71,12 @@ export function renderFrame(input: RenderFrameInput): void {
   state.gpu.focusUniform?.write(ctx.focus);
 
   const encoder = device.createCommandEncoder();
-  const swapView = context.getCurrentTexture().createView();
+  // THROWAWAY (vrSpike): in an XR session the presented targets are the
+  // projection layer's per-eye textures; the canvas swap chain is not
+  // acquired at all (its size is pinned to the eye size purely so the
+  // offscreen chain reconciles to XR resolution).
+  const vrEyes = vrOverride.active && vrOverride.eyes.length > 0 ? vrOverride.eyes : null;
+  const swapView = vrEyes ? null : context.getCurrentTexture().createView();
 
   const timingCtx = timingService.beginFrame();
   // The frame's pass shape: `settings.debug.renderStrategy` overrides it, defaulting
@@ -91,27 +97,67 @@ export function renderFrame(input: RenderFrameInput): void {
   // makes that in-between frame correct, not just a safe fallback.
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
-  executeFrame({
-    encoder,
-    ctx,
-    state,
-    program: frameProgram(
-      {
-        exposure: state.settings.tonemap.exposure,
-        curve: state.settings.tonemap.curve,
-        hdrKnee: hdrOn ? state.settings.hdr.knee : 0,
-        hdrHeadroom: hdrOn ? state.settings.hdr.headroom : 0,
-      },
-      // The master bloom toggle is the ONLY bloom value that shapes the step
-      // list; strength/threshold are read live by the bloom layers each draw.
-      state.settings.bloom.enabled,
-    ),
-    layers: CONTENT_LAYERS,
-    strategy,
-    timing: timingService,
-    swapView,
-  });
+  const program = frameProgram(
+    {
+      exposure: state.settings.tonemap.exposure,
+      curve: state.settings.tonemap.curve,
+      hdrKnee: hdrOn ? state.settings.hdr.knee : 0,
+      hdrHeadroom: hdrOn ? state.settings.hdr.headroom : 0,
+    },
+    // The master bloom toggle is the ONLY bloom value that shapes the step
+    // list; strength/threshold are read live by the bloom layers each draw.
+    state.settings.bloom.enabled,
+  );
+  if (vrEyes) {
+    // THROWAWAY (vrSpike): walk the same program once per eye, each into its
+    // own encoder (see the per-eye submit below). applyVrEyeToCtx swaps the
+    // per-eye vp/slabs/camPos onto ctx and resets the first-touch set so
+    // every target clears again — the offscreen chain is reused sequentially
+    // across eyes, which pass ordering (each eye fully submitted before the
+    // next starts recording) makes safe.
+    for (const eye of vrEyes) {
+      // THROWAWAY (vrSpike): each eye gets its OWN encoder + submit here.
+      // `device.queue.writeBuffer` (per-draw uniform uploads) lands in queue
+      // order IMMEDIATELY, ahead of any encoder's eventual `submit` — it is
+      // NOT ordered against the draws recorded between writes (the same
+      // writeBuffer-vs-submit landmine `planetRenderer`/`earthLayer` document
+      // for a single encoder). Sharing the outer `encoder` across both eyes
+      // meant eye 1's uniform writes clobbered eye 0's before either eye's
+      // draws were submitted, so both eyes presented eye 1's matrices —
+      // submitting per eye forces each eye's writes to land before its own
+      // draws submit.
+      const eyeEncoder = device.createCommandEncoder();
+      applyVrEyeToCtx(ctx, eye);
+      executeFrame({
+        encoder: eyeEncoder,
+        ctx,
+        state,
+        program,
+        layers: CONTENT_LAYERS,
+        strategy,
+        timing: timingService,
+        swapView: eye.textureView,
+      });
+      device.queue.submit([eyeEncoder.finish()]);
+    }
+  } else {
+    executeFrame({
+      encoder,
+      ctx,
+      state,
+      program,
+      layers: CONTENT_LAYERS,
+      strategy,
+      timing: timingService,
+      swapView: swapView!,
+    });
+  }
   timingService.endFrame(timingCtx, encoder);
 
+  // THROWAWAY (vrSpike): in the VR branch `encoder` above never receives a
+  // draw — each eye records and submits its own encoder — so GPU timing
+  // (bracketed on `encoder` by `beginFrame`/`endFrame`) isn't meaningful in
+  // VR spike mode. Still submitting it here closes out its timing
+  // resolve/copy and keeps the non-VR path's single `submit` call untouched.
   device.queue.submit([encoder.finish()]);
 }

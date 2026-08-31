@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * buildInitialSettings — boot-defaults assembly.
  *
@@ -7,9 +8,15 @@
  * exactly one row per id (a drift between the id set and the seed would strand a
  * catalog/structure with no settings row, the bug the `Object.fromEntries`
  * derivation exists to prevent).
+ *
+ * jsdom (rather than the suite's default `node` environment) so the `?vr`
+ * describe block below can drive `buildInitialSettings`'s
+ * `window.location.search` read — every other test here runs with an empty
+ * search string, the jsdom default, so behaves identically to `window`
+ * undefined.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
@@ -61,5 +68,95 @@ describe('buildInitialSettings', () => {
     expect(s.flow).toEqual(DEFAULT_FLOW);
     // Spread, not aliased — mutating the result must not write the seed.
     expect(s.flow).not.toBe(DEFAULT_FLOW);
+  });
+
+  describe('under `?vr`', () => {
+    const originalSearch = window.location.search;
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { ...window.location, search: originalSearch },
+      });
+    });
+
+    function setSearch(s: string): void {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { ...window.location, search: s },
+      });
+    }
+
+    it('leaves the star-catalogs master gate on while defaulting only the famous-star map on', () => {
+      // Regression: the master gate used to be forced off alongside the
+      // per-row items. `starCatalogVisible` ANDs the master against each row,
+      // so with the master off, re-enabling a single row's sidebar checkbox
+      // did nothing — the Stars section's header checkbox (the only sidebar
+      // control for the master) had to be found and flipped too. Leaving the
+      // master on makes a single row's own checkbox sufficient again, the
+      // same one-click contract the Galaxies section (no separate master
+      // gate) already gives. The famous-star map is the one row that stays
+      // on: the curated set the headset demo flies through, not a bulk
+      // survey the Quest would choke fetching.
+      setSearch('?vr');
+      const s = buildInitialSettings();
+      expect(s.starCatalogs.enabled).toBe(true);
+      for (const id of Object.keys(s.starCatalogs.items)) {
+        expect(s.starCatalogs.items[id as keyof typeof s.starCatalogs.items].enabled).toBe(
+          id === 'famousStar',
+        );
+      }
+    });
+
+    it('disables the selection-ring passes but leaves the Label2D swap-target passes alone', () => {
+      // Regression: the Label2D passes used to be forced off here too, but
+      // that also killed labels on the FLAT page whenever `?vr` was merely in
+      // the URL, outside any active session — disabling them per-session is
+      // vrSpike.ts's job (it dispatches `setPassDisabled` on session
+      // start/end), not this boot-time seed's.
+      setSearch('?vr');
+      const { disabledPasses } = buildInitialSettings().debug;
+      expect(disabledPasses).toEqual({
+        'selection-ring': true,
+        'near0-selection-ring': true,
+      });
+    });
+
+    it('coarsens the star-cut Detail knob (0.3, above the 0.16 default) for the headset perf A/B', () => {
+      // Regression/documentation: `refineThreshold` gates the octree walk's
+      // refine decision (`edge/distance > threshold`), so a HIGHER value
+      // delays refinement and draws FEWER nodes — this is the "less detail,
+      // cheaper" direction, not "more detail" despite the larger number.
+      setSearch('?vr');
+      const s = buildInitialSettings();
+      expect(s.starCatalogs.refineThreshold).toBe(0.3);
+      expect(s.starCatalogs.refineThreshold).toBeGreaterThan(DEFAULT_REFINE_THRESHOLD);
+    });
+
+    it('sets star size to 2px and halves glow overlap for the headset perf A/B', () => {
+      // Regression/documentation: fragment-bound star draw on Quest 3 — a
+      // flat 2px point plus half the default glow-overlap spread buys back
+      // frame budget. Non-VR boot keeps the un-scaled defaults (asserted in
+      // the top-level 'wires per-field defaults' test above).
+      setSearch('?vr');
+      const s = buildInitialSettings();
+      expect(s.starCatalogs.sizePx).toBe(2);
+      expect(s.starCatalogs.glowOverlap).toBe(DEFAULT_STAR_GLOW_OVERLAP * 0.5);
+    });
+
+    it('defaults 2MRS and Famous on while forcing every other galaxy catalog off', () => {
+      // 2MRS is the headset's default galaxy layer: 35k all-sky points, light
+      // enough for the Quest's frame budget. Famous is the curated thumbnail
+      // set the headset demo is built to fly through. Every other galaxy
+      // catalog stays off, unlike the un-forced star-catalogs master gate
+      // above.
+      setSearch('?vr');
+      const { items } = buildInitialSettings().galaxyCatalogs;
+      for (const id of Object.keys(items)) {
+        expect(items[id as keyof typeof items].enabled).toBe(
+          id === '2mrs' || id === 'famousGalaxy',
+        );
+      }
+    });
   });
 });

@@ -43,6 +43,7 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
+import type { Slab } from '../../../../@types/engine/frame/Slab';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
@@ -85,11 +86,17 @@ function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext):
  * One Earth per-frame derivation, shared by `draw`, `drawPick`, and
  * `runFrame`'s tile planner — the three sites that each used to
  * independently look up `earthState` and (`draw`/the planner) recompute the
- * same body-local MVP + camera. Memoised per `ctx` (mirrors `prepareStarCut`
- * in `starCatalogLayer.ts`), so whichever call site reaches it first in a
- * frame does the work and the rest read the cache. `view` must be
- * `slabViewOf(ctx, NEAR0)` for the same `ctx` this is keyed on — a documented
- * precondition, not enforced by types, true at both real call sites.
+ * same body-local MVP + camera. Memoised per `view.slab` (NOT per `ctx`):
+ * `slabViewOf` hands out a fresh `SlabView` per render step, but its `.slab`
+ * is the same `Slab` object for every call sharing one derivation of
+ * `ctx.slabs` — which is exactly once per real frame outside VR, so the
+ * memo still collapses to one computation there. Inside a VR session,
+ * `applyVrEyeToCtx` (vrSpikeState.ts) replaces `ctx.slabs` with fresh `Slab`
+ * objects per eye, so keying on `view.slab` forces a recompute for each eye
+ * instead of handing back the planner's pre-eye-mutation result — keying on
+ * `ctx` (the same object reference for the whole frame, planner call
+ * included) was the head-locked-Earth bug: both eyes, and the planner
+ * itself, shared one cached MVP built from whichever view resolved first.
  */
 export type PreparedEarthFrame = {
   readonly earthState: BodyState;
@@ -107,7 +114,7 @@ export type PreparedEarthFrame = {
   readonly frame: number;
 };
 
-const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedEarthFrame | null>();
+const preparedBySlab = new WeakMap<Slab, PreparedEarthFrame | null>();
 
 let earthFrameCounter = 0;
 
@@ -116,10 +123,10 @@ export function prepareEarthFrame(
   ctx: ReadyFrameContext,
   view: SlabView,
 ): PreparedEarthFrame | null {
-  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
+  if (preparedBySlab.has(view.slab)) return preparedBySlab.get(view.slab)!;
 
   const result = computeEarthFrame(state, ctx, view);
-  preparedByCtx.set(ctx, result);
+  preparedBySlab.set(view.slab, result);
   return result;
 }
 

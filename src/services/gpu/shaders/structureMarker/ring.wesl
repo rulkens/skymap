@@ -44,6 +44,21 @@ import package::lib::fadeUniforms::applyFade;
 // @group(1) FadeUniforms — see halo.wesl for the contract.
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
+// THROWAWAY (vrSpike): VR-only camera-position uniform for 'vsFlat' below.
+// io.wesl's shared 'Uniforms' (CameraUniforms' 80-byte prefix: viewProj +
+// viewportPx + 2 pads) carries no world-space eye position, and io.wesl is
+// shared by halo.wesl + ringPick.wesl — growing it would ripple into both.
+// This struct is local to ring.wesl instead, bound at @group(3), a slot only
+// the VR ring pipeline's layout declares (see structureMarkerRenderer.ts);
+// the flat 'vs' / halo / ringPick pipelines never bind group 3, so their
+// layouts and the shared camera uniform buffer are untouched.
+struct VrCamUniforms {
+  // .xyz = per-eye camera world position, Mpc (structureMarkerRenderer.ts
+  // writes ctx.drawCamPos/view.camPos here every VR draw); .w unused pad.
+  camPos: vec4<f32>,
+};
+@group(3) @binding(0) var<uniform> vrCam: VrCamUniforms;
+
 // Ring width in CSS pixels (full visible band, halved for the AA
 // smoothstep on each side).
 const RING_PX_WIDTH: f32 = 1.5;
@@ -113,6 +128,75 @@ fn vs(
   // Per-instance structure index forwarded for the ringPick fragment.  The
   // visual fragment doesn't read it; the cost is one flat-interpolated
   // u32 per vertex output.
+  out.structureIndex = ii;
+  return out;
+}
+
+// THROWAWAY (vrSpike): 'vsFlat' is a VR-only sibling of 'vs' above, selected
+// by structureMarkerRenderer.ts when 'vrOverride.active'. 'vs' expands the
+// quad entirely in clip space around ONE projected centre — screen-aligned,
+// so the ring always faces whichever eye is drawing it, with zero
+// orientation change as the viewer's head turns. At cluster/void distances
+// that's also true of translation (IPD is negligible next to Mpc), so the
+// ring reads as a decal glued to the view rather than an object sitting in
+// the scene.
+//
+// 'vsFlat' instead projects each CORNER as a real world-space point on an
+// UPRIGHT disc — a cylindrical (yaw-only) billboard: the disc plane always
+// contains world up (0,1,0), so the ring stands vertically regardless of
+// viewer height or head tilt, but rotates about that vertical axis to face
+// the eye's horizontal bearing. That's "world-anchored, always readable" —
+// an XZ-plane (lying-flat) disc reads as a ground decal from above and
+// vanishes edge-on from eye height, which is the wrong reading for a marker
+// meant to be walked up to and looked at. Same UV/margin contract as 'vs'
+// (see its comments); the fragment stage ('fs' below) is unchanged and
+// shared by both entry points.
+@vertex
+fn vsFlat(
+  @builtin(vertex_index) vi: u32,
+  @builtin(instance_index) ii: u32,
+  input: VsIn,
+) -> VsOut {
+  let worldPos = input.positionAndRadius.xyz;
+  let radiusMpc = input.positionAndRadius.w;
+
+  // Disc plane basis: 'up' is fixed (world vertical); 'side' is the
+  // horizontal axis perpendicular to both up and the direction to the eye,
+  // so the disc's face normal is the eye's horizontal bearing — turning
+  // your head yaws the ring to face you without ever tilting it off
+  // vertical.
+  let up = vec3<f32>(0.0, 1.0, 0.0);
+  let toCam = vrCam.camPos.xyz - worldPos;
+  let sideRaw = cross(up, toCam);
+  let sideLenSq = dot(sideRaw, sideRaw);
+  // Degenerate when toCam is (near-)parallel to up — looking straight down
+  // or up at the ring's centre — or when the eye sits at the ring centre
+  // (toCam ~ 0): cross(up, toCam) collapses toward the zero vector either
+  // way, and normalizing that is a divide-by-~0. The threshold combines a
+  // fixed floor (catches toCam ~ 0 outright) with a term scaled by
+  // dot(toCam, toCam) (catches near-parallel at any distance — Mpc-scale
+  // positions mean |toCam| itself spans many orders of magnitude, so a bare
+  // fixed epsilon would be wrong-sized at most scales). Fall back to a
+  // fixed horizontal axis so the ring still renders (just not eye-facing)
+  // instead of a NaN-filled degenerate quad.
+  let sideEps = max(1e-6 * dot(toCam, toCam), 1e-12);
+  let side = select(normalize(sideRaw), vec3<f32>(1.0, 0.0, 0.0), sideLenSq < sideEps);
+
+  let corner = quadCorner(vi);
+  // World-space offset in the (side, up) plane instead of a screen-space
+  // expansion — the one substantive difference from 'vs'.
+  let cornerWorld = worldPos + (corner.x * side + corner.y * up) * (radiusMpc * RING_QUAD_MARGIN);
+  let centerClip = worldToClip(u.cam, worldPos);
+  let cornerClip = worldToClip(u.cam, cornerWorld);
+  let sizePx = worldLenToPx(u.cam, radiusMpc, centerClip.w);
+
+  var out: VsOut;
+  out.pos = cornerClip;
+  out.uv = corner * RING_QUAD_MARGIN;
+  out.color = input.ringColorAndAlpha.xyz;
+  out.alpha = input.ringColorAndAlpha.w;
+  out.radiusMpc = radiusMpc;
+  out.camDistMpc = sizePx;
   out.structureIndex = ii;
   return out;
 }

@@ -409,6 +409,12 @@ describe('renderFrame visual baseline', () => {
           // Null so the ZoA guide band stays out of the pinned sequence — it
           // was held out only by the fixture's absent focusBlend before.
           zoneOfAvoidanceRenderer: null,
+          // labels3dLayer.enabled calls `.glyphCount()` on this handle — must
+          // be null (not absent), same key-must-exist landmine as the other
+          // renderer handles here.
+          label3DRenderer: null,
+          // labels3dNear0Layer.enabled shares the same landmine for its own handle.
+          label3DRendererNear0: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
           // Flow is CONTENT_LAYERS row 5 (see passes/index.ts); here it

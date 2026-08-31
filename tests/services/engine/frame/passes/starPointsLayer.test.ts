@@ -269,6 +269,9 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         // which this star-focused fixture does not carry.
         bodyGlintRenderer: null,
         starCatalogRenderer: null,
+        // Same key-must-exist landmine as bodyGlintRenderer above, for
+        // labels3dNear0Layer (also a member of this (hdr, NEAR0) group).
+        label3DRendererNear0: null,
       },
       data: { bodies: { stars: SCENE_STARS } },
       // The milky-way impostor also rides this group now (its slab moved to

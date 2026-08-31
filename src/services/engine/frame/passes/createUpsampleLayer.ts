@@ -3,9 +3,10 @@
  * layers (volume, star-aggregate, milky-way, zone-of-avoidance): a
  * screen-space blit of a reduced-res offscreen into HDR, ignoring the
  * resolved `SlabView`, gated by one liveness projection its producer shares
- * (see `UpsampleLayerRow.d.ts`). `postBlit` guards itself independently of
- * the blit handle (`zoneOfAvoidanceUpsampleLayer.ts:30-38`) — a missing
- * handle must never suppress it.
+ * (see `UpsampleLayerRow.d.ts`). `postBlit` is an escape hatch for extra
+ * draw work in the same pass — unused by any row today (the ZoA lettering
+ * that once rode it moved to its own `labels3dLayer`) — and guards itself
+ * independently of the blit handle: a missing handle must never suppress it.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';

@@ -11,6 +11,7 @@
 
 import type { StructureMarkerDescriptor } from './StructureMarkerDescriptor';
 import type { Vec2 } from '../math/Vec2';
+import type { Vec3 } from '../math/Vec3';
 
 export type StructureMarkerRenderer = {
   /** Human-readable identifier. */
@@ -34,12 +35,19 @@ export type StructureMarkerRenderer = {
    * `filamentRenderer.draw(... fadeOpacity)`.  The pass file passes a
    * constant 1.0; a FadeRegistry handle for structure markers (e.g. for
    * layer-toggle animations) can substitute its per-frame value here.
+   *
+   * `camPos` (THROWAWAY, vrSpike): world-space camera position, Mpc. Only
+   * the VR ring pipeline reads it (to orient each marker's upright disc
+   * toward the eye); the flat path ignores it. The caller passes
+   * `SlabView.camPos`, which is already per-eye-correct in VR (see
+   * `applyVrEyeToCtx`'s docstring in `services/xr/vrSpikeState.ts`).
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
     fadeOpacity: number,
+    camPos: Vec3,
   ): void;
   /** Number of markers last passed to setMarkers.  Used by the pass `enabled()` check. */
   markerCount(): number;

@@ -337,6 +337,17 @@ export type EngineGpuHandles = {
    */
   label3DRenderer: Label3DRenderer | null;
   /**
+   * THROWAWAY (Quest 3 WebXR spike). Second `Label3DRenderer` instance for
+   * planet-scale VR content (`produceVrLabels`'s scene-body captions via
+   * `Label3DProducerOutput.labelsNear0`) — a separate instance from
+   * `label3DRenderer` because that renderer's absolute world-Mpc upload
+   * denormal-flushes at body scale; `labels3dNear0Layer` camera-rebases this
+   * one's vp each draw instead. Draws into HDR, additive, same as
+   * `label3DRenderer`. Null until `initGpu` constructs it; nulled back out
+   * during teardown. Empty (no labels) outside an active VR session.
+   */
+  label3DRendererNear0: Label3DRenderer | null;
+  /**
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — the renderer is
