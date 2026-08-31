@@ -53,15 +53,13 @@ export const foregroundLabelsLayer: ContentLayer = {
     renderer.draw(pass, vpF32, viewportPx, depthView);
   },
 
-  // Pick aspect — the drawn captions' grace-padded ink boxes, each stamped
-  // with the SAME packed id the body's own sphere / glint pick writes, so a
-  // caption click and a body click resolve to one selection. The rects ride
-  // `near0LabelProjection` (the f64-rebased vp the captions are drawn through,
-  // NOT `view.vp`) because the caption anchors are camera-relative.
-  //
-  // This is what makes a sub-pixel body's NAME the click target its glint
-  // footprint could only approximate — see `bodyGlintsLayer.drawPick`, which
-  // widens its own pick to the caption range for exactly that affordance.
+  // Pick aspect — grace-padded ink boxes for the drawn captions, stamped with
+  // the SAME packed id the body's own sphere/glint pick writes, so a caption
+  // click and a body click resolve to one selection. Uses
+  // `near0LabelProjection` (the f64-rebased vp the captions are drawn
+  // through), not `view.vp` — the caption anchors are camera-relative.
+  // `bodyGlintsLayer.drawPick` widens its own pick to this caption range for
+  // the same affordance.
   drawPick(pass, _view, ctx, state) {
     const renderer = state.gpu.foregroundLabelRenderer;
     const pickRenderer = state.gpu.foregroundLabelPickRenderer;

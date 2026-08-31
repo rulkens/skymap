@@ -1,16 +1,12 @@
 /**
- * labelPickQuads — the drawn label set → clickable screen rectangles.
+ * labelPickQuads — the drawn label set → clickable screen rectangles, shared
+ * by both label layers so a COSMO label and a NEAR0 caption become pick
+ * geometry by the same rules. Input is already the post-declutter set the
+ * renderer packed, so nothing here re-decides visibility.
  *
- * The two label layers share this so a COSMO label and a NEAR0 caption become
- * pick geometry by the same rules, whichever declutter arm produced them: the
- * input is already the post-declutter, post-envelope set the renderer packed,
- * so nothing here re-decides visibility beyond "is it actually legible".
- *
- * `hasPickableLabel` lives beside it because it is the same decision one step
- * earlier — the layer's `pickEnabled` gate. It is deliberately the CHEAP half
- * (identity + alpha, no projection): admitting a frame whose labels all turn
- * out to be off-screen costs one empty draw, while a gate that could reject a
- * frame the emit would have filled is a silently dead pick.
+ * `hasPickableLabel` (the `pickEnabled` gate) is deliberately the CHEAP half
+ * — identity + alpha, no projection: a gate that rejects a frame the emit
+ * would fill is a silently dead pick, worse than an empty draw.
  */
 
 import type { Label2D } from '../../../../@types/rendering/Label2D';
@@ -34,15 +30,15 @@ export function hasPickableLabel(labels: readonly Label2D[]): boolean {
 
 /**
  * Screen rectangles for every label of `labels` that can take a click, in the
- * order they must be drawn: NEAREST SUBJECT FIRST, because every quad shares
- * one forced depth band and the depth test rejects equals, so the first
- * instance drawn owns a contested pixel. Depth is the label anchor's own
- * `clipW` — for a lifted label that is the lift's anchor rather than the
- * subject dot, which differs by a few screen px of parallax and never by
- * enough to reorder two labels the user could tell apart.
+ * order they must be drawn: NEAREST SUBJECT FIRST, since every quad shares one
+ * forced depth band and the depth test rejects equals, so the first instance
+ * drawn owns a contested pixel. Depth is the label anchor's own `clipW` — for
+ * a lifted label that's the lift's anchor, not the subject dot, which differs
+ * by only a few screen px of parallax and never enough to reorder two labels
+ * a user could tell apart.
  *
- * Each rect is the measured ink box (`labelScreenRect`, the same math the
- * COSMO declutter tests overlaps with) inflated by the grace padding.
+ * Each rect is the measured ink box (`labelScreenRect`) inflated by the grace
+ * padding.
  */
 export function labelPickQuads(args: {
   readonly labels: readonly Label2D[];

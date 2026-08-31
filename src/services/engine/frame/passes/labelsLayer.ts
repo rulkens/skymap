@@ -76,16 +76,15 @@ export const labelsLayer: ContentLayer = {
     state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, depthView);
   },
 
-  // Pick aspect — the drawn labels' grace-padded ink boxes, stamped with each
-  // subject's own packed id (see `labelPickQuads`). Rects are derived from the
-  // SAME projection the director declutters through, resolved fresh for the
-  // pick's own frame context so the boxes sit where the glyphs are now.
+  // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with
+  // each subject's own packed id (see `labelPickQuads`), from the SAME
+  // projection the director declutters through, resolved fresh per pick call
+  // so the boxes track where the glyphs are now.
   //
-  // Depth occlusion is deliberately NOT reproduced here: the visual pass
-  // discards caption pixels behind a nearer body (`fragmentOcclude`), which
-  // the flat pick quad cannot see. A label half-hidden behind Jupiter's limb
-  // therefore stays clickable over its hidden half — pick is wider than draw,
-  // which is the safe direction for a click affordance.
+  // Depth occlusion is deliberately NOT reproduced: the visual pass discards
+  // caption pixels behind a nearer body (`fragmentOcclude`), which the flat
+  // pick quad can't see — so an occluded label stays clickable. Pick wider
+  // than draw is the safe direction for a click affordance.
   drawPick(pass, _view, ctx, state) {
     const renderer = state.gpu.labelRenderer;
     const pickRenderer = state.gpu.labelPickRenderer;

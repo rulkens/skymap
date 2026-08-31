@@ -3,22 +3,10 @@
  * instanced screen-space rectangle per legible label, stamping the label
  * subject's packed identity so clicking a name selects the thing it names.
  *
- * It records into an ALREADY-BEGUN pick pass owned by the pick program and
- * owns no pass, texture or readback — the same shape as `bodyPickRenderer`.
- * Geometry is CPU-resolved (`labelPickQuads`), so this file is only the
- * pipeline plus one grow-only instance buffer.
- *
- * ### One instance per slab, hence no per-pass slot cursor
- *
- * The pick program records every slab's pass onto ONE encoder and submits
- * once, so two callers sharing an instance buffer would race
- * (`queue.writeBuffer` lands before any command in the batch runs). The two
- * label layers already need separate instances — different pick-target depth
- * formats and opposite depth conventions — and each calls `draw` exactly once
- * per pass, so the race has no site here and `bodyPickRenderer`'s slot cursor
- * is not needed.
- *
- * @module
+ * Records into an ALREADY-BEGUN pick pass owned by the pick program and owns
+ * no pass, texture, or readback — the same shape as `bodyPickRenderer`. Draws
+ * at most once per slab per frame, so unlike that renderer it needs no
+ * per-pass slot cursor.
  */
 
 import type { LabelPickQuad } from '../../../../@types/rendering/LabelPickQuad';

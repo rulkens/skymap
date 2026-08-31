@@ -1,16 +1,12 @@
 /**
  * labelScreenRect — the screen rect a label's ink occupies, in device px.
  *
- * Reproduces the label vertex shader's sizing on the CPU: `pxPerEm =
- * worldEmMpc / clipW · viewportH/2`, clamped to [minPx, maxPx], then atlas px
- * → screen px via `displayEmPx / ATLAS_FONT_SIZE`. The bbox is anchor-relative
- * with +Y down, which already matches screen space (the shader's atlas-Y flip
- * and its NDC→screen flip cancel), so it adds to the projected anchor with no
- * sign fix-up.
- *
- * ONE derivation for the two consumers that must agree: the COSMO declutter's
- * overlap test and the pick quads. A second copy would let a label be
- * clickable somewhere it is not drawn.
+ * Reproduces the label vertex shader's sizing on the CPU: `pxPerEm = worldEmMpc
+ * / clipW · viewportH/2`, clamped to [minPx, maxPx], then atlas px → screen px
+ * via `displayEmPx / ATLAS_FONT_SIZE` (+Y-down bbox already matches screen
+ * space — the shader's atlas-Y and NDC→screen flips cancel). ONE derivation for
+ * the two consumers that must agree — the COSMO declutter's overlap test and
+ * the pick quads — so a label can't be clickable somewhere it isn't drawn.
  */
 
 import type { Label2D } from '../../@types/rendering/Label2D';

@@ -1,15 +1,12 @@
 /**
  * sceneBodyPickId — the packed pick identity for one seeded scene body, by id.
  *
- * The caption pick's twin of what each body layer's `drawPick` stamps for its
- * own geometry: Earth and Sgr A* are singletons under their own source codes,
- * a planet or moon indexes `SCENE_PLANETS` under `Source.Planet`, and anything
- * else falls through to `starPickId`'s two star tables. Same source codes,
- * same seed tables, same `PICK_SENTINEL_OFFSET` — so a body picked by its
- * caption resolves to the same selection as one picked by its disc.
- *
- * `null` for an unseeded id, the `seedIndexOfBody` −1 contract: the caller
- * must SKIP rather than stamp, since an id packed from −1 aliases body 0.
+ * The caption pick's twin of each body layer's `drawPick` — same source codes,
+ * seed tables, and `PICK_SENTINEL_OFFSET` — so a caption pick resolves to the
+ * same selection as a disc pick. Earth/Sgr A* are singletons; a planet/moon
+ * indexes `SCENE_PLANETS`; anything else falls through to `starPickId`. Returns
+ * `null` for an unseeded id: the caller must SKIP, since packing
+ * `seedIndexOfBody`'s −1 sentinel would alias body 0.
  */
 
 import { Source } from '../../../../data/sources';
