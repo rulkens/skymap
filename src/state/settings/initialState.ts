@@ -18,10 +18,8 @@ import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
+  DEFAULT_FOV_DEG,
   DEFAULT_DEPTH_FADE_ENABLED,
-  DEFAULT_SHOW_PICK_BUFFER,
-  DEFAULT_SHOW_DISK_RADIUS_RING,
-  DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
   DEFAULT_EXPOSURE,
   DEFAULT_HDR_ENABLED,
   DEFAULT_HDR_KNEE,
@@ -71,6 +69,7 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
+import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import { ATMOSPHERE_PARAMS } from '../../data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../data/bodies/earthSurfaceParams';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
@@ -83,6 +82,7 @@ import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId'
 import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
+import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
 export function buildInitialSettings(): EngineSettingsState {
   return {
@@ -91,6 +91,12 @@ export function buildInitialSettings(): EngineSettingsState {
     // stays the default's single source of truth (mirroring `tonemap.curve` ←
     // `DEFAULT_TONE_MAP_CURVE`).
     orientation: DEFAULT_ORIENTATION,
+    // Camera lens: the vertical FOV slider. `cameraFraming.ts`'s boot-lens
+    // constant derives from the same `DEFAULT_FOV_DEG`, so boot and slider
+    // rest position agree by construction.
+    camera: {
+      fovDeg: DEFAULT_FOV_DEG,
+    },
     // Galaxy catalog layer: shared billboard appearance knobs + one item row
     // per galaxy catalog. Rows are DERIVED from the galaxy-catalog registry
     // entries so the seed can't drift from the galaxy catalog set — and,
@@ -247,9 +253,12 @@ export function buildInitialSettings(): EngineSettingsState {
     // labels draw (the guided tour flips it on and its snapshot restores it).
     labels: { focusedOnly: false },
     debug: {
-      showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
-      showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
-      showOrbitTrailImpostor: DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR,
+      // One entry per DEBUG_OVERLAY_ROWS row, all off — the roster is the
+      // single source of truth so a new row can't ship unseeded.
+      overlays: Object.fromEntries(DEBUG_OVERLAY_ROWS.map((row) => [row.key, false])) as Record<
+        DebugOverlayKey,
+        boolean
+      >,
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},

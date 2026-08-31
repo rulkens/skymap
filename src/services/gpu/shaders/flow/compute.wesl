@@ -42,9 +42,10 @@ const DIR_EPS = vec3<f32>(1e-6);
 const MIN_TRAVEL: f32 = 1e-9;
 
 // Per-dispatch integration parameters (48 bytes; TS pads the tail):
-//   dt        f32 @ 0
+//   dt        f32 @ 0    seconds elapsed since the previous frame (ages the particle)
 //   trailStep f32 @ 4
-//   headStep  f32 @ 8
+//   headStep  f32 @ 8    grid units to march THIS frame — the CPU has already
+//                        multiplied the per-second speed by dt
 //   n         u32 @ 12   active particle count
 //   frame     u32 @ 16   frame counter / RNG salt
 //   mode      u32 @ 20   advect=0 / streamline=1

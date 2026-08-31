@@ -15,6 +15,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { starCatalogLayer } from '../../../../src/services/engine/frame/passes/starCatalogLayer';
+import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/cameraFraming';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { Source } from '../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../src/data/sources/gaia-stars';
@@ -42,7 +43,7 @@ function camAtPc(distPc: number): Vec3 {
 
 /** A fresh ctx per call — `prepareStarCut` memoises on the ctx object. */
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
-  return { drawCamPos: camPos, nowMs } as unknown as ReadyFrameContext;
+  return { drawCamPos: camPos, nowMs, fovYRad: DEFAULT_FOV_Y_RAD } as unknown as ReadyFrameContext;
 }
 
 /** A single-leaf catalog: `walkStarOctreeCut` returns one leaf draw. */
@@ -99,7 +100,7 @@ function makeNear0View(camPos: Vec3): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   } as unknown as Slab;
@@ -117,7 +118,12 @@ describe('starCatalogLayer frustum cull wiring', () => {
     const camPos = camAtPc(MID_BAND_PC);
     const view = makeNear0View(camPos);
 
-    starCatalogLayer.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer, makePickRenderer()));
+    starCatalogLayer.draw(
+      PASS_STUB,
+      view,
+      makeCtx(camPos),
+      makeState(renderer, makePickRenderer()),
+    );
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const args = renderer.draw.mock.calls[0]![1];

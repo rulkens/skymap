@@ -2,9 +2,9 @@
  * starPointRenderer — the neighbourhood's distant stars as additive point
  * sprites in the depthless HDR accumulation.
  *
- * ### Why a thin dedicated pipeline, not a `createPointRenderer` wrap
+ * ### Why a thin dedicated pipeline, not a `createGalaxyPointRenderer` wrap
  *
- * The survey point pipeline (`pointRenderer.ts`) was the candidate for
+ * The survey point pipeline (`galaxyPointRenderer.ts`) was the candidate for
  * reuse — it already draws additive soft dots into the same rgba16float
  * target. But its factory signature threads three engine bind-group
  * layouts (`fadeBgl` / `sourceBgl` / `focusBgl`), its upload path runs a

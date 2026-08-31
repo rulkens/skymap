@@ -51,6 +51,14 @@ export type BitmapStreamSubsystem = Destroyable & {
   allocate(key: string, atFrame: number): number | null;
 
   /**
+   * Refresh a resident key's LRU stamp without allocating. Returns its slot,
+   * or `null` if `key` holds no slot — callers use that to collect the plan's
+   * misses for a second pass, so a miss elsewhere in the same plan can never
+   * evict a resident this call would otherwise have kept alive.
+   */
+  touch(key: string, atFrame: number): number | null;
+
+  /**
    * UV rect `[u0, v0, u1, v1]` for a slot — feeds the renderer instance
    * buffer.
    */
@@ -89,6 +97,13 @@ export type BitmapStreamSubsystem = Destroyable & {
    * predicate ORs in).
    */
   inFlightCount(): number;
+
+  /**
+   * Atlas slots currently claimed by a key (loaded or still in flight) — the
+   * atlas's own ground truth for a "used / capacity" debug readout, as
+   * opposed to a caller's parallel bookkeeping going stale under eviction.
+   */
+  occupiedCount(): number;
 
   /** Texture view bound by the LOD-2 renderers (called once at wireSlots). */
   getTextureView(): GPUTextureView;

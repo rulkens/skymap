@@ -12,8 +12,8 @@
 import sharp from 'sharp';
 import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { sessionPath } from '../tmpSession';
-import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha';
+import { sessionPath } from '../tmpSession.ts';
+import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.ts';
 
 const PREVIEW_PX = 512;
 

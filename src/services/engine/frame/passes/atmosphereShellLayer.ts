@@ -29,9 +29,12 @@
  * opaque sphere has stamped its depth. Its pipeline depth-TESTS against them
  * (`depthCompare: 'greater-equal'`, the NEAR0 slab's reversed-Z convention — clear
  * `0.0`, greater-z-wins; the EQUAL half lets the shell hugging a body's own surface
- * still pass against the depth that surface stamped) but writes NO depth and blends
- * straight-alpha OVER, so this row carries `blend: 'over'` where the opaque bodies carry
- * `'opaque'`. It is non-pickable (a translucent halo has no clickable silhouette;
+ * still pass against the depth that surface stamped) but writes NO depth. The shell
+ * draws its geometry TWICE — MULTIPLY for per-channel extinction, then ADD for the
+ * in-scatter — because one alpha channel cannot attenuate three wavelengths; the
+ * `blend: 'over'` this row carries is target-GROUPING metadata (it is what sorts the
+ * row into the translucent half), never applied to a pipeline.
+ * It is non-pickable (a translucent halo has no clickable silhouette;
  * clicking Earth hits the opaque surface `earthLayer` stamps into the pick pass),
  * so it declares no `drawPick`.
  *
@@ -65,6 +68,7 @@ import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { atmosphereDrawList } from '../atmosphereDrawList';
 
 export const atmosphereShellLayer: ContentLayer = {
@@ -129,7 +133,8 @@ export const atmosphereShellLayer: ContentLayer = {
         pass,
         body.id,
         packAtmosphereUniforms(
-          mvp,
+          // Narrow here, at the GPU uniform write — composeBodyMvp returns f64.
+          narrowMat4(mvp),
           sun,
           camLocal,
           bottomRadius,

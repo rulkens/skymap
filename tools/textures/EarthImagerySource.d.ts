@@ -1,4 +1,5 @@
-import type { LonLatBox } from './LonLatBox';
+import type { EarthTileProvenance } from '../../src/@types/scene/EarthTileProvenance';
+import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /**
  * EarthImagerySource — the one seam between `buildEarthTiles` and wherever
@@ -29,8 +30,13 @@ export type EarthImagerySource = {
   readonly attribution: string;
   /** Deepest pyramid level with real (non-upsampled) detail. */
   readonly maxLevel: number;
+  /** Geographic bounds this source covers. Multiple bounds allow partial-globe sources. */
+  readonly coverage: ReadonlyArray<LonLatBounds>;
+  /** This source's own identity, stamped onto every manifest band it bakes —
+   *  read verbatim by `bakeAll`, never assumed from a module-level constant. */
+  readonly provenance: EarthTileProvenance;
   /** Sample a lon/lat box into an RGBA raster of exactly widthPx x heightPx, graded and
    *  sRGB-encoded, alpha 0 where the source has no land data. Null when the box is
    *  entirely outside coverage, so the caller emits no tile at all. */
-  readBox(box: LonLatBox, widthPx: number, heightPx: number): Promise<Uint8Array | null>;
+  readBox(box: LonLatBounds, widthPx: number, heightPx: number): Promise<Uint8Array | null>;
 };

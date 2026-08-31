@@ -8,11 +8,11 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parseFamousSeed } from '../../../parsers/famousSeed';
-import { RAW_DATA } from '../../../utils/io/rawDataRegistry';
-import { loadOverrideIndex } from '../overrideIndex';
-import { overrideIndexPath, recipePath } from '../paths';
-import { parseRecipe } from '../recipe';
+import { parseFamousSeed } from '../../../parsers/famousSeed.ts';
+import { RAW_DATA } from '../../../utils/io/rawDataRegistry.ts';
+import { loadOverrideIndex } from '../overrideIndex.ts';
+import { overrideIndexPath, recipePath } from '../paths.ts';
+import { parseRecipe } from '../recipe.ts';
 
 export type GalaxyListEntry = {
   id: string;

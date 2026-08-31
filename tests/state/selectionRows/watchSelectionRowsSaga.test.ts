@@ -26,6 +26,9 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
+import { setSimDays, pause } from '../../../src/state/time/timeSlice';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { selectionRowsRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
@@ -167,5 +170,23 @@ describe('watchSelectionRowsSaga', () => {
       type: 'star',
       index: 0,
     });
+  });
+
+  it('a body ref resolves its position at the LIVE sim instant, not a fixed epoch', async () => {
+    // Regression: extractSelectionRow's body arm used to derive against a
+    // hardcoded J2000 epoch regardless of the running sim clock. Pin the clock
+    // to a known instant well past J2000 and assert the row tracks it.
+    const SIM_DAYS = CONST_J2000 + 200; // ~200 days along Earth's orbit
+    store.dispatch(setSimDays({ simDays: SIM_DAYS, nowMs: 0 }));
+    store.dispatch(pause({ nowMs: 0 }));
+
+    store.dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
+    await flush();
+
+    const row = store.getState()[selectionRowsRoute].focus;
+    const expectedPos = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
+    const j2000Pos = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    expect(row).toMatchObject({ type: 'body', id: 'earth', positionMpc: [...expectedPos] });
+    expect((row as { positionMpc: number[] }).positionMpc).not.toEqual([...j2000Pos]);
   });
 });

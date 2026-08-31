@@ -1,24 +1,10 @@
 /**
- * filamentsLayer tests — focus-recession routing of the filament overlay
- * opacity (task 1.4).
+ * filamentsLayer — focus-recession routing of the overlay opacity, pinned at both
+ * ends of the blend on the 6th argument of `filamentRenderer.draw`.
  *
- * The layer forwards the filament layer's opacity as the 6th argument to
- * `filamentRenderer.draw`.  Pre-1.4 that was the bare toggle opacity
- * (`fades.opacityOf({kind:'filament'})`).  Post-1.4 it is routed through
- * `resolveLayerOpacity(..., ctx.focusBlend, ...)` so the layer recedes
- * under cluster focus.  These tests pin both ends of the blend:
- *
- *   - blend 0 → 6th arg equals the bare toggle opacity (no recession).
- *   - blend 1 → 6th arg equals toggle × FILAMENT_RECESSION.
- *
- * They also pin that the `enabled` gate is *unaffected* by recession —
- * recession ∈ [FILAMENT_RECESSION, 1] can never zero a layer, so the gate
- * must keep reading the pure toggle alone (a toggled-off, fully-faded
- * layer dies regardless of blend).
- *
- * GPU-typed values are cast stubs; the split between `enabled` and `draw`
- * (the `ContentLayer` interface) lets us assert behaviour without a real
- * device.
+ * Also pins that the `enabled` gate is UNAFFECTED by recession: recession ∈
+ * [FILAMENT_RECESSION, 1] can never zero a layer, so the gate must keep reading
+ * the pure toggle alone.
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
@@ -36,7 +22,7 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
     nearMpc: 0.01,
     farMpc: 50000,
     vp: Float64Array.from(vp as unknown as Float32Array),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   };
@@ -60,7 +46,7 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: focusBlend,
     },
-    renderer: {} as never,
+    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
     texturedDisks: {} as never,
   };
@@ -79,7 +65,7 @@ function makeState(
   filamentRenderer: unknown = null,
 ): EngineState {
   return {
-    subsystems: { fades: { opacityOf: () => opacity } },
+    subsystems: { fades: { opacityOf: () => opacity }, clipPlayer: { clipOpacityOf: () => 1 } },
     settings: {
       filaments: {
         enabled: true,

@@ -36,10 +36,7 @@ export type RotatedCrop = {
  * Returns a sharp pipeline at the extracted-but-not-yet-encoded stage.
  * The caller chains `.png()` / `.webp()` / `.resize()` etc.
  */
-export async function rotatedExtract(
-  sourcePath: string,
-  crop: RotatedCrop,
-): Promise<Sharp> {
+export async function rotatedExtract(sourcePath: string, crop: RotatedCrop): Promise<Sharp> {
   const width = Math.round(crop.width);
   const height = Math.round(crop.height);
 

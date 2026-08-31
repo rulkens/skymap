@@ -49,6 +49,18 @@ describe('createStructureStore', () => {
     expect(s.byCategory('cluster').map((r) => r.id)).toEqual(['a1', 'b1']);
   });
 
+  it('categoryIndexOf matches the position byCategory would resolve back through', () => {
+    // Interleaved categories with a gap: a global or all()-position counter
+    // would each land on a different number here than the true per-category
+    // position, exactly the drift `resolveStructureFromPick` can't tolerate.
+    const s = createStructureStore();
+    s.setGroup('anchors', [rec('c1', 'cluster'), rec('s1', 'supercluster'), rec('c2', 'cluster')]);
+    expect(s.categoryIndexOf('cluster', 'c1')).toBe(0);
+    expect(s.categoryIndexOf('supercluster', 's1')).toBe(0);
+    expect(s.categoryIndexOf('cluster', 'c2')).toBe(1);
+    expect(s.categoryIndexOf('cluster', 'nope')).toBe(-1);
+  });
+
   it('setGroup takes a defensive copy (caller may mutate after)', () => {
     const s = createStructureStore();
     const arr = [rec('a1')];

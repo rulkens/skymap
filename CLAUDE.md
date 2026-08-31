@@ -71,6 +71,7 @@ tests/  Vitest suite — mirrors src/ tree
 - **Backlog hygiene**: [`docs/BACKLOG.md`](docs/BACKLOG.md) lists only _unstarted_ work, grouped by subsystem area with a readiness tag; design-bearing items have a `docs/backlog/YYYY-MM-DD-<slug>.md` detail file linked from the index. **Keep the index line very short** — title + readiness tag + one terse clause + the `→ [details]` link. Anything longer (file lists, evidence, approach, options) goes in the detail md, NEVER inline in `BACKLOG.md`; the index is a scannable list, not a write-up. **Picking up an item removes it in the same change** — whether you implement it directly or write a spec/plan, delete its index line **and** its detail file in that commit/branch (the detail file seeds the spec; the spec/plan is then the source of truth). **Never strike through a done item** — delete it; the completion record is the git log + `*/completed/`. `/feature-done` sweeps the backlog when a plan ships; audit the whole file against the git log periodically to catch stragglers.
 - **Test what can break**: judge every test by "will it ever fail on a real bug no other test or compiler check catches?" — no runtime type tests, constant/registry restatements, clamp-boundary or mirror tests. See [`docs/superpowers/conventions/testing.md`](docs/superpowers/conventions/testing.md).
 - **Simplicity over ease**: judge a design by the artifact (what runs and gets changed), not the keystrokes; un-braid concerns that could vary independently. Principles + the known-entanglements backlog live in [`docs/superpowers/conventions/simplicity.md`](docs/superpowers/conventions/simplicity.md) (Rich Hickey's _Simple Made Easy_, applied to skymap). Run the `entanglement-radar` skill to review a diff/module — **and at design time over a spec/plan**: a section that exists to teach handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal (classify essential vs accidental), not a note to write more carefully.
+- **Code is liability**: the scarce resource is the user's maintenance attention, not agent keystrokes. Prefer the smallest diff that satisfies the requirement; deletion beats addition; speculative generality, extra knobs/constants, and parallel paths are review findings, not features. A neutral-or-negative measurement **halts** a landing pipeline — land/park is the user's ruling, never process momentum. See [`simplicity.md`](docs/superpowers/conventions/simplicity.md). The `deletion-audit` skill is the standing counter-bias (leanness seat) — run it after fix waves and at `/feature-done`; findings apply per [`docs/superpowers/conventions/leanness.md`](docs/superpowers/conventions/leanness.md).
 
 ## Commands
 
@@ -78,6 +79,7 @@ tests/  Vitest suite — mirrors src/ tree
 npm run dev         # vite dev server (leave running)
 npm run build       # tsc --noEmit + vite build
 npm run typecheck   # both src and tools tsconfigs
+npm run typecheck:fast  # same two projects via tsgo (TS 7 preview) — ~7x faster
 npm test            # vitest run (single pass)
 npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
@@ -88,6 +90,8 @@ npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/ref
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 ```
+
+`typecheck:fast` is the inner-loop typecheck: TypeScript 7 (`tsgo`, the Go port) over the same two tsconfigs, 13.2s → 1.8s. It's an **exact-pinned dev build**, so `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug and confirm against `tsc` before acting on it.
 
 For `npm run perf`, read the `perf` skill (`.claude/skills/perf/SKILL.md`) first: measure **before and after** any renderer/perf change, and **in a worktree pass `--url http://localhost:<port>`** from _your_ server's `Local:` line or you silently measure another branch's server. The skill carries the flags and interpretation traps (MERGED vs PER-LAYER vs FLOOR, Apple Silicon slot-sum inflation).
 
@@ -115,7 +119,7 @@ These are **mandatory pre-reading** for the task areas below, not optional backg
 - **"why is this slow?"** → **measure first** with `npm run perf` (read the `perf` skill); then see [docs/RENDERER.md](docs/RENDERER.md) for the CPU-side mental model (per-frame work scales with ~2.5M on-screen galaxies; hoist constants, gate with squared distances, avoid per-galaxy `Math.tan`).
 - **"refactor X"** → keep the services/ layout. Cross-cutting helpers go in `utils/`; rendering subsystems in `services/gpu/`. Tests mirror the src tree. Any file move/rename goes through `npm run move-files` (next entry), not `git mv` + hand-edited imports.
 - **"move/rename/relocate a file"** (incl. folder reorgs) → `npm run move-files -- <from> <to>`, or `-- --manifest <moves.json>` for a batch. ts-morph rewrites every relative import project-wide and drags the `tests/` mirror along; run `--dry` first. Hand-editing import paths after a move is always the wrong plan. Not covered: `.wesl` `package::` imports + string-literal paths — grep for the old path afterwards. `npm run refactor -- move <from> <to>` is the canonical spelling. Details in `.claude/skills/refactor/SKILL.md`.
-- **"why does the renderer use index Y?"** → check `pointRenderer.ts` SLOTS_PER_POINT and the matching attribute layout in the shader; they must agree byte-for-byte (see [docs/RENDERER.md](docs/RENDERER.md)).
+- **"why does the renderer use index Y?"** → check `galaxyPointRenderer.ts` SLOTS_PER_GALAXY_POINT and the matching attribute layout in the shader; they must agree byte-for-byte (see [docs/RENDERER.md](docs/RENDERER.md)).
 
 ## Memory
 

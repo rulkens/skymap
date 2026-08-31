@@ -31,7 +31,7 @@
  * `limbStrength == 0` makes the fragment's limb term a no-op (spec §6.3). The
  * limb's view cosine needs the camera in the body's local frame, so each body
  * also packs `camPosLocal` derived through the shared `camPosLocal` util at the
- * body's SURFACE radius (`radiusKm * KM_TO_MPC` — the fragment's unit sphere, the
+ * body's SURFACE radius (`radiusM * M_TO_MPC` — the fragment's unit sphere, the
  * SAME inputs `composeBodyMvp` consumes; NOT an atmosphere-top scale). A body
  * absent from the limb table still packs a real `camPosLocal`, but with
  * `strength 0` it is never read — cheap and behaviour-neutral.
@@ -70,6 +70,7 @@ import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBodyUniforms';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
@@ -84,7 +85,9 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 function ringRatios(body: PlanetBody): { inner: number; outer: number } {
   const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
   if (ring === undefined) return { inner: 0, outer: 0 };
-  return { inner: ring.innerRadiusKm / body.radiusKm, outer: ring.outerRadiusKm / body.radiusKm };
+  // The ring table is authored in km, the body in metres.
+  const bodyRadiusKm = body.radiusM * SCALE_UNITS.M_TO_KM;
+  return { inner: ring.innerRadiusKm / bodyRadiusKm, outer: ring.outerRadiusKm / bodyRadiusKm };
 }
 
 /**
@@ -135,7 +138,7 @@ export const texturedBodiesLayer: ContentLayer = {
         view.slab.vp,
         bodyState.positionMpc,
         RENDER_ORIGIN_MPC,
-        body.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        body.radiusM * SCALE_UNITS.M_TO_MPC,
         bodyState.orientation,
       );
       // Rotate the sun direction into the body's local frame (its orientation
@@ -146,17 +149,26 @@ export const texturedBodiesLayer: ContentLayer = {
       // Minnaert limb-darkening: the per-body strength/exponent (identity for a
       // body absent from `LIMB_DARKENING_PARAMS`), plus the camera in the body's
       // local frame the fragment's view cosine needs. `camPosLocal` takes the
-      // body's SURFACE radius — the same `radiusKm × KM_TO_MPC` scale
+      // body's SURFACE radius — the same `radiusM × M_TO_MPC` scale
       // `composeBodyMvp` uses above, so the local camera matches the unit sphere
       // the fragment shades (NOT an atmosphere-top scale).
       const { strength, exponent } = limbParams(body);
       const cam = camPosLocal(
         view.camPos,
         bodyState.positionMpc,
-        body.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        body.radiusM * SCALE_UNITS.M_TO_MPC,
         bodyState.orientation,
       );
-      const uniforms = packTexturedBodyUniforms(mvp, sun, inner, outer, strength, exponent, cam);
+      // Narrow here, at the GPU uniform write — composeBodyMvp returns f64.
+      const uniforms = packTexturedBodyUniforms(
+        narrowMat4(mvp),
+        sun,
+        inner,
+        outer,
+        strength,
+        exponent,
+        cam,
+      );
       // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
       // `textured`, so the string id IS a BodyTextureId the renderer accepts.
       renderer.draw(pass, body.id as BodyTextureId, uniforms);

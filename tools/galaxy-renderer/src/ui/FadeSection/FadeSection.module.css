@@ -2,15 +2,15 @@
 }
 
 .toggleRow {
-  composes: toggleRow from '../shared.module.css';
+  composes: toggleRow from '../../../../../src/components/common/shared.module.css';
 }
 
 .toggleLabel {
-  composes: toggleLabel from '../shared.module.css';
+  composes: toggleLabel from '../../../../../src/components/common/shared.module.css';
 }
 
 .checkbox {
-  composes: checkbox from '../shared.module.css';
+  composes: checkbox from '../../../../../src/components/common/shared.module.css';
 }
 
 .anchorWrap {
@@ -26,7 +26,7 @@
 }
 
 .anchorSelect {
-  composes: control from '../shared.module.css';
+  composes: control from '../../../../../src/components/common/shared.module.css';
   width: 100%;
   padding: 6px 8px;
   border-radius: var(--radius-xl);

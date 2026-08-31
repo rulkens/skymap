@@ -45,7 +45,7 @@
  *       localY' = localY / effectiveAxisRatio,  localX' = localX.
  */
 
-import type { RecipeCrop, RecipeDisk } from '../famous-curator/plugin/recipe';
+import type { RecipeCrop, RecipeDisk } from '../famous-curator/plugin/recipe.ts';
 import type { FamousCalibration } from '../../src/@types/loading/FamousCalibration';
 import type { Vec2 } from '../../src/@types/math/Vec2';
 

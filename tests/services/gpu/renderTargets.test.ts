@@ -5,11 +5,12 @@
  *
  * Vitest runs in Node without a real GPU, so `device.createTexture` is
  * mocked; each mock returns a fresh `{ createView, destroy }` pair so the
- * resize / destroy tests can detect view replacement and per-texture
+ * reconcile / destroy tests can detect view replacement and per-texture
  * teardown by call count.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets } from '../../../src/services/gpu/renderTargets';
+import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 
 function mockDevice(): GPUDevice {
   return {
@@ -22,10 +23,14 @@ function mockDevice(): GPUDevice {
 
 const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 
-// The `mw-aggregate` row's divisor is a caller-supplied live knob, not a table
-// constant. These tests are about allocation mechanics, so they pass the boot
-// value and the row behaves like any other fixed-scale row.
+// The `mw-aggregate` row's divisor arrives off `state`, not the table. Most of
+// these tests are about allocation mechanics, so they hand over the boot value
+// and the row behaves like any other fixed-scale row.
 const MW_DIVISOR = 2;
+
+function stateWithDivisor(aggregateDivisor: number): EngineState {
+  return { settings: { milkyWay: { aggregateDivisor } } } as unknown as EngineState;
+}
 
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
@@ -33,7 +38,7 @@ describe('createRenderTargets', () => {
       mockDevice(),
       SWAP_FORMAT,
       { width: 800, height: 600 },
-      MW_DIVISOR,
+      stateWithDivisor(MW_DIVISOR),
     );
     // Offscreen rows resolve to a live view.
     expect(targets.viewOf('hdr')).toBeDefined();
@@ -44,14 +49,14 @@ describe('createRenderTargets', () => {
     expect(() => targets.viewOf('nope')).toThrow();
   });
 
-  it('resize reallocates offscreen textures at size/scale', () => {
+  it('reconcile reallocates every offscreen row when the canvas size changes', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
       SWAP_FORMAT,
       { width: 900, height: 600 },
-      MW_DIVISOR,
+      stateWithDivisor(MW_DIVISOR),
     );
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
@@ -77,7 +82,7 @@ describe('createRenderTargets', () => {
     const hdrViewBefore = targets.viewOf('hdr');
     const volViewBefore = targets.viewOf('volume');
     const aggViewBefore = targets.viewOf('star-aggregates');
-    targets.resize({ width: 1200, height: 900 });
+    targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
 
     // Each offscreen row reallocated at the new size/scale → 12 more textures.
     expect(create.mock.calls).toHaveLength(24);
@@ -99,10 +104,60 @@ describe('createRenderTargets', () => {
     expect(targets.viewOf('star-aggregates')).not.toBe(aggViewBefore);
   });
 
+  it("reconcile reallocates a row whose state-driven scale moved and leaves the other rows' views untouched", () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      stateWithDivisor(2),
+    );
+
+    const hdrViewBefore = targets.viewOf('hdr');
+    const volViewBefore = targets.viewOf('volume');
+    const callsBefore = create.mock.calls.length;
+
+    // The divisor is a DebugPanel slider, but a texture's dimensions are fixed
+    // at creation — so the only way a drag reaches the screen is this row's
+    // `scale` resolving to a new number and its texture being replaced.
+    targets.reconcile(stateWithDivisor(4), { width: 800, height: 600 });
+
+    const mwResized = create.mock.calls
+      .filter((c) => c[0].label === 'render-target-mw-aggregate')
+      .at(-1)![0];
+    expect(mwResized.size).toEqual({ width: 200, height: 150 });
+    expect(targets.sizeOf('mw-aggregate')).toEqual({ width: 200, height: 150 });
+    // Exactly one row moved: one new texture, and every other row's view is
+    // still the object its consumers resolved before the call.
+    expect(create.mock.calls.length).toBe(callsBefore + 1);
+    expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
+    expect(targets.viewOf('volume')).toBe(volViewBefore);
+  });
+
+  it('reconcile allocates nothing when neither the canvas size nor a resolved scale moved', () => {
+    // Comparing against what the textures actually hold (rather than a 'last
+    // applied' field) has to SETTLE, or every steady-state frame would throw
+    // away and re-allocate every offscreen target.
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    const callsBefore = create.mock.calls.length;
+
+    targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 800, height: 600 });
+
+    expect(create.mock.calls.length).toBe(callsBefore);
+  });
+
   it('clamps volume to a 1 px minimum when floor(size/scale) is 0', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 }, MW_DIVISOR);
+    createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 }, stateWithDivisor(MW_DIVISOR));
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     // floor(2 / 3) = 0 → clamped up to 1.
     expect(volDesc.size).toEqual({ width: 1, height: 1 });
@@ -115,7 +170,7 @@ describe('createRenderTargets', () => {
       device,
       SWAP_FORMAT,
       { width: 800, height: 600 },
-      MW_DIVISOR,
+      stateWithDivisor(MW_DIVISOR),
     );
 
     // foreground:0 declares depth → two textures at full resolution: an
@@ -137,8 +192,8 @@ describe('createRenderTargets', () => {
     const depthCallsBefore = create.mock.calls.filter(
       (c) => c[0].label === 'render-target-foreground:0-depth',
     ).length;
-    targets.resize({ width: 1024, height: 768 });
-    // Resize reallocates both the colour and the depth texture at the new size.
+    targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1024, height: 768 });
+    // Reconcile reallocates the colour AND the depth texture at the new size.
     const fgDepthResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-foreground:0-depth')
       .at(-1)![0];
@@ -153,7 +208,7 @@ describe('createRenderTargets', () => {
       mockDevice(),
       SWAP_FORMAT,
       { width: 800, height: 600 },
-      MW_DIVISOR,
+      stateWithDivisor(MW_DIVISOR),
     );
     // The one row that declares depth resolves to a live depth view.
     expect(targets.depthViewOf('foreground:0')).toBeDefined();
@@ -172,7 +227,7 @@ describe('createRenderTargets', () => {
       device,
       SWAP_FORMAT,
       { width: 800, height: 600 },
-      MW_DIVISOR,
+      stateWithDivisor(MW_DIVISOR),
     );
     targets.destroy();
     // Both offscreen textures had destroy() called.
@@ -190,7 +245,7 @@ describe('createRenderTargets', () => {
       device,
       SWAP_FORMAT,
       { width: 800, height: 600 },
-      MW_DIVISOR,
+      stateWithDivisor(MW_DIVISOR),
     );
 
     const specsBefore = targets.specs;
@@ -221,6 +276,68 @@ describe('createRenderTargets', () => {
     expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
   });
 
+  it('specOf returns the declared row and throws for an unknown id', () => {
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    expect(targets.specOf('hdr').id).toBe('hdr');
+    expect(() => targets.specOf('nope')).toThrow();
+  });
+
+  it('sizeOf returns the allocated pixel size of an offscreen row and throws for swap', () => {
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 900, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    // volume @ scale 3 -> floor(900/3), floor(600/3); zoa @ scale 5 ->
+    // floor(900/5), floor(600/5).
+    expect(targets.sizeOf('volume')).toEqual({ width: 300, height: 200 });
+    expect(targets.sizeOf('zoa')).toEqual({ width: 180, height: 120 });
+    expect(() => targets.sizeOf('swap')).toThrow();
+    expect(() => targets.sizeOf('nope')).toThrow();
+  });
+
+  // The clamp on the `sizeOf` READER path — the 'clamps volume to a 1 px
+  // minimum' case above covers the same clamp on the ALLOCATION path (the
+  // `createTexture` descriptor).
+  it('sizeOf clamps to a 1 px minimum when floor(size/scale) is 0', () => {
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 2, height: 2 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    // floor(2 / 3) = 0 -> clamped up to 1.
+    expect(targets.sizeOf('volume')).toEqual({ width: 1, height: 1 });
+  });
+
+  // `clearValue` is a required field, so a row silently losing it in a future
+  // edit is already a tsc error — not what this guards. What tsc cannot
+  // catch is a row's clearValue landing on the WRONG alpha (e.g. a=0 row
+  // copy-pasted from `hdr` keeping its a=1): `hdr`/`swap` are the only two
+  // rows that clear opaque; every other row must clear to zero coverage so
+  // its upsample/composite adds nothing for a fragment it didn't reach.
+  it('only hdr and swap clear to opaque alpha', () => {
+    const targets = createRenderTargets(
+      mockDevice(),
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    for (const spec of targets.specs) {
+      const expectedAlpha = spec.id === 'hdr' || spec.id === 'swap' ? 1 : 0;
+      // Every row in this table is written as a `{r,g,b,a}` dict (never the
+      // 4-tuple alternative `GPUColor` also allows), so this cast is safe.
+      const clearValue = spec.clearValue as GPUColorDict;
+      expect(clearValue.a).toBe(expectedAlpha);
+    }
+  });
+
   it('destroy destroys depth textures alongside colour', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
@@ -228,7 +345,7 @@ describe('createRenderTargets', () => {
       device,
       SWAP_FORMAT,
       { width: 800, height: 600 },
-      MW_DIVISOR,
+      stateWithDivisor(MW_DIVISOR),
     );
     const depthResult = create.mock.results.find(
       (_r, i) => create.mock.calls[i]![0].label === 'render-target-foreground:0-depth',

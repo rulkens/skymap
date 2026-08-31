@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { getVolumeFieldDefaults } from '../../../src/data/volume/volumeFieldDefaults';
+import {
+  getVolumeFieldDefaults,
+  buildVolumeFieldSettings,
+} from '../../../src/data/volume/volumeFieldDefaults';
+import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 
 const DEBUG_IDS: ReadonlyArray<VolumeFieldId> = [
@@ -46,5 +50,11 @@ describe('volumeFieldDefaults', () => {
     const env = getVolumeFieldDefaults('mcpm').envelope;
     expect(env.inner).toBeLessThan(env.outer);
     expect(env.outer).toBeLessThanOrEqual(Math.sqrt(3));
+  });
+
+  it('buildVolumeFieldSettings defaults bands to [surveyDeepZoom] for a registry entry with no fadeBands', () => {
+    // MCPM's registry row (src/data/sources/mcpm.ts) carries no `fadeBands`
+    // override, so it must seed with today's one-size-fits-all band.
+    expect(buildVolumeFieldSettings('mcpm').bands).toEqual([SCALE_FADE_BANDS.surveyDeepZoom]);
   });
 });

@@ -130,7 +130,7 @@ function makeNear0View(): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
@@ -165,7 +165,7 @@ function makeState(
   opts: {
     orbitTrailsEnabled?: boolean;
     layerOpacity?: number;
-    showOrbitTrailImpostor?: boolean;
+    impostorOn?: boolean;
   } = {},
 ): EngineState {
   const layerOpacity = opts.layerOpacity ?? 1;
@@ -173,7 +173,9 @@ function makeState(
     gpu: { orbitTrailRenderer },
     settings: {
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
-      debug: { showOrbitTrailImpostor: opts.showOrbitTrailImpostor ?? false },
+      debug: {
+        overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
+      },
     },
     subsystems: {
       fades: { opacityOf: () => layerOpacity },
@@ -591,7 +593,7 @@ describe('orbitTrailsLayer.draw', () => {
       PASS_STUB,
       view,
       makeDrawCtx(),
-      makeState(renderer, { showOrbitTrailImpostor: true }),
+      makeState(renderer, { impostorOn: true }),
     );
     expect(renderer.draw.mock.calls[0]![3]).toBe(true);
 
@@ -600,7 +602,7 @@ describe('orbitTrailsLayer.draw', () => {
       PASS_STUB,
       view,
       makeDrawCtx(),
-      makeState(renderer, { showOrbitTrailImpostor: false }),
+      makeState(renderer, { impostorOn: false }),
     );
     expect(renderer.draw.mock.calls[0]![3]).toBe(false);
   });

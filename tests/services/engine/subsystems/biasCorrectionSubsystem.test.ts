@@ -31,7 +31,7 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../../src/@types/data/galaxyCatalog/BiasMode';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
+import type { GalaxyPointRenderer } from '../../../../src/@types/rendering/GalaxyPointRenderer';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
@@ -41,7 +41,7 @@ type SpliceCall =
   | { kind: 'clear'; source: SourceType | undefined };
 
 type StubRenderer = {
-  renderer: PointRenderer;
+  renderer: GalaxyPointRenderer;
   calls: SpliceCall[];
   /** Read the most-recently-installed upload callback (post-attachRenderer). */
   getUploadCb(): ((source: SourceType, cloud: GalaxyCatalog) => void) | null;
@@ -51,7 +51,7 @@ type StubRenderer = {
 
 /**
  * Build a stub renderer that captures every method call the subsystem
- * makes against it.  Mirrors the subset of the PointRenderer surface
+ * makes against it.  Mirrors the subset of the GalaxyPointRenderer surface
  * the subsystem actually uses (5 methods).
  */
 function makeStubRenderer(): StubRenderer {
@@ -76,7 +76,7 @@ function makeStubRenderer(): StubRenderer {
     },
   };
   return {
-    renderer: stub as unknown as PointRenderer,
+    renderer: stub as unknown as GalaxyPointRenderer,
     calls,
     getUploadCb: () => uploadCb,
     getUnloadCb: () => unloadCb,

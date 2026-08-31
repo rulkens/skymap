@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 
 import reducer, {
   setOrientation,
+  setFovDeg,
   setBrightness,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
@@ -32,6 +33,7 @@ import reducer, {
   setStarCatalogRefineThreshold,
   setStarCatalogGlowOverlap,
   setStarCatalogVisible,
+  setDebugOverlay,
   setPassDisabled,
   setClipPathLinger,
   setClipPathLingerSec,
@@ -69,6 +71,13 @@ describe('settingsSlice — orientation', () => {
   });
 });
 
+describe('settingsSlice — camera lens', () => {
+  it('setFovDeg writes the vertical field of view', () => {
+    const next = reducer(base(), setFovDeg(75));
+    expect(next.camera.fovDeg).toBe(75);
+  });
+});
+
 describe('settingsSlice — galaxy-catalog knobs', () => {
   it('setGalaxyCatalogVisible flips one item row', () => {
     const next = reducer(base(), setGalaxyCatalogVisible({ id: catalogId, enabled: false }));
@@ -92,6 +101,13 @@ describe('settingsSlice — structures', () => {
 });
 
 describe('settingsSlice — debug', () => {
+  it('setDebugOverlay flips exactly the targeted row (Immer in-place, not a record swap)', () => {
+    const next = reducer(base(), setDebugOverlay({ key: 'pick-buffer', enabled: true }));
+    expect(next.debug.overlays['pick-buffer']).toBe(true);
+    expect(next.debug.overlays['disk-radius-ring']).toBe(false);
+    expect(next.debug.overlays['orbit-trail-impostor']).toBe(false);
+  });
+
   it('setPassDisabled writes a plain-object record entry', () => {
     const enabled = reducer(base(), setPassDisabled({ pass: 'foo', disabled: true }));
     expect(enabled.debug.disabledPasses).toEqual({ foo: true });

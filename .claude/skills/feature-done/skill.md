@@ -131,6 +131,15 @@ each deferred item. These don't block the plan, but make sure they're
 documented as deferred (with a follow-up plan or ticket reference)
 rather than silently dropped.
 
+### 9. Leanness audit
+
+If no `deletion-audit` run covers this branch since its last substantive
+commit, dispatch one (whole-branch, legacy framing, opus-class — see
+`.claude/skills/deletion-audit/SKILL.md`). Findings apply per
+`docs/superpowers/conventions/leanness.md`: the safe-now bin lands as its own
+deletion commit before the completion moves; needs-ruling items go to the user
+alongside the audit verdict. Report the audit's net-LOC number.
+
 ## Report format
 
 Output **one** structured summary at the end. Don't narrate each step
@@ -150,6 +159,7 @@ DoD audit — <plan filename>
   Test parity:                 <flag list, or "OK">
   Smoke test attestation:      <FOUND / NOT FOUND IN SESSION>
   Deferred items: <list, or "none">
+  Leanness audit: <net LOC found; safe-now applied in <sha> / NOT RUN>
 
 OVERALL: <READY / NOT READY: <reason>>
 ```

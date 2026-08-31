@@ -49,7 +49,7 @@ const SUN: PositionedStar = {
   positionMpc: [0, 0, 0],
   absMag: 4.83,
   color: [1, 0.95, 0.85],
-  radiusKm: 695_700,
+  radiusM: 695700000,
 };
 
 const SIRIUS: PositionedStar = {
@@ -58,7 +58,7 @@ const SIRIUS: PositionedStar = {
   positionMpc: [1.6e-6, 2.1e-6, -0.4e-6],
   absMag: 1.43,
   color: [0.75, 0.85, 1],
-  radiusKm: 1_189_600,
+  radiusM: 1189600000,
 };
 
 describe('createStarPointRenderer', () => {

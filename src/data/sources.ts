@@ -9,7 +9,7 @@
  *                     into the `.bin` point-cloud format and packed into
  *                     the pick texture.
  *   'structure'     — galaxy-cluster / supercluster / void / group marker rings.
- *                     Codes are also packed into the pick texture (upper 5 bits).
+ *                     Codes are also packed into the pick texture (upper 6 bits).
  *   'filament'      — derived line-strip geometry (DisPerSE skeleton).
  *                     Single global asset; no per-record identity.
  *   'volume'        — scalar-field cubes (CF-4 DM density, MCPM cosmic web).
@@ -75,6 +75,8 @@ import { FILAMENTS_ENTRY } from './sources/filaments';
 import { CONSTELLATIONS_ENTRY } from './sources/constellations';
 import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';
+import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
+import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
 import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
 import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
@@ -158,6 +160,8 @@ export const SOURCE_REGISTRY = {
   [Source.SgrAStar]: SGR_A_STAR_ENTRY,
   [Source.SStar]: S_STAR_ENTRY,
   [Source.ZoneOfAvoidance]: ZONE_OF_AVOIDANCE_ENTRY,
+  [Source.Polyphorm2MRS]: POLYPHORM_2MRS_ENTRY,
+  [Source.McpmWorkbench]: MCPM_WORKBENCH_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

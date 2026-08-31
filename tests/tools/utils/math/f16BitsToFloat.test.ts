@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { f16BitsToFloat } from '../../../../tools/utils/math/f16BitsToFloat';
-import { f32ToF16Bits } from '../../../../tools/utils/math/f32ToF16Bits';
+import { f32ToF16Bits } from '../../../../src/utils/math/f32ToF16Bits';
 
 describe('f16BitsToFloat', () => {
   it('decodes the f16 +Inf bit pattern back to Infinity', () => {

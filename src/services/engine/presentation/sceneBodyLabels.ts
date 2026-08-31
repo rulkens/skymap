@@ -33,7 +33,7 @@
  * future floating origin moves.
  */
 
-import type { Label } from '../../../@types/rendering/Label';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { CaptionKind } from './captionPriority';
@@ -49,6 +49,7 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { CONSTELLATION_COUNT } from './constellationCaptions';
+import { sceneBodyPickId } from '../frame/passes/sceneBodyPickId';
 
 /**
  * GPU buffer capacity for the foreground caption renderer — the `maxLabels`
@@ -92,7 +93,7 @@ const SGR_A_STAR_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
  * stops mattering. Everything else is far apart on the sky — default
  * baseline.
  */
-const BODY_ALIGN_Y: Readonly<Record<string, Label['alignY']>> = {
+const BODY_ALIGN_Y: Readonly<Record<string, Label2D['alignY']>> = {
   sun: 'top',
   earth: 'bottom',
   moon: 'top',
@@ -135,10 +136,17 @@ function bodyLabel(
   const o = RENDER_ORIGIN_MPC;
   const p = positionMpc;
   const worldPos: Vec3 = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
+  // The caption carries its subject's pick id so clicking the NAME selects the
+  // body — the affordance a sub-pixel body's glint footprint can only
+  // approximate. `?? undefined` keeps an unseeded id (impossible from these
+  // four tables, but the −1 contract is the helper's) out of the pick set
+  // rather than aliasing body 0.
+  const pickId = sceneBodyPickId(body.id) ?? undefined;
   return {
     id: sceneBodyLabelId(body.id),
     kind,
     worldPos,
+    pickId,
     text: body.label,
     font: 'cormorant',
     pixelSize: 0,
@@ -154,7 +162,7 @@ function bodyLabel(
     // a scene-body caption reads at the same size as a nearby famous-galaxy
     // label — the "adopt the famous treatment" parity — and a future retune of
     // the famous band carries here automatically instead of silently drifting.
-    worldEmMpc: body.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    worldEmMpc: body.radiusM * SCALE_UNITS.M_TO_MPC,
     minPixelSize: FAMOUS_LABEL_STYLE.minPixelSize,
     maxPixelSize: FAMOUS_LABEL_STYLE.maxPixelSize,
     alignX: 'center',

@@ -26,18 +26,19 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-// The layer reads the downsample divisor off the 'volume' spec row — the
-// fixture mirrors the production table's scale: 3.
+// The layer reads its viewport via `sizeOf('volume')` — the fixture computes
+// it here, mirroring the production table's scale: 3.
 const VOLUME_SCALE = 3;
 
 function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   const vp = new Float32Array(16) as unknown as Mat4;
+  const canvasSize = over.canvasSize ?? { width: 1280, height: 720 };
   const cosmoSlab: Slab = {
     index: COSMO,
     nearMpc: 0.01,
     farMpc: 50000,
     vp: Float64Array.from(vp as unknown as Float32Array),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   };
@@ -46,7 +47,7 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],
-    canvasSize: { width: 1280, height: 720 },
+    canvasSize,
     drawCamPos: [1, 2, 3] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     nowMs: 0,
@@ -59,14 +60,20 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer: {} as never,
+    galaxyPointRenderer: {} as never,
     renderTargets: {
       specs: [
         { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
         { id: 'volume', format: 'rgba16float', depth: null, scale: VOLUME_SCALE },
       ],
+      sizeOf: (id: string) => {
+        if (id !== 'volume') throw new Error(`fixture renderTargets: no size for '${id}'`);
+        return {
+          width: Math.max(1, Math.floor(canvasSize.width / VOLUME_SCALE)),
+          height: Math.max(1, Math.floor(canvasSize.height / VOLUME_SCALE)),
+        };
+      },
       viewOf: () => ({}) as GPUTextureView,
-      resize: vi.fn(),
       destroy: vi.fn(),
     } as never,
     texturedDisks: {} as never,
@@ -87,7 +94,10 @@ function liveState(
       },
     },
     settings: { volumes: { enabled: true, items: {} } },
-    subsystems: { fades: { opacityOf: () => 1 } },
+    subsystems: {
+      fades: { opacityOf: () => 1 },
+      clipPlayer: { clipOpacityOf: () => 1 },
+    },
   } as unknown as EngineState;
 }
 
@@ -128,14 +138,6 @@ describe('scalarVolumeLayer.draw', () => {
     // raymarch's jitter dither frequency stays stable.
     expect(args[2]).toEqual([Math.floor(1280 / VOLUME_SCALE), Math.floor(720 / VOLUME_SCALE)]);
     expect(args[3]).toEqual(view.camPos);
-  });
-
-  it('clamps the downsampled viewport to a minimum of 1 px', () => {
-    const drawSpy = vi.fn();
-    const state = liveState({ draw: drawSpy });
-    const ctx = makeCtx({ canvasSize: { width: 1, height: 1 } });
-    scalarVolumeLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
-    expect(drawSpy.mock.calls[0]![2]).toEqual([1, 1]);
   });
 
   it('forwards the liveness settingsOf/fadeOpacityOf closures to draw', () => {

@@ -18,7 +18,7 @@
  * ### Why `emptyGalaxyCatalog()` rather than `null`
  *
  * Returning a count=0 GalaxyCatalog composes cleanly with
- * `pointRenderer.upload`, which already treats count=0 as "free this
+ * `galaxyPointRenderer.upload`, which already treats count=0 as "free this
  * source's VRAM".  The slot's commit step still runs and frees the buffer.
  * If we returned `null`, every consumer would need a null-check before
  * touching the catalog — a lot of branching to dodge a value that the

@@ -18,9 +18,9 @@
  *
  * `createOcclusionDepthBindGroup` mirrors the per-frame builder in
  * `passes/additiveUpsample.ts`: the depth view it wraps is recreated on every
- * `renderTargets.resize()`, so a cached bind group would eventually reference a
- * destroyed view. One bind-group allocation per frame is negligible next to the
- * caption pass it carries, and it sidesteps the destroyed-view trap entirely.
+ * `renderTargets.reconcile()`, so a cached bind group would eventually
+ * reference a destroyed view. One bind-group allocation per frame is negligible
+ * next to the caption pass it carries, and it sidesteps that trap entirely.
  */
 
 // The group index the foreground caption pipelines bind this joint at. Named

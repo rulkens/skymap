@@ -134,13 +134,44 @@ const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
 const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
 const SWAP_VIEW = { __id: 'swap-view' } as unknown as GPUTextureView;
 
+const EXEC_SPECS = [
+  {
+    id: 'hdr',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 1 },
+  },
+  {
+    id: 'volume',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 3,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  },
+  {
+    id: 'foreground:0',
+    format: 'rgba16float' as const,
+    depth: 'depth32float' as const,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  },
+  {
+    id: 'swap',
+    format: 'bgra8unorm' as const,
+    depth: null,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 1 },
+  },
+];
+
 function makeCtx(): ReadyFrameContext {
   const slab: Slab = {
     index: COSMO,
     nearMpc: 0.01,
     farMpc: 50000,
     vp: new Float64Array(16),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   };
@@ -155,14 +186,18 @@ function makeCtx(): ReadyFrameContext {
     // Offscreen view resolution goes through the target table's viewOf —
     // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
     // + `depthViewOf` let the executor discover which target rows declare a
-    // depth attachment (only `foreground:0` here).
+    // depth attachment (only `foreground:0` here). `specOf` is what
+    // `colorAttachment`/`depthAttachment`/the composite's dstFormat read —
+    // clear values here match production (`hdr`/`swap` at a=1, the rest
+    // a=0) so a clear-value regression would show up in the clear/load
+    // assertions below.
     renderTargets: {
-      specs: [
-        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-        { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
-        { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
-        { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
-      ],
+      specs: EXEC_SPECS,
+      specOf: (id: string) => {
+        const spec = EXEC_SPECS.find((s) => s.id === id);
+        if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
+        return spec;
+      },
       viewOf: (id: string) => {
         if (id === 'hdr') return HDR_VIEW;
         if (id === 'volume') return VOLUME_VIEW;
@@ -542,6 +577,30 @@ describe('executeFrame', () => {
       .depthStencilAttachment;
     expect(secondDepth?.view).toBe(FG_DEPTH_VIEW);
     expect(secondDepth?.depthLoadOp).toBe('load');
+  });
+
+  it("a step's explicit depthLoad overrides the first-touch rule in both directions", () => {
+    // Same two-step shape as above, but each step names its own depth op: the
+    // first loads where the rule would clear, the second clears where the rule
+    // would load (the restart a back-to-front slab run needs mid-frame).
+    const env = makeEncoderEnv();
+    const a = makeLayer({ name: 'a', target: 'foreground:0' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'load' },
+      { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'clear' },
+    ];
+    const { args } = makeArgs({ program, layers: [a], env });
+    executeFrame(args);
+
+    const depthOpOf = (pass: GPURenderPassEncoder): string | undefined =>
+      (
+        env.passes.find((p) => p.pass === pass)!.desc as {
+          depthStencilAttachment?: { depthLoadOp: string };
+        }
+      ).depthStencilAttachment?.depthLoadOp;
+
+    expect(depthOpOf(a.draw.mock.calls[0]![0] as GPURenderPassEncoder)).toBe('load');
+    expect(depthOpOf(a.draw.mock.calls[1]![0] as GPURenderPassEncoder)).toBe('clear');
   });
 
   it('opens no depthStencilAttachment for depthless targets', () => {

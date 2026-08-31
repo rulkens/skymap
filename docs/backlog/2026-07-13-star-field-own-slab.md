@@ -1,7 +1,35 @@
 # Star field (points + captions + connectors) → its own slab
 
-**Status:** needs-design
+**Status:** needs-verification (re-scoped 2026-08-19 — slab split retired)
 **Area:** Rendering / frame architecture
+
+## Verdict (2026-08-19 research, during the Edenhofer dust-volume design)
+
+**Do not build the STARS slab.** Every defect below traces to NEAR0's far
+plane sweeping through the parsec anchors — and NEAR0 has been **infinite-far
+reversed-Z** since 2026-07-20 (`computeForegroundViewProj.ts:145`, zFar
+omitted; spec `2026-07-20-reversed-z-near0-depth.md`). There is no far clip
+any more, and depth precision is near/far-ratio-independent, so the bracket
+mismatch this item is built on no longer exists. That spec also already
+considered and **rejected** a new slab for this class of problem ("permanent
+machinery to manage the constraint"). The Edenhofer dust volume likewise
+lands on NEAR0 with no new slab (see
+[`../superpowers/specs/2026-08-20-edenhofer-dust-volume.md`](../superpowers/specs/2026-08-20-edenhofer-dust-volume.md)).
+
+What remains of this item:
+
+1. **Clip-z clamp audit.** The four `CLIP_Z_EPS` clamps
+   (`starPoints/vertex.wesl:123`, `starCatalog/vertex.wesl:458`,
+   `labels/vertex.wesl:83`, `markerLines/vertex.wesl:56`) were written to
+   defeat far-plane clipping under classic depth. Under reversed-Z,
+   `min(clip.z, w·(1−ε))` guards the **near** side instead — they silently
+   changed meaning. Verify whether they're still load-bearing for close
+   flybys (anchor nearer than `dist·1e-4`) or deletable; the starCatalog one
+   is dual-purpose (pick depth-band force) and stays either way.
+2. **The two folded-in knots below** — both slab-independent; do them
+   whenever their files are next open.
+
+The original problem statement and proposal are kept below for the record.
 
 ## Problem
 

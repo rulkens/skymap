@@ -56,7 +56,7 @@
  *
  * ### Why the GPU handles ride along on the ready context
  *
- * `state.gpu.renderer`, `state.gpu.renderTargets`, and `state.subsystems.thumbnails`
+ * `state.gpu.galaxyPointRenderer`, `state.gpu.renderTargets`, and `state.subsystems.thumbnails`
  * are all part of the 5-way bootstrap gate. Once the gate passes, downstream
  * code wants to use those handles without re-checking they're non-null — but if
  * we left them on `state.gpu.*` and `state.subsystems.*`, every consumer would
@@ -65,7 +65,7 @@
  *
  * Forwarding the narrowed handles onto `ReadyFrameContext` carries the narrowing
  * across the function boundary. A pass implementation can read
- * `ctx.renderer.draw(...)` directly, no `!` needed.
+ * `ctx.galaxyPointRenderer.draw(...)` directly, no `!` needed.
  *
  * The trade-off is mild type duplication: `ReadyFrameContext` lists fields that
  * also live on `EngineState`. We accept it because the win at the call site (no
@@ -92,6 +92,7 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
+import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
 
@@ -150,7 +151,7 @@ export function deriveFrameContext(
   if (!isEngineReady(state)) {
     return { isReady: false };
   }
-  const renderer = state.gpu.renderer;
+  const galaxyPointRenderer = state.gpu.galaxyPointRenderer;
   const renderTargets = state.gpu.renderTargets;
   const texturedDisks = state.subsystems.texturedDisks;
 
@@ -171,8 +172,10 @@ export function deriveFrameContext(
   // deriveSlabs is called here — alongside vp, not from a separate site —
   // so there is exactly one per-frame derivation of the slab table (see the
   // module header's point 2 on why derived scalars must not be recomputed
-  // in two places).
-  const slabs = deriveSlabs(cam, vp);
+  // in two places). The focused pivot's radius (or null) lets the near-field
+  // row key its near plane off ALTITUDE rather than raw distance — see
+  // `slabs.ts: deriveSlabs`.
+  const slabs = deriveSlabs(cam, vp, pivotRadiusMpc(state.selectionRows.focus));
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));
 
@@ -207,7 +210,7 @@ export function deriveFrameContext(
     focusBlend: 0,
     visibleSourceMask,
     focus: ZERO_FOCUS,
-    renderer,
+    galaxyPointRenderer,
     renderTargets,
     // A fresh empty Set per frame — the executor populates it as it opens the
     // first pass against each target, and a later pass sampling an earlier

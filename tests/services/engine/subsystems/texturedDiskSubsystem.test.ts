@@ -25,6 +25,7 @@ import type {
   HiResFamousPerGalaxyState,
   HiResFamousSubsystem,
 } from '../../../../src/@types/engine/subsystems/HiResFamousSubsystem';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 function makeFakeDevice(): GPUDevice {
@@ -68,6 +69,16 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
   });
 }
 
+/** Minimal resolved famousGalaxiesMeta covering `count` rows, distinct ids. */
+function makeFamousMeta(count: number): FamousGalaxyMetaEntry[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `famous-${i}`,
+    names: [],
+    description: '',
+    type: '',
+  }));
+}
+
 function makeCam(): OrbitCamera {
   return {
     target: [10, 0, 0] as unknown as Float32Array,
@@ -82,14 +93,18 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
+function makeInput(
+  catalogs: Map<SourceType, GalaxyCatalog>,
+  mask = 0xffffffff,
+  famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[] = [],
+) {
   const cam = makeCam();
   return {
     cam,
     catalogs,
     visibleSourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
-    famousGalaxiesMeta: [],
+    famousGalaxiesMeta,
     nowMs: 0,
   };
 }
@@ -211,10 +226,11 @@ describe('createTexturedDiskSubsystem', () => {
       hiResFamous,
     });
     const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
+    const meta = makeFamousMeta(2);
 
-    runTexturedSolo(walk, sys, makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));
     await new Promise((r) => setTimeout(r, 0));
-    const out = runTexturedSolo(walk, sys, makeInput(clouds));
+    const out = runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));
 
     // Row 0 carries the stubbed hi-res state; row 1 (missing from the
     // map) falls back to the -1 / 0 sentinel.
@@ -277,11 +293,12 @@ describe('createTexturedDiskSubsystem', () => {
       hiResFamous: initial,
     });
     const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
-    runTexturedSolo(walk, sys, makeInput(clouds));
+    const meta = makeFamousMeta(1);
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));
     await new Promise((r) => setTimeout(r, 0));
 
     // Pre-swap: row 0 reflects the initial planner's state.
-    const before = runTexturedSolo(walk, sys, makeInput(clouds)).disks;
+    const before = runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta)).disks;
     expect(before[0]?.hiResLayerIdx).toBe(1);
     expect(before[0]?.hiResCrossfadeAlpha).toBeCloseTo(0.25);
 
@@ -291,13 +308,13 @@ describe('createTexturedDiskSubsystem', () => {
     );
     sys.setHiResFamous(next);
 
-    const after = runTexturedSolo(walk, sys, makeInput(clouds)).disks;
+    const after = runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta)).disks;
     expect(after[0]?.hiResLayerIdx).toBe(6);
     expect(after[0]?.hiResCrossfadeAlpha).toBeCloseTo(0.9);
 
     // setHiResFamous(undefined) detaches — emits the -1 / 0 sentinel.
     sys.setHiResFamous(undefined);
-    const detached = runTexturedSolo(walk, sys, makeInput(clouds)).disks;
+    const detached = runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta)).disks;
     expect(detached[0]?.hiResLayerIdx).toBe(-1);
     expect(detached[0]?.hiResCrossfadeAlpha).toBe(0);
   });
@@ -317,5 +334,55 @@ describe('createTexturedDiskSubsystem', () => {
     const callsBefore = fetcher.mock.calls.length;
     for (let f = 0; f < 5; f++) runTexturedSolo(walk, sys, makeInput(clouds));
     expect(fetcher.mock.calls.length).toBe(callsBefore);
+  });
+
+  // ── famousGalaxiesMeta readiness race ──────────────────────────────
+  // The meta sidecar (`famous_galaxies_meta.json`) loads async and
+  // defaults to `[]` until it resolves. A Famous row visited before the
+  // id has arrived must not enqueue a fetch at all — enqueueing would
+  // fall through to the SDSS/DSS chain (fetchGalaxyBitmap's
+  // `if (famousId)` shortcut) and memoise the wrong bitmap.
+
+  it('does not fetch a Famous row while famousGalaxiesMeta has not loaded yet', async () => {
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      fetcher,
+    });
+    const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
+
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, []));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('fetches a Famous row with famousId once famousGalaxiesMeta has loaded for it', async () => {
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      fetcher,
+    });
+    const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
+    const meta: FamousGalaxyMetaEntry[] = [
+      { id: 'ngc-224', names: ['Andromeda'], description: '', type: 'spiral' },
+    ];
+
+    // Frame 1: meta not loaded yet — no fetch (see the test above).
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, []));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetcher).not.toHaveBeenCalled();
+
+    // Frame 2: meta has landed — the same row now enqueues with famousId.
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fetcher).toHaveBeenCalledWith(expect.objectContaining({ famousId: 'ngc-224' }));
   });
 });

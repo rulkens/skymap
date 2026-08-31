@@ -17,9 +17,9 @@ import type { OrientationDiagnostics } from '../../../@types/engine/OrientationD
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
-import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../ParamSlider/ParamSlider';
-import SliderGroup from '../SliderGroup/SliderGroup';
+import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
+import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
 import styles from './IsmMapSection.module.css';
 
 type FluidSliderKey = keyof GalaxyIsmMapFluidParams;

@@ -32,4 +32,11 @@ export type StructureStore = {
   byId(id: string): StructureInfo | null;
   /** Records of one category, in `all()` order (pick-index alignment). */
   byCategory(category: StructureId): readonly StructureInfo[];
+  /**
+   * A record's position within `byCategory(category)` — the single source
+   * for "which per-category index does this structure occupy", so the ring
+   * pick-index decode and a structure's own label pick-id stamp can't drift
+   * apart into two independent counts. -1 if `id` isn't in that category.
+   */
+  categoryIndexOf(category: StructureId, id: string): number;
 };

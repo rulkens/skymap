@@ -17,6 +17,7 @@ import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamer
 import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 
@@ -55,10 +56,10 @@ describe('deriveSlabs', () => {
 
   it('the near-field row is origin-relative and f64; the cosmological row is not origin-relative and f32', () => {
     const slabs = deriveSlabs(makeCam(100), makeCosmoVp());
-    expect(slabs[0]?.originRelative).toBe(true);
+    expect(slabs[0]?.frame).toEqual({ kind: 'world-mpc', originRelative: true });
     expect(slabs[0]?.precision).toBe('f64');
     expect(slabs[0]?.reversedZ).toBe(true);
-    expect(slabs[1]?.originRelative).toBe(false);
+    expect(slabs[1]?.frame).toEqual({ kind: 'world-mpc', originRelative: false });
     expect(slabs[1]?.precision).toBe('f32');
     expect(slabs[1]?.reversedZ).toBe(false);
   });
@@ -107,6 +108,37 @@ describe('deriveSlabs', () => {
     // byte-equal — this is what lets `slabViewOf` skip a COSMO special case.
     expect(Array.from(Float32Array.from(slabs[1]!.vp))).toEqual(Array.from(cosmoVp));
   });
+
+  it('with a pivot radius, keys the near-field bracket off ALTITUDE, not raw distance', () => {
+    // At a realistic close-approach altitude (50 m, comfortably above the
+    // ~15 m descent floor) the pivot's own radius utterly dominates raw
+    // `cam.distance`, so this is the actual regime the bug lived in: two very
+    // differently sized pivots at the SAME altitude must still get the same
+    // near/far.
+    const altitudeMpc = 0.05 * SCALE_UNITS.KM_TO_MPC; // 50 m
+    const moonletRadiusMpc = 10 * SCALE_UNITS.KM_TO_MPC;
+    const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
+    const a = deriveSlabs(makeCam(moonletRadiusMpc + altitudeMpc), makeCosmoVp(), moonletRadiusMpc);
+    const b = deriveSlabs(makeCam(earthRadiusMpc + altitudeMpc), makeCosmoVp(), earthRadiusMpc);
+    const relDiff = Math.abs(a[0]!.nearMpc - b[0]!.nearMpc) / a[0]!.nearMpc;
+    expect(relDiff).toBeLessThan(1e-9);
+    expect(a[0]!.farMpc).toBe(b[0]!.farMpc);
+
+    // Without the fix (keying off raw `cam.distance`), Earth's pivot would get
+    // a near plane over an order of magnitude farther out than the
+    // altitude-keyed one — comfortably past the 50 m altitude, i.e. the
+    // ground-clipping bug.
+    const rawDistanceBracket = foregroundFrustum(earthRadiusMpc + altitudeMpc);
+    expect(rawDistanceBracket.near / b[0]!.nearMpc).toBeGreaterThan(10);
+  });
+
+  it('with no pivot radius (default), behaves exactly as before — raw distance', () => {
+    const distance = 250;
+    const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
+    const { near, far } = foregroundFrustum(distance);
+    expect(slabs[0]!.nearMpc).toBe(near);
+    expect(slabs[0]!.farMpc).toBe(far);
+  });
 });
 
 describe('slabViewOf', () => {
@@ -128,7 +160,7 @@ describe('slabViewOf', () => {
       focusBlend: 0,
       visibleSourceMask: 0xffffffff,
       focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
-      renderer: {} as unknown as ReadyFrameContext['renderer'],
+      galaxyPointRenderer: {} as unknown as ReadyFrameContext['galaxyPointRenderer'],
       renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
       texturedDisks: {} as unknown as ReadyFrameContext['texturedDisks'],
       slabs,

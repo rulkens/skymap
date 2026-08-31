@@ -58,6 +58,28 @@ describe('fetchWithProgress', () => {
     expect(events.at(-1)).toEqual([5, 5]);
   });
 
+  it('clamps reported progress to total when decoded bytes exceed the declared Content-Length (gzip)', async () => {
+    // A gzip-encoded response reports the COMPRESSED size in Content-Length
+    // while the stream yields DECOMPRESSED bytes — simulate that mismatch.
+    const body = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(body.slice(0, 6));
+        controller.enqueue(body.slice(6, 10));
+        controller.close();
+      },
+    });
+    fetch.mock.mockResolvedValue(
+      new Response(stream, { status: 200, headers: { 'Content-Length': '3' } }),
+    );
+    const ctrl = new AbortController();
+    const events: Array<[number, number]> = [];
+    const buf = await fetchWithProgress('http://x/', ctrl.signal, (l, t) => events.push([l, t]));
+    expect(new Uint8Array(buf)).toEqual(body);
+    expect(events.every(([loaded, total]) => loaded <= total)).toBe(true);
+    expect(events.at(-1)).toEqual([3, 3]);
+  });
+
   it('throws HttpError on non-2xx', async () => {
     fetch.mock.mockResolvedValue(new Response('x', { status: 404 }));
     const ctrl = new AbortController();

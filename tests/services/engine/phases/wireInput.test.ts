@@ -56,8 +56,8 @@ vi.mock('../../../../src/services/camera/orbitControls', () => ({
   attachOrbitControls: (...args: unknown[]) => attachOrbitControlsSpy(...args),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/pickRenderer', () => ({
-  createPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPickRenderer', () => ({
+  createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
 }));
 
 // The content-layer registry pulls in every layer module (heavy GPU deps);
@@ -86,6 +86,10 @@ vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
 
 // Imported AFTER the mocks so wireInput picks them up.
 import { wireInput } from '../../../../src/services/engine/phases/wireInput';
+// The registry itself: derives the wireInput-phase key set for the
+// phase-split assertion below, rather than a hand-written key list that
+// could drift from GPU_HANDLE_ROWS.
+import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 import {
   selectSelectedRef,
   selectFocusRef,
@@ -132,8 +136,7 @@ function makeState(): EngineState {
         },
       },
       debug: {
-        showPickBuffer: false,
-        showDiskRadiusRing: false,
+        overlays: { 'pick-buffer': false, 'disk-radius-ring': false },
         disabledPasses: {},
         renderStrategy: 'auto',
       },
@@ -148,12 +151,13 @@ function makeState(): EngineState {
       galaxies: { get: () => undefined, famousGalaxiesMeta: [] },
     } as never,
     gpu: {
-      renderer: {
+      galaxyPointRenderer: {
         totalCount: () => 0,
         loadedSources: () => [],
       } as never,
-      pickRenderer: null,
-      // createPickRenderer binds the shared focus group; the stub only
+      galaxyPickRenderer: null,
+      pickProgram: null,
+      // createGalaxyPickRenderer binds the shared focus group; the stub only
       // needs an opaque bindGroup handle.
       focusUniform: { bindGroup: {} as GPUBindGroup },
       renderTargets: null,
@@ -291,7 +295,7 @@ describe('wireInput', () => {
           id: 'earth',
           label: 'Earth',
           positionMpc: [0, 0, 0],
-          radiusKm: 6371,
+          radiusM: 6371000,
         },
       }),
     );
@@ -316,5 +320,21 @@ describe('wireInput', () => {
     expect(selectSelectedRef(root)).toBeNull();
     expect(selectFocusRef(root)).toBeNull();
     expect(selectPendingFocusId(root)).toBe('m31');
+  });
+
+  it('constructs the wireInput-phase GPU_HANDLE_ROWS rows', async () => {
+    // The complement of initGpu's phase-split assertion: emptying or
+    // narrowing wireInput's row filter must fail here.
+    const state = makeState();
+    const deps = makeDeps();
+
+    await wireInput(state, deps);
+
+    const gpu = state.gpu as unknown as Record<string, unknown>;
+    for (const row of GPU_HANDLE_ROWS) {
+      if ('constructPhase' in row) {
+        expect(gpu[row.key]).toBeTruthy();
+      }
+    }
   });
 });

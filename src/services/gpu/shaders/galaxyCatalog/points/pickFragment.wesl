@@ -29,7 +29,7 @@
 // declares '@group(0)' (per-frame Uniforms) and '@group(2)' (per-
 // source SourceUniforms); the pick pipeline binds those plus a
 // no-op '@group(1)' FadeUniforms (opacity = 1) so its pipeline
-// layout matches the visual pipeline's exactly. See pickRenderer.ts
+// layout matches the visual pipeline's exactly. See galaxyPickRenderer.ts
 // for the shared-fade-buffer wiring.
 
 import package::galaxyCatalog::points::io::VSOut;
@@ -47,16 +47,16 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // Plain dot: discard fragments outside the unit circle.
   if (dot(in.uv, in.uv) > 1.0) { discard; }
 
-  // Write '(sourceCode << 27 | instance_index) + 1' so background
+  // Write '(sourceCode << 26 | instance_index) + 1' so background
   // pixels (cleared to 0) are distinguishable from a real hit. The +1
   // keeps 0 as the unambiguous 'no hit' sentinel; even with sourceCode
   // = 0 (the Synthetic galaxy catalog) and localIdx = 0 the written value is
   // 1, never 0.
   //
   // 'in.instanceIdx' was assembled in the vertex stage from
-  // '(source.sourceCode << 27u) | @builtin(instance_index)'. The
+  // '(source.sourceCode << 26u) | @builtin(instance_index)'. The
   // packing gives every galaxy catalog a structurally-disjoint identity range
-  // (top 5 bits = source code, bottom 27 = local index <= 134M), so
+  // (top 6 bits = source code, bottom 26 = local index <= 67M), so
   // two galaxies in different galaxy catalogs can never collide on the same
   // pick value.
   //

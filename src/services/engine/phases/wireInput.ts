@@ -17,7 +17,7 @@
  * ### State writes
  *
  *   - `state.cam`.
- *   - `state.gpu.pickRenderer`, `state.gpu.pickProgram`.
+ *   - `state.gpu.galaxyPickRenderer`, `state.gpu.pickProgram`.
  *   - `state.subsystems.clickResolver`, `state.subsystems.inputBindings`.
  *
  * ### Side effects on `deps`
@@ -31,10 +31,8 @@ import { attachOrbitControls } from '../../camera/orbitControls';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
-import { createPickRenderer } from '../../gpu/renderers/galaxyCatalog/pickRenderer';
-import { createPickProgram } from '../frame/pickProgram';
-import { SLAB_REVERSED_Z, COSMO } from '../frame/slabs';
-import { CONTENT_LAYERS } from '../frame/passes';
+import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
+import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
@@ -67,6 +65,8 @@ import { isCinemaMode } from '../../../utils/url/isCinemaMode';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
+import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
+import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click
@@ -77,38 +77,47 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // The visual renderer must exist before we wire picking + the camera —
   // `renderer` is the null-guard subject on the next line.
-  const renderer = state.gpu.renderer;
+  const renderer = state.gpu.galaxyPointRenderer;
   if (!renderer) return;
-  // The point-pick draw provider: it records the galaxy point billboards
-  // into the pick pass the pick program owns. The ring / disk / Milky-Way
-  // pick draws are their own registry `drawPick` rows now — the picker no
-  // longer folds them in, so it takes no marker / disk / MW arguments.
-  const pickRenderer = createPickRenderer(
-    deps.phaseLocals!.device,
-    state.gpu.fadeBgl!,
-    state.gpu.sourceBgl!,
-    state.gpu.focusBgl!,
-    // The live shared focus buffer — so the pick pass excludes non-members
-    // of a focused structure from hit-testing (vertex shader culls them).
-    state.gpu.focusUniform!.bindGroup,
-    SLAB_REVERSED_Z[COSMO]!,
-  );
-  state.gpu.pickRenderer = pickRenderer;
-
-  // The parallel per-slab pick program over the content-layer registry — the
-  // single owner of the hover / click / debug-overlay pick path. It filters
-  // `CONTENT_LAYERS` by `drawPick` + `enabled`, re-rasterises each pickable
-  // slab into its own r32uint target, reads back the cursor texel, and folds
-  // the results near→far. It derives the pick-time camera, the pickable
-  // sources, the point size, and the timing slot internally from `state`, so
-  // its callers only supply the cursor position.
-  const pickProgram = createPickProgram({
-    device: deps.phaseLocals!.device,
-    canvas,
+  // The two GPU_HANDLE_ROWS rows marked `constructPhase: 'wireInput'`: they
+  // read `state.gpu.focusUniform`, built by `initGpu`'s walker call, so they
+  // wait for this phase. `ctx.context`/`ctx.format`/`ctx.hdrCapable` and
+  // `fontAtlases` stay getters — neither row reads them — so this bag never
+  // widens this phase's boot-state requirement past what the old inline code
+  // required. `ctx.format` has no live source at this phase (no row here
+  // bakes a swap-format pipeline); it throws rather than silently re-deriving
+  // a value that could diverge from `initGpu`'s boot format.
+  const handleDeps: GpuHandleConstructDeps = {
+    ctx: {
+      device: deps.phaseLocals!.device,
+      get context() {
+        return state.gpu.uiCtx!.context;
+      },
+      canvas,
+      get format(): GPUTextureFormat {
+        throw new Error('wireInput-phase rows never read ctx.format — wire a derivation first');
+      },
+      get hdrCapable() {
+        return state.gpu.uiCtx!.hdrCapable;
+      },
+    },
+    fadeBgl: state.gpu.fadeBgl!,
+    sourceBgl: state.gpu.sourceBgl!,
+    focusBgl: state.gpu.focusBgl!,
+    get fontAtlases() {
+      return state.gpu.fontAtlases!;
+    },
+  };
+  // Complement of initGpu.ts's filter, by construction: this phase builds
+  // only the rows marked `constructPhase: 'wireInput'`.
+  constructGpuHandles(
+    GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.constructPhase === 'wireInput'),
     state,
-    layers: CONTENT_LAYERS,
-  });
-  state.gpu.pickProgram = pickProgram;
+    handleDeps,
+  );
+  // `pickProgram` derives its pick-time inputs from `state`; used below only
+  // as the hover/click resolvers' entry point.
+  const pickProgram = state.gpu.pickProgram!;
 
   // ── Hover-pick driver ────────────────────────────────────────────────
   //
@@ -187,7 +196,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   //
   // Three writes, in dependency order:
   //   1. `projection` — read off the assembled camera via `projectionOf`.
-  //      Subsequent resizes patch only `aspect`.
+  //      `runFrame` patches `aspect` on resize and `fovYRad` from the settings
+  //      slider every frame thereafter.
   //   2. `lastPose.current` — the initial pose so the first commit-on-edge has
   //      a valid previous pose to refer to.
   //   3. `commitCameraPose` dispatch — makes `camera.base` in the Redux store
@@ -366,6 +376,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         pivotRadiusMpc(selectFocusRow(root)),
       );
       if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
+      // Unconditional — the follow branch (applyWheelZoom.ts:72-75) mutates followDistanceTarget
+      // and returns null; a followed-body wheel tick dispatches nothing (D9, finding 3).
       state.subsystems.scheduler.requestRender();
     },
 

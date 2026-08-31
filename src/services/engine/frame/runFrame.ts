@@ -54,30 +54,28 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
+import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
-import { createRenderTargets } from '../../gpu/renderTargets';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
-import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
+import { runMarkerProducers } from './runMarkerProducers';
+import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { earthSurfaceTier } from './earthSurfaceTier';
 import { prepareStarCut } from './passes/starCatalogLayer';
-import { earthLayer } from './passes/earthLayer';
+import { prepareEarthFrame, earthLayer } from './passes/earthLayer';
 import { NEAR0, slabViewOf } from './slabs';
-import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
-import { camPosLocal } from '../../../utils/camera/camPosLocal';
-import { planEarthTiles } from '../../../utils/scene/planEarthTiles';
+import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -186,99 +184,37 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const masks = deriveSourceMasks(state);
   reevaluateDemand(state);
 
-  // ── Resize → projection Resource ─────────────────────────────────────────
+  // ── Resize → projection Resource, then reconcile the offscreen table ─────
   //
-  // `resizeCanvasToDisplay` returns `true` only when dimensions changed, so we
-  // patch `cameraRuntime.projection.aspect` + the offscreen target table only
-  // in that branch. The HDR row is sized 1:1 with the swap chain, so a stale
-  // target after resize would smear pixels or render off-canvas; the tone-map
-  // composite rebuilds its bind group each frame so it picks up the new view.
-  // One `renderTargets.resize` reallocates every offscreen row at its own
-  // size/scale — the frame body never enumerates targets by hand.
-  //
-  // Aspect lives on `projection` (the engine Resource), NOT on `state.cam`.
-  // `state.cam` is the drag register; its `aspect` field is set at bootstrap
-  // and is never read for the rendered frame — `assembleOrbitCamera` merges the
+  // `resizeCanvasToDisplay` returns `true` only when dimensions changed, so
+  // `cameraRuntime.projection.aspect` is patched only in that branch. Aspect
+  // lives on `projection` (the engine Resource), NOT on `state.cam`:
+  // `state.cam` is the drag register, and `assembleOrbitCamera` merges the
   // projection Resource's aspect onto every produced pose instead.
   //
-  // Resize can run pre-bootstrap (the canvas can change size before the first
-  // cloud lands) — `projection` is always non-null, so no guard is needed.
+  // `reconcile` runs UNCONDITIONALLY — one seam answering two inputs, the
+  // canvas size and every state-driven `scale` (the `mw-aggregate` divisor is
+  // a live slider). It reallocates only the rows whose pixel size actually
+  // moved, so a steady-state frame allocates nothing. Both can run
+  // pre-bootstrap; `renderTargets` is null until initGpu, hence the `?.`.
   if (resizeCanvasToDisplay(deps.canvas)) {
     state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
-    state.gpu.renderTargets?.resize({ width: deps.canvas.width, height: deps.canvas.height });
   }
-
-  // ── Milky-Way aggregate divisor → offscreen table rebuild ────────────────
-  //
-  // The `mw-aggregate` row's downsample divisor is a live tuning knob (the
-  // strongest perf lever the star cloud has — its fragment cost falls as the
-  // square — and it trades against the `starPxMin` / `starPxMax` clamps, which
-  // are already sliders). A texture's dimensions are fixed at creation, so a
-  // change is answered by rebuilding the table, not by resizing it; this sits
-  // beside the resize branch because it is the same "the targets no longer
-  // match what the frame wants" question, asked about a different input.
-  //
-  // The divisor in force is read back off the spec row, and the swap format off
-  // the old table's `swap` row. Both are already carried there, so the targets
-  // themselves ARE the record of what was applied — a 'last applied' mirror
-  // beside them could only ever drift from the textures it describes.
-  //
-  // Destroying textures an in-flight command buffer may still reference is the
-  // hazard `resize` already takes every time it reallocates, so this needs no
-  // synchronisation the resize path doesn't. Nothing caches a view across
-  // frames either: every consumer resolves through `viewOf` at draw time, and
-  // the upsample passes rebuild their bind group per draw.
-  const targets = state.gpu.renderTargets;
-  if (targets) {
-    const applied = targets.specs.find((s) => s.id === 'mw-aggregate')!.scale;
-    const wanted = state.settings.milkyWay.aggregateDivisor;
-    if (applied !== wanted) {
-      const swapFormat = targets.specs.find((s) => s.id === 'swap')!.format;
-      targets.destroy();
-      state.gpu.renderTargets = createRenderTargets(
-        deps.device,
-        swapFormat,
-        { width: deps.canvas.width, height: deps.canvas.height },
-        wanted,
-      );
-    }
-  }
+  // Unlike aspect (canvas-resize-gated), the FOV slider can change on ANY frame
+  // with no resize event, so this write runs unconditionally — a settings-slider
+  // twin of the aspect assignment above, both landing on the same projection
+  // Resource `assembleOrbitCamera` merges into the live camera every frame.
+  state.cameraRuntime.projection.fovYRad = state.settings.camera.fovDeg * (Math.PI / 180);
+  state.gpu.renderTargets?.reconcile(state, {
+    width: deps.canvas.width,
+    height: deps.canvas.height,
+  });
 
   // ── Milky-Way star count → cloud regeneration ───────────────────────────
   //
-  // starCount is a DebugPanel slider like every other `settings.milkyWay`
-  // knob, but unlike them it doesn't ride a uniform or a render target — it
-  // feeds GENERATION directly (`milkyWayCloud.generate` carves the star/dust
-  // layouts from it), so the only way a drag reaches the screen is this
-  // branch noticing the live setting has outrun the buffers currently on
-  // screen and regenerating. Same shape as the mw-aggregate branch just
-  // above — "the targets/buffers no longer match what the frame wants" —
-  // asked about generated data instead of a texture. It also picks up a tier
-  // change: `watchTierSaga` re-seeds `starCount` from the new tier's budget
-  // on every explicit tier switch, so a tier flip surfaces here as an
-  // ordinary mismatch too — `makeRunTierTransition` does not call
-  // `regenerate` itself, to avoid two paths racing to regenerate the same
-  // cloud.
-  //
-  // The comparison is against `cloud.starCount()`, the count the CURRENT
-  // buffers were actually generated with, not a runFrame-side shadow copy:
-  // the generator is the one place that fact is produced, and a second copy
-  // here could only ever drift from the buffers it describes.
-  //
-  // Cost note: `DebugSlider` fires on every input event, so dragging this
-  // knob regenerates the cloud once per tick — a full destroy + allocate +
-  // compute dispatch, far heavier than a uniform write. That is accepted
-  // deliberately for a dev-only knob; if it ever needs production-grade
-  // smoothness, the fix is coalescing to the drag's trailing edge (e.g. a
-  // debounce on the DebugPanel side), not gating the knob back out of the
-  // panel.
-  const cloud = state.gpu.milkyWayCloud;
-  if (cloud) {
-    const wantedCount = state.settings.milkyWay.starCount;
-    if (cloud.starCount() !== wantedCount) {
-      cloud.regenerate(wantedCount);
-    }
-  }
+  // Unconditional like `renderTargets.reconcile` above; the mismatch check
+  // and regeneration rationale live on `MilkyWayCloud.reconcile` itself.
+  state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
 
   // ── Camera produce → commit-on-edge ──────────────────────────────────────
   //
@@ -508,6 +444,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       cam: snap,
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
+      pivotRadiusMpc: pivotRadiusMpc(pivotFocus),
     });
     if (scaleInfo !== null) {
       deps.cb.store.dispatch(engineScaleChanged(scaleInfo));
@@ -652,43 +589,38 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // app-wide request, so a tier swap in flight can't make the planner believe
     // in detail that isn't on the GPU yet. Null until the manifest lands.
     const params = earthTiles.plannerParams(earthSurfaceTier(state));
+    // Empty by default: overwritten below only on the path that actually
+    // resolves a fresh cut. `setLastCut` runs unconditionally at the bottom
+    // of this block so a null-params/null-prepared frame (a tier swap in
+    // flight) draws nothing stale rather than last frame's cut.
+    let cut: readonly SurfaceCutTile[] = [];
     if (params !== null) {
       // Same slab resolution `earthLayer.draw` uses (the f64 seam — see its
       // module header), so the tiles the planner asks for never drift from the
       // pixels the fragment samples them into.
       const view = slabViewOf(ctx, NEAR0);
-      const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
-      const radiusMpc = earth.radiusKm * SCALE_UNITS.KM_TO_MPC;
-      const plan = planEarthTiles({
-        ...params,
-        camPosLocal: camPosLocal(
-          view.camPos,
-          earthState.positionMpc,
-          radiusMpc,
-          earthState.orientation,
-        ),
-        viewProjLocal: composeBodyMvp(
-          view.slab.vp,
-          earthState.positionMpc,
-          RENDER_ORIGIN_MPC,
-          radiusMpc,
-          earthState.orientation,
-        ),
-        viewportPx: view.viewportPx,
-      });
-      // Unconditional: engaging/disengaging is the subsystem's own decision
-      // from this plan. `getTileResources()` either side of `update` IS the
-      // null-to-non-null transition, so the renderer's bind group rebuilds
-      // exactly once, at that moment.
-      const engagedBefore = earthTiles.getTileResources() !== null;
-      earthTiles.update({ plan, nowMs: ctx.nowMs });
-      if (!engagedBefore) {
-        const tiles = earthTiles.getTileResources();
-        if (tiles !== null) {
-          state.gpu.earthRenderer?.setTileResources(tiles.pageTable, tiles.atlas);
-        }
+      // Skip when Earth's frame derivation is null — mirrors the `earth !==
+      // null` guard above (prepareEarthFrame returns null on exactly that
+      // condition); kept explicit so this block doesn't lean on the outer
+      // guard's reasoning to satisfy the type checker.
+      const prepared = prepareEarthFrame(state, ctx, view);
+      if (prepared !== null) {
+        // The single walk: `cut` is what earthLayer.draw draws this frame,
+        // `requests` is what update()'s fetch loop drives — see
+        // cutSurfaceTiles's header for why one walk produces both rather
+        // than two independently re-deriving the same horizon/frustum logic.
+        const result = cutSurfaceTiles({
+          ...params,
+          camPosLocal: prepared.camLocal,
+          viewProjLocal: prepared.mvpLocal,
+          viewportPx: view.viewportPx,
+          residentSlot: earthTiles.residentSlot,
+        });
+        cut = result.cut;
+        earthTiles.update({ plan: result.requests });
       }
     }
+    earthTiles.setLastCut(cut);
   }
 
   // Read OUTSIDE the gate above: `isAnimating()` is true while the manifest is
@@ -699,12 +631,19 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Label director per-frame update ──────────────────────────────────────
   //
   // Runs BEFORE the GPU dispatch so `labelRenderer.setLabels` /
-  // `markerLineRenderer.setLines` are uploaded before `renderFrame` reads those
-  // buffers. The director polls every registered `LabelProducer` (milkyWayLabel,
-  // structures, ...), merges, change-detects via signature hash, and flushes
-  // once; it null-checks its renderers, so this is safe before the atlas load
-  // completes.
-  state.subsystems.labelDirector.runFrame(state, ctx);
+  // `markerLineRenderer.setLines` (and the NEAR0 pair) are uploaded before
+  // `renderFrame` reads those buffers. Each director polls its own registered
+  // `Label2DProducer`s, merges, change-detects via signature hash, and flushes
+  // once; both null-check their renderers, so this is safe before the atlas
+  // load completes.
+  //
+  // Three statements, not `a() || b() || c()`: each call FLUSHES GPU buffers
+  // as a side effect, and `||` short-circuits — the inline form would skip a
+  // sibling's flush the moment an earlier one votes true.
+  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, ctx);
+  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, ctx);
+  const label3DAnimating = runLabel3DProducers(state, ctx);
+  const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
   // ── Star-cut planner (primes the per-ctx memo, surfaces the wake vote) ────
   //
@@ -724,13 +663,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Per-frame marker upload ───────────────────────────────────────────────
   //
-  // Like the label flush above: produceStructureMarkers walks the structure
-  // store, applies fade math, and hands descriptors to the renderer. Must run
-  // BEFORE the GPU dispatch so the instance buffer is uploaded before
-  // `structureMarkersLayer` reads it. Null-checked for the pre-initGpu window.
+  // Like the label flush above: runMarkerProducers walks the producer array (no
+  // sort/filter/dedupe, picks order preserved) and hands descriptors to the
+  // renderer. Must run BEFORE the GPU dispatch so the instance buffer is
+  // uploaded before `structureMarkersLayer` reads it. Null-checked for the
+  // pre-initGpu window.
   if (state.gpu.structureMarkerRenderer !== null) {
-    const markers = produceStructureMarkers(state, ctx);
-    state.gpu.structureMarkerRenderer.setMarkers(markers);
+    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));
   }
 
   // ── GPU dispatch ──────────────────────────────────────────────────────────
@@ -776,6 +715,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
     starFadeAnimating: starCut?.anyNodeFading ?? false,
     earthTilesAnimating,
+    labelsAnimating,
   });
 
   if (keepTicking) {

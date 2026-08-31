@@ -61,7 +61,7 @@ export type FamousStarEntry = {
   /** Full MK spectral string (e.g. `"M1-2 Ia-ab"`).  InfoCard + provenance. */
   spectralType: string;
   /**
-   * Primary radius, R☉.  REQUIRED — a render input (feeds `radiusKm`), always
+   * Primary radius, R☉.  REQUIRED — a render input (feeds `radiusM`), always
    * estimable; a guessed 0 would silently corrupt the rendered model.
    */
   radiusSolar: number;

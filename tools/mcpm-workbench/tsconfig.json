@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["src", "../../src", "../../tools/utils"],
+  // Empty exclude is load-bearing — see tools/galaxy-renderer/tsconfig.json.
+  "exclude": []
+}

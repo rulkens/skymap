@@ -6,7 +6,7 @@
  * as a registry key for filament + volume assets.
  *
  * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
- * file format AND packed into the pick texture's upper 5 bits. Treat
+ * file format AND packed into the pick texture's upper 6 bits. Treat
  * them like API version numbers — append, never renumber. Recycling a
  * code silently breaks every `.bin` ever written and every saved
  * selection URL.
@@ -39,8 +39,8 @@ export const Source = {
   FamousGalaxy: 4,
   /**
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
-   * cluster's marker ring return source code 5 in the upper 5 bits of
-   * the packed identity; the 27-bit `localIdx` carries the structure's index
+   * cluster's marker ring return source code 5 in the upper 6 bits of
+   * the packed identity; the 26-bit `localIdx` carries the structure's index
    * into the cluster table. See `selectionEncoding.ts` for the layout.
    */
   Cluster: 5,
@@ -87,8 +87,8 @@ export const Source = {
   DebugSpherical: 14,
   /**
    * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
-   * against a group's marker ring return source code 15 in the upper 5
-   * bits of the packed identity; the 27-bit `localIdx` carries the structure's
+   * against a group's marker ring return source code 15 in the upper 6
+   * bits of the packed identity; the 26-bit `localIdx` carries the structure's
    * index into the structure store. Same encoding as Cluster/Supercluster/
    * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
    * renumber the galaxy catalog codes 0–8 below it.
@@ -214,19 +214,38 @@ export const Source = {
    * famous star. The star layers draw both sets and stamp whichever code the
    * star's table dictates (`starPickId`). Not persisted. Appended at 28.
    *
-   * BUDGET: the pick texture's source field is 5 bits with 31 reserved as the
-   * all-ones sentinel (`selectionEncoding.ts`), so after this row only 29 and
-   * 30 remained. `zoneOfAvoidance` (29, below) spent one; only 30 is left
-   * before the next pickable source needs a wider field.
+   * BUDGET: the pick texture's source field is 6 bits with 63 reserved as the
+   * all-ones sentinel (`selectionEncoding.ts`), so after this row codes
+   * 29..62 remain. `zoneOfAvoidance` (29, below) spends one, leaving
+   * 30..62 for future pickable sources.
    */
   SStar: 28,
   /**
    * Zone-of-avoidance guide band — the additively-blended wedge along the
    * galactic plane annotating the dust-obscured hole every optical/near-IR
    * catalog shares. Pickable (clicking the band opens its InfoCard), so it
-   * spends one of the two codes the SStar docblock's budget note reserved.
-   * Appended at 29 — after this row, only 30 remains before the 5-bit pick
+   * spends one of the codes the SStar docblock's budget note reserved.
+   * Appended at 29 — after this row, codes 30..62 remain before the pick
    * field needs a wider layout.
    */
   ZoneOfAvoidance: 29,
+  /**
+   * Polyphorm ("2MRS Polyphorm") cosmic-web density volume — a test field
+   * for a Polyphorm-derived run over the 2MRS footprint. Registry-key-only
+   * code (not persisted, not pickable); the entry carries its presentation
+   * defaults like CF-4/MCPM. Default-off — it's a test field the user
+   * toggles on. Appended at 30 — never renumber the codes below it.
+   */
+  Polyphorm2MRS: 30,
+  /**
+   * MCPM workbench promoted-export cosmic-web density volume — a durable
+   * home for cubes promoted from the workbench dev tool via
+   * `tools/volumes/promoteWorkbenchExport.ts`. Registry-key-only code (not
+   * persisted, not pickable); the entry carries its presentation defaults
+   * like CF-4/MCPM/Polyphorm2MRS. Hidden (`visible: false`) until Phase 4
+   * validation clears — see `src/data/sources/mcpm-workbench.ts`. Appended
+   * at 31, the first code the 6-bit pick-source widening opened up — never
+   * renumber the codes below it.
+   */
+  McpmWorkbench: 31,
 } as const;

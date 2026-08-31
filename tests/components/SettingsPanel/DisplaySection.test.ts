@@ -46,6 +46,8 @@ function baseProps(overrides?: Partial<DisplaySectionProps>): DisplaySectionProp
     onToneMapCurveChange: vi.fn<(curve: ToneMapCurveT) => void>(),
     exposure: 3.0,
     onExposureChange: vi.fn<(next: number) => void>(),
+    fovDeg: 60,
+    onFovDegChange: vi.fn<(next: number) => void>(),
     hdrEnabled: false,
     onHdrEnabledChange: vi.fn<(next: boolean) => void>(),
     hdrCapable: true,
@@ -150,6 +152,22 @@ describe('DisplaySection', () => {
       fireEvent.change(getByLabelText(/orientation/i), { target: { value: 'supergalactic' } });
       expect(onOrientationChange).toHaveBeenCalledOnce();
       expect(onOrientationChange).toHaveBeenCalledWith('supergalactic');
+    });
+  });
+
+  describe('field of view control', () => {
+    it('calls onFovDegChange with the stepped value on a keyboard nudge', () => {
+      const onFovDegChange = vi.fn<(next: number) => void>();
+      const { getByRole, container } = render(
+        createElement(DisplaySection, baseProps({ fovDeg: 60, onFovDegChange })),
+      );
+      fireEvent.click(getByRole('button', { name: /display/i }));
+      const sliders = Array.from(container.querySelectorAll<HTMLElement>('[role="slider"]'));
+      const fov = sliders.find((el) => el.getAttribute('aria-label') === 'Field of view')!;
+      expect(fov).not.toBeUndefined();
+      fireEvent.keyDown(fov, { key: 'ArrowRight' });
+      expect(onFovDegChange).toHaveBeenCalledOnce();
+      expect(onFovDegChange).toHaveBeenCalledWith(60.5);
     });
   });
 

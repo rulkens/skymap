@@ -58,7 +58,7 @@ function rootWithCamera(
 const restingRoot = rootWithCamera();
 
 /** No in-frame animation vote — the default for every case but the vote ones. */
-const NO_ANIM = { starFadeAnimating: false, earthTilesAnimating: false };
+const NO_ANIM = { starFadeAnimating: false, earthTilesAnimating: false, labelsAnimating: false };
 
 /**
  * Minimal state covering every term shouldKeepTicking reads. All terms default
@@ -87,8 +87,8 @@ function makeState(over: {
   return {
     settings: { flow: { enabled: over.flowEnabled ?? false } },
     gpu: {
-      renderer: null,
-      pickRenderer: null,
+      galaxyPointRenderer: null,
+      galaxyPickRenderer: null,
       renderTargets: null,
     },
     cam: null,
@@ -234,12 +234,21 @@ describe('shouldKeepTicking', () => {
     ).toBe(true);
   });
 
+  it('a label envelope mid-ramp → true even with everything else at rest', () => {
+    // The label director's appear/disappear envelope used to fire its own
+    // requestRender; now it returns the vote and this predicate decides.
+    const state = makeState({});
+    expect(
+      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, labelsAnimating: true }),
+    ).toBe(true);
+  });
+
   it('passes nowMs through to the time-dependent fade/focus terms', () => {
     const isAnyAnimating = vi.fn<(nowMs: number) => boolean>(() => false);
     const isAwake = vi.fn<(nowMs: number) => boolean>(() => false);
     const state = {
       settings: { flow: { enabled: false } },
-      gpu: { renderer: null, pickRenderer: null, renderTargets: null },
+      gpu: { galaxyPointRenderer: null, galaxyPickRenderer: null, renderTargets: null },
       cam: null,
       cameraRuntime: {
         prevActiveId: { current: 'resting' },

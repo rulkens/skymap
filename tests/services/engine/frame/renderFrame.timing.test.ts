@@ -1,31 +1,11 @@
 /**
- * renderFrame — verify timing service is consulted per pass.
+ * renderFrame — the timing service is consulted per pass.
  *
- * Stubs renderFrame's dependencies, attaches a mock timingService, runs one
- * frame, then asserts:
- *
- *   1. `beginFrame` was called once.
- *   2. `descriptorFor(pass.name)` was called once per enabled layer — in
- *      this fixture point-sprites and the Milky-Way cloud's three rows
- *      (milky-way-aggregate, milky-way-upsample, milky-way); the rest are
- *      gated off via null subsystems / null optional renderers.
- *   3. The descriptor lands on `timestampWrites` of the corresponding
- *      `beginRenderPass` call — the orchestrator's
- *      `...(timestampWrites ? { ... } : {})` spread must materialise the
- *      field when the service is active.
- *   4. `endFrame` was called once with the encoder.
- *   5. With `state.gpu.timingService` null (the common case), none of
- *      `beginFrame`/`descriptorFor`/`endFrame` fire and the encoder
- *      commands stay byte-identical to the pre-timing path — the
- *      byte-identical claim itself is a snapshot in
- *      `renderFrameSplitBaseline.test.ts`; this test asserts the
- *      structural "no-call" invariant.
- *
- * The fixture stays local rather than importing `renderFrame.test.ts`'s
- * helper; its shape mirrors `renderFrameSplitBaseline.test.ts`'s
- * `makeMinimalInput` — encoder + pass stubs that record their call args,
- * renderers that no-op, and a `state` that gates every optional pass off so
- * the trace stays focused on the always-on passes.
+ * The fixture gates every optional pass off through null subsystems / null
+ * optional renderers, so the trace covers only point-sprites and the Milky-Way
+ * cloud's three rows. The byte-identical claim for the service-null path lives as
+ * a snapshot in `renderFrameSplitBaseline.test.ts`; this file pins the structural
+ * no-call invariant instead.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -127,22 +107,63 @@ function makeLoggingRenderer() {
  * shared by reference so a test can swap the volume row's view.
  */
 function makeRenderTargets(views: Record<string, GPUTextureView>) {
+  // Clear values match production; `specOf` is what `executeFrame` reads.
+  const specs = [
+    {
+      id: 'hdr',
+      format: 'rgba16float',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
+    {
+      id: 'volume',
+      format: 'rgba16float',
+      depth: null,
+      scale: 3,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+    // downscaled viewport it hands the star pass, so the row must exist here
+    // and not only in the views record.
+    {
+      id: 'mw-aggregate',
+      format: 'rgba16float',
+      depth: null,
+      scale: 2,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    {
+      id: 'swap',
+      format: 'bgra8unorm',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
+  ];
   return {
-    specs: [
-      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-      { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
-      // milkyWayAggregateLayer.draw reads this row's `scale` to size the
-      // downscaled viewport it hands the star pass, so the row must exist here
-      // and not only in the views record.
-      { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: 2 },
-      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
-    ],
+    specs,
+    specOf: (id: string) => {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
+      return spec;
+    },
+    // scalarVolumeLayer / milkyWayAggregateLayer read this for their
+    // downscaled viewport; the fixture canvas is the fixed 1280x720
+    // `makeMinimalInputWithTiming` builds `ctx` with.
+    sizeOf: (id: string) => {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec || id === 'swap') throw new Error(`mock renderTargets: no size for '${id}'`);
+      return {
+        width: Math.max(1, Math.floor(1280 / spec.scale)),
+        height: Math.max(1, Math.floor(FIXTURE_CANVAS_HEIGHT_PX / spec.scale)),
+      };
+    },
     viewOf: (id: string) => {
       const view = views[id];
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
-    resize: vi.fn(),
     destroy: vi.fn(),
   };
 }
@@ -190,7 +211,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const env = makeEncoderEnv();
   const device = makeFakeDevice(env.encoder);
   const context = makeFakeContext();
-  const pointRenderer = makeLoggingRenderer();
+  const galaxyPointRenderer = makeLoggingRenderer();
   // The cloud renderer's two passes target two different textures, so it has
   // two entry points rather than one `draw`.
   const milkyWayCloudRenderer = { drawStars: vi.fn(), drawDust: vi.fn() };
@@ -216,7 +237,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     nearMpc: 0.01,
     farMpc: 50000,
     vp: Float64Array.from(viewProj as unknown as Float32Array),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   };
@@ -234,8 +255,11 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
+    // resolveLayerOpacity's recession factor lerps on this; production seeds it
+    // to 0 in frameContext, and an absent one yields NaN alphas here.
+    focusBlend: 0,
     fovYRad: FIXTURE_FOV_Y_RAD,
-    renderer: pointRenderer,
+    galaxyPointRenderer,
     renderTargets,
     // texturedDisks slot is referenced from frameContext shape;
     // we'll null the matching subsystem on `state` so the pass skips.
@@ -352,6 +376,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // (opacity 0 ⇒ no render). Production seeds that fade from
         // `settings.milkyWay.enabled`, which is true here, hence 1.
         fades: { opacityOf: (id: { kind: string }) => (id.kind === 'milkyWay' ? 1 : 0) },
+        clipPlayer: { clipOpacityOf: () => 1 },
       },
     } as never,
     device,

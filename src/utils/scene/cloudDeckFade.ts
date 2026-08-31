@@ -8,7 +8,7 @@
  * deck exactly when there's no tile data to smear over. Altitude is the
  * physical fact that exists regardless of whether a tile ever loads.
  *
- * The band is calibrated against `planEarthTiles`'s own thresholds: at the
+ * The band is calibrated against `cutSurfaceTiles`'s own thresholds: at the
  * default FOV and viewport it settles at z6 ~0.075 Earth radii of altitude
  * and z7 ~0.037. The fade starts at z6 (the deck still does its whole-globe
  * job) and completes by z7 (fine tiles are now the thing worth looking at).

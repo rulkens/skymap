@@ -22,10 +22,10 @@
  * are the same caption to the declutter and the alpha envelope.
  */
 
-import type { Label } from '../../../@types/rendering/Label';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { CaptionKind } from './captionPriority';
 
-export type ForegroundCaption = Label &
-  Required<Pick<Label, 'color' | 'worldEmMpc' | 'minPixelSize' | 'maxPixelSize'>> & {
+export type ForegroundCaption = Label2D &
+  Required<Pick<Label2D, 'color' | 'worldEmMpc' | 'minPixelSize' | 'maxPixelSize'>> & {
     readonly kind: CaptionKind;
   };

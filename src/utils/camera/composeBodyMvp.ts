@@ -1,6 +1,8 @@
 /**
  * composeBodyMvp — compose a full proj·view·model MVP for a spherical body
- * (planet, star, Earth) and return a narrowed f32 matrix ready for GPU upload.
+ * (planet, star, Earth), entirely in f64. Callers narrow to f32 themselves,
+ * at whichever point their OWN use actually needs f32 — see "Why f64 all the
+ * way out" below.
  *
  * ### One unit (Mpc) across all bodies
  *
@@ -10,7 +12,7 @@
  * native-unit braid (km for planets, AU for orbits, Mpc for galaxies) ever
  * leaks into the composition path. Callers convert once at the call site:
  *
- *     radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC
+ *     radiusMpc = 6_371_000 * SCALE_UNITS.M_TO_MPC
  *
  * ### The model is `T · R · S` (translate · rotate · scale)
  *
@@ -41,24 +43,31 @@
  * dominant effect for a lone resolved star. A per-star pole vector is a future
  * orientation field; once it exists, that star's flatten tilts with it for free.
  *
- * ### Why compose the FULL MVP in f64 before narrowing (spec §3 / §9)
+ * ### Why compose the FULL MVP in f64, and stay f64 on return
  *
  * Earth sits at ~1 AU ≈ 4.85×10⁻¹² Mpc from the Sun. The body position is
  * therefore a very small number in Mpc — but the view-projection matrix
- * carries a large translation that nearly cancels it. When that translation
- * is stored in f32 first, the low-order bits (which encode the inter-body
- * separation, ~10⁻¹² Mpc) are already gone. Multiplying an f32 VP by an
- * f32 model matrix therefore places Earth at exactly the wrong position —
- * the error can easily exceed one Earth radius.
+ * carries a large translation that nearly cancels it. Narrowing either
+ * operand to f32 before the multiply loses the low-order bits that encode
+ * the inter-body separation, misplacing the body by more than one radius.
+ * `proj · view · model` is therefore computed entirely in f64 (`mat4d`).
  *
- * The fix: compute `proj · view · model` entirely in f64 (`mat4d`), then
- * narrow the resulting 16-element MVP once at the GPU-upload boundary via
- * `narrowMat4`. At that point the small-number arithmetic has already been
- * resolved in high precision, so the f32 elements each carry a well-
- * conditioned value rather than a catastrophically cancelled residual.
- *
- *     f64 foregroundVp  ×  f64 model  →  f64 mvp  →  narrow → f32 MVP
- *                                                      ↑ only here
+ * The result USED to narrow to f32 here too, on the reasoning that once the
+ * cancellation above is resolved every element is "well-conditioned". That
+ * held for every GPU-drawing caller (a sphere renderer's uniform write), but
+ * `prepareEarthFrame` (`earthLayer.ts`) also feeds this SAME mvp to
+ * `cutSurfaceTiles`, a CPU-side walk evaluating `mvp·p` at ground points
+ * metres from the camera. There the `w`-row cancels its OWN large terms (the
+ * `radiusMpc`-scale entries this function's model factor writes) down to
+ * `w≈10⁻²¹` at ~60 m altitude — a SECOND, independent cancellation, internal
+ * to this matrix rather than to the position delta above. Narrowing before
+ * that walk runs reintroduces per-element f32 rounding at a magnitude that is
+ * now a ~1% relative error on `w`, enough to corrupt the walk's bbox-cull
+ * test and drop tiles that are actually on screen — see
+ * `.superpowers/sdd/2026-08-20-earth-rtc-surface-foundation/cut-replay-exact-report.md`.
+ * So this function returns the raw f64 result; a GPU-drawing caller narrows
+ * via `narrowMat4` at its OWN upload site, and the CPU planner keeps `mvpLocal`
+ * `Float64Array` all the way into `cutSurfaceTiles`.
  *
  * The `foregroundVp` produced by `computeForegroundViewProj` is already
  * renderOrigin-relative, so the model's translation delta must be expressed
@@ -68,11 +77,11 @@
 import { mat4d } from 'wgpu-matrix';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { narrowMat4 } from '../math/narrowMat4';
 
 /**
- * Compose a narrowed proj·view·model matrix for a unit sphere centred at
+ * Compose a f64 proj·view·model matrix for a unit sphere centred at
  * `bodyPosMpc`, scaled to `radiusMpc`, in the renderOrigin-relative frame.
+ * NOT narrowed — see the module header for why narrowing is the caller's job.
  *
  * @param foregroundVp  The f64 proj·view matrix from `computeForegroundViewProj`.
  *                      Already expressed relative to `renderOrigin`.
@@ -80,7 +89,7 @@ import { narrowMat4 } from '../math/narrowMat4';
  * @param renderOrigin  The render origin (same value passed to
  *                      `computeForegroundViewProj`).
  * @param radiusMpc     Equatorial body radius in Mpc (e.g.
- *                      `6371 * SCALE_UNITS.KM_TO_MPC`).
+ *                      `6_371_000 * SCALE_UNITS.M_TO_MPC`).
  * @param orientation   The body's baked local→equatorial-world rotation `R`,
  *                      embedded between translate and scale (`T·R·S`). Pass
  *                      `IDENTITY_MAT3` for a rotation-invariant body (a flat
@@ -89,9 +98,10 @@ import { narrowMat4 } from '../math/narrowMat4';
  *                      by `radiusMpc·(1 − oblateness)` INSIDE the oriented frame,
  *                      so the flatten tilts with `orientation`. Defaults to `0`
  *                      (a true sphere), leaving uniform-radius callers unchanged.
- * @returns  A `Float32Array` of 16 values (column-major proj·view·model),
- *           composed entirely in f64 before narrowing to preserve sub-metre
- *           accuracy at 1-AU distances.
+ * @returns  A `Float64Array` of 16 values (column-major proj·view·model),
+ *           composed entirely in f64. Narrow via `narrowMat4` before a GPU
+ *           uniform write; a CPU-side consumer (the surface-tile planner)
+ *           must keep it f64 — see the module header.
  */
 export function composeBodyMvp(
   foregroundVp: Float64Array,
@@ -100,7 +110,7 @@ export function composeBodyMvp(
   radiusMpc: number,
   orientation: Readonly<Mat3>,
   oblateness = 0,
-): Float32Array {
+): Float64Array {
   // Delta in Mpc, expressed in the renderOrigin-relative frame that foregroundVp
   // was built for. Subtracting renderOrigin here mirrors what computeForegroundViewProj
   // does to eye/target — without this subtraction the VP and model matrices live in
@@ -120,10 +130,22 @@ export function composeBodyMvp(
   // every textured body; the round-trip test discriminates that.
   const r = orientation;
   const rot = new Float64Array([
-    r[0], r[1], r[2], 0,
-    r[3], r[4], r[5], 0,
-    r[6], r[7], r[8], 0,
-    0, 0, 0, 1,
+    r[0],
+    r[1],
+    r[2],
+    0,
+    r[3],
+    r[4],
+    r[5],
+    0,
+    r[6],
+    r[7],
+    r[8],
+    0,
+    0,
+    0,
+    0,
+    1,
   ]);
 
   // Model = T · R · S. A column vector v transforms as (T·R·S)·v — read
@@ -142,12 +164,7 @@ export function composeBodyMvp(
   ) as Float64Array;
 
   // Full compose in f64: the cancellation between the large VP translation and
-  // the small body-position delta is resolved here, at double precision, before
-  // any bits are lost to narrowing.
-  const mvp64 = mat4d.multiply(foregroundVp, model) as Float64Array;
-
-  // Narrow once at the GPU-upload boundary. Each element is now well-conditioned
-  // (no catastrophic cancellation left), so the f32 rounding error is at most
-  // 2^-24 relative — well under one metre at Earth-surface scale.
-  return narrowMat4(mvp64);
+  // the small body-position delta is resolved here, at double precision. NOT
+  // narrowed — see the module header for why that is now the caller's job.
+  return mat4d.multiply(foregroundVp, model) as Float64Array;
 }

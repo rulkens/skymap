@@ -4,7 +4,7 @@
  *
  * It records one source's leaf cut into an already-begun r32uint pick pass,
  * where each fragment writes the picked star's packed identity
- * (`(SOURCE_GAIA_STARS << 27) | recordIdx`, see `starCatalog/pickFragment.wesl`).
+ * (`(SOURCE_GAIA_STARS << 26) | recordIdx`, see `starCatalog/pickFragment.wesl`).
  * It owns no pass, no texture and no readback — the pick program begins the
  * pass and drives the readback; this renderer is one `drawPick` provider among
  * the pickable rows, the star analogue of the galaxy points `PickRenderer`.

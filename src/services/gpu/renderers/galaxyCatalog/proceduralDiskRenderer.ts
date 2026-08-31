@@ -257,7 +257,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // Alias the same ArrayBuffer as u32 so we can write pick ids into
     // float slots without float-precision loss. localIdx can exceed 2^24,
     // which isn't exactly representable as f32; writing the raw u32 bits
-    // preserves all 27 localIdx bits. The shader reads them back with
+    // preserves all 26 localIdx bits. The shader reads them back with
     // bitcast<u32>. The alternative — storing localIdx as a plain f32 —
     // would silently corrupt ids above ~16 M.
     const packedU32 = new Uint32Array(packed.buffer);

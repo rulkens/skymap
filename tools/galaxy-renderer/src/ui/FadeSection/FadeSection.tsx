@@ -14,8 +14,8 @@ import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeRea
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
-import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../ParamSlider/ParamSlider';
+import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import styles from './FadeSection.module.css';
 
 export type FadeSectionProps = {

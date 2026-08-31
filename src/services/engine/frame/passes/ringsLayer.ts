@@ -70,6 +70,7 @@ import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packRingUniforms } from '../../../../utils/gpu/packRingUniforms';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
@@ -161,13 +162,24 @@ export const ringsLayer: ContentLayer = {
       // Camera in the body's local frame, in planet radii (planet = unit sphere)
       // — the frame the fragment's in-front-of-planet view-ray test runs in, so
       // the ring keeps its own lit brightness where it occults the disc.
-      const radiusMpc = body.radiusKm * SCALE_UNITS.KM_TO_MPC;
-      const cam = camPosLocal(ctx.drawCamPos, bodyState.positionMpc, radiusMpc, bodyState.orientation);
+      const radiusMpc = body.radiusM * SCALE_UNITS.M_TO_MPC;
+      const cam = camPosLocal(
+        ctx.drawCamPos,
+        bodyState.positionMpc,
+        radiusMpc,
+        bodyState.orientation,
+      );
       // Ring-shape scalars, both relative to the OUTER radius (the disc's unit
       // radius): the planet's size in disc units, and the hole's inner edge.
-      const planetRadiusRatio = body.radiusKm / ring.outerRadiusKm;
+      // The ring table is authored in km, the body in metres — hence the
+      // conversion inside this otherwise unit-free ratio.
+      const planetRadiusRatio = (body.radiusM * SCALE_UNITS.M_TO_KM) / ring.outerRadiusKm;
       const innerRatio = ring.innerRadiusKm / ring.outerRadiusKm;
-      renderer.draw(pass, packRingUniforms(mvp, sun, planetRadiusRatio, cam, innerRatio));
+      // Narrow here, at the GPU uniform write — composeBodyMvp returns f64.
+      renderer.draw(
+        pass,
+        packRingUniforms(narrowMat4(mvp), sun, planetRadiusRatio, cam, innerRatio),
+      );
     }
   },
 };

@@ -4,7 +4,7 @@
  *
  * ### What this does
  *
- * When `state.settings.debug.showPickBuffer` is on the developer wants to see
+ * When `state.settings.debug.overlays['pick-buffer']` is on the developer wants to see
  * the raw pick texture colour-mapped and overlaid on the tone-mapped scene.
  * The overlay:
  *
@@ -58,11 +58,11 @@ export type DrawPickDebugOverlayDeps = {
 
 /**
  * Composite the pick-buffer debug visualisation over the swap chain if
- * `state.settings.debug.showPickBuffer` is on and all required handles are
- * non-null.
+ * `state.settings.debug.overlays['pick-buffer']` is on and all required
+ * handles are non-null.
  *
  * Returns immediately (no-op) when:
- *   - `showPickBuffer` is off
+ *   - `overlays['pick-buffer']` is off
  *   - `pickProgram` or `pickDebugOverlay` is null
  *   - `pickProgram.renderForDebug()` returns an empty array (engine not ready
  *     to pick, or no slab has an enabled pickable layer)
@@ -73,7 +73,7 @@ export type DrawPickDebugOverlayDeps = {
  */
 export function drawPickDebugOverlay(state: EngineState, deps: DrawPickDebugOverlayDeps): void {
   if (
-    !state.settings.debug.showPickBuffer ||
+    !state.settings.debug.overlays['pick-buffer'] ||
     state.gpu.pickProgram === null ||
     state.gpu.pickDebugOverlay === null
   ) {

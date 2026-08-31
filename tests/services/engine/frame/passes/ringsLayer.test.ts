@@ -35,9 +35,11 @@ import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 
 // Mock composeBodyMvp so the test can assert which vp it consumed by identity.
-// The composition math is covered by composeBodyMvp's own tests.
+// Real composeBodyMvp returns f64; the layer narrows its own copy at the
+// GPU-upload boundary. The composition math is covered by composeBodyMvp's
+// own tests.
 vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
+  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 
@@ -86,13 +88,13 @@ const SATURN_RING = SCENE_RINGS.find((r) => r.textureId === 'saturn-ring')!;
 
 /** Saturn sitting down +x, firmly resolved on the 720-tall/60° fixture. */
 function saturnBody(orientation: Mat3 = IDENTITY_MAT3): SeededPlanet {
-  const radiusKm = 58232;
-  const distanceKm = radiusKm * 5;
+  const radiusM = 58_232_000;
+  const distanceM = radiusM * 5;
   return {
     id: SATURN_RING.bodyId,
     label: 'Saturn',
-    positionMpc: [distanceKm * SCALE_UNITS.KM_TO_MPC, 0, 0],
-    radiusKm,
+    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+    radiusM,
     albedo: [0.8, 0.7, 0.5],
     orientation,
   };
@@ -117,7 +119,7 @@ function makeNear0View(): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
@@ -222,10 +224,10 @@ describe('ringsLayer.draw', () => {
     expect(u[17]).toBeCloseTo(expectedSun[1]);
     expect(u[18]).toBeCloseTo(expectedSun[2]);
     // planetRadiusRatio = planet / ring outer at float 19.
-    expect(u[19]).toBeCloseTo(saturn.radiusKm / SATURN_RING.outerRadiusKm);
+    expect(u[19]).toBeCloseTo((saturn.radiusM * SCALE_UNITS.M_TO_KM) / SATURN_RING.outerRadiusKm);
     // camPosLocal at floats 20..22 (recomputed independently — a rotate/pack
     // drift lands here, as with the sun above).
-    const radiusMpc = saturn.radiusKm * SCALE_UNITS.KM_TO_MPC;
+    const radiusMpc = saturn.radiusM * SCALE_UNITS.M_TO_MPC;
     const expectedCam = camPosLocal(
       NEAR_CTX.drawCamPos,
       saturn.positionMpc,

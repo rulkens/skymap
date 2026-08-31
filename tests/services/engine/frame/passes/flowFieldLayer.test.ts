@@ -36,7 +36,7 @@ function makeCtx(): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer: {} as never,
+    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
     texturedDisks: {} as never,
   };
@@ -50,7 +50,7 @@ function makeView(): SlabView {
       nearMpc: 0.01,
       farMpc: 50000,
       vp: new Float64Array(16),
-      originRelative: false,
+      frame: { kind: 'world-mpc', originRelative: false },
       precision: 'f32',
       reversedZ: false,
     },
@@ -79,6 +79,7 @@ function makeState(
     },
     subsystems: {
       fades: { opacityOf: vi.fn(() => over.opacity ?? 0.42) },
+      clipPlayer: { clipOpacityOf: () => 1 },
     },
     gpu: { flowFieldRenderer: over.flowFieldRenderer ?? null },
   } as unknown as EngineState;

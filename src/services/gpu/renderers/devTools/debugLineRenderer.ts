@@ -6,19 +6,19 @@
  *
  * The marker-line renderer is owned by the label director: its `setLines` is
  * the flush target of the producer-merge / declutter / fade machinery, and its
- * input `MarkerLine` carries id + fadeAlpha + ownerLabelId to support that
- * reconcile. The clip-path inspector wanted none of that — it precomputes a
- * snapshot on a button click and the pass uploads the whole speed-coloured
- * route wholesale each frame. Routing it through the label director (the
- * approach we backed out of) forced id-keying hacks because the director's
- * change-signature excludes positions. A second tiny renderer keyed off the
- * leaner `DebugLine` keeps the debug overlay fully decoupled from labels.
+ * input `MarkerLine` carries id + fadeAlpha to support that reconcile. The
+ * clip-path inspector wanted none of that — it precomputes a snapshot on a
+ * button click and the pass uploads the whole speed-coloured route wholesale
+ * each frame. Routing it through the label director (the approach we backed
+ * out of) forced id-keying hacks because the director's change-signature
+ * excludes positions. A second tiny renderer keyed off the leaner `DebugLine`
+ * keeps the debug overlay fully decoupled from labels.
  *
  * The GPU technique is identical, so this REUSES the marker-line WESL shaders
  * (`shaders/markerLines/{vertex,fragment}.wesl`) and the same 80-byte
  * CameraUniforms prefix + 48-byte instance stride. The only divergences are the
- * input type (no id/fade/owner) and a larger default `maxLines` — a clip path
- * is hundreds of route segments, not the 1–3 lines a marker overlay carries.
+ * input type (no id/fade) and a larger default `maxLines` — a clip path is
+ * hundreds of route segments, not the 1–3 lines a marker overlay carries.
  *
  * See `markerLineRenderer.ts` for the full uniform-layout / blend-mode
  * rationale; it is not repeated here.

@@ -48,6 +48,18 @@ export type DiskPlannerWalkDeps = {
   readonly decimationFactor?: number;
 };
 
+/**
+ * Per-frame cap on rows admitted into the two onRow bodies. The distance
+ * gate's radius grows with pxPerRad (∝ 1/tan(fovY/2)), which the FOV slider
+ * can push arbitrarily high at narrow FOV — without a cap, a whole decimated
+ * window clears the gate at once and floods colour lookup, RA/Dec
+ * conversion, and the atlas's O(slotCount) LRU scan (~500× the 60° frame
+ * cost, measured). 2048 = decimationFactor(8) × the galaxy atlas's slot
+ * count (256, galaxyAtlasSubsystem.ts) — a full stride cycle's worth of
+ * atlas capacity, well above the ~60 rows a 60° FOV admits in practice.
+ */
+export const DISK_ROW_ACCEPT_BUDGET = 2048;
+
 export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlannerWalk {
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
 
@@ -70,6 +82,12 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     const cy = cam.position[1];
     const cz = cam.position[2];
 
+    // Rows admitted this frame across ALL sources — see DISK_ROW_ACCEPT_BUDGET.
+    // Once spent, later sources skip their row loop (beginSource/endSource
+    // still run, so purge + cursor stay correct) and are swept on a later,
+    // rotated window.
+    let acceptedThisFrame = 0;
+
     for (const [source, catalog] of catalogs.entries()) {
       if (((visibleSourceMask >> source) & 1) === 0) {
         procedural.onSourceHidden(source);
@@ -88,23 +106,28 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
       procedural.beginSource(source, safeStart, end);
       textured.beginSource(source, safeStart, end);
 
-      for (let i = safeStart; i < end; i++) {
-        const i3 = i * 3;
-        const x = positions[i3 + 0]!;
-        const y = positions[i3 + 1]!;
-        const z = positions[i3 + 2]!;
+      if (acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
+        for (let i = safeStart; i < end; i++) {
+          const i3 = i * 3;
+          const x = positions[i3 + 0]!;
+          const y = positions[i3 + 1]!;
+          const z = positions[i3 + 2]!;
 
-        const dx = cx - x;
-        const dy = cy - y;
-        const dz = cz - z;
-        const camDistSq = dx * dx + dy * dy + dz * dz;
-        if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+          const dx = cx - x;
+          const dy = cy - y;
+          const dz = cz - z;
+          const camDistSq = dx * dx + dy * dy + dz * dz;
+          if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
 
-        const camDist = Math.sqrt(camDistSq);
-        const px = apparentSizePxAtDistance(catalog.diameterKpc[i]!, camDist, pxPerRad);
+          const camDist = Math.sqrt(camDistSq);
+          const px = apparentSizePxAtDistance(catalog.diameterKpc[i]!, camDist, pxPerRad);
 
-        procedural.onRow(source, catalog, i, x, y, z, camDist, px);
-        textured.onRow(source, catalog, i, x, y, z, camDist, px);
+          procedural.onRow(source, catalog, i, x, y, z, camDist, px);
+          textured.onRow(source, catalog, i, x, y, z, camDist, px);
+
+          acceptedThisFrame++;
+          if (acceptedThisFrame >= DISK_ROW_ACCEPT_BUDGET) break;
+        }
       }
 
       strideStartBySource.set(source, nextStart);

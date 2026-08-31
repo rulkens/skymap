@@ -1,25 +1,13 @@
 /**
- * Visual baseline — renderFrame's draw-command sequence, independent of how
- * many `beginRenderPass` blocks host those draws. A pass-split refactor that
- * changes pass boundaries but not renderer dispatch must still produce a
- * byte-identical hash here.
+ * Visual baseline — renderFrame's draw-command sequence, independent of how many
+ * `beginRenderPass` blocks host those draws, so a pass-split refactor must still
+ * hash byte-identically. Boundaries are excluded on purpose: a split changes their
+ * count, which would fail the baseline by definition.
  *
- * The hash excludes `beginRenderPass` boundaries on purpose: a pass split
- * intentionally changes their count, so including them would fail the
- * baseline by definition. It captures the per-renderer draw payload instead
- * (renderer name + argument shape).
- *
- * Recorded at the renderer-mock entry point (`pointRenderer.draw`,
- * `milkyWayCloudRenderer.drawStars`/`.drawDust`, etc.), not `pass.draw` on
- * the GPU encoder — the mocks short-circuit before the encoder ever sees
- * `draw`, so "what did the orchestrator dispatch?" is the only granularity
- * observable here.
- *
- * Every HDR pass's `enabled` gate is wired true so the fixture exercises one
- * renderer-draw entry per layer plus the hdr→swap composite. The horizon
- * shell is excluded: its fade band is the mirror image of the Milky Way's,
- * so the two never co-exist in one frame (covered separately in
- * `passes.test.ts` and `horizonShellFadeAlpha`).
+ * Recorded at the renderer-mock entry point, not `pass.draw` on the encoder — the
+ * mocks short-circuit first, so "what did the orchestrator dispatch?" is the only
+ * observable granularity. The horizon shell is excluded: its fade band mirrors the
+ * Milky Way's, so the two never co-exist in one frame.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -162,21 +150,62 @@ function makeRenderTargets(): any {
     volume: { __id: 'volume-view' } as unknown as GPUTextureView,
     'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
+  // Clear values match production; `specOf` is what `executeFrame` reads.
+  const specs = [
+    {
+      id: 'hdr',
+      format: 'rgba16float',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
+    {
+      id: 'volume',
+      format: 'rgba16float',
+      depth: null,
+      scale: 3,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+    // downscaled viewport it hands the cloud's star pass.
+    {
+      id: 'mw-aggregate',
+      format: 'rgba16float',
+      depth: null,
+      scale: 2,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    },
+    {
+      id: 'swap',
+      format: 'bgra8unorm',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    },
+  ];
   return {
-    specs: [
-      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-      { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
-      // milkyWayAggregateLayer.draw reads this row's `scale` to size the
-      // downscaled viewport it hands the cloud's star pass.
-      { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: 2 },
-      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
-    ],
+    specs,
+    specOf: (id: string) => {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
+      return spec;
+    },
+    // scalarVolumeLayer / milkyWayAggregateLayer read this for their
+    // downscaled viewport; the fixture canvas is the fixed 1280x720 the
+    // `ctx` built below uses (`canvasWidth`/`FIXTURE_CANVAS_HEIGHT_PX`).
+    sizeOf: (id: string) => {
+      const spec = specs.find((s) => s.id === id);
+      if (!spec || id === 'swap') throw new Error(`mock renderTargets: no size for '${id}'`);
+      return {
+        width: Math.max(1, Math.floor(1280 / spec.scale)),
+        height: Math.max(1, Math.floor(FIXTURE_CANVAS_HEIGHT_PX / spec.scale)),
+      };
+    },
     viewOf: (id: string) => {
       const view = views[id];
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
-    resize: vi.fn(),
     destroy: vi.fn(),
   };
 }
@@ -241,7 +270,7 @@ describe('renderFrame visual baseline', () => {
     const context = makeFakeContext();
 
     // Renderer mocks — each draw lands on the same `records` array.
-    const pointRenderer = makeLoggingRenderer(records, 'point-sprites');
+    const galaxyPointRenderer = makeLoggingRenderer(records, 'point-sprites');
     // The cloud renderer has two entry points because its two passes target two
     // different textures: the additive stars into the reduced-resolution
     // `mw-aggregate` offscreen, the multiplicative dust full-res into HDR. Each
@@ -305,7 +334,7 @@ describe('renderFrame visual baseline', () => {
       nearMpc: 0.01,
       farMpc: 50000,
       vp: Float64Array.from(viewProj as unknown as Float32Array),
-      originRelative: false,
+      frame: { kind: 'world-mpc', originRelative: false },
       precision: 'f32',
       reversedZ: false,
     };
@@ -336,8 +365,11 @@ describe('renderFrame visual baseline', () => {
       >,
       drawPxPerRad,
       nowMs: 0,
+      // resolveLayerOpacity's recession factor lerps on this; production seeds
+      // it to 0 in frameContext, and an absent one yields NaN alphas here.
+      focusBlend: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
-      renderer: pointRenderer,
+      galaxyPointRenderer,
       // The executor resolves hdr/volume attachments — and volumeUpsampleLayer
       // its source texture — via ctx.renderTargets.viewOf(id).
       renderTargets,
@@ -374,6 +406,9 @@ describe('renderFrame visual baseline', () => {
           // Null so clipPathDebugLayer stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
+          // Null so the ZoA guide band stays out of the pinned sequence — it
+          // was held out only by the fixture's absent focusBlend before.
+          zoneOfAvoidanceRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
           // Flow is CONTENT_LAYERS row 5 (see passes/index.ts); here it
@@ -469,6 +504,7 @@ describe('renderFrame visual baseline', () => {
             destroy: vi.fn(),
             label: 'fadeRegistry',
           },
+          clipPlayer: { clipOpacityOf: () => 1 },
         },
       } as never,
       device,

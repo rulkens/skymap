@@ -351,4 +351,7 @@ export type GalaxyInfo = {
    * Absent for galaxy catalog rows, whose `thumbnailUrl` is already the cutout.
    */
   thumbnailFallbackUrl?: string;
+
+  /** External 2D sky viewer URL, framed to match the thumbnail's field of view. */
+  skyViewUrl?: string;
 };

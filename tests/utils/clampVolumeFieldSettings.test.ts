@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { clampVolumeFieldSettings } from '../../src/utils/clampVolumeFieldSettings';
+import { SCALE_FADE_BANDS } from '../../src/services/engine/presentation/scaleFadeBands';
 import type { VolumeFieldSettings } from '../../src/@types/settings/VolumeFieldSettings';
 
 // Out-of-range raw values that force every scalar clamp to fire.
@@ -24,6 +25,7 @@ const rawHigh: VolumeFieldSettings = {
   densityScale: -1,
   trim: 2,
   exposure: 100,
+  bands: [SCALE_FADE_BANDS.surveyDeepZoom],
 };
 
 // A second variant: values below each floor so the low-side path is also hit.
@@ -40,6 +42,7 @@ const rawLow: VolumeFieldSettings = {
   densityScale: NaN,
   trim: -0.5,
   exposure: NaN,
+  bands: [SCALE_FADE_BANDS.milkyWayApproach],
 };
 
 describe('clampVolumeFieldSettings — paletteId and enabled pass through unchanged', () => {
@@ -74,5 +77,19 @@ describe('clampVolumeFieldSettings — input object is not mutated', () => {
     expect(Number.isNaN(rawLow.densityScale)).toBe(Number.isNaN(before.densityScale));
     expect(rawLow.trim).toBe(before.trim);
     expect(Number.isNaN(rawLow.exposure)).toBe(Number.isNaN(before.exposure));
+  });
+});
+
+describe('clampVolumeFieldSettings — bands', () => {
+  it('passes a present bands array through unchanged', () => {
+    expect(clampVolumeFieldSettings(rawHigh).bands).toBe(rawHigh.bands);
+    expect(clampVolumeFieldSettings(rawLow).bands).toBe(rawLow.bands);
+  });
+
+  it('falls back to [surveyDeepZoom] when bands is absent (stale persisted row)', () => {
+    // A row persisted before `bands` existed has it absent at runtime despite
+    // the type saying otherwise — the exact case the module header calls out.
+    const stale = { ...rawHigh, bands: undefined } as unknown as VolumeFieldSettings;
+    expect(clampVolumeFieldSettings(stale).bands).toEqual([SCALE_FADE_BANDS.surveyDeepZoom]);
   });
 });

@@ -13,7 +13,7 @@
  *   - WESL side: the struct text is scraped from `io.wesl` (plus the
  *     embedded `CameraUniforms` from `lib/camera.wesl`) and each field's
  *     byte offset is computed from WGSL uniform layout rules.
- *   - TS side: `packPointUniforms` is run with unique sentinel values and
+ *   - TS side: `packGalaxyPointUniforms` is run with unique sentinel values and
  *     each field's offset is OBSERVED by locating its sentinel in the
  *     packed buffer — the packer's behaviour, not its comments, is the
  *     authority.  The exported `SELECTED_PACKED_BYTE_OFFSET` /
@@ -27,12 +27,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { PointDrawSettings } from '../../../../src/@types/rendering/PointDrawSettings';
-import { packPointUniforms } from '../../../../src/utils/gpu/packPointUniforms';
+import type { GalaxyPointDrawSettings } from '../../../../src/@types/rendering/GalaxyPointDrawSettings';
+import { packGalaxyPointUniforms } from '../../../../src/utils/gpu/packGalaxyPointUniforms';
 import {
   SELECTED_PACKED_BYTE_OFFSET,
   POINT_SIZE_BYTE_OFFSET,
-} from '../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
+} from '../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPointVertexLayout';
 import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';
@@ -78,7 +78,7 @@ const SENTINEL = {
 function packSentinels(): ArrayBuffer {
   const viewProj = new Float32Array(16);
   for (let i = 0; i < 16; i++) viewProj[i] = 1001 + i; // distinct, none collide
-  const settings: PointDrawSettings = {
+  const settings: GalaxyPointDrawSettings = {
     pointSizePx: SENTINEL.pointSizePx,
     brightness: SENTINEL.brightness,
     selectedPacked: SENTINEL.selectedPacked,
@@ -100,7 +100,11 @@ function packSentinels(): ArrayBuffer {
     focusBindGroup: {} as unknown as GPUBindGroup,
     fadeOpacityOf: () => 1,
   };
-  return packPointUniforms(viewProj as unknown as Mat4, [SENTINEL.viewportPxX, 720], settings);
+  return packGalaxyPointUniforms(
+    viewProj as unknown as Mat4,
+    [SENTINEL.viewportPxX, 720],
+    settings,
+  );
 }
 
 /** Byte offset of a sentinel float in the packed buffer (must be unique). */
@@ -114,7 +118,7 @@ function observedF32Offset(buf: ArrayBuffer, value: number): number {
 
 // ─── The parity assertions ───────────────────────────────────────────────────
 
-describe('milkyWay/pick/io.wesl Uniforms ↔ packPointUniforms layout parity', () => {
+describe('milkyWay/pick/io.wesl Uniforms ↔ packGalaxyPointUniforms layout parity', () => {
   const buf = packSentinels();
   const at = (name: string): number => {
     const o = mirror.offsets.get(name);

@@ -1,35 +1,28 @@
-// planet/io.wesl — shared inter-stage struct for the instanced flat-lit
-// albedo planet. Imported by planet/vertex.wesl and planet/fragment.wesl.
+// planet/io.wesl — inter-stage struct for the instanced flat-lit albedo planet.
 //
-// Each seeded planet renders as a unit-sphere billboard body: the vertex
-// stage projects the local vertex through the per-instance MVP and
-// forwards the local position (which doubles as the outward surface
-// normal on a unit sphere), the per-instance albedo, and the per-instance
-// sun direction already rotated into the body's local frame; the fragment
-// stage runs a single lambert term against that normal and the sun
-// direction (the shared 'litShade') and modulates the albedo. 'VSOut' is
-// the contract between those two stages.
+// The mesh is a circumscribing PROXY, not the surface: the fragment ray-traces
+// the analytic unit sphere ('lib/analyticSphere.wesl'), so what it needs from
+// the vertex stage is a point on the view ray, the ray ORIGIN, and the mvp to
+// project the hit to depth. Vertex attributes are a vertex-stage input, so the
+// per-instance record has to cross as varyings; WGSL forbids a matrix in
+// inter-stage IO, hence the mvp crosses as its four columns.
 //
-// ## Why the struct lives here
-//
-// One authoritative inter-stage declaration makes vertex/fragment
-// @location drift structurally impossible — the same reasoning
-// 'star/vertex.wesl' states for importing 'TintedSphereUniforms' from
-// lib/sphere. The albedo AND sunDirLocal varyings MUST stay
-// '@interpolate(flat)' on both sides — both are one constant per planet
-// (a solid colour and one baked light direction), so there is nothing to
-// interpolate across a face; declaring them once here means the flat
-// qualifier cannot silently diverge between the stages.
+// One authoritative declaration is what keeps the two stages' @location and
+// @interpolate qualifiers from drifting apart silently.
 
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
-  // Local-space position passed through for the lambert term in the fragment
-  // stage. Unit sphere: localPos == outward surface normal.
+  // A point on this fragment's view ray: the interpolated PROXY position in
+  // body radii. NOT unit length — 'PROXY_SCALE' inflated it.
   @location(0) localPos: vec3<f32>,
-  // Per-instance albedo forwarded flat — one solid colour per planet, no
-  // cross-vertex interpolation to do.
+  // Everything below is one constant per planet, so all of it is flat: there
+  // is nothing to interpolate across a face.
   @location(1) @interpolate(flat) albedo: vec3<f32>,
-  // Per-instance sun direction in the body's local frame, forwarded flat —
-  // one baked direction per planet, so the lambert dot stays a plain dot.
   @location(2) @interpolate(flat) sunDirLocal: vec3<f32>,
+  // The camera in the body's local frame — the analytic ray's origin.
+  @location(3) @interpolate(flat) camPosLocal: vec3<f32>,
+  @location(4) @interpolate(flat) mvp0: vec4<f32>,
+  @location(5) @interpolate(flat) mvp1: vec4<f32>,
+  @location(6) @interpolate(flat) mvp2: vec4<f32>,
+  @location(7) @interpolate(flat) mvp3: vec4<f32>,
 };

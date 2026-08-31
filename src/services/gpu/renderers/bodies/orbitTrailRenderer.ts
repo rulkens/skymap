@@ -96,7 +96,7 @@ export function createOrbitTrailRenderer(
 
   const ribbonPipeline = makeRibbonPipeline('orbit-trail-ribbon-pipeline', 'fs');
 
-  // The `debug.showOrbitTrailImpostor` overlay, over the SAME vertex stage/
+  // The `debug.overlays['orbit-trail-impostor']` overlay, over the SAME vertex stage/
   // buffers/profile as the production pipeline but the constant-colour
   // `fsImpostorRibbon` entry point. Built LAZILY on first enable — the
   // overlay is off in production, so an unused pipeline is pure init cost

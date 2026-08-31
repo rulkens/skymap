@@ -9,6 +9,6 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  */
 export type StructureSourceEntry = SourceEntryBase & {
   readonly type: 'structure';
-  /** Stable numeric tag, matching the upper 5 bits of the packed pick ID. */
+  /** Stable numeric tag, matching the upper 6 bits of the packed pick ID. */
   readonly code: number;
 };

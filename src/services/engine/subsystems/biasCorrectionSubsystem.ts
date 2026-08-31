@@ -3,7 +3,7 @@
  * mode flags, cached per-source ratios/weights, the async bake state
  * machine, and the worker-runner registry.
  *
- * This state machine has no rendering reason to live on `PointRenderer`;
+ * This state machine has no rendering reason to live on `GalaxyPointRenderer`;
  * keeping it in a sibling subsystem leaves the renderer as a clean
  * instanced-billboard drawer.  The split is uni-directional — the
  * renderer doesn't observe the subsystem; the subsystem reaches in via
@@ -31,7 +31,7 @@
  *
  * The subsystem is constructed eagerly in the engine state literal
  * (alongside `selection`, `tweens`, `scheduler`) — at that point the
- * GPU device hasn't been acquired yet, so `state.gpu.renderer` is
+ * GPU device hasn't been acquired yet, so `state.gpu.galaxyPointRenderer` is
  * null.  `attachRenderer(renderer)` is called from `phases/initGpu.ts`
  * once the renderer exists.  In the brief pre-attach window:
  *
@@ -98,7 +98,7 @@ import type { SchechterRunner } from '../../../@types/engine/subsystems/Schechte
 import type { AngularRunner } from '../../../@types/engine/subsystems/AngularRunner';
 import type { BiasCorrectionSubsystem } from '../../../@types/engine/subsystems/BiasCorrectionSubsystem';
 import type { BiasCorrectionDeps } from '../../../@types/engine/subsystems/BiasCorrectionDeps';
-import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
+import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
 import type { SourceType } from '../../../@types/data/SourceType';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler
@@ -179,7 +179,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   // Internal mutable state.  Closure-captured `let`s so they're
   // genuinely inaccessible from outside (no `this.mode` for a future
   // caller to reach in and poke).
-  let renderer: PointRenderer | null = null;
+  let renderer: GalaxyPointRenderer | null = null;
   // Initialise from the live state at first read time, not at
   // construction (the engine state literal hasn't been assigned to its
   // variable when `createBiasCorrectionSubsystem` is called from inside
@@ -270,7 +270,9 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     const myGen = generation;
     mode = next;
     // Entry wake — flips the mode gate next frame; the only wake identity
-    // modes need (bake modes wake again post-splice below).
+    // modes need (bake modes wake again post-splice below). Redundant with
+    // the settings route today (`setBiasMode` → `watchWakeSaga`), but `setMode`
+    // dispatches nothing itself, so that coverage is the caller's — D8.
     requestRender();
 
     if (next === BiasMode.None || next === BiasMode.VolumeLimited || next === BiasMode.VMax) {
@@ -327,7 +329,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     cachedAngular.delete(source);
   }
 
-  function attachRenderer(r: PointRenderer): void {
+  function attachRenderer(r: GalaxyPointRenderer): void {
     renderer = r;
     // Install the upload/unload callbacks so the renderer can notify
     // us mid-mode when a source arrives/leaves.  Uni-directional

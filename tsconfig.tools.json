@@ -1,9 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["node", "@webgpu/types", "vite/client", "wesl-plugin/suffixes"],
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
-  },
   "include": ["tools", "src"],
   "exclude": ["tools/stars-rs/target"]
 }

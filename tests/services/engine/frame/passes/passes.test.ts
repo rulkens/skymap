@@ -1,32 +1,23 @@
 /**
- * passes — unit tests for the per-layer `enabled` gates and the
- * `CONTENT_LAYERS` migration-table shape.
+ * passes — the per-layer `enabled` gates and the `CONTENT_LAYERS` table shape,
+ * against stub state + ctx with no GPU device. The spot-checked `draw` calls pin
+ * that a layer threads the resolved `SlabView`'s `vp`/`viewportPx` rather than
+ * reading `ctx.vp`/`ctx.canvasSize` directly.
  *
- * Test surface:
- *   - Each layer's `enabled(state, ctx)` predicate flips correctly for
- *     its gate, with stub state + ctx (no GPU device).
- *   - `CONTENT_LAYERS` holds every hdr-group layer with the migration
- *     table's `{slab, target, blend}` fields.
- *   - A few `draw` calls verified end-to-end with stub renderers,
- *     confirming which renderer method fires and with which args,
- *     including that `draw` threads the resolved `SlabView`'s
- *     `vp`/`viewportPx` rather than reading `ctx.vp`/`ctx.canvasSize`
- *     directly.
- *
- * Encoder command sequencing and the post-process tone-map running
- * outside the HDR pass are covered by `renderFrame.test.ts`.
+ * Encoder sequencing and the post-process chain live in `renderFrame.test.ts`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
 import { Source } from '../../../../../src/data/sources';
+import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import {
   CONTENT_LAYERS,
   scalarVolumeLayer,
-  pointSpritesLayer,
+  galaxyPointSpritesLayer,
   filamentsLayer,
   milkyWayLayer,
   horizonShellLayer,
@@ -81,7 +72,7 @@ function makeCam(): OrbitCamera {
 function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as Mat4;
-  const renderer = { draw: vi.fn() } as any;
+  const galaxyPointRenderer = { draw: vi.fn() } as any;
   const renderTargets = { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any;
   const texturedDisks = {
     runFrame: vi.fn(),
@@ -94,7 +85,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     nearMpc: 0.01,
     farMpc: 50000,
     vp: Float64Array.from(vp as unknown as Float32Array),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   };
@@ -122,7 +113,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer,
+    galaxyPointRenderer,
     renderTargets,
     texturedDisks,
     ...overrides,
@@ -150,7 +141,7 @@ const MW_CLOUD_BUFFERS = {
 };
 
 // `state` is forwarded through — most layers ignore it, but
-// `pointSpritesLayer` reads `state.subsystems.fades.opacityOf` for
+// `galaxyPointSpritesLayer` reads `state.subsystems.fades.opacityOf` for
 // per-source fade opacity. A minimal fades stub returning full opacity
 // lets the layer run without a live FadeRegistry.
 const STATE_STUB = {
@@ -159,6 +150,7 @@ const STATE_STUB = {
       opacityOf: () => 1,
       isAnyAnimating: () => false,
     },
+    clipPlayer: { clipOpacityOf: () => 1 },
   },
   // The Milky-Way rows' `draw` now goes through the same
   // `deriveMilkyWayCloudAlpha` gate their `enabled` does (one liveness
@@ -167,7 +159,7 @@ const STATE_STUB = {
   // baseline stub has to carry it or `draw` throws before reaching the
   // renderer. Tests that need the toggle off override `settings` wholesale.
   settings: { milkyWay: { enabled: true } },
-  // pointSpritesLayer / disk layers bind the shared focus group off
+  // galaxyPointSpritesLayer / disk layers bind the shared focus group off
   // state.gpu.focusUniform; an opaque bind group is all they read.
   // The nullable GPU renderer fields default to null (pre-bootstrap
   // shape); individual draw tests override the one they exercise.
@@ -551,11 +543,11 @@ describe('starAggregatesLayer registry row', () => {
   });
 });
 
-describe('pointSpritesLayer.enabled', () => {
+describe('galaxyPointSpritesLayer.enabled', () => {
   it('always returns true (no user-facing toggle for point-sprites)', () => {
-    expect(pointSpritesLayer.enabled(STATE_STUB, makeCtx())).toBe(true);
+    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, makeCtx())).toBe(true);
     // Even when every other toggle is off, point-sprites still runs.
-    expect(pointSpritesLayer.enabled(STATE_STUB, makeCtx())).toBe(true);
+    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, makeCtx())).toBe(true);
   });
 });
 
@@ -769,7 +761,7 @@ describe('horizonShellLayer.draw', () => {
   });
 });
 
-// Minimal settings shape for the pointSpritesLayer.draw tests — only
+// Minimal settings shape for the galaxyPointSpritesLayer.draw tests — only
 // the fields the layer now reads from `state.settings`.
 const POINT_SPRITES_SETTINGS_STUB = {
   galaxyCatalogs: {
@@ -784,7 +776,7 @@ const POINT_SPRITES_SETTINGS_STUB = {
   },
 } as unknown as EngineState['settings'];
 
-describe('pointSpritesLayer.draw', () => {
+describe('galaxyPointSpritesLayer.draw', () => {
   it('packs (source, index) into the selectedPacked u32', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
@@ -802,12 +794,12 @@ describe('pointSpritesLayer.draw', () => {
       },
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
-    pointSpritesLayer.draw(PASS_STUB, view, ctx, stateWithSelection);
-    const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
+    galaxyPointSpritesLayer.draw(PASS_STUB, view, ctx, stateWithSelection);
+    const drawSpy = ctx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    // Selection lives on arg[3].selectedPacked (the PointDrawSettings
+    // Selection lives on arg[3].selectedPacked (the GalaxyPointDrawSettings
     // record).
-    const expected = ((Source.SDSS << 27) | 42) >>> 0;
+    const expected = packSelection(Source.SDSS, 42);
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(expected);
   });
@@ -822,8 +814,8 @@ describe('pointSpritesLayer.draw', () => {
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
-    pointSpritesLayer.draw(PASS_STUB, view, ctx, stateNullSelection);
-    const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
+    galaxyPointSpritesLayer.draw(PASS_STUB, view, ctx, stateNullSelection);
+    const drawSpy = ctx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
   });
@@ -842,8 +834,8 @@ describe('pointSpritesLayer.draw', () => {
     } as unknown as EngineState;
 
     const farCtx = makeCtx();
-    pointSpritesLayer.draw(PASS_STUB, slabViewOf(farCtx, COSMO), farCtx, state);
-    const farSettings = (farCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+    galaxyPointSpritesLayer.draw(PASS_STUB, slabViewOf(farCtx, COSMO), farCtx, state);
+    const farSettings = (farCtx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
     expect(farFadeOf(Source.SDSS)).toBe(1);
@@ -855,8 +847,8 @@ describe('pointSpritesLayer.draw', () => {
     const midCtx = makeCtx({
       drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]>,
     });
-    pointSpritesLayer.draw(PASS_STUB, slabViewOf(midCtx, COSMO), midCtx, state);
-    const midSettings = (midCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+    galaxyPointSpritesLayer.draw(PASS_STUB, slabViewOf(midCtx, COSMO), midCtx, state);
+    const midSettings = (midCtx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const midFadeOf = midSettings.fadeOpacityOf as (source: number) => number;
     const midFade = midFadeOf(Source.SDSS);
@@ -879,8 +871,8 @@ describe('pointSpritesLayer.draw', () => {
     const deepCtx = makeCtx({
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
-    pointSpritesLayer.draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
-    const deepSettings = (deepCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+    galaxyPointSpritesLayer.draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
+    const deepSettings = (deepCtx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
     expect(deepFadeOf(Source.SDSS)).toBe(0);
@@ -898,8 +890,8 @@ describe('pointSpritesLayer.draw', () => {
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
-    pointSpritesLayer.draw(PASS_STUB, view, ctx, stateNullSelection);
-    const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
+    galaxyPointSpritesLayer.draw(PASS_STUB, view, ctx, stateNullSelection);
+    const drawSpy = ctx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
     const call = drawSpy.mock.calls[0]!;
     expect(call[0]).toBe(PASS_STUB);
     expect(call[1]).toBe(view.vp);
@@ -910,14 +902,15 @@ describe('pointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly the twelve pickables expose drawPick, in registry order', () => {
+  it('exactly the fourteen pickables expose drawPick, in registry order', () => {
     // Pins the spec's migration table: the six COSMO/near-field survey
     // pickables (pointSprites / zoneOfAvoidance / proceduralDisks /
     // structureMarkers / milkyWay / starCatalog) PLUS the six NEAR0 true-scale
     // foreground bodies (starPoints / bodyGlints / earth / starSpheres /
     // focusedFieldStarSphere / planets), the selection-gated
     // focused-field-star sphere's pick and the sub-pixel body glints' pick
-    // among them. Order is registry order: the COSMO pick pass leads with
+    // among them — plus the two label rows, whose text is a click target for
+    // the subject it names. Order is registry order: the COSMO pick pass leads with
     // point-sprites (the @group(0) prefix contract); zone-of-avoidance sits
     // right after it in the registry for exactly that reason — its own
     // 'zoa' render target keeps it out of every VISUAL group regardless of
@@ -927,7 +920,17 @@ describe('drawPick migration-table rows', () => {
     // relative order carries no @group(0) dependence (it is depth-resolved,
     // nearest-wins). The production code stays name-blind — the pick program
     // filters by `drawPick` presence + `enabled`, never a hardcoded name
-    // list — so this test is the ONLY place the twelve names are asserted.
+    // list — so this test is the ONLY place the fourteen names are asserted.
+    //
+    // The two label rows are the exception to the ordering freedom above —
+    // not because their pick aspect needs a fixed slot (each restores the
+    // shared point-pick camera prefix before returning, same postcondition
+    // `proceduralDisksLayer` already satisfies from mid-registry — see
+    // `ContentLayer.drawPick`), but because CONTENT_LAYERS is the ONE list
+    // both the visual and pick programs filter, and 'labels' visual row must
+    // sit last among the swap-target layers so its text composites over the
+    // marker-line stroke it sits over (`passes/index.ts`). The pick filter
+    // inherits that position for free rather than keeping a second order.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'zone-of-avoidance',
@@ -937,10 +940,12 @@ describe('drawPick migration-table rows', () => {
       'star-points',
       'body-glints',
       'star-catalog',
+      'labels',
       'earth',
       'star-spheres',
       'field-star-sphere',
       'planets',
+      'foreground-labels',
     ]);
   });
 });
@@ -967,7 +972,7 @@ describe('structureMarkersLayer.enabled', () => {
   });
 });
 
-describe('pointSpritesLayer.drawPick', () => {
+describe('galaxyPointSpritesLayer.drawPick', () => {
   it('filters loadedSources by ctx.visibleSourceMask before drawPoints', () => {
     // The pick ctx's `visibleSourceMask` IS the pick mask, so a catalog whose
     // bit is clear (toggled off / fading out) is dropped before the picker
@@ -982,7 +987,7 @@ describe('pointSpritesLayer.drawPick', () => {
       sourceBuffer: {} as GPUBuffer,
     }));
     const ctx = makeCtx({
-      renderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
+      galaxyPointRenderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
       visibleSourceMask: (1 << Source.SDSS) | (1 << Source.Glade),
     });
     const view = slabViewOf(ctx, COSMO);
@@ -990,10 +995,10 @@ describe('pointSpritesLayer.drawPick', () => {
       ...STATE_STUB,
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
-      gpu: { ...STATE_STUB.gpu, pickRenderer: { drawPoints: drawPointsSpy } },
+      gpu: { ...STATE_STUB.gpu, galaxyPickRenderer: { drawPoints: drawPointsSpy } },
     } as unknown as EngineState;
 
-    pointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
 
     expect(drawPointsSpy).toHaveBeenCalledTimes(1);
     // arg[1] is the filtered `sources` list handed to drawPoints.
@@ -1015,7 +1020,7 @@ describe('pointSpritesLayer.drawPick', () => {
       sourceBuffer: {} as GPUBuffer,
     }));
     const ctx = makeCtx({
-      renderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
+      galaxyPointRenderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
       visibleSourceMask: 0xffffffff,
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
@@ -1024,10 +1029,10 @@ describe('pointSpritesLayer.drawPick', () => {
       ...STATE_STUB,
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
-      gpu: { ...STATE_STUB.gpu, pickRenderer: { drawPoints: drawPointsSpy } },
+      gpu: { ...STATE_STUB.gpu, galaxyPickRenderer: { drawPoints: drawPointsSpy } },
     } as unknown as EngineState;
 
-    pointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
 
     expect(drawPointsSpy).toHaveBeenCalledTimes(1);
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;

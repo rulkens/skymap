@@ -10,8 +10,10 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { buildRhizomeVolume, isQuickLookOutput } from '../../tools/volumes/buildRhizomeVolume';
+import { buildRhizomeVolume } from '../../tools/volumes/buildRhizomeVolume';
 import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
+import { f16BitsToFloat } from '../../tools/utils/math/f16BitsToFloat';
 
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {
   const headerDict = `{'descr': '<f4', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;
@@ -29,20 +31,20 @@ function writeF32Npy(path: string, values: number[], shape: readonly number[]): 
   writeFileSync(path, Buffer.from(buf));
 }
 
-// Values are irrelevant to the rejection test this fixture serves — only
-// the dtype byte and the zero-filled f16 payload matter.
-function writeF16Npy(path: string, count: number, shape: readonly number[]): void {
+function writeF16Npy(path: string, values: number[], shape: readonly number[]): void {
   const headerDict = `{'descr': '<f2', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;
   const baseLen = 10 + headerDict.length + 1;
   const padded = baseLen + ((64 - (baseLen % 64)) % 64);
   const headerLen = padded - 10;
   const headerStr = headerDict + ' '.repeat(headerLen - headerDict.length - 1) + '\n';
-  const dataBytes = count * 2;
+  const dataBytes = values.length * 2;
   const buf = new ArrayBuffer(10 + headerLen + dataBytes);
   const u8 = new Uint8Array(buf);
   u8.set([0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59, 1, 0]);
   new DataView(buf).setUint16(8, headerLen, true);
   for (let i = 0; i < headerStr.length; i++) u8[10 + i] = headerStr.charCodeAt(i);
+  const bits = new Uint16Array(buf, 10 + headerLen, values.length);
+  for (let i = 0; i < values.length; i++) bits[i] = f32ToF16Bits(values[i]!);
   writeFileSync(path, Buffer.from(buf));
 }
 
@@ -65,21 +67,6 @@ function writeSidecar(
   };
   writeFileSync(path, JSON.stringify(sidecar));
 }
-
-describe('isQuickLookOutput', () => {
-  // Pure path comparison — no fs I/O, so it's safe to exercise directly
-  // against the real 'public/data/...' string without ever touching the
-  // filesystem.
-  it('matches only the resolved MCPM large-tier path under the epoch folder', () => {
-    expect(isQuickLookOutput('public/data/scalar-field/v3/mcpm-large.scfd')).toBe(true);
-    expect(isQuickLookOutput('./public/data/scalar-field/v3/mcpm-large.scfd')).toBe(true);
-    expect(isQuickLookOutput('public/data/scalar-field/v3/mcpm-medium.scfd')).toBe(false);
-    expect(isQuickLookOutput('/tmp/somewhere/cube.scfd')).toBe(false);
-    // The pre-v9 root path is dead — guarding it again would re-strand
-    // quick-look on a file the manifest-driven viewer never fetches.
-    expect(isQuickLookOutput('public/data/mcpm-large.scfd')).toBe(false);
-  });
-});
 
 describe('buildRhizomeVolume (smoke)', () => {
   let dir: string;
@@ -151,11 +138,39 @@ describe('buildRhizomeVolume (smoke)', () => {
     );
   });
 
-  it('refuses an f16 npy', async () => {
-    writeF16Npy(npyPath, 64, dims);
-    writeSidecar(join(dir, 'cube.json'), { dims });
+  it('builds an f16 .npy to the same .scfd values as its f32 equivalent, within f16 rounding', async () => {
+    // Fractional values (not the integer ramp the other tests use) so f16's
+    // 10-bit mantissa actually rounds something — integers up to 2048 are
+    // exact in f16 and would let this test pass even with no widening.
+    const values = Array.from({ length: 64 }, (_, i) => (i + 0.37) * 0.6931);
 
-    await expect(buildRhizomeVolume({ npyPath, outPath })).rejects.toThrow(/export f32/);
+    const f32Path = join(dir, 'cube-f32.npy');
+    const f32Out = join(dir, 'cube-f32.scfd');
+    writeF32Npy(f32Path, values, dims);
+    writeSidecar(join(dir, 'cube-f32.json'), { dims });
+    await buildRhizomeVolume({ npyPath: f32Path, outPath: f32Out });
+
+    const f16Path = join(dir, 'cube-f16.npy');
+    const f16Out = join(dir, 'cube-f16.scfd');
+    writeF16Npy(f16Path, values, dims);
+    writeSidecar(join(dir, 'cube-f16.json'), { dims });
+    await buildRhizomeVolume({ npyPath: f16Path, outPath: f16Out });
+
+    const f32Buf = readFileSync(f32Out);
+    const f16Buf = readFileSync(f16Out);
+    const f32Cube = decodeScalarField(
+      f32Buf.buffer.slice(f32Buf.byteOffset, f32Buf.byteOffset + f32Buf.byteLength),
+    );
+    const f16Cube = decodeScalarField(
+      f16Buf.buffer.slice(f16Buf.byteOffset, f16Buf.byteOffset + f16Buf.byteLength),
+    );
+
+    expect(f16Cube.voxels.length).toBe(f32Cube.voxels.length);
+    for (let i = 0; i < f32Cube.voxels.length; i++) {
+      const a = f16BitsToFloat(f32Cube.voxels[i]!);
+      const b = f16BitsToFloat(f16Cube.voxels[i]!);
+      expect(Math.abs(a - b)).toBeLessThan(0.01);
+    }
   });
 
   it('refuses a cube whose per-axis voxel sizes disagree beyond 0.5%', async () => {
@@ -226,5 +241,45 @@ describe('buildRhizomeVolume (smoke)', () => {
     writeSidecar(join(dir, 'cube.json'), { dims: [2, 3, 4] });
 
     await expect(buildRhizomeVolume({ npyPath, outPath })).rejects.toThrow(/expected 3D cube/);
+  });
+
+  it('--clamp zeroes below-threshold voxels and leaves above-threshold voxels bit-identical', async () => {
+    // Raw ramp 0..63 normalises (log(1+v)/log(64)) to a spread of packed
+    // values below and above any mid-range threshold, so the clamped and
+    // unclamped builds diverge on some voxels and agree on others.
+    const values = Array.from({ length: 64 }, (_, i) => i);
+    writeF32Npy(npyPath, values, dims);
+    writeSidecar(join(dir, 'cube.json'), { dims });
+
+    const clampedOutPath = join(dir, 'clamped.scfd');
+    await buildRhizomeVolume({ npyPath, outPath });
+    await buildRhizomeVolume({ npyPath, outPath: clampedOutPath, clamp: 0.2 });
+
+    const plainBuf = readFileSync(outPath);
+    const clampedBuf = readFileSync(clampedOutPath);
+    const plainCube = decodeScalarField(
+      plainBuf.buffer.slice(plainBuf.byteOffset, plainBuf.byteOffset + plainBuf.byteLength),
+    );
+    const clampedCube = decodeScalarField(
+      clampedBuf.buffer.slice(clampedBuf.byteOffset, clampedBuf.byteOffset + clampedBuf.byteLength),
+    );
+
+    const thresholdBits = f32ToF16Bits(0.2);
+    let sawZeroed = false;
+    let sawPreserved = false;
+    for (let i = 0; i < plainCube.voxels.length; i++) {
+      const plainVoxel = plainCube.voxels[i]!;
+      const clampedVoxel = clampedCube.voxels[i]!;
+      if (plainVoxel < thresholdBits) {
+        expect(clampedVoxel).toBe(0);
+        if (plainVoxel !== 0) sawZeroed = true;
+      } else {
+        // At/above threshold: bit-identical, not just numerically close.
+        expect(clampedVoxel).toBe(plainVoxel);
+        sawPreserved = true;
+      }
+    }
+    expect(sawZeroed).toBe(true);
+    expect(sawPreserved).toBe(true);
   });
 });

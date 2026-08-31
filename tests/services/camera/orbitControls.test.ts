@@ -484,7 +484,7 @@ describe('attachOrbitControls — orbit-drag rate damps near a focused body’s 
 
   it('the same drag yaws far less near a surface than at the same pivot from afar', () => {
     const nearCam = makeCamera();
-    nearCam.distance = EARTH_RADIUS_MPC * 1.02; // SURFACE_STANDOFF_RADII floor
+    nearCam.distance = EARTH_RADIUS_MPC * 1.02; // ~127 km altitude, near-surface regime
     const { canvas: nearCanvas, rec: nearRec } = makeCanvas();
     attachOrbitControls(nearCanvas as unknown as HTMLCanvasElement, nearCam, {
       pivotRadiusMpc: () => EARTH_RADIUS_MPC,

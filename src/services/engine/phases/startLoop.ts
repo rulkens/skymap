@@ -62,6 +62,7 @@
 import { runFrame } from '../frame/runFrame';
 import { buildCameraDrivers } from '../camera/cameraDrivers';
 import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
+import { selectTimeState } from '../../../state/time/selectors';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -139,12 +140,21 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // single dispatch is what makes a bare load show the sky as it is RIGHT NOW.
   // No re-fire guard is needed — `startLoop` is the terminal bootstrap phase and
   // runs exactly once per engine, so this can never re-dispatch every frame.
-  deps.cb.store.dispatch(goLiveNowAction());
+  //
+  // Guarded on clock intent, same as `wireInput`'s Earth seed: a `#t=` deep
+  // link lands the clock manual+paused during the arrival read, which runs
+  // before this async phase (registration-before-bootstrap — see `wireInput`'s
+  // boot-ordering note). An unconditional snap would clobber that instant back
+  // to the wall clock, and the write half would then strip `t` off the URL.
+  if (selectTimeState(deps.cb.store.getState()).mode !== 'manual') {
+    deps.cb.store.dispatch(goLiveNowAction());
+  }
 
   // Kick off the first render.  The scheduler was already created
   // synchronously in the state literal — this just tells it to queue
   // one rAF.  The `onFrame: () => frameRef.current()` closure picks up
   // the just-assigned real frame body.  After that single frame, the
   // loop sleeps until a channel mouth wakes it.
+  // Boot ignition — independent of `goLiveNowAction`'s route: covers the clock, not frame 1 (D8).
   state.subsystems.scheduler.requestRender();
 }

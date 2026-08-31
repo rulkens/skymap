@@ -1,0 +1,82 @@
+/* Full-height right sidebar, the galaxy-renderer ControlsPanel's shape: the
+   glass chrome is on `.root` and the SCROLL lives on the inner `.scroll`, so
+   the wheel scrolls the controls instead of the viewport's own zoom handler. */
+.root {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  max-width: 90vw;
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  border-left: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  /* This tool has no App-level wrapper carrying the ambient text style, and
+     global.css's page reset sets none — without these, anything that doesn't
+     colour itself falls through to the browser's black-on-black. */
+  color: var(--color-fg-base);
+  font-family: var(--font-family-mono);
+}
+
+/* `align-content: start` because the grid is inside a flex:1 box: auto rows
+   would otherwise stretch to fill a taller-than-content panel. `min-height: 0`
+   is load-bearing, not decorative: a flex item's default min-height is its
+   content size, which overrides flex:1 and silently defeats overflow-y:auto
+   once a sibling (.footer) exists. */
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 22px 40px;
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+}
+
+/* download trace / download .scfd — pinned below .scroll (S12), always visible
+   regardless of scroll position. Same --surface-panel background as .root so
+   scrolled-under content can't bleed through; the border-top is the same
+   --border-divider hairline the Simulation section's own divider uses. */
+.footer {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  padding: var(--space-4) 22px;
+  border-top: 1px solid var(--border-divider);
+  background: var(--surface-panel);
+}
+
+.actionButton {
+  composes: blockButton from '../../../../src/components/common/shared.module.css';
+}
+
+/* V3: importParams' rejection message (malformed/hand-edited JSON) — same
+   panel background as .footer, sitting just under it so it never pushes the
+   download buttons around. */
+.paramsStatus {
+  flex: none;
+  padding: var(--space-2) 22px var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+  background: var(--surface-panel);
+}
+
+/* reset / clear trace, inside the Simulation section below the run/seed/weight
+   toggles — the border-top is the same --border-divider hairline
+   HistogramPlot/CollapsibleSection use to separate sections. */
+.simActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-divider);
+}
+
+.simActionButton {
+  composes: blockButton from '../../../../src/components/common/shared.module.css';
+  font-size: var(--font-size-sm);
+}

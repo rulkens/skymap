@@ -12,6 +12,10 @@
  * loading-bar UI honest — we observe bytes as they arrive instead of seeing
  * one binary "click → 5 s silence → done".  See the original cloudLoader
  * docblock for the full rationale.
+ *
+ * `Content-Length` on a gzip-encoded response is the COMPRESSED size, while
+ * `res.body` yields DECOMPRESSED bytes — so reported progress is clamped to
+ * `total` to stop the bar overshooting 100% on the most compressible files.
  */
 
 import { dataBaseUrl } from '../../utils/network/dataBaseUrl';
@@ -72,7 +76,7 @@ export async function fetchWithProgress(
     if (done) break;
     chunks.push(value);
     loaded += value.byteLength;
-    onProgress(loaded, total);
+    onProgress(total > 0 ? Math.min(loaded, total) : loaded, total);
   }
   const combined = new Uint8Array(loaded);
   let offset = 0;

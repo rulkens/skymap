@@ -14,7 +14,7 @@ const STRUCTURE_ENTRIES = SOURCE_ENTRIES.filter((e) => e.type === 'structure');
 export const STRUCTURE_IDS = STRUCTURE_ENTRIES.map((e) => e.id);
 
 /**
- * STRUCTURE_ID_CODES — each structure id's 5-bit code, packed into the pick
+ * STRUCTURE_ID_CODES — each structure id's 6-bit code, packed into the pick
  * texture when its ring is drawn. The encode-side map; decode needs no inverse,
  * since SOURCE_REGISTRY is already keyed by code (see `unpackPick`).
  */

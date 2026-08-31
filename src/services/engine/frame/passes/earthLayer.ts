@@ -1,6 +1,7 @@
 /**
  * earthLayer — the true-scale, Blue-Marble-textured Earth as a content-layer
- * row drawing into the depth-bearing `foreground:0` target.
+ * row drawing into the depth-bearing `foreground:0` target: the base globe,
+ * then the resident surface-tile detail patches over it.
  *
  * Draws the single seeded `bodies.earth` record as a unit sphere scaled to its
  * radius and translated to its position in the `RENDER_ORIGIN_MPC`-relative
@@ -8,13 +9,28 @@
  * direction + camera, all body-local, plus the PBR params including the
  * user-tunable `settings.earth.ambientLight` / `oceanRoughness` overrides).
  * `earthRenderer.draw` writes it into a single non-dynamic uniform buffer, so
- * this row must draw Earth AT MOST once per frame (see that renderer's header
- * for the `writeBuffer`-vs-`submit` race a second draw would trigger).
+ * this row must draw Earth's base globe AT MOST once per frame (see that
+ * renderer's header for the `writeBuffer`-vs-`submit` race a second draw
+ * would trigger) — the fade below rides that same write, never a second one.
+ * The detail-tile draw follows, gated on `earthTiles`' last-cut being
+ * non-empty and its atlas view being live — an empty cut is a legitimate
+ * "nothing resident yet, base globe alone" frame, not a bug — and MUST come
+ * after the base globe so the tile renderer's `nearer-or-equal` depth compare
+ * resolves ties in its favour.
+ *
+ * Once that tile gate is live, the base globe's alpha dissolves through
+ * `baseGlobeFadeAlpha` (`EARTH_BASE_GLOBE_FADE_*_ALTITUDE_KM`) so the tile
+ * mesh — which fully covers the cap by then — stops fighting the base
+ * globe's non-RTC f32 depth for it at low altitude; the draw call itself is
+ * skipped at alpha 0. Outside that gate alpha is pinned to 1, the failure
+ * floor for every disengaged case (no manifest, empty cut, no atlas).
  *
  * Reads the slab's f64 `view.slab.vp`, not the f32-narrowed `view.vp`, like the
  * other near-field sphere layers: Earth sits ~4.85e-12 Mpc from the render
  * origin, a cancellation `composeBodyMvp` must resolve in double precision
  * BEFORE narrowing to f32, or Earth mis-places by more than its own radius.
+ * The tile draw rebases the same f64 `vp` against the camera instead
+ * (`rebaseViewProj` + `narrowMat4`), the `StarCatalogDrawArgs` convention.
  *
  * `enabled` gates on the `earthRenderer` GPU handle, the seeded `bodies.earth`
  * record, the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`),
@@ -25,6 +41,9 @@
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { SlabView } from '../../../../@types/engine/frame/SlabView';
+import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -34,10 +53,13 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
+import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
+import { baseGlobeFadeAlpha } from '../../../../utils/scene/baseGlobeFadeAlpha';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
@@ -57,6 +79,75 @@ function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext):
   const dy = earthPositionMpc[1] - ctx.drawCamPos[1];
   const dz = earthPositionMpc[2] - ctx.drawCamPos[2];
   return Math.hypot(dx, dy, dz);
+}
+
+/**
+ * One Earth per-frame derivation, shared by `draw`, `drawPick`, and
+ * `runFrame`'s tile planner — the three sites that each used to
+ * independently look up `earthState` and (`draw`/the planner) recompute the
+ * same body-local MVP + camera. Memoised per `ctx` (mirrors `prepareStarCut`
+ * in `starCatalogLayer.ts`), so whichever call site reaches it first in a
+ * frame does the work and the rest read the cache. `view` must be
+ * `slabViewOf(ctx, NEAR0)` for the same `ctx` this is keyed on — a documented
+ * precondition, not enforced by types, true at both real call sites.
+ */
+export type PreparedEarthFrame = {
+  readonly earthState: BodyState;
+  readonly radiusMpc: number;
+  /** f64, NOT narrowed — `runFrame`'s tile planner feeds this straight into
+   *  `cutSurfaceTiles`, which re-cancels its own large terms at low altitude
+   *  (see `composeBodyMvp`'s header). `draw` narrows its own copy at the GPU
+   *  upload site below; never narrow this field in place. */
+  readonly mvpLocal: Float64Array;
+  readonly camLocal: Vec3;
+  /** Monotonic per-real-frame counter, forwarded to `earthSurfaceTileRenderer.draw`
+   *  for its mesh cache's LRU stamp — an integer index rather than `ctx.nowMs`
+   *  so a stepped/paused clock (tests, a recorder) can't collapse two frames'
+   *  stamps onto the same value. */
+  readonly frame: number;
+};
+
+const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedEarthFrame | null>();
+
+let earthFrameCounter = 0;
+
+export function prepareEarthFrame(
+  state: EngineState,
+  ctx: ReadyFrameContext,
+  view: SlabView,
+): PreparedEarthFrame | null {
+  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
+
+  const result = computeEarthFrame(state, ctx, view);
+  preparedByCtx.set(ctx, result);
+  return result;
+}
+
+function computeEarthFrame(
+  state: EngineState,
+  ctx: ReadyFrameContext,
+  view: SlabView,
+): PreparedEarthFrame | null {
+  const earth = state.data.bodies.earth;
+  if (earth === null) return null;
+
+  const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+  const radiusMpc = earth.radiusM * SCALE_UNITS.M_TO_MPC;
+  // See the module header's "f64 seam" note for why view.slab.vp, not view.vp.
+  const mvpLocal = composeBodyMvp(
+    view.slab.vp,
+    earthState.positionMpc,
+    RENDER_ORIGIN_MPC,
+    radiusMpc,
+    earthState.orientation,
+  );
+  const camLocal = camPosLocal(
+    view.camPos,
+    earthState.positionMpc,
+    radiusMpc,
+    earthState.orientation,
+  );
+  return { earthState, radiusMpc, mvpLocal, camLocal, frame: ++earthFrameCounter };
 }
 
 export const earthLayer: ContentLayer = {
@@ -80,7 +171,7 @@ export const earthLayer: ContentLayer = {
     const distanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
     if (distanceMpc === 0) return true;
     const diameterPx = apparentSizePx({
-      diameterKpc: (2 * earth.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
+      diameterKpc: (2 * earth.radiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
       distanceMpc,
       viewportHeightPx: ctx.canvasSize.height,
       fovYRad: ctx.fovYRad,
@@ -90,72 +181,104 @@ export const earthLayer: ContentLayer = {
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.earthRenderer;
-    const earth = state.data.bodies.earth;
-    if (renderer === null || earth === null) return;
+    if (renderer === null) return;
 
-    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+    const prepared = prepareEarthFrame(state, ctx, view);
+    if (prepared === null) return;
+    const { earthState, radiusMpc, mvpLocal, camLocal, frame } = prepared;
+    // Narrow HERE, at the GPU-upload boundary — `prepared.mvpLocal` stays f64
+    // for the tile planner's own read of it (see PreparedEarthFrame's doc).
+    const mvp = narrowMat4(mvpLocal);
 
-    // See the module header's "f64 seam" note for why view.slab.vp, not view.vp.
-    const mvp = composeBodyMvp(
-      view.slab.vp,
-      earthState.positionMpc,
-      RENDER_ORIGIN_MPC,
-      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
-      earthState.orientation,
-    );
     // Sun direction rotated into Earth's local frame (orientation carries the
     // axial tilt), so the fragment's lighting stays a plain dot product.
     const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
-    // Camera in Earth's local frame — the view vector the PBR fragment needs
-    // for the view-dependent ocean glint.
-    const camLocal = camPosLocal(
-      view.camPos,
-      earthState.positionMpc,
-      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
-      earthState.orientation,
-    );
-    // The window the fragment addresses tiles through, read from the tile
-    // subsystem rather than this frame's plan: the subsystem reports the
-    // window the page-table TEXTURE was actually built against, which lags a
-    // plan update until the texture re-derives. Null (the all-zero identity)
-    // before the first upload.
-    const tileWindow = state.subsystems.earthTiles?.getUploadedWindow() ?? null;
     // Same descent fade the cloud shell itself uses, from the same
     // camera-to-Earth-centre distance enabled's sub-pixel cull reads — the deck
     // and the shadow it casts must dissolve together.
     //
     // KNOWN OMISSION: this fade does not reach the night-side city-lights
     // dimming (nightLights reads cloudAlphaHere with no strength scalar).
-    // Fixing that needs a 14th uniform field and packEarthSurfaceUniforms has
-    // none free; deferred rather than paid for a night-side-only artifact.
-    const cloudFade = cloudDeckFade(
-      earthCameraDistanceMpc(earthState.positionMpc, ctx),
-      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
-    );
-    renderer.draw(
-      pass,
-      packEarthSurfaceUniforms(
-        mvp,
-        sun,
-        camLocal,
-        EARTH_SURFACE_PARAMS.roughnessBase,
-        EARTH_SURFACE_PARAMS.f0,
-        EARTH_SURFACE_PARAMS.sunIrradiance,
-        EARTH_SURFACE_PARAMS.cloudShadowStrength * cloudFade,
-        // Unit-sphere local radius of the SAME shell cloudShellLayer draws, so
-        // the cast shadow and the drawn deck agree by construction.
-        CLOUD_SHELL_PARAMS.radiusRatio,
-        // Live user settings, not the WESL consts (seeded from
-        // EARTH_SURFACE_PARAMS so the defaults match).
-        state.settings.earth.ambientLight,
-        state.settings.earth.oceanRoughness,
-        // Page-table window (zWin, winX0, winY0). All-zero is the identity: no
-        // tile named anywhere, base texture shown, window never consulted.
-        tileWindow?.zWin ?? 0,
-        tileWindow?.winX0 ?? 0,
-        tileWindow?.winY0 ?? 0,
-      ),
-    );
+    // Fixing that needs one more uniform field — deferred rather than paid
+    // for a night-side-only artifact.
+    const cameraDistanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
+    const cloudFade = cloudDeckFade(cameraDistanceMpc, radiusMpc);
+    const cloudShadowStrength = EARTH_SURFACE_PARAMS.cloudShadowStrength * cloudFade;
+
+    // ── Detail tiles, resolved BEFORE the base globe draw ──────────────────
+    //
+    // The base-globe fade below needs to know whether the tile path is
+    // actually alive THIS frame: an empty cut or a not-yet-engaged atlas is
+    // the ordinary pre-residency picture, not an error, and the base globe
+    // MUST stay at its alpha-1 failure floor through it — fading with
+    // nothing covering the cap would punch a hole through to whatever is
+    // behind Earth.
+    const tileRenderer = state.gpu.earthSurfaceTileRenderer;
+    const earthTiles = state.subsystems.earthTiles;
+    const tiles = earthTiles?.getLastCut() ?? [];
+    const surfaceAtlasView = earthTiles?.getAtlasView() ?? null;
+    const tilesLive = tileRenderer !== null && surfaceAtlasView !== null && tiles.length > 0;
+    const globeAlpha = tilesLive ? baseGlobeFadeAlpha(cameraDistanceMpc, radiusMpc) : 1;
+
+    // Skip the draw call entirely at alpha 0 (the tiles cover the whole cap
+    // by then) — this rides the SAME per-frame uniform write as any other
+    // alpha, never a second `renderer.draw` (see earthRenderer's
+    // at-most-once-per-frame precondition).
+    if (globeAlpha > 0) {
+      renderer.draw(
+        pass,
+        packEarthSurfaceUniforms(
+          mvp,
+          sun,
+          camLocal,
+          EARTH_SURFACE_PARAMS.roughnessBase,
+          EARTH_SURFACE_PARAMS.f0,
+          EARTH_SURFACE_PARAMS.sunIrradiance,
+          cloudShadowStrength,
+          // Unit-sphere local radius of the SAME shell cloudShellLayer draws, so
+          // the cast shadow and the drawn deck agree by construction.
+          CLOUD_SHELL_PARAMS.radiusRatio,
+          // Live user settings, not the WESL consts (seeded from
+          // EARTH_SURFACE_PARAMS so the defaults match).
+          state.settings.earth.ambientLight,
+          state.settings.earth.oceanRoughness,
+          globeAlpha,
+        ),
+      );
+    }
+
+    // ── Detail tiles, drawn AFTER the base globe ──────────────────────────
+    //
+    // `nearer-or-equal` depth compare on the tile pipeline needs the base
+    // globe's depth already written — see the module header.
+    if (tilesLive) {
+      const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+      tileRenderer!.draw(pass, {
+        tiles,
+        frame,
+        camPosMpc: view.camPos,
+        bodyPositionMpc: earthState.positionMpc,
+        orientation: earthState.orientation,
+        radiusMpc,
+        vp: rebasedVp,
+        sunDirLocal: sun,
+        roughnessBase: EARTH_SURFACE_PARAMS.roughnessBase,
+        f0: EARTH_SURFACE_PARAMS.f0,
+        sunIrradiance: EARTH_SURFACE_PARAMS.sunIrradiance,
+        ambientLight: state.settings.earth.ambientLight,
+        oceanRoughness: state.settings.earth.oceanRoughness,
+        cloudShadowStrength,
+        cloudShellRadius: CLOUD_SHELL_PARAMS.radiusRatio,
+        // DebugPanel's Earth LOD overlay toggle — read live each frame from the
+        // DEBUG_OVERLAY_ROWS-derived record, same as the other overlays.
+        debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],
+        surfaceAtlasView: surfaceAtlasView!,
+        materialView: renderer.getMapView('material'),
+        nightView: renderer.getMapView('night'),
+        normalView: renderer.getMapView('normal'),
+        cloudsView: renderer.getMapView('clouds'),
+      });
+    }
   },
 
   // Stamps Earth's packed identity into the NEAR0 r32uint pick pass. Earth is
@@ -164,17 +287,21 @@ export const earthLayer: ContentLayer = {
   // cleared-to-zero no-hit texel.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
-    const earth = state.data.bodies.earth;
-    if (pickRenderer === null || earth === null) return;
+    if (pickRenderer === null) return;
 
-    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+    const prepared = prepareEarthFrame(state, ctx, view);
+    if (prepared === null) return;
+    const { earthState, radiusMpc } = prepared;
 
     // Floor the pick radius (drawFlooredSpherePick) so a far-edge Earth
-    // projecting to a couple of pixels stays clickable.
+    // projecting to a couple of pixels stays clickable. Deliberately NOT
+    // `prepared.mvpLocal`/`camLocal` — those are composed against the true
+    // equatorial radius; drawFlooredSpherePick composes its own MVP/camPos
+    // internally against the floored pick radius.
     drawFlooredSpherePick(pickRenderer, pass, {
       vp: view.slab.vp,
       positionMpc: earthState.positionMpc,
-      radiusMpc: earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      radiusMpc,
       camPosMpc: view.camPos,
       drawPxPerRad: ctx.drawPxPerRad,
       orientation: earthState.orientation,

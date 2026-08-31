@@ -69,21 +69,21 @@ import { slabViewOf, groupKeyOf } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
-import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 
 /**
  * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
  * today (`'flow'` and `'atmosphereSkyView'`); a new compute pre-pass is a new
  * row, not a new branch. Every row takes the uniform `(encoder, ctx, state)`
- * shape — `flow` ignores `ctx`, while `atmosphereSkyView` reads the rendered
- * pose off it so its baked LUT matches what the shell fragment samples.
+ * shape — `flow` reads `ctx.nowMs` as its real-time advection clock, while
+ * `atmosphereSkyView` reads the rendered pose off it so its baked LUT matches
+ * what the shell fragment samples.
  */
 const COMPUTE: Record<
   string,
   (encoder: GPUCommandEncoder, ctx: ReadyFrameContext, state: EngineState) => void
 > = {
-  flow: (encoder, _ctx, state) => encodeFlowCompute(encoder, state),
+  flow: (encoder, ctx, state) => encodeFlowCompute(encoder, state, ctx.nowMs),
   atmosphereSkyView: (encoder, ctx, state) => encodeAtmosphereSkyView(encoder, ctx, state),
 };
 
@@ -101,37 +101,49 @@ function viewFor(id: string, ctx: ReadyFrameContext, swapView: GPUTextureView): 
 
 /** Build a colour attachment that clears (first touch) or loads (later). */
 function colorAttachment(
+  ctx: ReadyFrameContext,
   target: string,
   view: GPUTextureView,
   touched: boolean,
 ): GPURenderPassColorAttachment {
   if (touched) return { view, loadOp: 'load', storeOp: 'store' };
-  const clearValue = TARGET_CLEAR_VALUES[target];
-  if (!clearValue) {
-    throw new Error(`executeFrame: no clear value for target '${target}'`);
-  }
-  return { view, loadOp: 'clear', clearValue, storeOp: 'store' };
+  return {
+    view,
+    loadOp: 'clear',
+    clearValue: ctx.renderTargets.specOf(target).clearValue,
+    storeOp: 'store',
+  };
+}
+
+/**
+ * A render step's depth load-op. Absent `depthLoad` ⇒ the SAME first-touch
+ * `touched` fact that flips the colour load-op: the frame's first pass against
+ * a depth target clears, later passes load and so preserve the occlusion
+ * already written. A step that declares one overrides that — depth is the only
+ * attachment where sharing a target must not imply sharing its contents.
+ */
+function depthLoadOpFor(depthLoad: 'clear' | 'load' | undefined, touched: boolean): GPULoadOp {
+  if (depthLoad) return depthLoad;
+  return touched ? 'load' : 'clear';
 }
 
 /**
  * Depth attachment for a target row that declares `depth`, spread into the
- * pass descriptor — `{}` (no key) for depthless rows. The SAME first-touch
- * `touched` fact that flips the colour load-op flips depth: one fact, two
- * attachments. The first pass against a depth target clears depth to the far
- * plane (1.0) so the initial depth-test always passes; later passes (a second
- * render step, or `perLayerTimed` passes after the first) load, preserving the
- * occlusion already written this frame. Composite steps never call this —
- * their dest rows are depthless — so the depth budget is confined to the
- * opaque render passes that own it.
+ * pass descriptor — `{}` (no key) for depthless rows. Composite steps never
+ * call this — their dest rows are depthless — so the depth budget is confined
+ * to the opaque render passes that own it.
+ *
+ * `specOf` throws for an unknown target, but that's unreachable here:
+ * `viewFor` throws first, at the top of `renderGroup`.
  */
 function depthAttachment(
   ctx: ReadyFrameContext,
   target: string,
-  touched: boolean,
+  depthLoadOp: GPULoadOp,
   reversedZ: boolean,
 ): { depthStencilAttachment?: GPURenderPassDepthStencilAttachment } {
-  const spec = ctx.renderTargets.specs.find((s) => s.id === target);
-  if (!spec?.depth) return {};
+  const spec = ctx.renderTargets.specOf(target);
+  if (!spec.depth) return {};
   return {
     depthStencilAttachment: {
       view: ctx.renderTargets.depthViewOf(target),
@@ -139,7 +151,7 @@ function depthAttachment(
       // in depthClearValueFor so the clear and the depthCompare direction can
       // never disagree (a mismatch fights every fragment of the first draw).
       depthClearValue: depthClearValueFor(reversedZ),
-      depthLoadOp: touched ? 'load' : 'clear',
+      depthLoadOp,
       depthStoreOp: 'store',
     },
   };
@@ -210,6 +222,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           view,
           groupKey,
           alreadyTouched: touched.has(step.target),
+          depthLoadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
         });
         touched.add(step.target);
         break;
@@ -224,7 +237,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const pass = encoder.beginRenderPass({
           label: `composite-${source}->${dest}`,
           colorAttachments: [
-            colorAttachment(dest, viewFor(dest, ctx, swapView), touched.has(dest)),
+            colorAttachment(ctx, dest, viewFor(dest, ctx, swapView), touched.has(dest)),
           ],
           ...timestampSpread(timing, `${source}→${dest}`),
         });
@@ -243,7 +256,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // from the acquired frame texture, not the target table — the FORMAT is
         // a spec-table fact for every row including `swap` (whose spec carries
         // the swap-chain format), so it resolves uniformly with no swap branch.
-        const dstFormat = ctx.renderTargets.specs.find((s) => s.id === dest)!.format;
+        const dstFormat = ctx.renderTargets.specOf(dest).format;
         compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone, dstFormat);
         pass.end();
         touched.add(dest);
@@ -277,10 +290,22 @@ function renderGroup(
     view: SlabView;
     groupKey: string;
     alreadyTouched: boolean;
+    depthLoadOp: GPULoadOp;
   },
 ): void {
-  const { encoder, ctx, state, timing, swapView, target, group, view, groupKey, alreadyTouched } =
-    p;
+  const {
+    encoder,
+    ctx,
+    state,
+    timing,
+    swapView,
+    target,
+    group,
+    view,
+    groupKey,
+    alreadyTouched,
+    depthLoadOp,
+  } = p;
   const targetView = viewFor(target, ctx, swapView);
 
   if (strategy === 'merged') {
@@ -288,8 +313,8 @@ function renderGroup(
     // dst.color. Production path.
     const pass = encoder.beginRenderPass({
       label: `render-${target}`,
-      colorAttachments: [colorAttachment(target, targetView, alreadyTouched)],
-      ...depthAttachment(ctx, target, alreadyTouched, view.slab.reversedZ),
+      colorAttachments: [colorAttachment(ctx, target, targetView, alreadyTouched)],
+      ...depthAttachment(ctx, target, depthLoadOp, view.slab.reversedZ),
       // Bill the whole group against its per-step group slot — the one honest
       // timing a single-pass shape can give (per-layer slots are the
       // `perLayerTimed` path's alone). A no-op timing service returns undefined,
@@ -306,14 +331,14 @@ function renderGroup(
   // perLayerTimed: one pass per layer so each carries its own timestampWrites.
   // The M1 OVER-coherency hazard (dst.color stale across pass boundaries — see
   // the module header) is the price of per-pass timing; this path runs only
-  // under ?gpuTimings. The first layer of an untouched target carries the
-  // clear; the rest load.
+  // under ?gpuTimings. The step's clear (colour or depth) belongs to the FIRST
+  // layer's pass only — the rest load, or each would wipe its predecessor.
   group.forEach((layer, i) => {
     const touchedBefore = alreadyTouched || i > 0;
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${layer.name}`,
-      colorAttachments: [colorAttachment(target, targetView, touchedBefore)],
-      ...depthAttachment(ctx, target, touchedBefore, view.slab.reversedZ),
+      colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],
+      ...depthAttachment(ctx, target, i === 0 ? depthLoadOp : 'load', view.slab.reversedZ),
       ...timestampSpread(timing, layer.name),
     });
     layer.draw(pass, view, ctx, state);

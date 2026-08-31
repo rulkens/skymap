@@ -1,7 +1,7 @@
 /**
  * starPickId — the two-table routing the whole star pick path rests on.
  *
- * A packed id is `(sourceCode << 27) | index`, and the index means nothing
+ * A packed id is `(sourceCode << 26) | index`, and the index means nothing
  * without the code that says which table it indexes. So the invariant is not
  * "the index is right" but "the same index under two codes is two different
  * objects" — which is precisely what merging the tables would destroy.

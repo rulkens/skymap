@@ -9,8 +9,8 @@ describe('EarthBody type', () => {
     const earth: EarthBody = {
       id: 'earth',
       label: 'Earth',
-      radiusKm: 6371,
+      radiusM: 6371000,
     };
-    expect(earth.radiusKm).toBe(6371);
+    expect(earth.radiusM).toBe(6371000);
   });
 });

@@ -417,6 +417,49 @@ describe('buildGalaxyInfo — diameter provenance', () => {
   });
 });
 
+// ─── buildGalaxyInfo — blueshift lookback fallback ───────────────────────────
+
+describe('buildGalaxyInfo — blueshifted / zero-z lookback fallback', () => {
+  it('derives lookbackGyr from distance (not redshift) when redshift <= 0', () => {
+    // Local Group members can show a negative spectroscopic redshift —
+    // peculiar velocity (infall toward the Milky Way / Local Group barycenter)
+    // swamps the tiny Hubble-flow term at these distances. Feeding a negative
+    // z into lookbackTimeGyr's z/(1+z) term yields negative lookback time,
+    // which is physically nonsense — light can't arrive before it left.
+    const cloud = makeCloud(1);
+    // 0.78 Mpc on the +x axis: distanceMpc = 0.78 exactly.
+    setPosition(cloud, 0, 0.78, 0, 0);
+    cloud.spectroscopicZ[0] = -0.0001;
+
+    const info = buildInfo(cloud, 0, Source.SDSS);
+
+    // lookback ≈ distance (Mpc) × PC_TO_LY / 1000 = 0.78 × 3.26156 / 1000.
+    expect(info.redshift).toBeLessThanOrEqual(0);
+    expect(info.lookbackGyr).toBeCloseTo(0.00254, 4);
+    expect(info.lookbackGyr).toBeGreaterThan(0);
+    // 0.00254 Gyr falls in [0.001, 0.0026) — earthEraForLookback's second band.
+    expect(info.earthEra).toBe('during the rise of human civilisation');
+  });
+});
+
+// ─── buildGalaxyInfo — skyViewUrl dispatch ───────────────────────────────────
+
+describe('buildGalaxyInfo — skyViewUrl', () => {
+  it('routes SDSS rows to the SDSS Navigate viewer', () => {
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    const info = buildInfo(cloud, 0, Source.SDSS);
+    expect(info.skyViewUrl).toContain('skyserver.sdss.org/dr18/VisualTools/navi');
+  });
+
+  it('routes non-SDSS rows to the Aladin Lite viewer', () => {
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 50, 50, 0);
+    const info = buildInfo(cloud, 0, Source.TwoMRS);
+    expect(info.skyViewUrl).toContain('aladin.cds.unistra.fr/AladinLite');
+  });
+});
+
 // ─── buildGalaxyInfo — Milliquas branch ──────────────────────────────────────
 
 describe('buildGalaxyInfo — Milliquas source', () => {

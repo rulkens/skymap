@@ -14,7 +14,7 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Label } from '../../../../src/@types/rendering/Label';
+import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
 // Measured ink bbox the labelRenderer stub reports (atlas px, anchor-relative,
@@ -46,11 +46,12 @@ function makeState(
       labels: { focusedOnly: opts.focusedOnly ?? false },
     },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
-    gpu: { labelRenderer: { measure: vi.fn<(label: Label) => LabelBBox>(() => bbox) } },
+    gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,
       },
+      clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;
 }
@@ -77,6 +78,9 @@ function makeCtx(
     canvasSize: { width, height },
     fovYRad,
     nowMs: 0,
+    // resolveLayerOpacity lerps its recession factor on this; an absent one
+    // makes the composed alpha NaN.
+    focusBlend: 0,
   } as unknown as ReadyFrameContext;
 }
 
@@ -113,17 +117,16 @@ const distanceFadeAt = (camDistMpc: number): number =>
   milkyWayLabelAlpha(camDistMpc) * fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
 
 describe('produceMilkyWayLabel', () => {
-  it('emits one label and one line at the composed distance fade when close and enabled', () => {
+  it('emits one label carrying a leader at the composed distance fade when close and enabled', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);
-    expect(out.lines).toHaveLength(1);
     expect(out.labels[0]!.id).toBe('milkyWay'); // id = source id; text stays below
     expect(out.labels[0]!.text).toBe('You are here');
-    expect(out.lines[0]!.ownerLabelId).toBe('milkyWay');
-    // Label and stem fade in lock-step at the derived distance fade.
+    expect(out.labels[0]!.leader).toBeDefined();
+    // Label and its leader (the director synthesizes the stem from it) fade
+    // in lock-step at the derived distance fade.
     const expected = distanceFadeAt(0.5);
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(expected);
-    expect(out.lines[0]!.fadeAlpha).toBeCloseTo(expected);
   });
 
   it('outranks every structure label in the declutter (top prominence)', () => {
@@ -138,7 +141,6 @@ describe('produceMilkyWayLabel', () => {
   it('emits nothing far away (>= 2 Mpc) even when enabled', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(2.0));
     expect(out.labels).toEqual([]);
-    expect(out.lines).toEqual([]);
   });
 
   it('emits nothing on the deep-zoom descent (inside the survey band)', () => {
@@ -149,13 +151,11 @@ describe('produceMilkyWayLabel', () => {
     // (gone by 2 kpc = 0.002 Mpc) must cull it: no label AND no leader stem.
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(1e-6));
     expect(out.labels).toEqual([]);
-    expect(out.lines).toEqual([]);
   });
 
   it('emits nothing when the label axis is disabled and faded out', () => {
     const out = produceMilkyWayLabel(makeState(false, 0), makeCtx(0.5));
     expect(out.labels).toEqual([]);
-    expect(out.lines).toEqual([]);
   });
 
   it('multiplies the layer opacity into the distance fade', () => {
@@ -217,9 +217,9 @@ describe('produceMilkyWayLabel', () => {
     expect(anchor[0]).toBeCloseTo(dot[0], 2);
     expect(dot[1] - anchor[1]).toBeCloseTo(liftPx, 2);
 
-    expect(out.lines).toHaveLength(1);
-    expect(out.lines[0]!.fromWorld).toEqual([0, 0, 0]);
-    const tip = screenOf(ctx, out.lines[0]!.toWorld);
+    expect(out.labels[0]!.leader).toBeDefined();
+    expect(out.labels[0]!.leader!.fromWorld).toEqual([0, 0, 0]);
+    const tip = screenOf(ctx, out.labels[0]!.leader!.toWorld);
     expect(tip[0]).toBeCloseTo(dot[0], 2);
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
   });
@@ -247,8 +247,8 @@ describe('produceMilkyWayLabel', () => {
     // exactly the guaranteed minimum.
     expect(dot[1] - (anchor[1] + inkDropPx)).toBeCloseTo(MIN_LABEL_CLEARANCE_PX, 2);
     // The stem is present, top at the padding below the ink bottom.
-    expect(out.lines).toHaveLength(1);
-    const tip = screenOf(ctx, out.lines[0]!.toWorld);
+    expect(out.labels[0]!.leader).toBeDefined();
+    const tip = screenOf(ctx, out.labels[0]!.leader!.toWorld);
     expect(tip[1] - anchor[1]).toBeCloseTo(inkDropPx + LEADER_LINE_PADDING_PX, 2);
   });
 });

@@ -19,9 +19,7 @@ import { copyFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
-export type StarnetConfig =
-  | { mock: true }
-  | { mock: false; bin: string; weights: string };
+export type StarnetConfig = { mock: true } | { mock: false; bin: string; weights: string };
 
 export type Spawner = (
   bin: string,
@@ -102,10 +100,14 @@ export async function runStarnet(opts: {
   }
   const spawner = opts.spawner ?? defaultSpawner;
   const args = [
-    '-i', opts.input,
-    '-o', opts.output,
-    '-s', String(opts.stride),
-    '-w', opts.config.weights,
+    '-i',
+    opts.input,
+    '-o',
+    opts.output,
+    '-s',
+    String(opts.stride),
+    '-w',
+    opts.config.weights,
     '-e',
   ];
   if (opts.upsample) args.push('-u');

@@ -54,8 +54,7 @@ export async function fetchWikipediaArticleImages(
   for (const raw of candidateNames) {
     const title = raw.trim().replace(/\s+/g, '_');
     if (title.length === 0) continue;
-    const url =
-      `https://en.wikipedia.org/api/rest_v1/page/media-list/${encodeURIComponent(title)}`;
+    const url = `https://en.wikipedia.org/api/rest_v1/page/media-list/${encodeURIComponent(title)}`;
     let r: Response;
     try {
       r = await fetcher(url);
@@ -91,8 +90,7 @@ export async function fetchWikipediaArticleImages(
       // title are collapsed to underscores to match Wikipedia's URL
       // canonicalisation; encodeURIComponent handles special characters.
       const fileSlug = it.title.replace(/^File:/, '').replace(/\s+/g, '_');
-      const articleUrl =
-        `https://en.wikipedia.org/wiki/${title}#/media/File:${encodeURIComponent(fileSlug)}`;
+      const articleUrl = `https://en.wikipedia.org/wiki/${title}#/media/File:${encodeURIComponent(fileSlug)}`;
       images.push({ fileTitle: it.title, thumbUrl, fileUrl, articleUrl });
     }
     if (images.length > 0) return { articleTitle: title, images };

@@ -88,7 +88,7 @@ export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
   // A 1 px floor is the mildest anti-sparkle setting that still stops a
   // distant star from vanishing entirely between frames.
   starPxMin: 1.0,
-  // 119 target px — 357 screen px at the divisor below — bounds the foreground
+  // 119 target px — 714 screen px at the divisor below — bounds the foreground
   // swell on a close flythrough without visibly flattening the near disc into
   // equal-sized discs.
   starPxMax: 119.0,
@@ -101,13 +101,13 @@ export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
   // blending serializes the blender per pixel. In NDC (not px) because the
   // hash band was tuned in NDC units in the tool.
   lodApparent: 0.02,
-  // Third resolution for the `mw-aggregate` offscreen: 1/9th of the star
+  // Third resolution for the `mw-aggregate` offscreen: 1/36th of the star
   // pass's fragments, at a reconstruction blur the broad Gaussian profile
   // above hides completely (the survey's `star-aggregates` row only halves,
   // because its sprites stay tight). `starPxMin` / `starPxMax` above are
   // stated in pixels OF THAT TARGET, so this number and those two are one
   // trade — change it and they move with it.
-  aggregateDivisor: 3,
+  aggregateDivisor: 6,
   // By reference to `MILKY_WAY_STARS_PER_TIER.medium`, never a copied
   // literal: medium IS the tier the preset is tuned against, and the tier
   // slice always boots at 'medium' (see `tierSlice.ts`), so the two can't

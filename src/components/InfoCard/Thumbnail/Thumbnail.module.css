@@ -21,6 +21,18 @@
   flex-shrink: 0;
   object-fit: cover;
   display: block;
+  transition: filter 0.15s ease-out;
+}
+
+/* Wraps .root when the thumbnail links out to an external sky viewer */
+.link {
+  cursor: pointer;
+  display: block;
+  flex-shrink: 0;
+}
+
+.link:hover .root {
+  filter: brightness(1.15);
 }
 
 /* Placeholder shown when the thumbnail fails to load — same dimensions */

@@ -30,10 +30,11 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 
-// Mock composeBodyMvp so draw() never touches the real f64→f32 composition —
-// covered by that util's own tests.
+// Mock composeBodyMvp so draw() never touches the real f64 composition —
+// covered by that util's own tests. Real composeBodyMvp returns f64; the
+// layer narrows its own copy at the GPU-upload boundary.
 vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
+  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 
 // Stub the per-frame body-state snapshot to the seeded fixture's own
@@ -64,7 +65,7 @@ const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orien
 const EARTH: SeededEarth = {
   id: 'earth',
   label: 'Earth',
-  radiusKm: 6371,
+  radiusM: 6371000,
   positionMpc: [0, 0, 0],
   orientation: IDENTITY_MAT3,
 };
@@ -85,7 +86,7 @@ function makeNear0View(): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
@@ -98,7 +99,7 @@ function makeNear0View(): SlabView {
  * every test here isolates the descent-fade gate from the OTHER gates.
  */
 function ctxAtAltitude(altitudeRadii: number): ReadyFrameContext {
-  const radiusMpc = EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  const radiusMpc = EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
   const distanceMpc = radiusMpc * (1 + altitudeRadii);
   return {
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },

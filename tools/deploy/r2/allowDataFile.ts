@@ -22,6 +22,8 @@ export const allowDataFile = (path: string): boolean => {
     /^milliquas-(small|medium|large)\.bin$/.test(name) ||
     /^stars-(small|medium|large)\.bin$/.test(name) ||
     /^mcpm-(small|medium|large)\.scfd$/.test(name) ||
+    /^polyphorm-2mrs-(small|medium|large)\.scfd$/.test(name) ||
+    /^edenhofer-dust-(small|medium|large)\.scfd$/.test(name) ||
     name === '2mrs.bin' ||
     name === 'famous.bin' ||
     // The three DESI DR1 patches are fixed regions, not tiered downsamples,
@@ -36,6 +38,7 @@ export const allowDataFile = (path: string): boolean => {
     name === 'famous_stars_meta.json' ||
     name === 'cf4_density.scfd' ||
     name === 'flowfield.scfd' ||
+    name === 'mcpm-workbench.scfd' ||
     name === 'structures.ccat' ||
     name === 'structures_meta.json' ||
     name === 'constellations.json' ||

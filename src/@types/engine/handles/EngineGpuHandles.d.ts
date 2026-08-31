@@ -1,22 +1,25 @@
 /**
- * EngineGpuHandles — the GPU pipelines/targets sub-bag of `EngineState`. Every
- * field shares one lifecycle: null until `initGpu` resolves (the handle is
- * returned synchronously, the adapter/device chain is async), assigned once, then
- * released and re-nulled by `destroy()` — the re-null matters because a canvas
- * remount runs a fresh `createEngine` against the stale state object, which would
- * otherwise see "ready" handles pointing at destroyed resources.
- * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayCloudRenderer` are
- * never read through this bag; they live here only so `destroy()` can reach them.
+ * EngineGpuHandles — GPU pipelines/targets sub-bag of `EngineState`. Every
+ * field: null until `initGpu` resolves, released + re-nulled by `destroy()`.
+ * Assigned once, EXCEPT the 8 `rebuildOnSwapFormat` rows (reassigned on
+ * every HDR toggle). Add a field here AND a row to `GPU_HANDLE_ROWS`
+ * (`gpuHandles/gpuHandleRegistry.ts`) — the totality check fails `tsc` until
+ * both exist — unless it belongs in `GpuHandleKey`'s Exclude list
+ * (`fadeBgl`, `sourceBgl`, `focusBgl`, `fontAtlases`, `uiCtx`,
+ * `timingService`). `galaxyPickRenderer`/`pickProgram` are rows too, built
+ * from `wireInput.ts`. Flag `rebuildOnSwapFormat: true` if the new row
+ * bakes the swap format, or it silently goes stale on the first HDR toggle.
  */
 
-import type { PointRenderer } from '../../rendering/PointRenderer';
+import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
 import type { RenderTargets } from '../../rendering/RenderTargets';
-import type { PickRenderer } from '../../rendering/PickRenderer';
+import type { GalaxyPickRenderer } from '../../rendering/GalaxyPickRenderer';
 import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ConstellationRenderer } from '../../rendering/ConstellationRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
+import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
@@ -33,9 +36,11 @@ import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
 import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { ZoneOfAvoidanceRenderer } from '../../rendering/ZoneOfAvoidanceRenderer';
+import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
+import type { EarthSurfaceTileRenderer } from '../../rendering/EarthSurfaceTileRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
@@ -57,14 +62,14 @@ import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 import type { GpuContext } from '../../rendering/GpuContext';
 
 export type EngineGpuHandles = {
-  renderer: PointRenderer | null;
-  pickRenderer: PickRenderer | null;
+  galaxyPointRenderer: GalaxyPointRenderer | null;
+  galaxyPickRenderer: GalaxyPickRenderer | null;
   /**
    * The parallel per-slab pick program over the content-layer registry.
    * Owns the hover / click / debug-overlay pick path: it filters the registry
    * by `drawPick` presence + `enabled`, re-rasterises each pickable slab into
    * its own r32uint target, reads back the cursor texel, and folds the results
-   * near→far. Constructed in `wireInput` (alongside `pickRenderer`, from which
+   * near→far. Constructed in `wireInput` (alongside `galaxyPickRenderer`, from which
    * it borrows the point-pick draw provider) once the registry + GPU handles
    * exist; null until then. Destroyed in teardown alongside the other pick
    * providers — it owns per-slab pick + depth textures and staging buffers.
@@ -89,7 +94,7 @@ export type EngineGpuHandles = {
   /**
    * Canonical SourceUniforms bind-group layout (@group(2), points
    * only). Constructed once in `initGpu` and shared between the
-   * visual PointRenderer and the offscreen PickRenderer. Null until
+   * visual GalaxyPointRenderer and the offscreen GalaxyPickRenderer. Null until
    * `initGpu` resolves.
    */
   sourceBgl: SourceUniformsBgl | null;
@@ -112,11 +117,12 @@ export type EngineGpuHandles = {
    */
   focusUniform: FocusUniformBuffer | null;
   /**
-   * The offscreen render-target table — one owner for every offscreen
-   * row's (`hdr`, `volume`, …) texture lifecycle, resized as a unit on
-   * canvas resize.  See `services/gpu/renderTargets.ts` for the target
-   * table + the per-row rationale (why the HDR offscreen exists, why the
-   * volume row renders at 1/3 scale).
+   * The offscreen render-target table — one owner for every offscreen row's
+   * (`hdr`, `volume`, …) texture lifecycle, reconciled every frame against the
+   * canvas size and the live state — only the rows whose pixel size moved are
+   * reallocated.  See `services/gpu/renderTargets.ts` for the target table +
+   * the per-row rationale (why the HDR offscreen exists, why the volume row
+   * renders at 1/3 scale).
    */
   renderTargets: RenderTargets | null;
   /**
@@ -197,6 +203,22 @@ export type EngineGpuHandles = {
    */
   foregroundLabelRenderer: LabelRenderer | null;
   /**
+   * The r32uint pick provider for the COSMO text labels — one screen-space
+   * rectangle per legible label, stamping its subject's packed id so clicking
+   * a name selects the thing it names. A SEPARATE instance from
+   * `foregroundLabelPickRenderer` for the reason the two label renderers are
+   * separate, plus one more: the two slabs' pick targets carry different depth
+   * formats and opposite depth conventions, both baked into the pipeline.
+   * Null until `initGpu` builds it; `labelsLayer.drawPick` null-checks at use.
+   */
+  labelPickRenderer: LabelPickRenderer | null;
+  /**
+   * The NEAR0 sibling of `labelPickRenderer`, for the foreground body
+   * captions. Same lifecycle and rationale; `foregroundLabelsLayer.drawPick`
+   * null-checks at use.
+   */
+  foregroundLabelPickRenderer: LabelPickRenderer | null;
+  /**
    * Second thick screen-space line renderer, the leader-line sibling of
    * `foregroundLabelRenderer`.  A SEPARATE instance from `markerLineRenderer`
    * for the same reason `foregroundLabelRenderer` is separate from
@@ -274,7 +296,8 @@ export type EngineGpuHandles = {
    * GPU-generated Milky-Way star+dust point cloud — the buffer resource
    * (per-tier star/dust instance buffers + regenerate/destroy) that the
    * `milkyWayCloudRenderer` draws.  Null until `initGpu` generates the first
-   * tier's cloud; regenerated in `makeRunTierTransition` on a tier swap.
+   * tier's cloud; regenerated by its own `reconcile` whenever the live
+   * `settings.milkyWay.starCount` disagrees with the buffers on screen.
    * Same lifecycle + isEngineReady exclusion as the other optional GPU
    * resources; stored here so `destroy()` can release the star/dust vertex
    * buffers + the reused generation UBO.
@@ -304,6 +327,15 @@ export type EngineGpuHandles = {
    * back out during teardown).
    */
   zoneOfAvoidanceRenderer: ZoneOfAvoidanceRenderer | null;
+  /**
+   * Shared world-geometry text renderer (spec §9.1) — any number of
+   * arc-placed labels, each with its own font/placement/repeat count. Draws
+   * into HDR (not the swap chain), so it is NOT one of the
+   * `rebuildOnSwapFormat` rows. Null until `initGpu` constructs it; nulled
+   * back out during teardown. Its first consumer is the zone-of-avoidance
+   * lettering path (`produceZoneOfAvoidanceLettering`).
+   */
+  label3DRenderer: Label3DRenderer | null;
   /**
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
@@ -357,9 +389,9 @@ export type EngineGpuHandles = {
    * until `initGpu` constructs it (same phase as `volumeUpsample`). Excluded
    * from `isEngineReady` — when null, `zoneOfAvoidanceUpsampleLayer` skips
    * its blit (the full-res lettering draw is gated separately, on
-   * `zoneOfAvoidanceRenderer`), so a null handle is a silent no-op. Stored
-   * here so `destroy()` can release the pipeline + sampler + bind-group-layout
-   * via the pass's no-op destroy method.
+   * `label3DRenderer`), so a null handle is a silent no-op. Stored here so
+   * `destroy()` can release the pipeline + sampler + bind-group-layout via
+   * the pass's no-op destroy method.
    */
   zoneOfAvoidanceUpsample: AdditiveUpsample | null;
   /**
@@ -390,7 +422,7 @@ export type EngineGpuHandles = {
    * pick texture over the tone-mapped frame.  Null until `initGpu`
    * constructs it.  Excluded from `isEngineReady`: it's a debug-only
    * pass, and the per-frame consumer null-checks the field along with
-   * the `state.settings.debug.showPickBuffer` toggle.  Stored here so
+   * the `state.settings.debug.overlays['pick-buffer']` toggle.  Stored here so
    * `destroy()` can release the pipeline + bind-group-layout via the
    * pass's no-op destroy method (symmetry with the other GPU-resource
    * owners).
@@ -401,7 +433,7 @@ export type EngineGpuHandles = {
    * plane around the selected galaxy at its catalog disk radius.  Null
    * until `initGpu` constructs it.  Excluded from `isEngineReady`: a
    * debug-only overlay, null-checked together with the
-   * `state.settings.debug.showDiskRadiusRing` toggle.  Unlike
+   * `state.settings.debug.overlays['disk-radius-ring']` toggle.  Unlike
    * `pickDebugOverlay` (which owns no GPU buffers), this pass owns two
    * uniform buffers, so the `destroy()` chain must release it.
    */
@@ -410,9 +442,9 @@ export type EngineGpuHandles = {
    * True-scale, Blue-Marble-textured Earth drawn into the `foreground:0`
    * render-target row (Plan 02 — zoom-to-Earth).  Same UV-sphere mesh as the
    * star/planet renderers below, but shaded by sampling an equirectangular
-   * Blue Marble bitmap. Its ('rgba16float', 'depth32float') pipeline formats
-   * MUST match that row's `format` / `depth` in `renderTargets.ts` — the
-   * target↔renderer-profile invariant. Constructed in `initGpu`, which also
+   * Blue Marble bitmap. Its pipeline formats MUST match the `foreground:0`
+   * row's `format` / `depth` — see `renderTargetFormats.ts` for the shared
+   * constants both sides read. Constructed in `initGpu`, which also
    * mints its surface texture into the `bodyTextures` slot family (key
    * `'earth'`); that slot is proximity-demanded on descent and its commit calls
    * `setTexture`. Until the bitmap lands the renderer draws a plain mid-blue
@@ -423,13 +455,26 @@ export type EngineGpuHandles = {
    */
   earthRenderer: EarthRenderer | null;
   /**
+   * Instanced draw of the resident surface-tile detail patches
+   * (`cutSurfaceTiles`'s `cut` product) over the base globe — the OTHER half
+   * of the surface virtual texture, replacing the earlier page-table blend
+   * inside `earthRenderer`'s own fragment. Owns neither the tile atlas
+   * (`earthTileSubsystem`) nor the base globe's material/night/normal/cloud
+   * maps (`earthRenderer.getMapView`); both arrive as views on every
+   * `draw()` call. Excluded from `isEngineReady`, null-checked at use by
+   * `earthLayer`. Null until `initGpu` constructs it; released and
+   * re-nulled by `destroy()`.
+   */
+  earthSurfaceTileRenderer: EarthSurfaceTileRenderer | null;
+  /**
    * Flat-emissive resolved stars (the `spheres` branch of
    * `partitionStarsByResolution` — any star whose apparent size crosses
    * `STAR_RESOLVE_PX`, the Sun included) drawn into the `foreground:0`
-   * render-target row.  Same ('rgba16float', 'depth32float') format
-   * invariant as `earthRenderer`.  Owns a single non-dynamic uniform
-   * buffer, so same-frame draws through it clobber each other's uniforms
-   * (last write wins) — a known gap should two stars ever resolve at once;
+   * render-target row.  Same `foreground:0` format invariant as
+   * `earthRenderer` (see `renderTargetFormats.ts`).  Owns a single
+   * non-dynamic uniform buffer, so same-frame draws through it clobber
+   * each other's uniforms (last write wins) — a known gap should two
+   * stars ever resolve at once;
    * see `starSpheresLayer`'s module header for why the case is out of
    * reach today and what the real fix is.
    * Excluded from `isEngineReady` and null-checked at use.  Null until
@@ -457,18 +502,19 @@ export type EngineGpuHandles = {
    * mid-frame. `texturedBodiesLayer` draws the `textured` branch of
    * `partitionBodiesByPresentation` through it; the `bodyTextures` family's commit
    * routes each bitmap to `setMap` and its per-kind onRelease to `clearMap`. Same
-   * ('rgba16float', 'depth32float') `foreground:0` format invariant as
-   * `earthRenderer` / `planetRenderer`; excluded from `isEngineReady`.
+   * `foreground:0` format invariant as `earthRenderer` / `planetRenderer`
+   * (see `renderTargetFormats.ts`); excluded from `isEngineReady`.
    */
   texturedBodyRenderer: TexturedBodyRenderer | null;
   /**
    * The translucent planetary-ring renderer (Saturn's rings) — the overlay half
    * of the ring system, drawn LAST in the `(foreground:0, NEAR0)` group as a
    * two-sided translucent annulus that depth-tests against the opaque spheres
-   * but writes no depth and blends straight-alpha OVER. Its ('rgba16float',
-   * 'depth32float') pipeline formats match the `foreground:0` row like the sphere
-   * bodies. `ringsLayer` draws each resident `SCENE_RINGS` entry through it; the
-   * `bodyTextures` family's `saturn-ring` commit routes the radial strip to
+   * but writes no depth and blends straight-alpha OVER. Its pipeline formats
+   * match the `foreground:0` row like the sphere bodies (see
+   * `renderTargetFormats.ts`). `ringsLayer` draws each resident
+   * `SCENE_RINGS` entry through it; the `bodyTextures` family's
+   * `saturn-ring` commit routes the radial strip to
    * `setTexture` (alongside `texturedBodyRenderer.setRingTexture` for the
    * ring-on-planet shadow half). Excluded from `isEngineReady` and null-checked
    * at use. Null until `initGpu` constructs it; released and re-nulled by
@@ -478,11 +524,12 @@ export type EngineGpuHandles = {
   /**
    * The body-agnostic translucent cloud shell — a thin closed sphere drawn just
    * ABOVE the opaque surface in the `(foreground:0, NEAR0)` group, immediately
-   * after `earthLayer`: ('rgba16float', 'depth32float') formats, depth-tested
-   * against the globe but no depth write, straight-alpha OVER, the same profile as
-   * `ringRenderer`. The `bodyTextures` family's `earth:clouds` commit routes the
-   * colour+coverage map to `setTexture`; until one lands a 1×1 transparent
-   * placeholder keeps the shell invisible. Excluded from `isEngineReady`.
+   * after `earthLayer`: `foreground:0` formats (see `renderTargetFormats.ts`),
+   * depth-tested against the globe but no depth write, straight-alpha OVER,
+   * the same profile as `ringRenderer`. The `bodyTextures` family's
+   * `earth:clouds` commit routes the colour+coverage map to `setTexture`;
+   * until one lands a 1×1 transparent placeholder keeps the shell invisible.
+   * Excluded from `isEngineReady`.
    */
   cloudShellRenderer: CloudShellRenderer | null;
   /**

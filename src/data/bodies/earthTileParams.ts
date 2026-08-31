@@ -1,6 +1,6 @@
 /**
  * earthTileParams — named constants for Earth's surface virtual texture,
- * shared by the planner, page-table builder, tile subsystem and build
+ * shared by the walk (`cutSurfaceTiles`), the tile subsystem and the build
  * tool. Full rationale (cited inline as "Design N") lives in
  * docs/superpowers/specs/2026-07-28-earth-surface-virtual-texture.md.
  * Level `z`'s equirectangular width is `EARTH_EQUIRECT_BASE_WIDTH_PX << z`
@@ -22,24 +22,16 @@ export const EARTH_EQUIRECT_BASE_WIDTH_PX = 512;
  *  (Design 1.) */
 export const EARTH_TILE_PX = 512;
 
-/** Page-table window edge, in tiles at the finest planned level. 128 tiles
- *  covers the visible disc (~2500 km vs ~2000 km) with headroom; a
- *  full-grid table would be 537 MB at z13 against this 64 KB. (Design 2.) */
-export const EARTH_TILE_WINDOW_SIDE = 128;
-
-/** Physical atlas edge in pixels: 4096 / 512 = 8 slots per row, 64 slots, 67 MB.
- *  Against a working set of roughly 20 to 40 tiles, the headroom absorbs level
- *  transitions during motion. (Design 6.) */
-export const EARTH_TILE_ATLAS_SIDE = 4096;
+/** Physical atlas edge in pixels: 8192 / 512 = 16 slots per row, 256 slots,
+ *  268 MB. Deep z14–19 regional bands push the planner's pinned ancestor-chain
+ *  working set past the old 64-slot ceiling; 8192 is also WebGPU's baseline
+ *  maxTextureDimension2D, so no limit request is needed. (Design 6.) */
+export const EARTH_TILE_ATLAS_SIDE = 8192;
 
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than
  *  the asset queue's: many small streaming fetches during flight (~33 KB each),
  *  not a handful of big one-shot boot fetches. (Design 4.) */
 export const EARTH_TILE_CONCURRENCY = 4;
-
-/** Per-tile fade-in against the whole-globe base, in ms. The same duration the
- *  galaxy thumbnail crossfade uses. (Design 5.) */
-export const EARTH_TILE_FADE_MS = 400;
 
 /** WGS84 equatorial circumference in metres — the numerator of every
  *  metres-per-texel figure on the ladder. */
@@ -54,3 +46,48 @@ export const EARTH_EQUATORIAL_CIRCUMFERENCE_M = 40075016.686;
  * the pyramid is one level deep.
  */
 export const EARTH_TILE_LOD_BIAS = 1;
+
+/** `bakeSurfaceTileMesh`'s grid subdivision per tile edge (Task 5, replacing
+ *  the page-table window as the constant this file owns for the tile-detail
+ *  path). 8 -> 64 quads / 384 corner-expanded vertices per tile: enough that
+ *  the baked curvature doesn't facet at typical viewing distance (the normal
+ *  map supplies fine relief on top), cheap enough that a frame's worth of
+ *  cut tiles re-uploads in full every draw (see earthSurfaceTileRenderer.ts). */
+export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 8;
+
+/** `createSurfaceTileMeshCache`'s LRU capacity, in distinct tile ids. Sized
+ *  off the atlas's own slot count rather than picked independently: several
+ *  leaves at different pyramid depths can share one resident ANCESTOR's
+ *  atlas slot (the fallback `cutSurfaceTiles` resolves), so a frame's `cut`
+ *  can list more distinct (z,x,y) meshes than the atlas has slots. 2x the
+ *  atlas capacity is headroom against that fan-out while staying cheap --
+ *  each entry is a handful of small typed arrays, not GPU memory. */
+export const EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY =
+  2 * (EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX) ** 2;
+
+/**
+ * Base-globe descent-fade band, in camera altitude above the surface (km).
+ * The detail-tile mesh fully covers the visible cap once resident, and the
+ * base globe's non-RTC f32 depth jitters at low altitude, stochastically
+ * punching through the tiles — so the globe fades out ahead of that fight.
+ * 300 km completes the fade far above the few-km altitudes where the jitter
+ * becomes visible; 150 km sits far below tile engagement, so tiles are
+ * always resident by the time the globe is gone. See `baseGlobeFadeAlpha`.
+ */
+export const EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM = 300;
+
+/** Lower edge (alpha 0) of the base-globe fade band — see
+ *  `EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM`. */
+export const EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM = 150;
+
+/**
+ * Crossfade duration, in milliseconds of REAL time (`performance.now()`,
+ * never sim time -- a paused or scaled sim clock must not stall or distort
+ * the fade), a freshly-landed detail tile takes to blend in over the
+ * coarser ancestor imagery it replaces. Long enough to hide the graded-
+ * differently band boundaries (BMNG-derived z4-7, EOX z8-13, GeoDanmark
+ * z14-19) popping; short enough that a fast descent doesn't trail visible
+ * ghosting. See `earthSurfaceTileRenderer.ts`'s per-tile weight and
+ * `earthSurfaceTile/fragment.wesl`'s dual-sample mix.
+ */
+export const EARTH_TILE_CROSSFADE_MS = 400;

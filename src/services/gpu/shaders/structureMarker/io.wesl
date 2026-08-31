@@ -99,7 +99,7 @@ struct VsOut {
   // @builtin(instance_index).  Consumed only by the ringPick fragment
   // (offscreen r32uint picking pass), which packs it together with
   // SourceUniforms.sourceCode into the canonical
-  // (sourceCode << 27) | (structureIndex + PICK_SENTINEL_OFFSET) identity.
+  // (sourceCode << 26) | (structureIndex + PICK_SENTINEL_OFFSET) identity.
   //
   // The visual halo + ring fragments ignore it; it costs one extra
   // flat-interpolated u32 per vertex output and lets both pipelines

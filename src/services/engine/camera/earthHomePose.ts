@@ -68,7 +68,7 @@ export const HOME_TERMINATOR_OFFSET_RAD = (Math.PI / 180) * 60;
 
 export function earthHomePose(simDays: number, fovYRad: number, frameBasis?: Mat3): CameraPose {
   const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
-  const { target, distance } = bodyLikeFraming(earthPos, SCENE_EARTH.radiusKm, fovYRad);
+  const { target, distance } = bodyLikeFraming(earthPos, SCENE_EARTH.radiusM, fovYRad);
 
   // `s` is the sun→Earth (pure-sunward) unit direction; `t` is perpendicular to
   // it and horizontal in the equatorial frame (never degenerate — Earth never

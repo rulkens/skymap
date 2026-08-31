@@ -396,11 +396,12 @@ export const DEFAULT_ABS_MAG_LIMIT = -19;
  * Master toggle for the 3D scalar-field volume overlay defaults ON.
  *
  * The overlay renders additively into the same HDR offscreen target as the
- * galaxy points pass.  At startup no fields are registered yet (the caller
- * must call `addVolumeField` to load a cube), so this default has no visual
- * effect until the first field arrives.  Defaulting to `true` means the
- * overlay is ready to render as soon as the first field is added — the user
- * doesn't have to hunt for a master toggle to see anything.
+ * galaxy points pass.  At startup no fields are registered yet (a caller
+ * must load a cube via `handle.volumes.add` or a volume slot commit), so
+ * this default has no visual effect until the first field arrives.
+ * Defaulting to `true` means the overlay is ready to render as soon as the
+ * first field is added — the user doesn't have to hunt for a master toggle
+ * to see anything.
  *
  * Per-field `enabled` and `intensity` controls are the fine-grained knobs;
  * this flag is the coarser user-facing "hide all volumes" emergency off.
@@ -475,16 +476,13 @@ export const DEFAULT_FLOW: FlowSettings = {
   boundaryFadeWidth: SOURCE_REGISTRY[Source.Flow].boundaryFadeWidth,
 };
 
-// ── Debug overlays ─────────────────────────────────────────────────────────
+// ── Camera lens ───────────────────────────────────────────────────────────────
 
-/** Pick-buffer debug overlay starts off.  See `EngineSettingsState.debug.showPickBuffer`. */
-export const DEFAULT_SHOW_PICK_BUFFER = false;
-
-/** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
-export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
-
-/** Orbit-trail impostor overlay starts off.  See `EngineSettingsState.debug.showOrbitTrailImpostor`. */
-export const DEFAULT_SHOW_ORBIT_TRAIL_IMPOSTOR = false;
+/**
+ * Default vertical field of view, in degrees — seeds `settings.camera.fovDeg`
+ * and, via `cameraFraming.ts`'s `DEFAULT_FOV_Y_RAD`, the bootstrap lens.
+ */
+export const DEFAULT_FOV_DEG = 60;
 
 // ── Camera orientation frame ─────────────────────────────────────────────────
 

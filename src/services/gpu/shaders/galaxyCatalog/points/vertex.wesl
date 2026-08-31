@@ -1,8 +1,8 @@
 // points/vertex.wesl — billboard vertex stage for the points pipeline.
 //
-// Shared by both renderers: the visual PointRenderer compiles this
+// Shared by both renderers: the visual GalaxyPointRenderer compiles this
 // alongside 'colorFragment.wesl' for the additive-blended display
-// pass; the offscreen PickRenderer compiles it alongside
+// pass; the offscreen GalaxyPickRenderer compiles it alongside
 // 'pickFragment.wesl' for the r32uint picking pass. Both pipelines
 // build their OWN GPUShaderModule from this same source — never share
 // a module across pipelines, because WebGPU's 'auto' bind-group-layout
@@ -22,7 +22,7 @@
 // pickFragment.wesl declares no bindings of its own — this vertex
 // module references '@group(0)' (Uniforms) and '@group(2)' (per-source
 // SourceUniforms). The colorFragment module additionally declares
-// '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade buffer
+// '@group(1)' (FadeUniforms). GalaxyPickRenderer binds a no-op fade buffer
 // at '@group(1)' so its pipeline layout matches the visual pipeline.
 
 import package::galaxyCatalog::points::io::Uniforms;
@@ -42,7 +42,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // buffers carry the layout described in 'points/io.wesl::Uniforms';
 // the visual pass writes the full struct each frame, and the pick pass
 // re-uses the same buffer (with a small in-place mutation to boost the
-// pick floor — see pickRenderer.ts).
+// pick floor — see galaxyPickRenderer.ts).
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 // ── @group(1) — FadeUniforms (declared but unused at vertex stage) ─
@@ -62,7 +62,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // Per-source bind groups dodge the 'queue.writeBuffer' race entirely
 // (different uniform buffers per source means writes to one don't
 // race against draws against another). The vertex stage reads
-// 'source.sourceCode' to compose '(sourceCode << 27u) | instance_index'
+// 'source.sourceCode' to compose '(sourceCode << 26u) | instance_index'
 // for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 
@@ -109,7 +109,7 @@ fn vs(
   // the gated triangle land at NDC (2,2,2) and the GPU drops the primitive.
 
   // Recover the per-instance packed identity for the pick path. Bits
-  // 27..31 = 5-bit 'source.sourceCode' (this draw's galaxy catalog, set per-
+  // 26..31 = 6-bit 'source.sourceCode' (this draw's galaxy catalog, set per-
   // source via the @group(2) bind group); bits 0..26 = the GPU's
   // '@builtin(instance_index)' (local 0..count-1).
   let myPacked = packSelection(source.sourceCode, ii);

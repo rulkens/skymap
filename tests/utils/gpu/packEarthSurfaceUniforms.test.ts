@@ -43,11 +43,8 @@ const CLOUD_SHELL_RADIUS = 1.03;
 const AMBIENT_LIGHT = 0.03125;
 // Dyadic + distinct sentinel for the new 16-byte row's first slot (byte 112).
 const OCEAN_ROUGHNESS = 0.28125;
-// The page-table window. Small integers, mutually distinct and distinct from
-// every index they sit at, so a transposed pair or an off-by-one slot fails.
-const Z_WIN = 9;
-const WIN_X0 = 341;
-const WIN_Y0 = 77;
+// Dyadic + distinct sentinel for the descent-fade slot (byte 116).
+const BASE_GLOBE_ALPHA = 0.65625;
 
 describe('EarthSurfaceUniforms byte offsets', () => {
   it('packs a 128-byte / 32-f32 record with roughnessBase filling the vec3 tail @76', () => {
@@ -62,9 +59,7 @@ describe('EarthSurfaceUniforms byte offsets', () => {
       CLOUD_SHELL_RADIUS,
       AMBIENT_LIGHT,
       OCEAN_ROUGHNESS,
-      Z_WIN,
-      WIN_X0,
-      WIN_Y0,
+      BASE_GLOBE_ALPHA,
     );
     expect(rec.length).toBe(EARTH_SURFACE_UNIFORM_FLOATS);
     expect(rec.length).toBe(32); // 128 bytes
@@ -111,13 +106,13 @@ describe('EarthSurfaceUniforms byte offsets', () => {
     // dropped the 10th arg zeroes it and fails here. Dyadic sentinel ⇒ exact toBe.
     expect(rec[28]).toBe(OCEAN_ROUGHNESS); // byte 112
 
-    // The page-table window fills the row's remaining three slots (bytes
-    // 116..127) — the slots that used to be zeroed pad. Integers held as f32
-    // and read shader-side with `u32(...)`, so `toBe` is exact; the fragment
-    // resolves the window from these three alone, and a swapped pair would put
-    // every tile lookup in the wrong cell with no error anywhere.
-    expect(rec[29]).toBe(Z_WIN); // byte 116
-    expect(rec[30]).toBe(WIN_X0); // byte 120
-    expect(rec[31]).toBe(WIN_Y0); // byte 124
+    // baseGlobeAlpha — float index 29 (byte 116), the descent-fade
+    // multiplier the base-globe pass now carries. A packer that dropped the
+    // 11th arg zeroes it. Dyadic sentinel ⇒ exact toBe.
+    expect(rec[29]).toBe(BASE_GLOBE_ALPHA); // byte 116
+
+    // Indices 30..31 (bytes 120..127) are true padding.
+    expect(rec[30]).toBe(0);
+    expect(rec[31]).toBe(0);
   });
 });

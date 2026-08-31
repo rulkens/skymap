@@ -65,6 +65,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { camPosLocal } from '../../../utils/camera/camPosLocal';
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
+import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { minPickRadiusMpc } from './minPickRadiusMpc';
 
 export function drawFlooredSpherePick(
@@ -111,5 +112,11 @@ export function drawFlooredSpherePick(
     args.orientation,
     args.oblateness,
   );
-  pickRenderer.drawSphere(pass, { mvp, camPosLocal: camLocal, packedId: args.packedId });
+  // Narrow here, at the r32uint pick pass's GPU upload — composeBodyMvp
+  // returns f64 (see its header); this is a pure GPU-drawing consumer.
+  pickRenderer.drawSphere(pass, {
+    mvp: narrowMat4(mvp),
+    camPosLocal: camLocal,
+    packedId: args.packedId,
+  });
 }

@@ -1,23 +1,10 @@
 /**
- * volumeUpsampleLayer tests — gate predicate (five enabled() cases) and
- * draw behaviour (the call to volumeUpsample.draw + the defensive null-
- * guard).
+ * volumeUpsampleLayer — the gate predicate and the draw call, against cast stubs
+ * rather than a real GPUDevice.
  *
- * These tests deliberately do not stand up a real GPUDevice — all
- * GPU-typed values are cast stubs.  The split between `enabled` and
- * `draw` (from the `ContentLayer` interface) lets us assert the gate
- * predicate independently from the actual draw commands, which is the
- * main reason the interface exists.  See `ContentLayer.d.ts` for the
- * rationale.
- *
- * `draw`'s second argument is a `SlabView`, but `volumeUpsampleLayer`
- * doesn't read it — the upsample is a screen-space blit of an
- * already-rendered offscreen target, not a re-projected draw — so the
- * fixture below is an opaque placeholder.
- *
- * The implementation reads `ctx.renderTargets.viewOf('volume')` — the
- * half-res row of the offscreen target table — and the draw assertion
- * checks `drawSpy.mock.calls[0]![1]` equals that view.
+ * `draw`'s `SlabView` argument is an opaque placeholder here: the upsample is a
+ * screen-space blit of an already-rendered offscreen, not a re-projected draw, so
+ * the layer never reads it.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { volumeUpsampleLayer } from '../../../../../src/services/engine/frame/passes/volumeUpsampleLayer';
@@ -25,6 +12,23 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Mat4 } from 'wgpu-matrix';
+
+const FIXTURE_SPECS = [
+  {
+    id: 'hdr',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 1 },
+  },
+  {
+    id: 'volume',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 3,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  },
+];
 
 /**
  * Build a minimal ReadyFrameContext.  The `offscreenView` parameter
@@ -52,12 +56,15 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer: {} as never,
+    galaxyPointRenderer: {} as never,
     renderTargets: {
-      specs: [
-        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-        { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
-      ],
+      specs: FIXTURE_SPECS,
+      specOf: (id: string) => {
+        const spec = FIXTURE_SPECS.find((s) => s.id === id);
+        if (!spec) throw new Error(`fixture renderTargets: no spec row for '${id}'`);
+        return spec;
+      },
+      sizeOf: vi.fn(),
       viewOf: (id: string) => (id === 'volume' ? offscreenView : ({} as GPUTextureView)),
       // No row in this fixture declares depth, and the upsample layer never
       // asks for a depth view — throwing mirrors the real table's behaviour
@@ -65,7 +72,7 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       depthViewOf: (id: string): GPUTextureView => {
         throw new Error(`fixture renderTargets: no depth view for '${id}'`);
       },
-      resize: vi.fn(),
+      reconcile: vi.fn(),
       setSwapFormat: vi.fn(),
       destroy: vi.fn(),
     },
@@ -111,7 +118,10 @@ function livenessState(init: {
       volumeFieldRenderer: renderer,
       volumeUpsample: init.volumeUpsample ?? { draw: vi.fn(), destroy: vi.fn() },
     },
-    subsystems: { fades: { opacityOf: () => init.masterOpacity ?? 1 } },
+    subsystems: {
+      fades: { opacityOf: () => init.masterOpacity ?? 1 },
+      clipPlayer: { clipOpacityOf: () => 1 },
+    },
     settings: { volumes: { enabled: init.volumesEnabled ?? true, items: {} } },
   } as unknown as EngineState;
 }

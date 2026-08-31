@@ -29,6 +29,8 @@ export async function equirectFileSource(source: {
   readonly rawKey: RawDataKey;
   /** Verbatim attribution the licence requires. */
   readonly attribution: string;
+  /** Human-readable vintage, folded with `id`/`attribution` into `provenance`. */
+  readonly vintage: string;
 }): Promise<EarthImagerySource> {
   const path = rawDataPath(source.rawKey);
   const meta = await sharp(path, { limitInputPixels: false }).metadata();
@@ -47,6 +49,8 @@ export async function equirectFileSource(source: {
     id: source.id,
     attribution: source.attribution,
     maxLevel: earthLevelFittingWidth(sourceWidth),
+    coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
+    provenance: { sourceId: source.id, attribution: source.attribution, vintage: source.vintage },
 
     async readBox(box, widthPx, heightPx) {
       // Row 0 of the source is latitude +90, so the box's NORTH edge maps to

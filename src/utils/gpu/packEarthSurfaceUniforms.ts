@@ -2,7 +2,7 @@
  * packEarthSurfaceUniforms — pure packer for the 128-byte `EarthSurfaceUniforms`
  * struct (`shaders/lib/sphere.wesl`).
  *
- * The photoreal-Earth surface pass binds one per-draw uniform buffer carrying
+ * The photoreal-Earth base-globe pass binds one per-draw uniform buffer carrying
  * the lit-body prefix (MVP + body-local sun direction) plus the physically-based
  * shading parameters its fragment needs: a roughness base, the Fresnel F0, the
  * sun irradiance, and a cloud-shadow strength. This is the single source of
@@ -41,15 +41,14 @@
  * Earth-scoped override of the `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`), which
  * the surface fragment reads in place of that const.
  *
- * ## zWin / winX0 / winY0 — the page-table window
+ * ## No page-table window (Task 5)
  *
- * `zWin` (pyramid level) and `winX0`/`winY0` (the window's origin tile at that
- * level) let the fragment turn a surface uv into a page-table cell; they fill
- * `oceanRoughness`'s row rather than growing a fourth. Carried as `f32` (not
- * `u32`) so the packer stays one `Float32Array` with no second typed-array view
- * to drift out of sync. All-zero is the identity — a caller with no plan yet
- * passes zeros and draws exactly the picture Earth draws without the virtual
- * texture.
+ * This packer used to carry the page-table window (`zWin`/`winX0`/`winY0`) and
+ * a debug LOD-tint toggle in `oceanRoughness`'s row. Both died with the page
+ * table itself — tile detail now draws through a separate renderer
+ * (`earthSurfaceTileRenderer`) with its own per-tile addressing, and this
+ * shader has no per-fragment residency source left to visualise a LOD tint
+ * over. The struct is back to its pre-virtual-texture 128 bytes.
  *
  * ## Byte layout (uniform address space) — 128 bytes / 32 f32
  *
@@ -63,9 +62,8 @@
  *   f32 26     (byte 104..107): cloudShellRadius (unit-sphere shell radius)
  *   f32 27     (byte 108..111): ambientLight (night-side floor; Earth-scoped)
  *   f32 28     (byte 112..115): oceanRoughness (open-water GGX roughness; Earth-scoped)
- *   f32 29     (byte 116..119): zWin (page-table window level; read as u32)
- *   f32 30     (byte 120..123): winX0 (window origin west column at zWin; as u32)
- *   f32 31     (byte 124..127): winY0 (window origin north row at zWin; as u32)
+ *   f32 29     (byte 116..119): baseGlobeAlpha (descent-fade multiplier under the tile cut)
+ *   f32 30..31 (byte 120..127): padding (zeroed)
  *
  * @param mvp                 16-element column-major MVP (from `composeBodyMvp`).
  * @param sunDirLocal         Sun direction in the body's local frame.
@@ -82,16 +80,17 @@
  * @param oceanRoughness      Open-water GGX perceptual roughness (the ocean
  *                            glint breadth); Earth-scoped override of the
  *                            `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`.
- * @param zWin                Page-table window level (`EarthTilePlan.zWin`).
- * @param winX0               Window origin tile at `zWin`: west column.
- * @param winY0               Window origin tile at `zWin`: north row.
+ * @param baseGlobeAlpha      Base-globe descent-fade multiplier (see
+ *                            `baseGlobeFadeAlpha`) — 1 outside the fade band
+ *                            or before the tile path engages, dissolving to
+ *                            0 as the resident tile cut takes over the cap.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of `EarthSurfaceUniforms` — 16 mvp + 4 (sun+rough) + 4 (cam+f0) + 4
- *  (irradiance/cloud/ambient) + 4 (oceanRoughness + the page-table window). */
+ *  (irradiance/cloud/ambient) + 4 (oceanRoughness + 3 pad). */
 export const EARTH_SURFACE_UNIFORM_FLOATS = 32;
 
 export function packEarthSurfaceUniforms(
@@ -105,9 +104,7 @@ export function packEarthSurfaceUniforms(
   cloudShellRadius: number,
   ambientLight: number,
   oceanRoughness: number,
-  zWin: number,
-  winX0: number,
-  winY0: number,
+  baseGlobeAlpha: number,
 ): Float32Array {
   const out = new Float32Array(EARTH_SURFACE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -122,10 +119,7 @@ export function packEarthSurfaceUniforms(
   out[26] = cloudShellRadius; // byte 104 — the shadow shell's local radius
   out[27] = ambientLight; // byte 108 — night-side floor, fills the former pad
   out[28] = oceanRoughness; // byte 112 — open-water GGX roughness, new 16-byte row
-  // The page-table window fills the row's remaining three slots — integers held
-  // as f32, read shader-side with u32(...). All-zero is the identity.
-  out[29] = zWin; // byte 116 — window level
-  out[30] = winX0; // byte 120 — window origin west column at zWin
-  out[31] = winY0; // byte 124 — window origin north row at zWin
+  out[29] = baseGlobeAlpha; // byte 116 — descent-fade multiplier under the tile cut
+  // Indices 30..31 stay the Float32Array's zero fill (true padding).
   return out;
 }

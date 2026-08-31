@@ -2,7 +2,7 @@
  * VolumeFieldRenderer — public handle for the multi-field 3D scalar-
  * volume renderer.  Owns the WebGPU pipeline, the per-field bind groups,
  * and the per-field registry; consumers upload / unload cubes (keyed by
- * field id, mirroring `pointRenderer.upload`/`unload`, which key by
+ * field id, mirroring `galaxyPointRenderer.upload`/`unload`, which key by
  * galaxy-catalog id), and
  * the renderer READS per-field settings each frame via `draw(settingsOf)`.
  * The user-tunable knobs (enabled, intensity, palette, contrast,

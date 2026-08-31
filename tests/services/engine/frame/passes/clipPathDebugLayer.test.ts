@@ -40,7 +40,7 @@ function makeCtx(): ReadyFrameContext {
     nearMpc: near,
     farMpc: far,
     vp: near0Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: true,
   };
@@ -65,7 +65,7 @@ function makeCtx(): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer: {} as never,
+    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
     texturedDisks: {} as never,
   };

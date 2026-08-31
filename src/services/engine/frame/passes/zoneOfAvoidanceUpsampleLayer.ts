@@ -1,49 +1,28 @@
 /**
- * zoneOfAvoidanceUpsampleLayer — the consumer half of the ZoA guide band:
- * additively composites the reduced-res `zoa` offscreen (`zoneOfAvoidanceLayer`'s
- * raymarch) into HDR, then draws the full-res curved lettering in the same
- * HDR pass — MSDF text at reduced res would blur past legibility, so it
- * can't ride the producer's reduced-res target. Both halves gate on
- * `deriveZoneOfAvoidanceLiveness`, so this layer never composites (or
- * captions) an offscreen the producer skipped this frame, and never opens
- * against a null renderer.
+ * zoneOfAvoidanceUpsampleLayer — composites the reduced-res `zoa` offscreen
+ * into HDR, then draws the full-res curved lettering via `postBlit` — MSDF
+ * text at reduced res would blur past legibility, so captions can't ride
+ * the producer's reduced-res target.
+ *
+ * `postBlit` guards itself independently of the blit handle: the blit and
+ * the caption must never suppress each other.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { createUpsampleLayer } from './createUpsampleLayer';
 import { COSMO } from '../slabs';
 import { deriveZoneOfAvoidanceLiveness } from '../zoneOfAvoidanceLiveness';
 
-/** Curved-lettering circle radius, Mpc — visual-pass placeholder. */
-const LABEL_RADIUS_MPC = 40;
-
-export const zoneOfAvoidanceUpsampleLayer: ContentLayer = {
+export const zoneOfAvoidanceUpsampleLayer = createUpsampleLayer({
   name: 'zone-of-avoidance-upsample',
   slab: COSMO,
-  target: 'hdr',
-  blend: 'additive',
-
+  sourceTargetId: 'zoa',
+  handleOf: (state) => state.gpu.zoneOfAvoidanceUpsample,
   enabled(state, ctx) {
     return deriveZoneOfAvoidanceLiveness(state, ctx) !== null;
   },
-
-  draw(pass, view, ctx, state) {
-    // Own instance, not shared with volume's/Milky Way's (avoids braiding
-    // independently-gated subsystems); either handle can be null on its own.
-    if (state.gpu.zoneOfAvoidanceUpsample !== null) {
-      state.gpu.zoneOfAvoidanceUpsample.draw(pass, ctx.renderTargets.viewOf('zoa'));
-    }
-
-    if (state.gpu.zoneOfAvoidanceRenderer === null) return;
-    const opacity = deriveZoneOfAvoidanceLiveness(state, ctx);
-    if (opacity === null) return;
-    // Same band opacity as the composite — no independent toggle/fade.
-    state.gpu.zoneOfAvoidanceRenderer.drawLabels(
-      pass,
-      view.vp,
-      view.viewportPx,
-      state.settings.zoneOfAvoidance,
-      LABEL_RADIUS_MPC,
-      opacity,
-    );
+  postBlit(pass, view, _ctx, state) {
+    const r = state.gpu.label3DRenderer;
+    if (r === null || r.glyphCount() === 0) return;
+    r.draw(pass, view.vp, view.viewportPx);
   },
-};
+});

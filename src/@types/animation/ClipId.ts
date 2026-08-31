@@ -14,6 +14,7 @@ export type ClipId =
   | 'flyout'
   | 'earthFlyout'
   | 'earthUniverseLoop'
+  | 'earthCosmicWebLoop'
   | 'flowOrbit'
   | 'flyPathDemo'
   | 'famousFlythrough'

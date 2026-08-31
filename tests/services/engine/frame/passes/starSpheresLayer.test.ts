@@ -46,10 +46,11 @@ import type { PositionedStar } from '../../../../../src/@types/scene/PositionedS
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
-// object identity and (b) hand the renderer a recognisable Float32Array. The
-// real composition math is covered by composeBodyMvp's own tests.
+// object identity and (b) hand the layer a recognisable Float64Array — real
+// composeBodyMvp returns f64; the layer narrows its own copy at the GPU draw
+// call. The real composition math is covered by composeBodyMvp's own tests.
 vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float32Array>(() => new Float32Array(16)),
+  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
 
@@ -131,7 +132,7 @@ function makeNear0View(camPos: Vec3): SlabView {
     nearMpc: 0.0005,
     farMpc: 500,
     vp: f64Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
     precision: 'f64',
     reversedZ: false,
   };
@@ -214,10 +215,10 @@ describe('starSpheresLayer.draw', () => {
     // The load-bearing seam: first arg is the slab's Float64Array vp, NOT view.vp.
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
-    // Position, render origin, and the km→Mpc radius carried through.
+    // Position, render origin, and the m→Mpc radius carried through.
     expect(call[1]).toBe(SUN.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    expect(call[3]).toBe(SUN.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    expect(call[3]).toBe(SUN.radiusM * SCALE_UNITS.M_TO_MPC);
     // A star is a rotation-invariant emissive sphere — it forwards the identity.
     expect(call[4]).toBe(IDENTITY_MAT3);
 

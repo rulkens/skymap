@@ -90,7 +90,11 @@ function planFileRename(project: Project, resolved: ResolvedSymbol, newName: str
   if (anchor === null) return [];
 
   const { rel, prefix } = anchor;
-  const ext = extname(rel);
+  // `.d.ts` is ONE extension, but `extname` only ever sees the last dot and
+  // returns `.ts` — leaving a declaration file's basename as `Foo.d`, which can
+  // never equal its symbol. Every `src/@types/**` rename then silently skipped
+  // its file move while the identifier rename reported success.
+  const ext = rel.endsWith('.d.ts') ? '.d.ts' : extname(rel);
   const basename = rel.slice(dirname(rel).length + 1, rel.length - ext.length);
   if (basename !== resolved.name) return [];
 

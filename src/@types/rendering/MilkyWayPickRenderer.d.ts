@@ -9,7 +9,7 @@
  * apparent pixels, floored at the pick-widened point size — the same
  * derivation galaxy points use, so the hit target always agrees with the
  * rendered frame). The identity it writes is
- * `(Source.MilkyWay << 27) | (0 + PICK_SENTINEL_OFFSET)`; the MW carries
+ * `(Source.MilkyWay << 26) | (0 + PICK_SENTINEL_OFFSET)`; the MW carries
  * no per-record `localIdx`, so it is always 0.
  *
  * Unlike the COSMO pickables (rings, disks — which inherit the `@group(0)`

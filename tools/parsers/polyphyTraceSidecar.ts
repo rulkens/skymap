@@ -10,6 +10,7 @@
 
 import type { ScalarFieldFrameKind } from '../../src/@types/data/volume/ScalarFieldFrameKind';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { PackedTraceInputLayout } from '../../src/utils/volume/packLogTraceVoxels';
 
 export type PolyphyTraceSidecar = {
   readonly dims: Vec3;
@@ -18,6 +19,14 @@ export type PolyphyTraceSidecar = {
   readonly voxelSizeMpc: Vec3;
   readonly frame: ScalarFieldFrameKind;
   readonly valueUnits?: string;
+  /**
+   * How the paired `.npy`'s bytes are laid out — same vocabulary
+   * `packLogTraceVoxels` already uses. Optional: sidecars written before this
+   * field existed omit it, and `compareTraceCubes.ts` treats that as unknown
+   * rather than defaulting (a silent default is the X1 bug this field exists
+   * to prevent — see final-review.md §A/X1).
+   */
+  readonly voxelOrder?: PackedTraceInputLayout;
   readonly provenance?: Record<string, unknown>;
 };
 
@@ -30,6 +39,11 @@ const ALLOWED_FRAMES: Record<ScalarFieldFrameKind, true> = {
   galactic: true,
 };
 
+const ALLOWED_VOXEL_ORDERS: Record<PackedTraceInputLayout, true> = {
+  'c-order': true,
+  'x-fastest': true,
+};
+
 // Shared by dims / origin_mpc / voxel_size_mpc (rule 4): same "3 finite
 // numbers" shape check, with an optional extra per-element predicate for
 // the fields that also demand positive (voxel sizes) or positive-integer
@@ -39,7 +53,8 @@ function assertVec3(fieldName: string, raw: unknown, extra?: (n: number) => bool
     Array.isArray(raw) &&
     raw.length === 3 &&
     raw.every(
-      (v): v is number => typeof v === 'number' && Number.isFinite(v) && (extra === undefined || extra(v)),
+      (v): v is number =>
+        typeof v === 'number' && Number.isFinite(v) && (extra === undefined || extra(v)),
     );
   if (!valid) {
     throw new Error(
@@ -85,6 +100,21 @@ export function parsePolyphyTraceSidecar(text: string): PolyphyTraceSidecar {
   }
   const frame = obj.frame as ScalarFieldFrameKind;
 
+  // Present-but-invalid is an error (like frame above); absent is fine — see the
+  // type's own doc comment for why an absent field must stay absent, not defaulted.
+  let voxelOrder: PackedTraceInputLayout | undefined;
+  if ('voxel_order' in obj) {
+    if (
+      typeof obj.voxel_order !== 'string' ||
+      !Object.hasOwn(ALLOWED_VOXEL_ORDERS, obj.voxel_order)
+    ) {
+      throw new Error(
+        `parsePolyphyTraceSidecar: unknown voxel_order ${JSON.stringify(obj.voxel_order)} (expected ${Object.keys(ALLOWED_VOXEL_ORDERS).join(' | ')})`,
+      );
+    }
+    voxelOrder = obj.voxel_order as PackedTraceInputLayout;
+  }
+
   return {
     dims,
     originMpc,
@@ -94,6 +124,7 @@ export function parsePolyphyTraceSidecar(text: string): PolyphyTraceSidecar {
     // than an explicit `undefined` — matches decodeScalarField's
     // velocityStats precedent (scalarFieldFormat.ts).
     ...(typeof obj.value_units === 'string' ? { valueUnits: obj.value_units } : {}),
+    ...(voxelOrder !== undefined ? { voxelOrder } : {}),
     ...(typeof obj.provenance === 'object' && obj.provenance !== null
       ? { provenance: obj.provenance as Record<string, unknown> }
       : {}),

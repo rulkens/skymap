@@ -18,9 +18,9 @@
  * `draw`/`pickRing` partition descriptors by category and issue one
  * instanced draw per non-empty bucket, binding that category's
  * SourceUniforms at `@group(2)`.  The uniform carries the category's
- * 5-bit `sourceCode`, which the ringPick fragment composes into
- * `(sourceCode << 27) | structureIndex + PICK_SENTINEL_OFFSET` — the same
- * per-source pattern `pointRenderer` uses per galaxy catalog.  Buckets are
+ * 6-bit `sourceCode`, which the ringPick fragment composes into
+ * `(sourceCode << 26) | structureIndex + PICK_SENTINEL_OFFSET` — the same
+ * per-source pattern `galaxyPointRenderer` uses per galaxy catalog.  Buckets are
  * data-driven from `STRUCTURE_IDS`, so a new structure source
  * needs no change here.
  *
@@ -163,7 +163,7 @@ export function createStructureMarkerRenderer(
   // swapped to ringPick.wesl's fsRingPick + colour target swapped to
   // r32uint + depth24plus added.  See the pick pipeline build below for
   // the full rationale; in short, this is the structure-marker sibling of the
-  // galaxy pick path in pickRenderer.ts.  The engine's pick pass will
+  // galaxy pick path in galaxyPickRenderer.ts.  The engine's pick pass will
   // call `pickRing(pass)` immediately after the per-source galaxy
   // draws, reusing the caller's @group(0) (CameraUniforms) binding.
   let ringPickPipeline: GPURenderPipeline | null = null;
@@ -172,7 +172,7 @@ export function createStructureMarkerRenderer(
   let fadeBuffer: GPUBuffer | null = null;
   let fadeBindGroup: GPUBindGroup | null = null;
   // Dummy zeroed FadeUniforms for the pick pipeline.  Same pattern as
-  // pickRenderer.ts's dummy fade group: the pick fragment
+  // galaxyPickRenderer.ts's dummy fade group: the pick fragment
   // doesn't read fade.opacity (the pick texture is integer + has no
   // observable alpha), but the pipeline layout still declares the
   // canonical fadeBgl at @group(1) so other passes' bound fade
@@ -388,7 +388,7 @@ export function createStructureMarkerRenderer(
         size: SOURCE_UNIFORM_BYTES,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
-      // Write the 5-bit source code at offset 0; rest stays zero.
+      // Write the 6-bit source code at offset 0; rest stays zero.
       const u32 = new Uint32Array(SOURCE_UNIFORM_BYTES / 4);
       u32[0] = STRUCTURE_ID_CODES[cat];
       device.queue.writeBuffer(buf, 0, u32);

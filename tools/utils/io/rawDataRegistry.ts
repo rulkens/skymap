@@ -12,7 +12,7 @@
 
 import { resolve } from 'node:path';
 
-import { BMNG_VINTAGE } from './bmngVintage';
+import { BMNG_VINTAGE } from './bmngVintage.ts';
 
 export type RawDataEntry = {
   readonly path: string;
@@ -264,6 +264,50 @@ export const RAW_DATA = {
     source: 'gitignored',
     description:
       'MCPM-extracted SDSS Cosmic Web tiers — `mcpm_sdss_d{2,4,8}.npy`. Produced once per VAC release by the Python extractor; mirrored to R2.',
+  },
+
+  // ─── Edenhofer local dust volume ───────────────────────────────────────
+
+  'edenhofer.dir': {
+    path: 'data/raw/edenhofer',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Edenhofer et al. 2024 parsec-scale dust map raw-data directory — holds the 3.25 GB mean_and_std_healpix.fits plus the official interp2box.py/interp2lbd.py resamplers.',
+  },
+  'edenhofer.cache-dir': {
+    path: 'data/raw/edenhofer/cache',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Per-tier mean/std .npy cubes produced by tools/volumes/extractDustCube.py (edenhofer_{mean,std}_{128,256,384}.npy), consumed by tools/volumes/buildDustVolume.ts.',
+  },
+
+  // ─── Polyphorm (MCPM rhizome sim exports) ─────────────────────────────
+
+  'polyphorm.dir': {
+    path: 'data/raw/polyphorm',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py, consumed by buildRhizomeVolume.ts.',
+  },
+
+  // ─── MCPM workbench (promoted dev-tool exports) ───────────────────────
+
+  'mcpm-workbench.dir': {
+    path: 'data/raw/mcpm-workbench',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Browser-downloaded polyphy-trace .npy+.json pairs exported from the MCPM workbench dev tool. The operator drops a pair here; tools/volumes/promoteWorkbenchExport.ts promotes one to public/data/scalar-field/v3/mcpm-workbench.scfd.',
+  },
+  'mcpm-workbench.promoted': {
+    path: 'data/seeds/mcpm_workbench_promoted.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "Committed pointer copy of the promoted export's polyphy-trace sidecar (mirrors famous.curated) — records exactly which workbench run/params produced the live mcpm-workbench.scfd cube.",
   },
 
   // ─── Milliquas (AGN/quasar compilation) ───────────────────────────────
@@ -871,6 +915,25 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
+  },
+
+  // ─── EOX s2cloudless (2016) — deep tile bands over regional patches ───
+
+  'eox.dir': {
+    path: 'data/raw/eox',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'EOX s2cloudless 2016 WMTS z13 tile harvest, one subdir per registry region (`tools/fetch/eoxRegions.ts`) — holds `<region>/<z>/<row>/<col>.jpg` under the WGS84 TMS grid. CC BY 4.0; the 2016 layer only (see README).',
+    fetcher: 'tools/fetch/fetchEoxTiles.ts',
+    readme: 'eox.readme',
+  },
+  'eox.readme': {
+    path: 'data/raw/eox/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the EOX s2cloudless harvest — upstream URL, tile-index convention, fetch date, licence.',
   },
 
   // ─── Constellations (d3-celestial stick-figure lines) ─────────────────

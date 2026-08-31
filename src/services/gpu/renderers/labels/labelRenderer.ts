@@ -68,7 +68,7 @@
 
 import type { GpuContext } from '../../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { Label } from '../../../../@types/rendering/Label';
+import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LabelRenderer } from '../../../../@types/rendering/LabelRenderer';
 import type { FontMetrics } from '../../../../@types/rendering/FontMetrics';
 import type { LoadedFontAtlases } from '../../../../@types/rendering/LoadedFontAtlases';
@@ -87,22 +87,14 @@ import {
   OCCLUSION_DEPTH_LAYOUT_DESC,
   createOcclusionDepthBindGroup,
 } from './occlusionDepthGroup';
+import {
+  LABEL_MAX_PX_DEFAULT,
+  LABEL_MIN_PX_DEFAULT,
+  LABEL_WORLD_EM_MPC_DEFAULT,
+} from '../../../../data/labels/labelSizingDefaults';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
-
-// ─── sizing defaults ───────────────────────────────────────────────────────
-
-/**
- * Defaults applied when a Label omits its sizing fields (see the
- * corresponding docstrings on the Label type).  Exported because the
- * label director's rect-based declutter reproduces the vertex shader's
- * `clamp(worldLenToPx(worldEmMpc), minPx, maxPx)` on the CPU — reading
- * the defaults from here keeps the two computations from drifting.
- */
-export const LABEL_WORLD_EM_MPC_DEFAULT = 0.01;
-export const LABEL_MIN_PX_DEFAULT = 8;
-export const LABEL_MAX_PX_DEFAULT = 64;
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 
@@ -231,6 +223,10 @@ export function createLabelRenderer(
   // by `setLabels`; read by `draw`, `glyphCount`, `labelCount`.
   let currentGlyphCount = 0;
   let currentLabelCount = 0;
+  // The rows `setLabels` actually packed, retained so the pick path can derive
+  // its hit rects from exactly what is on screen — `maxLabels`-truncated tail
+  // included, since a dropped row draws nothing and must not be clickable.
+  let currentLabels: readonly Label2D[] = [];
 
   // ── GPU resources (null when device is null) ─────────────────────────────
   //
@@ -260,7 +256,7 @@ export function createLabelRenderer(
   if (device) {
     // ── Bind group layout ────────────────────────────────────────────────
     //
-    // Four bindings matching the labels shaders (io.wesl + fragment.wesl):
+    // Four bindings matching the labels shaders (io.wesl + lib/msdf.wesl):
     //   0 → uniform buffer  (CameraUniforms, vertex-visible)
     //   1 → read-only storage buffer (LabelData[], vertex-visible)
     //   2 → atlas texture   (fragment-visible)
@@ -280,7 +276,7 @@ export function createLabelRenderer(
           binding: 2,
           visibility: GPUShaderStage.FRAGMENT,
           // viewDimension '2d-array' matches the shader's
-          // `texture_2d_array<f32>` declaration in fragment.wesl.
+          // `texture_2d_array<f32>` declaration in lib/msdf.wesl.
           // Mismatching this with the shader-side binding type
           // triggers a pipeline-creation-time validation error.
           texture: { sampleType: 'float', viewDimension: '2d-array' },
@@ -484,11 +480,12 @@ export function createLabelRenderer(
 
   // ── public methods (closures over the locals above) ────────────────────
 
-  function setLabels(labels: readonly Label[]): void {
+  function setLabels(labels: readonly Label2D[]): void {
     currentGlyphCount = 0;
     currentLabelCount = 0;
 
     const count = Math.min(labels.length, maxLabels);
+    currentLabels = count === labels.length ? labels : labels.slice(0, count);
     for (let li = 0; li < count; li++) {
       const label = labels[li]!;
       // Each label specifies its own font; layout reads the font's
@@ -667,7 +664,7 @@ export function createLabelRenderer(
   // steady-state cost is a Map lookup.  Unbounded by design: the key
   // space is the label catalog (~hundreds), not user input.
   const measureCache = new Map<string, LabelBBox | null>();
-  function measure(label: Label): LabelBBox | null {
+  function measure(label: Label2D): LabelBBox | null {
     const alignX = label.alignX ?? 'left';
     const alignY = label.alignY ?? 'baseline';
     const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
@@ -694,6 +691,7 @@ export function createLabelRenderer(
     draw,
     glyphCount,
     labelCount,
+    packedLabels: () => currentLabels,
     destroy,
   };
   // `satisfies Renderer` confirms the shared label+destroy contract at

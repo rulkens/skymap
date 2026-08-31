@@ -57,11 +57,11 @@ import { flowFieldFromCube } from '../../resources/flowFieldFromCube';
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { clampFlowParams } from '../../../../utils/clampFlowParams';
 import { createReseedLatch } from '../../../../utils/createReseedLatch';
+import { flowFrameDeltaSec } from '../../../../utils/flowFrameDeltaSec';
 import {
   TRAIL,
   MAX_PARTICLES,
-  DT,
-  HEAD_STEP_SCALE,
+  HEAD_SPEED_SCALE,
   RIBBON_WIDTH,
 } from '../../../../data/flow/flowFieldConstants';
 import flowComputeWgsl from '../../shaders/flow/compute.wesl?static';
@@ -226,8 +226,9 @@ export function createFlowFieldRenderer(init: {
   // mat4.identity() — wgpu-matrix's create() returns zeros, but this default
   // must be identity (it's read by encodeCompute before a field loads).
   let modelMatrix = mat4.identity();
-  // Travelling-pulse accumulator for streamline mode; an internal per-frame
-  // counter advanced by DT * flowSpeed, kept off the settings store.
+  // Travelling-pulse accumulator for streamline mode; an internal counter
+  // advanced by dtSec * flowSpeed (real elapsed seconds), kept off the
+  // settings store.
   let phase = 0;
   // Per-frame counter, self-incremented each encodeCompute (mirrors
   // volumeFieldRenderer's internal frame counter — there is no engine-level
@@ -235,6 +236,9 @@ export function createFlowFieldRenderer(init: {
   // wander vary frame to frame. Stored as a u32 (wraps at 2^32 via `>>> 0`);
   // the WGSL reads it as `Prm.frame: u32`.
   let frame = 0;
+  // Timestamp of the previous encodeCompute; null until the first call. See
+  // flowFrameDeltaSec for what that null means.
+  let lastNowMs: number | null = null;
   // Built in upload once the velocity texture view + sampler exist.
   let computeBindGroup: GPUBindGroup | null = null;
 
@@ -297,17 +301,20 @@ export function createFlowFieldRenderer(init: {
       return field !== null;
     },
 
-    encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings): void {
+    encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings, nowMs: number): void {
       if (field === null || !computeBindGroup) return;
       // Clamp every knob to its GPU-safe bound once, at the point of use — the
       // store holds raw intent; this renderer owns its buffer + loop limits.
       const f = clampFlowParams(flow);
       const n = f.count;
 
-      // Advance the internal per-frame counter + the streamline pulse phase
-      // (phase is harmless in advect mode).
+      // Elapsed seconds drive the streamline pulse phase (harmless in advect
+      // mode) and, below, both the age step and the head march distance — so
+      // speed and lifetime read in seconds whatever the render frame rate.
       frame = (frame + 1) >>> 0;
-      phase += DT * f.flowSpeed;
+      const dtSec = flowFrameDeltaSec(nowMs, lastNowMs);
+      lastNowMs = nowMs;
+      phase += dtSec * f.flowSpeed;
 
       // Write compPrm ONCE — serves both the optional seed pass and the
       // integrate pass (see module header). The seed kernel reads only n / frame / bias;
@@ -315,11 +322,15 @@ export function createFlowFieldRenderer(init: {
       // in-shader, so always packing them is harmless.
       //   dt f32@0, trailStep f32@4, headStep f32@8, n u32@12, frame u32@16,
       //   mode u32@20, bias f32@24, wander f32@28 (buffer padded to 48 bytes).
-      prmF32[0] = DT;
+      prmF32[0] = dtSec;
       // trailStep is already floored at MIN_TRAIL_STEP by clampFlowParams — the
       // single home of the GPU-hang guard.
       prmF32[1] = f.trail;
-      prmF32[2] = f.flowSpeed * HEAD_STEP_SCALE;
+      // Grid units to march this frame = speed-per-second * elapsed seconds.
+      // The shader clamps `toGo = min(headStep, trailStep * TRAIL)` (compute.wesl),
+      // so a long dtSec after a stall is capped, never spun into a long loop —
+      // that clamp is what makes a variable headStep (and so a variable dtSec) safe.
+      prmF32[2] = f.flowSpeed * HEAD_SPEED_SCALE * dtSec;
       prmU32[3] = n;
       prmU32[4] = frame;
       prmU32[5] = modeCode(f);

@@ -5,12 +5,12 @@
  * interleaved vertex buffer, the CPU mirror of those bytes (so the
  * bias-correction subsystem can splice two slots and re-upload), the
  * per-source FadeUniforms buffer + bind group, and the per-source
- * SourceUniforms buffer + bind group carrying the 5-bit GPU identity.
+ * SourceUniforms buffer + bind group carrying the 6-bit GPU identity.
  * They are created together at upload, destroyed together at unload, and
  * every one of them outlives the frame that drew them.
  *
  * That storage life-cycle is a different concern from the pipeline
- * life-cycle.  `pointRenderer` owns things that exist once and never
+ * life-cycle.  `galaxyPointRenderer` owns things that exist once and never
  * change — shader modules, the render pipeline, the per-frame `@group(0)`
  * uniform buffer — and things that are recomputed every frame (the fade
  * opacity write, the visibility mask gate).  The store owns things that
@@ -28,11 +28,11 @@
  *
  *   - `loadedSources()` — the narrow feed the pick program consumes
  *     (vertex buffer + count + the raw SourceUniforms *buffer*, because
- *     `pickRenderer` builds its own bind group around those bytes with
+ *     `galaxyPickRenderer` builds its own bind group around those bytes with
  *     its own pipeline's layout — a bind group is not portable across
  *     pipelines).
  *   - `entries()` — the full draw-time record (fade buffer + both bind
- *     groups) so `pointRenderer.draw()` binds without reaching into
+ *     groups) so `galaxyPointRenderer.draw()` binds without reaching into
  *     store internals.
  *
  * Both iterate in `GALAXY_CATALOG_SOURCES` draw order, not upload order,
@@ -41,7 +41,7 @@
  *
  *   GalaxyCatalog → upload(id, …) → worker bake → GPU buffers + bind groups
  *                                                      ↓
- *                     pointRenderer.draw() ← entries() / pickRenderer ← loadedSources()
+ *                     galaxyPointRenderer.draw() ← entries() / galaxyPickRenderer ← loadedSources()
  *
  * @module
  */
@@ -56,7 +56,7 @@ import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUnifo
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/sources';
 import { cloneGalaxyCatalogForTransfer } from '../../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../../utils/worker/runDisposableWorker';
-import { SLOTS_PER_POINT } from './pointVertexLayout';
+import { SLOTS_PER_GALAXY_POINT } from './galaxyPointVertexLayout';
 
 // `?worker` emits the worker as a separate chunk and exports a class
 // whose `new` spawns it.  The bake runs off-thread to dodge the
@@ -106,7 +106,7 @@ export type BuildRunner = (
 // ─── Source code ↔ catalog id resolution ──────────────────────────────────────
 //
 // The public key is the string `GalaxyCatalogId`, but the GPU-facing
-// identity (the 5-bit `sourceCode` packed into the pick texture) and the
+// identity (the 6-bit `sourceCode` packed into the pick texture) and the
 // draw order (`GALAXY_CATALOG_SOURCES`) are numeric.  Both maps are derived
 // from `SOURCE_REGISTRY` so the catalog set + codes stay defined in exactly
 // one place — adding a galaxy catalog there extends both without a hardcoded
@@ -151,14 +151,14 @@ type LoadedSource = {
   /** Per-source FadeUniforms (opacity + pad) written once per frame. */
   fadeBuffer: GPUBuffer;
   fadeBindGroup: GPUBindGroup;
-  /** Per-source SourceUniforms (5-bit sourceCode + pad) written once at upload. */
+  /** Per-source SourceUniforms (6-bit sourceCode + pad) written once at upload. */
   sourceBuffer: GPUBuffer;
   sourceBindGroup: GPUBindGroup;
 };
 
 /**
  * One loaded catalog's GPU resources, in `GALAXY_CATALOG_SOURCES` draw
- * order, as `pointRenderer.draw()` binds them.  The CPU mirror stays
+ * order, as `galaxyPointRenderer.draw()` binds them.  The CPU mirror stays
  * private to the store — a draw pass has no business rewriting vertex
  * bytes.
  */
@@ -190,7 +190,7 @@ export type CatalogStore = {
     count: number;
     sourceBuffer: GPUBuffer;
   }>;
-  /** Full per-source draw essentials, in draw order, for `pointRenderer.draw()`. */
+  /** Full per-source draw essentials, in draw order, for `galaxyPointRenderer.draw()`. */
   entries(): IterableIterator<CatalogDrawEntry>;
   destroy(): void;
 };
@@ -331,7 +331,7 @@ export function createCatalogStore(init: {
       entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
 
-    // SourceUniforms: 5-bit sourceCode + per-source sbBoost +
+    // SourceUniforms: 6-bit sourceCode + per-source sbBoost +
     // per-source falloffHalfMpc + 4 B pad.  Written once here; the
     // values are constant per source so per-frame writes would be
     // wasted bytes.  See lib/sourceUniforms.wesl for the struct layout
@@ -410,7 +410,7 @@ export function createCatalogStore(init: {
       );
     }
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 10] = ratios[i]!;
+      entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 10] = ratios[i]!;
     }
     device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
@@ -426,7 +426,7 @@ export function createCatalogStore(init: {
       );
     }
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 11] = weights[i]!;
+      entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 11] = weights[i]!;
     }
     device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
@@ -449,8 +449,8 @@ export function createCatalogStore(init: {
         : Array.from(galaxyCatalogs.values());
     for (const entry of targets) {
       for (let i = 0; i < entry.count; i++) {
-        entry.interleaved[i * SLOTS_PER_POINT + 10] = 0;
-        entry.interleaved[i * SLOTS_PER_POINT + 11] = 0;
+        entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 10] = 0;
+        entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 11] = 0;
       }
       device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
     }

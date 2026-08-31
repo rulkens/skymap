@@ -5,7 +5,7 @@
  * Reads `state.data.structures` and emits structure labels — applying the
  * marker close-approach / far-distance fades, the featured + visibility gates,
  * and the ring-centre anchor. Famous-galaxy labels come from
- * `produceFamousLabels` instead — a split that also carries the deep-zoom
+ * `produceFamousGalaxyLabels` instead — a split that also carries the deep-zoom
  * exemption: THIS producer rides the `surveyDeepZoom` band (structure labels
  * dissolve with their rings on the descent into the solar system), while
  * famous labels stay visible with the famous points they name. The exemption
@@ -39,17 +39,19 @@
  * labels. This producer therefore emits EVERY surviving candidate, tagging each
  * with a
  * `prominencePx` (the ring's apparent radius) as the declutter sort key, and
- * the `labelDirectorSubsystem` declutters across ALL producers in its merge
+ * the `label2DDirector` declutters across ALL producers in its merge
  * step. Decluttering by apparent size (not a flat significance) keeps the
  * large structure under the camera while a small distant label sweeping past
  * during an orbit yields, instead of culling-then-releasing the structure
  * being inspected (flicker).
  */
 
-import type { Label } from '../../../@types/rendering/Label';
+import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
+import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import { STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -60,8 +62,8 @@ import { SCALE_FADE_BANDS } from './scaleFadeBands';
 export function produceStructureLabels(
   state: EngineState,
   ctx: ReadyFrameContext,
-): LabelProducerOutput {
-  const labels: Label[] = [];
+): Label2DProducerOutput {
+  const labels: Label2D[] = [];
 
   const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
@@ -75,7 +77,7 @@ export function produceStructureLabels(
   // fade reaches 0 continuously before this skip engages, so no pop.
   const camDistMpc = Math.hypot(cx, cy, cz);
   const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
-  if (surveyFade === 0) return { labels: [], lines: [], awake: false };
+  if (surveyFade === 0) return { labels: [], awake: false };
 
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
@@ -194,6 +196,13 @@ export function produceStructureLabels(
 
     labels.push({
       id: p.id,
+      // Byte-identical to what `ringPick.wesl` writes for this structure's own
+      // marker ring — the category's source code over the per-category index,
+      // both read from the store's single-sourced `categoryIndexOf`.
+      pickId: packSelection(
+        STRUCTURE_ID_CODES[p.category],
+        structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
+      ),
       // Structures anchor at the ring centre, centred on both axes (only
       // famous galaxies lift their label off the dot).
       worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
@@ -216,7 +225,7 @@ export function produceStructureLabels(
     });
   }
 
-  // Structures emit no anchor lines (only lifted famous labels do). No
+  // Structures emit no leaders (only lifted famous labels do). No
   // declutter here — the director de-collides across all producers.
-  return { labels, lines: [], awake: false };
+  return { labels, awake: false };
 }

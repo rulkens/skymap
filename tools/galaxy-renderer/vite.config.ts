@@ -17,9 +17,19 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
-export default defineConfig({
-  root: resolve(__dirname),
-  publicDir: resolve(__dirname, '../../public'),
+import { distDir } from '../utils/io/distDir.ts';
+import { toolPages } from '../utils/io/toolPages.ts';
+
+export default defineConfig(({ command }) => ({
+  root: resolve(import.meta.dirname),
+  // Build = the /galaxy/ subpath deploy (docs/DEPLOY.md). envDir at the repo
+  // root is load-bearing: with `root:` here Vite looks for env files locally
+  // and dataUrl() silently falls back to same-origin /data/. publicDir off in
+  // build: the main shell already serves those files; copying duplicates GBs.
+  base: command === 'build' ? `/${toolPages.galaxyRenderer}/` : '/',
+  publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
+  envDir: resolve(import.meta.dirname, '../../'),
+  build: { outDir: resolve(distDir, toolPages.galaxyRenderer), emptyOutDir: true },
   server: { port: 5400 },
   resolve: {
     // Cross-root WESL: the shared shader families live under the MAIN app's
@@ -48,14 +58,14 @@ export default defineConfig({
     preserveSymlinks: true,
     alias: ['milkyWay', 'additiveUpsample', 'bloom', 'compositor'].map((family) => ({
       find: new RegExp(`^(.*)/shaders/${family}/(.+\\.wesl(\\?.+)?)$`),
-      replacement: `${resolve(__dirname, `src/engine/shaders/${family}`)}/$2`,
+      replacement: `${resolve(import.meta.dirname, `src/engine/shaders/${family}`)}/$2`,
     })),
   },
   plugins: [
     viteWesl({
       extensions: [staticBuildExtension],
-      weslToml: resolve(__dirname, 'wesl.toml'),
+      weslToml: resolve(import.meta.dirname, 'wesl.toml'),
     }),
     react(),
   ],
-});
+}));

@@ -4,7 +4,7 @@
  * explicit method type, no internals leaked.
  */
 
-import type { Label } from './Label';
+import type { Label2D } from './Label2D';
 import type { LabelBBox } from './LabelBBox';
 import type { Vec2 } from '../math/Vec2';
 
@@ -26,7 +26,7 @@ export type LabelRenderer = {
    * fade band threshold). For the "you are here" use-case there will
    * typically be 1–3 labels so the cost is negligible.
    */
-  setLabels(labels: readonly Label[]): void;
+  setLabels(labels: readonly Label2D[]): void;
   /**
    * Ink bounding box the label's text will occupy, in atlas pixels
    * relative to the projected anchor (alignment shifts already applied
@@ -38,7 +38,7 @@ export type LabelRenderer = {
    * actual text rects rather than anchor points.  Memoized per
    * (font, alignment, text), so per-frame calls are cheap.
    */
-  measure(label: Label): LabelBBox | null;
+  measure(label: Label2D): LabelBBox | null;
   /**
    * Issue the label draw call into an in-flight render pass.  Must be
    * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
@@ -62,6 +62,13 @@ export type LabelRenderer = {
   glyphCount(): number;
   /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
   labelCount(): number;
+  /**
+   * The label rows `setLabels` actually packed — the drawn set, `maxLabels`
+   * truncation applied. The pick path derives its hit rects from this so a
+   * label is clickable exactly where it is legible; nothing else should read
+   * it (the GPU buffers hold the authoritative copy).
+   */
+  packedLabels(): readonly Label2D[];
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;
 };

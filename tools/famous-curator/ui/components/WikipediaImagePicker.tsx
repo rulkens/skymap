@@ -77,9 +77,7 @@ export function WikipediaImagePicker(props: WikipediaImagePickerProps) {
       {state.kind === 'idle' && (
         <p className="curator-wiki-picker__hint">Pick a galaxy to see Wikipedia images.</p>
       )}
-      {state.kind === 'loading' && (
-        <p className="curator-wiki-picker__hint">Loading…</p>
-      )}
+      {state.kind === 'loading' && <p className="curator-wiki-picker__hint">Loading…</p>}
       {state.kind === 'empty' && (
         <p className="curator-wiki-picker__hint">No Wikipedia images found.</p>
       )}

@@ -149,7 +149,6 @@ import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { fadeBand } from '../../../../utils/math/fadeBand';
-import { DEFAULT_FOV_Y_RAD } from '../../camera/cameraFraming';
 import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
 import {
   walkStarOctreeCut,
@@ -225,9 +224,9 @@ const STAR_PICK_MIN_RADIUS_PX = 3.5;
  * node whose box CENTRE has just crossed a clip plane can still paint on-screen
  * pixels, and the slack keeps it.
  *
- *   - `radiansPerPx = DEFAULT_FOV_Y_RAD / viewportHeightPx` — the angle one
- *     vertical pixel subtends, the exact conversion the vertex stage's
- *     pixel-size-to-clip math inverts.
+ *   - `radiansPerPx = fovYRad / viewportHeightPx` — the angle one vertical
+ *     pixel subtends at the LIVE camera FOV, the exact conversion the vertex
+ *     stage's pixel-size-to-clip math inverts.
  *   - `leafPxRadius = STAR_GLOW_MIN_PX · (sizePx / STAR_SIZE_REF_PX)` — the dot's
  *     glow radius in pixels, scaled by the user's dot size relative to the
  *     reference size (`DEFAULT_STAR_SIZE_PX`, the WESL STAR_SIZE_REF_PX twin).
@@ -243,8 +242,12 @@ const STAR_PICK_MIN_RADIUS_PX = 3.5;
  * per-draw path allocation-free.
  */
 const marginScratch = { leaf: 0, pick: 0 };
-function starCullMargins(sizePx: number, viewportHeightPx: number): typeof marginScratch {
-  const radiansPerPx = DEFAULT_FOV_Y_RAD / viewportHeightPx;
+function starCullMargins(
+  sizePx: number,
+  viewportHeightPx: number,
+  fovYRad: number,
+): typeof marginScratch {
+  const radiansPerPx = fovYRad / viewportHeightPx;
   const leafPxRadius = STAR_GLOW_MIN_PX * (sizePx / DEFAULT_STAR_SIZE_PX);
   marginScratch.leaf = leafPxRadius * radiansPerPx;
   marginScratch.pick = Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
@@ -286,7 +289,7 @@ function buildCutFrustum(
     cutPlanesPcScratch[b + 3] = planesMpc[b + 3]! * MPC_TO_PC;
   }
   const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
-  const radiansPerPx = DEFAULT_FOV_Y_RAD / ctx.canvasSize.height;
+  const radiansPerPx = ctx.fovYRad / ctx.canvasSize.height;
   const leafPxRadius = STAR_GLOW_MIN_PX * sizeScale;
   cutFrustumScratch.angularMarginRad =
     Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
@@ -866,6 +869,7 @@ function drawStream(
   view: SlabView,
   prep: PreparedStarCut,
   stream: StarDrawStream,
+  fovYRad: number,
 ): void {
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
   // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
@@ -873,7 +877,7 @@ function drawStream(
   // lossless — and derive the leaf angular slack once. Both are source-independent
   // and forwarded identically to every source's draw (the shared-vp invariant).
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
-  const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1]).leaf;
+  const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], fovYRad).leaf;
   for (const s of prep.sources) {
     const nodes = s[stream];
     if (nodes.count === 0) continue;
@@ -916,7 +920,7 @@ export const starCatalogLayer: ContentLayer = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
     // The LEAF stream: full-resolution point stars into HDR, per-glow knee.
-    drawStream(renderer, pass, view, prep, 'leaf');
+    drawStream(renderer, pass, view, prep, 'leaf', ctx.fovYRad);
   },
 
   // Pick aspect — stamps every visible LEAF star's packed identity into the
@@ -963,7 +967,7 @@ export const starCatalogLayer: ContentLayer = {
     // cull sphere must cover that inflated dot (a false cull here = an unclickable
     // edge star, forbidden), which the visual 1.5 px slack would undercover.
     const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
-    const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1]).pick;
+    const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], ctx.fovYRad).pick;
     for (const d of starPickLeafDraws(prep)) {
       pickRenderer.draw(pass, {
         source: d.source,

@@ -27,7 +27,7 @@ function makeCtx(): ReadyFrameContext {
     nearMpc: 0.01,
     farMpc: 50000,
     vp: Float64Array.from(vp),
-    originRelative: false,
+    frame: { kind: 'world-mpc', originRelative: false },
     precision: 'f32',
     reversedZ: false,
   };
@@ -51,7 +51,7 @@ function makeCtx(): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    renderer: {} as never,
+    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
     texturedDisks: {} as never,
   };
@@ -116,7 +116,7 @@ const BODY_ROW: SelectionRow = {
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [1e-9, 2e-9, -3e-9],
-  radiusKm: 69911,
+  radiusM: 69911000,
 };
 
 // A survey-star row — its halo is NEAR0-tagged, so the COSMO layer must ignore
@@ -127,7 +127,7 @@ const STAR_ROW: SelectionRow = {
   positionMpc: [0.001, -0.002, 0.0005],
   absMag: 4.8,
   bpRp: 0.65,
-  radiusKm: 696340,
+  radiusM: 696340000,
 };
 
 function makeStateWithSelection(row: SelectionRow | null): EngineState {

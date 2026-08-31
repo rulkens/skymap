@@ -66,6 +66,7 @@ import type { ClipPathTuningActive } from './ClipPathTuningActive';
 import type { RenderStrategy } from '../engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
 import type { GalaxyProvenanceSettings } from './GalaxyProvenanceSettings';
+import type { DebugOverlayKey } from '../data/debug/DebugOverlayKey';
 
 export type EngineSettingsState = {
   /**
@@ -76,6 +77,17 @@ export type EngineSettingsState = {
    * up-vector to. Defaults to `'ecliptic'` (see `DEFAULT_ORIENTATION`).
    */
   orientation: OrientationFrameId;
+
+  /**
+   * Camera lens control — the vertical field of view in degrees. The engine
+   * converts this to radians and writes it onto `cameraRuntime.projection.fovYRad`
+   * once per frame (`runFrame`), which every downstream consumer (view-proj,
+   * screen-space pixel math, the WGSL camera uniform) already reads live off
+   * the projection Resource. Default `DEFAULT_FOV_DEG` (60°).
+   */
+  camera: {
+    fovDeg: number;
+  };
 
   /**
    * Galaxy catalog point-billboard controls — the shared appearance knobs that
@@ -403,20 +415,8 @@ export type EngineSettingsState = {
    * in their own cluster so the per-cluster mental model (one cluster
    * = one chunk of the renderer) stays clean.
    *
-   *   - `showPickBuffer` — colour-maps the r32uint pick texture and
-   *     composites it over the tone-mapped frame.  Lets a developer
-   *     see which billboard the hover/click resolver actually claims
-   *     at each pixel.  Point billboards show a `pointSizePx`-clamped
-   *     dot; resolved galaxy disks are picked by the procedural-disk
-   *     pass at the disk edge.  Gated behind the DebugPanel.
-   *   - `showDiskRadiusRing` — outlines each famous-galaxy thumbnail's
-   *     disk-radius footprint so the developer can calibrate the
-   *     placement against the underlying billboard.  Gated behind the
-   *     DebugPanel.
-   *   - `showOrbitTrailImpostor` — draws the orbit-trail ribbon impostor's
-   *     hull as a flat fill tint IN ADDITION to the real trails, so a
-   *     developer can see whether the stroke pokes outside the ribbon (a
-   *     coverage gap). Gated behind the DebugPanel.
+   *   - `overlays` — one toggle per `DEBUG_OVERLAY_ROWS` row (roster + labels
+   *     live there, not here). All gated behind the DebugPanel.
    *   - `disabledPasses` — content-layer names the developer has manually
    *     toggled off in the renderer-toggle section.  Membership is
    *     `[name] === true`; a name absent from the record (or mapped to
@@ -427,11 +427,12 @@ export type EngineSettingsState = {
    *     whose gate returned false.  An open-world membership record (any
    *     layer name) against the closed-world `CONTENT_LAYERS` registry.  A
    *     plain object so the whole settings state stays JSON-serializable.
+   *     Trap: `'disk-radius-ring'` names a row in BOTH this record and
+   *     `overlays` above, with opposite defaults and opposite polarity —
+   *     absent-means-shown here, `false`-means-hidden there.
    */
   debug: {
-    showPickBuffer: boolean;
-    showDiskRadiusRing: boolean;
-    showOrbitTrailImpostor: boolean;
+    overlays: Record<DebugOverlayKey, boolean>;
     disabledPasses: Record<string, boolean>;
     /**
      * Render-strategy override — decouples the frame's pass SHAPE from whether

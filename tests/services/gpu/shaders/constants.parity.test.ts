@@ -27,6 +27,7 @@ import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGe
 import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidEvents';
+import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -221,5 +222,44 @@ describe('ISM_MAP_FLUID_EVENT_STRIDE parity (packIsmMapFluidEvents.ts ↔ ismMap
       weslValue,
       `${file}: WESL EVENT_STRIDE (${weslValue}) does not match TS ISM_MAP_FLUID_EVENT_STRIDE (${ISM_MAP_FLUID_EVENT_STRIDE})`,
     ).toBe(ISM_MAP_FLUID_EVENT_STRIDE);
+  });
+});
+
+/**
+ * EARTH_TILE_ATLAS_SIDE (earthTileParams.ts) is mirrored into
+ * earthSurfaceTile/fragment.wesl to derive the half-atlas-texel inset (C3)
+ * that keeps a resolved tile rect's bilinear sampling from crossing into a
+ * neighbour slot's pixels — a drift here would silently widen or shrink
+ * that guard band against the atlas's real physical size.
+ */
+describe('EARTH_TILE_ATLAS_SIDE parity (earthTileParams.ts ↔ earthSurfaceTile/fragment.wesl)', () => {
+  it("fragment.wesl's EARTH_TILE_ATLAS_SIDE equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/fragment.wesl';
+    const weslValue = readWeslConst(file, 'EARTH_TILE_ATLAS_SIDE');
+    expect(weslValue, `EARTH_TILE_ATLAS_SIDE is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL EARTH_TILE_ATLAS_SIDE (${weslValue}) does not match TS EARTH_TILE_ATLAS_SIDE (${EARTH_TILE_ATLAS_SIDE})`,
+    ).toBe(EARTH_TILE_ATLAS_SIDE);
+  });
+});
+
+/**
+ * EARTH_TILE_PX (earthTileParams.ts) is mirrored into
+ * earthSurfaceTile/fragment.wesl to derive TILE_SLOT_SCALE, the atlas-uv
+ * width of a tile drawn from its own slot with no ancestor fallback — the
+ * `earth-lod-overlay` toggle divides a resolved rect's actual width into
+ * this to recover how many pyramid levels the fallback walked. A drift here
+ * would silently mis-band every overlay tint.
+ */
+describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment.wesl)', () => {
+  it("fragment.wesl's EARTH_TILE_PX equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/fragment.wesl';
+    const weslValue = readWeslConst(file, 'EARTH_TILE_PX');
+    expect(weslValue, `EARTH_TILE_PX is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL EARTH_TILE_PX (${weslValue}) does not match TS EARTH_TILE_PX (${EARTH_TILE_PX})`,
+    ).toBe(EARTH_TILE_PX);
   });
 });

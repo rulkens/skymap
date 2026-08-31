@@ -157,6 +157,14 @@ export function createTexturedDiskSubsystem(
       onRow(source, catalog, i, x, y, z, _camDist, px) {
         if (source !== Source.FamousGalaxy && px < APPARENT_SIZE_THRESHOLD_PX) return;
 
+        // The meta sidecar (`famous_galaxies_meta.json`) loads async and
+        // defaults to `[]` until it resolves. Enqueueing before it lands
+        // would fetch with `famousId: undefined`, falling through to the
+        // SDSS/DSS chain (fetchGalaxyBitmap's `if (famousId)` shortcut) and
+        // memoising the wrong bitmap until LRU eviction. Skip and let the
+        // walk retry next frame — same pattern as hiResFamousSubsystem.
+        if (source === Source.FamousGalaxy && famousGalaxiesMeta[i]?.id === undefined) return;
+
         const dKpcRow = catalog.diameterKpc[i]!;
         const sizeWorldMpc = diskQuadExtentMpc(dKpcRow);
         const ar = catalog.axisRatio[i]!;
@@ -181,18 +189,13 @@ export function createTexturedDiskSubsystem(
         if (atlas.isFailed(key)) return;
 
         if (!atlas.isLoaded(key)) {
-          const sourceForFetch = source;
-          const idxForFetch = i;
+          // The onRow guard above already proved this id is defined for
+          // Famous rows, so it's safe to capture here at enqueue time.
+          const famousId = source === Source.FamousGalaxy ? famousGalaxiesMeta[i]!.id : undefined;
           atlas.enqueueFetch({
             key,
             priority: px,
-            fetcher: () => {
-              const fId =
-                sourceForFetch === Source.FamousGalaxy
-                  ? famousGalaxiesMeta[idxForFetch]?.id
-                  : undefined;
-              return fetcher({ ra, dec, famousId: fId });
-            },
+            fetcher: () => fetcher({ ra, dec, famousId }),
             onResult: (bitmap) => {
               if (destroyed) {
                 bitmap?.close();

@@ -15,7 +15,7 @@
  *
  * The per-star decision is the same apparent-size mechanism galaxies use
  * for their point→thumbnail promotion (`apparentSizePx` feeding a pixel
- * threshold — see `produceFamousLabels.ts`): project the star's physical
+ * threshold — see `produceFamousGalaxyLabels.ts`): project the star's physical
  * diameter at its camera distance into pixels, then let `resolvesToSphere`
  * apply the threshold. The function stays pure — a function of the star
  * list, the camera position, and the projection parameters — so the split
@@ -32,7 +32,7 @@ import { resolvesToSphere } from '../../../utils/scene/resolvesToSphere';
  * backdrop point to a resolved foreground sphere.
  *
  * Same promotion mechanism as the famous-galaxy gate
- * (`FAMOUS_MIN_APPARENT_PX = 6` in `produceFamousLabels.ts`, which holds
+ * (`FAMOUS_MIN_APPARENT_PX = 6` in `produceFamousGalaxyLabels.ts`, which holds
  * back a galaxy's label/thumbnail until its apparent size clears 6 px).
  * Stars promote a little earlier (4 px) because their handoff swaps a soft
  * point sprite for a sphere of the same emissive colour — near-seamless at
@@ -78,7 +78,7 @@ export function partitionStarsByResolution(input: {
     // per-star special case here.
     const diameterPx = bodyApparentDiameterPx({
       positionMpc: star.positionMpc,
-      radiusKm: star.radiusKm,
+      radiusM: star.radiusM,
       camPosMpc,
       viewportHeightPx,
       fovYRad,

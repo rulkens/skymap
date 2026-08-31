@@ -43,21 +43,18 @@
  * bind group against a stable layout object when a texture swaps, and an auto
  * layout does not cross pipelines (`feedback_webgpu_auto_layout_trap`).
  * Binding 0 is the uniform (both stages); 1 is the shared sampler; 2–6 are the
- * per-kind textures (from `KIND_CFG`); 7–9 are the surface virtual texture's
- * page table, atlas, and its own sampler.
+ * per-kind textures (from `KIND_CFG`).
  *
- * ### The surface virtual texture (bindings 7–9)
+ * ### Tile detail draws over this, in a separate renderer
  *
- * `earthTileSubsystem` owns a page table + atlas this renderer does not
- * allocate; the fragment blends it on top of the two owned layers, and every
- * failure path (no manifest, no atlas, a 404 on every tile) lands on the
- * picture Earth draws without it. Bindings 7–8 get 1×1 placeholders in the
- * same spirit as the per-kind ones, since the bind-group layout is fixed at
- * pipeline creation while the atlas (67 MB) allocates only once the tile
- * subsystem first engages. Binding 9 is a SECOND sampler: the atlas needs
- * `clamp-to-edge` on both axes (a slot's neighbour in the atlas is an
- * unrelated tile, so `repeat` would bleed a stranger across the seam) and no
- * mipmap filter (one atlas level; sampled with `textureSampleLevel`).
+ * This renderer no longer binds the surface virtual texture (the page table
+ * + atlas that used to occupy bindings 7–9) — `earthSurfaceTileRenderer`
+ * draws the resolved detail patches directly over this base globe instead,
+ * reading `earthTileSubsystem`'s atlas view and this renderer's own
+ * `getMapView` for the material/night/normal/cloud maps it shares. Every
+ * failure path in that other renderer (no manifest, no atlas, a 404 on
+ * every tile) simply draws nothing, leaving this base globe's picture as
+ * the final one.
  *
  * @module
  */
@@ -122,13 +119,6 @@ const KIND_CFG = {
 /** Every `TextureKind`, in `KIND_CFG` declaration order — the iteration order for
  *  the layout entries, the placeholder textures, and the bind group. */
 const MAP_KINDS = Object.keys(KIND_CFG) as TextureKind[];
-
-/** The surface virtual texture's three bindings — siblings of `KIND_CFG` rather
- *  than rows in it (see the module header): each is a single, differently-typed
- *  resource, so there is no shared row shape to invent. */
-const TILE_PAGE_TABLE_BINDING = 7;
-const TILE_ATLAS_BINDING = 8;
-const TILE_SAMPLER_BINDING = 9;
 
 /** Concatenate the six whole level-0 cube-sphere faces into one indexed mesh:
  *  sum vertex/index counts, then copy each face's positions/uvs/tangents
@@ -257,19 +247,6 @@ export function createEarthRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
-  // The tile atlas cannot share the sampler above: `repeat` on u is right for
-  // an equirectangular whole-globe map and wrong for an atlas, where the texel
-  // past a slot's edge belongs to an unrelated tile — hence `clamp-to-edge` on
-  // both axes. The atlas has a single mip level, so `mipmapFilter` stays at its
-  // 'nearest' default; the fragment samples with `textureSampleLevel`.
-  const tileSampler = device.createSampler({
-    label: 'earth-tile-sampler',
-    magFilter: 'linear',
-    minFilter: 'linear',
-    addressModeU: 'clamp-to-edge',
-    addressModeV: 'clamp-to-edge',
-  });
-
   // ── The two per-kind texture layers ───────────────────────────────────────
   //
   // `placeholders` holds one 1×1 texture per kind, alive from construction to
@@ -296,60 +273,10 @@ export function createEarthRenderer(
 
   const committed = new Map<TextureKind, GPUTexture>();
 
-  // ── Virtual-texture placeholders ──────────────────────────────────────────
-  //
-  // Bindings 7 and 8 must be satisfiable from construction, because the layout
-  // is fixed at pipeline creation while the tile subsystem allocates nothing
-  // until the virtual texture first engages (see the module header).
-  //
-  // The page table is `rgba8uint` — slot column, slot row, level, blend
-  // weight, read with `textureLoad`, never filtered or normalised. All-zero is
-  // the identity: weight 0 means "sample the base". WebGPU zero-initialises a
-  // fresh texture, but the zeros are written explicitly here because that
-  // value is load-bearing rather than incidental.
-  const placeholderPageTable = device.createTexture({
-    label: 'earth-placeholder-tile-page-table',
-    size: [1, 1, 1],
-    format: 'rgba8uint',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-  });
-  device.queue.writeTexture(
-    { texture: placeholderPageTable },
-    new Uint8Array([0, 0, 0, 0]),
-    { bytesPerRow: 4, rowsPerImage: 1 },
-    [1, 1, 1],
-  );
-
-  // Same sRGB format as the real atlas (`earthTileSubsystem`'s `ATLAS_FORMAT`).
-  // Its contents are unreachable while the page table reads weight 0, so the
-  // texel value is arbitrary; transparent black also stays inert under any
-  // blend that ignores the weight.
-  const placeholderTileAtlas = device.createTexture({
-    label: 'earth-placeholder-tile-atlas',
-    size: [1, 1, 1],
-    format: 'rgba8unorm-srgb',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-  });
-  device.queue.writeTexture(
-    { texture: placeholderTileAtlas },
-    new Uint8Array([0, 0, 0, 0]),
-    { bytesPerRow: 4, rowsPerImage: 1 },
-    [1, 1, 1],
-  );
-
-  // The tile subsystem's views once it has engaged, `null` before. Views
-  // rather than textures: this renderer does not own either resource and must
-  // never destroy them.
-  let tilePageTableView: GPUTextureView | null = null;
-  let tileAtlasView: GPUTextureView | null = null;
-
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
   // See the module header for why. Binding 0: uniform, both stages. Binding 1:
-  // shared sampler. Bindings 2–6: the map textures (from `KIND_CFG`). Binding
-  // 7: the page table, `sampleType: 'uint'` (integer data, `textureLoad` only —
-  // the same rule that keeps normal maps off `-srgb`). Binding 8: the tile
-  // atlas, filterable float. Binding 9: the tile sampler.
+  // shared sampler. Bindings 2–6: the map textures (from `KIND_CFG`).
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-bgl',
     entries: [
@@ -368,27 +295,10 @@ export function createEarthRenderer(
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' as const },
       })),
-      {
-        binding: TILE_PAGE_TABLE_BINDING,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'uint' as const },
-      },
-      {
-        binding: TILE_ATLAS_BINDING,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'float' as const },
-      },
-      {
-        binding: TILE_SAMPLER_BINDING,
-        visibility: GPUShaderStage.FRAGMENT,
-        sampler: { type: 'filtering' as const },
-      },
     ],
   });
 
-  // Resolve every map binding as committed-over-placeholder; the two
-  // virtual-texture bindings resolve the same way one layer shallower (the
-  // subsystem's view once engaged, otherwise the 1×1 stand-in).
+  // Resolve every map binding as committed-over-placeholder.
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'earth-bg',
@@ -400,15 +310,6 @@ export function createEarthRenderer(
           binding: KIND_CFG[kind].binding,
           resource: (committed.get(kind) ?? placeholders.get(kind)!).createView(),
         })),
-        {
-          binding: TILE_PAGE_TABLE_BINDING,
-          resource: tilePageTableView ?? placeholderPageTable.createView(),
-        },
-        {
-          binding: TILE_ATLAS_BINDING,
-          resource: tileAtlasView ?? placeholderTileAtlas.createView(),
-        },
-        { binding: TILE_SAMPLER_BINDING, resource: tileSampler },
       ],
     });
   }
@@ -449,8 +350,15 @@ export function createEarthRenderer(
       targets: [
         {
           format: targetFormat,
-          // No blend descriptor = opaque replace; the fragment emits alpha=1
-          // and the foreground composite blends the whole layer.
+          // Straight-alpha OVER (matches cloudShellRenderer): the fragment's
+          // alpha is `u.baseGlobeAlpha` (see packEarthSurfaceUniforms), 1
+          // outside the descent-fade band. At alpha 1 this reduces to the
+          // old opaque replace exactly (dst factor 1-1=0), so the fade is
+          // invisible until the camera actually enters the band.
+          blend: {
+            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+          },
         },
       ],
     },
@@ -546,15 +454,13 @@ export function createEarthRenderer(
   }
 
   /**
-   * Point bindings 7 and 8 at the tile subsystem's page table and atlas in
-   * place of the 1×1 stand-ins, and rebuild the bind group. Call on the
-   * transition, not per frame: `getTileResources()` is stable by identity once
-   * it stops returning `null`, so rebuilding every frame would be pure waste.
+   * A fresh view of a map's current layer (committed-over-placeholder, same
+   * resolution `buildBindGroup` uses) — what `earthSurfaceTileRenderer`
+   * shares this renderer's material/night/normal/cloud maps through, since
+   * it owns none of them itself (see that renderer's module header).
    */
-  function setTileResources(pageTable: GPUTextureView, atlas: GPUTextureView): void {
-    tilePageTableView = pageTable;
-    tileAtlasView = atlas;
-    bindGroup = buildBindGroup();
+  function getMapView(kind: TextureKind): GPUTextureView {
+    return (committed.get(kind) ?? placeholders.get(kind)!).createView();
   }
 
   function draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void {
@@ -581,20 +487,13 @@ export function createEarthRenderer(
     for (const placeholder of placeholders.values()) placeholder.destroy();
     committed.clear();
     placeholders.clear();
-    // The virtual texture's own stand-ins. Their real counterparts are NOT
-    // released here: `earthTileSubsystem` allocated the page table and the
-    // atlas and destroys them on its own teardown.
-    placeholderPageTable.destroy();
-    placeholderTileAtlas.destroy();
-    tilePageTableView = null;
-    tileAtlasView = null;
   }
 
   const renderer: EarthRenderer = {
     label: 'earthRenderer',
     setMap,
     setPlaceholderMap,
-    setTileResources,
+    getMapView,
     draw,
     destroy,
   };

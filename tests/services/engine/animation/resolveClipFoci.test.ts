@@ -62,6 +62,10 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const FOV_Y = 0.8; // radians — arbitrary; shared by all tests
 
+// The sim instant threaded to `extractSelectionRow`'s body arm — arbitrary
+// here, since no fixture in this file resolves a body ref (only structures).
+const SIM_DAYS = 2451545; // J2000, an arbitrary fixed instant
+
 // The live camera pose at resolve time — `lookAtId` bears from its target,
 // `strafeId` scales degrees into Mpc by its distance. Most tests park the
 // target at the origin, which makes bearing assertions trivial.
@@ -113,7 +117,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
       ],
     };
 
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     const outer = resolved.timeline[0];
     expect(outer).toBeDefined();
     expect(outer!.kind).toBe('all');
@@ -146,7 +150,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
     const clip: ClipData = {
       timeline: [dollyToId(id, 2, { scale: 0.5 })],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     expect(resolved.timeline[0]).toMatchObject({
       kind: 'set',
       ch: 'distance',
@@ -160,7 +164,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
     const clip: ClipData = {
       timeline: [moveTargetId(id, 7, 'easeInCubic')],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     expect(resolved.timeline[0]).toMatchObject({
       kind: 'setVec',
       ch: 'target',
@@ -180,7 +184,7 @@ describe('resolveClipFoci rewrites a focusId cue to a focus ref cue', () => {
     const clip: ClipData = {
       timeline: [focus(id)],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     expect(resolved.timeline[0]).toEqual({
       kind: 'focus',
       ref: { type: 'structure', id: 'cluster-virgo' },
@@ -197,7 +201,7 @@ describe('resolveClipFoci resolves focusId(null) to focus(null)', () => {
     const clip: ClipData = {
       timeline: [focus(null)],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     expect(resolved.timeline[0]).toEqual({ kind: 'focus', ref: null });
   });
 });
@@ -212,7 +216,7 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     const clip: ClipData = {
       timeline: [seq([hold(1), dollyToId(id, 2)])],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     const outer = resolved.timeline[0];
     if (outer!.kind !== 'seq') throw new Error('expected seq');
     expect(outer.children[1]).toMatchObject({
@@ -227,7 +231,7 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     const clip: ClipData = {
       timeline: [all([hold(1), moveTargetId(id, 2)])],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     const outer = resolved.timeline[0];
     if (outer!.kind !== 'all') throw new Error('expected all');
     expect(outer.children[1]).toMatchObject({ kind: 'setVec', ch: 'target' });
@@ -238,7 +242,7 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     const clip: ClipData = {
       timeline: [fork(focus(id))],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     const outer = resolved.timeline[0];
     if (outer!.kind !== 'fork') throw new Error('expected fork');
     expect(outer.child).toEqual({ kind: 'focus', ref: { type: 'structure', id: 'cluster-virgo' } });
@@ -248,7 +252,7 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     const clip: ClipData = {
       timeline: [seq([hold(2), hide(['flow'])])],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     // No id-bearing effects — the output must equal the input structurally.
     expect(resolved.timeline).toEqual(clip.timeline);
   });
@@ -263,7 +267,7 @@ describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
     // Virgo frames at [10,0,0]. Looking from the origin, the camera must aim
     // along +X: orbitAnglesLookingAlong([1,0,0]) → yaw −π/2, pitch 0.
     const clip: ClipData = { timeline: [lookAtId(focusId('cluster-virgo'), 3, 'easeOutCubic')] };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
 
     const outer = resolved.timeline[0]!;
     if (outer.kind !== 'all') throw new Error('expected aimAt to produce an all block');
@@ -286,7 +290,7 @@ describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
   it('the bearing is measured from the passed pose target, not the origin', () => {
     // From [10,0,10] the subject at [10,0,0] lies along −Z: yaw π, pitch 0.
     const clip: ClipData = { timeline: [lookAtId(focusId('cluster-virgo'), 2)] };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, { ...POSE, target: [10, 0, 10] });
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, { ...POSE, target: [10, 0, 10] }, SIM_DAYS);
 
     const outer = resolved.timeline[0]!;
     if (outer.kind !== 'all') throw new Error('expected aimAt to produce an all block');
@@ -308,7 +312,7 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
     const clip: ClipData = {
       timeline: [strafeId(focusId('cluster-virgo'), 45, 3, 'easeOutCubic')],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
 
     const eff = resolved.timeline[0]!;
     expect(eff).toMatchObject({ kind: 'setVec', ch: 'target', over: 3, ease: 'easeOutCubic' });
@@ -322,9 +326,9 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
     // Subject straight above the pose target: forward ∥ worldUp, no lateral
     // direction exists. A descriptive throw beats a NaN target.
     const clip: ClipData = { timeline: [strafeId(focusId('cluster-virgo'), 10, 3)] };
-    expect(() => resolveClipFoci(clip, DEPS, FOV_Y, { ...POSE, target: [10, -20, 0] })).toThrow(
-      /vertical/,
-    );
+    expect(() =>
+      resolveClipFoci(clip, DEPS, FOV_Y, { ...POSE, target: [10, -20, 0] }, SIM_DAYS),
+    ).toThrow(/vertical/);
   });
 });
 
@@ -341,13 +345,13 @@ describe('resolveClipFoci throws on unresolvable id', () => {
     // phantom ref without any existence check, so they would not trigger the throw.
     const id = focusId('no-such-object');
     const clip: ClipData = { timeline: [focus(id)] };
-    expect(() => resolveClipFoci(clip, DEPS, FOV_Y, POSE)).toThrow(/no-such-object/);
+    expect(() => resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS)).toThrow(/no-such-object/);
   });
 
   it('throws when moveTargetId cannot resolve the id', () => {
     const id = focusId('cluster-unknown-xyz');
     const clip: ClipData = { timeline: [moveTargetId(id, 2)] };
-    expect(() => resolveClipFoci(clip, DEPS, FOV_Y, POSE)).toThrow(/cluster-unknown-xyz/);
+    expect(() => resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS)).toThrow(/cluster-unknown-xyz/);
   });
 });
 
@@ -361,7 +365,7 @@ describe('resolveClipFoci preserves ClipData metadata', () => {
       start: { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 },
       timeline: [hold(1)],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     expect(resolved.start).toBe(clip.start);
   });
 });
@@ -381,7 +385,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
       ],
     };
 
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     const fp = resolved.timeline[0]!;
     if (fp.kind !== 'flyPath') throw new Error('expected a flyPath effect');
 
@@ -429,7 +433,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
       ],
     };
 
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
     const fp = resolved.timeline[0]!;
     if (fp.kind !== 'flyPath') throw new Error('expected a flyPath effect');
 
@@ -463,7 +467,7 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
     const livePose: CameraPose = { ...POSE, yaw: 0.5 };
     const clip: ClipData = { timeline: [spinToId(id, { over: 3 })] };
 
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, livePose);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, livePose, SIM_DAYS);
     const eff = resolved.timeline[0]!;
     if (eff.kind !== 'spin') throw new Error('expected a spin effect');
     expect(eff.ch).toBe('yaw');
@@ -530,6 +534,7 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
       deps,
       FOV_Y,
       livePose,
+      SIM_DAYS,
       ORIENTATION_FRAMES.ecliptic,
     );
     const resolvedGalactic = resolveClipFoci(
@@ -537,6 +542,7 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
       deps,
       FOV_Y,
       livePose,
+      SIM_DAYS,
       ORIENTATION_FRAMES.galactic,
     );
     const effE = resolvedEcliptic.timeline[0]!;
@@ -565,7 +571,7 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
 /** Resolve a single spinToId effect and return its `by` delta. */
 function resolveSpinBy(effect: ReturnType<typeof spinToId>, livePose: CameraPose): number {
   const clip: ClipData = { timeline: [effect] };
-  const resolved = resolveClipFoci(clip, DEPS, FOV_Y, livePose);
+  const resolved = resolveClipFoci(clip, DEPS, FOV_Y, livePose, SIM_DAYS);
   const eff = resolved.timeline[0]!;
   if (eff.kind !== 'spin') throw new Error('expected a spin effect');
   return eff.by;
@@ -580,7 +586,7 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
   it('resolves to concurrent yaw/pitch tweens aiming along the given world direction', () => {
     // Forward [1,0,0] under identity: dir = -forward, yaw = atan2(-1,0) = -π/2.
     const clip: ClipData = { timeline: [aimAlong([1, 0, 0], 3, 'easeOutCubic')] };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
 
     const outer = resolved.timeline[0]!;
     if (outer.kind !== 'all') throw new Error('expected aimAt to produce an all block');
@@ -605,13 +611,14 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
     // resolve to the identical bearing: aimAlong carries no target lookup, so
     // it is safe for a cold-open snap where the pre-clip pose is arbitrary.
     const clip: ClipData = { timeline: [aimAlong([1, 0, 0], 3)] };
-    const nearby = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
-    const farAway = resolveClipFoci(clip, DEPS, FOV_Y, {
-      target: [500, -300, 900],
-      yaw: 2.7,
-      pitch: -0.4,
-      distance: 4000,
-    });
+    const nearby = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
+    const farAway = resolveClipFoci(
+      clip,
+      DEPS,
+      FOV_Y,
+      { target: [500, -300, 900], yaw: 2.7, pitch: -0.4, distance: 4000 },
+      SIM_DAYS,
+    );
 
     const yawOf = (r: ClipData): number => {
       const outer = r.timeline[0]!;
@@ -628,8 +635,22 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
     // cameraFraming.test.ts (the derivation-guard test).
     const clip: ClipData = { timeline: [aimAlong(GALACTIC_DISC_FORWARD, 3)] };
 
-    const resolvedEcliptic = resolveClipFoci(clip, DEPS, FOV_Y, POSE, ORIENTATION_FRAMES.ecliptic);
-    const resolvedGalactic = resolveClipFoci(clip, DEPS, FOV_Y, POSE, ORIENTATION_FRAMES.galactic);
+    const resolvedEcliptic = resolveClipFoci(
+      clip,
+      DEPS,
+      FOV_Y,
+      POSE,
+      SIM_DAYS,
+      ORIENTATION_FRAMES.ecliptic,
+    );
+    const resolvedGalactic = resolveClipFoci(
+      clip,
+      DEPS,
+      FOV_Y,
+      POSE,
+      SIM_DAYS,
+      ORIENTATION_FRAMES.galactic,
+    );
     const effE = resolvedEcliptic.timeline[0]!;
     const effG = resolvedGalactic.timeline[0]!;
     if (effE.kind !== 'all' || effG.kind !== 'all') throw new Error('expected all blocks');
