@@ -32,6 +32,7 @@ import {
   structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
@@ -80,15 +81,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     hasInFlightWork: () => false,
   } as any;
   const drawCamPos = [0, 0, 5] as Readonly<[number, number, number]>;
-  const cosmoSlab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
-    vp: Float64Array.from(vp as unknown as Float32Array),
-    frame: { kind: 'world-mpc', originRelative: false },
-    precision: 'f32',
-    reversedZ: false,
-  };
+  const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
     isReady: true,
     renderedTargets: new Set<string>(),

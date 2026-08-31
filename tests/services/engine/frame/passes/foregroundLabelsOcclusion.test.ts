@@ -17,7 +17,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -36,15 +36,7 @@ function makeCtx(
   renderedTargets: ReadonlySet<string>,
   depthViewOf: (id: string) => GPUTextureView,
 ): ReadyFrameContext {
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab();
   return {
     slabs: [slab],
     drawCamPos: [2, 3, 5],

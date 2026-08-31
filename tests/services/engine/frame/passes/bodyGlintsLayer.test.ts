@@ -32,7 +32,7 @@ import { Source } from '../../../../../src/data/sources';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -136,15 +136,7 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
 function makeNear0View(camPos: Vec3): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp });
   return { slab, vp: f32Vp, camPos, viewportPx: [1280, 720] };
 }
 

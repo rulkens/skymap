@@ -29,7 +29,7 @@ import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodie
 import { minPickRadiusMpc } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -131,15 +131,7 @@ const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
 function makeNear0View(): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp });
   return {
     slab,
     vp: f32Vp,

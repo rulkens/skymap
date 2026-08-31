@@ -11,10 +11,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import { createLabel2DDirector } from '../../../../../src/services/engine/subsystems/label2DDirector';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/data/labels/foregroundLabelDirectorConfig';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -88,15 +88,7 @@ function makeState(
 // builds a FRESH ctx object per frame — `near0LabelProjection` memoises per
 // ctx identity, matching how `runFrame` mints a new ctx every frame for real.
 function makeCtx(nowMs = 0): ReadyFrameContext {
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab();
   return {
     slabs: [slab],
     drawCamPos: [2, 3, 5],

@@ -23,6 +23,7 @@ import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../utils/camera/foregroundFrustum';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -150,7 +151,7 @@ export function deriveSlabs(
   // `COSMO_NEAR_MPC`/`COSMO_FAR_MPC`: the cosmological scene's depth doesn't
   // change as the user zooms, only the near-field's does.
   const altitudeMpc = pivotRadiusMpc !== null ? cam.distance - pivotRadiusMpc : cam.distance;
-  const { near: nearMpc, far: farMpc } = foregroundFrustum(altitudeMpc);
+  const { near, far } = foregroundFrustum(altitudeMpc);
   // The image-plane up comes from the shared basis seam. At roll 0 `rolledUp`
   // is exactly the frame pole (`frameUp(cam.upBasis)`; world +Y absent a
   // basis), so this tracks the cosmological slab's up through the one seam.
@@ -174,15 +175,15 @@ export function deriveSlabs(
     renderOrigin: RENDER_ORIGIN_MPC,
     fovYRad: cam.fovYRad,
     aspect: cam.aspect,
-    near: nearMpc,
-    far: farMpc,
+    near,
+    far,
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   });
 
   const near0: Slab = {
     index: NEAR0,
-    nearMpc,
-    farMpc,
+    near,
+    far,
     vp: nearFieldVp,
     // The vp above is expressed relative to `RENDER_ORIGIN_MPC`, so any layer
     // bound to this slab must upload origin-relative model matrices.
@@ -191,15 +192,21 @@ export function deriveSlabs(
     // future floating origin would re-derive a per-slab `camPos` in
     // `slabViewOf`.
     frame: { kind: 'world-mpc', originRelative: true },
+    // Task 4 replaces this with the §7.1 star-sphere derivation; this row's
+    // Mpc bracket is a placeholder until then.
+    distanceRangeM: [near * SCALE_UNITS.MPC_TO_M, far * SCALE_UNITS.MPC_TO_M],
     precision: 'f64',
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   };
   const cosmo: Slab = {
     index: COSMO,
-    nearMpc: COSMO_NEAR_MPC,
-    farMpc: COSMO_FAR_MPC,
+    near: COSMO_NEAR_MPC,
+    far: COSMO_FAR_MPC,
     vp: Float64Array.from(cosmoVp),
     frame: { kind: 'world-mpc', originRelative: false },
+    // COSMO never enters the painter chain (not a `foreground:0` target), so
+    // this fixed bracket is permanent — unlike NEAR0's placeholder above.
+    distanceRangeM: [COSMO_NEAR_MPC * SCALE_UNITS.MPC_TO_M, COSMO_FAR_MPC * SCALE_UNITS.MPC_TO_M],
     precision: 'f32',
     reversedZ: SLAB_REVERSED_Z[COSMO]!,
   };

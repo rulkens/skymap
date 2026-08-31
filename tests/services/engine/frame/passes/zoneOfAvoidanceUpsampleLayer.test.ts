@@ -13,6 +13,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { zoneOfAvoidanceUpsampleLayer } from '../../../../../src/services/engine/frame/passes/zoneOfAvoidanceUpsampleLayer';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -31,15 +32,7 @@ const ZOA_VIEW = { __id: 'zoa-view' } as unknown as GPUTextureView;
 
 function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   const vp = new Float32Array(16) as unknown as Mat4;
-  const cosmoSlab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
-    vp: Float64Array.from(vp as unknown as Float32Array),
-    frame: { kind: 'world-mpc', originRelative: false },
-    precision: 'f32',
-    reversedZ: false,
-  };
+  const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
     isReady: true,
     vp,

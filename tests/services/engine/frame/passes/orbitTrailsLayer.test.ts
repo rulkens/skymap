@@ -31,6 +31,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/
 import { SCENE_ORBIT_CONICS } from '../../../../../src/data/bodies/sceneOrbitConics';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -125,15 +126,7 @@ function makeDrawCtx(): ReadyFrameContext {
 function makeNear0View(): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp });
   return {
     slab,
     vp: f32Vp,

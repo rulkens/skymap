@@ -56,6 +56,9 @@
  */
 export const MIN_NEAR_MPC = 2e-22;
 
+/** Sub-millimetre floor that only keeps a metres-scale near plane above zero — not a denormal dodge like `MIN_NEAR_MPC`, which stays the Mpc-scale precision floor. */
+export const MIN_NEAR_M = 1e-6;
+
 /**
  * Floor for the far plane, in Mpc. Sized to enclose the outermost seeded orbit
  * ring: Jupiter at 5.2 AU ≈ 2.52e-11 Mpc, times the ring quad's 1.1 draw
@@ -70,7 +73,7 @@ export const FAR_MIN_MPC = 3e-11;
  * survives the clip test instead of sitting exactly on (or past) it. Consumed by
  * `near0SelectionRingLayer` (the ring quad) and `foregroundLabelsLayer` (the
  * caption lift anchor); each clamps a camera-relative vector to
- * `slab.farMpc * NEAR0_FAR_CLAMP_FRACTION`. 0.99 = 1% inside — comfortably clear
+ * `slab.far * NEAR0_FAR_CLAMP_FRACTION`. 0.99 = 1% inside — comfortably clear
  * of f32 round-off at the plane while the projected screen position is unchanged
  * (a uniform length scale in the rebased frame moves only depth, not clip x/y).
  * Single-sourced so the two clamps can never pull to different depths.

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { texturedDisksLayer } from '../../../../../src/services/engine/frame/passes/texturedDisksLayer';
-import { COSMO } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
@@ -56,15 +56,7 @@ function makeCtx(): ReadyFrameContext {
  * what `draw` forwards to the renderer; `slab` is unused by this layer. */
 function makeView(ctx: ReadyFrameContext): SlabView {
   return {
-    slab: {
-      index: COSMO,
-      nearMpc: 0.01,
-      farMpc: 50000,
-      vp: new Float64Array(16),
-      frame: { kind: 'world-mpc', originRelative: false },
-      precision: 'f32',
-      reversedZ: false,
-    },
+    slab: makeCosmoSlab(),
     vp: ctx.vp as unknown as Float32Array,
     camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],

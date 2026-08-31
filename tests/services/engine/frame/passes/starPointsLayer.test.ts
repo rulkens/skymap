@@ -43,6 +43,7 @@ import { SGR_A_STAR_ENTRY } from '../../../../../src/data/sources/sgr-a-star';
 import { Source } from '../../../../../src/data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -132,15 +133,7 @@ function halfAuFrom(positionMpc: Readonly<Vec3>): Vec3 {
 function makeNear0View(camPos: Vec3): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp });
   return {
     slab,
     vp: f32Vp,

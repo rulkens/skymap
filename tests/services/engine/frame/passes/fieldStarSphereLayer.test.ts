@@ -30,8 +30,8 @@ import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/Sta
 import { SOLAR_RADIUS_KM } from '../../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { STAR_RESOLVE_PX } from '../../../../../src/services/engine/frame/partitionStarsByResolution';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import { Source } from '../../../../../src/data/sources';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -115,15 +115,7 @@ const PASS_STUB = {} as unknown as GPURenderPassEncoder;
 
 /** A NEAR0 view whose f64 `slab.vp` differs from the f32 `vp` (the compose seam). */
 function makeNear0View(camPos: Vec3): SlabView {
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab();
   return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, VIEWPORT_H] };
 }
 

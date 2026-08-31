@@ -3,6 +3,7 @@ import { clipPathDebugLayer } from '../../../../../src/services/engine/frame/pas
 import { NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -37,10 +38,11 @@ function makeCtx(): ReadyFrameContext {
   });
   const near0Slab: Slab = {
     index: NEAR0,
-    nearMpc: near,
-    farMpc: far,
+    near: near,
+    far: far,
     vp: near0Vp,
     frame: { kind: 'world-mpc', originRelative: true },
+    distanceRangeM: [near * SCALE_UNITS.MPC_TO_M, far * SCALE_UNITS.MPC_TO_M],
     precision: 'f64',
     reversedZ: true,
   };

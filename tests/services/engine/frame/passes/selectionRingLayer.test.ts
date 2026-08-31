@@ -12,6 +12,7 @@ import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -22,15 +23,7 @@ import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
  */
 function makeCtx(): ReadyFrameContext {
   const vp = new Float32Array(16) as unknown as Mat4;
-  const cosmoSlab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
-    vp: Float64Array.from(vp),
-    frame: { kind: 'world-mpc', originRelative: false },
-    precision: 'f32',
-    reversedZ: false,
-  };
+  const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp) });
   return {
     isReady: true,
     renderedTargets: new Set<string>(),

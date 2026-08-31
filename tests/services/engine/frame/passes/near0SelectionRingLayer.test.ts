@@ -88,7 +88,7 @@ describe('near0SelectionRingLayer.enabled', () => {
 
 // A NEAR0 star anchor whose camera-relative distance sits well OUTSIDE the
 // adaptive far plane — the exact condition that produced the reported bug:
-// with the camera orbiting something much nearer, `slab.farMpc`
+// with the camera orbiting something much nearer, `slab.far`
 // (foregroundFrustum's `orbit × 100`) drops below the pinned star's anchor
 // distance, and the un-clamped ring quad frustum-clips away while the star
 // sprite (which clamps clip-z) survives.
@@ -101,15 +101,15 @@ const FAR_STAR_ROW: SelectionRow = {
   radiusM: 696340000,
 };
 
-// A SlabView with `slab.farMpc` BELOW the star's camDist. camPos at the origin
+// A SlabView with `slab.far` BELOW the star's camDist. camPos at the origin
 // so the camera-relative centre equals worldPos. `vp`/`camPos`/`viewportPx` are
 // the shape the renderer spy reads without interpreting.
 function farClippingView(farMpc: number): SlabView {
   return {
     slab: {
       index: 0,
-      nearMpc: 1e-10,
-      farMpc,
+      near: 1e-10,
+      far: farMpc,
       vp: new Float64Array(16),
       frame: { kind: 'world-mpc', originRelative: true },
       precision: 'f64',

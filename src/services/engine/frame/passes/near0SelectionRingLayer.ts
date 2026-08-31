@@ -162,7 +162,7 @@ export const near0SelectionRingLayer: ContentLayer = {
     // is otherwise unobserved. Far side only: in practice the orbit target is
     // always at or beyond the anchor's scale when zoomed out, so the anchor can
     // only ever exit the FAR plane, never the near — no symmetric near clamp.
-    const clampedCentre = clampVec3Length(centre, view.slab.farMpc * NEAR0_FAR_CLAMP_FRACTION);
+    const clampedCentre = clampVec3Length(centre, view.slab.far * NEAR0_FAR_CLAMP_FRACTION);
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // centre. Uses the slab's f64 `vp`, narrowed HERE at the GPU-upload

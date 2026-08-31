@@ -47,10 +47,10 @@ describe('deriveSlabs', () => {
     expect(slabs[1]?.index).toBe(COSMO);
   });
 
-  it.each([5, 5000])('every slab has nearMpc < farMpc (cam.distance = %d)', (distance) => {
+  it.each([5, 5000])('every slab has near < far (cam.distance = %d)', (distance) => {
     const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
     for (const index of [NEAR0, COSMO]) {
-      expect(slabs[index]!.nearMpc).toBeLessThan(slabs[index]!.farMpc);
+      expect(slabs[index]!.near).toBeLessThan(slabs[index]!.far);
     }
   });
 
@@ -69,10 +69,20 @@ describe('deriveSlabs', () => {
     (distance) => {
       const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
       const { near, far } = foregroundFrustum(distance);
-      expect(slabs[0]?.nearMpc).toBe(near);
-      expect(slabs[0]?.farMpc).toBe(far);
+      expect(slabs[0]?.near).toBe(near);
+      expect(slabs[0]?.far).toBe(far);
     },
   );
+
+  it('gives NEAR0 a metre distance range matching its Mpc bracket', () => {
+    // cam.distance = 250 Mpc ⇒ foregroundFrustum gives near = 0.025 Mpc,
+    // far = 25000 Mpc (the pure NEAR_RATIO/FAR_RATIO regime, no floor engaged).
+    // The expected metres are hand-computed (not re-derived via MPC_TO_M here),
+    // so this fails if a row is left holding Mpc in a metres-typed field.
+    const slabs = deriveSlabs(makeCam(250), makeCosmoVp());
+    expect(slabs[0]?.distanceRangeM[0]).toBe(7.7141939537284183e20);
+    expect(slabs[0]?.distanceRangeM[1]).toBe(7.7141939537284181e26);
+  });
 
   it("the near row's vp is the origin-relative computeForegroundViewProj product", () => {
     const distance = 250;
@@ -120,24 +130,24 @@ describe('deriveSlabs', () => {
     const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
     const a = deriveSlabs(makeCam(moonletRadiusMpc + altitudeMpc), makeCosmoVp(), moonletRadiusMpc);
     const b = deriveSlabs(makeCam(earthRadiusMpc + altitudeMpc), makeCosmoVp(), earthRadiusMpc);
-    const relDiff = Math.abs(a[0]!.nearMpc - b[0]!.nearMpc) / a[0]!.nearMpc;
+    const relDiff = Math.abs(a[0]!.near - b[0]!.near) / a[0]!.near;
     expect(relDiff).toBeLessThan(1e-9);
-    expect(a[0]!.farMpc).toBe(b[0]!.farMpc);
+    expect(a[0]!.far).toBe(b[0]!.far);
 
     // Without the fix (keying off raw `cam.distance`), Earth's pivot would get
     // a near plane over an order of magnitude farther out than the
     // altitude-keyed one — comfortably past the 50 m altitude, i.e. the
     // ground-clipping bug.
     const rawDistanceBracket = foregroundFrustum(earthRadiusMpc + altitudeMpc);
-    expect(rawDistanceBracket.near / b[0]!.nearMpc).toBeGreaterThan(10);
+    expect(rawDistanceBracket.near / b[0]!.near).toBeGreaterThan(10);
   });
 
   it('with no pivot radius (default), behaves exactly as before — raw distance', () => {
     const distance = 250;
     const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
     const { near, far } = foregroundFrustum(distance);
-    expect(slabs[0]!.nearMpc).toBe(near);
-    expect(slabs[0]!.farMpc).toBe(far);
+    expect(slabs[0]!.near).toBe(near);
+    expect(slabs[0]!.far).toBe(far);
   });
 });
 
@@ -185,8 +195,8 @@ describe('slabViewOf', () => {
     const ctx = makeReadyCtx({ cam });
     const view = slabViewOf(ctx, NEAR0);
     const { near, far } = foregroundFrustum(cam.distance);
-    expect(view.slab.nearMpc).toBe(near);
-    expect(view.slab.farMpc).toBe(far);
+    expect(view.slab.near).toBe(near);
+    expect(view.slab.far).toBe(far);
   });
 
   it('throws for an index with no matching slab row', () => {

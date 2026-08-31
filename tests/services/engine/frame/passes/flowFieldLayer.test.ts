@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { flowFieldLayer } from '../../../../../src/services/engine/frame/passes/flowFieldLayer';
-import { COSMO } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -45,15 +45,7 @@ function makeCtx(): ReadyFrameContext {
 /** Minimal SlabView matching the ctx above. `slab` is unused by this layer. */
 function makeView(): SlabView {
   return {
-    slab: {
-      index: COSMO,
-      nearMpc: 0.01,
-      farMpc: 50000,
-      vp: new Float64Array(16),
-      frame: { kind: 'world-mpc', originRelative: false },
-      precision: 'f32',
-      reversedZ: false,
-    },
+    slab: makeCosmoSlab(),
     vp: new Float32Array(16),
     camPos: [0, 0, 5],
     viewportPx: [1280, 720],

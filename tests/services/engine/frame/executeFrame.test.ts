@@ -18,6 +18,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { executeFrame } from '../../../../src/services/engine/frame/executeFrame';
 import { COSMO } from '../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/ExecuteFrameArgs';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
@@ -166,15 +167,7 @@ const EXEC_SPECS = [
 ];
 
 function makeCtx(): ReadyFrameContext {
-  const slab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
-    vp: new Float64Array(16),
-    frame: { kind: 'world-mpc', originRelative: false },
-    precision: 'f32',
-    reversedZ: false,
-  };
+  const slab: Slab = makeCosmoSlab();
   return {
     slabs: [slab, slab],
     canvasSize: { width: 100, height: 50 },

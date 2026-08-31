@@ -26,6 +26,7 @@ vi.mock('../../../../src/services/engine/helpers/pickFrameContext', () => ({
 import { createPickProgram } from '../../../../src/services/engine/frame/pickProgram';
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
   PICK_SENTINEL_OFFSET,
   SELECTION_SOURCE_SHIFT,
@@ -43,10 +44,11 @@ const CANVAS = { width: 100, height: 80 } as unknown as HTMLCanvasElement;
 function makeCtx(): ReadyFrameContext {
   const slab = (index: number): Slab => ({
     index,
-    nearMpc: 0.01,
-    farMpc: 50000,
+    near: 0.01,
+    far: 50000,
     vp: new Float64Array(16),
     frame: { kind: 'world-mpc', originRelative: false },
+    distanceRangeM: [0.01 * SCALE_UNITS.MPC_TO_M, 50000 * SCALE_UNITS.MPC_TO_M],
     precision: 'f32',
     reversedZ: false,
   });
