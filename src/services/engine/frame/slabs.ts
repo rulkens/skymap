@@ -27,6 +27,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { ChainRow } from '../../../@types/scene/ChainRow';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -34,7 +35,10 @@ import { computeForegroundViewProj } from '../../../utils/camera/computeForegrou
 import { foregroundFrustum, MIN_NEAR_M } from '../../../utils/camera/foregroundFrustum';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
+import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
+import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
+import { chainOverlapViolations } from '../../../utils/scene/chainOverlapViolations';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
@@ -124,7 +128,8 @@ const COSMO_FAR_MPC = 50000;
 
 /**
  * Build one body's slab row (index left at a placeholder — the caller assigns
- * the real painter-order index once every row is sorted), or `null` when
+ * the real painter-order index once every row is sorted), plus the screen
+ * footprint the §7.2 overlap invariant needs (`chainRow`), or `null` when
  * `pose` reports the body has no pose this frame (culled).
  *
  * `vp` is built ABOUT THE EYE: `basisM`'s forward/up columns feed `mat4d.lookAt`
@@ -135,14 +140,24 @@ const COSMO_FAR_MPC = 50000;
  * uses (spec §4); `far` is `+∞` (spec §4's row-numbers table) — the row's
  * FINITE far bound is `distanceRangeM[1]`, a distinct field used by the
  * painter sort, not by this projection.
+ *
+ * `chainRow.centrePx` reprojects the body centre (`-eyeRelBodyM`) through
+ * this row's own `vp`. A body with no screen position (`clipW <= 0`) gets
+ * `[Infinity, Infinity]` — infinitely far from every other row's circle, so
+ * it never registers a false overlap. `chainRow.radiusPx` reuses
+ * `bodyApparentDiameterPx`, the same px conversion `visibleSlabBodies`
+ * already runs for the visibility gate, fed a synthetic radial Mpc position
+ * at `dM` (only the hypot distance matters to it) rather than threading the
+ * body's real Mpc position through just for this.
  */
 function bodySlabRow(input: {
   readonly body: SceneBody;
   readonly pose: BodyPoseProvider;
   readonly fovYRad: number;
   readonly aspect: number;
-}): Omit<Slab, 'index'> | null {
-  const { body, pose, fovYRad, aspect } = input;
+  readonly viewportPx: Readonly<Vec2>;
+}): { readonly slab: Omit<Slab, 'index'>; readonly chainRow: Omit<ChainRow, 'index'> } | null {
+  const { body, pose, fovYRad, aspect, viewportPx } = input;
   const relPose = pose(body.id as BodyId);
   if (relPose === null) return null;
   const { eyeRelBodyM, basisM } = relPose;
@@ -156,15 +171,31 @@ function bodySlabRow(input: {
   const up: Vec3 = [basisM[3], basisM[4], basisM[5]];
   const view = mat4d.lookAt([0, 0, 0], forward, up);
   const proj = mat4d.perspectiveReverseZ(fovYRad, aspect, near);
+  const vp = mat4d.multiply(proj, view) as Float64Array;
+
+  const centrePx =
+    projectToScreenPx([-eyeRelBodyM[0], -eyeRelBodyM[1], -eyeRelBodyM[2]], vp, viewportPx) ??
+    ([Infinity, Infinity] as const);
+  const radiusPx =
+    bodyApparentDiameterPx({
+      positionMpc: [dM * SCALE_UNITS.M_TO_MPC, 0, 0],
+      radiusM: rMaxM,
+      camPosMpc: [0, 0, 0],
+      viewportHeightPx: viewportPx[1],
+      fovYRad,
+    }) / 2;
 
   return {
-    near,
-    far: Infinity,
-    vp: mat4d.multiply(proj, view) as Float64Array,
-    frame: { kind: 'body-m', bodyId: body.id as BodyId },
-    distanceRangeM,
-    precision: 'f64',
-    reversedZ: true,
+    slab: {
+      near,
+      far: Infinity,
+      vp,
+      frame: { kind: 'body-m', bodyId: body.id as BodyId },
+      distanceRangeM,
+      precision: 'f64',
+      reversedZ: true,
+    },
+    chainRow: { distanceRangeM, centrePx, radiusPx },
   };
 }
 
@@ -196,9 +227,9 @@ function bodySlabRow(input: {
  * ordinal and `slabName`/`groupKeyOf` need no extra parameter. `bodyStates`
  * is threaded through (not read here) so the caller's `pose` closure and this
  * frame's body layers are provably reading the SAME `simDays` snapshot — see
- * the module-level "one `R_body(t)` sample" rule. `viewportPx` mirrors
- * `cam.aspect`, which is what the body-row projection actually uses (matching
- * NEAR0), so it is likewise unread here today.
+ * the module-level "one `R_body(t)` sample" rule. `viewportPx` feeds each body
+ * row's screen-space footprint (`bodySlabRow`'s `chainRow`), which in DEV only
+ * backs the `chainOverlapViolations` painter-order check (spec §7.2) below.
  *
  * NEAR0's `distanceRangeM` comes from `starSphereRangeM` — the interval the
  * star spheres ACTUALLY drawn this frame span (spec §7.1), not the
@@ -216,7 +247,7 @@ export function deriveSlabs(input: {
   readonly viewportPx: Readonly<Vec2>;
   readonly starSphereRangeM: readonly [number, number] | null;
 }): readonly Slab[] {
-  const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies } = input;
+  const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies, viewportPx } = input;
   // The near-field slab's near/far are adaptive, sized from the camera's
   // ALTITUDE above a known pivot (else raw orbit distance) by
   // `foregroundFrustum`, so depth precision holds from galaxy scale down to
@@ -290,11 +321,28 @@ export function deriveSlabs(input: {
   // Body rows sort back-to-front by distanceRangeM[0] BEFORE indices are
   // assigned, so index === painter ordinal (see the header note) — a body
   // whose pose is null this frame (culled) contributes no row.
-  const bodyRows: Slab[] = visibleBodies
-    .map((body) => bodySlabRow({ body, pose, fovYRad: cam.fovYRad, aspect: cam.aspect }))
-    .filter((row): row is Omit<Slab, 'index'> => row !== null)
-    .sort((a, b) => b.distanceRangeM[0] - a.distanceRangeM[0])
-    .map((row, i) => ({ ...row, index: i + 2 }));
+  const sortedBodyRows = visibleBodies
+    .map((body) =>
+      bodySlabRow({ body, pose, fovYRad: cam.fovYRad, aspect: cam.aspect, viewportPx }),
+    )
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .sort((a, b) => b.slab.distanceRangeM[0] - a.slab.distanceRangeM[0]);
+  const bodyRows: Slab[] = sortedBodyRows.map((row, i) => ({ ...row.slab, index: i + 2 }));
+
+  // Dev-only painter-order check (spec §7.2): screen-overlapping body rows
+  // must have disjoint distance intervals, else one silently paints over the
+  // other in the wrong order. A warn only, never a throw — see
+  // `chainOverlapViolations`'s header for why "intervals never overlap" is
+  // too strong a reading.
+  if (import.meta.env.DEV) {
+    const chainRows: readonly ChainRow[] = sortedBodyRows.map((row, i) => ({
+      index: i + 2,
+      ...row.chainRow,
+    }));
+    for (const [a, b] of chainOverlapViolations(chainRows)) {
+      console.warn(`deriveSlabs: painter-order violation between body rows ${a} and ${b}`);
+    }
+  }
 
   return [near0, cosmo, ...bodyRows];
 }
