@@ -8,15 +8,15 @@
  * position is a function of the clock, frozen at clip start.
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import type { ClipId } from '../../../@types/animation/ClipId';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { dollyTo, spin, all, seq, hold, hide } from '../../../services/engine/animation/effectHelpers';
-import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
-import { SCENE_EARTH } from '../../bodies/sceneEarth';
-import { SCALE_UNITS } from '../../scaleUnits';
+import type { Clip } from '../../../../@types/animation/Clip';
+import type { ClipId } from '../../../../@types/animation/ClipId';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { dollyTo, spin, all, seq, hold, hide } from '../../../../services/engine/animation/effectHelpers';
+import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
+import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
+import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
+import { SCENE_EARTH } from '../../../bodies/sceneEarth';
+import { SCALE_UNITS } from '../../../scaleUnits';
 
 const FLIGHT_SEC = 70; // same pull-back window as earthFlyout
 const HOLD_SEC = 4;

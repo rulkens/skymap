@@ -5,7 +5,7 @@
  * hidden so the capture reads as pure scenery.
  */
 
-import { makeEarthLoop } from './makeEarthLoop';
+import { makeEarthLoop } from './makers/makeEarthLoop';
 
 export const earthCosmicWebLoop = makeEarthLoop({
   id: 'earthCosmicWebLoop',

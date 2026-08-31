@@ -4,7 +4,7 @@
  * cousin) inspired. Mechanics live in `makeEarthLoop`.
  */
 
-import { makeEarthLoop } from './makeEarthLoop';
+import { makeEarthLoop } from './makers/makeEarthLoop';
 
 export const earthUniverseLoop = makeEarthLoop({
   id: 'earthUniverseLoop',
