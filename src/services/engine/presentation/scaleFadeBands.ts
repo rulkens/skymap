@@ -69,7 +69,7 @@ export const SCALE_FADE_BANDS = {
   // Centre — and it fades fully to 0: a dim floor reads as over-bright star
   // blobs this deep, so don't add one back; past `goneAt` the S-star cluster
   // is the content.
-  milkyWayApproachGc: { fullAt: 0.004, goneAt: 0.0002 },
+  milkyWayApproachGc: { fullAt: 0.012, goneAt: 0.0006 },
 
   // Keyed on: the STAR's own distance from the camera, pc. Caption edges scale
   // with the roster via FARTHEST_STAR_PC. Pop-free contract with the caption
