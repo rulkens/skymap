@@ -11,18 +11,17 @@
  */
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { DebugViewWeights } from '../../../@types/engine/DebugViewWeights';
 import type { DustHeaderLanes } from '../../../@types/engine/DustHeaderLanes';
 import type { FieldCamera } from '../../../@types/engine/FieldCamera';
+import type { FieldDustSlices } from '../../../@types/engine/FieldDustSlices';
 import type { FieldHeaderInput } from '../../../@types/engine/FieldHeaderInput';
 import type { FieldSliceCounts } from '../../../@types/engine/FieldSliceCounts';
 import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
 import type { HiiTierKind } from '../../../@types/engine/HiiTierKind';
+import type { IsmMapChannelWeights } from '../../../@types/engine/IsmMapChannelWeights';
 import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
-import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import type { YoungStarsLanes } from '../../../@types/engine/YoungStarsLanes';
-import type { FrameView } from '../frame/deriveFrameView';
-
-import { HII_TIERS } from '../../data/hiiTiers';
 
 /** The model-derived lanes no `render`/`frame` value can supply — one snapshot per frame off `model`'s own getters. */
 export type FieldHeaderModelLanes = {
@@ -45,12 +44,32 @@ export type FieldHeaderTargetSizes = {
   readonly tiers: Readonly<Record<HiiTierKind, Vec2>>;
 };
 
+/** The per-frame view lanes this builder reads — a structural subset of the tool's FrameView. */
+export type FieldHeaderFrameLanes = {
+  readonly view: Float32Array; // deriveFrameView.ts:53 — a raw mat4, not a Mat4 alias
+  readonly aspect: number;
+  readonly analyticExposure: number;
+  readonly debugViews: DebugViewWeights;
+  readonly galaxyWeight: number;
+  readonly ismMapChannels: IsmMapChannelWeights;
+  readonly dustSlices: FieldDustSlices;
+  readonly starGrainFeatureScale: number;
+};
+
+/** The render knobs this builder reads — a structural subset of the tool's RenderSettings. */
+export type FieldHeaderRenderLanes = {
+  readonly hiiNearFadeStart: number;
+  readonly hiiNearFadeEnd: number;
+  readonly starGrainWarpAmp: number;
+  readonly hiiQuadCap: number;
+};
+
 export type FieldHeaderInputsDeps = {
   readonly eye: Vec3;
   readonly fov: number;
   readonly shiftX: number;
-  readonly frame: FrameView;
-  readonly render: RenderSettings;
+  readonly frame: FieldHeaderFrameLanes;
+  readonly render: FieldHeaderRenderLanes;
   readonly model: FieldHeaderModelLanes;
   readonly targetSizes: FieldHeaderTargetSizes;
 };
@@ -174,7 +193,10 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
   // `hii.targetSizePx` here would silently hand every tier's splat the
   // extras target's resolution instead of its own.
   const tiers = Object.fromEntries(
-    HII_TIERS.map((tier) => [tier.kind, { ...hii, targetSizePx: targetSizes.tiers[tier.kind] }]),
+    (Object.keys(targetSizes.tiers) as HiiTierKind[]).map((kind) => [
+      kind,
+      { ...hii, targetSizePx: targetSizes.tiers[kind] },
+    ]),
   ) as Record<HiiTierKind, FieldHeaderInput>;
 
   return { field, hii, tiers };

@@ -12,7 +12,6 @@ import type { HiiTierKind } from '../../../@types/engine/HiiTierKind';
 import type { IsmMapGenerator } from '../ismMap/createIsmMapGenerator';
 
 import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
-import { HII_TIERS } from '../../data/hiiTiers';
 
 import fieldSplatVsWgsl from '../shaders/milkyWay/field/fieldSplat/vertex.wesl?static';
 import fieldSplatFsWgsl from '../shaders/milkyWay/field/fieldSplat/fragment.wesl?static';
@@ -355,20 +354,16 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
   function rebuildTierBindGroups(hiiCompsBuffer: GPUBuffer): void {
     hiiBG = buildHiiFullBindGroup(hiiUbo, 'galaxy:hiiBG', hiiExtrasPipe, hiiCompsBuffer);
     tierBGMap = Object.fromEntries(
-      HII_TIERS.map((tier) => [
-        tier.kind,
-        tier.kind === 'young'
+      (Object.keys(tierUbo) as HiiTierKind[]).map((kind) => [
+        kind,
+        kind === 'young'
           ? buildHiiFullBindGroup(
-              tierUbo[tier.kind],
-              `galaxy:hiiBG:${tier.kind}`,
+              tierUbo[kind],
+              `galaxy:hiiBG:${kind}`,
               hiiYoungPipe,
               hiiCompsBuffer,
             )
-          : buildHiiErosionBindGroup(
-              tierUbo[tier.kind],
-              `galaxy:hiiBG:${tier.kind}`,
-              hiiCompsBuffer,
-            ),
+          : buildHiiErosionBindGroup(tierUbo[kind], `galaxy:hiiBG:${kind}`, hiiCompsBuffer),
       ]),
     ) as Record<HiiTierKind, GPUBindGroup>;
   }
