@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -30,19 +31,22 @@ describe('visibleSlabBodies', () => {
   it('drops a body below the sub-pixel floor and keeps one above it', () => {
     // Both bodies sit at distanceMpc = 1000, on-axis, under a 90° vertical FOV
     // and a 1000px-tall viewport, so pxPerRad = 500 and the apparent-diameter
-    // formula reduces to diameterPx = diameterKpc·5e-4. radiusM = 3e22 lands
-    // just under the 1px floor (≈0.972px); radiusM = 3.2e22 lands just over
-    // it (≈1.037px) — see the task-4 report for the derivation.
+    // formula reduces to diameterPx = diameterKpc·5e-4. The pixel floor keys
+    // on rEffM = PROXY_SCALE·radiusM for a shell-less body (radar frame
+    // finding 2 — same basis the frustum cull already used), so `radiusM` is
+    // pre-divided by PROXY_SCALE here: rEffM lands at 3e22 (≈0.972px, just
+    // under the 1px floor) and 3.2e22 (≈1.037px, just over it) — see the
+    // task-4 report for that derivation.
     const belowFloor: PlanetBody = {
       id: 'below',
       label: 'Below floor',
-      radiusM: 3e22,
+      radiusM: 3e22 / PROXY_SCALE,
       albedo: [1, 1, 1],
     };
     const aboveFloor: PlanetBody = {
       id: 'above',
       label: 'Above floor',
-      radiusM: 3.2e22,
+      radiusM: 3.2e22 / PROXY_SCALE,
       albedo: [1, 1, 1],
     };
     const bodyStates = new Map<string, BodyState>([
@@ -86,6 +90,34 @@ describe('visibleSlabBodies', () => {
     });
 
     expect(visible.map((body) => body.id)).toEqual(['earth']);
+  });
+
+  it('keeps a ringed body once the ring, not the bare disc, clears the pixel floor', () => {
+    // Radar frame finding 2: the pixel floor used to key on body.radiusM
+    // alone while the frustum cull (below) already used the ring-inclusive
+    // bodyDrawRadiusM — a ring could still be several px across while the
+    // bare globe was sub-pixel, and the roster gate dropped the row before
+    // any per-layer gate (e.g. ringsLayer's own outer-diameter cull) got a
+    // chance to disagree. Real Saturn at 1.2e11 m, on-axis: bare disc
+    // ≈0.49px (sub-pixel), ring-inclusive rEff ≈1.17px (clears the floor).
+    const saturn = SCENE_PLANETS.find((p) => p.id === 'saturn');
+    if (saturn === undefined) throw new Error('SCENE_PLANETS is missing saturn');
+    const dMm = 1.2e11;
+    const dMpc = dMm * SCALE_UNITS.M_TO_MPC;
+    const bodyStates = new Map<string, BodyState>([['saturn', makeState([dMpc, 0, 0])]]);
+
+    const visible = visibleSlabBodies({
+      earth: null,
+      planets: [saturn],
+      bodyStates,
+      camPosMpc: [0, 0, 0],
+      camForwardMpc: FORWARD_X,
+      viewportWidthPx: 1000,
+      viewportHeightPx: 1000,
+      fovYRad: Math.PI / 2,
+    });
+
+    expect(visible.map((b) => b.id)).toEqual(['saturn']);
   });
 
   describe('view-frustum angular cull', () => {
