@@ -13,16 +13,16 @@ import { mat4 } from 'wgpu-matrix';
 
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { DebugViewWeights } from '../../../@types/engine/DebugViewWeights';
-import type { FieldDustSlices } from '../../../@types/engine/FieldDustSlices';
+import type { DebugViewWeights } from '../../../../../src/@types/galaxy/DebugViewWeights';
+import type { FieldDustSlices } from '../../../../../src/@types/galaxy/FieldDustSlices';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { IsmMapChannelWeights } from '../../../@types/engine/IsmMapChannelWeights';
+import type { IsmMapChannelWeights } from '../../../../../src/@types/galaxy/IsmMapChannelWeights';
 
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
-import { dustSliceEdges } from '../field/dustSliceEdges';
+import { dustSliceEdges } from '../../../../../src/services/gpu/renderers/galaxyField/field/dustSliceEdges';
 import { lerp } from '../../../../../src/utils/math/lerp';
 import { smoothstep } from '../../../../../src/utils/math/smoothstep';
 

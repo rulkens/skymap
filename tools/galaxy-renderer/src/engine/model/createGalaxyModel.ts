@@ -10,18 +10,18 @@
  * per-frame headers, and binds the buffers this exposes.
  */
 
-import type { DebugViewKind } from '../../../@types/data/DebugViewKind';
-import type { DustHeaderLanes } from '../../../@types/engine/DustHeaderLanes';
+import type { DebugViewKind } from '../../../../../src/@types/galaxy/DebugViewKind';
+import type { DustHeaderLanes } from '../../../../../src/@types/galaxy/DustHeaderLanes';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
-import type { FieldSliceCounts } from '../../../@types/engine/FieldSliceCounts';
-import type { HiiSegment } from '../../../@types/engine/HiiSegment';
-import type { HiiTextureLanes } from '../../../@types/engine/HiiTextureLanes';
+import type { FieldSliceCounts } from '../../../../../src/@types/galaxy/FieldSliceCounts';
+import type { HiiSegment } from '../../../../../src/@types/galaxy/HiiSegment';
+import type { HiiTextureLanes } from '../../../../../src/@types/galaxy/HiiTextureLanes';
 import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { IsmMapSeedingLanes } from '../../../@types/engine/IsmMapSeedingLanes';
-import type { YoungStarsLanes } from '../../../@types/engine/YoungStarsLanes';
+import type { IsmMapSeedingLanes } from '../../../../../src/@types/galaxy/IsmMapSeedingLanes';
+import type { YoungStarsLanes } from '../../../../../src/@types/galaxy/YoungStarsLanes';
 import type { GalaxyProbeApi } from '../../../@types/engine/GalaxyProbeApi';
 
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
@@ -72,37 +72,37 @@ import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 
 import { DEBUG_VIEWS } from '../../data/debugViews';
 import { createKeyedRebuild } from '../createKeyedRebuild';
-import { deriveDustHeaderLanes } from '../field/deriveDustHeaderLanes';
-import { createGrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
-import type { GrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
+import { deriveDustHeaderLanes } from '../../../../../src/services/gpu/renderers/galaxyField/field/deriveDustHeaderLanes';
+import { createGrowOnlyRecordBuffer } from '../../../../../src/services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
+import type { GrowOnlyRecordBuffer } from '../../../../../src/services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
 import { createOrientationDiagnostics } from '../ismMap/createOrientationDiagnostics';
-import type { IsmMapGenerator } from '../ismMap/createIsmMapGenerator';
-import type { IsmMapOrientation } from '../ismMap/createIsmMapOrientation';
-import type { IsmMapRingReduce } from '../ismMap/createIsmMapRingReduce';
-import type { IsmMapDustCdfScan } from '../ismMap/createIsmMapDustCdfScan';
-import { computePlaceDustBudget } from '../ismMap/computePlaceDustBudget';
-import type { PlaceDustBudget } from '../ismMap/computePlaceDustBudget';
-import { computeDigVeilBudget } from '../ismMap/computeDigVeilBudget';
-import type { DigVeilBudget } from '../ismMap/computeDigVeilBudget';
-import { buildDigArmEnvelopeTable } from '../ismMap/buildDigArmEnvelopeTable';
-import type { IsmMapPlaceDust, PlaceDustDispatchInput } from '../ismMap/createIsmMapPlaceDust';
+import type { IsmMapGenerator } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapGenerator';
+import type { IsmMapOrientation } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapOrientation';
+import type { IsmMapRingReduce } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapRingReduce';
+import type { IsmMapDustCdfScan } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapDustCdfScan';
+import { computePlaceDustBudget } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
+import type { PlaceDustBudget } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
+import { computeDigVeilBudget } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/computeDigVeilBudget';
+import type { DigVeilBudget } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/computeDigVeilBudget';
+import { buildDigArmEnvelopeTable } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/buildDigArmEnvelopeTable';
+import type { IsmMapPlaceDust, PlaceDustDispatchInput } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapPlaceDust';
 import type {
   IsmMapPlaceArmSpurCloud,
   PlaceArmSpurCloudDispatchInput,
-} from '../ismMap/createIsmMapPlaceArmSpurCloud';
+} from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapPlaceArmSpurCloud';
 import type {
   IsmMapPlaceArmCloud,
   PlaceArmCloudDispatchInput,
-} from '../ismMap/createIsmMapPlaceArmCloud';
+} from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapPlaceArmCloud';
 import type {
   IsmMapPlaceDigVeil,
   PlaceDigVeilDispatchInput,
-} from '../ismMap/createIsmMapPlaceDigVeil';
+} from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapPlaceDigVeil';
 import { MAX_PARTICLE_COUNT } from '../../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
-import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../field/packBubbleInstances';
-import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../field/packFieldUniforms';
+import { BUBBLE_RECORD_FLOATS, packBubbleInstances } from '../../../../../src/services/gpu/renderers/galaxyField/field/packBubbleInstances';
+import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../../../../../src/services/gpu/renderers/galaxyField/field/packFieldUniforms';
 
 /**
  * A single generated extra galaxy. The UBO is retained rather than destroyed

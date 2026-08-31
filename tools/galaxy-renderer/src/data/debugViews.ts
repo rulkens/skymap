@@ -11,7 +11,7 @@
  * it cannot simply map this table.
  */
 
-import type { DebugViewKind } from '../../@types/data/DebugViewKind';
+import type { DebugViewKind } from '../../../../src/@types/galaxy/DebugViewKind';
 import type { DebugViewSpec } from '../../@types/data/DebugViewSpec';
 
 export const DEBUG_VIEWS: Readonly<Record<DebugViewKind, DebugViewSpec>> = {

@@ -4,11 +4,11 @@
  * `createGalaxyEngine.ts`'s `drawFrame` builds for shells/dig/young instead
  * of copy-pasting DIG's split two more times.
  */
-import type { HiiTierKind } from './HiiTierKind';
+import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
 import type { RenderSettings } from './RenderSettings';
 
 export type HiiTierSpec = {
-  readonly kind: HiiTierKind;
+  readonly kind: HiiTier;
   /**
    * `model.hiiSegments`' own label for this tier (`hiiRegions.ts`'s
    * `buildHiiRegionsWithSegments`) — restated here, not imported, since that

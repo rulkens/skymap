@@ -9,8 +9,8 @@
  * sample, the rendered-flux sums) that can't live inside the model.
  */
 
-import type { FieldSliceCounts } from './FieldSliceCounts';
-import type { HiiSegment } from './HiiSegment';
+import type { FieldSliceCounts } from '../../../../src/@types/galaxy/FieldSliceCounts';
+import type { HiiSegment } from '../../../../src/@types/galaxy/HiiSegment';
 import type { GalaxyFieldMixtureResult } from '../../../../src/@types/galaxy/GalaxyFieldMixtureResult';
 
 export type GalaxyProbeApi = {

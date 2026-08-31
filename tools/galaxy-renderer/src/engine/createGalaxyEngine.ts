@@ -16,7 +16,7 @@ import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadou
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
-import type { HiiTierKind } from '../../@types/engine/HiiTierKind';
+import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import {
@@ -32,41 +32,41 @@ import { createFrameTimer } from './timing/createFrameTimer';
 import { createReportThrottle } from './timing/createReportThrottle';
 import { TIMING_SLOTS } from './timing/timingSlots';
 import { createRafLoop } from './createRafLoop';
-import { bakeVolumeTexture } from './gpu/bakeVolumeTexture';
+import { bakeVolumeTexture } from '../../../../src/services/gpu/renderers/galaxyField/gpu/bakeVolumeTexture';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { readTextureChannelSum } from './gpu/readTextureChannelSum';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
-import { beginClearPass } from './passes/beginClearPass';
+import { beginClearPass } from '../../../../src/services/gpu/lib/beginClearPass';
 import { encodeBloomPyramid } from './post/encodeBloomPyramid';
 import { createGradePipeline } from './post/createGradePipeline';
 import { createCloudPipelines } from './sprites/createCloudPipelines';
-import { createFieldPipelines } from './field/createFieldPipelines';
-import { encodeDustMapPass } from './field/encodeDustMapPass';
-import { encodeDustPresentPass } from './field/encodeDustPresentPass';
+import { createFieldPipelines } from '../../../../src/services/gpu/renderers/galaxyField/field/createFieldPipelines';
+import { encodeDustMapPass } from '../../../../src/services/gpu/renderers/galaxyField/field/encodeDustMapPass';
+import { encodeDustPresentPass } from '../../../../src/services/gpu/renderers/galaxyField/field/encodeDustPresentPass';
 import { encodePresentOverlay } from './passes/encodePresentOverlay';
 import { encodeSceneComposites } from './passes/encodeSceneComposites';
-import { encodeSplatPass } from './field/encodeSplatPass';
-import { buildFieldHeaderInputs } from './field/buildFieldHeaderInputs';
-import { findHiiSegment } from './field/findHiiSegment';
+import { encodeSplatPass } from '../../../../src/services/gpu/renderers/galaxyField/field/encodeSplatPass';
+import { buildFieldHeaderInputs } from '../../../../src/services/gpu/renderers/galaxyField/field/buildFieldHeaderInputs';
+import { findHiiSegment } from '../../../../src/services/gpu/renderers/galaxyField/field/findHiiSegment';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
-import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
-import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
-import { createIsmMapRingReduce } from './ismMap/createIsmMapRingReduce';
-import { createIsmMapDustCdfScan } from './ismMap/createIsmMapDustCdfScan';
-import { createIsmMapPlaceDust } from './ismMap/createIsmMapPlaceDust';
-import { createIsmMapPlaceArmSpurCloud } from './ismMap/createIsmMapPlaceArmSpurCloud';
-import { createIsmMapPlaceArmCloud } from './ismMap/createIsmMapPlaceArmCloud';
-import { createIsmMapPlaceDigVeil } from './ismMap/createIsmMapPlaceDigVeil';
+import { createIsmMapGenerator } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapGenerator';
+import { createIsmMapOrientation } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapOrientation';
+import { createIsmMapRingReduce } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapRingReduce';
+import { createIsmMapDustCdfScan } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapDustCdfScan';
+import { createIsmMapPlaceDust } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapPlaceDust';
+import { createIsmMapPlaceArmSpurCloud } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapPlaceArmSpurCloud';
+import { createIsmMapPlaceArmCloud } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapPlaceArmCloud';
+import { createIsmMapPlaceDigVeil } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapPlaceDigVeil';
 import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
 import { createIsmMapDustCdfScanDebugSample } from './ismMap/createIsmMapDustCdfScanDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
 import { deriveFrameView } from './frame/deriveFrameView';
-import { BUBBLE_RECORD_FLOATS } from './field/packBubbleInstances';
+import { BUBBLE_RECORD_FLOATS } from '../../../../src/services/gpu/renderers/galaxyField/field/packBubbleInstances';
 import { createOffscreenProbe } from './probe/createOffscreenProbe';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './sprites/packCloudUniforms';
 import {
@@ -78,7 +78,7 @@ import {
   FIELD_HEADER_BUFFER_SIZE,
   FIELD_HEADER_FLOATS,
   packFieldHeaderUniforms,
-} from './field/packFieldUniforms';
+} from '../../../../src/services/gpu/renderers/galaxyField/field/packFieldUniforms';
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
 import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
@@ -259,7 +259,7 @@ export async function createGalaxyEngine(
   // pass writes last its `targetSizePx` to every tier — and that lane feeds
   // `counts2.w`, which the shader's footprint gates read directly, so a wrong
   // one there is a silently wrong LOD/splat footprint, not a crash.
-  const tierUbo: Record<HiiTierKind, GPUBuffer> = Object.fromEntries(
+  const tierUbo: Record<HiiTier, GPUBuffer> = Object.fromEntries(
     HII_TIERS.map((tier) => [
       tier.kind,
       own(
@@ -270,7 +270,7 @@ export async function createGalaxyEngine(
         }),
       ),
     ]),
-  ) as Record<HiiTierKind, GPUBuffer>;
+  ) as Record<HiiTier, GPUBuffer>;
   // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
   // and compositor uniforms are owned by their shared factories below.
   const gradeBuf = own(
@@ -566,7 +566,7 @@ export async function createGalaxyEngine(
     hii: render.extrasDivisor,
     tiers: Object.fromEntries(
       HII_TIERS.map((tier) => [tier.kind, render[tier.divisorKey]]),
-    ) as Record<HiiTierKind, number>,
+    ) as Record<HiiTier, number>,
   });
 
   // Reused scratch for the per-frame uniform packs — no per-frame allocation.
@@ -795,7 +795,7 @@ export async function createGalaxyEngine(
         hii: targets.reducedSize(render.extrasDivisor),
         tiers: Object.fromEntries(
           HII_TIERS.map((tier) => [tier.kind, targets.reducedSize(render[tier.divisorKey])]),
-        ) as Record<HiiTierKind, Vec2>,
+        ) as Record<HiiTier, Vec2>,
       },
     });
     packFieldHeaderUniforms(headers.field, fieldData);

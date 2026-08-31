@@ -53,9 +53,9 @@ import {
 } from '../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
 import { discLightScaleLength } from '../../src/utils/galaxy/discLightScaleLength';
 import { buildHiiShellsAndYoungWithSegments } from '../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import { computePlaceDustBudget } from './src/engine/ismMap/computePlaceDustBudget';
-import { computeDigVeilBudget } from './src/engine/ismMap/computeDigVeilBudget';
-import { FIELD_COMPONENT_FLOATS } from './src/engine/field/packFieldUniforms';
+import { computePlaceDustBudget } from '../../src/services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
+import { computeDigVeilBudget } from '../../src/services/gpu/renderers/galaxyField/ismMap/computeDigVeilBudget';
+import { FIELD_COMPONENT_FLOATS } from '../../src/services/gpu/renderers/galaxyField/field/packFieldUniforms';
 
 const VIEWPORT = { width: 1400, height: 900 };
 // A control change reaches the GPU through store → engineBridge → the next rAF,

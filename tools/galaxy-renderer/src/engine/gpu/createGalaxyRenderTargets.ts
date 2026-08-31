@@ -9,7 +9,7 @@
  * Bind groups are not cached here — the shared pass factories rebuild theirs
  * per draw. The engine's several that bind `dustMapTex` can't; hence the callback.
  */
-import type { HiiTierKind } from '../../../@types/engine/HiiTierKind';
+import type { HiiTier } from '../../../../../src/@types/galaxy/HiiTier';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 
 import { BLOOM_LEVELS, bloomScale } from '../../../../../src/data/bloomConstants';
@@ -27,7 +27,7 @@ export type TargetDivisors = {
   readonly field: number;
   readonly dust: number;
   readonly hii: number;
-  readonly tiers: Readonly<Record<HiiTierKind, number>>;
+  readonly tiers: Readonly<Record<HiiTier, number>>;
 };
 
 /**
@@ -43,7 +43,7 @@ type GalaxyRenderTargets = {
   readonly dustMapTex: GPUTexture;
   readonly hiiTex: GPUTexture;
   /** One of the three generalized HII sub-tiers' own targets — see `allocateTier`'s own doc. */
-  tierTex(kind: HiiTierKind): GPUTexture;
+  tierTex(kind: HiiTier): GPUTexture;
   readonly dustViewTex: GPUTexture;
   readonly bloomMips: readonly GPUTexture[];
   /** Pixel size of a target at `divisor` — also what the passes pack as `viewportPx`. */
@@ -125,7 +125,7 @@ export function createGalaxyRenderTargets(
    * `createGalaxyEngine.ts`'s `buildTierBindGroup`), composited into HDR
    * through the same `aggregateUpsample` as every other reduced target.
    */
-  const tierTextures = new Map<HiiTierKind, GPUTexture>();
+  const tierTextures = new Map<HiiTier, GPUTexture>();
   /**
    * The JWST-view's own presentation target (dustPresent.wesl), divisor-
    * matched to `dustMapTex` rather than `fieldTex` — see `dustMapTex`'s own
@@ -228,7 +228,7 @@ export function createGalaxyRenderTargets(
   // bind group references the per-tier UBO/`hiiCompsBuf`/`dustMapTex`, none
   // of which this touches; the render PASS binds the tier's texture as its
   // attachment view freshly every `drawFrame`.
-  function allocateTier(kind: HiiTierKind, w: number, h: number): void {
+  function allocateTier(kind: HiiTier, w: number, h: number): void {
     tierTextures.get(kind)?.destroy();
     tierTextures.set(
       kind,
@@ -333,7 +333,7 @@ export function createGalaxyRenderTargets(
     get hiiTex(): GPUTexture {
       return hiiTex;
     },
-    tierTex(kind: HiiTierKind): GPUTexture {
+    tierTex(kind: HiiTier): GPUTexture {
       // Non-null: `rebuildAll`'s unconditional first `setDivisors` allocates
       // every row of `HII_TIERS` before any caller can reach this getter,
       // same contract `aggregateTex`'s (unchecked) getter above relies on.

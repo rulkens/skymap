@@ -21,8 +21,8 @@ import {
 import { createReadbackQueue } from '../gpu/createReadbackQueue';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
 import { decodeIsmMapTexels } from './decodeIsmMapTexels';
-import type { IsmMapGenerator } from './createIsmMapGenerator';
-import type { IsmMapOrientation } from './createIsmMapOrientation';
+import type { IsmMapGenerator } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapGenerator';
+import type { IsmMapOrientation } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapOrientation';
 
 export type IsmMapReadbacks = {
   /** Null until the first copy lands, and again whenever `dropIfGridMoved` invalidates it. */
