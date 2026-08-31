@@ -9,8 +9,9 @@ import { SCALE_UNITS } from '../../data/scaleUnits';
  * bracket, so the row sorts correctly against body rows (the Sun can be
  * nearer OR farther than a resolved planet).
  *
- * `bodyRelativePose` is the body-slab path's sole Mpc↔metre site; this is the
- * one exception spec §7.1 carves for NEAR0's star-sphere interval — a Mpc
+ * `bodyRelativePose` is the body-slab path's sole Mpc↔metre site; this file's
+ * exception is catalogued in `oneMpcSeam.test.ts`'s `SCALE_UNITS_ALLOW_LIST`
+ * (the NEAR0 star-sphere category) rather than argued fresh here — a Mpc
  * DISTANCE SCALAR, not a pose, folded to metres once here rather than
  * threading a body-relative pose through the star partition.
  */

@@ -36,44 +36,78 @@ function walk(dir: string, extensions: readonly string[]): string[] {
   });
 }
 
-// The body-slab path, spelled out per the plan brief (spec §10's file list),
-// not re-derived from a glob at test time — a future file added under these
-// dirs is swept in automatically via the `walk` calls below, but the TWO
-// single-file entries are named so a rename/move here is a deliberate edit.
+// The body-slab path, DERIVED by sweeping the directories the migration
+// actually put files in — a new file dropped into any of these (a layer, a
+// body renderer) is gated with no hand-edit here. `walk` recurses, so
+// sweeping 'frame' also covers 'frame/passes' — no separate entry needed.
+// The four single-file entries aren't under either swept dir, so they stay
+// named (a rename/move of one of them is then a deliberate edit here, not a
+// silent drop from the gate).
 const TS_FILES: readonly string[] = [
-  'src/services/engine/frame/passes/earthLayer.ts',
-  'src/services/engine/frame/passes/atmosphereShellLayer.ts',
-  'src/services/engine/frame/passes/cloudShellLayer.ts',
-  'src/services/engine/frame/passes/planetsLayer.ts',
-  'src/services/engine/frame/passes/texturedBodiesLayer.ts',
-  'src/services/engine/frame/passes/ringsLayer.ts',
+  ...walk('src/services/engine/frame', ['.ts']),
   ...walk('src/services/gpu/renderers/bodies', ['.ts']),
   'src/utils/scene/cutSurfaceTiles.ts',
+  'src/utils/scene/starSphereRangeM.ts',
   'src/utils/camera/composeBodySlabMvp.ts',
   'src/utils/camera/bodySlabCamLocal.ts',
 ];
 
+// A glob typo (wrong dir name, wrong extension) would silently sweep zero
+// files and this whole test would vacuously pass — assert the sweep found
+// real content, and specifically the files each finding was written about.
+const KNOWN_ANCHOR_FILES: readonly string[] = [
+  'src/services/engine/frame/passes/earthLayer.ts',
+  'src/services/engine/frame/frameProgram.ts',
+  'src/services/engine/frame/visibleSlabBodies.ts',
+  'src/services/gpu/renderers/bodies/planetRenderer.ts',
+];
+
 const WESL_FILES: readonly string[] = walk('src/services/gpu/shaders/bodies', ['.wesl']);
 
-// Allow-list: files in the path above that legitimately convert to Mpc, NOT
-// for the slab MVP/camLocal compose (both take metre-native args throughout —
-// see composeBodySlabMvp.ts / bodySlabCamLocal.ts), but to bridge into a
-// shared Mpc-scale helper that lives OUTSIDE the body-slab path (the
-// Tasks 9/10 "M_TO_MPC precedent"). Each entry is a distinct helper the file
-// calls, so the justification names it — a NEW use beyond these would need
-// its own line here, keeping this a real (if per-file) gate.
+// The ONE table of "files on the body-slab path allowed to bridge Mpc<->m
+// outside the pose seam (bodyRelativePose.ts), and why" — folds in what used
+// to be three separate homes for this same question: this map (originally 3
+// cull/fade entries), starSphereRangeM.ts's own header (a distinct NEAR0
+// exception), and visibleSlabBodies.ts's undocumented use (radar findings
+// 1+2, .superpowers/sdd/2026-08-26-body-render-slabs/radar-seams-tests.md).
+// Each entry names the category so a NEW use beyond these needs its own line
+// — keeping this a real (if per-file) gate, not a rubber stamp.
 const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
     'src/services/engine/frame/passes/earthLayer.ts',
-    'bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and baseGlobeFadeAlpha (both outside the body-slab path, both Mpc-shaped APIs)',
+    'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and baseGlobeFadeAlpha (both outside the body-slab path, both Mpc-shaped APIs)',
   ],
   [
     'src/services/engine/frame/passes/cloudShellLayer.ts',
-    'bridges radiusM to Mpc for the same apparentSizePx cull and for cloudDeckFade (outside the body-slab path)',
+    'cull/fade precedent — bridges radiusM to Mpc for the same apparentSizePx cull and for cloudDeckFade (outside the body-slab path)',
   ],
   [
     'src/services/engine/frame/passes/ringsLayer.ts',
-    'bridges the ring outer radius/distance to Mpc to call the shared apparentSizePx sub-pixel cull (outside the body-slab path)',
+    'cull/fade precedent — bridges the ring outer radius/distance to Mpc to call the shared apparentSizePx sub-pixel cull (outside the body-slab path)',
+  ],
+  [
+    'src/services/engine/frame/visibleSlabBodies.ts',
+    'candidacy-math precedent — the pixel-floor/frustum roster gate runs entirely in Mpc (camPosMpc, positionMpc); ruled correct in radar-seams-tests.md finding 1, not a re-derivation of a slab MVP',
+  ],
+  [
+    'src/services/engine/frame/bodyTextureLoadRadius.ts',
+    'candidacy-math precedent — converts a body radius to an Mpc load-distance threshold for the texture-demand gate, no slab MVP involved',
+  ],
+  [
+    'src/services/engine/frame/atmosphereDrawList.ts',
+    'cull precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull, same shape as earthLayer/cloudShellLayer',
+  ],
+  [
+    'src/services/engine/frame/passes/starSpheresLayer.ts',
+    "NEAR0 star-sphere precedent — scales a star's radiusM into the RENDER_ORIGIN_MPC-relative NEAR0 model matrix via composeBodyMvp, not the body-slab's composeBodySlabMvp",
+  ],
+  [
+    'src/utils/scene/starSphereRangeM.ts',
+    "NEAR0 star-sphere precedent (spec §7.1) — folds a Mpc DISTANCE SCALAR (camera-to-sphere hypot) to metres for NEAR0's distanceRangeM, not a pose; the one exception spec §7.1 carves for the star-sphere interval",
+  ],
+  [
+    'src/services/engine/frame/slabs.ts',
+    "deriveSlabs is the seam's CALLER, not a second compose site: bodySlabRow's near/far/vp consume bodyRelativePose's already-metre-native pose untouched; its own MPC_TO_M/M_TO_MPC uses are COSMO's fixed distanceRangeM bracket and a body row's screen-footprint (radiusPx) bridge into bodyApparentDiameterPx — cull/fade precedent again, not pose math",
   ],
 ]);
 
@@ -102,6 +136,15 @@ describe('the body-slab path never re-derives the Mpc<->metre conversion', () =>
     // this file is deliberately NOT in TS_FILES above.
     const seam = readFileSync('src/services/engine/camera/bodyRelativePose.ts', 'utf8');
     expect(seam).toContain('MPC_TO_M');
+  });
+
+  it('the directory sweep found real files, including each known anchor', () => {
+    // A typo'd glob dir/extension returns [] silently and every it.each below
+    // would vacuously pass with zero cases — this is the loud-failure check.
+    expect(TS_FILES.length).toBeGreaterThan(20);
+    for (const anchor of KNOWN_ANCHOR_FILES) {
+      expect(TS_FILES).toContain(anchor);
+    }
   });
 
   it.each(TS_FILES.filter((f) => !SCALE_UNITS_ALLOW_LIST.has(f)))(
