@@ -126,7 +126,9 @@ function makeBodyView(bodyId: BodyId): SlabView {
 
 function makeRendererSpy() {
   return {
-    draw: vi.fn<(pass: GPURenderPassEncoder, instances: Float32Array, count: number) => void>(),
+    draw: vi.fn<
+      (pass: GPURenderPassEncoder, bodyId: string, instances: Float32Array, count: number) => void
+    >(),
   };
 }
 
@@ -194,7 +196,8 @@ describe('planetsLayer.draw — one body per row (partition boundary)', () => {
 
     planetsLayer.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state); // flat row
     expect(renderer.draw).toHaveBeenCalledTimes(1);
-    expect(renderer.draw.mock.calls[0]![2]).toBe(1); // single-instance draw
+    expect(renderer.draw.mock.calls[0]![1]).toBe('mercury'); // this row's bodyId
+    expect(renderer.draw.mock.calls[0]![3]).toBe(1); // single-instance draw
   });
 
   it('texturedBodiesLayer and planetsLayer never both draw the same body', () => {
@@ -284,7 +287,8 @@ describe('planetsLayer.draw — the f64 seam and packed record layout', () => {
 
     planetsLayer.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state);
 
-    const [, staging, count] = renderer.draw.mock.calls[0]!;
+    const [, bodyId, staging, count] = renderer.draw.mock.calls[0]!;
+    expect(bodyId).toBe('mercury');
     expect(count).toBe(1);
     expect(staging).toHaveLength(INSTANCE_FLOATS);
     expect(staging[16]).toBeCloseTo(mercury.albedo[0]);

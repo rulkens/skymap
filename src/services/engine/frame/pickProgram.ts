@@ -299,6 +299,11 @@ export function createPickProgram(deps: {
     const py = Math.max(0, Math.min(h - 1, Math.floor(pickYPx)));
 
     const encoder = device.createCommandEncoder({ label: 'pick-program-encoder' });
+    // One submit can now span MULTIPLE passes (one per body-m slab row plus
+    // NEAR0), so `bodyPickRenderer`'s slot cursors must reset ONCE here, before
+    // any pass is recorded — never per pass (see its module header's
+    // writeBuffer-vs-submit note).
+    state.gpu.bodyPickRenderer?.beginSubmit();
 
     // Record every slab's pass + cursor-texel copy on ONE encoder; the staging
     // buffers are collected in slab order (near→far) so the readback fold is a
@@ -356,12 +361,16 @@ export function createPickProgram(deps: {
     const w = canvas.width;
     const h = canvas.height;
     // Record every slab's pick pass on ONE encoder. Each slab writes its OWN
-    // colour + depth textures and each layer's `drawPick` binds its own per-draw
-    // uniforms, so the passes share no mutable buffer — no writeBuffer/submit
-    // ordering hazard from batching them. No timing descriptor: the debug
-    // overlay is not the timed 'pick' pass, and consuming the shared query-set
-    // slot here would double-book it against a real pick.
+    // colour + depth textures, so the passes share no mutable TARGET; the one
+    // mutable buffer shared across passes (`bodyPickRenderer`'s sphere/point
+    // slots) is why `beginSubmit()` below is load-bearing, not optional. No
+    // timing descriptor: the debug overlay is not the timed 'pick' pass, and
+    // consuming the shared query-set slot here would double-book it against a
+    // real pick.
     const encoder = device.createCommandEncoder({ label: 'pick-program-debug-encoder' });
+    // Same per-submit reset as `pick()` above — this encoder also spans
+    // multiple passes.
+    state.gpu.bodyPickRenderer?.beginSubmit();
     const texturesNearToFar: GPUTexture[] = [];
     for (const { slabIndex, view, layers: slabPickables } of groups) {
       const target = ensureSlabTextures(slabIndex, w, h);

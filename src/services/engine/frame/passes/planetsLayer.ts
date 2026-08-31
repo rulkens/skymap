@@ -20,10 +20,12 @@
  * `view.slab.vp` (a distinct near-field projection about that body's eye-
  * relative pose — see `bodySlabRow`), so there is no longer one shared vp to
  * batch multiple bodies against. `renderer.draw` still takes an instance
- * array + count, but this layer now calls it once per row with `count = 1`;
- * the renderer's instancing machinery is unchanged (and still the right shape
- * for the multi-body world-mpc case it was built for), only this caller's
- * batch width changed.
+ * array + count, but this layer now calls it once per row with `count = 1`,
+ * passing this row's `bodyId` so the renderer keys its instance buffer per
+ * body — every row's call lands in ONE encoder + submit (`renderFrame.ts`),
+ * so a buffer shared across rows would let a later row's `writeBuffer`
+ * clobber an earlier row's bytes before the GPU drew either (see
+ * `planetRenderer`'s header).
  *
  * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis
  *
@@ -129,7 +131,7 @@ export const planetsLayer: ContentLayer = {
     staging[25] = cam[1];
     staging[26] = cam[2];
     staging[27] = 0; // camPosLocal pad — kept zeroed across frames
-    renderer.draw(pass, staging, 1);
+    renderer.draw(pass, bodyId, staging, 1);
   },
 
   // Pick aspect — stamps this row's body into the r32uint pick pass when it is

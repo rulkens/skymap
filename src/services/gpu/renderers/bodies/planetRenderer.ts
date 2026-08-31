@@ -22,28 +22,22 @@
  * `texturedBodyRenderer`, and — now that both silhouettes come from the same ray
  * test — it does so without changing shape.
  *
- * ### Why GPU instancing — one write + one draw for N planets
+ * ### Why GPU instancing — one write + one draw per call
  *
- * Each seeded planet's MVP + albedo rides in a per-instance vertex-buffer
- * record, stepped by `@builtin(instance_index)`. The caller packs every
- * body's record into one Float32Array and `draw` uploads it with a SINGLE
- * `queue.writeBuffer`, then issues ONE `drawIndexed` with `instanceCount = N`.
+ * Each planet's MVP + albedo rides in a per-instance vertex-buffer record,
+ * stepped by `@builtin(instance_index)`; `draw` uploads `count` records with a
+ * SINGLE `queue.writeBuffer` then issues ONE `drawIndexed(indexCount, count)` —
+ * the house idiom (`galaxyPointRenderer`), safe WITHIN one call because every
+ * instance reads its own baked record.
  *
- * This is the house idiom (`galaxyPointRenderer`), chosen over the alternatives:
- *
- *   - N per-body draws each rebinding a uniform — multiplies binds and pushes a
- *     "which body am I" frame concern into the wiring.
- *   - A shared single-slot uniform written once per draw — does NOT work:
- *     `queue.writeBuffer` is ordered against submit, not against the draws
- *     recorded between writes, so every draw would read the last-written block
- *     and all planets would collapse onto the final body (the writeBuffer-vs-
- *     submit landmine).
- *   - Dynamic-offset uniform slots — works, but costs a 256-byte-aligned slot
- *     per body and a per-draw dynamic bind; instancing needs neither.
- *
- * Instancing sidesteps the writeBuffer-vs-submit race by construction: every
- * instance reads its OWN baked record, so there is no mid-frame uniform for a
- * later write to clobber. One `writeBuffer` + one draw, no bind group at all.
+ * The hazard is ACROSS calls: `planetsLayer` calls `draw` once PER BODY-M SLAB
+ * ROW, all inside ONE submit (Task 7's per-body slabs), so a single shared
+ * instance buffer would let a later row's `writeBuffer` clobber an earlier
+ * row's bytes before the GPU ran either draw — the writeBuffer-vs-submit race,
+ * the same shape a shared uniform would hit. Fix: each `bodyId` gets its OWN
+ * grow-only instance buffer (`texturedBodyRenderer`'s own-buffer-per-body
+ * precedent, keyed here by the caller's id instead of a bind group), so two
+ * same-submit rows never touch the same bytes.
  *
  * @module
  */
@@ -195,24 +189,29 @@ export function createPlanetRenderer(
     },
   });
 
-  // ── Planet instance buffer (grown on demand, never replaced wholesale) ────
+  // ── Per-body instance buffers (grown on demand, never replaced wholesale) ──
   //
-  // Mirrors `starPointRenderer.setStars`, and `orbitTrailRenderer` alongside
-  // it. A fixed capacity sized to today's roster is the tempting alternative
-  // and the wrong one: the count it guards is an authored-data fact, so the day
-  // the table outgrows it the excess bodies vanish with no error.
-  // There is no fixed cap to size
-  // against up front, so the buffer starts unallocated and grows to fit the
-  // largest `count` any `draw` call has passed; a later smaller frame reuses
-  // the larger buffer and draws the smaller subset. `destroy()` on the
-  // outgoing buffer is safe even if a prior frame referenced it — WebGPU
-  // defers the actual release until in-flight work completes.
-  let instanceBuffer: GPUBuffer | null = null;
-  let capacityPlanets = 0;
+  // Keyed by `bodyId` — the caller's own per-body-m-slab-row identity — rather
+  // than one shared buffer, because `planetsLayer` now calls `draw` once per
+  // row, all inside one submit (see the module header's writeBuffer-vs-submit
+  // note). A fixed capacity sized to today's roster is the tempting
+  // alternative and the wrong one for the same reason `starPointRenderer` and
+  // `orbitTrailRenderer` reject it: the count it guards is an authored-data
+  // fact, so the day a body's batch outgrows it the excess vanishes with no
+  // error. Each body's buffer grows to fit the largest `count` that body's
+  // `draw` call has passed; a later smaller call reuses the larger buffer.
+  // `destroy()` on an outgoing buffer is safe even if a prior frame referenced
+  // it — WebGPU defers the actual release until in-flight work completes.
+  const bodies = new Map<string, { buffer: GPUBuffer; capacity: number }>();
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, instances: Float32Array, count: number): void {
+  function draw(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    instances: Float32Array,
+    count: number,
+  ): void {
     if (count === 0) return;
     // `count` must be backed by that many records in the caller's packed
     // array. Clamping a mismatch to fit would hide the caller's bug in a
@@ -224,23 +223,28 @@ export function createPlanetRenderer(
       );
     }
 
-    if (instanceBuffer === null || count > capacityPlanets) {
-      instanceBuffer?.destroy();
-      capacityPlanets = count;
-      instanceBuffer = device.createBuffer({
-        label: 'planet-instance-vbo',
-        size: capacityPlanets * INSTANCE_STRIDE,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      });
+    let body = bodies.get(bodyId);
+    if (body === undefined || count > body.capacity) {
+      body?.buffer.destroy();
+      body = {
+        capacity: count,
+        buffer: device.createBuffer({
+          label: `planet-instance-vbo-${bodyId}`,
+          size: count * INSTANCE_STRIDE,
+          usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        }),
+      };
+      bodies.set(bodyId, body);
     }
 
-    // One upload of exactly the first `count` records. The typed-array
-    // overload takes the data offset + size in ELEMENTS (floats), not bytes.
-    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, count * INSTANCE_FLOATS);
+    // One upload of exactly the first `count` records, into THIS body's own
+    // buffer. The typed-array overload takes the data offset + size in
+    // ELEMENTS (floats), not bytes.
+    device.queue.writeBuffer(body.buffer, 0, instances, 0, count * INSTANCE_FLOATS);
 
     pass.setPipeline(pipeline);
     pass.setVertexBuffer(0, positionBuffer);
-    pass.setVertexBuffer(1, instanceBuffer);
+    pass.setVertexBuffer(1, body.buffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.drawIndexed(indexCount, count);
   }
@@ -250,9 +254,8 @@ export function createPlanetRenderer(
   function destroy(): void {
     positionBuffer.destroy();
     indexBuffer.destroy();
-    instanceBuffer?.destroy();
-    instanceBuffer = null;
-    capacityPlanets = 0;
+    for (const body of bodies.values()) body.buffer.destroy();
+    bodies.clear();
   }
 
   const renderer: PlanetRenderer = {

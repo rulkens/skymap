@@ -618,6 +618,66 @@ describe('createPickProgram', () => {
     });
   });
 
+  it('calls bodyPickRenderer.beginSubmit() ONCE per pick(), before any pass is recorded', async () => {
+    // The pick-clobber regression: a submit now spans multiple passes (one per
+    // body-m slab row). `beginSubmit()` must reset the sphere/point slot
+    // cursors exactly once, before the FIRST drawPick of the submit — not once
+    // per pass (that reset the cursor mid-submit and collapsed every sphere
+    // pick onto the last row's bytes; see bodyPickRenderer's module header).
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+
+    const callLog: string[] = [];
+    const beginSubmit = vi.fn(() => callLog.push('beginSubmit'));
+    const layers = [
+      makeLayer({
+        name: 'body-pick',
+        slab: 'body',
+        enabled: true,
+        drawPick: () => callLog.push('drawPick'),
+      }),
+    ];
+    const state = {
+      gpu: {
+        timingService: { descriptorFor: vi.fn(() => undefined) },
+        bodyPickRenderer: { beginSubmit },
+      },
+    } as unknown as EngineState;
+    const program = createPickProgram({ device, canvas: CANVAS, state, layers });
+
+    await program.pick(10, 10);
+    expect(beginSubmit).toHaveBeenCalledTimes(1);
+    // beginSubmit precedes BOTH body-m row draws (two rows this submit).
+    expect(callLog).toEqual(['beginSubmit', 'drawPick', 'drawPick']);
+  });
+
+  it('renderForDebug also calls bodyPickRenderer.beginSubmit() once, before recording', () => {
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+
+    const callLog: string[] = [];
+    const beginSubmit = vi.fn(() => callLog.push('beginSubmit'));
+    const layers = [
+      makeLayer({
+        name: 'body-pick',
+        slab: 'body',
+        enabled: true,
+        drawPick: () => callLog.push('drawPick'),
+      }),
+    ];
+    const state = {
+      gpu: {
+        timingService: { descriptorFor: vi.fn(() => undefined) },
+        bodyPickRenderer: { beginSubmit },
+      },
+    } as unknown as EngineState;
+    const program = createPickProgram({ device, canvas: CANVAS, state, layers });
+
+    program.renderForDebug();
+    expect(beginSubmit).toHaveBeenCalledTimes(1);
+    expect(callLog).toEqual(['beginSubmit', 'drawPick', 'drawPick']);
+  });
+
   it('returns null when the engine is not ready to pick', async () => {
     const { device, getCommandEncoderCount } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(null);

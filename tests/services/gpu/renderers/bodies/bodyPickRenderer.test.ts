@@ -1,16 +1,19 @@
 /**
- * bodyPickRenderer — the multi-caller `drawPoints` contract.
+ * bodyPickRenderer — the multi-caller `drawPoints` contract, and the
+ * `beginSubmit()` per-submit (not per-pass) cursor-reset boundary.
  *
  * Vitest runs in Node with no WebGPU surface, so `create*` returns plausibly
  * shaped stand-ins (mirrors `starPointRenderer.test.ts`). The load-bearing
- * behaviour pinned here is the NEW renderer capability: `drawPoints` is safe to
- * call MULTIPLE times in one pick pass (the scene stars AND the sub-pixel body
- * glints both call it), because each call claims its own per-pass SLOT of buffers.
- * A shared instance buffer would race `queue.writeBuffer` against submit — the
- * second caller's write would clobber the first's before the GPU ran either draw,
- * collapsing both point batches onto the last caller's data. This test proves the
- * two same-pass calls bind DIFFERENT instance buffers + bind groups (no clobber),
- * and that a fresh pass object resets the cursor so slot 0 is reused.
+ * behaviour pinned here is the renderer capability: `drawPoints` is safe to
+ * call MULTIPLE times per SUBMIT (the scene stars AND the sub-pixel body
+ * glints both call it), because each call claims its own per-submit SLOT of
+ * buffers. A shared instance buffer would race `queue.writeBuffer` against
+ * submit — the second caller's write would clobber the first's before the GPU
+ * ran either draw, collapsing both point batches onto the last caller's data.
+ * This test proves the two same-submit calls bind DIFFERENT instance buffers +
+ * bind groups (no clobber), that a NEW pass object within the SAME submit does
+ * NOT reset the cursor (the regression this renderer once had — see its module
+ * header), and that only an explicit `beginSubmit()` call resets it.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -76,7 +79,7 @@ describe('createBodyPickRenderer', () => {
   });
 });
 
-describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
+describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
   it('two same-pass calls bind DIFFERENT instance buffers + bind groups (no last-write-wins clobber)', () => {
     const device = mockDevice();
     const renderer = createBodyPickRenderer(device, false);
@@ -121,7 +124,12 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     );
   });
 
-  it('a fresh pass resets the cursor — slot 0 is reused, not reallocated', () => {
+  it('a NEW pass within the SAME submit does NOT reset the cursor (the regression this renderer once had)', () => {
+    // Post-body-slabs, one submit records MULTIPLE passes (one per body-m slab
+    // row). A caller in a later pass of the SAME submit must still claim the
+    // NEXT slot, not slot 0 again — resetting on pass identity would let two
+    // different-pass callers collide on one slot's buffers, exactly the sphere
+    // clobber this renderer's `beginPassIfNew` bug produced.
     const device = mockDevice();
     const renderer = createBodyPickRenderer(device, false);
 
@@ -130,8 +138,27 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     const firstVbo = (passOne.setVertexBuffer as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0]![1];
 
-    // A new pass object marks a fresh submit: the cursor resets to 0, so the next
-    // drawPoints reuses slot 0's buffers (same count ≤ capacity → no realloc).
+    const passTwo = mockPass();
+    renderer.drawPoints(passTwo, { vp: VP, viewportPx: VIEWPORT, points: [pt(999, 9)] });
+    const secondVbo = (passTwo.setVertexBuffer as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![1];
+
+    expect(secondVbo).not.toBe(firstVbo);
+  });
+
+  it('beginSubmit() resets the cursor — slot 0 is reused, not reallocated', () => {
+    const device = mockDevice();
+    const renderer = createBodyPickRenderer(device, false);
+
+    const passOne = mockPass();
+    renderer.drawPoints(passOne, { vp: VP, viewportPx: VIEWPORT, points: [pt(100, 1)] });
+    const firstVbo = (passOne.setVertexBuffer as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![1];
+
+    // The submit owner calls this once before recording the next submit's
+    // passes: the cursor resets to 0, so the next drawPoints reuses slot 0's
+    // buffers (same count ≤ capacity → no realloc).
+    renderer.beginSubmit();
     const passTwo = mockPass();
     renderer.drawPoints(passTwo, { vp: VP, viewportPx: VIEWPORT, points: [pt(999, 9)] });
     const reusedVbo = (passTwo.setVertexBuffer as unknown as ReturnType<typeof vi.fn>).mock
@@ -167,7 +194,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
 
   it('reuses a slot across a stride change and reallocates to the wider byte size (byte-aware capacity)', () => {
     // Slots are keyed by CALL ORDER (pointCursor), not by caller: when
-    // starPointsLayer drops out of a pass (famous-stars toggle off / roster all
+    // starPointsLayer drops out of a submit (famous-stars toggle off / roster all
     // spheres), bodyGlintsLayer becomes the FIRST point caller and inherits slot 0
     // — a slot last sized for 16-byte scene-star instances. A count-only reuse
     // check keeps that 16-byte buffer for the wider 20-byte glints whenever the
@@ -178,7 +205,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     const renderer = createBodyPickRenderer(device, false);
     const N = 2;
 
-    // Pass 1: the scene-star variant claims slot 0 at 16 bytes/instance (32 total).
+    // Submit 1: the scene-star variant claims slot 0 at 16 bytes/instance (32 total).
     const passOne = mockPass();
     renderer.drawPoints(passOne, {
       vp: VP,
@@ -186,8 +213,10 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
       points: [pt(1, 1), pt(2, 2)],
     });
 
-    // Pass 2 (fresh pass → cursor resets to slot 0): the GLINT variant inherits
-    // slot 0 with the SAME instance count but a WIDER 20-byte stride (40 total).
+    // Submit 2 (beginSubmit → cursor resets to slot 0): the GLINT variant
+    // inherits slot 0 with the SAME instance count but a WIDER 20-byte stride
+    // (40 total).
+    renderer.beginSubmit();
     const glintPoints: BodyGlintPick[] = [
       { posRelCamMpc: [1, 0, 0] as Vec3, packedId: 1, bandClass: 1 },
       { posRelCamMpc: [2, 0, 0] as Vec3, packedId: 2, bandClass: 2 },
@@ -277,5 +306,76 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     const draw = pass.draw as unknown as ReturnType<typeof vi.fn>;
     expect(draw).toHaveBeenCalledTimes(1);
     expect(draw).toHaveBeenNthCalledWith(1, 6, 1);
+  });
+});
+
+const sphereArgs = (packedId: number) => ({
+  mvp: new Float32Array(16),
+  camPosLocal: [0, 0, 0] as Vec3,
+  packedId,
+});
+
+describe('bodyPickRenderer.drawSphere — per-submit slot cursor (the pick-clobber regression)', () => {
+  it('two drawSphere calls in DIFFERENT passes of the SAME submit get DISTINCT dynamic offsets', () => {
+    // The actual bug: `pickProgram` now records one pass PER BODY-M SLAB ROW
+    // (Earth, each flat planet) inside one submit. The old `beginPassIfNew`
+    // reset zeroed the sphere cursor on every new pass object, so every row's
+    // sphere pick wrote dynamic offset 0 — the farthest body's bytes won for
+    // every body. Without a `beginSubmit()` call between them, two passes in
+    // one submit must still advance to DIFFERENT slots.
+    const device = mockDevice();
+    const renderer = createBodyPickRenderer(device, false);
+
+    const passEarth = mockPass();
+    renderer.drawSphere(passEarth, sphereArgs(1));
+    const offsetEarth = (passEarth.setBindGroup as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![2] as number[];
+
+    const passMars = mockPass();
+    renderer.drawSphere(passMars, sphereArgs(2));
+    const offsetMars = (passMars.setBindGroup as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![2] as number[];
+
+    expect(offsetMars[0]).not.toBe(offsetEarth[0]);
+  });
+
+  it('beginSubmit() resets the sphere cursor back to offset 0', () => {
+    const device = mockDevice();
+    const renderer = createBodyPickRenderer(device, false);
+
+    const passOne = mockPass();
+    renderer.drawSphere(passOne, sphereArgs(1));
+    const firstOffset = (passOne.setBindGroup as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![2] as number[];
+
+    renderer.beginSubmit();
+    const passTwo = mockPass();
+    renderer.drawSphere(passTwo, sphereArgs(2));
+    const secondOffset = (passTwo.setBindGroup as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![2] as number[];
+
+    expect(secondOffset[0]).toBe(firstOffset[0]);
+  });
+
+  it('each drawSphere call writes its OWN dynamic-offset slot of the shared uniform buffer', () => {
+    // Distinct write targets — not just distinct offsets read back through the
+    // bind group — is the actual clobber-proofing: two writeBuffer calls at two
+    // different byte offsets into the SAME buffer never overlap.
+    const device = mockDevice();
+    const renderer = createBodyPickRenderer(device, false);
+    const passA = mockPass();
+    const passB = mockPass();
+
+    renderer.drawSphere(passA, sphereArgs(1));
+    renderer.drawSphere(passB, sphereArgs(2));
+
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+    const sphereWrites = writeBuffer.mock.calls.filter(([buffer]) =>
+      (buffer as { label?: string }).label?.startsWith('body-pick-sphere-uniform'),
+    );
+    expect(sphereWrites).toHaveLength(2);
+    const [, offsetA] = sphereWrites[0]!;
+    const [, offsetB] = sphereWrites[1]!;
+    expect(offsetB).not.toBe(offsetA);
   });
 });

@@ -37,21 +37,23 @@
  *
  * ### The writeBuffer-vs-submit trap, applied to `drawSphere`
  *
- * The pick program records every NEAR0 pickable layer's `drawPick` into ONE
- * render pass, then does ONE `queue.submit`. All `queue.writeBuffer` calls made
- * between passes and submit are applied to their buffers BEFORE the GPU runs any
- * command — so if `drawSphere` wrote a SINGLE shared uniform once per call,
- * every recorded sphere draw would read the LAST body's mvp + packedId and all
- * sphere picks would collapse onto the final body.
+ * The pick program now records pickable layers into MULTIPLE render passes per
+ * submit — one per body-m slab row (Earth, each flat planet) plus one NEAR0 pass
+ * for the resolved star spheres — before ONE `queue.submit`. All `queue.writeBuffer`
+ * calls made across every one of those passes are applied to their buffers BEFORE
+ * the GPU runs any command — so if `drawSphere` wrote a SINGLE shared uniform once
+ * per call, every recorded sphere draw would read the LAST call's mvp + packedId
+ * and all sphere picks would collapse onto the final body, whichever pass drew it.
  *
  * **Mechanism chosen: one uniform buffer + 256-byte-aligned DYNAMIC OFFSETS,
- * with a monotonically-advancing per-pass cursor.** Each `drawSphere` writes its
- * `{ mvp, camPosLocal, packedId }` into the cursor's OWN slot and binds it via a dynamic
- * offset, so no two draws in a pass share bytes — the race cannot happen. The
- * cursor resets to 0 the first time a NEW pass object is seen (`beginPassIfNew`),
- * which is the natural per-pass boundary (each `pick()` / `renderForDebug()`
- * begins a fresh `GPURenderPassEncoder`); across passes the slots are reused
- * safely because the prior pass was already submitted.
+ * with a monotonically-advancing per-SUBMIT cursor.** Each `drawSphere` writes its
+ * `{ mvp, camPosLocal, packedId }` into the cursor's OWN slot and binds it via a
+ * dynamic offset, so no two draws in a submit share bytes — the race cannot
+ * happen. The cursor resets to 0 only when the SUBMIT OWNER calls `beginSubmit()`
+ * (once, before recording that submit's passes) — NOT on every new pass object:
+ * a pass-identity reset is exactly the bug this renderer once had, because one
+ * submit spanning several passes would silently re-zero the cursor mid-submit and
+ * let a later pass's sphere draw reuse an earlier pass's slot.
  *
  * Why dynamic offsets over the sibling patterns:
  *
@@ -75,19 +77,19 @@
  * instance buffer the second write would clobber the first before the GPU ran
  * either draw, collapsing both point batches onto the last caller's data.
  *
- * **Mechanism chosen for multi-call: per-pass SLOTS, one own set of buffers per
+ * **Mechanism chosen for multi-call: per-SUBMIT SLOTS, one own set of buffers per
  * caller.** Each `drawPoints` call claims the next slot (a `{ uniformBuffer,
- * bindGroup, instanceBuffer }` record, grown on demand) via a per-pass cursor
- * that resets alongside the sphere cursor in `beginPassIfNew`. Two callers in one
- * pass — the scene stars (`starPointsLayer`) and the sub-pixel body glints
+ * bindGroup, instanceBuffer }` record, grown on demand) via a cursor that resets
+ * alongside the sphere cursor in `beginSubmit()`. Two callers within one submit
+ * — the scene stars (`starPointsLayer`) and the sub-pixel body glints
  * (`bodyGlintsLayer`) — therefore write DIFFERENT buffers, so no `writeBuffer`
  * races submit. This is `texturedBodyRenderer`'s own-buffer-per-body fix, keyed
- * here by a per-pass slot cursor rather than a body id; per-slot buffers (not the
+ * here by a per-submit slot cursor rather than a body id; per-slot buffers (not the
  * sphere path's dynamic-offset uniform) because each call also needs its OWN
  * variable-length instance VERTEX buffer, which a dynamic uniform offset cannot
- * express. Slots are reused across passes (the prior pass was already submitted
- * before its slots are handed out again), so the allocation is bounded by the
- * max callers in any one pass (two today).
+ * express. Slots are reused across submits (the prior submit already ran before
+ * its slots are handed out again), so the allocation is bounded by the max
+ * callers in any one submit (two today).
  *
  * ### Depth-tested, r32uint, no blend
  *
@@ -405,27 +407,23 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     return slot;
   }
 
-  // ── Per-pass cursors + reset ──────────────────────────────────────────────
+  // ── Per-submit cursors + reset ────────────────────────────────────────────
   //
-  // The sphere cursor advances per draw within a pass; the point cursor advances
-  // per drawPoints CALLER within a pass. Both reset when a NEW pass object is
-  // first seen. Comparing pass identity is the per-pass boundary: the pick program
-  // calls `beginRenderPass` once per `pick()` / `renderForDebug()`, so each fresh
-  // encoder object marks a fresh submit whose slots may be reused from scratch.
-  let currentPass: GPURenderPassEncoder | null = null;
+  // The sphere cursor advances per draw across the WHOLE submit; the point
+  // cursor advances per drawPoints CALLER across the whole submit. Both reset
+  // only when the submit owner calls `beginSubmit()` — NOT per pass, because one
+  // submit now spans multiple passes (one per body-m slab row plus NEAR0); a
+  // pass-identity reset would re-zero the cursor mid-submit and let a later
+  // pass's draw silently reuse an earlier pass's slot (see the module header).
   let sphereCursor = 0;
   let pointCursor = 0;
 
-  function beginPassIfNew(pass: GPURenderPassEncoder): void {
-    if (pass !== currentPass) {
-      currentPass = pass;
-      sphereCursor = 0;
-      pointCursor = 0;
-    }
+  function beginSubmit(): void {
+    sphereCursor = 0;
+    pointCursor = 0;
   }
 
   function drawSphere(pass: GPURenderPassEncoder, args: BodySpherePickArgs): void {
-    beginPassIfNew(pass);
     // Guard the fixed slot count. Never reached given the seed roster (~50 < 64);
     // dropping a tail draw beats a dynamic-offset-out-of-range validation error.
     if (sphereCursor >= MAX_SPHERE_DRAWS) return;
@@ -449,7 +447,6 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
   }
 
   function drawPoints(pass: GPURenderPassEncoder, args: BodyPointPickArgs): void {
-    beginPassIfNew(pass);
     const { vp, viewportPx, points } = args;
     const n = points.length;
     if (n === 0) return;
@@ -545,6 +542,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
 
   const renderer: BodyPickRenderer = {
     label: 'bodyPickRenderer',
+    beginSubmit,
     drawSphere,
     drawPoints,
     destroy,

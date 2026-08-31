@@ -482,17 +482,15 @@ export type EngineGpuHandles = {
    */
   starRenderer: StarRenderer | null;
   /**
-   * Flat-lit albedo planets — a SINGLE renderer instance that draws every
-   * seeded planet in one frame via GPU instancing: `planetsLayer` packs each
-   * body's MVP + albedo into a per-instance vertex-buffer record and hands
-   * the whole batch to one `draw` call, which does one `queue.writeBuffer`
-   * followed by one instanced `drawIndexed`. Each instance reads its OWN
-   * baked record, so there is no shared per-draw uniform for a later write
-   * to clobber (the writeBuffer-vs-submit landmine that a dynamic-offset or
-   * shared-slot design would have to guard against). Same `foreground:0`
-   * format invariant as the other sphere bodies. Excluded from
-   * `isEngineReady` and null-checked at use. Null until `initGpu` constructs
-   * it; released and re-nulled by `destroy()`.
+   * Flat-lit albedo planets — a SINGLE renderer instance, drawn one body-m
+   * slab row at a time: `planetsLayer` packs each row's MVP + albedo into a
+   * per-instance vertex-buffer record and hands it to `draw` keyed by that
+   * row's `bodyId`, so every body gets its OWN grow-only instance buffer (no
+   * shared buffer for a later same-submit row's `writeBuffer` to clobber —
+   * see `planetRenderer`'s header). Same `foreground:0` format invariant as
+   * the other sphere bodies. Excluded from `isEngineReady` and null-checked
+   * at use. Null until `initGpu` constructs it; released and re-nulled by
+   * `destroy()`.
    */
   planetRenderer: PlanetRenderer | null;
   /**
