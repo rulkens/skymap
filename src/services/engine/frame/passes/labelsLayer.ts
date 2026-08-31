@@ -53,14 +53,14 @@ export const labelsLayer: ContentLayer = {
   },
 
   draw(pass, view, ctx, state) {
-    // Occlude the captions per-pixel behind nearer bodies ONLY when the body
-    // pass actually ran this frame — else the `foreground:0` depth is
+    // Occlude the captions per-pixel behind an opaque body ONLY when the body
+    // pass actually ran this frame — else the `foreground:0` colour is
     // stale/uninitialised and would spuriously discard every caption. When
     // undefined, the occlusion renderer falls back to its plain pipeline and
     // draws the captions un-occluded. Mirrors `foregroundLabelsLayer`'s guard.
-    const depthView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.depthViewOf('foreground:0')
+    const colorView = ctx.renderedTargets.has('foreground:0')
+      ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;
-    state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, depthView);
+    state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, colorView);
   },
 };

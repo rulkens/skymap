@@ -279,4 +279,30 @@ describe('selectionRingLayer.draw', () => {
     // The viewport is `draw`'s 3rd argument.
     expect(rendererSpy.draw.mock.calls[0]![2]).toEqual([1280, 720]);
   });
+
+  // Cross-file contract (Task 12): the occlusion joint now reads
+  // 'foreground:0's COLOUR view (its alpha, via lib/sceneDepth.wesl), not its
+  // depth view — each painter-chain row clears its own depth (spec §7.3), so
+  // the depth buffer can no longer back a coverage test. This fails if the
+  // layer is ever pointed back at `depthViewOf`.
+  it('passes the foreground colour view (not the depth view) to the renderer as the 5th arg', () => {
+    const state = makeStateWithSizePx(galaxyRow(), 4);
+    const sentinelColorView = {} as GPUTextureView;
+    const viewOf = vi.fn<(id: string) => GPUTextureView>(() => sentinelColorView);
+    const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
+    const ctx = {
+      ...makeCtx(),
+      renderedTargets: new Set(['foreground:0']),
+      renderTargets: { viewOf, depthViewOf } as unknown as ReadyFrameContext['renderTargets'],
+    };
+
+    selectionRingLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
+
+    expect(viewOf).toHaveBeenCalledWith('foreground:0');
+    expect(depthViewOf).not.toHaveBeenCalled();
+    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
+      typeof makeRendererSpy
+    >;
+    expect(rendererSpy.draw.mock.calls[0]![4]).toBe(sentinelColorView);
+  });
 });

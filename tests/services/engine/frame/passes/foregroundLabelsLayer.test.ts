@@ -94,7 +94,7 @@ function makeCtx(nowMs = 0): ReadyFrameContext {
     drawCamPos: [2, 3, 5],
     canvasSize: { width: 1280, height: 720 },
     nowMs,
-    renderTargets: { depthViewOf: () => ({}) as GPUTextureView },
+    renderTargets: { viewOf: () => ({}) as GPUTextureView },
     renderedTargets: new Set(['foreground:0']),
   } as unknown as ReadyFrameContext;
 }

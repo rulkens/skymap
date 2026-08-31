@@ -31,18 +31,19 @@ export type MarkerLineRenderer = {
    * implementation.  The pass's render target format must match the
    * `targetFormat` passed to `createMarkerLineRenderer`.
    *
-   * `sceneDepthView` is consumed only by an instance created with
+   * `sceneColorView` is consumed only by an instance created with
    * `occludeAgainstDepth: 'compare' | 'coverage'`, where it feeds the group(1)
-   * depth joint so fragments behind a nearer solar-system body are discarded
-   * (per-pixel body occlusion).  The mode picks the occluder — `'compare'` for
-   * same-slab NEAR0 connectors, `'coverage'` for cross-slab COSMO overlays.  A
-   * plain instance ignores it.
+   * coverage joint so fragments behind an opaque solar-system body are
+   * discarded (per-pixel body occlusion, read from the foreground colour
+   * target's alpha — see lib/sceneDepth.wesl).  The mode only picks which
+   * entry point compiles in; both run the identical coverage test.  A plain
+   * instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    sceneDepthView?: GPUTextureView,
+    sceneColorView?: GPUTextureView,
   ): void;
   /** Number of lines last passed to setLines. Used by tests + debug HUD. */
   lineCount(): number;

@@ -73,10 +73,10 @@ import fsCode from '../../shaders/markerLines/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/markerLines/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
-  OCCLUSION_DEPTH_GROUP_INDEX,
-  OCCLUSION_DEPTH_LAYOUT_DESC,
-  createOcclusionDepthBindGroup,
-} from './occlusionDepthGroup';
+  OCCLUSION_COVERAGE_GROUP_INDEX,
+  OCCLUSION_COVERAGE_LAYOUT_DESC,
+  createOcclusionCoverageBindGroup,
+} from './occlusionCoverageGroup';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
@@ -126,20 +126,16 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * a follow-up resize.
  *
  * `opts.occludeAgainstDepth` opts this instance into per-pixel occlusion
- * behind nearer solar-system bodies, and selects WHICH occluder.  When set,
- * the pipeline gains a group(1) depth binding (`OCCLUSION_DEPTH_LAYOUT_DESC`)
- * and compiles a discard-gated `fragmentOcclude.wesl` entry instead of the
- * plain `fragment.wesl`; `draw` then consumes a per-frame scene depth view.
- * The mode picks the entry point:
- *   - `'compare'`  → the `fs` entry (depth COMPARE) for NEAR0 foreground
- *     leader lines that share the bodies' slab.
- *   - `'coverage'` → the `fsCoverage` entry (pure COVERAGE) for the COSMO
- *     overlay marker-lines, whose window-Z is in a different projection than
- *     the NEAR0 body depths, so any body depth written at the pixel occludes
- *     them.
- * The default (opts omitted) keeps the plain single-BGL, non-occluding
- * pipeline the Milky Way + structure leader lines rely on — byte-for-byte
- * unchanged.
+ * behind an opaque solar-system body.  When set, the pipeline gains a
+ * group(1) coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
+ * a discard-gated `fragmentOcclude.wesl` entry instead of the plain
+ * `fragment.wesl`; `draw` then consumes a per-frame scene colour view.  The
+ * mode picks the entry point — `'compare'` → `fs`, `'coverage'` → `fsCoverage`
+ * — but both entries run the identical alpha-coverage test now (see that
+ * file's header): the split is a naming hook for this call site, not a live
+ * behavioural difference.  The default (opts omitted) keeps the plain
+ * single-BGL, non-occluding pipeline the Milky Way + structure leader lines
+ * rely on — byte-for-byte unchanged.
  */
 export function createMarkerLineRenderer(
   ctx: GpuContext,
@@ -168,7 +164,7 @@ export function createMarkerLineRenderer(
   // ── GPU resources (null when device is null) ─────────────────────────────
   //
   // The occlusion instance builds BOTH pipelines and picks per-draw:
-  // `plainPipeline` (single BGL) whenever no scene depth is supplied this frame,
+  // `plainPipeline` (single BGL) whenever no scene colour is supplied this frame,
   // `occludePipeline` (two BGLs, discard-gated fragment) when it is. A
   // non-occlusion instance builds only `plainPipeline` and leaves the other null.
   let plainPipeline: GPURenderPipeline | null = null;
@@ -177,14 +173,14 @@ export function createMarkerLineRenderer(
   let gpuInstanceBuffer: GPUBuffer | null = null;
   let cornerBuffer: GPUBuffer | null = null;
   let bindGroup: GPUBindGroup | null = null;
-  // Retained only on the occlusion path — the group(1) depth BGL that
+  // Retained only on the occlusion path — the group(1) coverage BGL that
   // `draw` rebuilds a per-frame bind group against.  Null on the plain
   // path (and whenever device is null), which is what gates `draw`'s
   // occlusion branch.
-  let occlusionDepthBGL: GPUBindGroupLayout | null = null;
+  let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
 
   // The occlude MODE, or undefined for a plain instance. Present ⇒ build the
-  // occlude pipeline + depth BGL (exactly as the old boolean did); the mode
+  // occlude pipeline + coverage BGL (exactly as the old boolean did); the mode
   // then selects the fragment ENTRY POINT — see the factory docblock.
   const occludeMode = opts?.occludeAgainstDepth;
 
@@ -204,28 +200,28 @@ export function createMarkerLineRenderer(
 
     // ── Occlusion joint (opt-in) ─────────────────────────────────────────
     //
-    // When this instance occludes against scene depth, the pipeline gains a
-    // second bind-group layout at group 1 (the shared depth joint) and
-    // compiles the discard-gated fragment entry.  `occlusionDepthBGL` is
-    // retained so `draw` can rebuild its per-frame bind group (the depth
-    // view changes on every resize — see occlusionDepthGroup.ts).
+    // When this instance occludes against scene coverage, the pipeline gains a
+    // second bind-group layout at group 1 (the shared coverage joint) and
+    // compiles the discard-gated fragment entry.  `occlusionCoverageBGL` is
+    // retained so `draw` can rebuild its per-frame bind group (the colour
+    // view changes on every resize — see occlusionCoverageGroup.ts).
     if (occludeMode != null) {
-      occlusionDepthBGL = device.createBindGroupLayout(OCCLUSION_DEPTH_LAYOUT_DESC);
+      occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
     }
 
     // ── Pipelines ─────────────────────────────────────────────────────────
     //
     // An occlusion instance builds BOTH pipelines and picks per-draw. `draw`
-    // selects `occludePipeline` only when handed a scene depth view THIS frame,
+    // selects `occludePipeline` only when handed a scene colour view THIS frame,
     // and falls back to `plainPipeline` otherwise — so a frame in which no
-    // foreground body drew (hence no valid scene depth) still paints its
+    // foreground body drew (hence no valid scene colour) still paints its
     // connectors un-occluded through a VALID draw, rather than an occlusion
     // draw with group(1) left unbound. A non-occlusion instance builds only
     // the plain pipeline.
     const vsModule = createShaderModuleWithDevLog(device, vsCode, 'markerLines.vertex');
 
     // Both pipelines draw the identical geometry into the identical target;
-    // only the fragment entry and the group(1) depth binding differ, so the
+    // only the fragment entry and the group(1) coverage binding differ, so the
     // vertex-buffer + colour-target descriptors are shared.
     const vertexBuffers: GPUVertexBufferLayout[] = [
       // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
@@ -267,7 +263,7 @@ export function createMarkerLineRenderer(
       // participate in depth testing.
     });
 
-    if (occlusionDepthBGL) {
+    if (occlusionCoverageBGL) {
       const fsOccludeModule = createShaderModuleWithDevLog(
         device,
         fsOccludeCode,
@@ -277,14 +273,15 @@ export function createMarkerLineRenderer(
         label: 'marker-line-pipeline-occlude',
         layout: device.createPipelineLayout({
           label: 'marker-line-pipeline-occlude-layout',
-          // group 0 = the marker-line BGL; group 1 = the shared depth joint.
-          bindGroupLayouts: [bindGroupLayout, occlusionDepthBGL],
+          // group 0 = the marker-line BGL; group 1 = the shared coverage joint.
+          bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
         vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
         fragment: {
           module: fsOccludeModule,
-          // COVERAGE for the cross-slab COSMO overlays, COMPARE for the
-          // same-slab NEAR0 connectors — see the factory docblock.
+          // Both entries run the identical alpha-coverage test now — the
+          // 'compare'/'coverage' mode only picks which entry point compiles
+          // in, a naming hook for callers (see the factory docblock).
           entryPoint: occludeMode === 'coverage' ? 'fsCoverage' : 'fs',
           targets: colorTargets,
         },
@@ -377,7 +374,7 @@ export function createMarkerLineRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    sceneDepthView?: GPUTextureView,
+    sceneColorView?: GPUTextureView,
   ): void {
     if (
       !device ||
@@ -399,21 +396,21 @@ export function createMarkerLineRenderer(
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion
-    // pipeline only when a scene depth view is supplied THIS frame, binding the
-    // group(1) depth joint rebuilt from that view. With no depth view (e.g. no
-    // foreground body rendered this frame), it falls back to the plain pipeline
-    // and draws the connectors un-occluded — a valid draw, NOT an occlusion draw
-    // with group(1) left unbound. A non-occlusion instance (occludePipeline
-    // null) always takes the plain path.
-    if (occlusionDepthBGL && occludePipeline && sceneDepthView) {
+    // pipeline only when a scene colour view is supplied THIS frame, binding the
+    // group(1) coverage joint rebuilt from that view. With no colour view (e.g.
+    // no foreground body rendered this frame), it falls back to the plain
+    // pipeline and draws the connectors un-occluded — a valid draw, NOT an
+    // occlusion draw with group(1) left unbound. A non-occlusion instance
+    // (occludePipeline null) always takes the plain path.
+    if (occlusionCoverageBGL && occludePipeline && sceneColorView) {
       pass.setPipeline(occludePipeline);
       pass.setBindGroup(0, bindGroup);
-      const depthBindGroup = createOcclusionDepthBindGroup(
+      const coverageBindGroup = createOcclusionCoverageBindGroup(
         device,
-        occlusionDepthBGL,
-        sceneDepthView,
+        occlusionCoverageBGL,
+        sceneColorView,
       );
-      pass.setBindGroup(OCCLUSION_DEPTH_GROUP_INDEX, depthBindGroup);
+      pass.setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, coverageBindGroup);
     } else {
       pass.setPipeline(plainPipeline);
       pass.setBindGroup(0, bindGroup);

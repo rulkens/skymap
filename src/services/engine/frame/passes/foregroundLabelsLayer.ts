@@ -30,16 +30,16 @@ export const foregroundLabelsLayer: ContentLayer = {
     const { vpF32, viewportPx } = near0LabelProjection(ctx);
 
     // Valid only when the body pass ran this frame — else `foreground:0`'s
-    // depth is stale/uninitialised and would discard every caption.
-    const depthView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.depthViewOf('foreground:0')
+    // colour is stale/uninitialised and would discard every caption.
+    const colorView = ctx.renderedTargets.has('foreground:0')
+      ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;
 
     // Lines before captions, so the glyphs composite OVER the connector where
     // they meet. A null line renderer (bootstrap gap) just skips them.
     if (lineRenderer !== null) {
-      lineRenderer.draw(pass, vpF32, viewportPx, depthView);
+      lineRenderer.draw(pass, vpF32, viewportPx, colorView);
     }
-    renderer.draw(pass, vpF32, viewportPx, depthView);
+    renderer.draw(pass, vpF32, viewportPx, colorView);
   },
 };

@@ -24,19 +24,20 @@ export type SelectionRingRenderer = {
    * baked in the halo factor. Must be called inside a `beginRenderPass`
    * block on the swap-chain texture (premultiplied-OVER expects an LDR target).
    *
-   * `sceneDepthView` is consumed only by an instance created with
+   * `sceneColorView` is consumed only by an instance created with
    * `occludeAgainstDepth: 'compare' | 'coverage'`, where it feeds the group(1)
-   * depth joint so fragments behind a nearer solar-system body are discarded
-   * (per-pixel body occlusion).  The mode picks the occluder — `'compare'` for
-   * a same-slab NEAR0 ring, `'coverage'` for the cross-slab COSMO ring.  A
-   * plain instance ignores it.
+   * coverage joint so fragments behind an opaque solar-system body are
+   * discarded (per-pixel body occlusion, read from the foreground colour
+   * target's alpha — see lib/sceneDepth.wesl).  The mode only picks which
+   * entry point compiles in; both run the identical coverage test.  A plain
+   * instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number } | null,
-    sceneDepthView?: GPUTextureView,
+    sceneColorView?: GPUTextureView,
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;

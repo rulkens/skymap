@@ -1,22 +1,16 @@
-// labels/fragmentOcclude.wesl — depth-occluding variant of the MSDF label
+// labels/fragmentOcclude.wesl — occluding variants of the MSDF label
 // fragment stage.
-//
-// ## Why two occluding entries
 //
 // Labels draw AFTER the solar-system bodies, in a depthless OVER composite. A
 // label anchored behind a planet would otherwise paint over the body in front
-// of it. Two families of label need occluding, from different projections, so
-// this file exposes two discard-gated entries (the renderer picks one by mode):
-//
-//   'fs' — depth COMPARE via 'occludedByScene(input.pos.xy, input.pos.z)'. Used
-//   by the NEAR0 foreground captions, which share the bodies' slab so their
-//   window depth is comparable — see lib/sceneDepth.wesl for the 'greater means
-//   occluded' rule. Compare keeps a caption visible over its OWN body.
-//
-//   'fsCoverage' — pure COVERAGE via 'coveredByScene(input.pos.xy)' (no depth
-//   arg). Used by the COSMO overlay labels, which project through a different
-//   slab than the NEAR0 bodies, so their window-Z is incomparable to the stored
-//   body depth; any body depth written at this pixel occludes them.
+// of it. Two discard-gated entries exist so the renderer can still pick by
+// mode ('compare' vs 'coverage' — see labelRenderer.ts), but both now run the
+// SAME test: 'coveredByScene' (lib/sceneDepth.wesl), an alpha-coverage read of
+// 'foreground:0'. The 'compare vs coverage' split stopped meaning anything once
+// each painter-chain row started clearing its own depth (spec §7.3) — see that
+// file's header for why a per-row-cleared depth buffer can't back a compare
+// test either. Keeping both names is a hook for labelRenderer.ts's existing
+// pipeline-selection, not a live behavioural difference.
 //
 // The shading itself is identical to the plain 'fs' entry in labels/fragment.wesl:
 // both entries reuse 'shadeMsdf' (lib/msdf.wesl) so glyph colour has one source
@@ -25,24 +19,20 @@
 // ## Per-glyph, not per-pixel, occlusion
 //
 // All four glyph-quad corners share the anchor's clip-z (the vertex stage
-// writes one 'clampedClipZ' for the anchor — see labels/vertex.wesl), so
-// 'input.pos.z' is the anchor's window depth for the whole glyph. The caption is
-// therefore occluded or not as a unit — hidden where a nearer body covers it,
-// not sliced mid-glyph by the body's curved depth. That is what we want: a
-// caption reads as a single label, so its visibility should be all-or-nothing
-// against the body in front of it.
+// writes one 'clampedClipZ' for the anchor — see labels/vertex.wesl), so the
+// caption is occluded or not as a unit — hidden where an opaque body covers
+// its anchor, not sliced mid-glyph.
 //
 // In the fragment stage the VsOut builtin-position field 'input.pos' holds the
-// framebuffer position: '.xy' is window pixels and '.z' is window-space depth.
+// framebuffer position: '.xy' is window pixels.
 
 import package::labels::io::VsOut;
 import package::lib::msdf::shadeMsdf;
-import package::lib::sceneDepth::occludedByScene;
 import package::lib::sceneDepth::coveredByScene;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
-  if (occludedByScene(input.pos.xy, input.pos.z)) { discard; }
+  if (coveredByScene(input.pos.xy)) { discard; }
   return shadeMsdf(input.uv, input.fontIndex, input.color, input.outlineColor, input.outlineSdf);
 }
 

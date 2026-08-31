@@ -1,61 +1,41 @@
-// lib/sceneDepth.wesl — the shared scene-depth occlusion tests for the
+// lib/sceneDepth.wesl — the shared scene-coverage occlusion test for the
 // overlay renderers that draw AFTER the solar-system bodies.
-//
-// ## What this is
 //
 // A caption drawn AFTER the solar-system bodies must not paint over a planet
 // that sits IN FRONT of it. Rather than sort captions against every body on the
-// CPU, we sample the body pass's depth buffer at the caption fragment and
-// discard where a nearer body already owns the pixel.
+// CPU, we sample the body pass's colour buffer at the caption fragment and
+// discard where an opaque body already owns the pixel.
 //
-// ## Two occluders: 'compare' (same-slab) vs 'coverage' (cross-slab)
+// ## One test, not two — why this collapsed from a depth compare
 //
-// There are two flavours of occluder here, because two families of overlay
-// draw over the bodies from DIFFERENT projections:
+// This used to carry two occluders: a depth COMPARE for captions sharing the
+// body pass's own slab, and a pure coverage test for captions projected
+// through a different slab. Both are gone now that each 'foreground:0'
+// painter-chain row clears its OWN depth (spec §7.3) — the shared depth
+// buffer only ever holds the LAST row's value, unusable as an 'is a body
+// here' signal for either flavour, in ANY slab. Colour survives: the target
+// LOADS (not clears) between chain rows, so alpha accumulates under OVER
+// compositing across every row drawn this frame.
 //
-//   'occludedByScene' — a depth COMPARE. Used by the NEAR0 foreground captions,
-//   which live in the SAME NEAR0 reversed-Z slab as the bodies, so their
-//   window-Z is directly comparable to the stored body depth. Compare is what
-//   keeps a caption visible over its OWN body (its depth is not strictly less
-//   than the body it labels) while hiding it behind a NEARER body.
+// ## Why 'alpha > 0.5', not '> 0'
 //
-//   'coveredByScene' — a pure COVERAGE test. Used by the COSMO overlays
-//   (labels, marker-lines, selection ring), which project through the COSMO
-//   slab. Their window-Z is in a DIFFERENT projection than the NEAR0 body
-//   depths stored in 'foreground:0', so comparing the two numbers is
-//   meaningless — a depth compare would never fire and a cosmological label
-//   would paint over the Sun. The correct occluder is 'any body depth written
-//   at this pixel', i.e. strictly greater than the 0.0 far/clear value.
-//
-// ## Why 'greater' means occluded
-//
-// The body depth attachment is 'depthCompare: greater' cleared to 0.0 (the far
-// value under reversed-Z), so a nearer body writes a LARGER depth. A stored
-// sample strictly greater than this fragment's own depth therefore means a
-// NEARER body already covers this pixel — the caption is behind it and must
-// discard. Empty sky reads the 0.0 clear, which is never greater than a
-// fragment's depth, so captions over empty sky are kept.
+// 'foreground:0' clears to a=0, so its OVER composite into HDR is a no-op
+// wherever the foreground drew nothing, and an opaque body fragment (the
+// globe, a planet, a ring) writes a=1. 'atmosphereShellLayer' and
+// 'cloudShellLayer' depth-test but do NOT depth-write and their fragments
+// are translucent, so a naive 'a > 0' test would let their faint limb glow
+// occlude captions too. The 0.5 threshold passes the opaque body, not the
+// shell.
 //
 // ## Why textureLoad, no sampler
 //
-// Depth textures are unfilterable, so there is no sampler overload — we fetch
-// the exact texel with 'textureLoad'. 'fragXY' is the fragment's window-space
-// '@builtin(position).xy', which indexes the depth texel 1:1 because
-// 'foreground:0' and 'swap' both render at scale 1 (no half-res detour), so no
-// UV remap is needed. The alternative, sampling with a comparison sampler,
-// would force a same-size compare pipeline for no gain over the direct load.
+// 'fragXY' is the fragment's window-space '@builtin(position).xy', which
+// indexes the colour texel 1:1 because 'foreground:0' and 'swap' both render
+// at scale 1 (no half-res detour) — no UV remap, no filtering wanted.
 
-@group(1) @binding(0) var sceneDepthTex: texture_depth_2d;
+@group(1) @binding(0) var sceneColorTex: texture_2d<f32>;
 
-fn occludedByScene(fragXY: vec2f, fragDepth: f32) -> bool {
-  return textureLoad(sceneDepthTex, vec2i(fragXY), 0) > fragDepth;
-}
-
-// Cross-slab coverage test for the COSMO overlays: no depth argument, because
-// their window-Z is incomparable to the stored NEAR0 body depth (see the
-// 'compare vs coverage' note above). 'foreground:0' clears to 0.0 (the far
-// value under reversed-Z) and any body writes strictly greater than that, so a
-// stored sample > 0.0 means a body owns this pixel and the overlay must discard.
+/** True where the opaque foreground owns this pixel. Shells (a <= 0.5) do not. */
 fn coveredByScene(fragXY: vec2f) -> bool {
-  return textureLoad(sceneDepthTex, vec2i(fragXY), 0) > 0.0;
+  return textureLoad(sceneColorTex, vec2i(fragXY), 0).a > 0.5;
 }
