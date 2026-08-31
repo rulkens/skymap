@@ -61,8 +61,8 @@ import { SCALE_UNITS } from '../../scaleUnits';
 import { STAR_SPIRAL_WAYPOINTS } from './starSpiralWaypoints.generated';
 
 // Open with Earth's globe filling the frame: a few radii back from the surface,
-// radiusKm → Mpc through the shared unit table (matches `earthFlyout`).
-const EARTH_RADIUS_MPC = SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+// radiusM → Mpc through the shared unit table (matches `earthFlyout`).
+const EARTH_RADIUS_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
 const START_DISTANCE_MPC = EARTH_RADIUS_MPC * 3;
 
 // How close the camera passes each star, in Mpc (~103 AU). This is the camera's
