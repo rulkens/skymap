@@ -337,14 +337,13 @@ describe('timedSlotsOf', () => {
     // starfield, and star-upsample sits adjacent to the star-catalog leaf draw
     // it composites. The
     // foreground:0 body render now comes NEXT (before the composites) — one
-    // render STEP per foregroundChain entry (Task 9/10: earth, cloud-shell,
-    // and atmosphere-shell all ride the 'body' slab sentinel, a SEPARATE step
-    // from the still-NEAR0 rest, so the fixture below passes a body row
-    // (index 2) ahead of NEAR0 in the chain): earth, cloud-shell, and
-    // atmosphere-shell together in the body step (registry order), then a
-    // NEAR0 step carrying star-spheres, field-star-sphere, planets,
-    // textured-bodies, and the translucent rings overlay — so the bodies
-    // merge into HDR before the tone-map. The foreground:0→hdr LINEAR composite
+    // render STEP per foregroundChain entry (Task 9-11: earth, cloud-shell,
+    // planets, textured-bodies, rings, and atmosphere-shell all ride the
+    // 'body' slab sentinel, a SEPARATE step from the still-NEAR0 rest, so the
+    // fixture below passes a body row (index 2) ahead of NEAR0 in the
+    // chain): all six together in the body step (registry order), then a
+    // NEAR0 step carrying only star-spheres and field-star-sphere — so the
+    // bodies merge into HDR before the tone-map. The foreground:0→hdr LINEAR composite
     // then precedes the hdr→swap tone-map (the frame's only tone-map), and
     // the five swap overlays + the (swap, NEAR0) captions
     // (near0-selection-ring, foreground-labels) draw AFTER it, with pick last.
@@ -380,19 +379,20 @@ describe('timedSlotsOf', () => {
       'star-upsample',
       'constellations',
       'hdr·NEAR0',
-      // The body-m step (Task 9/10): every 'body'-slab layer matches EVERY
-      // body row, so earth, cloud-shell, and atmosphere-shell all land here,
-      // in registry order — rings/star-spheres/planets/textured-bodies stay
-      // literal NEAR0, so they sit in the NEXT (NEAR0) step instead.
+      // The body-m step (Task 9-11): every 'body'-slab layer matches EVERY
+      // body row, so earth, cloud-shell, planets, textured-bodies, rings, and
+      // atmosphere-shell all land here, in registry order — star-spheres and
+      // field-star-sphere are the only foreground layers still literal NEAR0,
+      // so they sit alone in the NEXT (NEAR0) step instead.
       'earth',
       'cloud-shell',
+      'planets',
+      'textured-bodies',
+      'rings',
       'atmosphere-shell',
       'foreground:0·BODY[0]',
       'star-spheres',
       'field-star-sphere',
-      'planets',
-      'textured-bodies',
-      'rings',
       'foreground:0·NEAR0',
       'foreground:0→hdr',
       // The bloom sub-pipeline, spliced between the linear foreground merge and

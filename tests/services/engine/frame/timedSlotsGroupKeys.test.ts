@@ -42,11 +42,13 @@ describe('timedSlotsOf — per-render-step group keys', () => {
   it('still includes per-layer slot names — the group rows are additions, not substitutions', () => {
     // A per-layer slot from the hdr·COSMO group and one from the
     // foreground:0·NEAR0 group: if the group-key push had replaced the layer
-    // loop rather than following it, these would be gone. 'planets', not
-    // 'earth' — Earth rides its own 'body' slab step now (Task 9) and this
-    // fixture's `[NEAR0]` chain carries no body row for it to expand into.
+    // loop rather than following it, these would be gone. 'star-spheres', not
+    // 'earth'/'planets' — those ride the 'body' slab step now (Tasks 9-11)
+    // and this fixture's `[NEAR0]` chain carries no body row for them to
+    // expand into; 'star-spheres' is one of the two foreground layers still
+    // literal NEAR0.
     expect(slots).toContain('point-sprites');
-    expect(slots).toContain('planets');
+    expect(slots).toContain('star-spheres');
   });
 
   it('keeps every slot name unique — no group key collides with a layer/composite/pick name', () => {

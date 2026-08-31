@@ -1,88 +1,99 @@
 /**
- * planetsLayer — unit tests for the seeded-planets content row.
+ * planetsLayer — unit tests for the seeded-planets `'body'`-slab content row.
  *
- * Three load-bearing assertions:
+ * Load-bearing assertions:
  *
- *   1. The f64 seam — every planet's MVP composes from the slab's
- *      `Float64Array` view-projection (`view.slab.vp`), NOT the f32-narrowed
- *      `view.vp` (identity-pinned via a mocked `composeBodyMvp`).
- *   2. The single instanced draw — ONE `renderer.draw(pass, staging, n)` paints
- *      every planet, with body i's own albedo and sun direction packed into
- *      body i's record. A per-draw uniform would instead race
- *      `queue.writeBuffer` against submit and render both planets at the
- *      last-written MVP; the packed instance batch is what avoids that.
- *   3. The MVP / `camPosLocal` pairing — the renderer ray-traces its silhouette
- *      from that packed camera, so it must be measured in the frame the packed
- *      MVP's model scale defines.
+ *   1. The f64 seam — the MVP composes from the slab's `Float64Array`
+ *      view-projection (`view.slab.vp`), NOT the f32-narrowed `view.vp`
+ *      (identity-pinned via a mocked `composeBodySlabMvp`), and reads the
+ *      pose off `ctx.bodyPose(bodyId)` rather than re-deriving it.
+ *   2. The partition boundary, now re-exposed by N body-m rows: a row draws
+ *      ONLY when its `bodyId` is in the partition's `flat` branch, and
+ *      `texturedBodiesLayer` / `planetsLayer` never both draw the same body —
+ *      the double-draw/z-fight bug the shared `sceneBodyPartition` exists to
+ *      prevent.
+ *   3. The MVP / `bodySlabCamLocal` pairing — the renderer ray-traces its
+ *      silhouette from the packed camera, so it must be measured in the frame
+ *      the packed MVP's model scale (`radiusM`) defines.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { planetsLayer } from '../../../../../src/services/engine/frame/passes/planetsLayer';
+import { texturedBodiesLayer } from '../../../../../src/services/engine/frame/passes/texturedBodiesLayer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
-import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
-import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
-import { minPickRadiusMpc } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
-import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
+import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
+import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
+import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-// Mock composeBodyMvp so the test can (a) assert which vp it consumed by
-// object identity and (b) hand each planet a recognisable Float64Array — real
-// composeBodyMvp returns f64; the layer narrows its own copy into the staging
-// buffer. The real composition math is covered by composeBodyMvp's own tests.
-vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
+// Mock the two body-slab compose primitives — real math is covered by their
+// own test files. This suite pins the ARGUMENTS the layer feeds them, and
+// lets sunDirLocal run for real so the packed sun direction reveals a
+// drift in the rotate/pack.
+const MOCK_MVP = new Float64Array(16);
+const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
+vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
+  composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
+vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
+  bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
+}));
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
 
-// The layer reads each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). Stub it to a map built from the SeededPlanet
-// fixtures, REUSING each fixture's own positionMpc/orientation refs — so the layer
-// sees the exact fixture values (identity-equal), keeping the `toBe(...)`
-// assertions below intact while the reads move off the baked record fields.
+// Both planetsLayer and texturedBodiesLayer read each body's live
+// position/orientation off this per-frame snapshot — mocked once so the
+// cross-layer no-double-draw test sees consistent state through both layers.
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
     }
-    const earth = state.data.bodies.earth as SeededPlanet | null;
-    if (earth)
-      m.set(earth.id, {
-        positionMpc: earth.positionMpc,
-        orientation: earth.orientation,
-        meanAnomalyRad: 0,
-      });
     return m;
   }),
 }));
 
-const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
+const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
+const camLocalMock = bodySlabCamLocal as unknown as ReturnType<typeof vi.fn>;
 
-// A test fixture pairing the identity record with the J2000 state the snapshot
-// carries — position + orientation were lifted off the record onto the derive, so
-// the fixture supplies them here (keyed by id, refs reused by the mock above).
-type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-const PLANET_STATES = deriveBodyStates(CONST_J2000);
-// The real seeded roster, each identity record paired with its derived J2000
-// state — so the layout/cull pins below run against the true positions.
-const SEEDED_PLANETS: readonly SeededPlanet[] = SCENE_PLANETS.map((p) => ({
-  ...p,
-  positionMpc: PLANET_STATES.get(p.id)!.positionMpc,
-  orientation: PLANET_STATES.get(p.id)!.orientation,
-}));
+const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
+
+/**
+ * A body sitting `radiusM·5` down +x — firmly resolved (well past the 3 px
+ * glint threshold) on the 720-tall/60° fixture viewport used throughout.
+ */
+function bodyAt(id: string, radiusM: number): SeededPlanet {
+  const distanceM = radiusM * 5;
+  return {
+    id,
+    label: id,
+    radiusM,
+    albedo: [0.5, 0.3, 0.2],
+    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+    orientation: IDENTITY_MAT3,
+  };
+}
+
+/** Deep sub-pixel from the fixture camera below — lands in the `glints` branch. */
+function glintBodyAt(id: string, radiusM: number): SeededPlanet {
+  return { ...bodyAt(id, radiusM), positionMpc: [radiusM * 1e7 * SCALE_UNITS.M_TO_MPC, 0, 0] };
+}
+
+const STUB_POSE: BodyRelativePose = { eyeRelBodyM: [1, 2, 3], basisM: IDENTITY_MAT3 };
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -92,79 +103,25 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-// Bare ctx for the null-handle and draw cases: draw never reads ctx, and
-// enabled's handle check must short-circuit BEFORE the ctx.cam read
-// (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as ReadyFrameContext;
 
-// Beyond the handle checks, enabled reads ctx.cam.distance (the shared
-// foreground gate) AND the camera position + projection knobs (the per-body
-// sub-pixel gate — the same predicate draw's pack loop applies). The fixture
-// camera parks just off Mercury's centre (the first seeded body) so, whenever
-// `distance` is inside the foreground gate, at least one body resolves and
-// the `distance` argument alone drives the foreground-gate assertions below.
-function makeCtx(distance: number): ReadyFrameContext {
-  const mercury = SEEDED_PLANETS[0]!.positionMpc;
+/** A ctx comfortably inside the shared foreground gate, with a fixed pose for every body. */
+function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): ReadyFrameContext {
   return {
     cam: { distance },
-    drawCamPos: [mercury[0] + 1e-14, mercury[1], mercury[2]],
+    drawCamPos: [0, 0, 0],
+    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
     canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: Math.PI / 3,
+    drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
   } as unknown as ReadyFrameContext;
 }
 
-// A camera comfortably inside the shared foreground gate.
-const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
-
-/**
- * A SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT
- * arrays, so a first-arg identity check unambiguously reveals which one the
- * layer fed to composeBodyMvp.
- *
- * The viewport is an astronomically TALL stub (1e12 px): the pack loop culls
- * bodies under SUB_PIXEL_BODY_CULL_PX apparent diameter, and the layout pins
- * below want EVERY seeded body packed — from one camera position that is
- * impossible on a real viewport (Mercury is sub-pixel from Neptune), so the
- * stub buys pixels instead of bending the scene data. The cull itself has a
- * dedicated test on a real 720-px viewport.
- */
-function makeNear0View(): SlabView {
+function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = makeSlab({ vp: f64Vp });
-  return {
-    slab,
-    vp: f32Vp,
-    camPos: [0, 0, 5],
-    viewportPx: [1280, 1e12],
-  };
-}
-
-// Draw ctx: camera at the origin (the Sun), 60° fov — the partition (shared by
-// enabled + draw) reads ctx.drawCamPos + ctx.canvasSize.height + ctx.fovYRad.
-// An astronomically TALL viewport (1e12 px) buys pixels so every seeded body
-// resolves past the glint threshold and lands in the `flat` branch — the layout
-// pins below want EVERY seeded body packed from one impossible-on-a-real-viewport
-// camera position (Mercury is sub-pixel from Neptune). The cull itself has a
-// dedicated test on a real 720-px viewport.
-const DRAW_CTX = {
-  drawCamPos: [0, 0, 0],
-  canvasSize: { width: 1280, height: 1e12 },
-  fovYRad: (60 * Math.PI) / 180,
-} as unknown as ReadyFrameContext;
-
-/**
- * State with a `planetRenderer` handle and a seeded planet list, and NO
- * `texturedBodyRenderer` handle — `sceneBodyPartition`'s `?? false` then
- * treats every body as not-resident, so the partition routes every resolved
- * body to the `flat` branch this layer draws (a resident body would slide to
- * `textured`, drawn by `texturedBodiesLayer` instead).
- */
-function makeState(planetRenderer: unknown, planets: readonly PlanetBody[]): EngineState {
-  return {
-    gpu: { planetRenderer },
-    data: { bodies: { planets } },
-  } as unknown as EngineState;
+  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', bodyId } });
+  return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
 }
 
 function makeRendererSpy() {
@@ -173,371 +130,266 @@ function makeRendererSpy() {
   };
 }
 
+/**
+ * State seeding the flat/textured/glint partition fixture: `mercury` not
+ * resident (flat), `mars` resident (textured), `moon` deep sub-pixel (glint).
+ */
+function makePartitionFixtureState(): EngineState {
+  const flat = bodyAt('mercury', 2440000);
+  const textured = bodyAt('mars', 3390000);
+  const glint = glintBodyAt('moon', 1737000);
+  return {
+    gpu: {
+      planetRenderer: makeRendererSpy(),
+      texturedBodyRenderer: {
+        draw: vi.fn(),
+        hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface',
+      },
+    },
+    data: { bodies: { planets: [flat, textured, glint] } },
+  } as unknown as EngineState;
+}
+
 describe('planetsLayer.enabled', () => {
-  it('is false while planetRenderer is null and while no planets are seeded; true with both', () => {
-    // Null handle. NOTE: deliberately no state.data and a bare ctx — the
-    // handle check must short-circuit BEFORE either is touched (renderFrame
-    // fixtures carry null handles and no bodies bag).
-    const view = makeNear0View();
-    expect(
-      planetsLayer.enabled(
-        { gpu: { planetRenderer: null } } as unknown as EngineState,
-        CTX_STUB,
-        view,
-      ),
-    ).toBe(false);
-    // Renderer only, nothing seeded (camera inside the gate).
-    expect(planetsLayer.enabled(makeState(makeRendererSpy(), []), NEAR_CTX, view)).toBe(false);
-    // Both present, camera inside the gate.
-    expect(planetsLayer.enabled(makeState(makeRendererSpy(), SEEDED_PLANETS), NEAR_CTX, view)).toBe(
-      true,
-    );
+  it('is false while planetRenderer is null (bare ctx short-circuits)', () => {
+    const state = { gpu: { planetRenderer: null } } as unknown as EngineState;
+    expect(planetsLayer.enabled(state, CTX_STUB, makeBodyView('mercury' as BodyId))).toBe(false);
   });
 
-  it('is disabled beyond the foreground gate even with planets seeded', () => {
-    // At galaxy scale every planet is a deep-sub-pixel speck: the shared gate
-    // turns the row off so the (foreground:0, NEAR0) step can be skipped
-    // wholesale.
-    // Gate edge + a decade beyond it (cosmic scale), both derived from the gate
-    // so a farther seed growing FOREGROUND_MAX_DISTANCE_MPC carries this check.
-    const state = makeState(makeRendererSpy(), SEEDED_PLANETS);
-    const view = makeNear0View();
-    expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), view)).toBe(false);
-    expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), view)).toBe(
-      false,
-    );
+  it('is false beyond the foreground gate even for a flat body', () => {
+    const state = makePartitionFixtureState();
+    const farCtx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(planetsLayer.enabled(state, farCtx, makeBodyView('mercury' as BodyId))).toBe(false);
   });
 
-  it('is disabled while every seeded body is sub-pixel, even inside the foreground band', () => {
-    // Camera ~0.002 Mpc (~400 AU) from the Sun — comfortably inside the
-    // foreground distance gate (~1e-2 Mpc) but far outside every planet's
-    // orbit, so every body's apparent diameter is far under
-    // SUB_PIXEL_BODY_CULL_PX. A row that would pack zero bodies must not
-    // stay in the pass plan just because its own draw-loop guard makes the
-    // eventual draw a no-op.
-    const state = makeState(makeRendererSpy(), SEEDED_PLANETS);
-    const subPixelCtx = {
-      cam: { distance: 0.002 },
-      drawCamPos: [0, 0, 0.002],
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
-    expect(planetsLayer.enabled(state, subPixelCtx, makeNear0View())).toBe(false);
+  it('is true for the flat-branch row, false for the textured and glint rows', () => {
+    const state = makePartitionFixtureState();
+    const ctx = makeCtx();
+    expect(planetsLayer.enabled(state, ctx, makeBodyView('mercury' as BodyId))).toBe(true);
+    expect(planetsLayer.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(false);
+    expect(planetsLayer.enabled(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
   });
 
-  it('is enabled once the camera is close enough for at least one body to resolve', () => {
-    // Camera parked just off Mercury's centre (the first seeded body), still
-    // inside the foreground gate: Mercury alone resolving is enough to keep
-    // the row in the pass plan even though every other body stays sub-pixel
-    // from here.
-    const state = makeState(makeRendererSpy(), SEEDED_PLANETS);
-    const mercury = SEEDED_PLANETS[0]!.positionMpc;
-    const resolvingCtx = {
-      cam: { distance: 0.002 },
-      drawCamPos: [mercury[0] + 1e-14, mercury[1], mercury[2]],
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
-    expect(planetsLayer.enabled(state, resolvingCtx, makeNear0View())).toBe(true);
+  it('is false when the view is not a body-m row', () => {
+    const state = makePartitionFixtureState();
+    const worldMpcView: SlabView = {
+      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
+      vp: new Float32Array(16),
+      camPos: [0, 0, 0],
+      viewportPx: [1, 1],
+    };
+    expect(planetsLayer.enabled(state, makeCtx(), worldMpcView)).toBe(false);
   });
 });
 
-describe('planetsLayer.draw', () => {
-  it('composes one MVP per planet from view.slab.vp and issues ONE instanced draw', () => {
-    composeMock.mockClear();
-    const renderer = makeRendererSpy();
-    const view = makeNear0View();
-    const state = makeState(renderer, SEEDED_PLANETS);
+describe('planetsLayer.draw — one body per row (partition boundary)', () => {
+  it('draws only the flat-branch body matching this row', () => {
+    const state = makePartitionFixtureState();
+    const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
+    const ctx = makeCtx();
 
-    planetsLayer.draw(PASS_STUB, view, DRAW_CTX, state);
-
-    // One MVP composed per planet, each from the f64 slab vp — NOT view.vp.
-    expect(composeMock).toHaveBeenCalledTimes(SEEDED_PLANETS.length);
-    SEEDED_PLANETS.forEach((planet, i) => {
-      const call = composeMock.mock.calls[i]!;
-      // The load-bearing seam: first arg is the slab's Float64Array vp.
-      expect(call[0]).toBe(view.slab.vp);
-      expect(call[0]).not.toBe(view.vp);
-      expect(call[1]).toBe(planet.positionMpc);
-      expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-      expect(call[3]).toBe(planet.radiusM * SCALE_UNITS.M_TO_MPC);
-      // Each planet forwards its own baked orientation as the rotation factor.
-      expect(call[4]).toBe(planet.orientation);
-    });
-
-    // Exactly one draw for the whole batch, with count == planet count.
-    expect(renderer.draw).toHaveBeenCalledTimes(1);
-    const [passArg, staging, count] = renderer.draw.mock.calls[0]!;
-    expect(passArg).toBe(PASS_STUB);
-    expect(count).toBe(SEEDED_PLANETS.length);
-    expect(staging).toBeInstanceOf(Float32Array);
-
-    // The staging layout: each planet's albedo sits at floats base+16..18 of
-    // its record, so body i's colour is packed against body i's MVP and not a
-    // neighbour's.
-    SEEDED_PLANETS.forEach((planet, i) => {
-      const base = i * INSTANCE_FLOATS;
-      expect(staging[base + 16]).toBeCloseTo(planet.albedo[0]);
-      expect(staging[base + 17]).toBeCloseTo(planet.albedo[1]);
-      expect(staging[base + 18]).toBeCloseTo(planet.albedo[2]);
-      expect(staging[base + 19]).toBe(0); // albedo pad stays zeroed
-    });
-  });
-
-  it('packs each body`s sunDirLocal at floats base+20..22 with a zeroed pad', () => {
-    // The per-instance sun direction that replaced the shader`s fixed LIGHT_DIR:
-    // floats 20..22 carry sunDirLocal(pos, RENDER_ORIGIN_MPC, orientation) —
-    // computed independently here — and float 23 the trailing pad. sunDirLocal
-    // is NOT mocked, so the layer runs the real transpose-rotate.
-    composeMock.mockClear();
-    const renderer = makeRendererSpy();
-    const view = makeNear0View();
-    const state = makeState(renderer, SEEDED_PLANETS);
-
-    planetsLayer.draw(PASS_STUB, view, DRAW_CTX, state);
-
-    const [, staging] = renderer.draw.mock.calls[0]!;
-    SEEDED_PLANETS.forEach((planet, i) => {
-      const base = i * INSTANCE_FLOATS;
-      const sun = sunDirLocal(planet.positionMpc, RENDER_ORIGIN_MPC, planet.orientation);
-      expect(staging[base + 20]).toBeCloseTo(sun[0]);
-      expect(staging[base + 21]).toBeCloseTo(sun[1]);
-      expect(staging[base + 22]).toBeCloseTo(sun[2]);
-      expect(staging[base + 23]).toBe(0); // sunDir pad stays zeroed
-    });
-  });
-
-  it('packs camPosLocal at floats base+24..26 against the SAME radius the MVP used', () => {
-    // The ray origin for the renderer's analytic silhouette. It and the MVP are
-    // a pair: the MVP's model scale defines the frame where the body is the unit
-    // sphere, so a camera divided by any other radius puts the ray origin
-    // somewhere the vertex stage never went — the silhouette, depth and normal
-    // then go wrong together, silently and only on screen. Recomputed here from
-    // the radius argument the layer actually handed composeBodyMvp, so the pin
-    // is on the PAIRING and not on a restated constant. camPosLocal is not
-    // mocked; the layer runs the real transpose-rotate.
-    composeMock.mockClear();
-    const renderer = makeRendererSpy();
-    const view = makeNear0View();
-    const state = makeState(renderer, SEEDED_PLANETS);
-
-    planetsLayer.draw(PASS_STUB, view, DRAW_CTX, state);
-
-    const [, staging] = renderer.draw.mock.calls[0]!;
-    SEEDED_PLANETS.forEach((planet, i) => {
-      const base = i * INSTANCE_FLOATS;
-      const mvpRadiusMpc = composeMock.mock.calls[i]![3] as number;
-      const cam = camPosLocal(view.camPos, planet.positionMpc, mvpRadiusMpc, planet.orientation);
-      // `Math.fround`, not a tolerance: the staging array is Float32Array, and
-      // the stub camera sits 5 Mpc out, so a body-radius-normalised component
-      // runs to ~1e16 where one f32 ULP is ~1e9 — larger than any absolute
-      // epsilon worth writing. fround is what the store does, exactly.
-      expect(staging[base + 24]).toBe(Math.fround(cam[0]));
-      expect(staging[base + 25]).toBe(Math.fround(cam[1]));
-      expect(staging[base + 26]).toBe(Math.fround(cam[2]));
-      expect(staging[base + 27]).toBe(0); // camPosLocal pad stays zeroed
-    });
-  });
-
-  it('packs only the bodies that resolve past the sub-pixel cull', () => {
-    // Real 720-px viewport, camera parked 1e-14 Mpc (~300,000 km — outside
-    // even Jupiter) from the FIRST seeded body: that body subtends whole
-    // pixels (the smallest seeded planet, Mercury, is ~10 px there) while
-    // every other body (≥ tenths of an AU away, at most planet-sized) is
-    // deep sub-pixel — so exactly one record is packed and the instanced
-    // draw gets count 1. Fails if the cull is dropped (count == all bodies)
-    // or applied to the wrong body.
-    composeMock.mockClear();
-    const renderer = makeRendererSpy();
-    const view: SlabView = { ...makeNear0View(), viewportPx: [1280, 720] };
-    const state = makeState(renderer, SEEDED_PLANETS);
-    const nearFirst = SEEDED_PLANETS[0]!.positionMpc;
-    const ctx = {
-      drawCamPos: [nearFirst[0] + 1e-14, nearFirst[1], nearFirst[2]],
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
-
-    planetsLayer.draw(PASS_STUB, view, ctx, state);
-
-    expect(composeMock).toHaveBeenCalledTimes(1);
-    expect(composeMock.mock.calls[0]![1]).toBe(SEEDED_PLANETS[0]!.positionMpc);
-    expect(renderer.draw).toHaveBeenCalledTimes(1);
-    expect(renderer.draw.mock.calls[0]![2]).toBe(1);
-  });
-
-  it('issues no draw when every body is sub-pixel', () => {
-    // Camera 1e-3 Mpc from the origin on a real viewport: every AU-scale
-    // body is far under a pixel, so nothing packs and the layer must not
-    // call the renderer at all (an n=0 instanced draw is dead GPU work).
-    const renderer = makeRendererSpy();
-    const view: SlabView = { ...makeNear0View(), viewportPx: [1280, 720] };
-    const state = makeState(renderer, SEEDED_PLANETS);
-    const ctx = {
-      drawCamPos: [0, 0, 1e-3],
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
-
-    planetsLayer.draw(PASS_STUB, view, ctx, state);
-
+    planetsLayer.draw(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state); // textured row
+    planetsLayer.draw(PASS_STUB, makeBodyView('moon' as BodyId), ctx, state); // glint row
     expect(renderer.draw).not.toHaveBeenCalled();
+
+    planetsLayer.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state); // flat row
+    expect(renderer.draw).toHaveBeenCalledTimes(1);
+    expect(renderer.draw.mock.calls[0]![2]).toBe(1); // single-instance draw
+  });
+
+  it('texturedBodiesLayer and planetsLayer never both draw the same body', () => {
+    const state = makePartitionFixtureState();
+    const planetsRenderer = state.gpu.planetRenderer as unknown as ReturnType<
+      typeof makeRendererSpy
+    >;
+    const texturedRenderer = state.gpu.texturedBodyRenderer as unknown as {
+      draw: ReturnType<typeof vi.fn>;
+    };
+    const ctx = makeCtx();
+
+    const drawnByPlanets = new Set<string>();
+    const drawnByTextured = new Set<string>();
+    for (const id of ['mercury', 'mars', 'moon']) {
+      const view = makeBodyView(id as BodyId);
+
+      const beforeP = planetsRenderer.draw.mock.calls.length;
+      planetsLayer.draw(PASS_STUB, view, ctx, state);
+      if (planetsRenderer.draw.mock.calls.length > beforeP) drawnByPlanets.add(id);
+
+      const beforeT = texturedRenderer.draw.mock.calls.length;
+      texturedBodiesLayer.draw(PASS_STUB, view, ctx, state);
+      if (texturedRenderer.draw.mock.calls.length > beforeT) drawnByTextured.add(id);
+    }
+
+    // Sanity: each layer actually drew its own branch (a vacuously-true empty
+    // intersection would pass even if BOTH layers drew nothing).
+    expect(drawnByPlanets).toEqual(new Set(['mercury']));
+    expect(drawnByTextured).toEqual(new Set(['mars']));
+    for (const id of drawnByPlanets) expect(drawnByTextured.has(id)).toBe(false);
   });
 
   it('is a no-op when the planetRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View();
+    const view = makeBodyView('mercury' as BodyId);
     const state = { gpu: { planetRenderer: null } } as unknown as EngineState;
     expect(() => planetsLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
   });
 
-  it('pick and draw agree on the planet count — no body is picked without being drawn', () => {
-    // Regression coverage for the "draw caps, pick does not" asymmetry the
-    // backlog item named: `draw` used to clamp its instanced batch to
-    // MAX_PLANETS while `drawPick` walked the SAME partition uncapped, so a
-    // roster past the cap left the tail bodies invisible yet still
-    // clickable — an InfoCard for a body nothing drew. Neither path carries
-    // a cap anymore, so the two counts — one instanced draw's `count` and
-    // the number of per-body `drawSphere` pick stamps — must agree for the
-    // WHOLE roster, not just whatever happened to fit under the old ceiling.
-    // Deliberately asserted with no literal count on either side: the moment
-    // the seeded table crosses the retired MAX_PLANETS = 24 (the S-star
-    // feature brings it there), this stops being a same-answer-either-way
-    // check and starts actually exercising the divergence the old clamp
-    // caused.
-    composeMock.mockClear();
-    const view = makeNear0View();
-
-    const renderer = makeRendererSpy();
-    planetsLayer.draw(PASS_STUB, view, DRAW_CTX, makeState(renderer, SEEDED_PLANETS));
-    expect(renderer.draw).toHaveBeenCalledTimes(1);
-    const drawnCount = renderer.draw.mock.calls[0]![2];
-
-    const drawSphere = vi.fn();
-    const pickCtx = { ...DRAW_CTX, drawPxPerRad: 1e9 } as unknown as ReadyFrameContext;
-    const pickState = {
-      gpu: { bodyPickRenderer: { drawSphere } },
-      data: { bodies: { planets: SEEDED_PLANETS } },
-    } as unknown as EngineState;
-    planetsLayer.drawPick!(PASS_STUB, view, pickCtx, pickState);
-    expect(drawSphere).toHaveBeenCalledTimes(drawnCount);
+  it('is a no-op when the view is not a body-m row', () => {
+    const state = makePartitionFixtureState();
+    const drawSpy = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
+    const worldMpcView: SlabView = {
+      slab: makeSlab({ frame: { kind: 'world-mpc', originRelative: true } }),
+      vp: new Float32Array(16),
+      camPos: [0, 0, 0],
+      viewportPx: [1, 1],
+    };
+    planetsLayer.draw(PASS_STUB, worldMpcView, makeCtx(), state);
+    expect(drawSpy.draw).not.toHaveBeenCalled();
   });
 });
 
-describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable)', () => {
-  // A resolved body whose texture IS resident routes to the partition's `textured`
-  // branch, NOT `flat` — so `enabled` (flat-only) is false, but the layer is the
-  // SOLE pick site for flat ∪ textured (texturedBodiesLayer carries no pick
-  // aspect). Camera 1e-14 Mpc off a 6371 km body → tens of px → resolved; a
-  // resident bodyTextures slot → textured. This is the lone-textured-Saturn case:
-  // before untextured moons resolve into `flat`, the whole planet source would be
-  // unpickable if the pick pass filtered on `enabled`.
-  const texturedBody: SeededPlanet = {
-    id: 'mars', // a real registry id → bodyTextureSpec('mars') !== null
-    label: 'Mars',
-    positionMpc: [0, 0, 0],
-    radiusM: 6371000,
-    albedo: [0.6, 0.32, 0.23],
-    orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as SeededPlanet['orientation'],
-  };
-  const texturedCtx = {
-    cam: { distance: 1e-14 },
-    drawCamPos: [1e-14, 0, 0],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 3,
-    drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
-  } as unknown as ReadyFrameContext;
-  function texturedState(): EngineState {
-    return {
-      gpu: {
-        planetRenderer: makeRendererSpy(),
-        bodyPickRenderer: { drawSphere: vi.fn() },
-        // hasMap('mars', 'surface') resident → the partition routes it to
-        // `textured`, not `flat`.
-        texturedBodyRenderer: {
-          hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface',
-        },
-      },
-      data: { bodies: { planets: [texturedBody] } },
-    } as unknown as EngineState;
-  }
+describe('planetsLayer.draw — the f64 seam and packed record layout', () => {
+  it('composes the MVP from view.slab.vp (never view.vp) and the pose off ctx.bodyPose', () => {
+    mvpMock.mockClear();
+    camLocalMock.mockClear();
+    const state = makePartitionFixtureState();
+    const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
+    const ctx = makeCtx();
+    const view = makeBodyView('mercury' as BodyId);
+    const mercury = (state.data.bodies.planets as SeededPlanet[])[0]!;
 
-  it('is true while enabled is false — the flat branch is empty but textured is not', () => {
-    const state = texturedState();
-    const view = makeNear0View();
-    // enabled mirrors the VISUAL draw's flat-only branch → false (nothing flat).
-    expect(planetsLayer.enabled(state, texturedCtx, view)).toBe(false);
-    // pickEnabled admits the row because the textured branch is non-empty.
-    expect(planetsLayer.pickEnabled!(state, texturedCtx, view)).toBe(true);
+    planetsLayer.draw(PASS_STUB, view, ctx, state);
+
+    expect(mvpMock).toHaveBeenCalledTimes(1);
+    const call = mvpMock.mock.calls[0]!;
+    expect(call[0]).toBe(view.slab.vp);
+    expect(call[0]).not.toBe(view.vp);
+    // Second arg is the pose's eyeRelBodyM, forwarded by reference — proof the
+    // layer read ctx.bodyPose rather than re-deriving a pose of its own.
+    expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
+    expect(call[2]).toBe(mercury.radiusM);
+
+    expect(camLocalMock).toHaveBeenCalledTimes(1);
+    expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
+    expect(camLocalMock.mock.calls[0]![1]).toBe(mercury.radiusM);
+
+    expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
 
-  it('is false beyond the foreground gate even with a textured body', () => {
-    const state = texturedState();
-    const farCtx = {
-      ...texturedCtx,
-      cam: { distance: FOREGROUND_MAX_DISTANCE_MPC },
-    } as ReadyFrameContext;
-    expect(planetsLayer.pickEnabled!(state, farCtx, makeNear0View())).toBe(false);
+  it('packs albedo@16..18, sunDirLocal@20..22 and camPosLocal@24..26 into a 28-float record', () => {
+    const state = makePartitionFixtureState();
+    const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
+    const ctx = makeCtx();
+    const mercury = (state.data.bodies.planets as SeededPlanet[])[0]!;
+
+    planetsLayer.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state);
+
+    const [, staging, count] = renderer.draw.mock.calls[0]!;
+    expect(count).toBe(1);
+    expect(staging).toHaveLength(INSTANCE_FLOATS);
+    expect(staging[16]).toBeCloseTo(mercury.albedo[0]);
+    expect(staging[17]).toBeCloseTo(mercury.albedo[1]);
+    expect(staging[18]).toBeCloseTo(mercury.albedo[2]);
+    expect(staging[19]).toBe(0); // albedo pad
+
+    const expectedSun = sunDirLocal(mercury.positionMpc, RENDER_ORIGIN_MPC, mercury.orientation);
+    expect(staging[20]).toBeCloseTo(expectedSun[0]);
+    expect(staging[21]).toBeCloseTo(expectedSun[1]);
+    expect(staging[22]).toBeCloseTo(expectedSun[2]);
+    expect(staging[23]).toBe(0); // sunDir pad
+
+    // camPosLocal is mocked — pin the PACKED value to the mock's return, not a
+    // recompute (the pairing invariant is covered separately above).
+    expect(staging[24]).toBe(Math.fround(MOCK_CAM_LOCAL[0]));
+    expect(staging[25]).toBe(Math.fround(MOCK_CAM_LOCAL[1]));
+    expect(staging[26]).toBe(Math.fround(MOCK_CAM_LOCAL[2]));
+    expect(staging[27]).toBe(0); // camPosLocal pad
+  });
+});
+
+describe('planetsLayer.pickEnabled (Bug A — textured-only row stays pickable)', () => {
+  it('is true for the textured row even though enabled (flat-only) is false there', () => {
+    const state = makePartitionFixtureState();
+    const ctx = makeCtx();
+    const view = makeBodyView('mars' as BodyId);
+    expect(planetsLayer.enabled(state, ctx, view)).toBe(false);
+    expect(planetsLayer.pickEnabled!(state, ctx, view)).toBe(true);
   });
 
-  it('drawPick stamps the textured body as a sphere (the sole pick site for flat ∪ textured)', () => {
-    const state = texturedState();
-    const view: SlabView = { ...makeNear0View(), camPos: [1e-14, 0, 0] };
-    planetsLayer.drawPick!(PASS_STUB, view, texturedCtx, state);
-    const drawSphere = (
-      state.gpu.bodyPickRenderer as unknown as { drawSphere: ReturnType<typeof vi.fn> }
-    ).drawSphere;
-    expect(drawSphere).toHaveBeenCalledTimes(1);
+  it('is false for the glint row (neither flat nor textured)', () => {
+    const state = makePartitionFixtureState();
+    const ctx = makeCtx();
+    expect(planetsLayer.pickEnabled!(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
+  });
+
+  it('is false beyond the foreground gate even for a textured row', () => {
+    const state = makePartitionFixtureState();
+    const farCtx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(planetsLayer.pickEnabled!(state, farCtx, makeBodyView('mars' as BodyId))).toBe(false);
   });
 });
 
 describe('planetsLayer.drawPick', () => {
-  it('floors the pick-pass sphere radius to the shared min footprint for a small resolved body', () => {
-    // A resolved-but-small planet (just past the 3 px glint threshold, so it lands
-    // in `flat`) can be only a handful of pixels across — too small to click. The
-    // pick-pass sphere radius must inflate to the shared 9 px-radius floor
-    // (`minPickRadiusMpc`), NOT stay the true physical radius, while the VISUAL
-    // draw keeps the true radius. Since composeBodyMvp is mocked, we read the
-    // radius arg (index 3) the layer handed it and pin it to the inflated value.
-    composeMock.mockClear();
-    const KM = SCALE_UNITS.KM_TO_MPC;
-    const radiusMpc = 6371 * KM;
-    const pxPerRad = 720 / (2 * Math.tan(Math.PI / 6));
-    // Distance chosen (small-angle) so the body subtends ~8 px — above the 3 px
-    // glint threshold (→ `flat`), under the 18 px pick floor (→ inflated).
-    const dist = (2 * radiusMpc * pxPerRad) / 8;
-
-    // A real SCENE_PLANETS id ('mercury' → seed 0) so seedIndexOfBody resolves;
-    // custom radius/position put it in the small-resolved regime.
-    const body: SeededPlanet = {
-      id: 'mercury',
-      label: 'Mercury',
-      positionMpc: [0, 0, 0],
-      radiusM: 6371000,
-      albedo: [0.3, 0.3, 0.3],
-      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as SeededPlanet['orientation'],
-    };
-    const camPos: Vec3 = [dist, 0, 0];
-    const view: SlabView = { ...makeNear0View(), camPos };
-    const ctx = {
-      cam: { distance: dist },
-      drawCamPos: camPos,
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: Math.PI / 3,
-      drawPxPerRad: pxPerRad,
-    } as unknown as ReadyFrameContext;
+  it('stamps the flat and textured rows, never the glint row', () => {
+    const flat = bodyAt('mercury', 2440000);
+    const textured = bodyAt('mars', 3390000);
+    const glint = glintBodyAt('moon', 1737000);
+    const pickRenderer = { drawSphere: vi.fn() };
     const state = {
-      gpu: { bodyPickRenderer: { drawSphere: vi.fn() } },
-      data: { bodies: { planets: [body] } },
+      gpu: {
+        planetRenderer: makeRendererSpy(),
+        texturedBodyRenderer: {
+          hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface',
+        },
+        bodyPickRenderer: pickRenderer,
+      },
+      data: { bodies: { planets: [flat, textured, glint] } },
     } as unknown as EngineState;
+    const ctx = makeCtx();
 
-    planetsLayer.drawPick!(PASS_STUB, view, ctx, state);
+    planetsLayer.drawPick!(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state); // flat
+    planetsLayer.drawPick!(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state); // textured
+    planetsLayer.drawPick!(PASS_STUB, makeBodyView('moon' as BodyId), ctx, state); // glint
+    expect(pickRenderer.drawSphere).toHaveBeenCalledTimes(2);
+  });
 
-    // The body resolved to `flat` and was composed exactly once.
-    expect(composeMock).toHaveBeenCalledTimes(1);
-    const radiusArg = composeMock.mock.calls[0]![3] as number;
-    const expected = minPickRadiusMpc(radiusMpc, dist, pxPerRad);
-    expect(radiusArg).toBeCloseTo(expected, 30);
-    // The floor is genuinely active here — the pick radius exceeds the true radius.
-    expect(radiusArg).toBeGreaterThan(radiusMpc);
+  it('floors the pick-pass sphere radius to the shared min footprint for a small resolved body', () => {
+    // A resolved-but-small planet can be only a handful of pixels across — too
+    // small to click. The pick-pass radius must inflate to the shared floor
+    // (BODY_PICK_MIN_RADIUS_PX / pxPerRad · distance), NOT stay the true
+    // radius, while the VISUAL draw keeps the true radius.
+    mvpMock.mockClear();
+    const radiusM = 2440000; // Mercury-sized
+    const dM = 1e12; // far enough that the true radius floors well under BODY_PICK_MIN_RADIUS_PX
+    const pxPerRad = 720 / (2 * Math.tan(Math.PI / 6));
+    const pose: BodyRelativePose = { eyeRelBodyM: [dM, 0, 0], basisM: IDENTITY_MAT3 };
+    const state = {
+      gpu: {
+        planetRenderer: makeRendererSpy(),
+        bodyPickRenderer: { drawSphere: vi.fn() },
+      },
+      data: { bodies: { planets: [{ ...bodyAt('mercury', radiusM), positionMpc: [0, 0, 0] }] } },
+    } as unknown as EngineState;
+    const ctx = {
+      ...makeCtx(),
+      bodyPose: (() => pose) as ReadyFrameContext['bodyPose'],
+      drawPxPerRad: pxPerRad,
+    };
+
+    planetsLayer.drawPick!(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state);
+
+    expect(mvpMock).toHaveBeenCalledTimes(1);
+    const radiusArg = mvpMock.mock.calls[0]![2] as number;
+    const expectedFloor = (BODY_PICK_MIN_RADIUS_PX / pxPerRad) * dM;
+    expect(radiusArg).toBeCloseTo(expectedFloor, 0);
+    expect(radiusArg).toBeGreaterThan(radiusM); // the floor is genuinely active here
+  });
+
+  it('is a no-op when the bodyPickRenderer handle is null', () => {
+    const state = makePartitionFixtureState();
+    (state.gpu as { bodyPickRenderer: unknown }).bodyPickRenderer = null;
+    expect(() =>
+      planetsLayer.drawPick!(PASS_STUB, makeBodyView('mercury' as BodyId), makeCtx(), state),
+    ).not.toThrow();
   });
 });

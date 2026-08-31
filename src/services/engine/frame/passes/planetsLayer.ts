@@ -1,71 +1,53 @@
 /**
- * planetsLayer — the `flat` branch of the per-frame body partition as
- * true-scale, flat-lit albedo spheres in the depth-bearing `foreground:0`
- * target.
+ * planetsLayer — the `flat` branch of the per-frame body partition as a
+ * true-scale, flat-lit albedo sphere, one `'body'`-slab content row per body.
  *
  * ### What it draws
  *
- * One sphere per body in `sceneBodyPartition`'s `flat` branch (resolved bodies
- * whose surface texture is not resident), composed as a unit sphere scaled to
- * the body's radius (`radiusM` → Mpc via `SCALE_UNITS.M_TO_MPC`) and
- * translated to its `positionMpc`, in the `RENDER_ORIGIN_MPC`-relative frame,
- * tinted by its flat `albedo`. A body with a resident texture is `textured`
- * (drawn by `texturedBodiesLayer`), and a sub-pixel body is a `glint` — so this
- * layer never draws either, and the two opaque `foreground:0` sphere layers
- * cannot z-fight over one body.
+ * The frame program expands a `'body'` layer into one render step per body-m
+ * slab row (Task 7); `enabled`/`draw` are therefore called once PER BODY,
+ * gated on `view.slab.frame.bodyId` filtered to the `flat` branch of
+ * `sceneBodyPartition` — the resolved body whose surface texture is not
+ * resident. A body with a resident texture is `textured` (drawn by
+ * `texturedBodiesLayer`), and a sub-pixel body is a `glint` (`bodyGlintsLayer`,
+ * untouched) — so a given bodyId matches at most one of these branches, and
+ * the two opaque `foreground:0` sphere layers can never z-fight over one body.
  *
- * ### Why one renderer with one instanced draw
+ * ### Why a single-instance draw, not the old N-body batch
  *
- * A single `planetRenderer` draws every flat planet in ONE instanced
- * `drawIndexed`. That batching is also why the record carries a per-body
- * `camPosLocal`: the renderer ray-traces its silhouette analytically, and one
- * draw cannot carry N ray origins on a uniform. This layer packs each body's
- * MVP + albedo + sun direction + local camera into a reused module-level
- * staging array (no per-frame allocation on the engine hot path)
- * and hands the whole batch to `draw`, which uploads it with one
- * `queue.writeBuffer`. Each planet reads its own baked record via the instance
- * step, so nothing races `queue.writeBuffer` against submit — the alternative
- * of a shared per-draw uniform would collapse every planet onto the last one
- * (the writeBuffer-vs-submit landmine). See `planetRenderer`'s header.
+ * Pre-body-slabs, one `planetRenderer` instanced draw painted every flat
+ * planet in a shared NEAR0 frame. Under `'body'` slabs each body owns its OWN
+ * `view.slab.vp` (a distinct near-field projection about that body's eye-
+ * relative pose — see `bodySlabRow`), so there is no longer one shared vp to
+ * batch multiple bodies against. `renderer.draw` still takes an instance
+ * array + count, but this layer now calls it once per row with `count = 1`;
+ * the renderer's instancing machinery is unchanged (and still the right shape
+ * for the multi-body world-mpc case it was built for), only this caller's
+ * batch width changed.
  *
- * ### The f64 seam — why `view.slab.vp`, NOT `view.vp`
+ * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis
  *
- * Same seam as `earthLayer` / `starSpheresLayer`: near-field sphere bodies
- * sit AU-to-parsec distances from the render origin — tiny Mpc numbers the
- * VP's large translation nearly cancels. `composeBodyMvp` resolves that
- * cancellation in double precision BEFORE narrowing to f32; feeding it the
- * already-narrowed `view.vp` would misplace a body by more than its radius.
- * See `composeBodyMvp`'s module header.
+ * Same seam as `earthLayer`/`atmosphereShellLayer`: this row's `pose =
+ * ctx.bodyPose(bodyId)` is the SAME closure `deriveSlabs` built this row's
+ * `view.slab.vp` from, so `composeBodySlabMvp`/`bodySlabCamLocal` compose
+ * against the eye-relative metre offset that vp already expects — no
+ * rotation term (the pose already rotated the offset into the body's fixed
+ * axes), no world translation. See `composeBodySlabMvp`'s module header.
  *
- * ### When it draws — the partition's flat branch
+ * ### When it draws — the partition's flat branch, this row's body only
  *
  * `enabled` gates on the `planetRenderer` GPU handle (null pre-bootstrap),
- * the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC` —
- * beyond it every planet is a deep-sub-pixel speck, and gating with the
- * NEAR0 siblings lets the executor skip the whole foreground pass group as
- * empty), AND a non-empty `flat` branch of `sceneBodyPartition`. The partition
- * splits the seeded bodies into `{ glints, flat, textured }` once per frame;
- * this layer draws the `flat` array — bodies resolved past the glint threshold
- * whose surface texture is NOT resident (its sibling `texturedBodiesLayer`
- * takes the `textured` array, so a resolved body is flat XOR textured and the
- * two opaque `foreground:0` layers can never z-fight over the same sphere).
- * Sub-pixel bodies land in `glints`, not `flat`, so they are dropped here with
- * no per-body cull of this layer's own — the partition owns that boundary. A
- * row whose `flat` branch is empty must not stay in the pass plan just because
- * the eventual instanced draw would be a no-op; `enabled` and `draw` read ONE
- * partition, so the two sites cannot disagree about which bodies are flat.
- * `draw` re-checks the handle so a stale call is a harmless no-op.
+ * the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`), AND
+ * this row's `bodyId` appearing in the partition's `flat` branch.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
-import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import { camPosLocal } from '../../../../utils/camera/camPosLocal';
-import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { sceneBodyPartition } from '../sceneBodyPartition';
@@ -73,159 +55,116 @@ import { sceneBodyStates } from '../sceneBodyStates';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
+import { BODY_PICK_MIN_RADIUS_PX } from '../../helpers/minPickRadiusMpc';
 
-// Reused across frames — the engine hot path allocates nothing here. Sized
-// for the live SCENE_PLANETS table (a compile-time constant, so this is a
-// fixed size, not a cap — the renderer itself carries no upper bound, and the
-// `flat` branch drawn below is always a subset of this same table); each
-// planet's `INSTANCE_FLOATS`-long record is rewritten in place before the
-// single instanced draw.
-const staging = new Float32Array(SCENE_PLANETS.length * INSTANCE_FLOATS);
+// One instance record, reused across draws — a `'body'` row draws at most one
+// planet, so this needs no per-body indexing (unlike the retired N-planet
+// staging array).
+const staging = new Float32Array(INSTANCE_FLOATS);
 
 export const planetsLayer: ContentLayer = {
   name: 'planets',
-  slab: NEAR0,
+  slab: 'body',
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state, ctx, _view) {
+  enabled(state, ctx, view) {
+    if (view.slab.frame.kind !== 'body-m') return false;
     // Handle first, distance second, partition last: the handle check
     // short-circuits so pre-bootstrap fixtures (null renderer, bare ctx, no
-    // bodies bag) never touch ctx or state.data. The target is a
-    // bootstrap-guaranteed renderTargets row.
+    // bodies bag) never touch ctx or state.data.
     if (state.gpu.planetRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    // A row that would draw zero bodies must leave the pass plan (see header):
-    // mirror draw's branch with the SAME partition.
-    return sceneBodyPartition(state, ctx).flat.length > 0;
+    const bodyId = view.slab.frame.bodyId;
+    return sceneBodyPartition(state, ctx).flat.some((p) => p.id === bodyId);
   },
 
   // Pick gate — WIDER than `enabled`: this layer is the sole pick site for the
   // whole planet source (`flat ∪ textured`; `texturedBodiesLayer` carries no
-  // pick aspect — see `drawPick`'s header), so the pick pass must admit the row
-  // whenever EITHER partition branch is non-empty. `enabled` stays flat-only so
-  // a textured-only frame (a lone textured Saturn before its untextured moons
-  // resolve into `flat`) leaves no zero-body row in the VISUAL pass plan while
-  // its sphere stays clickable. Handle + distance gates match `enabled`; only
-  // the partition predicate differs. See `ContentLayer.pickEnabled`.
-  pickEnabled(state, ctx, _view) {
-    // Short-circuits on the DRAW handle (`planetRenderer`), not the pick handle
-    // (`bodyPickRenderer` — which `drawPick` re-checks): the two GPU resources
-    // bootstrap together, so the draw handle is a sound pre-bootstrap proxy, and
-    // gating on it keeps `pickEnabled` reading the same fixtures `enabled` does.
+  // pick aspect — see `drawPick`'s header), so a textured-only row (a lone
+  // textured Saturn before its untextured moons resolve into `flat`) must stay
+  // pickable while its visual row leaves the pass plan. See `ContentLayer.pickEnabled`.
+  pickEnabled(state, ctx, view) {
+    if (view.slab.frame.kind !== 'body-m') return false;
     if (state.gpu.planetRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+    const bodyId = view.slab.frame.bodyId;
     const { flat, textured } = sceneBodyPartition(state, ctx);
-    return flat.length + textured.length > 0;
+    return flat.some((p) => p.id === bodyId) || textured.some((p) => p.id === bodyId);
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.planetRenderer;
-    if (renderer === null) return;
-    const flat = sceneBodyPartition(state, ctx).flat;
-    // Live position + orientation from the per-frame snapshot (keyed by id),
-    // resolved ONCE for the whole pack loop — not the baked record fields.
-    const states = sceneBodyStates(state, ctx);
-    const limit = flat.length;
+    if (renderer === null || view.slab.frame.kind !== 'body-m') return;
+    const bodyId = view.slab.frame.bodyId;
+    const planet = sceneBodyPartition(state, ctx).flat.find((p) => p.id === bodyId);
+    if (planet === undefined) return;
+    // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
+    // `view.slab.vp` — reading it here instead of re-deriving the pose is what
+    // keeps this layer's eyeRelBodyM from ever drifting off that basis.
+    const pose = ctx.bodyPose(bodyId);
+    if (pose === null) return;
 
-    // Pack one 28-float instance record per FLAT planet: floats 0..15 the MVP
-    // composed from the slab's f64 vp (see the module header's "f64 seam"
-    // note), 16..18 the albedo, 19 the pad, 20..22 the sun direction rotated
-    // into the body's local frame, 23 the pad, 24..26 the camera in that same
-    // local frame, 27 the pad. Then ONE instanced draw. The partition already
-    // dropped sub-pixel bodies to `glints` and resident-texture bodies to
-    // `textured`, so this loop packs exactly the flat-lit set with no per-body
-    // test of its own.
-    for (let i = 0; i < limit; i++) {
-      const planet = flat[i]!;
-      const bodyState = states.get(planet.id)!;
-      const radiusMpc = planet.radiusM * SCALE_UNITS.M_TO_MPC;
-      const mvp = composeBodyMvp(
-        view.slab.vp,
-        bodyState.positionMpc,
-        RENDER_ORIGIN_MPC,
-        radiusMpc,
-        bodyState.orientation,
-      );
-      // Rotate the sun direction into the body's local frame (its orientation
-      // carries any axial tilt) so the fragment's Lambert term stays a plain
-      // co-framed dot product — same rotate earthLayer does.
-      const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
-      // The analytic ray's ORIGIN, in the frame where this body is the unit
-      // sphere. It is a PAIR with the mvp above and must be built from the same
-      // `radiusMpc` — the mvp's model scale is what defines that frame, so a
-      // camera divided by a different radius puts the ray origin somewhere the
-      // vertex stage never went. Same call `texturedBodiesLayer` makes.
-      const cam = camPosLocal(view.camPos, bodyState.positionMpc, radiusMpc, bodyState.orientation);
-      const base = i * INSTANCE_FLOATS;
-      // Narrow here, at the staging-buffer write — composeBodyMvp returns f64.
-      staging.set(narrowMat4(mvp), base);
-      staging[base + 16] = planet.albedo[0];
-      staging[base + 17] = planet.albedo[1];
-      staging[base + 18] = planet.albedo[2];
-      staging[base + 19] = 0; // albedo pad — kept zeroed across frames
-      staging[base + 20] = sun[0];
-      staging[base + 21] = sun[1];
-      staging[base + 22] = sun[2];
-      staging[base + 23] = 0; // sunDir pad — kept zeroed across frames
-      staging[base + 24] = cam[0];
-      staging[base + 25] = cam[1];
-      staging[base + 26] = cam[2];
-      staging[base + 27] = 0; // camPosLocal pad — kept zeroed across frames
-    }
-    if (limit > 0) renderer.draw(pass, staging, limit);
+    // Live position + orientation from the per-frame snapshot (keyed by id) —
+    // sunDirLocal still reads Mpc/orientation directly; only the mvp/camLocal
+    // seam moved to the metre-native body-slab primitives.
+    const bodyState = sceneBodyStates(state, ctx).get(planet.id)!;
+    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, planet.radiusM);
+    const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+    // The analytic ray's ORIGIN, in the frame where this body is the unit
+    // sphere — a PAIR with the mvp above, both built from the same radiusM.
+    const cam = bodySlabCamLocal(pose.eyeRelBodyM, planet.radiusM);
+
+    // Narrow here, at the staging-buffer write — composeBodySlabMvp returns f64.
+    staging.set(narrowMat4(mvp), 0);
+    staging[16] = planet.albedo[0];
+    staging[17] = planet.albedo[1];
+    staging[18] = planet.albedo[2];
+    staging[19] = 0; // albedo pad — kept zeroed across frames
+    staging[20] = sun[0];
+    staging[21] = sun[1];
+    staging[22] = sun[2];
+    staging[23] = 0; // sunDir pad — kept zeroed across frames
+    staging[24] = cam[0];
+    staging[25] = cam[1];
+    staging[26] = cam[2];
+    staging[27] = 0; // camPosLocal pad — kept zeroed across frames
+    renderer.draw(pass, staging, 1);
   },
 
-  // Pick aspect — stamps one packed identity per RESOLVED planet-source body into
-  // the NEAR0 r32uint pick pass, one `drawSphere` per body (each carries its own
-  // MVP + packed id, so the sphere picks never collapse onto the last body — the
-  // writeBuffer-vs-submit race `bodyPickRenderer` guards with per-draw dynamic
-  // offsets).
-  //
-  // This is the SOLE pick site for the whole planet source: the two opaque
-  // foreground sphere layers split the resolved bodies across `planetsLayer`
-  // (the `flat` branch) and `texturedBodiesLayer` (the `textured` branch, which
-  // carries no pick aspect of its own), so the pick set here is the UNION of both
-  // partition branches — a body is pickable-as-a-sphere exactly when it draws as
-  // one, flat or textured alike. Sub-pixel `glints` are additive points, not
-  // spheres, so they stay unpickable (the same set the pre-partition resolution
-  // cull selected). The partition is the SAME per-frame `sceneBodyPartition`
-  // split `draw` consumes, so the pick and draw sets cannot disagree.
-  //
-  // The packed id carries each planet's STABLE `SCENE_PLANETS` index, NOT its
-  // slot in the resolved subset (which shifts as planets enter/leave the cull or
-  // cross the texture-residency boundary — see `seedIndexOfBody`). A planet id
-  // absent from the seed table returns −1 and is skipped: a packed id from −1
-  // would alias body 0. The MVP folds `orientation` the same way `draw` does, so
-  // the pick silhouette matches the drawn sphere.
+  // Pick aspect — stamps this row's body into the r32uint pick pass when it is
+  // EITHER flat or textured (the union `pickEnabled` admits). The packed id
+  // carries the body's STABLE `SCENE_PLANETS` index, NOT its slot in any
+  // resolved subset — see `seedIndexOfBody`. A planet id absent from the seed
+  // table returns −1 and is skipped: a packed id from −1 would alias body 0.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
-    if (pickRenderer === null) return;
-
+    if (pickRenderer === null || view.slab.frame.kind !== 'body-m') return;
+    const bodyId = view.slab.frame.bodyId;
     const { flat, textured } = sceneBodyPartition(state, ctx);
-    // Live position + orientation from the per-frame snapshot (keyed by id),
-    // resolved ONCE for the whole pick loop — not the baked record fields.
-    const states = sceneBodyStates(state, ctx);
+    const planet = flat.find((p) => p.id === bodyId) ?? textured.find((p) => p.id === bodyId);
+    if (planet === undefined) return;
+    const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
+    if (seedIndex < 0) return; // unknown id: a packed id from −1 would alias body 0.
+    const pose = ctx.bodyPose(bodyId);
+    if (pose === null) return;
 
-    for (const planet of [...flat, ...textured]) {
-      const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
-      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
-      const bodyState = states.get(planet.id)!;
-      // Floor the PICK radius to the shared min footprint (visual sphere
-      // untouched) via the shared `drawFlooredSpherePick` recipe: a resolved-but-
-      // small planet near the foreground far edge can project to a couple of
-      // pixels, too small to click. Each body folds its snapshot orientation and
-      // its stable seed-index identity.
-      drawFlooredSpherePick(pickRenderer, pass, {
-        vp: view.slab.vp,
-        positionMpc: bodyState.positionMpc,
-        radiusMpc: planet.radiusM * SCALE_UNITS.M_TO_MPC,
-        camPosMpc: view.camPos,
-        drawPxPerRad: ctx.drawPxPerRad,
-        orientation: bodyState.orientation,
-        packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
-      });
-    }
+    // Floor the pick radius (BODY_PICK_MIN_RADIUS_PX) so a far-edge planet
+    // projecting to a couple of pixels stays clickable — the same recipe
+    // `earthLayer.drawPick` uses, composed metre-native rather than through
+    // the Mpc-based `drawFlooredSpherePick` helper: `view.slab.vp` is
+    // eye-relative metres here, not that helper's Mpc/world-relative frame.
+    const dM = Math.hypot(pose.eyeRelBodyM[0], pose.eyeRelBodyM[1], pose.eyeRelBodyM[2]);
+    const pickRadiusM = Math.max(planet.radiusM, (BODY_PICK_MIN_RADIUS_PX / ctx.drawPxPerRad) * dM);
+    // Same pickRadiusM feeds both calls — the mvp's model scale defines the
+    // frame camPosLocal is measured in, so both must come from the one radius.
+    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, pickRadiusM);
+    const pickCamLocal = bodySlabCamLocal(pose.eyeRelBodyM, pickRadiusM);
+
+    pickRenderer.drawSphere(pass, {
+      mvp: narrowMat4(mvp),
+      camPosLocal: pickCamLocal,
+      packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
+    });
   },
 };

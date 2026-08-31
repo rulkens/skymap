@@ -20,6 +20,8 @@ import {
   galaxyPointSpritesLayer,
   filamentsLayer,
   earthLayer,
+  planetsLayer,
+  texturedBodiesLayer,
   milkyWayLayer,
   horizonShellLayer,
   starPointsLayer,
@@ -203,19 +205,17 @@ const HDR_NAMES = [
 const SWAP_NAMES = ['selection-ring', 'disk-radius-ring', 'marker-lines', 'labels'];
 
 // The near-field foreground group: the true-scale bodies drawn into the
-// depth-bearing `foreground:0` target through the near0 slab — Earth, the Sun
-// sphere, the selection-gated focused field-star sphere, the partition's
-// flat-lit `planets` branch, and its `textured-bodies` branch. Opaque
+// depth-bearing `foreground:0` target through the near0 slab — the Sun
+// sphere and the selection-gated focused field-star sphere. Opaque
 // (depth-tested), unlike the additive HDR group and the OVER swap group. The
 // focused-field-star sphere sits right after star-spheres — a selection-gated
-// sibling reusing the same star renderer. The translucent `cloud-shell` and
-// `rings` overlays are NOT in this list: both target foreground:0 but blend
-// OVER, so they are pinned separately (see the ringsLayer registry-row test
-// below).
-// Earth is excluded here: it rides the 'body' slab sentinel (Task 9, body
-// render slabs), not a fixed NEAR0 index — its own registry-row test below
-// pins it separately.
-const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere', 'planets', 'textured-bodies'];
+// sibling reusing the same star renderer.
+// Earth, the partition's `planets`/`textured-bodies` branches, and the
+// translucent `cloud-shell`/`rings`/`atmosphere-shell` overlays are NOT in
+// this list: all ride the 'body' slab sentinel (Tasks 9-11, body render
+// slabs) instead of a fixed NEAR0 index — their own registry-row tests below
+// pin them separately.
+const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere'];
 
 // The near-field hdr rows: the layers that pair the hdr target with the
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
@@ -321,8 +321,8 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
 
 describe('CONTENT_LAYERS migration table (foreground group)', () => {
   it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
-    // The near-field bodies (the Sun sphere, the planets) leave the
-    // cosmological slab: they project through NEAR0 into the depth-bearing
+    // The near-field bodies still on a fixed NEAR0 index (the Sun sphere, the
+    // focused field star): project through NEAR0 into the depth-bearing
     // `foreground:0` target and are opaque (depth-tested), not additive. See
     // the renderer-unification design's migration table (spec line 215).
     const fgLayers = CONTENT_LAYERS.filter((layer) => FOREGROUND_NAMES.includes(layer.name));
@@ -334,13 +334,15 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
     }
   });
 
-  it("earth rides the 'body' slab sentinel into foreground:0, opaque", () => {
-    // Task 9 (body render slabs): earthLayer expands into one render step
-    // per body-m row instead of a fixed NEAR0 index — see frameProgram.ts's
-    // 'body' expansion.
-    expect(earthLayer.slab).toBe('body');
-    expect(earthLayer.target).toBe('foreground:0');
-    expect(earthLayer.blend).toBe('opaque');
+  it("earth, planets, and textured-bodies ride the 'body' slab sentinel into foreground:0, opaque", () => {
+    // Task 9 (earth) / Task 11 (planets, textured-bodies): each expands into
+    // one render step per body-m row instead of a fixed NEAR0 index — see
+    // frameProgram.ts's 'body' expansion.
+    for (const layer of [earthLayer, planetsLayer, texturedBodiesLayer]) {
+      expect(layer.slab).toBe('body');
+      expect(layer.target).toBe('foreground:0');
+      expect(layer.blend).toBe('opaque');
+    }
   });
 });
 
@@ -448,15 +450,17 @@ describe('CONTENT_LAYERS blend legality', () => {
 });
 
 describe('ringsLayer registry row', () => {
-  it('draws into foreground:0 through NEAR0 with over, AFTER the opaque bodies', () => {
+  it("rides the 'body' slab sentinel into foreground:0 with over, AFTER the opaque bodies", () => {
     // The ring is the translucent overlay half of Saturn's rings: it shares the
-    // opaque bodies' (foreground:0, NEAR0) render step but blends OVER, so it
+    // opaque bodies' (foreground:0, 'body') render step but blends OVER, so it
     // must be ordered after them to depth-test against their stamped z (far ring
-    // half occluded). It is deliberately NOT in FOREGROUND_NAMES (that group's
-    // opaque assertion), it is the exception.
+    // half occluded). Task 11 moved it off the fixed NEAR0 index onto the same
+    // 'body' expansion earth/planets/textured-bodies use. It is deliberately
+    // NOT in FOREGROUND_NAMES (that group's opaque assertion), it is the
+    // exception.
     const rings = CONTENT_LAYERS.find((layer) => layer.name === 'rings')!;
     expect(rings).toBeDefined();
-    expect(rings.slab).toBe(NEAR0);
+    expect(rings.slab).toBe('body');
     expect(rings.target).toBe('foreground:0');
     expect(rings.blend).toBe('over');
 
