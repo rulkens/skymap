@@ -28,6 +28,7 @@ import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidEvents';
 import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
+import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -261,5 +262,24 @@ describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment
       weslValue,
       `${file}: WESL EARTH_TILE_PX (${weslValue}) does not match TS EARTH_TILE_PX (${EARTH_TILE_PX})`,
     ).toBe(EARTH_TILE_PX);
+  });
+});
+
+/**
+ * PROXY_SCALE (proxyScale.ts) mirrors analyticSphere.wesl's own PROXY_SCALE —
+ * `bodySlabRow` (slabs.ts) needs the same inflation factor CPU-side to size a
+ * body row's near-plane margin, so a rasterised proxy vertex can never fall
+ * in front of the plane meant to contain it (the Saturn-vanish investigation,
+ * .superpowers/sdd/2026-08-26-body-render-slabs/).
+ */
+describe('PROXY_SCALE parity (proxyScale.ts ↔ analyticSphere.wesl)', () => {
+  it("analyticSphere.wesl's PROXY_SCALE equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/lib/analyticSphere.wesl';
+    const weslValue = readWeslConst(file, 'PROXY_SCALE');
+    expect(weslValue, `PROXY_SCALE is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL PROXY_SCALE (${weslValue}) does not match TS PROXY_SCALE (${PROXY_SCALE})`,
+    ).toBe(PROXY_SCALE);
   });
 });

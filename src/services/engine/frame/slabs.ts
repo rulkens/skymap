@@ -39,6 +39,7 @@ import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
 import { chainOverlapViolations } from '../../../utils/scene/chainOverlapViolations';
+import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
@@ -126,6 +127,12 @@ const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], u
 const COSMO_NEAR_MPC = 0.01;
 const COSMO_FAR_MPC = 50000;
 
+// Relative pad on top of a body row's near-plane margin (`bodySlabRow`), so
+// the widest drawn shell's own near face sits strictly behind the plane
+// rather than exactly on it — f32-narrowing or reversed-Z rounding could
+// otherwise land a boundary vertex on the wrong side.
+const NEAR_MARGIN_EPS = 1e-3;
+
 /**
  * Build one body's slab row (index left at a placeholder — the caller assigns
  * the real painter-order index once every row is sorted), plus the screen
@@ -164,19 +171,39 @@ function bodySlabRow(input: {
 
   const dM = Math.hypot(eyeRelBodyM[0], eyeRelBodyM[1], eyeRelBodyM[2]);
   const rMaxM = bodyDrawRadiusM(body);
-  // dM - rMaxM only well-conditions near while the camera sits OUTSIDE the
-  // outermost drawn shell (e.g. Earth's atmosphere top, 100 km up). Once
-  // inside, that term goes negative and the old `max(…, MIN_NEAR_M)` floor
-  // pinned near at a degenerate 1e-6 m for the whole descent, collapsing
-  // reversed-Z depth precision against the surface — see
-  // .superpowers/sdd/2026-08-26-body-render-slabs/label-window-investigation.md.
-  // The altitude-above-SURFACE term (main's own foregroundFrustum ratio)
-  // keeps near well-conditioned through that regime instead.
-  const near = Math.max(dM - rMaxM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
-  const distanceRangeM: readonly [number, number] = [Math.max(dM - rMaxM, 0), dM + rMaxM];
-
   const forward: Vec3 = [basisM[6], basisM[7], basisM[8]];
   const up: Vec3 = [basisM[3], basisM[4], basisM[5]];
+
+  // Clip depth is measured along the VIEW AXIS, not the radial distance dM: a
+  // body θ off-axis has view-z = dM·cosθ, which can be well short of dM. The
+  // old `dM - rMaxM` term budgeted `rMaxM - proxyRadius` for that shortfall;
+  // once dM·(1 − cosθ) exceeded it the near plane sliced through the body —
+  // see the investigation this fixes. `viewZ` is exact (not an approximation
+  // of the sphere's near face): for a sphere at any transverse offset, the
+  // surface point with minimum view-z is exactly centre·forward − radius,
+  // because the dot product is linear.
+  const viewZ = -(
+    eyeRelBodyM[0] * forward[0] +
+    eyeRelBodyM[1] * forward[1] +
+    eyeRelBodyM[2] * forward[2]
+  );
+  // marginM covers whichever drawn shell reaches furthest along the view
+  // axis: the PROXY_SCALE-inflated globe/textured-body mesh, or an
+  // un-inflated outer shell (rings, atmosphere) wider than that. `NEAR_MARGIN_EPS`
+  // pads it a little further so a proxy's own near face never lands exactly
+  // on the plane.
+  const marginM = Math.max(PROXY_SCALE * body.radiusM, rMaxM) * (1 + NEAR_MARGIN_EPS);
+  // The altitude-above-SURFACE term stays radial: it only wins once the
+  // camera is inside the outermost shell (viewZ - marginM goes deeply
+  // negative either way), and that regime is a close orbit/descent around
+  // THIS body, where θ ≈ 0 — see
+  // .superpowers/sdd/2026-08-26-body-render-slabs/label-window-investigation.md
+  // for why it must stay well-conditioned instead of falling to MIN_NEAR_M.
+  const near = Math.max(viewZ - marginM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
+  // distanceRangeM STAYS RADIAL — the painter sort and pick ordering key off
+  // the body's actual distance, not its view-axis depth.
+  const distanceRangeM: readonly [number, number] = [Math.max(dM - rMaxM, 0), dM + rMaxM];
+
   const view = mat4d.lookAt([0, 0, 0], forward, up);
   const proj = mat4d.perspectiveReverseZ(fovYRad, aspect, near);
   const vp = mat4d.multiply(proj, view) as Float64Array;

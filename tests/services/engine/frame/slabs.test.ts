@@ -28,6 +28,7 @@ import {
   MIN_NEAR_M,
   NEAR_RATIO,
 } from '../../../../src/utils/camera/foregroundFrustum';
+import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -37,6 +38,7 @@ import type { BodyRelativePose } from '../../../../src/@types/engine/camera/Body
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 function makeCam(distance: number): OrbitCamera {
   return createOrbitCamera({
@@ -234,17 +236,88 @@ describe('deriveSlabs', () => {
 
   it('brackets a body row around its drawn radius — dM=1e9 m, rMaxM=1e5 m', () => {
     const body = makePlanet({ id: 'bracket-body', radiusM: 1e5 });
+    // ON-AXIS: eyeRelBodyM points along -forward ([0,0,1]), so viewZ === dM
+    // and this test exercises the "outside the shell" bracket in isolation
+    // from the off-axis correction the two tests below cover.
     const pose: BodyPoseProvider = () => ({
-      eyeRelBodyM: [1e9, 0, 0],
+      eyeRelBodyM: [0, 0, -1e9],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
     const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
     const row = slabs[2]!;
     // Hand-written, not re-derived from bodyDrawRadiusM/dM inside the test.
-    expect(row.near).toBe(999900000);
+    // rMaxM (1e5) has no atmosphere/ring/cloud to widen it, so the margin is
+    // PROXY_SCALE * radiusM = 105,000 m, plus NEAR_MARGIN_EPS (0.1%) so the
+    // proxy's own near face never sits exactly on the plane:
+    // 105,000 * 1.001 = 105,105; near = 1e9 - 105,105 = 999,894,895.
+    expect(row.near).toBe(999894895);
     expect(row.distanceRangeM).toEqual([999900000, 1000100000]);
     // far is +∞ (spec §4) — distanceRangeM[1] carries the finite bound instead.
     expect(row.far).toBe(Infinity);
+  });
+
+  it("keys a body row's near plane off VIEW-AXIS depth, not radial distance, for an off-axis body (Saturn pose-B repro)", () => {
+    // Real numbers from the investigation
+    // (.superpowers/sdd/2026-08-26-body-render-slabs/saturn-vanish-investigation.md,
+    // Phase 2): Saturn, θ=33.8° off the camera's forward axis, dM≈1.22e9 m.
+    // Saturn's own registry radiusM (58,232 km) and ring outer (140,220 km,
+    // `SCENE_RINGS`) come along for free via id: 'saturn' + `bodyDrawRadiusM`.
+    const dM = 1.22e9;
+    const thetaRad = (33.8 * Math.PI) / 180;
+    const radiusM = 58_232_000;
+    const ringOuterM = 140_220_000;
+    const body = makePlanet({ id: 'saturn', radiusM });
+    const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
+    // forward=[0,0,-1]; bodyRelEye = dM*(cosθ·forward + sinθ·right) =
+    // [dM sinθ, 0, -dM cosθ]. eyeRelBodyM = -bodyRelEye (bodyRelativePose.ts:
+    // eyeRelBodyM is eye MINUS body centre).
+    const bodyRelEye: Vec3 = [dM * Math.sin(thetaRad), 0, -dM * Math.cos(thetaRad)];
+    const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
+    const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
+
+    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const row = slabs[2]!;
+
+    const viewZ = dM * Math.cos(thetaRad);
+    const globeProxyNearFaceM = viewZ - PROXY_SCALE * radiusM;
+    const ringNearFaceM = viewZ - ringOuterM;
+
+    // The row's near plane must sit at or behind (numerically ≤) EVERY drawn
+    // shell's own nearest view-axis point, or that shell's proxy mesh clips —
+    // this is the invariant the bug violated.
+    expect(row.near).toBeLessThanOrEqual(globeProxyNearFaceM);
+    expect(row.near).toBeLessThanOrEqual(ringNearFaceM);
+
+    // Documents the bug this guards against: the OLD formula pinned near to
+    // the RADIAL dM - rMaxM, which at this θ sits IN FRONT of the globe
+    // proxy's true near face — i.e. it clipped the globe. This assertion is
+    // about the scenario's geometry, not the fix, so it holds either way.
+    const oldRadialNear = dM - ringOuterM;
+    expect(oldRadialNear).toBeGreaterThan(globeProxyNearFaceM);
+  });
+
+  it("keys a body row's near plane off view-axis depth for a RINGLESS off-axis body — the margin was NEGATIVE under the old radial formula", () => {
+    // Scope note from the investigation: a body whose outermost shell IS its
+    // surface has rMaxM === radiusM while the rasterised proxy is
+    // PROXY_SCALE × radiusM — a negative budget under the old `dM - rMaxM`
+    // formula, so this bites every ringless body, not just Saturn.
+    const dM = 2e8;
+    const thetaRad = (20 * Math.PI) / 180;
+    const radiusM = 5e6;
+    const body = makePlanet({ id: 'ringless-off-axis-body', radiusM });
+    const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
+    // Same derivation as the Saturn test above: forward=[0,0,-1], so
+    // bodyRelEye = dM*(cosθ·forward + sinθ·right) = [dM sinθ, 0, -dM cosθ].
+    const bodyRelEye: Vec3 = [dM * Math.sin(thetaRad), 0, -dM * Math.cos(thetaRad)];
+    const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
+    const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
+
+    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const row = slabs[2]!;
+
+    const viewZ = dM * Math.cos(thetaRad);
+    const globeProxyNearFaceM = viewZ - PROXY_SCALE * radiusM;
+    expect(row.near).toBeLessThanOrEqual(globeProxyNearFaceM);
   });
 
   it("floors a body row's near plane at MIN_NEAR_M when the camera is inside the drawn radius", () => {
