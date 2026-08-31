@@ -16,6 +16,8 @@ import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
+import { sceneBodyStates } from './sceneBodyStates';
+import { nearestRegionAnchorDistanceMpc } from '../../../utils/scene/nearestRegionAnchorDistanceMpc';
 
 export function deriveMilkyWayCloudAlpha(
   state: EngineState,
@@ -26,8 +28,15 @@ export function deriveMilkyWayCloudAlpha(
   }
 
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  // Near-side approach fade: shuts only deep inside the disc, once the Gaia star catalog has taken over.
-  const approach = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc);
+  // Near-side approach fade: shuts only deep inside the disc, once the Gaia star
+  // catalog has taken over — keyed on the NEAREST region anchor, not the origin,
+  // so the fade also closes descending on Sgr A* (8.2 kpc from the Sun, which
+  // origin-hypot alone would read as still "far").
+  const approachDistMpc = nearestRegionAnchorDistanceMpc(
+    ctx.drawCamPos,
+    sceneBodyStates(state, ctx),
+  );
+  const approach = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, approachDistMpc);
   if (approach <= 0) return null;
 
   const alpha =
