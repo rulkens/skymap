@@ -63,8 +63,18 @@
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
-import { COSMO, NEAR0, groupKeyOf } from './slabs';
+import { COSMO, NEAR0, groupKeyOf, slabName } from './slabs';
 import { CONTENT_LAYERS } from './passes';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+
+/**
+ * Upper bound on body rows `deriveSlabs` can emit in one frame: Earth (the
+ * NEAR0-adjacent body baked into `earthLayer`, not a `SCENE_PLANETS` row)
+ * plus every `SCENE_PLANETS` entry. `TIMED_SLOTS` allocates one slot per
+ * capacity row (not per row actually drawn this frame) so the query-set size
+ * is a compile-time constant — see `createGpuTimingService`.
+ */
+export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length;
 
 /**
  * Build this frame's step program. `tone` is threaded into the LONE tone-map —
@@ -83,8 +93,17 @@ import { CONTENT_LAYERS } from './passes';
  * do, because the step carries no uniform payload (unlike the `tone` a
  * `'composite'` step carries). So only `enabled` can change the step LIST;
  * strength/threshold change pixels without changing the frame's shape.
+ *
+ * `foregroundChain` (`foregroundChainOrder(ctx.slabs)`, painter-ordered
+ * back-to-front) expands the ONE `foreground:0` render into one step per
+ * entry, each `depthLoad: 'clear'` so a nearer body row doesn't test against
+ * a farther row's depth — see the push loop below.
  */
-export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly FrameStep[] {
+export function frameProgram(
+  tone: ToneMap,
+  bloomEnabled: boolean,
+  foregroundChain: readonly number[],
+): readonly FrameStep[] {
   const steps: FrameStep[] = [];
 
   steps.push({ kind: 'compute', name: 'flow' });
@@ -142,9 +161,17 @@ export function frameProgram(tone: ToneMap, bloomEnabled: boolean): readonly Fra
   // whole frame — no seam where the Sun's limb meets the cosmological scene.
   //
   // Assembled as a RUN in painter order (far → near) rather than one literal
-  // entry: per-body slabs expand it into several depth-bearing steps sharing
-  // this one target, and their ordering is the occlusion mechanism.
-  steps.push({ kind: 'render', target: 'foreground:0', slab: NEAR0 });
+  // entry: `foregroundChain` expands it into one depth-bearing step per row
+  // (NEAR0 — the Sun's slab — plus each body row), sharing this one target.
+  // Each row's `depthLoad: 'clear'` restarts depth so a nearer row's opaque
+  // pixels aren't test-rejected against a farther row's depth — painter order
+  // is the occlusion mechanism, not the depth test. An empty chain (no star
+  // sphere resolved, no bodies visible) emits no render step here at all, but
+  // the composite below still runs — see its own no-op-on-untouched guard in
+  // `executeFrame`.
+  for (const slab of foregroundChain) {
+    steps.push({ kind: 'render', target: 'foreground:0', slab, depthLoad: 'clear' });
+  }
 
   steps.push({
     kind: 'composite',
@@ -240,6 +267,15 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   'foreground:0·NEAR0': 'Foreground bodies · depth',
+  // One `foreground:0·BODY[k]` row per capacity slot, derived from `slabName`
+  // rather than authored — a new SCENE_PLANETS row widens BODY_SLAB_CAPACITY
+  // and this table follows with no hand-added line.
+  ...Object.fromEntries(
+    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [
+      `foreground:0·${slabName(k + 2)}`,
+      'Foreground bodies · depth',
+    ]),
+  ),
   // The bloom sub-pipeline bills one `'bloom'` slot (the whole bright →
   // downsample → upsample → fold span), placed after Foreground and before
   // Overlays so the group renders in that slot.
@@ -272,7 +308,13 @@ function timedSlotRowsOf(
       // the single `'bloom'` step), so no dedup is needed here.
       const groupKey = groupKeyOf(step.target, step.slab);
       for (const layer of layers) {
-        if (layer.target === step.target && layer.slab === step.slab) {
+        // A 'body' layer has no fixed slab index — it matches every body-row
+        // step (index ≥ 2), the same widening `executeFrame` applies with
+        // `view.slab.frame.kind === 'body-m'`. This derivation has no `ctx` to
+        // read a frame kind off, but body rows are exactly the indices ≥ 2
+        // (0 = NEAR0, 1 = COSMO — see slabs.ts), so the index bound is exact.
+        const matchesStep = layer.slab === step.slab || (layer.slab === 'body' && step.slab >= 2);
+        if (layer.target === step.target && matchesStep) {
           rows.push({ name: layer.name, groupKey });
         }
       }
@@ -374,8 +416,20 @@ export function timedSlotGroupsOf(
  */
 const PLACEHOLDER_TONE: ToneMap = { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 };
 
+/**
+ * The MAXIMUM foreground chain — NEAR0 plus every capacity body row — so the
+ * slot pool below is sized off the registry (`BODY_SLAB_CAPACITY`), never a
+ * hand-picked chain length. A real frame's chain is almost always shorter
+ * (most bodies are culled); the unused slots simply read zero, same as any
+ * other empty group (see `GpuTimingsSection`).
+ */
+const MAX_FOREGROUND_CHAIN: readonly number[] = [
+  NEAR0,
+  ...Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
+];
+
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
-  frameProgram(PLACEHOLDER_TONE, true),
+  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN),
   CONTENT_LAYERS,
 );
 
@@ -385,7 +439,7 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
  * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
  */
 export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
-  frameProgram(PLACEHOLDER_TONE, true),
+  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN),
   CONTENT_LAYERS,
 );
 
@@ -396,10 +450,9 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  * walk, so the two lists stay positionally aligned.
  */
 const PASS_GROUP_KEYS: ReadonlyMap<string, string> = new Map(
-  timedSlotRowsOf(frameProgram(PLACEHOLDER_TONE, true), CONTENT_LAYERS).map((row) => [
-    row.name,
-    row.groupKey,
-  ]),
+  timedSlotRowsOf(frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN), CONTENT_LAYERS).map(
+    (row) => [row.name, row.groupKey],
+  ),
 );
 
 /**

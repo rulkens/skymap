@@ -31,10 +31,12 @@ import {
   PICK_SENTINEL_OFFSET,
   SELECTION_SOURCE_SHIFT,
 } from '../../../../src/data/selectionEncoding';
+import { makeSlab } from '../../../fixtures/makeSlab';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -61,13 +63,26 @@ function makeCtx(): ReadyFrameContext {
 }
 
 /**
+ * `makeCtx()` plus body-slab rows appended at indices 2, 3, … — matching
+ * `deriveSlabs`' real layout. Built with `makeSlab` overrides per the fixture
+ * convention (see `executeFrame.test.ts`'s twin), rather than a hand literal.
+ */
+function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
+  const base = makeCtx();
+  const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', bodyId: bodyId as BodyId } }),
+  );
+  return { ...base, slabs: [...base.slabs, ...bodySlabs] };
+}
+
+/**
  * A fake layer. Omit `drawPick` to model a non-pickable layer. Pass
  * `pickEnabled` to model a layer whose pick gate diverges from its draw gate
  * (planetsLayer's flat ∪ textured, the Earth caption stamp).
  */
 function makeLayer(opts: {
   name: string;
-  slab: number;
+  slab: number | 'body';
   enabled: boolean;
   pickEnabled?: boolean;
   drawPick?: ContentLayer['drawPick'];
@@ -314,6 +329,35 @@ describe('createPickProgram', () => {
     });
 
     expect(await program.pick(10, 10)).toEqual({ sourceCode: 5, localIdx: 10 });
+  });
+
+  it("groups a 'body' layer into every body slab", async () => {
+    // A 'body' layer has no single fixed slabIndex — Task 7 widens
+    // `pickablesBySlab` to contribute it to every `body-m` row in `ctx.slabs`,
+    // the same expansion `executeFrame` applies to the visual program. Two
+    // body-m rows (indices 2, 3) → two pick passes, one drawPick call each.
+    const { device, createTextureCalls } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+
+    const callLog: string[] = [];
+    const layers = [
+      makeLayer({
+        name: 'body-pick',
+        slab: 'body',
+        enabled: true,
+        drawPick: () => callLog.push('body-pick'),
+      }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      layers,
+    });
+
+    await program.pick(10, 10);
+    expect(callLog).toEqual(['body-pick', 'body-pick']);
+    expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
   });
 
   it('never allocates pick:near0 at N=1 (no slab-0 pickable layer → one target)', async () => {

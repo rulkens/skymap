@@ -48,6 +48,7 @@ import type { PickProgram } from '../../../@types/engine/frame/PickProgram';
 import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
 import { slabViewOf, COSMO } from './slabs';
@@ -182,11 +183,11 @@ export function createPickProgram(deps: {
     encoder: GPUCommandEncoder,
     slabIndex: number,
     target: PickSlabTarget,
+    view: SlabView,
     ctx: ReadyFrameContext,
     slabPickables: readonly ContentLayer[],
     timing: GPURenderPassTimestampWrites | undefined,
   ): void {
-    const view = slabViewOf(ctx, slabIndex);
     const pass = encoder.beginRenderPass({
       label: `${pickTargetId(slabIndex)}-pass`,
       colorAttachments: [
@@ -228,13 +229,19 @@ export function createPickProgram(deps: {
   // its own draw, so their registry order carries no @group(0) dependence.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
-  ): { slabIndex: number; layers: ContentLayer[] }[] {
-    // No body-slab layer declares `drawPick` yet (Tasks 9-11), so `'body'`
-    // layers are excluded up front rather than threaded through the
-    // per-slab view resolution below — a `'body'` layer has no single
-    // `slabIndex` to resolve a view against.
-    const candidates = layers.filter((l) => l.drawPick && l.slab !== 'body');
-    const slabIndices = [...new Set(candidates.map((l) => l.slab as number))].sort((a, b) => a - b);
+  ): { slabIndex: number; view: SlabView; layers: ContentLayer[] }[] {
+    const candidates = layers.filter((l) => l.drawPick);
+    // Every body-row slab index present this frame — a 'body' layer (none
+    // declares `drawPick` yet; Tasks 9-11) contributes to each one, the same
+    // widening `executeFrame` applies via `view.slab.frame.kind === 'body-m'`.
+    const bodySlabIndices = ctx.slabs
+      .filter((slab) => slab.frame.kind === 'body-m')
+      .map((slab) => slab.index);
+    const numericSlabs = candidates.filter((l) => l.slab !== 'body').map((l) => l.slab as number);
+    const hasBodyCandidate = candidates.some((l) => l.slab === 'body');
+    const slabIndices = [
+      ...new Set(hasBodyCandidate ? [...numericSlabs, ...bodySlabIndices] : numericSlabs),
+    ].sort((a, b) => a - b);
     return slabIndices
       .map((slabIndex) => {
         const view = slabViewOf(ctx, slabIndex);
@@ -243,10 +250,12 @@ export function createPickProgram(deps: {
         // the caption stamps, the Milky Way's narrower close-range gate), else
         // `enabled` (pick set == draw set, the common case). See
         // `ContentLayer.pickEnabled`.
-        const layers = candidates.filter(
-          (l) => l.slab === slabIndex && (l.pickEnabled ?? l.enabled)(state, ctx, view),
+        const slabLayers = candidates.filter(
+          (l) =>
+            (l.slab === slabIndex || (l.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
+            (l.pickEnabled ?? l.enabled)(state, ctx, view),
         );
-        return { slabIndex, layers };
+        return { slabIndex, view, layers: slabLayers };
       })
       .filter((group) => group.layers.length > 0);
   }
@@ -273,12 +282,12 @@ export function createPickProgram(deps: {
     // buffers are collected in slab order (near→far) so the readback fold is a
     // simple "first non-zero".
     const stagingInOrder: GPUBuffer[] = [];
-    for (const { slabIndex, layers: slabPickables } of groups) {
+    for (const { slabIndex, view, layers: slabPickables } of groups) {
       const target = ensureSlabTextures(slabIndex, w, h);
       const staging = ensureSlabStaging(slabIndex);
       const timing =
         slabIndex === COSMO ? state.gpu.timingService.descriptorFor('pick') : undefined;
-      recordSlabPass(encoder, slabIndex, target, ctx, slabPickables, timing);
+      recordSlabPass(encoder, slabIndex, target, view, ctx, slabPickables, timing);
       encoder.copyTextureToBuffer(
         { texture: target.pickTexture, origin: { x: px, y: py, z: 0 } },
         { buffer: staging, bytesPerRow: 256 },
@@ -332,9 +341,9 @@ export function createPickProgram(deps: {
     // slot here would double-book it against a real pick.
     const encoder = device.createCommandEncoder({ label: 'pick-program-debug-encoder' });
     const texturesNearToFar: GPUTexture[] = [];
-    for (const { slabIndex, layers: slabPickables } of groups) {
+    for (const { slabIndex, view, layers: slabPickables } of groups) {
       const target = ensureSlabTextures(slabIndex, w, h);
-      recordSlabPass(encoder, slabIndex, target, ctx, slabPickables, undefined);
+      recordSlabPass(encoder, slabIndex, target, view, ctx, slabPickables, undefined);
       texturesNearToFar.push(target.pickTexture);
     }
     device.queue.submit([encoder.finish()]);

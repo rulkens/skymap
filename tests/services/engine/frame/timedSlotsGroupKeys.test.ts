@@ -18,12 +18,13 @@ import { describe, it, expect } from 'vitest';
 
 import { frameProgram, timedSlotsOf } from '../../../../src/services/engine/frame/frameProgram';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
+import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 
 describe('timedSlotsOf — per-render-step group keys', () => {
   // Bloom ON so the derivation covers the single `'bloom'` slot the sub-pipeline
   // adds alongside the per-render-step group keys.
   const slots = timedSlotsOf(
-    frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true),
+    frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true, [NEAR0]),
     CONTENT_LAYERS,
   );
 
@@ -31,8 +32,8 @@ describe('timedSlotsOf — per-render-step group keys', () => {
     // Each maps to a distinct render step in frameProgram(): the cosmological
     // HDR render (hdr·COSMO), the near-field HDR render (hdr·NEAR0), and the
     // foreground-bodies render (foreground:0·NEAR0). The middle-dot (U+00B7)
-    // and the `<target>·<SLAB_NAME>` shape must match the key executeFrame
-    // computes, or the merged pass finds no slot.
+    // and the `<target>·${slabName(slab)}` shape (slabs.ts) must match the
+    // key executeFrame computes, or the merged pass finds no slot.
     expect(slots).toContain('hdr·NEAR0');
     expect(slots).toContain('hdr·COSMO');
     expect(slots).toContain('foreground:0·NEAR0');

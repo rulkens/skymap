@@ -51,6 +51,7 @@ import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy
 import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
+import { foregroundChainOrder } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 
@@ -105,6 +106,9 @@ export function renderFrame(input: RenderFrameInput): void {
       // The master bloom toggle is the ONLY bloom value that shapes the step
       // list; strength/threshold are read live by the bloom layers each draw.
       state.settings.bloom.enabled,
+      // Painter-ordered NEAR0 + body-row indices (Task 4) — the chain the
+      // foreground:0 render expands into, one step per entry.
+      foregroundChainOrder(ctx.slabs),
     ),
     layers: CONTENT_LAYERS,
     strategy,
