@@ -404,7 +404,7 @@ export function deriveSlabs(input: {
  */
 export function foregroundChainOrder(slabs: readonly Slab[]): readonly number[] {
   return slabs
-    .filter((slab) => slab.index === NEAR0 || slab.index >= 2)
+    .filter((slab) => slab.index === NEAR0 || slab.frame.kind === 'body-m')
     .slice()
     .sort((a, b) => b.distanceRangeM[0] - a.distanceRangeM[0])
     .map((slab) => slab.index);
