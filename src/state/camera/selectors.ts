@@ -50,13 +50,19 @@ export const selectAutoRotateRate = (state: RootState): number =>
 // movers to decide whether to reschedule the next frame. The clip term keeps
 // the loop alive for the full duration of an animation clip; the frameTween
 // term keeps it alive through an orientation-frame roll's up-basis slerp.
+//
+// The auto-rotate term carries the same arm gate as the DRIVER it stands for
+// (`cameraDrivers`): in a body arm the flag is stored intent with nothing
+// acting on it, and an ungated term would pin the loop at 60 fps with nothing
+// moving. `dragging` is deliberately NOT gated — the surface controller is the
+// body arm's gesture driver.
 export const selectCameraActive = (state: RootState): boolean => {
   const c = selectCameraIntent(state);
   return (
     c.clip !== null ||
     c.dragging ||
     c.tween !== null ||
-    c.autoRotate.active ||
+    (c.autoRotate.active && c.base.frame === 'absolute') ||
     c.frameTween !== null
   );
 };

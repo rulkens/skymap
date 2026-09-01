@@ -46,8 +46,10 @@
  *      target with the live body position (for drivers that declare
  *      `pivotsOnFocusedBody`). The body owns the pivot; the driver owns the orbit
  *      terms — so a drag / auto-rotate orbits AROUND the moving body.
- *   3c. RESOLVE the world arm, ONCE. `lastPose` stays framed; every world-Mpc
- *      reader downstream takes this one value.
+ *   3c. THE FOLD: resolve the world arm ONCE, then normalize the pose to the
+ *      arm the regime predicate names — skipped whole while a gesture is in
+ *      flight. `lastPose` stays framed; every world-Mpc reader downstream takes
+ *      the resolved value.
  *   4. UPDATE Resources: `prevActiveId.current = activeId`,
  *      `lastPose.current = pose`.
  *
@@ -66,7 +68,10 @@ import { drainInput } from './drainInput';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
-import { resolveWorldArm } from '../camera/poseFrameConversion';
+import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
+import { regimeArmFor } from '../camera/regimeArmFor';
+import { absoluteArm } from '../../../utils/camera/absoluteArm';
+import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
@@ -439,13 +444,41 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     clock.followPanOffset,
   );
 
-  // ── WORLD-ARM RESOLUTION: once per frame, below every pose writer ─────────
+  // ── (3c) THE FOLD: one world-arm resolution, then the regime ─────────────
+  //
+  // Below every pose writer for the frame, at exactly one site (spec §7 steps
+  // 5-6): a fold ABOVE driver arbitration is discarded by whatever writes the
+  // pose after it, and the wrong writer wins.
   //
   // `lastPose` stays FRAMED (it is the authoritative pose); everything with a
   // world-Mpc shape — the scale-bar snap, `deriveFrameContext`, and through it
-  // the whole draw path — consumes THIS value. Free by reference on the
-  // absolute arm. Task 15 slots the regime fold in immediately above this line.
+  // the whole draw path — consumes THIS value, free by reference on the
+  // absolute arm.
   const worldPose = resolveWorldArm(renderPose, bodyStates, poseBasis, upBasis);
+
+  // No flip during an active gesture (ruled, Q6): the predicate is skipped
+  // WHOLE — not clamped, not latched — and re-evaluated at gesture end, which
+  // `drainInput` has already dispatched by the time `rootState` was read above.
+  if (!rootState.camera.dragging) {
+    const held = renderPose;
+    const arm = regimeArmFor(held.frame, eyeMpcOf(worldPose, poseBasis), bodyStates);
+    if (arm === 'absolute') {
+      if (held.frame !== 'absolute') renderPose = absoluteArm(worldPose);
+    } else if (held.frame === 'absolute' || held.frame.body !== arm.body) {
+      // Total: `regimeArmFor` only names a body it resolved out of THIS map.
+      const bodyState = bodyStates.get(arm.body)!;
+      renderPose = {
+        frame: arm,
+        pose: toBodyArm(worldPose, poseBasis, upBasis, arm.body, bodyState),
+      };
+    }
+    // Both arms render `worldPose` on the flip frame (the conversion is
+    // lossless); what changes is the arm the NEXT frame's drivers author in,
+    // and `camera.base.frame` IS the regime (spec §4) — hence the commit, on
+    // the edge only: a per-frame re-commit would reset every clock keyed on
+    // `base` identity.
+    if (renderPose !== held) deps.cb.store.dispatch(commitCameraPose(renderPose));
+  }
 
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────
   //

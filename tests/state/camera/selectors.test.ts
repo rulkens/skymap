@@ -35,11 +35,23 @@ import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { FrameTween } from '../../../src/@types/camera/FrameTween';
+import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 
 // Build a fresh store for each test so dispatch side-effects don't cross cases.
 const makeStore = () => configureStore({ reducer: rootReducer });
 
 const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: -0.3, distance: 10 };
+
+// An engaged arm; only its `frame` tag is read here.
+const bodyArm: FramedCameraPose = {
+  frame: { body: 'earth' },
+  pose: {
+    bodyId: 'earth',
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: [0, 0, 1e7],
+    basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  },
+};
 
 const clipData: ClipData = { timeline: [] };
 const clip = { data: clipData, frame: DEFAULT_ORIENTATION } as const;
@@ -113,6 +125,19 @@ describe('selectCameraActive', () => {
     store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
 
     expect(selectCameraActive(store.getState())).toBe(true);
+  });
+
+  it('is false while autoRotate.active in a body arm — the spin has no driver there', () => {
+    // The autoRotate DRIVER is gated on the absolute arm (spec §7), so in a
+    // body arm the flag is stored intent with nothing acting on it: left
+    // ungated here it would pin the render loop at 60 fps with nothing moving.
+    const store = makeStore();
+    store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
+    store.dispatch(commitCameraPose(bodyArm));
+
+    expect(selectCameraActive(store.getState())).toBe(false);
+    // The user's intent survives the crossing — only the activity term changes.
+    expect(selectAutoRotate(store.getState())).toBe(true);
   });
 
   it('is true while a clip is active', () => {

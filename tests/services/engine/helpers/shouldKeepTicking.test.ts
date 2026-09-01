@@ -22,6 +22,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shouldKeepTicking';
 import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RootState } from '../../../../src/store/types';
 
@@ -46,6 +47,9 @@ function rootWithCamera(
       autoRotate: { active: over.autoRotateActive ?? false },
       clip: null,
       frameTween: null,
+      // The auto-rotate term is arm-gated (see `selectCameraActive`), so the
+      // fixture carries the at-rest arm every real store boots with.
+      base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
     },
     time: {
       mode: over.timeMode ?? 'live',
@@ -238,9 +242,9 @@ describe('shouldKeepTicking', () => {
     // The label director's appear/disappear envelope used to fire its own
     // requestRender; now it returns the vote and this predicate decides.
     const state = makeState({});
-    expect(
-      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, labelsAnimating: true }),
-    ).toBe(true);
+    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, labelsAnimating: true })).toBe(
+      true,
+    );
   });
 
   it('passes nowMs through to the time-dependent fade/focus terms', () => {
