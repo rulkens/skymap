@@ -20,6 +20,7 @@ import { useStore } from '../state/useStore';
 import { StoreContext } from './storeContext';
 import Viewport from './Viewport';
 import ControlsPanel from './ControlsPanel';
+import HistogramDock from './HistogramDock';
 import Hud from './Hud';
 
 const statusStyle: CSSProperties = {
@@ -91,6 +92,7 @@ function App(): ReactNode {
       <div onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
         <Viewport store={store} />
         <Hud />
+        <HistogramDock />
         <ControlsPanel />
         {catalogStatusMessage && <div style={catalogStatusStyle}>{catalogStatusMessage}</div>}
         {import.meta.env.DEV && packedStatus && <div style={statusStyle}>{packedStatus}</div>}
