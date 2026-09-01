@@ -29,10 +29,10 @@
 
 **Contract:** each module exports one `createSlice` result: `export const viewSlice = createSlice({ name: 'view', initialState: defaultViewSlice, reducers: {...} })` plus `export const { setRaymarchPaletteId, ... } = viewSlice.actions`. Reducer names = the current pure-setter names, payloads = the current setters' non-`prev` arguments (multi-arg setters take an object payload, e.g. `setCameraYawPitch({ yaw, pitch })`). The pure setter functions are deleted; their logic moves into the reducers (immer-style or returning new state — match `src/state/` slice idiom). `defaultAppState.ts` keeps composing the five `initialState`s.
 
-- [ ] Port `viewSlice` + its tests (tests call `viewSlice.reducer(prev, setX(payload))`; keep only assertions that can fail on real logic — clamps, edge semantics — not spread restatements, per `docs/superpowers/conventions/testing.md`).
-- [ ] Port the other four slices + tests the same way. `catalogSlice`/`simSlice` keep their token fields for now (Task 2 deletes them) so this task stays purely mechanical.
-- [ ] Update every `store.setState((st) => ({...st, x: setY(st.x, ...)}))` call site in `src/ui/**` and `src/input/**` to `store.dispatch(setY(payload))` — grep for `setState` to enumerate. (The custom store still exists this task; give it a `dispatch` shim only if needed to keep the tree compiling, otherwise fold this step into Task 3.)
-- [ ] Typecheck + `npx vitest run tests/tools/mcpm-workbench` green; commit.
+- [x] Port `viewSlice` + its tests (tests call `viewSlice.reducer(prev, setX(payload))`; keep only assertions that can fail on real logic — clamps, edge semantics — not spread restatements, per `docs/superpowers/conventions/testing.md`).
+- [x] Port the other four slices + tests the same way. `catalogSlice`/`simSlice` keep their token fields for now (Task 2 deletes them) so this task stays purely mechanical.
+- [x] Update every `store.setState((st) => ({...st, x: setY(st.x, ...)}))` call site in `src/ui/**` and `src/input/**` to `store.dispatch(setY(payload))` — grep for `setState` to enumerate. (The custom store still exists this task; give it a `dispatch` shim only if needed to keep the tree compiling, otherwise fold this step into Task 3.)
+- [x] Typecheck + `npx vitest run tests/tools/mcpm-workbench` green; commit.
 
 ### Task 2: Token counters → request actions
 
@@ -43,8 +43,8 @@
 **Contract:** `resetToken`/`clearTraceToken`/`exportToken`/`scfdToken` fields and their `request*` reducers are deleted. In their place, four plain actions created with `createAction` in `tools/mcpm-workbench/src/state/commands.ts` (new file): `resetRequested()`, `clearTraceRequested()`, `exportNpyRequested()`, `exportScfdRequested()`. UI buttons dispatch these; until Task 7/8 land the sagas, Viewport's existing token watchers are re-pointed at a temporary store-subscribe on dispatched actions OR (simpler) left non-functional for exactly the commits between Task 2 and Tasks 7-8 — prefer keeping them working by having Viewport listen via `store` subscription to a `lastCommand` scratch only if trivially cheap; otherwise note the gap in the commit message.
 `volpathKeyFor.ts` loses its two token params — the path-tracer reset for an explicit reset/clear arrives via the harness rebuild / clear that the saga performs (Task 7 wires `resetVolpath` there).
 
-- [ ] Delete fields + reducers, add `commands.ts`, update dispatch sites and `volpathKeyFor` (+ its test).
-- [ ] Typecheck + tests green; commit.
+- [x] Delete fields + reducers, add `commands.ts`, update dispatch sites and `volpathKeyFor` (+ its test).
+- [x] Typecheck + tests green; commit.
 
 ### Task 3: Store scaffold + React seam
 
@@ -61,9 +61,9 @@
 - `hooks.ts`: `useAppSelector`/`useAppDispatch`/`useAppStore` wrappers — the only react-redux import.
 - `rootSaga.ts`: `all([])` for now.
 
-- [ ] Scaffold, wire `App.tsx` (`<Provider store={...}>`), convert all consumers, delete the custom store files.
-- [ ] The probe/validate harnesses (`tools/mcpm-workbench/probeGpuErrors.ts`, `validate/`) and any test helpers constructing the old store move to `createWorkbenchStore` — grep `createStore(` under `tools/mcpm-workbench` + `tests/tools/mcpm-workbench`.
-- [ ] Typecheck + tests + `npm run mcpm-workbench` boots (manual: page renders, sliders write state); commit.
+- [x] Scaffold, wire `App.tsx` (`<Provider store={...}>`), convert all consumers, delete the custom store files.
+- [x] The probe/validate harnesses (`tools/mcpm-workbench/probeGpuErrors.ts`, `validate/`) and any test helpers constructing the old store move to `createWorkbenchStore` — grep `createStore(` under `tools/mcpm-workbench` + `tests/tools/mcpm-workbench`.
+- [x] Typecheck + tests + `npm run mcpm-workbench` boots (manual: page renders, sliders write state); commit.
 
 ### Task 4: RenderResources holder
 
@@ -85,7 +85,7 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 ```
 `disposeScene` carries Viewport's `disposePreview` + `disposeHarness` ordering (free old device memory before a new build allocates — see the comment at the top of `buildFromPoints`). Test: dispose order + idempotence + epoch bump (a real regression trap: the double-resident-buffers landmine).
 
-- [ ] Implement + test + commit.
+- [x] Implement + test + commit.
 
 ### Task 5: catalogSaga
 
@@ -96,8 +96,8 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 
 **Contract:** `takeLatest` on the catalog-key actions (`setCatalogSources`, `setCatalogTier`, packed-catalog install) + `sagaContextRegistered` (initial load). Worker: status `'loading'` → resolve points (packedOverride ▸ `?probe` synthetic ▸ `loadCatalogPoints`) → `deriveAgentWeights` → dispatch `catalogLoaded` (new reducer carrying `{ points, weights, bounds }` — points move INTO catalog state, replacing Viewport's local `points`; extend the serializableCheck ignores). `takeLatest` cancellation replaces the `generation`/`loadedCatalogKey` guards for loading. Test only the key-derivation/points-resolution decision (extract as a pure fn if needed); no saga-plumbing mirror tests.
 
-- [ ] Implement, delete the corresponding `buildOnce` half in Viewport (`loadCatalogPoints` branch + `loadedCatalogKey`), leaving build triggering to Task 6.
-- [ ] Typecheck + tests; commit.
+- [x] Implement, delete the corresponding `buildOnce` half in Viewport (`loadCatalogPoints` branch + `loadedCatalogKey`), leaving build triggering to Task 6.
+- [x] Typecheck + tests; commit.
 
 ### Task 6: harnessSaga (build/rebuild/empty-scene/device-loss)
 
@@ -107,8 +107,8 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 
 **Contract:** debounced (`REBUILD_DEBOUNCE_MS`) `takeLatest` on every structural action (`catalogLoaded`, grid-slice box actions, `setAgentCount`, `setInitMode`, `setWeightMode`) — enumerate from Viewport's current rebuild key. (`resetRequested` is NOT a rebuild trigger — it reseeds in place via Task 7's `harness.reset`, matching current behaviour.) Worker (all resource access through saga context): `disposeScene` → `acquireGpu` (moves out of Viewport, taking the device-lost watcher with it; loss dispatches the status message + a `deviceLost` action the driver observes to stop) → zero points ▸ empty scene (graph only) / else ▸ `createMcpmHarness` + `createRenderGraph` + attach trace/volpath/agents → dispatch the existing post-build state writes (`setResolvedGrid`, `resetStepCount`, `resetHistogram`, budget). Saga cancellation + `resources.epoch` replace `buildGeneration`/`disposed`. Viewport keeps only: canvas ref, `registerSagaContext` on mount, input wiring, frame driver.
 
-- [ ] Implement; delete `buildFromPoints`/`buildEmptyScene`/`acquireGpu`/`disposeHarness` from Viewport.
-- [ ] Manual smoke on :5500 (load, rebuild on box change, deselect-all-sources gizmo path) + suite; commit.
+- [x] Implement; delete `buildFromPoints`/`buildEmptyScene`/`acquireGpu`/`disposeHarness` from Viewport.
+- [x] Manual smoke on :5500 (load, rebuild on box change, deselect-all-sources gizmo path) + suite; commit.
 
 ### Task 7: simCommandSaga (reset / clear trace)
 
@@ -116,7 +116,7 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 
 **Contract:** `takeEvery(resetRequested)` → `harness.reset(initMode, seed)` + `resetStepCount` + `resetHistogram` + `graph.resetVolpath()`; `takeEvery(clearTraceRequested)` → `harness.clearTrace()` + `graph.resetVolpath()`. No-ops without a harness. Replaces Viewport's reset/clearTrace token watchers (delete them).
 
-- [ ] Implement, delete watchers, suite; commit.
+- [x] Implement, delete watchers, suite; commit.
 
 ### Task 8: exportSaga
 
@@ -124,7 +124,7 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 
 **Contract:** `takeLeading` per action (an in-flight export ignores repeats): `exportNpyRequested` → `readbackTrace` → `exportNpy` + `emitTraceSidecar` via `triggerDownload`; `exportScfdRequested` → `exportScfd`. Error path = status message, never a throw (current Viewport behaviour). Delete the two export watchers from Viewport.
 
-- [ ] Implement + suite; commit.
+- [x] Implement + suite; commit.
 
 ### Task 9: previewPackedSaga
 
@@ -132,7 +132,7 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 
 **Contract:** `takeLatest(setPreviewPacked)` — rising edge packs (`readbackTrace` → `widenTrace` → `previewPackedTrace` → `graph.attachPreviewTrace`), stores `previewPackedAtStep` in view state (new field + reducer — the driver reads it instead of the closure var); falling edge disposes. A `stepCount`-advanced check (on `incrementStep`) handles staleness: dispose + `setPreviewPacked(false)`. The frame driver's stale-fallback branch shrinks to a pure read.
 
-- [ ] Implement, migrate `previewPackedAtStep`/`lastPreviewPacked` out of Viewport; suite; commit.
+- [x] Implement, migrate `previewPackedAtStep`/`lastPreviewPacked` out of Viewport; suite; commit.
 
 ### Task 10: histogramSaga
 
@@ -140,7 +140,7 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 
 **Contract:** `takeLeading` on `incrementStep` filtered to `stepCount % HISTOGRAM_INTERVAL_STEPS === 0` → `harness.readHistogram()` → `recordHistogramSample`. `takeLeading` replaces the `histogramInFlight` flag; the epoch check replaces `harness !== h`. Sim stepping itself STAYS in the frame driver (it is rAF-cadence-coupled); only the readback moves.
 
-- [ ] Implement, delete `runHistogram` from Viewport; suite; commit.
+- [x] Implement, delete `runHistogram` from Viewport; suite; commit.
 
 ### Task 11: paletteSaga
 
@@ -148,7 +148,7 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 
 **Contract:** `takeEvery(setRaymarchPaletteId)` → re-attach trace pass (+ dispose preview & `setPreviewPacked(false)` if attached); `takeEvery(setPathTracerPaletteId)` → re-attach volpath pass. Source fields come from `resources.harness`; no-op without one (build attaches with current palettes anyway). Removes the two `attachedPalette` blocks from `frame()`.
 
-- [ ] Implement + suite; commit.
+- [x] Implement + suite; commit.
 
 ### Task 12: Viewport slim-down + close-out
 
@@ -156,7 +156,7 @@ export function disposeScene(resources: RenderResources): void; // preview → g
 
 **Contract:** Viewport retains ONLY: canvas + context registration, `createViewportInput` wiring, the rAF driver (dirty/FPS/interaction-boost bookkeeping, sim step cadence, layer draws off `resources`, volpath key reset, tonemap), and probe-gate globals. Zero `dispatch` calls except `setFps` and the driver-owned `incrementStep`. Delete every now-dead closure/var; re-run the comment budget over the file.
 
-- [ ] Slim, README paragraph, full `npx vitest run tests/tools/mcpm-workbench`, `npm run typecheck`, `npm run mcpm-workbench:probe`; commit.
+- [x] Slim, README paragraph, full `npx vitest run tests/tools/mcpm-workbench`, `npm run typecheck`, `npm run mcpm-workbench:probe`; commit.
 
 ## Definition of Done
 

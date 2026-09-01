@@ -165,7 +165,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **mcpm-workbench: promote `ToggleRow` to `src/components/common/`** `ready` — the galaxy tool hand-rolls the same row in four files.
 - [ ] **mcpm-workbench: `boxLines.wesl` pushes a line endpoint to `z = 2.0`** `ready` — a line-list clips rather than discards, so a half-length line draws when a box corner is behind the eye plane.
 - [ ] **mcpm-workbench: comparator `--bins` is unvalidated** `ready` — an all-out-of-grid `--points` set fails with an unrelated `RangeError` instead of a clear message.
-- [ ] **mcpm-workbench: fold the one-shot command tokens into one table** `deferred` — `reset`/`clearTrace`/`export`/`scfd` each a 3-line reducer; table-ify once a fifth token arrives.
 - [ ] **mcpm-workbench: `export_metadata.txt` vs packed-catalog point-count mismatch** `needs-verification` — 324,849 (fork export) vs 324,901 (packed catalog sidecar), not yet investigated.
 - [ ] **mcpm-workbench: `attachTrace` rebuilds the whole pipeline on a palette change** `ready` — a cheap `setPalette(id)` would do if the palette becomes a live dropdown.
 - [ ] **mcpm-workbench: `PathTracerSliderSpec` duplicates `RaymarchSliderSpec` field-for-field** `ready` — one shared spec type covers both tables.
