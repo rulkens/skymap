@@ -85,16 +85,27 @@
  * which is fine, because it is a look dial, and it is the same reason the
  * fade keys off altitude rather than reading the planner's `zWin` directly
  * (see `cloudDeckFade`'s header for that rationale — not repeated here).
+ *
+ * ## `fadeEndAltitudeRadii` re-tune (Task 10, spec §5c)
+ *
+ * The z7 floor (0.037, ~238 km) sat well ABOVE the shell's own radius
+ * (`radiusRatio − 1 = 0.002`, ~12.7 km): the deck was fully faded long before
+ * a descending camera ever reached the shell it floats on, which is what
+ * hid the closed-sphere cull bug — there was never any opacity left for the
+ * fix to make visible. Lowered to 0.0005 (~3.2 km), well inside the shell
+ * radius, so the deck stays visible through the whole inside-the-shell
+ * descent and only fades out close to the ground, where the streamed
+ * surface tiles are already the higher-resolution truth.
  */
 
 export const CLOUD_SHELL_PARAMS: {
   readonly radiusRatio: number; // shell radius in unit-sphere local units (≈ 1 + cloudTopKm/earthRadiusKm)
   readonly opacity: number; // coverage-to-alpha multiplier into the shell's straight-alpha output
   readonly fadeStartAltitudeRadii: number; // altitude (body radii) where the descent fade begins (≈ z6, 476 km)
-  readonly fadeEndAltitudeRadii: number; // altitude (body radii) where the descent fade completes (≈ z7, 238 km)
+  readonly fadeEndAltitudeRadii: number; // altitude (body radii) where the descent fade completes (Task 10: ≈3.2 km, inside the shell radius)
 } = {
   radiusRatio: 1.002,
   opacity: 1.0,
   fadeStartAltitudeRadii: 0.075,
-  fadeEndAltitudeRadii: 0.037,
+  fadeEndAltitudeRadii: 0.0005,
 };
