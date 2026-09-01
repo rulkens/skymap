@@ -2,6 +2,7 @@ import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { Tier } from '../../src/@types/data/Tier';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
+import { TIER_LADDER } from '../../src/data/tierLadder';
 
 /**
  * emittedTiersForBody — the tiers `build-textures` may ever ship for a body's
@@ -27,11 +28,6 @@ import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry
  * that source cap lives in `buildTextures.ts`, intersected against this set, so
  * the two concerns (policy ceiling vs. what a run can produce) stay separate.
  */
-
-// The tier ladder in ascending resolution order — `small` (2k) < `medium` (4k)
-// < `large` (8k). Local (not exported) so this file owns exactly one symbol,
-// mirroring the same private `TIER_ORDER` const in `clampTier.ts`.
-const TIER_LADDER: readonly Tier[] = ['small', 'medium', 'large'];
 
 export function emittedTiersForBody(id: BodyTextureId, kind: TextureKind): readonly Tier[] {
   const ceiling = BODY_TEXTURE_REGISTRY[id].kinds[kind];
