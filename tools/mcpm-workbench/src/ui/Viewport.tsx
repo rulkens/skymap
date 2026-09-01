@@ -16,6 +16,7 @@ import type { GridBox } from '../../@types/GridBox';
 import type { McpmHarness } from '../../@types/McpmHarness';
 import type { Store } from '../../@types/Store';
 import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { initGpu, resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { downloadStem } from '../export/downloadStem';
@@ -138,6 +139,9 @@ function Viewport({ store }: ViewportProps): ReactNode {
     let rebuildTimer = 0;
     let harness: McpmHarness | null = null;
     let renderGraph: RenderGraph | null = null;
+    // The device/context pair frame() actually draws with — outlives the harness so
+    // the empty-catalog scene (buildEmptyScene) can render camera + gizmo without one.
+    let gpuCtx: GpuContext | null = null;
     // Task P34: identifies THIS rebuild's device to its own `device.lost` callback —
     // reassigned the instant a NEWER rebuild acquires its device (before that
     // rebuild's harness exists), so a stale device's loss can't clobber a working
@@ -377,14 +381,18 @@ function Viewport({ store }: ViewportProps): ReactNode {
       // needs its first frame drawn, regardless of what the dirty flag last held.
       dirty = true;
       const frame = (): void => {
-        if (disposed || !harness || !renderGraph) return;
+        if (disposed || !gpuCtx || !renderGraph) return;
         rafHandle = requestAnimationFrame(frame);
+        // h is null in the empty-catalog scene — every field-fed block below
+        // (sim step, layer draws, palette re-attach) checks it; camera, gizmo
+        // wireframe and tonemap run either way.
+        const gpu = gpuCtx;
         const h = harness;
         const graph = renderGraph;
 
         const s = store.getSnapshot();
         const now = performance.now();
-        if (s.sim.running) {
+        if (h && s.sim.running) {
           simFrameCounter += 1;
           // Task FLE: the SAME boost-then-settle shape as the divisors below, applied
           // to physics cadence via a synthetic "divisor 1" — step every frame once
@@ -420,8 +428,8 @@ function Viewport({ store }: ViewportProps): ReactNode {
         const holdUntilMs = Math.max(boxPreviewUntil, lastInteractionMs + SETTLE_MS);
         const needsRender = frameNeedsRender({
           dirty: frameDirty,
-          simRunning: s.sim.running,
-          pathTracerOn: s.view.layers.pathTracer,
+          simRunning: h !== null && s.sim.running,
+          pathTracerOn: h !== null && s.view.layers.pathTracer,
           pathTracerSampleCount: volpathSampleCount,
           pathTracerSampleCap: s.view.pathTracer.sampleCap,
           holdUntilMs,
@@ -457,7 +465,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // fresh volpath pass restarts accumulation exactly as the key change below
         // demands anyway. The T18 preview pass also baked the old palette: drop it
         // and un-toggle, the same recovery the staleness path below uses.
-        if (s.view.raymarch.paletteId !== attachedRaymarchPalette) {
+        if (h && s.view.raymarch.paletteId !== attachedRaymarchPalette) {
           attachedRaymarchPalette = s.view.raymarch.paletteId;
           graph.attachTrace({
             traceBuffer: h.traceBuffer,
@@ -470,7 +478,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
             store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
           }
         }
-        if (s.view.pathTracer.paletteId !== attachedVolpathPalette) {
+        if (h && s.view.pathTracer.paletteId !== attachedVolpathPalette) {
           attachedVolpathPalette = s.view.pathTracer.paletteId;
           graph.attachVolpath({
             traceBuffer: h.traceBuffer,
@@ -480,13 +488,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
           });
         }
 
-        const encoder = h.gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
+        const encoder = gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
         const cam = cameraViewFor(s, [canvas.width, canvas.height]);
         // Independent layers over one clear, back to front. The clear is unconditional:
         // with every layer off the frame is black, not last frame's pixels.
         const { layers } = s.view;
         graph.clear(encoder);
-        if (layers.raymarch) {
+        if (h && layers.raymarch) {
           // Task FLE: same interaction boost as the path tracer below — coarser divisor
           // while a UI write is fresh, the user's own setting once it settles.
           const effectiveRaymarchDivisor = effectiveVolpathDivisor(
@@ -513,7 +521,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
             graph.drawTrace(encoder, traceViewFor(s, h.box, cam), effectiveRaymarchDivisor);
           }
         }
-        if (layers.agents) {
+        if (h && layers.agents) {
           graph.drawSplat(encoder, {
             ...cam,
             sampleWeight: s.view.raymarch.sampleWeight,
@@ -521,8 +529,8 @@ function Viewport({ store }: ViewportProps): ReactNode {
             pointSizePx: s.view.agents.pointSizePx,
           });
         }
-        if (layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
-        if (layers.pathTracer) {
+        if (h && layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
+        if (h && layers.pathTracer) {
           // Task FLE: boost trigger generalized to ANY UI store write (lastInteractionMs,
           // set by the subscriber above) — was camera-only, a per-frame `cam` JSON
           // comparison. effectiveVolpathDivisor decays it back to the user's own setting
@@ -566,20 +574,75 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // A drag in progress keeps the wireframe up even once the 200ms preview timer
         // lapses — a continuous pointer signal is its own "still hot"; `input`'s own
         // isWireframeVisible ORs that in on top of the showGridBox/flash pair below (F1.7).
-        if (points && input.isWireframeVisible(s, now)) {
+        if (input.isWireframeVisible(s, now)) {
+          // No harness (empty scene): the pending box IS the built box — the gizmo
+          // manipulates a selection that nothing has been built against yet.
+          const pendingBox = deriveGridBox(s.grid);
           graph.drawBoxPreview(
             encoder,
             cam,
-            h.box,
-            deriveGridBox(s.grid),
+            h ? h.box : pendingBox,
+            pendingBox,
             input.getHoverHandle(),
             input.getDragHandleId(),
           );
         }
-        graph.tonemap(encoder, h.gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
-        h.gpu.device.queue.submit([encoder.finish()]);
+        graph.tonemap(encoder, gpu.context.getCurrentTexture().createView(), EXPOSURE, CONTRAST);
+        gpu.device.queue.submit([encoder.finish()]);
       };
       rafHandle = requestAnimationFrame(frame);
+    }
+
+    /**
+     * Device acquisition is a canvas/browser concern this component owns; harness
+     * and empty-scene builds both consume the resulting GpuContext, freshly
+     * acquired per rebuild. Task P34: wired here, the one call site a device ever
+     * comes from. 'destroyed' is an intentional device.destroy() (a future
+     * rebuild/dispose path, not one this codebase calls yet) — never a real loss,
+     * so it's excluded on top of the currentDevice staleness check. No
+     * auto-recreation: this only stops the loop and reports; the maintainer reloads.
+     */
+    async function acquireGpu(): Promise<GpuContext> {
+      const gpu = await initGpu(canvas, {
+        requiredFeatures: ['shader-f16'],
+        requiredLimits: {
+          maxComputeInvocationsPerWorkgroup: 1024, // propagate's 10x10x10 = 1000
+          maxBufferSize: Number.MAX_SAFE_INTEGER, // clamped to the adapter's max by initGpu
+          maxStorageBufferBindingSize: Number.MAX_SAFE_INTEGER,
+        },
+      });
+      currentDevice = gpu.device;
+      gpuCtx = gpu;
+      void gpu.device.lost.then((info) => {
+        if (disposed || currentDevice !== gpu.device || info.reason === 'destroyed') return;
+        if (rafHandle) cancelAnimationFrame(rafHandle);
+        rafHandle = 0;
+        store.setState((st) => ({
+          ...st,
+          catalog: setCatalogStatusMessage(
+            st.catalog,
+            `GPU device lost (${info.reason}) — reload the page`,
+          ),
+        }));
+      });
+      return gpu;
+    }
+
+    /**
+     * The zero-catalog scene: no harness, no layers — just the render graph, so
+     * the orbit camera and the grid-box gizmo stay live while no source is
+     * selected. frame() treats `harness === null` as "skip every field-fed
+     * layer"; a source (re)selection replaces this via the normal build path.
+     */
+    async function buildEmptyScene(generation: number): Promise<void> {
+      disposeHarness();
+      if (disposed) return;
+      const gpu = await acquireGpu();
+      if (disposed || generation !== buildGeneration) return;
+      renderGraph = createRenderGraph(gpu.device, gpu.format, (code, label) =>
+        gpu.device.createShaderModule({ code, label }),
+      );
+      startLoop();
     }
 
     async function buildFromPoints(pts: CatalogPoints, generation: number): Promise<void> {
@@ -597,34 +660,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       disposeHarness();
       if (disposed) return;
 
-      // Device acquisition is a canvas/browser concern this component owns; the
-      // harness only needs the resulting GpuContext, freshly acquired per rebuild.
-      const gpu = await initGpu(canvas, {
-        requiredFeatures: ['shader-f16'],
-        requiredLimits: {
-          maxComputeInvocationsPerWorkgroup: 1024, // propagate's 10x10x10 = 1000
-          maxBufferSize: Number.MAX_SAFE_INTEGER, // clamped to the adapter's max by initGpu
-          maxStorageBufferBindingSize: Number.MAX_SAFE_INTEGER,
-        },
-      });
-      // Task P34: wired here, the one call site a device ever comes from. 'destroyed'
-      // is an intentional device.destroy() (a future rebuild/dispose path, not one
-      // this codebase calls yet) — never a real loss, so it's excluded on top of the
-      // currentDevice staleness check. No auto-recreation: this only stops the loop
-      // and reports; the maintainer reloads.
-      currentDevice = gpu.device;
-      void gpu.device.lost.then((info) => {
-        if (disposed || currentDevice !== gpu.device || info.reason === 'destroyed') return;
-        if (rafHandle) cancelAnimationFrame(rafHandle);
-        rafHandle = 0;
-        store.setState((st) => ({
-          ...st,
-          catalog: setCatalogStatusMessage(
-            st.catalog,
-            `GPU device lost (${info.reason}) — reload the page`,
-          ),
-        }));
-      });
+      const gpu = await acquireGpu();
 
       const h = await createMcpmHarness({
         gpu,
@@ -729,10 +765,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
         }
         if (points.count === 0) {
           // Zero points is a real, reachable state (every selected source excluded
-          // at this tier, or none selected) — not a crash: tear down any harness
-          // left from a previous non-empty selection and surface a human status
-          // instead of letting createMcpmHarness's own guard throw.
-          disposeHarness();
+          // at this tier, or none selected) — not a crash: swap in the harness-free
+          // scene (camera + gizmo stay live) and surface a human status instead of
+          // letting createMcpmHarness's own guard throw.
+          await buildEmptyScene(generation);
           store.setState((st) => ({
             ...st,
             catalog: setCatalogStatusMessage(
