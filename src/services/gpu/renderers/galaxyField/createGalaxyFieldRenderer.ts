@@ -450,6 +450,11 @@ export function createGalaxyFieldRenderer(
   // first (and every later) texture. Every other reader takes the targets
   // `encode` is handed for that frame.
   let dustMapTex: GPUTexture | null = null;
+  // Whether `dustMapTex` currently holds anything but zeros — the encode
+  // gate's clear-on-drop-to-zero latch (see its own comment below). Reset
+  // here rather than left stale whenever `onDustMapReallocated` hands in a
+  // fresh (zero-initialised) texture.
+  let dustMapPopulated = false;
 
   // ---- field/HII splat pipelines + their bind-group apparatus ----
   // Must come after everything above: it takes all three UBOs, the generator,
@@ -1397,17 +1402,15 @@ export function createGalaxyFieldRenderer(
     // has to run — as the clear that empties the map. Assigning the returned
     // latch is what carries that across; drop the assignment and the map
     // freezes at the previous galaxy's dust.
-    if (fieldCounts.dust > 0 || drawDustView || fieldPipelines.dustMapPopulated) {
-      fieldPipelines.setDustMapPopulated(
-        encodeDustMapPass({
-          enc: encoder,
-          timestampWrites: timestampWrites('dustMap'),
-          targetView: frameTargets.dustMapTex.createView(),
-          pipeline: fieldPipelines.dustMapPipe,
-          bindGroup: fieldPipelines.dustMapBG,
-          instanceCount: fieldCounts.dust,
-        }),
-      );
+    if (fieldCounts.dust > 0 || drawDustView || dustMapPopulated) {
+      dustMapPopulated = encodeDustMapPass({
+        enc: encoder,
+        timestampWrites: timestampWrites('dustMap'),
+        targetView: frameTargets.dustMapTex.createView(),
+        pipeline: fieldPipelines.dustMapPipe,
+        bindGroup: fieldPipelines.dustMapBG,
+        instanceCount: fieldCounts.dust,
+      });
     }
 
     // JWST dust-view presentation, into its OWN target — runs ADDITIONALLY
@@ -1515,6 +1518,7 @@ export function createGalaxyFieldRenderer(
     onDustMapReallocated(next: GPUTexture): void {
       dustMapTex = next;
       fieldPipelines.rebuildDustMapDependents(fieldComps.buffer, hiiComps.buffer);
+      dustMapPopulated = false;
     },
 
     get fieldCounts(): FieldSliceCounts {

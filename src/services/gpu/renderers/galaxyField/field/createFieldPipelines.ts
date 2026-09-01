@@ -71,17 +71,13 @@ export type FieldPipelines = {
   readonly hiiBG: GPUBindGroup;
   tierBG(kind: HiiTier): GPUBindGroup;
 
-  /** Whether `dustMapTex` currently holds anything but zeros — see `rebuildDustMapDependents`. */
-  readonly dustMapPopulated: boolean;
-  setDustMapPopulated(populated: boolean): void;
-
   /** Rebuilds only `dustMapBG` — the one builder that never touches `targets`, so it is also the INITIAL build, called once right after `model` exists and before `targets` does. */
   rebuildDustMapBindGroup(fieldCompsBuffer: GPUBuffer): void;
   /** `fieldComps`' `onRegrow` — always fires after `targets` exists (a regrow is a later `write`, never the first). Rebuilds `dustMapBG` AND `fieldSplatBG`. */
   rebuildFieldCompsBindGroups(fieldCompsBuffer: GPUBuffer): void;
   /** `hiiComps`' `onRegrow` — rebuilds `hiiBG` and every `HII_TIERS` row's own bind group; they share `hiiCompsBuffer`/`dustMapTex`, so everywhere one needs rebuilding, all do. */
   rebuildTierBindGroups(hiiCompsBuffer: GPUBuffer): void;
-  /** `onDustMapReallocated` — every group holding a view of the fresh `dustMapTex`, plus the stale-map latch (a fresh texture is zero-initialised, so the latch resets with it). */
+  /** `onDustMapReallocated` — every group holding a view of the fresh `dustMapTex`. */
   rebuildDustMapDependents(fieldCompsBuffer: GPUBuffer, hiiCompsBuffer: GPUBuffer): void;
 };
 
@@ -216,7 +212,6 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
   let dustPresentBG: GPUBindGroup;
   let hiiBG: GPUBindGroup;
   let tierBGMap: Record<HiiTier, GPUBindGroup>;
-  let dustMapPopulated = false;
 
   function buildDustMapBindGroup(fieldCompsBuffer: GPUBuffer): GPUBindGroup {
     return device.createBindGroup({
@@ -365,7 +360,6 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     fieldSplatBG = buildFieldSplatBindGroup(fieldCompsBuffer);
     rebuildTierBindGroups(hiiCompsBuffer);
     dustPresentBG = buildDustPresentBindGroup();
-    dustMapPopulated = false;
   }
 
   return {
@@ -391,13 +385,6 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     },
     tierBG(kind: HiiTier): GPUBindGroup {
       return tierBGMap[kind];
-    },
-
-    get dustMapPopulated(): boolean {
-      return dustMapPopulated;
-    },
-    setDustMapPopulated(populated: boolean): void {
-      dustMapPopulated = populated;
     },
 
     rebuildDustMapBindGroup,
