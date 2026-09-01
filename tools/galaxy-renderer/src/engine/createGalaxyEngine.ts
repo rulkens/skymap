@@ -238,15 +238,11 @@ export async function createGalaxyEngine(
   // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
   // Allocates nothing yet — the first `rebuildAll` is the unconditional one
   // below the ResizeObserver, once the canvas has adopted its backing size.
-  // The callback fires from INSIDE the dust allocation, before `setDivisors`
-  // has reached the hii/tier rows — `targets.dustMapTex` is the only row this
-  // caller can read here, which is what `onDustMapReallocated` now types.
-  const targets = createGalaxyRenderTargets(
-    device,
-    canvas,
-    { hdr: HDR, swap: format, dustMap: DUST_MAP_FORMAT },
-    () => field.onDustMapReallocated(targets.dustMapTex),
-  );
+  const targets = createGalaxyRenderTargets(device, canvas, {
+    hdr: HDR,
+    swap: format,
+    dustMap: DUST_MAP_FORMAT,
+  });
 
   /**
    * This tool's own target rows in the field renderer's shape. Built fresh at
@@ -708,14 +704,15 @@ export async function createGalaxyEngine(
       // production frame's `encodeSplatPass` redraws it in full.
       async requestArmCloudRenderedFluxSum(): Promise<number | null> {
         const reservation = field.armCloudReservation;
-        if (!reservation) return null;
+        const bindGroup = field.probe.fieldSplatBG;
+        if (!reservation || !bindGroup) return null;
         const enc = device.createCommandEncoder({ label: 'galaxy:armCloudRenderedFluxSum' });
         encodeSplatPass({
           enc,
           label: 'galaxy:armCloudRenderedFluxSumPass',
           targetView: targets.fieldTex.createView(),
           pipeline: field.probe.fieldSplatPipe,
-          bindGroup: field.probe.fieldSplatBG,
+          bindGroup,
           instanceCount: reservation.count,
           firstInstance: reservation.offset,
         });
@@ -725,14 +722,15 @@ export async function createGalaxyEngine(
       // The spur-cloud twin of `requestArmCloudRenderedFluxSum` above.
       async requestArmSpurCloudRenderedFluxSum(): Promise<number | null> {
         const reservation = field.spurCloudReservation;
-        if (!reservation) return null;
+        const bindGroup = field.probe.fieldSplatBG;
+        if (!reservation || !bindGroup) return null;
         const enc = device.createCommandEncoder({ label: 'galaxy:armSpurCloudRenderedFluxSum' });
         encodeSplatPass({
           enc,
           label: 'galaxy:armSpurCloudRenderedFluxSumPass',
           targetView: targets.fieldTex.createView(),
           pipeline: field.probe.fieldSplatPipe,
-          bindGroup: field.probe.fieldSplatBG,
+          bindGroup,
           instanceCount: reservation.count,
           firstInstance: reservation.offset,
         });

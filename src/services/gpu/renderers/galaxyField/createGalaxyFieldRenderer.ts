@@ -56,6 +56,7 @@ import { createKeyedRebuild } from '../../lib/createKeyedRebuild';
 import { buildFieldHeaderInputs } from './field/buildFieldHeaderInputs';
 import type { FieldHeaderFrameLanes, FieldHeaderRenderLanes } from './field/buildFieldHeaderInputs';
 import { createFieldPipelines } from './field/createFieldPipelines';
+import type { FieldBindGroups } from './field/createFieldPipelines';
 import { deriveDustHeaderLanes } from './field/deriveDustHeaderLanes';
 import { encodeDustMapPass } from './field/encodeDustMapPass';
 import { encodeDustPresentPass } from './field/encodeDustPresentPass';
@@ -175,9 +176,7 @@ export type GalaxyFieldMixtureInput = {
 /**
  * Render targets the HOST allocates and owns. `GPUTexture` rather than
  * `GPUTextureView`: every field/HII/tier header packs `targetSizePx` off the
- * target's own pixel size, and a view exposes no dimensions. `dustMapTex` is
- * SAMPLED as well as written, so a reallocation must reach
- * `onDustMapReallocated` — a fresh view at encode time is not enough.
+ * target's own pixel size, and a view exposes no dimensions.
  */
 export type GalaxyFieldRenderTargets = {
   readonly fieldTex: GPUTexture;
@@ -250,7 +249,8 @@ export type GalaxyFieldProbe = {
   } | null>;
   /** The REAL production pair, so a host-side isolated-range draw exercises the real fragment shader. */
   readonly fieldSplatPipe: GPURenderPipeline;
-  readonly fieldSplatBG: GPUBindGroup;
+  /** `null` until the first `encode` has synced the bind groups against its own targets. */
+  readonly fieldSplatBG: GPUBindGroup | null;
 };
 
 export type GalaxyFieldRenderer = {
@@ -281,14 +281,6 @@ export type GalaxyFieldRenderer = {
   ): void;
   /** The three present overlays, into the host's already-open scene pass. */
   encodeOverlays(pass: GPURenderPassEncoder, overlays: GalaxyFieldOverlays): void;
-  /**
-   * The host reallocated `dustMapTex`. Rebuilds every `layout: 'auto'` bind
-   * group holding a view of the old texture and resets the stale-map latch —
-   * must be called from the allocation itself, never hoisted to a caller
-   * that may skip it (the latch reset asserts the texture is zeroed, true
-   * only of one just created).
-   */
-  onDustMapReallocated(dustMapTex: GPUTexture): void;
 
   readonly fieldCounts: FieldSliceCounts;
   /** Cached by the dust rebuild — the header reads these every frame, they change only when dust does. */
@@ -463,16 +455,10 @@ export function createGalaxyFieldRenderer(
   // GPU replacement for `buildDigVeil`'s complex/children placement.
   const placeDigVeil = own(createIsmMapPlaceDigVeil(device, { makeShader }));
 
-  // `getDustMapTex` is a thunk because `createFieldPipelines` is built before
-  // the host has allocated anything; `onDustMapReallocated` supplies the
-  // first (and every later) texture. Every other reader takes the targets
-  // `encode` is handed for that frame.
-  let dustMapTex: GPUTexture | null = null;
-  // Whether `dustMapTex` currently holds anything but zeros — the encode
-  // gate's clear-on-drop-to-zero latch (see its own comment below). Reset
-  // here rather than left stale whenever `onDustMapReallocated` hands in a
-  // fresh (zero-initialised) texture.
-  let dustMapPopulated = false;
+  /** The dust map this module last saw, and whether it holds anything but zeros. */
+  let dustMap: { readonly tex: GPUTexture; populated: boolean } | null = null;
+  /** What the last `encode`'s `sync` returned — the probe's isolated-range draw reads it. */
+  let bindGroups: FieldBindGroups | null = null;
 
   // ---- field/HII splat pipelines + their bind-group apparatus ----
   // Must come after everything above: it takes all three UBOs, the generator,
@@ -496,7 +482,6 @@ export function createGalaxyFieldRenderer(
     dustRenormBuffer: ringReduce.dustRenormBuffer,
     armRenormBuffer: ringReduce.armCloudRenormBuffer,
     spurRenormBuffer: ringReduce.spurCloudRenormBuffer,
-    getDustMapTex: () => dustMapTex!,
   });
 
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
@@ -554,9 +539,6 @@ export function createGalaxyFieldRenderer(
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       floatsPerRecord: FIELD_COMPONENT_FLOATS,
       initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
-      // A regrow REPLACES the GPUBuffer and a bind group holds the exact object
-      // it was built against — internal now that both live here.
-      onRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(fieldComps.getBuffer()),
     }),
   );
   // The HII tier's own storage buffer, byte-identical layout to `fieldComps`
@@ -575,7 +557,6 @@ export function createGalaxyFieldRenderer(
       // of it — so the common case never regrows on first activation.
       // + YOUNG_CHAIN_MAX_COMPONENTS: the young-stars chain rides it too.
       initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + YOUNG_CHAIN_MAX_COMPONENTS,
-      onRegrow: () => fieldPipelines.rebuildTierBindGroups(hiiComps.getBuffer()),
     }),
   );
 
@@ -596,11 +577,6 @@ export function createGalaxyFieldRenderer(
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     }),
   );
-
-  // `dustMapBG` is the only one of the five bind groups that doesn't
-  // reference `dustMapTex` (it is the pass that WRITES that texture), so it
-  // is also the only one buildable before the host has any targets.
-  fieldPipelines.rebuildDustMapBindGroup(fieldComps.getBuffer());
 
   // ---- mixture state ----
   let geometry: GalaxyDescription | null = null;
@@ -1330,6 +1306,16 @@ export function createGalaxyFieldRenderer(
     frameTargets: GalaxyFieldRenderTargets,
     frame: GalaxyFieldFrame,
   ): void {
+    // Pulled, not pushed: the bind groups any pass below binds are the ones
+    // built from THIS frame's own resources, so a buffer regrow or a target
+    // reallocation the module was never told about cannot leave a group
+    // holding a dead object.
+    bindGroups = fieldPipelines.sync({
+      fieldComps: fieldComps.getBuffer(),
+      hiiComps: hiiComps.getBuffer(),
+      dustMap: frameTargets.dustMapTex,
+    });
+
     // Every FieldHeaderInput this frame needs — field, `hii:extras`, and
     // every tier — assembled in one pure call off explicit mixture lanes,
     // host render settings and this frame's own derived view. Target sizes
@@ -1371,7 +1357,11 @@ export function createGalaxyFieldRenderer(
       device.queue.writeBuffer(tierUbo[kind], 0, tierData);
     }
 
-    if (!frame.render.analyticField) return;
+    // `bindGroups` is null only before the host has allocated a dust map, and
+    // then there is nothing to draw with — same "headers still written, no
+    // passes" exit as the disabled field.
+    if (!frame.render.analyticField || bindGroups === null) return;
+    const groups = bindGroups;
     const timestampWrites = frame.timestampWrites ?? ((): undefined => undefined);
     // The JWST view's own gate, read off the same `debugViews` the headers
     // above were packed from — one lane per fact, so the pass and its header
@@ -1384,18 +1374,24 @@ export function createGalaxyFieldRenderer(
     // pass's own source whenever the JWST view is live — so it has to run
     // whenever either consumer needs it.
     //
-    // The third disjunct is `dustMapPopulated`: a skipped pass leaves the
-    // last frame's contents, so the frame the dust count drops to zero still
-    // has to run — as the clear that empties the map. Assigning the returned
-    // latch is what carries that across; drop the assignment and the map
-    // freezes at the previous galaxy's dust.
-    if (fieldCounts.dust > 0 || drawDustView || dustMapPopulated) {
-      dustMapPopulated = encodeDustMapPass({
+    // The third disjunct is `populated`: a skipped pass leaves the last
+    // frame's contents, so the frame the dust count drops to zero still has to
+    // run — as the clear that empties the map. Assigning the returned latch is
+    // what carries that across; drop the assignment and the map freezes at the
+    // previous galaxy's dust. A texture WebGPU just created is zeroed, so a
+    // moved identity implies `populated: false` rather than the host having to
+    // announce it.
+    if (dustMap?.tex !== frameTargets.dustMapTex) {
+      dustMap = { tex: frameTargets.dustMapTex, populated: false };
+    }
+    const dustState = dustMap;
+    if (fieldCounts.dust > 0 || drawDustView || dustState.populated) {
+      dustState.populated = encodeDustMapPass({
         enc: encoder,
         timestampWrites: timestampWrites('dustMap'),
         targetView: frameTargets.dustMapTex.createView(),
         pipeline: fieldPipelines.dustMapPipe,
-        bindGroup: fieldPipelines.dustMapBG,
+        bindGroup: groups.dustMap,
         instanceCount: fieldCounts.dust,
       });
     }
@@ -1409,7 +1405,7 @@ export function createGalaxyFieldRenderer(
         enc: encoder,
         targetView: frameTargets.dustViewTex.createView(),
         pipeline: fieldPipelines.dustPresentPipe,
-        bindGroup: fieldPipelines.dustPresentBG,
+        bindGroup: groups.dustPresent,
       });
     }
 
@@ -1423,7 +1419,7 @@ export function createGalaxyFieldRenderer(
       timestampWrites: timestampWrites('field'),
       targetView: frameTargets.fieldTex.createView(),
       pipeline: fieldPipelines.fieldSplatPipe,
-      bindGroup: fieldPipelines.fieldSplatBG,
+      bindGroup: groups.fieldSplat,
       instanceCount: fieldCounts.emission,
     });
 
@@ -1444,7 +1440,7 @@ export function createGalaxyFieldRenderer(
         timestampWrites: timestampWrites(`hii:${kind}`),
         targetView: frameTargets.hiiTiers[kind].createView(),
         pipeline: fieldPipelines.hiiTierPipeline(kind),
-        bindGroup: fieldPipelines.tierBG(kind),
+        bindGroup: groups.tier(kind),
         instanceCount: segment.count,
         firstInstance: segment.first,
       });
@@ -1460,7 +1456,7 @@ export function createGalaxyFieldRenderer(
         timestampWrites: timestampWrites('hii:extras'),
         targetView: frameTargets.hiiTex.createView(),
         pipeline: fieldPipelines.hiiExtrasPipe,
-        bindGroup: fieldPipelines.hiiBG,
+        bindGroup: groups.hii,
         instanceCount: extrasSegment.count,
         firstInstance: extrasSegment.first,
       });
@@ -1501,12 +1497,6 @@ export function createGalaxyFieldRenderer(
     stepIsmMap,
     encode,
     encodeOverlays,
-
-    onDustMapReallocated(next: GPUTexture): void {
-      dustMapTex = next;
-      fieldPipelines.rebuildDustMapDependents(fieldComps.getBuffer(), hiiComps.getBuffer());
-      dustMapPopulated = false;
-    },
 
     get fieldCounts(): FieldSliceCounts {
       return fieldCounts;
@@ -1633,8 +1623,8 @@ export function createGalaxyFieldRenderer(
       },
 
       fieldSplatPipe: fieldPipelines.fieldSplatPipe,
-      get fieldSplatBG(): GPUBindGroup {
-        return fieldPipelines.fieldSplatBG;
+      get fieldSplatBG(): GPUBindGroup | null {
+        return bindGroups?.fieldSplat ?? null;
       },
     },
 
