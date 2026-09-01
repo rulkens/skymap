@@ -448,11 +448,13 @@ right where the regime engages and the sky opens below that; both are
 feel-tunable, no published reference exists for either (M §3).
 
 **Enforcement is orientation-only, applied after every write to the body arm**:
-recompute the ENU at the new standpoint and rebuild the basis from
-`(clamp(heading), min(tilt, maxTilt(h/R)))`. The eye never moves. The same
+recompute the ENU at the new standpoint and turn the basis by each limit's
+residual — `tilt − min(tilt, maxTilt(h/R))` about the yawed east, and the
+heading residual about the local vertical (§12-R4b: by residual, never as an
+absolute rebuild, which would discard roll). The eye never moves. The same
 curve limits the **heading** on a receding zoom write — the north-up return of
-§12-R4b, one authority scalar for both angles; a drag's heading and an
-approach's are unclamped. This is Cesium's
+§12-R4b, one authority scalar for both angles; a drag's heading is unclamped,
+and an approach carries its own north-up rule instead (§12-R4b). This is Cesium's
 HPR-recapture-per-zoom-step generalized (C §3.4, PR #5603) and it buys three
 things at once: a zoom-out re-levels against the new local vertical instead of
 drifting toward the horizon; the camera converges to top-down with no untilt
@@ -733,13 +735,21 @@ cursor, keeps the screen-centre pick.
 point, zoom-out re-frames to the canonical globe view — body centred, north up,
 converging top-down — smoothly, never as a snap. Implemented as a **scale-keyed
 ceiling, not an animated blend**: `maxTiltRad(h/R)` limits heading as well as
-tilt, clamped in the one basis rebuild §12-R3 already performs. That is the
-shape Google Maps documents ("the range of angles that can be used varies with
-the current zoom level; values outside this range are clamped") and the shape
-the tilt ceiling already had; convergence is then emergent and distance-keyed —
-it stops when zooming stops, has no overshoot, and cannot pop because there is
-no animation state to snap. One authority scalar for both angles, so they can
-never disagree about how constrained the pose is. The _centring_ half needs no
+tilt, enforced at the one site §12-R3 already writes. That is the shape Google
+Maps documents ("the range of angles that can be used varies with the current
+zoom level; values outside this range are clamped") and the shape the tilt
+ceiling already had; convergence is then emergent and distance-keyed — it stops
+when zooming stops and has no overshoot, because there is no animation state at
+all. One authority scalar for both angles, so they can never disagree about how
+constrained the pose is.
+
+Enforcement turns the basis **by each residual**, and is not the absolute
+`(heading, tilt)` reconstruction it was through §12-R3: a reconstruction has no
+roll term, so every tick that crossed a limit also discarded the pose's roll —
+a 1e-5 rad heading violation could spin the image 90° in one frame at ~170 km
+altitude, which is the pop this ruling forbids. The delta form is identical for
+a roll-free pose, leaves roll alone otherwise, and retires the roll-snap
+deviation R3 shipped with. The _centring_ half needs no
 separate term: with the sub-eye zoom-out anchor the body centre lies along the
 eye's radial, so the aim error the user sees as "the globe slid off centre" IS
 the tilt the same ceiling closes. Prior art and its limits are recorded in
@@ -747,14 +757,29 @@ the tilt the same ceiling closes. Prior art and its limits are recorded in
 Q3/Q4 — Cesium re-centres inward on the cursor and never returns to a canonical
 pose, so the retreat attractor is ours, not adopted.
 
-Two exemptions, both because a re-aim moves the cursor's point off the cursor:
-drags never north-force (a drag owns its heading), and the heading limit rides
-the **recession** only. The second was meant to fall out of the ceiling
-slackening on descent, and does not: near nadir a dive generates heading faster
-than it slackens — forward's horizontal component is the lean, and it swings to
-π as the eye slides off the sub-anchor point — so a direction-blind heading
-clamp turned the view mid-dive (0.37 rad of anchor drift over a 30-notch
-descent). The tilt half stays direction-blind, as before.
+The heading **limit** rides the recession only; drags never north-force (a drag
+owns its heading), and the tilt half stays direction-blind as before. The
+direction case was meant to fall out of the ceiling slackening on descent, and
+does not: near nadir a dive generates heading faster than it slackens —
+forward's horizontal component is the lean, and it swings to π as the eye
+slides off the sub-anchor point — so a direction-blind clamp turned the view
+mid-dive (0.37 rad of anchor drift over a 30-notch descent, measured).
+
+**The approach's own north-up rule.** "When zooming in, north is always up"
+does not follow from the ceiling — no curve reaches a limit that is switched
+off — and without a rule the dive lands tens of degrees off north (82°
+measured, worst case near the pole), because the eye moving is itself what
+turns the ENU under a fixed basis. So each approach notch also rotates the pose
+— eye **and** basis — about the axis through the cursor anchor and the body
+centre, easing screen-up back onto north by a capped share of the residual. On
+a sphere that axis is one line, so the rotation holds the anchor's camera-space
+coordinates exactly (prior art Q4c): the picked point keeps its pixel to the
+bit, and altitude is untouched. Moving the eye is not the thing §12-R3 forbids —
+that rule is about enforcement correcting a pose the user drove; this is a
+gesture-authored write, the form the tilt drag already uses. Its residual is
+**screen-up's** azimuth rather than `headingTiltAt`'s heading: the two agree
+for a roll-free pose, but a dive accumulates roll, and nulling forward's
+azimuth instead drove a measured polar dive through north-up and back out.
 
 **Small-body engage feel — flagged, not built.** Every planet/moon registry row
 can engage (R2's argmin is body-blind); on a ~10 km moon the band engages at

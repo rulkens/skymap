@@ -5,9 +5,10 @@
  * The anchor is the cursor's body-local pick only while *closing* on it
  * (`factor < 1`) with a hit; zoom-out and any miss fall back to the surface
  * point under the eye, so the cursor can never become a repelling pivot
- * (FW-H). For any anchor `A` with `eye·Â ≥ |A|` — the sub-eye point trivially,
- * a cursor pick by the caller's staleness test — `eye′·Â = |A| + f·(eye·Â −
- * |A|) ≥ |A|` for all `f ≥ 0`, so no tangent-plane overshoot guard is needed.
+ * (FW-H). For any anchor `A` with `eye·Â ≥ |A|` — the sub-eye point whenever
+ * `|eye| ≥ R`, which the floor below guarantees; a cursor pick by the caller's
+ * staleness test — `eye′·Â = |A| + f·(eye·Â − |A|) ≥ |A|` for all `f ≥ 0`, so
+ * no tangent-plane overshoot guard is needed.
  * The caller derives `factor` from the centre-measured range, never from
  * `|eye − anchor|`.
  */

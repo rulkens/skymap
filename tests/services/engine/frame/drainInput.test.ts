@@ -188,11 +188,11 @@ describe('drainInput', () => {
       ];
     };
     const eyeM = arm.pose.eyeRelAnchorM; // the anchor is the body centre here
-    const steppedTo = (a: Vec3, f: number): Vec3 => [
-      a[0] + f * (eyeM[0] - a[0]),
-      a[1] + f * (eyeM[1] - a[1]),
-      a[2] + f * (eyeM[2] - a[2]),
-    ];
+    // Which anchor the tick used, read off the range it scaled: the step takes
+    // `|eye − A|` to `f·|eye − A|`, and the approach's north-up rotation is
+    // about an axis through A, so that distance survives it exactly.
+    const rangeTo = (a: Vec3, e: Readonly<Vec3>): number =>
+      Math.hypot(e[0] - a[0], e[1] - a[1], e[2] - a[2]);
 
     agg.push({ kind: 'wheel', deltaY: -100, duringGesture: false, xPx: 700, yPx: 500 });
     drainInput(state, deps, 0);
@@ -200,16 +200,17 @@ describe('drainInput', () => {
     const committed = store.getState().camera.base;
     if (committed.frame === 'absolute') throw new Error('the arm flipped');
     const got = committed.pose.eyeRelAnchorM;
-    const wanted = steppedTo(anchorFor(cursorPx), Math.exp(-0.1));
-    expect(Math.hypot(got[0] - wanted[0], got[1] - wanted[1], got[2] - wanted[2])).toBeLessThan(
-      1e-3,
-    );
+    const f = Math.exp(-0.1);
+
+    const cursorAnchor = anchorFor(cursorPx);
+    expect(rangeTo(cursorAnchor, got)).toBeCloseTo(f * rangeTo(cursorAnchor, eyeM), 3);
     // Not a coincidence of two nearby points: the screen-centre anchor the
-    // pixel-less wheel used to take lands tens of km away.
-    const centred = steppedTo(anchorFor([500, 500]), Math.exp(-0.1));
-    expect(
-      Math.hypot(got[0] - centred[0], got[1] - centred[1], got[2] - centred[2]),
-    ).toBeGreaterThan(10_000);
+    // pixel-less wheel used to take is ~500 km away and does not fit the law.
+    const centreAnchor = anchorFor([500, 500]);
+    expect(rangeTo(centreAnchor, cursorAnchor)).toBeGreaterThan(100_000);
+    expect(Math.abs(rangeTo(centreAnchor, got) - f * rangeTo(centreAnchor, eyeM))).toBeGreaterThan(
+      1000,
+    );
   });
 
   it('latches a body-arm gesture against the pose on screen, not a stale base', () => {

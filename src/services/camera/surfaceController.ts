@@ -26,7 +26,7 @@ import { headingTiltAt } from '../../utils/camera/headingTiltAt';
 import { maxTiltRad } from '../../utils/camera/maxTiltRad';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
 import { surfaceFloorM } from '../../utils/camera/surfaceFloorM';
-import { mat3FromColumns } from '../../utils/math/mat3FromColumns';
+import { cross3 } from '../../utils/math/cross3';
 import { multiplyQuat } from '../../utils/math/multiplyQuat';
 import { normalize3 } from '../../utils/math/normalize3';
 import { quatFromAxisAngle } from '../../utils/math/quatFromAxisAngle';
@@ -91,30 +91,34 @@ function flooredPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
  * tour keyframe) is left alone until the user's own next gesture. Derives
  * its OWN eye-anchored ENU via `headingTiltAt` (never `surfaceReadoutOf`'s
  * screen-centre one, which snaps discontinuously when the forward ray misses
- * the sphere), and is a no-op below the ceiling, so it never disturbs a drag
- * mode's own roll — EXCEPT on the tick that first crosses it: the rebuild
- * below is a 2-parameter `(heading, tilt)` reconstruction with no roll term,
- * so whatever roll that write carried snaps to 0 in that one tick (measured
- * 45°→0 on a single wheel notch). Flagged for the Task 22 feel gate — the
- * spec's rebuild has nowhere to put the roll, so this isn't fixed here.
+ * the sphere), and is a no-op below the ceiling.
  *
- * `clampHeading` adds the north-up half on ZOOM writes (ruled 2026-09-01,
- * §12-R4b): the return to the canonical framing is a scale-keyed ceiling that
- * tightens with altitude, not an animated blend — the shape Google Maps
- * documents ("the range of angles varies with the current zoom level; values
- * outside are clamped") and the shape T17's tilt ceiling already is
- * (prior-art-cesium-ge.md Q3/Q4). `maxTiltRad` supplies BOTH limits: one
+ * Applied as the DELTA rotation each limit asks for, never as a `(heading,
+ * tilt)` reconstruction: an absolute rebuild has no roll term, so it discarded
+ * the pose's roll on every crossing tick — a 1e-5 rad heading violation could
+ * spin the image 90° in one frame at 170 km altitude. Turning by the residual
+ * instead is identical when roll is 0 and leaves it alone otherwise, which is
+ * what makes "smooth, never pops" (ruled) true of the clamp and not only of
+ * the convergence. It also retires T17's roll-snap flag.
+ *
+ * `clampHeading` adds the north-up half on RECEDING zoom writes (ruled
+ * 2026-09-01, §12-R4b): the return to the canonical framing is a scale-keyed
+ * ceiling that tightens with altitude, not an animated blend — the shape
+ * Google Maps documents ("the range of angles varies with the current zoom
+ * level; values outside are clamped") and the shape T17's tilt ceiling already
+ * is (prior-art-cesium-ge.md Q3/Q4). `maxTiltRad` supplies BOTH limits: one
  * off-canonical-authority scalar, so tilt and heading can never disagree about
  * how constrained the pose is, and the disengage boundary stays one number.
- * Convergence is then emergent and distance-keyed — it stops when zooming
- * stops, has no overshoot, and cannot pop because there is no state to snap.
- * Drags stay heading-free (ruled): the clamp is a zoom write's business.
+ * Convergence is emergent and distance-keyed — it stops when zooming stops and
+ * has no overshoot. Drags stay heading-free (ruled).
  *
- * The clamp turns the basis about the eye's local vertical. That is the
+ * The heading half turns the basis about the eye's local vertical — the
  * pixel-locking form (Q4c: a rigid rotation about an axis through the zoom
  * anchor holds the anchor's camera-space coordinates) exactly when the anchor
- * is the sub-eye point — i.e. on the recession, which is the only time this
- * clamp is active, since climbing is what tightens the ceiling.
+ * is the sub-eye point, i.e. on the recession, the only time it is active. The
+ * tilt half turns about the yawed east, which misses the anchor and does move
+ * its pixel; that is the re-centring itself, and FW-H withdraws the pixel-lock
+ * promise on a recession.
  */
 function ceilingEnforcedPose(
   pose: BodyFixedPose,
@@ -139,31 +143,31 @@ function ceilingEnforcedPose(
   if (tiltRad <= ceilingRad && clampedHeading === headingRad) return pose;
 
   const clampedTilt = Math.min(tiltRad, ceilingRad);
+
+  // Turning the basis by +δ about the local up reads as heading −δ (it rotates
+  // north toward −east), so the correction turns BY the residual it removes.
+  const yawed =
+    clampedHeading === headingRad
+      ? pose.basisLocal
+      : rotateBasisByQuat(quatFromAxisAngle(localUp, headingRad - clampedHeading), pose.basisLocal);
+  if (clampedTilt === tiltRad) return { ...pose, basisLocal: yawed };
+
+  // The axis of the tilt residual is the east of the CLAMPED heading — the
+  // normal of the vertical plane the corrected forward lies in. Turning by +φ
+  // about it raises tilt (`d/dφ` of `horiz·sin t − up·cos t` is exactly its
+  // `d/dt`), so the correction turns by −(tilt − clamped).
   const ch = Math.cos(clampedHeading);
   const sh = Math.sin(clampedHeading);
-  const ct = Math.cos(clampedTilt);
-  const st = Math.sin(clampedTilt);
   const horiz: Vec3 = [
     north[0] * ch + east[0] * sh,
     north[1] * ch + east[1] * sh,
     north[2] * ch + east[2] * sh,
   ];
-  const newForward: Vec3 = [
-    horiz[0] * st - localUp[0] * ct,
-    horiz[1] * st - localUp[1] * ct,
-    horiz[2] * st - localUp[2] * ct,
-  ];
-  const newUp: Vec3 = [
-    horiz[0] * ct + localUp[0] * st,
-    horiz[1] * ct + localUp[1] * st,
-    horiz[2] * ct + localUp[2] * st,
-  ];
-  const newRight: Vec3 = [
-    east[0] * ch - north[0] * sh,
-    east[1] * ch - north[1] * sh,
-    east[2] * ch - north[2] * sh,
-  ];
-  return { ...pose, basisLocal: mat3FromColumns(newRight, newUp, newForward) };
+  const yawedEast = cross3(horiz, localUp);
+  return {
+    ...pose,
+    basisLocal: rotateBasisByQuat(quatFromAxisAngle(yawedEast, clampedTilt - tiltRad), yawed),
+  };
 }
 
 /** Turn the whole pose — eye and basis — about a body-fixed point. */
@@ -324,6 +328,75 @@ function draggedPose(
   return { pose: rotatedAbout(arm, q, anchorM), mode };
 }
 
+/**
+ * Per-notch share of the remaining heading the approach removes, and the cap
+ * that keeps any one notch from being a turn the user did not ask for. Both
+ * feel-open until Task 22; at 0.25 / 0.1 rad a half-turn of accumulated
+ * heading unwinds over a couple of dozen notches and nothing ever moves more
+ * than 5.7° in a frame.
+ */
+const APPROACH_NORTH_SHARE = 0.25;
+const APPROACH_NORTH_CAP_RAD = 0.1;
+
+/**
+ * "When zooming in, north is always up" (ruled 2026-09-01, §12-R4b), delivered
+ * without costing the cursor its pixel: a rigid rotation of eye AND basis
+ * about the axis through the cursor anchor and the body centre — one line on a
+ * sphere, which is why this is exact here and needs Cesium's temporary ENU
+ * frame on an ellipsoid (prior art Q4c). The anchor's camera-space
+ * coordinates are invariant under any rotation about an axis through it, so
+ * the picked ground point holds its pixel exactly while the eye's azimuth
+ * about it walks north back to screen-up; altitude is untouched because the
+ * axis passes through the centre.
+ *
+ * Moving the eye is the point, and it is not the thing T17 forbade: "never
+ * moves the eye" is a rule about ENFORCEMENT (the ceiling clamp, which
+ * corrects a pose the user drove). This is a gesture-authored write, the same
+ * kind as the zoom it rides on, and the drag modes move the eye about a
+ * latched anchor in exactly this form already.
+ *
+ * The correction is a fraction of the residual, so it eases; the cap bounds
+ * one notch. Near the anchor `d(offset)/dδ ≈ −1`; further off it is scaled by
+ * `Â·localUp`, which the tangent-plane gate keeps positive — so the sign is
+ * always right and only the rate varies.
+ *
+ * The residual is SCREEN-UP's azimuth, not `headingTiltAt`'s (which reads
+ * forward's). They are the same number for a roll-free pose, and the ceiling
+ * clamp keeps using heading because that is the quantity the ceiling is
+ * specified in — but a dive accumulates roll, and then only screen-up's
+ * azimuth is what the user means by "north is up". Nulling forward's instead
+ * drove a measured polar dive THROUGH north-up and back out to 79° off.
+ */
+function northedOverAnchor(pose: BodyFixedPose, anchorM: Readonly<Vec3>): BodyFixedPose {
+  const eyeM = eyeOf(pose);
+  const eyeMagM = Math.hypot(...eyeM);
+  if (eyeMagM === 0) return pose;
+  const localUp = normalize3(eyeM);
+  const b = pose.basisLocal;
+  const forward: Vec3 = [b[6], b[7], b[8]];
+  const up: Vec3 = [b[3], b[4], b[5]];
+  const { east, north } = headingTiltAt(localUp, forward, up);
+
+  // Whichever of the two carries the azimuth at this tilt: screen-up's
+  // horizontal part is `cos(tilt)` long and forward's is `sin(tilt)`, so they
+  // trade places at 45°. Below that the view is near enough nadir that
+  // forward's azimuth is noise; above it screen-up's is, and "north up" means
+  // facing north anyway.
+  const source = dot3(forward, localUp) < -Math.SQRT1_2 ? up : forward;
+  const vert = dot3(source, localUp);
+  const horiz: Vec3 = [
+    source[0] - localUp[0] * vert,
+    source[1] - localUp[1] * vert,
+    source[2] - localUp[2] * vert,
+  ];
+  const offsetRad = Math.atan2(dot3(horiz, east), dot3(horiz, north));
+  if (offsetRad === 0) return pose;
+
+  const share = APPROACH_NORTH_SHARE * offsetRad;
+  const delta = Math.sign(share) * Math.min(Math.abs(share), APPROACH_NORTH_CAP_RAD);
+  return rotatedAbout(pose, quatFromAxisAngle(normalize3(anchorM), delta), BODY_CENTRE);
+}
+
 function zoomStep(
   arm: BodyFixedPose,
   gesture: SurfaceGesture | null,
@@ -342,14 +415,20 @@ function zoomStep(
   // At rest the wheel's own cursor pixel is the pick (user ruling, §12-R4);
   // during a gesture the drag's last pixel is the more current one. Only a
   // pinch supplies neither, and its screen-centre pick is the point C §3.1
-  // measures the zoom distance from.
+  // measures the zoom distance from. Note the two owners differ in anchor
+  // LIFETIME by construction: a gesture holds its latch until it goes stale,
+  // while at rest every tick re-picks through the same pixel — which converges
+  // on the pointed-at ground point rather than drifting off it.
   const pixel: Readonly<Vec2> = gesture?.prevPixel ??
     cursorPx ?? [viewportPx[0] / 2, viewportPx[1] / 2];
   const cursorAnchorM =
     latched !== null && !stale
       ? latched
       : (pickOn(cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad), bodyRadiusM)?.pointM ?? null);
-  return anchoredZoomStep(arm, factor, cursorAnchorM, bodyRadiusM);
+  const stepped = anchoredZoomStep(arm, factor, cursorAnchorM, bodyRadiusM);
+  // The approach's own north-up authority. A miss has no anchor to orbit
+  // about, so a dive at the sky keeps whatever heading it had.
+  return factor < 1 && cursorAnchorM !== null ? northedOverAnchor(stepped, cursorAnchorM) : stepped;
 }
 
 export function createSurfaceController(): SurfaceController {
@@ -377,13 +456,14 @@ export function createSurfaceController(): SurfaceController {
           fovYRad,
           bodyRadiusM,
         );
-        // The heading limit rides the RECESSION only. The ceiling tightening
-        // with altitude was meant to make that automatic, and the tilt half is
-        // — but a dive near nadir generates heading faster than descending
-        // slackens the limit (forward's horizontal component is the lean, and
-        // it swings to π as the eye slides off the sub-anchor point), so a
-        // direction-blind clamp turns the view mid-dive: measured 0.37 rad of
-        // anchor drift over a 30-notch descent, breaking the first ruling.
+        // The heading LIMIT rides the recession only — not because the
+        // approach has no north-up rule (`northedOverAnchor` is its rule) but
+        // because the clamp is the wrong instrument there: it turns the basis
+        // about the eye, which unpins the cursor's ground point, and near
+        // nadir a dive feeds it a heading reading that swings to π as the eye
+        // slides off the sub-anchor point. Direction-blind, that cost 0.37 rad
+        // of anchor drift over a 30-notch descent (measured), against the
+        // first ruling. The tilt half stays direction-blind.
         return ceilingEnforcedPose(zoomed, bodyRadiusM, step.factor > 1);
       }
       // The gesture boundaries reach the controller through the two callbacks;
