@@ -1,16 +1,17 @@
 /**
  * GalaxyProbeApi — every debug/validation entry point `probeGpuErrors.ts`
  * reaches; no production caller touches `handle.probe`, so that separation
- * is structural rather than per-method comments. `createGalaxyModel.ts`
- * builds the model-level members (`peekRecords`, the four placement
- * readbacks, the live counts/reservations `peekRecords`' caller derives its
- * own offset/count from); `createGalaxyEngine.ts` spreads in the
- * device/texture-bound readbacks (arm-ridge sample, ISM-map dust-CDF-scan
- * sample, the rendered-flux sums) that can't live inside the model.
+ * is structural rather than per-method comments. `createGalaxyFieldRenderer`
+ * owns `peekRecords`, the four placement readbacks, and the live
+ * counts/reservations `peekRecords`' caller derives its own offset/count
+ * from; `createGalaxyEngine.ts` spreads those straight off `field.probe` and
+ * adds the device/texture-bound readbacks (arm-ridge sample, ISM-map
+ * dust-CDF-scan sample, the rendered-flux sums, ring means) that can't live
+ * inside the field renderer.
  */
 
-import type { FieldSliceCounts } from './FieldSliceCounts';
-import type { HiiSegment } from './HiiSegment';
+import type { FieldSliceCounts } from '../../../../src/@types/galaxy/FieldSliceCounts';
+import type { HiiSegment } from '../../../../src/@types/galaxy/HiiSegment';
 import type { GalaxyFieldMixtureResult } from '../../../../src/@types/galaxy/GalaxyFieldMixtureResult';
 
 export type GalaxyProbeApi = {
@@ -31,8 +32,8 @@ export type GalaxyProbeApi = {
    * kernel fresh (validates the kernel itself — determinism, budget,
    * survival floor, flux parity), while a peek validates that
    * `ensureFresh()`'s keyed rebuilds actually refilled the slots the last
-   * repack zeroed — a bug class a fresh dispatch cannot see (Task 14's
-   * vanish bug). Both reads must keep working.
+   * repack zeroed — a bug class a fresh dispatch cannot see. Both reads must
+   * keep working.
    */
   peekRecords(buffer: 'field' | 'hii', offset: number, count: number): Promise<Float32Array>;
 
@@ -40,10 +41,10 @@ export type GalaxyProbeApi = {
   // `createIsmMapReadbacks.ts`'s `requestRingMeans`) against
   // `ismMapRingMeans.ts`'s CPU loop over `getIsmMapData()`.
   requestRingMeansReadback(): Promise<Float32Array>;
-  // Debug-only: Task 12's own numeric-validation exception
-  // (`createArmRidgeDebugSample.ts`) — armRidge.wesl vs. armRidgeGeometry.ts.
+  // Debug-only: numeric-validation exception (`createArmRidgeDebugSample.ts`)
+  // — armRidge.wesl vs. armRidgeGeometry.ts.
   requestArmRidgeSampleReadback(): Promise<Float32Array>;
-  // Debug-only: Task 6's own numeric-validation exception
+  // Debug-only: numeric-validation exception
   // (`createIsmMapDustCdfScanDebugSample.ts`) — ismMapDustCdfScan.wesl's
   // dust-weight prefix sum vs. buildIsmMapDustCdf.ts.
   requestIsmMapDustCdfScanReadback(): Promise<{
@@ -60,7 +61,7 @@ export type GalaxyProbeApi = {
     // Node/tsx side, which cannot resolve that module's `?static` shader import.
     readonly ringCap: number;
   }>;
-  // Debug-only: Task 7's own numeric-validation exception — dispatches
+  // Debug-only: numeric-validation exception — dispatches
   // `placeDust.wesl` fresh and maps the dust slot range straight back
   // (determinism, budget count, survival-floor zeroing). `mass` is
   // `placeDust.wesl`'s own `massOut`; `renormScale` is `ringReduce.wesl`'s
@@ -90,14 +91,14 @@ export type GalaxyProbeApi = {
   requestArmCloudRenderedFluxSum(): Promise<number | null>;
   // Debug-only: the spur-cloud twin of `requestArmCloudRenderedFluxSum`.
   requestArmSpurCloudRenderedFluxSum(): Promise<number | null>;
-  // Debug-only: Task 14's own numeric-validation exception — dispatches
-  // fresh and maps the spur-cloud reservation's slot range straight back
-  // (determinism, budget, survival/liveness, flux parity against `flux` —
-  // the SAME `spurFlux` uniform the dispatch used). `fluxWeight` is
-  // `placeArmSpurCloud.wesl`'s own `fluxWeightOut`; `renormScale` (Task 15)
-  // is `ringReduce.wesl`'s `csArmSpurFluxWeightSum` output off a dispatch
-  // encoded against that SAME `fluxWeight`. `null` when nothing is reserved
-  // this rebuild (central galaxy only).
+  // Debug-only: numeric-validation exception — dispatches fresh and maps the
+  // spur-cloud reservation's slot range straight back (determinism, budget,
+  // survival/liveness, flux parity against `flux` — the SAME `spurFlux`
+  // uniform the dispatch used). `fluxWeight` is `placeArmSpurCloud.wesl`'s
+  // own `fluxWeightOut`; `renormScale` is `ringReduce.wesl`'s
+  // `csArmSpurFluxWeightSum` output off a dispatch encoded against that SAME
+  // `fluxWeight`. `null` when nothing is reserved this rebuild (central
+  // galaxy only).
   requestArmSpurCloudPlacementReadback(): Promise<{
     readonly count: number;
     readonly offset: number;
@@ -118,7 +119,7 @@ export type GalaxyProbeApi = {
     readonly fluxWeight: Float32Array;
     readonly renormScale: number;
   } | null>;
-  // Debug-only: Task 8's own numeric-validation exception — dispatches
+  // Debug-only: numeric-validation exception — dispatches
   // fresh and maps the DIG veil reservation's slot range straight back
   // (determinism, budget, liveness, flux parity). `amplitudeBase` is the
   // SAME uniform the dispatch used. `null` when nothing is reserved this

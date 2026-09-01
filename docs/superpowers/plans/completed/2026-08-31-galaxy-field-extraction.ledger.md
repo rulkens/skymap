@@ -1,0 +1,73 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-08-31-galaxy-field-extraction.md
+
+Spec: docs/superpowers/specs/2026-08-17-galaxy-field-renderer-extraction-design.md (binding authority)
+Branch: worktree-galaxy-field-extraction · branched from main c161c2e11
+Task board artifact: https://claude.ai/code/artifact/4fd5180a-0439-4b7f-b0ff-3e1fdfba519a
+
+## Pre-flight conflict scan (2026-08-31)
+
+| pair / task | produces vs consumes | finding |
+|---|---|---|
+| T1↔T2 | both edit `buildFieldHeaderInputs.ts` (T1 narrows deps types, T2 drops `HII_TIERS` import) | compatible, strictly sequential, same commit — clean |
+| T2↔T14 | T2 leaves `HII_TIERS`-naming comments; T14 rewrites them | explicit handoff in both task texts — clean |
+| T3→T4 | T4 group B lists `engine/HiiTier.d.ts (post-Task 3)` | ordering encoded in the manifest row — clean |
+| T5→T6 | T6's 27-specifier count assumes T5's moved tree | counts pre-verified by plan author against real tree — clean |
+| T5→T7 | T7 moves tests whose imports T5 rewrote | consistent; G-test only meaningful after T7 — clean |
+| T9→T10–T12 | T10 "extend only with what Task 9's appendix established" | consistent; T9 is a plan-mandated USER CHECKPOINT — execution pauses there by plan text, not by controller choice |
+| T11↔T12↔T13 | same files (`createGalaxyFieldRenderer.ts`, `createGalaxyEngine.ts`, `createGalaxyModel.ts`) | strictly sequential, distinct commits 2/3 — clean |
+| T1 self | contract types are structural copies of tool types | deliberate, spec-sanctioned (dependency rule); not the duplication the rubric flags — ruled clean |
+| arithmetic | group A 10+24+2=36, +16 types +1 helper = 53 manifest entries | matches plan's own counts — clean |
+
+Ruling: commit 0 (seam prep) rides the single Track B PR — near-zero review cost,
+spec §PR packaging kept at one PR; user was offered the split and did not take it.
+Cost if wrong: one PR carries two small non-mechanical commits the user wanted separate.
+
+Ruling: pipelined reviews per sdd-execution.md Rule 2; implementers strictly serial.
+
+## Progress
+
+Tasks 1+2 (batched, commit 0): implementer DONE — commit 294aba024, all four gates green (tool-tsc, test 7592/7592, tool-build, probe PASS). Review in flight (package review-c161c2e11..294aba024.diff). T3 held until this review closes — its rename rewrites the same files, so no pipelining (Rule 2 disjointness fails).
+
+Task 1: complete (commits c161c2e11..294aba024, review clean)
+Task 2: complete (commits c161c2e11..294aba024, review clean — batched with Task 1)
+Ruling: reviewer's ⚠️ (caller records' key set ≡ HII_TIERS' enumeration) resolved by controller — `Record<HiiTierKind, …>` totality + clean tool-tsc + probe PASS cover it; not a gap. Cost if wrong: a tier silently dropped from the header/pipeline records — probe and visual pass would surface it.
+Tasks 3-8 (commit 1, the move): batched into ONE implementer dispatch — strictly sequential mechanical pipeline, one commit, each step gated; review is one package over the commit either way.
+
+Ruling (user asked for parallelism): T9's seam ANALYSIS runs in parallel with T3-8 — it is read-only, its two subject files are untouched until commit 2, and it reads the MAIN checkout's identical copies to dodge the in-flight move. The upstream ban on parallel IMPLEMENTERS stands (one working tree, data-dependent commits); T10-14 stay serial. Appendix lands at task-9-appendix.md; controller pastes it into the plan at the checkpoint. Cost if wrong: analysis staled by commit-1 drift — nil, since the move is content-neutral for those files.
+
+Task 9: complete — appendix committed into the plan (c9989b665). USER RULING at checkpoint (AskUserQuestion, 2026-09-01): ADOPT REFINED CONTRACT — setMixture survives with 4 added inputs (extras, 2 orientation sigmas, orientationViewWanted); encode(encoder, targets, frame) gains the per-frame header arg (per-target pixel sizes — views can't supply); separate encodeOverlays(pass,…) for the 3 sceneTex present draws; onTargetsReallocated replaces onDustMapRecreated; GalaxyFieldRenderTargets = 7 GPUTexture rows (spec missed dustViewTex, hiiTex). Scene-wide comps accepted for Track B; per-galaxy split re-scoped to Track C. Cost if wrong: module API churn at Track C.
+
+Tasks 3-8 (commit 1): implementer DONE_WITH_CONCERNS — commit d2b775104, all gates green (test 7624/7624; +32 vs 7592 root-caused: oneSymbolPerFile sweep × filenameMatchesExport re-registration over the 16 promoted types — accepted). Review in flight (review-ce159aff9..d2b775104.diff). T10-12 held until it closes (files overlap: engine/model import rewrites).
+
+Task 3-8: complete (commits ce159aff9..d2b775104, review clean — Approved, 0 Critical/Important)
+Task 6: minor (deferred): brief + report say "8 moved files" for the ?static fixes; the diff shows 27 fixes across 10 files. Prose only; grep gate (27 hits) unaffected. Fix the plan line if touched again.
+Ruling: reviewer ⚠️s resolved by controller — manifest verified indirectly (exactly 53 renames in the specified groups); rename-vs-add/delete evidenced by similarity-index headers + implementer's git show --stat; gates accepted from implementer report (all green). Cost if wrong: lost file history on a moved file — --follow check re-runs free at any time.
+Tasks 10-12 (commit 2, consume): batched into ONE implementer (opus — judgment commit); T9 user ruling (refined contract) supersedes the spec sketch where they differ. Implementer DONE_WITH_CONCERNS — commit 70d4078ca, all gates green (test 7626/7626, +2 vs 7624 to be verified by review; probe PASS). Six self-declared concerns in task-10-12-report.md (host hooks residual, probe moved into module, createKeyedRebuild moved to src/, construction-order deviations, writeBuffer relocation, visual pass owed). REVIEW IN FLIGHT (opus) at review-c9989b665..70d4078ca.diff — told to scrutinize concerns 1/4/5 and the +2 test delta. NOT YET PUSHED (push after review closes).
+
+Tasks 10-12 review CLOSED (2026-09-01): Approved — spec table all ✅, 0 Critical, 5 Important (shape/leanness on the Track C surface, not behaviour), minors. Full review saved at task-10-12-review.md. Reviewer's one ⚠️ (setRender → noteRenderChanged cut by hunk boundary) VERIFIED CLEAN by controller: createGalaxyEngine.ts:317 calls model.noteRenderChanged() on every setRender push; model:479-481 = field.setMixture(mixtureInput()) — snapshot refreshes on every push.
+Ruling (fix round 1, resume T10-12 implementer per SDD R≤3): apply I1 (HII_TIER_KINDS single ordered source in src/, HII_TIERS derived, kill the as-casts), I2 (extras-repack hardening — behaviour-neutral today, closes combined-mover trap Track C would hit; cost if wrong: 2 surplus lines), I3 (delete onDustBudgetRebuilt hook + model zero-payload handler — diagnostics-only, reviewer confirms no loss), I4 (consumer-check dustHeaderLanes/fieldCounts; delete if reader-less), I5 (one-line ordering-contract comment at createGalaxyRenderTargets callback), minor analytic/drawDustView (derive both inside encode — shrinks contract by 2 fields), module header 11→10.
+Parked minors with rulings: probe.fieldSplatPipe/BG exposure — behaviour-neutral bar keeps flux-probe bodies byte-identical, re-judge at Track C; TDZ hook trap — commented bootstrap invariant, accept; stepIsmMap {done} — ruled contract; per-frame allocations — negligible, old code did one of three; targetSizes resize-transient deviation — fix-round commit message gets one line; comment budget createGalaxyEngine.ts 0.72 — routed to T14 brief; 8 co-located types — Track C decides which move to @types.
+NOT YET PUSHED — push after fix round + scoped re-review close.
+Fix round 1 DONE (implementer resumed via SendMessage): commit f1e63f97f on top of 70d4078ca, all gates green. Dispositions: I1 applied (new src/data/hiiTiers.ts = HII_TIER_KINDS + mapHiiTiers, tool HII_TIERS derives, casts gone, TS2741-verified); I2 applied (extras repack unconditional when shadowed, no-op for all 4 current call paths); I3 applied scoped (hook+firing+handler deleted; noteDelta cascade → T13 list: OrientationDiagnostics 2 fields + test + IsmMapSection.tsx rendered row); I4 both KEPT — live readers (dustHeaderLanes → deriveFrameView dustReachR engine:465; fieldCounts → probe.fieldCounts engine:718); I5 applied; M6 applied (frame.render widened with analyticField — it was NOT in FieldHeaderRenderLanes); M7 applied.
+Scoped re-review CLEAN (sonnet): all 7 findings ADDRESSED, no new Critical/Important; Minor = comment-budget overage in new src/data/hiiTiers.ts (~2.8) + tool hiiTiers.ts (~0.58) → routed to T14 alongside createGalaxyEngine.ts 0.72. Re-reviewer note (accepted residual): HII_TIER_KINDS array itself not exhaustiveness-checked against HiiTier — materially better than before, matches required fix.
+
+Task 10-12: complete (commits c9989b665..f1e63f97f, review Approved + fix round 1 re-review clean)
+Ruling: noteDelta cascade (OrientationDeltaStats fields + test + IsmMapSection.tsx rendered row) DELETES in T13 — zero call sites in production, row shows never-updated data; diagnostics-only per I3 ruling. Cost if wrong: one tool-UI row to restore from git.
+Visual note: user started early T15 checks at f1e63f97f (worktree tool on :5400); T13/T14 expected pixel-neutral — flag re-check only if they change behaviour.
+Pushed through f1e63f97f (origin c9989b665..f1e63f97f).
+Task 15: complete — USER VISUAL PASS attested 2026-09-01 at f1e63f97f (worktree tool :5400). Performed before T13/T14 landed; both ruled pixel-neutral (T13's one visible change = dead ISM diagnostics row removed). Re-check only if a later review finds a behavioural change.
+Task 13: complete (commits f1e63f97f..e1410e3dc, review clean — Approved, 0 findings; frontier verified: coherence/readback live, zero orphans, test math exact). Task 14: complete (commits e1410e3dc..8c0bfefae, review clean — Approved; code-token neutrality proven, no landmine deleted, all ruled targets hit; engine 0.609 accepted as justified overage). Pushed.
+FINAL WHOLE-BRANCH REVIEW CLOSED (opus): mergeable, 0 Critical, 3 Important, 5 Minor; full text saved final-review.md. Behaviour re-verified neutral incl. the two cross-commit interactions (orientation-diagnostics emit, header-pack timing).
+Ruling (final fix dispatch, ONE round): FIX I1 (delete orphaned encodePresentOverlay.ts), I2 (rewrite engine/README.md to post-extraction tree), I3 (narrow onTargetsReallocated → onDustMapReallocated(dustMapTex), drop module targets field + `!`, fix the now-wrong tierTex getter comment), M4 (six stale cross-boundary comment refs; four true sibling refs stay), M5 comments only (stale framings + "Task 15" ref in buildFieldHeaderInputs), M6 partial (unify the two src/-side tier-enumeration sites onto mapHiiTiers; engine host site stays), M8 (tick all 51 plan checkboxes), + lift the resize-transient note from f1e63f97f's commit message into the plan appendix.
+Parked with rulings: M5 rename FieldHeaderModelLanes → Track C (lanes may reshape); M7 written-set return from encode → Track C note (already recorded); probe split, calibration promotion, orientationViewWanted inertness → Track C notes in final-review.md.
+Final fix round DONE — commit 2b24fa576, scoped re-review CLEAN (all 7 addressed; I3 traced: latch reset + rebuildDustMapDependents identical, encode keeps its 7-row snapshot, no TDZ; out-of-scope note: docs/research/engine/field-seam-map.md is a historical snapshot, deliberately untouched). Pushed.
+BRANCH CODE-COMPLETE 2026-09-01 at 2b24fa576: 9 commits, all task + whole-branch reviews closed clean, T15 visual pass attested.
+/feature-done audit RUN 2026-09-01: tests 7625 PASS · typecheck PASS · checkboxes 51/51, DoD present · 100 files all anticipated · 0 new TODOs · smoke attested in-session · deferral boundary documented. Deletion audit (opus, LEGACY, whole branch): report at deletion-audit-branch.md; ~105-125 src + 27 test LOC found, extraction itself lean. Triage: SAFE-NOW #1 (model pass-through getters ~44), #2 (orientationDiagnostics collapse ~39+27 test), #4 (hasData constant-true ~7), #6 (beginClearPass header trim), #7 (doc accuracy incl. README gpu/ row overclaim from 2b24fa576) — apply agent DISPATCHED (sonnet, one commit on 2b24fa576, + trap guard comments where missing). NEEDS-RULING (user): #3 dustMapPopulated relocation (latch-adjacent), #5 ismMapKey/ismMapFluidKey shadow keys (rebuild gate — auditor wants deliberate re-read). Safe-now APPLIED: commit fcda554c9 (net −102: src −87, tests −14 with the one real case preserved in a focused orientationCoherenceStats.test.ts, docs −1; all gates green; all trap sites already guarded — none added). Backlog sweep: no entry existed for this feature — nothing to remove.
+PLAN SHIPPED 2026-09-01: /feature-done READY. Completion moves committed (plan+spec → completed/, this ledger archived beside them). Open user items: rulings on audit #3 (dustMapPopulated relocation) + #5 (ismMapKey/ismMapFluidKey shadow keys) — both parked, evidence in deletion-audit-branch.md (archived copy beside ledger); PR #643 ready-for-review + merge call. Track C is unblocked once #643 merges.
+
+## Resume map (written for compaction, 2026-09-01)
+
+- Branch worktree-galaxy-field-extraction, draft PR #643. Commits: 294aba024 (commit 0, review clean) → ce159aff9 (plan) → d2b775104 (commit 1, review clean) → c9989b665 (T9 appendix + ruling). All pushed.
+- IN-FLIGHT AGENT: one opus implementer for T10-12 (consume commit). ON DONE: run review-package c9989b665..HEAD, dispatch task reviewer (opus — judgment diff) with briefs task-10/11/12 + task-9-appendix.md + the refined-contract ruling as global constraints; on clean → T13 (sonnet, brief task-13-brief.md), review → T14 (sonnet, brief task-14-brief.md, comment-audit checklist), review → final whole-branch review (opus, MERGE_BASE c161c2e11) → archive this ledger to docs/superpowers/plans/completed/ → T15 = USER visual pass (npm run galaxy-renderer, pixel parity) — not an agent task; user also still owed the PR-ready call. ON BLOCKED: read its report, rule, re-dispatch per SDD fix loop.
+- Task board artifact: https://claude.ai/code/artifact/4fd5180a-0439-4b7f-b0ff-3e1fdfba519a — source HTML at /private/tmp/claude-501/-Users-rulkens-Development-js-skymap/303c9c32-508f-46d9-9838-5ca389d651eb/scratchpad/galaxy-field-extraction-board.html; republish same path (or pass url) after each status change. Statuses: T1-T9 done; T10-12 active; T13-14 queued; T15 user gate.
+- User directives this session: implement in parallel where possible (honoured: T9 ran parallel; implementers stay serial); commit 0 rides the one PR; refined contract adopted at T9 checkpoint.

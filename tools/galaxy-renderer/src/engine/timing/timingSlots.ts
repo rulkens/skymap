@@ -32,7 +32,7 @@ export const TIMING_SLOTS: readonly string[] = [
   // shared coarser texel and blooming into fireflies); shells and young stars
   // get the identical treatment now via the same table rather than a
   // hand-duplicated third/fourth copy. Each slot is consumed whenever
-  // `drawFrame` finds that tier's span in `model.hiiSegments` nonempty,
+  // `drawFrame` finds that tier's span in `field.hiiSegments` nonempty,
   // billed unconditionally on content rather than behind a HUD-gated
   // toggle: every tier owns a private target, so billing it separately
   // costs nothing extra on any frame.
