@@ -27,8 +27,10 @@
  *
  * ### Camera produce → commit-on-edge ordering
  *
- * The frame body runs four camera steps, in this exact order:
+ * The frame body runs five camera steps, in this exact order:
  *
+ *   0. DRAIN INPUT: apply this frame's aggregated gestures to the drag register
+ *      and dispatch their store edges (`drainInput`) — the only input-apply site.
  *   1. PRODUCE the pose from the driver table (single-writer, one pose per frame).
  *   2. TWEEN COMPLETION: if the tween driver won and its elapsed >= durationMs,
  *      dispatch `cancelCameraTween()`. The tween deactivates on the NEXT frame;
@@ -56,6 +58,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 
+import { drainInput } from './drainInput';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
@@ -215,6 +218,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Unconditional like `renderTargets.reconcile` above; the mismatch check
   // and regeneration rationale live on `MilkyWayCloud.reconcile` itself.
   state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
+
+  // ── (0) DRAIN INPUT: apply this frame's gestures, once ────────────────────
+  //
+  // Above the `getState()` below so the gesture boundaries it dispatches
+  // (beginDrag / endDrag / the at-rest wheel commit) are already in the
+  // snapshot the driver table resolves against.
+  drainInput(state, deps, nowMs);
 
   // ── Camera produce → commit-on-edge ──────────────────────────────────────
   //

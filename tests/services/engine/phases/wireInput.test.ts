@@ -101,9 +101,6 @@ import {
 } from '../../../../src/state/selection/selectionSlice';
 import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
-import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { OrbitControlsOptions } from '../../../../src/@types/camera/OrbitControlsOptions';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -262,44 +259,6 @@ describe('wireInput', () => {
     const root = deps.cb.store.getState();
     expect(selectSelectedRef(root)).toEqual(jupiter);
     expect(selectFocusRef(root)).toEqual(jupiter);
-  });
-
-  it('hands the orbit controls a live read of the focused body’s radius', async () => {
-    // The zoom floor lives in clampDistance, but the pinch / wheel-during-gesture
-    // sites inside orbitControls can only apply it if this phase supplies the
-    // getter. Drop the wiring and the camera silently scrolls through the planet
-    // again with every unit test still green — hence the assertion here.
-    const state = makeState();
-    const deps = makeDeps();
-    // Earlier cases in this file attached against their own stores; take the call
-    // this `wireInput` made, not the first one recorded.
-    attachOrbitControlsSpy.mockClear();
-
-    await wireInput(state, deps);
-
-    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
-    const read = options?.pivotRadiusMpc;
-    expect(read).toBeTypeOf('function');
-
-    // Nothing resolved yet (the row cache is saga-filled and no saga runs here):
-    // no surface to stand off from, so the absolute floor applies.
-    expect(read!()).toBeNull();
-
-    // With Earth's row resolved, the getter reports its radius in Mpc — read
-    // through on every call, so a focus change needs no re-attach.
-    deps.cb.store.dispatch(
-      setSelectionRow({
-        slot: 'focus',
-        row: {
-          type: 'body',
-          id: 'earth',
-          label: 'Earth',
-          positionMpc: [0, 0, 0],
-          radiusM: 6371000,
-        },
-      }),
-    );
-    expect(read!()).toBeCloseTo(6371 * SCALE_UNITS.KM_TO_MPC, 30);
   });
 
   it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {

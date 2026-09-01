@@ -117,6 +117,7 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -211,6 +212,8 @@ function makeState(): EngineState {
       texturedDisks: null,
       clickResolver: null,
       inputBindings: null,
+      // Non-nullable from t=0: runFrame drains it before the produce step.
+      inputAggregator: createInputAggregator(),
       loadProgress: null,
     },
     cam: null,
