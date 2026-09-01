@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   packFieldComponents,
   FIELD_COMPONENT_FLOATS,
-} from '../../../../tools/galaxy-renderer/src/engine/field/packFieldUniforms';
+} from '../../../../src/services/gpu/renderers/galaxyField/field/packFieldUniforms';
 import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
 import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';

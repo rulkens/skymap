@@ -20,5 +20,6 @@ export function poseOf(cam: OrbitCamera): CameraPose {
     yaw: cam.yaw,
     pitch: cam.pitch,
     distance: cam.distance,
+    roll: cam.roll,
   };
 }

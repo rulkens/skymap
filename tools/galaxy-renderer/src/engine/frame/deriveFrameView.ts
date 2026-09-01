@@ -1,28 +1,27 @@
 /**
  * deriveFrameView — everything one frame's camera and settings determine
  * before any GPU work: the matrices, the visibility fade, the debug-view
- * weights, the dust slice edges and the analytic exposure.
- *
- * Pure, and separated from `drawFrame` for that reason — this is where the
- * frame's arithmetic lives, and the only part of the frame a test can reach
- * without a device. What stays in the engine is the pass ENCODING, which is a
- * straight-line sequence over every pipeline and bind group it owns; routing
- * that through a parameter bag would trade a real dependency for a wide one.
+ * weights, the dust slice edges and the analytic exposure. Pure, and
+ * separated from `drawFrame` for that reason — the only part of the frame a
+ * test can reach without a device. What stays in the engine is the pass
+ * ENCODING, a straight-line sequence over every pipeline and bind group it
+ * owns; routing that through a parameter bag would trade a real dependency
+ * for a wide one.
  */
 import { mat4 } from 'wgpu-matrix';
 
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { DebugViewWeights } from '../../../@types/engine/DebugViewWeights';
-import type { FieldDustSlices } from '../../../@types/engine/FieldDustSlices';
+import type { DebugViewWeights } from '../../../../../src/@types/galaxy/DebugViewWeights';
+import type { FieldDustSlices } from '../../../../../src/@types/galaxy/FieldDustSlices';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { IsmMapChannelWeights } from '../../../@types/engine/IsmMapChannelWeights';
+import type { IsmMapChannelWeights } from '../../../../../src/@types/galaxy/IsmMapChannelWeights';
 
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
-import { dustSliceEdges } from '../field/dustSliceEdges';
+import { dustSliceEdges } from '../../../../../src/services/gpu/renderers/galaxyField/field/dustSliceEdges';
 import { lerp } from '../../../../../src/utils/math/lerp';
 import { smoothstep } from '../../../../../src/utils/math/smoothstep';
 

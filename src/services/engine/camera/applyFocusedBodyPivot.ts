@@ -54,5 +54,6 @@ export function applyFocusedBodyPivot(
     yaw: pose.yaw,
     pitch: pose.pitch,
     distance: pose.distance,
+    roll: pose.roll,
   };
 }

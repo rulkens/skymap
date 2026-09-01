@@ -4,7 +4,7 @@
  * Scales `distance` by `factor` via `zoomedDistance` — geometric steps in
  * altitude above the pivot's surface when there is one, plain proportional
  * scaling when there isn't — and clamps to the shared zoom envelope; target,
- * yaw, and pitch carry over unchanged. The target is copied into a fresh array
+ * yaw, pitch, and roll carry over unchanged. The target is copied into a fresh array
  * so the result never aliases the input pose's (frozen, store-owned) target.
  *
  * `pivot` is forwarded straight to `zoomedDistance` — it describes whatever
@@ -29,5 +29,6 @@ export function zoomedPose(base: CameraPose, factor: number, pivot: PivotFraming
     yaw: base.yaw,
     pitch: base.pitch,
     distance: zoomedDistance(base.distance, factor, pivot),
+    roll: base.roll,
   };
 }

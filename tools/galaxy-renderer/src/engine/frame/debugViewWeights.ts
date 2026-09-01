@@ -5,8 +5,8 @@
  * per-pass gates) speaks kinds and can no longer disagree about which views
  * exist.
  */
-import type { DebugViewKind } from '../../../@types/data/DebugViewKind';
-import type { DebugViewWeights } from '../../../@types/engine/DebugViewWeights';
+import type { DebugViewKind } from '../../../../../src/@types/galaxy/DebugViewKind';
+import type { DebugViewWeights } from '../../../../../src/@types/galaxy/DebugViewWeights';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import { DEBUG_VIEWS, DEBUG_VIEW_KINDS } from '../../data/debugViews';
 

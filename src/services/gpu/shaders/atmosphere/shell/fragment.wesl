@@ -29,6 +29,8 @@
 // Camera INSIDE the shell -> only back faces are geometrically visible, so the
 // sky/limb still renders and down-looking (ground) rays lose their haze
 // (acceptable: the in-atmosphere descent regime is the deferred froxel's job).
+// In practice this proxy never reaches that regime: the layer hands off to the
+// full-screen inside path slightly above the top (see 'isInsideAtmosphereShell').
 //
 // ## The analytic march bound (WESL mirror of 'atmosphereShellBound')
 //
@@ -89,6 +91,7 @@ import package::lib::sphere::AtmosphereUniforms;
 import package::lib::util::raySphere;
 import package::atmosphere::scattering::sampleTransmittanceToTop;
 import package::atmosphere::scattering::skyViewLutParamsToUv;
+import package::lib::fullscreenTri::FullscreenOut;
 
 @group(0) @binding(0) var<uniform> u: AtmosphereUniforms;
 @group(0) @binding(1) var lutSamp: sampler;
@@ -129,9 +132,18 @@ struct ShellSample {
   // 1 - luminance(transmit) — the compositor's single background weight.
   coverage: f32,
   hit: bool,
+  // Does this ray hit the ground sphere ahead of the shell entry? Carried out
+  // so callers can run their OWN wall-duty test against it -- the outside path
+  // needs the front_facing split below; the inside full-screen pass has no
+  // "wrong wall" and skips it entirely.
+  intersectsGround: bool,
 };
 
-fn sampleShell(in: FsIn) -> ShellSample {
+// Shared core: the analytic march bound, the two LUT lookups, and the ring
+// occlusion -- everything 'sampleShell' used to do EXCEPT deriving 'dir' from
+// the proxy mesh's interpolated localPos and the front_facing wall-duty split.
+// 'ro' is always 'u.camPosLocal'; callers pass 'dir' already normalized.
+fn sampleShellRay(dir: vec3<f32>) -> ShellSample {
   // Off-shell / wrong-wall default, returned early below: the caller owns the
   // discard, and the LUT work never runs on a ray that missed. The values are
   // each blend's IDENTITY (multiply by 1, add 0), so a fragment that somehow
@@ -141,11 +153,8 @@ fn sampleShell(in: FsIn) -> ShellSample {
   out.emission = vec3<f32>(0.0);
   out.coverage = 0.0;
   out.hit = false;
+  out.intersectsGround = false;
 
-  // View ray in the local frame. Renormalize AFTER the implicit model transform
-  // (the proxy is a scaled sphere) -- the house trap; an un-normalized dir
-  // breaks every dot product below.
-  let dir = normalize(in.localPos - u.camPosLocal);
   let ro = u.camPosLocal;
 
   // ── Analytic march bound (mirror of atmosphereShellBound) ──────────
@@ -164,21 +173,7 @@ fn sampleShell(in: FsIn) -> ShellSample {
   if (intersectsGround && ground.x > tNear) {
     tFar = min(tFar, ground.x);
   }
-
-  // ── Wall-duty split (front_facing) ─────────────────────────────────
-  //
-  // The near wall (front-facing) renders ONLY ground-hitting rays (the disc
-  // haze); the far wall (back-facing) renders ONLY ground-missing rays (the limb
-  // + sky). Discard the other half on each so the pair is exhaustive AND mutually
-  // exclusive whatever the depth state (incl. the camera-inside case). Without
-  // the near-wall guard the limb would double-count -- both walls pass the depth
-  // test past the limb.
-  if (in.frontFacing && !intersectsGround) {
-    return out;
-  }
-  if (!in.frontFacing && intersectsGround) {
-    return out;
-  }
+  out.intersectsGround = intersectsGround;
 
   // ── Sky-view LUT lookup for the in-scattered radiance ──────────────
   let viewHeight = length(u.camPosLocal);
@@ -267,6 +262,39 @@ fn sampleShell(in: FsIn) -> ShellSample {
   return out;
 }
 
+// Outside path (proxy mesh): derives 'dir' from the interpolated localPos,
+// delegates the shared work to 'sampleShellRay', then applies the wall-duty
+// discard that only makes sense for a two-sided proxy mesh (see the
+// front_facing header comment above).
+fn sampleShell(in: FsIn) -> ShellSample {
+  // View ray in the local frame. Renormalize AFTER the implicit model transform
+  // (the proxy is a scaled sphere) -- the house trap; an un-normalized dir
+  // breaks every dot product in 'sampleShellRay'.
+  let dir = normalize(in.localPos - u.camPosLocal);
+  var out = sampleShellRay(dir);
+  if (!out.hit) {
+    return out;
+  }
+
+  // ── Wall-duty split (front_facing) ─────────────────────────────────
+  //
+  // The near wall (front-facing) renders ONLY ground-hitting rays (the disc
+  // haze); the far wall (back-facing) renders ONLY ground-missing rays (the limb
+  // + sky). Discard the other half on each so the pair is exhaustive AND mutually
+  // exclusive whatever the depth state (incl. the camera-inside case). Without
+  // the near-wall guard the limb would double-count -- both walls pass the depth
+  // test past the limb.
+  // Wrong wall <=> facing and ground-hit disagree (the front wall owns ground
+  // rays, the far wall owns the rest) -- one XOR covers both rejections.
+  if (in.frontFacing != out.intersectsGround) {
+    out.hit = false;
+    out.transmit = vec3<f32>(1.0);
+    out.emission = vec3<f32>(0.0);
+    out.coverage = 0.0;
+  }
+  return out;
+}
+
 // Pass 1 — blend 'zero'/'src' on BOTH components: dst *= src. rgb attenuates the
 // destination per channel; alpha carries the luminance complement of the same
 // factor, so 'dst.a *= 1 - coverage'.
@@ -286,6 +314,55 @@ fn fsMultiply(in: FsIn) -> @location(0) vec4<f32> {
 @fragment
 fn fsAdd(in: FsIn) -> @location(0) vec4<f32> {
   let s = sampleShell(in);
+  if (!s.hit) {
+    discard;
+  }
+  return vec4<f32>(s.emission, s.coverage);
+}
+
+// ── Inside-shell path (full-screen pass) ────────────────────────────────
+//
+// Camera inside the atmosphere shell: there is no proxy mesh to interpolate a
+// local position from, so the view ray is reconstructed by unprojecting the
+// full-screen triangle's screen position through 'u.invMvp'. No wall split --
+// a full-screen pass has no "wrong wall" (spec §4.2).
+
+// Recover the view ray for 'uv' by inverting fullscreenVertex's own mapping
+// ('uv = ((xy+1)*0.5, (1-xy)*0.5)') back to clip-space xy, unprojecting
+// through 'u.invMvp', and renormalizing (the house trap after a non-uniformly
+// scaled model transform -- same reason 'sampleShell's dir derivation does).
+fn insideRayDir(uv: vec2<f32>) -> vec3<f32> {
+  let xy = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
+  // Homogeneous far-point form -- never divide by w, never subtract camPos
+  // from a divided point. Under reversed-Z, z = 0 is the FAR plane: dividing
+  // there blows up (w -> 0, the uniform grey veil), and any finite z puts the
+  // unprojected point a few near-plane distances from the camera, so
+  // 'p - camPosLocal' is a metres-scale difference of unit-scale f32 vectors
+  // that shimmers as the near plane shrinks on descent. Algebra instead:
+  // p - cam = (P.xyz - cam * P.w) / P.w for P = invMvp * clip, so the
+  // direction is normalize(P.xyz - cam * P.w) with P.w's sign folded in --
+  // and at w -> 0 it degrades gracefully to normalize(P.xyz), the ray's own
+  // point at infinity.
+  let hp = u.invMvp * vec4<f32>(xy, 0.0, 1.0);
+  var v = hp.xyz - u.camPosLocal * hp.w;
+  if (hp.w < 0.0) { v = -v; }
+  return normalize(v);
+}
+
+@fragment
+fn fsInsideMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
+  let dir = insideRayDir(in.uv);
+  let s = sampleShellRay(dir);
+  if (!s.hit) {
+    discard;
+  }
+  return vec4<f32>(s.transmit, 1.0 - s.coverage);
+}
+
+@fragment
+fn fsInsideAdd(in: FullscreenOut) -> @location(0) vec4<f32> {
+  let dir = insideRayDir(in.uv);
+  let s = sampleShellRay(dir);
   if (!s.hit) {
     discard;
   }

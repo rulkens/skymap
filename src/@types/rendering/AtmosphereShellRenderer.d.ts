@@ -113,15 +113,23 @@ export type AtmosphereShellRenderer = Renderer & {
   setRingTexture(bodyId: string, bitmap: ImageBitmap): void;
 
   /**
-   * Draw body `bodyId`'s atmosphere-top proxy sphere (both walls) into the open
-   * foreground pass, as TWO draws of the same geometry: MULTIPLY (per-channel
-   * extinction of the destination) then ADD (the exposed in-scatter). The order is
-   * load-bearing — see the renderer's `draw`.
+   * Draw body `bodyId`'s atmosphere shell into the open foreground pass, as TWO
+   * draws of the same geometry: MULTIPLY (per-channel extinction of the
+   * destination) then ADD (the exposed in-scatter). The order is load-bearing —
+   * see the renderer's `draw`.
    *
-   * `uniforms` is the 112-byte `AtmosphereUniforms` record from
-   * `packAtmosphereUniforms` (MVP + body-local sun dir + bottomRadius +
-   * camPosLocal + sunIrradiance + exposure + ring ratios). THROWS on an unknown
+   * `inside` selects which pipeline pair runs. `false` (camera outside the
+   * atmosphere top) draws the proxy sphere (both walls, depth-tested against the
+   * opaque scene). `true` (camera past the atmosphere top) draws a full-screen
+   * triangle instead — no vertex/index buffer bound, no scene-depth test
+   * (`depthCompare: 'always'`; there is no proxy-mesh silhouette to test from
+   * inside) — reconstructing the view ray by unprojecting through the uniforms'
+   * inverse MVP rather than interpolating a proxy-mesh local position.
+   *
+   * `uniforms` is the 176-byte `AtmosphereUniforms` record from
+   * `packAtmosphereUniforms` (MVP + inverse MVP + body-local sun dir +
+   * bottomRadius + camPosLocal + exposure + ring ratios). THROWS on an unknown
    * `bodyId` (a programming error — callers only pass `atmosphereDrawList` ids).
    */
-  draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void;
+  draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array, inside: boolean): void;
 };

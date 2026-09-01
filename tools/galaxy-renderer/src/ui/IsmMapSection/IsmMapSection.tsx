@@ -2,12 +2,10 @@
  * IsmMapSection — the shared ISM-map switch: `GalaxyFieldTuning.ismMap.generator`
  * (none | fluid) is the ONLY control here — dust seeding is just "the
  * generator is running", with no separate enable/seed toggles to keep in
- * sync.
- *
- * The COUPLING readout is permanent, not a one-off debug print — "sliders
- * don't move the dust" has three structurally different causes (readback
- * never landed, the generator has no measurable structure, or the coupling
- * already agrees with the arm tangent) — shown whenever the generator is active.
+ * sync. The COUPLING readout is permanent, not a one-off debug print —
+ * "sliders don't move the dust" has two structurally different causes
+ * (readback never landed, or the generator has no measurable structure) —
+ * shown whenever the generator is active.
  */
 import type { ReactNode } from 'react';
 import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
@@ -330,11 +328,7 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
             <div className={styles.row}>
               <span className={styles.slot}>readback landed</span>
               <span className={styles.value}>
-                {diagnostics
-                  ? diagnostics.hasData
-                    ? `yes (gen ${diagnostics.generation})`
-                    : 'no'
-                  : '—'}
+                {diagnostics ? `yes (gen ${diagnostics.generation})` : '—'}
               </span>
             </div>
             <div className={styles.row}>
@@ -342,14 +336,6 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
               <span className={styles.value}>
                 {diagnostics
                   ? `${diagnostics.meanCoherence.toFixed(3)} / ${diagnostics.maxCoherence.toFixed(3)}`
-                  : '—'}
-              </span>
-            </div>
-            <div className={styles.row}>
-              <span className={styles.slot}>delta applied mean / max</span>
-              <span className={styles.value}>
-                {diagnostics
-                  ? `${diagnostics.meanDeltaDeg.toFixed(2)}° / ${diagnostics.maxDeltaDeg.toFixed(2)}°`
                   : '—'}
               </span>
             </div>

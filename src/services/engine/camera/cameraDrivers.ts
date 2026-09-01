@@ -316,6 +316,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
             yaw: cur.yaw,
             pitch: cur.pitch,
             distance: cur.distance,
+            roll: cur.roll,
           };
         }
         const from = clock.followFrom;

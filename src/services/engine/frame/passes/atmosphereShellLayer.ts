@@ -17,8 +17,14 @@
  * LUT (baked by the `atmosphereSkyView` compute step, in the compute prelude)
  * to compose the in-scattered radiance: a blue limb over the day side, a
  * reddened arc along the terminator/sunset, and haze greying the disc with
- * distance. Per-pixel scene-depth-aware aerial perspective (arbitrary occluder
- * depth, in-atmosphere descent) is the deferred froxel upgrade.
+ * distance. Per-pixel scene-depth-aware aerial perspective on down-view/
+ * ground rays (haze between the camera and terrain while inside the shell) is
+ * the deferred froxel upgrade, tracked as its own backlog item.
+ *
+ * Below `hypot(camPosLocal) < 1.005` the layer switches to a full-screen
+ * covering-triangle pipeline pair instead — no wall split, `depthCompare:
+ * 'always'`, the ray reconstructed per-fragment from `invMvp` via a
+ * homogeneous unproject (see `shell/fragment.wesl`'s `insideRayDir`).
  *
  * ### Why it draws LAST, OVER not opaque (spec §8.3)
  *
@@ -60,9 +66,11 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
+import { mat4d } from 'wgpu-matrix';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { isInsideAtmosphereShell } from '../../../../utils/camera/isInsideAtmosphereShell';
 import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { atmosphereDrawList } from '../atmosphereDrawList';
@@ -99,6 +107,11 @@ export const atmosphereShellLayer: ContentLayer = {
     // outer extent), in metres — the body-m slab frame's own unit.
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, atmosphereTopM);
+    // Inverted from the UN-narrowed f64 mvp (dst-last, fresh Float64Array) for
+    // the inside-shell entry points' screen→local unproject. Narrowing mvp to
+    // f32 first would reintroduce the per-element rounding the slab seam exists
+    // to avoid, here for a different consumer.
+    const invMvp = mat4d.inverse(mvp);
     // Sun rotated into the body's local frame (its resolved orientation carries
     // the axial tilt), co-framed with the in-scatter integral's sun direction.
     const sun = sunDirLocal(positionMpc, RENDER_ORIGIN_MPC, orientation);
@@ -114,7 +127,6 @@ export const atmosphereShellLayer: ContentLayer = {
     // `ATMOSPHERE_PARAMS.earth.exposure`), so it reads the store value each frame
     // (`EngineState.settings` is a live getter — a drag overrides the limb
     // without a reload); every other body reads its own params-row `exposure`.
-    // sunIrradiance is the per-body params dial (fragment-unused today).
     const exposure =
       body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
     // The host's ring annulus in the proxy's LOCAL units (atmosphere top = 1),
@@ -124,20 +136,25 @@ export const atmosphereShellLayer: ContentLayer = {
     const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
     const ringInnerRatio = ring === undefined ? 0 : ring.innerRadiusKm / params.atmosphereTopKm;
     const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;
+    // camLocal is already atmosphere-top-radius units, so this is the one
+    // comparison spec §4.1 calls for — no new per-frame derivation. The handoff
+    // sits slightly OUTSIDE the top (margin rationale lives in the util).
+    const inside = isInsideAtmosphereShell(camLocal);
     renderer.draw(
       pass,
       body.id,
       packAtmosphereUniforms(
         // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
         narrowMat4(mvp),
+        narrowMat4(invMvp),
         sun,
         camLocal,
         bottomRadius,
-        params.sunIrradiance,
         exposure,
         ringInnerRatio,
         ringOuterRatio,
       ),
+      inside,
     );
   },
 };

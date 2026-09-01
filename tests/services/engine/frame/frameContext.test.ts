@@ -397,6 +397,60 @@ describe('deriveFrameContext — ready branch', () => {
   });
 });
 
+describe('deriveFrameContext — roll threads into camBasisWorld (P5)', () => {
+  it('a rolled camera rotates the body pose basis about forward; forward and position are unaffected', () => {
+    const pose0: CameraPose = { target: [0, 0, 0], yaw: 0.2, pitch: 0.1, distance: 100 };
+    const poseRolled: CameraPose = { ...pose0, roll: Math.PI / 2 };
+
+    const ctx0 = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      pose0,
+      PROJECTION,
+      BASIS,
+      BASIS,
+      0xffffffff,
+      0,
+      CONST_J2000,
+    );
+    const ctxRolled = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      poseRolled,
+      PROJECTION,
+      BASIS,
+      BASIS,
+      0xffffffff,
+      0,
+      CONST_J2000,
+    );
+    expect(ctx0.isReady).toBe(true);
+    expect(ctxRolled.isReady).toBe(true);
+    if (!ctx0.isReady || !ctxRolled.isReady) return;
+
+    const p0 = ctx0.bodyPose('earth');
+    const pRolled = ctxRolled.bodyPose('earth');
+    expect(p0).not.toBeNull();
+    expect(pRolled).not.toBeNull();
+    if (p0 === null || pRolled === null) return;
+
+    // Position decodes through poseBasis/yaw/pitch only — roll never touches
+    // it, so the eye-relative vector is bit-identical between the two poses.
+    expect(pRolled.eyeRelBodyM).toEqual(p0.eyeRelBodyM);
+
+    // forward = basisM[6..8] is unaffected by a rotation ABOUT forward;
+    // right/up = basisM[0..5] rotate by 90° and must differ.
+    expect(pRolled.basisM[6]).toBeCloseTo(p0.basisM[6], 10);
+    expect(pRolled.basisM[7]).toBeCloseTo(p0.basisM[7], 10);
+    expect(pRolled.basisM[8]).toBeCloseTo(p0.basisM[8], 10);
+    const rightChanged =
+      Math.abs(pRolled.basisM[0] - p0.basisM[0]) > 1e-6 ||
+      Math.abs(pRolled.basisM[1] - p0.basisM[1]) > 1e-6 ||
+      Math.abs(pRolled.basisM[2] - p0.basisM[2]) > 1e-6;
+    expect(rightChanged).toBe(true);
+  });
+});
+
 describe('deriveFrameContext — bodyPose identity seam (m1)', () => {
   it('feeds deriveSlabs the SAME bodyPose closure it forwards onto ctx.bodyPose', () => {
     // `deriveSlabs` is the named import above — vi.mock intercepts module

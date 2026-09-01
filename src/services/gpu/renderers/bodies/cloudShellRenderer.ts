@@ -50,9 +50,14 @@
  * depth-tested against the opaque surface via the slab's `resolveDepthCompare`
  * but with `depthWriteEnabled: false` — the shell is depth-TESTED against the
  * opaque planet (so the far half is correctly occluded) but writes no depth (a
- * translucent overlay must not stamp z). `frontFace: 'ccw'`
- * + `cullMode: 'back'` (a CLOSED sphere with outward `uvSphereMesh` winding — NOT
- * two-sided; contrast the ring's `cullMode: 'none'` flat annulus). The shell is
+ * translucent overlay must not stamp z). `frontFace: 'ccw'` on a CLOSED sphere
+ * with outward `uvSphereMesh` winding (contrast the ring's `cullMode: 'none'`
+ * flat annulus) — but NOT one fixed cull mode: `draw`'s `inside` argument picks
+ * between two pipelines sharing every other state, `cullMode: 'back'` (outside
+ * the shell, the mesh's original vantage) or `'front'` (inside it — the whole
+ * sphere's outward normals now point away from the camera, so back-cull would
+ * discard every triangle; front-cull keeps exactly those, rendering the near
+ * AND far inner wall around the camera — Task 10, spec §5c). The shell is
  * static: it rides the host body's frame with no independent spin or drift.
  *
  * @module
@@ -196,68 +201,74 @@ export function createCloudShellRenderer(
   }
   let bindGroup = buildBindGroup();
 
-  // ── Shader modules + pipeline ─────────────────────────────────────────────
+  // ── Shader modules + pipelines ────────────────────────────────────────────
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'cloudShell.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'cloudShell.fragment');
 
-  const pipeline = device.createRenderPipeline({
-    label: 'cloudShell-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'cloudShell-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
-    }),
-    vertex: {
-      module: vsModule,
-      entryPoint: 'vs',
-      buffers: [
-        {
-          arrayStride: 12, // 3 × f32 position
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        },
-        {
-          arrayStride: 8, // 2 × f32 uv
-          attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }],
-        },
-      ],
-    },
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format: targetFormat,
-          // Straight-alpha OVER: the shell is a translucent overlay blended over
-          // the opaque spheres already in the foreground target.
-          blend: {
-            color: {
-              srcFactor: 'src-alpha',
-              dstFactor: 'one-minus-src-alpha',
-              operation: 'add',
-            },
-            alpha: {
-              srcFactor: 'one',
-              dstFactor: 'one-minus-src-alpha',
-              operation: 'add',
-            },
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'cloudShell-pipeline-layout',
+    bindGroupLayouts: [bindGroupLayout],
+  });
+  const vertexState: GPUVertexState = {
+    module: vsModule,
+    entryPoint: 'vs',
+    buffers: [
+      {
+        arrayStride: 12, // 3 × f32 position
+        attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+      },
+      {
+        arrayStride: 8, // 2 × f32 uv
+        attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }],
+      },
+    ],
+  };
+  const fragmentState: GPUFragmentState = {
+    module: fsModule,
+    entryPoint: 'fs',
+    targets: [
+      {
+        format: targetFormat,
+        // Straight-alpha OVER: the shell is a translucent overlay blended over
+        // the opaque spheres already in the foreground target.
+        blend: {
+          color: {
+            srcFactor: 'src-alpha',
+            dstFactor: 'one-minus-src-alpha',
+            operation: 'add',
+          },
+          alpha: {
+            srcFactor: 'one',
+            dstFactor: 'one-minus-src-alpha',
+            operation: 'add',
           },
         },
-      ],
-    },
-    primitive: {
-      topology: 'triangle-list',
-      // A CLOSED sphere: outward-facing `uvSphereMesh` winding, back-cull the
-      // inner surface (contrast the ring's two-sided `cullMode: 'none'` disc).
-      frontFace: 'ccw',
-      cullMode: 'back',
-    },
-    depthStencil: {
-      format: depthFormat,
-      // Depth-TESTED against the opaque planet (far shell half occluded) but
-      // writes NO depth — a translucent overlay must not stamp z.
-      depthWriteEnabled: false,
-      depthCompare: resolveDepthCompare('nearer', reversedZ),
-    },
-  });
+      },
+    ],
+  };
+  const depthStencilState: GPUDepthStencilState = {
+    format: depthFormat,
+    // Depth-TESTED against the opaque planet (far shell half occluded) but
+    // writes NO depth — a translucent overlay must not stamp z.
+    depthWriteEnabled: false,
+    depthCompare: resolveDepthCompare('nearer', reversedZ),
+  };
+
+  // Outside/inside pipelines share vertex/fragment/depthStencil/layout — built
+  // ONCE above — and differ ONLY in `cullMode`, so the pair can never drift
+  // apart on anything that would make them cover different pixels.
+  function createShellPipeline(label: string, cullMode: GPUCullMode): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label,
+      layout: pipelineLayout,
+      vertex: vertexState,
+      fragment: fragmentState,
+      primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode },
+      depthStencil: depthStencilState,
+    });
+  }
+  const outsidePipeline = createShellPipeline('cloudShell-pipeline-outside', 'back');
+  const insidePipeline = createShellPipeline('cloudShell-pipeline-inside', 'front');
 
   // ── setTexture ────────────────────────────────────────────────────────────
 
@@ -290,9 +301,9 @@ export function createCloudShellRenderer(
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void {
+  function draw(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean): void {
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
-    pass.setPipeline(pipeline);
+    pass.setPipeline(inside ? insidePipeline : outsidePipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setVertexBuffer(1, uvBuffer);
