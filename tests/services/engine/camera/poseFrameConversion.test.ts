@@ -23,6 +23,7 @@ import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { updatePosition } from '../../../../src/utils/camera/updatePosition';
 import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
+import { surfaceFloorM } from '../../../../src/utils/camera/surfaceFloorM';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
 import { rotYMat3 } from '../../../../src/utils/math/rotYMat3';
@@ -284,6 +285,40 @@ describe('poseFrameConversion', () => {
     expect(back.distance * SCALE_UNITS.MPC_TO_M).toBeCloseTo(
       Math.hypot(...eyeRel) - EARTH_RADIUS_M,
       3,
+    );
+  });
+
+  it('floors the range for an eye at the surface looking along the horizon', () => {
+    // The sharp case for the floor, and the only one that reaches its `eyeMagM`
+    // half: on the surface, exactly tangential. Both roots are 0 and so is the
+    // closest approach, so an unfloored range would be the zero vector and
+    // `normalize3` would hand NaN yaw/pitch to every consumer. Standing off by
+    // the surface arm's own descent floor is what keeps it finite.
+    const state = bodyState([0, 0, 0], IDENTITY);
+    const forward: Vec3 = [1, 0, 0];
+    const { right, up } = imagePlaneBasis(forward, 0, [0, 1, 0]);
+    const back = toWorldArm(
+      {
+        bodyId: 'earth',
+        anchorLocalM: [0, 0, 0],
+        eyeRelAnchorM: [0, 0, EARTH_RADIUS_M],
+        basisLocal: mat3FromColumns(right, up, forward),
+      },
+      state,
+      IDENTITY,
+      IDENTITY,
+      EARTH_RADIUS_M,
+    );
+
+    expect(back.distance * SCALE_UNITS.MPC_TO_M).toBeCloseTo(
+      surfaceFloorM(EARTH_RADIUS_M) - EARTH_RADIUS_M,
+      6,
+    );
+    expectVec3Near(
+      worldPoseOf(back, IDENTITY, IDENTITY).forward,
+      forward,
+      DIR_FLOOR,
+      'horizon axis',
     );
   });
 

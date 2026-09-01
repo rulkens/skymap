@@ -33,10 +33,17 @@ export function zoomedDistance(distance: number, factor: number, pivot: PivotFra
 
   const h = distance - radiusMpc;
   if (h <= 0) {
-    // Degenerate: `clampDistance` should prevent the camera reaching the
-    // surface at all. Fall back to plain proportional scaling rather than
-    // invent a geometric taper for a zero/negative altitude.
-    return clampDistance(distance * factor, floorMpc);
+    // The pose is not orbiting this pivot's centre: `distance` is a range to
+    // whatever its target is, and a pose that left the body arm carries a range
+    // along its VIEW RAY (`poseFrameConversion.ts: toWorldArm`), which a bigger
+    // body's floor can exceed. No altitude exists to taper, so scale plainly —
+    // and floor at the range we were GIVEN, because clamping UP to `floorMpc`
+    // teleports the eye outward by the whole difference (~a body radius) on the
+    // first notch. Never ratcheting outward keeps the floor's intent (never get
+    // closer while inside the envelope) without the jump. The real repair is
+    // the un-braiding: `cam.distance` and "altitude above the pivot" are two
+    // quantities, and three consumers each re-derive one from the other.
+    return clampDistance(distance * factor, Math.min(floorMpc, distance));
   }
 
   return clampDistance(radiusMpc + h * factor, floorMpc);
