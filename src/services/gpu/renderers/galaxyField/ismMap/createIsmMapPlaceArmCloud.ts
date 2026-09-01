@@ -13,7 +13,11 @@ import {
   packPlaceArmCloudParams,
   PLACE_ARM_CLOUD_PARAMS_BUFFER_SIZE,
 } from './packPlaceArmCloudParams';
-import { packArmCloudArmRecords } from './packArmCloudArmRecords';
+import {
+  ARM_CLOUD_ARM_RECORD_FLOATS,
+  packArmCloudArmRecords,
+} from './packArmCloudArmRecords';
+import { createGrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import { discLightScaleLength } from '../../../../../utils/galaxy/discLightScaleLength';
 import { armCrossSigma } from '../../../../engine/galaxyGenerator/v2/armRidgeGeometry';
 import {
@@ -92,12 +96,15 @@ export function createIsmMapPlaceArmCloud(
     size: PLACE_ARM_CLOUD_PARAMS_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  // Recreated whenever arm count grows past the current capacity — same
-  // "never shrunk, no state to preserve on regrow" idiom
-  // createIsmMapPlaceArmSpurCloud.ts's own `recordsBuffer` uses. Also bound
-  // (reinterpreted as `array<f32>`) at placeArmCloud.wesl's own dead
-  // `passThroughPrefixBuf` binding — see that file's own doc.
-  let recordsBuffer: GPUBuffer | null = null;
+  // Also bound (reinterpreted as `array<f32>`) at placeArmCloud.wesl's own
+  // dead `passThroughPrefixBuf` binding — see that file's own doc.
+  const recordsBuffer = createGrowOnlyRecordBuffer({
+    device,
+    label: 'galaxy:placeArmCloudRecords',
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    floatsPerRecord: ARM_CLOUD_ARM_RECORD_FLOATS,
+    initialCapacity: 1,
+  });
   const readbackByteSize = ARM_CLOUD_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4;
   const readbackBuffer = device.createBuffer({
     label: 'galaxy:placeArmCloudReadback',
@@ -116,20 +123,6 @@ export function createIsmMapPlaceArmCloud(
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
-  function ensureRecordsBuffer(byteSize: number): GPUBuffer {
-    if (recordsBuffer && recordsBuffer.size >= byteSize) return recordsBuffer;
-    recordsBuffer?.destroy();
-    recordsBuffer = device.createBuffer({
-      label: 'galaxy:placeArmCloudRecords',
-      // STORAGE (not STORAGE|COPY_DST alone) is already implied — the
-      // `array<f32>` reinterpretation at binding 4 needs no extra usage flag,
-      // it reads the same bytes `writeBuffer` below already wrote.
-      size: Math.max(byteSize, 32),
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    return recordsBuffer;
-  }
-
   /**
    * Encodes the dispatch, or returns null when there is nothing to place —
    * `geometry.arms.length === 0` (no arms this galaxy) or `weightSum <= 0`
@@ -142,8 +135,8 @@ export function createIsmMapPlaceArmCloud(
     const { buffer: recordsData, weightSum } = packArmCloudArmRecords(input.geometry.arms);
     if (!(weightSum > 0)) return false;
 
-    const buf = ensureRecordsBuffer(recordsData.byteLength);
-    device.queue.writeBuffer(buf, 0, recordsData);
+    recordsBuffer.write(recordsData);
+    const buf = recordsBuffer.buffer;
 
     const { geometry, tuning } = input;
     const hLight = discLightScaleLength(geometry);
@@ -248,7 +241,7 @@ export function createIsmMapPlaceArmCloud(
 
     dispose(): void {
       paramsBuffer.destroy();
-      recordsBuffer?.destroy();
+      recordsBuffer.destroy();
       readbackBuffer.destroy();
       fluxWeightBuffer.destroy();
       fluxWeightReadbackBuffer.destroy();
