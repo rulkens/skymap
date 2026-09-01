@@ -108,7 +108,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
     targetSizePx: targetSizes.field,
     dust: {
       count: model.fieldCounts.dust,
-      // All three cached by rebuildDustMixture, not recomputed per frame.
+      // All three from the `dustHeaderLanes` node, not recomputed per frame.
       extinctionRgb: model.dustHeaderLanes.extinctionRgb,
       noise: model.dustHeaderLanes.noise,
       carve: model.dustHeaderLanes.carve,

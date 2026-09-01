@@ -18,7 +18,7 @@ const DETAIL_MAX: f32 = 8.0;
 
 // rMax: the same grid ismMapCartesianBake.wesl resolves world xz through —
 // the one scalar the affine UV below needs. rMin stays in the struct only to
-// match gridUbo's byte layout (written once per rebuildIsmMap, not read here).
+// match gridUbo's byte layout (written once per ISM-map rebuild, not read here).
 
 // Binding numbers: dustMap.wesl's own closure is io's 0/1 (u/comps), its
 // dust-noise volume 4/5, and these three — collision-free there, which is

@@ -6,7 +6,7 @@
  * RETURNS the new value of the caller's "holds anything but zeros" latch, and
  * the caller MUST assign it — a skipped pass leaves whatever the last frame
  * wrote, so the latch is what makes skipping safe across a nonzero -> zero
- * transition (see `dustMapPopulated`'s declaration).
+ * transition (the caller's own `dustMap.populated` slot).
  */
 import { beginClearPass } from '../../../lib/beginClearPass';
 
@@ -22,7 +22,7 @@ export function encodeDustMapPass({
   readonly timestampWrites?: GPURenderPassTimestampWrites;
   readonly targetView: GPUTextureView;
   readonly pipeline: GPURenderPipeline;
-  /** Reassigned whenever `fieldCompsBuf` regrows, so it must be read fresh at the call site. */
+  /** The group `createFieldPipelines.sync` produced for THIS encode, against this frame's own resources. */
   readonly bindGroup: GPUBindGroup;
   /** The primary's dust component count — zero still OPENS the pass, as the clear that empties the map. */
   readonly instanceCount: number;

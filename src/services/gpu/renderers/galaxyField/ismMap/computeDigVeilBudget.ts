@@ -23,7 +23,7 @@ import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescr
 import type { GalaxyFieldTuning } from '../../../../../@types/galaxy/GalaxyFieldTuning';
 
 export type DigVeilBudget = {
-  /** Reserved slot count (`complexes * childrenPerComplex`) — `repackHiiComponents`'s DIG span sizes off this, not off any placed particle. */
+  /** Reserved slot count (`complexes * childrenPerComplex`) — `hiiPack`'s DIG span sizes off this, not off any placed particle. */
   readonly count: number;
   readonly childrenPerComplex: number;
   readonly complexSpread: number;
