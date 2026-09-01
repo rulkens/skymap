@@ -1,15 +1,12 @@
 /**
  * createWorkbenchStore — a factory (not a module singleton), mirroring
  * `src/store/createAppStore.ts` including its `registerSagaContext`
- * merge-then-announce ordering (see that file's header for the full
- * argument).
- *
- * Unlike the main app, this state legitimately holds typed arrays —
+ * merge-then-announce ordering. This state legitimately holds typed arrays —
  * `catalog.packedOverride`/`catalog.points`'s `Float32Array`s and
  * `histogram.counts`'s `Uint32Array` — so both RTK dev checks ignore exactly
- * those paths: flagging every dispatch near a multi-million-float catalog as
- * non-serializable is noise, and immutableCheck's deep freeze/diff over the
- * same arrays is a real per-frame cost, not just a warning.
+ * those paths: serializableCheck would flag every multi-million-float
+ * dispatch as noise, and immutableCheck's deep freeze/diff over them is a
+ * real per-frame cost, not just a warning.
  */
 import { configureStore } from '@reduxjs/toolkit';
 import createSagaMiddleware from 'redux-saga';

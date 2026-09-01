@@ -62,7 +62,7 @@ export async function createMcpmHarness(opts: {
   // Task R5: the caller owns "how do you get a GPUDevice" (a canvas/browser
   // concern, one call site) — this function only builds/steps the sim on top of
   // it. Callers ask initGpu for shader-f16 and the propagate kernel's compute
-  // limits themselves; see Viewport.tsx's buildFromPoints for the request shape
+  // limits themselves; see watchSceneSaga's initGpu call for the request shape
   // this harness needs.
   readonly gpu: GpuContext;
   readonly points: CatalogPoints;
@@ -366,8 +366,8 @@ export async function createMcpmHarness(opts: {
     },
     dispose(): void {
       // The device stays alive because the harness never acquired it — it only reads
-      // opts.gpu.device (post-R5). Viewport.disposeHarness() tears down the render graph
-      // and this harness together, so ownership isn't "outlives", it's "never owned".
+      // opts.gpu.device (post-R5). disposeScene() tears down the render graph and
+      // this harness together, so ownership isn't "outlives", it's "never owned".
       buffers.destroy();
       for (const buffer of Object.values(overlayBuffers)) buffer.destroy();
     },

@@ -9,7 +9,7 @@ import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defa
 /**
  * The task-R6 extraction opens a seam the pre-extraction Viewport.tsx closure never
  * had: the drag state machine driven by a synthetic pointer sequence, no DOM/store
- * double needed beyond the real `createStore`. This pins two things a DOM-level test
+ * double needed beyond the real `createWorkbenchStore`. This pins two things a DOM-level test
  * couldn't cheaply reach: the translate-drag delta math end to end, and the V3 ruling
  * (a drag through the grid controls clears `importedBox`) surviving the move.
  *

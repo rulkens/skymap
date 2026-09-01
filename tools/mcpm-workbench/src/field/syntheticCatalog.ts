@@ -1,6 +1,6 @@
 /**
  * syntheticCatalog — an in-tool stand-in for `loadCatalogPoints`, used ONLY
- * behind the `?probe` gate (see Viewport.tsx's `buildOnce`). Deterministic
+ * behind the `?probe` gate (see `watchCatalogSaga`). Deterministic
  * (one fixed seed, never `Math.random`) so the GPU probe's output is
  * reproducible across runs; clustered rather than uniform so the raymarch
  * has actual structure to draw, not a flat haze.

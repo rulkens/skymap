@@ -1,14 +1,12 @@
 /**
  * watchPaletteSaga — re-attaches the trace/volpath pass whenever its palette
  * setter fires (the LUT bakes into the pass's bind group at construction;
- * see ViewSlice.d.ts). Moved out of Viewport's `frame()` closure (T11):
- * `takeEvery` on the setter IS the edge now, replacing the old per-frame
- * `attachedRaymarchPalette`/`attachedVolpathPalette` diff. Each worker is
- * synchronous up to its guard below (no `call`/async step), so it can't
- * crash or leave a dangling graph reference against a concurrent
- * `watchSceneSaga` build, and the preview-dispose seam (below) is unaffected.
- * Known pre-existing edge, not fixed here: a palette dispatch landing during
- * a build's async window can be silently dropped — see the guard's comment.
+ * see ViewSlice.d.ts). `takeEvery` on the setter IS the edge. Each worker is
+ * synchronous up to its guard below (no `call`/async step other than the
+ * dispatch this file itself makes), so it can't crash or leave a dangling
+ * graph reference against a concurrent `watchSceneSaga` build. Known
+ * pre-existing edge, not fixed here: a palette dispatch landing during a
+ * build's async window can be silently dropped — see the guard's comment.
  */
 import { takeEvery, put, getContext } from 'typed-redux-saga';
 

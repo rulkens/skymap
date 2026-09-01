@@ -1,14 +1,12 @@
 /**
  * watchSceneSaga — builds/rebuilds/disposes the MCPM scene (device, harness,
  * render graph) into `resources` (saga context), which Viewport's frame
- * driver reads by reference. `takeLatest` debounces every structural
- * trigger by `REBUILD_DEBOUNCE_MS`: a new trigger cancels whatever the
- * previous one was doing (still waiting, or mid-build) and restarts the
- * wait. Cancellation unwinds the generator synchronously and redux-saga
- * drops the eventual `createMcpmHarness()` result rather than resuming
- * the generator with it — `acceptBuiltHarness` (called from inside that
- * promise's own `.then()`, not after the `yield*`) is what disposes an
- * orphaned build instead of leaking it; see its own doc comment.
+ * driver reads by reference. `takeLatest` debounces every structural trigger
+ * by `REBUILD_DEBOUNCE_MS`, cancelling whatever the previous one was doing.
+ * Cancellation unwinds synchronously and redux-saga drops the eventual
+ * `createMcpmHarness()` result rather than resuming with it —
+ * `acceptBuiltHarness`, called from inside that promise's own `.then()`, is
+ * what disposes an orphaned build instead of leaking it; see its own doc.
  */
 import {
   takeLatest,
@@ -210,17 +208,10 @@ function* buildScene() {
     console.error('mcpm-workbench: build failed', err);
     yield* put(setCatalogBuildError((err as Error).message));
   } finally {
-    // Runs SYNCHRONOUSLY at cancellation (before any pending promise can settle),
-    // which is what makes `cancellation.aborted` a reliable flag for
-    // `acceptBuiltHarness` to read later. Also disposes whatever this attempt had
-    // ALREADY stashed into `resources` before being cancelled — `resources.gpu`,
-    // or `resources.graph` on the empty-scene path, or the gap between
-    // `resources.harness` being assigned and the final `resources.graph = graph`.
-    // Does NOT cover the harness while `createMcpmHarness`'s promise is still in
-    // flight — that harness isn't reachable from `resources` yet, which is
-    // exactly why `acceptBuiltHarness` has to dispose it from inside the promise
-    // instead. Never runs on a clean finish: `cancelled()` is false there,
-    // leaving the finished scene alone.
+    // Runs SYNCHRONOUSLY at cancellation, before any pending promise settles —
+    // makes `cancellation.aborted` reliable for `acceptBuiltHarness`. Disposes
+    // whatever was ALREADY stashed into `resources`, but not the in-flight
+    // `createMcpmHarness` result (unreachable here — that's its job). No-op on a clean finish.
     if (yield* cancelled()) {
       cancellation.aborted = true;
       disposeScene(resources);

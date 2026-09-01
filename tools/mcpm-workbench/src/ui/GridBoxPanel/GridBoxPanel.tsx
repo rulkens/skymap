@@ -5,9 +5,8 @@
  * cached `catalog.catalogBoundsMpc` rather than re-deriving from raw positions.
  * "Auto fit" (`fitBoxToCatalog`, gridSlice.ts) is a one-shot ACTION, not a
  * mode: it snapshots the catalog bounds into the manual center/size fields
- * once, `paddingMpc` baked in at click time. After that it's an ordinary
- * manual box — the manual sliders already feed Viewport's box-preview timer,
- * so no extra wiring is needed here.
+ * once, `paddingMpc` baked in at click time — after that it's an ordinary
+ * manual box, no extra wiring needed here.
  */
 import type { ReactNode } from 'react';
 import Button from '../../../../../src/components/common/Button/Button';

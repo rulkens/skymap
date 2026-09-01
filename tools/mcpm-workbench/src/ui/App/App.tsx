@@ -1,16 +1,12 @@
 /**
  * App — the MCPM Workbench shell. Creates the store once and mounts the
- * redux `<Provider>` here (not `hooks.ts`) — this is the store's construction
- * site, exactly the role `src/main.tsx` plays for the main app's `<Provider>`.
- * Stacks the HUD + controls over the WebGPU Viewport, mirroring
- * tools/flow-workbench's App.
- *
- * Dev-only drag-drop (spec §9): dropping the fork's packed `.bin` + its
- * `_metadata.txt` together parses them via `loadPackedCatalog` and installs
- * the result via `setPackedCatalog` — `watchCatalogSaga`'s `takeLatest` also
- * fires on that action, re-resolving from `catalog.packedOverride` (weights
- * included) exactly as it does for a network fetch, so nothing here forks
- * that maths.
+ * redux `<Provider>` here (not `hooks.ts`) — the store's construction site,
+ * exactly the role `src/main.tsx` plays for the main app's `<Provider>`.
+ * Stacks the HUD + controls over the WebGPU Viewport. Dev-only drag-drop:
+ * dropping the fork's packed `.bin` + its `_metadata.txt` installs them via
+ * `setPackedCatalog` — `watchCatalogSaga`'s `takeLatest` re-resolves from
+ * `catalog.packedOverride` the same as a network fetch, so nothing here
+ * forks the weight/bounds maths.
  */
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import { Provider } from 'react-redux';

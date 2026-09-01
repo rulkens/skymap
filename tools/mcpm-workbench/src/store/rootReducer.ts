@@ -1,9 +1,7 @@
 /**
  * rootReducer — the workbench store's single combine point, mirroring
  * `src/store/rootReducer.ts` at workbench scale (five slices, no route-name
- * indirection needed for a fixed, small set). Key names — `catalog`, `grid`,
- * `sim`, `view`, `histogram` — are unchanged from the old `AppState` shape,
- * so every selector body (`s.catalog...`, `s.grid...`) survives the migration.
+ * indirection needed for a fixed, small set).
  */
 import { combineReducers } from '@reduxjs/toolkit';
 

@@ -1,20 +1,12 @@
 /**
- * HistogramPlot — the live convergence readout (task T20): the fork's 17-bin
- * density histogram as bars, plus `meanLogTraceAtPoints`'s time series as a
- * line beneath it. A small canvas, redrawn only when `histogram` changes —
- * watchHistogramSaga already throttles how often that is (HISTOGRAM_INTERVAL_STEPS).
- *
- * Bin 16 (constants.wesl's `N_HISTOGRAM_BINS - 1`) is not a count — it's the
- * running `atomicMax(1e5 * density)` marker — so only bins 0..15 draw as
- * bars; its value surfaces in the 'M' readout instead (S13, below).
- *
- * S13 fork parity (vendor main.cpp:1589-1622): the four info labels —
- * E (mean), M (top-bin marker), null% and the log base — sit right-aligned
- * beside the bars. They render as absolutely-positioned DOM rows (so each
- * carries a CompactInfoTip hover) but `draw()` still measures the SAME
- * strings with the canvas's own font to reserve the bars' strip width —
- * right alignment keeps a value's width change from nudging anything else
- * (the brief's "no layout jump") in both coordinate spaces.
+ * HistogramPlot — the live convergence readout: the fork's 17-bin density
+ * histogram as bars, plus `meanLogTraceAtPoints`'s time series as a line
+ * beneath it, redrawn only when `histogram` changes. Bin 16 is not a count
+ * but the running `atomicMax(1e5 * density)` marker, so only bins 0..15
+ * draw as bars; its value surfaces in the 'M' readout instead. The
+ * E/M/null%/log-base labels render as DOM rows right-aligned beside the
+ * canvas, but `draw()` still measures the SAME strings with the canvas's
+ * own font to reserve the bars' strip width, so their width can't nudge it.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';

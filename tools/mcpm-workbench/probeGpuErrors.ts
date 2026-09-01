@@ -20,14 +20,15 @@ const VIEWPORT = { width: 1280, height: 800 };
 // A control change reaches the GPU through store → Viewport's rAF loop, so
 // every step lets a few frames encode before its errors are drained.
 const SETTLE_FRAMES = 6;
-// T20: Viewport.tsx throttles the histogram READBACK to every 20 steps
+// T20: watchHistogramSaga throttles the histogram READBACK to every 20 steps
 // (HISTOGRAM_INTERVAL_STEPS) — the dispatch itself runs every step (encodeStep.ts)
 // and so is already covered by every other settle above, but the readbackHistogram
 // mapAsync round trip needs a longer settle to guarantee it fires at least once.
 const HISTOGRAM_SETTLE_FRAMES = 21;
 const BOOT_TIMEOUT_MS = 60_000;
-// T25 (spec §12): 5x HISTOGRAM_INTERVAL_STEPS (Viewport.tsx) so 'sim:energy-smoke'
-// below rides 5 periodic histogram readbacks, not just the first noisy one.
+// T25 (spec §12): 5x HISTOGRAM_INTERVAL_STEPS (watchHistogramSaga) so
+// 'sim:energy-smoke' below rides 5 periodic histogram readbacks, not just the
+// first noisy one.
 const ENERGY_SMOKE_STEPS = 100;
 // Same margin as HISTOGRAM_SETTLE_FRAMES: settling only ENERGY_SMOKE_STEPS frames
 // races the LAST periodic readback's own mapAsync round trip.
@@ -148,15 +149,15 @@ async function launchChromium(headed: boolean): Promise<Browser> {
 
 /**
  * The load-bearing hook, installed before a single page script runs: the page
- * bundle acquires its device via `Viewport`'s own `initGpu` call (task R5 moved
- * that call out of `createMcpmHarness`), so patching `GPUAdapter.prototype` is
- * the only way to reach it regardless of which module calls it. `uncapturederror`
- * is WHERE WebGPU validation failures surface — un-listened-to they are a
- * console line nobody reads.
+ * bundle acquires its device via `watchSceneSaga`'s `initGpu` call (task R5
+ * moved that call out of `createMcpmHarness`), so patching `GPUAdapter.prototype`
+ * is the only way to reach it regardless of which module calls it.
+ * `uncapturederror` is WHERE WebGPU validation failures surface —
+ * un-listened-to they are a console line nobody reads.
  *
- * A `device.lost` with reason 'destroyed' is Viewport's own `disposeHarness`
- * (every rebuild tears down the old device) and is deliberately dropped; any
- * other reason is a crash.
+ * A `device.lost` with reason 'destroyed' fires for the old, abandoned device
+ * on a rebuild (`watchSceneSaga` requests a fresh one via `initGpu` each time)
+ * and is deliberately dropped; any other reason is a crash.
  */
 async function installGpuProbe(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -269,8 +270,8 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       name: 'boot',
       run: async (page) => {
-        // `?probe` is what makes Viewport.tsx load `syntheticCatalog()` instead
-        // of the network catalogs, and defaultAppState.ts seed a 100k-agent,
+        // `?probe` is what makes `watchCatalogSaga` load `syntheticCatalog()`
+        // instead of the network catalogs, and defaultAppState.ts seed a 100k-agent,
         // <=128-long-axis grid — see their own docs. `__mcpmProbeReady` is set
         // once the harness + render graph exist and the rAF loop has started.
         await page.goto(`${url}/?probe`, { waitUntil: 'load', timeout: BOOT_TIMEOUT_MS });

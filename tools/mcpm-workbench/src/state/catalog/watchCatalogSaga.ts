@@ -1,17 +1,12 @@
 /**
  * watchCatalogSaga — the single owner of "what points feed the sim" and how
  * much stellar mass to weight them by. Triggers: the two catalog-identity
- * writes (`setCatalogSources`, `setCatalogTier`), a packed-catalog install
- * (`setPackedCatalog`), and `sagaContextRegistered` for the very first load.
- * `takeLatest` cancels an in-flight fetch the instant a newer trigger lands —
- * the same guarantee Viewport's old `generation`/`loadedCatalogKey` pair gave
- * by hand, now free from the saga itself (a superseded fetch's `catalogLoaded`
- * never fires, because the generator that would `put` it is already dead).
- *
- * Priority for WHERE points come from (packedOverride ▸ `?probe` synthetic ▸
- * network) mirrors Viewport's old `buildOnce` verbatim — pulled out as
- * `resolveCatalogPointsPlan` so the decision is unit-testable without a
- * fetch, a DOM `location`, or a running saga.
+ * writes, a packed-catalog install, and `sagaContextRegistered` for the very
+ * first load. `takeLatest` cancels an in-flight fetch the instant a newer
+ * trigger lands for free — a superseded fetch's `catalogLoaded` never fires,
+ * because the generator that would `put` it is already dead. WHERE points
+ * come from is `resolveCatalogPointsPlan`, below, pulled out so the decision
+ * is unit-testable without a fetch, a DOM `location`, or a running saga.
  */
 import { takeLatest, put, select, call } from 'typed-redux-saga';
 
