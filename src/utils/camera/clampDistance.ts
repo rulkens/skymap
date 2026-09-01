@@ -4,10 +4,9 @@
  * The limits here are the single source of truth for how far the orbit camera
  * may sit from its target — wheel zoom, pinch zoom, focus tweens, and initial
  * framing all route through `clampDistance` so the envelope can never drift.
- * The floor takes the orbited body's physical radius and stands off from its
- * surface (a framed body's target is its CENTRE), so `pivotRadiusMpc` is a
- * REQUIRED `number | null` param — optional would let a call site silently
- * fall back to the global floor, the drift this module exists to prevent.
+ * The floor stands off from the orbited body's surface (a framed body's target
+ * is its CENTRE); callers precompute it via `PivotFraming.floorMpc` rather than
+ * passing a radius here, so this module has no pivot-radius branch to drift.
  */
 
 // ─── Distance limits ──────────────────────────────────────────────────────────
@@ -60,25 +59,18 @@ export const MAX_DISTANCE_MPC = 30000;
 
 /**
  * Clamp a candidate distance to the zoom envelope: ceiling `MAX_DISTANCE_MPC`,
- * floor `max(MIN_DISTANCE_MPC, pivotRadiusMpc · standoffRadii)`.
+ * floor `floorMpc`.
  *
- * @param d               Candidate `cam.distance`, Mpc.
- * @param pivotRadiusMpc  Physical radius of the orbit pivot, Mpc, or `null` when
- *   it has no surface to stand off from (empty space, a galaxy, a structure,
- *   the Milky Way — volumes the camera flies INTO, never a floor).
- * @param standoffRadii   Per-pivot override of `SURFACE_STANDOFF_RADII` — see
- *   `AnchorPointBody.standoffRadii` for why a body needs its own ratio.
+ * `floorMpc` is precomputed by the caller (`PivotFraming.floorMpc`, built in
+ * `pivotRadiusMpc.ts`'s `pivotFraming`) as `max(MIN_DISTANCE_MPC,
+ * (radiusMpc ?? 0) * standoffRadii)` — this function no longer knows about a
+ * pivot radius or a standoff ratio, only the resulting number.
+ *
+ * @param d         Candidate `cam.distance`, Mpc.
+ * @param floorMpc  Precomputed distance floor, Mpc.
  */
-export function clampDistance(
-  d: number,
-  pivotRadiusMpc: number | null,
-  standoffRadii: number = SURFACE_STANDOFF_RADII,
-): number {
-  const floor =
-    pivotRadiusMpc === null
-      ? MIN_DISTANCE_MPC
-      : Math.max(MIN_DISTANCE_MPC, pivotRadiusMpc * standoffRadii);
-  if (d < floor) return floor;
+export function clampDistance(d: number, floorMpc: number): number {
+  if (d < floorMpc) return floorMpc;
   if (d > MAX_DISTANCE_MPC) return MAX_DISTANCE_MPC;
   return d;
 }

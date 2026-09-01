@@ -36,10 +36,10 @@
  *   - `onGestureEnd` fires exactly when ALL contacts are lifted.
  *   - `onChange` fires after any orbit, pan, pinch, or in-gesture wheel change;
  *     a discrete wheel zoom (no gesture) fires `onZoom` instead.
- *   - `pivotRadiusMpc` reaches BOTH in-module clamp sites (pinch, and a wheel
+ *   - `pivotFraming` reaches BOTH in-module clamp sites (pinch, and a wheel
  *     during a held gesture), so a zoom-in on a framed body stops just off its
- *     surface instead of passing through the centre. `standoffRadii` reaches
- *     the same two sites for a body's own floor override (Sgr A*'s 2 r_s).
+ *     surface instead of passing through the centre — including a body's own
+ *     floor override (Sgr A*'s 2 r_s), carried in the same bundle.
  *
  * Vitest runs in `node` here (no jsdom), so — matching
  * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
@@ -51,10 +51,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { MIN_DISTANCE_MPC, SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
+import type { PivotFraming } from '../../../src/@types/camera/PivotFraming';
 
 /** Earth's mean radius (km → Mpc) — the pivot radius for the zoom-floor cases. */
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
+/** The bundle a resolved Earth focus row resolves to (`pivotFraming`, no override). */
+const earthPivot = (): PivotFraming => ({
+  radiusMpc: EARTH_RADIUS_MPC,
+  floorMpc: EARTH_RADIUS_MPC * SURFACE_STANDOFF_RADII,
+});
+/** Same, but with a per-body standoff override (Sgr A*'s Q10 case is the real one). */
+const earthPivotWithStandoff = (standoffRadii: number): PivotFraming => ({
+  radiusMpc: EARTH_RADIUS_MPC,
+  floorMpc: Math.max(MIN_DISTANCE_MPC, EARTH_RADIUS_MPC * standoffRadii),
+});
 
 type Listener = (e: unknown) => void;
 
@@ -419,7 +431,7 @@ describe('attachOrbitControls — the zoom floor stops at a focused body’s sur
     const { canvas, rec } = makeCanvas();
 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      pivotFraming: earthPivot,
     });
 
     rec.fire('pointerdown', {
@@ -455,7 +467,7 @@ describe('attachOrbitControls — the zoom floor stops at a focused body’s sur
     const { canvas, rec } = makeCanvas();
 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      pivotFraming: earthPivot,
     });
 
     rec.fire('pointerdown', {
@@ -475,9 +487,9 @@ describe('attachOrbitControls — the zoom floor stops at a focused body’s sur
 
 describe('attachOrbitControls — the standoff override reaches both zoom sites', () => {
   // Same two in-module sites as the surface-floor tests above, but exercising
-  // the `standoffRadii` getter (Sgr A*'s Q10 2 r_s floor is the real case):
-  // without it reaching pinch + wheel-during-gesture, a body with an override
-  // would still stop at the Earth-tuned global ratio instead of its own.
+  // `pivotFraming`'s per-body floor override (Sgr A*'s Q10 2 r_s is the real
+  // case): without it reaching pinch + wheel-during-gesture, a body with an
+  // override would still stop at the Earth-tuned global ratio instead of its own.
   const STANDOFF = 3.0; // well above SURFACE_STANDOFF_RADII (~1.0000024)
 
   it('pinching in floors at the override, not the global ratio', () => {
@@ -486,8 +498,7 @@ describe('attachOrbitControls — the standoff override reaches both zoom sites'
     const { canvas, rec } = makeCanvas();
 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
-      standoffRadii: () => STANDOFF,
+      pivotFraming: () => earthPivotWithStandoff(STANDOFF),
     });
 
     rec.fire('pointerdown', {
@@ -519,8 +530,7 @@ describe('attachOrbitControls — the standoff override reaches both zoom sites'
     const { canvas, rec } = makeCanvas();
 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
-      standoffRadii: () => STANDOFF,
+      pivotFraming: () => earthPivotWithStandoff(STANDOFF),
     });
 
     rec.fire('pointerdown', {
@@ -537,13 +547,13 @@ describe('attachOrbitControls — the standoff override reaches both zoom sites'
     expect(radii).toBeLessThan(STANDOFF * 1.05);
   });
 
-  it('with no standoffRadii getter, the pinch floor is the global ratio unchanged', () => {
+  it('with no standoff override in the bundle, the pinch floor is the global ratio unchanged', () => {
     const cam = makeCamera();
     cam.distance = EARTH_RADIUS_MPC * 4;
     const { canvas, rec } = makeCanvas();
 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      pivotFraming: earthPivot,
     });
 
     rec.fire('pointerdown', {
@@ -585,14 +595,14 @@ describe('attachOrbitControls — orbit-drag rate damps near a focused body’s 
     nearCam.distance = EARTH_RADIUS_MPC * 1.02; // ~127 km altitude, near-surface regime
     const { canvas: nearCanvas, rec: nearRec } = makeCanvas();
     attachOrbitControls(nearCanvas as unknown as HTMLCanvasElement, nearCam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      pivotFraming: earthPivot,
     });
 
     const farCam = makeCamera();
     farCam.distance = EARTH_RADIUS_MPC * 1000; // deep orbital view of the same body
     const { canvas: farCanvas, rec: farRec } = makeCanvas();
     attachOrbitControls(farCanvas as unknown as HTMLCanvasElement, farCam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      pivotFraming: earthPivot,
     });
 
     // Identical drag (+50 px) on both, driven through the same window — each
@@ -624,7 +634,7 @@ describe('attachOrbitControls — orbit-drag rate damps near a focused body’s 
   });
 
   it('with no pivot radius, a drag yaws by exactly today’s flat dx * 0.005', () => {
-    // No pivotRadiusMpc option at all ⇒ pivotRadius() resolves to null ⇒
+    // No pivotFraming option at all ⇒ pivot() resolves to NO_PIVOT ⇒
     // orbitRadPerPixel returns the flat cap unchanged — the deep-space /
     // unfocused path this change must not touch.
     const cam = makeCamera();

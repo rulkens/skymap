@@ -103,7 +103,10 @@ import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
+import {
+  MIN_DISTANCE_MPC,
+  SURFACE_STANDOFF_RADII,
+} from '../../../../src/utils/camera/clampDistance';
 import type { OrbitControlsOptions } from '../../../../src/@types/camera/OrbitControlsOptions';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -265,7 +268,7 @@ describe('wireInput', () => {
     expect(selectFocusRef(root)).toEqual(jupiter);
   });
 
-  it('hands the orbit controls a live read of the focused body’s radius', async () => {
+  it('hands the orbit controls a live read of the focused body’s radius + zoom floor', async () => {
     // The zoom floor lives in clampDistance, but the pinch / wheel-during-gesture
     // sites inside orbitControls can only apply it if this phase supplies the
     // getter. Drop the wiring and the camera silently scrolls through the planet
@@ -279,15 +282,16 @@ describe('wireInput', () => {
     await wireInput(state, deps);
 
     const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
-    const read = options?.pivotRadiusMpc;
+    const read = options?.pivotFraming;
     expect(read).toBeTypeOf('function');
 
     // Nothing resolved yet (the row cache is saga-filled and no saga runs here):
     // no surface to stand off from, so the absolute floor applies.
-    expect(read!()).toBeNull();
+    expect(read!()).toEqual({ radiusMpc: null, floorMpc: MIN_DISTANCE_MPC });
 
-    // With Earth's row resolved, the getter reports its radius in Mpc — read
-    // through on every call, so a focus change needs no re-attach.
+    // With Earth's row resolved, the getter reports its radius (Mpc) and the
+    // global-ratio floor — read through on every call, so a focus change needs
+    // no re-attach.
     deps.cb.store.dispatch(
       setSelectionRow({
         slot: 'focus',
@@ -300,26 +304,14 @@ describe('wireInput', () => {
         },
       }),
     );
-    expect(read!()).toBeCloseTo(6371 * SCALE_UNITS.KM_TO_MPC, 30);
-  });
+    const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
+    expect(read!().radiusMpc).toBeCloseTo(earthRadiusMpc, 30);
+    expect(read!().floorMpc).toBeCloseTo(earthRadiusMpc * SURFACE_STANDOFF_RADII, 30);
 
-  it('hands the orbit controls a live read of the focused body’s standoff override', async () => {
-    // Same wiring gap, one field over: without this getter, Sgr A*'s Q10 floor
-    // (`standoffRadii: 2.0`) never reaches the pinch / wheel-during-gesture
-    // sites and the camera stops at the Earth-tuned global ratio instead.
-    const state = makeState();
-    const deps = makeDeps();
-    attachOrbitControlsSpy.mockClear();
-
-    await wireInput(state, deps);
-
-    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
-    const read = options?.standoffRadii;
-    expect(read).toBeTypeOf('function');
-
-    // Nothing resolved yet: no per-body override, so the global ratio applies.
-    expect(read!()).toBe(SURFACE_STANDOFF_RADII);
-
+    // Swapping to a body with its own override (Sgr A*'s Q10 floor of 2 r_s)
+    // changes the floor to ITS multiple, not the Earth-tuned global ratio —
+    // without this getter reaching `pivotFraming`, the camera would stop at
+    // the wrong surface.
     deps.cb.store.dispatch(
       setSelectionRow({
         slot: 'focus',
@@ -333,7 +325,8 @@ describe('wireInput', () => {
         },
       }),
     );
-    expect(read!()).toBe(2.0);
+    const sgrARadiusMpc = 1.269e10 * SCALE_UNITS.M_TO_MPC;
+    expect(read!()).toEqual({ radiusMpc: sgrARadiusMpc, floorMpc: sgrARadiusMpc * 2.0 });
   });
 
   it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {

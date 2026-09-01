@@ -19,11 +19,19 @@
 import { describe, it, expect } from 'vitest';
 
 import { zoomedDistance } from '../../../src/utils/camera/zoomedDistance';
-import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
+import { MIN_DISTANCE_MPC, SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import type { PivotFraming } from '../../../src/@types/camera/PivotFraming';
 
 /** Earth's mean radius (km → Mpc). */
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
+/** The bundle a resolved Earth focus row resolves to (`pivotFraming`, no override). */
+const EARTH_PIVOT: PivotFraming = {
+  radiusMpc: EARTH_RADIUS_MPC,
+  floorMpc: EARTH_RADIUS_MPC * SURFACE_STANDOFF_RADII,
+};
+/** No focused pivot — the absolute floor, no taper anchor. */
+const NO_PIVOT: PivotFraming = { radiusMpc: null, floorMpc: MIN_DISTANCE_MPC };
 
 describe('zoomedDistance', () => {
   it('tapers into the standoff floor: zoom-in steps shrink and never overshoot it', () => {
@@ -37,7 +45,7 @@ describe('zoomedDistance', () => {
     const stepSizes: number[] = [];
 
     for (let i = 0; i < 8; i++) {
-      const next = zoomedDistance(distance, factor, EARTH_RADIUS_MPC);
+      const next = zoomedDistance(distance, factor, EARTH_PIVOT);
       // Never overshoots below the standoff floor.
       expect(next).toBeGreaterThanOrEqual(floor - 1e-30);
       // Each notch is still a zoom-IN (distance strictly decreases) until it
@@ -58,7 +66,7 @@ describe('zoomedDistance', () => {
     // camera settles AT the floor rather than ever crossing it — the
     // asymptotic approach the taper is meant to produce.
     for (let i = 0; i < 100; i++) {
-      distance = zoomedDistance(distance, factor, EARTH_RADIUS_MPC);
+      distance = zoomedDistance(distance, factor, EARTH_PIVOT);
     }
     expect(distance).toBeCloseTo(floor, 9);
   });
@@ -71,7 +79,7 @@ describe('zoomedDistance', () => {
     const factor = 0.87;
     const plainModel = distance * factor;
 
-    const result = zoomedDistance(distance, factor, EARTH_RADIUS_MPC);
+    const result = zoomedDistance(distance, factor, EARTH_PIVOT);
 
     expect(Math.abs(result - plainModel) / plainModel).toBeLessThan(1e-5);
   });
@@ -80,8 +88,8 @@ describe('zoomedDistance', () => {
     // null means "no surface to taper against" — deep space, a galaxy, a
     // structure. The taper must not engage; distance scales exactly as it did
     // before this change existed.
-    expect(zoomedDistance(100, 2, null)).toBe(200);
-    expect(zoomedDistance(100, 0.5, null)).toBe(50);
+    expect(zoomedDistance(100, 2, NO_PIVOT)).toBe(200);
+    expect(zoomedDistance(100, 0.5, NO_PIVOT)).toBe(50);
   });
 
   it('falls back to the proportional model (still respecting the floor) if already at or below the surface', () => {
@@ -90,7 +98,7 @@ describe('zoomedDistance', () => {
     // fallback should still land the camera on the standoff floor rather than
     // diverging or returning something below the pivot's surface.
     const distance = EARTH_RADIUS_MPC * 0.5; // already inside the body
-    const result = zoomedDistance(distance, 0.9, EARTH_RADIUS_MPC);
+    const result = zoomedDistance(distance, 0.9, EARTH_PIVOT);
     expect(result).toBeCloseTo(EARTH_RADIUS_MPC * SURFACE_STANDOFF_RADII, 12);
   });
 });
