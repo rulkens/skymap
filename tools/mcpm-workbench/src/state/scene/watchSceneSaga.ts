@@ -47,7 +47,7 @@ import {
 } from '../grid/gridSlice';
 import { resetHistogram } from '../histogram/histogramSlice';
 import { setAgentCount, setInitMode, setSeed, resetStepCount } from '../sim/simSlice';
-import { deviceLost } from '../view/viewSlice';
+import { deviceLost, setPreviewPacked } from '../view/viewSlice';
 import { acceptBuiltHarness } from './acceptBuiltHarness';
 import { REBUILD_DEBOUNCE_MS } from './REBUILD_DEBOUNCE_MS';
 
@@ -125,6 +125,12 @@ function* buildScene() {
   const cancellation = { aborted: false };
   try {
     disposeScene(resources);
+    // disposeScene just destroyed the packed-preview buffer; without this the toggle
+    // stays ON over a live-trace fallback until the next incrementStep staleness pass
+    // — which never comes while the sim is paused.
+    if (yield* select((state: RootState) => state.view.raymarch.previewPacked)) {
+      yield* put(setPreviewPacked(false));
+    }
     // The epoch this build owns: a NEWER build's own `disposeScene` (its first line,
     // same as this one) bumps `resources.epoch` again — the second, independent
     // guard `acceptBuiltHarness` uses for a dispose that happens WITHOUT saga
