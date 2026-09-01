@@ -15,6 +15,7 @@ import type { CatalogPoints } from '../../@types/CatalogPoints';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmHarness } from '../../@types/McpmHarness';
 import type { Store } from '../../@types/Store';
+import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import { initGpu, resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { downloadStem } from '../export/downloadStem';
@@ -180,6 +181,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // turned on always differs from null, so enabling it always resets, per the
     // accumulation contract (task-V2A-report.md).
     let lastVolpathKey: string | null = null;
+    // The palette each attached pass was BUILT with (the LUT bakes into the pass's
+    // bind group at construction) — frame() re-attaches a pass when its slice value
+    // moves. Set alongside the attach calls in buildFromPoints.
+    let attachedRaymarchPalette: ScalarFieldPaletteId | null = null;
+    let attachedVolpathPalette: ScalarFieldPaletteId | null = null;
     // Task FLE: the interaction-priority boost trigger — was camera-only (a per-frame
     // `cam` JSON comparison), now ANY UI store write (see the subscriber below), fanned
     // out to the path tracer AND raymarch divisors and the sim step cadence, all through
@@ -446,6 +452,34 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
         graph.resize(canvas.width, canvas.height);
 
+        // Palette moves re-BUILD their pass (LUT bakes into the bind group at
+        // construction; see ViewSlice.d.ts) — cheap enough to do mid-loop, and the
+        // fresh volpath pass restarts accumulation exactly as the key change below
+        // demands anyway. The T18 preview pass also baked the old palette: drop it
+        // and un-toggle, the same recovery the staleness path below uses.
+        if (s.view.raymarch.paletteId !== attachedRaymarchPalette) {
+          attachedRaymarchPalette = s.view.raymarch.paletteId;
+          graph.attachTrace({
+            traceBuffer: h.traceBuffer,
+            box: h.box,
+            element: h.element,
+            paletteId: attachedRaymarchPalette,
+          });
+          if (graph.hasPreviewTrace()) {
+            disposePreview();
+            store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
+          }
+        }
+        if (s.view.pathTracer.paletteId !== attachedVolpathPalette) {
+          attachedVolpathPalette = s.view.pathTracer.paletteId;
+          graph.attachVolpath({
+            traceBuffer: h.traceBuffer,
+            box: h.box,
+            element: h.element,
+            paletteId: attachedVolpathPalette,
+          });
+        }
+
         const encoder = h.gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
         const cam = cameraViewFor(s, [canvas.width, canvas.height]);
         // Independent layers over one clear, back to front. The clear is unconditional:
@@ -648,14 +682,16 @@ function Viewport({ store }: ViewportProps): ReactNode {
       const graph = createRenderGraph(h.gpu.device, h.gpu.format, makeShader);
       // The trace buffer dies with its harness, so both passes reading it are
       // re-attached on every rebuild — a graph kept across one would march freed memory.
+      attachedRaymarchPalette = s.view.raymarch.paletteId;
+      attachedVolpathPalette = s.view.pathTracer.paletteId;
       const traceSource = {
         traceBuffer: h.traceBuffer,
         box,
         element: h.element,
-        paletteId: s.view.raymarch.paletteId,
+        paletteId: attachedRaymarchPalette,
       };
       graph.attachTrace(traceSource);
-      graph.attachVolpath(traceSource);
+      graph.attachVolpath({ ...traceSource, paletteId: attachedVolpathPalette });
       graph.attachAgents(h.agents, h.overlayAgents, box);
       renderGraph = graph;
       // A fresh accumulator already clears on its own first draw (VolpathPass's

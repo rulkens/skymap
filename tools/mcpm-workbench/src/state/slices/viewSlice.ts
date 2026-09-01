@@ -43,6 +43,7 @@ export const defaultViewSlice: ViewSlice = {
   // ~1-voxel mean steps that cross the whole box. sampleWeight also feeds the
   // emission palette (traceToRho) — 0.01 un-does the 100x darkening of 1e-4.
   pathTracer: {
+    paletteId: 'inferno',
     sigmaT: 1.0,
     albedo: 0.9,
     sigmaE: 1.0,
@@ -115,7 +116,7 @@ export function setOpticalThickness(prev: ViewSlice, opticalThickness: number): 
   return { ...prev, raymarch: { ...prev.raymarch, opticalThickness } };
 }
 
-export function setPaletteId(prev: ViewSlice, paletteId: ScalarFieldPaletteId): ViewSlice {
+export function setRaymarchPaletteId(prev: ViewSlice, paletteId: ScalarFieldPaletteId): ViewSlice {
   return { ...prev, raymarch: { ...prev.raymarch, paletteId } };
 }
 
@@ -149,8 +150,15 @@ export function setPreviewPacked(prev: ViewSlice, previewPacked: boolean): ViewS
 // raymarch layer's setDivisor — excluded here the same way 'compressive' is.
 type PathTracerNumericKey = Exclude<
   keyof ViewSlice['pathTracer'],
-  'compressive' | 'divisor' | 'sampleCap'
+  'compressive' | 'divisor' | 'sampleCap' | 'paletteId'
 >;
+
+export function setPathTracerPaletteId(
+  prev: ViewSlice,
+  paletteId: ScalarFieldPaletteId,
+): ViewSlice {
+  return { ...prev, pathTracer: { ...prev.pathTracer, paletteId } };
+}
 
 export function setPathTracerParam(
   prev: ViewSlice,

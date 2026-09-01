@@ -85,6 +85,13 @@ export type ViewSlice = {
    * transfer, but are independently tunable here.
    */
   readonly pathTracer: {
+    /**
+     * Emission palette — its own copy, not `raymarch.paletteId`, same reasoning
+     * as the trim/sampleWeight pair above. Unlike its siblings this is a pass
+     * CONSTRUCTION input (the LUT is baked into the pass's bind group), so
+     * Viewport re-attaches the pass when it moves rather than writing a uniform.
+     */
+    readonly paletteId: ScalarFieldPaletteId;
     readonly sigmaT: number;
     readonly albedo: number;
     readonly sigmaE: number;

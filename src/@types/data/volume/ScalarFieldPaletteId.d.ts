@@ -22,4 +22,25 @@ export type ScalarFieldPaletteId =
    * are equally interesting and the cosmic mean should fade out.
    * Inspired by matplotlib's `coolwarm` / `bwr` colour scheme.
    */
-  | 'coolwarm';
+  | 'coolwarm'
+  /**
+   * Polyphorm's shipped gradient set (vendor `bin/data/palette_*.tga`,
+   * sampled into anchors — see POLYPHORM_RAMPS in scalarFieldPalettes.ts).
+   * `magma-poly` is their `palette_magma.tga`, renamed to keep matplotlib's
+   * `magma` id: the two diverge at the top end (pure yellow vs cream).
+   */
+  | 'blue'
+  | 'cliff3'
+  | 'coldhot'
+  | 'eagle'
+  | 'eagle2'
+  | 'gogh-blue'
+  | 'gogh-green'
+  | 'hot'
+  | 'magma-poly'
+  | 'magneto2'
+  | 'sunset2'
+  | 'sunset3'
+  | 'tropico'
+  | 'vaneyck-green'
+  | 'vaneyck-red';

@@ -52,14 +52,17 @@ import {
   setOpticalThickness,
   setPathTracerCompressive,
   setPathTracerDivisor,
+  setPathTracerPaletteId,
   setPathTracerParam,
   setPathTracerSampleCap,
   setPreviewPacked,
+  setRaymarchPaletteId,
   setSampleWeight,
   setStepVoxels,
   setTrimDensity,
 } from '../state/slices/viewSlice';
 import { useAppStore } from './storeContext';
+import PaletteRow from './PaletteRow';
 import Toggle from './Toggle';
 import ToggleRow from './ToggleRow';
 import GridBoxPanel from './GridBoxPanel';
@@ -208,7 +211,7 @@ const RAYMARCH_SETTERS: {
 // mirroring the raymarch layer's own), not the generic log-mapped physics list.
 type PathTracerSliderKey = Exclude<
   keyof ViewSlice['pathTracer'],
-  'compressive' | 'divisor' | 'sampleCap'
+  'compressive' | 'divisor' | 'sampleCap' | 'paletteId'
 >;
 
 type PathTracerSliderSpec = {
@@ -555,6 +558,12 @@ function ControlsPanel(): ReactNode {
             info="Marches the packed export cube (real packLogTraceVoxels) instead of the live trace — a structure check, not a brightness match. Goes stale and reverts on the next sim step."
             onChange={(on) => store.setState((s) => ({ ...s, view: setPreviewPacked(s.view, on) }))}
           />
+          <PaletteRow
+            value={view.raymarch.paletteId}
+            onChange={(id) =>
+              store.setState((s) => ({ ...s, view: setRaymarchPaletteId(s.view, id) }))
+            }
+          />
           <SliderGroup title="Trace">
             {RAYMARCH_SLIDERS.map((spec) => (
               <ParamSlider
@@ -663,6 +672,12 @@ function ControlsPanel(): ReactNode {
           {/* Off by default: worst case is bounces×512 tracking steps per pixel,
               far heavier than the raymarch — this is not a layer to leave on
               while exploring. */}
+          <PaletteRow
+            value={view.pathTracer.paletteId}
+            onChange={(id) =>
+              store.setState((s) => ({ ...s, view: setPathTracerPaletteId(s.view, id) }))
+            }
+          />
           <SliderGroup title="Trace">
             {PATHTRACER_SLIDERS.map((spec) => (
               <ParamSlider

@@ -1,0 +1,17 @@
+/* Same composed row vocabulary as ToggleRow, minus the pill/ⓘ affordances. */
+
+.root {
+  composes: root from '../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+}
+
+.main {
+  composes: main from '../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.labelText {
+  composes: label from '../../../../src/components/common/Slider/Slider.module.css';
+}
