@@ -2,14 +2,14 @@
 
 One source, three domains, and they disagree about what it is.
 
-| Layer        | Where `famousStar` lives                   | What it calls it |
-| ------------ | ------------------------------------------ | ---------------- |
-| registry     | `FAMOUS_STAR_ENTRY`, `type: 'starCatalog'` | a star catalog   |
-| seed data    | `src/data/bodies/famousStars.generated.ts` | a body           |
-| engine store | `BodyStore.famousStarsMeta`                | a body           |
-| settings     | `starCatalogs.items.famousStar`            | a star catalog   |
+| Layer        | Where `famousStar` lives                                 | What it calls it |
+| ------------ | -------------------------------------------------------- | ---------------- |
+| registry     | `FAMOUS_STAR_ENTRY`, `type: 'starCatalog'`               | a star catalog   |
+| seed data    | `src/data/bodies/famousStars.generated.ts`               | a body           |
+| engine store | `EngineState.meta.famousStars` (`selectFamousStarsMeta`) | a body           |
+| settings     | `starCatalogs.items.famousStar`                          | a star catalog   |
 
-`famousStarsMeta` sits on `BodyStore` because **there is no star store** —
+`famousStarsMeta` sits on `EngineState.meta` because **there is no star store** —
 `BodyStore`, `GalaxyStore`, `StructureStore`, `PickStructureStore` are the whole
 set. That placement was not a mistake given the options; it is the symptom.
 

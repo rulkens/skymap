@@ -17,9 +17,12 @@ Two frame-assembly facts are asserted but never checked:
   value actually matches the `GPUBlendState` baked into the pipeline its
   `draw()` calls.
 - **Render-target formats are hand-matched at construction, unenforced**
-  (`initGpu.ts:426-428`) — a renderer's expected target format and the
-  `RenderTargetSpec` it's wired to are both authored by hand, with nothing
-  checking they agree.
+  (`gpuHandleRegistry.ts:317-321`, moved from `initGpu.ts` since this was
+  filed) — a renderer's expected target format and the `RenderTargetSpec`
+  it's wired to are both authored by hand, with nothing checking they agree.
+  Renderers now share `HDR_TARGET_FORMAT`/`FOREGROUND_DEPTH_FORMAT`
+  constants (`data/renderTargetFormats.ts`) rather than repeating literals,
+  which narrows but doesn't close the gap this item is about.
 
 The adjacent half of this same loose-spot row — `layer.target ∈ specs` and
 the unique-`ContentLayer.name` check — **is already closed**: covered by

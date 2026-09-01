@@ -26,14 +26,12 @@ load-bearing; each is an independent cleanup.
    table (or a parity test in the style of `generationShaderParity`) would
    catch a reorder in any one home.
 
-3. **`cameraBillboardBasis` mirrors `computeViewProj`'s roll math** — a
-   documented verbatim copy ("must be checked against the other"), i.e. a
-   must-remember-to. The original perf rationale doesn't hold (both run
-   once per frame); extract the shared Rodrigues-roll helper or fold the
-   basis derivation into the camera module.
-
-4. **Inject the pick camera bind group into `pickMilkyWay`** — the pick
+3. **Inject the pick camera bind group into `pickMilkyWay`** — the pick
    pass currently re-binds `@group(0)` at the call site before the MW draw
    (regression-tested), because ring/disk picks leave their own uniforms
    bound. Passing the bind group into `pickMilkyWay(pass, cameraBg)` would
    make the dependency explicit instead of ordering-implicit.
+
+(A fourth knot — `cameraBillboardBasis` mirroring `computeViewProj`'s roll
+math — was resolved separately: both now call the shared `imagePlaneBasis`
+helper, so it drops off this list.)

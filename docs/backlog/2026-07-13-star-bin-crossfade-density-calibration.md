@@ -1,14 +1,15 @@
 # Star-bin ↔ MW-cloud crossfade density calibration
 
-**Status:** deferred — polish follow-up to the (future) Gaia star bin; only relevant once that bin ships with the v1 hand-tuned crossfade band.
+**Status:** manual — polish follow-up to the shipped Gaia star bin's v1 hand-tuned crossfade band.
 
 ## Context
 
-The planned Gaia star bin (regime "c" — the real-data middle of the continuous
-zoom, decided in the 2026-07-13 star-bin grill session) hands off to the
-procedural Milky Way point cloud via a hand-tuned camera-distance crossfade
-band (star bin fades out, procedural cloud fades in, over ~2→5 kpc from the
-Sun — same fade-band mechanism as the MW cloud sprite, `e04ec827`).
+The Gaia star bin (regime "c" — the real-data middle of the continuous
+zoom, decided in the 2026-07-13 star-bin grill session; live via the
+`crossfadePc` band in `starCatalogLayer.ts`) hands off to the procedural
+Milky Way point cloud via a hand-tuned camera-distance crossfade band (star
+bin fades out, procedural cloud fades in, over ~2→5 kpc from the Sun — same
+fade-band mechanism as the MW cloud sprite, `e04ec827`).
 
 V1 accepts a possible visible seam at the band: real Gaia density, luminosity
 function, and color mix will not exactly match the procedural cloud's inner
