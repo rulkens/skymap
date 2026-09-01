@@ -68,7 +68,7 @@ export type IsmMapPlaceDust = {
    * MAX_PARTICLE_COUNT floats, one per particle slot, zeroed on a
    * survival-floor miss (mirrors `comps`' amplitude-as-liveness). Exposed so
    * `ringReduce.wesl`'s csSurvivorSum kernel (dispatched separately, off
-   * `createGalaxyModel.ts`'s own `ringReduce` instance) can bind the SAME
+   * `createGalaxyFieldRenderer.ts`'s own `ringReduce` instance) can bind the SAME
    * buffer this dispatch just filled — producer-owns-the-buffer, same
    * ownership shape `ismMapGenerator.ringMeansBuffer` already establishes
    * for `placeDust.wesl`'s own CONSUMED input.
@@ -129,7 +129,7 @@ export function createIsmMapPlaceDust(
   // particle SLOT (not byte-packed like FieldComponentRec). COPY_SRC beyond
   // the production STORAGE need, same "debug readback rides the production
   // buffer's own COPY_SRC flag" precedent `fieldComps` establishes
-  // (createGalaxyModel.ts).
+  // (createGalaxyFieldRenderer.ts).
   const massBuffer = device.createBuffer({
     label: 'galaxy:placeDustMass',
     size: MAX_PARTICLE_COUNT * 4,

@@ -39,7 +39,7 @@ export type IsmMapRingReduce = {
    * dispatch filled `input.massBuffer` for THIS rebuild, in the same
    * encoder/submit — cross-pass ordering within one submit is what
    * guarantees this reads fresh data with no readback of its own
-   * (`createGalaxyModel.ts`'s `dustPlacementRebuild` is the production
+   * (`createGalaxyFieldRenderer.ts`'s `dustPlacementRebuild` is the production
    * caller). Writes `dustRenormBuffer[0]`.
    */
   dispatchSurvivorSum(enc: GPUCommandEncoder, input: DispatchSurvivorSumInput): void;

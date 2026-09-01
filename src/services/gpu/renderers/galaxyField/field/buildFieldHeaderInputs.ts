@@ -21,7 +21,14 @@ import type { IsmMapChannelWeights } from '../../../../../@types/galaxy/IsmMapCh
 import type { IsmMapSeedingLanes } from '../../../../../@types/galaxy/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../../../../../@types/galaxy/YoungStarsLanes';
 
-/** The model-derived lanes no `render`/`frame` value can supply — one snapshot per frame off `model`'s own getters. */
+import { mapHiiTiers } from '../../../../../data/hiiTiers';
+
+/**
+ * The lanes no `render`/`frame` value can supply — one snapshot per frame.
+ * Six of eight are the module's own state (`fieldCounts` through
+ * `spurCloudReservation`); `ismMapSeeding`/`youngStars` are the two the host
+ * still owns, derived from the CPU-side ISM-map readback.
+ */
 export type FieldHeaderModelLanes = {
   readonly fieldCounts: FieldSliceCounts;
   readonly dustHeaderLanes: DustHeaderLanes;
@@ -29,12 +36,12 @@ export type FieldHeaderModelLanes = {
   readonly hiiCount: number;
   readonly hiiTexture: HiiTextureLanes;
   readonly youngStars: YoungStarsLanes;
-  /** Task 15's own consume-time renorm gate — `model.armCloudReservation`/`spurCloudReservation`, `null` when nothing reserved this rebuild. */
+  /** The consume-time renorm gate — `armCloudReservation`/`spurCloudReservation`, `null` when nothing reserved this rebuild. */
   readonly armCloudReservation: { readonly offset: number; readonly count: number } | null;
   readonly spurCloudReservation: { readonly offset: number; readonly count: number } | null;
 };
 
-/** Each pass's own target resolution — `targets.reducedSize(...)`, resolved by the caller (this module never touches `targets`). */
+/** Each pass's own target resolution, derived from the target texture's own `.width`/`.height` at `encode` time (this module never touches the texture itself). */
 export type FieldHeaderTargetSizes = {
   readonly field: Vec2;
   readonly dustMapHeightPx: number;
@@ -190,12 +197,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
   // shader's footprint gates and dustMapTex UV reconstruction with — reusing
   // `hii.targetSizePx` here would silently hand every tier's splat the
   // extras target's resolution instead of its own.
-  const tiers = Object.fromEntries(
-    (Object.keys(targetSizes.tiers) as HiiTier[]).map((kind) => [
-      kind,
-      { ...hii, targetSizePx: targetSizes.tiers[kind] },
-    ]),
-  ) as Record<HiiTier, FieldHeaderInput>;
+  const tiers = mapHiiTiers((kind) => ({ ...hii, targetSizePx: targetSizes.tiers[kind] }));
 
   return { field, hii, tiers };
 }

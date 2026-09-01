@@ -238,16 +238,14 @@ export async function createGalaxyEngine(
   // ---- size-dependent targets: HDR scene + star aggregate + bloom mips + LDR ----
   // Allocates nothing yet — the first `rebuildAll` is the unconditional one
   // below the ResizeObserver, once the canvas has adopted its backing size.
-  // The callback fires from INSIDE the dust allocation, so `dustMapTex` is the
-  // only row `fieldTargets()` can promise is fresh here — the hii/tier rows do
-  // not exist yet on the very first `rebuildAll`. `fieldTargets()` reads only
-  // `dustMapTex` off this snapshot, which makes `createGalaxyRenderTargets`'
-  // internal allocation ORDER load-bearing for this caller.
+  // The callback fires from INSIDE the dust allocation, before `setDivisors`
+  // has reached the hii/tier rows — `targets.dustMapTex` is the only row this
+  // caller can read here, which is what `onDustMapReallocated` now types.
   const targets = createGalaxyRenderTargets(
     device,
     canvas,
     { hdr: HDR, swap: format, dustMap: DUST_MAP_FORMAT },
-    () => field.onTargetsReallocated(fieldTargets()),
+    () => field.onDustMapReallocated(targets.dustMapTex),
   );
 
   /**

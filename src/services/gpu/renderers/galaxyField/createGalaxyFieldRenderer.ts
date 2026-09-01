@@ -171,7 +171,7 @@ export type GalaxyFieldMixtureInput = {
  * `GPUTextureView`: every field/HII/tier header packs `targetSizePx` off the
  * target's own pixel size, and a view exposes no dimensions. `dustMapTex` is
  * SAMPLED as well as written, so a reallocation must reach
- * `onTargetsReallocated` — a fresh view at encode time is not enough.
+ * `onDustMapReallocated` — a fresh view at encode time is not enough.
  */
 export type GalaxyFieldRenderTargets = {
   readonly fieldTex: GPUTexture;
@@ -276,13 +276,13 @@ export type GalaxyFieldRenderer = {
   /** The three present overlays, into the host's already-open scene pass. */
   encodeOverlays(pass: GPURenderPassEncoder, overlays: GalaxyFieldOverlays): void;
   /**
-   * The host reallocated its targets. Rebuilds every `layout: 'auto'` bind
-   * group holding a view of the old `dustMapTex` and resets the stale-map
-   * latch — must be called from the allocation itself, never hoisted to a
-   * caller that may skip it (the latch reset asserts the texture is zeroed,
-   * true only of one just created).
+   * The host reallocated `dustMapTex`. Rebuilds every `layout: 'auto'` bind
+   * group holding a view of the old texture and resets the stale-map latch —
+   * must be called from the allocation itself, never hoisted to a caller
+   * that may skip it (the latch reset asserts the texture is zeroed, true
+   * only of one just created).
    */
-  onTargetsReallocated(targets: GalaxyFieldRenderTargets): void;
+  onDustMapReallocated(dustMapTex: GPUTexture): void;
 
   readonly fieldCounts: FieldSliceCounts;
   /** Cached by the dust rebuild — the header reads these every frame, they change only when dust does. */
@@ -446,12 +446,10 @@ export function createGalaxyFieldRenderer(
   const placeDigVeil = createIsmMapPlaceDigVeil(device, { makeShader });
 
   // `getDustMapTex` is a thunk because `createFieldPipelines` is built before
-  // the host has allocated anything. Its `dustMapTex` is the ONLY row read off
-  // this snapshot: `onTargetsReallocated` fires from inside the host's own
-  // dust allocation, so the other six rows can be a reallocation behind — or,
-  // on the very first one, not allocated at all. Every other reader takes the
-  // targets `encode` is handed for that frame.
-  let targets: GalaxyFieldRenderTargets | null = null;
+  // the host has allocated anything; `onDustMapReallocated` supplies the
+  // first (and every later) texture. Every other reader takes the targets
+  // `encode` is handed for that frame.
+  let dustMapTex: GPUTexture | null = null;
 
   // ---- field/HII splat pipelines + their bind-group apparatus ----
   // Must come after everything above: it takes all three UBOs, the generator,
@@ -475,7 +473,7 @@ export function createGalaxyFieldRenderer(
     dustRenormBuffer: ringReduce.dustRenormBuffer,
     armRenormBuffer: ringReduce.armCloudRenormBuffer,
     spurRenormBuffer: ringReduce.spurCloudRenormBuffer,
-    getDustMapTex: () => targets!.dustMapTex,
+    getDustMapTex: () => dustMapTex!,
   });
 
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
@@ -1514,8 +1512,8 @@ export function createGalaxyFieldRenderer(
     encode,
     encodeOverlays,
 
-    onTargetsReallocated(next: GalaxyFieldRenderTargets): void {
-      targets = next;
+    onDustMapReallocated(next: GPUTexture): void {
+      dustMapTex = next;
       fieldPipelines.rebuildDustMapDependents(fieldComps.buffer, hiiComps.buffer);
     },
 

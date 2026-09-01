@@ -37,7 +37,7 @@ export type PlaceDigVeilDispatchInput = {
   readonly cdfRMin: number;
   readonly cdfRMax: number;
   readonly warp: PlaceDigVeilWarp;
-  /** The DIG-dedicated arm-biased CDF scan's output — see `createGalaxyModel.ts`'s `digCdfScan`. Own instance/buffer from dust's, never shared (two weight tables writing the same buffer would race across the two tiers' own deferred dispatches). */
+  /** The DIG-dedicated arm-biased CDF scan's output — see `createGalaxyFieldRenderer.ts`'s `digCdfScan`. Own instance/buffer from dust's, never shared (two weight tables writing the same buffer would race across the two tiers' own deferred dispatches). */
   readonly prefixBuffer: GPUBuffer;
   /** The LIVE `hiiComps` buffer — re-read after every regrow, never cached across calls. */
   readonly hiiCompsBuffer: GPUBuffer;

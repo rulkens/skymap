@@ -29,7 +29,7 @@ checked against the real import graph:
    ("promotes to `src/@types/galaxy/` … the dependency rule forbids the shared
    surface referencing anything under `tools/`") generalizes verbatim to the
    other 15. Commit 1 promotes all 16. See Task 4's manifest group B.
-2. **Three tool-local *values* are imported by the moving files**, none of them
+2. **Three tool-local _values_ are imported by the moving files**, none of them
    promotable as-is: `HII_TIERS` (its row type `HiiTierSpec` references
    `RenderSettings`, tool-only), `FrameView` (`frame/deriveFrameView.ts`, stays
    tool-side per spec), `RenderSettings` (tool-only settings bag). Commit 0
@@ -40,7 +40,7 @@ checked against the real import graph:
 3. **15 test files reach the moving units** (the task brief's "no test reaches
    `createGalaxyEngine.ts`" is true and separate). `move-files` rewrites their
    import paths but does **not** relocate them — `tests/tools/galaxy-renderer/
-   engine/**` is not a mirror path `move-files` recognises for a `src/`
+engine/**` is not a mirror path `move-files` recognises for a `src/`
    destination. Task 7 relocates them by hand-built manifest. Upside: `npm test`
    is a real behaviour gate for the move, which the spec did not anticipate.
 
@@ -54,14 +54,14 @@ Still one PR (spec §PR packaging, RESOLVED).
 
 Cited by short name in every task. **Run from the worktree root.**
 
-| name | command | catches |
-|---|---|---|
-| `G-tool-tsc` | `npx tsc --noEmit -p tools/galaxy-renderer/tsconfig.json` | tool-side type breakage. **NEVER omit `--noEmit`** — this config has none of its own and will write ~1200 `.js`/`.d.ts` files next to their sources. |
-| `G-app-tsc` | `npm run typecheck` | app-side breakage. Does **not** compile the tool; after commit 1 it *does* cover the moved files (root tsconfig includes `src` + `tests`). |
-| `G-test` | `npm test` | the 15 moved unit tests + the two `tests/services/gpu/shaders/*.parity.test.ts` byte-layout parity tests. |
-| `G-tool-build` | `npm run galaxy-renderer:build` | the **only** gate that resolves `.wesl?static` for real. `*.wesl?static` is a *wildcard* ambient module (`wesl-plugin/suffixes`), so a stale shader path type-checks clean under both tsc gates and fails only here. |
-| `G-probe` | `npm run galaxy-renderer:probe` | the only automated gate reaching the engine (GPU validation errors). |
-| `G-deps` | `grep -rn "tools/\|src/state/" src/services/gpu/renderers/galaxyField/` → must print nothing | the spec's dependency rule. |
+| name           | command                                                                                      | catches                                                                                                                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `G-tool-tsc`   | `npx tsc --noEmit -p tools/galaxy-renderer/tsconfig.json`                                    | tool-side type breakage. **NEVER omit `--noEmit`** — this config has none of its own and will write ~1200 `.js`/`.d.ts` files next to their sources.                                                                 |
+| `G-app-tsc`    | `npm run typecheck`                                                                          | app-side breakage. Does **not** compile the tool; after commit 1 it _does_ cover the moved files (root tsconfig includes `src` + `tests`).                                                                           |
+| `G-test`       | `npm test`                                                                                   | the 15 moved unit tests + the two `tests/services/gpu/shaders/*.parity.test.ts` byte-layout parity tests.                                                                                                            |
+| `G-tool-build` | `npm run galaxy-renderer:build`                                                              | the **only** gate that resolves `.wesl?static` for real. `*.wesl?static` is a _wildcard_ ambient module (`wesl-plugin/suffixes`), so a stale shader path type-checks clean under both tsc gates and fails only here. |
+| `G-probe`      | `npm run galaxy-renderer:probe`                                                              | the only automated gate reaching the engine (GPU validation errors).                                                                                                                                                 |
+| `G-deps`       | `grep -rn "tools/\|src/state/" src/services/gpu/renderers/galaxyField/` → must print nothing | the spec's dependency rule.                                                                                                                                                                                          |
 
 `G-probe` runs after **each** commit, not only at the end (spec §Migration
 sequencing).
@@ -71,7 +71,7 @@ sequencing).
 # Commit 0 — seam prep (no moves)
 
 Two content edits that remove the moving files' last reaches into tool-only
-*values*. Both are argument-shape changes with identical runtime behaviour;
+_values_. Both are argument-shape changes with identical runtime behaviour;
 existing tests are the proof.
 
 ### Task 1: Narrow `buildFieldHeaderInputs`' frame/render inputs
@@ -93,7 +93,7 @@ TypeScript is structural: `createGalaxyEngine.ts` keeps passing its whole
 ```ts
 /** The per-frame view lanes this builder reads — a structural subset of the tool's FrameView. */
 export type FieldHeaderFrameLanes = {
-  readonly view: Float32Array;               // deriveFrameView.ts:53 — a raw mat4, not a Mat4 alias
+  readonly view: Float32Array; // deriveFrameView.ts:53 — a raw mat4, not a Mat4 alias
   readonly aspect: number;
   readonly analyticExposure: number;
   readonly debugViews: DebugViewWeights;
@@ -112,12 +112,12 @@ export type FieldHeaderRenderLanes = {
 };
 ```
 
-- [ ] Read `deriveFrameView.ts`'s `FrameView` and `RenderSettings.d.ts` for the
+- [x] Read `deriveFrameView.ts`'s `FrameView` and `RenderSettings.d.ts` for the
       exact field types; copy types, not values. Do not widen or reorder.
-- [ ] Swap `FieldHeaderInputsDeps.frame`/`.render` to the two new types; drop
+- [x] Swap `FieldHeaderInputsDeps.frame`/`.render` to the two new types; drop
       the `FrameView` and `RenderSettings` imports.
-- [ ] `G-tool-tsc`, `G-test -- buildFieldHeaderInputs` → green, no test edits
-      needed. If a test edit *is* needed, the narrowing was wrong — re-derive.
+- [x] `G-tool-tsc`, `G-test -- buildFieldHeaderInputs` → green, no test edits
+      needed. If a test edit _is_ needed, the narrowing was wrong — re-derive.
 
 ### Task 2: Decouple the two `field/` files from `HII_TIERS`
 
@@ -138,14 +138,14 @@ load-bearing at either (the load-bearing draw/composite/HUD order stays in
 `createGalaxyEngine.ts`, which keeps `HII_TIERS`). No new shared constant —
 one fewer import, not one more.
 
-- [ ] Both sites: `Object.keys(<the record>) as HiiTierKind[]`, mirroring the
+- [x] Both sites: `Object.keys(<the record>) as HiiTierKind[]`, mirroring the
       cast `buildFieldHeaderInputs.ts:178` already makes on its
       `Object.fromEntries` result.
-- [ ] Drop both `HII_TIERS` imports. Leave the `HII_TIERS`-naming comments at
+- [x] Drop both `HII_TIERS` imports. Leave the `HII_TIERS`-naming comments at
       `buildFieldHeaderInputs.ts:4,169` and `createFieldPipelines.ts:64,82,147,153`
-      alone — they name the *concept*, and rewriting them is Task 13's job.
-- [ ] `G-tool-tsc`, `G-test`, `G-tool-build`, `G-probe`.
-- [ ] Commit 0. Message frames it as prep: the moving files' last tool-only
+      alone — they name the _concept_, and rewriting them is Task 13's job.
+- [x] `G-tool-tsc`, `G-test`, `G-tool-build`, `G-probe`.
+- [x] Commit 0. Message frames it as prep: the moving files' last tool-only
       value dependencies, ahead of the move.
 
 ---
@@ -170,9 +170,9 @@ npm run refactor -- rename tools/galaxy-renderer/@types/engine/HiiTierKind.d.ts#
 npm run refactor -- rename tools/galaxy-renderer/@types/engine/HiiTierKind.d.ts#HiiTierKind HiiTier
 ```
 
-- [ ] `--dry` first; confirm the file renames to `HiiTier.d.ts` and ~6 importers
+- [x] `--dry` first; confirm the file renames to `HiiTier.d.ts` and ~6 importers
       are rewritten.
-- [ ] `G-tool-tsc`, `G-app-tsc`.
+- [x] `G-tool-tsc`, `G-app-tsc`.
 
 ### Task 4: Build the move manifest and dry-run it
 
@@ -194,24 +194,24 @@ Do **not** add `field/createArmRidgeDebugSample.ts` or
 **Group B — 16 seam types.** `.d.ts` → `.ts`; `move-files` handles the
 extension change and rewrites importers (verified by dry-run).
 
-| from `tools/galaxy-renderer/@types/` | to `src/@types/galaxy/` |
-|---|---|
-| `engine/DebugViewWeights.d.ts` | `DebugViewWeights.ts` |
-| `engine/DustHeaderLanes.d.ts` | `DustHeaderLanes.ts` |
-| `engine/FieldCamera.d.ts` | `FieldCamera.ts` |
-| `engine/FieldDust.d.ts` | `FieldDust.ts` |
-| `engine/FieldDustCarve.d.ts` | `FieldDustCarve.ts` |
-| `engine/FieldDustNoise.d.ts` | `FieldDustNoise.ts` |
-| `engine/FieldDustSlices.d.ts` | `FieldDustSlices.ts` |
-| `engine/FieldHeaderInput.d.ts` | `FieldHeaderInput.ts` |
-| `engine/FieldSliceCounts.d.ts` | `FieldSliceCounts.ts` |
-| `engine/HiiSegment.d.ts` | `HiiSegment.ts` |
-| `engine/HiiTextureLanes.d.ts` | `HiiTextureLanes.ts` |
-| `engine/HiiTier.d.ts` (post-Task 3) | `HiiTier.ts` |
-| `engine/IsmMapChannelWeights.d.ts` | `IsmMapChannelWeights.ts` |
-| `engine/IsmMapSeedingLanes.d.ts` | `IsmMapSeedingLanes.ts` |
-| `engine/YoungStarsLanes.d.ts` | `YoungStarsLanes.ts` |
-| `data/DebugViewKind.d.ts` | `DebugViewKind.ts` |
+| from `tools/galaxy-renderer/@types/` | to `src/@types/galaxy/`   |
+| ------------------------------------ | ------------------------- |
+| `engine/DebugViewWeights.d.ts`       | `DebugViewWeights.ts`     |
+| `engine/DustHeaderLanes.d.ts`        | `DustHeaderLanes.ts`      |
+| `engine/FieldCamera.d.ts`            | `FieldCamera.ts`          |
+| `engine/FieldDust.d.ts`              | `FieldDust.ts`            |
+| `engine/FieldDustCarve.d.ts`         | `FieldDustCarve.ts`       |
+| `engine/FieldDustNoise.d.ts`         | `FieldDustNoise.ts`       |
+| `engine/FieldDustSlices.d.ts`        | `FieldDustSlices.ts`      |
+| `engine/FieldHeaderInput.d.ts`       | `FieldHeaderInput.ts`     |
+| `engine/FieldSliceCounts.d.ts`       | `FieldSliceCounts.ts`     |
+| `engine/HiiSegment.d.ts`             | `HiiSegment.ts`           |
+| `engine/HiiTextureLanes.d.ts`        | `HiiTextureLanes.ts`      |
+| `engine/HiiTier.d.ts` (post-Task 3)  | `HiiTier.ts`              |
+| `engine/IsmMapChannelWeights.d.ts`   | `IsmMapChannelWeights.ts` |
+| `engine/IsmMapSeedingLanes.d.ts`     | `IsmMapSeedingLanes.ts`   |
+| `engine/YoungStarsLanes.d.ts`        | `YoungStarsLanes.ts`      |
+| `data/DebugViewKind.d.ts`            | `DebugViewKind.ts`        |
 
 This closure is exact and self-contained: its only outward edges are
 `src/@types/math/Vec2`/`Vec3`, already shared. Names are kept as-is — a
@@ -229,19 +229,19 @@ path, which the spec's dependency rule permits
 npm run move-files -- --manifest <scratchpad>/galaxyField-moves.json --dry
 ```
 
-- [ ] 53 entries total (36 + 16 + 1). Verify the count before running.
-- [ ] Read the dry-run's rewritten-file set. Expect it to name
+- [x] 53 entries total (36 + 16 + 1). Verify the count before running.
+- [x] Read the dry-run's rewritten-file set. Expect it to name
       `createGalaxyEngine.ts`, `model/createGalaxyModel.ts`,
       `frame/deriveFrameView.ts`, `probeGpuErrors.ts`, the staying `passes/*`,
       the 15 tool tests and `tests/services/gpu/shaders/{records,constants}.parity.test.ts`.
-- [ ] Nothing is saved by `--dry`. Do not commit the manifest.
+- [x] Nothing is saved by `--dry`. Do not commit the manifest.
 
 ### Task 5: Execute the move
 
-- [ ] `npm run move-files -- --manifest <scratchpad>/galaxyField-moves.json`
-- [ ] `G-app-tsc`, `G-tool-tsc` → both green. (They will be even with the
+- [x] `npm run move-files -- --manifest <scratchpad>/galaxyField-moves.json`
+- [x] `G-app-tsc`, `G-tool-tsc` → both green. (They will be even with the
       shader paths still stale — see Task 6.)
-- [ ] Do **not** commit yet; Tasks 6–8 belong to this commit.
+- [x] Do **not** commit yet; Tasks 6–8 belong to this commit.
 
 ### Task 6: Fix the `?static` shader depths
 
@@ -273,10 +273,10 @@ and `src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer.ts:65-66` already
 proves the shape — a `src/` file spelling `'../../shaders/milkyWay/…?static'`,
 built by both configs.
 
-- [ ] `grep -rn "wesl?static" src/services/gpu/renderers/galaxyField/` → 27 hits,
+- [x] `grep -rn "wesl?static" src/services/gpu/renderers/galaxyField/` → 27 hits,
       all beginning `'../../../shaders/`.
-- [ ] `grep -rn "'\.\./shaders/" src/services/gpu/renderers/galaxyField/` → nothing.
-- [ ] `G-tool-build` → green. **This is the only gate that proves Task 6.**
+- [x] `grep -rn "'\.\./shaders/" src/services/gpu/renderers/galaxyField/` → nothing.
+- [x] `G-tool-build` → green. **This is the only gate that proves Task 6.**
 
 ### Task 7: Relocate the 15 moved unit tests to the mirror path
 
@@ -301,17 +301,17 @@ Staying at `tests/tools/galaxy-renderer/engine/`: `createOrientationDiagnostics`
 `decodeIsmMapTexels`, `decodeOrientationTexels`, `createReadbackQueue` — all
 four test files that stay tool-side.
 
-- [ ] `npm run move-files -- --manifest <scratchpad>/galaxyField-tests.json --dry`,
+- [x] `npm run move-files -- --manifest <scratchpad>/galaxyField-tests.json --dry`,
       then for real.
-- [ ] `G-test` → green, same test count as before the branch.
+- [x] `G-test` → green, same test count as before the branch.
 
 ### Task 8: Verify the dependency rule
 
-- [ ] `G-deps` → prints nothing. A hit means a moving file still reaches into
+- [x] `G-deps` → prints nothing. A hit means a moving file still reaches into
       `tools/` (add it to the closure, or narrow the reach as Task 1 did) or
       pulled in Redux (should be impossible — flag it).
-- [ ] `G-tool-tsc`, `G-app-tsc`, `G-test`, `G-tool-build`, `G-probe` → all green.
-- [ ] Commit 1. One mechanical commit; `git log --follow` on a moved file must
+- [x] `G-tool-tsc`, `G-app-tsc`, `G-test`, `G-tool-build`, `G-probe` → all green.
+- [x] Commit 1. One mechanical commit; `git log --follow` on a moved file must
       still reach its tool-side history (`git show --stat` should report renames,
       not add/delete pairs).
 
@@ -325,25 +325,25 @@ same `own()`-ledger discipline — just behind the instance API.
 
 ### Task 9: Map the seam, then CHECKPOINT
 
-**Files:** none edited. Output is an appendix appended to *this* plan file.
+**Files:** none edited. Output is an appendix appended to _this_ plan file.
 
 The spec's contract splits responsibility as "host owns lifecycle, budget and
 eviction; module owns GPU resource lifetime and pass encoding." Today that line
 runs through two files, not one: `createGalaxyEngine.ts` (1255 lines) owns
 pipelines/targets/encode, `model/createGalaxyModel.ts` (1849 lines) owns "what a
 galaxy IS" and drives the ISM generator's `rebuild()` — and the spec keeps the
-model tool-side entirely, as a *consumer*. So `setMixture()`'s real argument list
+model tool-side entirely, as a _consumer_. So `setMixture()`'s real argument list
 is whatever the model computes today and would hand in, and that list is not
 derivable from the spec alone.
 
-- [ ] Read `createGalaxyEngine.ts` and `model/createGalaxyModel.ts`, and write
+- [x] Read `createGalaxyEngine.ts` and `model/createGalaxyModel.ts`, and write
       into this plan, as `## Appendix: the today-split`: (a) the concrete
       argument list `setMixture` needs beyond the spec's
       `{ geometry, fieldTuning, seed }`; (b) which of `createGalaxyModel`'s
       responsibilities cross into the module and which stay; (c) the exact
       `GalaxyFieldRenderTargets` views `encode` needs, against
       `gpu/createGalaxyRenderTargets.ts`'s current rows.
-- [ ] **CHECKPOINT with the user before Task 10.** The risk to name: if the
+- [x] **CHECKPOINT with the user before Task 10.** The risk to name: if the
       honest minimal module turns out to be a pipeline-and-encode holder rather
       than the spec's `setMixture` semantic, that is a spec-contract question,
       not an implementer's call. Do not "make it fit" silently.
@@ -361,13 +361,13 @@ the spec exactly; extend only with what Task 9's appendix established.
 This task lands construction + `dispose()` only; `setMixture`/`stepIsmMap`/
 `encode` are stubs that throw until Tasks 11–12.
 
-- [ ] Construction order matches `createGalaxyEngine.ts`'s current sequence
+- [x] Construction order matches `createGalaxyEngine.ts`'s current sequence
       one-for-one. Deviating reorders GPU resource creation, and this branch's
       only defence against that is the probe and human eyes.
-- [ ] `dispose()` releases exactly what the engine's `own()` ledger releases for
+- [x] `dispose()` releases exactly what the engine's `own()` ledger releases for
       the field/ISM half today — nothing more (the host still owns targets).
-- [ ] No import of `tools/` or `src/state/` (`G-deps`).
-- [ ] `G-app-tsc`, `G-tool-tsc`.
+- [x] No import of `tools/` or `src/state/` (`G-deps`).
+- [x] `G-app-tsc`, `G-tool-tsc`.
 
 ### Task 11: `setMixture` + `stepIsmMap`
 
@@ -380,9 +380,9 @@ eager path calls it in a loop to completion inside `setMixture`, matching
 `createIsmMapFluidRunner`'s current behaviour. **Time-slicing is a non-goal** —
 `stepIsmMap` exists as a seam for a future per-galaxy scheduler, nothing more.
 
-- [ ] Route the engine's/model's existing rebuild path through `setMixture`;
+- [x] Route the engine's/model's existing rebuild path through `setMixture`;
       delete nothing yet (commit 3's job).
-- [ ] `G-app-tsc`, `G-tool-tsc`, `G-test`, `G-tool-build`, `G-probe`.
+- [x] `G-app-tsc`, `G-tool-tsc`, `G-test`, `G-tool-build`, `G-probe`.
 
 ### Task 12: `encode`
 
@@ -395,10 +395,10 @@ module owns is what is intrinsic to one galaxy's own passes — **dustMap before
 field**, per the engine's existing order. Where the galaxy's passes sit in the
 frame is the host's call and stays in `drawFrame`.
 
-- [ ] `drawFrame` passes views from `gpu/createGalaxyRenderTargets.ts` (which
+- [x] `drawFrame` passes views from `gpu/createGalaxyRenderTargets.ts` (which
       stays tool-side — the module allocates nothing).
-- [ ] `G-deps`, `G-app-tsc`, `G-tool-tsc`, `G-test`, `G-tool-build`, `G-probe`.
-- [ ] Commit 2.
+- [x] `G-deps`, `G-app-tsc`, `G-tool-tsc`, `G-test`, `G-tool-build`, `G-probe`.
+- [x] Commit 2.
 
 ---
 
@@ -412,10 +412,10 @@ Whatever inline construction/encode code the module now owns is dead. Deleting
 it in its own commit is what makes "what actually changed behaviourally"
 reviewable independently of the mechanical move.
 
-- [ ] Remove dead locals, dead imports, and any now-unreferenced helper. If a
+- [x] Remove dead locals, dead imports, and any now-unreferenced helper. If a
       moved file ends with **no** importer, say so in the commit message rather
       than deleting it — that is a scope finding for Track C, not a cleanup.
-- [ ] `G-deps`, `G-app-tsc`, `G-tool-tsc`, `G-test`, `G-tool-build`, `G-probe`.
+- [x] `G-deps`, `G-app-tsc`, `G-tool-tsc`, `G-test`, `G-tool-build`, `G-probe`.
 
 ### Task 14: Comment and header pass over the branch's touched files
 
@@ -427,14 +427,14 @@ and `tools/galaxy-renderer/src/data/hiiTiers.ts`'s own header names the two
 files that stopped importing it in Task 2. Comments are timeless: fix the
 references, do not narrate the move.
 
-- [ ] Run the `comment-audit` skill's checklist over the diff. Budget stands:
+- [x] Run the `comment-audit` skill's checklist over the diff. Budget stands:
       module header ≤ 10 lines, comment lines ≤ half the code lines.
-- [ ] No comment records "moved from the tool" or "was `HII_TIERS`" — that is
+- [x] No comment records "moved from the tool" or "was `HII_TIERS`" — that is
       the git log's job.
-- [ ] `DebugViewKind.ts`'s header cites `src/data/debugViews.ts`, which does not
+- [x] `DebugViewKind.ts`'s header cites `src/data/debugViews.ts`, which does not
       exist (the table is `tools/galaxy-renderer/src/data/debugViews.ts`). Fix
       the citation while the file is in hand.
-- [ ] `G-app-tsc`, `G-test`. Commit 3.
+- [x] `G-app-tsc`, `G-test`. Commit 3.
 
 ### Task 15: User visual pass
 
@@ -452,7 +452,7 @@ pre-branch build. Behaviour-neutral is the acceptance bar — the look must be
   spec's own classification (numeric-validation fixtures, own dispatch, own
   one-shot readback, no production caller — the same class as the
   `probe/`/readback path the scope excludes). They are wired unconditionally in
-  `createGalaxyEngine.ts` and stay wired; being a *consumer* of moved files is
+  `createGalaxyEngine.ts` and stay wired; being a _consumer_ of moved files is
   the allowed direction. `createArmRidgeDebugSample.ts` is also the only
   moving-folder file whose `?static` shader (`armRidgeDebugSample.wesl`) is a
   real tool-local file rather than a symlink to the app's tree — another reason
@@ -471,15 +471,15 @@ pre-branch build. Behaviour-neutral is the acceptance bar — the look must be
 
 **Deliverables**
 
-- [ ] `src/services/gpu/renderers/galaxyField/` exists with the spec's 36 moved
+- [x] `src/services/gpu/renderers/galaxyField/` exists with the spec's 36 moved
       files plus `createGalaxyFieldRenderer.ts`, exporting
       `createGalaxyFieldRenderer`, `GalaxyFieldRendererDeps`,
       `GalaxyFieldMixtureInput`, `GalaxyFieldRenderTargets`,
       `GalaxyFieldRenderer` per the spec's contract.
-- [ ] `src/@types/galaxy/HiiTier.ts` exists; the other 15 seam types live
+- [x] `src/@types/galaxy/HiiTier.ts` exists; the other 15 seam types live
       beside it; `src/services/gpu/lib/beginClearPass.ts` exists.
-- [ ] 15 unit tests live at `tests/services/gpu/renderers/galaxyField/**`.
-- [ ] `tools/galaxy-renderer/src/engine/{field,ismMap}/` retain only the two
+- [x] 15 unit tests live at `tests/services/gpu/renderers/galaxyField/**`.
+- [x] `tools/galaxy-renderer/src/engine/{field,ismMap}/` retain only the two
       debug-sample files and the five diagnostics/readback files the spec keeps
       tool-side; `engine/gpu/` retains `createGalaxyRenderTargets.ts`,
       `createReadbackQueue.ts`, `readTextureChannelSum.ts`.
@@ -487,20 +487,20 @@ pre-branch build. Behaviour-neutral is the acceptance bar — the look must be
 **Gates** (the tool-specific ones — `/feature-done`'s standing audit does not
 run these)
 
-- [ ] `npx tsc --noEmit -p tools/galaxy-renderer/tsconfig.json` clean.
-- [ ] `npm run galaxy-renderer:build` clean — the `?static` proof.
-- [ ] `npm run galaxy-renderer:probe` clean, run after each of commits 1, 2, 3.
-- [ ] `grep -rn "tools/\|src/state/" src/services/gpu/renderers/galaxyField/`
+- [x] `npx tsc --noEmit -p tools/galaxy-renderer/tsconfig.json` clean.
+- [x] `npm run galaxy-renderer:build` clean — the `?static` proof.
+- [x] `npm run galaxy-renderer:probe` clean, run after each of commits 1, 2, 3.
+- [x] `grep -rn "tools/\|src/state/" src/services/gpu/renderers/galaxyField/`
       prints nothing.
 
 **Observable behaviours (user pass, `npm run galaxy-renderer`)**
 
-- [ ] Default MW view: disc, dust lanes, arm ridges and HII tiers pixel-for-pixel
+- [x] Default MW view: disc, dust lanes, arm ridges and HII tiers pixel-for-pixel
       identical to a pre-branch build at the same seed and camera.
-- [ ] Reseed / re-tune: a `setMixture`-triggering param change settles to the
+- [x] Reseed / re-tune: a `setMixture`-triggering param change settles to the
       same look it settled to before, in the same single call (no visible
       multi-frame ISM-map settle appearing where there was none).
-- [ ] Each of the four debug views (`dust`, `ismMap`, `orientation`, `bubble`)
+- [x] Each of the four debug views (`dust`, `ismMap`, `orientation`, `bubble`)
       crossfades as before.
 
 **Deferral boundary** — out of scope, do not chase: any app-side wiring
@@ -528,15 +528,15 @@ Shorthands below: `engine` = `createGalaxyEngine.ts`, `model` =
 three.** Every CPU builder on the field/ISM rebuild path already takes exactly
 `(geometry, fieldTuning, seed)` or a value derived inside the same call:
 
-| builder | call site | inputs |
-|---|---|---|
-| `buildGalaxyFieldMixture` | model:1269 | `(geometry, fieldTuning)` → components + `spurCloudReservation` + `armCloudReservation` |
-| `buildHiiShellsAndYoungWithSegments` | model:1326 | `(geometry, fieldTuning, starFormation, geometry.seed)` → components + segments + `shellFluxSum` + `recentEventCount` |
-| `computePlaceDustBudget` | model:731 | `(geometry, fieldTuning.dust)` |
-| `computeDigVeilBudget` | model:752 | `(geometry, fieldTuning, shellFluxSum, recentEventCount)` — both extras come from the HII build above, same synchronous call |
-| `deriveDustHeaderLanes` | model:728 | `(geometry, fieldTuning.dust, fieldTuning.dust.enabled)` |
-| `buildDigArmEnvelopeTable` | model:685 | `(geometry, fieldTuning, grid)`, grid from `ismMapGridRadiusOrDefault(geometry)` |
-| `ismMapGenerator.rebuild` | model:813-818 | **already literally `{ geometry, tuning, seed }`** (`ismMap/createIsmMapGenerator.ts:44-48`) |
+| builder                              | call site     | inputs                                                                                                                       |
+| ------------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `buildGalaxyFieldMixture`            | model:1269    | `(geometry, fieldTuning)` → components + `spurCloudReservation` + `armCloudReservation`                                      |
+| `buildHiiShellsAndYoungWithSegments` | model:1326    | `(geometry, fieldTuning, starFormation, geometry.seed)` → components + segments + `shellFluxSum` + `recentEventCount`        |
+| `computePlaceDustBudget`             | model:731     | `(geometry, fieldTuning.dust)`                                                                                               |
+| `computeDigVeilBudget`               | model:752     | `(geometry, fieldTuning, shellFluxSum, recentEventCount)` — both extras come from the HII build above, same synchronous call |
+| `deriveDustHeaderLanes`              | model:728     | `(geometry, fieldTuning.dust, fieldTuning.dust.enabled)`                                                                     |
+| `buildDigArmEnvelopeTable`           | model:685     | `(geometry, fieldTuning, grid)`, grid from `ismMapGridRadiusOrDefault(geometry)`                                             |
+| `ismMapGenerator.rebuild`            | model:813-818 | **already literally `{ geometry, tuning, seed }`** (`ismMap/createIsmMapGenerator.ts:44-48`)                                 |
 
 `starFormation` and `dust` are not separate arguments — model:431-432 resolve
 both off `fieldTuning` (`currentDust()` / `currentStarFormation()`), and
@@ -596,7 +596,7 @@ for why the bubble overlay is a split case.
 
 - `fieldComps` / `hiiComps` grow-only record buffers (model:301-336) and both
   repack functions (model:1146-1227), including `hiiSegments` and `digOffset`
-  — `digOffset` is decided *only* by `repackHiiComponents` (model:1210) and is
+  — `digOffset` is decided _only_ by `repackHiiComponents` (model:1210) and is
   a `placeDigVeil` dispatch input (model:1051).
 - The two mixture captures — `centralFieldMixtureAndReservations` (model:1264),
   `centralHiiMixtureAndSegments` (model:1312) — plus the cached
@@ -622,7 +622,7 @@ for why the bubble overlay is a split case.
   `generateGalaxy` (model:1351), `starBuf`/`dustBuf`/`starCount`,
   `starInstances()`/`dustInstances()` (model:1819-1833), `onStats` (model:1394).
 - Extras **lifecycle** — per-extra UBO + generation submit (model:1531-1571),
-  `destroyExtras` (model:1509). Only their *geometry+transform* crosses (see (a)).
+  `destroyExtras` (model:1509). Only their _geometry+transform_ crosses (see (a)).
 - `createIsmMapReadbacks` (model:467) and `createOrientationDiagnostics`
   (model:468), per the spec's tool-only table — **but see the leak below.**
 - All of `probe.*` (model:1677-1817) and `handle.probe` (engine:1145-1223).
@@ -631,8 +631,8 @@ for why the bubble overlay is a split case.
 
 **Two things the spec's split cuts through the middle:**
 
-- **`youngStars` / `ismMapSeedingView` (model:1634-1668).** Both are *field
-  header lanes* the module must pack, and both are computed from
+- **`youngStars` / `ismMapSeedingView` (model:1634-1668).** Both are _field
+  header lanes_ the module must pack, and both are computed from
   `readbacks.ismMapData` — the CPU readback the spec keeps tool-side
   (`invMeanNormFor`, model:505-519; `ismMapGlobalMeanDust`, model:488-494). So
   either `createIsmMapReadbacks` moves in (contradicting the spec's tool-only
@@ -649,13 +649,13 @@ for why the bubble overlay is a split case.
 
 Against `targets`' current rows. Encode-path evidence: engine:869-967.
 
-| what encode touches | today | format | sized by | in the spec's type? |
-|---|---|---|---|---|
-| `fieldTex` — field splat attachment | engine:923, targets:164-178 | `rgba16float` (HDR) | `render.fieldDivisor` | yes |
-| `dustMapTex` — dustMap pass attachment **and** a sampled input of 4 bind groups | engine:887, targets:191-203 | `rgba16float` (`DUST_MAP_FORMAT`) | `render.dustDivisor` | yes |
-| `dustViewTex` — `encodeDustPresentPass` attachment (JWST view) | engine:900-907, targets:204-210 | `rgba16float` (HDR) | `render.dustDivisor` (shared with `dustMapTex` — targets:180-183: they **must** rebuild together) | **NO — missing** |
-| `hiiTex` — the `hii:extras` pass attachment | engine:962, targets:217-225 | `rgba16float` (HDR) | `render.extrasDivisor` | **NO — missing** (`hiiTiers` is a different thing) |
-| `tierTex('shells' \| 'young' \| 'dig')` ×3 | engine:945, targets:231-242 | `rgba16float` (HDR) | one divisor **each** (`shellsDivisor`/`youngDivisor`/`digDivisor`, `data/hiiTiers.ts:14-18`) | yes, as `hiiTiers` |
+| what encode touches                                                             | today                           | format                            | sized by                                                                                          | in the spec's type?                                |
+| ------------------------------------------------------------------------------- | ------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `fieldTex` — field splat attachment                                             | engine:923, targets:164-178     | `rgba16float` (HDR)               | `render.fieldDivisor`                                                                             | yes                                                |
+| `dustMapTex` — dustMap pass attachment **and** a sampled input of 4 bind groups | engine:887, targets:191-203     | `rgba16float` (`DUST_MAP_FORMAT`) | `render.dustDivisor`                                                                              | yes                                                |
+| `dustViewTex` — `encodeDustPresentPass` attachment (JWST view)                  | engine:900-907, targets:204-210 | `rgba16float` (HDR)               | `render.dustDivisor` (shared with `dustMapTex` — targets:180-183: they **must** rebuild together) | **NO — missing**                                   |
+| `hiiTex` — the `hii:extras` pass attachment                                     | engine:962, targets:217-225     | `rgba16float` (HDR)               | `render.extrasDivisor`                                                                            | **NO — missing** (`hiiTiers` is a different thing) |
+| `tierTex('shells' \| 'young' \| 'dig')` ×3                                      | engine:945, targets:231-242     | `rgba16float` (HDR)               | one divisor **each** (`shellsDivisor`/`youngDivisor`/`digDivisor`, `data/hiiTiers.ts:14-18`)      | yes, as `hiiTiers`                                 |
 
 Seven textures, not five. Beyond the two missing rows, three structural problems:
 
@@ -671,7 +671,7 @@ Seven textures, not five. Beyond the two missing rows, three structural problems
    wired at engine:548-553 → `fieldPipelines.rebuildDustMapDependents`), and its
    own comment says the callback "must never be hoisted to a caller that may
    skip it" because it also resets the `dustMapPopulated` latch, whose
-   correctness depends on the texture having *just* been created. Host-owned
+   correctness depends on the texture having _just_ been created. Host-owned
    allocation therefore requires a module method
    (`onTargetsReallocated(targets)`), not just fresh views at `encode` time.
 3. **Three overlay draws are not in `encode`'s shape at all.** `ismMapPresent`,
@@ -705,11 +705,11 @@ Seven textures, not five. Beyond the two missing rows, three structural problems
 6. `createFieldPipelines` (415) — **must come after 1-5**: it takes `fieldUbo`,
    `hiiUbo`, `tierUbo`, `ismMapGenerator`, all three noise textures + samplers,
    `dustMapSampler`, and `ringReduce.{dustRenormBuffer, armCloudRenormBuffer,
-   spurCloudRenormBuffer}`. `getDustMapTex` is passed as a **thunk**
+spurCloudRenormBuffer}`. `getDustMapTex` is passed as a **thunk**
    (engine:434) precisely because `targets` does not exist yet (engine:410-414).
 7. `createGalaxyModel` (515) — after 3-6.
 8. `fieldPipelines.rebuildDustMapBindGroup(model.fieldComps.buffer)` (540) —
-   after the model, before `targets`; it is the *only* one of the five bind
+   after the model, before `targets`; it is the _only_ one of the five bind
    groups that doesn't reference `dustMapTex` (engine:536-539).
 9. `createGalaxyRenderTargets` (548) with the `rebuildDustMapDependents`
    callback, then the unconditional `targets.rebuildAll(allDivisors())`
@@ -722,7 +722,7 @@ chain submits its own encoder that must precede the frame's); inside it,
 bubbles → `orientationTexRebuild` → `orientationDataRebuild` → **dust placement
 strictly after orientation** (model:1604-1608) → spur → armCloud → dig. Then
 within `encode`: dustMap → dustPresent → field splat → the three tier passes in
-`HII_TIERS` row order → `hii:extras`. Cross-*submit* ordering is relied on
+`HII_TIERS` row order → `hii:extras`. Cross-_submit_ ordering is relied on
 without a barrier: `ringReduce.dispatchRingMeans` submits at model:826-827 and
 `dispatchDustCdfScan`'s later submit reads `ringMeansBuffer` (model:821-825).
 
@@ -747,6 +747,7 @@ the field/ISM half: `ismMapGenerator` (1232), `ismMapOrientation` (1233),
 `hiiComps` (1843), `bubbleComps` (1844).
 
 Two notes:
+
 - `armRidgeDebugSample` (1241) and `ismMapDustCdfScanDebugSample` (1242) are
   disposed here too. The spec classifies them tool-side (its own OPEN question),
   but they are constructed unconditionally at engine:401/405 and live in
@@ -766,7 +767,7 @@ Two notes:
 
 The rebuild half of the spec is real and I'd keep it. Every builder on the
 field/ISM rebuild path already takes `(geometry, fieldTuning, seed)` and nothing
-else — `ismMapGenerator.rebuild` is *literally* that object today
+else — `ismMapGenerator.rebuild` is _literally_ that object today
 (`createIsmMapGenerator.ts:44-48`), and `starFormation`/`dust` are sections of
 `fieldTuning`, not separate inputs (model:431-432). A module that owns the
 mixtures, the budgets, the ISM map, the five keyed rebuilds and the two comps
@@ -777,7 +778,7 @@ pipeline-and-encode holder fed by the model — the model's field/ISM half is a
 clean lift, and leaving it behind would leave the app hand-porting exactly the
 ~1250 lines the spec exists to avoid.
 
-But the *encode* half of the contract is under-specified by roughly one whole
+But the _encode_ half of the contract is under-specified by roughly one whole
 argument. The field, `hii:extras` and three tier UBOs are rewritten **every
 frame** from camera-derived `FieldHeaderInput`s (engine:776-811), and those same
 UBOs are constructor-time dependencies of both `createIsmMapGenerator`
@@ -801,7 +802,7 @@ because those buffers are **scene-wide** — central mixture, then every extra's
 then the central dust reservation (model:1147-1148), with the extras' HII as a
 trailing `'hii:extras'` span that gates its own pass and composite
 (model:1219-1226, engine:867/956-967). Per-galaxy instancing is a real future
-shape, but it is a *behavioural* change to the packed layout, and this spec is
+shape, but it is a _behavioural_ change to the packed layout, and this spec is
 behaviour-neutral by construction.
 
 **The middle path, concretely — N = 4 extra `setMixture` inputs, plus one new
@@ -834,3 +835,12 @@ two rows and switches views→textures; (iii) does `createIsmMapReadbacks` move 
 the frame argument? And the "one instance per galaxy" line in the spec should be
 struck or re-scoped to a future track — it is not true of the artifact this
 extraction produces.
+
+### Accepted deviation: `targetSizePx` off the texture, not `reducedSize(divisor)`
+
+`encode` derives each pass's `targetSizePx` from the target texture's own
+`.width`/`.height` rather than `reducedSize(divisor)`. The two agree in steady
+state; they differ only in the frames between a canvas backing-size change and
+the ResizeObserver's reallocation, where the packed size now follows the old
+texture instead of the new canvas-derived size. This is more correct than
+baseline, not less — accepted, not pixel-for-pixel in that transient window.

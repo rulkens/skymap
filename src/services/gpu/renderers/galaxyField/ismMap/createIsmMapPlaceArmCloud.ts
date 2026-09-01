@@ -69,7 +69,7 @@ export type IsmMapPlaceArmCloud = {
    * `fluxWeightOut` (placeArmCloud.wesl binding 5) — ARM_CLOUD_MAX_COUNT
    * floats, one per particle slot. Exposed so `ringReduce.wesl`'s
    * csArmCloudFluxWeightSum kernel (dispatched separately, off
-   * `createGalaxyModel.ts`'s own `ringReduce` instance) can bind the SAME
+   * `createGalaxyFieldRenderer.ts`'s own `ringReduce` instance) can bind the SAME
    * buffer this dispatch just filled — `IsmMapPlaceDust.massBuffer`'s own
    * producer-owns-the-buffer precedent.
    */

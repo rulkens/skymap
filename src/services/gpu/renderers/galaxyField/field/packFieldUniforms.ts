@@ -15,9 +15,9 @@
  * galaxy's Gaussians every frame for no reader, and would cap `comps` around
  * ~1000 components (~3 galaxies' worth) at a 64 KiB uniform limit; `comps` is
  * instead a read-only storage array with no such ceiling, so N background
- * extras can outgrow it (`createGalaxyModel.ts` sizes and grows the backing
- * GPUBuffer; `GALAXY_FIELD_MAX_COMPONENTS` remains only the PER-GALAXY cap
- * `buildGalaxyFieldMixture` enforces).
+ * extras can outgrow it (`createGalaxyFieldRenderer.ts`'s `fieldComps` sizes
+ * and grows the backing GPUBuffer; `GALAXY_FIELD_MAX_COMPONENTS` remains only
+ * the PER-GALAXY cap `buildGalaxyFieldMixture` enforces).
  *
  * ## Why a camera BASIS and not an inverse view-projection
  *
@@ -107,7 +107,7 @@ const NO_YOUNG_STARS: YoungStarsLanes = {
 /**
  * packFieldHeaderUniforms — one `FIELD_HEADER_BUFFER_SIZE`-byte `FieldUniforms` header, every lane
  * written every call. `dst` is a per-frame scratch shared across headers
- * (createGalaxyEngine's `fieldData`/`hiiData`), so a lane left unwritten
+ * (`createGalaxyFieldRenderer.ts`'s `fieldData`/`hiiData`), so a lane left unwritten
  * silently ships the previous pass's bytes to the GPU — which is why an
  * absent `dust` falls back to `INERT_DUST` instead of skipping its writes.
  */

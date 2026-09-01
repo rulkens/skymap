@@ -333,9 +333,11 @@ export function createGalaxyRenderTargets(
       return hiiTex;
     },
     tierTex(kind: HiiTier): GPUTexture {
-      // Non-null: `rebuildAll`'s unconditional first `setDivisors` allocates
-      // every row of `HII_TIERS` before any caller can reach this getter,
-      // same contract `aggregateTex`'s (unchecked) getter above relies on.
+      // Non-null: the only caller reachable before `rebuildAll`'s first
+      // `setDivisors` finishes is `allocateDust`'s own reallocation callback,
+      // which reads `dustMapTex` and nothing else — every other caller runs
+      // after `rebuildAll` returns, by which point every `HII_TIERS` row is
+      // allocated, same contract `aggregateTex`'s (unchecked) getter relies on.
       return tierTextures.get(kind)!;
     },
     get dustViewTex(): GPUTexture {
