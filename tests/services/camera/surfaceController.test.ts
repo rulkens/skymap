@@ -374,28 +374,51 @@ describe('surfaceController', () => {
     expect(lastTilt).toBeLessThan(0.02);
   });
 
-  it('a recession re-orients even where the ceiling is slack — one law, both directions', () => {
-    // The ruled symmetry (R1/I1): the recession is no longer a ceiling that
-    // only bites near disengage — it converges by the SAME `clamp(SHARE·r,
-    // ±CAP)` decay the approach uses, at every altitude. Down here the
-    // ceiling is wide open, so the old model changed neither angle at all;
-    // one notch out must now walk both toward canonical by exactly one cap.
-    const start = poseAt([0, 0, 2], basisAt(1.2, 0.5));
-    const out = apply(createSurfaceController(), start, zoom(1.5, false, [50, 70]));
+  it('a recession norths the view but leaves a below-ceiling tilt alone (ruling 6)', () => {
+    // GM/Cesium zoom-out is a lerp back to the off-body pose DISTRIBUTED over
+    // the recession range: the tilt residual is measured against the
+    // altitude-keyed ceiling, so where the ceiling is slack a notch out
+    // changes tilt not at all — the tightening ceiling does the squeezing,
+    // never a front-loaded nadir pull. Heading still decays by one capped
+    // step (the north half is direction-blind). Tilt 0.7 keeps the
+    // screen-centre ray off the body, so the settle pivots on the sub-eye
+    // point and every readout stays on the fixture's axis.
+    const start = poseAt([0, 0, 2], basisAt(1.2, 0.7));
+    const out = apply(createSurfaceController(), start, zoom(1.5, false));
 
     const hOverR = Math.hypot(...eyeOf(out)) / R - 1;
-    expect(maxTiltRad(hOverR)).toBeGreaterThan(0.5); // the premise: slack
+    expect(maxTiltRad(hOverR)).toBeGreaterThan(0.7); // the premise: slack
     expect(northUpOffset(out)).toBeCloseTo(1.1, 9);
-    expect(bodyAngle(out)).toBeCloseTo(0.4, 9);
+    expect(bodyAngle(out)).toBeCloseTo(0.7, 12);
+  });
+
+  it('a recession decays an above-ceiling tilt toward the ceiling, not toward nadir', () => {
+    // The other half of ruling 6: with tilt above the band, the residual the
+    // decay acts on is the EXCESS over `maxTiltRad`, so one notch removes
+    // `SHARE·excess` — visibly less than the full cap a nadir residual would
+    // spend. Heading 0 keeps the whole basis turn attributable to tilt.
+    const c = createSurfaceController();
+    const start = poseAt([0, 0, 3], basisAtTilt(1.4));
+    const out = apply(c, start, zoom(1.02, false));
+
+    const ceiling = maxTiltRad(Math.hypot(...eyeOf(out)) / R - 1);
+    expect(ceiling).toBeGreaterThan(1.0); // premise: excess ≈ 0.3, share ≈ 0.077
+    const reduced = 1.4 - bodyAngle(out);
+    expect(reduced).toBeGreaterThan(0.05);
+    // A nadir-measured residual (0.25·1.4, capped) would spend the full 0.1.
+    expect(reduced).toBeLessThan(0.095);
   });
 
   it('a receding staircase converges heading and tilt to the canonical framing', () => {
+    // Tilt 0.6 keeps the screen-centre ray off the body, so the whole
+    // staircase recedes on the sub-eye radial and the fixture's on-axis
+    // readouts stay meaningful (the polar fixture's ENU breaks off-axis).
     const c = createSurfaceController();
-    let pose = poseAt([0, 0, 2], basisAt(1.2, 0.5));
+    let pose = poseAt([0, 0, 2], basisAt(1.2, 0.6));
     let lastAngle = bodyAngle(pose);
     let lastNorth = northUpOffset(pose);
     for (let i = 0; i < 40; i += 1) {
-      pose = apply(c, pose, zoom(1.2, false, [75, 50]));
+      pose = apply(c, pose, zoom(1.2, false));
       const angle = bodyAngle(pose);
       const north = northUpOffset(pose);
       // Monotone to a small slack: the three settle rotations pivot on
@@ -450,9 +473,12 @@ describe('surfaceController', () => {
     // residual taken the long way round the branch cut. The decay acts on
     // `atan2`'s (−π, π] residual, so ±3 rad steps to ±2.9 — one cap of turn,
     // not 5.1 the other way.
+    // Tilt 0.6 keeps the screen-centre ray off the body (limb 0.34 from up
+    // here), so the anchor is the sub-eye point and the heading step is the
+    // exact cap about the fixture's own axis.
     const c = createSurfaceController();
     for (const psi of [3.0, -3.0]) {
-      const start = poseAt([0, 0, R * 3], basisAt(psi, 0.3));
+      const start = poseAt([0, 0, R * 3], basisAt(psi, 0.6));
       const out = apply(c, start, zoom(1.5, false));
       expect(headingOnAxis(out)).toBeCloseTo(Math.sign(psi) * 2.9, 9);
     }
@@ -516,9 +542,12 @@ describe('surfaceController', () => {
   it('leaves a drag’s heading alone where a zoom notch would walk it north', () => {
     // Same pose, one write each: the zoom decays the heading toward north and
     // the drag does not (ruled: drags stay heading-free; only zoom writes
-    // re-orient). The drag's own wall and level must be exact no-ops on this
-    // roll-free, below-ceiling pose — heading 1.2 survives to the bit.
-    const start = poseAt([0, 0, R * 3.25], basisAt(1.2, 0.1));
+    // re-orient). The drag's own wall and level must be near-exact no-ops on
+    // this roll-free, below-ceiling pose. Tilt 0.35 keeps the screen-centre
+    // ray off the body (limb 0.31 from up here): the zoom's anchor is then
+    // the sub-eye point, whose radial passes through the eye, making the
+    // heading step the exact cap.
+    const start = poseAt([0, 0, R * 3.25], basisAt(1.2, 0.35));
 
     const dragged = createSurfaceController();
     dragged.onGestureStart();

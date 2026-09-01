@@ -104,7 +104,7 @@ describe('anchoredZoomStep', () => {
     expect(second).toEqual(first);
   });
 
-  it('zooming out ignores the cursor anchor', () => {
+  it('zooming out recedes from the cursor anchor, mirroring the dive (ruling 7)', () => {
     const pose: BodyFixedPose = {
       bodyId: 'earth',
       anchorLocalM: [0, 0, 0],
@@ -117,16 +117,16 @@ describe('anchoredZoomStep', () => {
       BODY_RADIUS_M * 0.9,
     ];
 
-    // Closed-form, not a comparison to a sibling call without a cursor: a
-    // latched (or altogether ignored) anchor implementation would also make
-    // two sibling calls agree, so the pin has to be the hand-derived
-    // sub-eye-anchored value itself — `R + f·(|eye| − R)` on the eye's own
-    // radial, which is also what rules out the old body-centre fallback.
+    // Closed-form: `A + f·(eye − A)` with f > 1 — the same affine map as the
+    // dive, so the point under the cursor stays pinned in BOTH directions (GM
+    // behaviour; overrules FW-H's sub-eye zoom-out). The old sub-eye value
+    // (`R + f·(|eye| − R)` on the eye radial, x = y = 0) is what this pins out.
     const withCursor = anchoredZoomStep(pose, 1.2, cursorAnchorM, BODY_RADIUS_M);
+    const eyeStart = [0, 0, 20_000_000] as const;
     const [ex, ey, ez] = eyeOf(withCursor);
-    expect(ex).toBeCloseTo(0, 6);
-    expect(ey).toBeCloseTo(0, 6);
-    expect(ez).toBeCloseTo(BODY_RADIUS_M + 1.2 * (20_000_000 - BODY_RADIUS_M), 6);
+    expect(ex).toBeCloseTo(cursorAnchorM[0] + 1.2 * (eyeStart[0] - cursorAnchorM[0]), 6);
+    expect(ey).toBeCloseTo(cursorAnchorM[1] + 1.2 * (eyeStart[1] - cursorAnchorM[1]), 6);
+    expect(ez).toBeCloseTo(cursorAnchorM[2] + 1.2 * (eyeStart[2] - cursorAnchorM[2]), 6);
   });
 
   it('an approach step never goes below the surface floor', () => {

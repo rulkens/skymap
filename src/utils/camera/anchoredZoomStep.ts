@@ -2,15 +2,15 @@
  * anchoredZoomStep — one stateless zoom tick on the body arm (spec §6b):
  * `eye′ = anchor + factor · (eye − anchor)`, no accumulator anywhere (FW-B).
  *
- * The anchor is the cursor's body-local pick only while *closing* on it
- * (`factor < 1`) with a hit; zoom-out and any miss fall back to the surface
- * point under the eye, so the cursor can never become a repelling pivot
- * (FW-H). For any anchor `A` with `eye·Â ≥ |A|` — the sub-eye point whenever
- * `|eye| ≥ R`, which the floor below guarantees; a cursor pick by the caller's
- * staleness test — `eye′·Â = |A| + f·(eye·Â − |A|) ≥ |A|` for all `f ≥ 0`, so
- * no tangent-plane overshoot guard is needed.
- * The caller derives `factor` from the centre-measured range, never from
- * `|eye − anchor|`.
+ * The anchor is the cursor's body-local pick in BOTH wheel directions (ruled
+ * 2026-09-02, #7 — GM pins the point under the cursor in and out; overrules
+ * FW-H's zoom-out carve-out); a miss falls back to the surface point under
+ * the eye, which keeps the step an altitude scale there. For any anchor `A`
+ * with `eye·Â ≥ |A|` — the sub-eye point whenever `|eye| ≥ R`, which the
+ * floor below guarantees; a cursor pick by the caller's staleness test —
+ * `eye′·Â = |A| + f·(eye·Â − |A|) ≥ |A|` for all `f ≥ 0`, so no
+ * tangent-plane overshoot guard is needed. The caller derives `factor` from
+ * the centre-measured range, never from `|eye − anchor|`.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -35,17 +35,15 @@ export function anchoredZoomStep(
     anchorLocalM[2] + eyeRelAnchorM[2],
   ];
 
-  const approaching = clampedFactor < 1;
-  // The fallback is the eye's own nadir footprint, not the body centre (user
-  // ruling, §12-R4): it lies on the eye's radial, so recession stays exactly
-  // centre-directed — FW-H's "the cursor never anchors a zoom-out" is
-  // untouched — while the step scales ALTITUDE rather than geocentric range,
-  // which is what makes one notch out undo one notch in near the ground. An
-  // eye exactly at the centre has no radial; the centre is the only answer
-  // there, and the floor below has none either.
+  // The miss fallback is the eye's own nadir footprint, not the body centre
+  // (user ruling, §12-R4): it lies on the eye's radial, so the step scales
+  // ALTITUDE rather than geocentric range, which is what makes one notch out
+  // undo one notch in near the ground. An eye exactly at the centre has no
+  // radial; the centre is the only answer there, and the floor below has none
+  // either.
   const eyeMagM = Math.hypot(eyeM[0], eyeM[1], eyeM[2]);
   const anchorM: Vec3 =
-    approaching && cursorAnchorM !== null
+    cursorAnchorM !== null
       ? cursorAnchorM
       : eyeMagM === 0
         ? [0, 0, 0]
