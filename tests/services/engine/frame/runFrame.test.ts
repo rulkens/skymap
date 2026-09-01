@@ -906,8 +906,15 @@ describe('runFrame — the label-director wake fold', () => {
     const base = makeCamState();
     return {
       ...base,
-      settings: { ...base.settings, flow: { enabled: false } },
-      data: { bodies: { earth: null } },
+      settings: {
+        ...base.settings,
+        flow: { enabled: false },
+        // Read unconditionally by `visibleStars` past the ready gate — see
+        // frameContext.test.ts's makeState for the same addition and why.
+        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+      },
+      data: { bodies: { earth: null, planets: [], stars: [] } },
       selectionRows: { focus: null },
       gpu: {
         ...base.gpu,

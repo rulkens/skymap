@@ -4,13 +4,17 @@
  * Vitest runs in Node without a WebGPU surface, so every `create*` call the
  * renderer issues at construction returns a plausibly-shaped stand-in
  * (mirrors `earthRenderer.test.ts`). These tests pin the `Renderer`
- * contract (non-empty `label`, `destroy`), the `draw(pass, instances, count)`
- * arity, the GPU-instancing mechanism (one `writeBuffer` of the caller's
- * array + one `drawIndexed(indexCount, count)`, so one draw paints N planets
- * without the writeBuffer-vs-submit race), the count guard, the grow-on-demand
- * instance buffer (no fixed cap — see the module header), and the opaque
- * foreground pipeline profile (caller's `targetFormat` on the colour target,
- * depth state present).
+ * contract (non-empty `label`, `destroy`), the `draw(pass, bodyId, instance)`
+ * arity, the per-body instancing mechanism (one `writeBuffer` of the caller's
+ * record into THAT body's own buffer + one `drawIndexed(indexCount, 1)`),
+ * and the opaque foreground pipeline profile (caller's `targetFormat` on the
+ * colour target, depth state present).
+ *
+ * `bodyPickRenderer.test.ts` carries the load-bearing regression this file's
+ * "own buffer per body" tests exist alongside: two same-submit `draw` calls
+ * for DIFFERENT bodies must never share a write target (the writeBuffer-vs-
+ * submit race `planetsLayer`'s per-row calls resurrected — see the module
+ * header).
  *
  * The two failures worth pinning here are the silent ones, both cross-file
  * contracts with no compiler check: the vertex-attribute layout drifting from
@@ -26,8 +30,14 @@ import {
   INSTANCE_STRIDE,
 } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
 import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
+import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 
 type BufferDesc = { label?: string; size: number };
+
+// Test-fixture body ids, cast the same way the real caller's do (`body.id as
+// BodyId` in slabs.ts) — this suite only cares that distinct ids get distinct
+// buffers, not that these particular names are registered ones.
+const id = (name: string): BodyId => name as BodyId;
 
 function mockDevice(opts?: {
   renderPipelines?: GPURenderPipelineDescriptor[];
@@ -41,7 +51,10 @@ function mockDevice(opts?: {
     }),
     createBuffer: vi.fn((desc: BufferDesc) => {
       opts?.buffers?.push(desc);
-      return { destroy: vi.fn() };
+      // Carries the label onto the returned stand-in (mirrors
+      // bodyPickRenderer.test.ts's mock) so a test can trace a writeBuffer
+      // target or a bound vertex buffer back to the body it belongs to.
+      return { label: desc.label, destroy: vi.fn() };
     }),
     createBindGroupLayout: vi.fn(() => ({})),
     createBindGroup: vi.fn(() => ({})),
@@ -88,41 +101,38 @@ describe('createPlanetRenderer', () => {
     createPlanetRenderer(mockDevice({ buffers }), 'rgba16float', 'depth32float', false);
     expect(buffers.find((b) => b.label === 'planet-position-vbo')).toBeDefined();
     expect(buffers.find((b) => b.label === 'planet-index-ibo')).toBeDefined();
-    expect(buffers.find((b) => b.label === 'planet-instance-vbo')).toBeUndefined();
+    expect(buffers.find((b) => b.label?.startsWith('planet-instance-vbo'))).toBeUndefined();
   });
 
-  it('draw is callable with (pass, instances, count) and records ONE indexed draw', () => {
+  it('draw is callable with (pass, bodyId, instance) and records ONE indexed draw', () => {
     const renderer = createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
-    expect(typeof renderer.draw).toBe('function');
-    expect(renderer.draw.length).toBe(3);
 
     const pass = mockPass();
-    const instances = new Float32Array(2 * INSTANCE_FLOATS);
-    expect(() => renderer.draw(pass, instances, 2)).not.toThrow();
+    const instance = new Float32Array(INSTANCE_FLOATS);
+    expect(() => renderer.draw(pass, id('jupiter'), instance)).not.toThrow();
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
-    // drawIndexed(indexCount, instanceCount): second arg is the planet count.
-    expect((pass.drawIndexed as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(2);
+    // drawIndexed(indexCount, instanceCount): a body-m row draws exactly one.
+    expect((pass.drawIndexed as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(1);
   });
 
-  it('draw does exactly one writeBuffer of the caller`s array with count × 24 float elements', () => {
+  it('draw does exactly one writeBuffer of the caller`s record, all 28 float elements', () => {
     const device = mockDevice();
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
-    const instances = new Float32Array(5 * INSTANCE_FLOATS);
+    const instance = new Float32Array(INSTANCE_FLOATS);
 
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear(); // drop the construction-time geometry uploads
-    renderer.draw(pass, instances, 3);
+    renderer.draw(pass, id('mars'), instance);
 
     expect(writeMock).toHaveBeenCalledTimes(1);
     const [, byteOffset, data, dataOffset, size] = writeMock.mock.calls[0]!;
     expect(byteOffset).toBe(0);
-    expect(data).toBe(instances); // the caller's array, uploaded directly
+    expect(data).toBe(instance); // the caller's array, uploaded directly
     expect(dataOffset).toBe(0);
-    // Element counts (not bytes): 3 records × 24 floats.
-    expect(size).toBe(3 * INSTANCE_FLOATS);
+    expect(size).toBe(INSTANCE_FLOATS);
 
-    // Both vertex buffers bound (per-vertex position + per-instance records).
+    // Both vertex buffers bound (per-vertex position + per-instance record).
     expect((pass.setVertexBuffer as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual([
       0, 1,
     ]);
@@ -130,58 +140,41 @@ describe('createPlanetRenderer', () => {
     expect(pass.setBindGroup).not.toHaveBeenCalled();
   });
 
-  it('a zero count is a no-op', () => {
+  it('two different bodies drawn in one submit get DISTINCT instance buffers (no clobber)', () => {
+    // The writeBuffer-vs-submit regression: `planetsLayer` calls `draw` once
+    // PER BODY-M SLAB ROW, all inside one encoder + submit. A single shared
+    // instance buffer would let mars' writeBuffer clobber mercury's bytes
+    // before the GPU ran either draw, so both rows must land in DIFFERENT
+    // buffers at DIFFERENT vertex-buffer bindings.
     const device = mockDevice();
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
-    const instances = new Float32Array(5 * INSTANCE_FLOATS);
-    const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
 
-    writeMock.mockClear();
-    renderer.draw(pass, instances, 0);
-    expect(writeMock).not.toHaveBeenCalled();
-    expect(pass.drawIndexed).not.toHaveBeenCalled();
+    renderer.draw(pass, id('mercury'), new Float32Array(INSTANCE_FLOATS));
+    renderer.draw(pass, id('mars'), new Float32Array(INSTANCE_FLOATS));
+
+    const setVbo = pass.setVertexBuffer as unknown as ReturnType<typeof vi.fn>;
+    const instanceVbos = setVbo.mock.calls.filter((c) => c[0] === 1).map((c) => c[1]);
+    expect(instanceVbos).toHaveLength(2);
+    expect(instanceVbos[0]).not.toBe(instanceVbos[1]);
+
+    const writeMock = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+    const targets = writeMock.mock.calls
+      .map((c) => c[0] as { label?: string })
+      .filter((buf) => buf.label?.startsWith('planet-instance-vbo'));
+    expect(targets).toHaveLength(2);
+    expect(targets[0]!.label).not.toBe(targets[1]!.label);
   });
 
-  it('the planet buffer grows past the initial capacity', () => {
-    // Regression coverage for the MAX_PLANETS = 24 defect: the planet table
-    // used to outgrow the buffer silently (Math.min clamp). Now the buffer
-    // itself has no cap — it grows to whatever the caller's count demands,
-    // the same grow-only-reuse pattern starPointRenderer.setStars uses for
-    // its instance buffer.
+  it('re-drawing the SAME body reuses its buffer, not a fresh allocation', () => {
     const buffers: BufferDesc[] = [];
     const device = mockDevice({ buffers });
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
 
-    // First draw establishes an initial capacity of 3.
-    renderer.draw(pass, new Float32Array(3 * INSTANCE_FLOATS), 3);
-    const afterFirst = buffers.filter((b) => b.label === 'planet-instance-vbo');
-    expect(afterFirst).toHaveLength(1);
-    expect(afterFirst[0]!.size).toBe(3 * INSTANCE_STRIDE);
-
-    // A later draw asking for more planets than that capacity must grow the
-    // buffer (a second allocation), not truncate to the first one's size.
-    renderer.draw(pass, new Float32Array(7 * INSTANCE_FLOATS), 7);
-    const afterSecond = buffers.filter((b) => b.label === 'planet-instance-vbo');
-    expect(afterSecond).toHaveLength(2);
-    expect(afterSecond[1]!.size).toBe(7 * INSTANCE_STRIDE);
-    // The grown draw actually issues all 7 instances — nothing dropped.
-    const lastCall = (pass.drawIndexed as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
-    expect(lastCall[1]).toBe(7);
-  });
-
-  it('an over-count draw throws rather than silently truncating', () => {
-    // The old clamp (Math.min(count, MAX_PLANETS)) hid a caller bug by
-    // quietly dropping the tail of the batch — the exact "draw caps, pick
-    // does not" asymmetry the backlog item named. A `count` the caller's own
-    // packed array cannot back is a programming error, not a runtime
-    // condition to paper over — it must throw at the call site instead of
-    // reading past the array or silently drawing fewer planets than asked.
-    const renderer = createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
-    const pass = mockPass();
-    const instances = new Float32Array(2 * INSTANCE_FLOATS); // only 2 records
-    expect(() => renderer.draw(pass, instances, 5)).toThrow();
+    renderer.draw(pass, id('mars'), new Float32Array(INSTANCE_FLOATS));
+    renderer.draw(pass, id('mars'), new Float32Array(INSTANCE_FLOATS));
+    expect(buffers.filter((b) => b.label?.startsWith('planet-instance-vbo'))).toHaveLength(1);
   });
 
   it('bakes the opaque foreground profile — targetFormat colour target + depth state', () => {

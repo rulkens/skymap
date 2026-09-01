@@ -56,7 +56,7 @@ export const horizonShellLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(_state, ctx) {
+  enabled(_state, ctx, _view) {
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return horizonShellFadeAlpha(camDistMpc, HORIZON_RADIUS_MPC) > 0;
   },

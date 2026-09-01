@@ -26,7 +26,7 @@ import { starExposureRamp } from '../../../../../src/services/gpu/renderers/star
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -123,36 +123,36 @@ function makeState(
  * pre-narrowed `view.vp`.
  */
 function makeNear0View(camPos: Vec3): SlabView {
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab();
   return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, 720] };
 }
 
 const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 
+// `enabled` never reads `view` — an arbitrary NEAR0 view satisfies the 3-arg
+// signature for every case below.
+const VIEW_STUB = makeNear0View([0, 0, 0]);
+
 describe('starCatalogLayer.enabled', () => {
   it('is false while the renderer handle is null (pre-bootstrap)', () => {
     const state = makeState(null);
-    expect(starCatalogLayer.enabled(state, CTX_STUB)).toBe(false);
+    expect(starCatalogLayer.enabled(state, CTX_STUB, VIEW_STUB)).toBe(false);
   });
 
   it('follows the master gate, the per-item toggle, and the crossfade band', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const insideCtx = makeCtx(camAtPc(inner + (outer - inner) * 0.25));
-    expect(starCatalogLayer.enabled(makeState(renderer), insideCtx)).toBe(true);
+    expect(starCatalogLayer.enabled(makeState(renderer), insideCtx, VIEW_STUB)).toBe(true);
 
     const beyondCtx = makeCtx(camAtPc(outer + 1000));
-    expect(starCatalogLayer.enabled(makeState(renderer), beyondCtx)).toBe(false);
+    expect(starCatalogLayer.enabled(makeState(renderer), beyondCtx, VIEW_STUB)).toBe(false);
 
-    expect(starCatalogLayer.enabled(makeState(renderer, { master: false }), insideCtx)).toBe(false);
-    expect(starCatalogLayer.enabled(makeState(renderer, { item: false }), insideCtx)).toBe(false);
+    expect(
+      starCatalogLayer.enabled(makeState(renderer, { master: false }), insideCtx, VIEW_STUB),
+    ).toBe(false);
+    expect(
+      starCatalogLayer.enabled(makeState(renderer, { item: false }), insideCtx, VIEW_STUB),
+    ).toBe(false);
   });
 });
 

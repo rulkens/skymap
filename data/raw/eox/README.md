@@ -66,7 +66,7 @@ npm run fetch-eox -- --region <name> [--level 13]
 ```
 
 `<name>` must be a key in `tools/fetch/eoxRegions.ts`; an unknown or missing
-`--region` throws listing the available names. Sequential, throttled to ~2
+`--region` throws listing the available names. Sequential, throttled to ~4
 requests/second, with exponential backoff on retryable failures (429/503/5xx
 or a network error) — same backoff shape as `tools/fetch/fetchDesi.ts`.
 Resumable by tile-file existence: re-running the same region/level skips

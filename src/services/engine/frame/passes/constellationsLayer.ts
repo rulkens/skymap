@@ -28,7 +28,7 @@ export const constellationsLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Hard distance cull, keyed on heliocentric-origin distance in Mpc: once the
     // band reads 0 the layer disables regardless of the toggle ("opacity 0 ⇒ no
     // render"), which also empties the (hdr, NEAR0) step for this row.

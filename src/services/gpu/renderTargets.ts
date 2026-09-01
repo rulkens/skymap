@@ -109,14 +109,17 @@
  * by depth-test, and WebGPU runs a depth-test only against a bound depth
  * attachment — so a row that declares depth gets a second texture allocated
  * and resized in lockstep with its colour texture. The depth texture carries
- * `RENDER_ATTACHMENT` (it feeds the depth-test as the pass draws) AND
- * `TEXTURE_BINDING`, because it is ALSO sampled downstream: the near-field
- * caption occlusion pass (`foregroundLabelsLayer`, via `lib/sceneDepth.wesl`)
- * reads this depth to hide a planet's name behind a nearer body. It renders
- * at full resolution (`scale: 1`) because opaque geometry has hard edges that
- * the bilinear upsample used for the low-frequency volume row would smear —
- * and full-res is also what lets a swap-pass fragment index the depth texel
- * 1:1 (spec invariant: `foreground:0` and `swap` both render at `scale: 1`).
+ * ONLY `RENDER_ATTACHMENT` (it feeds the depth-test as the pass draws) —
+ * nothing samples it downstream: each painter-chain row clears its own depth
+ * (spec §7.3), so the buffer only ever holds the LAST row's value and can't
+ * back a cross-row occlusion test. The caption occlusion pass
+ * (`foregroundLabelsLayer` and the other overlay layers, via
+ * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
+ * accumulates across rows under OVER compositing. It renders at full
+ * resolution (`scale: 1`) because opaque geometry has hard edges that the
+ * bilinear upsample used for the low-frequency volume row would smear — and
+ * full-res is also what lets a swap-pass fragment index the colour texel 1:1
+ * (spec invariant: `foreground:0` and `swap` both render at `scale: 1`).
  *
  * ### Why the swap row has a spec but no texture
  *
@@ -297,8 +300,10 @@ export function createRenderTargets(
       size: { width, height },
       // RENDER_ATTACHMENT lets the content layers' pipelines write into the
       // target; TEXTURE_BINDING lets the compositor / upsample fragment
-      // shaders sample from it. Both are required on the same texture —
-      // WebGPU descriptors don't support re-tagging after creation.
+      // shaders sample from it — for 'foreground:0' this is ALSO what the
+      // caption occlusion pass reads (its alpha, via lib/sceneDepth.wesl).
+      // Both usage flags are required on the same texture — WebGPU
+      // descriptors don't support re-tagging after creation.
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
     textures.set(spec.id, texture);
@@ -310,13 +315,14 @@ export function createRenderTargets(
         label: `render-target-${spec.id}-depth`,
         format: spec.depth,
         size: { width, height },
-        // Both flags: RENDER_ATTACHMENT feeds the depth-test while the
-        // foreground pass draws opaque geometry; TEXTURE_BINDING lets the
-        // near-field caption occlusion fragment shaders sample this same depth
-        // afterwards (via lib/sceneDepth.wesl) to hide captions behind nearer
-        // bodies. WebGPU descriptors can't re-tag usage after creation, so a
-        // texture that is later sampled must be born with TEXTURE_BINDING.
-        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+        // RENDER_ATTACHMENT only: this feeds the depth-test while the
+        // foreground pass draws opaque geometry, and nothing samples it
+        // downstream any more. The caption occlusion pass (lib/sceneDepth.wesl)
+        // reads the COLOUR texture's alpha instead (see the colour texture's
+        // own TEXTURE_BINDING comment above) — each painter-chain row clears
+        // its own depth (spec §7.3), so the depth buffer only ever holds the
+        // LAST row's value and can't back a coverage test.
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
       });
       depthTextures.set(spec.id, depthTexture);
       depthViews.set(spec.id, depthTexture.createView());

@@ -17,7 +17,7 @@ import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
- * Bytes of one `NodeParams` element: `originRelCamMpc` vec3 (0..11) +
+ * Bytes of one `NodeParams` element: `originRelCamM` vec3 (0..11) +
  * `vertexBase` u32 (12..15) + `atlasUvOrigin` vec2 (16..23) + `atlasUvScale`
  * vec2 (24..31) + `fallbackUvOrigin` vec2 (32..39) + `fallbackUvScale` vec2
  * (40..47) + `fadeWeight` f32 (48..51), rounded up to the vec3's 16-byte
@@ -43,9 +43,9 @@ export const TILE_VERTEX_BYTES = 48;
 export function writeSurfaceTileNodeParams(
   view: DataView,
   base: number,
-  originRelCamMpcX: number,
-  originRelCamMpcY: number,
-  originRelCamMpcZ: number,
+  originRelCamMX: number,
+  originRelCamMY: number,
+  originRelCamMZ: number,
   vertexBase: number,
   atlasUvOriginX: number,
   atlasUvOriginY: number,
@@ -57,9 +57,9 @@ export function writeSurfaceTileNodeParams(
   fallbackUvScaleY: number,
   fadeWeight: number,
 ): void {
-  view.setFloat32(base + 0, originRelCamMpcX, true);
-  view.setFloat32(base + 4, originRelCamMpcY, true);
-  view.setFloat32(base + 8, originRelCamMpcZ, true);
+  view.setFloat32(base + 0, originRelCamMX, true);
+  view.setFloat32(base + 4, originRelCamMY, true);
+  view.setFloat32(base + 8, originRelCamMZ, true);
   view.setUint32(base + 12, vertexBase >>> 0, true);
   view.setFloat32(base + 16, atlasUvOriginX, true);
   view.setFloat32(base + 20, atlasUvOriginY, true);
@@ -120,10 +120,13 @@ export const SURFACE_TILE_UNIFORM_BYTES = 176;
 export function writeSurfaceTileUniforms(
   view: DataView,
   vp: Float32Array,
+  /** Identity under the body-slab frame — see the renderer's module header
+   *  for why rotCol0/1/2 are inert; kept as a parameter (rather than baked
+   *  in here) so this function stays a pure statement of the byte layout. */
   orientation: Readonly<Mat3>,
-  radiusMpc: number,
+  radiusM: number,
   vertsPerTile: number,
-  camPosRelBodyMpc: Readonly<Vec3>,
+  camPosRelBodyM: Readonly<Vec3>,
   sunDirLocal: Readonly<Vec3>,
   roughnessBase: number,
   f0: number,
@@ -153,7 +156,7 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(64, orientation[0], true);
   view.setFloat32(68, orientation[1], true);
   view.setFloat32(72, orientation[2], true);
-  view.setFloat32(76, radiusMpc, true);
+  view.setFloat32(76, radiusM, true);
   view.setFloat32(80, orientation[3], true);
   view.setFloat32(84, orientation[4], true);
   view.setFloat32(88, orientation[5], true);
@@ -162,9 +165,9 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(100, orientation[7], true);
   view.setFloat32(104, orientation[8], true);
   view.setFloat32(108, roughnessBase, true);
-  view.setFloat32(112, camPosRelBodyMpc[0], true);
-  view.setFloat32(116, camPosRelBodyMpc[1], true);
-  view.setFloat32(120, camPosRelBodyMpc[2], true);
+  view.setFloat32(112, camPosRelBodyM[0], true);
+  view.setFloat32(116, camPosRelBodyM[1], true);
+  view.setFloat32(120, camPosRelBodyM[2], true);
   view.setFloat32(124, f0, true);
   view.setFloat32(128, sunDirLocal[0], true);
   view.setFloat32(132, sunDirLocal[1], true);

@@ -28,7 +28,7 @@ export const galaxyPointSpritesLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled() {
+  enabled(_state, _ctx, _view) {
     return true;
   },
 

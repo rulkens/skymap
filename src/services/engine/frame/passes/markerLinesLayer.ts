@@ -46,23 +46,23 @@ export const markerLinesLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (state.gpu.markerLineRenderer === null) return false;
     return state.gpu.markerLineRenderer.lineCount() > 0;
   },
 
   draw(pass, view, ctx, state) {
-    // Occlude the leader lines per-pixel behind nearer bodies ONLY when the
-    // body pass actually ran this frame — else the `foreground:0` depth is
-    // stale/uninitialised and would spuriously discard every line. When
+    // Occlude the leader lines per-pixel behind an opaque body ONLY when the
+    // body pass actually ran this frame — else the `foreground:0` colour is
+    // stale/uninitialised and would spuriously blank every line. When
     // undefined, the occlusion renderer falls back to its plain pipeline and
     // draws the lines un-occluded. Mirrors `foregroundLabelsLayer`'s guard.
-    const depthView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.depthViewOf('foreground:0')
+    const colorView = ctx.renderedTargets.has('foreground:0')
+      ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;
     // `enabled()` proved markerLineRenderer is non-null and has at least
     // one line.  The `!` assertion is safe: the framework only calls
     // `draw` when `enabled` returns true.
-    state.gpu.markerLineRenderer!.draw(pass, view.vp, view.viewportPx, depthView);
+    state.gpu.markerLineRenderer!.draw(pass, view.vp, view.viewportPx, colorView);
   },
 };

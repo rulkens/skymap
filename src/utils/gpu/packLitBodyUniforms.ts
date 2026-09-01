@@ -28,7 +28,7 @@
  *   f32 16..18 (byte 64..75): sunDirLocal (vec3, 16-byte aligned)
  *   f32 19     (byte 76..79): _pad (the vec3's trailing pad, left zeroed)
  *
- * @param mvp          16-element column-major MVP (from `composeBodyMvp`).
+ * @param mvp          16-element column-major MVP (from `composeBodySlabMvp`).
  * @param sunDirLocal  Sun direction in the body's local frame (`sunDirLocal.ts`).
  */
 
@@ -37,10 +37,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 /** f32 count of `LitBodyUniforms` — 16 mvp + 3 sunDirLocal + 1 pad. */
 export const LIT_BODY_UNIFORM_FLOATS = 20;
 
-export function packLitBodyUniforms(
-  mvp: Float32Array,
-  sunDirLocal: Readonly<Vec3>,
-): Float32Array {
+export function packLitBodyUniforms(mvp: Float32Array, sunDirLocal: Readonly<Vec3>): Float32Array {
   const out = new Float32Array(LIT_BODY_UNIFORM_FLOATS);
   out.set(mvp.subarray(0, 16), 0); // bytes 0..63
   out[16] = sunDirLocal[0]; // byte 64

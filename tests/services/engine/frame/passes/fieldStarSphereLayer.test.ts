@@ -30,8 +30,8 @@ import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/Sta
 import { SOLAR_RADIUS_KM } from '../../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { STAR_RESOLVE_PX } from '../../../../../src/services/engine/frame/partitionStarsByResolution';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import { Source } from '../../../../../src/data/sources';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -115,15 +115,7 @@ const PASS_STUB = {} as unknown as GPURenderPassEncoder;
 
 /** A NEAR0 view whose f64 `slab.vp` differs from the f32 `vp` (the compose seam). */
 function makeNear0View(camPos: Vec3): SlabView {
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab();
   return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, VIEWPORT_H] };
 }
 
@@ -132,9 +124,10 @@ describe('fieldStarSphereLayer.enabled', () => {
     const cat = await threeStarCatalog();
     const starPos = resolveStarRecord(cat, 1)!.positionMpc;
     // Camera well within the ON distance; state carries no selectionRows.
-    expect(
-      fieldStarSphereLayer.enabled(stateWith(cat), makeCtx(camAt(starPos, ON_MPC * 0.5))),
-    ).toBe(true);
+    const cam = camAt(starPos, ON_MPC * 0.5);
+    expect(fieldStarSphereLayer.enabled(stateWith(cat), makeCtx(cam), makeNear0View(cam))).toBe(
+      true,
+    );
   });
 
   it('honours the hysteresis band: present stays present, absent stays absent', async () => {
@@ -144,42 +137,50 @@ describe('fieldStarSphereLayer.enabled', () => {
     // frame keeps it. Fresh catalog so the WeakMap starts empty.
     const catA = await threeStarCatalog();
     const posA = resolveStarRecord(catA, 1)!.positionMpc;
-    expect(fieldStarSphereLayer.enabled(stateWith(catA), makeCtx(camAt(posA, ON_MPC * 0.5)))).toBe(
-      true,
-    );
-    expect(fieldStarSphereLayer.enabled(stateWith(catA), makeCtx(camAt(posA, bandDist)))).toBe(
-      true,
-    );
+    const camAOn = camAt(posA, ON_MPC * 0.5);
+    expect(
+      fieldStarSphereLayer.enabled(stateWith(catA), makeCtx(camAOn), makeNear0View(camAOn)),
+    ).toBe(true);
+    const camABand = camAt(posA, bandDist);
+    expect(
+      fieldStarSphereLayer.enabled(stateWith(catA), makeCtx(camABand), makeNear0View(camABand)),
+    ).toBe(true);
 
     // Sub-case B — was ABSENT (camera only ever saw the band): stays absent. A
     // separate catalog keeps its WeakMap entry independent of sub-case A.
     const catB = await threeStarCatalog();
     const posB = resolveStarRecord(catB, 1)!.positionMpc;
-    expect(fieldStarSphereLayer.enabled(stateWith(catB), makeCtx(camAt(posB, bandDist)))).toBe(
-      false,
-    );
+    const camBBand = camAt(posB, bandDist);
+    expect(
+      fieldStarSphereLayer.enabled(stateWith(catB), makeCtx(camBBand), makeNear0View(camBBand)),
+    ).toBe(false);
   });
 
   it('is absent (and clears its stored state) once the camera recedes past OFF', async () => {
     const cat = await threeStarCatalog();
     const starPos = resolveStarRecord(cat, 1)!.positionMpc;
     // Adopt it up close, then pull well past OFF — the star drops.
-    expect(
-      fieldStarSphereLayer.enabled(stateWith(cat), makeCtx(camAt(starPos, ON_MPC * 0.5))),
-    ).toBe(true);
-    expect(fieldStarSphereLayer.enabled(stateWith(cat), makeCtx(camAt(starPos, OFF_MPC * 4)))).toBe(
-      false,
+    const camOn = camAt(starPos, ON_MPC * 0.5);
+    expect(fieldStarSphereLayer.enabled(stateWith(cat), makeCtx(camOn), makeNear0View(camOn))).toBe(
+      true,
     );
+    const camOff = camAt(starPos, OFF_MPC * 4);
+    expect(
+      fieldStarSphereLayer.enabled(stateWith(cat), makeCtx(camOff), makeNear0View(camOff)),
+    ).toBe(false);
     // Cleared, not merely hidden: back in the band it stays absent (the prior
     // presence did not survive the recede).
     const bandDist = (ON_MPC + OFF_MPC) / 2;
-    expect(fieldStarSphereLayer.enabled(stateWith(cat), makeCtx(camAt(starPos, bandDist)))).toBe(
-      false,
-    );
+    const camBand = camAt(starPos, bandDist);
+    expect(
+      fieldStarSphereLayer.enabled(stateWith(cat), makeCtx(camBand), makeNear0View(camBand)),
+    ).toBe(false);
   });
 
   it('is absent while the catalog is not loaded (pre-bootstrap)', () => {
-    expect(fieldStarSphereLayer.enabled(stateWith(null), makeCtx([0, 0, 0]))).toBe(false);
+    expect(
+      fieldStarSphereLayer.enabled(stateWith(null), makeCtx([0, 0, 0]), makeNear0View([0, 0, 0])),
+    ).toBe(false);
   });
 });
 
@@ -192,7 +193,7 @@ describe('fieldStarSphereLayer.draw', () => {
     const state = stateWith(cat, { starRenderer: { draw: drawSpy } });
 
     // enabled runs first (the executor's contract) → stores the present star.
-    expect(fieldStarSphereLayer.enabled(state, makeCtx(cam))).toBe(true);
+    expect(fieldStarSphereLayer.enabled(state, makeCtx(cam), makeNear0View(cam))).toBe(true);
     fieldStarSphereLayer.draw(PASS_STUB, makeNear0View(cam), makeCtx(cam), state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
   });
@@ -210,7 +211,7 @@ describe('fieldStarSphereLayer.drawPick', () => {
     });
     const state = stateWith(cat, { bodyPickRenderer: { drawSphere } });
 
-    expect(fieldStarSphereLayer.enabled(state, makeCtx(cam))).toBe(true);
+    expect(fieldStarSphereLayer.enabled(state, makeCtx(cam), makeNear0View(cam))).toBe(true);
     fieldStarSphereLayer.drawPick!(PASS_STUB, makeNear0View(cam), makeCtx(cam), state);
 
     expect(drawSphere).toHaveBeenCalledTimes(1);

@@ -65,7 +65,7 @@ import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import { slabViewOf, groupKeyOf } from './slabs';
+import { slabViewOf, groupKeyOf, layerTimingSlotName } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
@@ -194,18 +194,25 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // one whose gate returned false — hence the check follows the gate.
         // Empty in production, so the membership lookup is in the noise.
         const disabledPasses = state.settings.debug.disabledPasses;
+        // The frame's ONLY slab resolution — one SlabView per render step,
+        // threaded into every layer in the group. Resolved BEFORE the filter
+        // (not after, as before body slabs): a 'body' layer's `enabled` needs
+        // the view to read `view.slab.frame.bodyId`, and a step whose slab is
+        // a body row still resolves cheaply even when its group ends up empty.
+        const view = slabViewOf(ctx, step.slab);
         const group = layers.filter(
           (l) =>
             l.target === step.target &&
-            l.slab === step.slab &&
-            l.enabled(state, ctx) &&
+            // A 'body' layer matches every body-slab step, not one fixed
+            // index — Task 7 emits one such step per body row. `view.slab` is
+            // in hand here, so this reads `frame.kind` directly rather than
+            // going through `isBodySlabIndex` (slabs.ts) — the index-only
+            // sibling check `frameProgram.ts` uses where no `Slab` is in hand.
+            (l.slab === step.slab || (l.slab === 'body' && view.slab.frame.kind === 'body-m')) &&
+            l.enabled(state, ctx, view) &&
             disabledPasses[l.name] !== true,
         );
         if (group.length === 0) break;
-
-        // The frame's ONLY slab resolution — one SlabView per render step,
-        // threaded into every layer in the group.
-        const view = slabViewOf(ctx, step.slab);
         // The merged pass bills its whole group against this one slot. The key
         // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
         // definition `timedSlotRowsOf` allocates the slot under — so
@@ -333,13 +340,19 @@ function renderGroup(
   // the module header) is the price of per-pass timing; this path runs only
   // under ?gpuTimings. The step's clear (colour or depth) belongs to the FIRST
   // layer's pass only — the rest load, or each would wipe its predecessor.
+  // `layerTimingSlotName` keys the slot by `view.slab.index` (not just
+  // `layer.name`): a `slab: 'body'` layer draws once per body row in one
+  // encoder, and without the row in the name every row's pass would attach
+  // the SAME two query indices — the last one to run silently overwrites the
+  // others' timestamps (see `layerTimingSlotName`'s doc, slabs.ts).
   group.forEach((layer, i) => {
     const touchedBefore = alreadyTouched || i > 0;
+    const slot = layerTimingSlotName(layer.name, view.slab.index);
     const pass = encoder.beginRenderPass({
-      label: `render-${target}-${layer.name}`,
+      label: `render-${target}-${slot}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],
       ...depthAttachment(ctx, target, i === 0 ? depthLoadOp : 'load', view.slab.reversedZ),
-      ...timestampSpread(timing, layer.name),
+      ...timestampSpread(timing, slot),
     });
     layer.draw(pass, view, ctx, state);
     pass.end();

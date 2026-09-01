@@ -30,4 +30,11 @@ describe('buildTimingSlotMap', () => {
     const lastEnd = map.get('pick')![1];
     expect(lastEnd).toBe(names.length * 2 - 1);
   });
+
+  it('throws on a duplicate name instead of silently colliding two slots onto one index pair', () => {
+    // The exact regression this restores: TIMED_SLOTS once carried 'planets'
+    // 26 times (one per body-row capacity slot) with no per-row distinction,
+    // so every duplicate silently overwrote the same two query indices.
+    expect(() => buildTimingSlotMap(['a', 'b', 'a'])).toThrow(/duplicate/i);
+  });
 });

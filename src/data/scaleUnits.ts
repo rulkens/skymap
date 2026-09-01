@@ -44,6 +44,10 @@ const KM_TO_MPC = PC_TO_MPC / PC_IN_KM;
 const AU_TO_MPC = AU_IN_KM * KM_TO_MPC;
 const LY_TO_MPC = PC_TO_MPC / PC_TO_LY;
 const M_TO_MPC = KM_TO_MPC / KM_TO_M;
+// Derived the same way as M_TO_MPC (from PC_IN_KM), not as 1 / M_TO_MPC — a
+// runtime reciprocal would round differently and the two directions would no
+// longer round-trip at f64.
+const MPC_TO_M = PC_IN_KM * 1e6 * KM_TO_M;
 
 /**
  * Unit conversion constants, named `<FROM>_TO_<TO>`.
@@ -64,6 +68,7 @@ export const SCALE_UNITS: Readonly<{
   readonly KM_TO_M: number;
   readonly M_TO_KM: number;
   readonly M_TO_MPC: number;
+  readonly MPC_TO_M: number;
 }> = {
   KM_TO_MPC,
   AU_TO_MPC,
@@ -75,4 +80,5 @@ export const SCALE_UNITS: Readonly<{
   KM_TO_M,
   M_TO_KM,
   M_TO_MPC,
+  MPC_TO_M,
 } as const;

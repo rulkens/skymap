@@ -218,7 +218,7 @@ export const fieldStarSphereLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // The presence query needs the live catalog; null (pre-bootstrap / GPU
     // teardown) disables before any distance math.
     const catalog = currentCatalog(state);

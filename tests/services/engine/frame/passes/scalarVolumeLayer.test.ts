@@ -14,6 +14,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { scalarVolumeLayer } from '../../../../../src/services/engine/frame/passes/scalarVolumeLayer';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -33,15 +34,7 @@ const VOLUME_SCALE = 3;
 function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   const vp = new Float32Array(16) as unknown as Mat4;
   const canvasSize = over.canvasSize ?? { width: 1280, height: 720 };
-  const cosmoSlab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
-    vp: Float64Array.from(vp as unknown as Float32Array),
-    frame: { kind: 'world-mpc', originRelative: false },
-    precision: 'f32',
-    reversedZ: false,
-  };
+  const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
     isReady: true,
     cam: {} as never,
@@ -103,7 +96,8 @@ function liveState(
 
 describe('scalarVolumeLayer.enabled', () => {
   it('is enabled when deriveVolumeLiveness is non-null (renderer active, master on)', () => {
-    expect(scalarVolumeLayer.enabled(liveState(), makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(scalarVolumeLayer.enabled(liveState(), ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
   it('is disabled when the renderer is null (pre-bootstrap)', () => {
@@ -112,13 +106,19 @@ describe('scalarVolumeLayer.enabled', () => {
       settings: { volumes: { enabled: true, items: {} } },
       subsystems: { fades: { opacityOf: () => 1 } },
     } as unknown as EngineState;
-    expect(scalarVolumeLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(scalarVolumeLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('is disabled when no field is active', () => {
-    expect(scalarVolumeLayer.enabled(liveState({ hasActiveFields: () => false }), makeCtx())).toBe(
-      false,
-    );
+    const ctx = makeCtx();
+    expect(
+      scalarVolumeLayer.enabled(
+        liveState({ hasActiveFields: () => false }),
+        ctx,
+        slabViewOf(ctx, COSMO),
+      ),
+    ).toBe(false);
   });
 });
 

@@ -15,7 +15,7 @@ export const flowFieldLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // No cube committed → nothing to draw, even mid-fade.
     if (!slotReady(state.assetSlots.flow)) return false;
     if (state.settings.flow.enabled) return true;

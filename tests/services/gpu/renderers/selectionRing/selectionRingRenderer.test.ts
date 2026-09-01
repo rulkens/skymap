@@ -18,7 +18,10 @@ const newNullDeviceRenderer = () => {
 // A mock device that records writeBuffer calls and hands back stub GPU
 // objects, so the populated `draw` path (pipeline + buffers non-null) runs
 // without a real WebGPU backend.
-function newMockDeviceRenderer(targetFormat?: GPUTextureFormat) {
+function newMockDeviceRenderer(
+  targetFormat?: GPUTextureFormat,
+  init?: { occludeAgainstScene?: boolean },
+) {
   const writeBuffer = vi.fn<(buffer: GPUBuffer, offset: number, data: Float32Array) => void>();
   const stubBuffer = (label: string) => ({ label, destroy: vi.fn() }) as unknown as GPUBuffer;
   const renderPipelines: GPURenderPipelineDescriptor[] = [];
@@ -46,7 +49,7 @@ function newMockDeviceRenderer(targetFormat?: GPUTextureFormat) {
     hdrCapable: false,
   };
   return {
-    renderer: createSelectionRingRenderer(ctx, targetFormat ?? ctx.format),
+    renderer: createSelectionRingRenderer(ctx, targetFormat ?? ctx.format, init),
     writeBuffer,
     renderPipelines,
   };
@@ -68,6 +71,22 @@ describe('SelectionRingRenderer colour target', () => {
     expect(renderPipelines).toHaveLength(1);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
+  });
+});
+
+describe('SelectionRingRenderer occlusion variant', () => {
+  it('blends the occlusion pipeline PREMULTIPLIED — the contract sceneTransmittance depends on', () => {
+    // `fragmentOcclude.wesl` returns `shadeRing(...) * sceneTransmittance(...)`:
+    // one scalar scaling an already-premultiplied rgba. That is only a fade
+    // under a `one` source factor. Flip this target to straight-alpha OVER
+    // (`src-alpha`) and the hardware multiplies by alpha a SECOND time — the
+    // ring crushes toward black instead of fading out, on a device only. The
+    // shader can't state the requirement; this can.
+    const { renderPipelines } = newMockDeviceRenderer(undefined, { occludeAgainstScene: true });
+    const occlude = renderPipelines.find((p) => p.label?.includes('occlude'));
+    const target = Array.from(occlude!.fragment!.targets!)[0]!;
+    expect(target!.blend?.color.srcFactor).toBe('one');
+    expect(target!.blend?.color.dstFactor).toBe('one-minus-src-alpha');
   });
 });
 

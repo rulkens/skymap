@@ -10,29 +10,28 @@
  * distances; per-planet texturing would follow the Earth's `setMap`
  * pattern when a body earns it.
  *
- * ONE instanced draw paints every seeded planet: each body's MVP + albedo +
- * sun direction rides in a per-instance vertex-buffer record, so the renderer
- * needs neither a per-body bind nor a per-draw uniform — see `planetRenderer`'s
- * header for why instancing beats dynamic-offset uniforms here.
+ * Each body's MVP + albedo + sun direction rides in a per-instance
+ * vertex-buffer record, needing neither a per-body bind nor a per-draw
+ * uniform — but `draw` is called once per body-m slab row (own instance
+ * buffer per `bodyId`), not once for the whole roster; see `planetRenderer`'s
+ * header for the per-body-buffer race and its fix.
  */
 
 import type { Renderer } from './Renderer';
+import type { BodyId } from '../data/body/BodyId';
 
 export type PlanetRenderer = Renderer & {
   /**
-   * Draw `count` planets into the current (opaque, depth-tested) pass with a
-   * single instanced `drawIndexed`. `instances` is a packed Float32Array of
-   * `count` per-instance records, each 24 floats: floats 0..15 are the body's
-   * column-major MVP (model T·R·S + view + projection), floats 16..18 its
-   * linear-RGB albedo, float 19 a pad, floats 20..22 the sun direction in the
-   * body's local frame, float 23 a pad. The caller reuses one
-   * staging array across frames; `draw` uploads the first `count` records in
-   * ONE `queue.writeBuffer` and issues ONE draw, so there is no per-body
-   * uniform for a later write to clobber (the writeBuffer-vs-submit landmine is
-   * avoided by construction). The instance buffer grows to fit the largest
-   * `count` seen so far — there is no fixed cap on how many planets can be
-   * drawn; `count` must not exceed `instances.length / 24`, or `draw` throws
-   * rather than read past the caller's array. A zero count is a no-op.
+   * Draw the one planet belonging to `bodyId` into the current (opaque,
+   * depth-tested) pass. `instance` is a packed Float32Array of 28 floats:
+   * floats 0..15 the body's column-major MVP (model T·R·S + view +
+   * projection), 16..18 linear-RGB albedo (+ pad at 19), 20..22 the sun
+   * direction in the body's local frame (+ pad at 23), 24..26 camPosLocal (+
+   * pad at 27). `planetsLayer` calls `draw` once per body-m slab row, all
+   * inside one submit, so each `bodyId` gets its OWN instance buffer (the
+   * `texturedBodyRenderer` own-buffer-per-body precedent): two same-submit
+   * calls for different ids never share a write target, so neither can
+   * clobber the other before the GPU runs either draw.
    */
-  draw(pass: GPURenderPassEncoder, instances: Float32Array, count: number): void;
+  draw(pass: GPURenderPassEncoder, bodyId: BodyId, instance: Float32Array): void;
 };

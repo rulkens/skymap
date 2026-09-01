@@ -31,7 +31,7 @@
  * The ambient floor is not packed on either struct — `litShade` reads
  * `lib/bodyLighting.wesl`'s `AMBIENT` const directly (see `packLitBodyUniforms`).
  *
- * @param mvp            16-element column-major MVP (from `composeBodyMvp`).
+ * @param mvp            16-element column-major MVP (from `composeBodySlabMvp`).
  * @param sunDirLocal    Sun direction in the body's local frame.
  * @param ringInnerRatio Ring inner radius / planet radius (0 when no ring).
  * @param ringOuterRatio Ring outer radius / planet radius; 0 ⇒ no ring.

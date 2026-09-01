@@ -12,6 +12,7 @@ import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -22,18 +23,12 @@ import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
  */
 function makeCtx(): ReadyFrameContext {
   const vp = new Float32Array(16) as unknown as Mat4;
-  const cosmoSlab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
-    vp: Float64Array.from(vp),
-    frame: { kind: 'world-mpc', originRelative: false },
-    precision: 'f32',
-    reversedZ: false,
-  };
+  const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp) });
   return {
     isReady: true,
     renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],
@@ -145,32 +140,38 @@ describe('selectionRingLayer.enabled', () => {
       gpu: { selectionRingRenderer: null },
       selectionRows: { select: null, focus: null, hover: null },
     } as unknown as EngineState;
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('returns false when nothing is selected', () => {
     const state = makeStateWithSelection(null);
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('returns true when renderer is non-null and a galaxy row is selected', () => {
     const state = makeStateWithSelection(galaxyRow());
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
   it('is true when the Milky Way row is selected', () => {
     const state = makeStateWithSelection(MILKY_WAY_ROW);
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
   it('stays false for a structure row (marker pass owns that halo)', () => {
     const state = makeStateWithSelection(structureRow() as SelectionRow);
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('stays false for a star row (its NEAR0 halo belongs to the sibling layer)', () => {
     const state = makeStateWithSelection(STAR_ROW);
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(selectionRingLayer.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 });
 
@@ -201,8 +202,9 @@ describe('selection-ring slab exclusivity (COSMO vs NEAR0)', () => {
   for (const { name, row, cosmo, near0 } of cases) {
     it(`${name}: never both layers, routes to the right slab`, () => {
       const state = makeStateWithSelection(row);
-      const cosmoEnabled = selectionRingLayer.enabled(state, ctx);
-      const near0Enabled = near0SelectionRingLayer.enabled(state, ctx);
+      const view = slabViewOf(ctx, COSMO);
+      const cosmoEnabled = selectionRingLayer.enabled(state, ctx, view);
+      const near0Enabled = near0SelectionRingLayer.enabled(state, ctx, view);
       expect(cosmoEnabled && near0Enabled).toBe(false);
       expect(cosmoEnabled).toBe(cosmo);
       expect(near0Enabled).toBe(near0);
@@ -276,5 +278,31 @@ describe('selectionRingLayer.draw', () => {
     expect(rendererSpy.draw).toHaveBeenCalledOnce();
     // The viewport is `draw`'s 3rd argument.
     expect(rendererSpy.draw.mock.calls[0]![2]).toEqual([1280, 720]);
+  });
+
+  // Cross-file contract (Task 12): the occlusion joint now reads
+  // 'foreground:0's COLOUR view (its alpha, via lib/sceneDepth.wesl), not its
+  // depth view — each painter-chain row clears its own depth (spec §7.3), so
+  // the depth buffer can no longer back a coverage test. This fails if the
+  // layer is ever pointed back at `depthViewOf`.
+  it('passes the foreground colour view (not the depth view) to the renderer as the 5th arg', () => {
+    const state = makeStateWithSizePx(galaxyRow(), 4);
+    const sentinelColorView = {} as GPUTextureView;
+    const viewOf = vi.fn<(id: string) => GPUTextureView>(() => sentinelColorView);
+    const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
+    const ctx = {
+      ...makeCtx(),
+      renderedTargets: new Set(['foreground:0']),
+      renderTargets: { viewOf, depthViewOf } as unknown as ReadyFrameContext['renderTargets'],
+    };
+
+    selectionRingLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
+
+    expect(viewOf).toHaveBeenCalledWith('foreground:0');
+    expect(depthViewOf).not.toHaveBeenCalled();
+    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
+      typeof makeRendererSpy
+    >;
+    expect(rendererSpy.draw.mock.calls[0]![4]).toBe(sentinelColorView);
   });
 });

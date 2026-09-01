@@ -23,12 +23,11 @@
 import package::selectionRing::io::VsOut;
 
 // The annulus mask + colour body, factored out of the '@fragment fn fs'
-// entry so a depth-occluding variant (selectionRing/fragmentOcclude.wesl)
-// can reuse the exact same mask after its discard gate — one source of
-// truth for the ring shape, two entry points that differ only in whether
-// they test the scene depth first.  The interior 'discard' statements are
-// valid inside a called function: WGSL permits 'discard' anywhere in a
-// fragment's call tree, so both entries inherit the annulus's own culling.
+// entry so the scene-attenuated variant (selectionRing/fragmentOcclude.wesl)
+// scales this exact result rather than re-deriving it — one source of truth
+// for the ring shape.  The interior 'discard' statements are valid inside a
+// called function: WGSL permits 'discard' anywhere in a fragment's call
+// tree, so both entries inherit the annulus's own culling.
 fn shadeRing(input: VsOut) -> vec4<f32> {
   // Radial distance² from the quad centre.  UV is in [-1, +1]², so
   // 'dot(uv, uv)' is r² in unit-quad space.

@@ -40,7 +40,7 @@ export const diskRadiusRingLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     // Handle check first: no ring renderer means nothing to draw, and
     // short-circuiting here keeps the gate robust against the not-yet-
     // constructed startup window (and partial test stubs) without

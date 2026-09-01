@@ -30,16 +30,21 @@ type ResidentLookupResult = {
  */
 export function cutSurfaceTiles(input: {
   readonly kind: EarthTileKind;
-  /** Camera position in Earth's local frame, in body-radii units (surface =
-   *  unit sphere). */
-  readonly camPosLocal: Readonly<Vec3>;
-  /** View-projection for that frame, column-major. Only x/y extent is read,
-   *  so the depth convention doesn't matter here. MUST stay `Float64Array` —
-   *  at low altitude the `w`-row cancels its own large terms down to ~1e-21,
-   *  so f32-rounding an element beforehand injects a ~1% relative error that
-   *  corrupts the bbox-cull test below (see `composeBodyMvp`'s header). */
+  /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
+   *  units — see `radiusM` below, the walk's new length scale). */
+  readonly camPosLocalM: Readonly<Vec3>;
+  /** The body slab's own f64 vp, built about the eye, in metres. Only x/y
+   *  extent is read, so the depth convention doesn't matter here. Stays
+   *  `Float64Array` as a belt-and-braces contract: the `w`-row cancellation
+   *  that forced it under the old Mpc-frame walk (`composeBodyMvp`'s header)
+   *  no longer occurs — metres is already the small, well-conditioned unit
+   *  — but keeping the type honest costs nothing and guards a future caller
+   *  that narrows too early. */
   readonly viewProjLocal: Float64Array;
   readonly viewportPx: Readonly<Vec2>;
+  /** The body's equatorial radius in metres — was implicit (unit sphere);
+   *  the walk's horizon test now scales against this instead. */
+  readonly radiusM: number;
   /** The level the whole-globe base texture already delivers — the walk's floor. */
   readonly baseLevel: number;
   /** The manifest's geographic depth bands for this kind; a leaf outside every
@@ -63,9 +68,10 @@ export function cutSurfaceTiles(input: {
 } {
   const {
     kind,
-    camPosLocal,
+    camPosLocalM,
     viewProjLocal,
     viewportPx,
+    radiusM,
     baseLevel,
     bands,
     tilePx,
@@ -73,18 +79,20 @@ export function cutSurfaceTiles(input: {
     residentSlot,
   } = input;
 
-  const camLen = Math.hypot(camPosLocal[0], camPosLocal[1], camPosLocal[2]);
+  const camLen = Math.hypot(camPosLocalM[0], camPosLocalM[1], camPosLocalM[2]);
   // Computed before the early return below so a degenerate/underground camera
   // still reports a (best-effort) sub-camera direction rather than none.
   const camDir: Vec3 =
     camLen > 0
-      ? [camPosLocal[0] / camLen, camPosLocal[1] / camLen, camPosLocal[2] / camLen]
+      ? [camPosLocalM[0] / camLen, camPosLocalM[1] / camLen, camPosLocalM[2] / camLen]
       : [1, 0, 0];
   // Camera on or inside the surface: no horizon, nothing sensible to plan.
-  if (!(camLen > 1))
+  if (!(camLen > radiusM))
     return { cut: [], requests: { zWin: baseLevel, requests: [], subCameraDirLocal: camDir } };
-  // Horizon lies acos(1/d) from the sub-camera point on the unit sphere.
-  const capAngle = Math.acos(1 / camLen);
+  // Horizon lies acos(radiusM/d) from the sub-camera point on the sphere —
+  // the metres-native form of the old unit-sphere acos(1/d) (radiusM = 1
+  // there), so the walk is unit-agnostic rather than assuming a unit sphere.
+  const capAngle = Math.acos(radiusM / camLen);
   // The deepest level any band bakes: bounds `required` below so a huge
   // screen-space extent can't ask the walk to descend past every band's max.
   let maxTileLevel = baseLevel;
