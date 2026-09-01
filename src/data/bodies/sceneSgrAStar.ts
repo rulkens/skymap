@@ -16,9 +16,10 @@
  */
 
 import { raDecDistToCartesian } from '../../utils/math/raDecDistToCartesian';
+import { schwarzschildRadiusM } from '../../utils/physics/schwarzschildRadiusM';
 import { SCALE_UNITS } from '../scaleUnits';
 import { SGR_A_STAR_ENTRY } from '../sources/sgr-a-star';
-import { SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM } from './sgrAStarSchwarzschildRadiusKm';
+import { SGR_A_STAR_MASS_SOLAR } from './sgrAStarMassSolar';
 import type { AnchorBody } from '../../@types/scene/AnchorBody';
 import type { AnchorPointBody } from '../../@types/scene/AnchorPointBody';
 
@@ -37,8 +38,8 @@ const SGR_A_STAR_DISTANCE_PC = 8178;
 export const SGR_A_STAR: AnchorPointBody = {
   id: SGR_A_STAR_ENTRY.id,
   label: SGR_A_STAR_ENTRY.label,
-  // Wire/authored value is km; runtime convention is metres.
-  radiusM: SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+  // schwarzschildRadiusM returns metres directly.
+  radiusM: schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR),
   // Q10's descent floor: the camera may approach to 2 r_s, well inside the
   // Earth-tuned global SURFACE_STANDOFF_RADII (~1.0000024).
   standoffRadii: 2.0,
