@@ -3,10 +3,12 @@
  * setter fires (the LUT bakes into the pass's bind group at construction;
  * see ViewSlice.d.ts). Moved out of Viewport's `frame()` closure (T11):
  * `takeEvery` on the setter IS the edge now, replacing the old per-frame
- * `attachedRaymarchPalette`/`attachedVolpathPalette` diff. Both workers run
- * to completion synchronously (no `call`/async step), so a dispatch can't
- * land mid-worker — see watchSceneSaga's build-vs-reattach race in the task
- * report for why that also keeps this safe against a concurrent scene build.
+ * `attachedRaymarchPalette`/`attachedVolpathPalette` diff. Each worker is
+ * synchronous up to its guard below (no `call`/async step), so it can't
+ * crash or leave a dangling graph reference against a concurrent
+ * `watchSceneSaga` build, and the preview-dispose seam (below) is unaffected.
+ * Known pre-existing edge, not fixed here: a palette dispatch landing during
+ * a build's async window can be silently dropped — see the guard's comment.
  */
 import { takeEvery, put, getContext } from 'typed-redux-saga';
 
@@ -22,6 +24,13 @@ export function* watchPaletteSaga() {
     const resources = yield* getContext<WorkbenchSagaContext['resources']>('resources');
     const h = resources?.harness;
     const graph = resources?.graph;
+    // Known edge (pre-existing, tracked by the controller — not fixed here):
+    // watchSceneSaga's buildScene reads view.*PaletteId ONCE, before its own
+    // async gaps, and never re-selects before its attachTrace/attachVolpath.
+    // A dispatch landing while resources.harness/graph is still null (mid-
+    // build) no-ops here AND the build then attaches its stale pre-dispatch
+    // snapshot — the change is silently dropped until the next palette
+    // change or rebuild.
     if (!resources || !h || !graph) return;
     graph.attachTrace({
       traceBuffer: h.traceBuffer,
