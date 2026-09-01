@@ -234,7 +234,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         break;
       }
       case 'render': {
-        // The runtime hand-off (Task 12): a step carrying `face` (the
+        // The runtime hand-off: a step carrying `face` (the
         // black-hole lens's sky-cubemap capture) resolves EVERY per-step value
         // below — slab view, enable gate, draw ctx — from ITS OWN camera
         // (`renderFrame`'s per-face `skyCubemapFaceContext` derivation), not
@@ -256,12 +256,12 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // the view to read `view.slab.frame.bodyId`, and a step whose slab is
         // a body row still resolves cheaply even when its group ends up empty.
         const view = slabViewOf(stepCtx, step.slab);
-        // A capture step (Task 12's sky-cubemap sweep) selects its group by
+        // A capture step (the sky-cubemap sweep) selects its group by
         // the `skyCapture` opt-in flag, not `target`: every capture step
         // targets 'sky-cubemap', but the roster's own layers keep their
         // ordinary `target` ('hdr', typically) for their NORMAL per-frame
         // draw — target-matching could never select them for a capture step
-        // (Ruling 6, resolving Task 12's own recorded finding). `step.face`
+        // (the capture roster is an opt-in list, not a target match). `step.face`
         // is the same discriminant `stepCtx` above already reads.
         const isCaptureStep = step.face !== undefined;
         const faceKey = step.face === undefined ? null : `${step.target}:${step.face}`;
@@ -269,12 +269,12 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           (l) =>
             (isCaptureStep ? l.skyCapture === true : l.target === step.target) &&
             // A 'body' layer matches every body-slab step, not one fixed
-            // index — Task 7 emits one such step per body row. `view.slab` is
+            // index. `view.slab` is
             // in hand here, so this reads `frame.kind` directly rather than
             // going through `isBodySlabIndex` (slabs.ts) — the index-only
             // sibling check `frameProgram.ts` uses where no `Slab` is in hand.
             (l.slab === step.slab || (l.slab === 'body' && view.slab.frame.kind === 'body-m')) &&
-            // The black-hole lens's (hdr, NEAR0) split (Task 14b): a step
+            // The black-hole lens's (hdr, NEAR0) split: a step
             // carrying `lensPhase` further narrows the group to the layers
             // that opted into `hdrPostLensing` accordingly — see slabs.ts.
             matchesLensPhase(l.hdrPostLensing, step.lensPhase) &&

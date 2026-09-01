@@ -1,19 +1,12 @@
 /**
  * sgrAStarLensingLayer — the Sgr A* lens pass's `ContentLayer` row.
  *
- * `slab: 'body'`: the frame program expands a `'body'` layer into one render
- * step per body-m slab row, so `enabled`/`draw` are called once per body —
- * narrowed here to Sgr A*'s own row (the anchor's `visibleSlabBodies`
- * candidacy, same seam `planetsLayer` reads for a seeded planet). `blend:
- * 'over'` (Porter-Duff, premultiplied) rather than the additive convention
- * most `hdr` layers use: the black hole's captured disc must truly occlude
- * the additive starlight already accumulated behind it, and per-pixel alpha
- * lets the roster drawn earlier show through wherever deflection is
- * negligible — `Blend.d.ts` enumerates `'over'` for any target, not just the
- * swap-chain rows.
- *
- * No `drawPick`: Sgr A*'s existing pick stamp lives in `starPointsLayer`
- * (see `ContentLayer.d.ts`'s own docblock) and is untouched by this layer.
+ * `slab: 'body'` expands into one render step per body-m row, so
+ * `enabled`/`draw` run once per body and are narrowed here to Sgr A*'s.
+ * `blend: 'over'`, not the additive convention most `hdr` layers use: the
+ * captured disc must truly OCCLUDE the starlight behind it, while per-pixel
+ * alpha lets the earlier roster through where deflection is negligible.
+ * No `drawPick` — Sgr A*'s pick stamp lives in `starPointsLayer`.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -112,9 +105,8 @@ export const sgrAStarLensingLayer: ContentLayer = {
     // impact-parameter coverage can never exceed that distance — 0.6 bounds
     // the vertex's plane-stretch factor at 1.25 (see vertex.wesl) — and
     // floored at the LUT max so the fade never cuts into the LUT-resolved
-    // strong-field region during a close descent. Fading at the raw LUT edge
-    // instead blended a sky still deflected ~40 px into the true sky (see
-    // audit-cubemap-alignment.md §7).
+    // strong-field region during a close descent — fading at the raw LUT edge
+    // blends a sky still deflected ~40 px into the true sky.
     const distRs =
       Math.hypot(anchorPosRelCamM[0], anchorPosRelCamM[1], anchorPosRelCamM[2]) /
       SCHWARZSCHILD_RADIUS_M;
@@ -122,10 +114,8 @@ export const sgrAStarLensingLayer: ContentLayer = {
       renderer.lut.maxImpactParamRs,
       Math.min(2 * ctx.drawPxPerRad, 0.6 * distRs),
     );
-    // Billboard half-size in f64 HERE, not in the vertex shader: the f32
-    // in-shader inversion degenerated close-in (edgeFadeEndRs >= distRs via
-    // the lutMax floor) into a ~5e4x-oversized quad whose varying
-    // interpolation shook every ray — see lensQuadPlaneRadiusRs's docblock.
+    // Billboard half-size in f64 HERE, not in the vertex shader — see
+    // `lensQuadPlaneRadiusRs`'s docblock.
     const quadPlaneRadiusRs = lensQuadPlaneRadiusRs(edgeFadeEndRs, distRs);
 
     const uniforms = packSgrAStarLensingUniforms({

@@ -33,12 +33,11 @@
  * ### Why pass an explicit input bag instead of capturing closure?
  *
  * This module owns no cross-frame state of its OWN — every local value it
- * computes is recomputed each frame. It DOES read/write one Resource, Task
- * 12's `state.cameraRuntime.skyCubemapCapture` (the black-hole lens's
- * amortized sky-capture bookkeeping), the same amortized-Resources shape
- * `cameraRuntime`'s other fields already carry — see
- * `SkyCubemapCaptureRuntime.d.ts`. A free function taking a struct of inputs
- * is trivially testable and bounds the encoder lifetime to the function body.
+ * computes is recomputed each frame. It DOES read/write one Resource,
+ * `state.cameraRuntime.skyCubemapCapture` (the black-hole lens's amortized
+ * sky-capture bookkeeping), the same amortized-Resources shape
+ * `cameraRuntime`'s other fields already carry. A free function taking a
+ * struct of inputs bounds the encoder lifetime to the function body.
  *
  * ### What stays in `runFrame()` (NOT here)
  *
@@ -113,12 +112,10 @@ export function renderFrame(input: RenderFrameInput): void {
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
 
-  // The black-hole lens's amortized sky-cubemap capture schedule (Task 12).
-  // `bandAlpha` keys on the CAMERA's distance from the galactic-centre
-  // anchor, same quantity + region every `sgrAStarLensing`-band consumer
-  // reads (`scaleFadeBands.ts`). Bookkeeping lives on `cameraRuntime`, not
-  // here — see `SkyCubemapCaptureRuntime.d.ts` for why `renderFrame` (which
-  // owns no cross-frame state of its own) is still this bag's sole writer.
+  // The black-hole lens's amortized sky-cubemap capture schedule. The band
+  // keys on the CAMERA's distance from the galactic-centre anchor, the same
+  // quantity + region every `sgrAStarLensing`-band consumer reads. The
+  // bookkeeping lives on `cameraRuntime` — see `SkyCubemapCaptureRuntime`.
   const captureRuntime = state.cameraRuntime.skyCubemapCapture;
   const gcDistanceMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
@@ -127,16 +124,6 @@ export function renderFrame(input: RenderFrameInput): void {
   );
   const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
 
-  // Sgr A*'s own body-m slab row this frame, if the band is active (Task 14,
-  // Ruling 8): `frameProgram` never emitted an (hdr, BODY[k]) step for
-  // `sgrAStarLensingLayer` before this task, so it compiled and registered
-  // but never drew (Task 13's own finding). Resolved here, not in
-  // `frameProgram`, because the row's painter-order index comes from
-  // `deriveSlabs` (computed upstream of this function) — the same
-  // "resolve here, hand data down" split `earthSlab` in `runFrame.ts`
-  // already follows for the identical `frame.kind === 'body-m'` lookup.
-  // `null` outside the band, or when the row isn't in `ctx.slabs` this frame
-  // (e.g. frustum-culled despite the distance band).
   const bandJustEngaged = bandActive && !captureRuntime.bandActive;
   // The `sky-cubemap` row's 50 MB exists only while the band does (its
   // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`
@@ -149,18 +136,13 @@ export function renderFrame(input: RenderFrameInput): void {
     ctx.renderTargets.reconcile(state, ctx.canvasSize);
   }
 
-  // The runtime hand-off (Task 12's brief, "Name the runtime hand-off"):
-  // `frameProgram` only knows WHICH faces to capture (static data); resolving
-  // each face's own synthetic camera is `renderFrame`'s job, done fresh every
-  // frame since the schedule's face LIST can change frame to frame.
-  // `faceSizePx` reads the sky-cubemap row's own ALLOCATED size (`sizeOf`,
-  // this frame's already-reconciled pixels — see `RenderTargets.sizeOf`'s
-  // doc), not `specOf().fixedSizePx.size` directly: that field is a live
-  // setting (a function of state, not a plain number), so reading the
-  // resolved allocation is the authoritative answer.
-  // A face whose context comes back null (pre-bootstrap) is simply
-  // omitted — `executeFrame` treats a missing map entry as "skip this step
-  // cleanly" (see its module header).
+  // `frameProgram` only knows WHICH faces to capture; each face's own
+  // synthetic camera is resolved here, fresh every frame, since the face LIST
+  // changes frame to frame. `faceSizePx` reads the row's ALLOCATED size, not
+  // `specOf().fixedSizePx.size`: that field is a live setting (a function of
+  // state), so the resolved allocation is the authoritative answer. A face
+  // whose context comes back null (pre-bootstrap) is omitted — `executeFrame`
+  // treats a missing map entry as "skip this step cleanly".
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
   let skyCubemapFacesToCapture: readonly CubeFace[] = [];
   // Sgr A*'s own body-m slab row this frame: `frameProgram` emits the
@@ -240,7 +222,7 @@ export function renderFrame(input: RenderFrameInput): void {
       // The master bloom toggle is the ONLY bloom value that shapes the step
       // list; strength/threshold are read live by the bloom layers each draw.
       state.settings.bloom.enabled,
-      // Painter-ordered NEAR0 + body-row indices (Task 4) — the chain the
+      // Painter-ordered NEAR0 + body-row indices — the chain the
       // foreground:0 render expands into, one step per entry.
       foregroundChainOrder(ctx.slabs),
       skyCubemapFacesToCapture,

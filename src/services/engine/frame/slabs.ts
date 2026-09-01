@@ -108,7 +108,7 @@ export function layerTimingSlotName(layerName: string, slabIndex: number, face?:
 
 /**
  * The per-STEP query-set slot name for a render step that may carry a
- * `face` (Task 12's sky-cubemap capture) — `groupKey` unchanged, or
+ * `face` (the sky-cubemap capture) — `groupKey` unchanged, or
  * `'<groupKey>·FACE[n]'` when a face is present. Six capture steps share one
  * `(target, slab)` — `('sky-cubemap', NEAR0)` — because the array-layer they
  * write isn't part of the `(target, slab)` key at all (unlike a body row,
@@ -133,7 +133,7 @@ export function renderStepTimingSlotName(
 }
 
 /**
- * The Task 14b (Ruling 9) lens-phase gate: whether a layer belongs to a
+ * The lens-phase gate: whether a layer belongs to a
  * render step's group, given the step's `lensPhase` (FrameStep.d.ts). Single-
  * sourced here because `frameProgram.ts`'s `timedSlotRowsOf` (the derived
  * timing-slot list) and `executeFrame`'s group filter (the actual draw

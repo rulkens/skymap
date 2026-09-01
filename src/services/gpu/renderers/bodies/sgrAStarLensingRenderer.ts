@@ -1,31 +1,14 @@
 /**
  * sgrAStarLensingRenderer — the Sgr A* lens pass: one billboard draw per
- * frame classifying capture/escape/annulus rays against the Task 9 LUT and
- * the Task 11 sky cubemap. Structural precedent: `bodyGlintRenderer.ts` (a
- * small single-draw body renderer, explicit non-'auto' bind group layout,
- * `label:` on every resource).
+ * frame classifying capture/escape/annulus rays against the deflection LUT
+ * and the sky cubemap. Structural precedent: `bodyGlintRenderer.ts`.
  *
- * ### The LUT texture — `Infinity` encoding (Task 13's brief, decided here)
+ * LANDMINE — the LUT's captured samples are IEEE `Infinity`, which a
+ * fast-math compiler need not preserve, so they upload as
+ * `CAPTURE_SENTINEL_RAD` and the fragment threshold-tests instead.
  *
- * `buildSchwarzschildDeflectionLut`'s captured samples are IEEE `Infinity`.
- * That round-trips through an `r32float` texel's raw bits exactly, but a
- * fast-math shader compiler is not guaranteed to preserve Infinity
- * arithmetic (this codebase already treats float edge-case flushing as a
- * live landmine — see the renderer landmines). Rather than ship raw
- * Infinity through the upload and rely on GPU-side comparisons behaving,
- * this helper replaces every `Infinity` sample with `CAPTURE_SENTINEL_RAD`
- * — a large finite value comfortably separated from any real (finite)
- * quadrature result — before `writeTexture`. The fragment's
- * `CAPTURE_THRESHOLD_RAD` (half the sentinel) is the GPU-side counterpart;
- * the two constants don't need to agree exactly, only that the threshold
- * sits between the largest real bend angle and the sentinel.
- *
- * ### Why a `texture_2d<f32>` of height 1, not `texture_1d`
- *
- * docs/RENDERER.md's iOS/WebKit landmine: `textureSampleLevel` has no 1D
- * overload, and WebKit rejects `texture_1d` sampling Chrome accepts. Every
- * 1D LUT in this codebase is an N×1 `texture_2d` instead — this one follows
- * the same convention.
+ * LANDMINE — the LUT is an N×1 `texture_2d`: `textureSampleLevel` has no 1D
+ * overload and WebKit rejects the `texture_1d` Chrome accepts.
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';

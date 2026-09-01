@@ -112,35 +112,35 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * a farther row's depth — see the push loop below.
  *
  * `skyCubemapFacesToCapture` (`skyCubemapCaptureSchedule`'s output, computed
- * by `renderFrame` each frame from the lensing band alpha — Task 12) is the
+ * by `renderFrame` each frame from the lensing band alpha) is the
  * black-hole lens's amortized sky-capture list: empty outside the band, so
  * NO capture steps are emitted at all (Q6's zero-dispatch guarantee — this is
  * the capture side of that contract, not just the lensing draw itself).
  * Placed in the compute prelude's wake, ahead of every other render step, so
- * a same-frame lensing draw (Task 13) can sample a cubemap this frame
+ * a same-frame lensing draw can sample a cubemap this frame
  * actually wrote. TWO steps per requested face — COSMO then NEAR0 — because
- * the fixed opt-in roster (`ContentLayer.skyCapture`, Ruling 6) spans both
+ * the fixed opt-in roster (`ContentLayer.skyCapture`) spans both
  * slabs: `point-sprites` / `textured-disks` project through COSMO;
  * `star-catalog` / `star-aggregates` / `star-points` through NEAR0. A
  * capture step selects its group by the flag rather than by `target`
  * (`executeFrame`'s capture-step branch), but `slab` still gates normally —
- * one step per slab is what makes BOTH halves of the roster reachable
- * (Task 13b; a single NEAR0-only step left the COSMO half permanently
- * unselected, the flag having no effect). Order (COSMO before NEAR0)
+ * one step per slab is what makes BOTH halves of the roster reachable (a
+ * single NEAR0-only step leaves the COSMO half permanently unselected, the
+ * flag having no effect). Order (COSMO before NEAR0)
  * mirrors the real `(hdr, COSMO)` → `(hdr, NEAR0)` sequence below, so the
  * capture composites in the same order the live frame would.
  *
- * `sgrAStarLensingBodySlabs` (Task 14, Ruling 8) is the black-hole lens's OWN
- * missing step: no step here ever matched `sgrAStarLensingLayer` (`slab:
- * 'body'`, `target: 'hdr'`) before Task 14 — it registered and compiled but
- * never drew (Task 13's own recorded finding). `renderFrame` resolves Sgr
+ * `sgrAStarLensingBodySlabs` is the black-hole lens's OWN step: without it
+ * nothing here matches `sgrAStarLensingLayer` (`slab: 'body'`, `target:
+ * 'hdr'`), which registers and compiles but never draws. `renderFrame`
+ * resolves Sgr
  * A*'s body-m row each frame and passes it here ONLY inside the fade band, so
  * an inactive band emits no step at all (same zero-dispatch guarantee as
  * `skyCubemapFacesToCapture`). One `(hdr, slab)` render step per entry,
  * placed after the `(hdr, NEAR0)` roster step so the lens's OVER blend
  * occludes the roster light already accumulated there. A non-empty list also
  * means the band is active, so the `(hdr, NEAR0)` roster step ABOVE this one
- * splits into `'pre'`/`'post'` halves around it (Task 14b, Ruling 9):
+ * splits into `'pre'`/`'post'` halves around it:
  * `orbit-trails`/`body-glints` opt into the `'post'` half via
  * `ContentLayer.hdrPostLensing`, so they draw AFTER the lens rather than
  * being sampled by it, while an inactive band leaves the roster as the one
@@ -204,8 +204,7 @@ export function frameProgram(
   // still accumulating into HDR BEFORE the tone-map composite below — one
   // tone curve for stars and galaxies. The hdr target is already touched
   // by the COSMO step above, so this pass loads rather than clears.
-  // Task 14b (Ruling 9): outside the band this is the one untagged step it
-  // always was — byte-identical to pre-Task-14b. Inside it, the roster
+  // Outside the band this is one untagged step. Inside it, the roster
   // splits around the lens's own (hdr, BODY[k]) step(s) below so
   // `orbit-trails`/`body-glints` (ContentLayer.hdrPostLensing) draw AFTER
   // the lens instead of being sampled by it — see this function's doc.
@@ -331,8 +330,8 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
   'mw-aggregate·NEAR0': 'Volumes & aggregates',
-  // The black-hole lens's amortized sky-capture steps (Task 12) — 0-12 of
-  // them per frame (COSMO + NEAR0 per requested face, Task 13b) depending on
+  // The black-hole lens's amortized sky-capture steps — 0-12 of
+  // them per frame (COSMO + NEAR0 per requested face) depending on
   // `skyCubemapCaptureSchedule`, so its own group rather than folding into
   // an existing title.
   'sky-cubemap·COSMO': 'Sky capture',
@@ -388,7 +387,7 @@ function timedSlotRowsOf(
       // `groupKeyOf` helper (slabs.ts) — the same definition the merged executor
       // resolves against, so the two can't drift. Two render steps can now
       // share one `(target, slab)` — the black-hole lens's `'pre'`/`'post'`
-      // roster split (Task 14b) — but never share a LAYER (`matchesLensPhase`
+      // roster split — but never share a LAYER (`matchesLensPhase`
       // partitions the registry between them), so no per-layer dedup is
       // needed; only the group-TOTAL row below needs the split disambiguated.
       const groupKey = groupKeyOf(step.target, step.slab);

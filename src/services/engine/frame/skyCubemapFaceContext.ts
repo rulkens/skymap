@@ -1,11 +1,9 @@
 /**
  * skyCubemapFaceContext — one face of the black-hole sky cubemap's capture
- * camera, as a value. Mirrors `pickFrameContext.ts` exactly: several roster
- * layers read `ctx.fovYRad`/`ctx.canvasSize`/`ctx.drawPxPerRad` as
- * frame-globals, not just `viewProj`, so this re-derives a full
- * `ReadyFrameContext` from a synthetic camera (eye = `eyeMpc`, forward = the
- * face's fixed axis, a 90° symmetric frustum) instead of threading a swapped
- * vp through every roster-layer consumer.
+ * camera, as a value. Mirrors `pickFrameContext.ts`: roster layers read
+ * `ctx.fovYRad`/`canvasSize`/`drawPxPerRad` as frame-globals, not just
+ * `viewProj`, so a whole synthetic `ReadyFrameContext` is cheaper than
+ * threading a swapped vp through every consumer.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -20,23 +18,14 @@ import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { cross3 } from '../../../utils/math/cross3';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
-/**
- * The synthetic frustum's near plane, NOT the live cosmo camera's (`0.01
- * Mpc` / 10 kpc, sized for the whole scene). The capture's actual content —
- * S-stars and the field around Sgr A* — sits at hundreds of AU, seven orders
- * of magnitude inside that near plane; reusing it would clip every S-star
- * invisible. `sky-cubemap` is depthless (`depth: null`), so near/far affect
- * only clipping, never depth precision — free to pick a value sized for the
- * capture scene instead of the main camera's.
- */
+// NOT the live cosmo near plane (0.01 Mpc): the capture's content sits at
+// hundreds of AU, inside it, so reusing it clips every S-star away.
 const SKY_CAPTURE_NEAR_MPC = 0.1 * SCALE_UNITS.AU_TO_MPC;
 
 /**
- * Forward axis per `CubeFace` (index order ±X/±Y/±Z, see `CubeFace.d.ts`).
- * `FACE_UP` is the WebGPU/D3D `texture_cube` convention's per-face up
- * reference: world ±Y is parallel to forward on the ±Y faces, so those two
- * borrow world ±Z instead. A later cube-view bind of this row's 6 layers
- * relies on both tables matching that convention exactly.
+ * Forward axis per `CubeFace` (±X/±Y/±Z), and the `texture_cube` convention's
+ * per-face up (the ±Y faces borrow world ±Z, since world ±Y is forward
+ * there). The cube-view bind relies on both matching that convention.
  */
 const FACE_FORWARD: readonly Vec3[] = [
   [1, 0, 0],
@@ -56,14 +45,10 @@ const FACE_UP: readonly Vec3[] = [
 ];
 
 /**
- * One basis per face, doing double duty as both `poseBasis` and `upBasis`.
- * With `yaw = pitch = 0` fixed below, `updatePosition` decodes local +Z
- * through `poseBasis` — so this basis' THIRD column is set to `-forward`
- * (target → eye), placing the derived eye exactly on `target - forward`.
- * `ORIENTATION_FRAMES`' own convention puts a basis' pole in the MIDDLE
- * column, which `frameUp` reads for screen-up — so the same matrix's middle
- * column carries `FACE_UP`, and one basis serves both roles with no risk of
- * the two drifting apart.
+ * One basis per face, serving as both `poseBasis` and `upBasis` so the two
+ * cannot drift. `updatePosition` decodes local +Z through the THIRD column,
+ * so that column is `-forward`; `frameUp` reads the MIDDLE for screen-up, so
+ * that one carries `FACE_UP`.
  */
 const FACE_BASES: readonly Mat3[] = FACE_FORWARD.map((forward, i): Mat3 => {
   const up = FACE_UP[i]!;
@@ -72,15 +57,10 @@ const FACE_BASES: readonly Mat3[] = FACE_FORWARD.map((forward, i): Mat3 => {
 });
 
 /**
- * Negate a view-projection's clip-space Y row (column-major 1/5/9/13).
- * The cube-face (s,t) convention is a MIRROR of any right-handed capture
- * basis: `FACE_UP` is the classic GL capture table, which only samples
- * upright under GL's bottom-left framebuffer origin. WebGPU rasterizes
- * top-left, so every face would land vertically flipped (v = 1 − t) at
- * `texture_cube` sample time — see audit-cubemap-alignment.md. No rotation
- * can absorb a reflection, hence this clip-Y negation on every capture vp.
- * The winding reversal it implies is harmless: the capture roster is
- * entirely cull-free point/billboard pipelines.
+ * Negate a vp's clip-Y row (column-major 1/5/9/13). `FACE_UP` is the GL
+ * capture table, upright only under GL's bottom-left origin; WebGPU
+ * rasterizes top-left, so every face would sample flipped (v = 1 − t) and no
+ * rotation absorbs a reflection. The winding reversal is harmless here.
  */
 function flipClipY(vp: Float32Array | Float64Array): void {
   vp[1] = -vp[1]!;
@@ -94,27 +74,24 @@ export function skyCubemapFaceContext(input: {
   readonly eyeMpc: Readonly<Vec3>;
   readonly face: CubeFace;
   readonly faceSizePx: number;
-  /** The FRAME's stamped clock, so a roster layer that animates on `nowMs`
-   *  ticks identically on a captured face and in the direct view. */
+  /** The FRAME's clock, so a `nowMs`-animated roster layer ticks identically
+   *  on a captured face and in the direct view. */
   readonly nowMs: number;
 }): ReadyFrameContext | null {
   const { state, eyeMpc, face, faceSizePx, nowMs } = input;
   const forward = FACE_FORWARD[face]!;
   const basis = FACE_BASES[face]!;
-  // target = eyeMpc + forward, distance = 1: `updatePosition` then derives
-  // position = target + 1·(-forward) = eyeMpc exactly, for every face.
+  // A target one unit ahead at distance 1 puts the derived eye back on
+  // `eyeMpc` exactly, on every face.
   const target: Vec3 = [eyeMpc[0] + forward[0], eyeMpc[1] + forward[1], eyeMpc[2] + forward[2]];
   const pose: CameraPose = { target, yaw: 0, pitch: 0, distance: 1 };
 
   const ctx = deriveFrameContext(
     state,
-    // deriveFrameContext only reads `.width`/`.height` off this — there is no
-    // real canvas for an offscreen capture, so a size-shaped stub stands in.
+    // Only `.width`/`.height` are read, and an offscreen capture has no canvas.
     { width: faceSizePx, height: faceSizePx } as unknown as HTMLCanvasElement,
     pose,
-    // 90° symmetric frustum sized for a cube face. near = SKY_CAPTURE_NEAR_MPC
-    // (see its docblock); far rides the live engine projection so distant
-    // stars/galaxies at cosmological range still survive the capture.
+    // 90° symmetric frustum, one cube face; `far` rides the live projection.
     {
       fovYRad: Math.PI / 2,
       aspect: 1,
@@ -123,19 +100,16 @@ export function skyCubemapFaceContext(input: {
     },
     basis,
     basis,
-    // Draw mask, not pick: this is a real capture pass, not a click target.
-    deriveSourceMasks(state).draw,
+    deriveSourceMasks(state).draw, // draw mask: a capture, not a click target
+
     nowMs,
     state.cameraRuntime.lastRenderedSimDays.current,
   );
   if (!ctx.isReady) return null;
-  // Mirror every capture vp (see flipClipY). In place: deriveFrameContext
-  // freshly allocated these arrays for this call, nothing else aliases them.
+  // In place is safe: `deriveFrameContext` freshly allocated these arrays.
   flipClipY(ctx.vp);
   for (const slab of ctx.slabs) flipClipY(slab.vp);
-  // Stamp this face's view slot (`face + 1` — slot 0 is the main view; see
-  // `ReadyFrameContext.viewSlot`'s doc) so a roster renderer's view-slot
-  // buffer helper keys this call's writes into a destination the main
-  // view's own `viewSlot: 0` draw never touches.
+  // Slot 0 is the main view, so the view-slot rings keep this call's writes
+  // off the real frame's (`ReadyFrameContext.viewSlot`).
   return { ...ctx, viewSlot: face + 1 };
 }

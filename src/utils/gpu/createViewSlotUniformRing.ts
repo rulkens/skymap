@@ -1,28 +1,12 @@
 /**
- * createViewSlotUniformRing — one fixed-size uniform buffer PER view slot
- * (Task 13b, Ruling 7), so a renderer's per-frame `writeBuffer` survives a
- * sky-cubemap capture sweep intact.
+ * createViewSlotUniformRing — one fixed-size uniform buffer PER view slot, so
+ * a renderer's per-frame `writeBuffer` survives a sky-cubemap capture sweep.
  *
- * A capture sweep calls a roster renderer's `draw()` once per face (a
- * synthetic `ReadyFrameContext`) plus once for the real view, ALL before one
- * `submit()`. A single shared buffer keeps only the LAST of those writes —
- * `queue.writeBuffer` calls apply in call order, but every recorded draw only
- * reads its bound buffer's contents at `submit()` time, by which point every
- * write already landed (docs/RENDERER.md landmine #1). Giving each
- * `ctx.viewSlot` its OWN physical buffer + bind group closes the race: a
- * call's write and the draw recorded against it always agree on which bytes
- * are theirs, because no other call ever touches that buffer.
- *
- * Ring-of-buffers, not one buffer + 256-byte-aligned dynamic offsets: the
- * bind-group layouts this ring is built against are shared, canonical
- * objects in several call sites (`FadeUniformsBgl`, `SourceUniformsBgl`) —
- * consumed as-is by sibling pipelines (`galaxyPickRenderer`) that only ever
- * bind slot 0. Making the layout's binding `hasDynamicOffset: true` would
- * force every consumer, including ones with no multi-slot need, to supply an
- * offset at bind time — a shared-type change for a single-caller feature. A
- * private ring needs no layout change at all: 7 slots × ≤176 B is a rounding
- * error in VRAM, so the memory a dynamic-offset scheme would save isn't
- * worth the wider blast radius.
+ * A sweep draws once per face plus once for the real view, all before one
+ * `submit()`, and a recorded draw reads its bound buffer only at submit time
+ * — so one shared buffer hands every draw the LAST write (docs/RENDERER.md
+ * landmine #1). A ring, not dynamic offsets: the bind-group layouts it binds
+ * are shared canonical objects sibling pipelines consume as-is.
  */
 
 import type { ViewSlotUniformRing } from '../../@types/rendering/ViewSlotUniformRing';
