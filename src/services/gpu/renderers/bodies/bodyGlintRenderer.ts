@@ -56,15 +56,28 @@ import fsCode from '../../shaders/bodies/bodyGlint/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
+import { SCENE_ANCHOR_POINT_BODIES } from '../../../../data/bodies/sceneAnchorPointBodies';
+
+// Headroom past today's exact seed count, so a new SCENE_PLANETS or
+// SCENE_ANCHOR_POINT_BODIES entry can still land without touching this file.
+const GLINT_CAPACITY_MARGIN = 4;
 
 /**
- * Upper bound on body glints drawn per frame. The glints branch is a subset of
- * the seeded bodies (the flat/textured branches take the rest), so it never
- * exceeds the ~21 seeded planets/moons; this caps the instance buffer with
- * headroom — see "Why draw takes the batch" above, its instance buffer is a
- * single fixed-capacity allocation.
+ * Upper bound on body glints drawn per frame: worst case every `SCENE_PLANETS`
+ * entry AND every `SCENE_ANCHOR_POINT_BODIES` entry packs as a glint the same
+ * frame (the glints branch is a SUBSET of `SCENE_PLANETS` in practice — the
+ * flat/textured branches take the rest — so this is a safe over-count, not a
+ * tight one), plus `GLINT_CAPACITY_MARGIN` headroom. Mirrors
+ * `BODY_SLAB_CAPACITY`'s derivation in `frameProgram.ts` — sized off the
+ * registries, not a hand-picked number that silently goes stale as the seed
+ * tables grow. Both pack loops in `bodyGlintsLayer` `break` on `count >=
+ * MAX_GLINTS` with no error, so zero margin would let the next seeded body
+ * silently starve a glint — see "Why draw takes the batch" above, its
+ * instance buffer is a single fixed-capacity allocation.
  */
-export const MAX_GLINTS = 24;
+export const MAX_GLINTS =
+  SCENE_PLANETS.length + SCENE_ANCHOR_POINT_BODIES.length + GLINT_CAPACITY_MARGIN;
 
 /**
  * Per-glint instance record: position (f32x3) + colour (f32x3) + brightness
