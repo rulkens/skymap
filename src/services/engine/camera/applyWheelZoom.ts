@@ -46,12 +46,12 @@
  * drag path writes it via the recapture edge (a committed base.distance); this
  * function is the WHEEL half of 'any user zoom'.
  *
- * `pivotRadiusMpc` is the radius of whatever the camera orbits (see the helper
- * of the same name), forwarded to every arm's `zoomedDistance` call so the zoom
- * tapers into just off a focused body's surface instead of scaling raw distance
- * to the centre. All three arms need it: follow orbits the body by definition,
- * and the autoRotate / resting arms orbit it too whenever the frame loop's
- * pivot-pin is centring them on it.
+ * `pivot` bundles the radius + floor of whatever the camera orbits (see
+ * `pivotRadiusMpc.ts`'s `pivotFraming`), forwarded to every arm's
+ * `zoomedDistance` call so the zoom tapers into just off a focused body's
+ * surface instead of scaling raw distance to the centre. All three arms need
+ * it: follow orbits the body by definition, and the autoRotate / resting arms
+ * orbit it too whenever the frame loop's pivot-pin is centring them on it.
  */
 
 import { autoRotateElapsed } from './cameraClock';
@@ -60,6 +60,7 @@ import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { PivotFraming } from '../../../@types/camera/PivotFraming';
 
 export function applyWheelZoom(
   clock: CameraClock,
@@ -68,15 +69,15 @@ export function applyWheelZoom(
   factor: number,
   autoRotate: { active: boolean; rate: number },
   nowMs: number,
-  pivotRadiusMpc: number | null,
+  pivot: PivotFraming,
 ): CameraPose | null {
   if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
-    clock.followDistanceTarget = zoomedDistance(clock.followDistanceTarget, factor, pivotRadiusMpc);
+    clock.followDistanceTarget = zoomedDistance(clock.followDistanceTarget, factor, pivot);
     return null;
   }
   if (prevActiveId === 'autoRotate') {
     const elapsed = autoRotateElapsed(clock, autoRotate.active, base, nowMs);
-    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), factor, pivotRadiusMpc);
+    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), factor, pivot);
   }
-  return zoomedPose(base, factor, pivotRadiusMpc);
+  return zoomedPose(base, factor, pivot);
 }

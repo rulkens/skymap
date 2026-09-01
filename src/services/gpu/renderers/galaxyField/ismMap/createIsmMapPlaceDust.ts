@@ -45,7 +45,6 @@ export type PlaceDustDispatchInput = {
   readonly ringMeansBuffer: GPUBuffer;
   readonly ismMapTexture: GPUTexture;
   readonly orientationTexture: GPUTexture;
-  /** The LIVE fieldComps buffer — re-read after every regrow, never cached across calls. */
   readonly fieldCompsBuffer: GPUBuffer;
 };
 

@@ -15,6 +15,7 @@ import CollapsibleSection from '../../../../../src/components/common/Collapsible
 import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
 import { SOURCE_REGISTRY } from '../../../../../src/data/sources';
+import { TIER_LADDER } from '../../../../../src/data/tierLadder';
 import { tierTarget } from '../../../../../src/data/tierTargets';
 import {
   clearTraceRequested,
@@ -241,7 +242,7 @@ function ControlsPanel(): ReactNode {
               tier
             </span>
             <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-              {(['small', 'medium', 'large'] as const).map((tier) => (
+              {TIER_LADDER.map((tier) => (
                 <Toggle
                   key={tier}
                   label={tier}

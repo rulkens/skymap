@@ -25,7 +25,7 @@ import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescr
 import type { GalaxyDustParams } from '../../../../../@types/galaxy/GalaxyDustParams';
 
 export type PlaceDustBudget = {
-  /** Reserved slot count — `repackFieldComponents`'s dust range sizes off this, not off any placed particle. */
+  /** Reserved slot count — `fieldPack`'s dust range sizes off this, not off any placed particle. */
   readonly count: number;
   readonly childrenPerComplex: number;
   readonly complexSpread: number;

@@ -1,3 +1,5 @@
+import { TIER_LADDER } from '../../data/tierLadder';
+
 /**
  * Tier — three-way data-volume preset shared between the build pipeline and
  * the runtime hot-swap.
@@ -11,6 +13,6 @@
  * The values are persisted in URL query strings and the runtime API only
  * (never on disk: the binary format is tier-agnostic). String-union — not a
  * numeric enum — because tier identity is human-readable telemetry, not a
- * file-format token.
+ * file-format token. Derived from `TIER_LADDER` so the two never drift.
  */
-export type Tier = 'small' | 'medium' | 'large';
+export type Tier = (typeof TIER_LADDER)[number];

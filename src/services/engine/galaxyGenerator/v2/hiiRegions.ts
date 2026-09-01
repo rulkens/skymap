@@ -657,7 +657,7 @@ const EMPTY_HII_RESULT: {
   readonly segments: readonly HiiRegionSegment[];
 } = { components: [], segments: [] };
 
-const EMPTY_SHELLS_AND_YOUNG: HiiShellsAndYoungResult = {
+export const EMPTY_SHELLS_AND_YOUNG: HiiShellsAndYoungResult = {
   components: [],
   segments: [],
   shellFluxSum: 0,
@@ -673,7 +673,7 @@ const EMPTY_SHELLS_AND_YOUNG: HiiShellsAndYoungResult = {
  * scratch on a separate pass would risk drifting from what this pass
  * actually built.
  */
-type HiiShellsAndYoungResult = {
+export type HiiShellsAndYoungResult = {
   readonly components: readonly GalaxyFieldComponent[];
   readonly segments: readonly HiiRegionSegment[];
   readonly shellFluxSum: number;

@@ -13,7 +13,11 @@ import {
   packPlaceArmSpurCloudParams,
   PLACE_ARM_SPUR_CLOUD_PARAMS_BUFFER_SIZE,
 } from './packPlaceArmSpurCloudParams';
-import { packArmSpurCloudRecords } from './packArmSpurCloudRecords';
+import {
+  ARM_SPUR_CLOUD_RECORD_FLOATS,
+  packArmSpurCloudRecords,
+} from './packArmSpurCloudRecords';
+import { createGrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import { discLightScaleLength } from '../../../../../utils/galaxy/discLightScaleLength';
 import { FIELD_COMPONENT_FLOATS } from '../field/packFieldUniforms';
 import { SPUR_CLOUD_MAX_COUNT } from '../../../../engine/galaxyGenerator/v2/armSpurParticleCloud';
@@ -32,7 +36,6 @@ export type PlaceArmSpurCloudDispatchInput = {
   readonly spurArms: readonly GalaxyFieldArmRecord[];
   readonly geometry: GalaxyDescription;
   readonly tuning: GalaxyFieldTuning;
-  /** The LIVE fieldComps buffer — re-read after every regrow, never cached across calls. */
   readonly fieldCompsBuffer: GPUBuffer;
 };
 
@@ -69,10 +72,13 @@ export function createIsmMapPlaceArmSpurCloud(
     size: PLACE_ARM_SPUR_CLOUD_PARAMS_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  // Recreated whenever spur count grows past the current capacity — never
-  // shrunk, the `createGrowOnlyRecordBuffer` idiom minus the growable
-  // wrapper (this buffer holds no cross-rebuild state to preserve on regrow).
-  let recordsBuffer: GPUBuffer | null = null;
+  const recordsBuffer = createGrowOnlyRecordBuffer({
+    device,
+    label: 'galaxy:placeArmSpurCloudRecords',
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    floatsPerRecord: ARM_SPUR_CLOUD_RECORD_FLOATS,
+    initialCapacity: 1,
+  });
   const readbackByteSize = SPUR_CLOUD_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4;
   const readbackBuffer = device.createBuffer({
     label: 'galaxy:placeArmSpurCloudReadback',
@@ -91,17 +97,6 @@ export function createIsmMapPlaceArmSpurCloud(
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
-  function ensureRecordsBuffer(byteSize: number): GPUBuffer {
-    if (recordsBuffer && recordsBuffer.size >= byteSize) return recordsBuffer;
-    recordsBuffer?.destroy();
-    recordsBuffer = device.createBuffer({
-      label: 'galaxy:placeArmSpurCloudRecords',
-      size: Math.max(byteSize, 32),
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    return recordsBuffer;
-  }
-
   /**
    * Encodes the dispatch, or returns null when there is nothing to place —
    * `spurArms.length === 0` (no roots this galaxy) or `weightSum <= 0` (every
@@ -119,8 +114,8 @@ export function createIsmMapPlaceArmSpurCloud(
     );
     if (!(weightSum > 0)) return false;
 
-    const buf = ensureRecordsBuffer(recordsData.byteLength);
-    device.queue.writeBuffer(buf, 0, recordsData);
+    recordsBuffer.write(recordsData);
+    const buf = recordsBuffer.getBuffer();
 
     const { geometry, tuning } = input;
     device.queue.writeBuffer(
@@ -209,7 +204,7 @@ export function createIsmMapPlaceArmSpurCloud(
 
     dispose(): void {
       paramsBuffer.destroy();
-      recordsBuffer?.destroy();
+      recordsBuffer.destroy();
       readbackBuffer.destroy();
       fluxWeightBuffer.destroy();
       fluxWeightReadbackBuffer.destroy();

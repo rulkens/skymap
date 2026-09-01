@@ -87,7 +87,7 @@ import {
   tierFilenameForSource,
   fluxSupplementMagLimitFor,
 } from '../../src/data/tierTargets';
-import type { Tier } from '../../src/@types/data/Tier';
+import { TIER_LADDER } from '../../src/data/tierLadder';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { estimateLog10StellarMass } from './estimateLog10StellarMass';
@@ -847,7 +847,6 @@ async function runCli(): Promise<void> {
   }
 
   const outDir = args['out-dir']!;
-  const TIERS: readonly Tier[] = ['small', 'medium', 'large'];
 
   // Track filenames already written this run so the tier-agnostic sources
   // (2MRS, Famous) are only encoded + flushed once.  `tierFilenameForSource`
@@ -856,7 +855,7 @@ async function runCli(): Promise<void> {
   const written = new Set<string>();
 
   for (const [source, records] of bySource) {
-    for (const tier of TIERS) {
+    for (const tier of TIER_LADDER) {
       const filename = tierFilenameForSource(source, tier);
       if (written.has(filename)) continue;
       written.add(filename);

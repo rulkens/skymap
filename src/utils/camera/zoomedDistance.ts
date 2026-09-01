@@ -9,36 +9,35 @@
  * standoff floor (`SURFACE_STANDOFF_RADII`).
  *
  * The fix scales ALTITUDE geometrically instead: with `h = distance -
- * pivotRadiusMpc`, `distance' = pivotRadiusMpc + h * factor`. As `h → 0` the
+ * pivot.radiusMpc`, `distance' = pivot.radiusMpc + h * factor`. As `h → 0` the
  * steps shrink without bound (the Google Earth model). For `h >>
- * pivotRadiusMpc` (every astronomical viewing distance) this degenerates to
- * the old model exactly — `pivotRadiusMpc + h * factor ≈ distance * factor` —
+ * pivot.radiusMpc` (every astronomical viewing distance) this degenerates to
+ * the old model exactly — `pivot.radiusMpc + h * factor ≈ distance * factor` —
  * so deep-space feel is unchanged and the taper only engages on final
- * approach. `pivotRadiusMpc === null` (no surface — empty space, a galaxy, a
+ * approach. `pivot.radiusMpc === null` (no surface — empty space, a galaxy, a
  * structure, the Milky Way) degenerates to it exactly too.
  *
  * `clampDistance` is called from inside here, not by the caller, so the
- * envelope stays enforced in exactly one place.
+ * envelope stays enforced in exactly one place — `pivot.floorMpc` is already
+ * the standoff-and-MIN-adjusted floor, so it forwards straight through.
  */
 
 import { clampDistance } from './clampDistance';
+import type { PivotFraming } from '../../@types/camera/PivotFraming';
 
-export function zoomedDistance(
-  distance: number,
-  factor: number,
-  pivotRadiusMpc: number | null,
-): number {
-  if (pivotRadiusMpc === null) {
-    return clampDistance(distance * factor, null);
+export function zoomedDistance(distance: number, factor: number, pivot: PivotFraming): number {
+  const { radiusMpc, floorMpc } = pivot;
+  if (radiusMpc === null) {
+    return clampDistance(distance * factor, floorMpc);
   }
 
-  const h = distance - pivotRadiusMpc;
+  const h = distance - radiusMpc;
   if (h <= 0) {
     // Degenerate: `clampDistance` should prevent the camera reaching the
     // surface at all. Fall back to plain proportional scaling rather than
     // invent a geometric taper for a zero/negative altitude.
-    return clampDistance(distance * factor, pivotRadiusMpc);
+    return clampDistance(distance * factor, floorMpc);
   }
 
-  return clampDistance(pivotRadiusMpc + h * factor, pivotRadiusMpc);
+  return clampDistance(radiusMpc + h * factor, floorMpc);
 }

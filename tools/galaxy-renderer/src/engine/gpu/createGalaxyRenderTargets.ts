@@ -5,8 +5,8 @@
  * `mw-aggregate` and `bloom0..4` rows at the same formats and divisors.
  * `ldrTex` has no runtime counterpart: it is only the intermediate the
  * tool-only grade trailer reads. Bind groups are not cached here — the shared
- * pass factories rebuild theirs per draw. The engine's several that bind
- * `dustMapTex` can't; hence the callback.
+ * pass factories rebuild theirs per draw, and the field module's own groups
+ * are pulled from the textures it is handed each `encode`.
  */
 import type { HiiTier } from '../../../../../src/@types/galaxy/HiiTier';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
@@ -67,7 +67,6 @@ export function createGalaxyRenderTargets(
     readonly swap: GPUTextureFormat;
     readonly dustMap: GPUTextureFormat;
   },
-  onDustMapRecreated: () => void,
 ): GalaxyRenderTargets {
   let sceneTex: GPUTexture;
   let ldrTex: GPUTexture;
@@ -179,14 +178,6 @@ export function createGalaxyRenderTargets(
   // The two dust targets rebuild TOGETHER — dustPresent.wesl reads `dustMapTex`
   // 1:1 into `dustViewTex`, so leaving either behind reintroduces the
   // resolution mismatch the shared divisor exists to prevent.
-  //
-  // `onDustMapRecreated` is the engine's half of that recreation: three
-  // `layout: 'auto'` bind groups are tied to the specific GPUTexture they were
-  // built against, and the engine's "dust map holds nonzero texels" latch
-  // resets alongside them. That reset asserts the map is zeroed, which is true
-  // ONLY of a texture this function just created — so the callback fires from
-  // the allocation itself and must never be hoisted to a caller that may skip
-  // it.
   function allocateDust(w: number, h: number): void {
     if (dustMapTex) dustMapTex.destroy();
     dustMapTex = device.createTexture({
@@ -207,12 +198,8 @@ export function createGalaxyRenderTargets(
       format: formats.hdr,
       usage: RA_TB,
     });
-    onDustMapRecreated();
   }
 
-  // Rebuilds no bind group — `hiiBG` references `hiiUbo`/`hiiCompsBuf`/
-  // `dustMapTex`, none of which this touches, not `hiiTex` itself (the render
-  // PASS binds `hiiTex` as its attachment view, freshly, every `drawFrame`).
   function allocateHii(w: number, h: number): void {
     if (hiiTex) hiiTex.destroy();
     hiiTex = device.createTexture({
@@ -223,10 +210,6 @@ export function createGalaxyRenderTargets(
     });
   }
 
-  // Rebuilds no bind group, same reason `allocateHii` doesn't — the per-tier
-  // bind group references the per-tier UBO/`hiiCompsBuf`/`dustMapTex`, none
-  // of which this touches; the render PASS binds the tier's texture as its
-  // attachment view freshly every `drawFrame`.
   function allocateTier(kind: HiiTier, w: number, h: number): void {
     tierTextures.get(kind)?.destroy();
     tierTextures.set(
@@ -247,8 +230,7 @@ export function createGalaxyRenderTargets(
    * drag and a canvas resize both reduce to the same question, and `rebuildAll`
    * delegates here. Two divisors that floor to the same size — or a resize that
    * floors to the same pixels — genuinely need no reallocation: the surviving
-   * texture is the same object every bind group already holds a view of, and
-   * the stale-map latch stays at its truthful value (see `allocateDust`).
+   * texture is the same object every bind group already holds a view of.
    */
   function setDivisors(divisors: TargetDivisors): void {
     const reallocateIfResized = (
@@ -333,11 +315,9 @@ export function createGalaxyRenderTargets(
       return hiiTex;
     },
     tierTex(kind: HiiTier): GPUTexture {
-      // Non-null: the only caller reachable before `rebuildAll`'s first
-      // `setDivisors` finishes is `allocateDust`'s own reallocation callback,
-      // which reads `dustMapTex` and nothing else — every other caller runs
-      // after `rebuildAll` returns, by which point every `HII_TIERS` row is
-      // allocated, same contract `aggregateTex`'s (unchecked) getter relies on.
+      // Non-null: every caller runs after `rebuildAll` returns, by which point
+      // every `HII_TIERS` row is allocated — the same contract `aggregateTex`'s
+      // (unchecked) getter relies on.
       return tierTextures.get(kind)!;
     },
     get dustViewTex(): GPUTexture {

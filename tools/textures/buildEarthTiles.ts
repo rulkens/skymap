@@ -33,9 +33,9 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 import type { EarthTileKind } from '../../src/@types/data/EarthTileKind';
-import type { Tier } from '../../src/@types/data/Tier';
 import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { TIER_LADDER } from '../../src/data/tierLadder';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
 import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
 import { earthTilePath } from '../../src/utils/scene/earthTilePath';
@@ -87,10 +87,6 @@ function candidateTileIndices(
 /** Lossy WebP quality for surface tiles: JPEG can't carry the alpha channel
  *  that doubles as the land mask. */
 const WEBP_QUALITY = 82;
-
-/** Each builder keeps its own module-local tier ladder; the bake floor below
- *  moves with it rather than naming a tier. */
-const TIER_LADDER: readonly Tier[] = ['small', 'medium', 'large'];
 
 /**
  * Shallowest level this bake emits: one finer than the COARSEST whole-globe

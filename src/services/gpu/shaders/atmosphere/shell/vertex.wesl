@@ -21,12 +21,13 @@
 //
 // ## Bindings
 //
-// '@group(0) @binding(0)' holds 'AtmosphereUniforms' (112 bytes: the mat4x4<f32>
-// MVP, body-local sun direction, bottomRadius, camPosLocal, sunIrradiance,
-// exposure), visible in BOTH stages. The vertex reads only 'u.mvp'; the fragment
-// reads the rest. The '@group/@binding' declaration is module-local (WESL has no
-// global state), so we declare 'u' here and pass 'u.mvp' into the imported
-// 'clip_from_local' helper -- the 'pass cam, don't capture' idiom.
+// '@group(0) @binding(0)' holds 'AtmosphereUniforms' (176 bytes: the mat4x4<f32>
+// MVP, body-local sun direction, bottomRadius, camPosLocal, exposure, ring
+// ratios, and the inverse MVP), visible in BOTH stages. The vertex reads only
+// 'u.mvp'; the fragment reads the rest. The '@group/@binding' declaration is
+// module-local (WESL has no global state), so we declare 'u' here and pass
+// 'u.mvp' into the imported 'clip_from_local' helper -- the 'pass cam, don't
+// capture' idiom.
 //
 // ## Attribute layout
 //
@@ -45,6 +46,8 @@
 
 import package::lib::sphere::AtmosphereUniforms;
 import package::lib::sphere::clip_from_local;
+import package::lib::fullscreenTri::FullscreenOut;
+import package::lib::fullscreenTri::fullscreenVertex;
 
 @group(0) @binding(0) var<uniform> u: AtmosphereUniforms;
 
@@ -62,4 +65,13 @@ fn vs(@location(0) position: vec3<f32>) -> VsOut {
   out.clip = clip_from_local(u.mvp, position);
   out.localPos = position;
   return out;
+}
+
+// The inside-shell full-screen pass: no proxy
+// mesh, no vertex buffer -- just the covering triangle. The fragment
+// reconstructs the view ray by unprojecting through 'u.invMvp' instead of
+// reading an interpolated local position.
+@vertex
+fn insideVs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
+  return fullscreenVertex(vi);
 }

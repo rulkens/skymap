@@ -322,18 +322,51 @@ export function createAtmosphereShellRenderer(
     depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
   };
 
+  // Inside-shell state (camera inside the atmosphere top): a full-screen
+  // triangle, no vertex buffer, and an always-pass depth test — there is no
+  // scene depth to test against from inside (spec §4.4). NOT routed through
+  // `resolveDepthCompare`: that helper resolves a reversed-Z-dependent INTENT,
+  // and 'always' has no such intent to resolve.
+  const insideVertexState: GPUVertexState = { module: shellVsModule, entryPoint: 'insideVs' };
+  const insidePrimitiveState: GPUPrimitiveState = { topology: 'triangle-list' };
+  const insideDepthState: GPUDepthStencilState = {
+    format: depthFormat,
+    depthWriteEnabled: false,
+    depthCompare: 'always',
+  };
+
+  /** The outside (proxy-sphere) and inside (full-screen) draws differ only in
+   *  this triple — vertex/primitive/depthStencil are otherwise identical
+   *  across all four shell pipelines. */
+  type ShellPipelineState = {
+    vertex: GPUVertexState;
+    primitive: GPUPrimitiveState;
+    depthStencil: GPUDepthStencilState;
+  };
+  const outsideShellState: ShellPipelineState = {
+    vertex: shellVertexState,
+    primitive: shellPrimitiveState,
+    depthStencil: shellDepthState,
+  };
+  const insideShellState: ShellPipelineState = {
+    vertex: insideVertexState,
+    primitive: insidePrimitiveState,
+    depthStencil: insideDepthState,
+  };
+
   function createShellPipeline(
     label: string,
     entryPoint: string,
     blend: GPUBlendState,
+    state: ShellPipelineState,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
       layout: shellPipelineLayout,
-      vertex: shellVertexState,
+      vertex: state.vertex,
       fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
-      primitive: shellPrimitiveState,
-      depthStencil: shellDepthState,
+      primitive: state.primitive,
+      depthStencil: state.depthStencil,
     });
   }
 
@@ -343,23 +376,49 @@ export function createAtmosphereShellRenderer(
   // alpha channel cannot attenuate three wavelengths differently, and a
   // luminance-collapsed alpha let a λ⁻⁴ Rayleigh ramp add blue to the disc
   // without removing blue from it (cyan wash).
+  //
+  // Hoisted (not inlined) so the inside pair below shares the SAME blend object —
+  // multiply/add semantics do not change between the outside proxy-mesh draw and
+  // the inside full-screen draw, only the vertex/depth state does.
+  const multiplyBlend: GPUBlendState = {
+    color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
+    alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
+  };
   const shellMultiplyPipeline = createShellPipeline(
     'atmosphere-shell-multiply-pipeline',
     'fsMultiply',
-    {
-      color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
-      alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
-    },
+    multiplyBlend,
+    outsideShellState,
   );
 
   // Pass 2 — ADD. Straight accumulation of the exposed in-scatter. Its alpha
   // contribution is the coverage complement, so the two passes together leave the
   // target alpha at the value the single OVER draw produced (the compositor reads
   // `foreground:0` as STRAIGHT alpha — it is the background weight, not decoration).
-  const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', {
+  const addBlend: GPUBlendState = {
     color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-  });
+  };
+  const shellAddPipeline = createShellPipeline(
+    'atmosphere-shell-add-pipeline',
+    'fsAdd',
+    addBlend,
+    outsideShellState,
+  );
+
+  // Inside pair — SAME blend objects as the outside pair (see above).
+  const shellInsideMultiplyPipeline = createShellPipeline(
+    'atmosphere-shell-inside-multiply-pipeline',
+    'fsInsideMultiply',
+    multiplyBlend,
+    insideShellState,
+  );
+  const shellInsideAddPipeline = createShellPipeline(
+    'atmosphere-shell-inside-add-pipeline',
+    'fsInsideAdd',
+    addBlend,
+    insideShellState,
+  );
 
   // ── Per-body bundles ───────────────────────────────────────────────────────
   //
@@ -601,19 +660,31 @@ export function createAtmosphereShellRenderer(
 
   // ── draw ───────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void {
+  function draw(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    inside: boolean,
+  ): void {
     // Write THIS body's own shell uniform buffer immediately before its draw — no
     // shared buffer for a later body's write to race (see the module header).
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.shellUniformBuffer, 0, uniforms);
     pass.setBindGroup(0, bundle.shellBindGroup);
+    // `inside` selects the full-screen no-scene-depth pipeline pair (camera past
+    // the atmosphere top, no proxy-mesh silhouette to rasterise) over the
+    // proxy-sphere pair. MULTIPLY strictly BEFORE ADD in both branches: the
+    // multiply pass scales whatever is already in the target, so running it
+    // second would attenuate this body's own in-scatter by its own transmittance.
+    if (inside) {
+      pass.setPipeline(shellInsideMultiplyPipeline);
+      pass.draw(3);
+      pass.setPipeline(shellInsideAddPipeline);
+      pass.draw(3);
+      return;
+    }
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
-    // MULTIPLY strictly BEFORE ADD: the multiply pass scales whatever is already
-    // in the target, so running it second would attenuate this body's own
-    // in-scatter by its own transmittance. The two pipelines share one pipeline
-    // layout, so the bind group + vertex/index state set above survives the
-    // `setPipeline` switch between them.
     pass.setPipeline(shellMultiplyPipeline);
     pass.drawIndexed(indexCount);
     pass.setPipeline(shellAddPipeline);

@@ -4,8 +4,8 @@
  * into its own reduced-resolution target — the smooth field, `hii:extras`,
  * and every `HII_TIERS` tier share this encoding, differing only in label,
  * timing slot, target, pipeline, bind group and instance range. `firstInstance`
- * lets a tier draw its own span of the SHARED `model.hiiComps.buffer` with no
- * shader change — `@builtin(instance_index)` includes the offset.
+ * lets a tier draw its own span of the SHARED `model.hiiComps.getBuffer()`
+ * with no shader change — `@builtin(instance_index)` includes the offset.
  */
 import { beginClearPass } from '../../../lib/beginClearPass';
 
@@ -25,7 +25,7 @@ export function encodeSplatPass({
   readonly targetView: GPUTextureView;
   /** A `layout: 'auto'` bind group only satisfies the pipeline it was derived from, so the caller must pass its OWN pipeline/bindGroup pair — field, `hii:young`, `hii:shells`/`hii:dig` and `hii:extras` each draw through a different one. */
   readonly pipeline: GPURenderPipeline;
-  /** Reassigned whenever its storage buffer regrows, so it must be read fresh at the call site. */
+  /** The group `createFieldPipelines.sync` produced for THIS encode, against this frame's own resources. */
   readonly bindGroup: GPUBindGroup;
   readonly instanceCount: number;
   /** `@builtin(instance_index)` includes this offset (WebGPU's own contract), so a sub-range draw needs no shader change. */

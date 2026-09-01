@@ -30,7 +30,7 @@ export type GalaxyEngineHandle = {
   grab(size?: number): Promise<{ S: number; data: Uint8ClampedArray }>; // see createOffscreenProbe
   getCamera(): ViewPose;
   // The ISM-map generator's packed output (gas / stars / activity / dust,
-  // log-polar) — see createGalaxyModel.ts's rebuildIsmMap.
+  // log-polar) — see the field renderer's `ismMap` stage row.
   // Consumed by nothing but its own overlay yet; exposed for the sibling UI
   // and future consumers.
   getIsmMapTexture(): GPUTexture;

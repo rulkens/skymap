@@ -1,8 +1,8 @@
 /**
  * createFieldPipelines — the analytic field's six render pipelines (field
  * splat, three HII splats, dust-column map, dust-map presentation) and every
- * `layout: 'auto'` bind group built against them, constructed before
- * `model`/`targets` exist via callbacks (`getDustMapTex`, `rebuild*`).
+ * `layout: 'auto'` bind group built against them, pulled from the resources
+ * `sync` is handed rather than pushed at allocation.
  * `layout: 'auto'` derives a bind-group layout from a pipeline's OWN
  * vertex+fragment pair, so a binding two pipelines' modules disagree on
  * (stage visibility) forces separate module pairs per pipeline — a mismatched
@@ -41,17 +41,26 @@ export type FieldPipelineDeps = {
   readonly starGrainTex: GPUTexture;
   readonly starGrainSampler: GPUSampler;
   readonly dustMapSampler: GPUSampler;
-  /** dustMap/fragment.wesl binding 14 — Task 9's Larson renorm scale, GPU-written by `ringReduce.dispatchSurvivorSum`. Fixed-lifetime, never regrows (see `createIsmMapRingReduce.ts`'s own `dustRenormBuffer`), so it rides here like `fieldUbo`/`hiiUbo`, not the `rebuild*` regrow callbacks below. */
+  /** dustMap/fragment.wesl binding 14 — the Larson renorm scale, GPU-written by `ringReduce.dispatchSurvivorSum`. Fixed-lifetime, never regrows (see `createIsmMapRingReduce.ts`'s own `dustRenormBuffer`), so it rides here like `fieldUbo`/`hiiUbo` rather than in `FieldBindGroupResources`. */
   readonly dustRenormBuffer: GPUBuffer;
-  /** fieldSplat/fragment.wesl bindings 15/16 — Task 15's arm-cloud/spur-cloud reciprocal-weightSum scales, GPU-written by `ringReduce.dispatchArmCloudFluxWeightSum`/`dispatchArmSpurFluxWeightSum`. Same fixed-lifetime shape as `dustRenormBuffer` above. */
+  /** fieldSplat/fragment.wesl bindings 15/16 — the arm-cloud/spur-cloud reciprocal-weightSum scales, GPU-written by `ringReduce.dispatchArmCloudFluxWeightSum`/`dispatchArmSpurFluxWeightSum`. Same fixed-lifetime shape as `dustRenormBuffer` above. */
   readonly armRenormBuffer: GPUBuffer;
   readonly spurRenormBuffer: GPUBuffer;
-  /**
-   * `targets` doesn't exist yet at construction — its own dust-map-recreated
-   * callback IS `rebuildDustMapDependents` below. Read live, per the "reassigned
-   * whenever its storage buffer regrows" contract `encodeSplatPass` documents.
-   */
-  readonly getDustMapTex: () => GPUTexture;
+};
+
+/** The identity-bearing inputs every bind group in this module is built against. */
+export type FieldBindGroupResources = {
+  readonly fieldComps: GPUBuffer;
+  readonly hiiComps: GPUBuffer;
+  readonly dustMap: GPUTexture;
+};
+
+export type FieldBindGroups = {
+  readonly dustMap: GPUBindGroup;
+  readonly fieldSplat: GPUBindGroup;
+  readonly dustPresent: GPUBindGroup;
+  readonly hii: GPUBindGroup;
+  tier(kind: HiiTier): GPUBindGroup;
 };
 
 export type FieldPipelines = {
@@ -64,21 +73,28 @@ export type FieldPipelines = {
   /** Which pipeline draws a given `HII_TIERS` row — see its own doc below. */
   hiiTierPipeline(kind: HiiTier): GPURenderPipeline;
 
-  /** Read fresh at the call site every frame — see `encodeSplatPass`'s own contract. */
-  readonly dustMapBG: GPUBindGroup;
-  readonly fieldSplatBG: GPUBindGroup;
-  readonly dustPresentBG: GPUBindGroup;
-  readonly hiiBG: GPUBindGroup;
-  tierBG(kind: HiiTier): GPUBindGroup;
+  /**
+   * Rebuild every bind group whose declared inputs' IDENTITY moved since the
+   * last call; return the full set. Idempotent and cheap — called at the top
+   * of every `encode`.
+   */
+  sync(resources: FieldBindGroupResources): FieldBindGroups;
+};
 
-  /** Rebuilds only `dustMapBG` — the one builder that never touches `targets`, so it is also the INITIAL build, called once right after `model` exists and before `targets` does. */
-  rebuildDustMapBindGroup(fieldCompsBuffer: GPUBuffer): void;
-  /** `fieldComps`' `onRegrow` — always fires after `targets` exists (a regrow is a later `write`, never the first). Rebuilds `dustMapBG` AND `fieldSplatBG`. */
-  rebuildFieldCompsBindGroups(fieldCompsBuffer: GPUBuffer): void;
-  /** `hiiComps`' `onRegrow` — rebuilds `hiiBG` and every `HII_TIERS` row's own bind group; they share `hiiCompsBuffer`/`dustMapTex`, so everywhere one needs rebuilding, all do. */
-  rebuildTierBindGroups(hiiCompsBuffer: GPUBuffer): void;
-  /** `onDustMapReallocated` — every group holding a view of the fresh `dustMapTex`. */
-  rebuildDustMapDependents(fieldCompsBuffer: GPUBuffer, hiiCompsBuffer: GPUBuffer): void;
+type BindGroupRole = 'dustMap' | 'fieldSplat' | 'hii' | 'tiers' | 'dustPresent';
+type BindGroupResourceKey = keyof FieldBindGroupResources;
+
+/**
+ * Which identity-bearing resources a role is built against — the "which bind
+ * group does regrowing X touch" answer as one table instead of a rebuild
+ * entry point per mover.
+ */
+const BIND_GROUP_DEPS: Record<BindGroupRole, readonly BindGroupResourceKey[]> = {
+  dustMap: ['fieldComps'],
+  fieldSplat: ['fieldComps', 'dustMap'],
+  hii: ['hiiComps', 'dustMap'],
+  tiers: ['hiiComps', 'dustMap'],
+  dustPresent: ['dustMap'],
 };
 
 export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
@@ -101,7 +117,6 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     dustRenormBuffer,
     armRenormBuffer,
     spurRenormBuffer,
-    getDustMapTex,
   } = deps;
 
   // ---- field/HII splat pipelines: one instanced quad per component ----
@@ -202,17 +217,9 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
 
   // ---- bind groups ----
   // A group holds the EXACT GPUBuffer/GPUTexture objects it names, so each
-  // resource that can regrow/recreate owns a rebuild entry point below rather
-  // than a cached group. None of the five `let`s here builds during
-  // construction: `fieldCompsBuffer`/`hiiCompsBuffer` come from `model`,
-  // `getDustMapTex()` from `targets`, and neither exists yet when this module
-  // is constructed (see the module header).
-  let dustMapBG: GPUBindGroup;
-  let fieldSplatBG: GPUBindGroup;
-  let dustPresentBG: GPUBindGroup;
-  let hiiBG: GPUBindGroup;
-  let tierBGMap: Record<HiiTier, GPUBindGroup>;
-
+  // resource that can regrow/recreate must trigger a rebuild rather than a
+  // cached group living forever — `BIND_GROUP_DEPS` above plus `sync` below
+  // are the one table/one walker doing that.
   function buildDustMapBindGroup(fieldCompsBuffer: GPUBuffer): GPUBindGroup {
     return device.createBindGroup({
       label: 'galaxy:dustMapBG',
@@ -228,7 +235,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
         { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
         { binding: 7, resource: dustMapSampler },
         { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
-        // Task 9's Larson renorm scale — only dustMap/fragment.wesl imports
+        // The Larson renorm scale — only dustMap/fragment.wesl imports
         // it, so 'layout: auto' adds this entry to dustMapPipe's bind group
         // alone (io.wesl's own doc for the same "only the shader that
         // imports a binding gains it" contract).
@@ -237,7 +244,10 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     });
   }
 
-  function buildFieldSplatBindGroup(fieldCompsBuffer: GPUBuffer): GPUBindGroup {
+  function buildFieldSplatBindGroup(
+    fieldCompsBuffer: GPUBuffer,
+    dustMapTex: GPUTexture,
+  ): GPUBindGroup {
     return device.createBindGroup({
       label: 'galaxy:fieldSplatBG',
       layout: fieldSplatPipe.getBindGroupLayout(0),
@@ -247,9 +257,9 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
         // dustAttenuation.wesl's own two bindings — fieldSplat/fragment.wesl
         // is the only reader of dustMapTex through a FILTERED sample
         // (dustPresent.wesl gets away with a 1:1 texel load below).
-        { binding: 2, resource: getDustMapTex().createView() },
+        { binding: 2, resource: dustMapTex.createView() },
         { binding: 6, resource: dustMapSampler },
-        // Task 15's own two renorm scales — only fieldSplat/fragment.wesl
+        // The arm/spur renorm scales — only fieldSplat/fragment.wesl
         // imports these, so 'layout: auto' adds these entries to
         // fieldSplatPipe's bind group alone (dustMapBG's own binding-14
         // precedent above).
@@ -259,13 +269,13 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     });
   }
 
-  function buildDustPresentBindGroup(): GPUBindGroup {
+  function buildDustPresentBindGroup(dustMapTex: GPUTexture): GPUBindGroup {
     return device.createBindGroup({
       label: 'galaxy:dustPresentBG',
       layout: dustPresentPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 2, resource: getDustMapTex().createView() },
+        { binding: 2, resource: dustMapTex.createView() },
         // No 3/7/8/9: S4's detail term applies at accumulation (dustMap.wesl);
         // this pass just presents the already-modulated column.
       ],
@@ -285,11 +295,12 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     label: string,
     pipe: GPURenderPipeline,
     hiiCompsBuffer: GPUBuffer,
+    dustMapTex: GPUTexture,
   ): GPUBindGroup {
     const entries: GPUBindGroupEntry[] = [
       { binding: 0, resource: { buffer: ubo } },
       { binding: 1, resource: { buffer: hiiCompsBuffer } },
-      { binding: 2, resource: getDustMapTex().createView() },
+      { binding: 2, resource: dustMapTex.createView() },
       { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
       { binding: 7, resource: dustMapSampler },
       { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
@@ -323,6 +334,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     ubo: GPUBuffer,
     label: string,
     hiiCompsBuffer: GPUBuffer,
+    dustMapTex: GPUTexture,
   ): GPUBindGroup {
     return device.createBindGroup({
       label,
@@ -330,7 +342,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
       entries: [
         { binding: 0, resource: { buffer: ubo } },
         { binding: 1, resource: { buffer: hiiCompsBuffer } },
-        { binding: 2, resource: getDustMapTex().createView() },
+        { binding: 2, resource: dustMapTex.createView() },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
         { binding: 6, resource: dustMapSampler },
@@ -338,28 +350,71 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     });
   }
 
-  function rebuildDustMapBindGroup(fieldCompsBuffer: GPUBuffer): void {
-    dustMapBG = buildDustMapBindGroup(fieldCompsBuffer);
-  }
+  const lastIdentity: {
+    fieldComps: GPUBuffer | null;
+    hiiComps: GPUBuffer | null;
+    dustMap: GPUTexture | null;
+  } = { fieldComps: null, hiiComps: null, dustMap: null };
 
-  function rebuildFieldCompsBindGroups(fieldCompsBuffer: GPUBuffer): void {
-    fieldSplatBG = buildFieldSplatBindGroup(fieldCompsBuffer);
-    dustMapBG = buildDustMapBindGroup(fieldCompsBuffer);
-  }
+  /** What the last `sync` returned — a role whose inputs didn't move rides along unrebuilt. */
+  let groups: FieldBindGroups | null = null;
+  let tierGroups: Record<HiiTier, GPUBindGroup> | null = null;
 
-  function rebuildTierBindGroups(hiiCompsBuffer: GPUBuffer): void {
-    hiiBG = buildHiiFullBindGroup(hiiUbo, 'galaxy:hiiBG', hiiExtrasPipe, hiiCompsBuffer);
-    tierBGMap = mapHiiTiers((kind) =>
-      kind === 'young'
-        ? buildHiiFullBindGroup(tierUbo[kind], `galaxy:hiiBG:${kind}`, hiiYoungPipe, hiiCompsBuffer)
-        : buildHiiErosionBindGroup(tierUbo[kind], `galaxy:hiiBG:${kind}`, hiiCompsBuffer),
-    );
-  }
+  function sync(resources: FieldBindGroupResources): FieldBindGroups {
+    const { fieldComps, hiiComps, dustMap } = resources;
+    const changed = new Set<BindGroupResourceKey>();
+    if (!Object.is(lastIdentity.fieldComps, fieldComps)) {
+      lastIdentity.fieldComps = fieldComps;
+      changed.add('fieldComps');
+    }
+    if (!Object.is(lastIdentity.hiiComps, hiiComps)) {
+      lastIdentity.hiiComps = hiiComps;
+      changed.add('hiiComps');
+    }
+    if (!Object.is(lastIdentity.dustMap, dustMap)) {
+      lastIdentity.dustMap = dustMap;
+      changed.add('dustMap');
+    }
 
-  function rebuildDustMapDependents(fieldCompsBuffer: GPUBuffer, hiiCompsBuffer: GPUBuffer): void {
-    fieldSplatBG = buildFieldSplatBindGroup(fieldCompsBuffer);
-    rebuildTierBindGroups(hiiCompsBuffer);
-    dustPresentBG = buildDustPresentBindGroup();
+    const fresh = (role: BindGroupRole): boolean =>
+      BIND_GROUP_DEPS[role].every((key) => !changed.has(key));
+
+    const previous = groups;
+    const tiers =
+      tierGroups !== null && fresh('tiers')
+        ? tierGroups
+        : mapHiiTiers((kind) =>
+            kind === 'young'
+              ? buildHiiFullBindGroup(
+                  tierUbo[kind],
+                  `galaxy:hiiBG:${kind}`,
+                  hiiYoungPipe,
+                  hiiComps,
+                  dustMap,
+                )
+              : buildHiiErosionBindGroup(tierUbo[kind], `galaxy:hiiBG:${kind}`, hiiComps, dustMap),
+          );
+    tierGroups = tiers;
+    groups = {
+      dustMap:
+        previous !== null && fresh('dustMap')
+          ? previous.dustMap
+          : buildDustMapBindGroup(fieldComps),
+      fieldSplat:
+        previous !== null && fresh('fieldSplat')
+          ? previous.fieldSplat
+          : buildFieldSplatBindGroup(fieldComps, dustMap),
+      dustPresent:
+        previous !== null && fresh('dustPresent')
+          ? previous.dustPresent
+          : buildDustPresentBindGroup(dustMap),
+      hii:
+        previous !== null && fresh('hii')
+          ? previous.hii
+          : buildHiiFullBindGroup(hiiUbo, 'galaxy:hiiBG', hiiExtrasPipe, hiiComps, dustMap),
+      tier: (kind) => tiers[kind],
+    };
+    return groups;
   }
 
   return {
@@ -370,26 +425,6 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     dustMapPipe,
     dustPresentPipe,
     hiiTierPipeline,
-
-    get dustMapBG(): GPUBindGroup {
-      return dustMapBG;
-    },
-    get fieldSplatBG(): GPUBindGroup {
-      return fieldSplatBG;
-    },
-    get dustPresentBG(): GPUBindGroup {
-      return dustPresentBG;
-    },
-    get hiiBG(): GPUBindGroup {
-      return hiiBG;
-    },
-    tierBG(kind: HiiTier): GPUBindGroup {
-      return tierBGMap[kind];
-    },
-
-    rebuildDustMapBindGroup,
-    rebuildFieldCompsBindGroups,
-    rebuildTierBindGroups,
-    rebuildDustMapDependents,
+    sync,
   };
 }

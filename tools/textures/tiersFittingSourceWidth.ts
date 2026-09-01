@@ -1,4 +1,5 @@
 import type { Tier } from '../../src/@types/data/Tier';
+import { TIER_LADDER } from '../../src/data/tierLadder';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 
 /**
@@ -19,12 +20,10 @@ import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
  * dev sibling yields `small` + `medium` but not `large`; a native 8 k+ raw
  * yields all three.
  *
- * Uses the same `small < medium < large` ladder as `emittedTiersForBody`; kept
- * in its own file (one exported symbol) so the source-cap rule is unit-testable
- * without any filesystem or sharp call.
+ * Uses the same `TIER_LADDER` as `emittedTiersForBody`; kept in its own file
+ * (one exported symbol) so the source-cap rule is unit-testable without any
+ * filesystem or sharp call.
  */
-
-const TIER_LADDER: readonly Tier[] = ['small', 'medium', 'large'];
 
 export function tiersFittingSourceWidth(sourceWidthPx: number): readonly Tier[] {
   return TIER_LADDER.filter((tier) => tierToTexturePx(tier) <= sourceWidthPx);
