@@ -15,6 +15,7 @@ import { toBodyArm, toWorldArm } from '../../../../src/services/engine/camera/po
 import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyRelativePose';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { updatePosition } from '../../../../src/utils/camera/updatePosition';
 import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
@@ -24,6 +25,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 
 // Provider A's floor: the world arm stores the eye as `target + distance·dir`
@@ -32,9 +34,10 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 // the arithmetic — a component whose true value straddles a grid step is the
 // only way to spend them, and a real inversion error blows past them.
 const EYE_FLOOR_M = 5e-5;
-// Directions are unit-magnitude and grid-free; their error is the eye
-// quantisation above divided by the eye-to-target range (≳ 1e6 m).
-const DIR_FLOOR = 1e-9;
+// Directions are unit-magnitude and grid-free, so their bound is the eye bound
+// above divided by the shortest eye-to-target range in the fixtures (~1e6 m):
+// 5e-11, doubled for headroom. Measured error is 7e-13.
+const DIR_FLOOR = 1e-10;
 
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const EARTH_RADIUS_M = 6.371e6;
@@ -275,6 +278,42 @@ describe('poseFrameConversion', () => {
       EYE_FLOOR_M,
       'fallback eye',
     );
+  });
+
+  it('composes the world eye exactly as updatePosition does', () => {
+    // The module re-composes `updatePosition`'s two steps (frame-local decode,
+    // rotate by `poseBasis`) out of the same sub-utils rather than calling it,
+    // which no round-trip can catch: both halves would share the same drift.
+    // `updatePosition` is not under test here, so it is a legal fixture source.
+    // With the body at the world origin under the identity orientation,
+    // `eyeRelAnchorM` IS the world eye scaled to metres, so the two agree bit
+    // for bit or not at all. The target sits near the origin ON PURPOSE: at
+    // heliocentric magnitude the f64 grid (~25 µm) swallows any composition
+    // difference smaller than a grid step, and this equality would go blind.
+    const pose: CameraPose = {
+      target: [m(1.2e6), -m(0.8e6), m(1.1e6)],
+      yaw: -2.2,
+      pitch: -0.55,
+      distance: m(1.1e7),
+      roll: 0.4,
+    };
+    const cam: OrbitCamera = {
+      ...pose,
+      poseBasis: POSE_FRAME,
+      upBasis: UP_FRAME,
+      fovYRad: 1,
+      aspect: 1,
+      near: 1,
+      far: 2,
+      position: [0, 0, 0],
+    };
+    updatePosition(cam);
+
+    const arm = toBodyArm(pose, POSE_FRAME, UP_FRAME, 'earth', bodyState([0, 0, 0], IDENTITY));
+    expect(arm.eyeRelAnchorM).toEqual(cam.position.map((c) => c * SCALE_UNITS.MPC_TO_M));
+    // …and this file's own hand-rolled twin of that decode, so a fixture-side
+    // convention slip cannot cancel a module-side one.
+    expect(worldPoseOf(pose, POSE_FRAME, UP_FRAME).eye).toEqual([...cam.position]);
   });
 
   it('carries the body id and anchors at the body centre', () => {

@@ -334,7 +334,8 @@ const bodyPose: BodyPoseProvider = (bodyId) =>
 **B keeps A** (ruled, S1): every body that is not the engaged one still gets its
 pose derived from the heliocentric camera, and on approach from deep space the
 camera is heliocentric regardless. Both produce the same value at the flip, to
-within provider A's ~14 µm floor — a unit test asserts it.
+within provider A's floor — ≈2 ulp at heliocentric magnitude, ≈50 µm at 1 AU —
+a unit test asserts it.
 
 `camBasisWorld` at that site is built with roll hard-coded 0
 (`frameContext.ts:222`). That is correct today because nothing sets roll; under
@@ -602,7 +603,8 @@ Each is a requirement on the engaged arm, and each is one test:
 **Structural:**
 
 - Engage and disengage are pose-exact: eye, forward and screen-up round-trip to
-  within provider A's ~14 µm floor, over a body with a **tilted pole** and a
+  within provider A's floor (≈2 ulp at heliocentric magnitude, ≈50 µm at 1 AU),
+  over a body with a **tilted pole** and a
   non-identity orientation (the FW-F reviewer's fixture shape; the
   quaternion-order landmine O §2.1 is what it catches).
 - `maxTiltRad(SURFACE_REGIME.disengageHR) === 0`, asserted against the record,
