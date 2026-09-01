@@ -9,6 +9,11 @@
  * silently drift out of metres again — see the module header this migration
  * retired (`composeBodyMvp.ts`'s "Why compose the FULL MVP in f64" section).
  *
+ * The camera-pivot work (spec §10) added a second legitimate seam,
+ * `poseFrameConversion.ts`'s world-arm/body-arm pair, and put the ENGAGED
+ * camera path (`services/engine/camera`, `services/camera`, `utils/camera`)
+ * under the same gate as the render path above.
+ *
  * This is an import-graph assertion (ts-morph, real property-access AST
  * nodes), not a source-text grep: `conventions/testing.md` bans a substring
  * search as a BEHAVIOUR proxy, but a cross-file architectural contract like
@@ -36,21 +41,32 @@ function walk(dir: string, extensions: readonly string[]): string[] {
   });
 }
 
-// The body-slab path, DERIVED by sweeping the directories the migration
-// actually put files in — a new file dropped into any of these (a layer, a
-// body renderer) is gated with no hand-edit here. `walk` recurses, so
-// sweeping 'frame' also covers 'frame/passes' — no separate entry needed.
-// The four single-file entries aren't under either swept dir, so they stay
+// The two seams themselves: deliberately excluded from TS_FILES below (they
+// ARE the allowed conversion sites), documented instead in the first `it`.
+const SEAM_FILES: readonly string[] = [
+  'src/services/engine/camera/bodyRelativePose.ts',
+  'src/services/engine/camera/poseFrameConversion.ts',
+];
+
+// The body-slab path AND the engaged camera path, DERIVED by sweeping the
+// directories the migrations actually put files in — a new file dropped into
+// any of these (a layer, a body renderer, a driver) is gated with no
+// hand-edit here. `walk` recurses, so sweeping 'frame' also covers
+// 'frame/passes', and sweeping 'utils/camera' also covers what used to be
+// two separate single-file entries (`composeBodySlabMvp.ts`,
+// `bodySlabCamLocal.ts`) — no longer named apart from the walk. The two
+// remaining single-file entries aren't under any swept dir, so they stay
 // named (a rename/move of one of them is then a deliberate edit here, not a
 // silent drop from the gate).
 const TS_FILES: readonly string[] = [
   ...walk('src/services/engine/frame', ['.ts']),
   ...walk('src/services/gpu/renderers/bodies', ['.ts']),
+  ...walk('src/services/engine/camera', ['.ts']),
+  ...walk('src/services/camera', ['.ts']),
+  ...walk('src/utils/camera', ['.ts']),
   'src/utils/scene/cutSurfaceTiles.ts',
   'src/utils/scene/starSphereRangeM.ts',
-  'src/utils/camera/composeBodySlabMvp.ts',
-  'src/utils/camera/bodySlabCamLocal.ts',
-];
+].filter((f) => !SEAM_FILES.includes(f));
 
 // A glob typo (wrong dir name, wrong extension) would silently sweep zero
 // files and this whole test would vacuously pass — assert the sweep found
@@ -60,18 +76,22 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/frame/frameProgram.ts',
   'src/services/engine/frame/visibleSlabBodies.ts',
   'src/services/gpu/renderers/bodies/planetRenderer.ts',
+  'src/services/engine/camera/cameraDrivers.ts',
+  'src/services/camera/orbitControls.ts',
+  'src/utils/camera/computeViewProj.ts',
 ];
 
 const WESL_FILES: readonly string[] = walk('src/services/gpu/shaders/bodies', ['.wesl']);
 
-// The ONE table of "files on the body-slab path allowed to bridge Mpc<->m
-// outside the pose seam (bodyRelativePose.ts), and why" — folds in what used
-// to be three separate homes for this same question: this map (originally 3
-// cull/fade entries), starSphereRangeM.ts's own header (a distinct NEAR0
-// exception), and visibleSlabBodies.ts's undocumented use (radar findings
-// 1+2, .superpowers/sdd/2026-08-26-body-render-slabs/radar-seams-tests.md).
-// Each entry names the category so a NEW use beyond these needs its own line
-// — keeping this a real (if per-file) gate, not a rubber stamp.
+// The ONE table of "files on the body-slab path or the engaged camera path
+// allowed to bridge Mpc<->m outside the two seams (bodyRelativePose.ts,
+// poseFrameConversion.ts), and why" — folds in what used to be three separate
+// homes for this same question: this map (originally 3 cull/fade entries),
+// starSphereRangeM.ts's own header (a distinct NEAR0 exception), and
+// visibleSlabBodies.ts's undocumented use (radar findings 1+2,
+// .superpowers/sdd/2026-08-26-body-render-slabs/radar-seams-tests.md). Each
+// entry names the category so a NEW use beyond these needs its own line —
+// keeping this a real (if per-file) gate, not a rubber stamp.
 const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
     'src/services/engine/frame/passes/earthLayer.ts',
@@ -109,6 +129,18 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'src/services/engine/frame/slabs.ts',
     "deriveSlabs is the seam's CALLER, not a second compose site: bodySlabRow's near/far/vp consume bodyRelativePose's already-metre-native pose untouched; its own MPC_TO_M/M_TO_MPC uses are COSMO's fixed distanceRangeM bracket and a body row's screen-footprint (radiusPx) bridge into bodyApparentDiameterPx — cull/fade precedent again, not pose math",
   ],
+  [
+    'src/services/engine/camera/bodyLikeFraming.ts',
+    'framing-bridge precedent — converts a body radius to Mpc so bodyFocusDistance and the returned FocusFraming.radius can compose with Mpc-shaped framing math (camera-pivot controller verification, spec §10), not a pose re-derivation',
+  ],
+  [
+    'src/services/engine/camera/cameraDrivers.ts',
+    "framing-bridge precedent (line 332) — the followBody driver's initial-approach branch converts the focused body's radiusM to Mpc to seed bodyFocusDistance's framing target, the same radius->Mpc bridge as bodyLikeFraming, not pose math",
+  ],
+  [
+    'src/services/engine/camera/pivotRadiusMpc.ts',
+    "framing-bridge precedent — the SelectionRow's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
+  ],
 ]);
 
 const project = new Project({ useInMemoryFileSystem: false });
@@ -130,18 +162,26 @@ function scaleUnitsMembersUsed(file: string): string[] {
 }
 
 describe('the body-slab path never re-derives the Mpc<->metre conversion', () => {
-  it('bodyRelativePose.ts is the only file the migration allows to import MPC_TO_M', () => {
-    // Documents the seam this whole test protects rather than re-asserting a
-    // fact ts-morph already proves in bodyRelativePose's own header comment —
-    // this file is deliberately NOT in TS_FILES above.
-    const seam = readFileSync('src/services/engine/camera/bodyRelativePose.ts', 'utf8');
-    expect(seam).toContain('MPC_TO_M');
+  it('bodyRelativePose.ts and poseFrameConversion.ts are the only files the migrations allow to convert Mpc<->metres', () => {
+    // Documents the two seams this whole test protects rather than
+    // re-asserting a fact ts-morph already proves in each file's own header
+    // comment — both files are deliberately NOT in TS_FILES above (SEAM_FILES
+    // filters them out of every swept dir).
+    const bodyRelativePose = readFileSync('src/services/engine/camera/bodyRelativePose.ts', 'utf8');
+    expect(bodyRelativePose).toContain('MPC_TO_M');
+    const poseFrameConversion = readFileSync(
+      'src/services/engine/camera/poseFrameConversion.ts',
+      'utf8',
+    );
+    expect(poseFrameConversion).toContain('M_TO_MPC');
   });
 
   it('the directory sweep found real files, including each known anchor', () => {
     // A typo'd glob dir/extension returns [] silently and every it.each below
     // would vacuously pass with zero cases — this is the loud-failure check.
-    expect(TS_FILES.length).toBeGreaterThan(20);
+    // Five swept dirs now (~145 files at time of writing); 100 leaves ample
+    // margin below the true count while still catching an empty/typo'd walk.
+    expect(TS_FILES.length).toBeGreaterThan(100);
     for (const anchor of KNOWN_ANCHOR_FILES) {
       expect(TS_FILES).toContain(anchor);
     }
