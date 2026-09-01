@@ -29,8 +29,9 @@
  *
  * The frame body runs five camera steps, in this exact order:
  *
- *   0. DRAIN INPUT: apply this frame's aggregated gestures to the drag register
- *      and dispatch their store edges (`drainInput`) — the only input-apply site.
+ *   0. DRAIN INPUT: fold this frame's aggregated gestures into the live
+ *      register (`cameraRuntime.lastPose`) and dispatch their store edges
+ *      (`drainInput`) — the only input-apply site.
  *   1. PRODUCE the pose from the driver table (single-writer, one pose per frame).
  *   2. TWEEN COMPLETION: if the tween driver won and its elapsed >= durationMs,
  *      dispatch `cancelCameraTween()`. The tween deactivates on the NEXT frame;
@@ -77,8 +78,7 @@ import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
-import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
+import { tweenElapsed, frameTweenElapsed } from '../camera/cameraClock';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
@@ -205,9 +205,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // `resizeCanvasToDisplay` returns `true` only when dimensions changed, so
   // `cameraRuntime.projection.aspect` is patched only in that branch. Aspect
-  // lives on `projection` (the engine Resource), NOT on `state.cam`:
-  // `state.cam` is the drag register, and `assembleOrbitCamera` merges the
-  // projection Resource's aspect onto every produced pose instead.
+  // lives on `projection` (the engine Resource): `assembleOrbitCamera` merges
+  // the projection Resource's aspect onto every produced pose.
   //
   // `reconcile` runs UNCONDITIONALLY — one seam answering two inputs, the
   // canvas size and every state-driven `scale` (the `mw-aggregate` divisor is
@@ -282,21 +281,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // `runCameraDrivers` and the clock is advanced once here — `deriveFrameContext`
   // receives the already-produced pose so it does NOT re-call the drivers or
   // advance the clock again.
-  //
-  // This runs even if `state.cam` is null (pre-bootstrap): in that case
-  // `orbitDrag` calls `poseOf(null)` which would crash — but `orbitDrag` is
-  // only active when `s.camera.dragging` is true, and dragging cannot be true
-  // before the controls are attached (which happens in wireInput, after cam is
-  // non-null). So the resting or tween/autoRotate drivers win pre-bootstrap,
-  // both of which ignore `cam`. The guard below for the scale-bar snapshot
-  // still keeps the post-cam path distinct.
-  const pose = runCameraDrivers(
-    deps.drivers,
-    rootState,
-    state.cam!,
-    state.cameraRuntime.clock,
-    nowMs,
-  );
+  const pose = runCameraDrivers(deps.drivers, rootState, state.cameraRuntime.clock, nowMs);
   const activeId = activeDriverId(deps.drivers, rootState);
 
   // ── Orientation basis: two readers, two different values ─────────────────
@@ -312,9 +297,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // seeds the NEXT switch's `fromQuat` (`watchOrientationChangeSaga`), and a
   // re-switch mid-roll must compose from the live pole, not the committed one.
   //
-  // `state.cam` and `deriveFrameContext` below both take the same split —
-  // committed basis for position decode, live basis for up — see
-  // `OrbitCameraInit.d.ts` for why the two camera fields exist.
+  // `drainInput` (next frame's gesture fold) and `deriveFrameContext` below
+  // both take the same split — committed basis for position decode, live basis
+  // for up.
   const poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation];
   const upBasis = resolveFrameBasis(
     rootState.settings.orientation,
@@ -323,12 +308,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     nowMs,
   );
   state.cameraRuntime.upBasis.current = upBasis;
-  if (state.cam) {
-    // Pre-bootstrap `cam` is null; a grab is impossible until wireInput attaches
-    // controls, so there is no decode to keep in sync until then.
-    state.cam.poseBasis = poseBasis;
-    state.cam.upBasis = upBasis;
-  }
 
   // Clear a finished frame roll exactly once, mirroring the camera-tween
   // completion block below: when the roll's elapsed saturates its duration, the
@@ -421,25 +400,17 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // absolute (SETS the target), so baking `renderPose` into `base` on the next
   // commit-on-edge can never double-apply the body translation.
   //
-  // A right-drag STRAFE while following is folded into the clock's world-frame
-  // `followPanOffset` FIRST (a follow-drag frame is orbitDrag winning over a body
-  // focus), then the pin resolves the pivot to `bodyPosition + followPanOffset`.
-  // The offset — not `cam.target`, which the pin overwrites — is the strafe's home,
-  // so the shifted pivot still translate-follows the body and a fresh focus zeroes
-  // it (in `followElapsed`).
+  // A pan STRAFE while following lives on the clock's world-frame
+  // `followPanOffset` — `drainInput` folds each pan step's delta there at
+  // apply time — and the pin resolves the pivot to `bodyPosition +
+  // followPanOffset`, so the shifted pivot still translate-follows the body
+  // and a fresh focus zeroes it (in `followElapsed`).
   // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
   // resolved against this frame), so the pin and the winner never disagree on
   // what is focused. A separate `focusRow` local below reads the EngineState
   // mirror for the structure-focus / time-report sections.
   const pivotFocus = rootState.selectionRows.focus;
   const clock = state.cameraRuntime.clock;
-  const followingBody = bodyMovesThisFrame(pivotFocus);
-  if (state.cam) {
-    accumulateFollowPan(clock, activeId === 'orbitDrag' && followingBody, state.cam.target);
-  } else {
-    // Pre-bootstrap: no cam, no drag possible — keep the delta chain reset.
-    clock.lastPanTarget = null;
-  }
   renderPose = applyFocusedBodyPivot(
     renderPose,
     deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
@@ -560,8 +531,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     renderPose,
     state.cameraRuntime.projection,
     // The committed pose basis (holds still through a roll) and the live up
-    // basis (rolls) — the same split fed to the drag register above, so the
-    // draw decode shares both poles with the switch surfaces.
+    // basis (rolls) — the same split the gesture fold reads, so the draw
+    // decode shares both poles with the switch surfaces.
     poseBasis,
     upBasis,
     masks.draw,

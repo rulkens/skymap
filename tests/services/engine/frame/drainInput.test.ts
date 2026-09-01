@@ -56,8 +56,8 @@ function makeHarness(distance = 100) {
   const inputAggregator = createInputAggregator();
   const state = {
     cam,
-    // The gesture seed resolves the live pose's arm, so the harness carries the
-    // orientation + epoch that resolution reads.
+    // The world-arm fold resolves the live pose's arm, so the harness carries
+    // the orientation + epoch that resolution reads.
     settings: { orientation: 'ecliptic' },
     subsystems: { inputAggregator },
     cameraRuntime: {
@@ -109,15 +109,15 @@ function rangeM(framed: FramedCameraPose): number {
 
 describe('drainInput', () => {
   it('applies nothing until the frame drains', () => {
-    const { cam, agg, state, deps } = makeHarness();
+    const { agg, state, deps } = makeHarness();
     agg.push({ kind: 'gestureStart' });
     agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
     agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
 
-    expect(cam.yaw).toBe(0);
+    expect(worldArmOf(state.cameraRuntime.lastPose.current).yaw).toBe(0);
 
     drainInput(state, deps, 0);
-    expect(cam.yaw).toBeCloseTo(-50 * 0.005, 6);
+    expect(worldArmOf(state.cameraRuntime.lastPose.current).yaw).toBeCloseTo(-50 * 0.005, 6);
   });
 
   it('commits the tail of a gesture that ended mid-frame', () => {
@@ -138,12 +138,11 @@ describe('drainInput', () => {
     expect(store.getState().camera.dragging).toBe(false);
   });
 
-  it('routes a body-arm drag to the surface controller, never the register', () => {
-    // The register is invisible in a body arm — `orbitDrag` is arm-gated off —
-    // so committing it on release would land the whole accumulated gesture in
-    // one frame, which the fold then re-engages: the register-vs-render
-    // divergence at its worst. The anchored gesture is what moves the camera,
-    // and it stays in the body arm the whole way.
+  it('routes a body-arm drag to the surface controller and commits it at gesture end', () => {
+    // The anchored gesture is what moves the camera, folded into the live
+    // register step by step, and it stays in the body arm the whole way; the
+    // release bakes the folded pose — never a stale world-arm reading — into
+    // `base`.
     const { agg, state, deps, store } = makeHarness();
     const arm = earthArm(2);
     store.dispatch(commitCameraPose(arm));
@@ -236,10 +235,11 @@ describe('drainInput', () => {
 
     // The centre pixel hits the body dead-on from either pose, so both latch
     // `pan` — a rotation about the body centre. The range is then the
-    // fingerprint of which pose the gesture was applied to.
-    const committed = rangeM(store.getState().camera.base);
-    expect(committed / rangeM(onScreen)).toBeCloseTo(1, 9);
-    expect(committed / rangeM(stale)).toBeLessThan(0.5);
+    // fingerprint of which pose the gesture was applied to. Mid-gesture the
+    // pose lives in the register (the store commits at gesture end).
+    const folded = rangeM(state.cameraRuntime.lastPose.current);
+    expect(folded / rangeM(onScreen)).toBeCloseTo(1, 9);
+    expect(folded / rangeM(stale)).toBeLessThan(0.5);
   });
 
   it('leaves the pose alone while a clip owns the camera', () => {
@@ -295,22 +295,58 @@ describe('drainInput', () => {
     expect(store.getState().camera.tween).not.toBeNull();
   });
 
-  it('routes an at-rest wheel to the store base, not the drag register', () => {
-    // With no gesture the resting driver renders `base`, so a register mutation
-    // would be invisible.
-    const { cam, agg, state, deps, store } = makeHarness();
+  it('routes an at-rest wheel to the store base, not the gesture register', () => {
+    // With no gesture the resting driver renders `base`, so a register-only
+    // write would be invisible.
+    const { agg, state, deps, store } = makeHarness();
+    const registerBefore = state.cameraRuntime.lastPose.current;
     const baseBefore = worldArmOf(store.getState().camera.base).distance;
     agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
 
     drainInput(state, deps, 0);
 
-    expect(cam.distance).toBe(100);
+    expect(state.cameraRuntime.lastPose.current).toBe(registerBefore);
     // deltaY > 0 zooms out, so the committed base grew.
     expect(worldArmOf(store.getState().camera.base).distance).toBeGreaterThan(baseBefore);
   });
 
+  it('folds a followed-body pan into the clock strafe offset, not double-counted', () => {
+    // While a MOVING body is followed the pivot-pin owns the pose target
+    // (`bodyPosition + followPanOffset`), so a pan step's own delta must land
+    // on the clock offset — and an orbit step must leave it alone (its delta
+    // is angular, not a strafe). The offset carries exactly the image-plane
+    // translation of the drag, no body motion mixed in.
+    const { agg, state, deps, store } = makeHarness();
+    store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusM: 6371000,
+        },
+      }),
+    );
+
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
+    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
+    drainInput(state, deps, 0);
+    expect(state.cameraRuntime.clock.followPanOffset).toEqual([0, 0, 0]);
+
+    agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
+    agg.push({ kind: 'dragMove', mode: 'pan', xPx: 150, yPx: 100 });
+    drainInput(state, deps, 16);
+
+    // 50 px at the image plane: 2 · distance · tan(fov/2) / cssHeight per px.
+    const pxToWorld = (2 * 100 * Math.tan(Math.PI / 6)) / 1000;
+    expect(Math.hypot(...state.cameraRuntime.clock.followPanOffset)).toBeCloseTo(50 * pxToWorld, 9);
+  });
+
   it('floors an in-gesture zoom at the focused body’s surface', () => {
-    const { cam, agg, state, deps, store } = makeHarness(EARTH_RADIUS_MPC * 4);
+    const { agg, state, deps, store } = makeHarness(EARTH_RADIUS_MPC * 4);
     store.dispatch(
       setSelectionRow({
         slot: 'focus',
@@ -329,7 +365,7 @@ describe('drainInput', () => {
     agg.push({ kind: 'pinchMove', distPx: 10_000_000 });
     drainInput(state, deps, 0);
 
-    const radii = cam.distance / EARTH_RADIUS_MPC;
+    const radii = worldArmOf(state.cameraRuntime.lastPose.current).distance / EARTH_RADIUS_MPC;
     expect(radii).toBeGreaterThan(1);
     expect(radii).toBeLessThan(1.05);
   });

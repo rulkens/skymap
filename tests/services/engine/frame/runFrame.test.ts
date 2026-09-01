@@ -454,9 +454,8 @@ describe('runFrame — orientation-frame roll', () => {
 
   it('a full orientation-frame roll: B(t) reaches the destination pole monotonically and the descriptor clears on completion', () => {
     // NOT a produce-path test — see 'during a frame roll the assembled camera
-    // position is unchanged...' below for what `runFrame` actually feeds
-    // `state.cam.poseBasis` / `.upBasis`, and the position-holds-still
-    // invariant that follows. This test instead drives a real frameTween
+    // position is unchanged...' below for the committed-vs-live basis split
+    // `runFrame` resolves, and the position-holds-still invariant that follows. This test instead drives a real frameTween
     // through `runFrame` end to end and reads a SYNTHETIC probe camera —
     // `assembleOrbitCamera(pose, projection, B, B)` with the SAME live B(t)
     // fed to both slots — purely to turn the resolved basis into a vector
@@ -550,8 +549,8 @@ describe('runFrame — orientation-frame roll', () => {
     // is the COMMITTED frame (`ORIENTATION_FRAMES[orientation]`), which
     // `watchOrientationChangeSaga` sets to the destination the instant a switch
     // starts — so it does not move for the roll's whole duration — while
-    // `upBasis` is the live, mid-slerp `B(t)`. This test drives the drag
-    // register's two fields (what `runFrame` actually writes) through
+    // `upBasis` is the live, mid-slerp `B(t)` runFrame resolves into
+    // `cameraRuntime.upBasis`. This test drives those two sources through
     // `assembleOrbitCamera` and asserts the split: position holds, up rotates.
     const store = makeStore();
     const state = makeCamState();
@@ -579,16 +578,16 @@ describe('runFrame — orientation-frame roll', () => {
     const cam1 = assembleOrbitCamera(
       worldArmOf(state.cameraRuntime.lastPose.current),
       projection,
-      state.cam!.poseBasis!,
-      state.cam!.upBasis!,
+      ORIENTATION_FRAMES.galactic,
+      state.cameraRuntime.upBasis.current,
     );
 
     runFrame(state, deps, 500);
     const cam2 = assembleOrbitCamera(
       worldArmOf(state.cameraRuntime.lastPose.current),
       projection,
-      state.cam!.poseBasis!,
-      state.cam!.upBasis!,
+      ORIENTATION_FRAMES.galactic,
+      state.cameraRuntime.upBasis.current,
     );
 
     // The eye holds still: poseBasis is the committed 'galactic' frame at both

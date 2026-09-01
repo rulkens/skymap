@@ -129,7 +129,7 @@ function simulateFrame(
   const rootState = store.getState();
   const { clock, lastPose, prevActiveId } = engineState.cameraRuntime;
 
-  const pose = runCameraDrivers(drivers, rootState, engineState.cam!, clock, nowMs);
+  const pose = runCameraDrivers(drivers, rootState, clock, nowMs);
   const currActiveId = activeDriverId(drivers, rootState);
 
   // Step 2: Tween completion.
@@ -475,10 +475,10 @@ describe('commitOnEdge — clip deactivation', () => {
   });
 
   it('a playing clip keeps the camera against a body-arm gesture', () => {
-    // The surface row sits at 100, above the clip's 95 — but taking the camera
-    // for a held gesture and handing it back to a clip whose commit-on-edge
-    // bakes its OWN final pose would discard the gesture whole at pointerup.
-    // The table's rule holds in both arms: a clip is not drag-interruptible.
+    // Taking the camera for a held gesture and handing it back to a clip whose
+    // commit-on-edge bakes its OWN final pose would discard the gesture whole
+    // at pointerup. The gesture row serves both arms at 80; the clip's 95
+    // outranks it either way: a clip is not drag-interruptible.
     const store = makeStore();
     const { state } = makeEngineState();
     const drivers = buildCameraDrivers(state as unknown as EngineState);
@@ -496,7 +496,7 @@ describe('commitOnEdge — clip deactivation', () => {
       }),
     );
     store.dispatch(beginDrag());
-    expect(activeDriverId(drivers, store.getState())).toBe('surface');
+    expect(activeDriverId(drivers, store.getState())).toBe('orbitDrag');
 
     store.dispatch(
       clipStarted({

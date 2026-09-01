@@ -25,15 +25,15 @@
  * winner, guaranteeing that the driver's `pose` and the commit-on-edge guard
  * never disagree (invariant 1 of the frame-ordering contract).
  *
- * `buildCameraDrivers` produces the seven-row table that reads directly from the
- * Redux store. Most drivers' `isActive` and `pose` read only `s.camera.*`; `cam`
- * is forwarded to the `orbitDrag` driver, which reads `state.cam` (the gesture
- * register) for its live yaw/pitch/distance. The `followBody` driver is the one
- * that needs the engine snapshot, so `buildCameraDrivers(state)` closes over
- * `EngineState`: follow reads the per-frame body-state snapshot (primed by
- * `runFrame` before produce), the live lens FOV, and the follow ease clock.
+ * `buildCameraDrivers` produces the six-row table that reads directly from the
+ * Redux store. Most drivers' `isActive` and `pose` read only `s.camera.*`.
+ * `buildCameraDrivers(state)` closes over `EngineState` for two rows: `orbitDrag`
+ * reads the live gesture register (`cameraRuntime.lastPose`, folded by
+ * `drainInput` in either arm), and `followBody` reads the per-frame body-state
+ * snapshot (primed by `runFrame` before produce), the live lens FOV, and the
+ * follow ease clock.
  *
- * Priorities: surface 100 > clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 >
+ * Priorities: clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 >
  * followBody 10 > resting 0. The gap between each step is deliberate headroom
  * so a future driver can slot in without renumbering.
  *
@@ -54,11 +54,9 @@
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
-import { poseOf } from './poseOf';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { liveWorldPose } from '../helpers/liveWorldPose';
 import { tweenToClip } from './tweenToClip';
@@ -148,39 +146,42 @@ function elapsedForWinner(
 export function runCameraDrivers(
   drivers: readonly CameraDriver[],
   s: RootState,
-  cam: OrbitCamera,
   clock: CameraClock,
   nowMs: number,
 ): FramedCameraPose {
   const winner = pickWinner(drivers, s);
   const elapsed = elapsedForWinner(winner, s, clock, nowMs);
-  return winner.pose(s, cam, elapsed);
+  return winner.pose(s, elapsed);
 }
 
 /**
- * Build the engine's camera-driver table — seven rows, store-reading, returned
+ * Build the engine's camera-driver table — six rows, store-reading, returned
  * in priority order for readability (the resolver uses a max-scan, so order
  * does not affect correctness).
  *
- * The `state` parameter is closed over for the `followBody` driver alone (see
- * below); the other five read only `RootState` and mutate neither `state.cam`
- * nor `EngineState`.
+ * The `state` parameter is closed over for the `orbitDrag` and `followBody`
+ * drivers (see below); the other four read only `RootState` and never mutate
+ * `EngineState`.
  *
  * Drivers, highest priority first:
  *
  *   - `clip` (95) — an in-flight animation clip. Active while `s.camera.clip`
  *     is non-null. Owns the camera above orbitDrag so a playing clip cannot
- *     be interrupted by a drag gesture. `commitsOnEdge: true` bakes the clip's
- *     final pose into `base` on deactivation — the camera holds the last frame
- *     of the clip rather than snapping back to the pre-clip base. Elapsed is
- *     in SECONDS (evaluateClip's unit).
+ *     be interrupted by a drag gesture — in EITHER arm: taking the camera for
+ *     a held gesture and handing it back to a clip whose commit-on-edge bakes
+ *     its own final pose would discard the whole gesture at pointerup, so
+ *     `drainInput` swallows the steps too. `commitsOnEdge: true` bakes the
+ *     clip's final pose into `base` on deactivation — the camera holds the
+ *     last frame of the clip rather than snapping back to the pre-clip base.
+ *     Elapsed is in SECONDS (evaluateClip's unit).
  *
- *   - `orbitDrag` (80) — the live gesture register (`state.cam`). Active while
- *     `s.camera.dragging` is true. Returns `poseOf(cam)` so the controls keep
- *     directly manipulating the register without re-composing through the store.
- *     `pivotsOnFocusedBody`: while a body is focused the pivot-pin overwrites the
- *     dragged target with the live body, so a drag orbits around the moving body
- *     (no drift) rather than a frozen point.
+ *   - `orbitDrag` (80) — the live gesture register, BOTH arms. Active while
+ *     `s.camera.dragging` is true. `drainInput` folds each step into
+ *     `cameraRuntime.lastPose` before produce; this row holds that pose
+ *     against every lower row. `pivotsOnFocusedBody`: while a body is focused
+ *     the pivot-pin overwrites the dragged target with the live body, so a
+ *     drag orbits around the moving body (no drift) rather than a frozen
+ *     point — and the pin skips body arms by itself, so no arm gate is needed.
  *
  *   - `followBody` (10) — a focus on a moving scene body. Active while
  *     `s.selectionRows.focus` is a body the sim clock propagates (the shared
@@ -236,7 +237,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // orientation switch (see evaluateClip's Cached type). The evaluated pose
       // is then re-encoded forward into the CURRENT frame — reencodePose returns
       // it by reference when the two bases match, the overwhelmingly common case.
-      pose: (s, _cam, elapsed) => {
+      pose: (s, elapsed) => {
         const clip = s.camera.clip!;
         const evaluated = evaluateClip(clip.data, elapsed, ORIENTATION_FRAMES[clip.frame]);
         return absoluteArm(
@@ -249,39 +250,22 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       },
     },
     {
-      id: 'surface',
-      priority: 100,
-      // The body arm's gesture, in the slot the SpaceMouse driver vacated (spec
-      // §7). `drainInput` has already committed this frame's anchored pose into
-      // `base`, so the row authors nothing new — it exists to hold the camera
-      // for the gesture against every LOWER row. No pivot pin: that is a
-      // world-arm concern.
-      //
-      // A playing clip is not interruptible by a gesture in EITHER arm (the
-      // table's rule, above): the row stands down and `drainInput` leaves the
-      // pose alone, because taking the camera for the held gesture and handing
-      // it back to a clip whose commit-on-edge then bakes its own final pose
-      // would discard the whole gesture at pointerup.
-      isActive: (s) =>
-        s.camera.dragging && s.camera.base.frame !== 'absolute' && s.camera.clip === null,
-      pose: (s) => s.camera.base,
-    },
-    {
       id: 'orbitDrag',
       priority: 80,
       // Orbit driver: while a body is focused the frame loop pins the pose target
       // to the live body so a drag orbits AROUND the moving body instead of a
       // frozen point (the body would otherwise drift out from under the cursor
-      // mid-drag). Drag owns yaw/pitch/distance; the body owns the pivot.
+      // mid-drag). Drag owns yaw/pitch/distance; the body owns the pivot. The
+      // pin is a no-op on a body arm (co-rotation satisfies it structurally),
+      // so ONE row serves both arms with no arm gate; a playing clip outranks
+      // it at 95 (a gesture never interrupts a clip, either arm).
       pivotsOnFocusedBody: true,
-      // World-arm producer: the drag register is Mpc orbit params, so the row
-      // only competes while the state is in the absolute arm (spec §7).
-      isActive: (s) => s.camera.dragging && s.camera.base.frame === 'absolute',
-      // The live drag register is the source of truth while the gesture is
-      // held — poseOf reads yaw/pitch/distance/target off the OrbitCamera
-      // that orbitControls mutates in real time. The target it reads is only
-      // used when NO body is focused; otherwise the pivot-pin overwrites it.
-      pose: (_s, cam) => absoluteArm(poseOf(cam)),
+      isActive: (s) => s.camera.dragging,
+      // The live gesture register: `drainInput` folds every step into
+      // `cameraRuntime.lastPose` before produce, in whichever arm the regime
+      // names. The target is only rendered as-is when NO moving body is
+      // focused; otherwise the pivot-pin overwrites it.
+      pose: () => state.cameraRuntime.lastPose.current,
     },
     {
       id: 'followBody',
@@ -320,7 +304,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // once a drag has committed a zoom into `base`, follow eases toward THAT
       // committed `base.distance` instead, so the user can zoom while following
       // rather than having the framing distance re-asserted every frame.
-      pose: (s, _cam, elapsed) => {
+      pose: (s, elapsed) => {
         const focus = s.selectionRows.focus;
         const clock = state.cameraRuntime.clock;
         // Defensive: pose only runs for the winner, so isActive already proved a
@@ -402,7 +386,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // `evaluateClip`'s compile cache reuses tracks across frames; the result
       // is then re-encoded forward into the CURRENT frame — reencodePose
       // returns it by reference when the two bases match, the common case.
-      pose: (s, _cam, elapsedMs) => {
+      pose: (s, elapsedMs) => {
         const tween = s.camera.tween!;
         const evaluated = evaluateClip(
           tweenToClip(tween),
@@ -436,7 +420,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // (commit-on-edge only fires on driver deactivation), so the yaw advances
       // at the correct cumulative rate rather than a per-frame delta off a
       // moving base.
-      pose: (s, _cam, elapsedMs) => {
+      pose: (s, elapsedMs) => {
         const base = s.camera.base;
         // The isActive gate restated as the narrowing TS needs.
         if (base.frame !== 'absolute') return base;

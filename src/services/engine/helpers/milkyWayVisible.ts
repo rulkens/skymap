@@ -11,7 +11,7 @@
  * DIFFERENT cameras — draw passes the frame-frozen `ctx.drawCamPos` /
  * `ctx.fovYRad` / `ctx.nowMs`, pick passes its own pick-time replay. Sharing
  * one gate (not a mirrored pair) means the pick answer can't drift from the
- * draw answer for that camera; reading the live drag register instead would
+ * draw answer for that camera; reading the live pose instead would
  * lag a wheel-zoom/tween between frames and let a vanished disc claim a
  * click, or a visible one miss.
  */

@@ -338,9 +338,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // reaches `put(startCameraTween)` with no intervening yield, so a cancel
   // deferred to the next frame would kill the tween that double-tap-to-focus
   // just started. `beginDrag` rides along to keep the pair atomic. Only the
-  // register seed and the camera math stay deferred — nothing between the
-  // pointerdown and the drain can move `lastPose.current`, which is the seed's
-  // only input.
+  // camera math stays deferred — nothing between the pointerdown and the drain
+  // can move `lastPose.current`, the pose the drain's first fold reads.
   deps.detachControlsRef.current = attachOrbitControls(
     canvas,
     (event) => {

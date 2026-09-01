@@ -1,27 +1,32 @@
 /**
- * drainInput — the single per-frame input-apply site. Runs at the top of
+ * drainInput — the single per-frame input-apply site, and the only gesture
+ * writer of the live register (`cameraRuntime.lastPose`). Runs at the top of
  * `runFrame`, above the store read the driver table resolves against, so a
  * gesture that began between frames is visible to this frame's produce step.
  * Steps arrive in order, so a wheel tick between two drags still changes the
  * rate the second drag is applied at.
+ *
+ * Both arms fold the same way: each step folds the live pose into the next
+ * and writes the register; the store commits only at gesture end and per
+ * at-rest wheel notch (its own atomic gesture) — the live pose is a Resource,
+ * not Intent (intent.md's carve-out).
  *
  * `beginDrag` / `cancelCameraTween` are NOT here — the emit sink dispatches them
  * at DOM time (`wireInput`) so a cancel cannot outlive the tween a double-click
  * starts in the same gap.
  */
 
-import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { pivotFraming } from '../camera/pivotRadiusMpc';
-import { poseOf } from '../camera/poseOf';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { liveWorldPose } from '../helpers/liveWorldPose';
+import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
-import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
@@ -32,18 +37,15 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
 
   const store = deps.cb.store;
   const cssHeight = deps.canvas.clientHeight || 1;
-
-  /** What this drain last handed the surface controller; null before the first. */
-  let armPose: BodyFixedPose | null = null;
+  const register = state.cameraRuntime.lastPose;
 
   /**
-   * The engaged arm's input owner (spec §6): anchored gestures, committed
-   * straight into `base` because a body arm has no register to render from;
-   * `false` hands the step back to the untouched world-arm path. The GATE is
-   * the stored regime (`base.frame`, T15); the POSE is the live produced one,
-   * because the fold commits on a regime EDGE only — mid-tween `base` holds the
-   * last crossing pose while `lastPose` tracks the animation, and a latch taken
-   * against a pose the user never saw sticks for the whole gesture (FW-G).
+   * The engaged arm's input owner (spec §6). The GATE is the stored regime
+   * (`base.frame`, T15); the POSE is the live register, because the fold
+   * commits on a regime EDGE only — mid-tween `base` holds the last crossing
+   * pose while the register tracks the animation, and a latch taken against a
+   * pose the user never saw sticks for the whole gesture (FW-G). `false`
+   * hands the step back to the world-arm path.
    */
   const routeToSurface = (step: InputStep): boolean => {
     const root = store.getState();
@@ -54,10 +56,9 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
     // Unreachable: the fold only ever names a body it resolved.
     const body = SCENE_BODIES.find((row) => row.id === base.frame.body);
     if (body === undefined) return true;
-    const live = state.cameraRuntime.lastPose.current;
+    const live = register.current;
     const from =
-      armPose ??
-      (live.frame !== 'absolute' && live.frame.body === base.frame.body ? live.pose : base.pose);
+      live.frame !== 'absolute' && live.frame.body === base.frame.body ? live.pose : base.pose;
     const next = state.cameraRuntime.surface.apply(
       from,
       step,
@@ -65,49 +66,78 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
       state.cameraRuntime.projection.fovYRad,
       body.radiusM,
     );
-    armPose = next;
-    // Identity, not equality: a declined step returns its input by reference
-    // (`anchoredZoomStep` always allocates, so a floored wheel still writes an
-    // equal pose — harmless, nothing subscribes). `frame` rides along BY
-    // REFERENCE: one fact in two fields, and the body never changes here.
-    if (next !== base.pose) store.dispatch(commitCameraPose({ frame: base.frame, pose: next }));
+    if (step.kind === 'zoom' && !step.duringGesture) {
+      // An at-rest notch is its own atomic gesture, so the commit is its
+      // gesture end — a register-only write would be invisible (the resting
+      // driver renders `base`). Identity, not equality: a declined step
+      // returns its input by reference. `frame` rides along BY REFERENCE:
+      // one fact in two fields, and the body never changes here.
+      if (next !== from) store.dispatch(commitCameraPose({ frame: base.frame, pose: next }));
+    } else {
+      register.current = { frame: base.frame, pose: next };
+    }
     return true;
   };
-  // Pre-bootstrap `state.cam` is null and no recognizer is attached, so only the
-  // register arms need the guard — the store edges fired unconditionally in the
-  // callbacks this drain replaced, and stay unconditional.
-  const cam = state.cam;
+
+  /** World-arm fold: live pose → next pose, written to the register. */
+  const applyWorldStep = (step: Extract<InputStep, { kind: 'drag' } | { kind: 'zoom' }>): void => {
+    const root = store.getState();
+    // Same rule as the body arm: a playing clip is not gesture-interruptible,
+    // so the step is swallowed rather than folded invisibly under the clip.
+    if (root.camera.clip !== null) return;
+    const focus = selectFocusRow(root);
+    const world = liveWorldPose(state);
+    const next = applyInputToCamera(
+      world,
+      step,
+      cssHeight,
+      pivotFraming(focus),
+      state.cameraRuntime.projection.fovYRad,
+      ORIENTATION_FRAMES[state.settings.orientation],
+      state.cameraRuntime.upBasis.current,
+    );
+    if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
+      // Followed-body strafe: the pivot-pin owns the target
+      // (`bodyPosition + followPanOffset`), so the pan step's own delta goes
+      // to the clock offset the pin reads. Folding it here — where the delta
+      // is in hand — is what lets the offset stay clean while the body moves.
+      const off = state.cameraRuntime.clock.followPanOffset;
+      state.cameraRuntime.clock.followPanOffset = [
+        off[0] + next.target[0] - world.target[0],
+        off[1] + next.target[1] - world.target[1],
+        off[2] + next.target[2] - world.target[2],
+      ];
+    }
+    register.current = absoluteArm(next);
+  };
 
   for (const step of steps) {
     switch (step.kind) {
       case 'gestureStart':
-        // Seed from the live PRODUCED pose, not `camera.base`: mid-tween those
-        // differ, and only the produced pose is where the user sees the camera.
-        if (cam !== null) seedCameraFromBase(cam, liveWorldPose(state));
         state.cameraRuntime.surface.onGestureStart();
         break;
 
-      case 'gestureEnd':
-        // Commit BEFORE `endDrag` so the baked pose is in `base` the moment the
-        // orbitDrag driver deactivates — otherwise the next frame's resting
-        // driver returns the pre-gesture base and the camera snaps back.
-        //
-        // World arm only: in a body arm `orbitDrag` never won, so the register
-        // holds a pose nothing rendered, and committing it would land the whole
-        // held gesture in one frame — while the surface controller has been
-        // committing the real thing all along (spec §6).
-        if (cam !== null && store.getState().camera.base.frame === 'absolute') {
-          store.dispatch(commitCameraPose(absoluteArm(poseOf(cam))));
-        }
+      case 'gestureEnd': {
+        // ONE commit site for both arms: bake the live register into `base`
+        // before `endDrag`, so the resting driver resumes from the pose the
+        // user released. Skipped while a clip owns the camera (the gesture was
+        // swallowed whole) and across an arm mismatch (a clip ended mid-hold;
+        // the fold owns regime edges, a commit here must never flip one).
+        const root = store.getState();
+        const live = register.current;
+        const sameArm =
+          live.frame === 'absolute'
+            ? root.camera.base.frame === 'absolute'
+            : root.camera.base.frame !== 'absolute' &&
+              live.frame.body === root.camera.base.frame.body;
+        if (root.camera.clip === null && sameArm) store.dispatch(commitCameraPose(live));
         state.cameraRuntime.surface.onGestureEnd();
         store.dispatch(endDrag());
         break;
+      }
 
       case 'drag':
-        if (routeToSurface(step)) break;
-        if (cam !== null) {
-          applyInputToCamera(cam, step, cssHeight, pivotFraming(selectFocusRow(store.getState())));
-        }
+        if (!routeToSurface(step)) applyWorldStep(step);
         break;
 
       case 'zoom': {
@@ -115,18 +145,11 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         // its range, so `applyWheelZoom`'s three owners go unconsulted (§7).
         if (routeToSurface(step)) break;
         if (step.duringGesture) {
-          if (cam !== null) {
-            applyInputToCamera(
-              cam,
-              step,
-              cssHeight,
-              pivotFraming(selectFocusRow(store.getState())),
-            );
-          }
+          applyWorldStep(step);
           break;
         }
-        // At rest the register is invisible — `applyWheelZoom` routes the factor
-        // to whichever driver actually owns the distance this frame.
+        // At rest the register is not rendered — `applyWheelZoom` routes the
+        // factor to whichever driver actually owns the distance this frame.
         const root = store.getState();
         const zoomed = applyWheelZoom(
           state.cameraRuntime.clock,

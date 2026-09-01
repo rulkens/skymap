@@ -139,8 +139,8 @@ export function attachOrbitControls(
     // Suppress page scroll while zooming. Needs `{ passive: false }` below,
     // since a passive listener may not call preventDefault.
     e.preventDefault();
-    // With a pointer down the drag register is what renders (`orbitDrag`), so
-    // the zoom folds into it; at rest the store `base` renders instead.
+    // With a pointer down the gesture register is what renders (`orbitDrag`),
+    // so the zoom folds into it; at rest the store `base` renders instead.
     // Client coords, matching the drag arms — the pick ray is built from the
     // same pixel space whichever arm supplies it.
     emit({

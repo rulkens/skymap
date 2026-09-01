@@ -7,7 +7,7 @@
  * the projection and orientation bases it refreshes every frame. This re-runs
  * the same `assembleOrbitCamera` merge `runFrame`/`deriveFrameContext` use, so
  * a caller off the frame gets the identical camera, not the stale
- * `state.cam` drag register (see `frameContext.ts`'s header).
+ * `state.cam` boot camera (see `frameContext.ts`'s header).
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

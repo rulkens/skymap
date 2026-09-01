@@ -24,14 +24,17 @@
  *                    the store because it is derived from the DOM canvas and the
  *                    FOV setting at bootstrap, not user camera intent.
  *
- *   `lastPose`     — the produced `FramedCameraPose` from the previous frame, wrapped
- *                    in a `{ current }` box so it can be updated in place without
- *                    reconstructing the reference that `wireInput` and the focus
- *                    handlers hold. The commit-on-edge logic reads this to bake
- *                    the last animated pose into `base` exactly once when a
- *                    tween/auto-rotate driver deactivates. The gesture seed also
- *                    reads it to grab the live mid-animation pose rather than the
- *                    (potentially stale) `base`.
+ *   `lastPose`     — the live pose register, wrapped in a `{ current }` box so
+ *                    it can be updated in place without reconstructing the
+ *                    reference that `wireInput` and the focus handlers hold.
+ *                    Two writers, disjoint in time: `drainInput` folds gesture
+ *                    steps into it at the top of the frame (so a grab
+ *                    continues from the live mid-animation pose, never a stale
+ *                    `base`), and `runFrame` step 4 stamps the rendered pose.
+ *                    The commit-on-edge logic reads it to bake the last
+ *                    animated pose into `base` exactly once when a
+ *                    tween/auto-rotate driver deactivates; the `orbitDrag`
+ *                    driver row holds it while a gesture is live.
  *
  *   `prevActiveId` — the winning driver id from the previous frame, wrapped in a
  *                    `{ current }` box. The commit-on-edge gate compares it to
@@ -80,10 +83,11 @@ export type CameraRuntime = {
   /** Live projection config; aspect patched on each canvas resize. */
   projection: CameraProjection;
   /**
-   * Last produced pose, in the arm the frame produced it in — the AUTHORITATIVE
-   * pose. Boxed so wireInput and the focus handlers share the live reference.
-   * Off-frame readers that need world Mpc go through `liveWorldPose`, the one
-   * off-frame resolution site; nothing else re-resolves it.
+   * The live pose register, in the arm it was authored in — the AUTHORITATIVE
+   * pose (drain-folded during gestures, produce-stamped every frame). Boxed so
+   * wireInput and the focus handlers share the live reference. Off-frame
+   * readers that need world Mpc go through `liveWorldPose`, the one off-frame
+   * resolution site; nothing else re-resolves it.
    */
   lastPose: { current: FramedCameraPose };
   /** Winning driver id from the previous frame; boxed for the same reason. */
@@ -100,9 +104,9 @@ export type CameraRuntime = {
    */
   upBasis: { current: Mat3 };
   /**
-   * The body arm's gesture register — `state.cam`'s counterpart for the engaged
-   * regime, and for the same reason: the latched gesture is live-session state
-   * that would be meaningless serialized. `drainInput` is its only caller.
+   * The body arm's gesture latch (mode, anchor, frozen pan radius): the
+   * latched gesture is live-session state that would be meaningless
+   * serialized. `drainInput` is its only caller.
    */
   surface: SurfaceController;
 };

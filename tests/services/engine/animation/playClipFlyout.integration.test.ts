@@ -162,7 +162,7 @@ function simulateFrame(
 
   // Step 2 — produce pose from the driver table (reads fresh store state after tick).
   const freshState = store.getState();
-  const pose = runCameraDrivers(drivers, freshState, engineState.cam!, clock, nowMs);
+  const pose = runCameraDrivers(drivers, freshState, clock, nowMs);
   const currActiveId = activeDriverId(drivers, freshState);
 
   // Step 3 — commit-on-edge. Mirror the production property-based guard in
