@@ -29,6 +29,8 @@
 // Camera INSIDE the shell -> only back faces are geometrically visible, so the
 // sky/limb still renders and down-looking (ground) rays lose their haze
 // (acceptable: the in-atmosphere descent regime is the deferred froxel's job).
+// In practice this proxy never reaches that regime: the layer hands off to the
+// full-screen inside path slightly above the top (see 'isInsideAtmosphereShell').
 //
 // ## The analytic march bound (WESL mirror of 'atmosphereShellBound')
 //

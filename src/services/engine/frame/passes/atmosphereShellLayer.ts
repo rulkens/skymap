@@ -131,7 +131,8 @@ export const atmosphereShellLayer: ContentLayer = {
     const ringInnerRatio = ring === undefined ? 0 : ring.innerRadiusKm / params.atmosphereTopKm;
     const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;
     // camLocal is already atmosphere-top-radius units, so this is the one
-    // comparison spec §4.1 calls for — no new per-frame derivation.
+    // comparison spec §4.1 calls for — no new per-frame derivation. The handoff
+    // sits slightly OUTSIDE the top (margin rationale lives in the util).
     const inside = isInsideAtmosphereShell(camLocal);
     renderer.draw(
       pass,
