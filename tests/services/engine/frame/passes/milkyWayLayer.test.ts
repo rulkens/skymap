@@ -51,7 +51,7 @@ describe('milkyWayLayer pick vs draw', () => {
     // Well inside the impostor, still an order of magnitude outside the 2 kpc
     // approach fade: the disc is DRAWN at full strength here.
     const inside = makeCtx(0.02);
-    expect(inside.cam.distance).toBeGreaterThan(SCALE_FADE_BANDS.milkyWayApproach.fullAt);
+    expect(inside.cam.distance).toBeGreaterThan(SCALE_FADE_BANDS.milkyWayApproachSun.fullAt);
     expect(milkyWayLayer.enabled(STATE, inside, VIEW_STUB)).toBe(true);
     expect(milkyWayLayer.pickEnabled!(STATE, inside, VIEW_STUB)).toBe(false);
 
@@ -64,7 +64,7 @@ describe('milkyWayLayer pick vs draw', () => {
   it('stays unpickable wherever it is invisible — pick is a strict subset of draw', () => {
     // `pickEnabled` composes over `enabled` rather than restating its terms, so an
     // invisible disc cannot come back as a click target.
-    const dissolved = makeCtx(SCALE_FADE_BANDS.milkyWayApproach.goneAt / 2);
+    const dissolved = makeCtx(SCALE_FADE_BANDS.milkyWayApproachSun.goneAt / 2);
     expect(milkyWayLayer.enabled(STATE, dissolved, VIEW_STUB)).toBe(false);
     expect(milkyWayLayer.pickEnabled!(STATE, dissolved, VIEW_STUB)).toBe(false);
   });
