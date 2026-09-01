@@ -1,10 +1,10 @@
 /**
- * catalogSlice — `setPackedCatalog` must reuse `setCatalogLoaded`'s
- * transition (loadStatus/pointCount/nanFillCount) rather than a parallel
- * one, or the packed-drop path and the network-load path could drift.
- * `packedDropId` must increment even across same-name drops — it, not the
- * filename, is Viewport's rebuild-trigger key (review finding: the fork
- * exports under one default filename every run).
+ * catalogSlice — `packedDropId` must increment even across same-name drops —
+ * it, not the filename, is Viewport's rebuild-trigger key (review finding:
+ * the fork exports under one default filename every run). `catalogLoaded` is
+ * `watchCatalogSaga`'s completed-load transition (replacing the old
+ * Viewport-dispatched `setCatalogLoaded`), so it's exercised here directly
+ * rather than through a saga.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -21,8 +21,10 @@ const points = {
   sources: [],
 };
 
+const weights = { weights: new Float32Array([1e6]), nanCount: 0, medianLog10Mass: 10 };
+
 describe('catalogSlice setPackedCatalog', () => {
-  it('installs the override and mirrors setCatalogLoaded', () => {
+  it('installs the override and its own pointCount/nanFillCount bookkeeping', () => {
     const next = reducer(
       defaultCatalogSlice,
       actions.setPackedCatalog({ points, nanFillCount: 2, sourceName: 'sdssGalaxy_metadata.txt' }),
@@ -53,18 +55,26 @@ describe('catalogSlice setPackedCatalog', () => {
 });
 
 describe('catalogSlice zero-point status', () => {
-  it('setCatalogLoaded clears a stale statusMessage — a real load must supersede it', () => {
+  it('catalogLoaded clears a stale statusMessage — a real load must supersede it', () => {
     const stale = reducer(
       defaultCatalogSlice,
       actions.setCatalogStatusMessage('no catalog points'),
     );
 
-    const loaded = reducer(
-      stale,
-      actions.setCatalogLoaded({ pointCount: 1, nanFillCount: 0, boundsMpc: null }),
-    );
+    const loaded = reducer(stale, actions.catalogLoaded({ points, weights, bounds: null }));
 
     expect(loaded.statusMessage).toBeNull();
+  });
+
+  it('catalogLoaded moves points into catalog state', () => {
+    const loaded = reducer(
+      defaultCatalogSlice,
+      actions.catalogLoaded({ points, weights, bounds: null }),
+    );
+
+    expect(loaded.points).toBe(points);
+    expect(loaded.pointCount).toBe(1);
+    expect(loaded.nanFillCount).toBe(0);
   });
 });
 
@@ -83,10 +93,7 @@ describe('catalogSlice setCatalogBuildError', () => {
   it('a later successful load clears it, same as any other statusMessage', () => {
     const failed = reducer(defaultCatalogSlice, actions.setCatalogBuildError('over budget'));
 
-    const loaded = reducer(
-      failed,
-      actions.setCatalogLoaded({ pointCount: 5, nanFillCount: 0, boundsMpc: null }),
-    );
+    const loaded = reducer(failed, actions.catalogLoaded({ points, weights, bounds: null }));
 
     expect(loaded.loadStatus).toBe('loaded');
     expect(loaded.statusMessage).toBeNull();

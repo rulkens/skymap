@@ -2,14 +2,14 @@
  * createWorkbenchStore — a factory (not a module singleton), mirroring
  * `src/store/createAppStore.ts` including its `registerSagaContext`
  * merge-then-announce ordering (see that file's header for the full
- * argument); no consumer awaits it yet, `rootSaga` being `all([])`.
+ * argument).
  *
  * Unlike the main app, this state legitimately holds typed arrays —
- * `catalog.packedOverride`'s `Float32Array`s and `histogram.counts`'s
- * `Uint32Array` — so both RTK dev checks ignore exactly those paths: flagging
- * every dispatch near a multi-million-float catalog as non-serializable is
- * noise, and immutableCheck's deep freeze/diff over the same arrays is a
- * real per-frame cost, not just a warning.
+ * `catalog.packedOverride`/`catalog.points`'s `Float32Array`s and
+ * `histogram.counts`'s `Uint32Array` — so both RTK dev checks ignore exactly
+ * those paths: flagging every dispatch near a multi-million-float catalog as
+ * non-serializable is noise, and immutableCheck's deep freeze/diff over the
+ * same arrays is a real per-frame cost, not just a warning.
  */
 import { configureStore } from '@reduxjs/toolkit';
 import createSagaMiddleware from 'redux-saga';
@@ -20,8 +20,13 @@ import { sagaContextRegistered } from './sagaContextRegistered';
 import type { RootState } from './types';
 import type { WorkbenchSagaContext } from './sagaContext';
 
-const TYPED_ARRAY_STATE_PATHS = ['catalog.packedOverride', 'histogram.counts'];
-const TYPED_ARRAY_ACTION_PATHS = ['payload.points', 'payload.counts', 'payload.densities'];
+const TYPED_ARRAY_STATE_PATHS = ['catalog.packedOverride', 'catalog.points', 'histogram.counts'];
+const TYPED_ARRAY_ACTION_PATHS = [
+  'payload.points',
+  'payload.weights',
+  'payload.counts',
+  'payload.densities',
+];
 
 export type PreloadedState = Partial<RootState>;
 

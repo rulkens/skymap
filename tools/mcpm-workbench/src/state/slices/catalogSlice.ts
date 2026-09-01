@@ -1,4 +1,5 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import type { AgentWeights } from '../../../@types/AgentWeights';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
@@ -18,6 +19,7 @@ export const defaultCatalogSlice: CatalogSlice = {
   sources: [Source.SDSS, Source.TwoMRS, Source.Glade],
   tier: 'medium',
   loadStatus: 'idle',
+  points: null,
   pointCount: 0,
   nanFillCount: 0,
   weightMode: 'stellarMass',
@@ -76,29 +78,34 @@ export const catalogSlice = createSlice({
     setCatalogLoadStatus: (state, action: PayloadAction<CatalogSlice['loadStatus']>) => {
       state.loadStatus = action.payload;
     },
-    /**
-     * Records a completed load: point count, NaN-fill count, bounds, `loadStatus:
-     * 'loaded'`, and clears `statusMessage` — a completed load (zero-point
-     * included; Viewport calls this on that path too, with `boundsMpc` null)
-     * always supersedes whatever status the PREVIOUS load left behind.
-     */
-    setCatalogLoaded: (
-      state,
-      action: PayloadAction<{
-        pointCount: number;
-        nanFillCount: number;
-        boundsMpc: CatalogSlice['catalogBoundsMpc'];
-      }>,
-    ) => {
-      state.loadStatus = 'loaded';
-      state.pointCount = action.payload.pointCount;
-      state.nanFillCount = action.payload.nanFillCount;
-      state.statusMessage = null;
-      state.catalogBoundsMpc = action.payload.boundsMpc;
-    },
-    /** Viewport's zero-point path sets this after `setCatalogLoaded` (which just cleared it). */
+    /** Viewport's zero-point path sets this after `catalogLoaded` (which just cleared it). */
     setCatalogStatusMessage: (state, action: PayloadAction<string | null>) => {
       state.statusMessage = action.payload;
+    },
+    /**
+     * `watchCatalogSaga`'s completed-load transition: points move INTO catalog
+     * state here (Viewport's build path reads `catalog.points`, not a local
+     * closure var), and `weights` is the FULL `AgentWeights` the saga already
+     * derived — the reducer reads only `nanCount` from it, since `nanCount` is
+     * weightMode-invariant (see `deriveAgentWeights`) but the `weights` array
+     * itself is not: a later weightMode edit re-derives it at build time
+     * without a reload, so persisting the array here would go stale.
+     */
+    catalogLoaded: (
+      state,
+      action: PayloadAction<{
+        points: CatalogPoints;
+        weights: AgentWeights;
+        bounds: CatalogSlice['catalogBoundsMpc'];
+      }>,
+    ) => {
+      const { points, weights, bounds } = action.payload;
+      state.loadStatus = 'loaded';
+      state.points = points as Draft<CatalogPoints>;
+      state.pointCount = points.count;
+      state.nanFillCount = weights.nanCount;
+      state.statusMessage = null;
+      state.catalogBoundsMpc = bounds;
     },
     /**
      * Records a failed build (e.g. `planGridBudget`'s over-budget refusal,
@@ -115,12 +122,16 @@ export const catalogSlice = createSlice({
       state.weightMode = action.payload;
     },
     /**
-     * Installs a dev-dropped packed catalog through the exact same completed-load
-     * transition (`setCatalogLoaded`) the network path uses, plus the override
-     * payload a harness-rebuild consumer reads instead of fetching. `packedDropId`
-     * always increments, even on a same-filename re-drop — the rebuild trigger
-     * (Viewport's `catalogKey`) needs a value that changes on every install, not
-     * just every distinct name.
+     * Installs a dev-dropped packed catalog: sets the override plus its own
+     * pointCount/nanFillCount/bounds book-keeping. `watchCatalogSaga` (triggered
+     * by this same action, since it's a catalog-identity write) re-resolves from
+     * `packedOverride` right after and dispatches `catalogLoaded`, which is what
+     * actually populates `catalog.points` for Viewport's build path — the two
+     * reducers land on the same numbers because `nanFillCount` doesn't depend on
+     * `weightMode` (see `deriveAgentWeights`). `packedDropId` always increments,
+     * even on a same-filename re-drop — the rebuild trigger (Viewport's
+     * `catalogKey`) needs a value that changes on every install, not just every
+     * distinct name.
      */
     setPackedCatalog: (
       state,
@@ -144,8 +155,8 @@ export const {
   setCatalogSources,
   setCatalogTier,
   setCatalogLoadStatus,
-  setCatalogLoaded,
   setCatalogStatusMessage,
+  catalogLoaded,
   setCatalogBuildError,
   setWeightMode,
   setPackedCatalog,

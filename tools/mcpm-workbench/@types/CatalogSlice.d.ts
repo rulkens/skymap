@@ -19,6 +19,11 @@ export type CatalogSlice = {
   readonly sources: readonly SourceType[];
   readonly tier: Tier;
   readonly loadStatus: 'idle' | 'loading' | 'loaded' | 'error';
+  /** The last completed load's points — `watchCatalogSaga`'s own, not Viewport's
+   * closure. Null until the first `catalogLoaded`; Viewport's build path
+   * re-derives weights from it on every rebuild (weightMode can change without
+   * a reload), so only `points` itself needs to live here, not weights too. */
+  readonly points: CatalogPoints | null;
   readonly pointCount: number;
   readonly nanFillCount: number;
   readonly weightMode: 'stellarMass' | 'uniform';
@@ -29,7 +34,7 @@ export type CatalogSlice = {
   /**
    * Human-readable status for a state Viewport can reach but isn't an error —
    * currently just the zero-point case (every selected source excluded at
-   * this tier, or none selected). `setCatalogLoaded` clears it on every
+   * this tier, or none selected). `catalogLoaded` clears it on every
    * completed load so a stale message can't survive a real one.
    */
   readonly statusMessage: string | null;

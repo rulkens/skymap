@@ -23,11 +23,8 @@ import { exportScfd } from '../../export/exportScfd';
 import { previewPackedTrace } from '../../export/previewPackedTrace';
 import { triggerDownload } from '../../export/triggerDownload';
 import { widenTrace } from '../../export/widenTrace';
-import { catalogBounds } from '../../field/catalogBounds';
 import { deriveAgentWeights } from '../../field/deriveAgentWeights';
 import { deriveGridBox } from '../../field/deriveGridBox';
-import { loadCatalogPoints } from '../../field/loadCatalogPoints';
-import { syntheticCatalog } from '../../field/syntheticCatalog';
 import { createViewportInput } from '../../input/createViewportInput';
 import { cameraViewFor } from '../../render/cameraViewFor';
 import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpathDivisor';
@@ -35,12 +32,7 @@ import { createRenderGraph, type RenderGraph } from '../../render/RenderGraph';
 import { volpathKeyFor } from '../../render/volpathKeyFor';
 import { createMcpmHarness } from '../../sim/createMcpmHarness';
 import { planGridBudget } from '../../sim/planGridBudget';
-import {
-  setCatalogBuildError,
-  setCatalogLoadStatus,
-  setCatalogLoaded,
-  setCatalogStatusMessage,
-} from '../../state/slices/catalogSlice';
+import { setCatalogBuildError, setCatalogStatusMessage } from '../../state/slices/catalogSlice';
 import { buildKey } from '../../state/buildKey';
 import { gridShapeKeyFor } from '../../state/gridShapeKeyFor';
 import { createTokenWatcher } from '../../state/tokenWatcher';
@@ -109,12 +101,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // one's status. Mirrors the `harness !== h` staleness check the async read-back
     // paths use, one step earlier in the build (device exists, harness doesn't yet).
     let currentDevice: GPUDevice | null = null;
-    let points: CatalogPoints | null = null;
     // The T16 export leg's other half of buildFromPoints' local `weights` —
     // held here so runExport (below) can reach the SAME weights the running
     // harness was seeded with, not a freshly re-derived copy.
     let latestWeights: AgentWeights | null = null;
-    let loadedCatalogKey = '';
     // REQUESTED, not "last built": the frame loop notifies this subscriber every
     // frame (the step counter is store state), so the guard has to compare against
     // what a build was last asked for or every frame would request another one.
@@ -215,10 +205,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
      */
     async function runExport(): Promise<void> {
       const h = harness;
-      const pts = points;
+      const s = store.getState();
+      const pts = s.catalog.points;
       const weights = latestWeights;
       if (!h || !pts || !weights) return;
-      const s = store.getState();
       try {
         const readback = await h.readbackTrace();
         const stem = downloadStem(new Date());
@@ -595,11 +585,14 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
     async function buildFromPoints(pts: CatalogPoints, generation: number): Promise<void> {
       const s = store.getState();
+      // Re-derived on every rebuild, not read back from `catalog`: weightMode
+      // is in `buildKey`, not `catalogKey` (a mode-only change rebuilds without
+      // a reload), so the harness's actual weights can outlive what
+      // `watchCatalogSaga`'s `catalogLoaded` last computed. pointCount/
+      // nanFillCount/bounds, by contrast, ARE catalog-identity facts — already
+      // current in `s.catalog` from that same `catalogLoaded`, so this build
+      // doesn't re-dispatch them.
       const weights = deriveAgentWeights(pts.log10StellarMass, s.catalog.weightMode);
-      const boundsMpc = pts.count > 0 ? catalogBounds(pts.positions) : null;
-      store.dispatch(
-        setCatalogLoaded({ pointCount: pts.count, nanFillCount: weights.nanCount, boundsMpc }),
-      );
 
       const box = deriveGridBox(s.grid);
       // Free the old device memory BEFORE allocating the new grids: the two sets of
@@ -686,35 +679,21 @@ function Viewport({ store }: ViewportProps): ReactNode {
       if (hasUrlGate('probe')) (window as unknown as ProbeWindow).__mcpmProbeReady = true;
     }
 
-    /** One build against the live snapshot, reloading the catalog only if its key moved. */
+    /** One build against whatever catalog `watchCatalogSaga` currently holds. */
     async function buildOnce(generation: number): Promise<void> {
-      const s = store.getState();
-      const ck = JSON.stringify(catalogKey(s));
       try {
-        if (!points || ck !== loadedCatalogKey) {
-          store.dispatch(setCatalogLoadStatus('loading'));
-          // A dev-dropped packed catalog (App.tsx) wins outright — sticky for the
-          // session, same as the doc comment on CatalogSlice's packedOverride field.
-          // Otherwise `?probe` (probeGpuErrors.ts) swaps ONLY the next line — a
-          // deterministic in-tool catalog instead of the network fetch — so the gate
-          // never touches the network or `public/data` and every downstream pass
-          // (grid fit, seeding, propagate/decay/raymarch) runs unmodified.
-          const pts = s.catalog.packedOverride
-            ? s.catalog.packedOverride
-            : hasUrlGate('probe')
-              ? syntheticCatalog()
-              : await loadCatalogPoints(s.catalog.sources, s.catalog.tier);
-          if (disposed || generation !== buildGeneration) return;
-          points = pts;
-          loadedCatalogKey = ck;
-        }
-        if (points.count === 0) {
+        // `watchCatalogSaga` now owns the fetch (packedOverride ▸ `?probe`
+        // synthetic ▸ network) — null here means it hasn't resolved yet for the
+        // current catalogKey. Task 6 wires the trigger so a build only ever
+        // runs once it has; for now this generation simply produces nothing.
+        const pts = store.getState().catalog.points;
+        if (!pts) return;
+        if (pts.count === 0) {
           // Zero points is a real, reachable state (every selected source excluded
           // at this tier, or none selected) — not a crash: swap in the harness-free
           // scene (camera + gizmo stay live) and surface a human status instead of
           // letting createMcpmHarness's own guard throw.
           await buildEmptyScene(generation);
-          store.dispatch(setCatalogLoaded({ pointCount: 0, nanFillCount: 0, boundsMpc: null }));
           store.dispatch(
             setCatalogStatusMessage(
               'no catalog points — enable a source or pick a tier that carries one',
@@ -722,7 +701,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           );
           return;
         }
-        await buildFromPoints(points, generation);
+        await buildFromPoints(pts, generation);
       } catch (err) {
         console.error('mcpm-workbench: build failed', err);
         if (!disposed) {
