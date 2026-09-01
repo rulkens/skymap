@@ -71,14 +71,32 @@ export type FieldPipelines = {
   readonly hiiBG: GPUBindGroup;
   tierBG(kind: HiiTier): GPUBindGroup;
 
-  /** Rebuilds only `dustMapBG` — the one builder that never touches `targets`, so it is also the INITIAL build, called once right after `model` exists and before `targets` does. */
+  /** `fieldComps`' initial build (before `targets` exists) — see `BIND_GROUP_DEPS`. */
   rebuildDustMapBindGroup(fieldCompsBuffer: GPUBuffer): void;
-  /** `fieldComps`' `onRegrow` — always fires after `targets` exists (a regrow is a later `write`, never the first). Rebuilds `dustMapBG` AND `fieldSplatBG`. */
+  /** `fieldComps`' `onRegrow` — see `BIND_GROUP_DEPS`. */
   rebuildFieldCompsBindGroups(fieldCompsBuffer: GPUBuffer): void;
-  /** `hiiComps`' `onRegrow` — rebuilds `hiiBG` and every `HII_TIERS` row's own bind group; they share `hiiCompsBuffer`/`dustMapTex`, so everywhere one needs rebuilding, all do. */
+  /** `hiiComps`' `onRegrow` — see `BIND_GROUP_DEPS`. */
   rebuildTierBindGroups(hiiCompsBuffer: GPUBuffer): void;
-  /** `onDustMapReallocated` — every group holding a view of the fresh `dustMapTex`. */
+  /** `onDustMapReallocated` — see `BIND_GROUP_DEPS`. */
   rebuildDustMapDependents(fieldCompsBuffer: GPUBuffer, hiiCompsBuffer: GPUBuffer): void;
+};
+
+type BindGroupRole = 'dustMapBG' | 'fieldSplatBG' | 'hiiBG' | 'tierBGMap' | 'dustPresentBG';
+type BindGroupResourceKey = 'fieldComps' | 'hiiComps' | 'dustMap';
+
+/**
+ * Which identity-bearing resources a role is built against — the "which
+ * bind group does regrowing X touch" answer as one table instead of four
+ * hand-picked call sites. `dustMap` is `getDustMapTex()`'s live return,
+ * `null` before the host allocates a target — see the walker's readiness
+ * gate below.
+ */
+const BIND_GROUP_DEPS: Record<BindGroupRole, readonly BindGroupResourceKey[]> = {
+  dustMapBG: ['fieldComps'],
+  fieldSplatBG: ['fieldComps', 'dustMap'],
+  hiiBG: ['hiiComps', 'dustMap'],
+  tierBGMap: ['hiiComps', 'dustMap'],
+  dustPresentBG: ['dustMap'],
 };
 
 export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
@@ -202,11 +220,12 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
 
   // ---- bind groups ----
   // A group holds the EXACT GPUBuffer/GPUTexture objects it names, so each
-  // resource that can regrow/recreate owns a rebuild entry point below rather
-  // than a cached group. None of the five `let`s here builds during
-  // construction: `fieldCompsBuffer`/`hiiCompsBuffer` come from `model`,
-  // `getDustMapTex()` from `targets`, and neither exists yet when this module
-  // is constructed (see the module header).
+  // resource that can regrow/recreate must trigger a rebuild rather than a
+  // cached group living forever — `BIND_GROUP_DEPS` above plus `syncBindGroups`
+  // below are the one table/one walker doing that. None of the five `let`s
+  // here builds during construction: `fieldCompsBuffer`/`hiiCompsBuffer` come
+  // from `model`, `getDustMapTex()` from `targets`, and neither exists yet
+  // when this module is constructed (see the module header).
   let dustMapBG: GPUBindGroup;
   let fieldSplatBG: GPUBindGroup;
   let dustPresentBG: GPUBindGroup;
@@ -338,28 +357,88 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     });
   }
 
+  // `getDustMapTex`'s declared type lies (see `FieldPipelineDeps`): the host's
+  // real thunk is `() => dustMapTex!` over a `GPUTexture | null` that starts
+  // `null`, so this cast just names the runtime truth the walker depends on.
+  const currentDustMapTex = (): GPUTexture | null => getDustMapTex() as GPUTexture | null;
+
+  const lastIdentity: { fieldComps?: GPUBuffer; hiiComps?: GPUBuffer; dustMap: GPUTexture | null } =
+    { dustMap: null };
+
+  /**
+   * Rebuilds every role whose `BIND_GROUP_DEPS` names a resource that moved
+   * identity since the last call (`Object.is` against `lastIdentity`) — an
+   * unchanged buffer/texture is a no-op. `resources` carries only what THIS
+   * call knows fresh; `dustMap` is always re-read live, which is safe even
+   * before allocation (it comes back `null`, which the readiness gate below
+   * excludes from building).
+   */
+  function syncBindGroups(resources: { fieldComps?: GPUBuffer; hiiComps?: GPUBuffer }): void {
+    const { fieldComps: fieldCompsBuffer, hiiComps: hiiCompsBuffer } = resources;
+    const dustMapTex = currentDustMapTex();
+
+    const changed = new Set<BindGroupResourceKey>();
+    if (fieldCompsBuffer !== undefined && !Object.is(lastIdentity.fieldComps, fieldCompsBuffer)) {
+      lastIdentity.fieldComps = fieldCompsBuffer;
+      changed.add('fieldComps');
+    }
+    if (hiiCompsBuffer !== undefined && !Object.is(lastIdentity.hiiComps, hiiCompsBuffer)) {
+      lastIdentity.hiiComps = hiiCompsBuffer;
+      changed.add('hiiComps');
+    }
+    if (!Object.is(lastIdentity.dustMap, dustMapTex)) {
+      lastIdentity.dustMap = dustMapTex;
+      changed.add('dustMap');
+    }
+
+    const ready = (key: BindGroupResourceKey): boolean => key !== 'dustMap' || dustMapTex !== null;
+    const dirty = (role: BindGroupRole): boolean =>
+      BIND_GROUP_DEPS[role].some((key) => changed.has(key)) && BIND_GROUP_DEPS[role].every(ready);
+
+    if (dirty('dustMapBG') && fieldCompsBuffer !== undefined) {
+      dustMapBG = buildDustMapBindGroup(fieldCompsBuffer);
+    }
+    if (dirty('fieldSplatBG') && fieldCompsBuffer !== undefined) {
+      fieldSplatBG = buildFieldSplatBindGroup(fieldCompsBuffer);
+    }
+    if (dirty('hiiBG') && hiiCompsBuffer !== undefined) {
+      hiiBG = buildHiiFullBindGroup(hiiUbo, 'galaxy:hiiBG', hiiExtrasPipe, hiiCompsBuffer);
+    }
+    if (dirty('tierBGMap') && hiiCompsBuffer !== undefined) {
+      tierBGMap = mapHiiTiers((kind) =>
+        kind === 'young'
+          ? buildHiiFullBindGroup(
+              tierUbo[kind],
+              `galaxy:hiiBG:${kind}`,
+              hiiYoungPipe,
+              hiiCompsBuffer,
+            )
+          : buildHiiErosionBindGroup(tierUbo[kind], `galaxy:hiiBG:${kind}`, hiiCompsBuffer),
+      );
+    }
+    if (dirty('dustPresentBG')) {
+      dustPresentBG = buildDustPresentBindGroup();
+    }
+  }
+
+  /** `fieldComps`' initial build (before `targets` exists) — see `BIND_GROUP_DEPS`. */
   function rebuildDustMapBindGroup(fieldCompsBuffer: GPUBuffer): void {
-    dustMapBG = buildDustMapBindGroup(fieldCompsBuffer);
+    syncBindGroups({ fieldComps: fieldCompsBuffer });
   }
 
+  /** `fieldComps`' `onRegrow` — see `BIND_GROUP_DEPS`. */
   function rebuildFieldCompsBindGroups(fieldCompsBuffer: GPUBuffer): void {
-    fieldSplatBG = buildFieldSplatBindGroup(fieldCompsBuffer);
-    dustMapBG = buildDustMapBindGroup(fieldCompsBuffer);
+    syncBindGroups({ fieldComps: fieldCompsBuffer });
   }
 
+  /** `hiiComps`' `onRegrow` — see `BIND_GROUP_DEPS`. */
   function rebuildTierBindGroups(hiiCompsBuffer: GPUBuffer): void {
-    hiiBG = buildHiiFullBindGroup(hiiUbo, 'galaxy:hiiBG', hiiExtrasPipe, hiiCompsBuffer);
-    tierBGMap = mapHiiTiers((kind) =>
-      kind === 'young'
-        ? buildHiiFullBindGroup(tierUbo[kind], `galaxy:hiiBG:${kind}`, hiiYoungPipe, hiiCompsBuffer)
-        : buildHiiErosionBindGroup(tierUbo[kind], `galaxy:hiiBG:${kind}`, hiiCompsBuffer),
-    );
+    syncBindGroups({ hiiComps: hiiCompsBuffer });
   }
 
+  /** `onDustMapReallocated` — see `BIND_GROUP_DEPS`. */
   function rebuildDustMapDependents(fieldCompsBuffer: GPUBuffer, hiiCompsBuffer: GPUBuffer): void {
-    fieldSplatBG = buildFieldSplatBindGroup(fieldCompsBuffer);
-    rebuildTierBindGroups(hiiCompsBuffer);
-    dustPresentBG = buildDustPresentBindGroup();
+    syncBindGroups({ fieldComps: fieldCompsBuffer, hiiComps: hiiCompsBuffer });
   }
 
   return {
