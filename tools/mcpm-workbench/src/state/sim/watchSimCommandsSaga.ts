@@ -13,7 +13,7 @@ import { clearTraceRequested, resetRequested } from '../commands';
 import { setCatalogStatusMessage } from '../catalog/catalogSlice';
 import { resetHistogram } from '../histogram/histogramSlice';
 import { resetStepCount } from './simSlice';
-import { defaultViewSlice, commitCameraPose, setAutoRotate } from '../view/viewSlice';
+import { defaultViewSlice, commitCameraPose } from '../view/viewSlice';
 
 function* resetWorker() {
   const resources = yield* getContext<WorkbenchSagaContext['resources']>('resources');
@@ -27,8 +27,6 @@ function* resetWorker() {
     // Reset restores framing too, deliberately: the orbit target is absolute world
     // Mpc, not box-relative, so nothing else recenters the camera onto the box —
     // this is the one recovery path for "camera drifted" (Viewport's old comment).
-    // `autoRotate` stays its own dispatch — it's a toggle, not part of the pose
-    // `commitCameraPose` carries.
     const { camera } = defaultViewSlice;
     yield* put(
       commitCameraPose({
@@ -38,7 +36,6 @@ function* resetWorker() {
         targetMpc: camera.targetMpc,
       }),
     );
-    yield* put(setAutoRotate(camera.autoRotate));
   } catch (err) {
     console.error('mcpm-workbench: reset failed', err);
     yield* put(setCatalogStatusMessage(`reset failed: ${(err as Error).message}`));

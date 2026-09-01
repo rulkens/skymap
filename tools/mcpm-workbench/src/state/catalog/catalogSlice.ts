@@ -17,14 +17,11 @@ import { Source } from '../../../../../src/data/source';
 export const defaultCatalogSlice: CatalogSlice = {
   sources: [Source.SDSS, Source.TwoMRS, Source.Glade],
   tier: 'medium',
-  loadStatus: 'idle',
   points: null,
   pointCount: 0,
   nanFillCount: 0,
   weightMode: 'stellarMass',
   packedOverride: null,
-  packedSourceName: null,
-  packedDropId: 0,
   statusMessage: null,
   catalogBoundsMpc: null,
 };
@@ -74,9 +71,6 @@ export const catalogSlice = createSlice({
     setCatalogTier: (state, action: PayloadAction<Tier>) => {
       state.tier = action.payload;
     },
-    setCatalogLoadStatus: (state, action: PayloadAction<CatalogSlice['loadStatus']>) => {
-      state.loadStatus = action.payload;
-    },
     /** `watchSceneSaga`'s zero-point branch sets this after `catalogLoaded` (which just cleared it). */
     setCatalogStatusMessage: (state, action: PayloadAction<string | null>) => {
       state.statusMessage = action.payload;
@@ -99,7 +93,6 @@ export const catalogSlice = createSlice({
       }>,
     ) => {
       const { points, weights, bounds } = action.payload;
-      state.loadStatus = 'loaded';
       state.points = points as Draft<CatalogPoints>;
       state.pointCount = points.count;
       state.nanFillCount = weights.nanCount;
@@ -108,13 +101,12 @@ export const catalogSlice = createSlice({
     },
     /**
      * Records a failed build (e.g. `planGridBudget`'s over-budget refusal,
-     * already naming buffer/bytes/limit) as 'error' PLUS the thrown error's own
-     * message routed into `statusMessage`, so App.tsx's status line shows WHAT
-     * failed instead of the message dead-ending in the console. No new copy —
-     * the caller passes the caught error's `.message` straight through.
+     * already naming buffer/bytes/limit): the thrown error's own message
+     * routed into `statusMessage`, so App.tsx's status line shows WHAT failed
+     * instead of the message dead-ending in the console. No new copy — the
+     * caller passes the caught error's `.message` straight through.
      */
     setCatalogBuildError: (state, action: PayloadAction<string>) => {
-      state.loadStatus = 'error';
       state.statusMessage = action.payload;
     },
     setWeightMode: (state, action: PayloadAction<CatalogSlice['weightMode']>) => {
@@ -128,17 +120,10 @@ export const catalogSlice = createSlice({
      * reducer used to duplicate that same bookkeeping, but `catalogLoaded`
      * always immediately supersedes it (same points, same weightMode-invariant
      * nanCount), leaving nothing that ever reads the intermediate value —
-     * dead writes, deleted. `packedDropId` always increments, even on a
-     * same-filename re-drop, so a re-drop is never mistaken for a no-op.
+     * dead writes, deleted.
      */
-    setPackedCatalog: (
-      state,
-      action: PayloadAction<{ points: CatalogPoints; sourceName: string }>,
-    ) => {
-      const { points, sourceName } = action.payload;
-      state.packedOverride = points as Draft<CatalogPoints>;
-      state.packedSourceName = sourceName;
-      state.packedDropId += 1;
+    setPackedCatalog: (state, action: PayloadAction<{ points: CatalogPoints }>) => {
+      state.packedOverride = action.payload.points as Draft<CatalogPoints>;
     },
   },
 });
@@ -146,7 +131,6 @@ export const catalogSlice = createSlice({
 export const {
   setCatalogSources,
   setCatalogTier,
-  setCatalogLoadStatus,
   setCatalogStatusMessage,
   catalogLoaded,
   setCatalogBuildError,

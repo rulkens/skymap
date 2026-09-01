@@ -14,7 +14,7 @@ import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { GizmoDragState } from '../../@types/GizmoDragState';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { WorkbenchCameraPose } from '../../@types/WorkbenchCameraPose';
+import type { ViewSlice } from '../../@types/ViewSlice';
 import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';
 import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
 import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';
@@ -64,7 +64,7 @@ export type ViewportInput = {
   drain(): boolean;
   /** The live camera: the register mid-gesture, the committed store value otherwise
    *  (the store→register adoption below keeps them equal at rest). */
-  getCameraPose(): WorkbenchCameraPose;
+  getCameraPose(): ViewSlice['camera'];
   /** F1.7's hover glyph highlight — recomputed every non-dragging pointermove. */
   getHoverHandle(): GizmoHandleId | null;
   /** The handle currently being dragged, or null — drawBoxPreview's `activeHandle`. */
@@ -121,11 +121,11 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
     return isFlashVisible(now) || gizmoDragging !== null || (s.grid.showGridBox && pointerInside);
   }
 
-  function getCameraPose(): WorkbenchCameraPose {
+  function getCameraPose(): ViewSlice['camera'] {
     return register;
   }
 
-  function currentPose(): WorkbenchCameraPose {
+  function currentPose(): ViewSlice['camera'] {
     return {
       yaw: register.yaw,
       pitch: register.pitch,

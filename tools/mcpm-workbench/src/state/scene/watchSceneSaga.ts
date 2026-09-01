@@ -191,7 +191,7 @@ function* buildScene() {
       harness.element,
       harness.gpu.device.limits,
     );
-    yield* put(setResolvedGrid({ box, resolvedElement: harness.element, byteBudget: budget }));
+    yield* put(setResolvedGrid({ resolvedElement: harness.element, byteBudget: budget }));
     yield* put(setMaxBufferBytes(harness.gpu.device.limits.maxStorageBufferBindingSize));
     yield* put(resetStepCount());
     yield* put(resetHistogram());

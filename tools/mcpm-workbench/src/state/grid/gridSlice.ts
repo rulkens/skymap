@@ -20,7 +20,6 @@ export const defaultGridSlice: GridSlice = {
   manualSizeMpc: [200, 200, 200],
   manualRotation: [0, 0, 0, 1],
   importedBox: null,
-  box: null,
   resolvedElement: null,
   byteBudget: null,
   showGridBox: true,
@@ -115,12 +114,11 @@ export const gridSlice = createSlice({
     setShowGridBox: (state, action: PayloadAction<boolean>) => {
       state.showGridBox = action.payload;
     },
-    /** Records a completed fit: the resolved box, its element, and its byte budget. */
+    /** Records a completed fit: the resolved element and its byte budget. */
     setResolvedGrid: (
       state,
-      action: PayloadAction<{ box: GridBox; resolvedElement: GridElement; byteBudget: GridBudget }>,
+      action: PayloadAction<{ resolvedElement: GridElement; byteBudget: GridBudget }>,
     ) => {
-      state.box = action.payload.box as Draft<GridBox>;
       state.resolvedElement = action.payload.resolvedElement;
       state.byteBudget = action.payload.byteBudget;
     },

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
-import type { WorkbenchCameraPose } from '../../../../tools/mcpm-workbench/@types/WorkbenchCameraPose';
+import type { ViewSlice } from '../../../../tools/mcpm-workbench/@types/ViewSlice';
 import { createViewportInput } from '../../../../tools/mcpm-workbench/src/input/createViewportInput';
 import { gizmoArrowLengthMpc } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoArrowLengthMpc';
 import { createWorkbenchStore } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
@@ -93,11 +93,10 @@ function mouseUp(clientX: number, clientY = CANVAS_PX / 2, pointerId = 1) {
   return { pointerId, clientX, clientY };
 }
 
-const FIXED_CAMERA: WorkbenchCameraPose & { autoRotate: boolean } = {
+const FIXED_CAMERA: ViewSlice['camera'] = {
   yaw: 0,
   pitch: 0,
   distance: DISTANCE,
-  autoRotate: false,
   targetMpc: [0, 0, 0],
 };
 

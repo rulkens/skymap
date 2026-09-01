@@ -46,7 +46,6 @@ export type ViewSlice = {
     readonly yaw: number;
     readonly pitch: number;
     readonly distance: number;
-    readonly autoRotate: boolean;
     /**
      * Orbit target in absolute world Mpc — deliberately NOT box-relative, so
      * dragging the grid-box centre sliders doesn't drag the camera with it.

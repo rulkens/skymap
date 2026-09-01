@@ -1,6 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { ViewSlice } from '../../../@types/ViewSlice';
-import type { WorkbenchCameraPose } from '../../../@types/WorkbenchCameraPose';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 
 /**
@@ -21,7 +20,7 @@ export const defaultViewSlice: ViewSlice = {
   agents: { intensity: 1, pointSizePx: 1 },
   fps: 0,
   deviceLost: false,
-  camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetMpc: [0, 0, 0] },
+  camera: { yaw: 0.6, pitch: 0.35, distance: 600, targetMpc: [0, 0, 0] },
   raymarch: {
     opticalThickness: 0.25,
     paletteId: 'inferno',
@@ -110,14 +109,11 @@ export const viewSlice = createSlice({
     // The gesture-boundary commit (input module's gestureEnd / rest-wheel) and the
     // reset saga's own restore both land here — one write site for the whole pose,
     // clamped exactly like the deleted per-field setters were.
-    commitCameraPose: (state, action: PayloadAction<WorkbenchCameraPose>) => {
+    commitCameraPose: (state, action: PayloadAction<ViewSlice['camera']>) => {
       state.camera.yaw = action.payload.yaw;
       state.camera.pitch = Math.min(PITCH_LIMIT, Math.max(-PITCH_LIMIT, action.payload.pitch));
       state.camera.distance = Math.max(CAMERA_DISTANCE_FLOOR, action.payload.distance);
       state.camera.targetMpc = action.payload.targetMpc;
-    },
-    setAutoRotate: (state, action: PayloadAction<boolean>) => {
-      state.camera.autoRotate = action.payload;
     },
     setOpticalThickness: (state, action: PayloadAction<number>) => {
       state.raymarch.opticalThickness = action.payload;
@@ -179,7 +175,6 @@ export const {
   setFps,
   deviceLost,
   commitCameraPose,
-  setAutoRotate,
   setOpticalThickness,
   setRaymarchPaletteId,
   setTrimDensity,

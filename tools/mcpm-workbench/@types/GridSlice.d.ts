@@ -6,8 +6,10 @@ import type { GridElement } from './GridElement';
 
 /**
  * GridSlice — the grid-box CONFIG (what the panel edits) plus the last
- * RESOLVED box (what the sim runs on); `box`/`resolvedElement`/`byteBudget`
- * are null until the first successful build. The manual path (center + size
+ * RESOLVED build's own facts; `resolvedElement`/`byteBudget` are null until
+ * the first successful build (the resolved box itself is re-derived from the
+ * manual/imported fields via `deriveGridBox`, not stored). The manual path
+ * (center + size
  * + a directly-stored `manualVoxelSizeMpc`) is the only resolution lever — a
  * physical Mpc size, not a scale factor, so resolution stays stable under
  * resize/refit (grid-voxel-size-currency decision, Q1/Q2).
@@ -40,7 +42,6 @@ export type GridSlice = {
   readonly manualSizeMpc: Vec3;
   readonly manualRotation: Readonly<Vec4>;
   readonly importedBox: GridBox | null;
-  readonly box: GridBox | null;
   readonly resolvedElement: GridElement | null;
   readonly byteBudget: GridBudget | null;
   readonly showGridBox: boolean;

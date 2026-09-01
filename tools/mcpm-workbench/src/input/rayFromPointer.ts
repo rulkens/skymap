@@ -1,6 +1,6 @@
 import type { GridBox } from '../../@types/GridBox';
 import type { Ray } from '../../@types/Ray';
-import type { WorkbenchCameraPose } from '../../@types/WorkbenchCameraPose';
+import type { ViewSlice } from '../../@types/ViewSlice';
 import { cameraBasis } from '../render/cameraBasis';
 import { cameraViewFor } from '../render/cameraViewFor';
 import { screenToRay } from '../gizmo/screenToRay';
@@ -25,7 +25,7 @@ const UNROTATED_BASIS_BOX: GridBox = {
 export function rayFromPointer(
   canvas: HTMLCanvasElement,
   e: Pick<PointerEvent, 'clientX' | 'clientY'>,
-  camera: WorkbenchCameraPose,
+  camera: ViewSlice['camera'],
 ): Ray {
   const rect = canvas.getBoundingClientRect();
   const ndc: [number, number] = [

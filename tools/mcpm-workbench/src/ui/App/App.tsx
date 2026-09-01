@@ -13,7 +13,7 @@ import { Provider } from 'react-redux';
 import { createWorkbenchStore } from '../../store/createWorkbenchStore';
 import { defaultAppState } from '../../state/defaultAppState';
 import { loadPackedCatalog } from '../../field/loadPackedCatalog';
-import { setCatalogLoadStatus, setPackedCatalog } from '../../state/catalog/catalogSlice';
+import { setPackedCatalog } from '../../state/catalog/catalogSlice';
 import CatalogStatus from '../CatalogStatus/CatalogStatus';
 import Viewport from '../Viewport/Viewport';
 import ControlsPanel from '../ControlsPanel/ControlsPanel';
@@ -31,7 +31,6 @@ function App(): ReactNode {
     if (!import.meta.env.DEV) return;
     void readDroppedPackedCatalog(Array.from(e.dataTransfer.files)).then((dropped) => {
       if (!dropped) return;
-      store.dispatch(setCatalogLoadStatus('loading'));
       try {
         const { points, declaredCount, declaredMeanWeight } = loadPackedCatalog(
           dropped.bin,
@@ -40,13 +39,12 @@ function App(): ReactNode {
         // `watchCatalogSaga`'s takeLatest also fires on this action and re-derives
         // weights (same `deriveAgentWeights` transform the network path runs) via
         // `catalogLoaded` — no need to duplicate that here just to discard it.
-        store.dispatch(setPackedCatalog({ points, sourceName: dropped.sourceName }));
+        store.dispatch(setPackedCatalog({ points }));
         setPackedStatus(
           `packed catalog "${dropped.sourceName}": ${points.count.toLocaleString()} pts ` +
             `(declared ${declaredCount.toLocaleString()}), declared mean weight ${declaredMeanWeight}`,
         );
       } catch (err) {
-        store.dispatch(setCatalogLoadStatus('error'));
         setPackedStatus(`packed catalog load failed: ${(err as Error).message}`);
       }
     });

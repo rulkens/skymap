@@ -1,5 +1,5 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { WorkbenchCameraPose } from '../../@types/WorkbenchCameraPose';
+import type { ViewSlice } from '../../@types/ViewSlice';
 import type { McpmCameraView } from './writeMcpmCamera';
 
 const FOV_Y_RAD = Math.PI / 4;
@@ -11,7 +11,7 @@ const CAMERA_UP: Vec3 = [0, 1, 0];
  * module's live drag register instead of the not-yet-committed store value.
  */
 export function cameraViewFor(
-  camera: WorkbenchCameraPose,
+  camera: ViewSlice['camera'],
   viewportPx: readonly [number, number],
 ): McpmCameraView {
   const { yaw, pitch, distance, targetMpc } = camera;

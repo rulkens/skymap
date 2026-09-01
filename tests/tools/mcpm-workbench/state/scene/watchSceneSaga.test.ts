@@ -61,7 +61,6 @@ const GRID_FIXTURES: {
   setShowGridBox: gridSlice.actions.setShowGridBox(true),
   setAutoFitPercent: gridSlice.actions.setAutoFitPercent(90),
   setResolvedGrid: gridSlice.actions.setResolvedGrid({
-    box: SAMPLE_BOX,
     resolvedElement: 'f32',
     byteBudget: SAMPLE_BUDGET,
   }),

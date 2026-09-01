@@ -24,7 +24,6 @@ import type { RootState } from '../../store/types';
 import {
   catalogLoaded,
   setCatalogBuildError,
-  setCatalogLoadStatus,
   setCatalogSources,
   setCatalogTier,
   setPackedCatalog,
@@ -57,7 +56,6 @@ function* resolvePoints(plan: CatalogPointsPlan) {
 }
 
 function* loadCatalogWorker() {
-  yield* put(setCatalogLoadStatus('loading'));
   try {
     const catalog = yield* select((s: RootState) => s.catalog);
     const plan = resolveCatalogPointsPlan(catalog, hasUrlGate('probe'));
