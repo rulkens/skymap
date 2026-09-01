@@ -539,6 +539,13 @@
       "license": "CC BY-SA 4.0",
       "author": "Kevinmloch",
       "processedAt": "2026-06-09T21:38:12.402Z"
+    },
+    "leda1313424": {
+      "dir": "famous-curated/leda1313424",
+      "sourceUrl": "https://esahubble.org/images/opo2506a/",
+      "license": "CC BY 4.0",
+      "author": "NASA, ESA, I. Pasha (Yale), P. van Dokkum (Yale)",
+      "processedAt": "2026-09-01T11:34:09.586Z"
     }
   }
 }
