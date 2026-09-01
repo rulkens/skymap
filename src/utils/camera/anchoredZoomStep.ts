@@ -3,11 +3,13 @@
  * `eye′ = anchor + factor · (eye − anchor)`, no accumulator anywhere (FW-B).
  *
  * The anchor is the cursor's body-local pick only while *closing* on it
- * (`factor < 1`) with a hit; zoom-out and any miss fall back to the body
- * centre, so the cursor can never become a repelling pivot (FW-H). For a
- * visible anchor, `eye′·n̂ = |A| + f·(eye·n̂ − |A|) ≥ |A|` for all `f ≥ 0`,
- * so no tangent-plane overshoot guard is needed. The caller derives
- * `factor` from the centre-measured range, never from `|eye − anchor|`.
+ * (`factor < 1`) with a hit; zoom-out and any miss fall back to the surface
+ * point under the eye, so the cursor can never become a repelling pivot
+ * (FW-H). For any anchor `A` with `eye·Â ≥ |A|` — the sub-eye point trivially,
+ * a cursor pick by the caller's staleness test — `eye′·Â = |A| + f·(eye·Â −
+ * |A|) ≥ |A|` for all `f ≥ 0`, so no tangent-plane overshoot guard is needed.
+ * The caller derives `factor` from the centre-measured range, never from
+ * `|eye − anchor|`.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -33,7 +35,24 @@ export function anchoredZoomStep(
   ];
 
   const approaching = clampedFactor < 1;
-  const anchorM: Vec3 = approaching && cursorAnchorM !== null ? cursorAnchorM : [0, 0, 0];
+  // The fallback is the eye's own nadir footprint, not the body centre (user
+  // ruling, §12-R4): it lies on the eye's radial, so recession stays exactly
+  // centre-directed — FW-H's "the cursor never anchors a zoom-out" is
+  // untouched — while the step scales ALTITUDE rather than geocentric range,
+  // which is what makes one notch out undo one notch in near the ground. An
+  // eye exactly at the centre has no radial; the centre is the only answer
+  // there, and the floor below has none either.
+  const eyeMagM = Math.hypot(eyeM[0], eyeM[1], eyeM[2]);
+  const anchorM: Vec3 =
+    approaching && cursorAnchorM !== null
+      ? cursorAnchorM
+      : eyeMagM === 0
+        ? [0, 0, 0]
+        : [
+            (eyeM[0] / eyeMagM) * bodyRadiusM,
+            (eyeM[1] / eyeMagM) * bodyRadiusM,
+            (eyeM[2] / eyeMagM) * bodyRadiusM,
+          ];
 
   const steppedM: Vec3 = [
     anchorM[0] + clampedFactor * (eyeM[0] - anchorM[0]),

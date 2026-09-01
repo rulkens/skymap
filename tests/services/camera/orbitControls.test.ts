@@ -241,12 +241,26 @@ describe('attachOrbitControls — gesture boundaries', () => {
     const sink = makeSink();
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
-    rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
-    expect(sink.events).toContainEqual({ kind: 'wheel', deltaY: 100, duringGesture: false });
+    // The pixel rides along on both: at rest it is the only cursor position
+    // the surface arm has to aim its zoom at (spec §12-R4).
+    rec.fire('wheel', { deltaY: 100, clientX: 640, clientY: 360, preventDefault: vi.fn() });
+    expect(sink.events).toContainEqual({
+      kind: 'wheel',
+      deltaY: 100,
+      duringGesture: false,
+      xPx: 640,
+      yPx: 360,
+    });
 
     rec.fire('pointerdown', touchDown(1, 100, 100));
-    rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
-    expect(sink.events).toContainEqual({ kind: 'wheel', deltaY: 100, duringGesture: true });
+    rec.fire('wheel', { deltaY: 100, clientX: 641, clientY: 361, preventDefault: vi.fn() });
+    expect(sink.events).toContainEqual({
+      kind: 'wheel',
+      deltaY: 100,
+      duringGesture: true,
+      xPx: 641,
+      yPx: 361,
+    });
   });
 
   it('emits pinch samples only while two contacts are down', () => {

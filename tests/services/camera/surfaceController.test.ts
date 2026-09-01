@@ -37,6 +37,11 @@ function drag(mode: 'orbit' | 'pan', startPx: Vec2, endPx: Vec2): InputStep {
   return { kind: 'drag', mode, startPx, endPx };
 }
 
+/** `cursorPx: null` is the pinch case — no single cursor, so screen centre. */
+function zoom(factor: number, duringGesture: boolean, cursorPx: Vec2 | null = null): InputStep {
+  return { kind: 'zoom', factor, duringGesture, cursorPx };
+}
+
 function eyeOf(pose: BodyFixedPose): Vec3 {
   const { anchorLocalM: a, eyeRelAnchorM: e } = pose;
   return [a[0] + e[0], a[1] + e[1], a[2] + e[2]];
@@ -217,7 +222,7 @@ describe('surfaceController', () => {
     // `eye′ = A + f·(eye − A)` inverts to `A = (eye′ − f·eye)/(1 − f)`, so the
     // anchor the tick actually used is readable off the result: it is a fresh
     // surface pick, and it is not the latched one.
-    const zoomedEye = eyeOf(apply(c, tilted, { kind: 'zoom', factor: 0.5, duringGesture: true }));
+    const zoomedEye = eyeOf(apply(c, tilted, zoom(0.5, true)));
     const used: Vec3 = [
       2 * zoomedEye[0] - eye[0],
       2 * zoomedEye[1] - eye[1],
@@ -227,15 +232,40 @@ describe('surfaceController', () => {
     expect(angleBetween(used, anchor)).toBeGreaterThan(0.5);
   });
 
-  it('a zoom-out re-levels against the new local vertical', () => {
-    // Comfortably tilted at a low, wide-open ceiling; a factor-2 zoom-out
-    // (the per-tick maximum) lifts h/R past the point where the ceiling has
-    // narrowed below the held tilt, so the very same tick must re-level —
-    // no separate untilt tween runs afterward.
+  it('anchors an at-rest wheel on the cursor’s surface pick, not screen centre', () => {
+    // From [0,0,2] the ray through x = 75 px (ndc 0.5, tan(FOV/2) = 1) is
+    // [0.5,0,−1]/√1.25 and hits the unit sphere at exactly [0.6,0,0.8]; the
+    // screen-centre pick a pixel-less wheel used to take is [0,0,1], so the
+    // two fallbacks are metres apart in this fixture.
     const c = createSurfaceController();
-    const theta = 2.5;
-    const start = poseAt([0, 0, R * 1.05], basisAtTilt(theta));
-    const zoomedOut = apply(c, start, { kind: 'zoom', factor: 2, duringGesture: false });
+    const start = poseAt([0, 0, 2], NADIR);
+    const anchor: Vec3 = [0.6, 0, 0.8];
+
+    const stepped = eyeOf(apply(c, start, zoom(0.5, false, [75, 50])));
+    expect(stepped[0]).toBeCloseTo(0.3, 12);
+    expect(stepped[1]).toBeCloseTo(0, 12);
+    expect(stepped[2]).toBeCloseTo(1.4, 12);
+
+    // …and keeping the wheel turning walks the eye onto that point, which is
+    // the user-visible property: what the cursor is over stays put and grows.
+    // The residual is the descent floor's radial push, not a drift — the eye
+    // parks above the anchor rather than in it. A screen-centre anchor leaves
+    // this angle at 0.64 rad.
+    let pose = start;
+    for (let i = 0; i < 30; i += 1) pose = apply(c, pose, zoom(0.5, false, [75, 50]));
+    expect(angleBetween(eyeOf(pose), anchor)).toBeLessThan(1e-3);
+  });
+
+  it('a zoom-out re-levels against the new local vertical', () => {
+    // Comfortably tilted at a wide-open ceiling; a factor-2 zoom-out (the
+    // per-tick maximum) doubles the ALTITUDE — the anchor is the sub-eye
+    // surface point (§12-R4), so h/R 1 → 2 — past the point where the
+    // ceiling has narrowed below the held tilt, and the very same tick must
+    // re-level: no separate untilt tween runs afterward.
+    const c = createSurfaceController();
+    const theta = 2.4;
+    const start = poseAt([0, 0, R * 2], basisAtTilt(theta));
+    const zoomedOut = apply(c, start, zoom(2, false));
 
     const eye = eyeOf(zoomedOut);
     const hOverR = Math.hypot(...eye) / R - 1;
@@ -250,13 +280,48 @@ describe('surfaceController', () => {
     expect(tiltAfter).toBeCloseTo(maxTiltRad(hOverR), 10);
   });
 
+  it('holds the body still on screen through a zoom-out, cursor or no cursor', () => {
+    // The user-visible acceptance property: receding must not slide the body
+    // off view centre. It holds iff the zoom-out anchor lies on the EYE's own
+    // radial — the eye then recedes along the line it already sits on and the
+    // direction to the body centre is untouched. An off-nadir anchor (the
+    // cursor pick, a latched gesture anchor) swings the eye sideways and the
+    // body drifts, which is FW-H's repelling pivot seen from the screen.
+    const c = createSurfaceController();
+    const tilt = 0.5;
+    const start = poseAt([0, 0, R * 2], basisAtTilt(tilt));
+    const bodyAngle = (pose: BodyFixedPose): number => {
+      const e = eyeOf(pose);
+      const fwd: Vec3 = [pose.basisLocal[6], pose.basisLocal[7], pose.basisLocal[8]];
+      return angleBetween(fwd, [-e[0], -e[1], -e[2]]);
+    };
+
+    // One notch, with a cursor parked well off the nadir: unchanged to the bit.
+    const out = apply(c, start, zoom(1.5, false, [75, 50]));
+    expect(Math.hypot(...eyeOf(out))).toBeGreaterThan(Math.hypot(...eyeOf(start)));
+    expect(bodyAngle(out)).toBeCloseTo(tilt, 12);
+
+    // And over a run: the ceiling eventually re-levels, which may only pull the
+    // body TOWARD centre. The angle never grows.
+    let pose = poseAt([0, 0, R * 1.5], basisAtTilt(tilt));
+    let previous = bodyAngle(pose);
+    for (let i = 0; i < 10; i += 1) {
+      pose = apply(c, pose, zoom(1.5, false, [75, 50]));
+      const angle = bodyAngle(pose);
+      expect(angle).toBeLessThanOrEqual(previous + 1e-12);
+      previous = angle;
+    }
+    // Not vacuous: the run ended past disengage, where the ceiling is 0.
+    expect(previous).toBeCloseTo(0, 9);
+  });
+
   it('the pose reaching the disengage boundary has tilt 0', () => {
     // maxTiltRad(disengageHR) === 0 (pinned in maxTiltRad.test.ts), so ANY
     // held tilt at that altitude clamps all the way to nadir — the Q4
     // invariant a world-arm pivot pin relies on at the seam.
     const c = createSurfaceController();
     const start = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(1.0));
-    const settled = apply(c, start, { kind: 'zoom', factor: 1, duringGesture: false });
+    const settled = apply(c, start, zoom(1, false));
 
     const forward: Vec3 = [settled.basisLocal[6], settled.basisLocal[7], settled.basisLocal[8]];
     expect(forward[0]).toBeCloseTo(0, 12);
@@ -286,7 +351,7 @@ describe('surfaceController', () => {
     const unenforced = anchoredZoomStep(start, factor, anchorM, R);
 
     const c = createSurfaceController();
-    const settled = apply(c, start, { kind: 'zoom', factor, duringGesture: false });
+    const settled = apply(c, start, zoom(factor, false));
 
     expect(settled.anchorLocalM).toEqual(unenforced.anchorLocalM);
     expect(settled.eyeRelAnchorM).toEqual(unenforced.eyeRelAnchorM);

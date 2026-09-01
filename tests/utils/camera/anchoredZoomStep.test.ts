@@ -2,12 +2,14 @@
  * anchoredZoomStep — the FW-H/FW-B/FW-D guards (spec §6b).
  *
  * The 260-notch round trip uses `cursorAnchorM: null` throughout (a cursor
- * that never hits the body): mixing a centre-anchored leg with a
- * cursor-anchored leg can *never* cancel exactly — the affine map toward an
- * off-centre point doesn't invert a pure radial scale, regardless of how
- * close the factor sits to 1 — so an honest round-trip fixture keeps both
- * legs on the centre anchor and lets the miss-handling (FW-H) and the
- * statelessness (FW-B) carry the proof.
+ * that never hits the body): mixing an off-axis cursor-anchored leg with a
+ * radial one can *never* cancel exactly — the affine map toward an off-axis
+ * point doesn't invert a radial scale, regardless of how close the factor
+ * sits to 1 — so an honest round-trip fixture keeps both legs on the sub-eye
+ * anchor and lets the miss-handling (FW-H) and the statelessness (FW-B) carry
+ * the proof. The reciprocity fixture below is the deliberate exception: it
+ * parks the cursor on the sub-eye point, where the two anchors coincide and
+ * the legs DO cancel.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -56,6 +58,33 @@ describe('anchoredZoomStep', () => {
     expect(ez).toBeCloseTo(sz, 6);
   });
 
+  it('undoes a low-altitude notch in with one notch out (§12-R4 reciprocity)', () => {
+    // The racing zoom-out this rules out: anchored at the body CENTRE, one
+    // notch out at 1 km altitude multiplied the whole 6371 km geocentric range
+    // and climbed ~700 km, while the notch in it was meant to undo had moved
+    // 100 m. Anchored at the sub-eye surface point both legs scale ALTITUDE,
+    // so `f` and `1/f` cancel — here to the metre out of 6371 km.
+    const altitudeM = 1000;
+    const start: BodyFixedPose = {
+      bodyId: 'earth',
+      anchorLocalM: [0, 0, 0],
+      eyeRelAnchorM: [0, 0, BODY_RADIUS_M + altitudeM],
+      basisLocal: BASIS_IDENTITY,
+    };
+    // Cursor parked on the sub-eye point (nadir view, cursor at screen centre).
+    const subEyeM: [number, number, number] = [0, 0, BODY_RADIUS_M];
+
+    const f = 0.9;
+    const inOnce = anchoredZoomStep(start, f, subEyeM, BODY_RADIUS_M);
+    expect(Math.hypot(...eyeOf(inOnce)) - BODY_RADIUS_M).toBeCloseTo(altitudeM * f, 6);
+
+    const back = anchoredZoomStep(inOnce, 1 / f, null, BODY_RADIUS_M);
+    const [bx, by, bz] = eyeOf(back);
+    expect(bx).toBeCloseTo(0, 6);
+    expect(by).toBeCloseTo(0, 6);
+    expect(bz).toBeCloseTo(BODY_RADIUS_M + altitudeM, 6);
+  });
+
   it('is stateless: the same input pose and factor give the same output twice', () => {
     const pose: BodyFixedPose = {
       bodyId: 'earth',
@@ -91,12 +120,13 @@ describe('anchoredZoomStep', () => {
     // Closed-form, not a comparison to a sibling call without a cursor: a
     // latched (or altogether ignored) anchor implementation would also make
     // two sibling calls agree, so the pin has to be the hand-derived
-    // centre-anchored value itself.
+    // sub-eye-anchored value itself — `R + f·(|eye| − R)` on the eye's own
+    // radial, which is also what rules out the old body-centre fallback.
     const withCursor = anchoredZoomStep(pose, 1.2, cursorAnchorM, BODY_RADIUS_M);
     const [ex, ey, ez] = eyeOf(withCursor);
     expect(ex).toBeCloseTo(0, 6);
     expect(ey).toBeCloseTo(0, 6);
-    expect(ez).toBeCloseTo(20_000_000 * 1.2, 6);
+    expect(ez).toBeCloseTo(BODY_RADIUS_M + 1.2 * (20_000_000 - BODY_RADIUS_M), 6);
   });
 
   it('an approach step never goes below the surface floor', () => {
@@ -135,7 +165,7 @@ describe('anchoredZoomStep', () => {
     expect(magnitude(eyeOf(hugeOut1))).toBeLessThan(unclamped / 1000);
   });
 
-  it('an approach genuinely anchors on the cursor, and never crosses onto the anchor\'s far side', () => {
+  it("an approach genuinely anchors on the cursor, and never crosses onto the anchor's far side", () => {
     const pose: BodyFixedPose = {
       bodyId: 'earth',
       anchorLocalM: [0, 0, 0],

@@ -408,11 +408,15 @@ path hiding drift.
 **(b) Zoom to cursor, direction-asymmetric.** `eye′ = anchor + factor·(eye −
 anchor)`: stateless per tick, no accumulator (FW-B). Two points stay separate —
 the distance _measure_ comes from the screen centre, the _anchor_ from the
-cursor (C §3.1). Approaching with a cursor hit anchors on the cursor;
-**zoom-out and cursor misses always fall back to centre-directed** (FW-H): the
+cursor (C §3.1). Approaching with a cursor hit anchors on the cursor —
+**at rest on the wheel's own cursor pixel**, during a gesture on the latched
+one (ruled 2026-09-01, §12-R4); **zoom-out and cursor misses always fall back
+to the centre-directed anchor: the surface point under the eye** (FW-H). The
 cursor anchor is a repelling fixed point on the way out, and the offset it
 accumulates is `altitude · tan(off-axis)` at every scale — geometry, not a
-storage artefact, so deleting the stored pivot does not delete it. Guards, all
+storage artefact, so deleting the stored pivot does not delete it. The sub-eye
+point sits on the eye's own radial, so recession is centre-directed exactly as
+before while the step scales _altitude_ rather than geocentric range. Guards, all
 cheap and all evidence-backed: clamp step **magnitude** on both signs (C §6.15);
 force a fresh anchor pick after an overshoot past the anchor's tangent plane
 (C §6.7); gate the approach on _closing distance_, never on absolute altitude
@@ -704,6 +708,22 @@ ceiling (a flyby aimed away from the body, a tour keyframe). Since altitude only
 changes through zoom, and zoom re-levels through the ceiling (§6), every path
 the user can drive still lands at `tilt = 0` by the disengage boundary — the Q4
 invariant holds where it is load-bearing without a special case at the seam.
+
+**R4 — the zoom's two anchors. RULED BY THE USER 2026-09-01** at the hands-on
+feel check, superseding the interim recorded at Task 16. Two findings, one
+mechanism apiece. (i) An at-rest wheel had no cursor pixel to pick through —
+`InputStep`'s zoom arm carried only a factor — so it anchored at screen
+centre and the ruling ("point at a point on the surface and zoom in on that
+point") failed exactly when no pointer was down, the common case. The wheel
+event now carries its cursor position through the recognizer and the
+aggregator, alongside the drag arms' pixels. (ii) Zoom-out anchored at the
+body CENTRE scaled the geocentric range, so near the ground one notch out
+climbed ~700 km while the notch in it should undo had moved ~100 m — the
+recession raced. The fallback is now the surface point under the eye: still
+on the eye's radial, so FW-H's "the cursor never anchors a zoom-out" and the
+centre-directed recession both stand unchanged, but `f` and `1/f` are
+reciprocal in ALTITUDE at every altitude. A pinch, which has no single
+cursor, keeps the screen-centre pick.
 
 **Small-body engage feel — flagged, not built.** Every planet/moon registry row
 can engage (R2's argmin is body-blind); on a ~10 km moon the band engages at

@@ -26,6 +26,9 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
+import { cursorRayBodyLocal } from '../../../../src/utils/camera/cursorRayBodyLocal';
+import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
@@ -33,6 +36,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
+import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 
@@ -161,6 +165,53 @@ describe('drainInput', () => {
     expect(store.getState().camera.dragging).toBe(false);
   });
 
+  it('carries the wheel’s cursor pixel to the body arm’s zoom anchor', () => {
+    // End to end: recognizer pixel → aggregator step → surface controller pick.
+    // With no pointer down there is no drag baseline to read the cursor off,
+    // so the wheel event's own pixel is the whole plumbing (spec §12-R4) —
+    // without it the zoom anchors at screen centre, a different point.
+    const { agg, state, deps, store } = makeHarness();
+    const arm = earthArm(2);
+    store.dispatch(commitCameraPose(arm));
+    state.cameraRuntime.lastPose.current = arm;
+    if (arm.frame === 'absolute') throw new Error('fixture: not a body arm');
+
+    const radiusM = SCENE_BODIES.find((b) => b.id === 'earth')!.radiusM;
+    const cursorPx: Vec2 = [700, 500];
+    const anchorFor = (px: Vec2): Vec3 => {
+      const ray = cursorRayBodyLocal(arm.pose, px, [1000, 1000], Math.PI / 3);
+      const t = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], radiusM)![0];
+      return [
+        ray.originM[0] + ray.dir[0] * t,
+        ray.originM[1] + ray.dir[1] * t,
+        ray.originM[2] + ray.dir[2] * t,
+      ];
+    };
+    const eyeM = arm.pose.eyeRelAnchorM; // the anchor is the body centre here
+    const steppedTo = (a: Vec3, f: number): Vec3 => [
+      a[0] + f * (eyeM[0] - a[0]),
+      a[1] + f * (eyeM[1] - a[1]),
+      a[2] + f * (eyeM[2] - a[2]),
+    ];
+
+    agg.push({ kind: 'wheel', deltaY: -100, duringGesture: false, xPx: 700, yPx: 500 });
+    drainInput(state, deps, 0);
+
+    const committed = store.getState().camera.base;
+    if (committed.frame === 'absolute') throw new Error('the arm flipped');
+    const got = committed.pose.eyeRelAnchorM;
+    const wanted = steppedTo(anchorFor(cursorPx), Math.exp(-0.1));
+    expect(Math.hypot(got[0] - wanted[0], got[1] - wanted[1], got[2] - wanted[2])).toBeLessThan(
+      1e-3,
+    );
+    // Not a coincidence of two nearby points: the screen-centre anchor the
+    // pixel-less wheel used to take lands tens of km away.
+    const centred = steppedTo(anchorFor([500, 500]), Math.exp(-0.1));
+    expect(
+      Math.hypot(got[0] - centred[0], got[1] - centred[1], got[2] - centred[2]),
+    ).toBeGreaterThan(10_000);
+  });
+
   it('latches a body-arm gesture against the pose on screen, not a stale base', () => {
     // `base` equals what is rendered only while the resting or surface driver
     // wins: the fold commits on a REGIME edge, so mid-fly-to `base` still holds
@@ -209,7 +260,7 @@ describe('drainInput', () => {
     agg.push({ kind: 'gestureStart' });
     agg.push({ kind: 'dragAnchor', xPx: 500, yPx: 500 });
     agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 560, yPx: 500 });
-    agg.push({ kind: 'wheel', deltaY: 240, duringGesture: false });
+    agg.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 500, yPx: 500 });
     agg.push({ kind: 'gestureEnd' });
 
     drainInput(state, deps, 0);
@@ -248,7 +299,7 @@ describe('drainInput', () => {
     // would be invisible.
     const { cam, agg, state, deps, store } = makeHarness();
     const baseBefore = worldArmOf(store.getState().camera.base).distance;
-    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false });
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
 
     drainInput(state, deps, 0);
 

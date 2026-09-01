@@ -125,7 +125,7 @@ describe('applyInputToCamera — zoom floor at a focused body’s surface', () =
 
     applyInputToCamera(
       cam,
-      { kind: 'zoom', factor: 1 / 1e6, duringGesture: true },
+      { kind: 'zoom', factor: 1 / 1e6, duringGesture: true, cursorPx: null },
       CSS_HEIGHT,
       EARTH_PIVOT,
     );

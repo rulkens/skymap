@@ -428,7 +428,13 @@ describe('runFrame — the regime fold', () => {
     expect(engaged.frame).toEqual(EARTH_ARM);
 
     const spy = vi.spyOn(store, 'dispatch');
-    state.subsystems.inputAggregator.push({ kind: 'wheel', deltaY: 240, duringGesture: false });
+    state.subsystems.inputAggregator.push({
+      kind: 'wheel',
+      deltaY: 240,
+      duringGesture: false,
+      xPx: 500,
+      yPx: 500,
+    });
     runFrame(state, deps, 16);
 
     const commits = commitCalls(spy) as { payload: FramedCameraPose }[];

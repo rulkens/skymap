@@ -301,6 +301,7 @@ function zoomStep(
   arm: BodyFixedPose,
   gesture: SurfaceGesture | null,
   factor: number,
+  cursorPx: Readonly<Vec2> | null,
   viewportPx: Readonly<Vec2>,
   fovYRad: number,
   bodyRadiusM: number,
@@ -311,9 +312,12 @@ function zoomStep(
   // test runs every tick rather than latching a flag — the zoom owns no state
   // of its own (FW-B).
   const stale = latched !== null && dot3(eyeOf(arm), normalize3(latched)) < Math.hypot(...latched);
-  // A wheel step carries no pixel, so at rest the anchor is the screen-centre
-  // pick — the same point C §3.1 measures the zoom distance from.
-  const pixel: Readonly<Vec2> = gesture?.prevPixel ?? [viewportPx[0] / 2, viewportPx[1] / 2];
+  // At rest the wheel's own cursor pixel is the pick (user ruling, §12-R4);
+  // during a gesture the drag's last pixel is the more current one. Only a
+  // pinch supplies neither, and its screen-centre pick is the point C §3.1
+  // measures the zoom distance from.
+  const pixel: Readonly<Vec2> = gesture?.prevPixel ??
+    cursorPx ?? [viewportPx[0] / 2, viewportPx[1] / 2];
   const cursorAnchorM =
     latched !== null && !stale
       ? latched
@@ -341,6 +345,7 @@ export function createSurfaceController(): SurfaceController {
           arm,
           live?.gesture ?? null,
           step.factor,
+          step.cursorPx,
           viewportPx,
           fovYRad,
           bodyRadiusM,
