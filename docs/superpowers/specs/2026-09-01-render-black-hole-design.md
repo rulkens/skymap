@@ -364,9 +364,9 @@ walk, per captured face, per frame. Mitigations, restated from Q8/Q9:
 **Hard gate:** `npm run perf` before and after (read the `perf` skill first;
 worktree runs need `--url` against this worktree's own dev-server port). Zero
 delta expected outside the band; bounded, measured cost expected inside it.
-A neutral-or-negative reading on either measurement halts the landing
-pipeline per the project's code-is-liability convention — it does not get
-waved through on the strength of the design.
+A regression outside the band, or an unbounded/unacceptable cost inside it,
+halts the landing pipeline per the project's code-is-liability convention —
+it does not get waved through on the strength of the design.
 
 ### Settings
 
