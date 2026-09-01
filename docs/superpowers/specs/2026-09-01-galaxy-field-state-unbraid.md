@@ -273,8 +273,7 @@ four rebuild methods and five getters. It exposes one:
 export type FieldBindGroupResources = {
   readonly fieldComps: GPUBuffer;
   readonly hiiComps: GPUBuffer;
-  /** `null` only before the host has allocated any target — see `sync`. */
-  readonly dustMap: GPUTexture | null;
+  readonly dustMap: GPUTexture;
 };
 
 export type FieldBindGroups = {
@@ -288,10 +287,10 @@ export type FieldBindGroups = {
 // on FieldPipelines:
 /**
  * Rebuild every bind group whose declared inputs' IDENTITY moved since the last
- * call; return the full set. `null` while `dustMap` is null (nothing can draw
- * yet). Idempotent and cheap — called at the top of every `encode`.
+ * call; return the full set. Idempotent and cheap — called at the top of every
+ * `encode`.
  */
-sync(resources: FieldBindGroupResources): FieldBindGroups | null;
+sync(resources: FieldBindGroupResources): FieldBindGroups;
 ```
 
 backed by an internal dependency table — the same "graph as data" move, one level

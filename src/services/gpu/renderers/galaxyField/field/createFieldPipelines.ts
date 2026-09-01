@@ -52,8 +52,7 @@ export type FieldPipelineDeps = {
 export type FieldBindGroupResources = {
   readonly fieldComps: GPUBuffer;
   readonly hiiComps: GPUBuffer;
-  /** `null` only before the host has allocated any target — see `sync`. */
-  readonly dustMap: GPUTexture | null;
+  readonly dustMap: GPUTexture;
 };
 
 export type FieldBindGroups = {
@@ -76,10 +75,10 @@ export type FieldPipelines = {
 
   /**
    * Rebuild every bind group whose declared inputs' IDENTITY moved since the
-   * last call; return the full set. `null` while `dustMap` is null (nothing
-   * can draw yet). Idempotent and cheap — called at the top of every `encode`.
+   * last call; return the full set. Idempotent and cheap — called at the top
+   * of every `encode`.
    */
-  sync(resources: FieldBindGroupResources): FieldBindGroups | null;
+  sync(resources: FieldBindGroupResources): FieldBindGroups;
 };
 
 type BindGroupRole = 'dustMap' | 'fieldSplat' | 'hii' | 'tiers' | 'dustPresent';
@@ -361,13 +360,8 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
   let groups: FieldBindGroups | null = null;
   let tierGroups: Record<HiiTier, GPUBindGroup> | null = null;
 
-  function sync(resources: FieldBindGroupResources): FieldBindGroups | null {
+  function sync(resources: FieldBindGroupResources): FieldBindGroups {
     const { fieldComps, hiiComps, dustMap } = resources;
-    // Four of the five roles bind a view of the dust map, and nothing draws
-    // before the host has allocated one — so there is no partial set worth
-    // building, and no identity worth recording either.
-    if (dustMap === null) return null;
-
     const changed = new Set<BindGroupResourceKey>();
     if (!Object.is(lastIdentity.fieldComps, fieldComps)) {
       lastIdentity.fieldComps = fieldComps;

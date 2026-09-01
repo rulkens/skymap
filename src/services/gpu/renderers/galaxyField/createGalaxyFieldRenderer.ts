@@ -1298,10 +1298,7 @@ export function createGalaxyFieldRenderer(
       device.queue.writeBuffer(tierUbo[kind], 0, tierData);
     }
 
-    // `bindGroups` is null only before the host has allocated a dust map, and
-    // then there is nothing to draw with — same "headers still written, no
-    // passes" exit as the disabled field.
-    if (!frame.render.analyticField || bindGroups === null) return;
+    if (!frame.render.analyticField) return;
     const groups = bindGroups;
     const timestampWrites = frame.timestampWrites ?? ((): undefined => undefined);
     // The JWST view's own gate, read off the same `debugViews` the headers
