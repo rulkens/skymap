@@ -381,10 +381,10 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       // V3: the full save→load round trip through the real DOM — exportParams'
       // download, fed straight back into the hidden file input importParams
-      // reads. The GPU-relevant half is what installImportedBox provokes: it
-      // lands in buildKey (Viewport.tsx), so this is the only step that exercises a
-      // harness rebuild triggered by a grid-box change with none of voxel size /
-      // manual bounds moving.
+      // reads. The GPU-relevant half is what installImportedBox provokes: it's
+      // one of watchSceneSaga's structural triggers, so this is the only step
+      // that exercises a harness rebuild triggered by a grid-box change with
+      // none of voxel size / manual bounds moving.
       name: 'params:save-load',
       run: async (page) => {
         const [download] = await Promise.all([

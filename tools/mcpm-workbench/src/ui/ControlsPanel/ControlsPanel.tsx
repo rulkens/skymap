@@ -3,10 +3,10 @@
  * mode toggles, and the embedded GridBoxPanel. Every slider writes straight
  * to the sim slice; the harness reads `params` fresh each step, so these
  * are live with no rebuild. Agent count / weight mode / init mode / grid
- * box are structural — Viewport watches them and rebuilds the harness. The
- * Raymarch / Agents / Galaxies / Path tracer sections are the four render
- * layers: each section's header pill IS its layer's on/off switch, and any
- * subset may be on.
+ * box are structural — `watchSceneSaga` watches those actions and rebuilds
+ * the harness (debounced). The Raymarch / Agents / Galaxies / Path tracer
+ * sections are the four render layers: each section's header pill IS its
+ * layer's on/off switch, and any subset may be on.
  */
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { ViewSlice } from '../../../@types/ViewSlice';

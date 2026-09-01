@@ -36,6 +36,13 @@ export type ViewSlice = {
   };
   /** Viewport's rAF-loop EMA, throttled to the store at most every 500ms; 0 = not measured yet. */
   readonly fps: number;
+  /**
+   * Set once by `watchSceneSaga`'s device-lost watcher (a real loss, never the
+   * intentional-`destroy()` case) and never cleared — the frame driver reads it
+   * to stop the rAF loop instead of drawing onto a dead device. No reload-and-
+   * retry path exists; the maintainer reloads the page.
+   */
+  readonly deviceLost: boolean;
   readonly camera: {
     readonly yaw: number;
     readonly pitch: number;

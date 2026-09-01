@@ -11,3 +11,6 @@ import type { createWorkbenchStore } from './createWorkbenchStore';
 export type RootState = ReturnType<typeof rootReducer>;
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>['store'];
 export type AppDispatch = WorkbenchStore['dispatch'];
+/** App.tsx's other half of the factory result — Viewport's own prop, since it's the
+ * one component that creates `RenderResources` and hands the pair to the saga context. */
+export type RegisterSagaContext = ReturnType<typeof createWorkbenchStore>['registerSagaContext'];

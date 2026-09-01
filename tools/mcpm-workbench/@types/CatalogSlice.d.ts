@@ -10,8 +10,8 @@ import type { CatalogPoints } from './CatalogPoints';
  * computed at the display site rather than stored. `packedOverride` is a
  * dev-drop's parsed fork catalog — sticky for the session, cleared never;
  * `packedDropId` bumps on every install since the fork's export filename
- * repeats across runs, so it's the only reliable rebuild-trigger key.
- * `catalogBoundsMpc` is cached (not recomputed from positions) so
+ * repeats across runs, so a re-drop is never mistaken for a repeat of the
+ * same install. `catalogBoundsMpc` is cached (not recomputed from positions) so
  * `deriveGridBox` derives the SAME box for Viewport's build and the grid
  * panel's live readout.
  */

@@ -1,10 +1,10 @@
 /**
- * catalogSlice — `packedDropId` must increment even across same-name drops —
- * it, not the filename, is Viewport's rebuild-trigger key (review finding:
- * the fork exports under one default filename every run). `catalogLoaded` is
- * `watchCatalogSaga`'s completed-load transition (replacing the old
- * Viewport-dispatched `setCatalogLoaded`), so it's exercised here directly
- * rather than through a saga.
+ * catalogSlice — `packedDropId` must increment even across same-name drops
+ * (review finding: the fork exports under one default filename every run),
+ * so a re-drop is never mistaken for a no-op re-dispatch of the same action.
+ * `catalogLoaded` is `watchCatalogSaga`'s completed-load transition
+ * (replacing the old Viewport-dispatched `setCatalogLoaded`), so it's
+ * exercised here directly rather than through a saga.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -24,29 +24,27 @@ const points = {
 const weights = { weights: new Float32Array([1e6]), nanCount: 0, medianLog10Mass: 10 };
 
 describe('catalogSlice setPackedCatalog', () => {
-  it('installs the override and its own pointCount/nanFillCount bookkeeping', () => {
+  it("installs the override and source name — pointCount/nanFillCount/bounds are catalogLoaded's job, not this reducer's", () => {
     const next = reducer(
       defaultCatalogSlice,
-      actions.setPackedCatalog({ points, nanFillCount: 2, sourceName: 'sdssGalaxy_metadata.txt' }),
+      actions.setPackedCatalog({ points, sourceName: 'sdssGalaxy_metadata.txt' }),
     );
 
-    expect(next.loadStatus).toBe('loaded');
-    expect(next.pointCount).toBe(1);
-    expect(next.nanFillCount).toBe(2);
     expect(next.packedOverride).toBe(points);
     expect(next.packedSourceName).toBe('sdssGalaxy_metadata.txt');
     expect(next.packedDropId).toBe(1);
-    expect(next.catalogBoundsMpc).toEqual({ min: [1, 2, 3], max: [1, 2, 3] });
+    expect(next.pointCount).toBe(defaultCatalogSlice.pointCount);
+    expect(next.catalogBoundsMpc).toBe(defaultCatalogSlice.catalogBoundsMpc);
   });
 
   it('bumps packedDropId on every install, even a same-filename re-drop', () => {
     const first = reducer(
       defaultCatalogSlice,
-      actions.setPackedCatalog({ points, nanFillCount: 2, sourceName: 'sdssGalaxy_metadata.txt' }),
+      actions.setPackedCatalog({ points, sourceName: 'sdssGalaxy_metadata.txt' }),
     );
     const second = reducer(
       first,
-      actions.setPackedCatalog({ points, nanFillCount: 0, sourceName: 'sdssGalaxy_metadata.txt' }),
+      actions.setPackedCatalog({ points, sourceName: 'sdssGalaxy_metadata.txt' }),
     );
 
     expect(second.packedDropId).toBe(2);

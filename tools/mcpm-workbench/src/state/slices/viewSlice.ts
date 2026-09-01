@@ -20,6 +20,7 @@ export const defaultViewSlice: ViewSlice = {
   // pointSizePx 1 is the single-pixel footprint splatTransform.wesl always wrote.
   agents: { intensity: 1, pointSizePx: 1 },
   fps: 0,
+  deviceLost: false,
   camera: { yaw: 0.6, pitch: 0.35, distance: 600, autoRotate: false, targetMpc: [0, 0, 0] },
   raymarch: {
     opticalThickness: 0.25,
@@ -98,6 +99,10 @@ export const viewSlice = createSlice({
     setFps: (state, action: PayloadAction<number>) => {
       state.fps = action.payload;
     },
+    /** `watchSceneSaga`'s device-lost watcher only — never dispatched by the UI. */
+    deviceLost: (state) => {
+      state.deviceLost = true;
+    },
     setCameraYawPitch: (state, action: PayloadAction<{ yaw: number; pitch: number }>) => {
       state.camera.yaw = action.payload.yaw;
       state.camera.pitch = Math.min(PITCH_LIMIT, Math.max(-PITCH_LIMIT, action.payload.pitch));
@@ -165,6 +170,7 @@ export const {
   setAgentIntensity,
   setAgentPointSize,
   setFps,
+  deviceLost,
   setCameraYawPitch,
   setCameraDistance,
   setCameraTarget,

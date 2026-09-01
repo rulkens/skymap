@@ -5,7 +5,6 @@ import type { CatalogSlice } from '../../../@types/CatalogSlice';
 import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 import { Source } from '../../../../../src/data/source';
-import { catalogBounds } from '../../field/catalogBounds';
 
 /**
  * defaultCatalogSlice — SDSS + 2MRS + GLADE at the `medium` tier (spec §10's
@@ -122,28 +121,21 @@ export const catalogSlice = createSlice({
       state.weightMode = action.payload;
     },
     /**
-     * Installs a dev-dropped packed catalog: sets the override plus its own
-     * pointCount/nanFillCount/bounds book-keeping. `watchCatalogSaga` (triggered
-     * by this same action, since it's a catalog-identity write) re-resolves from
-     * `packedOverride` right after and dispatches `catalogLoaded`, which is what
-     * actually populates `catalog.points` for Viewport's build path — the two
-     * reducers land on the same numbers because `nanFillCount` doesn't depend on
-     * `weightMode` (see `deriveAgentWeights`). `packedDropId` always increments,
-     * even on a same-filename re-drop — the rebuild trigger (Viewport's
-     * `catalogKey`) needs a value that changes on every install, not just every
-     * distinct name.
+     * Installs a dev-dropped packed catalog: `watchCatalogSaga`'s `takeLatest`
+     * also fires on this action, re-resolving from `packedOverride` and
+     * dispatching `catalogLoaded` right after — which is what actually
+     * populates `pointCount`/`nanFillCount`/`catalogBoundsMpc`/`points`. This
+     * reducer used to duplicate that same bookkeeping, but `catalogLoaded`
+     * always immediately supersedes it (same points, same weightMode-invariant
+     * nanCount), leaving nothing that ever reads the intermediate value —
+     * dead writes, deleted. `packedDropId` always increments, even on a
+     * same-filename re-drop, so a re-drop is never mistaken for a no-op.
      */
     setPackedCatalog: (
       state,
-      action: PayloadAction<{ points: CatalogPoints; nanFillCount: number; sourceName: string }>,
+      action: PayloadAction<{ points: CatalogPoints; sourceName: string }>,
     ) => {
-      const { points, nanFillCount, sourceName } = action.payload;
-      const boundsMpc = points.count > 0 ? catalogBounds(points.positions) : null;
-      state.loadStatus = 'loaded';
-      state.pointCount = points.count;
-      state.nanFillCount = nanFillCount;
-      state.statusMessage = null;
-      state.catalogBoundsMpc = boundsMpc;
+      const { points, sourceName } = action.payload;
       state.packedOverride = points as Draft<CatalogPoints>;
       state.packedSourceName = sourceName;
       state.packedDropId += 1;
