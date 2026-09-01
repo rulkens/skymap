@@ -41,6 +41,25 @@
  * pickable (the Milky-Way impostor or the Gaia star catalog) passes its
  * visibility gate; on a cosmic-zoom frame neither is enabled and it stays unallocated.
  *
+ * ### Retained GPU memory is O(1) in body-row count, not O(rows ever seen)
+ *
+ * Body-slab rows (index 2…2+`BODY_SLAB_CAPACITY`−1) do NOT get one persistent
+ * viewport-sized target each — `pick()` only ever reads ONE texel per slab
+ * (`recordSlabPass` + `copyTextureToBuffer` below), so every body row's pass
+ * shares ONE `bodyPickTarget` pair: each row's texel is copied out to its OWN
+ * small staging buffer BEFORE the next row's pass re-clears the shared
+ * texture — safe because commands recorded on one `GPUCommandEncoder` execute
+ * in that exact order, so the copy always captures the row that drew before
+ * it. Retained pick-texture memory is therefore bounded at THREE
+ * viewport-sized pairs total (cosmo, near0, body), not one pair per body-row
+ * index — the shape that regressed to ≈500 MB on a six-body scene at Retina
+ * resolution (branch-review B1). `renderForDebug()` cannot share one texture
+ * the same way — the overlay composites every active row's FULL raster at
+ * once, not a single texel — so its body-row targets are rebuilt from
+ * scratch every call (`resetDebugBodyTargets`), bounding retained debug
+ * memory to THIS call's active row count rather than the session's
+ * historical maximum.
+ *
  * @module
  */
 
@@ -51,7 +70,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
-import { slabViewOf, foregroundChainOrder, COSMO } from './slabs';
+import { slabViewOf, foregroundChainOrder, isBodySlabIndex, COSMO } from './slabs';
 import { frontmostPick } from '../../../utils/picking/frontmostPick';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { unpackPick } from '../../../data/selectionEncoding';
@@ -103,13 +122,30 @@ export function createPickProgram(deps: {
 }): PickProgram {
   const { device, canvas, state, layers } = deps;
 
-  // Per-slab pick targets + staging buffers, allocated lazily on first use for
-  // a slab and recreated on viewport change. A slab with no pickable layer is
-  // never inserted here — that is what keeps `pick:near0` unallocated at N=1.
+  // COSMO/NEAR0 pick targets + staging buffers, allocated lazily on first use
+  // for a slab and recreated on viewport change. Body-row indices never land
+  // here (see `bodyPickTarget` below) — this map is capped at 2 entries.
+  // A slab with no pickable layer is never inserted — that is what keeps
+  // `pick:near0` unallocated at N=1.
   const slabTargets = new Map<number, PickSlabTarget>();
-  // Staging buffers are size-invariant (256 bytes, one texel), so they persist
-  // across resizes even though the textures don't.
+  // Staging buffers are size-invariant (256 bytes, one texel) and keyed per
+  // real slab index — including body rows, up to `BODY_SLAB_CAPACITY` of
+  // them — so they persist across resizes even though the textures don't.
+  // Unlike the viewport-sized textures, 256 B × capacity is noise (a few KB),
+  // so body rows keeping their own staging entry costs nothing; only the
+  // TEXTURE pair is what B1 needed to stop growing per-row.
   const slabStaging = new Map<number, GPUBuffer>();
+
+  // ONE shared viewport-sized target for every body-slab row within a single
+  // `pick()` (or `renderForDebug()`) call — see the module header's "Retained
+  // GPU memory" section. Body rows always use the NEAR0 depth format
+  // (`pickDepthFormat`'s non-COSMO arm), so one pair suffices for all of them.
+  let bodyPickTarget: PickSlabTarget | null = null;
+  // `renderForDebug`'s ephemeral per-body-row targets (it needs every active
+  // row's FULL raster alive at once, unlike `pick()`'s one-texel read) —
+  // rebuilt from scratch each call by `resetDebugBodyTargets`, so retained
+  // memory tracks THIS call's active row count, not a historical maximum.
+  let debugBodyTargets: PickSlabTarget[] = [];
 
   // `mapAsync` is async; a second pick before the first resolves would map an
   // already-mapped staging buffer (validation error). `inFlight` makes the
@@ -123,23 +159,16 @@ export function createPickProgram(deps: {
   // (harmless teardown race) and re-throw anything else.
   let destroyed = false;
 
-  /**
-   * Lazily (re)allocate a slab's pick + depth textures. No-op when the
-   * dimensions already match. Inserting into `slabTargets` here is what marks
-   * a slab as "allocated" — callers only reach this for slabs with a pickable
-   * layer.
-   */
-  function ensureSlabTextures(slabIndex: number, w: number, h: number): PickSlabTarget {
-    const existing = slabTargets.get(slabIndex);
-    if (existing && existing.width === w && existing.height === h) return existing;
-
-    existing?.pickTexture.destroy();
-    existing?.depthTexture.destroy();
-
-    const id = pickTargetId(slabIndex);
-    const target: PickSlabTarget = {
+  /** Allocate one `PickSlabTarget` (r32uint colour + the given depth format). */
+  function createPickTarget(
+    label: string,
+    w: number,
+    h: number,
+    depthFormat: GPUTextureFormat,
+  ): PickSlabTarget {
+    return {
       pickTexture: device.createTexture({
-        label: `${id}-target`,
+        label: `${label}-target`,
         size: { width: w, height: h },
         format: 'r32uint',
         usage:
@@ -148,15 +177,70 @@ export function createPickProgram(deps: {
           GPUTextureUsage.TEXTURE_BINDING,
       }),
       depthTexture: device.createTexture({
-        label: `${id}-depth`,
+        label: `${label}-depth`,
         size: { width: w, height: h },
-        format: pickDepthFormat(slabIndex),
+        format: depthFormat,
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       }),
       width: w,
       height: h,
     };
+  }
+
+  /**
+   * Lazily (re)allocate a COSMO/NEAR0 slab's pick + depth textures. No-op
+   * when the dimensions already match. Inserting into `slabTargets` here is
+   * what marks a slab as "allocated" — callers only reach this for slabs
+   * with a pickable layer. Never called with a body-row index.
+   */
+  function ensureSlabTextures(slabIndex: number, w: number, h: number): PickSlabTarget {
+    const existing = slabTargets.get(slabIndex);
+    if (existing && existing.width === w && existing.height === h) return existing;
+
+    existing?.pickTexture.destroy();
+    existing?.depthTexture.destroy();
+
+    const target = createPickTarget(pickTargetId(slabIndex), w, h, pickDepthFormat(slabIndex));
     slabTargets.set(slabIndex, target);
+    return target;
+  }
+
+  /**
+   * The ONE target every body-slab row's `pick()` pass shares this call.
+   * Lazily (re)allocated on first use or viewport resize. Safe to reuse
+   * across rows within one encoder: `pick()` copies each row's texel out to
+   * its own staging buffer BEFORE the next row's pass re-clears this texture
+   * (see the module header) — commands on one `GPUCommandEncoder` execute in
+   * recorded order, so the copy always wins the race against the next clear.
+   */
+  function ensureBodyPickTarget(w: number, h: number): PickSlabTarget {
+    if (bodyPickTarget && bodyPickTarget.width === w && bodyPickTarget.height === h) {
+      return bodyPickTarget;
+    }
+    bodyPickTarget?.pickTexture.destroy();
+    bodyPickTarget?.depthTexture.destroy();
+    bodyPickTarget = createPickTarget('pick:body', w, h, NEAR0_DEPTH_FORMAT);
+    return bodyPickTarget;
+  }
+
+  /**
+   * Destroy last call's ephemeral debug body-row targets. Safe even if the
+   * GPU hasn't finished the previous submit yet — `ensureSlabTextures`
+   * already relies on the same "destroy while a prior submit may still
+   * reference it" pattern across a resize.
+   */
+  function resetDebugBodyTargets(): void {
+    for (const target of debugBodyTargets) {
+      target.pickTexture.destroy();
+      target.depthTexture.destroy();
+    }
+    debugBodyTargets = [];
+  }
+
+  /** Allocate one body row's debug-overlay target for THIS `renderForDebug()` call. */
+  function ensureDebugBodyTarget(slabIndex: number, w: number, h: number): PickSlabTarget {
+    const target = createPickTarget(`pick:body[${slabIndex}]-debug`, w, h, NEAR0_DEPTH_FORMAT);
+    debugBodyTargets.push(target);
     return target;
   }
 
@@ -309,7 +393,12 @@ export function createPickProgram(deps: {
     // simple "first non-zero".
     const stagingInOrder: GPUBuffer[] = [];
     for (const { slabIndex, view, layers: slabPickables } of groups) {
-      const target = ensureSlabTextures(slabIndex, w, h);
+      // Every body row shares ONE target (see `ensureBodyPickTarget`'s doc and
+      // the module header's "Retained GPU memory" section) — only COSMO/NEAR0
+      // get their own persistent pair.
+      const target = isBodySlabIndex(slabIndex)
+        ? ensureBodyPickTarget(w, h)
+        : ensureSlabTextures(slabIndex, w, h);
       const staging = ensureSlabStaging(slabIndex);
       const timing =
         slabIndex === COSMO ? state.gpu.timingService.descriptorFor('pick') : undefined;
@@ -360,19 +449,27 @@ export function createPickProgram(deps: {
     const w = canvas.width;
     const h = canvas.height;
     // Record every slab's pick pass on ONE encoder. Each slab writes its OWN
-    // colour + depth textures, so the passes share no mutable TARGET; the one
-    // mutable buffer shared across passes (`bodyPickRenderer`'s sphere/point
-    // slots) is why `beginSubmit()` below is load-bearing, not optional. No
-    // timing descriptor: the debug overlay is not the timed 'pick' pass, and
+    // colour + depth textures — the overlay composites every active row's
+    // FULL raster, so (unlike `pick()`) body rows can't share one target — so
+    // the passes share no mutable TARGET; the one mutable buffer shared
+    // across passes (`bodyPickRenderer`'s sphere/point slots) is why
+    // `beginSubmit()` below is load-bearing, not optional. No timing
+    // descriptor: the debug overlay is not the timed 'pick' pass, and
     // consuming the shared query-set slot here would double-book it against a
     // real pick.
     const encoder = device.createCommandEncoder({ label: 'pick-program-debug-encoder' });
     // Same per-submit reset as `pick()` above — this encoder also spans
     // multiple passes.
     state.gpu.bodyPickRenderer?.beginSubmit();
+    // Fresh body-row targets for THIS call only (see `resetDebugBodyTargets`'s
+    // doc + the module header) — bounds retained debug memory to the active
+    // row count instead of a session-wide high-water mark.
+    resetDebugBodyTargets();
     const texturesNearToFar: GPUTexture[] = [];
     for (const { slabIndex, view, layers: slabPickables } of groups) {
-      const target = ensureSlabTextures(slabIndex, w, h);
+      const target = isBodySlabIndex(slabIndex)
+        ? ensureDebugBodyTarget(slabIndex, w, h)
+        : ensureSlabTextures(slabIndex, w, h);
       recordSlabPass(encoder, slabIndex, target, view, ctx, slabPickables, undefined);
       texturesNearToFar.push(target.pickTexture);
     }
@@ -397,6 +494,10 @@ export function createPickProgram(deps: {
     }
     slabTargets.clear();
     slabStaging.clear();
+    bodyPickTarget?.pickTexture.destroy();
+    bodyPickTarget?.depthTexture.destroy();
+    bodyPickTarget = null;
+    resetDebugBodyTargets();
   }
 
   return {

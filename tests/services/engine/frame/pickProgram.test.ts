@@ -335,7 +335,10 @@ describe('createPickProgram', () => {
     // A 'body' layer has no single fixed slabIndex — Task 7 widens
     // `pickablesBySlab` to contribute it to every `body-m` row in `ctx.slabs`,
     // the same expansion `executeFrame` applies to the visual program. Two
-    // body-m rows (indices 2, 3) → two pick passes, one drawPick call each.
+    // body-m rows (indices 2, 3) → two pick passes, one drawPick call each —
+    // but ONE shared r32uint target (B1 fix: `pick()` reads a single texel per
+    // row, so every body row reuses the same viewport-sized texture instead of
+    // retaining one pair per row; see `bodyPickTarget` growth test below).
     const { device, createTextureCalls } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
 
@@ -357,7 +360,107 @@ describe('createPickProgram', () => {
 
     await program.pick(10, 10);
     expect(callLog).toEqual(['body-pick', 'body-pick']);
-    expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
+    expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(1);
+  });
+
+  describe('B1 — bounded pick-texture memory across many body rows', () => {
+    it('pick() shares ONE viewport-sized target across every body row and never grows across repeated calls', async () => {
+      const { device, createTextureCalls } = makeDevice();
+      const bodyIds = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus'];
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(bodyIds));
+
+      const callLog: string[] = [];
+      const layers = [
+        makeLayer({
+          name: 'body-pick',
+          slab: 'body',
+          enabled: true,
+          drawPick: () => callLog.push('draw'),
+        }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      await program.pick(10, 10);
+      expect(callLog).toHaveLength(bodyIds.length); // every row still draws
+
+      // ONE shared colour+depth pair for all six body rows — not one pair per
+      // row, which is what regressed to ≈500 MB on a Retina six-body scene
+      // (branch-review B1).
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(1);
+      expect(createTextureCalls.filter((c) => c.format === 'depth32float')).toHaveLength(1);
+
+      // A second pick at the same viewport size reuses the cached pair —
+      // zero NEW textures, regardless of body-row count.
+      await program.pick(20, 20);
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(1);
+      expect(createTextureCalls.filter((c) => c.format === 'depth32float')).toHaveLength(1);
+    });
+
+    it('destroy() releases the shared body target', async () => {
+      const { device } = makeDevice();
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+      const layers = [
+        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      await program.pick(10, 10);
+      const created = (device.createTexture as ReturnType<typeof vi.fn>).mock.results.map(
+        (r) => r.value as { destroy: ReturnType<typeof vi.fn> },
+      );
+      expect(created.length).toBeGreaterThan(0);
+
+      program.destroy();
+      for (const tex of created) {
+        expect(tex.destroy).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it("renderForDebug rebuilds every body row's target fresh each call, destroying the previous call's", () => {
+      // Unlike pick(), the debug overlay needs every active row's FULL raster
+      // alive SIMULTANEOUSLY, so body rows can't share one texture here — the
+      // bound instead is "at most this call's active row count", enforced by
+      // tearing down the previous call's targets before building new ones.
+      const { device, createTextureCalls } = makeDevice();
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+      const layers = [
+        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      const first = program.renderForDebug() as unknown as ReadonlyArray<{
+        destroy: ReturnType<typeof vi.fn>;
+      }>;
+      expect(first).toHaveLength(2); // one colour texture per active body row
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
+
+      program.renderForDebug();
+      // The first call's textures are torn down before the second call
+      // allocates its own — a permanently-growing map would never call
+      // destroy() on the earlier row's texture.
+      for (const tex of first) {
+        expect(tex.destroy).toHaveBeenCalledTimes(1);
+      }
+      // Two fresh textures created on top of the first two — 4 total, not 2
+      // (no reuse across calls) and not unboundedly growing (still just this
+      // call's 2 rows).
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(4);
+    });
   });
 
   it('never allocates pick:near0 at N=1 (no slab-0 pickable layer → one target)', async () => {
