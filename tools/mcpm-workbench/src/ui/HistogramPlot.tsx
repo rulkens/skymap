@@ -9,13 +9,15 @@
  * bars; its value surfaces in the 'M' readout instead (S13, below).
  *
  * S13 fork parity (vendor main.cpp:1589-1622): the four info labels —
- * E (mean), M (top-bin marker), null% and the log base — are drawn straight
- * onto the canvas, right-aligned beside the bars, rather than as DOM text:
- * `ctx.textAlign = 'right'` means a value's width changing can never nudge
- * anything else (the brief's "no layout jump"), and it keeps the readout in
- * the same coordinate space `draw()` already uses for the bars/line.
+ * E (mean), M (top-bin marker), null% and the log base — sit right-aligned
+ * beside the bars. They render as absolutely-positioned DOM rows (so each
+ * carries a CompactInfoTip hover) but `draw()` still measures the SAME
+ * strings with the canvas's own font to reserve the bars' strip width —
+ * right alignment keeps a value's width change from nudging anything else
+ * (the brief's "no layout jump") in both coordinate spaces.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
+import CompactInfoTip from '../../../../src/components/common/CompactInfoTip/CompactInfoTip';
 import { HISTOGRAM_BASE, HISTOGRAM_BINS } from '../sim/createGridBuffers';
 import { useStore } from '../state/useStore';
 import { useAppStore } from './storeContext';
@@ -25,8 +27,7 @@ const COUNT_BIN_COUNT = HISTOGRAM_BINS - 1; // bins 0..15; bin 16 is the max mar
 const MAX_BIN_INDEX = HISTOGRAM_BINS - 1;
 const BAR_GAP_PX = 1;
 const LINE_AREA_FRACTION = 0.4; // bottom 40% of the canvas is the mean-log-trace line
-const READOUT_MARGIN_PX = 4;
-const READOUT_LINE_HEIGHT_PX = 12;
+const READOUT_MARGIN_PX = 4; // mirrored by .readout's 4px offsets in the CSS
 
 function cssVar(el: Element, name: string, fallback: string): string {
   const value = getComputedStyle(el).getPropertyValue(name).trim();
@@ -54,11 +55,33 @@ function sampledTotal(counts: Uint32Array): number {
   return total;
 }
 
+/** The E / M / null% / log-base readout rows, shared by the DOM overlay (which
+ * renders them with hover tips) and `draw()` (which measures them for layout). */
+function readoutLinesFor(counts: Uint32Array, meanLogTraceAtPoints: number): readonly string[] {
+  const peak = counts[MAX_BIN_INDEX] ?? 0;
+  const nullCount = counts[0] ?? 0;
+  const total = sampledTotal(counts);
+  const nullPct = total > 0 ? (100 * nullCount) / total : NaN;
+  return [
+    `E: ${formatSignificant(meanLogTraceAtPoints, 4)}`,
+    `M: ${formatSignificant(peak / 1e5, 4)}`,
+    total > 0 ? `null: ${formatSignificant(nullPct, 2)}%` : 'null: —',
+    `(log ${HISTOGRAM_BASE})`,
+  ];
+}
+
+const READOUT_TIPS: readonly string[] = [
+  'Mean log trace density over the histogram sample points (catalog positions, or random positions with jittered sampling on) — the convergence signal. The line under the bars plots its history; flat means the field has settled.',
+  "Running maximum sampled density — the fork's atomicMax marker bin, not a count. The field's hot ceiling; a reference when sizing the path tracer's trace max majorant.",
+  "Share of samples in the null bin (density ≤ 1e-5): places the swarm hasn't deposited yet. Expect it to fall as the network grows over the points.",
+  'Bin scale — the 16 bars are log-spaced density bins in this base.',
+];
+
 function draw(
   canvas: HTMLCanvasElement,
   counts: Uint32Array,
   history: readonly number[],
-  meanLogTraceAtPoints: number,
+  readoutLines: readonly string[],
 ): void {
   const dpr = window.devicePixelRatio || 1;
   const cssWidth = canvas.clientWidth;
@@ -78,7 +101,6 @@ function draw(
   const barColor = cssVar(canvas, '--color-accent-bright', '#5fb0ff');
   const lineColor = cssVar(canvas, '--color-fg-base', '#e8e8e8');
   const dividerColor = cssVar(canvas, '--border-divider', '#3a3a3a');
-  const mutedColor = cssVar(canvas, '--color-fg-muted', '#c8dcff');
   const readoutFont =
     `${cssVar(canvas, '--font-size-sm', '10px')} ` +
     cssVar(canvas, '--font-family-mono', 'monospace');
@@ -87,21 +109,12 @@ function draw(
   const lineAreaTop = barAreaHeight + 4;
   const lineAreaHeight = cssHeight - lineAreaTop;
 
-  // S13: E / M / null% / log-base — computed and measured BEFORE the bars
-  // below, so the bars can be laid out in a narrower strip that leaves this
-  // text its own column (never overlaid on top of a tall bar). Confined to
-  // the bar area only — the mean-trace line beneath is this project's own
-  // addition (the fork has no such series), so it keeps the full width.
-  const peak = counts[MAX_BIN_INDEX] ?? 0;
-  const nullCount = counts[0] ?? 0;
-  const total = sampledTotal(counts);
-  const nullPct = total > 0 ? (100 * nullCount) / total : NaN;
-  const readoutLines = [
-    `E: ${formatSignificant(meanLogTraceAtPoints, 4)}`,
-    `M: ${formatSignificant(peak / 1e5, 4)}`,
-    total > 0 ? `null: ${formatSignificant(nullPct, 2)}%` : 'null: —',
-    `(log ${HISTOGRAM_BASE})`,
-  ];
+  // S13: the readout column is measured BEFORE the bars so they lay out in a
+  // narrower strip that leaves the DOM rows their own column (never overlaid on
+  // a tall bar). Same strings + same font tokens as `.readout`'s CSS, so the
+  // measurement tracks what actually renders. Confined to the bar area only —
+  // the mean-trace line beneath is this project's own addition (the fork has no
+  // such series), so it keeps the full width.
   ctx.font = readoutFont;
   const readoutWidth = Math.max(...readoutLines.map((line) => ctx.measureText(line).width));
   const barsWidth = Math.max(0, cssWidth - readoutWidth - READOUT_MARGIN_PX * 3);
@@ -150,27 +163,13 @@ function draw(
     });
     ctx.stroke();
   }
-
-  // S13: E / M / null% / log-base, right-aligned so a value's width changing
-  // never shifts anything else. `mutedColor` matches the panel's usual
-  // data-label styling; `E` alone shares `lineColor` — the same series
-  // (meanLogTraceAtPoints) the line beneath the bars already plots, tying
-  // its readout to that line the way the fork ties E's text to the eplot.
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  const rightX = cssWidth - READOUT_MARGIN_PX;
-  let y = READOUT_MARGIN_PX;
-  readoutLines.forEach((line, i) => {
-    ctx.fillStyle = i === 0 ? lineColor : mutedColor;
-    ctx.fillText(line, rightX, y);
-    y += READOUT_LINE_HEIGHT_PX;
-  });
 }
 
 function HistogramPlot(): ReactNode {
   const store = useAppStore();
   const histogram = useStore(store, (s) => s.histogram);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const readoutLines = readoutLinesFor(histogram.counts, histogram.meanLogTraceAtPoints);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -179,7 +178,7 @@ function HistogramPlot(): ReactNode {
       canvas,
       histogram.counts,
       histogram.history.map((sample) => sample.meanLogTraceAtPoints),
-      histogram.meanLogTraceAtPoints,
+      readoutLinesFor(histogram.counts, histogram.meanLogTraceAtPoints),
     );
   }, [histogram]);
 
@@ -187,6 +186,13 @@ function HistogramPlot(): ReactNode {
     <div className={styles.root}>
       <div className={styles.canvasBox}>
         <canvas ref={canvasRef} className={styles.canvas} />
+        <div className={styles.readout}>
+          {readoutLines.map((line, i) => (
+            <CompactInfoTip key={READOUT_TIPS[i]} label={READOUT_TIPS[i]} align="end">
+              <span className={i === 0 ? styles.readoutEmphasis : styles.readoutRow}>{line}</span>
+            </CompactInfoTip>
+          ))}
+        </div>
       </div>
     </div>
   );
