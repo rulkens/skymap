@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
 > (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps
-> use checkbox (`- [ ]`) syntax for tracking.
+> use checkbox (`- [x]`) syntax for tracking.
 
 > **WESL tasks (5, 10):** load the `wesl-shaders` skill (`.claude/skills/wesl-shaders/SKILL.md`)
 > BEFORE touching any `.wesl` file. Linker gotchas that bite here specifically: an imported
@@ -186,19 +186,19 @@ export function packAtmosphereUniforms(
 ): Float32Array;
 ```
 
-- [ ] Update `tests/utils/gpu/packAtmosphereUniforms.test.ts`: drop the
+- [x] Update `tests/utils/gpu/packAtmosphereUniforms.test.ts`: drop the
       `SUN_IRRADIANCE` sentinel and the corresponding call argument; change
       the `rec[23]` assertion from `.toBe(SUN_IRRADIANCE)` to `.toBe(0)`
       with a one-line comment ("the vec3 tail pad — was sunIrradiance,
       structural not content"); keep every other sentinel/assertion as-is.
       Run it — it should FAIL against the current 8-arg packer (confirms
       the test actually exercises the new signature before you change it).
-- [ ] Drop `sunIrradiance` from `AtmosphereParams` (type + all 9 rows) and
+- [x] Drop `sunIrradiance` from `AtmosphereParams` (type + all 9 rows) and
       the header sentence naming it.
-- [ ] Drop the `sunIrradiance` parameter from `packAtmosphereUniforms`;
+- [x] Drop the `sunIrradiance` parameter from `packAtmosphereUniforms`;
       `out[23]` stays unwritten (implicitly 0, per `Float32Array`'s zero
       init).
-- [ ] Rename `sphere.wesl`'s `AtmosphereUniforms.sunIrradiance: f32` field
+- [x] Rename `sphere.wesl`'s `AtmosphereUniforms.sunIrradiance: f32` field
       (line 449) to `_pad1: f32`; update the struct's byte-layout comment
       block (lines 392–432) to match — the "two vec3 tails filled with REAL
       fields" framing (lines 412–415) now only names `bottomRadius`; the
@@ -206,17 +206,17 @@ export function packAtmosphereUniforms(
       touch the two OTHER `sunIrradiance` fields elsewhere in this file
       (`EarthSurfaceUniforms`/`CloudShellUniforms` — see the Global
       Constraints namesake note).
-- [ ] Drop the `params.sunIrradiance` argument from
+- [x] Drop the `params.sunIrradiance` argument from
       `atmosphereShellLayer.ts`'s `packAtmosphereUniforms` call and its
       explaining comment line.
-- [ ] Update `AtmosphereShellRenderer.d.ts`'s `draw` doc comment (line 123)
+- [x] Update `AtmosphereShellRenderer.d.ts`'s `draw` doc comment (line 123)
       to drop "+ sunIrradiance" from the field list.
-- [ ] `npm test -- packAtmosphereUniforms atmosphereShellLayer
+- [x] `npm test -- packAtmosphereUniforms atmosphereShellLayer
     atmosphereShellRenderer atmosphereParams` — green (note: no
       `atmosphereShellLayer.test.ts` exists yet at this point — the glob
       will just match nothing for that name, harmless).
-- [ ] `npm run typecheck` — clean.
-- [ ] Commit:
+- [x] `npm run typecheck` — clean.
+- [x] Commit:
 
 ```
 refactor(atmosphere): delete the unwired sunIrradiance decoy field
@@ -305,7 +305,7 @@ the extra vector math is immaterial next to the GPU draws it gates. Do not
 unrequested change (the backlog item `docs/backlog/2026-08-20-hoist-solar-system-derivations.md`
 names it as separate, longer-tail work).
 
-- [ ] Add the test `atmosphereDrawList derives camPosLocal/sunDirLocal once
+- [x] Add the test `atmosphereDrawList derives camPosLocal/sunDirLocal once
   per body, not per consumer` to `atmosphereDrawList.test.ts`: `vi.mock`
       `src/utils/camera/camPosLocal` and `src/utils/camera/sunDirLocal` (a
       SECOND `vi.mock` block alongside the existing `sceneBodyStates` mock —
@@ -316,18 +316,18 @@ names it as separate, longer-tail work).
       return values (`toBe`, referential — the mocks return fixed arrays).
       This is a wiring/call-count assertion, not a mirror: it does not
       recompute the real formula.
-- [ ] Grow `AtmosphereDrawEntry`, wire the two derivations into
+- [x] Grow `AtmosphereDrawEntry`, wire the two derivations into
       `atmosphereDrawList`'s both push sites.
-- [ ] Rewire `atmosphereShellLayer.draw` to consume the entry's fields;
+- [x] Rewire `atmosphereShellLayer.draw` to consume the entry's fields;
       delete its own derivation + now-unused imports.
-- [ ] Rewire `encodeAtmosphereSkyView` to consume the entry's fields;
+- [x] Rewire `encodeAtmosphereSkyView` to consume the entry's fields;
       delete its own derivation + now-unused imports.
-- [ ] `npm test -- atmosphereDrawList atmosphereShellLayer
+- [x] `npm test -- atmosphereDrawList atmosphereShellLayer
     encodeAtmosphereSkyView` — green. `encodeAtmosphereSkyView.test.ts`
       needs NO edits (it asserts observable packed-uniform values, which
       are bit-identical before/after this pure refactor).
-- [ ] `npm run typecheck` — clean.
-- [ ] Commit:
+- [x] `npm run typecheck` — clean.
+- [x] Commit:
 
 ```
 refactor(atmosphere): hoist camPosLocal/sunDirLocal onto AtmosphereDrawEntry
@@ -354,13 +354,13 @@ Load the `perf` skill (`.claude/skills/perf/SKILL.md`) before running
 anything. Confirm the dev server is running in THIS worktree and get its
 port from the `Local:` line.
 
-- [ ] `npm run perf -- --url http://localhost:<this worktree's port>` —
+- [x] `npm run perf -- --url http://localhost:<this worktree's port>` —
       run against the tree as it stands after Task 2 (no renderer/GPU code
       has changed yet). Record MERGED/PER-LAYER/FLOOR numbers (in this
       plan file's Task 8 section, or the SDD ledger) per the skill's
       interpretation guidance — this is the baseline Task 8 compares
       against.
-- [ ] No commit (measurement only). If a commit is wanted to anchor the
+- [x] No commit (measurement only). If a commit is wanted to anchor the
       baseline in history, a doc-only note is acceptable but not required.
 
 ---
@@ -430,7 +430,7 @@ narrowMat4(invMvp),
 
 (new import: `import { mat4d } from 'wgpu-matrix';`)
 
-- [ ] Add the test `packs a 176-byte / 44-f32 record with invMvp at
+- [x] Add the test `packs a 176-byte / 44-f32 record with invMvp at
   offset 112` to `packAtmosphereUniforms.test.ts`: extend the existing
       sentinel style (a second 16-value recognisable array, e.g. `17..32`,
       distinct from `MVP`'s `1..16` so a swap is caught), assert
@@ -438,15 +438,15 @@ narrowMat4(invMvp),
       equal the `invMvp` sentinel verbatim, alongside re-asserting every
       existing offset 0–27 is unchanged. Run it — FAILS against the
       current 7-arg packer.
-- [ ] Add `invMvp: mat4x4<f32>` to `sphere.wesl`'s `AtmosphereUniforms`
+- [x] Add `invMvp: mat4x4<f32>` to `sphere.wesl`'s `AtmosphereUniforms`
       struct (after `_pad0`) and update the byte-layout comment block
       (lines 392–432) to the table above; the "CPU side uploads 28 f32s"
       line (440) becomes 44.
-- [ ] Grow `packAtmosphereUniforms`'s signature + `ATMOSPHERE_UNIFORM_FLOATS`;
+- [x] Grow `packAtmosphereUniforms`'s signature + `ATMOSPHERE_UNIFORM_FLOATS`;
       add `out.set(invMvp.subarray(0, 16), 28);`.
-- [ ] Add the `mat4d.inverse` call + `narrowMat4(invMvp)` at
+- [x] Add the `mat4d.inverse` call + `narrowMat4(invMvp)` at
       `atmosphereShellLayer.ts`'s call site, per the sketch above.
-- [ ] Create `tests/services/engine/frame/passes/atmosphereShellLayer.test.ts`
+- [x] Create `tests/services/engine/frame/passes/atmosphereShellLayer.test.ts`
       with ONE describe block, `'invMvp inversion sanity (mat4d.inverse
   dst-last / f64 contract)'` — pure math, no GPU/state/ctx mocking needed.
       Hand-pick an `mvp` whose inverse is analytically obvious (e.g. a pure
@@ -464,9 +464,9 @@ narrowMat4(invMvp),
       by hand from the known transform. This is the regression lock named
       in spec §9: "catching a dst-last/f64-wrapper mistake before it
       reaches the GPU."
-- [ ] `npm test -- packAtmosphereUniforms atmosphereShellLayer` — green.
-- [ ] `npm run typecheck` — clean.
-- [ ] Commit:
+- [x] `npm test -- packAtmosphereUniforms atmosphereShellLayer` — green.
+- [x] `npm run typecheck` — clean.
+- [x] Commit:
 
 ```
 feat(atmosphere): grow AtmosphereUniforms with invMvp (112 -> 176 bytes)
@@ -595,22 +595,22 @@ vec4<f32>` only, matching `fsMultiply`/`fsAdd`'s existing shape — do not
   about ("a future edit that forks the two passes' hit tests would
   double-count or drop pixels").
 
-- [ ] Extract `sampleShellRay` from `sampleShell`; add `intersectsGround`
+- [x] Extract `sampleShellRay` from `sampleShell`; add `intersectsGround`
       to `ShellSample`; rewrite `sampleShell` as the thin outside-path
       wrapper. Confirm (read, do not just assume) that `fsMultiply`/`fsAdd`
       need zero edits — they still call `sampleShell(in)` with the same
       signature.
-- [ ] Add `insideVs` to `shell/vertex.wesl`.
-- [ ] Add `insideRayDir`, `fsInsideMultiply`, `fsInsideAdd` to
+- [x] Add `insideVs` to `shell/vertex.wesl`.
+- [x] Add `insideRayDir`, `fsInsideMultiply`, `fsInsideAdd` to
       `shell/fragment.wesl`.
-- [ ] `npm run typecheck` — clean (WESL changes alone do not typically
+- [x] `npm run typecheck` — clean (WESL changes alone do not typically
       break `tsc`, but the `?static` import machinery can surface a linker
       error at build time — also run `npm run build` or at minimum confirm
       `npm run dev`'s console has no shader-compile error for the
       atmosphere shell, since this task has no automated test coverage of
       its own — Task 6's pipeline-descriptor tests are the first automated
       check that these entry points parse and link).
-- [ ] Commit:
+- [x] Commit:
 
 ```
 feat(atmosphere): add inside-shell fragment entry points (WESL only)
@@ -729,18 +729,18 @@ code for one more commit while keeping typecheck AND behaviour green.
 
 **Pipeline-descriptor tests, extending the existing harness (spec §9):**
 
-- [ ] `'shares shellPipelineLayout across all four shell pipelines'` —
+- [x] `'shares shellPipelineLayout across all four shell pipelines'` —
       assert `insideMultiply.layout`, `insideAdd.layout` both `toBe` the
       same reference as `multiply.layout`/`add.layout`.
-- [ ] `'gives fsInsideMultiply the multiply blend and fsInsideAdd the add
+- [x] `'gives fsInsideMultiply the multiply blend and fsInsideAdd the add
   blend, matching the outside pair'` — reuse `blendRole` (or extend it)
       to assert `blendRole(insideMultiply) === 'multiply'`,
       `blendRole(insideAdd) === 'add'`.
-- [ ] `'gives both inside pipelines the always-compare, no-depth-write
+- [x] `'gives both inside pipelines the always-compare, no-depth-write
   profile'` — assert `insideMultiply.depthStencil` `toEqual`
       `{ format: depthFormat, depthWriteEnabled: false, depthCompare:
   'always' }` (and `insideAdd.depthStencil` `toEqual` the same object).
-- [ ] `'draws the inside geometry twice, MULTIPLY before ADD, with no
+- [x] `'draws the inside geometry twice, MULTIPLY before ADD, with no
   vertex/index buffer bound'` — extend the existing pass mock (add a
       `draw: vi.fn(() => order.push('draw'))` stub alongside the existing
       `drawIndexed`) and call `renderer.draw(pass, 'earth',
@@ -748,11 +748,11 @@ code for one more commit while keeping typecheck AND behaviour green.
       `order` is `['multiply', 'draw', 'add', 'draw']` (reusing
       `blendRole`/`descOf`) and that `setVertexBuffer`/`setIndexBuffer`
       were NOT called.
-- [ ] Update the existing `'draws the geometry twice, MULTIPLY before
+- [x] Update the existing `'draws the geometry twice, MULTIPLY before
   ADD'` test's call to pass `false` explicitly as the 4th arg (was a
       3-arg call) — confirms the outside path is unaffected by the new
       branch.
-- [ ] **One deliberate exception to the source-text-grep ban, flagged.**
+- [x] **One deliberate exception to the source-text-grep ban, flagged.**
       `testing.md` bans "asserting a function is called by grepping for
       its name in the file text." Spec §9 explicitly asks for a
       source-level check that `fsInsideMultiply`/`fsInsideAdd` "discard
@@ -769,9 +769,9 @@ code for one more commit while keeping typecheck AND behaviour green.
       fails if a future edit forks one entry point onto its own inline hit
       test instead of the shared function — so a later `testing.md` sweep
       does not bin it as a bare rename-detector.
-- [ ] `npm test -- atmosphereShellRenderer atmosphereShellLayer` — green.
-- [ ] `npm run typecheck` — clean.
-- [ ] Commit:
+- [x] `npm test -- atmosphereShellRenderer atmosphereShellLayer` — green.
+- [x] `npm run typecheck` — clean.
+- [x] Commit:
 
 ```
 feat(atmosphere): two inside-shell pipelines, draw() gains inside arg
@@ -824,7 +824,7 @@ const inside = isInsideAtmosphereShell(camLocal); // camLocal = entry.camPosLoca
 renderer.draw(pass, body.id, packAtmosphereUniforms(...), inside);
 ```
 
-- [ ] Add the test `isInsideAtmosphereShell classifies values straddling
+- [x] Add the test `isInsideAtmosphereShell classifies values straddling
   the unit-sphere boundary` to a new
       `tests/utils/camera/isInsideAtmosphereShell.test.ts`: assert `true`
       for a vector of length `0.999` and `false` for length `1.001` (e.g.
@@ -832,26 +832,26 @@ renderer.draw(pass, body.id, packAtmosphereUniforms(...), inside);
       genuine classifier boundary (`<` vs `<=` would reclassify a camera
       sitting EXACTLY on the shell, an observationally real difference),
       tested straddling the value, not restating the constant `1` itself.
-- [ ] Implement `isInsideAtmosphereShell`.
-- [ ] Add the test `atmosphereDrawList includes Earth when the camera is
+- [x] Implement `isInsideAtmosphereShell`.
+- [x] Add the test `atmosphereDrawList includes Earth when the camera is
   deep inside the atmosphere shell` to `atmosphereDrawList.test.ts`,
       using the existing `camRadiiOut` helper at a radius well under 1
       (e.g. `camRadiiOut(SEEDED_EARTH, 0.5)`) — asserts `list` still has
       length 1 and `list[0]!.body === SEEDED_EARTH`, the explicit
       regression lock spec §4.6 calls for ("this should be verified as an
       explicit test property, not assumed").
-- [ ] Extend `atmosphereShellLayer.test.ts` (from Task 4) with a
+- [x] Extend `atmosphereShellLayer.test.ts` (from Task 4) with a
       `describe('draw — inside/outside dispatch')` block: mock
       `state.gpu.atmosphereShellRenderer.draw` as a spy, drive `draw` with
       a fixture camera well inside the shell and a fixture well outside
       it, and assert the spy's 4th call argument is `true`/`false`
       respectively.
-- [ ] Wire the real trigger into `atmosphereShellLayer.ts`, replacing
+- [x] Wire the real trigger into `atmosphereShellLayer.ts`, replacing
       Task 6's hardcoded `false`.
-- [ ] `npm test -- isInsideAtmosphereShell atmosphereDrawList
+- [x] `npm test -- isInsideAtmosphereShell atmosphereDrawList
     atmosphereShellLayer` — green.
-- [ ] `npm run typecheck` — clean.
-- [ ] Commit:
+- [x] `npm run typecheck` — clean.
+- [x] Commit:
 
 ```
 feat(atmosphere): trigger the inside-shell pass on hypot(camPosLocal) < 1
@@ -872,15 +872,15 @@ still include a body the camera sits deep inside (spec §4.6).
 
 Not a code task beyond whatever this surfaces needing a fix.
 
-- [ ] `npm run perf -- --url http://localhost:<this worktree's port>` —
+- [x] `npm run perf -- --url http://localhost:<this worktree's port>` —
       run against the tree as it stands after Task 7. Compare MERGED/
       PER-LAYER/FLOOR numbers against Task 3's baseline.
-- [ ] **Land/park is the user's ruling.** A neutral-or-negative
+- [x] **Land/park is the user's ruling.** A neutral-or-negative
       measurement halts the pipeline here (`feedback_code_is_liability`) —
       report the numbers, do not argue past a bad result on process
       momentum. If parked, stop here; Tasks 9–12 do not proceed until this
       is resolved.
-- [ ] If landed: no separate commit — record the numbers in the SDD ledger
+- [x] If landed: no separate commit — record the numbers in the SDD ledger
       or this plan file.
 
 ---
@@ -890,23 +890,23 @@ Not a code task beyond whatever this surfaces needing a fix.
 **Not a code task.** Requires the user's own eyes at the dev server. Do
 not commit anything as part of this task.
 
-- [ ] Fly Earth's camera down through the atmosphere shell boundary on the
+- [x] Fly Earth's camera down through the atmosphere shell boundary on the
       DAY side. Confirm: the haze thickens into a full sky dome with no
       pop or gap at the crossing (spec §4.5 — the trigger is a hard
       switch, but both sides evaluate the identical `sampleShellRay`
       integral against the identical LUTs, so the crossing should be
       seamless by construction).
-- [ ] Same descent on the NIGHT side. Confirm: stars visible near the
+- [x] Same descent on the NIGHT side. Confirm: stars visible near the
       boundary, hidden once deep inside if sun-lit, visible again once
       past the terminator into shadow.
-- [ ] Confirm star/Milky Way/galaxy washout under bright day sky (the
+- [x] Confirm star/Milky Way/galaxy washout under bright day sky (the
       compositor-alpha mechanism, spec §4.3) — and confirm the swap-chain
       label layer is UNAFFECTED (drawn after the `foreground:0 -> hdr`
       composite, never washed out).
-- [ ] Fly into Mars's and Titan's atmosphere shells — sanity pass only
+- [x] Fly into Mars's and Titan's atmosphere shells — sanity pass only
       (correct hue, no crash, no blank frame), not a tuning pass (spec
       §6).
-- [ ] **Ruling recorded, not assumed.** If any of the above reads wrong,
+- [x] **Ruling recorded, not assumed.** If any of the above reads wrong,
       stop here — do not proceed to Task 10 on an un-landed Task 4–7
       feature.
 
@@ -967,7 +967,7 @@ LOOK dial, not a re-derivation of the z7 math — read
 touching it, and re-tune against the dev server in Task 10's own visual QA
 step, not by calculation alone.
 
-- [ ] Create `tests/services/gpu/renderers/bodies/cloudShellRenderer.test.ts`,
+- [x] Create `tests/services/gpu/renderers/bodies/cloudShellRenderer.test.ts`,
       mirroring `atmosphereShellRenderer.test.ts`'s `mockDevice()` harness
       (cite it, do not re-derive independently). Test:
       `'builds two shell pipelines identical except cullMode'` — assert
@@ -975,26 +975,26 @@ step, not by calculation alone.
       and `primitive.cullMode` differs (`'back'` outside, `'front'`
       inside). Test: `'draws with the front-cull pipeline when inside,
   back-cull when outside'` — mirror Task 6's dispatch-order test shape.
-- [ ] Add `insideShell` to `CloudShellDraw`; add the second pipeline +
+- [x] Add `insideShell` to `CloudShellDraw`; add the second pipeline +
       `inside` arg to `cloudShellRenderer.draw`; update
       `CloudShellRenderer.d.ts`.
-- [ ] Update `cloudShellLayer.test.ts` for the new `CloudShellDraw` field
+- [x] Update `cloudShellLayer.test.ts` for the new `CloudShellDraw` field
       and the `draw()` call's 3rd argument.
-- [ ] Re-tune `fadeEndAltitudeRadii` at the dev server — descend through
+- [x] Re-tune `fadeEndAltitudeRadii` at the dev server — descend through
       the cloud deck and confirm it stays visible through the transition
       to fine surface tiles rather than vanishing before the cull fix ever
       gets a chance to matter.
-- [ ] **Visual QA, own line (spec §9):** overcast reads correctly from
+- [x] **Visual QA, own line (spec §9):** overcast reads correctly from
       below the deck at low altitude; the deck neither vanishes early nor
       pops at the old ~238 km edge.
-- [ ] `npm run perf -- --url http://localhost:<this worktree's port>` —
+- [x] `npm run perf -- --url http://localhost:<this worktree's port>` —
       own checkpoint (spec §9's closing note: "the cloud shell now
       potentially double-sided at low altitude" is a distinct perf
       question from Tasks 3/8's atmosphere-shell measurement). Land/park
       per the same halt rule.
-- [ ] `npm test -- cloudShellRenderer cloudShellLayer` — green.
-- [ ] `npm run typecheck` — clean.
-- [ ] Commit:
+- [x] `npm test -- cloudShellRenderer cloudShellLayer` — green.
+- [x] `npm run typecheck` — clean.
+- [x] Commit:
 
 ```
 fix(bodies): cloud deck stays visible from inside its own shell
@@ -1027,21 +1027,21 @@ inside the shell, so the overlap was invisible; now there is. This task
 tunes the two existing constants against what Tasks 4–9 shipped — it does
 not redesign either fade.
 
-- [ ] At the dev server, descend through the overlap band on Earth's day
+- [x] At the dev server, descend through the overlap band on Earth's day
       and night sides with the inside-shell sky live. Judge whether the
       base-globe fade and the new sky read coherently together (no visible
       seam, no double-darkening, no premature globe fade-out against a sky
       that's still clearly "outside").
-- [ ] If a re-tune is warranted, change ONLY the two constants — this is a
+- [x] If a re-tune is warranted, change ONLY the two constants — this is a
       look dial, not a structural change. Record the before/after values
       in the commit body.
-- [ ] If no re-tune is warranted, record that finding (a doc-only note in
+- [x] If no re-tune is warranted, record that finding (a doc-only note in
       the commit, or skip the commit entirely if truly nothing changes) —
       do not tune for the sake of tuning.
-- [ ] `npm test` — green (these constants have no dedicated unit test per
+- [x] `npm test` — green (these constants have no dedicated unit test per
       `testing.md`'s "no constant restatement" rule; this is a visual
       judgment call, not a test-driven change).
-- [ ] Commit (only if values changed):
+- [x] Commit (only if values changed):
 
 ```
 fix(bodies): re-tune the base-globe descent fade against the inside-shell sky
@@ -1058,22 +1058,22 @@ against the now-visible inside-shell sky at the dev server.
 
 **Not a code task** beyond whatever this surfaces needing a fix.
 
-- [ ] `npm test` — full suite green (7200+ tests, no new failures).
-- [ ] `npm run typecheck` — both tsconfigs clean.
-- [ ] Run the `comment-audit` skill over every file this plan touched or
+- [x] `npm test` — full suite green (7200+ tests, no new failures).
+- [x] `npm run typecheck` — both tsconfigs clean.
+- [x] Run the `comment-audit` skill over every file this plan touched or
       created — the comment budget (module header ≤10 lines, ≤half the
       code lines) is a standing constraint, not a suggestion, and a plan
       this size accumulates header drift across 10 code commits.
-- [ ] Walk the Definition of Done checklist above against the actual diff:
+- [x] Walk the Definition of Done checklist above against the actual diff:
       every deliverable exists, every named observable behaviour was
       confirmed at Tasks 9/10/11, the deferral boundary was not crossed
       (no froxel work, no sun-glare pass, no non-Earth tuning, no
       `atmosphereDrawList` cull-rule change, no LUT bake change, no
       per-body irradiance falloff).
-  - [ ] `git log` confirms every commit landed in the order this plan
+  - [x] `git log` confirms every commit landed in the order this plan
         specifies (T7 before T8/T9; T4–T7's inside-mode wiring never left
         a broken intermediate state per Task 6's placeholder note).
-- [ ] Hand off to `/feature-done` for the DoD audit + backlog sweep.
+- [x] Hand off to `/feature-done` for the DoD audit + backlog sweep.
 
 ---
 
