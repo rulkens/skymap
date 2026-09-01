@@ -16,7 +16,6 @@ import { deriveGridBox } from '../../field/deriveGridBox';
 import { BYTES_PER_ELEMENT } from '../../sim/createGridBuffers';
 import { minFeasibleVoxelSizeMpc } from '../../sim/minFeasibleVoxelSizeMpc';
 import { estimateGridBudgetBytes } from '../../sim/planGridBudget';
-import { useStore } from '../../state/useStore';
 import {
   fitBoxToCatalog,
   setManualCenterMpc,
@@ -25,7 +24,7 @@ import {
   setShowGridBox,
   setVoxelSizeMpc,
 } from '../../state/slices/gridSlice';
-import { useAppStore } from '../storeContext';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { formatBytes } from '../formatBytes';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import { AXES } from './utils/AXES';
@@ -38,10 +37,10 @@ import { withAxis } from './utils/withAxis';
 import styles from './GridBoxPanel.module.css';
 
 function GridBoxPanel(): ReactNode {
-  const store = useAppStore();
-  const grid = useStore(store, (s) => s.grid);
-  const catalogBoundsMpc = useStore(store, (s) => s.catalog.catalogBoundsMpc);
-  const agentCount = useStore(store, (s) => s.sim.agentCount);
+  const dispatch = useAppDispatch();
+  const grid = useAppSelector((s) => s.grid);
+  const catalogBoundsMpc = useAppSelector((s) => s.catalog.catalogBoundsMpc);
+  const agentCount = useAppSelector((s) => s.sim.agentCount);
   const box = deriveGridBox(grid);
   // Same total-bytes formula planGridBudget uses to refuse a build (one home,
   // shared) — no device limits needed here since this is a live estimate, not
@@ -91,14 +90,14 @@ function GridBoxPanel(): ReactNode {
         label="show box"
         on={grid.showGridBox}
         info="Keeps the box wireframe and its drag handles on screen, instead of only the 200ms flash after a slider edit."
-        onChange={(on) => store.setState((s) => ({ ...s, grid: setShowGridBox(s.grid, on) }))}
+        onChange={(on) => dispatch(setShowGridBox(on))}
       />
       <Button
         className={styles.autoFitButton}
         disabled={!catalogBoundsMpc}
         onClick={() => {
           if (!catalogBoundsMpc) return;
-          store.setState((s) => ({ ...s, grid: fitBoxToCatalog(s.grid, catalogBoundsMpc) }));
+          dispatch(fitBoxToCatalog(catalogBoundsMpc));
         }}
       >
         auto fit
@@ -113,12 +112,7 @@ function GridBoxPanel(): ReactNode {
           type="number"
           style={fieldStyle}
           value={grid.paddingMpc}
-          onChange={(e) =>
-            store.setState((s) => ({
-              ...s,
-              grid: setPaddingMpc(s.grid, parseFloat(e.target.value)),
-            }))
-          }
+          onChange={(e) => dispatch(setPaddingMpc(parseFloat(e.target.value)))}
         />
       </label>
       {/* One wrapper for all seven sliders: consecutive ParamSliders space by their
@@ -136,7 +130,7 @@ function GridBoxPanel(): ReactNode {
           step={VOXEL_SIZE_STEP_MPC}
           format={(v) => v.toFixed(2)}
           info={voxelSizeInfo}
-          onChange={(v) => store.setState((s) => ({ ...s, grid: setVoxelSizeMpc(s.grid, v) }))}
+          onChange={(v) => dispatch(setVoxelSizeMpc(v))}
           path="grid.manualVoxelSizeMpc"
         />
         {AXES.map(({ axis, label }) => (
@@ -149,12 +143,7 @@ function GridBoxPanel(): ReactNode {
             step={1}
             format={(v) => v.toFixed(0)}
             info="Centre of the simulated box (Mpc)."
-            onChange={(v) =>
-              store.setState((s) => ({
-                ...s,
-                grid: setManualCenterMpc(s.grid, withAxis(s.grid.manualCenterMpc, axis, v)),
-              }))
-            }
+            onChange={(v) => dispatch(setManualCenterMpc(withAxis(grid.manualCenterMpc, axis, v)))}
             path={`grid.manualCenterMpc.${axis}`}
           />
         ))}
@@ -168,12 +157,7 @@ function GridBoxPanel(): ReactNode {
             step={5}
             format={(v) => v.toFixed(0)}
             info="Extent of the simulated box along this axis (Mpc)."
-            onChange={(v) =>
-              store.setState((s) => ({
-                ...s,
-                grid: setManualSizeMpc(s.grid, withAxis(s.grid.manualSizeMpc, axis, v)),
-              }))
-            }
+            onChange={(v) => dispatch(setManualSizeMpc(withAxis(grid.manualSizeMpc, axis, v)))}
             path={`grid.manualSizeMpc.${axis}`}
           />
         ))}

@@ -1,7 +1,9 @@
 /**
- * App — the MCPM Workbench shell. Creates the single Store once, provides
- * it to the tree, and stacks the HUD + controls over the WebGPU Viewport —
- * mirroring tools/flow-workbench's App.
+ * App — the MCPM Workbench shell. Creates the store once and mounts the
+ * redux `<Provider>` here (not `hooks.ts`) — this is the store's construction
+ * site, exactly the role `src/main.tsx` plays for the main app's `<Provider>`.
+ * Stacks the HUD + controls over the WebGPU Viewport, mirroring
+ * tools/flow-workbench's App.
  *
  * Dev-only drag-drop (spec §9): dropping the fork's packed `.bin` + its
  * `_metadata.txt` together parses them via `loadPackedCatalog`, derives
@@ -11,13 +13,13 @@
  * consumer reads `catalog.packedOverride` the same way it reads a fetch.
  */
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react';
-import { createStore } from '../../state/createStore';
+import { Provider } from 'react-redux';
+import { createWorkbenchStore } from '../../store/createWorkbenchStore';
 import { defaultAppState } from '../../state/defaultAppState';
 import { deriveAgentWeights } from '../../field/deriveAgentWeights';
 import { loadPackedCatalog } from '../../field/loadPackedCatalog';
 import { setCatalogLoadStatus, setPackedCatalog } from '../../state/slices/catalogSlice';
-import { useStore } from '../../state/useStore';
-import { StoreContext } from '../storeContext';
+import { useAppSelector } from '../../store/hooks';
 import Viewport from '../Viewport/Viewport';
 import ControlsPanel from '../ControlsPanel/ControlsPanel';
 import HistogramDock from '../HistogramDock/HistogramDock';
@@ -27,16 +29,16 @@ import { readDroppedPackedCatalog } from './utils/readDroppedPackedCatalog';
 import { statusStyle } from './utils/statusStyle';
 
 function App(): ReactNode {
-  const store = useMemo(() => createStore(defaultAppState), []);
+  const { store } = useMemo(() => createWorkbenchStore(defaultAppState), []);
   const [packedStatus, setPackedStatus] = useState<string | null>(null);
-  const catalogStatusMessage = useStore(store, (s) => s.catalog.statusMessage);
+  const catalogStatusMessage = useAppSelector((s) => s.catalog.statusMessage);
 
   const onDrop = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     if (!import.meta.env.DEV) return;
     void readDroppedPackedCatalog(Array.from(e.dataTransfer.files)).then((dropped) => {
       if (!dropped) return;
-      store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'loading') }));
+      store.dispatch(setCatalogLoadStatus('loading'));
       try {
         const { points, declaredCount, declaredMeanWeight } = loadPackedCatalog(
           dropped.bin,
@@ -46,25 +48,28 @@ function App(): ReactNode {
         // no forked maths (brief's contract).
         const weights = deriveAgentWeights(
           points.log10StellarMass,
-          store.getSnapshot().catalog.weightMode,
+          store.getState().catalog.weightMode,
         );
-        store.setState((st) => ({
-          ...st,
-          catalog: setPackedCatalog(st.catalog, points, weights.nanCount, dropped.sourceName),
-        }));
+        store.dispatch(
+          setPackedCatalog({
+            points,
+            nanFillCount: weights.nanCount,
+            sourceName: dropped.sourceName,
+          }),
+        );
         setPackedStatus(
           `packed catalog "${dropped.sourceName}": ${points.count.toLocaleString()} pts ` +
             `(declared ${declaredCount.toLocaleString()}), declared mean weight ${declaredMeanWeight}`,
         );
       } catch (err) {
-        store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'error') }));
+        store.dispatch(setCatalogLoadStatus('error'));
         setPackedStatus(`packed catalog load failed: ${(err as Error).message}`);
       }
     });
   };
 
   return (
-    <StoreContext.Provider value={store}>
+    <Provider store={store}>
       <div onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
         <Viewport store={store} />
         <Hud />
@@ -73,7 +78,7 @@ function App(): ReactNode {
         {catalogStatusMessage && <div style={catalogStatusStyle}>{catalogStatusMessage}</div>}
         {import.meta.env.DEV && packedStatus && <div style={statusStyle}>{packedStatus}</div>}
       </div>
-    </StoreContext.Provider>
+    </Provider>
   );
 }
 

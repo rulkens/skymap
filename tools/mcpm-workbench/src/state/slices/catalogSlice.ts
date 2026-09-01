@@ -140,70 +140,13 @@ export const catalogSlice = createSlice({
   },
 });
 
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCatalogSources(
-  prev: CatalogSlice,
-  sources: readonly SourceType[],
-): CatalogSlice {
-  return catalogSlice.reducer(prev, catalogSlice.actions.setCatalogSources(sources));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCatalogTier(prev: CatalogSlice, tier: Tier): CatalogSlice {
-  return catalogSlice.reducer(prev, catalogSlice.actions.setCatalogTier(tier));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCatalogLoadStatus(
-  prev: CatalogSlice,
-  loadStatus: CatalogSlice['loadStatus'],
-): CatalogSlice {
-  return catalogSlice.reducer(prev, catalogSlice.actions.setCatalogLoadStatus(loadStatus));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCatalogLoaded(
-  prev: CatalogSlice,
-  pointCount: number,
-  nanFillCount: number,
-  boundsMpc: CatalogSlice['catalogBoundsMpc'],
-): CatalogSlice {
-  return catalogSlice.reducer(
-    prev,
-    catalogSlice.actions.setCatalogLoaded({ pointCount, nanFillCount, boundsMpc }),
-  );
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCatalogStatusMessage(
-  prev: CatalogSlice,
-  statusMessage: string | null,
-): CatalogSlice {
-  return catalogSlice.reducer(prev, catalogSlice.actions.setCatalogStatusMessage(statusMessage));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCatalogBuildError(prev: CatalogSlice, message: string): CatalogSlice {
-  return catalogSlice.reducer(prev, catalogSlice.actions.setCatalogBuildError(message));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setWeightMode(
-  prev: CatalogSlice,
-  weightMode: CatalogSlice['weightMode'],
-): CatalogSlice {
-  return catalogSlice.reducer(prev, catalogSlice.actions.setWeightMode(weightMode));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setPackedCatalog(
-  prev: CatalogSlice,
-  points: CatalogPoints,
-  nanFillCount: number,
-  sourceName: string,
-): CatalogSlice {
-  return catalogSlice.reducer(
-    prev,
-    catalogSlice.actions.setPackedCatalog({ points, nanFillCount, sourceName }),
-  );
-}
+export const {
+  setCatalogSources,
+  setCatalogTier,
+  setCatalogLoadStatus,
+  setCatalogLoaded,
+  setCatalogStatusMessage,
+  setCatalogBuildError,
+  setWeightMode,
+  setPackedCatalog,
+} = catalogSlice.actions;

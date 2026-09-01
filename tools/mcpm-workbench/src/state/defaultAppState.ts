@@ -1,4 +1,4 @@
-import type { AppState } from '../../@types/AppState';
+import type { RootState } from '../store/types';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
 import { defaultCatalogSlice } from './slices/catalogSlice';
 import { defaultGridSlice } from './slices/gridSlice';
@@ -19,7 +19,7 @@ const PROBE_VOXEL_SIZE_MPC = 3.125;
 const PROBE_AGENT_COUNT = 100_000;
 
 /** defaultAppState — the store's seed value, one slice default per field. */
-export const defaultAppState: AppState = hasUrlGate('probe')
+export const defaultAppState: RootState = hasUrlGate('probe')
   ? {
       catalog: defaultCatalogSlice,
       // Grid derivation is always the manual path ("auto fit" is a one-shot

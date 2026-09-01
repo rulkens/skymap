@@ -56,26 +56,4 @@ export const histogramSlice = createSlice({
   },
 });
 
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function recordHistogramSample(
-  prev: HistogramSlice,
-  counts: Uint32Array,
-  sampledCount: number,
-  densities: Float32Array,
-  stepCount: number,
-): HistogramSlice {
-  return histogramSlice.reducer(
-    prev,
-    histogramSlice.actions.recordHistogramSample({ counts, sampledCount, densities, stepCount }),
-  );
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setSampleRandomly(prev: HistogramSlice, sampleRandomly: boolean): HistogramSlice {
-  return histogramSlice.reducer(prev, histogramSlice.actions.setSampleRandomly(sampleRandomly));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function resetHistogram(prev: HistogramSlice): HistogramSlice {
-  return histogramSlice.reducer(prev, histogramSlice.actions.resetHistogram());
-}
+export const { recordHistogramSample, setSampleRandomly, resetHistogram } = histogramSlice.actions;

@@ -6,10 +6,8 @@
  * this module owns the hover/drag closures and applies drag deltas through the grid/view
  * setters.
  */
-import type { AppState } from '../../@types/AppState';
 import type { GizmoDragState } from '../../@types/GizmoDragState';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
-import type { Store } from '../../@types/Store';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';
 import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
@@ -25,6 +23,7 @@ import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { setManualCenterMpc, setManualSizeMpc, setRotation } from '../state/slices/gridSlice';
 import { setCameraDistance, setCameraTarget, setCameraYawPitch } from '../state/slices/viewSlice';
+import type { RootState, WorkbenchStore } from '../store/types';
 import { arrowLengthMpcFor } from './arrowLengthMpcFor';
 import { isAxisDrag } from './isAxisDrag';
 import { rayFromPointer } from './rayFromPointer';
@@ -39,12 +38,12 @@ const PAN_SPEED = 0.0016;
 
 export type ViewportInputDeps = {
   readonly canvas: HTMLCanvasElement;
-  readonly store: Store<AppState>;
+  readonly store: WorkbenchStore;
   /** The persistent-toggle/post-edit-flash pair of boxWireframeVisible's three reasons
    *  (F1.7) — Viewport's own render-loop state (`showGridBox`, `boxPreviewUntil`). The
    *  third reason, an in-flight gizmo drag, is this module's own state and is ORed in by
    *  `isWireframeVisible` below, so callers never recombine the three by hand. */
-  readonly isPreviewVisible: (s: AppState, now: number) => boolean;
+  readonly isPreviewVisible: (s: RootState, now: number) => boolean;
 };
 
 export type ViewportInput = {
@@ -67,7 +66,7 @@ export type ViewportInput = {
   /** boxWireframeVisible's full OR (F1.7): the gizmo hit-test/hover-pick below must agree
    *  with frame()'s draw call exactly, or picking an invisible handle would hijack an
    *  orbit click while the wireframe is off. */
-  isWireframeVisible(s: AppState, now: number): boolean;
+  isWireframeVisible(s: RootState, now: number): boolean;
 };
 
 export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
@@ -83,12 +82,12 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   let gizmoDragging: GizmoDragState | null = null;
   let hoverHandle: GizmoHandleId | null = null;
 
-  function isWireframeVisible(s: AppState, now: number): boolean {
+  function isWireframeVisible(s: RootState, now: number): boolean {
     return isPreviewVisible(s, now) || gizmoDragging !== null;
   }
 
   const onPointerDown = (e: PointerEvent): void => {
-    const s = store.getSnapshot();
+    const s = store.getState();
     if (isWireframeVisible(s, performance.now())) {
       const pendingBox = deriveGridBox(s.grid);
       const ray = rayFromPointer(canvas, e, s);
@@ -135,7 +134,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   };
 
   const onPointerMove = (e: PointerEvent): void => {
-    const s = store.getSnapshot();
+    const s = store.getState();
 
     if (gizmoDragging) {
       if (isAxisDrag(gizmoDragging)) {
@@ -146,7 +145,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
         const deltaMpc = param - drag.anchorAxisParam;
         if (drag.handle.kind === 'translate') {
           const centerMpc = applyTranslateDrag(drag.anchorBox, axisDir, deltaMpc);
-          store.setState((st) => ({ ...st, grid: setManualCenterMpc(st.grid, centerMpc) }));
+          store.dispatch(setManualCenterMpc(centerMpc));
         } else {
           const { centerMpc, sizeMpc } = applyResizeDrag(
             drag.anchorBox,
@@ -155,10 +154,8 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
             drag.handle.sign,
             deltaMpc,
           );
-          store.setState((st) => ({
-            ...st,
-            grid: setManualSizeMpc(setManualCenterMpc(st.grid, centerMpc), sizeMpc),
-          }));
+          store.dispatch(setManualCenterMpc(centerMpc));
+          store.dispatch(setManualSizeMpc(sizeMpc));
         }
       } else {
         // Fixed-anchor recompute (spec §5): every pointermove recomputes rotation' from the
@@ -180,7 +177,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
             quatFromAxisAngle(axisDir, angleNow - drag.anchorAngleRad),
             drag.anchorRotation,
           );
-          store.setState((st) => ({ ...st, grid: setRotation(st.grid, rotation) }));
+          store.dispatch(setRotation(rotation));
         }
       }
       return;
@@ -209,39 +206,31 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
       // Right/middle-drag pans the orbit target along the camera's right/up axes,
       // grab-the-world signs and screen-constant dist*0.0016 px rate — both
       // galaxy-renderer's createOrbitCameraInput, so the two tools share one hand feel.
-      store.setState((s) => {
-        const { yaw, pitch, distance, targetMpc } = s.view.camera;
-        const cosY = Math.cos(yaw);
-        const sinY = Math.sin(yaw);
-        const cosP = Math.cos(pitch);
-        const sinP = Math.sin(pitch);
-        const k = distance * PAN_SPEED;
-        const next: Vec3 = [
-          targetMpc[0] + (-cosY * dx + -sinP * sinY * dy) * k,
-          targetMpc[1] + cosP * dy * k,
-          targetMpc[2] + (sinY * dx + -sinP * cosY * dy) * k,
-        ];
-        return { ...s, view: setCameraTarget(s.view, next) };
-      });
+      const { yaw, pitch, distance, targetMpc } = s.view.camera;
+      const cosY = Math.cos(yaw);
+      const sinY = Math.sin(yaw);
+      const cosP = Math.cos(pitch);
+      const sinP = Math.sin(pitch);
+      const k = distance * PAN_SPEED;
+      const next: Vec3 = [
+        targetMpc[0] + (-cosY * dx + -sinP * sinY * dy) * k,
+        targetMpc[1] + cosP * dy * k,
+        targetMpc[2] + (sinY * dx + -sinP * cosY * dy) * k,
+      ];
+      store.dispatch(setCameraTarget(next));
       return;
     }
     const { dYaw, dPitch } = orbitDragDelta(dx, dy, DRAG_SPEED);
-    store.setState((s) => ({
-      ...s,
-      view: setCameraYawPitch(s.view, s.view.camera.yaw - dYaw, s.view.camera.pitch + dPitch),
-    }));
+    store.dispatch(
+      setCameraYawPitch({ yaw: s.view.camera.yaw - dYaw, pitch: s.view.camera.pitch + dPitch }),
+    );
   };
 
   const onContextMenu = (e: Event): void => e.preventDefault();
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
-    store.setState((s) => ({
-      ...s,
-      view: setCameraDistance(
-        s.view,
-        exponentialZoomDistance(s.view.camera.distance, e.deltaY, ZOOM_SPEED),
-      ),
-    }));
+    const { distance } = store.getState().view.camera;
+    store.dispatch(setCameraDistance(exponentialZoomDistance(distance, e.deltaY, ZOOM_SPEED)));
   };
 
   return {

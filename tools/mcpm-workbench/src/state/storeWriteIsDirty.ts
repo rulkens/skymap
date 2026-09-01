@@ -1,4 +1,4 @@
-import type { AppState } from '../../@types/AppState';
+import type { RootState } from '../store/types';
 
 /**
  * storeWriteIsDirty — did a store write change anything the frame loop draws, or
@@ -14,7 +14,7 @@ import type { AppState } from '../../@types/AppState';
  * pins the interaction boost on for the whole time a sim is running, since a
  * running sim always has fresh histogram writes a few hundred ms apart).
  */
-export function storeWriteIsDirty(prev: AppState, next: AppState): boolean {
+export function storeWriteIsDirty(prev: RootState, next: RootState): boolean {
   if (prev === next) return false;
   return (
     prev.catalog !== next.catalog ||
@@ -29,7 +29,7 @@ export function storeWriteIsDirty(prev: AppState, next: AppState): boolean {
   );
 }
 
-function isSimMeaningfullyChanged(prev: AppState['sim'], next: AppState['sim']): boolean {
+function isSimMeaningfullyChanged(prev: RootState['sim'], next: RootState['sim']): boolean {
   if (prev === next) return false;
   return (
     prev.params !== next.params ||

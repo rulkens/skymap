@@ -10,10 +10,8 @@
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { AgentWeights } from '../../../@types/AgentWeights';
-import type { AppState } from '../../../@types/AppState';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { McpmHarness } from '../../../@types/McpmHarness';
-import type { Store } from '../../../@types/Store';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
 import { initGpu, resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
@@ -49,8 +47,17 @@ import { createTokenWatcher } from '../../state/tokenWatcher';
 import { setMaxBufferBytes, setResolvedGrid } from '../../state/slices/gridSlice';
 import { recordHistogramSample, resetHistogram } from '../../state/slices/histogramSlice';
 import { incrementStep, resetStepCount } from '../../state/slices/simSlice';
-import { defaultViewSlice, setFps, setPreviewPacked } from '../../state/slices/viewSlice';
+import {
+  defaultViewSlice,
+  setAutoRotate,
+  setCameraDistance,
+  setCameraTarget,
+  setCameraYawPitch,
+  setFps,
+  setPreviewPacked,
+} from '../../state/slices/viewSlice';
 import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
+import type { WorkbenchStore } from '../../store/types';
 import { frameNeedsRender } from '../frameNeedsRender';
 import { BOX_PREVIEW_MS } from './utils/BOX_PREVIEW_MS';
 import { canvasStyle } from './utils/canvasStyle';
@@ -74,7 +81,7 @@ type ProbeWindow = {
 };
 
 export type ViewportProps = {
-  readonly store: Store<AppState>;
+  readonly store: WorkbenchStore;
 };
 
 function Viewport({ store }: ViewportProps): ReactNode {
@@ -111,15 +118,15 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // REQUESTED, not "last built": the frame loop notifies this subscriber every
     // frame (the step counter is store state), so the guard has to compare against
     // what a build was last asked for or every frame would request another one.
-    let requestedCatalogKey = JSON.stringify(catalogKey(store.getSnapshot()));
-    let requestedBuildKey = JSON.stringify(buildKey(store.getSnapshot()));
+    let requestedCatalogKey = JSON.stringify(catalogKey(store.getState()));
+    let requestedBuildKey = JSON.stringify(buildKey(store.getState()));
     let buildGeneration = 0;
     let building = false;
-    const resetTokenWatcher = createTokenWatcher(store.getSnapshot().sim.resetToken);
-    const clearTraceTokenWatcher = createTokenWatcher(store.getSnapshot().sim.clearTraceToken);
-    const exportTokenWatcher = createTokenWatcher(store.getSnapshot().sim.exportToken);
-    const scfdTokenWatcher = createTokenWatcher(store.getSnapshot().sim.scfdToken);
-    let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getSnapshot()));
+    const resetTokenWatcher = createTokenWatcher(store.getState().sim.resetToken);
+    const clearTraceTokenWatcher = createTokenWatcher(store.getState().sim.clearTraceToken);
+    const exportTokenWatcher = createTokenWatcher(store.getState().sim.exportToken);
+    const scfdTokenWatcher = createTokenWatcher(store.getState().sim.scfdToken);
+    let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getState()));
     let boxPreviewUntil = 0;
     // T18 preview-export view: a second TracePass over a packed-cube buffer, owned by
     // RenderGraph (attachPreviewTrace/drawPreviewTrace/disposePreviewTrace — task R7),
@@ -130,11 +137,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // the live trace once `stepCount` moves past it (spec's "STALE").
     let previewBuffer: GPUBuffer | null = null;
     let previewPackedAtStep = -1;
-    let lastPreviewPacked = store.getSnapshot().view.raymarch.previewPacked;
+    let lastPreviewPacked = store.getState().view.raymarch.previewPacked;
     // T20: jittered-position samples and data-point samples are differently-defined
     // statistics under the same `meanLogTraceAtPoints` name — every toggle edge clears
     // `history` (below) so the two never ride the same convergence curve.
-    let lastSampleRandomly = store.getSnapshot().histogram.sampleRandomly;
+    let lastSampleRandomly = store.getState().histogram.sampleRandomly;
     // null whenever the path tracer is off — reaching this frame with the layer freshly
     // turned on always differs from null, so enabling it always resets, per the
     // accumulation contract (task-V2A-report.md).
@@ -161,7 +168,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // and cleared once per frame() tick. Starts true so a freshly (re)built harness
     // always draws its first frame.
     let dirty = true;
-    let lastDirtyCheckState = store.getSnapshot();
+    let lastDirtyCheckState = store.getState();
     // Reset alongside the accumulator itself (same volpathKey edge, below) — see
     // ViewSlice.d.ts's pathTracer.sampleCap doc comment.
     let volpathSampleCount = 0;
@@ -177,7 +184,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
     // lifetime, so installing the getter once here (rather than per-build) is enough.
     if (hasUrlGate('probe')) {
       (window as unknown as ProbeWindow).__mcpmProbeMeanLogTraceAtPoints = () =>
-        store.getSnapshot().histogram.meanLogTraceAtPoints;
+        store.getState().histogram.meanLogTraceAtPoints;
     }
 
     /** Frees the T18 preview pass (RenderGraph's own) + its packed buffer
@@ -211,7 +218,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       const pts = points;
       const weights = latestWeights;
       if (!h || !pts || !weights) return;
-      const s = store.getSnapshot();
+      const s = store.getState();
       try {
         const readback = await h.readbackTrace();
         const stem = downloadStem(new Date());
@@ -275,7 +282,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         const readback = await h.readbackTrace();
         const values = widenTrace(readback);
         if (disposed || harness !== h) return;
-        if (!store.getSnapshot().view.raymarch.previewPacked) return;
+        if (!store.getState().view.raymarch.previewPacked) return;
         disposePreview();
         const packed = previewPackedTrace(h.gpu.device, values, h.box);
         previewBuffer = packed.buffer;
@@ -283,13 +290,13 @@ function Viewport({ store }: ViewportProps): ReactNode {
           traceBuffer: packed.buffer,
           box: h.box,
           element: packed.element,
-          paletteId: store.getSnapshot().view.raymarch.paletteId,
+          paletteId: store.getState().view.raymarch.paletteId,
         });
-        previewPackedAtStep = store.getSnapshot().sim.stepCount;
+        previewPackedAtStep = store.getState().sim.stepCount;
       } catch (err) {
         console.error('mcpm-workbench: preview packed trace failed', err);
         disposePreview();
-        store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
+        store.dispatch(setPreviewPacked(false));
       }
     }
 
@@ -305,16 +312,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
       try {
         const { counts, sampledCount, densities } = await h.readHistogram();
         if (disposed || harness !== h) return;
-        store.setState((st) => ({
-          ...st,
-          histogram: recordHistogramSample(
-            st.histogram,
-            counts,
-            sampledCount,
-            densities,
-            stepCount,
-          ),
-        }));
+        store.dispatch(recordHistogramSample({ counts, sampledCount, densities, stepCount }));
       } catch (err) {
         console.error('mcpm-workbench: histogram readback failed', err);
       } finally {
@@ -344,7 +342,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         const h = harness;
         const graph = renderGraph;
 
-        const s = store.getSnapshot();
+        const s = store.getState();
         const now = performance.now();
         if (h && s.sim.running) {
           simFrameCounter += 1;
@@ -356,7 +354,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           if (simFrameCounter % cadenceDivisor === 0) {
             h.step(s.sim.params, s.histogram.sampleRandomly);
             const nextStepCount = s.sim.stepCount + 1;
-            store.setState((st) => ({ ...st, sim: incrementStep(st.sim) }));
+            store.dispatch(incrementStep());
             if (nextStepCount % HISTOGRAM_INTERVAL_STEPS === 0) void runHistogram(h, nextStepCount);
           }
         }
@@ -405,7 +403,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
             const fpsRounded = Math.round(1000 / fpsEma);
             if (fpsRounded !== lastPushedFps) {
               lastPushedFps = fpsRounded;
-              store.setState((st) => ({ ...st, view: setFps(st.view, fpsRounded) }));
+              store.dispatch(setFps(fpsRounded));
             }
             lastFpsPushTime = now;
           }
@@ -429,7 +427,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           });
           if (graph.hasPreviewTrace()) {
             disposePreview();
-            store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
+            store.dispatch(setPreviewPacked(false));
           }
         }
         if (h && s.view.pathTracer.paletteId !== attachedVolpathPalette) {
@@ -470,7 +468,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
           } else {
             if (s.view.raymarch.previewPacked && graph.hasPreviewTrace()) {
               disposePreview();
-              store.setState((st) => ({ ...st, view: setPreviewPacked(st.view, false) }));
+              store.dispatch(setPreviewPacked(false));
             }
             graph.drawTrace(encoder, traceViewFor(s, h.box, cam), effectiveRaymarchDivisor);
           }
@@ -571,13 +569,9 @@ function Viewport({ store }: ViewportProps): ReactNode {
         if (disposed || currentDevice !== gpu.device || info.reason === 'destroyed') return;
         if (rafHandle) cancelAnimationFrame(rafHandle);
         rafHandle = 0;
-        store.setState((st) => ({
-          ...st,
-          catalog: setCatalogStatusMessage(
-            st.catalog,
-            `GPU device lost (${info.reason}) — reload the page`,
-          ),
-        }));
+        store.dispatch(
+          setCatalogStatusMessage(`GPU device lost (${info.reason}) — reload the page`),
+        );
       });
       return gpu;
     }
@@ -600,13 +594,12 @@ function Viewport({ store }: ViewportProps): ReactNode {
     }
 
     async function buildFromPoints(pts: CatalogPoints, generation: number): Promise<void> {
-      const s = store.getSnapshot();
+      const s = store.getState();
       const weights = deriveAgentWeights(pts.log10StellarMass, s.catalog.weightMode);
       const boundsMpc = pts.count > 0 ? catalogBounds(pts.positions) : null;
-      store.setState((st) => ({
-        ...st,
-        catalog: setCatalogLoaded(st.catalog, pts.count, weights.nanCount, boundsMpc),
-      }));
+      store.dispatch(
+        setCatalogLoaded({ pointCount: pts.count, nanFillCount: weights.nanCount, boundsMpc }),
+      );
 
       const box = deriveGridBox(s.grid);
       // Free the old device memory BEFORE allocating the new grids: the two sets of
@@ -631,10 +624,10 @@ function Viewport({ store }: ViewportProps): ReactNode {
       }
       harness = h;
       latestWeights = weights;
-      resetTokenWatcher.sync(store.getSnapshot().sim.resetToken);
-      clearTraceTokenWatcher.sync(store.getSnapshot().sim.clearTraceToken);
-      exportTokenWatcher.sync(store.getSnapshot().sim.exportToken);
-      scfdTokenWatcher.sync(store.getSnapshot().sim.scfdToken);
+      resetTokenWatcher.sync(store.getState().sim.resetToken);
+      clearTraceTokenWatcher.sync(store.getState().sim.clearTraceToken);
+      exportTokenWatcher.sync(store.getState().sim.exportToken);
+      scfdTokenWatcher.sync(store.getState().sim.scfdToken);
       // disposeHarness() (above, via disposePreview()) already freed the old
       // preview pass/buffer; forcing the edge low re-packs against the fresh
       // harness on the subscriber's next tick, IF the toggle was left on.
@@ -651,21 +644,19 @@ function Viewport({ store }: ViewportProps): ReactNode {
         h.element,
         h.gpu.device.limits,
       );
-      store.setState((st) => ({
-        ...st,
-        // V2: records the device's real per-buffer ceiling once a GPU exists — non-user,
-        // does not clear importedBox — so deriveGridBox can clamp every FUTURE derivation
-        // (this build's own `box` above was already derived, unclamped, against the prior
-        // value or null; that's fine, it either already fit or the refusal above caught it).
-        grid: setMaxBufferBytes(
-          setResolvedGrid(st.grid, box, h.element, budget),
-          h.gpu.device.limits.maxStorageBufferBindingSize,
-        ),
-        sim: resetStepCount(st.sim),
-        // A new grid box / catalog never continues the old convergence curve — same
-        // reasoning as the resetToken path below, same one-line fix.
-        histogram: resetHistogram(st.histogram),
-      }));
+      // V2: records the device's real per-buffer ceiling once a GPU exists — non-user,
+      // does not clear importedBox — so deriveGridBox can clamp every FUTURE derivation
+      // (this build's own `box` above was already derived, unclamped, against the prior
+      // value or null; that's fine, it either already fit or the refusal above caught it).
+      // Four separate dispatches, not one combined write: none of these fields feed
+      // catalogKey/buildKey/gridShapeOf (grep confirms), so the subscriber below can't
+      // mistake this for a rebuild-worthy change no matter how it's split.
+      store.dispatch(setResolvedGrid({ box, resolvedElement: h.element, byteBudget: budget }));
+      store.dispatch(setMaxBufferBytes(h.gpu.device.limits.maxStorageBufferBindingSize));
+      store.dispatch(resetStepCount());
+      // A new grid box / catalog never continues the old convergence curve — same
+      // reasoning as the resetToken path below, same one-line fix.
+      store.dispatch(resetHistogram());
 
       const makeShader = (code: string, label: string): GPUShaderModule =>
         h.gpu.device.createShaderModule({ code, label });
@@ -697,11 +688,11 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
     /** One build against the live snapshot, reloading the catalog only if its key moved. */
     async function buildOnce(generation: number): Promise<void> {
-      const s = store.getSnapshot();
+      const s = store.getState();
       const ck = JSON.stringify(catalogKey(s));
       try {
         if (!points || ck !== loadedCatalogKey) {
-          store.setState((st) => ({ ...st, catalog: setCatalogLoadStatus(st.catalog, 'loading') }));
+          store.dispatch(setCatalogLoadStatus('loading'));
           // A dev-dropped packed catalog (App.tsx) wins outright — sticky for the
           // session, same as the doc comment on CatalogSlice's packedOverride field.
           // Otherwise `?probe` (probeGpuErrors.ts) swaps ONLY the next line — a
@@ -723,23 +714,19 @@ function Viewport({ store }: ViewportProps): ReactNode {
           // scene (camera + gizmo stay live) and surface a human status instead of
           // letting createMcpmHarness's own guard throw.
           await buildEmptyScene(generation);
-          store.setState((st) => ({
-            ...st,
-            catalog: setCatalogStatusMessage(
-              setCatalogLoaded(st.catalog, 0, 0, null),
+          store.dispatch(setCatalogLoaded({ pointCount: 0, nanFillCount: 0, boundsMpc: null }));
+          store.dispatch(
+            setCatalogStatusMessage(
               'no catalog points — enable a source or pick a tier that carries one',
             ),
-          }));
+          );
           return;
         }
         await buildFromPoints(points, generation);
       } catch (err) {
         console.error('mcpm-workbench: build failed', err);
         if (!disposed) {
-          store.setState((st) => ({
-            ...st,
-            catalog: setCatalogBuildError(st.catalog, (err as Error).message),
-          }));
+          store.dispatch(setCatalogBuildError((err as Error).message));
         }
       }
     }
@@ -770,7 +757,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
     const unsubscribe = store.subscribe(() => {
       if (disposed) return;
-      const s = store.getSnapshot();
+      const s = store.getState();
 
       // Task FLE: one check feeds both render-on-demand's dirty flag AND the
       // interaction-priority boost trigger — the fps-only write is excluded inside
@@ -799,15 +786,19 @@ function Viewport({ store }: ViewportProps): ReactNode {
       if (harness) {
         if (resetTokenWatcher.changed(s.sim.resetToken)) {
           harness.reset(s.sim.initMode, s.sim.seed);
-          store.setState((st) => ({
-            ...st,
-            sim: resetStepCount(st.sim),
-            histogram: resetHistogram(st.histogram),
-            // Reset restores framing too, deliberately: the orbit target is absolute
-            // world Mpc, not box-relative, so nothing else recenters the camera onto
-            // the box — this is the one recovery path for "camera drifted".
-            view: { ...st.view, camera: defaultViewSlice.camera },
-          }));
+          store.dispatch(resetStepCount());
+          store.dispatch(resetHistogram());
+          // Reset restores framing too, deliberately: the orbit target is absolute
+          // world Mpc, not box-relative, so nothing else recenters the camera onto
+          // the box — this is the one recovery path for "camera drifted". Four
+          // dispatches (one per camera field), not a whole-object write — RTK has
+          // no single "replace this nested object" action, and every field here is
+          // outside catalogKey/buildKey/gridShapeOf so the split has no rebuild side effect.
+          const { camera } = defaultViewSlice;
+          store.dispatch(setCameraYawPitch({ yaw: camera.yaw, pitch: camera.pitch }));
+          store.dispatch(setCameraDistance(camera.distance));
+          store.dispatch(setCameraTarget(camera.targetMpc));
+          store.dispatch(setAutoRotate(camera.autoRotate));
         }
         if (clearTraceTokenWatcher.changed(s.sim.clearTraceToken)) {
           harness.clearTrace();
@@ -823,7 +814,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
         // into one curve, so every edge clears history (and counts/mean) outright.
         if (s.histogram.sampleRandomly !== lastSampleRandomly) {
           lastSampleRandomly = s.histogram.sampleRandomly;
-          store.setState((st) => ({ ...st, histogram: resetHistogram(st.histogram) }));
+          store.dispatch(resetHistogram());
         }
         // T18: a boolean edge, not a token — ControlsPanel's checkbox already
         // IS the one-shot trigger (checking it twice without unchecking is a

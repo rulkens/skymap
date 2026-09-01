@@ -1,4 +1,4 @@
-import type { AppState } from '../../../../@types/AppState';
+import type { RootState } from '../../../store/types';
 
 /**
  * `packedDropId`/`packedSourceName` stand in for the dropped catalog's
@@ -9,6 +9,6 @@ import type { AppState } from '../../../../@types/AppState';
  * run, so re-dropping a regenerated file — the realistic repeat workflow —
  * would leave a name-only key unchanged and silently starve the reload.
  */
-export function catalogKey(s: AppState): unknown[] {
+export function catalogKey(s: RootState): unknown[] {
   return [s.catalog.sources, s.catalog.tier, s.catalog.packedDropId, s.catalog.packedSourceName];
 }

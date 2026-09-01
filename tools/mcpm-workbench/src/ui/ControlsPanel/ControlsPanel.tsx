@@ -19,7 +19,6 @@ import { tierTarget } from '../../../../../src/data/tierTargets';
 import { downloadStem } from '../../export/downloadStem';
 import { triggerDownload } from '../../export/triggerDownload';
 import { deriveGridBox } from '../../field/deriveGridBox';
-import { useStore } from '../../state/useStore';
 import {
   setCatalogSources,
   setCatalogTier,
@@ -56,7 +55,7 @@ import {
   setPreviewPacked,
   setRaymarchPaletteId,
 } from '../../state/slices/viewSlice';
-import { useAppStore } from '../storeContext';
+import { useAppDispatch, useAppSelector, useAppStore } from '../../store/hooks';
 import PaletteRow from '../PaletteRow/PaletteRow';
 import Toggle from '../Toggle/Toggle';
 import ToggleRow from '../ToggleRow/ToggleRow';
@@ -68,10 +67,11 @@ import { RAYMARCH_SLIDERS } from './utils/RAYMARCH_SLIDERS';
 import styles from './ControlsPanel.module.css';
 
 function ControlsPanel(): ReactNode {
+  const dispatch = useAppDispatch();
   const store = useAppStore();
-  const sim = useStore(store, (s) => s.sim);
-  const catalog = useStore(store, (s) => s.catalog);
-  const view = useStore(store, (s) => s.view);
+  const sim = useAppSelector((s) => s.sim);
+  const catalog = useAppSelector((s) => s.catalog);
+  const view = useAppSelector((s) => s.view);
   // No open/close slice for the workbench's panel sections yet — CollapsibleSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
@@ -82,7 +82,7 @@ function ControlsPanel(): ReactNode {
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
   const [pathTracerOpen, setPathTracerOpen] = useState(false);
   const toggleLayer = (layer: keyof ViewSlice['layers']) => (on: boolean) =>
-    store.setState((s) => ({ ...s, view: setLayerEnabled(s.view, layer, on) }));
+    dispatch(setLayerEnabled({ layer, on }));
 
   // V3: save/load a McpmParams + agent count + init mode + grid box preset,
   // the same shape emitTraceSidecar's provenance.params rides (exportParams).
@@ -92,7 +92,7 @@ function ControlsPanel(): ReactNode {
   const paramsFileInputRef = useRef<HTMLInputElement>(null);
 
   const onSaveParams = (): void => {
-    const s = store.getSnapshot();
+    const s = store.getState();
     // deriveGridBox is never null: grid derivation is always the manual path
     // (S13.5), and manualCenterMpc/manualSizeMpc always have a value.
     const json = exportParams({
@@ -116,24 +116,18 @@ function ControlsPanel(): ReactNode {
       .text()
       .then((text) => {
         const imported = importParams(text);
-        store.setState((s) => ({
-          ...s,
-          sim: setAgentCount(
-            { ...s.sim, params: imported.params, initMode: imported.initMode },
-            imported.agentCount,
-          ),
-          grid: installImportedBox(s.grid, imported.gridBox),
-          // Folded into this same update, not a follow-up setState: Viewport's
-          // subscriber branches on catalog identity FIRST when both catalogKey and
-          // buildKey move together, and buildOnce always re-reads deriveGridBox(s.grid)
-          // off the live snapshot at build time — so one combined write can never
-          // race the box install, it just yields one rebuild instead of two. Omitted
-          // field (pre-S15 preset) ⇒ leave the current selection untouched.
-          catalog:
-            imported.sources !== undefined
-              ? setCatalogSources(s.catalog, imported.sources)
-              : s.catalog,
-        }));
+        // Grid/sim first, catalog LAST (only if present): Viewport's subscriber treats a
+        // catalog-identity (`catalogKey`) change as the immediate, undebounced rebuild
+        // trigger and reads the whole live state at that point — dispatching the catalog
+        // action after every other field lands means that one rebuild already sees the
+        // new grid box/agent count/params, matching the old single combined write's
+        // "one rebuild, not two" behaviour despite this now being several dispatches.
+        for (const key of MCPM_PARAM_KEYS)
+          dispatch(setSimParam({ key, value: imported.params[key] }));
+        dispatch(setInitMode(imported.initMode));
+        dispatch(setAgentCount(imported.agentCount));
+        dispatch(installImportedBox(imported.gridBox));
+        if (imported.sources !== undefined) dispatch(setCatalogSources(imported.sources));
         setParamsStatus(null);
       })
       .catch((err: unknown) => {
@@ -153,29 +147,19 @@ function ControlsPanel(): ReactNode {
             label="running"
             on={sim.running}
             info="Steps the simulation every frame. Pause to let the path tracer accumulate and to take stable exports."
-            onChange={(on) => store.setState((s) => ({ ...s, sim: setRunning(s.sim, on) }))}
+            onChange={(on) => dispatch(setRunning(on))}
           />
           <ToggleRow
             label="seed around data"
             on={sim.initMode === 'aroundData'}
             info="Seeds agents near catalog points instead of uniformly across the grid, so the fit converges onto the survey volume faster."
-            onChange={(on) =>
-              store.setState((s) => ({
-                ...s,
-                sim: setInitMode(s.sim, on ? 'aroundData' : 'uniform'),
-              }))
-            }
+            onChange={(on) => dispatch(setInitMode(on ? 'aroundData' : 'uniform'))}
           />
           <ToggleRow
             label="weight by mass"
             on={catalog.weightMode === 'stellarMass'}
             info="Data-point deposits scale with each galaxy's stellar mass; off, every data point deposits equally. Free agents always deposit at a flat weight either way."
-            onChange={(on) =>
-              store.setState((s) => ({
-                ...s,
-                catalog: setWeightMode(s.catalog, on ? 'stellarMass' : 'uniform'),
-              }))
-            }
+            onChange={(on) => dispatch(setWeightMode(on ? 'stellarMass' : 'uniform'))}
           />
           {/* reset / clear trace: momentary commands, not state — the slice records
               a request the Viewport consumes on its next frame. Divided from the
@@ -184,15 +168,12 @@ function ControlsPanel(): ReactNode {
               than the panel's other buttons so the pair reads as secondary to the
               run/seed/weight toggles it now sits under. */}
           <div className={styles.simActions}>
-            <Button
-              className={styles.simActionButton}
-              onClick={() => store.setState((s) => ({ ...s, sim: requestReset(s.sim) }))}
-            >
+            <Button className={styles.simActionButton} onClick={() => dispatch(requestReset())}>
               reset
             </Button>
             <Button
               className={styles.simActionButton}
-              onClick={() => store.setState((s) => ({ ...s, sim: requestClearTrace(s.sim) }))}
+              onClick={() => dispatch(requestClearTrace())}
             >
               clear trace
             </Button>
@@ -209,9 +190,7 @@ function ControlsPanel(): ReactNode {
                   step={spec.step}
                   info={spec.info}
                   value={sim.params[id]}
-                  onChange={(v) =>
-                    store.setState((s) => ({ ...s, sim: setSimParam(s.sim, id, v) }))
-                  }
+                  onChange={(v) => dispatch(setSimParam({ key: id, value: v }))}
                   path={`sim.params.${id}`}
                 />
               );
@@ -224,7 +203,7 @@ function ControlsPanel(): ReactNode {
               value={sim.agentCount}
               format={(v) => `${(v / 1_000_000).toFixed(1)}M`}
               info="Structural: changing it rebuilds the harness and reseeds the swarm."
-              onChange={(v) => store.setState((s) => ({ ...s, sim: setAgentCount(s.sim, v) }))}
+              onChange={(v) => dispatch(setAgentCount(v))}
               path="sim.agentCount"
             />
           </SliderGroup>
@@ -250,7 +229,7 @@ function ControlsPanel(): ReactNode {
               hint={tierTarget(s, catalog.tier) === 0 ? `not in ${catalog.tier} tier` : undefined}
               onChange={(on) => {
                 const next = toggleCatalogSource(catalog.sources, s, on);
-                store.setState((st) => ({ ...st, catalog: setCatalogSources(st.catalog, next) }));
+                dispatch(setCatalogSources(next));
               }}
             />
           ))}
@@ -270,9 +249,7 @@ function ControlsPanel(): ReactNode {
                   key={tier}
                   label={tier}
                   on={catalog.tier === tier}
-                  onToggle={() =>
-                    store.setState((s) => ({ ...s, catalog: setCatalogTier(s.catalog, tier) }))
-                  }
+                  onToggle={() => dispatch(setCatalogTier(tier))}
                 />
               ))}
             </div>
@@ -292,7 +269,7 @@ function ControlsPanel(): ReactNode {
           <ToggleRow
             label="additive blend"
             on={view.raymarch.additive}
-            onChange={(on) => store.setState((s) => ({ ...s, view: setAdditive(s.view, on) }))}
+            onChange={(on) => dispatch(setAdditive(on))}
           />
           {/* T18: on demand, not a mode — Viewport packs once on the rising edge
               and un-checks this itself once the sim steps past that snapshot. */}
@@ -300,13 +277,11 @@ function ControlsPanel(): ReactNode {
             label="preview packed export"
             on={view.raymarch.previewPacked}
             info="Marches the packed export cube (real packLogTraceVoxels) instead of the live trace — a structure check, not a brightness match. Goes stale and reverts on the next sim step."
-            onChange={(on) => store.setState((s) => ({ ...s, view: setPreviewPacked(s.view, on) }))}
+            onChange={(on) => dispatch(setPreviewPacked(on))}
           />
           <PaletteRow
             value={view.raymarch.paletteId}
-            onChange={(id) =>
-              store.setState((s) => ({ ...s, view: setRaymarchPaletteId(s.view, id) }))
-            }
+            onChange={(id) => dispatch(setRaymarchPaletteId(id))}
           />
           <SliderGroup title="Trace">
             {RAYMARCH_SLIDERS.map((spec) => (
@@ -320,10 +295,7 @@ function ControlsPanel(): ReactNode {
                 format={spec.format}
                 info={spec.info}
                 onChange={(v) =>
-                  store.setState((s) => ({
-                    ...s,
-                    view: RAYMARCH_SETTERS[spec.key](s.view, spec.log ? Math.pow(10, v) : v),
-                  }))
+                  dispatch(RAYMARCH_SETTERS[spec.key](spec.log ? Math.pow(10, v) : v))
                 }
                 path={`view.raymarch.${spec.key}`}
               />
@@ -338,7 +310,7 @@ function ControlsPanel(): ReactNode {
               step={1}
               format={(v) => v.toFixed(0)}
               info="Marches into a floor(size/divisor) offscreen target and bilinear-upsamples it in, instead of straight into the frame. Fragment cost falls with the square of the divisor; 3 matches the main app's volume row."
-              onChange={(v) => store.setState((s) => ({ ...s, view: setDivisor(s.view, v) }))}
+              onChange={(v) => dispatch(setDivisor(v))}
               path="view.raymarch.divisor"
             />
           </SliderGroup>
@@ -359,7 +331,7 @@ function ControlsPanel(): ReactNode {
             step={0.05}
             format={(v) => v.toFixed(2)}
             info="Brightness multiplier on the resolved agent splat."
-            onChange={(v) => store.setState((s) => ({ ...s, view: setAgentIntensity(s.view, v) }))}
+            onChange={(v) => dispatch(setAgentIntensity(v))}
             path="view.agents.intensity"
           />
           <ParamSlider
@@ -370,7 +342,7 @@ function ControlsPanel(): ReactNode {
             step={1}
             format={(v) => v.toFixed(0)}
             info="Per-agent splat footprint, in whole pixels — the splat compute kernel writes a discrete square, unlike the Galaxies layer's continuously-sized quad."
-            onChange={(v) => store.setState((s) => ({ ...s, view: setAgentPointSize(s.view, v) }))}
+            onChange={(v) => dispatch(setAgentPointSize(v))}
             path="view.agents.pointSizePx"
           />
         </CollapsibleSection>
@@ -390,7 +362,7 @@ function ControlsPanel(): ReactNode {
             step={0.05}
             format={(v) => v.toFixed(2)}
             info="Brightness of each catalog dot, before its own mass weighting."
-            onChange={(v) => store.setState((s) => ({ ...s, view: setGalaxyIntensity(s.view, v) }))}
+            onChange={(v) => dispatch(setGalaxyIntensity(v))}
             path="view.galaxies.intensity"
           />
           <ParamSlider
@@ -401,7 +373,7 @@ function ControlsPanel(): ReactNode {
             step={0.5}
             format={(v) => v.toFixed(1)}
             info="Screen-space dot radius — constant with distance, so far galaxies stay visible."
-            onChange={(v) => store.setState((s) => ({ ...s, view: setGalaxyPointSize(s.view, v) }))}
+            onChange={(v) => dispatch(setGalaxyPointSize(v))}
             path="view.galaxies.pointSizePx"
           />
         </CollapsibleSection>
@@ -418,9 +390,7 @@ function ControlsPanel(): ReactNode {
               while exploring. */}
           <PaletteRow
             value={view.pathTracer.paletteId}
-            onChange={(id) =>
-              store.setState((s) => ({ ...s, view: setPathTracerPaletteId(s.view, id) }))
-            }
+            onChange={(id) => dispatch(setPathTracerPaletteId(id))}
           />
           <SliderGroup title="Trace">
             {PATHTRACER_SLIDERS.map((spec) => (
@@ -434,10 +404,9 @@ function ControlsPanel(): ReactNode {
                 format={spec.format}
                 info={spec.info}
                 onChange={(v) =>
-                  store.setState((s) => ({
-                    ...s,
-                    view: setPathTracerParam(s.view, spec.key, spec.log ? Math.pow(10, v) : v),
-                  }))
+                  dispatch(
+                    setPathTracerParam({ key: spec.key, value: spec.log ? Math.pow(10, v) : v }),
+                  )
                 }
                 path={`view.pathTracer.${spec.key}`}
               />
@@ -452,9 +421,7 @@ function ControlsPanel(): ReactNode {
               step={1}
               format={(v) => v.toFixed(0)}
               info="Accumulates into floor(size/divisor), samples/sec up with divisor². Auto-boosts to 4 while the camera moves."
-              onChange={(v) =>
-                store.setState((s) => ({ ...s, view: setPathTracerDivisor(s.view, v) }))
-              }
+              onChange={(v) => dispatch(setPathTracerDivisor(v))}
               path="view.pathTracer.divisor"
             />
             <ParamSlider
@@ -465,9 +432,7 @@ function ControlsPanel(): ReactNode {
               step={64}
               format={(v) => v.toFixed(0)}
               info="Progressive accumulator stops forcing a render past this many samples (Monte Carlo noise falls as 1/sqrt(N)). Raising it while capped resumes accumulation without a reset; lowering it just goes idle sooner."
-              onChange={(v) =>
-                store.setState((s) => ({ ...s, view: setPathTracerSampleCap(s.view, v) }))
-              }
+              onChange={(v) => dispatch(setPathTracerSampleCap(v))}
               path="view.pathTracer.sampleCap"
             />
           </SliderGroup>
@@ -475,9 +440,7 @@ function ControlsPanel(): ReactNode {
             label="compressive"
             on={view.pathTracer.compressive}
             info="Tonemap each sample before accumulating (the fork's LDR accumulation) instead of averaging linear radiance."
-            onChange={(on) =>
-              store.setState((s) => ({ ...s, view: setPathTracerCompressive(s.view, on) }))
-            }
+            onChange={(on) => dispatch(setPathTracerCompressive(on))}
           />
         </CollapsibleSection>
       </div>
@@ -489,20 +452,14 @@ function ControlsPanel(): ReactNode {
             only Viewport's harness closure can actually call readbackTrace,
             so this button can only request; Viewport's token-diff effect is
             the consumer that performs the readback and triggerDownloads. */}
-        <Button
-          className={styles.actionButton}
-          onClick={() => store.setState((s) => ({ ...s, sim: requestExport(s.sim) }))}
-        >
+        <Button className={styles.actionButton} onClick={() => dispatch(requestExport())}>
           download trace
         </Button>
         {/* T17 leg 2: same one-shot token pattern, downloading a
             ready-to-serve `.scfd` through the SAME packing code
             (packLogTraceVoxels/encodeScalarField) the offline
             buildRhizomeVolume importer uses. */}
-        <Button
-          className={styles.actionButton}
-          onClick={() => store.setState((s) => ({ ...s, sim: requestScfdExport(s.sim) }))}
-        >
+        <Button className={styles.actionButton} onClick={() => dispatch(requestScfdExport())}>
           download .scfd
         </Button>
         {/* V3: unlike the two exports above, this runs synchronously right

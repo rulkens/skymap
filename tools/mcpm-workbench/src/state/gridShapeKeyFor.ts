@@ -1,9 +1,9 @@
-import type { AppState } from '../../@types/AppState';
+import type { RootState } from '../store/types';
 import { gridShapeOf } from './gridShapeOf';
 
 /** `gridShapeOf`'s fields, serialized — a change here restarts the pending-box preview timer
  *  (Viewport.tsx's `boxPreviewUntil`). "Auto fit" (fitBoxToCatalog) is covered for free: it's a
  *  one-shot write to manualCenterMpc/manualSizeMpc, not a field this key has to track separately. */
-export function gridShapeKeyFor(s: AppState): unknown[] {
+export function gridShapeKeyFor(s: RootState): unknown[] {
   return Object.values(gridShapeOf(s.grid));
 }

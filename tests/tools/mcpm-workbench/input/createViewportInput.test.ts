@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { AppState } from '../../../../tools/mcpm-workbench/@types/AppState';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import { createViewportInput } from '../../../../tools/mcpm-workbench/src/input/createViewportInput';
 import { gizmoArrowLengthMpc } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoArrowLengthMpc';
-import { createStore } from '../../../../tools/mcpm-workbench/src/state/createStore';
+import { createWorkbenchStore } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
+import type { PreloadedState } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
 import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defaultAppState';
 
 /**
@@ -73,7 +73,7 @@ describe('createViewportInput — translate-drag state machine (task R6 seam)', 
       voxelSizeMpc: 200 / 256,
       rotation: [0, 0, 0, 1],
     };
-    const state: AppState = {
+    const state: PreloadedState = {
       ...defaultAppState,
       grid: { ...defaultAppState.grid, importedBox },
       view: {
@@ -81,7 +81,7 @@ describe('createViewportInput — translate-drag state machine (task R6 seam)', 
         camera: { yaw: 0, pitch: 0, distance: DISTANCE, autoRotate: false, targetMpc: [0, 0, 0] },
       },
     };
-    const store = createStore(state);
+    const { store } = createWorkbenchStore(state);
     const input = createViewportInput({
       canvas: fakeCanvas(),
       store,
@@ -93,7 +93,7 @@ describe('createViewportInput — translate-drag state machine (task R6 seam)', 
 
     input.onPointerMove(pointerEvent(clientXFor(ndcXForWorldX(3 * arrowLengthMpc))));
 
-    const grid = store.getSnapshot().grid;
+    const grid = store.getState().grid;
     expect(grid.manualCenterMpc[0]).toBeCloseTo(2 * arrowLengthMpc, 6);
     expect(grid.manualCenterMpc[1]).toBeCloseTo(0, 6);
     expect(grid.manualCenterMpc[2]).toBeCloseTo(0, 6);
@@ -102,14 +102,14 @@ describe('createViewportInput — translate-drag state machine (task R6 seam)', 
 
   it('pointercancel ends a gizmo drag exactly as pointerup does (minor 7)', () => {
     const arrowLengthMpc = gizmoArrowLengthMpc([0, 0, DISTANCE], [0, 0, 0], FOV_Y_RAD);
-    const state: AppState = {
+    const state: PreloadedState = {
       ...defaultAppState,
       view: {
         ...defaultAppState.view,
         camera: { yaw: 0, pitch: 0, distance: DISTANCE, autoRotate: false, targetMpc: [0, 0, 0] },
       },
     };
-    const store = createStore(state);
+    const { store } = createWorkbenchStore(state);
     const input = createViewportInput({
       canvas: fakeCanvas(),
       store,
@@ -122,10 +122,10 @@ describe('createViewportInput — translate-drag state machine (task R6 seam)', 
     input.onPointerCancel();
     expect(input.getDragHandleId()).toBeNull();
 
-    const centerAfterCancel = store.getSnapshot().grid.manualCenterMpc;
+    const centerAfterCancel = store.getState().grid.manualCenterMpc;
     // A cancelled sequence's later pointermove must fall to the un-captured branch (hover
     // recompute only) rather than the drag branch — nothing should mutate the grid box.
     input.onPointerMove(pointerEvent(clientXFor(ndcXForWorldX(3 * arrowLengthMpc))));
-    expect(store.getSnapshot().grid.manualCenterMpc).toEqual(centerAfterCancel);
+    expect(store.getState().grid.manualCenterMpc).toEqual(centerAfterCancel);
   });
 });

@@ -158,128 +158,28 @@ export const viewSlice = createSlice({
   },
 });
 
-// transitional wrappers — deleted when call sites move to dispatch (Task 3)
-export function setLayerEnabled(
-  prev: ViewSlice,
-  layer: keyof ViewSlice['layers'],
-  on: boolean,
-): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setLayerEnabled({ layer, on }));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setGalaxyIntensity(prev: ViewSlice, intensity: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setGalaxyIntensity(intensity));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setGalaxyPointSize(prev: ViewSlice, pointSizePx: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setGalaxyPointSize(pointSizePx));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setAgentIntensity(prev: ViewSlice, intensity: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setAgentIntensity(intensity));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setAgentPointSize(prev: ViewSlice, pointSizePx: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setAgentPointSize(pointSizePx));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setFps(prev: ViewSlice, fps: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setFps(fps));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCameraYawPitch(prev: ViewSlice, yaw: number, pitch: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setCameraYawPitch({ yaw, pitch }));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCameraDistance(prev: ViewSlice, distance: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setCameraDistance(distance));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setCameraTarget(prev: ViewSlice, targetMpc: Vec3): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setCameraTarget(targetMpc));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setAutoRotate(prev: ViewSlice, autoRotate: boolean): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setAutoRotate(autoRotate));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setOpticalThickness(prev: ViewSlice, opticalThickness: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setOpticalThickness(opticalThickness));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setRaymarchPaletteId(prev: ViewSlice, paletteId: ScalarFieldPaletteId): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setRaymarchPaletteId(paletteId));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setTrimDensity(prev: ViewSlice, trimDensity: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setTrimDensity(trimDensity));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setSampleWeight(prev: ViewSlice, sampleWeight: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setSampleWeight(sampleWeight));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setStepVoxels(prev: ViewSlice, stepVoxels: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setStepVoxels(stepVoxels));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setAdditive(prev: ViewSlice, additive: boolean): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setAdditive(additive));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setDivisor(prev: ViewSlice, divisor: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setDivisor(divisor));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setPreviewPacked(prev: ViewSlice, previewPacked: boolean): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setPreviewPacked(previewPacked));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setPathTracerPaletteId(
-  prev: ViewSlice,
-  paletteId: ScalarFieldPaletteId,
-): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setPathTracerPaletteId(paletteId));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setPathTracerParam(
-  prev: ViewSlice,
-  key: PathTracerNumericKey,
-  value: number,
-): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setPathTracerParam({ key, value }));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setPathTracerCompressive(prev: ViewSlice, compressive: boolean): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setPathTracerCompressive(compressive));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setPathTracerDivisor(prev: ViewSlice, divisor: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setPathTracerDivisor(divisor));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setPathTracerSampleCap(prev: ViewSlice, sampleCap: number): ViewSlice {
-  return viewSlice.reducer(prev, viewSlice.actions.setPathTracerSampleCap(sampleCap));
-}
+export const {
+  setLayerEnabled,
+  setGalaxyIntensity,
+  setGalaxyPointSize,
+  setAgentIntensity,
+  setAgentPointSize,
+  setFps,
+  setCameraYawPitch,
+  setCameraDistance,
+  setCameraTarget,
+  setAutoRotate,
+  setOpticalThickness,
+  setRaymarchPaletteId,
+  setTrimDensity,
+  setSampleWeight,
+  setStepVoxels,
+  setAdditive,
+  setDivisor,
+  setPreviewPacked,
+  setPathTracerPaletteId,
+  setPathTracerParam,
+  setPathTracerCompressive,
+  setPathTracerDivisor,
+  setPathTracerSampleCap,
+} = viewSlice.actions;

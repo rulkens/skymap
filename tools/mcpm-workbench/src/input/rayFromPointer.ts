@@ -1,9 +1,9 @@
-import type { AppState } from '../../@types/AppState';
 import type { GridBox } from '../../@types/GridBox';
 import type { Ray } from '../../@types/Ray';
 import { cameraBasis } from '../render/cameraBasis';
 import { cameraViewFor } from '../render/cameraViewFor';
 import { screenToRay } from '../gizmo/screenToRay';
+import type { RootState } from '../store/types';
 
 // cameraBasis only reads `.rotation` off its GridBox param — fabricated zeros elsewhere,
 // so this site skips deriveGridBox's bisection + autofit just to overwrite the one field
@@ -21,7 +21,7 @@ const UNROTATED_BASIS_BOX: GridBox = {
 /** World-space pick ray through the pointer, against the *unrotated* CameraBasis —
  *  screenToRay's own contract: the gizmo picks world-space handle geometry, never
  *  voxel space. */
-export function rayFromPointer(canvas: HTMLCanvasElement, e: PointerEvent, s: AppState): Ray {
+export function rayFromPointer(canvas: HTMLCanvasElement, e: PointerEvent, s: RootState): Ray {
   const rect = canvas.getBoundingClientRect();
   const ndc: [number, number] = [
     ((e.clientX - rect.left) / rect.width) * 2 - 1,

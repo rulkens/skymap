@@ -18,16 +18,14 @@
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
-import { useStore } from '../../state/useStore';
-import { useAppStore } from '../storeContext';
+import { useAppSelector } from '../../store/hooks';
 import { draw } from './utils/draw';
 import { READOUT_TIPS } from './utils/READOUT_TIPS';
 import { readoutLinesFor } from './utils/readoutLinesFor';
 import styles from './HistogramPlot.module.css';
 
 function HistogramPlot(): ReactNode {
-  const store = useAppStore();
-  const histogram = useStore(store, (s) => s.histogram);
+  const histogram = useAppSelector((s) => s.histogram);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const readoutLines = readoutLinesFor(histogram.counts, histogram.meanLogTraceAtPoints);
 

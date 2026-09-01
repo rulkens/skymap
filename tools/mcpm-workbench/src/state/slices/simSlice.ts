@@ -89,57 +89,16 @@ export const simSlice = createSlice({
   },
 });
 
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setSimParam(prev: SimSlice, key: keyof McpmParams, value: number): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.setSimParam({ key, value }));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setAgentCount(prev: SimSlice, agentCount: number): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.setAgentCount(agentCount));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setInitMode(prev: SimSlice, initMode: AgentInitMode): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.setInitMode(initMode));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setRunning(prev: SimSlice, running: boolean): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.setRunning(running));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setSeed(prev: SimSlice, seed: number): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.setSeed(seed));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function requestReset(prev: SimSlice): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.requestReset());
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function requestClearTrace(prev: SimSlice): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.requestClearTrace());
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function requestExport(prev: SimSlice): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.requestExport());
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function requestScfdExport(prev: SimSlice): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.requestScfdExport());
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function resetStepCount(prev: SimSlice): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.resetStepCount());
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function incrementStep(prev: SimSlice): SimSlice {
-  return simSlice.reducer(prev, simSlice.actions.incrementStep());
-}
+export const {
+  setSimParam,
+  setAgentCount,
+  setInitMode,
+  setRunning,
+  setSeed,
+  requestReset,
+  requestClearTrace,
+  requestExport,
+  requestScfdExport,
+  resetStepCount,
+  incrementStep,
+} = simSlice.actions;

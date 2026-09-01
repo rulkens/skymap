@@ -7,17 +7,15 @@
  * off the store — fps is Viewport's own throttled push, not measured here.
  */
 import type { ReactNode } from 'react';
-import { useStore } from '../../state/useStore';
-import { useAppStore } from '../storeContext';
+import { useAppSelector } from '../../store/hooks';
 import { formatBytes } from '../formatBytes';
 import styles from './Hud.module.css';
 
 function Hud(): ReactNode {
-  const store = useAppStore();
-  const catalog = useStore(store, (s) => s.catalog);
-  const grid = useStore(store, (s) => s.grid);
-  const stepCount = useStore(store, (s) => s.sim.stepCount);
-  const fps = useStore(store, (s) => s.view.fps);
+  const catalog = useAppSelector((s) => s.catalog);
+  const grid = useAppSelector((s) => s.grid);
+  const stepCount = useAppSelector((s) => s.sim.stepCount);
+  const fps = useAppSelector((s) => s.view.fps);
 
   const nanFraction = catalog.pointCount > 0 ? catalog.nanFillCount / catalog.pointCount : 0;
 

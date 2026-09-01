@@ -1,4 +1,4 @@
-import type { AppState } from '../../@types/AppState';
+import type { RootState } from '../store/types';
 import { gridShapeOf } from './gridShapeOf';
 
 /**
@@ -9,7 +9,7 @@ import { gridShapeOf } from './gridShapeOf';
  * `gridShapeOf` spreads in every field a gizmo drag can write into `grid` — see its docstring for
  * why that's a single Pick rather than a hand-spelled list.
  */
-export function buildKey(s: AppState): unknown[] {
+export function buildKey(s: RootState): unknown[] {
   return [
     s.catalog.weightMode,
     ...Object.values(gridShapeOf(s.grid)),

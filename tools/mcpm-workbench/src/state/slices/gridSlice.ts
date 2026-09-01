@@ -124,60 +124,15 @@ export const gridSlice = createSlice({
   },
 });
 
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setVoxelSizeMpc(prev: GridSlice, manualVoxelSizeMpc: number): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.setVoxelSizeMpc(manualVoxelSizeMpc));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setPaddingMpc(prev: GridSlice, paddingMpc: number): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.setPaddingMpc(paddingMpc));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setManualCenterMpc(prev: GridSlice, manualCenterMpc: Vec3): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.setManualCenterMpc(manualCenterMpc));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setManualSizeMpc(prev: GridSlice, manualSizeMpc: Vec3): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.setManualSizeMpc(manualSizeMpc));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setRotation(prev: GridSlice, rotation: Readonly<Vec4>): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.setRotation(rotation));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function installImportedBox(prev: GridSlice, importedBox: GridBox): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.installImportedBox(importedBox));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function fitBoxToCatalog(prev: GridSlice, boundsMpc: { min: Vec3; max: Vec3 }): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.fitBoxToCatalog(boundsMpc));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setShowGridBox(prev: GridSlice, showGridBox: boolean): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.setShowGridBox(showGridBox));
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setResolvedGrid(
-  prev: GridSlice,
-  box: GridBox,
-  resolvedElement: GridElement,
-  byteBudget: GridBudget,
-): GridSlice {
-  return gridSlice.reducer(
-    prev,
-    gridSlice.actions.setResolvedGrid({ box, resolvedElement, byteBudget }),
-  );
-}
-
-// transitional wrapper — deleted when call sites move to dispatch (Task 3)
-export function setMaxBufferBytes(prev: GridSlice, maxBufferBytes: number): GridSlice {
-  return gridSlice.reducer(prev, gridSlice.actions.setMaxBufferBytes(maxBufferBytes));
-}
+export const {
+  setVoxelSizeMpc,
+  setPaddingMpc,
+  setManualCenterMpc,
+  setManualSizeMpc,
+  setRotation,
+  installImportedBox,
+  fitBoxToCatalog,
+  setShowGridBox,
+  setResolvedGrid,
+  setMaxBufferBytes,
+} = gridSlice.actions;
