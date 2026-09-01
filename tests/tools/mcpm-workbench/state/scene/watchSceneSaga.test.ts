@@ -91,10 +91,6 @@ const SIM_FIXTURES: {
   setInitMode: simSlice.actions.setInitMode('uniform'),
   setRunning: simSlice.actions.setRunning(false),
   setSeed: simSlice.actions.setSeed(2),
-  requestReset: simSlice.actions.requestReset(),
-  requestClearTrace: simSlice.actions.requestClearTrace(),
-  requestExport: simSlice.actions.requestExport(),
-  requestScfdExport: simSlice.actions.requestScfdExport(),
   resetStepCount: simSlice.actions.resetStepCount(),
   incrementStep: simSlice.actions.incrementStep(),
 };

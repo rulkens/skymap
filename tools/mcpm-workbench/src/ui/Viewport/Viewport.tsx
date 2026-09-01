@@ -13,12 +13,7 @@ import type { McpmHarness } from '../../../@types/McpmHarness';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import { resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
-import { downloadStem } from '../../export/downloadStem';
-import { emitTraceSidecar } from '../../export/emitTraceSidecar';
-import { exportNpy } from '../../export/exportNpy';
-import { exportScfd } from '../../export/exportScfd';
 import { previewPackedTrace } from '../../export/previewPackedTrace';
-import { triggerDownload } from '../../export/triggerDownload';
 import { widenTrace } from '../../export/widenTrace';
 import { deriveGridBox } from '../../field/deriveGridBox';
 import { createViewportInput } from '../../input/createViewportInput';
@@ -27,18 +22,9 @@ import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpat
 import { createRenderResources, disposeScene } from '../../render/renderResources';
 import { volpathKeyFor } from '../../render/volpathKeyFor';
 import { gridShapeKeyFor } from '../../state/gridShapeKeyFor';
-import { createTokenWatcher } from '../../state/tokenWatcher';
 import { recordHistogramSample, resetHistogram } from '../../state/slices/histogramSlice';
-import { incrementStep, resetStepCount } from '../../state/slices/simSlice';
-import {
-  defaultViewSlice,
-  setAutoRotate,
-  setCameraDistance,
-  setCameraTarget,
-  setCameraYawPitch,
-  setFps,
-  setPreviewPacked,
-} from '../../state/slices/viewSlice';
+import { incrementStep } from '../../state/slices/simSlice';
+import { setFps, setPreviewPacked } from '../../state/slices/viewSlice';
 import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
 import type { RegisterSagaContext, WorkbenchStore } from '../../store/types';
 import { frameNeedsRender } from '../frameNeedsRender';
@@ -81,10 +67,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
 
     let disposed = false;
     let rafHandle = 0;
-    const resetTokenWatcher = createTokenWatcher(store.getState().sim.resetToken);
-    const clearTraceTokenWatcher = createTokenWatcher(store.getState().sim.clearTraceToken);
-    const exportTokenWatcher = createTokenWatcher(store.getState().sim.exportToken);
-    const scfdTokenWatcher = createTokenWatcher(store.getState().sim.scfdToken);
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getState()));
     let boxPreviewUntil = 0;
     // T18 preview-export view: a second TracePass over a packed-cube buffer, owned by
@@ -157,74 +139,17 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     }
 
     /**
-     * T16 export leg: readback → `.npy` + `polyphy-trace` sidecar from one
-     * `downloadStem`, both via `triggerDownload`. `readbackTrace` refuses
-     * by name (over `maxBufferSize`) rather than throwing mid-copy, but
-     * either way a failure here must not reach the caller — it runs off
-     * the store subscriber, not inside the rAF `frame()` loop, so an
-     * unhandled rejection would only be a silent console error, not a
-     * dead loop; caught explicitly anyway so the failure reads as an
-     * export-specific message, not a generic unhandled-rejection trace.
-     */
-    async function runExport(): Promise<void> {
-      const h = resources.harness;
-      const s = store.getState();
-      const pts = s.catalog.points;
-      const weights = resources.weights;
-      if (!h || !pts || !weights) return;
-      try {
-        const readback = await h.readbackTrace();
-        const stem = downloadStem(new Date());
-        triggerDownload(`${stem}.npy`, exportNpy(readback), 'application/octet-stream');
-        const sidecar = emitTraceSidecar({
-          box: h.box,
-          points: pts,
-          weights,
-          tier: s.catalog.tier,
-          params: s.sim.params,
-          agentCount: s.sim.agentCount,
-          steps: s.sim.stepCount,
-          seed: s.sim.seed,
-          producedAt: new Date(),
-        });
-        triggerDownload(`${stem}.json`, sidecar, 'application/json');
-      } catch (err) {
-        console.error('mcpm-workbench: export failed', err);
-      }
-    }
-
-    /**
-     * T17 leg 2: readback → widen → `.scfd`, through the SAME
-     * `packLogTraceVoxels`/`encodeScalarField` the offline `buildRhizomeVolume`
-     * importer runs, so the two outputs are diffable. Same refusal contract
-     * as `runExport` above — caught here so it can never kill the rAF loop.
-     */
-    async function runScfdExport(): Promise<void> {
-      const h = resources.harness;
-      if (!h) return;
-      try {
-        const readback = await h.readbackTrace();
-        const values = widenTrace(readback);
-        const scfd = exportScfd(values, h.box);
-        const stem = downloadStem(new Date());
-        triggerDownload(`${stem}.scfd`, scfd, 'application/octet-stream');
-      } catch (err) {
-        console.error('mcpm-workbench: scfd export failed', err);
-      }
-    }
-
-    /**
      * T18: readback → widen → `previewPackedTrace` (the REAL packLogTraceVoxels,
-     * `runScfdExport`'s own call) → `graph.attachPreviewTrace`, RenderGraph's own
-     * TracePass construction. Runs once per toggle-on; frame() below is what decides
-     * every frame whether the result is still fresh enough to draw. `resources.harness
-     * !== h` guards the rebuild race the same way `buildFromPoints` used to —
-     * `readbackTrace` can outlive a catalog switch that starts mid-await. The
-     * `previewPacked` re-check guards a second race the token-diff style above
-     * doesn't: the user can uncheck before this lands, and only the flag at
-     * COMMIT time (not at call time) says whether the result is still wanted —
-     * skip installing rather than build-then-dispose, so nothing orphaned is
-     * ever created.
+     * the same packing the export saga's `.scfd` leg uses) → `graph.attachPreviewTrace`,
+     * RenderGraph's own TracePass construction. Runs once per toggle-on; frame()
+     * below is what decides every frame whether the result is still fresh enough
+     * to draw. `resources.harness !== h` guards the rebuild race the same way
+     * `buildFromPoints` used to — `readbackTrace` can outlive a catalog switch
+     * that starts mid-await. The `previewPacked` re-check guards a second race:
+     * the user can uncheck before this lands, and only the flag at COMMIT time
+     * (not at call time) says whether the result is still wanted — skip
+     * installing rather than build-then-dispose, so nothing orphaned is ever
+     * created.
      */
     async function runPreviewPacked(): Promise<void> {
       const h = resources.harness;
@@ -437,15 +362,17 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
           s.view.pathTracer.divisor,
           now - lastInteractionMs,
         );
-        // Reset on any camera move, any pathTracer param change (divisor included,
-        // sampleCap excluded — see volpathKeyFor.ts), or an explicit clear-trace/reset
-        // command — `cam` is the SAME serialized object already computed above, so
-        // this can't drift from what actually drew. Deliberately NOT keyed on
-        // `sim.stepCount`: an earlier version floored a step term in here so a running
-        // sim wiped the accumulator every 16 steps instead of every frame — still a
-        // periodic full-wipe, visible as never converging. The field drifts slowly
-        // enough (same reasoning that justified the 16-step floor) that letting
-        // samples ride across steps indefinitely is fine; a box change that actually
+        // Reset on any camera move or any pathTracer param change (divisor included,
+        // sampleCap excluded — see volpathKeyFor.ts) — `cam` is the SAME serialized
+        // object already computed above, so this can't drift from what actually
+        // drew. An explicit reset/clear-trace command no longer feeds this key —
+        // watchSimCommandsSaga calls `graph.resetVolpath()` itself when it handles
+        // those actions. Deliberately NOT keyed on `sim.stepCount`: an earlier
+        // version floored a step term in here so a running sim wiped the
+        // accumulator every 16 steps instead of every frame — still a periodic
+        // full-wipe, visible as never converging. The field drifts slowly enough
+        // (same reasoning that justified the 16-step floor) that letting samples
+        // ride across steps indefinitely is fine; a box change that actually
         // invalidates the grid reaches here through a harness rebuild instead (the
         // epoch reset below resets `lastVolpathKey` to null). Deliberately NOT
         // keyed on `effectiveDivisor` either: VolpathPass's own accumulator already
@@ -453,9 +380,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         // effectiveDivisor directly — keying this string on it too would only add a
         // second, redundant reset exactly 200ms after every interaction, on top of
         // the resize the accumulator was always going to do on its own.
-        const volpathKey = JSON.stringify(
-          volpathKeyFor(cam, s.view.pathTracer, s.sim.clearTraceToken, s.sim.resetToken),
-        );
+        const volpathKey = JSON.stringify(volpathKeyFor(cam, s.view.pathTracer));
         if (volpathKey !== lastVolpathKey) {
           graph.resetVolpath();
           volpathSampleCount = 0;
@@ -514,10 +439,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         attachedVolpathPalette = s.view.pathTracer.paletteId;
         lastPreviewPacked = false;
         previewPackedAtStep = -1;
-        resetTokenWatcher.sync(s.sim.resetToken);
-        clearTraceTokenWatcher.sync(s.sim.clearTraceToken);
-        exportTokenWatcher.sync(s.sim.exportToken);
-        scfdTokenWatcher.sync(s.sim.scfdToken);
       }
 
       // Task FLE: one check feeds both render-on-demand's dirty flag AND the
@@ -530,33 +451,10 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       lastDirtyCheckState = s;
 
       if (resources.harness) {
-        const harness = resources.harness;
-        if (resetTokenWatcher.changed(s.sim.resetToken)) {
-          harness.reset(s.sim.initMode, s.sim.seed);
-          store.dispatch(resetStepCount());
-          store.dispatch(resetHistogram());
-          // Reset restores framing too, deliberately: the orbit target is absolute
-          // world Mpc, not box-relative, so nothing else recenters the camera onto
-          // the box — this is the one recovery path for "camera drifted". Four
-          // dispatches (one per camera field), not a whole-object write — RTK has
-          // no single "replace this nested object" action, and none of these camera
-          // fields are among watchSceneSaga's structural triggers, so the split has
-          // no rebuild side effect.
-          const { camera } = defaultViewSlice;
-          store.dispatch(setCameraYawPitch({ yaw: camera.yaw, pitch: camera.pitch }));
-          store.dispatch(setCameraDistance(camera.distance));
-          store.dispatch(setCameraTarget(camera.targetMpc));
-          store.dispatch(setAutoRotate(camera.autoRotate));
-        }
-        if (clearTraceTokenWatcher.changed(s.sim.clearTraceToken)) {
-          harness.clearTrace();
-        }
-        if (exportTokenWatcher.changed(s.sim.exportToken)) {
-          void runExport();
-        }
-        if (scfdTokenWatcher.changed(s.sim.scfdToken)) {
-          void runScfdExport();
-        }
+        // Reset/clear-trace/export/scfd used to be watched here (token-diff against
+        // sim.resetToken etc.) — that's gone now that those are plain commands;
+        // watchSimCommandsSaga/watchExportSaga (Tasks 7/8) take the actions directly
+        // instead of a subscriber diffing a counter.
         // T20: jittered-position samples and data-point samples are differently-defined
         // statistics under the same name — a toggle mid-run must not interleave them
         // into one curve, so every edge clears history (and counts/mean) outright.

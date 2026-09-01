@@ -16,6 +16,12 @@ import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamS
 import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
 import { SOURCE_REGISTRY } from '../../../../../src/data/sources';
 import { tierTarget } from '../../../../../src/data/tierTargets';
+import {
+  clearTraceRequested,
+  exportNpyRequested,
+  exportScfdRequested,
+  resetRequested,
+} from '../../state/commands';
 import { downloadStem } from '../../export/downloadStem';
 import { triggerDownload } from '../../export/triggerDownload';
 import { deriveGridBox } from '../../field/deriveGridBox';
@@ -29,16 +35,7 @@ import {
 import { exportParams, MCPM_PARAM_KEYS } from '../../state/exportParams';
 import { installImportedBox } from '../../state/slices/gridSlice';
 import { importParams } from '../../state/importParams';
-import {
-  requestClearTrace,
-  requestExport,
-  requestReset,
-  requestScfdExport,
-  setAgentCount,
-  setInitMode,
-  setRunning,
-  setSimParam,
-} from '../../state/slices/simSlice';
+import { setAgentCount, setInitMode, setRunning, setSimParam } from '../../state/slices/simSlice';
 import {
   setAdditive,
   setAgentIntensity,
@@ -162,19 +159,18 @@ function ControlsPanel(): ReactNode {
             info="Data-point deposits scale with each galaxy's stellar mass; off, every data point deposits equally. Free agents always deposit at a flat weight either way."
             onChange={(on) => dispatch(setWeightMode(on ? 'stellarMass' : 'uniform'))}
           />
-          {/* reset / clear trace: momentary commands, not state — the slice records
-              a request the Viewport consumes on its next frame. Divided from the
-              toggle rows above with the same --border-divider hairline
-              HistogramPlot/CollapsibleSection use, and one font-size step smaller
-              than the panel's other buttons so the pair reads as secondary to the
-              run/seed/weight toggles it now sits under. */}
+          {/* reset / clear trace: momentary commands, not state — `state/commands.ts`
+              actions a saga (Task 7) takes. Divided from the toggle rows above with
+              the same --border-divider hairline HistogramPlot/CollapsibleSection use,
+              and one font-size step smaller than the panel's other buttons so the
+              pair reads as secondary to the run/seed/weight toggles it now sits under. */}
           <div className={styles.simActions}>
-            <Button className={styles.simActionButton} onClick={() => dispatch(requestReset())}>
+            <Button className={styles.simActionButton} onClick={() => dispatch(resetRequested())}>
               reset
             </Button>
             <Button
               className={styles.simActionButton}
-              onClick={() => dispatch(requestClearTrace())}
+              onClick={() => dispatch(clearTraceRequested())}
             >
               clear trace
             </Button>
@@ -448,19 +444,16 @@ function ControlsPanel(): ReactNode {
       {/* Pinned below the scroll area, always visible (S12). */}
       <div className={styles.footer}>
         {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
-            both (downloadStem/emitTraceSidecar/exportNpy). Same one-shot
-            token shape as reset/clear-trace (Simulation section above) —
-            only Viewport's harness closure can actually call readbackTrace,
-            so this button can only request; Viewport's token-diff effect is
-            the consumer that performs the readback and triggerDownloads. */}
-        <Button className={styles.actionButton} onClick={() => dispatch(requestExport())}>
+            both (downloadStem/emitTraceSidecar/exportNpy). Only the export
+            saga's harness closure (Task 8) can actually call readbackTrace,
+            so this button can only request. */}
+        <Button className={styles.actionButton} onClick={() => dispatch(exportNpyRequested())}>
           download trace
         </Button>
-        {/* T17 leg 2: same one-shot token pattern, downloading a
-            ready-to-serve `.scfd` through the SAME packing code
-            (packLogTraceVoxels/encodeScalarField) the offline
-            buildRhizomeVolume importer uses. */}
-        <Button className={styles.actionButton} onClick={() => dispatch(requestScfdExport())}>
+        {/* T17 leg 2: same request/saga split, downloading a ready-to-serve
+            `.scfd` through the SAME packing code (packLogTraceVoxels/
+            encodeScalarField) the offline buildRhizomeVolume importer uses. */}
+        <Button className={styles.actionButton} onClick={() => dispatch(exportScfdRequested())}>
           download .scfd
         </Button>
         {/* V3: unlike the two exports above, this runs synchronously right

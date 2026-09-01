@@ -36,10 +36,6 @@ function isSimMeaningfullyChanged(prev: RootState['sim'], next: RootState['sim']
     prev.agentCount !== next.agentCount ||
     prev.initMode !== next.initMode ||
     prev.running !== next.running ||
-    prev.seed !== next.seed ||
-    prev.resetToken !== next.resetToken ||
-    prev.clearTraceToken !== next.clearTraceToken ||
-    prev.exportToken !== next.exportToken ||
-    prev.scfdToken !== next.scfdToken
+    prev.seed !== next.seed
   );
 }

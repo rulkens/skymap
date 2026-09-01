@@ -27,10 +27,6 @@ export const defaultSimSlice: SimSlice = {
   running: true,
   stepCount: 0,
   seed: 1,
-  resetToken: 0,
-  clearTraceToken: 0,
-  exportToken: 0,
-  scfdToken: 0,
 };
 
 export const simSlice = createSlice({
@@ -59,26 +55,6 @@ export const simSlice = createSlice({
     setSeed: (state, action: PayloadAction<number>) => {
       state.seed = action.payload;
     },
-    /** One-shot command: Viewport diffs `resetToken` against the last value it processed. */
-    requestReset: (state) => {
-      state.resetToken += 1;
-    },
-    /** One-shot command: Viewport diffs `clearTraceToken` the same way. */
-    requestClearTrace: (state) => {
-      state.clearTraceToken += 1;
-    },
-    /** One-shot command: Viewport diffs `exportToken` the same way, then runs the
-     * `.npy`+sidecar download pair (readbackTrace → exportNpy/emitTraceSidecar →
-     * triggerDownload) against its own harness/points closure. */
-    requestExport: (state) => {
-      state.exportToken += 1;
-    },
-    /** One-shot command: Viewport diffs `scfdToken` the same way, then runs the
-     * `.scfd` download (readbackTrace → widenTrace → exportScfd → triggerDownload)
-     * against its own harness/points closure. */
-    requestScfdExport: (state) => {
-      state.scfdToken += 1;
-    },
     /** Viewport calls this once it has actually reseeded, zeroing the HUD's step counter. */
     resetStepCount: (state) => {
       state.stepCount = 0;
@@ -95,10 +71,6 @@ export const {
   setInitMode,
   setRunning,
   setSeed,
-  requestReset,
-  requestClearTrace,
-  requestExport,
-  requestScfdExport,
   resetStepCount,
   incrementStep,
 } = simSlice.actions;
