@@ -1,7 +1,7 @@
 /**
- * visibleSlabBodies — which of `[earth, ...planets]` clear the sub-pixel
- * apparent-diameter floor AND the view-frustum angular cull, and so get a
- * body slab row this frame.
+ * visibleSlabBodies — which of `bodies` clear the sub-pixel apparent-diameter
+ * floor AND the view-frustum angular cull, and so get a body slab row this
+ * frame.
  */
 
 import { describe, it, expect } from 'vitest';
