@@ -2,22 +2,11 @@
 // capture (black), escape (LUT-deflected sky-cubemap sample), or annulus
 // (bounded emission march), composited over the escape/capture base.
 //
-// 'Infinity' encoding (Task 9's 'SchwarzschildDeflectionLut.samples', decided
-// here per Task 13's brief): the renderer's texture-upload helper
-// ('sgrAStarLensingRenderer.ts') replaces every 'Infinity' sample with a
-// large finite sentinel before uploading to the r32float texture — raw IEEE
-// Infinity round-trips through an r32float texel exactly, but a fast-math
-// shader compiler is not guaranteed to preserve Infinity arithmetic
-// (this codebase already treats float edge-case flushing as a live
-// landmine), so a threshold comparison well below the sentinel and well
-// above any real quadrature result is the robust encoding either way — see
-// 'CAPTURE_THRESHOLD_RAD' below.
-//
-// The captured/escape split happens IN THE LUT sample itself (samples with
-// impact parameter at or below the photon-sphere bound are Infinity, hence
-// sentinel, by construction — see buildSchwarzschildDeflectionLut.ts), so
-// 'captured' here means 'the sampled bend angle is the sentinel', not a
-// separate geometric test.
+// 'Infinity' encoding: the LUT's captured samples (b <= b_c, see
+// buildSchwarzschildDeflectionLut.ts) are non-finite; 'sgrAStarLensingRenderer
+// .ts' replaces them with a finite sentinel before the r32float upload (raw
+// Infinity isn't guaranteed to survive a fast-math shader compiler), so
+// 'CAPTURE_THRESHOLD_RAD' below is a threshold check, not an isinf() test.
 
 import package::lib::sgrAStarLensing::SgrAStarLensingUniforms;
 import package::lib::math::rotateAroundAxis;
@@ -33,25 +22,18 @@ struct FsIn {
   @location(0) posRelCamM: vec3<f32>,
 };
 
-// Half of the renderer's CPU-side sentinel (see the module header) — the two
-// sides don't need to agree on an exact value, only that this sits well
-// below the sentinel and well above any real (finite) quadrature result,
-// which stays a low-two-digit-radian value even one grid step from the
-// critical impact parameter (see buildSchwarzschildDeflectionLut.ts's
-// Simpson integration).
+// Half the renderer's sentinel — the two sides need not agree exactly, only
+// that this sits between any real (finite) bend angle and the sentinel.
 const CAPTURE_THRESHOLD_RAD: f32 = 500.0;
 
 const MARCH_STEPS: i32 = 48; // within the spec's 32-64-step bound
 const DISK_HALF_THICKNESS_RS: f32 = 0.15; // thin-disk approximation, tuned for looks
 const DOPPLER_STRENGTH: f32 = 0.6; // tuned for looks — see BLACK_HOLES's own "visual taste" note
 
-// Two-tap manual lerp over the LUT (an r32float texture is not
-// sampler-filterable without the optional 'float32-filterable' feature, so
-// this uses textureLoad, not textureSample — see the WebKit texture_1d note
-// in docs/RENDERER.md, the reason the LUT is a texture_2d<f32> of height 1
-// rather than a texture_1d in the first place). Either tap reading the
-// sentinel propagates it through unblended, so a lerp never averages a real
-// angle with the capture sentinel into a bogus finite value.
+// Two-tap manual lerp (r32float isn't sampler-filterable without the
+// optional feature, hence textureLoad + a texture_2d<f32>, not texture_1d —
+// WebKit rejects the latter, docs/RENDERER.md). Either tap hitting the
+// sentinel propagates it unblended, never averaging a real angle with it.
 fn sampleLut(impactParamRs: f32) -> f32 {
   let span = max(u.lutMaxImpactParamRs - u.lutMinImpactParamRs, 1e-6);
   let t = saturate((impactParamRs - u.lutMinImpactParamRs) / span);
@@ -67,33 +49,33 @@ fn sampleLut(impactParamRs: f32) -> f32 {
   return mix(a0, a1, fract(fIdx));
 }
 
-// Disk-plane normal from (inclination, positionAngle): tilt a fixed world-+Y
-// reference about world +X, then spin the tilted normal's azimuth about
-// world +Y. Deliberately NOT the Galactic-Centre sky frame 'sStar.ts' orients
-// S-star orbits against — that frame's RA/Dec basis has no field in this
-// uniform's locked 144 bytes, and 'BLACK_HOLES''s own doc already calls
-// inclination/positionAngle "visual taste" rather than fit to observations —
-// so a fixed world reference is a documented simplification, not a silent
-// mismatch with the S-star orbits' frame.
+// Tilt a fixed world-+Y reference by inclination, then spin its azimuth by
+// positionAngle — NOT the Galactic-Centre sky frame S-star orbits use (that
+// RA/Dec basis has no field in this uniform); BLACK_HOLES already calls both
+// angles "visual taste", so a fixed world reference is a documented choice.
 fn diskNormal() -> vec3<f32> {
   let tilted = rotateAroundAxis(vec3<f32>(0.0, 1.0, 0.0), vec3<f32>(1.0, 0.0, 0.0), u.inclinationRad);
   return normalize(rotateAroundAxis(tilted, vec3<f32>(0.0, 1.0, 0.0), u.positionAngleRad));
 }
 
-// Bounded march along the UNDEFLECTED ray (spec's 32-64-step bound) for the
-// accretion annulus's own emission, composited over the escape/capture base
-// the caller already resolved. Returns (premultiplied-ish linear emission,
-// coverage) — coverage feeds the caller's alpha, not the light itself.
-fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>) -> vec4<f32> {
+// Bounded march (spec's 32-64-step bound) for the annulus's own emission,
+// composited over the escape/capture base. Centred on 'closestT' (the ray's
+// own closest approach to the hole, computed once in 'fs') rather than on
+// t=0 (the camera): the hole sits at 'length(toAnchor)' from the camera,
+// almost always far outside a 't in [0, marchHalfM]' window sized off
+// 'outerRs', so marching from the camera would miss the disk for virtually
+// the whole fade band. Returns (linear emission, coverage); coverage feeds
+// the caller's alpha, not the light itself.
+fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>, closestT: f32) -> vec4<f32> {
   let normal = diskNormal();
-  let marchMaxM = u.outerRs * u.schwarzschildRadiusM * 3.0;
-  let stepLenM = marchMaxM / f32(MARCH_STEPS);
+  let marchHalfM = u.outerRs * u.schwarzschildRadiusM * 1.5;
+  let stepLenM = (2.0 * marchHalfM) / f32(MARCH_STEPS);
   let halfThicknessM = DISK_HALF_THICKNESS_RS * u.schwarzschildRadiusM;
 
   var emission = vec3<f32>(0.0);
   var coverage = 0.0;
   for (var i = 0; i < MARCH_STEPS; i++) {
-    let t = (f32(i) + 0.5) * stepLenM;
+    let t = max(closestT - marchHalfM + (f32(i) + 0.5) * stepLenM, 0.0);
     let p = rayDir * t - toAnchor; // position relative to the hole's centre
     let distToPlane = dot(p, normal);
     if (abs(distToPlane) > halfThicknessM) {
@@ -109,9 +91,8 @@ fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>) -> vec4<f32> {
     let radialDir = inPlane / max(radialM, 1e-6);
     let orbitDir = cross(normal, radialDir); // tangent to a circular orbit at this point
     let dopplerFactor = 1.0 + DOPPLER_STRENGTH * dot(orbitDir, -rayDir);
-    // Kepler orbital period ~ r^1.5: a cheap differential-rotation phase
-    // offset per radius (closer annuli lead the outer ones), not a fitted
-    // light curve — visual taste, as above.
+    // Kepler period ~ r^1.5: a cheap per-radius phase offset (closer annuli
+    // lead the outer ones), not a fitted light curve — visual taste, as above.
     let periodScale = pow(max(radialRs, 0.1), 1.5);
     let localPhase = u.flickerPhase + (radialRs / periodScale) * TAU;
     let flicker = 1.0 + u.flickerAmp * sin(localPhase);
@@ -131,12 +112,10 @@ fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>) -> vec4<f32> {
 fn fs(in: FsIn) -> @location(0) vec4<f32> {
   let rayDir = normalize(in.posRelCamM);
   let toAnchor = u.anchorPosRelCamM;
-  // Perpendicular distance from the hole's centre to the ray through the
-  // origin (the camera) — the impact parameter. Clamped to the ray's
-  // forward half: the billboard is centred on the anchor and faces the
-  // camera, so a negative closestT is unreachable in practice, but the
-  // clamp keeps the geometry well-defined if float error ever puts a
-  // corner fragment just behind the plane's own centre.
+  // Impact parameter: perpendicular distance from the hole to the ray
+  // through the camera (the origin). Clamped forward — the billboard faces
+  // the camera and is centred on the anchor, so negative t is unreachable
+  // outside float error at a corner fragment.
   let closestT = max(dot(toAnchor, rayDir), 0.0);
   let offsetVec = toAnchor - rayDir * closestT;
   let impactParamM = length(offsetVec);
@@ -146,39 +125,30 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
   var alpha = 0.0;
 
   if (impactParamRs < u.lutMinImpactParamRs) {
-    // Below the LUT's own sampled domain — deep inside the capture region
-    // the LUT never samples a finite value for.
-    alpha = u.bandAlpha;
+    alpha = u.bandAlpha; // below the LUT's own domain — deep in the capture region
   } else {
     let bendAngle = sampleLut(impactParamRs);
     if (bendAngle >= CAPTURE_THRESHOLD_RAD) {
       alpha = u.bandAlpha;
     } else {
-      // Gravitational lensing displaces the apparent background AWAY from
-      // the lens centre (the Einstein-ring displacement) — rotate the
-      // straight-line ray away from the hole by the LUT's bend angle to
-      // recover the asymptotic sky direction this photon actually left
-      // from. Sign/axis convention: verify visually at the Task 17 gate
-      // (the known LUT approximation the brief accepts); flip the sign here
-      // if the ring reads backward.
+      // Lensing displaces the apparent background AWAY from the lens centre
+      // (Einstein-ring displacement): rotate the ray away from the hole by
+      // the LUT's bend angle to recover the source's asymptotic direction.
+      // Sign/axis unverified visually (Task 17 gate); flip if it reads backward.
       let axis = normalize(cross(rayDir, toAnchor));
       let deflected = normalize(rotateAroundAxis(rayDir, axis, -bendAngle));
       color = textureSampleLevel(skyTex, skySampler, deflected, 0.0).rgb;
 
-      // Soft edge fade toward the billboard's rim so the roster drawn
-      // earlier still shows through once deflection is negligible — 'over'
-      // blend, per-pixel alpha does the rest (see ContentLayer.d.ts's note
-      // on this row's blend).
+      // Soft edge fade to the billboard's rim so the earlier-drawn roster
+      // shows through once deflection is negligible (Blend.d.ts's 'over').
       let edgeFade = 1.0 - smoothstep(u.lutMaxImpactParamRs * 0.7, u.lutMaxImpactParamRs, impactParamRs);
       alpha = u.bandAlpha * edgeFade;
     }
 
-    let annulus = annulusEmission(rayDir, toAnchor);
+    let annulus = annulusEmission(rayDir, toAnchor, closestT);
     color += annulus.rgb;
     alpha = max(alpha, u.bandAlpha * annulus.a);
   }
 
-  // Premultiplied — this row's blend is PREMULTIPLIED_OVER (Blend.d.ts's
-  // 'over'), so the fragment multiplies its own colour by coverage.
-  return vec4<f32>(color * alpha, alpha);
+  return vec4<f32>(color * alpha, alpha); // premultiplied, per PREMULTIPLIED_OVER_BLEND
 }
