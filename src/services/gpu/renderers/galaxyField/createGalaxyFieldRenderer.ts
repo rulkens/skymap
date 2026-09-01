@@ -173,6 +173,16 @@ export type GalaxyFieldMixtureInput = {
   readonly orientationViewWanted: boolean;
 };
 
+const EMPTY_INPUT: GalaxyFieldMixtureInput = {
+  geometry: null,
+  fieldTuning: DEFAULT_GALAXY_FIELD_TUNING,
+  seed: 0,
+  extras: [],
+  sigmaDerivTexels: 0,
+  sigmaIntegTexels: 0,
+  orientationViewWanted: false,
+};
+
 /**
  * Render targets the HOST allocates and owns. `GPUTexture` rather than
  * `GPUTextureView`: every field/HII/tier header packs `targetSizePx` off the
@@ -584,18 +594,12 @@ export function createGalaxyFieldRenderer(
   );
 
   // ---- mixture state ----
-  let geometry: GalaxyDescription | null = null;
-  let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
-  let seed = 0;
-  let extras: readonly GalaxyFieldExtra[] = [];
-  /** Each extra's own mixtures, already in world space — index-parallel to `extras`. */
+  let current: GalaxyFieldMixtureInput = EMPTY_INPUT;
+  /** Each extra's own mixtures, already in world space — index-parallel to `current.extras`. */
   let extraMixtures: readonly {
     readonly fieldMixture: readonly GalaxyFieldComponent[];
     readonly hiiMixture: readonly GalaxyFieldComponent[];
   }[] = [];
-  let sigmaDerivTexels = 0;
-  let sigmaIntegTexels = 0;
-  let orientationViewWanted = false;
 
   // The CENTRAL galaxy's field mixture and HII tier. Empty (the sentinels
   // above) until the first `setMixture`: a field of zero components draws
@@ -626,8 +630,8 @@ export function createGalaxyFieldRenderer(
    * has nothing coherent to report either.
    */
   const orientationDataRebuild = createKeyedRebuild({
-    wanted: () => fieldTuning.ismMap.generator !== 'none',
-    build: () => deps.onOrientationRebuilt?.(ismMapGridRadiusOrDefault(geometry)),
+    wanted: () => current.fieldTuning.ismMap.generator !== 'none',
+    build: () => deps.onOrientationRebuilt?.(ismMapGridRadiusOrDefault(current.geometry)),
   });
 
   /**
@@ -639,7 +643,7 @@ export function createGalaxyFieldRenderer(
    * populated it is safe. Invalidated by `rebuildIsmMap` and by a sigma move.
    */
   const orientationTexRebuild = createKeyedRebuild({
-    wanted: () => orientationViewWanted || fieldTuning.ismMap.generator !== 'none',
+    wanted: () => current.orientationViewWanted || current.fieldTuning.ismMap.generator !== 'none',
     build: () => {
       // gasFloor=1 when the generator is off: the map texture is a cleared
       // (all-zero) blank then, and ismMapOrientationField.wesl's
@@ -649,13 +653,13 @@ export function createGalaxyFieldRenderer(
       // fake radial gradient into the orientation view. gasScaleLength must
       // still be finite even though it's then algebraically unused.
       const pedestal =
-        fieldTuning.ismMap.generator === 'fluid'
-          ? fieldTuning.ismMapFluid
+        current.fieldTuning.ismMap.generator === 'fluid'
+          ? current.fieldTuning.ismMapFluid
           : { gasFloor: 1, gasScaleLength: 1 };
       ismMapOrientation.dispatch({
-        grid: ismMapGridRadiusOrDefault(geometry),
-        sigmaDerivTexels,
-        sigmaIntegTexels,
+        grid: ismMapGridRadiusOrDefault(current.geometry),
+        sigmaDerivTexels: current.sigmaDerivTexels,
+        sigmaIntegTexels: current.sigmaIntegTexels,
         gasFloor: pedestal.gasFloor,
         gasScaleLength: pedestal.gasScaleLength,
         ambient: ISM_MAP_AMBIENT_DUST,
@@ -674,8 +678,8 @@ export function createGalaxyFieldRenderer(
    * rebuild happens to re-scan it.
    */
   function dispatchDustCdfScan(): void {
-    if (!geometry || fieldTuning.ismMap.generator !== 'fluid') return;
-    const grid = ismMapGridRadiusOrDefault(geometry);
+    if (!current.geometry || current.fieldTuning.ismMap.generator !== 'fluid') return;
+    const grid = ismMapGridRadiusOrDefault(current.geometry);
     const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDustCdfScanRebuild' });
     // `ringCap` reproduces dustParticleCloud.ts's density() ring-mean-
     // normalised, capped placement density (ismMapDustCdfScan.wesl's own doc).
@@ -685,7 +689,7 @@ export function createGalaxyFieldRenderer(
       weights: {
         kind: 'channel',
         channelWeights: { gas: 0, stars: 0, activity: 0, dust: 1 },
-        ringCap: fieldTuning.dust.cloud.dustPlacementCap ?? 0,
+        ringCap: current.fieldTuning.dust.cloud.dustPlacementCap ?? 0,
       },
       ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
     });
@@ -703,10 +707,11 @@ export function createGalaxyFieldRenderer(
    * trusts whatever `params.armBias` the caller packed.
    */
   function dispatchDigCdfScan(): void {
-    if (!geometry || fieldTuning.ismMap.generator !== 'fluid') return;
-    const grid = ismMapGridRadiusOrDefault(geometry);
-    const armBias = Math.min(1, Math.max(0, fieldTuning.hii.dig?.armBias ?? 0));
-    const armCount = geometry.arms.length;
+    const geo = current.geometry;
+    if (!geo || current.fieldTuning.ismMap.generator !== 'fluid') return;
+    const grid = ismMapGridRadiusOrDefault(geo);
+    const armBias = Math.min(1, Math.max(0, current.fieldTuning.hii.dig?.armBias ?? 0));
+    const armCount = geo.arms.length;
     const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDigCdfScanRebuild' });
     digCdfScan.dispatchScan(enc, {
       ismMapTexture: ismMapGenerator.texture,
@@ -717,7 +722,7 @@ export function createGalaxyFieldRenderer(
         channelWeights: { gas: 0, stars: 0, activity: 1, dust: 0 },
         armBias,
         armCount,
-        entries: buildDigArmEnvelopeTable(geometry, fieldTuning, {
+        entries: buildDigArmEnvelopeTable(geo, current.fieldTuning, {
           rings: ISM_MAP_RINGS,
           rMin: grid.rMin,
           rMax: grid.rMax,
@@ -742,10 +747,10 @@ export function createGalaxyFieldRenderer(
    * the same synchronous invocation.
    */
   function rebuildDustMixture(): void {
-    const dust = fieldTuning.dust;
-    dustHeaderLanes = deriveDustHeaderLanes(geometry, dust, fieldTuning.dust.enabled);
+    const dust = current.fieldTuning.dust;
+    dustHeaderLanes = deriveDustHeaderLanes(current.geometry, dust, dust.enabled);
     dustBudget =
-      geometry && fieldTuning.dust.enabled ? computePlaceDustBudget(geometry, dust) : null;
+      current.geometry && dust.enabled ? computePlaceDustBudget(current.geometry, dust) : null;
     dispatchDustCdfScan();
   }
 
@@ -756,8 +761,8 @@ export function createGalaxyFieldRenderer(
    * Same "whoever zeroes the slots owns the invalidation" split as dust's.
    */
   function rebuildDigVeilBudget(hii: HiiShellsAndYoungResult): void {
-    digBudget = geometry
-      ? computeDigVeilBudget(geometry, fieldTuning, hii.shellFluxSum, hii.recentEventCount)
+    digBudget = current.geometry
+      ? computeDigVeilBudget(current.geometry, current.fieldTuning, hii.shellFluxSum, hii.recentEventCount)
       : null;
     dispatchDigCdfScan();
   }
@@ -771,8 +776,12 @@ export function createGalaxyFieldRenderer(
    * rather than an earlier galaxy's map.
    */
   function rebuildIsmMap(): void {
-    const grid = ismMapGenerator.rebuild({ geometry, tuning: fieldTuning, seed });
-    if (fieldTuning.ismMap.generator === 'fluid') {
+    const grid = ismMapGenerator.rebuild({
+      geometry: current.geometry,
+      tuning: current.fieldTuning,
+      seed: current.seed,
+    });
+    if (current.fieldTuning.ismMap.generator === 'fluid') {
       const enc = device.createCommandEncoder({ label: 'galaxy:ismMapRingReduceRebuild' });
       // ringMeansBuffer written HERE; dispatchDustCdfScan's own LATER submit
       // reads it — WebGPU's cross-SUBMIT ordering on one queue is what makes
@@ -803,10 +812,11 @@ export function createGalaxyFieldRenderer(
   const dustPlacementRebuild = createKeyedRebuild({
     wanted: () => dustBudget !== null,
     build: () => {
+      const geo = current.geometry;
       const budget = dustBudget;
-      if (!geometry || !budget) return;
+      if (!geo || !budget) return;
       const enc = device.createCommandEncoder({ label: 'galaxy:placeDust' });
-      placeDust.dispatchPlaceDust(enc, dustDispatchInput(geometry, budget));
+      placeDust.dispatchPlaceDust(enc, dustDispatchInput(geo, budget));
       // Survivor-sum + Larson renorm, encoded into the SAME encoder/submit
       // right after the dispatch: cross-pass ordering within one submit is
       // what lets this read `placeDust.massBuffer` fresh with no readback of
@@ -835,10 +845,10 @@ export function createGalaxyFieldRenderer(
   ): PlaceDustDispatchInput {
     const grid = ismMapGridRadiusOrDefault(geo);
     return {
-      seed,
+      seed: current.seed,
       budget,
       dustOffset: fieldCounts.emission,
-      generatorIsFluid: forceGeneratorIsFluid ?? fieldTuning.ismMap.generator === 'fluid',
+      generatorIsFluid: forceGeneratorIsFluid ?? current.fieldTuning.ismMap.generator === 'fluid',
       grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
       warp: {
         warpStrength: geo.warpStrength,
@@ -865,13 +875,11 @@ export function createGalaxyFieldRenderer(
   const spurCloudPlacementRebuild = createKeyedRebuild({
     wanted: () => central.spurCloudReservation !== null,
     build: () => {
+      const geo = current.geometry;
       const reservation = central.spurCloudReservation;
-      if (!geometry || !reservation) return;
+      if (!geo || !reservation) return;
       const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloud' });
-      placeArmSpurCloud.dispatchPlaceArmSpurCloud(
-        enc,
-        spurCloudDispatchInput(geometry, reservation),
-      );
+      placeArmSpurCloud.dispatchPlaceArmSpurCloud(enc, spurCloudDispatchInput(geo, reservation));
       ringReduce.dispatchArmSpurFluxWeightSum(enc, {
         fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
         count: reservation.count,
@@ -886,13 +894,13 @@ export function createGalaxyFieldRenderer(
     reservation: NonNullable<GalaxyFieldMixtureResult['spurCloudReservation']>,
   ): PlaceArmSpurCloudDispatchInput {
     return {
-      seed,
+      seed: current.seed,
       offset: reservation.offset,
       count: reservation.count,
       flux: reservation.flux,
       spurArms: reservation.spurArms,
       geometry: geo,
-      tuning: fieldTuning,
+      tuning: current.fieldTuning,
       fieldCompsBuffer: fieldComps.getBuffer(),
     };
   }
@@ -906,10 +914,11 @@ export function createGalaxyFieldRenderer(
   const armCloudPlacementRebuild = createKeyedRebuild({
     wanted: () => central.armCloudReservation !== null,
     build: () => {
+      const geo = current.geometry;
       const reservation = central.armCloudReservation;
-      if (!geometry || !reservation) return;
+      if (!geo || !reservation) return;
       const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloud' });
-      placeArmCloud.dispatchPlaceArmCloud(enc, armCloudDispatchInput(geometry, reservation));
+      placeArmCloud.dispatchPlaceArmCloud(enc, armCloudDispatchInput(geo, reservation));
       ringReduce.dispatchArmCloudFluxWeightSum(enc, {
         fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
         count: reservation.count,
@@ -924,12 +933,12 @@ export function createGalaxyFieldRenderer(
     reservation: NonNullable<GalaxyFieldMixtureResult['armCloudReservation']>,
   ): PlaceArmCloudDispatchInput {
     return {
-      seed,
+      seed: current.seed,
       offset: reservation.offset,
       count: reservation.count,
       flux: reservation.flux,
       geometry: geo,
-      tuning: fieldTuning,
+      tuning: current.fieldTuning,
       orientationTexture: ismMapOrientation.texture,
       fieldCompsBuffer: fieldComps.getBuffer(),
     };
@@ -943,10 +952,11 @@ export function createGalaxyFieldRenderer(
   const digPlacementRebuild = createKeyedRebuild({
     wanted: () => digBudget !== null,
     build: () => {
+      const geo = current.geometry;
       const budget = digBudget;
-      if (!geometry || !budget) return;
+      if (!geo || !budget) return;
       const enc = device.createCommandEncoder({ label: 'galaxy:placeDigVeil' });
-      placeDigVeil.dispatchPlaceDigVeil(enc, digDispatchInput(geometry, budget));
+      placeDigVeil.dispatchPlaceDigVeil(enc, digDispatchInput(geo, budget));
       device.queue.submit([enc.finish()]);
     },
   });
@@ -958,10 +968,10 @@ export function createGalaxyFieldRenderer(
   ): PlaceDigVeilDispatchInput {
     const grid = ismMapGridRadiusOrDefault(geo);
     return {
-      seed,
+      seed: current.seed,
       budget,
       reservationOffset: findHiiSegment(hiiSegments, 'hii:dig')?.first ?? 0,
-      generatorIsFluid: fieldTuning.ismMap.generator === 'fluid',
+      generatorIsFluid: current.fieldTuning.ismMap.generator === 'fluid',
       cdfRings: ISM_MAP_RINGS,
       cdfAz: ISM_MAP_AZ,
       cdfRMin: grid.rMin,
@@ -1088,7 +1098,10 @@ export function createGalaxyFieldRenderer(
    * one whose inputs moved.
    */
   function extraFieldMixture(extra: GalaxyFieldExtra): readonly GalaxyFieldComponent[] {
-    return place(buildGalaxyFieldMixture(extra.geometry, fieldTuning).components, extra.transform);
+    return place(
+      buildGalaxyFieldMixture(extra.geometry, current.fieldTuning).components,
+      extra.transform,
+    );
   }
 
   /**
@@ -1101,8 +1114,8 @@ export function createGalaxyFieldRenderer(
     return place(
       buildHiiRegions(
         extra.geometry,
-        fieldTuning,
-        fieldTuning.starFormation,
+        current.fieldTuning,
+        current.fieldTuning.starFormation,
         extra.geometry.seed,
         null,
       ),
@@ -1116,7 +1129,7 @@ export function createGalaxyFieldRenderer(
    * galaxy's mixture is ever GPU-filled today), so only this path pays for it.
    */
   function rebuildCentralFieldMixture(geo: GalaxyDescription): void {
-    central = buildGalaxyFieldMixture(geo, fieldTuning);
+    central = buildGalaxyFieldMixture(geo, current.fieldTuning);
   }
 
   /**
@@ -1126,17 +1139,18 @@ export function createGalaxyFieldRenderer(
   function rebuildCentralHiiMixture(geo: GalaxyDescription): void {
     centralHii = buildHiiShellsAndYoungWithSegments(
       geo,
-      fieldTuning,
-      fieldTuning.starFormation,
+      current.fieldTuning,
+      current.fieldTuning.starFormation,
       geo.seed,
     );
   }
 
   /** A new galaxy: everything derived from its geometry, plus an unconditional ISM-map regenerate. */
   function rebuildForGeometry(): void {
-    if (geometry) {
-      rebuildCentralFieldMixture(geometry);
-      rebuildCentralHiiMixture(geometry);
+    const geo = current.geometry;
+    if (geo) {
+      rebuildCentralFieldMixture(geo);
+      rebuildCentralHiiMixture(geo);
     }
     rebuildDustMixture();
     rebuildDigVeilBudget(centralHii);
@@ -1162,32 +1176,34 @@ export function createGalaxyFieldRenderer(
    *   ismMapFluid   -> the fluid generator's own params
    */
   function rebuildForTuning(prev: GalaxyFieldTuning): void {
+    const tuning = current.fieldTuning;
     // `arms.widthScale` reaches further than the arms: `armCrossSigma` sizes
     // the cross-arm scatter `buildSfEventCatalog` draws every SF event from.
     // `arms.cloud` shares this flag by construction — the UI cannot replace
     // the cloud without replacing the `arms` object around it.
-    const armsMoved = prev.arms !== fieldTuning.arms;
-    const fieldMoved = armsMoved || prev.disc !== fieldTuning.disc;
+    const armsMoved = prev.arms !== tuning.arms;
+    const fieldMoved = armsMoved || prev.disc !== tuning.disc;
     // HII reads `tuning.arms` ONLY through `armCrossSigma`'s `widthScale`, so
     // a whole-section identity check here would rebuild HII's
     // ~O(rings x az x arms) CDF sweep on an arm-cloud drag that cannot change
     // its output.
-    const armsWidthMoved = prev.arms.widthScale !== fieldTuning.arms.widthScale;
+    const armsWidthMoved = prev.arms.widthScale !== tuning.arms.widthScale;
     // `starFormation` feeds the HII tier alone (dust reads none of it), so it
     // joins `hiiMoved` rather than getting its own flag.
-    const starFormationMoved = prev.starFormation !== fieldTuning.starFormation;
-    const hiiMoved = armsWidthMoved || starFormationMoved || prev.hii !== fieldTuning.hii;
-    const dustMoved = prev.dust !== fieldTuning.dust;
+    const starFormationMoved = prev.starFormation !== tuning.starFormation;
+    const hiiMoved = armsWidthMoved || starFormationMoved || prev.hii !== tuning.hii;
+    const dustMoved = prev.dust !== tuning.dust;
 
     if (fieldMoved || hiiMoved) {
-      if (geometry) {
-        if (fieldMoved) rebuildCentralFieldMixture(geometry);
+      const geo = current.geometry;
+      if (geo) {
+        if (fieldMoved) rebuildCentralFieldMixture(geo);
         if (hiiMoved) {
-          rebuildCentralHiiMixture(geometry);
+          rebuildCentralHiiMixture(geo);
           rebuildDigVeilBudget(centralHii);
         }
       }
-      extraMixtures = extras.map((extra, i) => ({
+      extraMixtures = current.extras.map((extra, i) => ({
         fieldMixture: fieldMoved ? extraFieldMixture(extra) : extraMixtures[i]!.fieldMixture,
         hiiMixture: hiiMoved ? extraHiiMixture(extra) : extraMixtures[i]!.hiiMixture,
       }));
@@ -1202,8 +1218,8 @@ export function createGalaxyFieldRenderer(
     // forcing field bakes, but re-triggering on it would make an arm-width
     // drag pay this cost per frame — deliberately left stale until `ismMap`
     // moves.
-    const generatorMoved = prev.ismMap !== fieldTuning.ismMap;
-    const fluidParamsMoved = prev.ismMapFluid !== fieldTuning.ismMapFluid;
+    const generatorMoved = prev.ismMap !== tuning.ismMap;
+    const fluidParamsMoved = prev.ismMapFluid !== tuning.ismMapFluid;
     if (generatorMoved || fluidParamsMoved) {
       rebuildIsmMap();
     }
@@ -1225,11 +1241,12 @@ export function createGalaxyFieldRenderer(
    * on every call, since the host re-pushes its whole bag on any knob.
    */
   function setMixture(input: GalaxyFieldMixtureInput): void {
+    const prev = current;
     // `geometry` alone, not `seed`: a seed change always arrives with a fresh
     // `describeGalaxy` result, and every dispatch reads `seed` live anyway.
-    const geometryMoved = input.geometry !== geometry;
-    const tuningMoved = input.fieldTuning !== fieldTuning;
-    const extrasMoved = input.extras !== extras;
+    const geometryMoved = input.geometry !== prev.geometry;
+    const tuningMoved = input.fieldTuning !== prev.fieldTuning;
+    const extrasMoved = input.extras !== prev.extras;
     // The two sigmas are the only render lanes the orientation chain reads,
     // and the host re-pushes the WHOLE bag on any knob — so an unconditional
     // invalidate here would redispatch the six stages, and with a generator
@@ -1238,21 +1255,15 @@ export function createGalaxyFieldRenderer(
     // invalidation raised while nothing wanted the value is retained, so the
     // overlay turning on rebuilds by itself.
     const sigmasMoved =
-      input.sigmaDerivTexels !== sigmaDerivTexels || input.sigmaIntegTexels !== sigmaIntegTexels;
+      input.sigmaDerivTexels !== prev.sigmaDerivTexels ||
+      input.sigmaIntegTexels !== prev.sigmaIntegTexels;
 
-    const prevTuning = fieldTuning;
-    geometry = input.geometry;
-    fieldTuning = input.fieldTuning;
-    seed = input.seed;
-    extras = input.extras;
-    sigmaDerivTexels = input.sigmaDerivTexels;
-    sigmaIntegTexels = input.sigmaIntegTexels;
-    orientationViewWanted = input.orientationViewWanted;
+    current = input;
 
     if (sigmasMoved) orientationTexRebuild.invalidate();
 
     if (extrasMoved) {
-      extraMixtures = extras.map((extra) => ({
+      extraMixtures = current.extras.map((extra) => ({
         fieldMixture: extraFieldMixture(extra),
         hiiMixture: extraHiiMixture(extra),
       }));
@@ -1261,7 +1272,7 @@ export function createGalaxyFieldRenderer(
     if (geometryMoved) {
       rebuildForGeometry();
     } else if (tuningMoved) {
-      rebuildForTuning(prevTuning);
+      rebuildForTuning(prev.fieldTuning);
     }
     // Outside the chain, not an `else if` tail: a call that moves extras AND
     // tuning would otherwise compute the extras' new components above and
@@ -1301,8 +1312,8 @@ export function createGalaxyFieldRenderer(
     // applies at its own per-group `texture` reads — a preset saved before
     // this knob existed carries no such key.
     return {
-      scale: fieldTuning.hii.shells.textureScale ?? 0,
-      contrast: fieldTuning.hii.shells.textureContrast ?? 1,
+      scale: current.fieldTuning.hii.shells.textureScale ?? 0,
+      contrast: current.fieldTuning.hii.shells.textureContrast ?? 1,
     };
   }
 
@@ -1544,9 +1555,9 @@ export function createGalaxyFieldRenderer(
 
       async requestDustPlacementReadback(opts) {
         const budget = dustBudget;
-        if (!geometry || !budget) return null;
+        if (!current.geometry || !budget) return null;
         const { records, mass } = await placeDust.dispatchAndReadbackDust(
-          dustDispatchInput(geometry, budget, opts?.forceGeneratorIsFluid),
+          dustDispatchInput(current.geometry, budget, opts?.forceGeneratorIsFluid),
         );
         // Own encoder/submit, AFTER the placement dispatch above's submit has
         // already retired — `placeDust.massBuffer` holds THIS dispatch's
@@ -1565,9 +1576,9 @@ export function createGalaxyFieldRenderer(
 
       async requestArmSpurCloudPlacementReadback() {
         const reservation = central.spurCloudReservation;
-        if (!geometry || !reservation) return null;
+        if (!current.geometry || !reservation) return null;
         const { records, fluxWeight } = await placeArmSpurCloud.dispatchAndReadbackArmSpurCloud(
-          spurCloudDispatchInput(geometry, reservation),
+          spurCloudDispatchInput(current.geometry, reservation),
         );
         const enc = device.createCommandEncoder({
           label: 'galaxy:placeArmSpurCloudDebugFluxWeightSum',
@@ -1590,9 +1601,9 @@ export function createGalaxyFieldRenderer(
 
       async requestArmCloudPlacementReadback() {
         const reservation = central.armCloudReservation;
-        if (!geometry || !reservation) return null;
+        if (!current.geometry || !reservation) return null;
         const { records, fluxWeight } = await placeArmCloud.dispatchAndReadbackArmCloud(
-          armCloudDispatchInput(geometry, reservation),
+          armCloudDispatchInput(current.geometry, reservation),
         );
         const enc = device.createCommandEncoder({
           label: 'galaxy:placeArmCloudDebugFluxWeightSum',
@@ -1615,9 +1626,9 @@ export function createGalaxyFieldRenderer(
 
       async requestDigVeilPlacementReadback() {
         const budget = digBudget;
-        if (!geometry || !budget) return null;
+        if (!current.geometry || !budget) return null;
         const records = await placeDigVeil.dispatchAndReadbackDigVeil(
-          digDispatchInput(geometry, budget),
+          digDispatchInput(current.geometry, budget),
         );
         return {
           count: budget.count,
