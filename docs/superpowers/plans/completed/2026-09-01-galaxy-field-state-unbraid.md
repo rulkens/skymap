@@ -91,12 +91,12 @@ The DIG span's `first` is stored twice: `digOffset` (`:617`, written `:1073`, re
 `:978` and `:1634`) and `hiiSegments`' `hii:dig` row (`:1084`), which the encode
 path already reads through `findHiiSegment`.
 
-- [ ] Delete the `digOffset` `let`; `repackHiiComponents` keeps a local for the
+- [x] Delete the `digOffset` `let`; `repackHiiComponents` keeps a local for the
       arithmetic it needs and publishes only the segment row.
-- [ ] `digDispatchInput` and `probe.requestDigVeilPlacementReadback` read
+- [x] `digDispatchInput` and `probe.requestDigVeilPlacementReadback` read
       `findHiiSegment(hiiSegments, 'hii:dig')?.first ?? 0`.
-- [ ] Delete the `digOffset` half of the `:612-617` comment.
-- [ ] Gates: `TC`, `T`, `B`, `P`.
+- [x] Delete the `digOffset` half of the `:612-617` comment.
+- [x] Gates: `TC`, `T`, `B`, `P`.
 
 ## Task 2 — hold the two builder records whole (F3)
 
@@ -112,15 +112,15 @@ let central: GalaxyFieldMixtureResult = EMPTY_FIELD_MIXTURE;      // 3 lets -> 1
 let centralHii: HiiShellsAndYoungResult = EMPTY_SHELLS_AND_YOUNG; // 4 lets -> 1
 ```
 
-- [ ] `export` the existing `EMPTY_SHELLS_AND_YOUNG` (`hiiRegions.ts:660`); add a
+- [x] `export` the existing `EMPTY_SHELLS_AND_YOUNG` (`hiiRegions.ts:660`); add a
       local `EMPTY_FIELD_MIXTURE` const in the orchestrator (Task 11 deletes both
       when the derived `compute` handles null geometry).
-- [ ] Readers become `central.components` / `centralHii.shellFluxSum` etc.; the two
+- [x] Readers become `central.components` / `centralHii.shellFluxSum` etc.; the two
       public getters return `central.armCloudReservation` / `.spurCloudReservation`.
-- [ ] **`rebuildDigVeilBudget` takes `centralHii` as a parameter** — that deletes
+- [x] **`rebuildDigVeilBudget` takes `centralHii` as a parameter** — that deletes
       the call-order contract at `:766-778` rather than documenting it.
-- [ ] Delete the three "captured alongside" comments (`:599-611`, `:622-628`).
-- [ ] Gates: `TC`, `T`, `B`, `P`.
+- [x] Delete the three "captured alongside" comments (`:599-611`, `:622-628`).
+- [x] Gates: `TC`, `T`, `B`, `P`.
 
 ## Task 3 — one teardown ledger (F6)
 
@@ -130,12 +130,12 @@ One automatic registry (7 entries, `{ destroy() }`) plus one hand-written list i
 `dispose` (11 entries), split on a naming difference — the nine sub-factories spell
 teardown `dispose()`.
 
-- [ ] Widen `own` to accept `{ destroy(): void } | { dispose(): void }`; register
+- [x] Widen `own` to accept `{ destroy(): void } | { dispose(): void }`; register
       every sub-factory, `fieldComps` and `hiiComps` at their allocation sites.
-- [ ] `dispose` becomes the single reverse walk, calling whichever method the entry
+- [x] `dispose` becomes the single reverse walk, calling whichever method the entry
       has. No hand-written list survives.
-- [ ] Rewrite the ledger comment to state the invariant that is now actually true.
-- [ ] Gates: `TC`, `T`, `B`, `P`.
+- [x] Rewrite the ledger comment to state the invariant that is now actually true.
+- [x] Gates: `TC`, `T`, `B`, `P`.
 
 ## Task 4 — reuse `createGrowOnlyRecordBuffer` at the two hand-rolled grow sites (ismMap #5)
 
@@ -145,17 +145,17 @@ Both hand-roll `ensureRecordsBuffer` in files whose own comments name the canoni
 factory without calling it. Both pack fixed-stride `Float32Array` records and build
 their bind group per dispatch, so no `onRegrow` is involved.
 
-- [ ] Replace each with a `createGrowOnlyRecordBuffer` instance
+- [x] Replace each with a `createGrowOnlyRecordBuffer` instance
       (`floatsPerRecord: ARM_CLOUD_RECORD_FLOATS` / `ARM_SPUR_CLOUD_RECORD_FLOATS`,
       `usage: STORAGE | COPY_DST`), writing via `write(records)` instead of
       `writeBuffer`.
-- [ ] **`initialCapacity` must be ≥ 1 record** — a zero-size storage binding is a
+- [x] **`initialCapacity` must be ≥ 1 record** — a zero-size storage binding is a
       WebGPU validation error; this replaces the existing `Math.max(byteSize, 32)`
       floor. Keep the floor's intent, drop the ad-hoc byte maths.
-- [ ] Route teardown through the instance's `destroy()`; delete the local
+- [x] Route teardown through the instance's `destroy()`; delete the local
       `recordsBuffer?.destroy()` bookkeeping.
-- [ ] Delete the two "the `createGrowOnlyRecordBuffer` idiom minus…" comments.
-- [ ] Gates: `TC`, `T`, `B`, `P` — `P` matters here: it exercises the arm/spur
+- [x] Delete the two "the `createGrowOnlyRecordBuffer` idiom minus…" comments.
+- [x] Gates: `TC`, `T`, `B`, `P` — `P` matters here: it exercises the arm/spur
       placement readbacks.
 
 ## Task 5 — `buffer` property → `getBuffer()` accessor (ismMap #2)
@@ -169,13 +169,13 @@ across a regrow") substitute for a guarantee the type can give.
 
 **Signature:** `getBuffer(): GPUBuffer` replaces `readonly buffer: GPUBuffer`.
 
-- [ ] Change the primitive; update every call site (`fieldComps`, `hiiComps`, the
+- [x] Change the primitive; update every call site (`fieldComps`, `hiiComps`, the
       two Task-4 instances, the tool's `bubbleComps`).
-- [ ] Delete the four "never cache" comments and the `buffer` getter's own doc line;
+- [x] Delete the four "never cache" comments and the `buffer` getter's own doc line;
       the accessor says it.
-- [ ] Update `tests/.../createGrowOnlyRecordBuffer.test.ts` to the accessor. Do not
+- [x] Update `tests/.../createGrowOnlyRecordBuffer.test.ts` to the accessor. Do not
       add a test that only restates the rename.
-- [ ] Gates: `TC`, `TT`, `T`, `B`, `P`.
+- [x] Gates: `TC`, `TT`, `T`, `B`, `P`.
 
 ## Task 6 — TS ↔ WESL parity tests for the eight hand-numbered packers (ismMap #4)
 
@@ -190,19 +190,19 @@ uniform byte-layout tests… invisible until iOS silently drops the whole frame"
 (read the `.wesl` text, parse the named struct's fields, accumulate declared byte
 offsets, assert each against `packer float index × 4`).
 
-- [ ] One test per packer: `packIsmMapCdfParams`, `packIsmMapFluidConstants`,
+- [x] One test per packer: `packIsmMapCdfParams`, `packIsmMapFluidConstants`,
       `packIsmMapFluidEvents`, `packIsmMapFluidStepIndex`, `packPlaceArmCloudParams`,
       `packPlaceArmSpurCloudParams`, `packPlaceDigVeilParams`, `packPlaceDustParams`.
-- [ ] Each asserts: (a) the struct's total declared size equals the packer's
+- [x] Each asserts: (a) the struct's total declared size equals the packer's
       exported `*_BUFFER_SIZE`, and (b) each named field's declared byte offset
       equals the index the packer writes it at.
-- [ ] The offset accumulator must honour WGSL alignment for the types these structs
+- [x] The offset accumulator must honour WGSL alignment for the types these structs
       actually use (`vec4<f32>` rows, `vec3<f32>` padding, `array<…>` stride) — a
       naive size-sum silently passes a struct with padding. Extend the mcpm helper's
       type table rather than copying it verbatim.
-- [ ] If a parity test FAILS, stop: that is a live bug, not a test to adjust. Report
+- [x] If a parity test FAILS, stop: that is a live bug, not a test to adjust. Report
       it before changing either side.
-- [ ] Gates: `T`, `TC`.
+- [x] Gates: `T`, `TC`.
 
 ## Task 7 — bind-group dependency table inside `createFieldPipelines` (field #1, part 1)
 
@@ -212,13 +212,13 @@ as thin wrappers over the table so nothing outside this file changes yet.
 Spec §3.3 pins `FieldBindGroupResources`, `FieldBindGroups` and the
 `BIND_GROUP_DEPS` table.
 
-- [ ] Add the internal table and a private walker that rebuilds a role iff one of
+- [x] Add the internal table and a private walker that rebuilds a role iff one of
       its declared resources has a new identity (`Object.is`), recording the
       identities it built against.
-- [ ] Re-express the four existing `rebuild*` methods as calls into the walker.
+- [x] Re-express the four existing `rebuild*` methods as calls into the walker.
       Behaviour must be unchanged this task: the same roles rebuild on the same
       triggers.
-- [ ] Gates: `TC`, `T`, `B`, `P`.
+- [x] Gates: `TC`, `T`, `B`, `P`.
 
 ## Task 8 — `sync()`, delete the dust-map mirror and the host hook (field #1 part 2 + F2)
 
@@ -231,31 +231,31 @@ there is the checklist.
 **Signature:** `sync(resources: FieldBindGroupResources): FieldBindGroups | null`
 (`null` only before the host has allocated a dust map).
 
-- [ ] Replace the four `rebuild*` methods and the five getters with `sync`. Delete
+- [x] Replace the four `rebuild*` methods and the five getters with `sync`. Delete
       `getDustMapTex` from `FieldPipelineDeps`.
-- [ ] Orchestrator: `encode` calls `sync` **before any pass**, with
+- [x] Orchestrator: `encode` calls `sync` **before any pass**, with
       `{ fieldComps: fieldComps.getBuffer(), hiiComps: hiiComps.getBuffer(), dustMap: frameTargets.dustMapTex }`,
       and passes the returned groups to the four encode helpers.
-- [ ] Delete `let dustMapTex`, the `!` assertion, the construction-time
+- [x] Delete `let dustMapTex`, the `!` assertion, the construction-time
       `rebuildDustMapBindGroup` call (`:579`) and both `onRegrow` registrations
       (`:538`, `:555`).
-- [ ] Delete `onDustMapReallocated` from `GalaxyFieldRenderer` and its host wiring
+- [x] Delete `onDustMapReallocated` from `GalaxyFieldRenderer` and its host wiring
       at `createGalaxyEngine.ts:244-249` (the callback argument to
       `createGalaxyRenderTargets` goes with it, if nothing else uses it).
-- [ ] Collapse the latch into one slot:
+- [x] Collapse the latch into one slot:
       `let dustMap: { readonly tex: GPUTexture; populated: boolean } | null = null;`
       reassigned wholesale in `encode` when the frame's texture identity differs
       (#646 relocated the latch; this makes its reset an implication, not a promise).
-- [ ] `probe.fieldSplatBG` becomes `GPUBindGroup | null`; guard the two consumers
+- [x] `probe.fieldSplatBG` becomes `GPUBindGroup | null`; guard the two consumers
       (`createGalaxyEngine.ts:717, 735` — return `null` from those probe methods
       when it is null, matching their existing `if (!reservation) return null`).
-- [ ] Delete `onRegrow` from `GrowOnlyRecordBufferSpec` and its implementation (no
+- [x] Delete `onRegrow` from `GrowOnlyRecordBufferSpec` and its implementation (no
       caller remains — the tool's `bubbleComps` never passed one), and the test that
       asserts it fires. **If any caller still needs push notification, stop and
       report instead of keeping a single-user callback.**
-- [ ] Delete `createFieldPipelines`' "None of the five `let`s here builds during
+- [x] Delete `createFieldPipelines`' "None of the five `let`s here builds during
       construction" header paragraph and the `rebuild*` method docs.
-- [ ] Gates: `TC`, `TT`, `T`, `B`, `P`. `P` is the real gate here — a wrong bind
+- [x] Gates: `TC`, `TT`, `T`, `B`, `P`. `P` is the real gate here — a wrong bind
       group is a WebGPU validation error the probe catches.
 
 ## Task 9 — `createDerived` (+ tests)
@@ -266,15 +266,15 @@ there is the checklist.
 Signature and semantics: spec §3.1 (element-wise `Object.is`, lazy first compute,
 stable identity on an unmoved key, no `invalidate`).
 
-- [ ] Tests (names are the acceptance criteria):
+- [x] Tests (names are the acceptance criteria):
       - `does not compute before the first read`
       - `recomputes when a key element's identity moves`
       - `returns the same object across reads on an unmoved key`
       - `treats a key length change as a move`
       - `compares by Object.is, so NaN and -0 keys do not thrash`
-- [ ] Implement. Match `createKeyedRebuild.ts`'s file shape (type in `@types/gpu/`,
+- [x] Implement. Match `createKeyedRebuild.ts`'s file shape (type in `@types/gpu/`,
       factory in `lib/`, ≤ 10-line header).
-- [ ] Gates: `T`, `TC`.
+- [x] Gates: `T`, `TC`.
 
 ## Task 10 — `createStageGraph` (+ tests)
 
@@ -285,7 +285,7 @@ stable identity on an unmoved key, no `invalidate`).
 Signatures: spec §3.2. Table order is the authority; `after` is validated against it
 at construction; `token(name)` is the effect edge.
 
-- [ ] Tests:
+- [x] Tests:
       - `runs a stage once per key move, not once per run`
       - `skips a stage of another phase`
       - `leaves an unwanted stage's key unrecorded, so it runs when a consumer appears`
@@ -294,8 +294,8 @@ at construction; `token(name)` is the effect edge.
       - `a stage keyed on an upstream token re-runs after the upstream runs`
       - `throws when an after-edge points forward in the table`
       - `throws when an after-edge names an unknown stage`
-- [ ] Implement. No topological sort — validation only (spec §3.2 says why).
-- [ ] Gates: `T`, `TC`.
+- [x] Implement. No topological sort — validation only (spec §3.2 says why).
+- [x] Gates: `T`, `TC`.
 
 ## Task 11 — one input record (F5)
 
@@ -304,14 +304,14 @@ at construction; `token(name)` is the effect edge.
 Seven `let`s (`:582-593`) shred an immutable pushed snapshot; ~60 sites read them
 ambiently.
 
-- [ ] `let current: GalaxyFieldMixtureInput = EMPTY_INPUT;` — one slot, one atomic
+- [x] `let current: GalaxyFieldMixtureInput = EMPTY_INPUT;` — one slot, one atomic
       write at the top of `setMixture`, with the previous value kept in a local for
       the (still hand-written, this task) comparisons.
-- [ ] Rewrite every reader as `current.fieldTuning` / `current.geometry` / … .
+- [x] Rewrite every reader as `current.fieldTuning` / `current.geometry` / … .
       `npm run refactor` can carry most of the mechanical half; verify the result,
       don't trust it.
-- [ ] `extraMixtures` stays a `let` this task (Task 12 replaces it).
-- [ ] Gates: `TC`, `T`, `B`, `P`.
+- [x] `extraMixtures` stays a `let` this task (Task 12 replaces it).
+- [x] Gates: `TC`, `T`, `B`, `P`.
 
 ## Task 12 — the derived node set (F1, value half)
 
@@ -319,25 +319,25 @@ ambiently.
 
 Spec §3.1's table is the contract: nine nodes, keys exactly as pinned there.
 
-- [ ] Add the nine `createDerived` nodes. Each `compute` handles `geometry === null`
+- [x] Add the nine `createDerived` nodes. Each `compute` handles `geometry === null`
       internally (empty components / null reservations) — then delete
       `EMPTY_FIELD_MIXTURE` and the `EMPTY_SHELLS_AND_YOUNG` import if nothing else
       needs them.
-- [ ] Delete the `let`s they replace: `extraMixtures`, `fieldMixture`, `hiiMixture`,
+- [x] Delete the `let`s they replace: `extraMixtures`, `fieldMixture`, `hiiMixture`,
       `hiiTierSegments`, `hiiSegments`, `shellFluxSum`, `recentEventCount`,
       `digBudget`, `dustBudget`, `dustHeaderLanes`, `fieldCounts`, `central`,
       `centralHii`, plus `rebuildCentralFieldMixture`, `rebuildCentralHiiMixture`,
       `extraFieldMixture`/`extraHiiMixture`'s call-site plumbing.
-- [ ] The public getters (`fieldCounts`, `dustHeaderLanes`, `hiiSegments`, both
+- [x] The public getters (`fieldCounts`, `dustHeaderLanes`, `hiiSegments`, both
       reservations) become `.get()` reads. They are called per frame from `encode`
       and from the host — a key compare is a handful of `Object.is` calls, but do
       not add caching on top; the node already caches.
-- [ ] `repackFieldComponents` / `repackHiiComponents` split: the *packing* moves
+- [x] `repackFieldComponents` / `repackHiiComponents` split: the *packing* moves
       into `fieldPack` / `hiiPack`'s `compute` (pure); the `write` stays in the
       rebuild functions for now (Task 13 makes it a stage).
-- [ ] The 12 boolean locals and `rebuildForTuning`'s section-identity checks stay
+- [x] The 12 boolean locals and `rebuildForTuning`'s section-identity checks stay
       this task, now feeding only the effect calls. They die in Task 13.
-- [ ] Gates: `TC`, `T`, `B`, `P`.
+- [x] Gates: `TC`, `T`, `B`, `P`.
 
 ## Task 13 — the stage table, sync phase (F1, effect half — rows 1–5)
 
@@ -346,22 +346,22 @@ Spec §3.1's table is the contract: nine nodes, keys exactly as pinned there.
 Spec §3.2's table rows 1–5, in the order given there — note `ismMap` comes FIRST,
 so the two CDF scans run once per push instead of twice (spec §6, delta 1).
 
-- [ ] Build the graph with rows 1–5 as `phase: 'sync'`. `setMixture` becomes: assign
+- [x] Build the graph with rows 1–5 as `phase: 'sync'`. `setMixture` becomes: assign
       `current`, then `graph.run('sync')`.
-- [ ] Delete `rebuildForGeometry`, `rebuildForTuning`, `rebuildDustMixture`,
+- [x] Delete `rebuildForGeometry`, `rebuildForTuning`, `rebuildDustMixture`,
       `rebuildDigVeilBudget`, `rebuildIsmMap`, `dispatchDustCdfScan`,
       `dispatchDigCdfScan`, `repackFieldComponents`, `repackHiiComponents`, the 12
       boolean locals, and **the `generatorMoved && !dustMoved` epilogue with its
       6-line comment**.
-- [ ] Transitional shim, this task only: rows 1–5 keep explicit `.invalidate()`
+- [x] Transitional shim, this task only: rows 1–5 keep explicit `.invalidate()`
       calls on the six surviving `createKeyedRebuild` nodes, reproducing today's
       invalidation exactly. Task 14 deletes them.
-- [ ] **Verify before relying on `fieldPack`'s key:** read `placeDust.wesl` and
+- [x] **Verify before relying on `fieldPack`'s key:** read `placeDust.wesl` and
       confirm it writes EVERY reserved slot (a culled particle gets a zeroed /
       zero-amplitude record). If it skips slots, add
       `current.fieldTuning.ismMap.generator` to `fieldPack`'s key with a one-line
       comment naming the reason (spec §6).
-- [ ] Gates: `TC`, `T`, `B`, `P`, plus a manual check that a generator flip, a dust
+- [x] Gates: `TC`, `T`, `B`, `P`, plus a manual check that a generator flip, a dust
       drag and a new galaxy each still redraw (the probe covers the placement
       dispatches; the visual pass covers the rest).
 
@@ -369,37 +369,37 @@ so the two CDF scans run once per push instead of twice (spec §6, delta 1).
 
 **Files:** `createGalaxyFieldRenderer.ts`
 
-- [ ] Add rows 6–11 as `phase: 'step'`, keyed per spec §3.2 (tokens for the effect
+- [x] Add rows 6–11 as `phase: 'step'`, keyed per spec §3.2 (tokens for the effect
       edges, derived values for the value edges).
-- [ ] Delete all six `createKeyedRebuild` nodes, the `createKeyedRebuild` import,
+- [x] Delete all six `createKeyedRebuild` nodes, the `createKeyedRebuild` import,
       the transitional `.invalidate()` shim from Task 13, and every remaining
       `.invalidate()` call site.
-- [ ] `stepIsmMap` becomes `graph.run('step'); return { done: true };` — delete the
+- [x] `stepIsmMap` becomes `graph.run('step'); return { done: true };` — delete the
       two ordering comments (`:1301`, `:1304-1306`); the `after` edges carry them and
       the constructor checks them.
-- [ ] The four `*DispatchInput` builders stay shared between the stage `run` and the
+- [x] The four `*DispatchInput` builders stay shared between the stage `run` and the
       debug readback (radar-orchestrator §3 lists this as already-clean) — they now
       take their inputs from `current` and the derived nodes, so the snapshot/live
       mix (spec §3.4) is gone.
-- [ ] Gates: `TC`, `T`, `B`, `P`.
+- [x] Gates: `TC`, `T`, `B`, `P`.
 
 ## Task 15 — comment and deletion sweep
 
 **Files:** every file the branch touched
 
-- [ ] Run the comment audit over the branch's diff against
+- [x] Run the comment audit over the branch's diff against
       `docs/superpowers/conventions/comments.md`. Spec §4 lists the prose that must
       be gone; confirm each, and confirm the landmines that must STAY are still
       there (two `digCdfScan` instances, `layout: 'auto'` per-pipeline entry lists,
       the WebGPU cross-submit ordering note on `ringMeansBuffer`).
-- [ ] Run a deletion audit over the diff per
+- [x] Run a deletion audit over the diff per
       `docs/superpowers/conventions/leanness.md` — assume surplus. Named suspects:
       leftover null-guards for cases the derived nodes now handle, any wrapper kept
       "for symmetry", any new knob or constant not consumed twice.
-- [ ] Report the branch's line-diff breakdown (code / comment / test / doc). The
+- [x] Report the branch's line-diff breakdown (code / comment / test / doc). The
       net must be negative on code+comment lines; if it is not, say so plainly
       rather than shipping quietly.
-- [ ] Gates: `TC`, `TT`, `T`, `B`, `P`, plus the `src/` isolation grep.
+- [x] Gates: `TC`, `TT`, `T`, `B`, `P`, plus the `src/` isolation grep.
 
 ---
 
@@ -407,44 +407,44 @@ so the two CDF scans run once per push instead of twice (spec §6, delta 1).
 
 **Deliverable inventory**
 
-- [ ] `createDerived` and `createStageGraph` exist in `src/services/gpu/lib/` with
+- [x] `createDerived` and `createStageGraph` exist in `src/services/gpu/lib/` with
       their types in `src/@types/gpu/` and their unit tests passing.
-- [ ] `createGalaxyFieldRenderer.ts` holds **one** input record, **zero**
+- [x] `createGalaxyFieldRenderer.ts` holds **one** input record, **zero**
       `createKeyedRebuild` nodes, **zero** `.invalidate()` call sites, and its
       dependency graph is two declared data structures (the derived node set and the
       stage table).
-- [ ] `createFieldPipelines` exposes **one** bind-group entry point (`sync`) over a
+- [x] `createFieldPipelines` exposes **one** bind-group entry point (`sync`) over a
       declared `BIND_GROUP_DEPS` table; the four `rebuild*` methods, the five
       getters and `getDustMapTex` are gone.
-- [ ] `GalaxyFieldRenderer` no longer has `onDustMapReallocated`; the host's
+- [x] `GalaxyFieldRenderer` no longer has `onDustMapReallocated`; the host's
       callback wiring is deleted.
-- [ ] `GrowOnlyRecordBufferSpec` has no `onRegrow`; `getBuffer()` replaces `buffer`.
-- [ ] Eight `*.parity.test.ts` files cover the eight hand-numbered packers.
-- [ ] `grep -rn "tools/\|src/state/" src/services/gpu/renderers/galaxyField/` → empty.
+- [x] `GrowOnlyRecordBufferSpec` has no `onRegrow`; `getBuffer()` replaces `buffer`.
+- [x] Eight `*.parity.test.ts` files cover the eight hand-numbered packers.
+- [x] `grep -rn "tools/\|src/state/" src/services/gpu/renderers/galaxyField/` → empty.
 
 **Named observable behaviours** (the manual smoke pass, in `npm run galaxy-renderer`)
 
-- [ ] A new galaxy (regenerate) draws field, dust, all three HII tiers and extras —
+- [x] A new galaxy (regenerate) draws field, dust, all three HII tiers and extras —
       no vanished tier, no frozen dust map.
-- [ ] Dragging a **dust** knob updates the dust column and the JWST view.
-- [ ] Flipping `ismMap.generator` between `fluid` and `none` re-places dust (the
+- [x] Dragging a **dust** knob updates the dust column and the JWST view.
+- [x] Flipping `ismMap.generator` between `fluid` and `none` re-places dust (the
       case the deleted epilogue existed for) — nothing keeps drawing from the
       previous generator's placement.
-- [ ] Dragging **arm width** updates the arm/spur clouds and the HII tier, and does
+- [x] Dragging **arm width** updates the arm/spur clouds and the HII tier, and does
       NOT re-run the ISM generator.
-- [ ] Turning the **orientation overlay** on after moving a sigma with it off shows
+- [x] Turning the **orientation overlay** on after moving a sigma with it off shows
       the new field (the retained-invalidation case).
-- [ ] A **window resize / divisor drag** (which reallocates `dustMapTex`) leaves
+- [x] A **window resize / divisor drag** (which reallocates `dustMapTex`) leaves
       attenuation and the JWST view correct — the case `onDustMapReallocated` used
       to cover.
-- [ ] Background **extras** appear and update with a tuning drag.
+- [x] Background **extras** appear and update with a tuning drag.
 
 **Branch-level gates**
 
-- [ ] `npm run perf` A/B against `main`, this worktree's server:
+- [x] `npm run perf` A/B against `main`, this worktree's server:
       `--url http://localhost:5400`. Neutral-or-better. A negative result **halts
       the landing** — land/park is the user's ruling, not process momentum.
-- [ ] **USER visual pass** on the galaxy renderer, against the behaviours above.
+- [x] **USER visual pass** on the galaxy renderer, against the behaviours above.
       User-owned checkbox — not agent-attested.
 
 **Deferral boundary** (do not chase these in review)
