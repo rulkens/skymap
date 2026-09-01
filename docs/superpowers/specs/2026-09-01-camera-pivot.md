@@ -394,7 +394,9 @@ export function cursorRayBodyLocal(
 **(a) 1:1 drag — frozen pick sphere, two-ray rotation.** Freeze
 `anchorRadiusM = |first pick|` at gesture start; each frame intersect the
 previous and current cursor rays with _that sphere_ and rotate the pose —
-position **and** basis — by the quaternion carrying `p̂₀` to `p̂₁` (C §2.2-2.4).
+position **and** basis — by the inverse of the quaternion carrying `p̂₀` to `p̂₁`
+— the pose rotates _with_ its rays, so the camera turns the other way
+(C §2.2-2.4).
 Eight lines, pole-free, exact, identical at every latitude. No `cos(latitude)`
 term exists to be wrong; dragging over the pole is an ordinary rotation with a
 near-equatorial axis. A ray that misses the frozen sphere degrades the gesture

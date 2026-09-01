@@ -10,6 +10,10 @@
  *
  * Columns are the natural Gram-Schmidt target here because each column is
  * contiguous in memory and represents one image axis of the rotation.
+ *
+ * Column 2 is rebuilt as `c0 × c1`, so the input triple must be RIGHT-handed:
+ * an `imagePlaneBasis` (right, up, forward) triple is left-handed and comes
+ * back silently mirrored — pass that one as (forward, up, right).
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';

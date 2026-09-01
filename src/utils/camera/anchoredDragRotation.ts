@@ -19,11 +19,15 @@ import { cross3 } from '../math/cross3';
 
 const BODY_CENTRE: Vec3 = [0, 0, 0];
 
-// |ray·normal| below this is edge-on enough that the rotation satisfying the
-// drag is a teleport. A hard test, never a blend — a blend would be a second
-// path hiding drift. Feel-open until Task 22.
-const MIN_INCIDENCE_COS = 0.05;
+/**
+ * |ray·normal| below this is edge-on enough that the rotation satisfying the
+ * drag is a teleport. A hard test, never a blend — a blend would be a second
+ * path hiding drift. Feel-open until Task 22. Single home: the surface
+ * controller imports this, never restates it.
+ */
+export const MIN_INCIDENCE_COS = 0.05;
 
+/** `dir` must be unit — `raySphereRoots` assumes it and scales `t` by `|dir|`. */
 type PickRay = { readonly originM: Readonly<Vec3>; readonly dir: Readonly<Vec3> };
 
 /** Unit direction of the near pick; `null` on a miss, a hit behind the eye, or grazing. */
@@ -67,8 +71,8 @@ export function anchoredDragRotation(
   const forward = rotateVec3ByQuat(q, [b[6], b[7], b[8]]);
   // `reorthonormalise` rebuilds its third column as `c0 × c1`, but this is the
   // image-plane basis, where `right × up = −forward`. Passing the columns as
-  // (forward, up, right) both lands the right axis in that slot and keeps
-  // `imagePlaneBasis`'s authority order — forward exact, the rest derived.
+  // (forward, up, right) lands the right axis in that slot, and leaves forward
+  // exact — the axis a drift would be most visible on.
   const [fx, fy, fz, ux, uy, uz, rx, ry, rz] = reorthonormalise([...forward, ...up, ...right]);
 
   return {
