@@ -4,9 +4,10 @@
  * can't disagree. This panel holds no catalog data, so the readout reads the
  * cached `catalog.catalogBoundsMpc` rather than re-deriving from raw positions.
  * "Auto fit" (`fitBoxToCatalog`, gridSlice.ts) is a one-shot ACTION, not a
- * mode: it snapshots the catalog bounds into the manual center/size fields
- * once, `paddingMpc` baked in at click time — after that it's an ordinary
- * manual box, no extra wiring needed here.
+ * mode: it snapshots bounds into the manual center/size fields once,
+ * `paddingMpc` baked in at click time — after that it's an ordinary manual
+ * box. Below 100%, `resolveAutoFitBounds` swaps in the densest-fraction
+ * bounds (`autoFitPercent`, gridSlice.ts) before that same snapshot.
  */
 import type { ReactNode } from 'react';
 import Button from '../../../../../src/components/common/Button/Button';
@@ -17,6 +18,7 @@ import { minFeasibleVoxelSizeMpc } from '../../sim/minFeasibleVoxelSizeMpc';
 import { estimateGridBudgetBytes } from '../../sim/planGridBudget';
 import {
   fitBoxToCatalog,
+  setAutoFitPercent,
   setManualCenterMpc,
   setManualSizeMpc,
   setPaddingMpc,
@@ -29,6 +31,7 @@ import ToggleRow from '../ToggleRow/ToggleRow';
 import { AXES } from './utils/AXES';
 import { dimsReadoutStyle } from './utils/dimsReadoutStyle';
 import { fieldStyle } from './utils/fieldStyle';
+import { resolveAutoFitBounds } from './utils/resolveAutoFitBounds';
 import { VOXEL_SIZE_MAX_MPC } from './utils/VOXEL_SIZE_MAX_MPC';
 import { VOXEL_SIZE_MIN_MPC } from './utils/VOXEL_SIZE_MIN_MPC';
 import { VOXEL_SIZE_STEP_MPC } from './utils/VOXEL_SIZE_STEP_MPC';
@@ -39,7 +42,16 @@ function GridBoxPanel(): ReactNode {
   const dispatch = useAppDispatch();
   const grid = useAppSelector((s) => s.grid);
   const catalogBoundsMpc = useAppSelector((s) => s.catalog.catalogBoundsMpc);
+  const catalogPoints = useAppSelector((s) => s.catalog.points);
+  const catalogPointCount = useAppSelector((s) => s.catalog.pointCount);
   const agentCount = useAppSelector((s) => s.sim.agentCount);
+  // Display-only: how many catalog points the current slider position would evict on
+  // the next Auto fit click. Derived here, not stored — `autoFitPercent` is a one-shot
+  // input to that click, with no bearing on the box already showing (gridSlice.ts).
+  const evictedCount =
+    grid.autoFitPercent >= 100
+      ? 0
+      : catalogPointCount - Math.ceil((grid.autoFitPercent / 100) * catalogPointCount);
   const box = deriveGridBox(grid);
   // Same total-bytes formula planGridBudget uses to refuse a build (one home,
   // shared) — no device limits needed here since this is a live estimate, not
@@ -91,12 +103,28 @@ function GridBoxPanel(): ReactNode {
         info="Keeps the box wireframe and its drag handles on screen, instead of only the 200ms flash after a slider edit."
         onChange={(on) => dispatch(setShowGridBox(on))}
       />
+      <ParamSlider
+        label="fit %"
+        value={grid.autoFitPercent}
+        min={80}
+        max={100}
+        step={1}
+        format={(v) => v.toFixed(0)}
+        info="Fraction of catalog points the next Auto fit keeps, evicting the farthest-from-median fringe."
+        onChange={(v) => dispatch(setAutoFitPercent(v))}
+        path="grid.autoFitPercent"
+      />
+      {grid.autoFitPercent < 100 && <div style={dimsReadoutStyle}>evicts {evictedCount} pts</div>}
       <Button
         className={styles.autoFitButton}
         disabled={!catalogBoundsMpc}
         onClick={() => {
           if (!catalogBoundsMpc) return;
-          dispatch(fitBoxToCatalog(catalogBoundsMpc));
+          dispatch(
+            fitBoxToCatalog(
+              resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
+            ),
+          );
         }}
       >
         auto fit

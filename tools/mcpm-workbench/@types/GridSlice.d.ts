@@ -27,6 +27,11 @@ import type { GridElement } from './GridElement';
  * `manualVoxelSizeMpc` up in `deriveGridBox`; set only by
  * `setMaxBufferBytes`, which — like `setResolvedGrid` — does NOT clear
  * `importedBox`.
+ *
+ * `autoFitPercent` — like `paddingMpc`, a one-shot input baked in at the
+ * NEXT "auto fit" click, not a live modifier of the box already showing:
+ * excluded from `gridShapeOf` and `SCENE_REBUILD_TRIGGERS` for the same
+ * reason. 100 reproduces today's full-catalog-bounds fit exactly.
  */
 export type GridSlice = {
   readonly manualVoxelSizeMpc: number;
@@ -40,4 +45,7 @@ export type GridSlice = {
   readonly byteBudget: GridBudget | null;
   readonly showGridBox: boolean;
   readonly maxBufferBytes: number | null;
+  /** Integer 80–100 (%): fraction of catalog points Auto fit keeps, evicting the
+   * L∞-farthest-from-median fringe (see `buildFitProfile`/`fitProfileBounds`). */
+  readonly autoFitPercent: number;
 };

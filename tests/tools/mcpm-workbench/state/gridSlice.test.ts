@@ -59,6 +59,24 @@ describe('gridSlice setters clear importedBox on any user edit', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
     expect(reducer(withImportedBox, actions.fitBoxToCatalog(bounds)).importedBox).toBeNull();
   });
+
+  it('setAutoFitPercent clears it', () => {
+    expect(reducer(withImportedBox, actions.setAutoFitPercent(90)).importedBox).toBeNull();
+  });
+});
+
+describe('setAutoFitPercent', () => {
+  it('clamps below 80 up to 80', () => {
+    expect(reducer(defaultGridSlice, actions.setAutoFitPercent(50)).autoFitPercent).toBe(80);
+  });
+
+  it('clamps above 100 down to 100', () => {
+    expect(reducer(defaultGridSlice, actions.setAutoFitPercent(150)).autoFitPercent).toBe(100);
+  });
+
+  it('passes an in-range integer through unchanged', () => {
+    expect(reducer(defaultGridSlice, actions.setAutoFitPercent(92)).autoFitPercent).toBe(92);
+  });
 });
 
 describe('installImportedBox', () => {

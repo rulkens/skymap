@@ -25,6 +25,7 @@ export const defaultGridSlice: GridSlice = {
   byteBudget: null,
   showGridBox: true,
   maxBufferBytes: null,
+  autoFitPercent: 100,
 };
 
 export const gridSlice = createSlice({
@@ -41,6 +42,17 @@ export const gridSlice = createSlice({
     },
     setPaddingMpc: (state, action: PayloadAction<number>) => {
       state.paddingMpc = action.payload;
+      state.importedBox = null;
+    },
+    /**
+     * setAutoFitPercent — same shape as `setPaddingMpc` above: a one-shot input
+     * to the NEXT "auto fit" click, not a live modifier of the box already
+     * showing, but still a grid-controls edit under the V3 ruling so it clears
+     * `importedBox`. Clamped here (not just at the slider) so a stray dispatch
+     * can't push the fit below the 80% floor `fitProfileBounds` assumes.
+     */
+    setAutoFitPercent: (state, action: PayloadAction<number>) => {
+      state.autoFitPercent = Math.min(100, Math.max(80, Math.round(action.payload)));
       state.importedBox = null;
     },
     setManualCenterMpc: (state, action: PayloadAction<Vec3>) => {
@@ -127,6 +139,7 @@ export const gridSlice = createSlice({
 export const {
   setVoxelSizeMpc,
   setPaddingMpc,
+  setAutoFitPercent,
   setManualCenterMpc,
   setManualSizeMpc,
   setRotation,
