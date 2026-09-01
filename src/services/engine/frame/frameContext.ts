@@ -91,6 +91,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
+import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
@@ -105,6 +106,7 @@ import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
 import { deriveBodyStates } from './deriveBodyStates';
 import { visibleSlabBodies } from './visibleSlabBodies';
+import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
 import { visibleStars } from './visibleStars';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 
@@ -198,9 +200,14 @@ export function deriveFrameContext(
     cam.target[2] - cam.position[2],
   ]);
 
+  const { earth, planets } = state.data.bodies;
+  const slabBodyCandidates: readonly SceneBody[] =
+    earth === null
+      ? [...planets, ...SCENE_ANCHOR_POINT_BODIES]
+      : [earth, ...planets, ...SCENE_ANCHOR_POINT_BODIES];
+
   const visibleBodies = visibleSlabBodies({
-    earth: state.data.bodies.earth,
-    planets: state.data.bodies.planets,
+    bodies: slabBodyCandidates,
     bodyStates,
     camPosMpc: cam.position,
     camForwardMpc: camForward,

@@ -1,7 +1,9 @@
 /**
- * AnchorPointBody — a scene body that is positioned, named and selectable but
- * DRAWS NOTHING: no mesh, no point, no glint. Its whole on-screen presence is
- * its caption.
+ * AnchorPointBody — a scene body that is positioned, named and selectable.
+ * Today it draws only its caption; a future anchor may also draw a far-field
+ * glint and, inside its lensing band, a geodesic pass — both via dedicated
+ * `ContentLayer` rows keyed on its id, never via the flat/textured/glint
+ * partition planets use.
  *
  * Identity fields only, so a record cannot carry photometry or a texture it has
  * no renderer for. That is the difference from `StarBody`, whose `absMag` /
