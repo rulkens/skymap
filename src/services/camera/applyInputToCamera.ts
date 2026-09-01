@@ -16,6 +16,7 @@ import { frameUp } from '../../utils/camera/frameUp';
 
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { InputStep } from '../../@types/camera/InputStep';
+import type { PivotFraming } from '../../@types/camera/PivotFraming';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
@@ -27,17 +28,17 @@ const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
 /**
  * `cssHeight` is the CSS height, NOT the backing store — gesture feel must not
- * depend on devicePixelRatio. `pivotRadiusMpc` (null: no surface) damps the
+ * depend on devicePixelRatio. `pivot` (radius `null`: no surface) damps the
  * orbit rate and floors the zoom.
  */
 export function applyInputToCamera(
   cam: OrbitCamera,
   step: Extract<InputStep, { kind: 'drag' } | { kind: 'zoom' }>,
   cssHeight: number,
-  pivotRadiusMpc: number | null,
+  pivot: PivotFraming,
 ): void {
   if (step.kind === 'zoom') {
-    cam.distance = zoomedDistance(cam.distance, step.factor, pivotRadiusMpc);
+    cam.distance = zoomedDistance(cam.distance, step.factor, pivot);
     updatePosition(cam);
     return;
   }
@@ -68,7 +69,7 @@ export function applyInputToCamera(
   }
 
   // Damped by altitude above a focused body so the ground tracks the drag.
-  const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivotRadiusMpc);
+  const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivot.radiusMpc);
   cam.yaw -= dx * radPerPixel;
   cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * radPerPixel));
   updatePosition(cam);

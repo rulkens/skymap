@@ -11,6 +11,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets } from '../../../src/services/gpu/renderTargets';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 
 function mockDevice(): GPUDevice {
   return {
@@ -31,6 +32,19 @@ const MW_DIVISOR = 2;
 function stateWithDivisor(aggregateDivisor: number): EngineState {
   return { settings: { milkyWay: { aggregateDivisor } } } as unknown as EngineState;
 }
+
+// `fixedSizePx` has no row in the production table yet (Phase B adds the
+// real sky-cubemap row); `createRenderTargets`'s 5th `extraRows` param is a
+// test-only injection seam so the allocation branch can be exercised now.
+// No production caller passes it.
+const FIXED_SIZE_ROW: RenderTargetSpec = {
+  id: 'test:cubemap',
+  format: 'rgba16float',
+  depth: null,
+  scale: 1,
+  clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  fixedSizePx: { size: 256, layers: 6 },
+};
 
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
@@ -72,9 +86,9 @@ describe('createRenderTargets', () => {
     const aggDesc = create.mock.calls.find(
       (c) => c[0].label === 'render-target-star-aggregates',
     )![0];
-    expect(hdrDesc.size).toEqual({ width: 900, height: 600 });
-    expect(volDesc.size).toEqual({ width: 300, height: 200 });
-    expect(aggDesc.size).toEqual({ width: 450, height: 300 });
+    expect(hdrDesc.size).toEqual({ width: 900, height: 600, depthOrArrayLayers: 1 });
+    expect(volDesc.size).toEqual({ width: 300, height: 200, depthOrArrayLayers: 1 });
+    expect(aggDesc.size).toEqual({ width: 450, height: 300, depthOrArrayLayers: 1 });
     expect(hdrDesc.format).toBe('rgba16float');
     expect(volDesc.format).toBe('rgba16float');
     expect(aggDesc.format).toBe('rgba16float');
@@ -95,13 +109,51 @@ describe('createRenderTargets', () => {
     const aggResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-star-aggregates')
       .at(-1)![0];
-    expect(hdrResized.size).toEqual({ width: 1200, height: 900 });
-    expect(volResized.size).toEqual({ width: 400, height: 300 });
-    expect(aggResized.size).toEqual({ width: 600, height: 450 });
+    expect(hdrResized.size).toEqual({ width: 1200, height: 900, depthOrArrayLayers: 1 });
+    expect(volResized.size).toEqual({ width: 400, height: 300, depthOrArrayLayers: 1 });
+    expect(aggResized.size).toEqual({ width: 600, height: 450, depthOrArrayLayers: 1 });
     // New views replaced the old ones.
     expect(targets.viewOf('hdr')).not.toBe(hdrViewBefore);
     expect(targets.viewOf('volume')).not.toBe(volViewBefore);
     expect(targets.viewOf('star-aggregates')).not.toBe(aggViewBefore);
+  });
+
+  it('a fixedSizePx row allocates at its declared size regardless of canvas size', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 900, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+      [FIXED_SIZE_ROW],
+    );
+
+    const desc = create.mock.calls.find((c) => c[0].label === 'render-target-test:cubemap')![0];
+    expect(desc.size).toEqual({ width: 256, height: 256, depthOrArrayLayers: 6 });
+    expect(desc.dimension).toBe('2d');
+  });
+
+  it('reconcile does not reallocate a fixedSizePx row when the canvas resizes', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 900, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+      [FIXED_SIZE_ROW],
+    );
+    const callsBefore = create.mock.calls.filter(
+      (c) => c[0].label === 'render-target-test:cubemap',
+    ).length;
+
+    targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
+
+    const callsAfter = create.mock.calls.filter(
+      (c) => c[0].label === 'render-target-test:cubemap',
+    ).length;
+    expect(callsAfter).toBe(callsBefore);
   });
 
   it("reconcile reallocates a row whose state-driven scale moved and leaves the other rows' views untouched", () => {
@@ -126,7 +178,7 @@ describe('createRenderTargets', () => {
     const mwResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-mw-aggregate')
       .at(-1)![0];
-    expect(mwResized.size).toEqual({ width: 200, height: 150 });
+    expect(mwResized.size).toEqual({ width: 200, height: 150, depthOrArrayLayers: 1 });
     expect(targets.sizeOf('mw-aggregate')).toEqual({ width: 200, height: 150 });
     // Exactly one row moved: one new texture, and every other row's view is
     // still the object its consumers resolved before the call.
@@ -160,7 +212,7 @@ describe('createRenderTargets', () => {
     createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 }, stateWithDivisor(MW_DIVISOR));
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     // floor(2 / 3) = 0 → clamped up to 1.
-    expect(volDesc.size).toEqual({ width: 1, height: 1 });
+    expect(volDesc.size).toEqual({ width: 1, height: 1, depthOrArrayLayers: 1 });
   });
 
   it('allocates and resizes a depth texture alongside colour for rows that declare depth', () => {
@@ -180,9 +232,9 @@ describe('createRenderTargets', () => {
       (c) => c[0].label === 'render-target-foreground:0-depth',
     )![0];
     expect(fgColour.format).toBe('rgba16float');
-    expect(fgColour.size).toEqual({ width: 800, height: 600 });
+    expect(fgColour.size).toEqual({ width: 800, height: 600, depthOrArrayLayers: 1 });
     expect(fgDepth.format).toBe('depth32float');
-    expect(fgDepth.size).toEqual({ width: 800, height: 600 });
+    expect(fgDepth.size).toEqual({ width: 800, height: 600, depthOrArrayLayers: 1 });
     // Depth carries ONLY RENDER_ATTACHMENT (feeds the depth-test) — nothing
     // samples it downstream any more (each painter-chain row clears its own
     // depth, spec §7.3, so it can't back a cross-row occlusion test).
@@ -203,7 +255,7 @@ describe('createRenderTargets', () => {
     const fgDepthResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-foreground:0-depth')
       .at(-1)![0];
-    expect(fgDepthResized.size).toEqual({ width: 1024, height: 768 });
+    expect(fgDepthResized.size).toEqual({ width: 1024, height: 768, depthOrArrayLayers: 1 });
     expect(
       create.mock.calls.filter((c) => c[0].label === 'render-target-foreground:0-depth').length,
     ).toBe(depthCallsBefore + 1);

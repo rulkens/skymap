@@ -19,7 +19,10 @@
  * `.a` coverage) and dims it by the same body-local sun-relative Lambert term
  * the surface uses, so the deck goes dark on the night side.
  * `CLOUD_SHELL_PARAMS.opacity` is the coverage-to-alpha multiplier folded
- * into the shell's straight-alpha output.
+ * into the shell's straight-alpha output. `cloudShellDraw`'s `insideShell`
+ * (camera below the shell radius) selects `cloudShellRenderer`'s front-cull
+ * pipeline over its back-cull one, so the deck stays visible descending
+ * through it (Task 10) instead of every triangle culling away.
  *
  * ### Why it draws AFTER earth, OVER not opaque
  *
@@ -76,8 +79,14 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { sceneBodyStates } from '../sceneBodyStates';
 
-/** The Earth body plus its resolved descent-fade multiplier for this frame. */
-type CloudShellDraw = { readonly earth: EarthBody; readonly deckFade: number };
+/** The Earth body, its resolved descent-fade multiplier, and whether the camera
+ *  sits inside the shell radius this frame (Task 10: `cloudShellRenderer.draw`
+ *  needs this to pick its front-cull, inside-sphere pipeline). */
+type CloudShellDraw = {
+  readonly earth: EarthBody;
+  readonly deckFade: number;
+  readonly insideShell: boolean;
+};
 
 /**
  * The Earth record + descent-fade multiplier to draw the cloud shell with this
@@ -114,18 +123,22 @@ function cloudShellDraw(
   const bodyRadiusMpc = earth.radiusM * SCALE_UNITS.M_TO_MPC;
   const deckFade = cloudDeckFade(distanceMpc, bodyRadiusMpc);
   if (deckFade <= 0) return null;
+  // Same shell radius the geometry itself is scaled to (radiusRatio, in body
+  // radii) — NOT `isInsideAtmosphereShell`'s atmosphere-top-radius ratio, a
+  // different unit convention on a different shell.
+  const insideShell = distanceMpc / bodyRadiusMpc < CLOUD_SHELL_PARAMS.radiusRatio;
   // Sub-pixel cull on Earth's diameter (the shell is a hair larger, so the
   // surface gate governs both). apparentSizePx returns 0 for a zero
   // camera-to-centre distance (camera inside the body), which reads as
   // resolved here since deckFade already handled that case above.
-  if (distanceMpc === 0) return { earth, deckFade };
+  if (distanceMpc === 0) return { earth, deckFade, insideShell };
   const diameterPx = apparentSizePx({
     diameterKpc: (2 * earth.radiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
     distanceMpc,
     viewportHeightPx: ctx.canvasSize.height,
     fovYRad: ctx.fovYRad,
   });
-  return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { earth, deckFade } : null;
+  return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { earth, deckFade, insideShell } : null;
 }
 
 export const cloudShellLayer: ContentLayer = {
@@ -150,7 +163,7 @@ export const cloudShellLayer: ContentLayer = {
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
     const drawInputs = cloudShellDraw(state, ctx, view.slab.frame.bodyId);
     if (drawInputs === null) return;
-    const { earth, deckFade } = drawInputs;
+    const { earth, deckFade, insideShell } = drawInputs;
     // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
     // `view.slab.vp` — reading it here instead of re-deriving the pose is what
     // keeps this layer's eyeRelBodyM from ever drifting off that basis. The
@@ -188,6 +201,7 @@ export const cloudShellLayer: ContentLayer = {
         EARTH_SURFACE_PARAMS.sunIrradiance,
         state.settings.earth.ambientLight,
       ),
+      insideShell,
     );
   },
 };

@@ -13,7 +13,7 @@
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotFraming } from '../camera/pivotRadiusMpc';
 import { poseOf } from '../camera/poseOf';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
@@ -50,24 +50,14 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
 
       case 'drag':
         if (cam !== null) {
-          applyInputToCamera(
-            cam,
-            step,
-            cssHeight,
-            pivotRadiusMpc(selectFocusRow(store.getState())),
-          );
+          applyInputToCamera(cam, step, cssHeight, pivotFraming(selectFocusRow(store.getState())));
         }
         break;
 
       case 'zoom': {
         if (step.duringGesture) {
           if (cam !== null) {
-            applyInputToCamera(
-              cam,
-              step,
-              cssHeight,
-              pivotRadiusMpc(selectFocusRow(store.getState())),
-            );
+            applyInputToCamera(cam, step, cssHeight, pivotFraming(selectFocusRow(store.getState())));
           }
           break;
         }
@@ -81,7 +71,7 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
           step.factor,
           root.camera.autoRotate,
           nowMs,
-          pivotRadiusMpc(selectFocusRow(root)),
+          pivotFraming(selectFocusRow(root)),
         );
         if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
         break;

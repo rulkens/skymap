@@ -1,7 +1,7 @@
 /**
- * visibleSlabBodies — which of `[earth, ...planets]` clear the sub-pixel
- * apparent-diameter floor AND the view-frustum angular cull, and so get a
- * body slab row this frame.
+ * visibleSlabBodies — which of `bodies` clear the sub-pixel apparent-diameter
+ * floor AND the view-frustum angular cull, and so get a body slab row this
+ * frame.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -11,6 +11,7 @@ import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
+import type { AnchorPointBody } from '../../../../src/@types/scene/AnchorPointBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
@@ -55,8 +56,7 @@ describe('visibleSlabBodies', () => {
     ]);
 
     const visible = visibleSlabBodies({
-      earth: null,
-      planets: [belowFloor, aboveFloor],
+      bodies: [belowFloor, aboveFloor],
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
@@ -79,8 +79,7 @@ describe('visibleSlabBodies', () => {
     const bodyStates = new Map<string, BodyState>([['earth', makeState()]]);
 
     const visible = visibleSlabBodies({
-      earth,
-      planets: [orphan],
+      bodies: [earth, orphan],
       bodyStates,
       camPosMpc: [1000, 0, 0], // camera AT earth's stored position ⇒ distance 0 ⇒ inside its own shell, always kept
       camForwardMpc: FORWARD_X,
@@ -107,8 +106,7 @@ describe('visibleSlabBodies', () => {
     const bodyStates = new Map<string, BodyState>([['saturn', makeState([dMpc, 0, 0])]]);
 
     const visible = visibleSlabBodies({
-      earth: null,
-      planets: [saturn],
+      bodies: [saturn],
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
@@ -138,8 +136,7 @@ describe('visibleSlabBodies', () => {
         ['wide', makeState(offAxisPositionMpc(offAxisDeg, distanceMpc))],
       ]);
       return visibleSlabBodies({
-        earth: null,
-        planets: [wideBody],
+        bodies: [wideBody],
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -180,8 +177,7 @@ describe('visibleSlabBodies', () => {
       ]);
 
       const visible = visibleSlabBodies({
-        earth: null,
-        planets: [straddling],
+        bodies: [straddling],
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -209,8 +205,7 @@ describe('visibleSlabBodies', () => {
       ]);
 
       const visible = visibleSlabBodies({
-        earth: null,
-        planets: [saturn],
+        bodies: [saturn],
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -221,5 +216,34 @@ describe('visibleSlabBodies', () => {
 
       expect(visible.map((b) => b.id)).toEqual(['saturn']);
     });
+  });
+
+  it('admits an AnchorPointBody candidate on the same terms as a planet', () => {
+    const visibleAnchor: AnchorPointBody = {
+      id: 'visible-anchor',
+      label: 'Visible anchor',
+      radiusM: 3.2e22,
+    };
+    const hiddenAnchor: AnchorPointBody = {
+      id: 'hidden-anchor',
+      label: 'Hidden anchor',
+      radiusM: 3.2e22,
+    };
+    const bodyStates = new Map<string, BodyState>([
+      ['visible-anchor', makeState()],
+      ['hidden-anchor', makeState(offAxisPositionMpc(180, 1000))],
+    ]);
+
+    const visible = visibleSlabBodies({
+      bodies: [visibleAnchor, hiddenAnchor],
+      bodyStates,
+      camPosMpc: [0, 0, 0],
+      camForwardMpc: FORWARD_X,
+      viewportWidthPx: 1000,
+      viewportHeightPx: 1000,
+      fovYRad: Math.PI / 2,
+    });
+
+    expect(visible.map((body) => body.id)).toEqual(['visible-anchor']);
   });
 });

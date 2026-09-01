@@ -8,12 +8,12 @@
  * deck exactly when there's no tile data to smear over. Altitude is the
  * physical fact that exists regardless of whether a tile ever loads.
  *
- * The band is calibrated against `cutSurfaceTiles`'s own thresholds: at the
- * default FOV and viewport it settles at z6 ~0.075 Earth radii of altitude
- * and z7 ~0.037. The fade starts at z6 (the deck still does its whole-globe
- * job) and completes by z7 (fine tiles are now the thing worth looking at).
- * The two edges live as named fields on `CLOUD_SHELL_PARAMS`, not literals
- * here — see that constant's header for the derivation.
+ * The fade starts (`fullAt`) at the z6 tile-LOD crossover altitude (the deck
+ * still does its whole-globe job at that resolution). `goneAt` no longer
+ * tracks a tile-LOD crossover — Task 10 lowered it into the shell's own
+ * radius so the deck stays visible descending through it (see
+ * `CLOUD_SHELL_PARAMS`'s header). The two edges live as named fields there,
+ * not literals here.
  *
  * `fadeBand` supplies the smoothstep (a linear ramp would kink); its edge
  * ordering (`fullAt > goneAt`) matches this fade's direction.

@@ -24,6 +24,12 @@ import type { Renderer } from './Renderer';
 export type CloudShellRenderer = Renderer & {
   /** Swap in the cloud colour+alpha map (own copy; `.a` is the coverage). */
   setTexture(bitmap: ImageBitmap): void;
-  /** Draw the shell for one `CloudShellUniforms` record (80 B) into the pass. */
-  draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void;
+  /**
+   * Draw the shell for one `CloudShellUniforms` record (80 B) into the pass.
+   * `inside` (camera below the shell radius) selects the front-cull pipeline,
+   * which renders the closed sphere's inner surface — the outward-normal
+   * back-cull pipeline the outside draw uses discards every triangle once the
+   * camera sits inside it (Task 10, spec §5c).
+   */
+  draw(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean): void;
 };

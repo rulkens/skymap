@@ -17,6 +17,11 @@
  * plan rather than draw a fully transparent sphere (the house "opacity 0 ⇒
  * no render" rule). `draw` is pinned separately to confirm the fade actually
  * reaches the packed opacity, not just the gate.
+ *
+ * Task 10 adds a third assertion: `insideShell` (camera below
+ * `CLOUD_SHELL_PARAMS.radiusRatio`) must reach `renderer.draw`'s third
+ * argument unchanged, so the renderer picks its front-cull pipeline exactly
+ * when the back-cull one would discard everything.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -173,7 +178,8 @@ describe('cloudShellLayer.enabled', () => {
 
 describe('cloudShellLayer.draw', () => {
   it('scales the packed opacity by the descent fade partway through the band', () => {
-    const drawSpy = vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array) => void>();
+    const drawSpy =
+      vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean) => void>();
     const state = makeState({ draw: drawSpy }, true);
     const midAltitudeRadii =
       (CLOUD_SHELL_PARAMS.fadeStartAltitudeRadii + CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii) / 2;
@@ -191,10 +197,29 @@ describe('cloudShellLayer.draw', () => {
     expect(uniforms[19]).toBeLessThan(CLOUD_SHELL_PARAMS.opacity);
   });
 
+  it('passes insideShell as the third draw() argument — false above the shell radius, true below it', () => {
+    const drawSpy =
+      vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean) => void>();
+    const state = makeState({ draw: drawSpy }, true);
+    const view = makeBodyView('earth' as BodyId);
+
+    // Well above CLOUD_SHELL_PARAMS.radiusRatio (1.002) — the outside pipeline.
+    cloudShellLayer.draw(PASS_STUB, view, ctxAtAltitude(10), state);
+    // Below radiusRatio − 1 (0.002) but still above the re-tuned fade floor
+    // (0.0005) — the deck is still visible AND the camera is inside the shell,
+    // exactly the case Task 10's cull fix exists for.
+    cloudShellLayer.draw(PASS_STUB, view, ctxAtAltitude(0.001), state);
+
+    expect(drawSpy).toHaveBeenCalledTimes(2);
+    expect(drawSpy.mock.calls[0]![2]).toBe(false);
+    expect(drawSpy.mock.calls[1]![2]).toBe(true);
+  });
+
   it('composes from the slab f64 vp and the pose off ctx.bodyPose, never view.vp', () => {
     const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
     mvpMock.mockClear();
-    const drawSpy = vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array) => void>();
+    const drawSpy =
+      vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean) => void>();
     const state = makeState({ draw: drawSpy }, true);
     const view = makeBodyView('earth' as BodyId);
 

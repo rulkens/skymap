@@ -66,15 +66,17 @@ import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import { COSMO, NEAR0, groupKeyOf, isBodySlabIndex, layerTimingSlotName, slabName } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
 
 /**
  * Upper bound on body rows `deriveSlabs` can emit in one frame: Earth (the
  * NEAR0-adjacent body baked into `earthLayer`, not a `SCENE_PLANETS` row)
- * plus every `SCENE_PLANETS` entry. `TIMED_SLOTS` allocates one slot per
- * capacity row (not per row actually drawn this frame) so the query-set size
- * is a compile-time constant — see `createGpuTimingService`.
+ * plus every `SCENE_PLANETS` entry plus every `SCENE_ANCHOR_POINT_BODIES`
+ * entry. `TIMED_SLOTS` allocates one slot per capacity row (not per row
+ * actually drawn this frame) so the query-set size is a compile-time
+ * constant — see `createGpuTimingService`.
  */
-export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length;
+export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_BODIES.length;
 
 /**
  * Build this frame's step program. `tone` is threaded into the LONE tone-map —

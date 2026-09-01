@@ -43,4 +43,12 @@ describe('orientationForBody', () => {
     expect(orientationForBody('titan', CONST_J2000)).toEqual([...IDENTITY_MAT3]);
     expect(orientationForBody('titan', CONST_J2000 + 5000)).toEqual([...IDENTITY_MAT3]);
   });
+
+  it('returns identity for the Sgr A* anchor', () => {
+    // Sgr A* is not in BODY_TEXTURE_REGISTRY, so the membership gate above
+    // already returns identity for it. This pins that fact so a future
+    // accidental texture-registry entry for 'sgr-a-star' can't silently
+    // rotate the body-slab basis bodyRelativePose builds from it.
+    expect(orientationForBody('sgr-a-star', CONST_J2000)).toEqual([...IDENTITY_MAT3]);
+  });
 });
