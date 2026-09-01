@@ -62,11 +62,13 @@
 
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
+import type { PivotFraming } from '../../@types/camera/PivotFraming';
 import { updatePosition } from '../../utils/camera/updatePosition';
 import { zoomedDistance } from '../../utils/camera/zoomedDistance';
 import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
+import { MIN_DISTANCE_MPC } from '../../utils/camera/clampDistance';
 import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
@@ -93,6 +95,9 @@ import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
  * See also: the ⚠ note in `orbitCamera.ts` on `OrbitCameraInit.pitch`.
  */
 const PITCH_LIMIT = Math.PI / 2 - 0.01;
+
+/** No focused pivot: no surface to taper/damp against, absolute floor only. */
+const NO_PIVOT: PivotFraming = { radiusMpc: null, floorMpc: MIN_DISTANCE_MPC };
 
 // ─── Controls ─────────────────────────────────────────────────────────────────
 
@@ -193,15 +198,12 @@ export function attachOrbitControls(
   /** Squared pixel distance between pointerdown and pointerup. */
   const CLICK_THRESHOLD_SQ = 4 * 4; // 4 px radius → 16 when squared
 
-  // Both zoom paths below (pinch, and a wheel tick during a held gesture) need
-  // the focused body's radius to taper/floor `zoomedDistance` against — read
-  // live through the caller's getter rather than cached, since this module
-  // never sees the scene and focus can change while controls stay attached.
-  const pivotRadius = (): number | null => options?.pivotRadiusMpc?.() ?? null;
-  // Same live-read reasoning, for the per-pivot standoff override (e.g. Sgr
-  // A*'s 2 r_s floor). Undefined (no getter, or the getter's own default)
-  // reaches `zoomedDistance`'s own default unchanged.
-  const standoffRadius = (): number | undefined => options?.standoffRadii?.();
+  // Both zoom paths below (pinch, and a wheel tick during a held gesture), plus
+  // the orbit-drag rate, need the focused body's radius/floor to taper/damp
+  // against — read live through the caller's getter rather than cached, since
+  // this module never sees the scene and focus can change while controls stay
+  // attached.
+  const pivot = (): PivotFraming => options?.pivotFraming?.() ?? NO_PIVOT;
 
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
@@ -365,12 +367,7 @@ export function attachOrbitControls(
       if (activePointers.size < 2 || lastPinchDist === 0) return;
       const newDist = currentPinchDistance();
       if (newDist > 0) {
-        cam.distance = zoomedDistance(
-          cam.distance,
-          lastPinchDist / newDist,
-          pivotRadius(),
-          standoffRadius(),
-        );
+        cam.distance = zoomedDistance(cam.distance, lastPinchDist / newDist, pivot());
         lastPinchDist = newDist;
         updatePosition(cam);
         options?.onChange?.();
@@ -470,7 +467,7 @@ export function attachOrbitControls(
     // focused body's surface so the ground under the cursor tracks the drag
     // (see the util's module header for the derivation and its limits).
     const cssHeight = canvas.clientHeight || 1;
-    const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivotRadius());
+    const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivot().radiusMpc);
 
     cam.yaw -= dx * radPerPixel;
 
@@ -526,7 +523,7 @@ export function attachOrbitControls(
       // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
       // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
       // so the zoom shows immediately and rides the `onGestureEnd` commit.
-      cam.distance = zoomedDistance(cam.distance, factor, pivotRadius(), standoffRadius());
+      cam.distance = zoomedDistance(cam.distance, factor, pivot());
       updatePosition(cam);
       options?.onChange?.();
       return;

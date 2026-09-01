@@ -5,6 +5,8 @@
  * behaviour as the original single-argument overload (orbit only, no click).
  */
 
+import type { PivotFraming } from './PivotFraming';
+
 export type OrbitControlsOptions = {
   /**
    * Called when the user clicks (as opposed to drags) on the canvas.
@@ -59,24 +61,17 @@ export type OrbitControlsOptions = {
    */
   onZoom?: (factor: number) => void;
   /**
-   * Physical radius (Mpc) of whatever the camera currently orbits, or `null`
-   * when the pivot has no surface. Read at the start of a pinch or
-   * wheel-during-gesture so `clampDistance` floors the distance just off
-   * that surface instead of at the absolute floor (~309 km, deep inside
-   * Earth).
+   * Radius + zoom floor of whatever the camera currently orbits. Read at the
+   * start of a pinch, a wheel-during-gesture, and every orbit-drag move, so
+   * `zoomedDistance`/`clampDistance` taper into and floor at that surface
+   * (rather than the absolute floor, ~309 km deep inside Earth) and
+   * `orbitRadPerPixel` damps drag sensitivity near it.
    *
    * A getter, not a cached value — this module holds no scene state; the
-   * engine wires it to `pivotRadiusMpc(selectFocusRow(...))`. Omitted
-   * (tests, or no scene) ⇒ only the global floor applies.
+   * engine wires it to `pivotFraming(selectFocusRow(...))`. Omitted (tests,
+   * or no scene) ⇒ no pivot, only the global/absolute floor applies.
    */
-  pivotRadiusMpc?: () => number | null;
-  /**
-   * Per-pivot override of `clampDistance`'s global `SURFACE_STANDOFF_RADII`
-   * (e.g. Sgr A*'s Q10 floor of 2 r_s), read alongside `pivotRadiusMpc` at the
-   * same two call sites. A getter for the same reason; the engine wires it to
-   * `pivotStandoffRadii(selectFocusRow(...))`. Omitted ⇒ the global ratio.
-   */
-  standoffRadii?: () => number;
+  pivotFraming?: () => PivotFraming;
   /**
    * Called on the first pointer contact that begins a new gesture (i.e. when
    * `activePointers.size === 1` on `pointerdown`). Subsequent fingers (pinch
