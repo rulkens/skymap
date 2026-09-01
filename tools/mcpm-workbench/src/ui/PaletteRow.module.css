@@ -15,3 +15,9 @@
 .labelText {
   composes: label from '../../../../src/components/common/Slider/Slider.module.css';
 }
+
+/* PaletteSelect's `font: inherit` picks up the panel's 14px mono base here;
+   the main app's rows sit in a --font-size-sm context, so match it. */
+.select {
+  font-size: var(--font-size-sm);
+}

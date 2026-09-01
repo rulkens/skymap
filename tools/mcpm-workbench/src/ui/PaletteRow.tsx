@@ -17,7 +17,7 @@ function PaletteRow({ value, onChange }: PaletteRowProps): ReactNode {
     <div className={styles.root}>
       <div className={styles.main}>
         <span className={styles.labelText}>palette</span>
-        <PaletteSelect value={value} onChange={onChange} />
+        <PaletteSelect className={styles.select} value={value} onChange={onChange} />
       </div>
     </div>
   );
