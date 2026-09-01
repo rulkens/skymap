@@ -4,9 +4,9 @@
  * turning point u0 (root of f in [0, 2/3], the photon-sphere bound) is found
  * by bisection. The bending integral has an integrable sqrt singularity at
  * u0; substituting u = u0*sin(theta) regularises it (cos(theta) and sqrt(f)
- * both vanish linearly as theta -> pi/2), so Simpson's rule over theta
- * converges normally. See the test file for the theta=pi/2 endpoint limit
- * and an independent cross-check of the resulting values.
+ * both vanish linearly as theta -> pi/2, see endpointValue below), so
+ * Simpson's rule over theta converges normally. See the test file for an
+ * independent cross-check of the resulting values.
  */
 
 import type { SchwarzschildDeflectionLut } from '../../@types/lensing/SchwarzschildDeflectionLut';
@@ -40,7 +40,9 @@ function bendingAngleRadians(impactParamRs: number): number {
 
   const invBSq = 1 / (impactParamRs * impactParamRs);
   const u0 = turningPointU(invBSq);
-  const endpointValue = Math.sqrt(2 / (2 - 3 * u0)); // theta -> pi/2 limit, derived in the test file
+  // theta -> pi/2 limit: f(u0 sin(theta)) ~ u0^2(2-3u0)/2 * (pi/2-theta)^2 and
+  // cos(theta) ~ (pi/2-theta) there, so sampleAt's ratio tends to this finite value.
+  const endpointValue = Math.sqrt(2 / (2 - 3 * u0));
 
   const sampleAt = (theta: number): number => {
     const u = u0 * Math.sin(theta);

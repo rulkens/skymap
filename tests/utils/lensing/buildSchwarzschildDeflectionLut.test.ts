@@ -67,7 +67,8 @@ describe('buildSchwarzschildDeflectionLut', () => {
     expect(lut.samples[firstFiniteIndex]).toBeGreaterThan(3);
 
     const belowCriticalIndex = Math.round(
-      ((2 - lut.minImpactParamRs) / (lut.maxImpactParamRs - lut.minImpactParamRs)) * (lut.samples.length - 1),
+      ((2 - lut.minImpactParamRs) / (lut.maxImpactParamRs - lut.minImpactParamRs)) *
+        (lut.samples.length - 1),
     );
     expect(lut.samples[belowCriticalIndex]).toBe(Infinity);
   });
