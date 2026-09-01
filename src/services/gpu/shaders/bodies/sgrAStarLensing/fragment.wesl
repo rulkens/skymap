@@ -12,6 +12,7 @@ import package::lib::sgrAStarLensing::SgrAStarLensingUniforms;
 import package::lib::math::rotateAroundAxis;
 import package::lib::math::saturate;
 import package::lib::math::TAU;
+import package::lib::util::hash21Hq;
 
 @group(0) @binding(0) var<uniform> u: SgrAStarLensingUniforms;
 @group(0) @binding(1) var lutTex: texture_2d<f32>;
@@ -27,7 +28,10 @@ struct FsIn {
 const CAPTURE_THRESHOLD_RAD: f32 = 500.0;
 
 const MARCH_STEPS: i32 = 48; // within the spec's 32-64-step bound
-const DISK_HALF_THICKNESS_RS: f32 = 0.15; // thin-disk approximation, tuned for looks
+// Split across the bent-ray march's two segments (Task 13c finding 3).
+const SEGMENT_STEPS: i32 = MARCH_STEPS / 2;
+const DISK_SCALE_HEIGHT_RS: f32 = 0.4; // vertical falloff scale height, thin-disk taste (T15 tuning knob)
+const RADIAL_EDGE_FEATHER_RS: f32 = 0.3; // inner/outer annulus edge softening width
 const DOPPLER_STRENGTH: f32 = 0.6; // tuned for looks — see BLACK_HOLES's own "visual taste" note
 
 // Two-tap manual lerp (r32float isn't sampler-filterable without the
@@ -58,58 +62,93 @@ fn diskNormal() -> vec3<f32> {
   return normalize(rotateAroundAxis(tilted, vec3<f32>(0.0, 1.0, 0.0), u.positionAngleRad));
 }
 
+// Per-sample density is the product of two SOFT profiles (findings 1 & 2)
+// instead of hard cutoffs, so a sample easing into the annulus fades in
+// rather than switching on. 'viewDir' is the local ray direction at 'p'
+// (straight in segment 1, bent in segment 2) — Doppler beaming reads off
+// whichever way the photon is actually travelling there.
+fn annulusSampleContribution(p: vec3<f32>, normal: vec3<f32>, viewDir: vec3<f32>, stepLenM: f32) -> vec4<f32> {
+  let distToPlaneRs = dot(p, normal) / u.schwarzschildRadiusM;
+  let verticalWeight = exp(-(distToPlaneRs * distToPlaneRs) / (DISK_SCALE_HEIGHT_RS * DISK_SCALE_HEIGHT_RS));
+  if (verticalWeight < 1e-3) {
+    return vec4<f32>(0.0);
+  }
+
+  let inPlane = p - normal * dot(p, normal);
+  let radialM = length(inPlane);
+  let radialRs = radialM / u.schwarzschildRadiusM;
+  let radialWeight = smoothstep(u.innerRs - RADIAL_EDGE_FEATHER_RS, u.innerRs + RADIAL_EDGE_FEATHER_RS, radialRs)
+    * (1.0 - smoothstep(u.outerRs - RADIAL_EDGE_FEATHER_RS, u.outerRs + RADIAL_EDGE_FEATHER_RS, radialRs));
+  if (radialWeight < 1e-3) {
+    return vec4<f32>(0.0);
+  }
+
+  let radialDir = inPlane / max(radialM, 1e-6);
+  let orbitDir = cross(normal, radialDir); // tangent to a circular orbit at this point
+  let dopplerFactor = 1.0 + DOPPLER_STRENGTH * dot(orbitDir, -viewDir);
+  // Kepler period ~ r^1.5: a cheap per-radius phase offset (closer annuli
+  // lead the outer ones), not a fitted light curve — visual taste, as above.
+  let periodScale = pow(max(radialRs, 0.1), 1.5);
+  let localPhase = u.flickerPhase + (radialRs / periodScale) * TAU;
+  let flicker = 1.0 + u.flickerAmp * sin(localPhase);
+  let redshift = 1.0 / sqrt(max(1.0 - 1.0 / radialRs, 0.05));
+  let heat = saturate(1.0 - (radialRs - u.innerRs) / max(u.outerRs - u.innerRs, 1e-6));
+  let tint = mix(vec3<f32>(1.0, 0.45, 0.15), vec3<f32>(1.0, 0.85, 0.65), heat);
+  let falloff = 1.0 / max(radialRs * radialRs, 1.0); // radial profile: brightest at the inner edge, EHT-style
+
+  let density = verticalWeight * radialWeight;
+  let contribution = falloff * flicker * dopplerFactor * redshift * density * (stepLenM / u.schwarzschildRadiusM);
+  return vec4<f32>(tint * contribution, saturate(contribution));
+}
+
 // Bounded march (spec's 32-64-step bound) for the annulus's own emission,
 // composited over the escape/capture base. Centred on 'closestT' (the ray's
-// own closest approach to the hole, computed once in 'fs') rather than on
-// t=0 (the camera): the hole sits at 'length(toAnchor)' from the camera,
-// almost always far outside a 't in [0, marchHalfM]' window sized off
-// 'outerRs', so marching from the camera would miss the disk for virtually
-// the whole fade band. Returns (linear emission, coverage); coverage feeds
-// the caller's alpha, not the light itself.
-fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>, closestT: f32) -> vec4<f32> {
+// own closest approach) rather than t=0 (the camera) — the hole sits far
+// outside a march window sized off 'outerRs' otherwise.
+
+// Two-segment bent-ray approximation (finding 3): segment 1 walks the
+// straight camera ray to closest approach; segment 2 continues from that
+// kink along 'deflectedDir', the same rotated direction the escape branch
+// samples the sky with. A captured ray has no LUT deflection to bend by, so
+// it stays on segment 1 for the full budget and plunges to the horizon,
+// same as before this fix. 'jitterSeed' offsets the march start per pixel
+// (finding 1); both segments share one offset since they share one step
+// length.
+fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>, closestT: f32, deflectedDir: vec3<f32>, captured: bool, jitterSeed: vec2<f32>) -> vec4<f32> {
   let normal = diskNormal();
   let marchHalfM = u.outerRs * u.schwarzschildRadiusM * 1.5;
-  let stepLenM = (2.0 * marchHalfM) / f32(MARCH_STEPS);
-  let halfThicknessM = DISK_HALF_THICKNESS_RS * u.schwarzschildRadiusM;
+  let stepLenM = marchHalfM / f32(SEGMENT_STEPS);
+  let jitter = hash21Hq(jitterSeed) * stepLenM;
 
   var emission = vec3<f32>(0.0);
   var coverage = 0.0;
-  for (var i = 0; i < MARCH_STEPS; i++) {
-    let t = max(closestT - marchHalfM + (f32(i) + 0.5) * stepLenM, 0.0);
+
+  for (var i = 0; i < SEGMENT_STEPS; i++) {
+    let t = max(closestT - marchHalfM + jitter + (f32(i) + 0.5) * stepLenM, 0.0);
     let p = rayDir * t - toAnchor; // position relative to the hole's centre
-    let distToPlane = dot(p, normal);
-    if (abs(distToPlane) > halfThicknessM) {
-      continue;
-    }
-    let inPlane = p - normal * distToPlane;
-    let radialM = length(inPlane);
-    let radialRs = radialM / u.schwarzschildRadiusM;
-    if (radialRs < u.innerRs || radialRs > u.outerRs) {
-      continue;
-    }
-
-    let radialDir = inPlane / max(radialM, 1e-6);
-    let orbitDir = cross(normal, radialDir); // tangent to a circular orbit at this point
-    let dopplerFactor = 1.0 + DOPPLER_STRENGTH * dot(orbitDir, -rayDir);
-    // Kepler period ~ r^1.5: a cheap per-radius phase offset (closer annuli
-    // lead the outer ones), not a fitted light curve — visual taste, as above.
-    let periodScale = pow(max(radialRs, 0.1), 1.5);
-    let localPhase = u.flickerPhase + (radialRs / periodScale) * TAU;
-    let flicker = 1.0 + u.flickerAmp * sin(localPhase);
-    let redshift = 1.0 / sqrt(max(1.0 - 1.0 / radialRs, 0.05));
-    let heat = saturate(1.0 - (radialRs - u.innerRs) / max(u.outerRs - u.innerRs, 1e-6));
-    let tint = mix(vec3<f32>(1.0, 0.45, 0.15), vec3<f32>(1.0, 0.85, 0.65), heat);
-    let falloff = 1.0 / max(radialRs * radialRs, 1.0);
-
-    let contribution = falloff * flicker * dopplerFactor * redshift * (stepLenM / u.schwarzschildRadiusM);
-    emission += tint * contribution;
-    coverage = max(coverage, saturate(contribution));
+    let emissionSample = annulusSampleContribution(p, normal, rayDir, stepLenM);
+    emission += emissionSample.rgb;
+    coverage = max(coverage, emissionSample.a);
   }
+
+  if (captured) {
+    return vec4<f32>(emission, coverage);
+  }
+
+  let kink = rayDir * closestT; // camera-relative position at closest approach — the bend point
+  for (var i = 0; i < SEGMENT_STEPS; i++) {
+    let d = jitter + (f32(i) + 0.5) * stepLenM;
+    let p = kink + deflectedDir * d - toAnchor;
+    let emissionSample = annulusSampleContribution(p, normal, deflectedDir, stepLenM);
+    emission += emissionSample.rgb;
+    coverage = max(coverage, emissionSample.a);
+  }
+
   return vec4<f32>(emission, coverage);
 }
 
 @fragment
-fn fs(in: FsIn) -> @location(0) vec4<f32> {
+fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f32> {
   let rayDir = normalize(in.posRelCamM);
   let toAnchor = u.anchorPosRelCamM;
   // Impact parameter: perpendicular distance from the hole to the ray
@@ -128,15 +167,18 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
     alpha = u.bandAlpha; // below the LUT's own domain — deep in the capture region
   } else {
     let bendAngle = sampleLut(impactParamRs);
-    if (bendAngle >= CAPTURE_THRESHOLD_RAD) {
+    let captured = bendAngle >= CAPTURE_THRESHOLD_RAD;
+    // Lensing displaces the apparent background AWAY from the lens centre:
+    // rotate the ray away from the hole by the LUT's bend angle to recover
+    // the source's asymptotic direction (sign/axis unverified visually,
+    // Task 17 gate). Reused below as the annulus march's segment-2 bend
+    // (finding 3) — one basis for both consumers.
+    let axis = normalize(cross(rayDir, toAnchor));
+    let deflected = normalize(rotateAroundAxis(rayDir, axis, -bendAngle));
+
+    if (captured) {
       alpha = u.bandAlpha;
     } else {
-      // Lensing displaces the apparent background AWAY from the lens centre
-      // (Einstein-ring displacement): rotate the ray away from the hole by
-      // the LUT's bend angle to recover the source's asymptotic direction.
-      // Sign/axis unverified visually (Task 17 gate); flip if it reads backward.
-      let axis = normalize(cross(rayDir, toAnchor));
-      let deflected = normalize(rotateAroundAxis(rayDir, axis, -bendAngle));
       color = textureSampleLevel(skyTex, skySampler, deflected, 0.0).rgb;
 
       // Soft edge fade to the billboard's rim so the earlier-drawn roster
@@ -145,7 +187,7 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
       alpha = u.bandAlpha * edgeFade;
     }
 
-    let annulus = annulusEmission(rayDir, toAnchor, closestT);
+    let annulus = annulusEmission(rayDir, toAnchor, closestT, deflected, captured, fragCoord.xy);
     color += annulus.rgb;
     alpha = max(alpha, u.bandAlpha * annulus.a);
   }
