@@ -98,7 +98,10 @@ function expectPixelNear(
 describe('eoxTileSource', () => {
   const RED = [255, 0, 0] as const;
   const GREEN = [0, 255, 0] as const;
-  const BLUE = [0, 0, 255] as const;
+  // Not a saturated blue: that would score as water and get recoloured by
+  // matchEoxSeaColour, entangling this quadrant-compositing test with the
+  // sea-colour bake step.
+  const CYAN = [0, 255, 255] as const;
   const WHITE = [255, 255, 255] as const;
 
   it('composites each quadrant from its own EOX child tile', async () => {
@@ -107,7 +110,7 @@ describe('eoxTileSource', () => {
     const colNW = 200;
     await writeEoxTile(coverageDir, 'testregion', rowNW, colNW, RED); // NW
     await writeEoxTile(coverageDir, 'testregion', rowNW, colNW + 1, GREEN); // NE
-    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, BLUE); // SW
+    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, CYAN); // SW
     await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW + 1, WHITE); // SE
 
     const source = await eoxTileSource({ coverageDir });
@@ -122,7 +125,7 @@ describe('eoxTileSource', () => {
 
     expectPixelNear(nw, [...RED, 255]);
     expectPixelNear(ne, [...GREEN, 255]);
-    expectPixelNear(sw, [...BLUE, 255]);
+    expectPixelNear(sw, [...CYAN, 255]);
     expectPixelNear(se, [...WHITE, 255]);
   });
 
@@ -130,7 +133,7 @@ describe('eoxTileSource', () => {
     const coverageDir = tmpCoverageDir();
     await writeEoxTile(coverageDir, 'testregion', 100, 200, RED);
     await writeEoxTile(coverageDir, 'testregion', 100, 201, GREEN);
-    await writeEoxTile(coverageDir, 'testregion', 101, 200, BLUE);
+    await writeEoxTile(coverageDir, 'testregion', 101, 200, CYAN);
     await writeEoxTile(coverageDir, 'testregion', 101, 201, WHITE);
 
     const source = await eoxTileSource({ coverageDir });
@@ -151,7 +154,7 @@ describe('eoxTileSource', () => {
     // an interrupted-mid-fetch harvest would leave.
     await writeEoxTile(coverageDir, 'testregion', rowNW, colNW, RED); // NW
     await writeEoxTile(coverageDir, 'testregion', rowNW, colNW + 1, GREEN); // NE
-    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, BLUE); // SW
+    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, CYAN); // SW
     await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW + 1, WHITE); // SE
 
     const source = await eoxTileSource({ coverageDir });
