@@ -21,4 +21,9 @@ export type AnchorPointBody = {
   readonly radiusM: number;
   /** Per-body override of `clampDistance`'s Earth-tuned `SURFACE_STANDOFF_RADII` — e.g. Sgr A*'s Q10 floor of 2 r_s. */
   readonly standoffRadii?: number;
+  /**
+   * Per-body override of `bodyFocusDistance`'s screen-fill arrival distance, as
+   * a multiple of `radiusM` — e.g. Sgr A*'s ~30.4 r_s. See `focusFraming`.
+   */
+  readonly focusDistanceRadii?: number;
 };

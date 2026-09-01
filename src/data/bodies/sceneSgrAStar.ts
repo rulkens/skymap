@@ -43,6 +43,9 @@ export const SGR_A_STAR: AnchorPointBody = {
   // Q10's descent floor: the camera may approach to 2 r_s, well inside the
   // Earth-tuned global SURFACE_STANDOFF_RADII (~1.0000024).
   standoffRadii: 2.0,
+  // Arrival distance the user framed live (2026-09-01): ~30.4 r_s, well
+  // outside the descent floor above and deep inside the lensing fade band.
+  focusDistanceRadii: 30.4,
 };
 
 export const SGR_A_STAR_ANCHOR: AnchorBody = {
