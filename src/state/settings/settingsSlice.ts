@@ -47,6 +47,7 @@ import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSetti
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
+import type { SgrAStarLensingTuning } from '../../@types/settings/SgrAStarLensingTuning';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
@@ -195,6 +196,13 @@ const settingsSlice = createSlice({
     // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
     setZoneOfAvoidanceTuning: (settings, action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>) => {
       Object.assign(settings.zoneOfAvoidance, action.payload);
+    },
+
+    // ── Sgr A* lens tuning — TEMPORARY (Task 15), deleted at the removal step
+    // ─ leaf-by-leaf patch, no visibility axis to protect (this cluster is
+    // pure knobs, not a singleton overlay).
+    setSgrAStarLensingTuning: (settings, action: PayloadAction<Partial<SgrAStarLensingTuning>>) => {
+      Object.assign(settings.sgrAStarLensingTuning, action.payload);
     },
 
     // ── filaments ───────────────────────────────────────────────────────────
@@ -517,6 +525,7 @@ export const {
   setMilkyWayTuning,
   setZoneOfAvoidanceEnabled,
   setZoneOfAvoidanceTuning,
+  setSgrAStarLensingTuning,
   setFilamentsEnabled,
   setFilamentIntensity,
   setConstellationsEnabled,

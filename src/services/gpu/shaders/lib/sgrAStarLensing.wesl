@@ -27,8 +27,12 @@
 //   offset 120 : lutSampleCount           f32  — LUT texture's texel count
 //   offset 124 : bandAlpha                f32  — fade band's own alpha this frame
 //   offset 128 : anchorPosRelCamM         vec3<f32>  — camera-relative anchor, metres (f64->f32 rebase seam)
-//   offset 140 : _pad2                    f32  — rounds the struct to 144 / 16-byte
-//   total: 144 bytes.
+//   offset 140 : diskScaleHeightRs        f32  — T15 TEMP tuning knob, was fragment.wesl's DISK_SCALE_HEIGHT_RS const
+//   offset 144 : edgeFadeStartFraction    f32  — T15 TEMP tuning knob, was the escape branch's hardcoded '* 0.7'
+//   offset 148 : dopplerStrength          f32  — T15 TEMP tuning knob, was fragment.wesl's DOPPLER_STRENGTH const
+//   offset 152 : _pad3                    f32  — T15 TEMP, rounds the struct to 160 / 16-byte
+//   offset 156 : _pad4                    f32  — T15 TEMP, rounds the struct to 160 / 16-byte
+//   total: 160 bytes.
 //
 // The 12 scalar fields (80..127, 48 bytes) exactly fill the run up to 128,
 // so 'anchorPosRelCamM' lands on a 16-byte boundary with no implicit padding
@@ -38,6 +42,10 @@
 // the single source of truth for that half of the contract) or the GPU
 // silently reads garbage — no compile error, no runtime error, just a wrong
 // (or on iOS, dropped) frame.
+//
+// TASK 15 TEMPORARY: the three fields after 'anchorPosRelCamM' are DebugPanel
+// tuning knobs (Tier 2 of the task-15 brief), deleted — struct shrunk back to
+// 144 bytes — at the removal step once Task 17 converges on final values.
 
 import package::lib::camera::CameraUniforms;
 
@@ -56,5 +64,9 @@ struct SgrAStarLensingUniforms {
   lutSampleCount: f32,
   bandAlpha: f32,
   anchorPosRelCamM: vec3<f32>,
-  _pad2: f32,
+  diskScaleHeightRs: f32,
+  edgeFadeStartFraction: f32,
+  dopplerStrength: f32,
+  _pad3: f32,
+  _pad4: f32,
 };

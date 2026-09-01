@@ -56,6 +56,10 @@ function makeState(): EngineState {
       hdr: { enabled: false, knee: 0, headroom: 0 },
       bloom: { enabled: false },
       debug: { renderStrategy: 'auto' },
+      // TEMPORARY (Task 15): renderFrame reads the recapture-move threshold
+      // off settings now — 0.03 matches SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION,
+      // the value every threshold assertion below was written against.
+      sgrAStarLensingTuning: { skyCubemapRecaptureCameraMoveFraction: 0.03 },
     },
     cameraRuntime: { skyCubemapCapture: makeCaptureRuntime() },
   } as unknown as EngineState;
@@ -75,6 +79,13 @@ function makeCtx(drawCamPos: readonly [number, number, number]): ReadyFrameConte
         if (id === 'sky-cubemap') return { fixedSizePx: { size: 256, layers: 6 } };
         if (id === 'swap') return { format: 'bgra8unorm' };
         throw new Error(`mock renderTargets: no spec row for '${id}'`);
+      },
+      // TEMPORARY (Task 15): renderFrame reads the ALLOCATED size, not the
+      // spec's `fixedSizePx.size` (a live setting now) — see renderFrame.ts's
+      // `faceSizePx` derivation.
+      sizeOf: (id: string) => {
+        if (id === 'sky-cubemap') return { width: 256, height: 256 };
+        throw new Error(`mock renderTargets: no allocated size for '${id}'`);
       },
     },
   } as unknown as ReadyFrameContext;

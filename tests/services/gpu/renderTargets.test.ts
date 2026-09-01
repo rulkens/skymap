@@ -29,8 +29,23 @@ const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 // and the row behaves like any other fixed-scale row.
 const MW_DIVISOR = 2;
 
-function stateWithDivisor(aggregateDivisor: number): EngineState {
-  return { settings: { milkyWay: { aggregateDivisor } } } as unknown as EngineState;
+// The production `sky-cubemap` row's `fixedSizePx.size` reads
+// `settings.sgrAStarLensingTuning.cubemapResolutionPx` (TEMPORARY, Task 15) —
+// every `createRenderTargets`/`reconcile` call below goes through the real
+// table (`extraRows` only APPENDS), so this fixture needs the field even in
+// tests that don't care about the sky-cubemap row itself.
+const SKY_CUBEMAP_RESOLUTION_PX = 256;
+
+function stateWithDivisor(
+  aggregateDivisor: number,
+  cubemapResolutionPx: number = SKY_CUBEMAP_RESOLUTION_PX,
+): EngineState {
+  return {
+    settings: {
+      milkyWay: { aggregateDivisor },
+      sgrAStarLensingTuning: { cubemapResolutionPx },
+    },
+  } as unknown as EngineState;
 }
 
 // `fixedSizePx` has no row in the production table yet (Phase B adds the
@@ -44,6 +59,21 @@ const FIXED_SIZE_ROW: RenderTargetSpec = {
   scale: 1,
   clearValue: { r: 0, g: 0, b: 0, a: 0 },
   fixedSizePx: { size: 256, layers: 6 },
+};
+
+// A `fixedSizePx` row whose `size` is a FUNCTION of state (the
+// `sky-cubemap` production row's own shape, TEMPORARILY, Task 15) —
+// mirrors `mw-aggregate`'s state-driven `scale`.
+const STATE_DRIVEN_FIXED_SIZE_ROW: RenderTargetSpec = {
+  id: 'test:state-cubemap',
+  format: 'rgba16float',
+  depth: null,
+  scale: 1,
+  clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  fixedSizePx: {
+    size: (state) => state.settings.sgrAStarLensingTuning.cubemapResolutionPx,
+    layers: 6,
+  },
 };
 
 describe('createRenderTargets', () => {
@@ -171,6 +201,35 @@ describe('createRenderTargets', () => {
       (c) => c[0].label === 'render-target-test:cubemap',
     ).length;
     expect(callsAfter).toBe(callsBefore);
+  });
+
+  it('a fixedSizePx row whose size is a function resolves it against live state, and reconcile reallocates when the resolved size moves', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 900, height: 600 },
+      stateWithDivisor(MW_DIVISOR, 256),
+      [STATE_DRIVEN_FIXED_SIZE_ROW],
+    );
+    const desc = create.mock.calls.find(
+      (c) => c[0].label === 'render-target-test:state-cubemap',
+    )![0];
+    expect(desc.size).toEqual({ width: 256, height: 256, depthOrArrayLayers: 6 });
+
+    const cubeViewBefore = targets.cubeViewOf('test:state-cubemap');
+    // Canvas size is UNCHANGED — only the resolved fixedSizePx moved, mirroring
+    // the mw-aggregate divisor test's "a texture's dimensions are fixed at
+    // creation" reasoning.
+    targets.reconcile(stateWithDivisor(MW_DIVISOR, 512), { width: 900, height: 600 });
+
+    const resized = create.mock.calls
+      .filter((c) => c[0].label === 'render-target-test:state-cubemap')
+      .at(-1)![0];
+    expect(resized.size).toEqual({ width: 512, height: 512, depthOrArrayLayers: 6 });
+    expect(targets.sizeOf('test:state-cubemap')).toEqual({ width: 512, height: 512 });
+    expect(targets.cubeViewOf('test:state-cubemap')).not.toBe(cubeViewBefore);
   });
 
   it("reconcile reallocates a row whose state-driven scale moved and leaves the other rows' views untouched", () => {

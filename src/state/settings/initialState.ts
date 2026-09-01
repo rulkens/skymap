@@ -37,6 +37,7 @@ import {
   DEFAULT_ORBIT_TRAILS_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
+  DEFAULT_SGR_A_STAR_LENSING_TUNING,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
@@ -57,6 +58,10 @@ import { DEFAULT_REFINE_THRESHOLD } from '../../services/gpu/renderers/starCatal
 // renderer's calibration module, so seed them from there rather than restating
 // six numbers here.
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
+// TEMPORARY (Task 15, deleted at its removal step): same relationship —
+// `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`'s single source of truth is
+// the schedule module it feeds, not `data/defaults.ts`.
+import { SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION } from '../../services/engine/frame/skyCubemapCaptureSchedule';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
@@ -168,6 +173,13 @@ export function buildInitialSettings(): EngineSettingsState {
     zoneOfAvoidance: {
       enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
       ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
+    },
+    // TEMPORARY (Task 15) — deleted, mount line and all, at the removal step
+    // once Task 17 converges on final values. See `SgrAStarLensingTuning`'s
+    // own docblock for the tier breakdown.
+    sgrAStarLensingTuning: {
+      ...DEFAULT_SGR_A_STAR_LENSING_TUNING,
+      skyCubemapRecaptureCameraMoveFraction: SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,

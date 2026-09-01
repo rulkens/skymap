@@ -7,7 +7,9 @@
  * debugging), `FlowTuningSectionContainer`, `MilkyWayTuningSectionContainer`
  * (the Milky-Way star cloud's look knobs),
  * `ZoneOfAvoidanceTuningSectionContainer` (the galactic-plane guide band's
- * look knobs), `DebugOverlaysSectionContainer`
+ * look knobs), `SgrAStarLensingTuningSectionContainer` (TEMPORARY, Task 15 —
+ * the Sgr A* lens pass's tuning knobs, deleted once Task 17 converges),
+ * `DebugOverlaysSectionContainer`
  * (pick-buffer / disk-radius-ring toggles), `EarthTileAtlasSectionContainer`
  * (textual atlas-residency readout — slot pressure, per-level resident/pending
  * counts, last plan shape), `GalaxyProvenanceSectionContainer`
@@ -53,6 +55,9 @@ import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionCon
 import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
 import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
 import ZoneOfAvoidanceTuningSectionContainer from '../containers/ZoneOfAvoidanceTuningSectionContainer';
+// TEMPORARY (Task 15) — deleted, with this import + its mount line below, at
+// the removal step once Task 17 converges. See SgrAStarLensingTuning.d.ts.
+import SgrAStarLensingTuningSectionContainer from '../containers/SgrAStarLensingTuningSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
 import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
@@ -96,6 +101,7 @@ function DebugPanel({
       <FlowTuningSectionContainer />
       <MilkyWayTuningSectionContainer />
       <ZoneOfAvoidanceTuningSectionContainer />
+      <SgrAStarLensingTuningSectionContainer />
       <DebugOverlaysSectionContainer />
       <EarthTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
       <GalaxyProvenanceSectionContainer />

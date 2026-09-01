@@ -43,6 +43,14 @@ export type RenderTargetSpec = {
    * array layers (a `2d-array` texture, sampled as `texture_cube` by a
    * consumer that binds all six as a cube — WebGPU has no cube-view render
    * attachment). `scale` is ignored when this is present.
+   *
+   * `size` may be a FUNCTION for a row whose declared size is a live setting
+   * (`sky-cubemap`, T15 TEMPORARY DebugPanel knob) — the same
+   * `scale`-is-a-function shape `mw-aggregate` uses, resolved by `reconcile`
+   * every frame so a knob-driven row needs no rebuild path of its own.
    */
-  fixedSizePx?: { readonly size: number; readonly layers: number };
+  fixedSizePx?: {
+    readonly size: number | ((state: EngineState) => number);
+    readonly layers: number;
+  };
 };

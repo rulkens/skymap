@@ -51,6 +51,7 @@ import type { HdrSettings } from './HdrSettings';
 import type { LabelSettings } from './LabelSettings';
 import type { MilkyWaySettings } from './MilkyWaySettings';
 import type { ZoneOfAvoidanceSettings } from './ZoneOfAvoidanceSettings';
+import type { SgrAStarLensingTuning } from './SgrAStarLensingTuning';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
@@ -196,6 +197,13 @@ export type EngineSettingsState = {
    * knobs themselves on `ZoneOfAvoidanceTuning`.
    */
   zoneOfAvoidance: ZoneOfAvoidanceSettings;
+
+  /**
+   * TEMPORARY (Task 15, deleted at its removal step once Task 17 converges) —
+   * the Sgr A* lens pass's DebugPanel tuning knobs. See `SgrAStarLensingTuning`
+   * for the tier breakdown and what each field replaces.
+   */
+  sgrAStarLensingTuning: SgrAStarLensingTuning;
 
   /**
    * Filament-skeleton overlay controls.  Master toggle + intensity scale

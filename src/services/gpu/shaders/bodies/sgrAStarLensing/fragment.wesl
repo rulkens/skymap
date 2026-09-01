@@ -30,9 +30,11 @@ const CAPTURE_THRESHOLD_RAD: f32 = 500.0;
 const MARCH_STEPS: i32 = 48; // within the spec's 32-64-step bound
 // Split across the bent-ray march's two segments (Task 13c finding 3).
 const SEGMENT_STEPS: i32 = MARCH_STEPS / 2;
-const DISK_SCALE_HEIGHT_RS: f32 = 0.4; // vertical falloff scale height, thin-disk taste (T15 tuning knob)
 const RADIAL_EDGE_FEATHER_RS: f32 = 0.3; // inner/outer annulus edge softening width
-const DOPPLER_STRENGTH: f32 = 0.6; // tuned for looks — see BLACK_HOLES's own "visual taste" note
+// DISK_SCALE_HEIGHT_RS / DOPPLER_STRENGTH used to live here as consts —
+// TEMPORARILY (Task 15) they ride 'u.diskScaleHeightRs' / 'u.dopplerStrength'
+// instead (DebugPanel tuning knobs), baked back into consts at the removal
+// step once Task 17 converges.
 
 // Two-tap manual lerp (r32float isn't sampler-filterable without the
 // optional feature, hence textureLoad + a texture_2d<f32>, not texture_1d —
@@ -69,7 +71,7 @@ fn diskNormal() -> vec3<f32> {
 // whichever way the photon is actually travelling there.
 fn annulusSampleContribution(p: vec3<f32>, normal: vec3<f32>, viewDir: vec3<f32>, stepLenM: f32) -> vec4<f32> {
   let distToPlaneRs = dot(p, normal) / u.schwarzschildRadiusM;
-  let verticalWeight = exp(-(distToPlaneRs * distToPlaneRs) / (DISK_SCALE_HEIGHT_RS * DISK_SCALE_HEIGHT_RS));
+  let verticalWeight = exp(-(distToPlaneRs * distToPlaneRs) / (u.diskScaleHeightRs * u.diskScaleHeightRs));
   if (verticalWeight < 1e-3) {
     return vec4<f32>(0.0);
   }
@@ -85,7 +87,7 @@ fn annulusSampleContribution(p: vec3<f32>, normal: vec3<f32>, viewDir: vec3<f32>
 
   let radialDir = inPlane / max(radialM, 1e-6);
   let orbitDir = cross(normal, radialDir); // tangent to a circular orbit at this point
-  let dopplerFactor = 1.0 + DOPPLER_STRENGTH * dot(orbitDir, -viewDir);
+  let dopplerFactor = 1.0 + u.dopplerStrength * dot(orbitDir, -viewDir);
   // Kepler period ~ r^1.5: a cheap per-radius phase offset (closer annuli
   // lead the outer ones), not a fitted light curve — visual taste, as above.
   let periodScale = pow(max(radialRs, 0.1), 1.5);
@@ -187,7 +189,9 @@ fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
 
     // Soft edge fade to the billboard's rim so the earlier-drawn roster
     // shows through once deflection is negligible (Blend.d.ts's 'over').
-    let edgeFade = 1.0 - smoothstep(u.lutMaxImpactParamRs * 0.7, u.lutMaxImpactParamRs, impactParamRs);
+    // 'u.edgeFadeStartFraction' was a hardcoded '0.7' — TEMPORARILY (Task 15)
+    // a DebugPanel knob, baked back into a shader const at the removal step.
+    let edgeFade = 1.0 - smoothstep(u.lutMaxImpactParamRs * u.edgeFadeStartFraction, u.lutMaxImpactParamRs, impactParamRs);
     alpha = u.bandAlpha * edgeFade;
   }
 

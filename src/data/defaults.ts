@@ -17,6 +17,9 @@ import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { ZoneOfAvoidanceTuning } from '../@types/settings/ZoneOfAvoidanceTuning';
+import type { SgrAStarLensingTuning } from '../@types/settings/SgrAStarLensingTuning';
+import { BLACK_HOLES } from './blackHoles';
+import { SGR_A_STAR } from './bodies/sceneSgrAStar';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import type { GalaxyProvenanceSettings } from '../@types/settings/GalaxyProvenanceSettings';
 import { SOURCE_REGISTRY, Source } from './sources';
@@ -261,6 +264,47 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
   edgeSharpness: 5,
   color: [0.5333, 0.5089, 1],
   labelColor: [0.2307, 0.2502, 0.6795],
+};
+
+/**
+ * TEMPORARY (Task 15, deleted at its removal step) — the Sgr A* lens pass's
+ * DebugPanel tuning starting values.
+ *
+ * Tier 1 (`innerRs`..`flickerTimescaleS`) seeds from `BLACK_HOLES`'s Sgr A*
+ * row — that registry stays the single source of truth for these until the
+ * removal step bakes the tuned values back into it.
+ *
+ * Tier 2 (`diskScaleHeightRs` / `edgeFadeStartFraction` / `dopplerStrength`)
+ * mirrors `fragment.wesl`'s former `DISK_SCALE_HEIGHT_RS` / the escape
+ * branch's `* 0.7` edge-fade factor / `DOPPLER_STRENGTH` — this literal is
+ * their new single source of truth until the removal step bakes the tuned
+ * values back into the shader as consts.
+ *
+ * `cubemapResolutionPx` seeds the `sky-cubemap` render-target row's declared
+ * size (`renderTargets.ts`) — 512, the user's visual-tuning call bumping it
+ * off the original 256 (T15 addendum).
+ *
+ * NOT here: `skyCubemapRecaptureCameraMoveFraction`. Its owner is
+ * `skyCubemapCaptureSchedule.ts` (a `services/` module `data/` doesn't
+ * import from), so `initialState.ts` seeds it straight from there and spreads
+ * it in alongside this object — the same "owned by the module it feeds"
+ * relationship `DEFAULT_REFINE_THRESHOLD` has to `walkStarOctreeCut`.
+ */
+const SGR_A_STAR_BLACK_HOLE_ROW = BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id)!;
+export const DEFAULT_SGR_A_STAR_LENSING_TUNING: Omit<
+  SgrAStarLensingTuning,
+  'skyCubemapRecaptureCameraMoveFraction'
+> = {
+  innerRs: SGR_A_STAR_BLACK_HOLE_ROW.emission.innerRs,
+  outerRs: SGR_A_STAR_BLACK_HOLE_ROW.emission.outerRs,
+  inclinationRad: SGR_A_STAR_BLACK_HOLE_ROW.emission.inclinationRad,
+  positionAngleRad: SGR_A_STAR_BLACK_HOLE_ROW.emission.positionAngleRad,
+  flickerAmp: SGR_A_STAR_BLACK_HOLE_ROW.emission.flickerAmp,
+  flickerTimescaleS: SGR_A_STAR_BLACK_HOLE_ROW.emission.flickerTimescaleS,
+  diskScaleHeightRs: 0.4,
+  edgeFadeStartFraction: 0.7,
+  dopplerStrength: 0.6,
+  cubemapResolutionPx: 512,
 };
 
 // ── HDR tone-mapping ────────────────────────────────────────────────────────

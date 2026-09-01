@@ -52,7 +52,8 @@ function structFields(source: string, name: string): Array<{ name: string; type:
     .filter((line) => line.length > 0)
     .map((line) => {
       const [fieldName, type] = line.split(':').map((part) => part.trim());
-      if (!fieldName || !type) throw new Error(`unparsable SgrAStarLensingUniforms field: '${line}'`);
+      if (!fieldName || !type)
+        throw new Error(`unparsable SgrAStarLensingUniforms field: '${line}'`);
       return { name: fieldName, type };
     });
 }
@@ -108,6 +109,11 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const lutSampleCount = 511;
     const bandAlpha = 512;
     const anchorPosRelCamM: Vec3 = [601, 602, 603];
+    // T15 TEMP tuning-knob fields — deleted along with these sentinels at the
+    // removal step once Task 17 converges.
+    const diskScaleHeightRs = 701;
+    const edgeFadeStartFraction = 702;
+    const dopplerStrength = 703;
 
     const rec = packSgrAStarLensingUniforms(
       viewProj,
@@ -125,6 +131,9 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       lutSampleCount,
       bandAlpha,
       anchorPosRelCamM,
+      diskScaleHeightRs,
+      edgeFadeStartFraction,
+      dopplerStrength,
     );
 
     const vectorByField: Record<string, Vec3> = { anchorPosRelCamM };
@@ -141,8 +150,11 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       lutMaxImpactParamRs,
       lutSampleCount,
       bandAlpha,
+      diskScaleHeightRs,
+      edgeFadeStartFraction,
+      dopplerStrength,
     };
-    const zeroPadFields = new Set(['_pad2']);
+    const zeroPadFields = new Set(['_pad3', '_pad4']);
 
     for (const field of layout) {
       if (field.lanes === 0) {

@@ -60,10 +60,7 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import {
-  skyCubemapCaptureSchedule,
-  SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION,
-} from './skyCubemapCaptureSchedule';
+import { skyCubemapCaptureSchedule } from './skyCubemapCaptureSchedule';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
 import { regionById } from '../../../utils/scene/regionById';
@@ -136,20 +133,22 @@ export function renderFrame(input: RenderFrameInput): void {
   // `null` outside the band, or when the row isn't in `ctx.slabs` this frame
   // (e.g. frustum-culled despite the distance band).
   const sgrAStarBodySlab = bandActive
-    ? (ctx.slabs.find(
-        (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id,
-      )?.index ?? null)
+    ? (ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
+        ?.index ?? null)
     : null;
   const bandJustEngaged = bandActive && !captureRuntime.wasBandActive;
   // Measured against the PINNED eye, not the live camera each frame: a
   // fresh live eye per round-robin face made adjacent faces disagree at
   // their shared border and the whole cubemap flicker as the camera moved
-  // (fix round 3). Threshold is a FRACTION of `gcDistanceMpc` — see the
-  // constant's own docblock for why a fixed AU distance is wrong here.
+  // (fix round 3). Threshold is a FRACTION of `gcDistanceMpc` — see
+  // `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`'s own docblock for why a
+  // fixed AU distance is wrong here. Read off settings, not the module
+  // constant, TEMPORARILY (Task 15's DebugPanel knob) — the constant stays
+  // this value's real owner (`initialState.ts` seeds from it).
   const cameraMovedBeyondThreshold =
     captureRuntime.pinnedEyeMpc !== null &&
     distanceMpc(ctx.drawCamPos, captureRuntime.pinnedEyeMpc) >
-      SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION * gcDistanceMpc;
+      state.settings.sgrAStarLensingTuning.skyCubemapRecaptureCameraMoveFraction * gcDistanceMpc;
   const fullSweepTriggered = bandJustEngaged || cameraMovedBeyondThreshold;
   // Re-pin BEFORE scheduling so a triggered full sweep — including this
   // frame's own faces — samples the eye it was triggered by, not the eye it
@@ -175,14 +174,18 @@ export function renderFrame(input: RenderFrameInput): void {
   // `frameProgram` only knows WHICH faces to capture (static data); resolving
   // each face's own synthetic camera is `renderFrame`'s job, done fresh every
   // frame since the schedule's face LIST can change frame to frame.
-  // `faceSizePx` reads the sky-cubemap row's own declared size rather than a
-  // hard-coded constant, so the two can never drift. A face whose context
-  // comes back null (pre-bootstrap) is simply omitted — `executeFrame` treats
-  // a missing map entry as "skip this step cleanly" (see its module header).
+  // `faceSizePx` reads the sky-cubemap row's own ALLOCATED size (`sizeOf`,
+  // this frame's already-reconciled pixels — see `RenderTargets.sizeOf`'s
+  // doc), not `specOf().fixedSizePx.size` directly: that field is a live
+  // setting as of Task 15 (a function of state, not a plain number), so
+  // reading the resolved allocation is both simpler and the authoritative
+  // answer. A face whose context comes back null (pre-bootstrap) is simply
+  // omitted — `executeFrame` treats a missing map entry as "skip this step
+  // cleanly" (see its module header).
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
   const pinnedEyeMpc = captureRuntime.pinnedEyeMpc;
   if (skyCubemapFacesToCapture.length > 0 && pinnedEyeMpc !== null) {
-    const faceSizePx = ctx.renderTargets.specOf('sky-cubemap').fixedSizePx!.size;
+    const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
     for (const face of skyCubemapFacesToCapture) {
       const faceCtx = skyCubemapFaceContext({
         state,

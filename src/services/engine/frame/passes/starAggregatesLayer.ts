@@ -60,9 +60,10 @@ export const starAggregatesLayer: ContentLayer = {
     // flicker, not wrong brightness — `toRefPx` keeps the photometry
     // viewport-independent). `viewSlot !== 0` marks a sky-cubemap capture draw
     // (this layer's `skyCapture` flag, see `ReadyFrameContext.viewSlot`'s
-    // doc), which targets the 256px `sky-cubemap` face, not this row. The view
-    // is COPIED rather than mutated: one `SlabView` is shared by every layer
-    // in the render step.
+    // doc), which targets the `sky-cubemap` face — its own declared size (a
+    // live setting as of Task 15), not this row's. The view is COPIED rather
+    // than mutated: one `SlabView` is shared by every layer in the render
+    // step.
     const destTarget = ctx.viewSlot !== 0 ? 'sky-cubemap' : 'star-aggregates';
     const { width: vw, height: vh } = ctx.renderTargets.sizeOf(destTarget);
 

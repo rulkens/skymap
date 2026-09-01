@@ -168,6 +168,19 @@ function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
 }
 
 /**
+ * A `fixedSizePx` row's declared per-axis size for this state — mirrors
+ * `resolveScale`. TEMPORARY (Task 15): today only `sky-cubemap`'s size is a
+ * function; every other `fixedSizePx` row (incl. `renderTargets.test.ts`'s
+ * synthetic `test:cubemap`) still hands a plain number.
+ */
+function resolveFixedSize(
+  fixedSizePx: { size: number | ((state: EngineState) => number) },
+  state: EngineState,
+): number {
+  return typeof fixedSizePx.size === 'function' ? fixedSizePx.size(state) : fixedSizePx.size;
+}
+
+/**
  * The declared render-target table for this frame configuration. A function
  * (not a module constant) because the swap row's format is runtime-decided —
  * the live swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
@@ -262,7 +275,14 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       depth: null,
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
-      fixedSizePx: { size: 256, layers: 6 },
+      // `size` is a live setting, TEMPORARILY (Task 15's DebugPanel resolution
+      // knob, 256/512/1024) — `reconcile` resolves it every frame exactly like
+      // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
+      // (and its cube/layer views) without a rebuild path of its own.
+      fixedSizePx: {
+        size: (state) => state.settings.sgrAStarLensingTuning.cubemapResolutionPx,
+        layers: 6,
+      },
     },
     {
       id: 'swap',
@@ -401,7 +421,7 @@ export function createRenderTargets(
       // separate code path past this one branch: the held-size comparison
       // and `allocate` call below stay shared with every other row.
       const [width, height] = spec.fixedSizePx
-        ? [spec.fixedSizePx.size, spec.fixedSizePx.size]
+        ? [resolveFixedSize(spec.fixedSizePx, s), resolveFixedSize(spec.fixedSizePx, s)]
         : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
       const held = sizes.get(spec.id);
       if (held !== undefined && held.width === width && held.height === height) continue;
