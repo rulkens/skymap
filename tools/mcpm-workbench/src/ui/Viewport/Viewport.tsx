@@ -8,11 +8,10 @@
  * request arriving mid-build served on completion. Only structural changes
  * are debounced; params/run tokens/camera are live.
  */
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { AgentWeights } from '../../../@types/AgentWeights';
 import type { AppState } from '../../../@types/AppState';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
-import type { GridBox } from '../../../@types/GridBox';
 import type { McpmHarness } from '../../../@types/McpmHarness';
 import type { Store } from '../../../@types/Store';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
@@ -35,9 +34,7 @@ import { createViewportInput } from '../../input/createViewportInput';
 import { cameraViewFor } from '../../render/cameraViewFor';
 import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpathDivisor';
 import { createRenderGraph, type RenderGraph } from '../../render/RenderGraph';
-import type { TraceView } from '../../render/tracePass';
 import { volpathKeyFor } from '../../render/volpathKeyFor';
-import type { McpmCameraView } from '../../render/writeMcpmCamera';
 import { createMcpmHarness } from '../../sim/createMcpmHarness';
 import { planGridBudget } from '../../sim/planGridBudget';
 import {
@@ -55,23 +52,15 @@ import { incrementStep, resetStepCount } from '../../state/slices/simSlice';
 import { defaultViewSlice, setFps, setPreviewPacked } from '../../state/slices/viewSlice';
 import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
 import { frameNeedsRender } from '../frameNeedsRender';
-
-// The fork's ps_volume_trace multiplies fragment rgb by 2.0; the port dropped that,
-// so exposure 2 reproduces it exactly through the blit.
-const EXPOSURE = 2;
-const CONTRAST = 1;
-const REBUILD_DEBOUNCE_MS = 400;
-// How long the pending-box wireframe stays up after the last grid-shaping change.
-const BOX_PREVIEW_MS = 200;
-// FPS badge throttle — pushing every frame would re-render the Hud at 60Hz.
-const FPS_PUSH_INTERVAL_MS = 500;
-// T20: the histogram PASS runs every step (encodeStep.ts) — cheap, only nDataPoints
-// invocations do real work. What's worth throttling is the READBACK: mapAsync is a
-// host round trip, and every sim step already queues one GPU submission of its own.
-// Steps, not wall-clock, so the convergence plot's x-axis is exact step counts.
-const HISTOGRAM_INTERVAL_STEPS = 20;
-
-const canvasStyle: CSSProperties = { display: 'block', width: '100vw', height: '100vh' };
+import { BOX_PREVIEW_MS } from './utils/BOX_PREVIEW_MS';
+import { canvasStyle } from './utils/canvasStyle';
+import { catalogKey } from './utils/catalogKey';
+import { CONTRAST } from './utils/CONTRAST';
+import { EXPOSURE } from './utils/EXPOSURE';
+import { FPS_PUSH_INTERVAL_MS } from './utils/FPS_PUSH_INTERVAL_MS';
+import { HISTOGRAM_INTERVAL_STEPS } from './utils/HISTOGRAM_INTERVAL_STEPS';
+import { REBUILD_DEBOUNCE_MS } from './utils/REBUILD_DEBOUNCE_MS';
+import { traceViewFor } from './utils/traceViewFor';
 
 /**
  * `?probe`-gated boot signal: probeGpuErrors.ts has no React tree to observe, so it
@@ -83,41 +72,6 @@ type ProbeWindow = {
   __mcpmProbeReady?: boolean;
   __mcpmProbeMeanLogTraceAtPoints?: () => number;
 };
-
-/**
- * `packedDropId`/`packedSourceName` stand in for the dropped catalog's
- * identity — cheap to JSON.stringify every store notification (incl. every
- * running-sim frame), where the override's own Float32Arrays would not be.
- * The id (not the name alone) is what actually triggers a rebuild: the
- * fork exports its packed catalog under the same default filename on every
- * run, so re-dropping a regenerated file — the realistic repeat workflow —
- * would leave a name-only key unchanged and silently starve the reload.
- */
-function catalogKey(s: AppState): unknown[] {
-  return [s.catalog.sources, s.catalog.tier, s.catalog.packedDropId, s.catalog.packedSourceName];
-}
-
-function traceViewFor(s: AppState, box: GridBox, cam: McpmCameraView): TraceView {
-  return {
-    eyeMpc: cam.eyeMpc,
-    targetMpc: cam.targetMpc,
-    upMpc: cam.upMpc,
-    fovYRad: cam.fovYRad,
-    aspect: cam.viewportPx[0] / cam.viewportPx[1],
-    trimDensity: s.view.raymarch.trimDensity,
-    sampleWeight: s.view.raymarch.sampleWeight,
-    opticalThickness: s.view.raymarch.opticalThickness,
-    stepVoxels: s.view.raymarch.stepVoxels,
-    additive: s.view.raymarch.additive,
-    // Scaled to the grid AND the step length, never fixed: the box diagonal is longer
-    // than any axis, and sub-1 stepVoxels needs proportionally more steps — a bound
-    // short of the crossing truncates the march silently, with no visual cue that it did.
-    maxSteps: Math.ceil(
-      (2 * Math.max(box.dims[0], box.dims[1], box.dims[2])) /
-        Math.max(s.view.raymarch.stepVoxels, 0.25),
-    ),
-  };
-}
 
 export type ViewportProps = {
   readonly store: Store<AppState>;

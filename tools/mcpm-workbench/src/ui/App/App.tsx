@@ -10,7 +10,7 @@
  * completed-load transition `Viewport`'s own boot path calls, so a rebuild
  * consumer reads `catalog.packedOverride` the same way it reads a fetch.
  */
-import { useMemo, useState, type CSSProperties, type DragEvent, type ReactNode } from 'react';
+import { useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import { createStore } from '../../state/createStore';
 import { defaultAppState } from '../../state/defaultAppState';
 import { deriveAgentWeights } from '../../field/deriveAgentWeights';
@@ -22,33 +22,9 @@ import Viewport from '../Viewport/Viewport';
 import ControlsPanel from '../ControlsPanel/ControlsPanel';
 import HistogramDock from '../HistogramDock/HistogramDock';
 import Hud from '../Hud/Hud';
-
-const statusStyle: CSSProperties = {
-  position: 'fixed',
-  left: 12,
-  bottom: 12,
-  padding: '6px 10px',
-  font: '12px monospace',
-  color: '#e8e8e8',
-  background: 'rgba(0, 0, 0, 0.7)',
-  borderRadius: 4,
-  pointerEvents: 'none',
-};
-
-// Stacked above the (dev-only) packed-drop status line rather than sharing its
-// slot: catalog.statusMessage (e.g. "no catalog points") can be live in prod,
-// so the two must never silently overlap if both happen to be set at once.
-const catalogStatusStyle: CSSProperties = { ...statusStyle, bottom: 44 };
-
-async function readDroppedPackedCatalog(
-  files: readonly File[],
-): Promise<{ bin: ArrayBuffer; metadataText: string; sourceName: string } | null> {
-  const binFile = files.find((f) => f.name.endsWith('.bin'));
-  const metaFile = files.find((f) => f.name.endsWith('.txt'));
-  if (!binFile || !metaFile) return null;
-  const [bin, metadataText] = await Promise.all([binFile.arrayBuffer(), metaFile.text()]);
-  return { bin, metadataText, sourceName: binFile.name };
-}
+import { catalogStatusStyle } from './utils/catalogStatusStyle';
+import { readDroppedPackedCatalog } from './utils/readDroppedPackedCatalog';
+import { statusStyle } from './utils/statusStyle';
 
 function App(): ReactNode {
   const store = useMemo(() => createStore(defaultAppState), []);
