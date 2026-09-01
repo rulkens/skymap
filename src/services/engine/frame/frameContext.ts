@@ -243,9 +243,7 @@ export function deriveFrameContext(
   const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
   // Provider B serves ONLY the engaged body, straight from its own stored
   // pose — no Mpc round trip. Every other body, and the whole absolute arm,
-  // stay on provider A (spec §5.2, ruled S1: "B keeps A"). Task 15 is what
-  // makes `arm.frame` ever a body arm; until then this branch is dead code,
-  // exercised only by tests that construct one by hand.
+  // stay on provider A (spec §5.2, ruled S1: "B keeps A").
   const bodyPose: BodyPoseProvider = (bodyId) => {
     if (arm.frame !== 'absolute' && arm.frame.body === bodyId) {
       return poseFromBodyArm(arm.pose);

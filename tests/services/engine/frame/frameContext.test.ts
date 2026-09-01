@@ -45,6 +45,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
@@ -518,12 +519,6 @@ describe('deriveFrameContext — bodyPose identity seam (m1)', () => {
   });
 });
 
-// Provider A's floor (spec §11's structural criterion, ruled): "≈2 ulp at
-// heliocentric magnitude, ≈50 µm at 1 AU". `bodyRelativePose`'s Mpc-then-metre
-// subtraction is what sets it — see poseFrameConversion.test.ts's EYE_FLOOR_M
-// for the same value's derivation.
-const EYE_FLOOR_M = 5e-5;
-
 /**
  * The world camera position and basis `frameContext.ts` itself derives from a
  * `CameraPose` — the SAME `assembleOrbitCamera` + `imagePlaneBasis`/`frameUp`
@@ -546,19 +541,21 @@ function worldCamera(
 }
 
 describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec §5.2)', () => {
-  it('provider B and provider A agree at the engage boundary — same camera, both providers', () => {
+  it('the engaged body reads provider B, not provider A — a routing test', () => {
+    // A world camera ~100 Mpc out puts provider A's `eyeRelBodyM` at ~1e23-1e24 m
+    // (heliocentric magnitude). The hand-built body arm below carries a small,
+    // near-origin anchor split provider A has no path to produce from THIS
+    // camera — so a value equal to it can only have come through provider B.
+    // Deleting the `if` at the seam, or threading the wrong arm in, both fall
+    // through to provider A's giant-magnitude answer and fail this assertion.
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
-    const earthState = deriveBodyStates(CONST_J2000).get('earth')!;
-
-    // Provider A's own answer for this camera — computed independently of the
-    // seam under test, from the SAME world camera `deriveFrameContext` derives.
-    const { camPosMpc, camBasisWorld } = worldCamera(pose, PROJECTION);
-    const providerA = bodyRelativePose({ camPosMpc, camBasisWorld, bodyState: earthState });
-
-    // The body arm engaging 'earth' at THIS camera — `toBodyArm` is Task 13's
-    // conversion, used here only as a fixture builder (its own correctness is
-    // poseFrameConversion.test.ts's job).
-    const bodyFixedPose = toBodyArm(pose, BASIS, BASIS, 'earth', earthState);
+    const basisLocal: Mat3 = [1, 0, 0, 0, 0, 1, 0, -1, 0];
+    const bodyFixedPose: BodyFixedPose = {
+      bodyId: 'earth',
+      anchorLocalM: [10, 20, 30],
+      eyeRelAnchorM: [1, 2, 3],
+      basisLocal,
+    };
     const arm: FramedCameraPose = { frame: { body: 'earth' }, pose: bodyFixedPose };
 
     const ctx = deriveFrameContext(
@@ -576,22 +573,13 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
 
-    const providerB = ctx.bodyPose('earth');
-    expect(providerB).not.toBeNull();
-    if (providerB === null) return;
-
-    for (let i = 0; i < 3; i++) {
-      expect(
-        Math.abs(providerB.eyeRelBodyM[i]! - providerA.eyeRelBodyM[i]!),
-        `eyeRelBodyM component ${i}`,
-      ).toBeLessThan(EYE_FLOOR_M);
-    }
-    for (let i = 0; i < 9; i++) {
-      expect(
-        Math.abs(providerB.basisM[i]! - providerA.basisM[i]!),
-        `basisM element ${i}`,
-      ).toBeLessThan(1e-9);
-    }
+    const engaged = ctx.bodyPose('earth');
+    expect(engaged).not.toBeNull();
+    if (engaged === null) return;
+    // Hand-computed fold, independent of `poseFromBodyArm` under test elsewhere
+    // (poseFromBodyArm.test.ts owns the fold's own arithmetic).
+    expect(engaged.eyeRelBodyM).toEqual([11, 22, 33]);
+    expect(engaged.basisM).toEqual(basisLocal);
   });
 
   it('provider A still serves every body that is not the engaged one', () => {
