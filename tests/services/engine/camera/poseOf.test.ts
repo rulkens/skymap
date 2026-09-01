@@ -9,7 +9,10 @@
 import { describe, it, expect } from 'vitest';
 
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { poseOf } from '../../../../src/services/engine/camera/poseOf';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 
 const makeCam = (): OrbitCamera =>
   ({
@@ -53,5 +56,21 @@ describe('poseOf', () => {
     expect(cam.yaw).toBe(before.yaw);
     expect(cam.pitch).toBe(before.pitch);
     expect(cam.distance).toBe(before.distance);
+  });
+});
+
+describe('poseOf → assembleOrbitCamera round trip (P5)', () => {
+  it('carries a non-zero roll from a live camera onto the reassembled camera', () => {
+    const cam = makeCam();
+    cam.roll = 0.42;
+
+    const pose = poseOf(cam);
+    expect(pose.roll).toBe(0.42);
+
+    const projection: CameraProjection = { fovYRad: 1, aspect: 1.5, near: 0.1, far: 1000 };
+    const identity: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    const reassembled = assembleOrbitCamera(pose, projection, identity, identity);
+
+    expect(reassembled.roll).toBe(0.42);
   });
 });
