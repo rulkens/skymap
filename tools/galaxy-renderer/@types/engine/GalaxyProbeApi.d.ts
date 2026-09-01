@@ -30,10 +30,10 @@ export type GalaxyProbeApi = {
    * replacement for the four old `request<Tier>BufferPeek` clones. This is
    * NOT redundant with the readbacks below: a readback re-dispatches its
    * kernel fresh (validates the kernel itself — determinism, budget,
-   * survival floor, flux parity), while a peek validates that
-   * `ensureFresh()`'s keyed rebuilds actually refilled the slots the last
-   * repack zeroed — a bug class a fresh dispatch cannot see. Both reads must
-   * keep working.
+   * survival floor, flux parity), while a peek validates that the renderer's
+   * `place:*` stage rows actually refilled the slots the last `upload:*` row
+   * zeroed — a bug class a fresh dispatch cannot see. Both reads must keep
+   * working.
    */
   peekRecords(buffer: 'field' | 'hii', offset: number, count: number): Promise<Float32Array>;
 

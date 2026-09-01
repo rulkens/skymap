@@ -1,7 +1,7 @@
 // hiiSplat/extrasFragment.wesl — the 'hii:extras' pass draws every
 // background extra's WHOLE hii mixture concatenated: shells/DIG/young
 // interleaved per-instance, deliberately not split by group for segment
-// contiguity (createGalaxyModel.ts's repackHiiComponents, ~line 640 — one
+// contiguity (createGalaxyFieldRenderer.ts's hiiPack node — one
 // 'hii:extras' span covers each extra's entire own contribution, since a
 // per-group split across extras would stop being contiguous). This is the
 // ONE fragment that legitimately keeps the data-driven textureWeight sign

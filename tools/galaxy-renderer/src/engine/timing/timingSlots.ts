@@ -40,8 +40,8 @@ export const TIMING_SLOTS: readonly string[] = [
   'hii:young',
   'hii:dig',
   // `hiiTex`'s own pass, which now draws ONLY background extras' whole HII
-  // contribution lumped into one row — see `createGalaxyModel.ts`'s
-  // `repackHiiComponents` for why extras can't split into their own
+  // contribution lumped into one row — see `createGalaxyFieldRenderer.ts`'s
+  // `hiiPack` node for why extras can't split into their own
   // shell/DIG/young tiers the way the central galaxy's components do (their
   // own spans interleave across extras, so per-extra labels would stop being
   // HUD-short and stop being contiguous). Same unconditional-on-content

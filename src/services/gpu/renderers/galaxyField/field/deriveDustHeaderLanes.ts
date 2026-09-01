@@ -1,8 +1,8 @@
 /**
  * deriveDustHeaderLanes — the galaxy-dependent dust lanes of the field header,
  * as one pure function over the same inputs the dust RESERVATION is built
- * from. `drawFrame` reads the result every frame; it changes only when
- * the dust params, the geometry or the `dust.enabled` pill do.
+ * from. `drawFrame` reads the result every frame; it changes only when the
+ * dust params, the geometry or the `dust.enabled` pill do.
  */
 import type { GalaxyDustParams } from '../../../../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';

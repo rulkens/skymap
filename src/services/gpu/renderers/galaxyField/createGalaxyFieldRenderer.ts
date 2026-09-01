@@ -574,7 +574,7 @@ export function createGalaxyFieldRenderer(
    * peekScratchBuffer — the ONE shared COPY_DST|MAP_READ target behind
    * `probe.peekRecords`: a peek COPIES whatever is CURRENTLY sitting in
    * `fieldComps`/`hiiComps` without dispatching anything, so the host's probe
-   * can tell "the keyed rebuilds refilled the slots the last repack zeroed"
+   * can tell "the `place:*` rows refilled the slots the last upload zeroed"
    * apart from "the placement kernel itself is correct" (the readbacks below
    * re-dispatch fresh and so cannot see the former). Sized at
    * `MAX_PARTICLE_COUNT`, the largest of the four tiers. ONE peek at a time:
@@ -1185,11 +1185,11 @@ export function createGalaxyFieldRenderer(
       phase: 'step',
       after: ['scan:dig', 'upload:hii'],
       wanted: () => digBudget.get() !== null,
-      // `hiiPack` is redundant with `T(upload:hii)` as the table stands (that
-      // row keys on exactly this node and has no `wanted`). Declared anyway,
-      // per spec: this dispatch writes at the segment table's `hii:dig`
-      // offset, so a `wanted` added to `upload:hii` later must not be able to
-      // leave the DIG span silently misaddressed.
+      // `hiiPack` is redundant with `token('upload:hii')` as the table stands
+      // (that row keys on exactly this node and has no `wanted`). Declared
+      // anyway: this dispatch writes at the segment table's `hii:dig` offset,
+      // so a `wanted` added to `upload:hii` later must not be able to leave
+      // the DIG span silently misaddressed.
       key: () => [
         graph.token('upload:hii'),
         graph.token('scan:dig'),

@@ -16,7 +16,7 @@ export function encodeDustPresentPass({
   readonly enc: GPUCommandEncoder;
   readonly targetView: GPUTextureView;
   readonly pipeline: GPURenderPipeline;
-  /** Reassigned whenever the dust map is recreated, so it must be read fresh at the call site. */
+  /** The group `createFieldPipelines.sync` produced for THIS encode, against this frame's own resources. */
   readonly bindGroup: GPUBindGroup;
 }): void {
   const pass = beginClearPass(enc, 'galaxy:dustPresentPass', targetView);

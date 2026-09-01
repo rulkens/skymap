@@ -85,8 +85,8 @@
 // (dustAttenuation.wesl, dustPresent/fragment.wesl): both read the eroded column from here
 // with no second code path. contrastExp (.w) is dustMap.wesl's signed power
 // exponent shaping the noise about its own midpoint — 1/textureContrast,
-// inverted CPU-side (deriveDustHeaderLanes.ts) so a HIGHER
-// contrast slider value maps to a SMALLER exponent (harder filament edges)
+// inverted CPU-side (deriveDustHeaderLanes.ts) so a HIGHER contrast slider
+// value maps to a SMALLER exponent (harder filament edges)
 // with the shader itself doing one plain pow().
 //
 // dustSlices (offset 144) is the VIEW-DEPENDENT depth partition the dust map

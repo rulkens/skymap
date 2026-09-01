@@ -442,8 +442,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     },
 
     ensureFresh(): { readonly bubblesLive: boolean } {
-      // Bubbles first, then the field renderer's own chain — the order the
-      // single `ensureFresh` this replaced ran them in.
       const bubblesLive = bubblePlacements.ensureFresh();
       field.stepIsmMap();
       return { bubblesLive };

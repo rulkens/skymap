@@ -650,7 +650,7 @@ export async function createGalaxyEngine(
     getCamera: camera.getCamera,
     // The ISM-map generator's packed output (ismMapFluidPack.wesl) — a
     // persistent GPU texture, always non-null, whose CONTENT is only
-    // meaningful once rebuildIsmMap has run at least once (setParams).
+    // meaningful once the `ismMap` stage row has run at least once (setParams).
     getIsmMapTexture: (): GPUTexture => field.ismMapGenerator.texture,
     // The CPU-side readback of the same output (`scheduleIsmMapReadback`):
     // null until the first one lands. `placeDust.wesl` reads the GPU texture
