@@ -121,7 +121,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       // Feeds the SAME interaction-priority boost as a store write (below) — without
       // this, orbiting/panning/zooming the camera would never trip the boost, since
       // the register no longer dispatches until the gesture ends.
-      if (input.drain(now)) {
+      if (input.drain()) {
         dirty = true;
         lastInteractionMs = now;
       }

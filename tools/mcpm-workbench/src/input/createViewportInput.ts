@@ -61,7 +61,7 @@ export type ViewportInput = {
   /** Applies one frame's worth of aggregated gesture steps to the camera register
    *  (and, at a gesture boundary or rest-wheel, commits it). Returns whether any
    *  step was applied, so the caller can fold it into its own dirty flag. */
-  drain(nowMs: number): boolean;
+  drain(): boolean;
   /** The live camera: the register mid-gesture, the committed store value otherwise
    *  (the store→register adoption below keeps them equal at rest). */
   getCameraPose(): WorkbenchCameraPose;
@@ -295,7 +295,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
     register.pitch = Math.min(PITCH_LIMIT, Math.max(-PITCH_LIMIT, register.pitch + dPitch));
   }
 
-  function drain(_nowMs: number): boolean {
+  function drain(): boolean {
     const steps = aggregator.drain();
     if (steps.length === 0) return false;
 

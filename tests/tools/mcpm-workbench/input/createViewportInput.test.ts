@@ -220,7 +220,7 @@ describe('createViewportInput — camera routing (dragAnchor misses every handle
 
     // Nothing applied yet — the aggregator only folds on drain().
     expect(store.getState().view.camera).toEqual(FIXED_CAMERA);
-    expect(input.drain(performance.now())).toBe(true);
+    expect(input.drain()).toBe(true);
 
     // orbitDragDelta(10, 0, 0.005) -> dYaw=0.05; register.yaw -= dYaw (drag right orbits
     // the world toward the hand, per applyInputToCamera's convention).
@@ -229,7 +229,7 @@ describe('createViewportInput — camera routing (dragAnchor misses every handle
     expect(store.getState().view.camera).toEqual(FIXED_CAMERA);
 
     win.fire('pointerup', mouseUp(60, 50));
-    expect(input.drain(performance.now())).toBe(true);
+    expect(input.drain()).toBe(true);
 
     expect(store.getState().view.camera.yaw).toBeCloseTo(-0.05, 10);
     expect(store.getState().view.camera.pitch).toBe(0);
@@ -252,7 +252,7 @@ describe('createViewportInput — camera routing (dragAnchor misses every handle
     });
 
     fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
-    expect(input.drain(performance.now())).toBe(true);
+    expect(input.drain()).toBe(true);
 
     expect(store.getState().view.camera.distance).toBeCloseTo(DISTANCE * Math.exp(0.1), 6);
   });

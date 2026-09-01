@@ -18,23 +18,23 @@ import { defaultViewSlice } from './view/viewSlice';
 const PROBE_VOXEL_SIZE_MPC = 3.125;
 const PROBE_AGENT_COUNT = 100_000;
 
+const baseAppState: RootState = {
+  catalog: defaultCatalogSlice,
+  grid: defaultGridSlice,
+  sim: defaultSimSlice,
+  view: defaultViewSlice,
+  histogram: defaultHistogramSlice,
+};
+
 /** defaultAppState — the store's seed value, one slice default per field. */
 export const defaultAppState: RootState = hasUrlGate('probe')
   ? {
-      catalog: defaultCatalogSlice,
+      ...baseAppState,
       // Grid derivation is always the manual path ("auto fit" is a one-shot
       // action, not a mode — gridSlice.ts's fitBoxToCatalog) — PROBE_VOXEL_SIZE_MPC
       // alone is what keeps the probe grid small; the default manual box's own
       // 0.75 Mpc voxel size would otherwise ship unscaled (272³).
       grid: { ...defaultGridSlice, manualVoxelSizeMpc: PROBE_VOXEL_SIZE_MPC },
       sim: { ...defaultSimSlice, agentCount: PROBE_AGENT_COUNT },
-      view: defaultViewSlice,
-      histogram: defaultHistogramSlice,
     }
-  : {
-      catalog: defaultCatalogSlice,
-      grid: defaultGridSlice,
-      sim: defaultSimSlice,
-      view: defaultViewSlice,
-      histogram: defaultHistogramSlice,
-    };
+  : baseAppState;

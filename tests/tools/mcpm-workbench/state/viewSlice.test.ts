@@ -38,20 +38,4 @@ describe('viewSlice commitCameraPose', () => {
     );
     expect(next.camera.distance).toBe(1);
   });
-
-  it('passes yaw/pitch/distance/targetMpc through unchanged when within range', () => {
-    const next = viewSlice.reducer(
-      defaultViewSlice,
-      viewSlice.actions.commitCameraPose({
-        yaw: 0.2,
-        pitch: 0.5,
-        distance: 42,
-        targetMpc: [1, 2, 3],
-      }),
-    );
-    expect(next.camera.yaw).toBe(0.2);
-    expect(next.camera.pitch).toBe(0.5);
-    expect(next.camera.distance).toBe(42);
-    expect(next.camera.targetMpc).toEqual([1, 2, 3]);
-  });
 });

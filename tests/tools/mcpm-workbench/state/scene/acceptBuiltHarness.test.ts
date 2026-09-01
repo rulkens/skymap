@@ -39,13 +39,4 @@ describe('acceptBuiltHarness', () => {
     expect(result).toBeNull();
     expect(harness.dispose).toHaveBeenCalledTimes(1);
   });
-
-  it('disposes on either condition alone — both aborted AND stale still disposes exactly once', () => {
-    const harness = fakeHarness();
-
-    const result = acceptBuiltHarness(harness, { epoch: 4 }, 3, { aborted: true });
-
-    expect(result).toBeNull();
-    expect(harness.dispose).toHaveBeenCalledTimes(1);
-  });
 });

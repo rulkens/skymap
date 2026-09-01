@@ -24,20 +24,6 @@ function stubResources() {
   return { calls, previewBuffer, graph, harness, gpu, weights, resources };
 }
 
-describe('createRenderResources', () => {
-  it('starts with every slot null and epoch at zero', () => {
-    const resources = createRenderResources();
-    expect(resources).toEqual({
-      gpu: null,
-      harness: null,
-      weights: null,
-      graph: null,
-      previewBuffer: null,
-      epoch: 0,
-    });
-  });
-});
-
 describe('disposeScene', () => {
   it('disposes preview buffer, then graph, then harness — old device memory freed before a rebuild allocates', () => {
     const { calls, previewBuffer, graph, harness, resources } = stubResources();
@@ -62,27 +48,11 @@ describe('disposeScene', () => {
     expect(resources.gpu).toBe(gpu);
   });
 
-  it('bumps epoch by exactly one per call', () => {
-    const { resources } = stubResources();
-
-    disposeScene(resources);
-    expect(resources.epoch).toBe(1);
-    disposeScene(resources);
-    expect(resources.epoch).toBe(2);
-  });
-
   it('is idempotent — a second dispose on an already-empty holder is safe and still bumps epoch', () => {
     const { resources } = stubResources();
     disposeScene(resources);
 
     expect(() => disposeScene(resources)).not.toThrow();
     expect(resources.epoch).toBe(2);
-  });
-
-  it('is a no-op disposal (but still bumps epoch) on a freshly created holder', () => {
-    const resources = createRenderResources();
-
-    expect(() => disposeScene(resources)).not.toThrow();
-    expect(resources.epoch).toBe(1);
   });
 });

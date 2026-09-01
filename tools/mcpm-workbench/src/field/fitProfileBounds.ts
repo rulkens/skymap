@@ -13,9 +13,9 @@ import type { FitProfile } from '../../@types/FitProfile';
 export function fitProfileBounds(
   profile: FitProfile,
   fraction: number,
-): { minMpc: Vec3; maxMpc: Vec3; keptCount: number } {
+): { minMpc: Vec3; maxMpc: Vec3 } {
   const { count } = profile;
-  if (count === 0) return { minMpc: [0, 0, 0], maxMpc: [0, 0, 0], keptCount: 0 };
+  if (count === 0) return { minMpc: [0, 0, 0], maxMpc: [0, 0, 0] };
 
   const keptCount = Math.min(count, Math.max(2, Math.ceil(fraction * count)));
   const k = keptCount - 1;
@@ -31,6 +31,5 @@ export function fitProfileBounds(
       profile.prefixMax[k * 3 + 1]!,
       profile.prefixMax[k * 3 + 2]!,
     ],
-    keptCount,
   };
 }

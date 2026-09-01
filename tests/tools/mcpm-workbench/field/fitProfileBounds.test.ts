@@ -1,22 +1,12 @@
 /**
  * fitProfileBounds — O(1) prefix lookup for the densest `fraction` of a
- * FitProfile's points. keptCount and the shrink-on-eviction behaviour are
- * the load-bearing properties auto-fit depends on.
+ * FitProfile's points. The shrink-on-eviction behaviour is the load-bearing
+ * property auto-fit depends on.
  */
 import { describe, expect, it } from 'vitest';
+import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import { buildFitProfile } from '../../../../tools/mcpm-workbench/src/field/buildFitProfile';
 import { fitProfileBounds } from '../../../../tools/mcpm-workbench/src/field/fitProfileBounds';
-
-function mulberry32(seed: number): () => number {
-  let a = seed;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 // A tight cluster near the origin plus a handful of far-flung stragglers.
 function clusterWithStragglers(): Float32Array {
@@ -40,17 +30,6 @@ function clusterWithStragglers(): Float32Array {
 }
 
 describe('fitProfileBounds', () => {
-  it('keptCount matches max(2, ceil(fraction*n)) clamped to n, exactly', () => {
-    const positions = new Float32Array(20 * 3);
-    for (let i = 0; i < positions.length; i++) positions[i] = i;
-    const profile = buildFitProfile(positions);
-
-    expect(fitProfileBounds(profile, 0.1).keptCount).toBe(2); // ceil(2)=2, max(2,2)=2
-    expect(fitProfileBounds(profile, 0.5).keptCount).toBe(10);
-    expect(fitProfileBounds(profile, 0.95).keptCount).toBe(19);
-    expect(fitProfileBounds(profile, 1).keptCount).toBe(20);
-  });
-
   it('excludes far stragglers and shrinks the box by a large factor at fraction=0.95', () => {
     const positions = clusterWithStragglers();
     const profile = buildFitProfile(positions);
@@ -70,8 +49,7 @@ describe('fitProfileBounds', () => {
     const positions = new Float32Array([0, 0, 0, 10, 10, 10]);
     const profile = buildFitProfile(positions);
     for (const fraction of [0.01, 0.5, 1]) {
-      const { minMpc, maxMpc, keptCount } = fitProfileBounds(profile, fraction);
-      expect(keptCount).toBe(2);
+      const { minMpc, maxMpc } = fitProfileBounds(profile, fraction);
       expect(minMpc).toEqual([0, 0, 0]);
       expect(maxMpc).toEqual([10, 10, 10]);
     }
@@ -81,8 +59,7 @@ describe('fitProfileBounds', () => {
     const positions = new Float32Array([7, 8, 9]);
     const profile = buildFitProfile(positions);
     for (const fraction of [0.01, 0.5, 1]) {
-      const { minMpc, maxMpc, keptCount } = fitProfileBounds(profile, fraction);
-      expect(keptCount).toBe(1);
+      const { minMpc, maxMpc } = fitProfileBounds(profile, fraction);
       expect(minMpc).toEqual([7, 8, 9]);
       expect(maxMpc).toEqual([7, 8, 9]);
     }
