@@ -69,6 +69,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Black-hole lens crossfade shows subtle duplicate points** `ready` — direct sky + lensed cubemap both partially visible across the band ramp; fade the direct roster inversely. → [details](backlog/2026-09-02-lens-crossfade-duplicate-points.md)
 - [ ] **`dirToEquirectUv` lives twice in WESL** `ready` — copied verbatim from `earth/fragment.wesl` into `earthSurfaceTile/fragment.wesl` (both load-bearing); extract to `shaders/lib/`.
 - [ ] **Renderer landmines from the Quest VR spike** `ready` — three hard-won traps to add to docs/RENDERER.md: per-camera (not per-frame) ctx memos, rebase-origin carrying, writeBuffer-at-submit ordering. → [details](backlog/2026-08-23-renderer-landmine-docs.md)
 - [ ] **Layer blend is declared twice** `needs-design` — `ContentLayer.blend` and the pipeline's `GPUBlendState` restate each other with nothing tying them; parity wants `blendStateOf` threaded through every renderer. → [details](backlog/2026-07-31-layer-blend-declared-twice.md)
