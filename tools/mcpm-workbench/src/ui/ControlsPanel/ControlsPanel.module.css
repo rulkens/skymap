@@ -50,7 +50,7 @@
 }
 
 .actionButton {
-  composes: blockButton from '../../../../src/components/common/shared.module.css';
+  composes: blockButton from '../../../../../src/components/common/shared.module.css';
 }
 
 /* V3: importParams' rejection message (malformed/hand-edited JSON) — same
@@ -77,6 +77,6 @@
 }
 
 .simActionButton {
-  composes: blockButton from '../../../../src/components/common/shared.module.css';
+  composes: blockButton from '../../../../../src/components/common/shared.module.css';
   font-size: var(--font-size-sm);
 }

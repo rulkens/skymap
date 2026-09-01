@@ -1,11 +1,11 @@
 /* Same composed row vocabulary as ToggleRow, minus the pill/ⓘ affordances. */
 
 .root {
-  composes: root from '../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  composes: root from '../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
 }
 
 .main {
-  composes: main from '../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  composes: main from '../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -13,7 +13,7 @@
 }
 
 .labelText {
-  composes: label from '../../../../src/components/common/Slider/Slider.module.css';
+  composes: label from '../../../../../src/components/common/Slider/Slider.module.css';
 }
 
 /* PaletteSelect's `font: inherit` picks up the panel's 14px mono base here;

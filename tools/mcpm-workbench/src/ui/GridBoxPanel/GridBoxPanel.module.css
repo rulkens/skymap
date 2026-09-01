@@ -2,6 +2,6 @@
    reset/clear-trace pair (blockButton + the same smaller font-size-sm) so
    it reads as the same class of control: a command, not a slider/toggle. */
 .autoFitButton {
-  composes: blockButton from '../../../../src/components/common/shared.module.css';
+  composes: blockButton from '../../../../../src/components/common/shared.module.css';
   font-size: var(--font-size-sm);
 }
