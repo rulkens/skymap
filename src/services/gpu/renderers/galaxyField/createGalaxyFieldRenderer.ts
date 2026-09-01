@@ -925,8 +925,10 @@ export function createGalaxyFieldRenderer(
    * the schedule and `after` only proves it. `ismMap` leads the two scans, so a
    * new galaxy scans once from the final map instead of once per trigger. The
    * `sync` rows run inside `setMixture`; the `step` rows are deferred to
-   * `stepIsmMap`, which the host calls before the frame's own encoder exists —
-   * each of them submits an encoder of its own that has to precede it.
+   * `stepIsmMap`, which the host must call before the frame's own encoder
+   * exists — the four `place:*` rows and `orientation:tex` each submit an
+   * encoder of their own that has to precede it (`orientation:data` alone
+   * submits nothing: it is the CPU-side readback hook).
    */
   const graph: StageGraph<StageName> = createStageGraph<StageName>([
     {
@@ -1183,9 +1185,11 @@ export function createGalaxyFieldRenderer(
       phase: 'step',
       after: ['scan:dig', 'upload:hii'],
       wanted: () => digBudget.get() !== null,
-      // `hiiPack` and not just its token: this dispatch writes at the segment
-      // table's `hii:dig` offset, so a repack that moves that span has to
-      // re-place even when the buffer upload itself was a no-op.
+      // `hiiPack` is redundant with `T(upload:hii)` as the table stands (that
+      // row keys on exactly this node and has no `wanted`). Declared anyway,
+      // per spec: this dispatch writes at the segment table's `hii:dig`
+      // offset, so a `wanted` added to `upload:hii` later must not be able to
+      // leave the DIG span silently misaddressed.
       key: () => [
         graph.token('upload:hii'),
         graph.token('scan:dig'),
