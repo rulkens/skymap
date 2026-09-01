@@ -16,6 +16,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/fra
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { regionById } from '../../../../src/utils/scene/regionById';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { fadeBand } from '../../../../src/utils/math/fadeBand';
 
 const NEIGHBOURHOOD_EXTENT_MPC = regionById('solar-neighbourhood').extentMpc;
 const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;
@@ -69,5 +70,27 @@ describe('both backdrop bands derive from one shape', () => {
     expect(SCALE_FADE_BANDS.starBackdrop.goneAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
       SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
+  });
+});
+
+describe('sgrAStarLensing band — 100/500 AU envelope in Mpc, approach direction', () => {
+  it('the sgrAStarLensing fade band engages on approach to Sgr A*', () => {
+    // The band classification is critical: since fullAt < goneAt, fadeBand
+    // returns 1 at the close edge and 0 at the far edge, implementing a fade-IN
+    // as the camera approaches. A retune that swapped the edges would flip the
+    // direction and cause the lens pass to fade OUT on approach (the opposite of
+    // the intended effect). This test pins the edge ordering; classifiers catch
+    // backwards bands.
+    const fullAtMpc = 100 * SCALE_UNITS.AU_TO_MPC;
+    const goneAtMpc = 500 * SCALE_UNITS.AU_TO_MPC;
+
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, fullAtMpc)).toBe(1);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, goneAtMpc)).toBe(0);
+
+    // A midpoint value is strictly between 0 and 1, confirming the smooth ramp.
+    const midpointMpc = (fullAtMpc + goneAtMpc) / 2;
+    const midpointAlpha = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpointMpc);
+    expect(midpointAlpha).toBeGreaterThan(0);
+    expect(midpointAlpha).toBeLessThan(1);
   });
 });
