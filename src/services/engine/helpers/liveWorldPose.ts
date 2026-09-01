@@ -1,12 +1,12 @@
 /**
- * liveWorldPose — the world arm of the last produced pose, for callers OUTSIDE
- * the frame loop (pick, demand, the gesture seed, `getLivePose`, the follow
- * driver's `from` capture). `runFrame` resolves its own arm once per frame;
- * this is the single OFF-frame resolution site, so no reader invents a second.
+ * liveWorldPose — the world arm of `lastPose`; the one resolution site besides
+ * `runFrame`'s own per-frame call, so no reader invents a second.
  *
- * Resolved at `lastRenderedSimDays` — the epoch the last frame DREW its bodies
- * at, not a fresh clock sample — so an off-frame read stays welded to the pixels
- * on screen (the pick-path rule on `CameraRuntime.d.ts`'s `lastRenderedSimDays`).
+ * It always reads `lastRenderedSimDays`, which means two things by call site.
+ * Between frames (pick, demand, `getLivePose`, the gesture seed) that is the
+ * epoch the last frame DREW at — what welds those reads to the pixels on screen.
+ * Inside the produce step `runFrame` has already advanced it, so `followBody`'s
+ * `from` capture gets THIS frame's epoch: the ease starts where the camera is now.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
