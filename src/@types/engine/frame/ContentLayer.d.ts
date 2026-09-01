@@ -71,6 +71,17 @@ export type ContentLayer = {
    */
   readonly skyCapture?: true;
   /**
+   * Opt-in to the `'post'` half of the black-hole lens's `(hdr, NEAR0)`
+   * step split (Task 14b, Ruling 9): set only by `orbitTrailsLayer` and
+   * `bodyGlintsLayer`, the two rows the spec keeps unwarped ON TOP of the
+   * lens rather than sampled by it. `frameProgram` only emits the split
+   * (and a `'post'` step) when the lens's own `(hdr, BODY[k])` step fires —
+   * outside the band this flag is inert and every `(hdr, NEAR0)` layer
+   * shares the one untagged step, exactly as before. `true`-only, same
+   * three-state-avoidance reasoning as `skyCapture` above.
+   */
+  readonly hdrPostLensing?: true;
+  /**
    * Whether this layer should record draw commands this frame, given the
    * step's already-resolved `SlabView` — a `'body'` layer reads
    * `view.slab.frame.bodyId` to gate its own row. Pure: no side effects.

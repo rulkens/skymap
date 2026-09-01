@@ -70,6 +70,7 @@ import {
   groupKeyOf,
   isBodySlabIndex,
   layerTimingSlotName,
+  matchesLensPhase,
   renderStepTimingSlotName,
   slabName,
 } from './slabs';
@@ -131,17 +132,19 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  *
  * `sgrAStarLensingBodySlabs` (Task 14, Ruling 8) is the black-hole lens's OWN
  * missing step: no step here ever matched `sgrAStarLensingLayer` (`slab:
- * 'body'`, `target: 'hdr'`) before this task — it registered and compiled but
+ * 'body'`, `target: 'hdr'`) before Task 14 — it registered and compiled but
  * never drew (Task 13's own recorded finding). `renderFrame` resolves Sgr
  * A*'s body-m row each frame and passes it here ONLY inside the fade band, so
  * an inactive band emits no step at all (same zero-dispatch guarantee as
  * `skyCubemapFacesToCapture`). One `(hdr, slab)` render step per entry,
  * placed after the `(hdr, NEAR0)` roster step so the lens's OVER blend
- * occludes the roster light already accumulated there. It also ends up
- * drawing over `orbit-trails`/`body-glints` (the SAME shared step, per
- * `passes/index.ts`'s registry order) — fully keeping those two unwarped
- * needs splitting that shared step, which this one new step does not do; see
- * the task 14 report.
+ * occludes the roster light already accumulated there. A non-empty list also
+ * means the band is active, so the `(hdr, NEAR0)` roster step ABOVE this one
+ * splits into `'pre'`/`'post'` halves around it (Task 14b, Ruling 9):
+ * `orbit-trails`/`body-glints` opt into the `'post'` half via
+ * `ContentLayer.hdrPostLensing`, so they draw AFTER the lens rather than
+ * being sampled by it, while an inactive band leaves the roster as the one
+ * untagged step it always was. See `slabs.ts`'s `matchesLensPhase`.
  */
 export function frameProgram(
   tone: ToneMap,
@@ -200,13 +203,19 @@ export function frameProgram(
   // still accumulating into HDR BEFORE the tone-map composite below — one
   // tone curve for stars and galaxies. The hdr target is already touched
   // by the COSMO step above, so this pass loads rather than clears.
-  steps.push({ kind: 'render', target: 'hdr', slab: NEAR0 });
-
-  // The black-hole lens's own (hdr, BODY[k]) step(s) — see this function's
-  // doc for why it exists and its residual limitation. Runs after the (hdr,
-  // NEAR0) roster above; empty (inactive band) contributes no step.
-  for (const slab of sgrAStarLensingBodySlabs) {
-    steps.push({ kind: 'render', target: 'hdr', slab });
+  // Task 14b (Ruling 9): outside the band this is the one untagged step it
+  // always was — byte-identical to pre-Task-14b. Inside it, the roster
+  // splits around the lens's own (hdr, BODY[k]) step(s) below so
+  // `orbit-trails`/`body-glints` (ContentLayer.hdrPostLensing) draw AFTER
+  // the lens instead of being sampled by it — see this function's doc.
+  if (sgrAStarLensingBodySlabs.length > 0) {
+    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'pre' });
+    for (const slab of sgrAStarLensingBodySlabs) {
+      steps.push({ kind: 'render', target: 'hdr', slab });
+    }
+    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'post' });
+  } else {
+    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0 });
   }
 
   // Near-field foreground bodies (zoom-to-earth fold). Rendered into their
@@ -332,7 +341,10 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   // buckets under one title regardless of which row Sgr A* lands in this
   // frame, same reasoning as the `foreground:0·BODY[k]` block below.
   ...Object.fromEntries(
-    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [`hdr·${slabName(k + 2)}`, 'Sgr A* lensing']),
+    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [
+      `hdr·${slabName(k + 2)}`,
+      'Sgr A* lensing',
+    ]),
   ),
   'foreground:0·NEAR0': 'Foreground bodies · depth',
   // One `foreground:0·BODY[k]` row per capacity slot, derived from `slabName`
@@ -371,9 +383,11 @@ function timedSlotRowsOf(
       // Every layer matched by this step shares the step's `(target, slab)`, so
       // one groupKey covers the whole run. The key comes from the shared
       // `groupKeyOf` helper (slabs.ts) — the same definition the merged executor
-      // resolves against, so the two can't drift. Every render step now has a
-      // distinct `(target, slab)` (the pyramid's reused-target repeats moved into
-      // the single `'bloom'` step), so no dedup is needed here.
+      // resolves against, so the two can't drift. Two render steps can now
+      // share one `(target, slab)` — the black-hole lens's `'pre'`/`'post'`
+      // roster split (Task 14b) — but never share a LAYER (`matchesLensPhase`
+      // partitions the registry between them), so no per-layer dedup is
+      // needed; only the group-TOTAL row below needs the split disambiguated.
       const groupKey = groupKeyOf(step.target, step.slab);
       for (const layer of layers) {
         // A 'body' layer has no fixed slab index — it matches every body-row
@@ -384,7 +398,11 @@ function timedSlotRowsOf(
         // same fact (slabs.ts).
         const matchesStep =
           layer.slab === step.slab || (layer.slab === 'body' && isBodySlabIndex(step.slab));
-        if (layer.target === step.target && matchesStep) {
+        if (
+          layer.target === step.target &&
+          matchesStep &&
+          matchesLensPhase(layer.hdrPostLensing, step.lensPhase)
+        ) {
           // `layerTimingSlotName` carries the row into the slot NAME for a body
           // step, so two body rows sharing one layer (Jupiter + a moon, both
           // drawn by `planetsLayer`) each get their own query-set slot instead
@@ -402,11 +420,13 @@ function timedSlotRowsOf(
       // pass, so no timing is billed against it). `groupKey` is unique per step
       // for every ordinary render step (each has a distinct `(target, slab)`)
       // and never collides with a layer name — EXCEPT the sky-cubemap capture
-      // steps, which share `('sky-cubemap', NEAR0)` across all 6 faces;
-      // `renderStepTimingSlotName` appends the face there so each still earns
-      // its own slot (see its doc, slabs.ts). The DebugPanel bucket still uses
-      // the shared `groupKey`, so all 6 land under one "Sky capture" group.
-      rows.push({ name: renderStepTimingSlotName(groupKey, step.face), groupKey });
+      // steps (share `('sky-cubemap', NEAR0)` across all 6 faces) and the
+      // lens's `'pre'`/`'post'` roster split (share `('hdr', NEAR0)`);
+      // `renderStepTimingSlotName` appends the face or the `'post'` phase
+      // there so each still earns its own slot (see its doc, slabs.ts). The
+      // DebugPanel bucket still uses the shared `groupKey`, so all 6 capture
+      // faces — and both split halves — land under one title each.
+      rows.push({ name: renderStepTimingSlotName(groupKey, step.face, step.lensPhase), groupKey });
     } else if (step.kind === 'composite') {
       // A composite merges whole textures rather than projecting geometry — it
       // belongs to no slab, and all composites share the one infra group.

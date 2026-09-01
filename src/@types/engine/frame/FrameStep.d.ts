@@ -66,6 +66,21 @@ export type FrameStep =
        * timing-slot lookup, frameProgram.ts / executeFrame.ts.
        */
       face?: CubeFace;
+      /**
+       * Splits the shared `(hdr, NEAR0)` roster step around the black-hole
+       * lens's own `(hdr, BODY[k])` step (Task 14b, Ruling 9), so
+       * `orbit-trails`/`body-glints` draw AFTER the lens rather than being
+       * sampled by it. Absent ⇒ every layer matches, the pre-Task-14b
+       * behaviour. `'pre'` admits every `(hdr, NEAR0)` layer EXCEPT those
+       * opted into `ContentLayer.hdrPostLensing`; `'post'` (emitted only
+       * when the lens step fires) admits ONLY those. Two steps sharing one
+       * `(target, slab)` would otherwise collide on one GPU-timing group
+       * slot — `slabs.ts`'s `matchesLensPhase` is the single predicate both
+       * `timedSlotRowsOf` and `executeFrame` read, and
+       * `renderStepTimingSlotName` gives the `'post'` step's group-total
+       * slot a distinct name so it can't collide with `'pre'`'s.
+       */
+      lensPhase?: 'pre' | 'post';
     }
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };

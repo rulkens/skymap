@@ -41,9 +41,12 @@
  * star-points, star-catalog, star-upsample, constellations, orbit-trails,
  * body-glints); `star-aggregates` has its OWN `(star-aggregates, NEAR0)` render
  * step into the half-res offscreen `star-upsample` composites back, and
- * `sgr-a-star-lensing` has its OWN `(hdr, BODY[k])` render step (Task 14) — its
- * position below is registry-order documentation, not the mechanism that keeps
- * it after the roster and before orbit-trails/body-glints; see `frameProgram.ts`:
+ * `sgr-a-star-lensing` has its OWN `(hdr, BODY[k])` render step (Task 14). Its
+ * position below is registry-order documentation for items 10-15 — but for
+ * orbit-trails/body-glints (17/17b) the ordering IS enforced, by
+ * `ContentLayer.hdrPostLensing` splitting the shared `(hdr, NEAR0)` step
+ * around the lens step whenever the band is active (Task 14b, Ruling 9); see
+ * `frameProgram.ts`:
  *
  *  10. milky-way           — star/dust point cloud at the galactic centre
  *                            (the fixed 10 kpc COSMO near plane clipped the
@@ -79,16 +82,19 @@
  *                            NEAR0)` roster step above so it draws over items
  *                            10-15
  *  17. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
- *                            Moon) as screen-space conics with a brightness
+ *                            Moon, and the 39 bound S-stars orbiting Sgr A*
+ *                            itself) as screen-space conics with a brightness
  *                            lobe at the body's position (f64 compose seam);
- *                            moved here (from between 11 and 13) so it draws
- *                            unwarped over the lens pass, per spec "Draw order"
+ *                            opts into the lens's `'post'` split half
+ *                            (`hdrPostLensing`) so it draws unwarped over the
+ *                            lens pass whenever the band is active, per spec
+ *                            "Draw order" (Task 14b, Ruling 9)
  *  17b. body-glints        — the sub-pixel bodies (the glints branch of the body
  *                            partition) as brightness-scaled additive points
  *                            (size x albedo x phase, cross-fading with the mesh
  *                            over 1-3 px), sibling of star-points (f64 rebase
- *                            seam); moved alongside orbit-trails for the same
- *                            reason
+ *                            seam); opts into the lens's `'post'` split half
+ *                            for the same reason
  *
  * The next six are premultiplied-OVER overlays, projected through the
  * cosmological slab (except near0-selection-ring, which rides near0) and drawn
@@ -339,10 +345,13 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // light already accumulated behind them) and BEFORE orbit-trails/body-glints
   // below (so those stay unwarped on top, spec "Draw order", Q5). Registry
   // order alone can't enforce this against `orbit-trails`/`body-glints` — they
-  // share this SAME (hdr, NEAR0) render step with the roster above, so their
-  // relative draw order actually comes from `frameProgram`'s own step order
-  // (see its module header) wedging a dedicated (hdr, BODY[k]) step here; this
-  // array position is the documentation of that intent, not its enforcement.
+  // share this SAME (hdr, NEAR0) render step with the roster above. The real
+  // enforcement is `ContentLayer.hdrPostLensing` (Task 14b, Ruling 9): those
+  // two opt in, so `frameProgram` splits the shared step into `'pre'`/`'post'`
+  // halves around this row's own `(hdr, BODY[k])` step whenever the band is
+  // active (see its module header); this array position stays the
+  // documentation of the intent, registry order deciding each half's internal
+  // ordering.
   sgrAStarLensingLayer,
   orbitTrailsLayer,
   // The sub-pixel bodies (the glints branch of the body partition) as

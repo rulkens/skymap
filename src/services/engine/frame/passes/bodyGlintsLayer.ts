@@ -162,6 +162,11 @@ export const bodyGlintsLayer: ContentLayer = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
+  // Opts into the black-hole lens's `'post'` split half (Task 14b, Ruling 9)
+  // so this layer's own Sgr A* far-field marker (and any solar-system glint
+  // that happens to overlap it on screen) draws unwarped ON TOP of the lens
+  // rather than being sampled by it — see frameProgram.ts's step-split doc.
+  hdrPostLensing: true,
 
   enabled(state, ctx, _view) {
     // Handle first (short-circuits before any ctx / state.data read — matches

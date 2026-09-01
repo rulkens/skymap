@@ -123,6 +123,9 @@ function makeLayer(init: {
   // Ruling 6: opts this fixture layer into the sky-cubemap capture roster —
   // see `ContentLayer.skyCapture`'s doc.
   skyCapture?: true;
+  // Task 14b (Ruling 9): opts this fixture layer into the black-hole lens's
+  // 'post' step split half — see `ContentLayer.hdrPostLensing`'s doc.
+  hdrPostLensing?: true;
 }): SpyLayer {
   return {
     name: init.name,
@@ -130,6 +133,7 @@ function makeLayer(init: {
     target: init.target,
     blend: 'additive',
     ...(init.skyCapture ? { skyCapture: true as const } : {}),
+    ...(init.hdrPostLensing ? { hdrPostLensing: true as const } : {}),
     enabled: vi.fn<ContentLayer['enabled']>((_state, _ctx, view) =>
       init.enabledFor ? init.enabledFor(view) : (init.enabled ?? true),
     ),
@@ -809,7 +813,9 @@ describe('executeFrame', () => {
     // capture step via the flag alone.
     it("selects a capture step group by the skyCapture flag, ignoring the layer's own target", () => {
       const layer = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0, skyCapture: true });
-      const program: FrameStep[] = [{ kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 3 }];
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 3 },
+      ];
       const faceCtx = makeCtx();
       const { args, env } = makeArgs({
         program,
@@ -826,7 +832,9 @@ describe('executeFrame', () => {
 
     it('never selects a capture step group by target alone — a layer targeting sky-cubemap without the flag is skipped', () => {
       const layer = makeLayer({ name: 'unflagged', target: 'sky-cubemap', slab: NEAR0 });
-      const program: FrameStep[] = [{ kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 }];
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+      ];
       const faceCtx = makeCtx();
       const { args } = makeArgs({
         program,
@@ -846,6 +854,50 @@ describe('executeFrame', () => {
       const { args } = makeArgs({ program, layers: [layer] });
       executeFrame(args);
       expect(layer.draw).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('black-hole lens (hdr, NEAR0) roster split (Task 14b, Ruling 9)', () => {
+    // A step's `lensPhase` narrows the (target, slab) group by
+    // `ContentLayer.hdrPostLensing` — 'pre' excludes flagged layers, 'post'
+    // admits only them. This is the mechanism that keeps orbit-trails/
+    // body-glints drawing AFTER the lens step instead of under it.
+    it("a 'pre' step excludes hdrPostLensing layers; a 'post' step draws only them", () => {
+      const roster = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0 });
+      const trails = makeLayer({
+        name: 'orbit-trails',
+        target: 'hdr',
+        slab: NEAR0,
+        hdrPostLensing: true,
+      });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'pre' },
+        { kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'post' },
+      ];
+      const { args } = makeArgs({ program, layers: [roster, trails] });
+      executeFrame(args);
+      expect(roster.draw).toHaveBeenCalledTimes(1);
+      expect(trails.draw).toHaveBeenCalledTimes(1);
+      // Each drew into a DIFFERENT pass — the 'pre'/'post' split opens two
+      // passes even though both steps share (target: 'hdr', slab: NEAR0).
+      expect(roster.draw.mock.calls[0]![0]).not.toBe(trails.draw.mock.calls[0]![0]);
+    });
+
+    it('a step with no lensPhase draws every matching layer regardless of hdrPostLensing — the untagged, outside-the-band shape', () => {
+      const roster = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0 });
+      const trails = makeLayer({
+        name: 'orbit-trails',
+        target: 'hdr',
+        slab: NEAR0,
+        hdrPostLensing: true,
+      });
+      const program: FrameStep[] = [{ kind: 'render', target: 'hdr', slab: NEAR0 }];
+      const { args } = makeArgs({ program, layers: [roster, trails] });
+      executeFrame(args);
+      expect(roster.draw).toHaveBeenCalledTimes(1);
+      expect(trails.draw).toHaveBeenCalledTimes(1);
+      // Both drew into the SAME single pass — one untagged step, one group.
+      expect(roster.draw.mock.calls[0]![0]).toBe(trails.draw.mock.calls[0]![0]);
     });
   });
 });

@@ -114,8 +114,34 @@ export function layerTimingSlotName(layerName: string, slabIndex: number): strin
  * `executeFrame`'s merged pass must resolve the identical name via
  * `descriptorFor`, so both call this rather than templating `·FACE[n]` twice.
  */
-export function renderStepTimingSlotName(groupKey: string, face: number | undefined): string {
-  return face === undefined ? groupKey : `${groupKey}·FACE[${face}]`;
+export function renderStepTimingSlotName(
+  groupKey: string,
+  face: number | undefined,
+  lensPhase?: 'pre' | 'post',
+): string {
+  if (face !== undefined) return `${groupKey}·FACE[${face}]`;
+  // Only 'post' needs disambiguating: 'pre' keeps the bare groupKey because
+  // no frame ever emits an untagged (hdr, NEAR0) step alongside it (the
+  // split is all-or-nothing per frame — see frameProgram.ts) — so 'pre' and
+  // the untagged single-step case can safely share one name.
+  return lensPhase === 'post' ? `${groupKey}·POST_LENSING` : groupKey;
+}
+
+/**
+ * The Task 14b (Ruling 9) lens-phase gate: whether a layer belongs to a
+ * render step's group, given the step's `lensPhase` (FrameStep.d.ts). Single-
+ * sourced here because `frameProgram.ts`'s `timedSlotRowsOf` (the derived
+ * timing-slot list) and `executeFrame`'s group filter (the actual draw
+ * selection) must never disagree on which layers a `'pre'`/`'post'` step
+ * selects — a drift would either draw a layer the timing list never billed,
+ * or bill a slot for a layer that never drew.
+ */
+export function matchesLensPhase(
+  hdrPostLensing: true | undefined,
+  stepLensPhase: 'pre' | 'post' | undefined,
+): boolean {
+  if (stepLensPhase === undefined) return true;
+  return stepLensPhase === 'post' ? hdrPostLensing === true : hdrPostLensing !== true;
 }
 
 /**

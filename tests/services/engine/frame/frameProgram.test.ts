@@ -269,6 +269,25 @@ describe('frameProgram', () => {
     expect(withDefault).toEqual(base);
     expect(withEmpty).toEqual(base);
     expect(base.some((step) => step.kind === 'render' && step.slab >= 2)).toBe(false);
+    // Task 14b (Ruling 9): the split discriminant must not leak outside the
+    // band either — the (hdr, NEAR0) step stays the single untagged step it
+    // always was, byte-identical to pre-Task-14b.
+    expect(base.some((step) => step.kind === 'render' && 'lensPhase' in step)).toBe(false);
+  });
+
+  it('sgrAStarLensingBodySlabs active: orbit-trails/body-glints move to their own step AFTER the lens step (Task 14b, Ruling 9)', () => {
+    // Ruling 9's evidenced gap: orbit-trails and body-glints (the S-star
+    // trails and the Sgr A* far-field glint among them) used to share the
+    // pre-lens (hdr, NEAR0) roster step and so drew UNDER the lens's OVER
+    // blend. `ContentLayer.hdrPostLensing` moves them into a step that runs
+    // after the lens's own (hdr, BODY[k]) step instead — checked here
+    // against the REAL registry, so a missing flag on either layer (they'd
+    // stay in 'pre', ahead of the lens) fails this.
+    const slots = timedSlotsOf(frameProgram(TONE, false, [NEAR0], [], [4]), CONTENT_LAYERS);
+    const lensLayerIdx = slots.indexOf('sgr-a-star-lensing·BODY[2]');
+    expect(lensLayerIdx).toBeGreaterThanOrEqual(0);
+    expect(slots.indexOf('orbit-trails')).toBeGreaterThan(lensLayerIdx);
+    expect(slots.indexOf('body-glints')).toBeGreaterThan(lensLayerIdx);
   });
 
   it('bloom disabled: no bloom step emitted and program otherwise identical', () => {
@@ -452,10 +471,7 @@ describe('timedSlotsOf', () => {
     // slab index (4, arbitrary — any body-slab index widens the same way)
     // must now surface its row, positioned right after the (hdr, NEAR0)
     // group's own slot.
-    const slots = timedSlotsOf(
-      frameProgram(TONE, false, [NEAR0], [], [4]),
-      CONTENT_LAYERS,
-    );
+    const slots = timedSlotsOf(frameProgram(TONE, false, [NEAR0], [], [4]), CONTENT_LAYERS);
     const hdrNear0Idx = slots.indexOf('hdr·NEAR0');
     expect(hdrNear0Idx).toBeGreaterThanOrEqual(0);
     expect(slots[hdrNear0Idx + 1]).toBe('sgr-a-star-lensing·BODY[2]');
