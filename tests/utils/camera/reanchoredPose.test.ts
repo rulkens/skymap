@@ -86,6 +86,46 @@ describe('reanchoredPose', () => {
     expect(reanchoredPose(pose)).toBe(pose);
   });
 
+  it('quantizes to ulp(|anchorLocalM|), not ulp(range) or a fixed grid', () => {
+    // Hand-derived via the actual ulp(anchorMag) grid — verified by
+    // substitution to differ from quantizing off ulp(range) or a fixed 1e-6
+    // grid, so this pins the BASIS the spec calls out (§5.3), not merely
+    // that some quantization ran. Non-round components (not clean integers)
+    // so the grid's own bits actually get exercised — 1200 divides its own
+    // ulp(anchorMag) grid evenly and would pin nothing.
+    const pose: BodyFixedPose = {
+      bodyId: 'earth',
+      anchorLocalM: [4237918.63821547, -3119004.22187693, 2884650.91120408],
+      eyeRelAnchorM: [1234.567891234, -789.123456789, 456.789012345],
+      basisLocal: BASIS_IDENTITY,
+    };
+
+    const out = reanchoredPose(pose);
+
+    expect(out.anchorLocalM).toEqual([4239153.206106704, -3119793.345333719, 2885107.7002164247]);
+    expect(out.eyeRelAnchorM).toEqual([
+      3.992681740783155e-10, 1.8064838513964787e-10, 4.459366209630389e-10,
+    ]);
+  });
+
+  it('quantizes correctly at a power-of-two anchor magnitude', () => {
+    // 2^23 exactly — the binade boundary `ulpAt`'s mantissa-increment must
+    // not miss (the failure mode `Math.log2` would be prone to instead).
+    const pose: BodyFixedPose = {
+      bodyId: 'earth',
+      anchorLocalM: [8388608, 0, 0],
+      eyeRelAnchorM: [1234.567891234, -789.123456789, 456.789012345],
+      basisLocal: BASIS_IDENTITY,
+    };
+
+    const out = reanchoredPose(pose);
+
+    expect(out.anchorLocalM).toEqual([8389842.567891235, -789.1234567891806, 456.78901234455407]);
+    expect(out.eyeRelAnchorM).toEqual([
+      -5.32054400537163e-10, 1.8064838513964787e-10, 4.459366209630389e-10,
+    ]);
+  });
+
   it('never triggers for a body-centre anchor ([0,0,0])', () => {
     // BodyFixedPose's doc comment: `[0,0,0]` = body centre. A zero-magnitude
     // anchor makes the trigger fraction's threshold zero too, so ANY range

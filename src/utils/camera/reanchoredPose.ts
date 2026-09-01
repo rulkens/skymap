@@ -1,28 +1,22 @@
 /**
- * reanchoredPose — shrink a body-fixed pose's stored magnitudes by moving the
- * anchor toward the eye (spec §5.3), keeping `anchor + eyeRel` naming the same
- * point. Built now for the deep-zoom anchors that want it; the shipped centre
- * anchor (`[0,0,0]`) has zero magnitude and so never crosses the trigger below.
- *
- * The shift is quantized to the ulp grid of `|anchorLocalM|` first:
- * `anchorLocalM + d` then lands on a grid it already occupies (no rounding),
- * and `eyeRelAnchorM − d` is just that grid's remainder (exact) — so
- * `anchor + eyeRel` rounds to the identical bit pattern before and after.
+ * reanchoredPose — moves a body-fixed pose's anchor toward the eye (spec
+ * §5.3), keeping `anchor + eyeRel` bit-identical while both magnitudes
+ * shrink. Quantizing the shift to ulp(|anchorLocalM|) first makes both
+ * `anchor + d` and `eyeRel − d` exact on that grid, so the sum rounds
+ * identically before and after. `[0,0,0]` (body centre) has zero magnitude,
+ * so it never crosses the trigger below.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { Vec3 } from '../../@types/math/Vec3';
 
-// Below this fraction of |anchorLocalM|, the remaining range is close enough
-// to the anchor's own ulp floor (spec §5.3: ~1nm at Earth-radius magnitude)
-// that re-anchoring buys headroom before that floor becomes visible.
+// ulp(anchor) starts to matter below this fraction of |anchorLocalM| (spec
+// §5.3: ~1nm at Earth-radius magnitude) — re-anchor ahead of that floor.
 const TRIGGER_FRACTION = 1e-3;
 
 /**
- * `nextafter(magnitude) - magnitude`, via direct mantissa increment rather
- * than `Math.log2` — a power-of-two magnitude can land one ulp short of
- * `log2`'s true value (see `earthLevelFittingWidth`'s header), which would
- * pick a grid one binade off and break the exactness this function exists for.
+ * `nextafter(magnitude) - magnitude` via mantissa increment — `Math.log2`
+ * can miss a power-of-two boundary by one ulp (`earthLevelFittingWidth`).
  */
 function ulpAt(magnitude: number): number {
   if (magnitude === 0) return 0;
