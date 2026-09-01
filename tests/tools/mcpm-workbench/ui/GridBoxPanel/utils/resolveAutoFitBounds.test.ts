@@ -1,8 +1,8 @@
 /**
  * resolveAutoFitBounds — at 100% must reproduce today's plain-`catalogBoundsMpc`
- * Auto fit path bit-for-bit (not merely "close", since `buildFitProfile` sorts
+ * Auto fit path bit-for-bit (not merely "close", since `denseFractionBounds` ranks
  * by a different key and only coincidentally agrees at the full set); below
- * 100% it defers to `fitProfileBounds`, already covered by its own suite.
+ * 100% it defers to `denseFractionBounds`, already covered by its own suite.
  */
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';

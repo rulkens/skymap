@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 import Button from '../../../../../src/components/common/Button/Button';
 import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import { deriveGridBox } from '../../field/deriveGridBox';
+import { keptCountFor } from '../../field/keptCountFor';
 import { BYTES_PER_ELEMENT } from '../../sim/createGridBuffers';
 import { minFeasibleVoxelSizeMpc } from '../../sim/minFeasibleVoxelSizeMpc';
 import { estimateGridBudgetBytes } from '../../sim/planGridBudget';
@@ -51,7 +52,7 @@ function GridBoxPanel(): ReactNode {
   const evictedCount =
     grid.autoFitPercent >= 100
       ? 0
-      : catalogPointCount - Math.ceil((grid.autoFitPercent / 100) * catalogPointCount);
+      : catalogPointCount - keptCountFor(catalogPointCount, grid.autoFitPercent / 100);
   const box = deriveGridBox(grid);
   // Same total-bytes formula planGridBudget uses to refuse a build (one home,
   // shared) — no device limits needed here since this is a live estimate, not

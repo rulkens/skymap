@@ -47,6 +47,6 @@ export type GridSlice = {
   readonly showGridBox: boolean;
   readonly maxBufferBytes: number | null;
   /** Integer 80–100 (%): fraction of catalog points Auto fit keeps, evicting the
-   * L∞-farthest-from-median fringe (see `buildFitProfile`/`fitProfileBounds`). */
+   * L∞-farthest-from-median fringe (see `denseFractionBounds`). */
   readonly autoFitPercent: number;
 };

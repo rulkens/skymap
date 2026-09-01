@@ -48,7 +48,7 @@ export const gridSlice = createSlice({
      * to the NEXT "auto fit" click, not a live modifier of the box already
      * showing, but still a grid-controls edit under the V3 ruling so it clears
      * `importedBox`. Clamped here (not just at the slider) so a stray dispatch
-     * can't push the fit below the 80% floor `fitProfileBounds` assumes.
+     * can't push the fit below the 80% floor `denseFractionBounds` assumes.
      */
     setAutoFitPercent: (state, action: PayloadAction<number>) => {
       state.autoFitPercent = Math.min(100, Math.max(80, Math.round(action.payload)));
