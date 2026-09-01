@@ -20,11 +20,10 @@ export const BLACK_HOLES: readonly BlackHoleRow[] = [
       outerRs: 6,
       // Face-on view is ≲30° per EHT polarimetry. Chosen value at ~20°; the exact
       // angle is unconstrained but fixed for reproducible renders.
-      inclinationRad: Math.PI / 9, // ~20°
+      inclinationRad: 0.35, // ~20°
       // Major-axis position angle (E of N, standard astronomical convention).
-      // Entirely unconstrained; set to 45° for visual variety. Adjust here or via
-      // Task 15 debug panel.
-      positionAngleRad: Math.PI / 4, // 45°
+      // Entirely unconstrained; tuned via the Task 15 debug panel.
+      positionAngleRad: 2.21,
       // Stochastic brightening/dimming at minute-to-hour timescales (Sgr A* manifests
       // minute-scale near-IR flares; we borrow that timescale). Amplitude is tasteful
       // dev tuning — no published NIR variability-index texture yet. Range 0..1.
