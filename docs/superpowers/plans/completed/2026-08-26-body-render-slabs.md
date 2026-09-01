@@ -223,26 +223,26 @@ export function bodyRelativePose(input: {
   registry row. Copying `radiusM` onto `BodyState` would create exactly the mirror-state
   the simplicity convention forbids.
 
-- [ ] Add `MPC_TO_M` to `src/data/scaleUnits.ts`'s constant list and to the
+- [x] Add `MPC_TO_M` to `src/data/scaleUnits.ts`'s constant list and to the
       `SCALE_UNITS` object literal + its `Readonly<{…}>` annotation.
-- [ ] Write `bodyRelativePose` per the signature and behaviour above.
-- [ ] **Test `bodyRelativePose round-trips world → body → world at Earth`** — build a
+- [x] Write `bodyRelativePose` per the signature and behaviour above.
+- [x] **Test `bodyRelativePose round-trips world → body → world at Earth`** — build a
       non-identity `orientation` (a real rotation matrix, not the identity — the
       transpose-is-inverse step is silently correct under identity), a camera at a
       known Mpc offset, then rotate `eyeRelBodyM` back by `orientation`, scale by
       `M_TO_MPC`, add `positionMpc`, and assert the result matches `camPosMpc` to
       within 1e-9 Mpc **componentwise**. Repeat the same assertion for a Jupiter-scale
       offset and a moon-scale (Io-orbit) offset — three cases, one test body each.
-- [ ] **Test `bodyRelativePose resolves ~14 µm at Earth-radius magnitude`** — perturb
+- [x] **Test `bodyRelativePose resolves ~14 µm at Earth-radius magnitude`** — perturb
       `camPosMpc` by one f64 ULP at Earth-radius magnitude and assert the resulting
       change in `eyeRelBodyM` is non-zero and below 1e-4 m. This is the claim spec §5
       makes about provider A's floor; it fails if the subtraction is done in the wrong
       order (scale-then-subtract loses the cancellation).
-- [ ] **Test `bodyRelativePose rotates the camera basis into the body frame`** — assert
+- [x] **Test `bodyRelativePose rotates the camera basis into the body frame`** — assert
       `basisM` is orthonormal (columns unit-length, mutually orthogonal to 1e-12) and
       that for an identity `orientation` it equals `camBasisWorld` exactly.
-- [ ] `npm test -- bodyRelativePose` → green. `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- bodyRelativePose` → green. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -278,19 +278,19 @@ export function bodyDrawRadiusM(body: SceneBody): number;
   structs are km) and stay so — convert with `SCALE_UNITS.KM_TO_M` here. That is not an
   Mpc↔metre crossing and does not touch the §5 one-seam rule.
 
-- [ ] Implement `bodyDrawRadiusM`.
-- [ ] **Test `bodyDrawRadiusM returns the bare radius for a body with no shells`** —
+- [x] Implement `bodyDrawRadiusM`.
+- [x] **Test `bodyDrawRadiusM returns the bare radius for a body with no shells`** —
       pick a registry moon with no atmosphere, cloud or ring row; assert `=== radiusM`.
-- [ ] **Test `bodyDrawRadiusM returns Saturn's ring outer edge`** — assert the result is
+- [x] **Test `bodyDrawRadiusM returns Saturn's ring outer edge`** — assert the result is
       `140_220 * 1000` m (hand-computed from `sceneRings.ts:32-39`), i.e. strictly
       greater than Saturn's `radiusM`.
-- [ ] **Test `bodyDrawRadiusM returns Earth's atmosphere top, not its cloud shell`** —
+- [x] **Test `bodyDrawRadiusM returns Earth's atmosphere top, not its cloud shell`** —
       Earth carries both; assert the result equals the atmosphere top in metres and is
       strictly greater than `radiusM * 1.002`. This fails if the `max` fold drops a
       candidate or if the km→m conversion is missing on the atmosphere branch (a
       missing ×1000 would make the cloud shell win — a 1000× wrong near plane).
-- [ ] `npm test -- bodyDrawRadiusM` → green. `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- bodyDrawRadiusM` → green. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -352,20 +352,20 @@ export type Slab = {
   with the §7.1 star-sphere derivation; COSMO keeps this one permanently (it never
   enters the painter chain — it is not a `foreground:0` target).
 
-- [ ] Run the two renames via `npm run refactor -- rename` (`--dry` first), then
+- [x] Run the two renames via `npm run refactor -- rename` (`--dry` first), then
       `npm run typecheck` to catch anything the tool missed.
-- [ ] Add `MIN_NEAR_M` to `foregroundFrustum.ts` with its one-line justification.
-- [ ] Add `distanceRangeM` to `Slab.d.ts` with the spec's docblock verbatim, and fill it
+- [x] Add `MIN_NEAR_M` to `foregroundFrustum.ts` with its one-line justification.
+- [x] Add `distanceRangeM` to `Slab.d.ts` with the spec's docblock verbatim, and fill it
       in both `deriveSlabs` row builders.
-- [ ] **Test `deriveSlabs gives NEAR0 a metre distance range matching its Mpc bracket`**
+- [x] **Test `deriveSlabs gives NEAR0 a metre distance range matching its Mpc bracket`**
       — assert `distanceRangeM[0]` is `near * MPC_TO_M` and `[1]` is `far * MPC_TO_M`,
       with a hand-computed metre value for a known camera distance (not recomputed with
       `MPC_TO_M` in the test — write the number). This fails if a row is left holding
       Mpc in a metres-typed field, which is the exact lie the rename exists to prevent.
-- [ ] Update the `Slab`/`SlabView` fixtures the typecheck flags. Prefer a shared fixture
+- [x] Update the `Slab`/`SlabView` fixtures the typecheck flags. Prefer a shared fixture
       helper in `tests/` if the same literal appears in more than ~5 files.
-- [ ] `npm test` → green. `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test` → green. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -488,42 +488,42 @@ one-deep cache (`deriveBodyStates.ts:75-79`), so the downstream
 `sceneBodyStates(state, ctx)` calls return **the identical Map by reference**. Do not add
 a second cache or thread the map through `ctx`.
 
-- [ ] Write `starSphereRangeM` and `visibleSlabBodies`.
-- [ ] **Test `starSphereRangeM spans the drawn set, not the frustum`** — two spheres at
+- [x] Write `starSphereRangeM` and `visibleSlabBodies`.
+- [x] **Test `starSphereRangeM spans the drawn set, not the frustum`** — two spheres at
       known Mpc distances with known radii; assert the returned interval's ends are the
       hand-computed `d−r` and `d+r` of the near and far members respectively.
-- [ ] **Test `starSphereRangeM returns null for an empty set`.**
-- [ ] **Test `visibleSlabBodies drops a body below the sub-pixel floor`** — one body
+- [x] **Test `starSphereRangeM returns null for an empty set`.**
+- [x] **Test `visibleSlabBodies drops a body below the sub-pixel floor`** — one body
       placed so its apparent diameter is just under `SUB_PIXEL_BODY_CULL_PX` and one
       just over; assert only the second survives.
-- [ ] Convert `deriveSlabs` to the object signature, add `slabName` (replacing the
+- [x] Convert `deriveSlabs` to the object signature, add `slabName` (replacing the
       `SLAB_NAME` record at `slabs.ts:48-51`; keep `groupKeyOf`'s `·` separator and its
       wire-format comment at `:56-65`), add `foregroundChainOrder`, and emit body rows.
-- [ ] **Test `deriveSlabs emits one body row per visible body, back-to-front`** — three
+- [x] **Test `deriveSlabs emits one body row per visible body, back-to-front`** — three
       bodies at distinct distances; assert `slabs.length === 2 + 3`, that
       `slabs[2].distanceRangeM[0] > slabs[3].distanceRangeM[0] > slabs[4].distanceRangeM[0]`,
       and that each row's `frame` is `{ kind: 'body-m', bodyId: <expected> }`.
-- [ ] **Test `deriveSlabs brackets a body row around its drawn radius`** — one body at a
+- [x] **Test `deriveSlabs brackets a body row around its drawn radius`** — one body at a
       hand-picked `dM` with a hand-picked `rMaxM`; assert `near === dM − rMaxM` and
       `distanceRangeM === [dM − rMaxM, dM + rMaxM]` against numbers written out, not
       recomputed from `bodyDrawRadiusM` in the test.
-- [ ] **Test `deriveSlabs floors a body row's near plane at MIN_NEAR_M`** — camera inside
+- [x] **Test `deriveSlabs floors a body row's near plane at MIN_NEAR_M`** — camera inside
       the drawn radius (`dM < rMaxM`), so the unfloored near would be negative; assert
       `near === MIN_NEAR_M` and `distanceRangeM[0] === 0`.
-- [ ] **Test `deriveSlabs builds a body row's vp about the eye`** — assert that
+- [x] **Test `deriveSlabs builds a body row's vp about the eye`** — assert that
       projecting `eyeRelBodyM`'s negation (the body centre) through `slabs[2].vp` lands
       on the screen centre for a camera pointed at the body, and that the `vp`'s
       translation column is zero (the eye is the origin). This is the RTC-native claim;
       it fails if a world translation leaks back in.
-- [ ] **Test `slabName names body rows by painter ordinal`** — `slabName(0) === 'NEAR0'`,
+- [x] **Test `slabName names body rows by painter ordinal`** — `slabName(0) === 'NEAR0'`,
       `slabName(2) === 'BODY[0]'`, `slabName(5) === 'BODY[3]'`.
-- [ ] Rewire `frameContext.ts:178`: hoist `deriveBodyStates(simDays)` above the call,
+- [x] Rewire `frameContext.ts:178`: hoist `deriveBodyStates(simDays)` above the call,
       build `visibleBodies`, build the `pose` closure over `bodyRelativePose`, and pass
       the object. Verify by reading the file that every value the object needs is already
       derived above line 178; hoist any that is not.
-- [ ] `npm test` → green (the new rows are inert — no layer targets them yet).
+- [x] `npm test` → green (the new rows are inert — no layer targets them yet).
       `npm run typecheck`.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -567,20 +567,20 @@ cannot paint over each other, so their order is irrelevant.
 `import.meta.env.DEV` that `console.warn`s the offending pair — an overlap is a painter
 ordering error, never a crash. Do not add a settings toggle for it.
 
-- [ ] Implement `chainOverlapViolations`.
-- [ ] **Test `chainOverlapViolations reports nothing for Jupiter + Galileans at
+- [x] Implement `chainOverlapViolations`.
+- [x] **Test `chainOverlapViolations reports nothing for Jupiter + Galileans at
       transit`** — a fixture where Io's circle overlaps Jupiter's on screen and the two
       distance intervals are separated (Io in front). Assert `[]`.
-- [ ] **Test `chainOverlapViolations reports nothing for Jupiter + Io at quadrature`** —
+- [x] **Test `chainOverlapViolations reports nothing for Jupiter + Io at quadrature`** —
       distance intervals overlap, screen circles do **not**. Assert `[]`. This is the
       test that fails if someone re-implements S6's literal always-disjoint reading.
-- [ ] **Test `chainOverlapViolations reports a genuine painter-order violation`** — two
+- [x] **Test `chainOverlapViolations reports a genuine painter-order violation`** — two
       rows whose screen circles overlap *and* whose intervals overlap; assert the pair
       is returned.
-- [ ] Wire the dev-gated warn in `deriveSlabs`, sourcing `centrePx`/`radiusPx` from the
+- [x] Wire the dev-gated warn in `deriveSlabs`, sourcing `centrePx`/`radiusPx` from the
       apparent radius `bodyApparentDiameterPx` already computes for the visibility gate.
-- [ ] `npm test -- chainOverlapViolations` → green. `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- chainOverlapViolations` → green. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -628,29 +628,29 @@ l.target === step.target && (l.slab === step.slab ||
   (l.slab === 'body' && ctx.slabs[step.slab].frame.kind === 'body-m'))
 ```
 
-- [ ] Widen `ContentLayer.slab` and add the `view` parameter to `enabled`. Update
+- [x] Widen `ContentLayer.slab` and add the `view` parameter to `enabled`. Update
       `pickEnabled` to the same three-arg shape (it is the pick-side twin of `enabled`
       and `pickProgram` resolves a `SlabView` per slab already,
       `pickProgram.ts:189`).
-- [ ] Update every layer in `passes/` to the new `enabled`/`pickEnabled` signature —
+- [x] Update every layer in `passes/` to the new `enabled`/`pickEnabled` signature —
       most simply gain an unused third parameter at this task; Tasks 9–11 give the six
       body layers a real per-row gate.
-- [ ] Invert the resolve/filter order in `executeFrame` and widen the match.
-- [ ] **Test `executeFrame runs a 'body' layer once per body-slab step`** — a fixture
+- [x] Invert the resolve/filter order in `executeFrame` and widen the match.
+- [x] **Test `executeFrame runs a 'body' layer once per body-slab step`** — a fixture
       `ctx` with two `body-m` rows and a program with two `foreground:0` steps against
       them; assert the layer's `draw` is called twice, with a different
       `view.slab.frame.bodyId` each time.
-- [ ] **Test `executeFrame gates a 'body' layer per row`** — the layer's `enabled`
+- [x] **Test `executeFrame gates a 'body' layer per row`** — the layer's `enabled`
       returns `true` for one `bodyId` and `false` for the other; assert exactly one
       `draw`.
-- [ ] **Test `executeFrame passes the resolved view to enabled`** — assert `enabled`
+- [x] **Test `executeFrame passes the resolved view to enabled`** — assert `enabled`
       received the same `SlabView` object the layer's `draw` later receives (`toBe`).
       This fails if someone resolves the view twice.
-- [ ] **Test `executeFrame does not match a 'body' layer against a world-mpc step`** —
+- [x] **Test `executeFrame does not match a 'body' layer against a world-mpc step`** —
       a `foreground:0`/NEAR0 step with only a `'body'` layer registered; assert no
       `draw`.
-- [ ] `npm test` → green. `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test` → green. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -722,34 +722,34 @@ it the same way: a `'body'` layer contributes to every `body-m` slab index in
 `ctx.slabs`. Painter order back-to-front means the nearest row's ids overwrite the
 farther rows', matching `frontmostPick`'s existing CPU fold.
 
-- [ ] Add the `foregroundChain` parameter and the expansion; derive `BODY_SLAB_CAPACITY`
+- [x] Add the `foregroundChain` parameter and the expansion; derive `BODY_SLAB_CAPACITY`
       from `SCENE_PLANETS.length` + 1.
-- [ ] **Test `frameProgram emits today's exact list when the chain is [NEAR0]`** — the
+- [x] **Test `frameProgram emits today's exact list when the chain is [NEAR0]`** — the
       P2 no-behaviour-change gate the spec §13 requires. Compare against the existing
       expected list in `frameProgram.test.ts:86`.
-- [ ] **Test `frameProgram expands the foreground chain in painter order`** — chain
+- [x] **Test `frameProgram expands the foreground chain in painter order`** — chain
       `[NEAR0, 3, 2]`; assert three consecutive `foreground:0` render steps with slabs
       `0, 3, 2` in that order, each `depthLoad: 'clear'`, and that the surrounding steps
       (the preceding `hdr`/NEAR0 render, the following `foreground:0 → hdr` composite)
       are unmoved.
-- [ ] **Test `frameProgram emits no foreground chain step for an empty chain`** — assert
+- [x] **Test `frameProgram emits no foreground chain step for an empty chain`** — assert
       the `foreground:0 → hdr` composite still follows (a frame with no bodies and no
       resolved star sphere must still composite a cleared target, or the previous
       frame's foreground persists).
-- [ ] **Test `TIMED_SLOTS allocates one body slot per registry row`** — assert
+- [x] **Test `TIMED_SLOTS allocates one body slot per registry row`** — assert
       `TIMED_SLOTS` contains `foreground:0·BODY[0]` through
       `foreground:0·BODY[BODY_SLAB_CAPACITY − 1]` and nothing beyond. (Assert the
       endpoints and the count, not the full literal list — a registry restatement would
       break on every new planet.)
-- [ ] **Test `every body slot falls under the Foreground bodies group`** — assert
+- [x] **Test `every body slot falls under the Foreground bodies group`** — assert
       `TIMED_SLOT_GROUPS` puts `foreground:0·BODY[0]` under
       `'Foreground bodies · depth'`, alongside `foreground:0·NEAR0`.
-- [ ] Widen `pickablesBySlab`; update `renderFrame.ts:98` to pass
+- [x] Widen `pickablesBySlab`; update `renderFrame.ts:98` to pass
       `foregroundChainOrder(ctx.slabs)` (`ctx` is in scope there — verified).
-- [ ] **Test `pickProgram groups a 'body' layer into every body slab`** — a fixture
+- [x] **Test `pickProgram groups a 'body' layer into every body slab`** — a fixture
       `ctx` with two `body-m` rows; assert two pick passes for the one `'body'` layer.
-- [ ] `npm test` → green. `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test` → green. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -803,27 +803,27 @@ its module header) so the shells that consume it are unchanged.
 Both return f64. Narrowing stays at the GPU-upload boundary in the consuming layer, as
 today.
 
-- [ ] Implement both.
-- [ ] **Test `composeBodySlabMvp puts the body centre at the eye-relative offset`** —
+- [x] Implement both.
+- [x] **Test `composeBodySlabMvp puts the body centre at the eye-relative offset`** —
       project the origin (the body centre in the model frame) and assert it lands where
       `slabVp` maps `−eyeRelBodyM`. Hand-build a simple `slabVp` (an identity-ish
       orthographic) so the expectation is computed independently of the function.
-- [ ] **Test `composeBodySlabMvp scales the unit sphere to metres`** — assert the model
+- [x] **Test `composeBodySlabMvp scales the unit sphere to metres`** — assert the model
       scale is `radiusM` by projecting a unit-X point and comparing against the
       hand-computed metre position.
-- [ ] **Test `composeBodySlabMvp squares Earth's radius outside f32's denormal range`** —
+- [x] **Test `composeBodySlabMvp squares Earth's radius outside f32's denormal range`** —
       the spec §10 structural criterion, made concrete: assert `radiusM * radiusM` for
       Earth's `radiusM` is ≥ 1e12 (it is ≈4.06e13), and — as the contrast the test
       exists to pin — that the same square in Mpc (≈4.3e-42) is below f32's smallest
       normal, 1.18e-38. This is the black-nadir bug reduced to arithmetic; it fails if a
       radius ever comes back in Mpc.
-- [ ] **Test `bodySlabCamLocal puts the camera at unit distance on the surface`** —
+- [x] **Test `bodySlabCamLocal puts the camera at unit distance on the surface`** —
       `eyeRelBodyM` exactly one radius out along +X returns `[1, 0, 0]`.
-- [ ] **Test `bodySlabCamLocal applies oblateness per-axis`** — a non-zero oblateness
+- [x] **Test `bodySlabCamLocal applies oblateness per-axis`** — a non-zero oblateness
       with an offset that has both equatorial and polar components; assert the polar
       component is divided by the flattened radius, hand-computed.
-- [ ] `npm test -- composeBodySlabMvp bodySlabCamLocal` → green. `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- composeBodySlabMvp bodySlabCamLocal` → green. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -924,39 +924,39 @@ export function prepareBodySurfaceFrame(
    Resolve it from `ctx.slabs` by `frame.kind === 'body-m' && frame.bodyId === 'earth'`;
    no row ⇒ skip tile planning entirely (Earth is culled).
 
-- [ ] Rename and re-key `prepareBodySurfaceFrame` (use `npm run refactor -- rename` for
+- [x] Rename and re-key `prepareBodySurfaceFrame` (use `npm run refactor -- rename` for
       the symbol; it stays in `earthLayer.ts` per the shipped `prepareStarCut` precedent).
-- [ ] **Test `prepareBodySurfaceFrame memoizes per (ctx, body)`** — call twice for the
+- [x] **Test `prepareBodySurfaceFrame memoizes per (ctx, body)`** — call twice for the
       same ctx and body, assert the same object (`toBe`); call for a second `bodyId` on
       the same ctx, assert a *different* object and a different `pose`. The second half
       is the load-bearing one — a ctx-keyed memo returning Earth's frame for Mars is the
       exact bug shape RENDERER-adjacent memos have shipped before.
-- [ ] **Test `prepareBodySurfaceFrame composes from the slab f64 vp, not the f32 vp`** —
+- [x] **Test `prepareBodySurfaceFrame composes from the slab f64 vp, not the f32 vp`** —
       mock `composeBodySlabMvp` (the file's existing mock pattern at
       `earthLayer.test.ts:49-51`) and assert the first argument `toBe(view.slab.vp)` and
       `not.toBe(view.vp)`.
-- [ ] Convert `earthLayer` to `slab: 'body'` with the per-row `enabled` gate; swap in the
+- [x] Convert `earthLayer` to `slab: 'body'` with the per-row `enabled` gate; swap in the
       two primitives; delete the `rebaseViewProj` call and the `M_TO_MPC` import.
-- [ ] Convert `cutSurfaceTiles`'s parameters and internals to metres + `radiusM`.
-- [ ] **Test `cutSurfaceTiles culls beyond the horizon in metres`** — retarget the
+- [x] Convert `cutSurfaceTiles`'s parameters and internals to metres + `radiusM`.
+- [x] **Test `cutSurfaceTiles culls beyond the horizon in metres`** — retarget the
       existing horizon test at metre inputs with an explicit `radiusM`; assert a tile
       just past the geometric horizon for a hand-computed altitude is absent from `cut`.
-- [ ] **Test `cutSurfaceTiles refines to the same level in metres as in radii`** — feed
+- [x] **Test `cutSurfaceTiles refines to the same level in metres as in radii`** — feed
       the metre form of an input the existing LOD test already covers in radii and
       assert the same `zWin`. This is the unit-agnosticism claim; it fails if a
       radius-normalisation was dropped rather than parameterized.
-- [ ] Convert `SurfaceTileUniforms` + `writeSurfaceTileUniforms` to metres. Run the
+- [x] Convert `SurfaceTileUniforms` + `writeSurfaceTileUniforms` to metres. Run the
       existing uniform byte-layout parity test; if none covers this struct, add one
       asserting the 176-byte total and the offsets of the two renamed fields (a
       keep-rule test per `conventions/testing.md` — iOS silently drops the whole frame
       on a mislaid uniform).
-- [ ] Rewire `runFrame.ts`'s tile-planning block to Earth's body row.
-- [ ] `npm test` → green. `npm run typecheck`.
-- [ ] **Dev-server check (report to the user, do not self-attest):** whole-globe Earth
+- [x] Rewire `runFrame.ts`'s tile-planning block to Earth's body row.
+- [x] `npm test` → green. `npm run typecheck`.
+- [x] **Dev-server check (report to the user, do not self-attest):** whole-globe Earth
       and Earth close approach at the zoom floor. Look for: no black nadir disc, tile
       detail present, ocean glint stable, no UV quantization. Atmosphere and clouds will
       look wrong at this point — they are still in NEAR0 and land in Task 10.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -998,22 +998,22 @@ boundary where it is — `ATMOSPHERE_PARAMS` already declares itself "the bounda
 here and nowhere else" (`atmosphereParams.ts:27-28`), and km↔m is not the Mpc↔metre seam
 §5 governs. What must go is the `M_TO_MPC` multiply, not the km convention.
 
-- [ ] Convert `atmosphereShellLayer` and `cloudShellLayer` to `slab: 'body'` with per-row
+- [x] Convert `atmosphereShellLayer` and `cloudShellLayer` to `slab: 'body'` with per-row
       gates.
-- [ ] Swap both layers onto the Task 8 primitives; delete their `M_TO_MPC` imports.
-- [ ] **Test `atmosphereShellLayer draws only for its own body's row`** — a fixture with
+- [x] Swap both layers onto the Task 8 primitives; delete their `M_TO_MPC` imports.
+- [x] **Test `atmosphereShellLayer draws only for its own body's row`** — a fixture with
       two `body-m` rows (earth, mars); assert one draw per row with the right
       `ATMOSPHERE_PARAMS` entry, and no draw for a body with no atmosphere row.
-- [ ] **Test `cloudShellLayer is disabled on a non-Earth body row`.**
-- [ ] **Test `atmosphereShellLayer composes from the slab f64 vp`** — the same
+- [x] **Test `cloudShellLayer is disabled on a non-Earth body row`.**
+- [x] **Test `atmosphereShellLayer composes from the slab f64 vp`** — the same
       `toBe(view.slab.vp)` / `not.toBe(view.vp)` seam assertion the sibling layers carry.
-- [ ] Update `packAtmosphereUniforms` / `packCloudShellUniforms` and their WESL structs
+- [x] Update `packAtmosphereUniforms` / `packCloudShellUniforms` and their WESL structs
       for any field whose unit changed. If nothing but `mvp` changed, say so and skip —
       do not churn a struct that does not need it.
-- [ ] `npm test` → green. `npm run typecheck`.
-- [ ] **Dev-server check (report to the user):** whole-globe Earth — limb, terminator,
+- [x] `npm test` → green. `npm run typecheck`.
+- [x] **Dev-server check (report to the user):** whole-globe Earth — limb, terminator,
       atmosphere gradient, cloud shell. Compare against `main` side by side.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -1061,26 +1061,26 @@ that survive unchanged. `RingSpec`'s `innerRadiusKm`/`outerRadiusKm` stay km-nat
 (`RingSpec.d.ts:25-34`, authored in km by design). Only the `M_TO_MPC` multiply and the
 MVP composition change.
 
-- [ ] Convert all three layers to `slab: 'body'` with per-row `enabled` gates that filter
+- [x] Convert all three layers to `slab: 'body'` with per-row `enabled` gates that filter
       their partition branch to `view.slab.frame.bodyId`.
-- [ ] Swap all three onto the Task 8 primitives; delete their `M_TO_MPC` imports.
-- [ ] **Test `planetsLayer draws only the flat-branch body matching this row`** — a
+- [x] Swap all three onto the Task 8 primitives; delete their `M_TO_MPC` imports.
+- [x] **Test `planetsLayer draws only the flat-branch body matching this row`** — a
       fixture with three `body-m` rows where one body is in `flat`, one in `textured`,
       one in `glints`; assert exactly one `planetsLayer` draw, on the `flat` row.
-- [ ] **Test `texturedBodiesLayer and planetsLayer never both draw the same body`** —
+- [x] **Test `texturedBodiesLayer and planetsLayer never both draw the same body`** —
       same fixture, both layers run across all three rows; assert no body id appears in
       both layers' draw calls. This is the double-draw/z-fight bug the shared partition
       exists to prevent, now re-exposed by N rows.
-- [ ] **Test `ringsLayer draws only for a body with a ring row`** — earth row and saturn
+- [x] **Test `ringsLayer draws only for a body with a ring row`** — earth row and saturn
       row; assert one draw, on saturn.
-- [ ] Update the three `pack*Uniforms` + their WESL structs for any field whose unit
+- [x] Update the three `pack*Uniforms` + their WESL structs for any field whose unit
       changed; leave the ratio fields alone.
-- [ ] `npm test` → green. `npm run typecheck`.
-- [ ] **Dev-server check (report to the user):** Mars and the Moon resolved with
+- [x] `npm test` → green. `npm run typecheck`.
+- [x] **Dev-server check (report to the user):** Mars and the Moon resolved with
       neighbours in frame (occultation, transit); Saturn with rings intersecting its own
       globe; solar-system wide with the Sun and planets both nearer and farther, across
       the 3 px glint↔sphere boundary.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -1169,29 +1169,29 @@ fragment's alpha output. If any writes `a` from a texture's alpha channel, that 
 bug this task must fix (a PNG with a non-opaque alpha channel would silently punch holes
 in coverage).
 
-- [ ] Collapse `sceneDepth.wesl` to the single `coveredByScene` above and repoint the
+- [x] Collapse `sceneDepth.wesl` to the single `coveredByScene` above and repoint the
       three `fragmentOcclude.wesl` importers. **Do not rename the file** —
       `sceneDepth.wesl` is referenced from `renderTargets.ts:114,316` and
       `lib/msdf.wesl:6`; a rename here costs more than it buys and the shader skill's
       `package::` caveat applies.
-- [ ] Move `occlusionDepthGroup.ts` with `npm run move-files`; update the layout entry
+- [x] Move `occlusionDepthGroup.ts` with `npm run move-files`; update the layout entry
       and the parameter to a colour view.
-- [ ] Flip the `TEXTURE_BINDING` usage in `renderTargets.ts` from the depth texture to
+- [x] Flip the `TEXTURE_BINDING` usage in `renderTargets.ts` from the depth texture to
       the colour texture.
-- [ ] Repoint the four overlay layers from
+- [x] Repoint the four overlay layers from
       `ctx.renderTargets.depthViewOf('foreground:0')` to the colour view. The
       `ctx.renderedTargets.has('foreground:0')` guard stays exactly as-is.
-- [ ] **Test `overlay layers pass the foreground colour view, not the depth view`** —
+- [x] **Test `overlay layers pass the foreground colour view, not the depth view`** —
       one test per overlay layer family, asserting the renderer's draw received the
       colour view. This is a cross-file contract (three renderers, one bind-group
       layout) that no other test covers; it fails if a layer is missed in the repoint.
-- [ ] Verify the alpha-write question above; fix any layer writing a non-1 alpha for an
+- [x] Verify the alpha-write question above; fix any layer writing a non-1 alpha for an
       opaque fragment.
-- [ ] `npm test` → green. `npm run typecheck`.
-- [ ] **Dev-server check (report to the user):** a caption over Earth's limb — it must be
+- [x] `npm test` → green. `npm run typecheck`.
+- [x] **Dev-server check (report to the user):** a caption over Earth's limb — it must be
       clipped by the opaque globe and **not** by the outer atmosphere glow. Also a COSMO
       overlay (a galaxy label) behind a planet, which must still be covered.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -1256,21 +1256,21 @@ reaches against the shipped tree): `starSpheresLayer.ts:11`,
 clips, and `sceneBodyLabels.ts:157`. **Flag this narrowing in the PR body** so the user
 can rule on it.
 
-- [ ] Narrow `composeBodyMvp`'s docblock; verify no body caller remains.
-- [ ] Resolve `camPosLocal`'s fate per the deletion-audit call above.
-- [ ] Repoint `lonLatFocusPose` at the seam, or record why not.
-- [ ] Write the import-graph test in `tests/services/engine/camera/oneMpcSeam.test.ts`
+- [x] Narrow `composeBodyMvp`'s docblock; verify no body caller remains.
+- [x] Resolve `camPosLocal`'s fate per the deletion-audit call above.
+- [x] Repoint `lonLatFocusPose` at the seam, or record why not.
+- [x] Write the import-graph test in `tests/services/engine/camera/oneMpcSeam.test.ts`
       with the file list above spelled out as data and the allow-list commented with its
       one-line justification.
-- [ ] **Test `no body-slab-path module imports the Mpc↔metre constants`** — the above.
-- [ ] Fix the stale `radiusKm` doc reference at `liveFocusRow.ts:9`.
-- [ ] Update `docs/RENDERER.md`'s renderer quick map for the body-slab chain and the
+- [x] **Test `no body-slab-path module imports the Mpc↔metre constants`** — the above.
+- [x] Fix the stale `radiusKm` doc reference at `liveFocusRow.ts:9`.
+- [x] Update `docs/RENDERER.md`'s renderer quick map for the body-slab chain and the
       alpha-coverage occlusion source (both are quick-map facts a future reader needs);
       keep it to the existing bullet style, no essay.
-- [ ] Sweep `docs/BACKLOG.md` for any item this landing consumed and delete it (index
+- [x] Sweep `docs/BACKLOG.md` for any item this landing consumed and delete it (index
       line **and** its `docs/backlog/` detail file) per the backlog-hygiene convention.
-- [ ] `npm test` → green. `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test` → green. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -1288,13 +1288,13 @@ can rule on it.
 was not, take it now against a clean `main` checkout before measuring this branch —
 a post-hoc "after" with no "before" cannot satisfy the halt rule.
 
-- [ ] Run `npm run perf` against this worktree's dev server at each of the four spec §10
+- [x] Run `npm run perf` against this worktree's dev server at each of the four spec §10
       views. Report MERGED, PER-LAYER and FLOOR separately; N passes replacing one
       merged pass is the specific risk (spec §10).
-- [ ] **If the measurement is neutral-or-negative, HALT and report.** Land/park is the
+- [x] **If the measurement is neutral-or-negative, HALT and report.** Land/park is the
       user's ruling, not process momentum. Do not proceed to the visual pass to "make up
       for it."
-- [ ] **Visual parity pass — the user's eyes, not yours. f.lux OFF before any colour
+- [x] **Visual parity pass — the user's eyes, not yours. f.lux OFF before any colour
       judgement.** Present each of the four spec §10 views side by side against `main`:
       (1) whole-globe Earth — limb, terminator, atmosphere, cloud shell, caption
       placement and clipping at the limb; (2) Earth close approach at the current zoom
@@ -1303,10 +1303,10 @@ a post-hoc "after" with no "before" cannot satisfy the halt rule.
       occultation, transit; (4) solar-system wide with the Sun and planets both nearer
       and farther — the §7.1 ordering case plus glint↔sphere behaviour across the 3 px
       boundary.
-- [ ] **Failure-path check (spec §13):** with no manifest, no atlas, and a 404 on every
+- [x] **Failure-path check (spec §13):** with no manifest, no atlas, and a 404 on every
       tile, Earth still lands on the picture it draws without them.
-- [ ] **Pick check:** clicking a body still selects the front-most one across body rows.
-- [ ] Confirm `chainOverlapViolations` reported nothing during the four views (the
+- [x] **Pick check:** clicking a body still selects the front-most one across body rows.
+- [x] Confirm `chainOverlapViolations` reported nothing during the four views (the
       dev-gated warn from Task 5).
-- [ ] Report the full result — perf numbers, per-view verdicts, and any finding deferred
+- [x] Report the full result — perf numbers, per-view verdicts, and any finding deferred
       from Tasks 9–13 — and hand the land/park decision to the user.
