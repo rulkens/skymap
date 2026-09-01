@@ -55,11 +55,19 @@ export type StarCatalogDrawArgs = {
   /** Which loaded catalog's records buffer to bind. */
   readonly source: SourceType;
   /**
-   * Which draw stream this call records — selects the fragment pipeline (leaf =
-   * knee'd into HDR, aggregate = linear into the half-res offscreen) and the
+   * Which draw stream this call records — selects the node set and the
    * per-source buffer pair the params are uploaded to.
    */
   readonly stream: StarDrawStream;
+  /**
+   * Whether the fragment stage applies the hue-preserving knee at deposit
+   * (`fs`) or writes the linear glow plus its raw scalar for a later composite
+   * to knee (`fsLinear`). Separate from `stream` because the aggregate stream
+   * needs BOTH: linear into the half-res offscreen its knee'd upsample
+   * composites, but knee'd when it draws into a sky-cubemap capture face,
+   * which has no upsample pass behind it and is sampled as the sky itself.
+   */
+  readonly knee: boolean;
   /** Rebased camera-relative view-projection (`narrowMat4(rebaseViewProj(...))`). */
   readonly vp: Float32Array;
   /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */

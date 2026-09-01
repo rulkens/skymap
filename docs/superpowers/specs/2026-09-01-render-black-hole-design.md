@@ -305,7 +305,9 @@ elsewhere on screen.
 
 **What gets captured (Q5, Q8):** an explicit opt-in roster — `point-sprites`
 (galaxy points), the Gaia survey stream (`star-catalog` + `star-aggregates`,
-composited the same way `star-upsample` already does), and whichever
+composited the same way `star-upsample` already does — implemented as the
+knee at deposit, since a capture face has no half-res offscreen or upsample
+pass of its own), and whichever
 partition branch is currently rendering the S-stars (their apparent size at
 GC-relative framing puts them in the `bodyGlints`/`planets`/`starSpheres`
 branch of the body/star partition machinery, filtered to S-star ids). Never

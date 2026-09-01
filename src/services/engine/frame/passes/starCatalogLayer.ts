@@ -879,12 +879,20 @@ function drawStream(
   // and forwarded identically to every source's draw (the shared-vp invariant).
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
   const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], fovYRad).leaf;
+  // The aggregate stream's knee normally lands in `star-upsample`, over the
+  // summed half-res field. A sky-cubemap capture face (`viewSlot !== 0`) has
+  // no such pass behind it — the face IS the sky the lens samples — so the
+  // aggregate quads carry the knee themselves there, or captured glows read
+  // brighter and more saturated than the same stars in the direct view drawn
+  // beside them at the band crossfade.
+  const knee = stream === 'leaf' || viewSlot !== 0;
   for (const s of prep.sources) {
     const nodes = s[stream];
     if (nodes.count === 0) continue;
     renderer.draw(pass, {
       source: s.source,
       stream,
+      knee,
       vp: rebasedVp,
       viewportPx: view.viewportPx,
       drawCount: nodes.count,

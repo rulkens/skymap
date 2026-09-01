@@ -152,6 +152,22 @@ describe('starAggregatesLayer', () => {
     expect(args.viewportPx).toEqual([256, 256]);
   });
 
+  // The aggregate glow is kneed by `star-upsample` over the summed half-res
+  // field. A capture face has no upsample behind it, so an un-kneed capture
+  // would make the lensed sky brighter than the direct view beside it.
+  it('draws linear into the offscreen but kneed into a sky-cubemap face', () => {
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
+    const camPos = camAtPcVec(FAR_PC);
+    const view = makeNear0View(camPos);
+    const state = makeState(renderer);
+
+    starAggregatesLayer.draw(PASS_STUB, view, makeCtx(camPos), state);
+    expect(renderer.draw.mock.calls[0]![1].knee).toBe(false);
+
+    starAggregatesLayer.draw(PASS_STUB, view, makeCtx(camPos, 0, 1), state);
+    expect(renderer.draw.mock.calls[1]![1].knee).toBe(true);
+  });
+
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {
     const camPos = camAtPcVec(FAR_PC);
     const state = makeState(null);

@@ -45,6 +45,7 @@ function oneNodeArgs(viewSlot: number): StarCatalogDrawArgs {
   return {
     source: Source.GaiaStars,
     stream: 'leaf',
+    knee: true,
     vp: new Float32Array(16),
     viewportPx: [1280, 720],
     drawCount: 1,

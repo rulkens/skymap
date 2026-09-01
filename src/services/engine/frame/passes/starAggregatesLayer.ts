@@ -38,11 +38,11 @@ export const starAggregatesLayer: ContentLayer = {
   slab: NEAR0,
   target: 'star-aggregates',
   blend: 'additive',
-  // Sky-cubemap capture roster (Task 13b, Ruling 6): the survey AGGREGATE
-  // stream is part of the black-hole lens's captured "sky", drawn straight
-  // into the capture target (a capture step selects by this flag, not by
-  // `target` — see `executeFrame`'s capture-step branch) rather than through
-  // its usual half-res-offscreen + knee'd upsample.
+  // Sky-cubemap capture roster: the survey AGGREGATE stream is part of the
+  // black-hole lens's captured "sky", drawn straight into the capture target
+  // (a capture step selects by this flag, not by `target` — see
+  // `executeFrame`'s capture-step branch) rather than through its usual
+  // half-res offscreen. Its knee moves to deposit time there — `drawStream`.
   skyCapture: true,
 
   enabled: starCatalogVisible,
