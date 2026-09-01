@@ -235,9 +235,18 @@ drawn shell radius `rMaxM`:
 
 ```
 distanceRangeM = [max(dM − rMaxM, 0), dM + rMaxM]
-near           = max(dM − rMaxM, MIN_NEAR_M)
+near           = max(viewZ − marginM, (dM − radiusM) × NEAR_RATIO, MIN_NEAR_M)
 far            = +∞   (infinite-far reversed-Z, as NEAR0 already uses)
 ```
+
+Amended post-ship (ledger-ruled, `slabs.ts`'s `bodySlabRow`): `near` shipped
+VIEW-AXIS, not radial — `viewZ` is depth along the camera's forward axis
+(`dM·cosθ` for a body θ off-axis, which can fall well short of `dM`), and
+`marginM` is the PROXY_SCALE-inflated footprint plus a small epsilon pad. A
+radial `dM − rMaxM` sliced through an off-axis body once `dM·(1 − cosθ)`
+exceeded the old term's budget (the Saturn pose-B repro); the `(dM − radiusM) ×
+NEAR_RATIO` third term is the close-orbit/descent floor. Commits `7aa71b1f2` +
+`15d967998`.
 
 `rMaxM` is `max(radiusM, atmosphereTopM, cloudShellM, ringOuterM)` for the rows
 the registry declares — one helper, `bodyDrawRadiusM(body)`, so the near plane
@@ -513,9 +522,12 @@ eyes; f.lux off before any colour judgement):
 
 - The Mpc-magnitude denormal class of bug is **unrepresentable**: every body-slab
   uniform is in metres, asserted by the grep test in §5 (no `MPC_TO_M` /
-  `M_TO_MPC` import outside `bodyRelativePose`) plus a unit test that the black
-  -nadir arithmetic (`r²` at Earth radius) lands ≥ 1e12 rather than in f32's
-  denormal range.
+  `M_TO_MPC` import outside `bodyRelativePose`). Dropped post-ship
+  (`491e1124e`): the standalone unit test that the black-nadir arithmetic
+  (`r²` at Earth radius) lands ≥ 1e12 was pure `SCALE_UNITS` constant
+  arithmetic with no `composeBodySlabMvp` call — no mutation of the function
+  could fail it — and `composeBodySlabMvp.test.ts`'s "scales the unit sphere
+  to metres" case already pins the same Mpc-leak path.
 - Exactly one body-rendering path: `composeBodyMvp` has no body callers left
   (§11-O3 covers the non-body ones).
 - The screen-overlap ⇒ disjoint-interval assertion (§7.2) holds across a fixture
