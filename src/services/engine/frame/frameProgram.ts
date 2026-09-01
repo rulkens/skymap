@@ -120,15 +120,15 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * a same-frame lensing draw (Task 13) can sample a cubemap this frame
  * actually wrote. TWO steps per requested face — COSMO then NEAR0 — because
  * the fixed opt-in roster (`ContentLayer.skyCapture`, Ruling 6) spans both
- * slabs: `point-sprites` projects through COSMO, `star-catalog` /
- * `star-aggregates` / `star-points` through NEAR0. A capture step selects
- * its group by the flag rather than by `target` (`executeFrame`'s
- * capture-step branch), but `slab` still gates normally — one step per slab
- * is what makes BOTH halves of the roster reachable (Task 13b; a single
- * NEAR0-only step left the COSMO half permanently unselected, the flag
- * having no effect). Order (COSMO before NEAR0) mirrors the real `(hdr,
- * COSMO)` → `(hdr, NEAR0)` sequence below, so the capture composites in the
- * same order the live frame would.
+ * slabs: `point-sprites` / `textured-disks` project through COSMO;
+ * `star-catalog` / `star-aggregates` / `star-points` through NEAR0. A
+ * capture step selects its group by the flag rather than by `target`
+ * (`executeFrame`'s capture-step branch), but `slab` still gates normally —
+ * one step per slab is what makes BOTH halves of the roster reachable
+ * (Task 13b; a single NEAR0-only step left the COSMO half permanently
+ * unselected, the flag having no effect). Order (COSMO before NEAR0)
+ * mirrors the real `(hdr, COSMO)` → `(hdr, NEAR0)` sequence below, so the
+ * capture composites in the same order the live frame would.
  *
  * `sgrAStarLensingBodySlabs` (Task 14, Ruling 8) is the black-hole lens's OWN
  * missing step: no step here ever matched `sgrAStarLensingLayer` (`slab:

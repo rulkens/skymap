@@ -543,7 +543,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "procedural-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1]",
+          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1],undefined",
           "renderer": "textured-disks",
         },
         {

@@ -654,6 +654,109 @@ describe('createInstancedQuadRenderer', () => {
     });
   });
 
+  describe('viewSlotCount (Task 13b)', () => {
+    it('defaults to a single @group(0) buffer+bindGroup — createBuffer count unchanged for existing consumers', () => {
+      const { ctx, calls } = makeStubContext();
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        atlas: {},
+        capacity: { kind: 'fixed', max: 16 },
+        blend: 'additive',
+        targetFormat: 'rgba16float',
+      });
+      // Uniform (1) + instance (1) = 2 — same count as before this option
+      // existed, since `viewSlotCount` defaults to 1.
+      expect(calls.createBuffer).toHaveLength(2);
+      expect(calls.createBindGroup).toHaveLength(0); // atlas-capable: deferred
+    });
+
+    it('allocates one @group(0) buffer per slot when viewSlotCount > 1', () => {
+      const { ctx, calls } = makeStubContext();
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        capacity: { kind: 'grow' },
+        blend: 'additive',
+        targetFormat: 'rgba16float',
+        viewSlotCount: 3,
+      });
+      // No atlas: 3 uniform buffers, eagerly bound bind groups, no instance
+      // buffer yet (grow strategy).
+      expect(calls.createBuffer).toHaveLength(3);
+      for (const desc of calls.createBuffer) {
+        expect(desc.size).toBe(UNIFORM_BYTES);
+      }
+      expect(calls.createBindGroup).toHaveLength(3);
+    });
+
+    it('two draw() calls with different viewSlot write into DIFFERENT physical buffers — the writeBuffer/submit race this closes', () => {
+      const { ctx, calls } = makeStubContext();
+      const writeBufferSpy = (
+        ctx.device as unknown as { queue: { writeBuffer: ReturnType<typeof vi.fn> } }
+      ).queue.writeBuffer;
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        capacity: { kind: 'grow' },
+        blend: 'additive',
+        targetFormat: 'rgba16float',
+        viewSlotCount: 3,
+      });
+
+      const bindGroupsSeen: unknown[] = [];
+      const pass = {
+        setPipeline: vi.fn(),
+        setBindGroup: (slot: number, bg: unknown) => {
+          if (slot === 0) bindGroupsSeen.push(bg);
+        },
+        setVertexBuffer: vi.fn(),
+        draw: vi.fn(),
+      } as unknown as GPURenderPassEncoder;
+
+      // A sky-cubemap capture sweep: two `draw()` calls (different faces) in
+      // the same frame, both before one `submit()`.
+      r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
+        pass,
+        viewProj: new Float32Array(16),
+        viewport: [512, 512],
+        instanceBytes: new Float32Array(FLOATS_PER_INSTANCE),
+        instanceCount: 1,
+        viewSlot: 1,
+      });
+      r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
+        pass,
+        viewProj: new Float32Array(16),
+        viewport: [512, 512],
+        instanceBytes: new Float32Array(FLOATS_PER_INSTANCE),
+        instanceCount: 1,
+        viewSlot: 2,
+      });
+
+      // The @group(0) bind group resolves to a DIFFERENT physical bind group
+      // (over a different uniform buffer) per view slot.
+      expect(bindGroupsSeen[0]).not.toBe(bindGroupsSeen[1]);
+
+      // The uniform writeBuffer calls target different underlying buffers —
+      // slot 2's write can never land in slot 1's buffer. Identify the
+      // uniform-sized writes by their DATA byte length (24 floats), not
+      // buffer identity, since the mock's returned buffers carry a `size`
+      // only on the createBuffer call args, not on the object itself.
+      const uniformWriteTargets = writeBufferSpy.mock.calls
+        .filter((call) => (call[2] as Float32Array).length === UNIFORM_BYTES / 4)
+        .map((call) => (call[0] as { __index: number }).__index);
+      expect(uniformWriteTargets).toEqual([1, 2]); // slot 1's buffer, then slot 2's
+    });
+  });
+
   describe('blend mode', () => {
     it('applies additive blend factors when blend = "additive"', () => {
       const { ctx } = makeStubContext();

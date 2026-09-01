@@ -47,4 +47,30 @@ export type InstancedQuadConfig = {
    *  flag is preserved as-is to avoid silently changing the
    *  pipeline-layout introspection signature. */
   uniformVisibility?: GPUShaderStageFlags;
+  /**
+   * Number of physical `@group(0)` buffer+bindGroup copies to allocate,
+   * indexed by `draw()`'s `viewSlot` arg. Defaults to 1 (single shared
+   * buffer, `viewSlot` ignored) — every consumer except TexturedDiskRenderer.
+   *
+   * TexturedDiskRenderer passes `VIEW_SLOT_COUNT` (Task 13b, Ruling 6): its
+   * consumer, `texturedDisksLayer`, is on the black-hole lens's sky-cubemap
+   * capture roster, whose several `draw()` calls (one per captured face, one
+   * for the real view, all before one `submit()`) each carry a DIFFERENT
+   * `viewProj`/`viewport`/`camPos`. A single shared `@group(0)` buffer would
+   * keep only the last call's bytes at `submit()` time — the same
+   * writeBuffer/submit race `createViewSlotUniformRing` closes for the other
+   * roster renderers. This factory's `@group(0)` also carries the atlas/
+   * hi-res-array bindings (unlike the pure-uniform BGLs those renderers
+   * ring), so it rolls its own per-slot buffer+bindGroup array rather than
+   * reusing that ring directly — see `instancedQuadRenderer.ts`'s doc.
+   *
+   * The instance buffer (the disk list itself) is NOT ringed: `disks` is
+   * computed once per frame from the real camera, upstream of the capture
+   * sweep (`diskPlannerWalk.runFrame`, before `executeFrame`), so every
+   * `draw()` call this frame re-uploads byte-identical instance bytes —
+   * repeated identical writes commute, so one shared instance buffer is
+   * correct (same reasoning `starCatalogRenderer` uses for its per-frame-
+   * constant camera-scalar writes).
+   */
+  viewSlotCount?: number;
 };

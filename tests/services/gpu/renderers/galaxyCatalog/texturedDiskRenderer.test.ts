@@ -168,3 +168,98 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
     expect(target!.format).toBe('rgba16float');
   });
 });
+
+describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
+  it('two draw() calls with different viewSlot land their @group(0) uniform write in different buffers', () => {
+    const { ctx, writeBufferCalls } = makeStubCtx();
+    const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);
+    renderer.bindAtlas({} as GPUTextureView);
+    renderer.bindHiResArray({} as GPUTextureView);
+
+    const bindGroupsAt0: unknown[] = [];
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: (slot: number, bg: unknown) => {
+        if (slot === 0) bindGroupsAt0.push(bg);
+      },
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    const instances: DiskInstance[] = [fakeDiskInstance()];
+
+    // A sky-cubemap capture sweep: two `draw()` calls (different faces) in
+    // the same frame, both before one `submit()` — mirrors the roster
+    // convention pinned in `galaxyPointRenderer.test.ts` /
+    // `starCatalogRenderer`'s own viewSlot tests.
+    renderer.draw(
+      pass,
+      new Float32Array(16) as never,
+      [512, 512],
+      [0, 0, 0],
+      FOCUS_BIND_GROUP,
+      instances,
+      1,
+    );
+    renderer.draw(
+      pass,
+      new Float32Array(16) as never,
+      [512, 512],
+      [0, 0, 0],
+      FOCUS_BIND_GROUP,
+      instances,
+      2,
+    );
+
+    // The @group(0) bind group resolves to a DIFFERENT physical bind group
+    // (over a different uniform buffer) per view slot — slot 2's write can
+    // never land in slot 1's buffer (the writeBuffer/submit race this
+    // closes; docs/RENDERER.md landmine #1).
+    expect(bindGroupsAt0[0]).not.toBe(bindGroupsAt0[1]);
+
+    // Two uniform writeBuffer calls (96 bytes / 24 floats each — the
+    // instance-bytes writes are a separate, larger payload), one per slot.
+    const uniformWrites = writeBufferCalls.filter((c) => c.data.length === 96 / 4);
+    expect(uniformWrites).toHaveLength(2);
+  });
+
+  it('defaults viewSlot to 0 when omitted', () => {
+    const { ctx } = makeStubCtx();
+    const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);
+    renderer.bindAtlas({} as GPUTextureView);
+    renderer.bindHiResArray({} as GPUTextureView);
+
+    const bindGroupsAt0: unknown[] = [];
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: (slot: number, bg: unknown) => {
+        if (slot === 0) bindGroupsAt0.push(bg);
+      },
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    const instances: DiskInstance[] = [fakeDiskInstance()];
+    renderer.draw(
+      pass,
+      new Float32Array(16) as never,
+      [800, 600],
+      [0, 0, 0],
+      FOCUS_BIND_GROUP,
+      instances,
+    );
+    renderer.draw(
+      pass,
+      new Float32Array(16) as never,
+      [800, 600],
+      [0, 0, 0],
+      FOCUS_BIND_GROUP,
+      instances,
+      0,
+    );
+
+    // Both calls land on slot 0's SAME bind group — an omitted viewSlot is
+    // byte-identical to an explicit 0.
+    expect(bindGroupsAt0[0]).toBe(bindGroupsAt0[1]);
+  });
+});
