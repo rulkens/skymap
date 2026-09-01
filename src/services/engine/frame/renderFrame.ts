@@ -72,7 +72,7 @@ import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
+import { SGR_A_STAR, SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
 
 const SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_MPC =
   SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU * SCALE_UNITS.AU_TO_MPC;
@@ -128,6 +128,22 @@ export function renderFrame(input: RenderFrameInput): void {
     sceneBodyStates(state, ctx),
   );
   const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
+
+  // Sgr A*'s own body-m slab row this frame, if the band is active (Task 14,
+  // Ruling 8): `frameProgram` never emitted an (hdr, BODY[k]) step for
+  // `sgrAStarLensingLayer` before this task, so it compiled and registered
+  // but never drew (Task 13's own finding). Resolved here, not in
+  // `frameProgram`, because the row's painter-order index comes from
+  // `deriveSlabs` (computed upstream of this function) — the same
+  // "resolve here, hand data down" split `earthSlab` in `runFrame.ts`
+  // already follows for the identical `frame.kind === 'body-m'` lookup.
+  // `null` outside the band, or when the row isn't in `ctx.slabs` this frame
+  // (e.g. frustum-culled despite the distance band).
+  const sgrAStarBodySlab = bandActive
+    ? (ctx.slabs.find(
+        (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id,
+      )?.index ?? null)
+    : null;
   const bandJustEngaged = bandActive && !captureRuntime.wasBandActive;
   // Every captured face's content (which galaxies/stars are visible, their
   // backdrop-fade alpha) is keyed on the PLAYER's camera position, not the
@@ -195,6 +211,7 @@ export function renderFrame(input: RenderFrameInput): void {
       // foreground:0 render expands into, one step per entry.
       foregroundChainOrder(ctx.slabs),
       skyCubemapFacesToCapture,
+      sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
     ),
     layers: CONTENT_LAYERS,
     strategy,

@@ -225,20 +225,25 @@ const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere'];
 // Milky-Way cloud's UPSAMPLE composite first, then the cloud's dust pass (its
 // multiplicative transmittance must land on the upsampled starlight, and must
 // never darken the local starfield drawn after it), then the far-partition
-// star points, the orbit trails, the survey star LEAF catalog, and the survey
-// aggregate UPSAMPLE composite (adjacent to the leaf draw it composites).
-// Neither aggregate STREAM is here — the Milky Way's star billboards target
-// 'mw-aggregate' and the survey's target 'star-aggregates', so both sit
-// outside the hdr group.
+// star points, the survey star LEAF catalog, the survey aggregate UPSAMPLE
+// composite (adjacent to the leaf draw it composites), and the constellation
+// figures — that whole run is the "sky" roster the Sgr A* lens pass samples
+// from its OWN (hdr, BODY[k]) step (frameProgram.ts). `orbit-trails` and
+// `body-glints` trail LAST here (Task 14) so they draw unwarped over the lens
+// pass rather than sitting among the roster it samples. Neither aggregate
+// STREAM is here — the Milky Way's star billboards target 'mw-aggregate' and
+// the survey's target 'star-aggregates', so both sit outside the hdr group;
+// `sgrAStarLensingLayer` itself is ALSO not here — its slab is 'body', not
+// NEAR0.
 const NEAR_HDR_NAMES = [
   'milky-way-upsample',
   'milky-way',
   'star-points',
-  'orbit-trails',
-  'body-glints',
   'star-catalog',
   'star-upsample',
   'constellations',
+  'orbit-trails',
+  'body-glints',
 ];
 
 // The near-field swap group: the overlays that pair the swap target with the
@@ -275,18 +280,22 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
-  it('the (hdr, NEAR0) group holds milky-way-upsample, milky-way, star-points, orbit-trails, star-catalog, additive', () => {
+  it('the (hdr, NEAR0) group holds the sky roster, then orbit-trails/body-glints LAST (Task 14), additive', () => {
     // The hdr rows outside the cosmological slab: the Milky-Way cloud's
-    // upsample + dust, the far-partition neighbourhood stars, and the orbit
-    // trails, projected through NEAR0 (COSMO's FIXED 0.01 Mpc near plane would
-    // clip their kpc-to-AU-scale anchors — for the Milky Way it clipped the
-    // disc mid-descent before the approach fade completed) but accumulating
-    // into the same HDR target so they ride the galaxies' tone-map. Drawn by
-    // the program's dedicated (hdr, NEAR0) step before the hdr→swap composite.
-    // The two Milky-Way rows MUST lead, in this order: the upsample adds the
-    // cloud's own starlight into HDR, then the multiplicative dust extincts it
-    // along with the cosmological accumulation behind it — and leading the
-    // group keeps the local starfield drawn after out of that multiply.
+    // upsample + dust, the far-partition neighbourhood stars, the survey
+    // catalog/upsample, and the constellation figures, projected through
+    // NEAR0 (COSMO's FIXED 0.01 Mpc near plane would clip their kpc-to-AU-scale
+    // anchors — for the Milky Way it clipped the disc mid-descent before the
+    // approach fade completed) but accumulating into the same HDR target so
+    // they ride the galaxies' tone-map. Drawn by the program's dedicated (hdr,
+    // NEAR0) step before the hdr→swap composite. The two Milky-Way rows MUST
+    // lead, in this order: the upsample adds the cloud's own starlight into
+    // HDR, then the multiplicative dust extincts it along with the
+    // cosmological accumulation behind it — and leading the group keeps the
+    // local starfield drawn after out of that multiply. `orbit-trails` and
+    // `body-glints` moved LAST here (Task 14, spec "Draw order") so they draw
+    // over the Sgr A* lens pass's OWN (hdr, BODY[k]) step rather than being
+    // sampled by it.
     const nearHdr = CONTENT_LAYERS.filter(
       (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
     );
@@ -964,8 +973,8 @@ describe('drawPick migration-table rows', () => {
       'structure-markers',
       'milky-way',
       'star-points',
-      'body-glints',
       'star-catalog',
+      'body-glints',
       'labels',
       'earth',
       'star-spheres',

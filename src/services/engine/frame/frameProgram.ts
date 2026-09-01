@@ -128,12 +128,27 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * `submit` landmine, docs/RENDERER.md), an invariant a multi-face capture
  * sweep breaks; no layer carries `skyCapture` yet, so these steps still
  * select an empty group and draw nothing pending that renderer-side fix.
+ *
+ * `sgrAStarLensingBodySlabs` (Task 14, Ruling 8) is the black-hole lens's OWN
+ * missing step: no step here ever matched `sgrAStarLensingLayer` (`slab:
+ * 'body'`, `target: 'hdr'`) before this task — it registered and compiled but
+ * never drew (Task 13's own recorded finding). `renderFrame` resolves Sgr
+ * A*'s body-m row each frame and passes it here ONLY inside the fade band, so
+ * an inactive band emits no step at all (same zero-dispatch guarantee as
+ * `skyCubemapFacesToCapture`). One `(hdr, slab)` render step per entry,
+ * placed after the `(hdr, NEAR0)` roster step so the lens's OVER blend
+ * occludes the roster light already accumulated there. It also ends up
+ * drawing over `orbit-trails`/`body-glints` (the SAME shared step, per
+ * `passes/index.ts`'s registry order) — fully keeping those two unwarped
+ * needs splitting that shared step, which this one new step does not do; see
+ * the task 14 report.
  */
 export function frameProgram(
   tone: ToneMap,
   bloomEnabled: boolean,
   foregroundChain: readonly number[],
   skyCubemapFacesToCapture: readonly CubeFace[],
+  sgrAStarLensingBodySlabs: readonly number[] = [],
 ): readonly FrameStep[] {
   const steps: FrameStep[] = [];
 
@@ -186,6 +201,13 @@ export function frameProgram(
   // tone curve for stars and galaxies. The hdr target is already touched
   // by the COSMO step above, so this pass loads rather than clears.
   steps.push({ kind: 'render', target: 'hdr', slab: NEAR0 });
+
+  // The black-hole lens's own (hdr, BODY[k]) step(s) — see this function's
+  // doc for why it exists and its residual limitation. Runs after the (hdr,
+  // NEAR0) roster above; empty (inactive band) contributes no step.
+  for (const slab of sgrAStarLensingBodySlabs) {
+    steps.push({ kind: 'render', target: 'hdr', slab });
+  }
 
   // Near-field foreground bodies (zoom-to-earth fold). Rendered into their
   // depth-bearing foreground target, then composited OVER hdr in LINEAR
@@ -305,6 +327,13 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'sky-cubemap·NEAR0': 'Sky capture',
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
+  // One `hdr·BODY[k]` row per capacity slot — today only the black-hole lens
+  // (`sgrAStarLensingLayer`) targets `hdr` on a body-m slab, so every slot
+  // buckets under one title regardless of which row Sgr A* lands in this
+  // frame, same reasoning as the `foreground:0·BODY[k]` block below.
+  ...Object.fromEntries(
+    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [`hdr·${slabName(k + 2)}`, 'Sgr A* lensing']),
+  ),
   'foreground:0·NEAR0': 'Foreground bodies · depth',
   // One `foreground:0·BODY[k]` row per capacity slot, derived from `slabName`
   // rather than authored — a new SCENE_PLANETS row widens BODY_SLAB_CAPACITY
@@ -500,8 +529,26 @@ const MAX_FOREGROUND_CHAIN: readonly number[] = [
  */
 const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
+/**
+ * The MAXIMUM sgrAStarLensing body-slab list — every capacity index (Task
+ * 14), the same "maximum, not a real frame" sizing `MAX_FOREGROUND_CHAIN`
+ * documents above: Sgr A*'s painter-order row moves with whichever OTHER
+ * bodies are visible, so the query-set pool must cover every capacity slot
+ * it could land on, not just today's live value.
+ */
+const MAX_SGR_A_STAR_LENSING_BODY_SLABS: readonly number[] = Array.from(
+  { length: BODY_SLAB_CAPACITY },
+  (_, k) => k + 2,
+);
+
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
-  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN, ALL_CUBE_FACES),
+  frameProgram(
+    PLACEHOLDER_TONE,
+    true,
+    MAX_FOREGROUND_CHAIN,
+    ALL_CUBE_FACES,
+    MAX_SGR_A_STAR_LENSING_BODY_SLABS,
+  ),
   CONTENT_LAYERS,
 );
 
@@ -511,7 +558,13 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
  * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
  */
 export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
-  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN, ALL_CUBE_FACES),
+  frameProgram(
+    PLACEHOLDER_TONE,
+    true,
+    MAX_FOREGROUND_CHAIN,
+    ALL_CUBE_FACES,
+    MAX_SGR_A_STAR_LENSING_BODY_SLABS,
+  ),
   CONTENT_LAYERS,
 );
 
@@ -550,7 +603,13 @@ function plainLayerGroupKeys(
  * project them into the same groups the timing list uses.
  */
 const PASS_GROUP_KEYS: ReadonlyMap<string, string> = plainLayerGroupKeys(
-  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN, ALL_CUBE_FACES),
+  frameProgram(
+    PLACEHOLDER_TONE,
+    true,
+    MAX_FOREGROUND_CHAIN,
+    ALL_CUBE_FACES,
+    MAX_SGR_A_STAR_LENSING_BODY_SLABS,
+  ),
   CONTENT_LAYERS,
 );
 

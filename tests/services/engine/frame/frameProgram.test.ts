@@ -246,6 +246,31 @@ describe('frameProgram', () => {
     ).toHaveLength(1);
   });
 
+  it('sgrAStarLensingBodySlabs: emits an (hdr, slab) step per entry, after (hdr, NEAR0) and before the foreground chain', () => {
+    // Task 14 (Ruling 8): before this, no step ever matched
+    // sgrAStarLensingLayer's (slab: 'body', target: 'hdr') row. One render
+    // step per requested body-slab index, positioned so the lens's OVER blend
+    // occludes the (hdr, NEAR0) roster already accumulated above it.
+    const program = frameProgram(TONE, false, [NEAR0], [], [4]);
+    const hdrNear0Idx = program.findIndex(
+      (step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0,
+    );
+    expect(program[hdrNear0Idx + 1]).toEqual({ kind: 'render', target: 'hdr', slab: 4 });
+    const foregroundIdx = program.findIndex(
+      (step) => step.kind === 'render' && step.target === 'foreground:0',
+    );
+    expect(hdrNear0Idx + 1).toBeLessThan(foregroundIdx);
+  });
+
+  it('sgrAStarLensingBodySlabs omitted or empty: no extra step, program identical to the base list (zero-cost outside the band)', () => {
+    const withDefault = frameProgram(TONE, false, [NEAR0], []);
+    const withEmpty = frameProgram(TONE, false, [NEAR0], [], []);
+    const base = frameProgram(TONE, false, [NEAR0], [], undefined);
+    expect(withDefault).toEqual(base);
+    expect(withEmpty).toEqual(base);
+    expect(base.some((step) => step.kind === 'render' && step.slab >= 2)).toBe(false);
+  });
+
   it('bloom disabled: no bloom step emitted and program otherwise identical', () => {
     // Only `enabled` shapes the step list. Bloom-off is the base program; bloom-on
     // is that base with exactly ONE `{ kind: 'bloom' }` step spliced in between the
@@ -330,12 +355,15 @@ describe('timedSlotsOf', () => {
     // closest sibling — then the two aggregate offscreens,
     // each its OWN NEAR0 render step ahead of the hdr NEAR0 step:
     // star-aggregates, then milky-way-aggregate. The (hdr, NEAR0) step follows
-    // with milky-way-upsample + milky-way + star-points + orbit-trails +
-    // star-catalog + star-upsample before the tone-map — milky-way-upsample
+    // with milky-way-upsample + milky-way + star-points + star-catalog +
+    // star-upsample + constellations before the tone-map — milky-way-upsample
     // precedes milky-way so the dust extincts the cloud's own starlight, that
     // pair leads the group so the multiplicative dust never darkens the local
     // starfield, and star-upsample sits adjacent to the star-catalog leaf draw
-    // it composites. The
+    // it composites. orbit-trails + body-glints trail LAST in this group
+    // (Task 14) — this fixture passes no sgrAStarLensingBodySlabs, so its
+    // own (hdr, BODY[k]) step (which would otherwise sit between this group
+    // and the foreground:0 step) is absent, zero-cost. The
     // foreground:0 body render now comes NEXT (before the composites) — one
     // render STEP per foregroundChain entry (Task 9-11: earth, cloud-shell,
     // planets, textured-bodies, rings, and atmosphere-shell all ride the
@@ -373,11 +401,11 @@ describe('timedSlotsOf', () => {
       'milky-way-upsample',
       'milky-way',
       'star-points',
-      'orbit-trails',
-      'body-glints',
       'star-catalog',
       'star-upsample',
       'constellations',
+      'orbit-trails',
+      'body-glints',
       'hdr·NEAR0',
       // The body-m step (Task 9-11): every 'body'-slab layer matches EVERY
       // body row, so earth, cloud-shell, planets, textured-bodies, rings, and
@@ -415,6 +443,24 @@ describe('timedSlotsOf', () => {
       'pick',
     ]);
   });
+
+  it('reaches sgrAStarLensingLayer once a body slab is passed (Task 14 regression: Task 13 found no step ever matched it)', () => {
+    // Before Task 14, frameProgram never emitted an (hdr, BODY[k]) step, so
+    // this name never appeared in ANY derived slot list regardless of the
+    // real CONTENT_LAYERS registry or chain contents — the layer compiled
+    // and registered but was structurally unreachable. Passing Sgr A*'s own
+    // slab index (4, arbitrary — any body-slab index widens the same way)
+    // must now surface its row, positioned right after the (hdr, NEAR0)
+    // group's own slot.
+    const slots = timedSlotsOf(
+      frameProgram(TONE, false, [NEAR0], [], [4]),
+      CONTENT_LAYERS,
+    );
+    const hdrNear0Idx = slots.indexOf('hdr·NEAR0');
+    expect(hdrNear0Idx).toBeGreaterThanOrEqual(0);
+    expect(slots[hdrNear0Idx + 1]).toBe('sgr-a-star-lensing·BODY[2]');
+    expect(slots[hdrNear0Idx + 2]).toBe('hdr·BODY[2]');
+  });
 });
 
 describe('TIMED_SLOTS — body slot pool', () => {
@@ -439,6 +485,19 @@ describe('TIMED_SLOTS — body slot pool', () => {
     expect(names).toContain('foreground:0·NEAR0');
     expect(names).toContain('foreground:0·BODY[0]');
     expect(names).toContain(`foreground:0·BODY[${BODY_SLAB_CAPACITY - 1}]`);
+  });
+
+  it('also allocates one hdr·BODY[k] slot per registry row (Task 14 — the lens pass pool)', () => {
+    // Same "maximum, not a real frame" sizing as the foreground:0 pool above,
+    // for the black-hole lens's own (hdr, BODY[k]) step: Sgr A*'s
+    // painter-order row varies with which other bodies are visible, so
+    // TIMED_SLOTS must cover every capacity slot it could land on.
+    const bodySlots = TIMED_SLOTS.filter((name) => name.startsWith('hdr·BODY['));
+    expect(bodySlots).toHaveLength(BODY_SLAB_CAPACITY);
+    expect(bodySlots[0]).toBe('hdr·BODY[0]');
+    expect(bodySlots[bodySlots.length - 1]).toBe(`hdr·BODY[${BODY_SLAB_CAPACITY - 1}]`);
+    const group = TIMED_SLOT_GROUPS.find((g) => g.title === 'Sgr A* lensing')!;
+    expect(group.rows.map((r) => r.name)).toContain('hdr·BODY[0]');
   });
 
   it('every real TIMED_SLOTS name is unique (buildTimingSlotMap precondition, M2)', () => {
@@ -509,12 +568,16 @@ describe('timedSlotGroupsOf', () => {
     // map to "Volumes & aggregates"; the two composites and pick — scattered
     // through execution order — collapse into
     // the trailing "Composites & pick". "Sky capture" is TIMED_SLOTS' 6 capture
-    // steps (Task 12's ALL_CUBE_FACES sizing, one row per face).
+    // steps (Task 12's ALL_CUBE_FACES sizing, one row per face). "Sgr A*
+    // lensing" is Task 14's own (hdr, BODY[k]) pool, sized off
+    // MAX_SGR_A_STAR_LENSING_BODY_SLABS the same way "Foreground bodies"
+    // is sized off MAX_FOREGROUND_CHAIN.
     expect(TIMED_SLOT_GROUPS.map((g) => g.title)).toEqual([
       'Volumes & aggregates',
       'Sky capture',
       'Cosmos · HDR',
       'Near field · HDR',
+      'Sgr A* lensing',
       'Foreground bodies · depth',
       'Bloom',
       'Overlays',
