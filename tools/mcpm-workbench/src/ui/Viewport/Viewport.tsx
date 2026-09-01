@@ -88,9 +88,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     // Reset alongside the accumulator itself (same volpathKey edge, below) — see
     // ViewSlice.d.ts's pathTracer.sampleCap doc comment.
     let volpathSampleCount = 0;
-    // Cadence throttle's own frame counter — only meaningful while sim.running; not
-    // reset on rebuild, since "every Nth frame" doesn't care where N last landed.
-    let simFrameCounter = 0;
     // The epoch this component last reacted to — `watchSceneSaga` bumps `resources.epoch`
     // on every dispose (including a no-op one), so a mismatch here means a rebuild landed
     // (or tore down) since the last time the subscriber checked.
@@ -128,17 +125,13 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         dirty = true;
         lastInteractionMs = now;
       }
-      if (h && s.sim.running) {
-        simFrameCounter += 1;
-        // Task FLE: the SAME boost-then-settle shape as the divisors below, applied
-        // to physics cadence via a synthetic "divisor 1" — step every frame once
-        // settled, only every BOOST_DIVISOR-th frame while an interaction is fresh,
-        // trading simulation rate for less GPU contention against the render passes.
-        const cadenceDivisor = effectiveVolpathDivisor(1, now - lastInteractionMs);
-        if (simFrameCounter % cadenceDivisor === 0) {
-          h.step(s.sim.params, s.histogram.sampleRandomly);
-          store.dispatch(incrementStep());
-        }
+      // Sim pauses outright while an interaction is fresh (same window as the divisor
+      // boost below): a step on a large cube can cost ~300ms of unpreemptible GPU
+      // time, so throttling its cadence still hitches every drag — only not stepping
+      // keeps the canvas fluid. Resumes SETTLE_MS after the last input.
+      if (h && s.sim.running && now - lastInteractionMs >= SETTLE_MS) {
+        h.step(s.sim.params, s.histogram.sampleRandomly);
+        store.dispatch(incrementStep());
       }
 
       const gridShapeKey = JSON.stringify(gridShapeKeyFor(s));
