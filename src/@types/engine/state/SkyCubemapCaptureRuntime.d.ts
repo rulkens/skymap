@@ -20,6 +20,13 @@ export type SkyCubemapCaptureRuntime = {
   frameIndex: number;
   /** The lensing band's active/inactive state last frame — `bandJustEngaged`'s edge. */
   wasBandActive: boolean;
-  /** Camera position at the last FULL sweep (band entry or escape valve), for the movement check. `null` before the first sweep. */
-  lastSweepCamPosMpc: Readonly<Vec3> | null;
+  /**
+   * The eye EVERY face was captured from at the last full sweep. Round-robin
+   * refreshes reuse this same pinned eye rather than the live camera each
+   * frame — a per-frame live eye made adjacent faces disagree at their
+   * shared border and the whole cubemap flicker as the camera moved.
+   * Re-pinned to the live camera on each full sweep (band entry, or camera
+   * displacement past the movement threshold). `null` before the first sweep.
+   */
+  pinnedEyeMpc: Readonly<Vec3> | null;
 };

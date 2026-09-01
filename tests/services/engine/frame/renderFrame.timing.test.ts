@@ -379,7 +379,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
           lastCapturedAtMs: new Map(),
           frameIndex: 0,
           wasBandActive: false,
-          lastSweepCamPosMpc: null,
+          pinnedEyeMpc: null,
         },
       },
     } as never,

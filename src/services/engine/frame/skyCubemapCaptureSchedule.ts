@@ -1,8 +1,8 @@
 /**
  * skyCubemapCaptureSchedule — the black-hole sky cubemap's amortized capture
- * schedule: a full 6-face sweep on band ENTRY, then one face per frame in
- * round-robin, with an escape valve for a stale or camera-moved face. Pure —
- * every input is a plain value — so it's testable headlessly.
+ * schedule: a full 6-face sweep on band ENTRY or pinned-eye movement, then
+ * one face per frame in round-robin, with an escape valve for a stale face.
+ * Pure — every input is a plain value — so it's testable headlessly.
  */
 
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
@@ -13,13 +13,13 @@ const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 export const SKY_CUBEMAP_RECAPTURE_THRESHOLD_MS = 2000;
 
 /**
- * Escape-valve camera-movement threshold, as a FRACTION of the camera's
- * current distance to Sgr A* — not an absolute distance. The capture eye is
- * now the camera itself (fix round 2), so the parallax a given displacement
- * introduces scales with displacement/distance, not displacement alone: a
- * fixed AU threshold would near-never fire during the descent to the event
- * horizon (camera distance ~0.17 AU at the 2·r_s floor) while under-firing
- * nowhere else. See `renderFrame.ts`'s `cameraMovedBeyondThreshold` derivation.
+ * Escape-valve movement threshold, as a FRACTION of the camera's current
+ * distance to Sgr A* — not an absolute distance. The pinned capture eye
+ * (fix round 3) only moves on a full sweep, so this measures how far the
+ * LIVE camera has drifted from that pinned eye: a fixed AU threshold would
+ * near-never fire during the descent to the event horizon (camera distance
+ * ~0.17 AU at the 2·r_s floor) while under-firing nowhere else. See
+ * `renderFrame.ts`'s `cameraMovedBeyondThreshold` derivation.
  */
 export const SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION = 0.03;
 
@@ -28,18 +28,19 @@ export type SkyCubemapCaptureSchedule = {
 };
 
 export function skyCubemapCaptureSchedule(input: {
-  readonly bandJustEngaged: boolean; // band alpha crossed 0→positive this frame
+  // Band just engaged OR the live camera drifted past the pinned-eye
+  // threshold — either forces every face, so the caller pre-folds both
+  // reasons into one flag rather than this function re-deriving them.
+  readonly fullSweepTriggered: boolean;
   readonly frameIndex: number; // for round-robin
   readonly lastCapturedAtMs: ReadonlyMap<CubeFace, number>;
   readonly nowMs: number;
-  readonly cameraMovedBeyondThreshold: boolean;
 }): SkyCubemapCaptureSchedule {
-  const { bandJustEngaged, frameIndex, lastCapturedAtMs, nowMs, cameraMovedBeyondThreshold } =
-    input;
+  const { fullSweepTriggered, frameIndex, lastCapturedAtMs, nowMs } = input;
 
-  if (bandJustEngaged || cameraMovedBeyondThreshold) {
-    // A moved eye invalidates every face at once — same as band entry, no
-    // partial-sweep half-state to reason about.
+  if (fullSweepTriggered) {
+    // A re-pinned eye invalidates every face at once — same as band entry,
+    // no partial-sweep half-state to reason about.
     return { facesToCapture: ALL_CUBE_FACES };
   }
 

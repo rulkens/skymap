@@ -13,14 +13,13 @@ import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 const ALL_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
 describe('skyCubemapCaptureSchedule', () => {
-  it('full 6-face capture on band entry', () => {
+  it('full 6-face capture when fullSweepTriggered (band entry or pinned-eye movement — the caller folds both reasons into this one flag)', () => {
     for (let frameIndex = 0; frameIndex < 12; frameIndex++) {
       const { facesToCapture } = skyCubemapCaptureSchedule({
-        bandJustEngaged: true,
+        fullSweepTriggered: true,
         frameIndex,
         lastCapturedAtMs: new Map(),
         nowMs: 1000,
-        cameraMovedBeyondThreshold: false,
       });
       expect([...facesToCapture].sort()).toEqual([...ALL_FACES]);
     }
@@ -30,11 +29,10 @@ describe('skyCubemapCaptureSchedule', () => {
     const seen: CubeFace[] = [];
     for (let frameIndex = 0; frameIndex < 6; frameIndex++) {
       const { facesToCapture } = skyCubemapCaptureSchedule({
-        bandJustEngaged: false,
+        fullSweepTriggered: false,
         frameIndex,
         lastCapturedAtMs: new Map(ALL_FACES.map((f) => [f, 1000])),
         nowMs: 1000,
-        cameraMovedBeyondThreshold: false,
       });
       expect(facesToCapture).toHaveLength(1);
       seen.push(facesToCapture[0]!);
@@ -56,35 +54,21 @@ describe('skyCubemapCaptureSchedule', () => {
       [5, 100_000],
     ]);
     const { facesToCapture } = skyCubemapCaptureSchedule({
-      bandJustEngaged: false,
+      fullSweepTriggered: false,
       frameIndex: 0,
       lastCapturedAtMs,
       nowMs: 100_000,
-      cameraMovedBeyondThreshold: false,
     });
     expect(facesToCapture).toContain(0); // this frame's round-robin face
     expect(facesToCapture).toContain(2); // the stale escape-valve face
   });
 
-  it('escape valve re-captures every face out of turn when the camera moved', () => {
-    const lastCapturedAtMs = new Map<CubeFace, number>(ALL_FACES.map((f) => [f, 100_000]));
-    const { facesToCapture } = skyCubemapCaptureSchedule({
-      bandJustEngaged: false,
-      frameIndex: 0,
-      lastCapturedAtMs,
-      nowMs: 100_000,
-      cameraMovedBeyondThreshold: true,
-    });
-    expect([...facesToCapture].sort()).toEqual([...ALL_FACES]);
-  });
-
   it('a face missing from lastCapturedAtMs (never captured) is always stale', () => {
     const { facesToCapture } = skyCubemapCaptureSchedule({
-      bandJustEngaged: false,
+      fullSweepTriggered: false,
       frameIndex: 3, // round-robin would pick face 3 alone
       lastCapturedAtMs: new Map(), // every face uncaptured
       nowMs: 0,
-      cameraMovedBeyondThreshold: false,
     });
     expect([...facesToCapture].sort()).toEqual([...ALL_FACES]);
   });

@@ -1,12 +1,15 @@
 /**
  * renderFrame — sky-cubemap runtime hand-off (Task 12's "Name the runtime
- * hand-off" step, built in round 1's fix-up).
+ * hand-off" step, built in round 1's fix-up; eye source revised in fix
+ * rounds 2 and 3 — see those commits).
  *
  * `executeFrame` and `skyCubemapFaceContext` are both mocked: this file
  * is about the WIRING — renderFrame calling `skyCubemapFaceContext` once per
  * scheduled face with the black hole's eye/face/row-declared size, and
  * threading the resulting map into `executeFrame`'s `skyCubemapFaceContexts`
- * — not the GPU pass machinery `renderFrame.test.ts` already covers.
+ * — not the GPU pass machinery `renderFrame.test.ts` already covers. Fix
+ * round 3's PINNED-eye tests drive `renderFrame` across two calls sharing one
+ * `state` object, since the pin only lives in `cameraRuntime` between frames.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -41,7 +44,7 @@ function makeCaptureRuntime() {
     lastCapturedAtMs: new Map(),
     frameIndex: 0,
     wasBandActive: false,
-    lastSweepCamPosMpc: null,
+    pinnedEyeMpc: null,
   };
 }
 
@@ -162,5 +165,63 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
       ReadyFrameContext
     >;
     expect(handedOff.size).toBe(0);
+  });
+
+  it('round-robin faces reuse the PINNED eye, not the live camera, after a sub-threshold move (fix round 3)', () => {
+    skyCubemapFaceContextMock.mockImplementation(
+      (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
+    );
+
+    const state = makeState();
+    const pinnedEye: readonly [number, number, number] = [
+      SGR_A_STAR_ANCHOR.positionMpc[0] + 50 * SCALE_UNITS.AU_TO_MPC,
+      SGR_A_STAR_ANCHOR.positionMpc[1],
+      SGR_A_STAR_ANCHOR.positionMpc[2],
+    ];
+    renderFrame(makeInput(makeCtx(pinnedEye), state)); // band entry ⇒ full sweep, pins the eye
+    skyCubemapFaceContextMock.mockClear();
+
+    // 0.1 AU move, well under 3% of the ~50 AU distance to Sgr A* (~1.5 AU) —
+    // stays a round-robin frame, not a re-pinning full sweep.
+    const movedSubThreshold: readonly [number, number, number] = [
+      pinnedEye[0] + 0.1 * SCALE_UNITS.AU_TO_MPC,
+      pinnedEye[1],
+      pinnedEye[2],
+    ];
+    renderFrame(makeInput(makeCtx(movedSubThreshold), state));
+
+    // Round-robin picks exactly one face; a revert to a live camera eye
+    // would hand it `movedSubThreshold`, not the pinned position.
+    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(1);
+    expect(skyCubemapFaceContextMock.mock.calls[0]![0]).toMatchObject({ eyeMpc: pinnedEye });
+  });
+
+  it('a super-threshold move re-pins the eye and forces a full 6-face sweep (fix round 3)', () => {
+    skyCubemapFaceContextMock.mockImplementation(
+      (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
+    );
+
+    const state = makeState();
+    const pinnedEye: readonly [number, number, number] = [
+      SGR_A_STAR_ANCHOR.positionMpc[0] + 50 * SCALE_UNITS.AU_TO_MPC,
+      SGR_A_STAR_ANCHOR.positionMpc[1],
+      SGR_A_STAR_ANCHOR.positionMpc[2],
+    ];
+    renderFrame(makeInput(makeCtx(pinnedEye), state)); // band entry ⇒ full sweep, pins the eye
+    skyCubemapFaceContextMock.mockClear();
+
+    // 10 AU move, well over 3% of the ~60 AU distance to Sgr A* (~1.8 AU).
+    const movedBeyondThreshold: readonly [number, number, number] = [
+      pinnedEye[0] + 10 * SCALE_UNITS.AU_TO_MPC,
+      pinnedEye[1],
+      pinnedEye[2],
+    ];
+    renderFrame(makeInput(makeCtx(movedBeyondThreshold), state));
+
+    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    for (const call of skyCubemapFaceContextMock.mock.calls) {
+      expect(call[0]).toMatchObject({ eyeMpc: movedBeyondThreshold });
+    }
+    expect(state.cameraRuntime.skyCubemapCapture.pinnedEyeMpc).toEqual(movedBeyondThreshold);
   });
 });

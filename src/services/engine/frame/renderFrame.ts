@@ -141,28 +141,32 @@ export function renderFrame(input: RenderFrameInput): void {
       )?.index ?? null)
     : null;
   const bandJustEngaged = bandActive && !captureRuntime.wasBandActive;
-  // Threshold is a FRACTION of `gcDistanceMpc`, not an absolute distance:
-  // the capture eye is the camera itself, so a fixed AU threshold would
-  // near-never fire at the 2·r_s descent floor (~0.17 AU) while being too
-  // loose at the 500 AU band edge — see the constant's own docblock.
+  // Measured against the PINNED eye, not the live camera each frame: a
+  // fresh live eye per round-robin face made adjacent faces disagree at
+  // their shared border and the whole cubemap flicker as the camera moved
+  // (fix round 3). Threshold is a FRACTION of `gcDistanceMpc` — see the
+  // constant's own docblock for why a fixed AU distance is wrong here.
   const cameraMovedBeyondThreshold =
-    captureRuntime.lastSweepCamPosMpc !== null &&
-    distanceMpc(ctx.drawCamPos, captureRuntime.lastSweepCamPosMpc) >
+    captureRuntime.pinnedEyeMpc !== null &&
+    distanceMpc(ctx.drawCamPos, captureRuntime.pinnedEyeMpc) >
       SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION * gcDistanceMpc;
+  const fullSweepTriggered = bandJustEngaged || cameraMovedBeyondThreshold;
+  // Re-pin BEFORE scheduling so a triggered full sweep — including this
+  // frame's own faces — samples the eye it was triggered by, not the eye it
+  // just moved past.
+  if (fullSweepTriggered) {
+    captureRuntime.pinnedEyeMpc = ctx.drawCamPos;
+  }
   const skyCubemapFacesToCapture: readonly CubeFace[] = bandActive
     ? skyCubemapCaptureSchedule({
-        bandJustEngaged,
+        fullSweepTriggered,
         frameIndex: captureRuntime.frameIndex,
         lastCapturedAtMs: captureRuntime.lastCapturedAtMs,
         nowMs: ctx.nowMs,
-        cameraMovedBeyondThreshold,
       }).facesToCapture
     : [];
   for (const face of skyCubemapFacesToCapture) {
     captureRuntime.lastCapturedAtMs.set(face, ctx.nowMs);
-  }
-  if (bandJustEngaged || cameraMovedBeyondThreshold) {
-    captureRuntime.lastSweepCamPosMpc = ctx.drawCamPos;
   }
   captureRuntime.wasBandActive = bandActive;
   captureRuntime.frameIndex += 1;
@@ -176,18 +180,18 @@ export function renderFrame(input: RenderFrameInput): void {
   // comes back null (pre-bootstrap) is simply omitted — `executeFrame` treats
   // a missing map entry as "skip this step cleanly" (see its module header).
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
-  if (skyCubemapFacesToCapture.length > 0) {
+  const pinnedEyeMpc = captureRuntime.pinnedEyeMpc;
+  if (skyCubemapFacesToCapture.length > 0 && pinnedEyeMpc !== null) {
     const faceSizePx = ctx.renderTargets.specOf('sky-cubemap').fixedSizePx!.size;
     for (const face of skyCubemapFacesToCapture) {
       const faceCtx = skyCubemapFaceContext({
         state,
-        // The live camera's position, NOT the hole's: a hole-centred capture
-        // parallaxes against the camera's own view for near-field content
-        // (S-stars at AU distances), visibly mismatching the lens against
-        // the directly rendered sky at the escape-fade boundary. Capturing
-        // from the camera converges to exactly what it sees where deflection
-        // is negligible — standard environment-map practice (Bruneton).
-        eyeMpc: ctx.drawCamPos,
+        // The PINNED eye (see `pinnedEyeMpc`'s docblock), not the live
+        // camera: all six faces must share one eye or they disagree at
+        // their shared border. Still camera-relative overall, not the
+        // hole's — see this fix's round-2 commit for the boundary-seam
+        // rationale that motivated moving off the hole in the first place.
+        eyeMpc: pinnedEyeMpc,
         face,
         faceSizePx,
       });

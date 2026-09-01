@@ -188,7 +188,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       lastCapturedAtMs: new Map(),
       frameIndex: 0,
       wasBandActive: false,
-      lastSweepCamPosMpc: null,
+      pinnedEyeMpc: null,
     },
   };
 
