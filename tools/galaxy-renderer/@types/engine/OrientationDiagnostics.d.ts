@@ -1,11 +1,8 @@
 /**
  * OrientationDiagnostics — permanent debug readout for the ISM-map ->
  * dust-elongation coupling (`IsmMapSection`'s "measured filament coupling"
- * block). The three numbers discriminate where a "sliders don't move the
- * dust" report is coming from: `hasData: false` means the readback never
- * landed; near-zero coherence means the generator has no measurable
- * structure yet; fine coherence with near-zero delta means the coupling
- * works but the measured orientation already agrees with the arm tangent.
+ * block). `hasData: false` means the readback never landed; near-zero
+ * coherence means the generator has no measurable structure yet.
  */
 
 export type OrientationDiagnostics = {
@@ -17,8 +14,4 @@ export type OrientationDiagnostics = {
   readonly meanCoherence: number;
   /** Max of the same, over the same grid. */
   readonly maxCoherence: number;
-  /** Mean |delta| actually applied by `rotateFrameToOrientation` during the last dust build, degrees. */
-  readonly meanDeltaDeg: number;
-  /** Max of the same, over the same build. */
-  readonly maxDeltaDeg: number;
 };

@@ -345,14 +345,6 @@ function IsmMapSection({ diagnostics }: IsmMapSectionProps): ReactNode {
                   : '—'}
               </span>
             </div>
-            <div className={styles.row}>
-              <span className={styles.slot}>delta applied mean / max</span>
-              <span className={styles.value}>
-                {diagnostics
-                  ? `${diagnostics.meanDeltaDeg.toFixed(2)}° / ${diagnostics.maxDeltaDeg.toFixed(2)}°`
-                  : '—'}
-              </span>
-            </div>
           </div>
         )}
       </div>
