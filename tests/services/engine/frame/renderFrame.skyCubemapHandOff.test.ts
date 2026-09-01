@@ -43,7 +43,7 @@ function makeCaptureRuntime() {
   return {
     lastCapturedAtMs: new Map(),
     frameIndex: 0,
-    wasBandActive: false,
+    bandActive: false,
     pinnedEyeMpc: null,
   };
 }
@@ -74,7 +74,9 @@ function makeCtx(drawCamPos: readonly [number, number, number]): ReadyFrameConte
     nowMs: 1000,
     focus: {},
     slabs: [],
+    canvasSize: { width: 800, height: 600 },
     renderTargets: {
+      reconcile: vi.fn(),
       specOf: (id: string) => {
         if (id === 'sky-cubemap') return { fixedSizePx: { size: 256, layers: 6 } };
         if (id === 'swap') return { format: 'bgra8unorm' };
@@ -176,6 +178,28 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
       ReadyFrameContext
     >;
     expect(handedOff.size).toBe(0);
+  });
+
+  // The sky-cubemap row is lazily allocated off `bandActive`, and the frame
+  // that opens the band is the frame that sweeps all six faces — so the row
+  // has to be reconciled into existence BEFORE this frame reads it, and
+  // reconciled away again when the band closes.
+  it('reconciles the render targets on the band edge, and only on the edge', () => {
+    const state = makeState();
+    const inBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
+    renderFrame(makeInput(inBand, state));
+    expect(inBand.renderTargets.reconcile).toHaveBeenCalledTimes(1);
+    expect(state.cameraRuntime.skyCubemapCapture.bandActive).toBe(true);
+
+    // Still in-band: nothing about the row's existence changed.
+    const stillInBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
+    renderFrame(makeInput(stillInBand, state));
+    expect(stillInBand.renderTargets.reconcile).not.toHaveBeenCalled();
+
+    const outOfBand = makeCtx([1000, 0, 0]);
+    renderFrame(makeInput(outOfBand, state));
+    expect(outOfBand.renderTargets.reconcile).toHaveBeenCalledTimes(1);
+    expect(state.cameraRuntime.skyCubemapCapture.bandActive).toBe(false);
   });
 
   it('round-robin faces reuse the PINNED eye, not the live camera, after a sub-threshold move (fix round 3)', () => {

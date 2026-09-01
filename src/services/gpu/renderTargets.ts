@@ -267,12 +267,19 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // 2d-array, later bound as a `texture_cube` (see `CubeFace.d.ts`). Same
     // depthless/additive/zero-clear profile as `hdr` — the captured roster
     // (point-sprites, star-catalog/aggregates, S-star glints) is additive.
+    //
+    // The one row with an `allocateWhen`: 1024² × 6 × 8 B is 50 MB, and the
+    // lens draws only within ~500 AU of Sgr A*, so the texture exists only
+    // while the band does. `renderFrame` writes the band flag and reconciles
+    // on its edge, so the row is there on the band-entry frame — the frame
+    // that sweeps all six faces.
     {
       id: 'sky-cubemap',
       format: HDR_TARGET_FORMAT,
       depth: null,
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
+      allocateWhen: (state) => state.cameraRuntime.skyCubemapCapture.bandActive,
       // `size` is a live setting (the DebugPanel resolution knob,
       // 256/512/1024/2048) — `reconcile` resolves it every frame exactly like
       // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
@@ -407,6 +414,24 @@ export function createRenderTargets(
     }
   }
 
+  /**
+   * Drop one row's textures + views. Every map is cleared together with the
+   * size record, so the row misses the held-size comparison on the frame its
+   * `allocateWhen` turns true again and reallocates through the normal path.
+   */
+  function release(id: string): void {
+    if (!textures.has(id) && !depthTextures.has(id)) return;
+    textures.get(id)?.destroy();
+    depthTextures.get(id)?.destroy();
+    textures.delete(id);
+    views.delete(id);
+    cubeViews.delete(id);
+    layerViews.delete(id);
+    depthTextures.delete(id);
+    depthViews.delete(id);
+    sizes.delete(id);
+  }
+
   // Keyed on the size the row was allocated at, never on a remembered divisor:
   // the texture is the authoritative record of what it was built at, so a canvas
   // resize and a settings-driven divisor move reduce to one question. Two
@@ -415,11 +440,19 @@ export function createRenderTargets(
   // (`reducedTargetSize` is the shared sizing rule; see its docblock.)
   function reconcile(s: EngineState, canvas: Size): void {
     for (const spec of offscreenSpecs) {
+      // A row that declares `allocateWhen` holds VRAM only while its
+      // condition does — same per-frame seam as a moved size, so entering
+      // and leaving the condition need no lifecycle path of their own.
+      if (spec.allocateWhen !== undefined && !spec.allocateWhen(s)) {
+        release(spec.id);
+        continue;
+      }
       // A fixed-size row is a size that never changes across resizes, not a
       // separate code path past this one branch: the held-size comparison
       // and `allocate` call below stay shared with every other row.
+      const fixed = spec.fixedSizePx ? resolveFixedSize(spec.fixedSizePx, s) : 0;
       const [width, height] = spec.fixedSizePx
-        ? [resolveFixedSize(spec.fixedSizePx, s), resolveFixedSize(spec.fixedSizePx, s)]
+        ? [fixed, fixed]
         : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
       const held = sizes.get(spec.id);
       if (held !== undefined && held.width === width && held.height === height) continue;

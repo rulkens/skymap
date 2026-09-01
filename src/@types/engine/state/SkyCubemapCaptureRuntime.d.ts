@@ -18,8 +18,13 @@ export type SkyCubemapCaptureRuntime = {
   lastCapturedAtMs: Map<CubeFace, number>;
   /** Monotonic per-frame counter driving the round-robin (`frameIndex % 6`). */
   frameIndex: number;
-  /** The lensing band's active/inactive state last frame — `bandJustEngaged`'s edge. */
-  wasBandActive: boolean;
+  /**
+   * The lensing band's state as of the last rendered frame. `renderFrame`
+   * reads it for the `bandJustEngaged` edge before overwriting it, and the
+   * `sky-cubemap` render-target row's `allocateWhen` reads it to decide
+   * whether its texture exists at all (`renderTargets.ts`).
+   */
+  bandActive: boolean;
   /**
    * The eye EVERY face was captured from at the last full sweep. Round-robin
    * refreshes reuse this same pinned eye rather than the live camera each

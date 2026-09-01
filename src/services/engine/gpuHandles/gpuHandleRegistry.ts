@@ -369,6 +369,9 @@ export const GPU_HANDLE_ROWS = [
       createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
+    // Boot-eager like every other renderer row, deliberately: the deflection
+    // LUT build + its 2 KB texture + two pipelines are a one-off cost, unlike
+    // the 50 MB `sky-cubemap` target, which is lazy (`allocateWhen`).
     key: 'sgrAStarLensingRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createSgrAStarLensingRenderer(deps.ctx.device, HDR_TARGET_FORMAT),

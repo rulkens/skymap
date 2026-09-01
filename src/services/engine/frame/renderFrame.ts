@@ -132,43 +132,17 @@ export function renderFrame(input: RenderFrameInput): void {
   // already follows for the identical `frame.kind === 'body-m'` lookup.
   // `null` outside the band, or when the row isn't in `ctx.slabs` this frame
   // (e.g. frustum-culled despite the distance band).
-  const sgrAStarBodySlab = bandActive
-    ? (ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
-        ?.index ?? null)
-    : null;
-  const bandJustEngaged = bandActive && !captureRuntime.wasBandActive;
-  // Measured against the PINNED eye, not the live camera each frame: a
-  // fresh live eye per round-robin face made adjacent faces disagree at
-  // their shared border and the whole cubemap flicker as the camera moved
-  // (fix round 3). Threshold is a FRACTION of `gcDistanceMpc` — see
-  // `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`'s own docblock for why a
-  // fixed AU distance is wrong here. Read off settings (the DebugPanel knob),
-  // not the module constant — which stays this value's real owner
-  // (`initialState.ts` seeds from it).
-  const cameraMovedBeyondThreshold =
-    captureRuntime.pinnedEyeMpc !== null &&
-    distanceMpc(ctx.drawCamPos, captureRuntime.pinnedEyeMpc) >
-      state.settings.sgrAStarLensingTuning.skyCubemapRecaptureCameraMoveFraction * gcDistanceMpc;
-  const fullSweepTriggered = bandJustEngaged || cameraMovedBeyondThreshold;
-  // Re-pin BEFORE scheduling so a triggered full sweep — including this
-  // frame's own faces — samples the eye it was triggered by, not the eye it
-  // just moved past.
-  if (fullSweepTriggered) {
-    captureRuntime.pinnedEyeMpc = ctx.drawCamPos;
+  const bandJustEngaged = bandActive && !captureRuntime.bandActive;
+  // The `sky-cubemap` row's 50 MB exists only while the band does (its
+  // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`
+  // runs BEFORE this frame's camera pose is produced, so it cannot see the
+  // band open; the edge reconciles here instead, because the entry frame is
+  // also the frame that sweeps all six faces and would otherwise read a row
+  // that does not exist yet.
+  if (bandActive !== captureRuntime.bandActive) {
+    captureRuntime.bandActive = bandActive;
+    ctx.renderTargets.reconcile(state, ctx.canvasSize);
   }
-  const skyCubemapFacesToCapture: readonly CubeFace[] = bandActive
-    ? skyCubemapCaptureSchedule({
-        fullSweepTriggered,
-        frameIndex: captureRuntime.frameIndex,
-        lastCapturedAtMs: captureRuntime.lastCapturedAtMs,
-        nowMs: ctx.nowMs,
-      }).facesToCapture
-    : [];
-  for (const face of skyCubemapFacesToCapture) {
-    captureRuntime.lastCapturedAtMs.set(face, ctx.nowMs);
-  }
-  captureRuntime.wasBandActive = bandActive;
-  captureRuntime.frameIndex += 1;
 
   // The runtime hand-off (Task 12's brief, "Name the runtime hand-off"):
   // `frameProgram` only knows WHICH faces to capture (static data); resolving
@@ -183,22 +157,66 @@ export function renderFrame(input: RenderFrameInput): void {
   // omitted — `executeFrame` treats a missing map entry as "skip this step
   // cleanly" (see its module header).
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
-  const pinnedEyeMpc = captureRuntime.pinnedEyeMpc;
-  if (skyCubemapFacesToCapture.length > 0 && pinnedEyeMpc !== null) {
-    const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
+  let skyCubemapFacesToCapture: readonly CubeFace[] = [];
+  // Sgr A*'s own body-m slab row this frame: `frameProgram` emits the
+  // (hdr, BODY[k]) lens step off it. Resolved here, not in `frameProgram`,
+  // because the row's painter-order index comes from `deriveSlabs` (computed
+  // upstream of this function) — the same "resolve here, hand data down"
+  // split `earthSlab` in `runFrame.ts` already follows for the identical
+  // `frame.kind === 'body-m'` lookup. Stays `null` when the row isn't in
+  // `ctx.slabs` this frame (e.g. frustum-culled despite the distance band).
+  let sgrAStarBodySlab: number | null = null;
+  if (bandActive) {
+    sgrAStarBodySlab =
+      ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
+        ?.index ?? null;
+    // Measured against the PINNED eye, not the live camera each frame: a
+    // fresh live eye per round-robin face made adjacent faces disagree at
+    // their shared border and the whole cubemap flicker as the camera moved.
+    // Threshold is a FRACTION of `gcDistanceMpc` — see
+    // `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`'s own docblock for why a
+    // fixed AU distance is wrong here. Read off settings (the DebugPanel
+    // knob), not the module constant — which stays this value's real owner
+    // (`initialState.ts` seeds from it).
+    const cameraMovedBeyondThreshold =
+      captureRuntime.pinnedEyeMpc !== null &&
+      distanceMpc(ctx.drawCamPos, captureRuntime.pinnedEyeMpc) >
+        state.settings.sgrAStarLensingTuning.skyCubemapRecaptureCameraMoveFraction * gcDistanceMpc;
+    const fullSweepTriggered = bandJustEngaged || cameraMovedBeyondThreshold;
+    // Re-pin BEFORE scheduling so a triggered full sweep — including this
+    // frame's own faces — samples the eye it was triggered by, not the eye it
+    // just moved past.
+    if (fullSweepTriggered) {
+      captureRuntime.pinnedEyeMpc = ctx.drawCamPos;
+    }
+    skyCubemapFacesToCapture = skyCubemapCaptureSchedule({
+      fullSweepTriggered,
+      frameIndex: captureRuntime.frameIndex,
+      lastCapturedAtMs: captureRuntime.lastCapturedAtMs,
+      nowMs: ctx.nowMs,
+    }).facesToCapture;
     for (const face of skyCubemapFacesToCapture) {
-      const faceCtx = skyCubemapFaceContext({
-        state,
-        // The PINNED eye (see `pinnedEyeMpc`'s docblock), not the live
-        // camera: all six faces must share one eye or they disagree at
-        // their shared border. Still camera-relative overall, not the
-        // hole's — see this fix's round-2 commit for the boundary-seam
-        // rationale that motivated moving off the hole in the first place.
-        eyeMpc: pinnedEyeMpc,
-        face,
-        faceSizePx,
-      });
-      if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
+      captureRuntime.lastCapturedAtMs.set(face, ctx.nowMs);
+    }
+    captureRuntime.frameIndex += 1;
+
+    const pinnedEyeMpc = captureRuntime.pinnedEyeMpc;
+    if (skyCubemapFacesToCapture.length > 0 && pinnedEyeMpc !== null) {
+      const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
+      for (const face of skyCubemapFacesToCapture) {
+        const faceCtx = skyCubemapFaceContext({
+          state,
+          // The PINNED eye (see `pinnedEyeMpc`'s docblock), not the live
+          // camera: all six faces must share one eye or they disagree at
+          // their shared border. Still camera-relative overall, not the
+          // hole's — a hole-centred eye put the capture's own boundary seam
+          // where the lens magnifies it most.
+          eyeMpc: pinnedEyeMpc,
+          face,
+          faceSizePx,
+        });
+        if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
+      }
     }
   }
 

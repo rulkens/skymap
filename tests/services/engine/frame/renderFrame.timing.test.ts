@@ -378,7 +378,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         skyCubemapCapture: {
           lastCapturedAtMs: new Map(),
           frameIndex: 0,
-          wasBandActive: false,
+          bandActive: false,
           pinnedEyeMpc: null,
         },
       },

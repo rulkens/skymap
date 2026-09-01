@@ -53,4 +53,16 @@ export type RenderTargetSpec = {
     readonly size: number | ((state: EngineState) => number);
     readonly layers: number;
   };
+  /**
+   * When present, this row's texture exists only on the frames this returns
+   * `true`; `reconcile` releases it (and its views) again the frame it turns
+   * `false`. Absent — every other row — means "always allocated", which is
+   * the right default for a viewport-sized row a pass may touch on any frame.
+   * It is worth declaring for a row whose VRAM is large and whose consumers
+   * are gated on one narrow condition (`sky-cubemap`: 50 MB at the shipped
+   * resolution, read only within ~500 AU of Sgr A*). A consumer must be
+   * gated on the SAME condition — `viewOf`/`sizeOf` throw while the row is
+   * released.
+   */
+  allocateWhen?: (state: EngineState) => boolean;
 };
