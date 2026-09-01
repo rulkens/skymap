@@ -11,7 +11,10 @@ import { keptCountFor } from './keptCountFor';
  *
  * Single pass over the points to fold min/max: the only O(n log n) step is
  * sorting the rank values themselves, to find the `keptCount`-th smallest as
- * the eviction threshold — no prefix arrays, no sorted index array.
+ * the eviction threshold — no prefix arrays, no sorted index array. Points
+ * EXACTLY tied at the threshold rank are all kept (the predecessor prefix-cut
+ * dropped ties past `keptCount`); duplicates can't widen bounds, so this only
+ * matters on measure-zero cross-axis float ties.
  */
 export function denseFractionBounds(
   positions: Float32Array,
