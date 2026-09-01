@@ -75,6 +75,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { Tier } from '../../src/@types/data/Tier';
+import { TIER_LADDER } from '../../src/data/tierLadder';
 import type { StarCatalog } from '../../src/@types/data/starCatalog/StarCatalog';
 import { parseHipparcos2, type Hip2Row } from '../parsers/hipparcos2';
 import { resolveStarDistancePc } from './resolveStarDistancePc';
@@ -153,8 +154,6 @@ export const TIER_BUDGET_BYTES: Readonly<Record<Tier, number>> = {
 /** A tier whose mandatory content overshoots its budget by more than this is a
  * loud STOP-and-report: the codec is too weak and escalating is user-gated. */
 const CODEC_MISS_TOLERANCE = 1.2;
-
-const TIERS: readonly Tier[] = ['small', 'medium', 'large'];
 
 /**
  * One parsed Gaia main-catalog row (the paged `gaia_page_*.csv` schema).
@@ -444,7 +443,7 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   // byte-determinism argument that this sharing is safe.
   const sizeCache = new Map<number, number>();
   const tiers: StarTierResult[] = [];
-  for (const tier of TIERS) {
+  for (const tier of TIER_LADDER) {
     tiers.push(
       await buildTier(
         tier,
