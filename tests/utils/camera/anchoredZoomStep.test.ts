@@ -88,10 +88,15 @@ describe('anchoredZoomStep', () => {
       BODY_RADIUS_M * 0.9,
     ];
 
+    // Closed-form, not a comparison to a sibling call without a cursor: a
+    // latched (or altogether ignored) anchor implementation would also make
+    // two sibling calls agree, so the pin has to be the hand-derived
+    // centre-anchored value itself.
     const withCursor = anchoredZoomStep(pose, 1.2, cursorAnchorM, BODY_RADIUS_M);
-    const withoutCursor = anchoredZoomStep(pose, 1.2, null, BODY_RADIUS_M);
-
-    expect(withCursor).toEqual(withoutCursor);
+    const [ex, ey, ez] = eyeOf(withCursor);
+    expect(ex).toBeCloseTo(0, 6);
+    expect(ey).toBeCloseTo(0, 6);
+    expect(ez).toBeCloseTo(20_000_000 * 1.2, 6);
   });
 
   it('an approach step never goes below the surface floor', () => {
@@ -130,30 +135,35 @@ describe('anchoredZoomStep', () => {
     expect(magnitude(eyeOf(hugeOut1))).toBeLessThan(unclamped / 1000);
   });
 
-  it('an approach never crosses the cursor anchor point onto its far side', () => {
-    // Convex-combination invariant: with a visible (on-sphere) anchor and
-    // factor ∈ (0, 1], the stepped eye's projection onto the anchor's own
-    // outward normal never drops below the anchor's — i.e. it never crosses
-    // the anchor's tangent plane. A regression here (e.g. an off-by-one on
-    // the clamp bounds letting factor go non-positive) is exactly the bug
-    // class the "force a fresh anchor pick after an overshoot" rule guards.
+  it('an approach genuinely anchors on the cursor, and never crosses onto the anchor\'s far side', () => {
     const pose: BodyFixedPose = {
       bodyId: 'earth',
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [0, 0, 20_000_000],
       basisLocal: BASIS_IDENTITY,
     };
+    const eyeStart = eyeOf(pose);
     const cursorAnchorM: [number, number, number] = [
       BODY_RADIUS_M * 0.6,
       BODY_RADIUS_M * 0.3,
       BODY_RADIUS_M * Math.sqrt(1 - 0.6 * 0.6 - 0.3 * 0.3),
     ];
-    const normal = cursorAnchorM.map((c) => c / BODY_RADIUS_M) as [number, number, number];
 
     const out = anchoredZoomStep(pose, 0.5, cursorAnchorM, BODY_RADIUS_M);
-    const eye = eyeOf(out);
-    const projection = eye[0] * normal[0] + eye[1] * normal[1] + eye[2] * normal[2];
+    const [ex, ey, ez] = eyeOf(out);
 
+    // Closed-form pin: the positive assertion that this step genuinely
+    // anchored on the cursor (`A + factor·(eye − A)`), not on the centre or
+    // some other fallback.
+    expect(ex).toBeCloseTo(cursorAnchorM[0] + 0.5 * (eyeStart[0] - cursorAnchorM[0]), 6);
+    expect(ey).toBeCloseTo(cursorAnchorM[1] + 0.5 * (eyeStart[1] - cursorAnchorM[1]), 6);
+    expect(ez).toBeCloseTo(cursorAnchorM[2] + 0.5 * (eyeStart[2] - cursorAnchorM[2]), 6);
+
+    // Consequence: a convex combination of two points already on-or-outside
+    // the anchor's tangent plane can't cross it (spec's tangent-plane
+    // overshoot guard — see the module header's algebra).
+    const normal = cursorAnchorM.map((c) => c / BODY_RADIUS_M) as [number, number, number];
+    const projection = ex * normal[0] + ey * normal[1] + ez * normal[2];
     expect(projection).toBeGreaterThanOrEqual(BODY_RADIUS_M - 1e-6);
   });
 });
