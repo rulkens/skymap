@@ -446,25 +446,26 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── (3c) THE FOLD: one world-arm resolution, then the regime ─────────────
   //
-  // Below every pose writer for the frame, at exactly one site (spec §7 steps
-  // 5-6): a fold ABOVE driver arbitration is discarded by whatever writes the
-  // pose after it, and the wrong writer wins.
-  //
-  // `lastPose` stays FRAMED (it is the authoritative pose); everything with a
-  // world-Mpc shape — the scale-bar snap, `deriveFrameContext`, and through it
-  // the whole draw path — consumes THIS value, free by reference on the
-  // absolute arm.
+  // Below every pose writer for the frame, at one site (spec §7 steps 5-6): a
+  // fold ABOVE driver arbitration is discarded by whatever writes the pose
+  // after it. `lastPose` stays FRAMED (it is the authoritative pose); every
+  // world-Mpc reader — the scale-bar snap, `deriveFrameContext`, and through it
+  // the draw path — takes THIS value, free by reference on the absolute arm.
   const worldPose = resolveWorldArm(renderPose, bodyStates, poseBasis, upBasis);
 
   // No flip during an active gesture (ruled, Q6): the predicate is skipped
   // WHOLE — not clamped, not latched — and re-evaluated at gesture end, which
   // `drainInput` has already dispatched by the time `rootState` was read above.
   if (!rootState.camera.dragging) {
-    const held = renderPose;
-    const arm = regimeArmFor(held.frame, eyeMpcOf(worldPose, poseBasis), bodyStates);
+    // `camera.base.frame` IS the regime (spec §4), NOT the arm this frame's
+    // winner authored: `tween` and `clip` are not arm-gated, so reading it off
+    // the produced pose would re-engage on every frame of an animation inside
+    // the band and would apply the engage test where the disengage one is due.
+    const regime = rootState.camera.base.frame;
+    const arm = regimeArmFor(regime, eyeMpcOf(worldPose, poseBasis), bodyStates);
     if (arm === 'absolute') {
-      if (held.frame !== 'absolute') renderPose = absoluteArm(worldPose);
-    } else if (held.frame === 'absolute' || held.frame.body !== arm.body) {
+      if (renderPose.frame !== 'absolute') renderPose = absoluteArm(worldPose);
+    } else if (renderPose.frame === 'absolute') {
       // Total: `regimeArmFor` only names a body it resolved out of THIS map.
       const bodyState = bodyStates.get(arm.body)!;
       renderPose = {
@@ -472,12 +473,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         pose: toBodyArm(worldPose, poseBasis, upBasis, arm.body, bodyState),
       };
     }
-    // Both arms render `worldPose` on the flip frame (the conversion is
-    // lossless); what changes is the arm the NEXT frame's drivers author in,
-    // and `camera.base.frame` IS the regime (spec §4) — hence the commit, on
-    // the edge only: a per-frame re-commit would reset every clock keyed on
-    // `base` identity.
-    if (renderPose !== held) deps.cb.store.dispatch(commitCameraPose(renderPose));
+    // The store write is the REGIME's edge, so it fires once per crossing; both
+    // arms render `worldPose` on that frame (the conversion is lossless). The
+    // wake is the fold's own — `shouldKeepTicking` below reads the pre-fold
+    // snapshot, so a flip that quiets the last live term would park the loop.
+    if ((arm === 'absolute' ? null : arm.body) !== (regime === 'absolute' ? null : regime.body)) {
+      deps.cb.store.dispatch(commitCameraPose(renderPose));
+      state.subsystems.scheduler.requestRender();
+    }
   }
 
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────

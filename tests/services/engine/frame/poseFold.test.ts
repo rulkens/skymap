@@ -81,7 +81,12 @@ import { createInputAggregator } from '../../../../src/services/engine/subsystem
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { beginDrag, endDrag, commitCameraPose } from '../../../../src/state/camera/cameraSlice';
+import {
+  beginDrag,
+  endDrag,
+  commitCameraPose,
+  startCameraTween,
+} from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../../src/state/time/timeSlice';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -251,6 +256,38 @@ describe('runFrame — the regime fold', () => {
 
     expect(store.getState().camera.base.frame).toEqual(EARTH_ARM);
     expect(commitCalls(spy)).toHaveLength(0);
+  });
+
+  it('a driver that authors the absolute arm inside the band commits once, not per frame', () => {
+    // The regime is `camera.base.frame`, never the arm the winning driver
+    // authored: tween@60 and clip@95 are not arm-gated and always produce
+    // absolute poses. Keyed on the produced pose, the fold would re-convert and
+    // re-dispatch on every frame of an animation that ends inside the band —
+    // a 60 Hz store write through every saga channel — and would feed the
+    // predicate `'absolute'`, swapping §4's disengage test for the engage one.
+    const store = makeStore();
+    const state = makeState();
+    const deps = makeDeps(state, store);
+    const FROM = poseAtHR(EARTH, SCENE_EARTH.radiusM, 1);
+    // Yaw-only, so every frame of the tween sits at the same h/R: the arm must
+    // hold across all four, not re-engage on each.
+    const TO: CameraPose = { ...FROM, yaw: FROM.yaw + 0.4 };
+    seedPose(store, state, FROM);
+    store.dispatch(
+      startCameraTween({
+        from: FROM,
+        to: TO,
+        durationMs: 4000,
+        easing: 'linear',
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+    const spy = vi.spyOn(store, 'dispatch');
+
+    for (const nowMs of [0, 16, 32, 48]) runFrame(state, deps, nowMs);
+
+    expect(commitCalls(spy)).toHaveLength(1);
+    expect(store.getState().camera.base.frame).toEqual(EARTH_ARM);
   });
 
   it('hands back to the absolute arm above the disengage threshold', () => {

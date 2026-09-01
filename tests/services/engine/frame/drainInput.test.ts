@@ -17,7 +17,13 @@ import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamer
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { startCameraTween, beginDrag } from '../../../../src/state/camera/cameraSlice';
+import {
+  startCameraTween,
+  beginDrag,
+  commitCameraPose,
+} from '../../../../src/state/camera/cameraSlice';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
@@ -26,6 +32,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 
@@ -93,6 +100,47 @@ describe('drainInput', () => {
     drainInput(state, deps, 0);
 
     expect(worldArmOf(store.getState().camera.base).yaw).toBeCloseTo(-50 * 0.005, 6);
+    expect(store.getState().camera.dragging).toBe(false);
+  });
+
+  it('does not commit the drag register on gesture end in a body arm', () => {
+    // The register is invisible in a body arm — `orbitDrag` is arm-gated off,
+    // so nothing moved while the gesture was held. Committing it on release
+    // would land the whole accumulated gesture in one frame, which the fold
+    // then re-engages: the register-vs-render divergence, at its worst. The
+    // anchored gestures that make a held drag real are the surface controller's
+    // (spec §6); until it exists, an unowned gesture does nothing.
+    const { agg, state, deps, store } = makeHarness();
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const B = ORIENTATION_FRAMES.ecliptic;
+    const arm = {
+      frame: { body: 'earth' },
+      pose: toBodyArm(
+        {
+          target: [...earth.positionMpc] as Vec3,
+          yaw: 0.7,
+          pitch: 0.3,
+          distance: 2 * 6371000 * SCALE_UNITS.M_TO_MPC,
+        },
+        B,
+        B,
+        'earth',
+        earth,
+      ),
+    } as FramedCameraPose;
+    store.dispatch(commitCameraPose(arm));
+    state.cameraRuntime.lastPose.current = arm;
+    store.dispatch(beginDrag());
+
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
+    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 400, yPx: 100 });
+    agg.push({ kind: 'gestureEnd' });
+
+    drainInput(state, deps, 0);
+
+    expect(store.getState().camera.base).toBe(arm);
+    // The gesture still ENDS — only its pose commit is dropped.
     expect(store.getState().camera.dragging).toBe(false);
   });
 

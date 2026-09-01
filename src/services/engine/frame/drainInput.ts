@@ -46,7 +46,15 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         // Commit BEFORE `endDrag` so the baked pose is in `base` the moment the
         // orbitDrag driver deactivates — otherwise the next frame's resting
         // driver returns the pre-gesture base and the camera snaps back.
-        if (cam !== null) store.dispatch(commitCameraPose(absoluteArm(poseOf(cam))));
+        //
+        // World arm only: in a body arm `orbitDrag` never won, so the register
+        // holds a pose nothing rendered, and committing it would land the whole
+        // held gesture in one frame. The anchored gestures that make a held drag
+        // real belong to the surface controller (spec §6); until then an unowned
+        // gesture does nothing.
+        if (cam !== null && store.getState().camera.base.frame === 'absolute') {
+          store.dispatch(commitCameraPose(absoluteArm(poseOf(cam))));
+        }
         store.dispatch(endDrag());
         break;
 
