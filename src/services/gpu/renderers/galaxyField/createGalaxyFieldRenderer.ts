@@ -858,9 +858,10 @@ export function createGalaxyFieldRenderer(
     /**
      * Debug-only override: forcing this to `false` exercises placeDust.wesl's
      * mode-1 (smoothDisc) branch directly, WITHOUT flipping
-     * `fieldTuning.ismMap.generator` — the real 'none' transition hits an
-     * unrelated, pre-existing bug in `ismMapGenerator.rebuild`'s clear path.
-     * The production path never passes this.
+     * `fieldTuning.ismMap.generator` — that would rerun the generator, both CDF
+     * scans and the placement, so two readbacks either side of it would no
+     * longer be over the same map and budget. The production path never passes
+     * this.
      */
     forceGeneratorIsFluid?: boolean,
   ): PlaceDustDispatchInput {
