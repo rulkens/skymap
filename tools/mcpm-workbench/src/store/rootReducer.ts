@@ -5,11 +5,11 @@
  */
 import { combineReducers } from '@reduxjs/toolkit';
 
-import { catalogSlice } from '../state/slices/catalogSlice';
-import { gridSlice } from '../state/slices/gridSlice';
-import { simSlice } from '../state/slices/simSlice';
-import { viewSlice } from '../state/slices/viewSlice';
-import { histogramSlice } from '../state/slices/histogramSlice';
+import { catalogSlice } from '../state/catalog/catalogSlice';
+import { gridSlice } from '../state/grid/gridSlice';
+import { simSlice } from '../state/sim/simSlice';
+import { viewSlice } from '../state/view/viewSlice';
+import { histogramSlice } from '../state/histogram/histogramSlice';
 
 export const rootReducer = combineReducers({
   catalog: catalogSlice.reducer,

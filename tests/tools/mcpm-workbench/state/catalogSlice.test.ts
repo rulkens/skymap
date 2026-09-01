@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   catalogSlice,
   defaultCatalogSlice,
-} from '../../../../tools/mcpm-workbench/src/state/slices/catalogSlice';
+} from '../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
 
 const { actions, reducer } = catalogSlice;
 

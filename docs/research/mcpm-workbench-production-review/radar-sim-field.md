@@ -41,7 +41,7 @@ together.
 **Where:**
 - `src/services/gpu/shaders/mcpm/histogram.wesl:84-103` — GPU: `floor()` before the `i32` cast, then `inGrid()`, binning + `atomicAdd`.
 - `tools/mcpm-workbench/validate/dataPointHistogram.ts:36-48` — Node CLI: `Math.floor` per axis, bounds check, `log1p` sum/mean.
-- `tools/mcpm-workbench/src/state/slices/histogramSlice.ts:27-43` (`recordHistogramSample`) — live UI: sums `log1p` over the GPU readback's `densities` array, dividing by the GPU's own `sampledCount`.
+- `tools/mcpm-workbench/src/state/histogram/histogramSlice.ts:27-43` (`recordHistogramSample`) — live UI: sums `log1p` over the GPU readback's `densities` array, dividing by the GPU's own `sampledCount`.
 
 **The braid:** the *definition* of "which catalog points count, and how their density becomes one convergence number" is restated three times — once as WGSL arithmetic, once as CPU floor/bounds arithmetic, once as a JS reduction over the first kernel's output. The docblocks on all three are explicit that this is deliberate and unshared: `histogram.wesl:6-9` — "this identity is load-bearing, not incidental"; `dataPointHistogram.ts:10-17` — "That identity requires `Math.floor`... on BOTH sides"; `histogramSlice.ts:21-25` — **"Kept in sync by convention rather than shared code: that function bundles voxel-lookup + binning + the mean into one pass over a full readback cube, so there is no separable 'just the mean' call to share."**
 

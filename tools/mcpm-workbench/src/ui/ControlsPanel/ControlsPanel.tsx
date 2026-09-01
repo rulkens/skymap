@@ -31,11 +31,11 @@ import {
   setWeightMode,
   toggleCatalogSource,
   WORKBENCH_SOURCES,
-} from '../../state/slices/catalogSlice';
+} from '../../state/catalog/catalogSlice';
 import { exportParams, MCPM_PARAM_KEYS } from '../../state/exportParams';
-import { installImportedBox } from '../../state/slices/gridSlice';
+import { installImportedBox } from '../../state/grid/gridSlice';
 import { importParams } from '../../state/importParams';
-import { setAgentCount, setInitMode, setRunning, setSimParam } from '../../state/slices/simSlice';
+import { setAgentCount, setInitMode, setRunning, setSimParam } from '../../state/sim/simSlice';
 import {
   setAdditive,
   setAgentIntensity,
@@ -51,7 +51,7 @@ import {
   setPathTracerSampleCap,
   setPreviewPacked,
   setRaymarchPaletteId,
-} from '../../state/slices/viewSlice';
+} from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../store/hooks';
 import PaletteRow from '../PaletteRow/PaletteRow';
 import Toggle from '../Toggle/Toggle';

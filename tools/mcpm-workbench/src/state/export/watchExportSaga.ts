@@ -20,7 +20,7 @@ import { exportScfd } from '../../export/exportScfd';
 import { triggerDownload } from '../../export/triggerDownload';
 import { widenTrace } from '../../export/widenTrace';
 import { exportNpyRequested, exportScfdRequested } from '../commands';
-import { setCatalogStatusMessage } from '../slices/catalogSlice';
+import { setCatalogStatusMessage } from '../catalog/catalogSlice';
 
 function* exportNpyWorker() {
   const resources = yield* getContext<WorkbenchSagaContext['resources']>('resources');

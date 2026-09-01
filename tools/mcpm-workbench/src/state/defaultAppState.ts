@@ -1,10 +1,10 @@
 import type { RootState } from '../store/types';
 import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
-import { defaultCatalogSlice } from './slices/catalogSlice';
-import { defaultGridSlice } from './slices/gridSlice';
-import { defaultHistogramSlice } from './slices/histogramSlice';
-import { defaultSimSlice } from './slices/simSlice';
-import { defaultViewSlice } from './slices/viewSlice';
+import { defaultCatalogSlice } from './catalog/catalogSlice';
+import { defaultGridSlice } from './grid/gridSlice';
+import { defaultHistogramSlice } from './histogram/histogramSlice';
+import { defaultSimSlice } from './sim/simSlice';
+import { defaultViewSlice } from './view/viewSlice';
 
 // `?probe` (probeGpuErrors.ts) needs the gate's own run to be fast and to
 // respect ruling R11's quantum floor — 100_000 sits BELOW the panel's own

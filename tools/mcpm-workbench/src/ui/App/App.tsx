@@ -13,7 +13,7 @@ import { Provider } from 'react-redux';
 import { createWorkbenchStore } from '../../store/createWorkbenchStore';
 import { defaultAppState } from '../../state/defaultAppState';
 import { loadPackedCatalog } from '../../field/loadPackedCatalog';
-import { setCatalogLoadStatus, setPackedCatalog } from '../../state/slices/catalogSlice';
+import { setCatalogLoadStatus, setPackedCatalog } from '../../state/catalog/catalogSlice';
 import CatalogStatus from '../CatalogStatus/CatalogStatus';
 import Viewport from '../Viewport/Viewport';
 import ControlsPanel from '../ControlsPanel/ControlsPanel';

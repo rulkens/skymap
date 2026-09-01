@@ -10,9 +10,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defaultAppState';
-import { viewSlice } from '../../../../tools/mcpm-workbench/src/state/slices/viewSlice';
-import { simSlice } from '../../../../tools/mcpm-workbench/src/state/slices/simSlice';
-import { histogramSlice } from '../../../../tools/mcpm-workbench/src/state/slices/histogramSlice';
+import { viewSlice } from '../../../../tools/mcpm-workbench/src/state/view/viewSlice';
+import { simSlice } from '../../../../tools/mcpm-workbench/src/state/sim/simSlice';
+import { histogramSlice } from '../../../../tools/mcpm-workbench/src/state/histogram/histogramSlice';
 import { storeWriteIsDirty } from '../../../../tools/mcpm-workbench/src/state/storeWriteIsDirty';
 
 describe('storeWriteIsDirty', () => {

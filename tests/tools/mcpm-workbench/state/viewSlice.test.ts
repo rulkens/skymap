@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defaultViewSlice,
   viewSlice,
-} from '../../../../tools/mcpm-workbench/src/state/slices/viewSlice';
+} from '../../../../tools/mcpm-workbench/src/state/view/viewSlice';
 
 const PITCH_LIMIT = 1.5;
 

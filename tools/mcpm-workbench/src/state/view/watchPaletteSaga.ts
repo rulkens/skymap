@@ -11,12 +11,12 @@
 import { takeEvery, put, getContext } from 'typed-redux-saga';
 
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
-import { setCatalogStatusMessage } from '../slices/catalogSlice';
+import { setCatalogStatusMessage } from '../catalog/catalogSlice';
 import {
   setPathTracerPaletteId,
   setPreviewPacked,
   setRaymarchPaletteId,
-} from '../slices/viewSlice';
+} from './viewSlice';
 
 export function* watchPaletteSaga() {
   yield* takeEvery(setRaymarchPaletteId, function* (action) {

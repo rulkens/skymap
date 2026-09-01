@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defaultHistogramSlice,
   histogramSlice,
-} from '../../../../tools/mcpm-workbench/src/state/slices/histogramSlice';
+} from '../../../../tools/mcpm-workbench/src/state/histogram/histogramSlice';
 
 describe('histogramSlice setSampleRandomly', () => {
   it('resets counts/history/meanLogTraceAtPoints on a toggle edge', () => {

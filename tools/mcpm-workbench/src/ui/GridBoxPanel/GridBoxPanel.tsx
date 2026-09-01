@@ -22,7 +22,7 @@ import {
   setPaddingMpc,
   setShowGridBox,
   setVoxelSizeMpc,
-} from '../../state/slices/gridSlice';
+} from '../../state/grid/gridSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { formatBytes } from '../formatBytes';
 import ToggleRow from '../ToggleRow/ToggleRow';

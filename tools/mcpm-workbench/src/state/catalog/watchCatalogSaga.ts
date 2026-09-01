@@ -28,7 +28,7 @@ import {
   setCatalogSources,
   setCatalogTier,
   setPackedCatalog,
-} from '../slices/catalogSlice';
+} from './catalogSlice';
 
 export type CatalogPointsPlan =
   | { readonly kind: 'packedOverride'; readonly points: CatalogPoints }

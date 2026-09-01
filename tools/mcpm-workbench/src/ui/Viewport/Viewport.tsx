@@ -18,8 +18,8 @@ import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpat
 import { createRenderResources, disposeScene } from '../../render/renderResources';
 import { volpathKeyFor } from '../../render/volpathKeyFor';
 import { gridShapeKeyFor } from '../../state/gridShapeKeyFor';
-import { incrementStep } from '../../state/slices/simSlice';
-import { setFps } from '../../state/slices/viewSlice';
+import { incrementStep } from '../../state/sim/simSlice';
+import { setFps } from '../../state/view/viewSlice';
 import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
 import type { RegisterSagaContext, WorkbenchStore } from '../../store/types';
 import { frameNeedsRender } from '../frameNeedsRender';

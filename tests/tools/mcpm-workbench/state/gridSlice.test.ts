@@ -14,7 +14,7 @@ import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import {
   defaultGridSlice,
   gridSlice,
-} from '../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
+} from '../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
 
 const { actions, reducer } = gridSlice;
 

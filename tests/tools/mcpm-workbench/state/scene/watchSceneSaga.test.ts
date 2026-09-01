@@ -19,15 +19,15 @@ import { gridShapeOf } from '../../../../../tools/mcpm-workbench/src/state/gridS
 import {
   catalogLoaded,
   setWeightMode,
-} from '../../../../../tools/mcpm-workbench/src/state/slices/catalogSlice';
+} from '../../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
 import {
   defaultGridSlice,
   gridSlice,
-} from '../../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
+} from '../../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
 import {
   defaultSimSlice,
   simSlice,
-} from '../../../../../tools/mcpm-workbench/src/state/slices/simSlice';
+} from '../../../../../tools/mcpm-workbench/src/state/sim/simSlice';
 import { SCENE_REBUILD_TRIGGERS } from '../../../../../tools/mcpm-workbench/src/state/scene/watchSceneSaga';
 
 const TRIGGER_TYPES: Set<string> = new Set(SCENE_REBUILD_TRIGGERS.map((action) => action.type));

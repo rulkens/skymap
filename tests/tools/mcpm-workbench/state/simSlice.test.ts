@@ -10,7 +10,7 @@ import {
   AGENT_COUNT_MIN,
   defaultSimSlice,
   simSlice,
-} from '../../../../tools/mcpm-workbench/src/state/slices/simSlice';
+} from '../../../../tools/mcpm-workbench/src/state/sim/simSlice';
 
 describe('simSlice setAgentCount', () => {
   it('snaps to the nearest 100k unit', () => {

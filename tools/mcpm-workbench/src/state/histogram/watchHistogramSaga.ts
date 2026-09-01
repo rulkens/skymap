@@ -12,8 +12,8 @@ import { takeLeading, call, put, select, getContext } from 'typed-redux-saga';
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
 import { HISTOGRAM_INTERVAL_STEPS } from './HISTOGRAM_INTERVAL_STEPS';
-import { incrementStep } from '../slices/simSlice';
-import { recordHistogramSample } from '../slices/histogramSlice';
+import { incrementStep } from '../sim/simSlice';
+import { recordHistogramSample } from './histogramSlice';
 
 export function* watchHistogramSaga() {
   yield* takeLeading(incrementStep, function* () {

@@ -5,7 +5,7 @@ import {
   setSampleWeight,
   setStepVoxels,
   setTrimDensity,
-} from '../../../state/slices/viewSlice';
+} from '../../../state/view/viewSlice';
 
 /** Keyed action creators, dispatched by the caller — not pure state setters (Task 3). */
 export const RAYMARCH_SETTERS: {

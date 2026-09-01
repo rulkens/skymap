@@ -24,8 +24,8 @@
 ### Task 1: RTK slices for the five domains
 
 **Files:**
-- Modify: `tools/mcpm-workbench/src/state/slices/{simSlice,viewSlice,gridSlice,catalogSlice,histogramSlice}.ts`
-- Modify: their mirrors under `tests/tools/mcpm-workbench/state/slices/`
+- Modify: `tools/mcpm-workbench/src/state/{sim/simSlice,view/viewSlice,grid/gridSlice,catalog/catalogSlice,histogram/histogramSlice}.ts`
+- Modify: their mirrors under `tests/tools/mcpm-workbench/state/`
 
 **Contract:** each module exports one `createSlice` result: `export const viewSlice = createSlice({ name: 'view', initialState: defaultViewSlice, reducers: {...} })` plus `export const { setRaymarchPaletteId, ... } = viewSlice.actions`. Reducer names = the current pure-setter names, payloads = the current setters' non-`prev` arguments (multi-arg setters take an object payload, e.g. `setCameraYawPitch({ yaw, pitch })`). The pure setter functions are deleted; their logic moves into the reducers (immer-style or returning new state — match `src/state/` slice idiom). `defaultAppState.ts` keeps composing the five `initialState`s.
 
@@ -37,7 +37,7 @@
 ### Task 2: Token counters → request actions
 
 **Files:**
-- Modify: `tools/mcpm-workbench/src/state/slices/simSlice.ts`, `tools/mcpm-workbench/@types/SimSlice.d.ts`
+- Modify: `tools/mcpm-workbench/src/state/sim/simSlice.ts`, `tools/mcpm-workbench/@types/SimSlice.d.ts`
 - Modify: `tools/mcpm-workbench/src/ui/ControlsPanel/ControlsPanel.tsx`, `tools/mcpm-workbench/src/ui/Viewport/Viewport.tsx` (token-watcher call sites)
 
 **Contract:** `resetToken`/`clearTraceToken`/`exportToken`/`scfdToken` fields and their `request*` reducers are deleted. In their place, four plain actions created with `createAction` in `tools/mcpm-workbench/src/state/commands.ts` (new file): `resetRequested()`, `clearTraceRequested()`, `exportNpyRequested()`, `exportScfdRequested()`. UI buttons dispatch these; until Task 7/8 land the sagas, Viewport's existing token watchers are re-pointed at a temporary store-subscribe on dispatched actions OR (simpler) left non-functional for exactly the commits between Task 2 and Tasks 7-8 — prefer keeping them working by having Viewport listen via `store` subscription to a `lastCommand` scratch only if trivially cheap; otherwise note the gap in the commit message.

@@ -34,7 +34,7 @@ import {
   setCatalogBuildError,
   setCatalogStatusMessage,
   setWeightMode,
-} from '../slices/catalogSlice';
+} from '../catalog/catalogSlice';
 import {
   fitBoxToCatalog,
   installImportedBox,
@@ -44,10 +44,10 @@ import {
   setResolvedGrid,
   setRotation,
   setVoxelSizeMpc,
-} from '../slices/gridSlice';
-import { resetHistogram } from '../slices/histogramSlice';
-import { setAgentCount, setInitMode, setSeed, resetStepCount } from '../slices/simSlice';
-import { deviceLost } from '../slices/viewSlice';
+} from '../grid/gridSlice';
+import { resetHistogram } from '../histogram/histogramSlice';
+import { setAgentCount, setInitMode, setSeed, resetStepCount } from '../sim/simSlice';
+import { deviceLost } from '../view/viewSlice';
 import { acceptBuiltHarness } from './acceptBuiltHarness';
 import { REBUILD_DEBOUNCE_MS } from './REBUILD_DEBOUNCE_MS';
 

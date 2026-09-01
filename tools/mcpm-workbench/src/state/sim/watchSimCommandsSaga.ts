@@ -10,16 +10,16 @@ import { takeEvery, put, select, getContext } from 'typed-redux-saga';
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
 import { clearTraceRequested, resetRequested } from '../commands';
-import { setCatalogStatusMessage } from '../slices/catalogSlice';
-import { resetHistogram } from '../slices/histogramSlice';
-import { resetStepCount } from '../slices/simSlice';
+import { setCatalogStatusMessage } from '../catalog/catalogSlice';
+import { resetHistogram } from '../histogram/histogramSlice';
+import { resetStepCount } from './simSlice';
 import {
   defaultViewSlice,
   setAutoRotate,
   setCameraDistance,
   setCameraTarget,
   setCameraYawPitch,
-} from '../slices/viewSlice';
+} from '../view/viewSlice';
 
 function* resetWorker() {
   const resources = yield* getContext<WorkbenchSagaContext['resources']>('resources');

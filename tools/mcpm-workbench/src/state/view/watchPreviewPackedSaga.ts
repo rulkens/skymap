@@ -15,8 +15,8 @@ import { widenTrace } from '../../export/widenTrace';
 import type { RenderResources } from '../../render/renderResources';
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
-import { incrementStep } from '../slices/simSlice';
-import { setPreviewPacked, setPreviewPackedAtStep } from '../slices/viewSlice';
+import { incrementStep } from '../sim/simSlice';
+import { setPreviewPacked, setPreviewPackedAtStep } from './viewSlice';
 import { isPreviewStale } from './isPreviewStale';
 
 function disposePreview(resources: RenderResources): void {
