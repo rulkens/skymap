@@ -497,6 +497,33 @@ describe('executeFrame', () => {
     expect(twA?.querySet._stub).toBe('a');
   });
 
+  it('perLayerTimed keys a body-row layer’s slot by its row, not just layer.name (M2 fix)', () => {
+    // The regression: a `slab: 'body'` layer drawing into TWO body rows in one
+    // encoder used to attach `descriptorFor(layer.name)` for BOTH passes —
+    // the same two query indices, written twice, so the reported figure was
+    // whichever pass resolved last. `layerTimingSlotName` folds the row into
+    // the slot name, so each row's pass gets its OWN descriptor.
+    const env = makeEncoderEnv();
+    const { svc, descriptorFor } = makeTimingService();
+    const planets = makeLayer({ name: 'planets', target: 'foreground:0', slab: 'body' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: 2 },
+      { kind: 'render', target: 'foreground:0', slab: 3 },
+    ];
+    const { args } = makeArgs({
+      program,
+      layers: [planets],
+      strategy: 'perLayerTimed',
+      timing: svc,
+      ctx: makeBodyCtx(['mars', 'jupiter']),
+      env,
+    });
+    executeFrame(args);
+    expect(descriptorFor).toHaveBeenCalledWith('planets·BODY[0]');
+    expect(descriptorFor).toHaveBeenCalledWith('planets·BODY[1]');
+    expect(descriptorFor).not.toHaveBeenCalledWith('planets');
+  });
+
   it('composite passes carry the source→dest timing descriptor', () => {
     const env = makeEncoderEnv();
     const { svc, descriptorFor } = makeTimingService();

@@ -63,7 +63,7 @@
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
-import { COSMO, NEAR0, groupKeyOf, isBodySlabIndex, slabName } from './slabs';
+import { COSMO, NEAR0, groupKeyOf, isBodySlabIndex, layerTimingSlotName, slabName } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 
@@ -317,7 +317,11 @@ function timedSlotRowsOf(
         const matchesStep =
           layer.slab === step.slab || (layer.slab === 'body' && isBodySlabIndex(step.slab));
         if (layer.target === step.target && matchesStep) {
-          rows.push({ name: layer.name, groupKey });
+          // `layerTimingSlotName` carries the row into the slot NAME for a body
+          // step, so two body rows sharing one layer (Jupiter + a moon, both
+          // drawn by `planetsLayer`) each get their own query-set slot instead
+          // of colliding on the same two indices (see its doc, slabs.ts).
+          rows.push({ name: layerTimingSlotName(layer.name, step.slab), groupKey });
         }
       }
       // One extra slot per render STEP whose NAME is the groupKey itself, so
@@ -357,13 +361,12 @@ function timedSlotRowsOf(
  * empty group is dropped — that's how the toggles list omits the "composites &
  * pick" group whose rows aren't togglable.
  *
- * A `slab: 'body'` layer matches every body-row step in the chain, so its row
- * repeats once per capacity slot with the same `name` (its own group-key rows
- * stay unique per step and are unaffected). The underlying `gpuTimingService`
- * already collapses same-named slots onto one query index (`buildTimingSlotMap`:
- * "names are assumed unique … a duplicate would collide on its index pair"),
- * so every repeat reads the same sample — kept once per group here, first
- * occurrence wins, for display only.
+ * `namesSeen` still guards against a genuine same-title duplicate (two
+ * distinct groupKeys sharing a display title, e.g. every `foreground:0·BODY[k]`
+ * bucketing under "Foreground bodies · depth") landing the same row NAME
+ * twice — no such collision exists today (`layerTimingSlotName` keys a
+ * `slab: 'body'` layer's per-row name by its own `BODY[k]`), but the guard
+ * stays as the cheap belt for that shape rather than assuming it can't recur.
  */
 function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
   const titleOf = (groupKey: string): string => PASS_GROUP_TITLES[groupKey] ?? groupKey;
@@ -462,15 +465,42 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
 );
 
 /**
- * Layer/slot name → groupKey, so a consumer holding only names (the
- * RenderTogglesSection, fed the engine handle's live togglable-pass list) can
- * project them into the same groups the timing list uses. Built from the same
- * walk, so the two lists stay positionally aligned.
+ * Plain `layer.name` → groupKey — a SEPARATE walk from `timedSlotRowsOf`,
+ * because the engine handle's `allNames` (what `groupPassNames` below
+ * actually receives) is `CONTENT_LAYERS.map(l => l.name)`: one entry per
+ * REGISTERED layer, never per-body-row (toggling a layer disables it on
+ * every row it draws — see `RenderTogglesSection`'s one-way override doc).
+ * A `slab: 'body'` layer's plain name therefore matches every body-row step
+ * here; later occurrences simply overwrite earlier ones in the built map,
+ * which is harmless — `PASS_GROUP_TITLES` maps every `<target>·BODY[k]`
+ * groupKey to the SAME title, so whichever row the last occurrence lands on
+ * resolves to the identical display group.
  */
-const PASS_GROUP_KEYS: ReadonlyMap<string, string> = new Map(
-  timedSlotRowsOf(frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN), CONTENT_LAYERS).map(
-    (row) => [row.name, row.groupKey],
-  ),
+function plainLayerGroupKeys(
+  program: readonly FrameStep[],
+  layers: readonly ContentLayer[],
+): ReadonlyMap<string, string> {
+  const map = new Map<string, string>();
+  for (const step of program) {
+    if (step.kind !== 'render') continue;
+    const groupKey = groupKeyOf(step.target, step.slab);
+    for (const layer of layers) {
+      const matchesStep =
+        layer.slab === step.slab || (layer.slab === 'body' && isBodySlabIndex(step.slab));
+      if (layer.target === step.target && matchesStep) map.set(layer.name, groupKey);
+    }
+  }
+  return map;
+}
+
+/**
+ * Layer name → groupKey, so a consumer holding only PLAIN names (the
+ * RenderTogglesSection, fed the engine handle's live togglable-pass list) can
+ * project them into the same groups the timing list uses.
+ */
+const PASS_GROUP_KEYS: ReadonlyMap<string, string> = plainLayerGroupKeys(
+  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN),
+  CONTENT_LAYERS,
 );
 
 /**

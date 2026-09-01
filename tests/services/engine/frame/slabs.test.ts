@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { mat4, vec3d } from 'wgpu-matrix';
+import { mat4, mat4d, vec3d } from 'wgpu-matrix';
 import type { Mat4 } from 'wgpu-matrix';
 
 import {
@@ -20,6 +20,7 @@ import {
   foregroundChainOrder,
   NEAR0,
   COSMO,
+  SLAB_REVERSED_Z,
 } from '../../../../src/services/engine/frame/slabs';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
@@ -252,6 +253,42 @@ describe('deriveSlabs', () => {
     expect(row.distanceRangeM).toEqual([999900000, 1000100000]);
     // far is +∞ (spec §4) — distanceRangeM[1] carries the finite bound instead.
     expect(row.far).toBe(Infinity);
+  });
+
+  it("keys a body row's reversedZ + projection off SLAB_REVERSED_Z[NEAR0], not a hard-coded literal (M3 fix)", () => {
+    // Regression: `bodySlabRow` used to hard-code `reversedZ: true` and always
+    // build the reversed-Z projection, independent of `SLAB_REVERSED_Z` — the
+    // very constant every body-row PIPELINE (`gpuHandleRegistry`) already
+    // reads for its `depthCompare`. Mutating the shared constant (it's a
+    // plain object at runtime, only `Readonly` at the type level) and
+    // re-deriving must flip BOTH the `reversedZ` field and the projection
+    // SHAPE together, or the module header's "partial flip impossible" claim
+    // is false. `computeForegroundViewProj` pins the identical NEAR0-side
+    // coupling by rebuilding the expected matrix from the same util this
+    // test rebuilds by hand for the body row (no shared "foreground" util
+    // exists for body rows, so the two mat4d calls are inlined here).
+    const body = makePlanet({ id: 'flip-body', radiusM: 1e5 });
+    const pose: BodyPoseProvider = () => ({
+      eyeRelBodyM: [0, 0, -1e9],
+      basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    });
+    const cam = makeCam(100);
+    const mutableFlag = SLAB_REVERSED_Z as Record<number, boolean>;
+    const original = mutableFlag[NEAR0];
+    mutableFlag[NEAR0] = false;
+    try {
+      const slabs = deriveSlabs(baseInput({ cam, pose, visibleBodies: [body] }));
+      const row = slabs[2]!;
+      expect(row.reversedZ).toBe(false);
+      const view = mat4d.lookAt([0, 0, 0], [0, 0, 1], [0, 1, 0]);
+      const dM = 1e9;
+      const rMaxM = 1e5; // no atmosphere/ring/cloud widens a bare radiusM body.
+      const expectedProj = mat4d.perspective(cam.fovYRad, cam.aspect, row.near, dM + rMaxM);
+      const expectedVp = mat4d.multiply(expectedProj, view);
+      expect(Array.from(row.vp)).toEqual(Array.from(expectedVp));
+    } finally {
+      mutableFlag[NEAR0] = original!;
+    }
   });
 
   it("keys a body row's near plane off VIEW-AXIS depth, not radial distance, for an off-axis body (Saturn pose-B repro)", () => {

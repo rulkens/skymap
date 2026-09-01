@@ -65,7 +65,7 @@ import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import { slabViewOf, groupKeyOf } from './slabs';
+import { slabViewOf, groupKeyOf, layerTimingSlotName } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
@@ -340,13 +340,19 @@ function renderGroup(
   // the module header) is the price of per-pass timing; this path runs only
   // under ?gpuTimings. The step's clear (colour or depth) belongs to the FIRST
   // layer's pass only — the rest load, or each would wipe its predecessor.
+  // `layerTimingSlotName` keys the slot by `view.slab.index` (not just
+  // `layer.name`): a `slab: 'body'` layer draws once per body row in one
+  // encoder, and without the row in the name every row's pass would attach
+  // the SAME two query indices — the last one to run silently overwrites the
+  // others' timestamps (see `layerTimingSlotName`'s doc, slabs.ts).
   group.forEach((layer, i) => {
     const touchedBefore = alreadyTouched || i > 0;
+    const slot = layerTimingSlotName(layer.name, view.slab.index);
     const pass = encoder.beginRenderPass({
-      label: `render-${target}-${layer.name}`,
+      label: `render-${target}-${slot}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],
       ...depthAttachment(ctx, target, i === 0 ? depthLoadOp : 'load', view.slab.reversedZ),
-      ...timestampSpread(timing, layer.name),
+      ...timestampSpread(timing, slot),
     });
     layer.draw(pass, view, ctx, state);
     pass.end();

@@ -28,6 +28,7 @@ import {
   BODY_SLAB_CAPACITY,
 } from '../../../../src/services/engine/frame/frameProgram';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
+import { buildTimingSlotMap } from '../../../../src/services/gpu/timing/buildTimingSlotMap';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
@@ -382,13 +383,16 @@ describe('timedSlotsOf', () => {
       // body row, so earth, cloud-shell, planets, textured-bodies, rings, and
       // atmosphere-shell all land here, in registry order — star-spheres and
       // field-star-sphere are the only foreground layers still literal NEAR0,
-      // so they sit alone in the NEXT (NEAR0) step instead.
-      'earth',
-      'cloud-shell',
-      'planets',
-      'textured-bodies',
-      'rings',
-      'atmosphere-shell',
+      // so they sit alone in the NEXT (NEAR0) step instead. Each name carries
+      // its row (`·BODY[0]`, this fixture's one body slab) — `layerTimingSlotName`
+      // (M2 fix): a second body row would give these a DIFFERENT suffix rather
+      // than colliding on the same query-set slot.
+      'earth·BODY[0]',
+      'cloud-shell·BODY[0]',
+      'planets·BODY[0]',
+      'textured-bodies·BODY[0]',
+      'rings·BODY[0]',
+      'atmosphere-shell·BODY[0]',
       'foreground:0·BODY[0]',
       'star-spheres',
       'field-star-sphere',
@@ -435,6 +439,16 @@ describe('TIMED_SLOTS — body slot pool', () => {
     expect(names).toContain('foreground:0·NEAR0');
     expect(names).toContain('foreground:0·BODY[0]');
     expect(names).toContain(`foreground:0·BODY[${BODY_SLAB_CAPACITY - 1}]`);
+  });
+
+  it('every real TIMED_SLOTS name is unique (buildTimingSlotMap precondition, M2)', () => {
+    // The regression: a 'body' layer used to contribute its bare name once per
+    // capacity row (~26 identical 'planets' entries), which collided on one
+    // query-set index pair. `buildTimingSlotMap` now throws on a duplicate —
+    // this pins that the real registry actually satisfies the precondition,
+    // not just a fixture.
+    expect(new Set(TIMED_SLOTS).size).toBe(TIMED_SLOTS.length);
+    expect(() => buildTimingSlotMap(TIMED_SLOTS)).not.toThrow();
   });
 });
 
@@ -548,14 +562,15 @@ describe('timedSlotGroupsOf', () => {
     ]);
   });
 
-  it('dedupes a body-family layer to one row per group, though it matches every body-row step', () => {
+  it('gives a body-family layer a distinct row per body index, keyed by its slab (M2 fix)', () => {
     // A `slab: 'body'` layer (e.g. `planetsLayer`) matches EVERY body-row
-    // step in the chain — with two body rows it would otherwise contribute
-    // two identical-name 'planets' rows to 'Foreground bodies · depth'. The
-    // underlying GPU timing already collapses these onto one query-set slot
-    // (`buildTimingSlotMap`'s "names are assumed unique" invariant), so the
-    // display list keeps only the first occurrence; the two rows' own
-    // group-key rows (unique per step) are untouched.
+    // step in the chain — with two body rows it must contribute TWO
+    // distinctly-NAMED 'planets·BODY[k]' rows, not one collapsed 'planets'
+    // row: the underlying GPU timing indexes solely by name
+    // (`buildTimingSlotMap`), so two same-named passes in one encoder would
+    // both write the SAME two query indices and the reported figure would be
+    // whichever pass resolved last — under-reporting a multi-body scene by a
+    // factor of N. See `layerTimingSlotName` (slabs.ts).
     const bodyLayer: ContentLayer = {
       name: 'planets',
       slab: 'body',
@@ -568,8 +583,9 @@ describe('timedSlotGroupsOf', () => {
     const foreground = groups.find((g) => g.title === 'Foreground bodies · depth')!;
     expect(foreground.rows.map((r) => r.name)).toEqual([
       'foreground:0·NEAR0',
-      'planets',
+      'planets·BODY[0]',
       'foreground:0·BODY[0]',
+      'planets·BODY[1]',
       'foreground:0·BODY[1]',
     ]);
   });
@@ -593,6 +609,11 @@ describe('timedSlotGroupsOf', () => {
 
 describe('groupPassNames', () => {
   it('groups an arbitrary togglable-name list by pass group, in title order, omitting empty groups', () => {
+    // 'earth' is a real `slab: 'body'` layer: the engine handle's `allNames`
+    // passes its PLAIN name (one entry regardless of body-row count), which
+    // must still resolve to 'Foreground bodies · depth' even though
+    // `layerTimingSlotName` suffixes its TIMED_SLOTS row — `PASS_GROUP_KEYS`
+    // is built from the separate `plainLayerGroupKeys` walk for exactly this.
     const groups = groupPassNames(['labels', 'point-sprites', 'earth', 'star-aggregates']);
     expect(groups.map((g) => g.title)).toEqual([
       'Volumes & aggregates', // star-aggregates

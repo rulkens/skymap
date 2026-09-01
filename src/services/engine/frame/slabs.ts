@@ -87,6 +87,21 @@ export function groupKeyOf(target: string, slab: number): string {
 }
 
 /**
+ * The per-slot GPU-timing NAME for a layer drawing into `slabIndex` — bare
+ * `layerName` for NEAR0/COSMO (one instance per frame, already unique), or
+ * `'<layerName>·BODY[k]'` for a body row, so two body rows sharing one
+ * `'body'`-slab layer (e.g. `planetsLayer` drawing Jupiter AND a moon) don't
+ * collide on the same query-set index pair. `timedSlotRowsOf`
+ * (frameProgram.ts, the build-time slot-list/query-set-size derivation) and
+ * `executeFrame`'s `perLayerTimed` pass (the runtime `descriptorFor` lookup)
+ * both call this, so the allocated slot and the looked-up slot can never
+ * drift apart.
+ */
+export function layerTimingSlotName(layerName: string, slabIndex: number): string {
+  return isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
+}
+
+/**
  * The single source of each slab's depth convention: `false` ⇒ the classic
  * smaller-z-wins / clear-`1.0` / `mat4d.perspective` set; `true` ⇒ reversed-Z
  * (greater-wins / clear-`0` / `mat4d.perspectiveReverseZ`).
@@ -223,8 +238,19 @@ function bodySlabRow(input: {
   // the body's actual distance, not its view-axis depth.
   const distanceRangeM: readonly [number, number] = [Math.max(dM - rMaxM, 0), dM + rMaxM];
 
+  // Body rows share NEAR0's reversed-Z convention — reading `SLAB_REVERSED_Z`
+  // here (rather than hard-coding the reversed branch) is what makes it true,
+  // not just documented, that every body-row pipeline (already keyed off this
+  // SAME constant in `gpuHandleRegistry`) and this row's own projection +
+  // depth clear (`reversedZ` below, read via `depthClearValueFor`) can never
+  // disagree if the constant is ever flipped. The non-reversed branch needs
+  // A finite far; `dM + rMaxM` (== `distanceRangeM[1]`) is unused today
+  // (SLAB_REVERSED_Z[NEAR0] is `true`) but keeps the fallback well-defined.
+  const reversedZ = SLAB_REVERSED_Z[NEAR0]!;
   const view = mat4d.lookAt([0, 0, 0], forward, up);
-  const proj = mat4d.perspectiveReverseZ(fovYRad, aspect, near);
+  const proj = reversedZ
+    ? mat4d.perspectiveReverseZ(fovYRad, aspect, near)
+    : mat4d.perspective(fovYRad, aspect, near, dM + rMaxM);
   const vp = mat4d.multiply(proj, view) as Float64Array;
 
   // The §7.2 overlap scan below is DEV-only, so the screen footprint it needs
@@ -251,7 +277,7 @@ function bodySlabRow(input: {
       frame: { kind: 'body-m', bodyId: body.id as BodyId },
       distanceRangeM,
       precision: 'f64',
-      reversedZ: true,
+      reversedZ,
     },
     chainRow: { distanceRangeM, centrePx, radiusPx },
   };

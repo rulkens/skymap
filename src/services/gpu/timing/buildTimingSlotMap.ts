@@ -25,9 +25,13 @@
  * which they do by sharing the one map this function returns.  The query
  * set is sized `names.length * 2` by the caller.
  *
- * Names are assumed unique (render-pass names are unique by
- * construction); a duplicate would collide on its index pair, so the
- * caller's registry is the place that guarantees uniqueness.
+ * Names MUST be unique — a duplicate would collide on its index pair, so
+ * every pass sharing the name would overwrite the same two timestamps
+ * (whichever pass resolves last "wins", silently). The caller's registry is
+ * the place that guarantees uniqueness (`layerTimingSlotName` is what makes a
+ * body-row layer's name unique per row); this function enforces the
+ * precondition rather than trusting it, since a collision here corrupts data
+ * rather than throwing on its own.
  */
 
 export function buildTimingSlotMap(
@@ -35,7 +39,11 @@ export function buildTimingSlotMap(
 ): ReadonlyMap<string, readonly [number, number]> {
   const map = new Map<string, readonly [number, number]>();
   for (let i = 0; i < names.length; i++) {
-    map.set(names[i]!, [i * 2, i * 2 + 1]);
+    const name = names[i]!;
+    if (map.has(name)) {
+      throw new Error(`buildTimingSlotMap: duplicate timing slot name "${name}"`);
+    }
+    map.set(name, [i * 2, i * 2 + 1]);
   }
   return map;
 }
