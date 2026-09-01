@@ -426,11 +426,12 @@ describe('createPickProgram', () => {
       }
     });
 
-    it("renderForDebug rebuilds every body row's target fresh each call, destroying the previous call's", () => {
+    it("renderForDebug reuses each body row's target across calls at the same viewport size (no churn)", () => {
       // Unlike pick(), the debug overlay needs every active row's FULL raster
-      // alive SIMULTANEOUSLY, so body rows can't share one texture here — the
-      // bound instead is "at most this call's active row count", enforced by
-      // tearing down the previous call's targets before building new ones.
+      // alive SIMULTANEOUSLY, so body rows can't share one texture here — but
+      // a row that's still present next call reuses its own target instead of
+      // being torn down and reallocated (N1: that used to be ~370 MB/frame
+      // churn with the pick-buffer overlay on).
       const { device, createTextureCalls } = makeDevice();
       vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
       const layers = [
@@ -449,17 +450,48 @@ describe('createPickProgram', () => {
       expect(first).toHaveLength(2); // one colour texture per active body row
       expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
 
-      program.renderForDebug();
-      // The first call's textures are torn down before the second call
-      // allocates its own — a permanently-growing map would never call
-      // destroy() on the earlier row's texture.
+      const second = program.renderForDebug();
+      // Same two rows touched again — reused, not recreated: no new textures,
+      // no destroys, same texture objects returned.
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
       for (const tex of first) {
-        expect(tex.destroy).toHaveBeenCalledTimes(1);
+        expect(tex.destroy).not.toHaveBeenCalled();
       }
-      // Two fresh textures created on top of the first two — 4 total, not 2
-      // (no reuse across calls) and not unboundedly growing (still just this
-      // call's 2 rows).
-      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(4);
+      expect(second).toEqual(first);
+    });
+
+    it("renderForDebug destroys a body row's target once that row stops appearing", () => {
+      // The eviction half of N1: a row present last call but absent this call
+      // (its body left the frame, or its pick gate closed) must have its
+      // texture pair destroyed rather than retained forever.
+      const { device, createTextureCalls } = makeDevice();
+      const layers = [
+        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+      const first = program.renderForDebug() as unknown as ReadonlyArray<{
+        destroy: ReturnType<typeof vi.fn>;
+        __label?: string;
+      }>;
+      expect(first).toHaveLength(2);
+      const earthTarget = first.find((t) => t.__label?.includes('[2]'))!;
+      const marsTarget = first.find((t) => t.__label?.includes('[3]'))!;
+
+      // Mars's row (index 3) is gone next call; earth's (index 2) stays.
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth']));
+      program.renderForDebug();
+
+      expect(earthTarget.destroy).not.toHaveBeenCalled(); // reused
+      expect(marsTarget.destroy).toHaveBeenCalledTimes(1); // evicted
+      // No new r32uint texture needed — earth's is reused, mars's is just dropped.
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
     });
   });
 
