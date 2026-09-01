@@ -1,17 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import type { WorkbenchCameraPose } from '../../../../tools/mcpm-workbench/@types/WorkbenchCameraPose';
 import { createViewportInput } from '../../../../tools/mcpm-workbench/src/input/createViewportInput';
 import { gizmoArrowLengthMpc } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoArrowLengthMpc';
 import { createWorkbenchStore } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
 import type { PreloadedState } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
 import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defaultAppState';
+import { commitCameraPose } from '../../../../tools/mcpm-workbench/src/state/view/viewSlice';
 
 /**
- * The task-R6 extraction opens a seam the pre-extraction Viewport.tsx closure never
- * had: the drag state machine driven by a synthetic pointer sequence, no DOM/store
- * double needed beyond the real `createWorkbenchStore`. This pins two things a DOM-level test
- * couldn't cheaply reach: the translate-drag delta math end to end, and the V3 ruling
- * (a drag through the grid controls clears `importedBox`) surviving the move.
+ * The task input-port rewrite adopts the main app's `attachOrbitControls` recognizer
+ * instead of hand-rolled DOM handlers, so these tests drive it the way
+ * `tests/services/camera/orbitControls.test.ts` does: a recorder standing in for the
+ * canvas plus a stubbed `window` (vitest runs `node`, no jsdom), firing real
+ * pointer/wheel events rather than calling per-event methods that no longer exist on
+ * the module's public surface (`drain`/`getCameraPose`/`getHoverHandle`/
+ * `getDragHandleId`/`isWireframeVisible`/`destroy`).
  *
  * Camera fixed at yaw=0/pitch=0/target=[0,0,0]/distance=DISTANCE — cameraViewFor then
  * places eyeMpc at [0,0,DISTANCE] looking down -Z, so a pointer at NDC (ndcXForWorldX(x), 0)
@@ -27,8 +31,30 @@ const DISTANCE = 1000;
 const FOV_Y_RAD = Math.PI / 4;
 const TAN_HALF_FOV = Math.tan(FOV_Y_RAD / 2);
 
-function fakeCanvas(): HTMLCanvasElement {
-  return {
+type Listener = (e: unknown) => void;
+
+function makeRecorder() {
+  const listeners: Array<{ type: string; handler: Listener }> = [];
+  const target = {
+    addEventListener(type: string, handler: Listener): void {
+      listeners.push({ type, handler });
+    },
+    removeEventListener(type: string, handler: Listener): void {
+      const idx = listeners.findIndex((l) => l.type === type && l.handler === handler);
+      if (idx >= 0) listeners.splice(idx, 1);
+    },
+  };
+  function fire(type: string, event: unknown): void {
+    for (const l of [...listeners]) {
+      if (l.type === type) l.handler(event);
+    }
+  }
+  return { target, fire };
+}
+
+function makeCanvas(): { canvas: HTMLCanvasElement; fire: (type: string, event: unknown) => void } {
+  const rec = makeRecorder();
+  const canvas = Object.assign(rec.target, {
     width: CANVAS_PX,
     height: CANVAS_PX,
     getBoundingClientRect: () => ({
@@ -42,8 +68,8 @@ function fakeCanvas(): HTMLCanvasElement {
       y: 0,
       toJSON: () => ({}),
     }),
-    setPointerCapture: () => {},
-  } as unknown as HTMLCanvasElement;
+  });
+  return { canvas: canvas as unknown as HTMLCanvasElement, fire: rec.fire };
 }
 
 // Inverse of rayFromPointer's ndc→ray chain for a camera at [0,0,DISTANCE] looking
@@ -57,15 +83,46 @@ function clientXFor(ndcX: number): number {
   return ((ndcX + 1) / 2) * CANVAS_PX;
 }
 
-function pointerEvent(clientX: number, pointerId = 1): PointerEvent {
-  return { clientX, clientY: CANVAS_PX / 2, button: 0, pointerId } as unknown as PointerEvent;
+function mouseDown(clientX: number, clientY = CANVAS_PX / 2, pointerId = 1) {
+  return { pointerId, pointerType: 'mouse', button: 0, clientX, clientY };
+}
+function mouseMove(clientX: number, clientY = CANVAS_PX / 2, pointerId = 1) {
+  return { pointerId, clientX, clientY };
+}
+function mouseUp(clientX: number, clientY = CANVAS_PX / 2, pointerId = 1) {
+  return { pointerId, clientX, clientY };
 }
 
-describe('createViewportInput — translate-drag state machine (task R6 seam)', () => {
-  it('translates the box along axis0 and clears importedBox (V3 ruling)', () => {
+const FIXED_CAMERA: WorkbenchCameraPose & { autoRotate: boolean } = {
+  yaw: 0,
+  pitch: 0,
+  distance: DISTANCE,
+  autoRotate: false,
+  targetMpc: [0, 0, 0],
+};
+
+let win: ReturnType<typeof makeRecorder>;
+let originalWindow: unknown;
+
+beforeEach(() => {
+  win = makeRecorder();
+  const g = globalThis as unknown as Record<string, unknown>;
+  originalWindow = g.window;
+  g.window = win.target;
+});
+
+afterEach(() => {
+  const g = globalThis as unknown as Record<string, unknown>;
+  if (originalWindow === undefined) {
+    delete g.window;
+  } else {
+    g.window = originalWindow;
+  }
+});
+
+describe('createViewportInput — gizmo routing (dragAnchor hits a handle)', () => {
+  it('translates the box along axis0 and clears importedBox (V3 ruling), never touching the camera register', () => {
     const arrowLengthMpc = gizmoArrowLengthMpc([0, 0, DISTANCE], [0, 0, 0], FOV_Y_RAD);
-    // A non-null importedBox with the SAME shape as the manual fields below — proves
-    // the drag clears it (V3) without also changing the hit-test geometry mid-test.
     const importedBox: GridBox = {
       centerMpc: [0, 0, 0],
       sizeMpc: [200, 200, 200],
@@ -76,56 +133,149 @@ describe('createViewportInput — translate-drag state machine (task R6 seam)', 
     const state: PreloadedState = {
       ...defaultAppState,
       grid: { ...defaultAppState.grid, importedBox },
-      view: {
-        ...defaultAppState.view,
-        camera: { yaw: 0, pitch: 0, distance: DISTANCE, autoRotate: false, targetMpc: [0, 0, 0] },
-      },
+      view: { ...defaultAppState.view, camera: FIXED_CAMERA },
     };
     const { store } = createWorkbenchStore(state);
+    const { canvas, fire } = makeCanvas();
     const input = createViewportInput({
-      canvas: fakeCanvas(),
+      canvas,
       store,
-      isPreviewVisible: (s) => s.grid.showGridBox, // true by default — no flash timer needed
+      isPreviewVisible: (s) => s.grid.showGridBox,
+      markDirty: () => {},
     });
 
-    input.onPointerDown(pointerEvent(clientXFor(ndcXForWorldX(arrowLengthMpc))));
+    fire('pointerdown', mouseDown(clientXFor(ndcXForWorldX(arrowLengthMpc))));
     expect(input.getDragHandleId()).toEqual({ kind: 'translate', axis: 0 });
 
-    input.onPointerMove(pointerEvent(clientXFor(ndcXForWorldX(3 * arrowLengthMpc))));
+    win.fire('pointermove', mouseMove(clientXFor(ndcXForWorldX(3 * arrowLengthMpc))));
 
     const grid = store.getState().grid;
     expect(grid.manualCenterMpc[0]).toBeCloseTo(2 * arrowLengthMpc, 6);
     expect(grid.manualCenterMpc[1]).toBeCloseTo(0, 6);
     expect(grid.manualCenterMpc[2]).toBeCloseTo(0, 6);
     expect(grid.importedBox).toBeNull();
+
+    // A gizmo gesture must never touch the camera — neither the live register nor
+    // (once it ends) the committed store value.
+    expect(input.getCameraPose()).toEqual({
+      yaw: 0,
+      pitch: 0,
+      distance: DISTANCE,
+      targetMpc: [0, 0, 0],
+    });
+    win.fire('pointerup', mouseUp(clientXFor(ndcXForWorldX(3 * arrowLengthMpc))));
+    expect(store.getState().view.camera).toEqual(FIXED_CAMERA);
   });
 
-  it('pointercancel ends a gizmo drag exactly as pointerup does (minor 7)', () => {
+  it('pointercancel ends a gizmo drag exactly as pointerup does', () => {
     const arrowLengthMpc = gizmoArrowLengthMpc([0, 0, DISTANCE], [0, 0, 0], FOV_Y_RAD);
     const state: PreloadedState = {
       ...defaultAppState,
-      view: {
-        ...defaultAppState.view,
-        camera: { yaw: 0, pitch: 0, distance: DISTANCE, autoRotate: false, targetMpc: [0, 0, 0] },
-      },
+      view: { ...defaultAppState.view, camera: FIXED_CAMERA },
     };
     const { store } = createWorkbenchStore(state);
+    const { canvas, fire } = makeCanvas();
     const input = createViewportInput({
-      canvas: fakeCanvas(),
+      canvas,
       store,
       isPreviewVisible: (s) => s.grid.showGridBox,
+      markDirty: () => {},
     });
 
-    input.onPointerDown(pointerEvent(clientXFor(ndcXForWorldX(arrowLengthMpc))));
+    fire('pointerdown', mouseDown(clientXFor(ndcXForWorldX(arrowLengthMpc))));
     expect(input.getDragHandleId()).toEqual({ kind: 'translate', axis: 0 });
 
-    input.onPointerCancel();
+    win.fire('pointercancel', mouseUp(clientXFor(ndcXForWorldX(arrowLengthMpc))));
     expect(input.getDragHandleId()).toBeNull();
 
+    // The recognizer drops the pointer on cancel, so a later move for the same id is
+    // never even emitted — the grid box must stay exactly where the cancel left it.
     const centerAfterCancel = store.getState().grid.manualCenterMpc;
-    // A cancelled sequence's later pointermove must fall to the un-captured branch (hover
-    // recompute only) rather than the drag branch — nothing should mutate the grid box.
-    input.onPointerMove(pointerEvent(clientXFor(ndcXForWorldX(3 * arrowLengthMpc))));
+    win.fire('pointermove', mouseMove(clientXFor(ndcXForWorldX(3 * arrowLengthMpc))));
     expect(store.getState().grid.manualCenterMpc).toEqual(centerAfterCancel);
+  });
+});
+
+describe('createViewportInput — camera routing (dragAnchor misses every handle)', () => {
+  it('mutates only the live register while dragging, then commits once at gestureEnd', () => {
+    const state: PreloadedState = {
+      ...defaultAppState,
+      view: { ...defaultAppState.view, camera: FIXED_CAMERA },
+    };
+    const { store } = createWorkbenchStore(state);
+    const { canvas, fire } = makeCanvas();
+    const input = createViewportInput({
+      canvas,
+      store,
+      isPreviewVisible: () => false, // wireframe hidden -> dragAnchor never hit-tests a handle
+      markDirty: () => {},
+    });
+
+    fire('pointerdown', mouseDown(50, 50));
+    win.fire('pointermove', mouseMove(60, 50)); // dx=10, dy=0 -> orbit yaw only
+
+    // Nothing applied yet — the aggregator only folds on drain().
+    expect(store.getState().view.camera).toEqual(FIXED_CAMERA);
+    expect(input.drain(performance.now())).toBe(true);
+
+    // orbitDragDelta(10, 0, 0.005) -> dYaw=0.05; register.yaw -= dYaw (drag right orbits
+    // the world toward the hand, per applyInputToCamera's convention).
+    expect(input.getCameraPose().yaw).toBeCloseTo(-0.05, 10);
+    // The register moved but nothing has been dispatched — no commit until gestureEnd.
+    expect(store.getState().view.camera).toEqual(FIXED_CAMERA);
+
+    win.fire('pointerup', mouseUp(60, 50));
+    expect(input.drain(performance.now())).toBe(true);
+
+    expect(store.getState().view.camera.yaw).toBeCloseTo(-0.05, 10);
+    expect(store.getState().view.camera.pitch).toBe(0);
+    expect(store.getState().view.camera.distance).toBe(DISTANCE);
+    expect(store.getState().view.camera.targetMpc).toEqual([0, 0, 0]);
+  });
+
+  it('commits a rest-wheel zoom immediately, without waiting for a gesture', () => {
+    const state: PreloadedState = {
+      ...defaultAppState,
+      view: { ...defaultAppState.view, camera: FIXED_CAMERA },
+    };
+    const { store } = createWorkbenchStore(state);
+    const { canvas, fire } = makeCanvas();
+    const input = createViewportInput({
+      canvas,
+      store,
+      isPreviewVisible: () => false,
+      markDirty: () => {},
+    });
+
+    fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
+    expect(input.drain(performance.now())).toBe(true);
+
+    expect(store.getState().view.camera.distance).toBeCloseTo(DISTANCE * Math.exp(0.1), 6);
+  });
+});
+
+describe('createViewportInput — store→register adoption', () => {
+  it('adopts an external camera write (preset import / reset) when no gesture is in flight', () => {
+    const state: PreloadedState = {
+      ...defaultAppState,
+      view: { ...defaultAppState.view, camera: FIXED_CAMERA },
+    };
+    const { store } = createWorkbenchStore(state);
+    const { canvas } = makeCanvas();
+    const input = createViewportInput({
+      canvas,
+      store,
+      isPreviewVisible: () => false,
+      markDirty: () => {},
+    });
+
+    store.dispatch(commitCameraPose({ yaw: 1, pitch: 0.2, distance: 50, targetMpc: [1, 2, 3] }));
+
+    expect(input.getCameraPose()).toEqual({
+      yaw: 1,
+      pitch: 0.2,
+      distance: 50,
+      targetMpc: [1, 2, 3],
+    });
   });
 });

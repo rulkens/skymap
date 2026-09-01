@@ -1,13 +1,20 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { RootState } from '../store/types';
+import type { WorkbenchCameraPose } from '../../@types/WorkbenchCameraPose';
 import type { McpmCameraView } from './writeMcpmCamera';
 
 const FOV_Y_RAD = Math.PI / 4;
 const CAMERA_UP: Vec3 = [0, 1, 0];
 
-/** The one camera every view resolves from: an overlay off by a frame's basis is a lie. */
-export function cameraViewFor(s: RootState, viewportPx: readonly [number, number]): McpmCameraView {
-  const { yaw, pitch, distance, targetMpc } = s.view.camera;
+/**
+ * The one camera every view resolves from: an overlay off by a frame's basis is a lie.
+ * Takes the pose directly (not `RootState`) so a caller mid-gesture can pass the input
+ * module's live drag register instead of the not-yet-committed store value.
+ */
+export function cameraViewFor(
+  camera: WorkbenchCameraPose,
+  viewportPx: readonly [number, number],
+): McpmCameraView {
+  const { yaw, pitch, distance, targetMpc } = camera;
   const cosPitch = Math.cos(pitch);
   const eyeMpc: Vec3 = [
     targetMpc[0] + distance * cosPitch * Math.sin(yaw),

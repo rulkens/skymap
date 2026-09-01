@@ -119,6 +119,15 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       const graph = resources.graph;
 
       const now = performance.now();
+      // The one per-frame input-apply site (task: input-port): camera-gesture steps
+      // fold into `input`'s register here rather than dispatching per pointermove.
+      // Feeds the SAME interaction-priority boost as a store write (below) — without
+      // this, orbiting/panning/zooming the camera would never trip the boost, since
+      // the register no longer dispatches until the gesture ends.
+      if (input.drain(now)) {
+        dirty = true;
+        lastInteractionMs = now;
+      }
       if (h && s.sim.running) {
         simFrameCounter += 1;
         // Task FLE: the SAME boost-then-settle shape as the divisors below, applied
@@ -187,7 +196,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       graph.resize(canvas.width, canvas.height);
 
       const encoder = gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
-      const cam = cameraViewFor(s, [canvas.width, canvas.height]);
+      const cam = cameraViewFor(input.getCameraPose(), [canvas.width, canvas.height]);
       // Independent layers over one clear, back to front. The clear is unconditional:
       // with every layer off the frame is black, not last frame's pixels.
       const { layers } = s.view;
@@ -310,54 +319,26 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     });
 
     // Orbit input → view slice camera (a gizmo handle hit short-circuits it into a
-    // drag instead) — pointer/wheel interpretation, hover/pick state and drag
-    // mechanics all live in createViewportInput (task R6); this component only
-    // supplies the F1.7 preview-flash term (showGridBox/boxPreviewUntil) it can't
-    // see and reads back hover/drag-handle state for the box-preview draw call above.
+    // drag instead) — DOM attach/detach, the gesture recognizer, hover/pick state and
+    // drag mechanics all live in createViewportInput (task input-port); this component
+    // only supplies the F1.7 preview-flash term (showGridBox/boxPreviewUntil) it can't
+    // see, drains it once per frame above, and reads back hover/drag-handle state for
+    // the box-preview draw call below.
     const input = createViewportInput({
       canvas,
       store,
       isPreviewVisible: (s, now) => s.grid.showGridBox || now < boxPreviewUntil,
+      markDirty: () => {
+        dirty = true;
+      },
     });
-    canvas.addEventListener('pointerdown', input.onPointerDown);
-    canvas.addEventListener('pointerup', input.onPointerUp);
-    canvas.addEventListener('pointercancel', input.onPointerCancel);
-    canvas.addEventListener('pointermove', input.onPointerMove);
-    canvas.addEventListener('pointerleave', input.onPointerLeave);
-    canvas.addEventListener('wheel', input.onWheel, { passive: false });
-    canvas.addEventListener('contextmenu', input.onContextMenu);
-    // Task FLE: render-on-demand's OTHER dirty source, alongside the store
-    // subscriber above — a separate listener per event rather than folding into
-    // `input`'s own handlers, so createViewportInput stays unaware the render loop
-    // is on-demand at all. Not `contextmenu`: it only ever preventDefault()s.
-    const markDirty = (): void => {
-      dirty = true;
-    };
-    canvas.addEventListener('pointerdown', markDirty);
-    canvas.addEventListener('pointerup', markDirty);
-    canvas.addEventListener('pointercancel', markDirty);
-    canvas.addEventListener('pointermove', markDirty);
-    canvas.addEventListener('pointerleave', markDirty);
-    canvas.addEventListener('wheel', markDirty);
 
     return () => {
       disposed = true;
       if (rafHandle) cancelAnimationFrame(rafHandle);
       unsubscribe();
       disposeScene(resources);
-      canvas.removeEventListener('pointerdown', input.onPointerDown);
-      canvas.removeEventListener('pointerup', input.onPointerUp);
-      canvas.removeEventListener('pointercancel', input.onPointerCancel);
-      canvas.removeEventListener('pointermove', input.onPointerMove);
-      canvas.removeEventListener('pointerleave', input.onPointerLeave);
-      canvas.removeEventListener('wheel', input.onWheel);
-      canvas.removeEventListener('contextmenu', input.onContextMenu);
-      canvas.removeEventListener('pointerdown', markDirty);
-      canvas.removeEventListener('pointerup', markDirty);
-      canvas.removeEventListener('pointercancel', markDirty);
-      canvas.removeEventListener('pointermove', markDirty);
-      canvas.removeEventListener('pointerleave', markDirty);
-      canvas.removeEventListener('wheel', markDirty);
+      input.destroy();
     };
   }, [store, registerSagaContext]);
 

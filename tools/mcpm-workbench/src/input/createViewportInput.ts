@@ -1,17 +1,22 @@
 /**
- * createViewportInput — pointer/wheel interpretation for Viewport's canvas: orbit-camera
- * pan/zoom AND the gizmo hover/pick/drag state machine share these handlers (a gizmo hit
- * short-circuits the orbit drag), so they move together rather than split across two
- * modules. Viewport owns DOM subscription and the render-loop's `points`/`box` state;
- * this module owns the hover/drag closures and applies drag deltas through the grid/view
- * setters.
+ * createViewportInput — adopts the main app's gesture recognizer
+ * (`attachOrbitControls`) + per-frame aggregator instead of hand-rolled DOM
+ * handlers. A `dragAnchor` is hit-tested against the gizmo handles once, at
+ * gesture start: a hit routes the whole gesture into the gizmo drag math
+ * below (dispatched per move, unchanged); a miss routes it into a plain
+ * camera register that reaches the store once, at `gestureEnd` or a
+ * rest-wheel tick — no per-move dispatch.
  */
+import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import { attachOrbitControls } from '../../../../src/services/camera/orbitControls';
+import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
+import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { GizmoDragState } from '../../@types/GizmoDragState';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { WorkbenchCameraPose } from '../../@types/WorkbenchCameraPose';
 import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';
 import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
-import { exponentialZoomDistance } from '../../../utils/camera/exponentialZoomDistance';
 import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';
 import { boxAxesFor } from '../field/boxAxesFor';
 import { deriveGridBox } from '../field/deriveGridBox';
@@ -22,7 +27,7 @@ import { dragRotate } from '../gizmo/dragRotate';
 import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { setManualCenterMpc, setManualSizeMpc, setRotation } from '../state/grid/gridSlice';
-import { setCameraDistance, setCameraTarget, setCameraYawPitch } from '../state/view/viewSlice';
+import { commitCameraPose, PITCH_LIMIT, CAMERA_DISTANCE_FLOOR } from '../state/view/viewSlice';
 import type { RootState, WorkbenchStore } from '../store/types';
 import { arrowLengthMpcFor } from './arrowLengthMpcFor';
 import { isAxisDrag } from './isAxisDrag';
@@ -30,10 +35,11 @@ import { rayFromPointer } from './rayFromPointer';
 import { ringReferenceDirFor } from './ringReferenceDirFor';
 
 const DRAG_SPEED = 0.005;
-// Exponential in the raw wheel delta — galaxy-renderer's createOrbitCameraInput
-// constant, so both tools zoom with the same hand feel; a sign-only step ignores
-// delta magnitude and crawls on trackpads.
-const ZOOM_SPEED = 0.0018;
+// Right/middle-drag pans the orbit target along the camera's right/up axes, screen-constant
+// dist*0.0016 px rate — galaxy-renderer's createOrbitCameraInput, so the two tools share one
+// hand feel. Wheel zoom no longer has its own speed constant here: the shared aggregator
+// folds wheel/pinch into a `factor` already scaled by ITS OWN rate (WHEEL_ZOOM_K), applied
+// to the register directly below — the same contract `applyInputToCamera`'s zoom branch uses.
 const PAN_SPEED = 0.0016;
 
 export type ViewportInputDeps = {
@@ -44,21 +50,20 @@ export type ViewportInputDeps = {
    *  third reason, an in-flight gizmo drag, is this module's own state and is ORed in by
    *  `isWireframeVisible` below, so callers never recombine the three by hand. */
   readonly isPreviewVisible: (s: RootState, now: number) => boolean;
+  /** Marks the render-on-demand loop dirty for closure-state-only changes (hover
+   *  highlight, gizmo-drag start/end) that neither a store write nor a drained input
+   *  step would otherwise surface. */
+  readonly markDirty: () => void;
 };
 
 export type ViewportInput = {
-  readonly onPointerDown: (e: PointerEvent) => void;
-  readonly onPointerUp: () => void;
-  /** A cancelled sequence (OS gesture takeover, tab switch, stylus lift) gets the exact
-   *  same end-of-drag treatment as pointerup — otherwise gizmoDragging stays set and every
-   *  later pointermove keeps mutating the grid box with a capture that no longer exists. */
-  readonly onPointerCancel: () => void;
-  readonly onPointerMove: (e: PointerEvent) => void;
-  /** Clears the hover highlight when the pointer leaves the canvas — it is not otherwise
-   *  recomputed once the pointer stops moving over the canvas. */
-  readonly onPointerLeave: () => void;
-  readonly onWheel: (e: WheelEvent) => void;
-  readonly onContextMenu: (e: Event) => void;
+  /** Applies one frame's worth of aggregated gesture steps to the camera register
+   *  (and, at a gesture boundary or rest-wheel, commits it). Returns whether any
+   *  step was applied, so the caller can fold it into its own dirty flag. */
+  drain(nowMs: number): boolean;
+  /** The live camera: the register mid-gesture, the committed store value otherwise
+   *  (the store→register adoption below keeps them equal at rest). */
+  getCameraPose(): WorkbenchCameraPose;
   /** F1.7's hover glyph highlight — recomputed every non-dragging pointermove. */
   getHoverHandle(): GizmoHandleId | null;
   /** The handle currently being dragged, or null — drawBoxPreview's `activeHandle`. */
@@ -67,182 +72,303 @@ export type ViewportInput = {
    *  with frame()'s draw call exactly, or picking an invisible handle would hijack an
    *  orbit click while the wireframe is off. */
   isWireframeVisible(s: RootState, now: number): boolean;
+  destroy(): void;
 };
 
-export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
-  const { canvas, store, isPreviewVisible } = deps;
+function cloneTarget(t: Readonly<Vec3>): Vec3 {
+  return [t[0], t[1], t[2]];
+}
 
-  let dragging = false;
-  let panning = false;
-  let lastX = 0;
-  let lastY = 0;
-  // Closure-local, per spec §5's "State flow" — not store fields. gizmoDragging's anchor
-  // is captured once at pointer-down; hoverHandle is recomputed every non-dragging move,
-  // purely for drawBoxPreview's glyph highlight.
+export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
+  const { canvas, store, isPreviewVisible, markDirty } = deps;
+
+  const aggregator = createInputAggregator();
+
+  // The live drag register (spec's "camera register"): seeded from the committed store
+  // value, mutated per aggregated step while a camera gesture is in flight, committed
+  // back via `commitCameraPose` at gestureEnd / rest-wheel. Never aliases the store's
+  // own `targetMpc` array — RTK's immutableCheck deep-freezes it, and a later pan would
+  // throw trying to mutate a frozen array in place.
+  let lastSeenCamera = store.getState().view.camera;
+  const register: { yaw: number; pitch: number; distance: number; targetMpc: Vec3 } = {
+    yaw: lastSeenCamera.yaw,
+    pitch: lastSeenCamera.pitch,
+    distance: lastSeenCamera.distance,
+    targetMpc: cloneTarget(lastSeenCamera.targetMpc),
+  };
+
+  // Closure-local, per spec §5's "State flow" — not store fields. `gizmoDragging`'s anchor
+  // is captured once at the routing decision (dragAnchor); `hoverHandle` is recomputed on
+  // every non-dragging canvas pointermove, purely for drawBoxPreview's glyph highlight.
   let gizmoDragging: GizmoDragState | null = null;
   let hoverHandle: GizmoHandleId | null = null;
+  // Which gesture a `dragAnchor` resolved into — decided once per gesture, at the first
+  // dragAnchor — and what routes `dragMove`/`gestureEnd` for the rest of it. `null` between
+  // gestures (also while a `gestureStart` hasn't yet seen its anchor).
+  let route: 'camera' | 'gizmo' | null = null;
+  // `gestureStart` always precedes the routing decision (the recognizer emits both
+  // synchronously on the first pointerdown), so it can't be forwarded to the aggregator
+  // until `dragAnchor` decides the gesture is a camera one.
+  let pendingGestureStart = false;
 
   function isWireframeVisible(s: RootState, now: number): boolean {
     return isPreviewVisible(s, now) || gizmoDragging !== null;
   }
 
-  const onPointerDown = (e: PointerEvent): void => {
+  function getCameraPose(): WorkbenchCameraPose {
+    return register;
+  }
+
+  function currentPose(): WorkbenchCameraPose {
+    return {
+      yaw: register.yaw,
+      pitch: register.pitch,
+      distance: register.distance,
+      targetMpc: cloneTarget(register.targetMpc),
+    };
+  }
+
+  // ── Gizmo hit-test (dragAnchor routing) ─────────────────────────────────────
+
+  function tryStartGizmoDrag(xPx: number, yPx: number): boolean {
     const s = store.getState();
-    if (isWireframeVisible(s, performance.now())) {
-      const pendingBox = deriveGridBox(s.grid);
-      const ray = rayFromPointer(canvas, e, s);
-      const arrowLengthMpc = arrowLengthMpcFor(canvas, s, pendingBox.centerMpc);
-      const axes = boxAxesFor(pendingBox.rotation);
-      const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, axes, arrowLengthMpc));
-      if (hit && hit.kind === 'rotate') {
-        const axisDir = axes[hit.axis];
-        const referenceDir = ringReferenceDirFor(axisDir);
-        const anchorAngleRad = dragRotate(ray, pendingBox.centerMpc, axisDir, referenceDir);
-        // null only on a ray parallel to the ring's own plane — an edge-on view a real click
-        // on the visible ring can't produce in practice; falls through to orbit rather than
-        // starting an undefined-angle drag.
-        if (anchorAngleRad !== null) {
-          gizmoDragging = { handle: hit, anchorAngleRad, anchorRotation: pendingBox.rotation };
-          canvas.setPointerCapture(e.pointerId);
+    if (!isWireframeVisible(s, performance.now())) return false;
+
+    const pendingBox = deriveGridBox(s.grid);
+    const pointer = { clientX: xPx, clientY: yPx };
+    const ray = rayFromPointer(canvas, pointer, getCameraPose());
+    const arrowLengthMpc = arrowLengthMpcFor(canvas, getCameraPose(), pendingBox.centerMpc);
+    const axes = boxAxesFor(pendingBox.rotation);
+    const hit = pickGizmoHandle(ray, gizmoHandleGeometry(pendingBox, axes, arrowLengthMpc));
+    if (!hit) return false;
+
+    if (hit.kind === 'rotate') {
+      const axisDir = axes[hit.axis];
+      const referenceDir = ringReferenceDirFor(axisDir);
+      const anchorAngleRad = dragRotate(ray, pendingBox.centerMpc, axisDir, referenceDir);
+      // null only on a ray parallel to the ring's own plane — an edge-on view a real click
+      // on the visible ring can't produce in practice; falls through to a camera gesture
+      // rather than starting an undefined-angle drag.
+      if (anchorAngleRad === null) return false;
+      gizmoDragging = { handle: hit, anchorAngleRad, anchorRotation: pendingBox.rotation };
+    } else {
+      const anchorAxisParam = closestPointOnRayToLine(ray, pendingBox.centerMpc, axes[hit.axis]);
+      gizmoDragging = { handle: hit, anchorAxisParam, anchorBox: pendingBox };
+    }
+    markDirty();
+    return true;
+  }
+
+  function applyGizmoDragMove(xPx: number, yPx: number): void {
+    if (!gizmoDragging) return;
+    const s = store.getState();
+    const pointer = { clientX: xPx, clientY: yPx };
+
+    if (isAxisDrag(gizmoDragging)) {
+      const drag = gizmoDragging;
+      const axisDir = boxAxesFor(drag.anchorBox.rotation)[drag.handle.axis];
+      const ray = rayFromPointer(canvas, pointer, getCameraPose());
+      const param = closestPointOnRayToLine(ray, drag.anchorBox.centerMpc, axisDir);
+      const deltaMpc = param - drag.anchorAxisParam;
+      if (drag.handle.kind === 'translate') {
+        store.dispatch(setManualCenterMpc(applyTranslateDrag(drag.anchorBox, axisDir, deltaMpc)));
+      } else {
+        const { centerMpc, sizeMpc } = applyResizeDrag(
+          drag.anchorBox,
+          drag.handle.axis,
+          axisDir,
+          drag.handle.sign,
+          deltaMpc,
+        );
+        store.dispatch(setManualCenterMpc(centerMpc));
+        store.dispatch(setManualSizeMpc(sizeMpc));
+      }
+      return;
+    }
+
+    // Fixed-anchor recompute (spec §5): every move recomputes rotation' from the SAME
+    // anchorRotation captured at the routing decision — see the original F2.5 comment
+    // this logic was ported from (createViewportInput's pre-recognizer version) for why
+    // that must not incrementally accumulate onto the live box rotation.
+    const drag = gizmoDragging;
+    const axisDir = boxAxesFor(drag.anchorRotation)[drag.handle.axis];
+    const referenceDir = ringReferenceDirFor(axisDir);
+    const centerMpc = deriveGridBox(s.grid).centerMpc;
+    const ray = rayFromPointer(canvas, pointer, getCameraPose());
+    const angleNow = dragRotate(ray, centerMpc, axisDir, referenceDir);
+    if (angleNow !== null) {
+      const rotation = multiplyQuat(
+        quatFromAxisAngle(axisDir, angleNow - drag.anchorAngleRad),
+        drag.anchorRotation,
+      );
+      store.dispatch(setRotation(rotation));
+    }
+  }
+
+  // ── Recognizer sink: routes each gesture event to gizmo state or the aggregator ──
+
+  function handleGestureEvent(event: InputGestureEvent): void {
+    switch (event.kind) {
+      case 'gestureStart':
+        route = null;
+        pendingGestureStart = true;
+        return;
+
+      case 'dragAnchor':
+        if (tryStartGizmoDrag(event.xPx, event.yPx)) {
+          route = 'gizmo';
+          pendingGestureStart = false;
           return;
         }
-      } else if (hit) {
-        const anchorAxisParam = closestPointOnRayToLine(ray, pendingBox.centerMpc, axes[hit.axis]);
-        gizmoDragging = { handle: hit, anchorAxisParam, anchorBox: pendingBox };
-        canvas.setPointerCapture(e.pointerId);
+        route = 'camera';
+        if (pendingGestureStart) {
+          aggregator.push({ kind: 'gestureStart' });
+          pendingGestureStart = false;
+        }
+        aggregator.push(event);
         return;
-      }
-    }
 
-    dragging = true;
-    panning = e.button === 2 || e.button === 1;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    canvas.setPointerCapture(e.pointerId);
-  };
-
-  const endDragState = (): void => {
-    dragging = false;
-    panning = false;
-    gizmoDragging = null;
-  };
-  const onPointerUp = endDragState;
-  const onPointerCancel = endDragState;
-
-  const onPointerLeave = (): void => {
-    hoverHandle = null;
-  };
-
-  const onPointerMove = (e: PointerEvent): void => {
-    const s = store.getState();
-
-    if (gizmoDragging) {
-      if (isAxisDrag(gizmoDragging)) {
-        const drag = gizmoDragging;
-        const axisDir = boxAxesFor(drag.anchorBox.rotation)[drag.handle.axis];
-        const ray = rayFromPointer(canvas, e, s);
-        const param = closestPointOnRayToLine(ray, drag.anchorBox.centerMpc, axisDir);
-        const deltaMpc = param - drag.anchorAxisParam;
-        if (drag.handle.kind === 'translate') {
-          const centerMpc = applyTranslateDrag(drag.anchorBox, axisDir, deltaMpc);
-          store.dispatch(setManualCenterMpc(centerMpc));
-        } else {
-          const { centerMpc, sizeMpc } = applyResizeDrag(
-            drag.anchorBox,
-            drag.handle.axis,
-            axisDir,
-            drag.handle.sign,
-            deltaMpc,
-          );
-          store.dispatch(setManualCenterMpc(centerMpc));
-          store.dispatch(setManualSizeMpc(sizeMpc));
+      case 'dragMove':
+        if (route === 'gizmo') {
+          applyGizmoDragMove(event.xPx, event.yPx);
+        } else if (route === 'camera') {
+          aggregator.push(event);
         }
-      } else {
-        // Fixed-anchor recompute (spec §5): every pointermove recomputes rotation' from the
-        // SAME anchorRotation captured at pointerdown — no incremental accumulation onto the
-        // previous frame's rotation, no renormalize. axisDir is invariant under its own
-        // rotation (rotating about an axis never moves that axis), so deriving it from
-        // anchorRotation rather than the live (already-changing) box rotation is exact, not
-        // an approximation. centerMpc alone is read live: unlike translate/resize, a rotate
-        // drag never writes it, so there is no re-derive feedback loop to guard against
-        // (drag.anchorBox's whole reason to exist for THAT pair).
-        const drag = gizmoDragging;
-        const axisDir = boxAxesFor(drag.anchorRotation)[drag.handle.axis];
-        const referenceDir = ringReferenceDirFor(axisDir);
-        const centerMpc = deriveGridBox(s.grid).centerMpc;
-        const ray = rayFromPointer(canvas, e, s);
-        const angleNow = dragRotate(ray, centerMpc, axisDir, referenceDir);
-        if (angleNow !== null) {
-          const rotation = multiplyQuat(
-            quatFromAxisAngle(axisDir, angleNow - drag.anchorAngleRad),
-            drag.anchorRotation,
-          );
-          store.dispatch(setRotation(rotation));
+        return;
+
+      case 'pinchAnchor':
+      case 'pinchMove':
+        // No multi-touch gizmo gesture exists — a second contact during a gizmo drag
+        // is ignored rather than folded into the camera register underneath it.
+        if (route !== 'gizmo') aggregator.push(event);
+        return;
+
+      case 'wheel':
+        // Re-key `duringGesture` on OUR route rather than the recognizer's raw pointer
+        // count: a wheel tick during a gizmo drag must still zoom (old behaviour), which
+        // means committing immediately (the "rest" path) since a gizmo gestureEnd never
+        // commits the camera.
+        aggregator.push({ kind: 'wheel', deltaY: event.deltaY, duringGesture: route === 'camera' });
+        return;
+
+      case 'gestureEnd':
+        if (route === 'gizmo') {
+          gizmoDragging = null;
+          markDirty();
+        } else if (route === 'camera') {
+          aggregator.push(event);
         }
-      }
-      return;
+        route = null;
+        return;
     }
+  }
 
-    if (!dragging) {
-      if (isWireframeVisible(s, performance.now())) {
-        const box = deriveGridBox(s.grid);
-        const ray = rayFromPointer(canvas, e, s);
-        const arrowLengthMpc = arrowLengthMpcFor(canvas, s, box.centerMpc);
-        hoverHandle = pickGizmoHandle(
-          ray,
-          gizmoHandleGeometry(box, boxAxesFor(box.rotation), arrowLengthMpc),
-        );
-      } else {
-        hoverHandle = null;
-      }
-      return;
-    }
+  // ── Per-frame drain: the one apply site for camera gesture steps ────────────
 
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    if (panning) {
-      // Right/middle-drag pans the orbit target along the camera's right/up axes,
-      // grab-the-world signs and screen-constant dist*0.0016 px rate — both
-      // galaxy-renderer's createOrbitCameraInput, so the two tools share one hand feel.
-      const { yaw, pitch, distance, targetMpc } = s.view.camera;
+  function applyDragStep(step: Extract<InputStep, { kind: 'drag' }>): void {
+    const dx = step.endPx[0] - step.startPx[0];
+    const dy = step.endPx[1] - step.startPx[1];
+
+    if (step.mode === 'pan') {
+      const { yaw, pitch, distance, targetMpc } = register;
       const cosY = Math.cos(yaw);
       const sinY = Math.sin(yaw);
       const cosP = Math.cos(pitch);
       const sinP = Math.sin(pitch);
       const k = distance * PAN_SPEED;
-      const next: Vec3 = [
+      register.targetMpc = [
         targetMpc[0] + (-cosY * dx + -sinP * sinY * dy) * k,
         targetMpc[1] + cosP * dy * k,
         targetMpc[2] + (sinY * dx + -sinP * cosY * dy) * k,
       ];
-      store.dispatch(setCameraTarget(next));
       return;
     }
-    const { dYaw, dPitch } = orbitDragDelta(dx, dy, DRAG_SPEED);
-    store.dispatch(
-      setCameraYawPitch({ yaw: s.view.camera.yaw - dYaw, pitch: s.view.camera.pitch + dPitch }),
-    );
-  };
 
-  const onContextMenu = (e: Event): void => e.preventDefault();
-  const onWheel = (e: WheelEvent): void => {
-    e.preventDefault();
-    const { distance } = store.getState().view.camera;
-    store.dispatch(setCameraDistance(exponentialZoomDistance(distance, e.deltaY, ZOOM_SPEED)));
+    const { dYaw, dPitch } = orbitDragDelta(dx, dy, DRAG_SPEED);
+    register.yaw -= dYaw;
+    register.pitch = Math.min(PITCH_LIMIT, Math.max(-PITCH_LIMIT, register.pitch + dPitch));
+  }
+
+  function drain(_nowMs: number): boolean {
+    const steps = aggregator.drain();
+    if (steps.length === 0) return false;
+
+    for (const step of steps) {
+      switch (step.kind) {
+        case 'gestureStart':
+          // The register already mirrors the committed pose (store→register adoption,
+          // below) — nothing to seed.
+          break;
+        case 'gestureEnd':
+          store.dispatch(commitCameraPose(currentPose()));
+          break;
+        case 'drag':
+          applyDragStep(step);
+          break;
+        case 'zoom':
+          register.distance = Math.max(CAMERA_DISTANCE_FLOOR, register.distance * step.factor);
+          if (!step.duringGesture) store.dispatch(commitCameraPose(currentPose()));
+          break;
+      }
+    }
+    return true;
+  }
+
+  // ── Store → register adoption (preset import, reset) ────────────────────────
+
+  const unsubscribeAdopt = store.subscribe(() => {
+    const camera = store.getState().view.camera;
+    if (camera === lastSeenCamera) return;
+    lastSeenCamera = camera;
+    // Mid-gesture the register is authoritative; an external write during a drag
+    // (there isn't one today, but nothing rules it out) must not yank the camera
+    // out from under the user's hand.
+    if (route !== null) return;
+    register.yaw = camera.yaw;
+    register.pitch = camera.pitch;
+    register.distance = camera.distance;
+    register.targetMpc = cloneTarget(camera.targetMpc);
+  });
+
+  // ── Hover / leave bindings (mirrors inputBindings.ts's shape: one small bag) ─
+
+  const onHoverMove = (e: PointerEvent): void => {
+    if (route !== null) return; // matches the old `if (!dragging)` gate
+    const s = store.getState();
+    if (isWireframeVisible(s, performance.now())) {
+      const box = deriveGridBox(s.grid);
+      const ray = rayFromPointer(canvas, e, getCameraPose());
+      const arrowLengthMpc = arrowLengthMpcFor(canvas, getCameraPose(), box.centerMpc);
+      hoverHandle = pickGizmoHandle(
+        ray,
+        gizmoHandleGeometry(box, boxAxesFor(box.rotation), arrowLengthMpc),
+      );
+    } else {
+      hoverHandle = null;
+    }
+    markDirty();
   };
+  const onPointerLeave = (): void => {
+    hoverHandle = null;
+    markDirty();
+  };
+  canvas.addEventListener('pointermove', onHoverMove);
+  canvas.addEventListener('pointerleave', onPointerLeave);
+
+  const detachRecognizer = attachOrbitControls(canvas, handleGestureEvent);
 
   return {
-    onPointerDown,
-    onPointerUp,
-    onPointerCancel,
-    onPointerMove,
-    onPointerLeave,
-    onWheel,
-    onContextMenu,
+    drain,
+    getCameraPose,
     getHoverHandle: () => hoverHandle,
     getDragHandleId: () => gizmoDragging?.handle ?? null,
     isWireframeVisible,
+    destroy(): void {
+      detachRecognizer();
+      unsubscribeAdopt();
+      canvas.removeEventListener('pointermove', onHoverMove);
+      canvas.removeEventListener('pointerleave', onPointerLeave);
+      aggregator.destroy();
+    },
   };
 }
