@@ -43,6 +43,16 @@ describe('reencodePose', () => {
     expect(out.distance).toBe(pose.distance);
   });
 
+  it('preserves a non-zero roll across a basis change (P5)', () => {
+    const from = ORIENTATION_FRAMES.ecliptic;
+    const to = ORIENTATION_FRAMES.galactic;
+    const pose: CameraPose = { target: [1, 2, 3], yaw: 0.7, pitch: 0.3, distance: 42, roll: 1.1 };
+
+    const out = reencodePose(pose, from, to);
+
+    expect(out.roll).toBe(1.1);
+  });
+
   it('returns the input by reference when the bases are identical', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.1, pitch: 0.2, distance: 5 };
 

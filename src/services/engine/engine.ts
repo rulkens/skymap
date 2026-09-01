@@ -40,6 +40,7 @@ import { produceConstellationCaptions } from './presentation/produceConstellatio
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
+import { createInputAggregator } from './subsystems/inputAggregator';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
@@ -449,6 +450,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getEngineState: () => state,
       }),
 
+      // ── Input aggregator ──────────────────────────────────────────
+      // Collects the gesture recognizer's events; `drainInput` applies them
+      // once per frame.  Eager (no GPU dep) — the first rAF can beat the
+      // async `wireInput` phase that attaches the recognizer.
+      inputAggregator: createInputAggregator(),
+
       // ── Clip-path inspector (debug) ───────────────────────────────
       // Holds the precomputed ClipPathSnapshot the debug panel's "Calculate"
       // button produces; the clip-path debug pass reads it each frame. Eager
@@ -811,6 +818,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.inputBindings = null;
     detachControlsRef.current?.();
     detachControlsRef.current = null;
+    // Drop anything the recognizer queued but no frame ever drained.
+    state.subsystems.inputAggregator.destroy();
     // The HDR-capability matchMedia listener `initGpu` registers via
     // `watchHdrCapability` — `phaseLocals` is assigned immediately after
     // registration (not at the end of `initGpu`'s many-hundred-line body),

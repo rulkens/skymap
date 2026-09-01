@@ -28,9 +28,6 @@
 
 import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
-import { applyWheelZoom } from '../camera/applyWheelZoom';
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
-import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createClickResolver } from '../interaction/clickHandler';
@@ -42,23 +39,14 @@ import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { EARTH_REF } from '../../../data/selection/earthRef';
-import {
-  commitCameraPose,
-  beginDrag,
-  endDrag,
-  cancelCameraTween,
-} from '../../../state/camera/cameraSlice';
+import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import {
-  selectSelectedRef,
-  selectFocusRow,
-  selectHasSelectionIntent,
-} from '../../../state/selection/selectors';
+import { selectSelectedRef, selectHasSelectionIntent } from '../../../state/selection/selectors';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { isCinemaMode } from '../../../utils/url/isCinemaMode';
@@ -339,97 +327,57 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     });
   };
 
-  deps.detachControlsRef.current = attachOrbitControls(canvas, cam, {
-    // Wake the render loop after any camera mutation so the frame body
-    // re-derives the pose, updates the scale bar, and runs the pick gate.
-    onChange: () => {
+  // The recognizer only emits; `drainInput` applies the frame's queue at the
+  // top of `runFrame`. Waking the loop is this sink's job — without a frame
+  // nothing would ever drain.
+  //
+  // The two gesture-start STORE edges fire here, at DOM time, not at the drain.
+  // `cancelCameraTween` must land before any tween the same click can start:
+  // `onDoubleClick` below dispatches focus synchronously and `watchFocusTweenSaga`
+  // reaches `put(startCameraTween)` with no intervening yield, so a cancel
+  // deferred to the next frame would kill the tween that double-tap-to-focus
+  // just started. `beginDrag` rides along to keep the pair atomic. Only the
+  // register seed and the camera math stay deferred — nothing between the
+  // pointerdown and the drain can move `lastPose.current`, which is the seed's
+  // only input.
+  deps.detachControlsRef.current = attachOrbitControls(
+    canvas,
+    (event) => {
+      if (event.kind === 'gestureStart') {
+        store.dispatch(beginDrag());
+        store.dispatch(cancelCameraTween());
+      }
+      state.subsystems.inputAggregator.push(event);
       state.subsystems.scheduler.requestRender();
     },
-
-    // The zoom floor's input, read live off the resolved focus row — same
-    // derivation the `onZoom` path below uses.
-    pivotRadiusMpc: () => pivotRadiusMpc(selectFocusRow(store.getState())),
-
-    // Discrete wheel zoom (no gesture in progress). The zoom goes to whichever
-    // driver owns the distance this frame: while a body is followed the
-    // followBody driver owns it (scale its distance target in place, so the
-    // zoom is not swallowed by the re-asserted framing distance); under an
-    // active auto-rotate the committed base folds in the accumulated spin so the
-    // elapsed reset is seamless; at rest the resting driver renders `base`, so
-    // commit the zoomed base. Reading `base` from the store (not the
-    // frame-lagged `lastPose` Resource) makes rapid wheel ticks accumulate
-    // correctly — each tick zooms from the prior tick's committed distance.
-    // `autoRotate` + `performance.now()` feed the auto-rotate branch's spin
-    // fold. See `applyWheelZoom` for the ownership split.
-    onZoom: (factor) => {
-      const root = store.getState();
-      const cam = root.camera;
-      const zoomed = applyWheelZoom(
-        state.cameraRuntime.clock,
-        state.cameraRuntime.prevActiveId.current,
-        cam.base,
-        factor,
-        cam.autoRotate,
-        performance.now(),
-        // Floors the zoom just off a focused body's surface for every arm of
-        // applyWheelZoom, not only the follow driver.
-        pivotRadiusMpc(selectFocusRow(root)),
-      );
-      if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
-      // Unconditional — the follow branch (applyWheelZoom.ts:72-75) mutates followDistanceTarget
-      // and returns null; a followed-body wheel tick dispatches nothing (D9, finding 3).
-      state.subsystems.scheduler.requestRender();
+    {
+      onClick: (xCss, yCss) => {
+        // Run a one-shot pick at the click position. No throttle guard —
+        // clicks are infrequent and want an immediate, synchronous-feeling
+        // response.
+        const pick = runPickAtCss(xCss, yCss);
+        if (!pick) return;
+        // Single-click dispatches the identity ref (null clears). The
+        // reconciler saga watches the slot and fills `selectionRows`.
+        pick
+          .then((ref) => {
+            store.dispatch(updateSelectionSelect(ref));
+          })
+          .catch(() => {
+            // A failed pick readback should not crash input handling; the
+            // click is simply dropped and the prior selection stands.
+          });
+      },
+      onDoubleClick: () => {
+        // Upgrade the current select ref to focus. The preceding single-click
+        // already wrote the ref to the store, so we read it back from the
+        // authoritative slot rather than running a second pick (racing
+        // readbacks resolve out of order). A null select ref means empty space:
+        // dispatch focus(null) to lift the cluster-focus fade. The camera tween
+        // is triggered by the watchFocusTweenSaga — not here.
+        const ref = selectSelectedRef(store.getState());
+        store.dispatch(updateSelectionFocus(ref));
+      },
     },
-
-    // Gesture start: seed the drag register from the live produced pose (NOT
-    // from store.camera.base, which is stale mid-tween), begin the Redux drag,
-    // and cancel any in-flight tween. Seeding from `lastPose.current` makes
-    // both at-rest grabs (lastPose == base) and mid-tween grabs jump-free —
-    // the drag register continues from exactly where the animation left the
-    // camera. `cancelCameraTween()` is the single cancel-on-grab path: a manual
-    // orbit always wins over a focus tween.
-    onGestureStart: () => {
-      if (state.cam) seedCameraFromBase(state.cam, state.cameraRuntime.lastPose.current);
-      store.dispatch(beginDrag());
-      store.dispatch(cancelCameraTween());
-    },
-
-    // Gesture end: commit the final drag pose into Redux base BEFORE ending
-    // the drag, so the committed base is in place the moment the orbitDrag
-    // driver deactivates on the next frame. Without this ordering, the next
-    // frame's resting driver would return the pre-gesture base, causing a
-    // one-frame snap-back to the old position.
-    onGestureEnd: () => {
-      if (state.cam) store.dispatch(commitCameraPose(poseOf(state.cam)));
-      store.dispatch(endDrag());
-    },
-
-    onClick: (xCss, yCss) => {
-      // Run a one-shot pick at the click position.  We don't use
-      // the throttle guard here — clicks are infrequent and we
-      // want an immediate, synchronous-feeling response.
-      const pick = runPickAtCss(xCss, yCss);
-      if (!pick) return;
-      // Single-click dispatches the identity ref (null clears). The
-      // reconciler saga watches the slot and fills `selectionRows`.
-      pick
-        .then((ref) => {
-          store.dispatch(updateSelectionSelect(ref));
-        })
-        .catch(() => {
-          // A failed pick readback should not crash input handling; the
-          // click is simply dropped and the prior selection stands.
-        });
-    },
-    onDoubleClick: () => {
-      // Upgrade the current select ref to focus. The preceding single-click
-      // already wrote the ref to the store, so we read it back from the
-      // authoritative slot rather than running a second pick (racing
-      // readbacks resolve out of order). A null select ref means empty space:
-      // dispatch focus(null) to lift the cluster-focus fade. The camera tween
-      // is triggered by the watchFocusTweenSaga — not here.
-      const ref = selectSelectedRef(store.getState());
-      store.dispatch(updateSelectionFocus(ref));
-    },
-  });
+  );
 }

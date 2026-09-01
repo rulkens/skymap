@@ -1,8 +1,5 @@
 /**
- * orbitControls — unit tests for the canvas → OrbitCamera input mapping,
- * focused on the listener-target contract that keeps touch gestures
- * working on iOS Safari, and the gesture-hook callbacks that wire the
- * drag state into the Redux camera slice.
+ * orbitControls — the gesture recognizer's DOM contract.
  *
  * ### Why this test exists
  *
@@ -17,28 +14,11 @@
  * do NOT call `setPointerCapture`; instead bind the *move* / *up* /
  * *cancel* listeners to `window` so they fire regardless of WebKit's
  * broken capture and regardless of where the pointer travels.  These
- * tests lock that contract in:
+ * tests lock that contract in, plus the gesture-boundary emissions the
+ * frame's drain turns into Redux edges.
  *
- *   1. `pointerdown` is on the canvas (a gesture must start on it), but
- *      `pointermove` / `pointerup` / `pointercancel` are on `window`.
- *   2. `setPointerCapture` is never called.
- *   3. An orbit driven by a `window` pointermove actually mutates yaw —
- *      i.e. the drag works through the window listener path.
- *
- * ### Gesture hook tests
- *
- * The new `onGestureStart` / `onGestureEnd` / `onChange` callbacks let
- * wireInput.ts wire the Redux camera slice without subclassing or patching
- * the controls. Tests pin:
- *
- *   - `onGestureStart` fires exactly on the FIRST contact (not on a
- *     second finger promoting to pinch).
- *   - `onGestureEnd` fires exactly when ALL contacts are lifted.
- *   - `onChange` fires after any orbit, pan, pinch, or in-gesture wheel change;
- *     a discrete wheel zoom (no gesture) fires `onZoom` instead.
- *   - `pivotRadiusMpc` reaches BOTH in-module clamp sites (pinch, and a wheel
- *     during a held gesture), so a zoom-in on a framed body stops just off its
- *     surface instead of passing through the centre.
+ * The camera math is no longer here — it moved to `applyInputToCamera`,
+ * driven once per frame by `drainInput`.
  *
  * Vitest runs in `node` here (no jsdom), so — matching
  * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
@@ -48,12 +28,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
-import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
-import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
-
-/** Earth's mean radius (km → Mpc) — the pivot radius for the zoom-floor cases. */
-const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
+import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureEvent';
 
 type Listener = (e: unknown) => void;
 
@@ -82,8 +57,7 @@ function makeRecorder() {
 /**
  * Canvas stand-in: a recorder plus the pointer-capture methods the
  * module *might* call.  `setPointerCapture` is a spy so tests can assert
- * it stays untouched.  `clientHeight` feeds the pan path's px→world
- * conversion (unused by the orbit tests but needed for a valid shape).
+ * it stays untouched.
  */
 function makeCanvas() {
   const rec = makeRecorder();
@@ -101,18 +75,23 @@ function makeCanvas() {
   return { canvas, rec, setPointerCapture, releasePointerCapture };
 }
 
-function makeCamera(): OrbitCamera {
-  return createOrbitCamera({
-    target: [0, 0, 0],
-    distance: 100,
-    yaw: 0,
-    pitch: 0,
-    fovYRad: (Math.PI / 180) * 60,
-    aspect: 1,
-    near: 0.1,
-    far: 1000,
-  });
+/** Collects the recognizer's emissions in arrival order. */
+function makeSink() {
+  const events: InputGestureEvent[] = [];
+  const emit = (e: InputGestureEvent): void => {
+    events.push(e);
+  };
+  const kinds = (): string[] => events.map((e) => e.kind);
+  return { events, emit, kinds };
 }
+
+const touchDown = (pointerId: number, clientX: number, clientY: number) => ({
+  pointerId,
+  pointerType: 'touch',
+  button: 0,
+  clientX,
+  clientY,
+});
 
 let win: ReturnType<typeof makeRecorder>;
 let originalWindow: unknown;
@@ -136,7 +115,7 @@ afterEach(() => {
 describe('attachOrbitControls — listener targets (iOS touch capture fix)', () => {
   it('binds pointerdown to the canvas but move/up/cancel to window', () => {
     const { canvas, rec } = makeCanvas();
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera());
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeSink().emit);
 
     // Gesture start stays on the canvas — only touches that begin on the
     // drawing surface should start an orbit.
@@ -154,36 +133,23 @@ describe('attachOrbitControls — listener targets (iOS touch capture fix)', () 
 
   it('never calls setPointerCapture (relies on implicit/window delivery)', () => {
     const { canvas, rec, setPointerCapture } = makeCanvas();
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera());
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeSink().emit);
 
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
+    rec.fire('pointerdown', touchDown(1, 100, 100));
 
     expect(setPointerCapture).not.toHaveBeenCalled();
   });
 
-  it('orbits from a window-dispatched pointermove after a canvas pointerdown', () => {
+  it('emits an orbit move from a window-dispatched pointermove', () => {
     const { canvas, rec } = makeCanvas();
-    const cam = makeCamera();
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam);
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
+    rec.fire('pointerdown', touchDown(1, 100, 100));
     // The move arrives on window — the path that was dead on iOS before.
     win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
 
-    // drag right (+50 px) → yaw decreases by 50 * 0.005 (globe drag).
-    expect(cam.yaw).toBeCloseTo(-0.25, 5);
+    expect(sink.events).toContainEqual({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
   });
 
   it('recovers from a missed mouse pointerup (no stale pinch state)', () => {
@@ -192,8 +158,8 @@ describe('attachOrbitControls — listener targets (iOS touch capture fix)', () 
     // must reset that so the next drag orbits rather than mis-promoting
     // to a two-pointer pinch.
     const { canvas, rec } = makeCanvas();
-    const cam = makeCamera();
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam);
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
     // First drag, but the pointerup never arrives (released off-screen).
     rec.fire('pointerdown', {
@@ -214,334 +180,90 @@ describe('attachOrbitControls — listener targets (iOS touch capture fix)', () 
     });
     win.fire('pointermove', { pointerId: 1, clientX: 160, clientY: 100 });
 
-    // drag right (+60 px) → yaw decreases by 60 * 0.005 = 0.3. A pinch
-    // mis-promotion would have left yaw at 0.
-    expect(cam.yaw).toBeCloseTo(-0.3, 5);
+    expect(sink.kinds()).not.toContain('pinchAnchor');
+    expect(sink.events).toContainEqual({ kind: 'dragMove', mode: 'orbit', xPx: 160, yPx: 100 });
   });
 
   it('teardown removes the window listeners it added', () => {
     const { canvas, rec } = makeCanvas();
-    const cam = makeCamera();
-    const detach = attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam);
+    const sink = makeSink();
+    const detach = attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
     detach();
 
     expect(rec.listeners).toHaveLength(0);
     expect(win.listeners).toHaveLength(0);
 
-    // A post-detach move must not move the camera.
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
+    // A post-detach gesture must emit nothing.
+    rec.fire('pointerdown', touchDown(1, 100, 100));
     win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
-    expect(cam.yaw).toBe(0);
+    expect(sink.events).toHaveLength(0);
   });
 });
 
-describe('attachOrbitControls — gesture hooks (Redux wiring)', () => {
-  it('onGestureStart fires exactly once for the first pointerdown', () => {
+describe('attachOrbitControls — gesture boundaries', () => {
+  it('emits gestureStart on the first contact only, not on pinch promotion', () => {
+    // The drain turns gestureStart into seed + beginDrag + cancelCameraTween;
+    // a second finger changes the mode but does not start a new gesture.
     const { canvas, rec } = makeCanvas();
-    const onGestureStart = vi.fn<() => void>();
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
-      onGestureStart,
+    rec.fire('pointerdown', touchDown(1, 100, 100));
+    rec.fire('pointerdown', touchDown(2, 200, 200));
+
+    expect(sink.kinds().filter((k) => k === 'gestureStart')).toHaveLength(1);
+    // The promotion baselines the pinch instead.
+    expect(sink.events).toContainEqual({
+      kind: 'pinchAnchor',
+      distPx: Math.sqrt(100 * 100 + 100 * 100),
     });
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-
-    expect(onGestureStart).toHaveBeenCalledOnce();
   });
 
-  it('onGestureStart does NOT fire when a second finger promotes to pinch', () => {
-    // The gesture-start commit (seed + beginDrag + cancelCameraTween) should
-    // only fire once per gesture, on the first contact. A second finger
-    // changes the mode to 'pinch' but does not start a new gesture.
+  it('emits gestureEnd only when the LAST contact lifts', () => {
+    // Gesture end commits the pose and ends the Redux drag — a pinch where one
+    // finger lifts must not commit.
     const { canvas, rec } = makeCanvas();
-    const onGestureStart = vi.fn<() => void>();
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
-      onGestureStart,
-    });
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    // Second finger down — promotes to pinch.
-    rec.fire('pointerdown', {
-      pointerId: 2,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 200,
-      clientY: 200,
-    });
-
-    // onGestureStart fired only on the first contact.
-    expect(onGestureStart).toHaveBeenCalledOnce();
-  });
-
-  it('onGestureEnd fires when ALL contacts are lifted', () => {
-    const { canvas, rec } = makeCanvas();
-    const onGestureEnd = vi.fn<() => void>();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
-      onGestureEnd,
-    });
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    win.fire('pointerup', { pointerId: 1, clientX: 110, clientY: 110 });
-
-    expect(onGestureEnd).toHaveBeenCalledOnce();
-  });
-
-  it('onGestureEnd does NOT fire when only one of two contacts is lifted', () => {
-    // Gesture end (commitCameraPose + endDrag) must only fire when the last
-    // finger leaves. A pinch where one finger lifts should not commit.
-    const { canvas, rec } = makeCanvas();
-    const onGestureEnd = vi.fn<() => void>();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
-      onGestureEnd,
-    });
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    rec.fire('pointerdown', {
-      pointerId: 2,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 200,
-      clientY: 200,
-    });
-    // First finger up — one still down.
+    rec.fire('pointerdown', touchDown(1, 100, 100));
+    rec.fire('pointerdown', touchDown(2, 200, 200));
     win.fire('pointerup', { pointerId: 1, clientX: 100, clientY: 100 });
+    expect(sink.kinds()).not.toContain('gestureEnd');
 
-    expect(onGestureEnd).not.toHaveBeenCalled();
+    win.fire('pointerup', { pointerId: 2, clientX: 200, clientY: 200 });
+    expect(sink.kinds().filter((k) => k === 'gestureEnd')).toHaveLength(1);
   });
 
-  it('onChange fires after an orbit (pointermove)', () => {
+  it('flags a wheel by whether a pointer is down (which register owns the zoom)', () => {
     const { canvas, rec } = makeCanvas();
-    const onChange = vi.fn<() => void>();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), { onChange });
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    const countAfterDown = onChange.mock.calls.length;
-    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
-
-    expect(onChange.mock.calls.length).toBeGreaterThan(countAfterDown);
-  });
-
-  it('a discrete wheel zoom (no gesture) calls onZoom with the distance factor, not onChange', () => {
-    const onZoom = vi.fn<(factor: number) => void>();
-    const onChange = vi.fn<() => void>();
-    const { canvas, rec } = makeCanvas();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), { onZoom, onChange });
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
     rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
+    expect(sink.events).toContainEqual({ kind: 'wheel', deltaY: 100, duringGesture: false });
 
-    // exp(100 * 0.001) = exp(0.1) ≈ 1.105 — zoom OUT (distance grows).
-    expect(onZoom).toHaveBeenCalledTimes(1);
-    expect(onZoom.mock.calls[0]?.[0]).toBeCloseTo(Math.exp(0.1), 6);
-    // With no gesture, `cam` is not the rendered pose; onZoom commits to `base`
-    // and wakes the loop itself, so the onChange wake path is NOT taken.
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('a wheel DURING a drag folds into the cam register and fires onChange (no onZoom)', () => {
-    const onZoom = vi.fn<(factor: number) => void>();
-    const onChange = vi.fn<() => void>();
-    const cam = makeCamera();
-    const { canvas, rec } = makeCanvas();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, { onZoom, onChange });
-
-    // Begin a gesture so activePointers.size > 0.
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'mouse',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    const before = cam.distance;
+    rec.fire('pointerdown', touchDown(1, 100, 100));
     rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
-
-    // Folded into the live register (orbitDrag renders it); rides onGestureEnd.
-    expect(cam.distance).toBeGreaterThan(before);
-    expect(onChange).toHaveBeenCalled();
-    expect(onZoom).not.toHaveBeenCalled();
+    expect(sink.events).toContainEqual({ kind: 'wheel', deltaY: 100, duringGesture: true });
   });
-});
 
-describe('attachOrbitControls — the zoom floor stops at a focused body’s surface', () => {
-  // Both in-module zoom paths dolly toward the orbit TARGET, which for a framed
-  // body is its CENTRE. The clamp's absolute floor is 0.048 Earth radii, so
-  // without the pivot radius reaching these two sites a zoom-in walks the camera
-  // thousands of km under the crust. Distances are asserted in body radii so the
-  // property reads as "outside the surface, close to it".
-
-  it('pinching in stops just outside the surface', () => {
-    const cam = makeCamera();
-    cam.distance = EARTH_RADIUS_MPC * 4;
+  it('emits pinch samples only while two contacts are down', () => {
     const { canvas, rec } = makeCanvas();
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
-    });
+    rec.fire('pointerdown', touchDown(1, 0, 0));
+    rec.fire('pointerdown', touchDown(2, 10, 0));
+    win.fire('pointermove', { pointerId: 2, clientX: 30, clientY: 0 });
+    expect(sink.events).toContainEqual({ kind: 'pinchMove', distPx: 30 });
 
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 0,
-      clientY: 0,
-    });
-    rec.fire('pointerdown', {
-      pointerId: 2,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 10,
-      clientY: 0,
-    });
-    // Fingers spreading apart → zoom IN (distance × lastDist / newDist). Three
-    // ×100 steps would land at 4e-6 radii, deep inside the mantle.
-    for (const x of [1000, 100000, 10000000]) {
-      win.fire('pointermove', { pointerId: 2, clientX: x, clientY: 0 });
-    }
-
-    const radii = cam.distance / EARTH_RADIUS_MPC;
-    expect(radii).toBeGreaterThan(1);
-    expect(radii).toBeLessThan(1.05);
-  });
-
-  it('a wheel tick during a held gesture stops just outside the surface', () => {
-    // The wheel-during-gesture path folds into the live `cam` register rather
-    // than going out through onZoom, so it needs its own floor.
-    const cam = makeCamera();
-    cam.distance = EARTH_RADIUS_MPC * 4;
-    const { canvas, rec } = makeCanvas();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
-    });
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'mouse',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    rec.fire('wheel', { deltaY: -20000, preventDefault: vi.fn() });
-
-    const radii = cam.distance / EARTH_RADIUS_MPC;
-    expect(radii).toBeGreaterThan(1);
-    expect(radii).toBeLessThan(1.05);
-  });
-});
-
-describe('attachOrbitControls — orbit-drag rate damps near a focused body’s surface', () => {
-  // The flat 0.005 rad/px orbit rate rotates about the pivot's CENTRE, so the
-  // ground distance it sweeps scales with the pivot's radius — irrelevant to
-  // how far the camera actually is from that ground. `orbitRadPerPixel` fixes
-  // that by damping the rate at low altitude (see its docstring for the ~350x
-  // Earth-standoff numbers). These two cases are the regression that matters:
-  // near a surface the same drag must barely turn the camera, and with no
-  // surface to damp against (or far above one) today's flat rate must be
-  // untouched.
-
-  it('the same drag yaws far less near a surface than at the same pivot from afar', () => {
-    const nearCam = makeCamera();
-    nearCam.distance = EARTH_RADIUS_MPC * 1.02; // ~127 km altitude, near-surface regime
-    const { canvas: nearCanvas, rec: nearRec } = makeCanvas();
-    attachOrbitControls(nearCanvas as unknown as HTMLCanvasElement, nearCam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
-    });
-
-    const farCam = makeCamera();
-    farCam.distance = EARTH_RADIUS_MPC * 1000; // deep orbital view of the same body
-    const { canvas: farCanvas, rec: farRec } = makeCanvas();
-    attachOrbitControls(farCanvas as unknown as HTMLCanvasElement, farCam, {
-      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
-    });
-
-    // Identical drag (+50 px) on both, driven through the same window — each
-    // attachment tracks its own pointer/drag state independently.
-    nearRec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    farRec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
-
-    // Far above the surface, the damping term hasn't engaged — matches
-    // today's flat rate almost exactly.
-    expect(farCam.yaw).toBeCloseTo(-50 * 0.005, 4);
-
-    // At the standoff floor, the same drag turns the camera a tiny fraction
-    // of that — this is the fix: the ground now tracks the cursor instead of
-    // sweeping a third of a screen width per pixel.
-    expect(Math.abs(nearCam.yaw)).toBeLessThan(Math.abs(farCam.yaw) / 50);
-  });
-
-  it('with no pivot radius, a drag yaws by exactly today’s flat dx * 0.005', () => {
-    // No pivotRadiusMpc option at all ⇒ pivotRadius() resolves to null ⇒
-    // orbitRadPerPixel returns the flat cap unchanged — the deep-space /
-    // unfocused path this change must not touch.
-    const cam = makeCamera();
-    const { canvas, rec } = makeCanvas();
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam);
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
-
-    expect(cam.yaw).toBeCloseTo(-50 * 0.005, 6);
+    // One finger lifts: the gesture is over, and the survivor must not be
+    // promoted back to orbit (which would feel like a snap on a grip change).
+    win.fire('pointerup', { pointerId: 1, clientX: 0, clientY: 0 });
+    const before = sink.events.length;
+    win.fire('pointermove', { pointerId: 2, clientX: 90, clientY: 0 });
+    expect(sink.events).toHaveLength(before);
   });
 });

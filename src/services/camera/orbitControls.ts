@@ -1,172 +1,31 @@
 /**
- * Orbit controls — maps DOM input events to `OrbitCamera` mutations.
+ * Orbit controls — the DOM gesture recognizer. Recognizes what the pointer /
+ * wheel stream means and emits `InputGestureEvent`s, touching no camera and no
+ * engine state: `inputAggregator` folds a frame's events and `drainInput`
+ * applies them. One apply per frame rather than one per event is what keeps a
+ * second controller from becoming a second writer of the same register.
  *
- * ### Responsibility split
- *
- * `orbitCamera.ts` owns the *math*: it knows how yaw, pitch, and distance
- * map to a world-space position and view-projection matrix. This module owns
- * the *input*: it watches DOM events on a `<canvas>` and translates pointer
- * deltas and wheel ticks into changes on those three numbers.
- *
- * Keeping input separate from math means the camera can be driven from tests,
- * animations, or network state without touching event listeners, and the event
- * handlers stay small and easy to reason about.
- *
- * ### Why pointer events, not mouse events?
- *
- * The Pointer Events API (`PointerEvent`) is a superset of mouse events that
- * also covers stylus pens and touch fingers. A single handler works for:
- *
- *   - `pointerdown` / `pointerup` / `pointermove`  (mouse, pen, touch)
- *
- * The older `mousedown` / `mousemove` API only fires for mice and is not
- * dispatched for touch on mobile browsers. Using pointer events means the
- * orbit controls work identically on a laptop trackpad, a Wacom tablet, and
- * a touch screen without any extra branching.
- *
- * ### Why move/up/cancel listen on `window`, not the canvas
- *
- * `pointerdown` is bound to the canvas (a gesture must *start* on the
- * drawing surface), but `pointermove` / `pointerup` / `pointercancel` are
- * bound to `window`. Two reasons, one of them load-bearing on iOS:
- *
- *   - **Drag-outside continuation.** A drag that leaves the canvas (over a
- *     UI panel, or past the viewport edge) must keep orbiting. `window`
- *     sees those moves regardless of what is under the pointer.
- *   - **iOS Safari capture bug.** Touch pointers get *implicit* pointer
- *     capture on `pointerdown`. WebKit mishandles an *explicit*
- *     `setPointerCapture()` layered on top of that implicit capture — it
- *     stops delivering `pointermove` / `pointerup`, so single-finger orbit
- *     and two-finger pinch both die on iPhone/iPad while desktop mouse
- *     (no implicit capture) is unaffected. The fix, used by every major
- *     touch-gesture library, is to NOT call `setPointerCapture` and bind
- *     the continuation events to `window` instead. (`touch-action: none`
- *     on the canvas — see global.css — still suppresses native scroll/zoom
- *     because that is keyed off the touch's *target* element, the canvas.)
- *     See https://github.com/openseadragon/openseadragon/issues/1962.
- *
- * ### Coordinate conventions
- *
- *   drag right (+dx) → yaw decreases → camera sweeps left past the scene
- *
- * This is sometimes called "globe" or "grab" drag: the user grabs the scene
- * and pulls it, so the world appears to rotate in the direction of the drag.
- * Contrast with "FPS" drag where moving the mouse right pans the *camera*
- * rightward (yaw increases). Globe drag feels more natural for inspecting
- * a fixed object like a galaxy cluster.
- *
- * ### Module role in the pipeline
- *
- *   DOM events → (this module) → OrbitCamera state → orbitCamera.ts → mat4
+ * Pointer events, not mouse events: one handler covers mouse, pen and touch,
+ * where `mousedown`/`mousemove` are never dispatched for touch at all.
  */
 
-import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
+import type { InputGestureEvent } from '../../@types/camera/InputGestureEvent';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
-import { updatePosition } from '../../utils/camera/updatePosition';
-import { zoomedDistance } from '../../utils/camera/zoomedDistance';
-import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
-import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../utils/camera/frameUp';
-import { vec3 } from 'wgpu-matrix';
-import type { Vec3 } from '../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-/**
- * Maximum allowed pitch angle in radians — clamped just below π/2 (90°).
- *
- * ### Why not exactly π/2?
- *
- * At pitch = ±π/2 the camera sits exactly on the world's +Y or −Y pole.
- * At that point the camera's "forward" direction (toward the target) is
- * perfectly aligned with the world "up" vector `[0, 1, 0]` used by `lookAt`.
- * When forward and up are collinear, `lookAt` cannot determine a unique
- * "right" axis: the cross product of two parallel vectors is the zero vector.
- * The result is a degenerate (all-NaN) view matrix — this is the **gimbal
- * lock** singularity. Every orbit camera must guard against it.
- *
- * Subtracting a small ε (0.01 rad ≈ 0.57°) keeps the camera safely off the
- * poles so `lookAt` always has a well-defined "up" direction. The user will
- * never notice the 0.57° gap.
- *
- * See also: the ⚠ note in `orbitCamera.ts` on `OrbitCameraInit.pitch`.
- */
-const PITCH_LIMIT = Math.PI / 2 - 0.01;
-
-// ─── Controls ─────────────────────────────────────────────────────────────────
-
-/**
- * Attach mouse/touch/pen orbit controls to a canvas element.
- *
- * Registers four event listeners on `canvas`:
- *
- *   - `pointerdown`  — start a drag, capture pointer
- *   - `pointerup`    — end a drag, release pointer
- *   - `pointermove`  — update yaw/pitch while dragging
- *   - `wheel`        — zoom in/out by changing `cam.distance`
- *
- * After each mutation the function calls `updatePosition(cam)` to keep
- * `cam.position` in sync. The render loop (Task 11) then reads
- * `computeViewProj(cam)` every frame.
- *
- * ### Teardown / cleanup
- *
- * Returns a zero-argument cleanup function that removes all four listeners.
- * This is the standard JavaScript idiom for *disposable* event bindings:
- *
- * ```ts
- * const detach = attachOrbitControls(canvas, cam);
- * // later, when the canvas unmounts or the view changes:
- * detach();
- * ```
- *
- * Callers that never need cleanup (e.g. a single-page app that lives for the
- * full document lifetime) can ignore the return value.
- *
- * @param canvas   The `<canvas>` element to listen on. Pointer events are
- *                 registered here so the hit-test area matches the viewport.
- * @param cam      The orbit camera to mutate. The caller owns this object;
- *                 `attachOrbitControls` only reads and writes its fields.
- * @param options  Optional configuration. Supports `onClick`, `onDoubleClick`,
- *                 `onChange` (wake the render loop after any mutation),
- *                 `onGestureStart` (first pointer contact — seed the drag
- *                 register + begin Redux drag), and `onGestureEnd` (all
- *                 pointers lifted — commit the final pose + end Redux drag).
- * @returns A teardown function — call it to remove all event listeners.
- */
 export function attachOrbitControls(
   canvas: HTMLCanvasElement,
-  cam: OrbitCamera,
+  emit: (event: InputGestureEvent) => void,
   options?: OrbitControlsOptions,
 ): () => void {
-  // Track drag state with module-level (closure) variables so the three
-  // pointer handlers can share it without a wrapper object allocation.
-  //
-  // `dragMode` distinguishes a left-button orbit from a right-button (or
-  // middle-button) pan, plus the touch-only `'pinch'` mode that fires when
-  // a second finger touches down.  `null` means no drag in progress.
+  // `null` means no drag in progress.
   type DragMode = 'orbit' | 'pan' | 'pinch';
   let dragMode: DragMode | null = null;
-  let lastX = 0; // client-space X of the previous pointermove event
-  let lastY = 0; // client-space Y of the previous pointermove event
 
-  // ── Multi-touch state ─────────────────────────────────────────────────────
-  //
-  // We track every active pointer in a small Map (id → last x/y) so we can
-  // compute pinch geometry from any two of them.  For single-pointer drags
-  // (orbit / pan) only `dragPointerId` matters — that's the contact that
-  // started the gesture and whose moves drive the camera.  Other pointers
-  // that arrive mid-gesture promote the mode to `'pinch'` and the
-  // single-pointer driver is paused until everything's released.
-  //
-  // Why not use TouchEvent?  PointerEvent unifies mouse / pen / touch so
-  // the existing orbit/pan code Just Works on a tablet stylus or a touch
-  // screen, and adding pinch on top is a single multi-id case in here
-  // rather than a parallel TouchEvent listener tree.
+  // Every active pointer (id → last x/y), so pinch geometry can come from any
+  // two. Contacts other than `dragPointerId` are tracked only so they tear
+  // down cleanly; they never drive a single-pointer gesture.
   const activePointers = new Map<number, { x: number; y: number }>();
   let dragPointerId: number | null = null;
-  let lastPinchDist = 0;
 
   /** Euclidean distance between the first two active pointers, or 0 if <2. */
   const currentPinchDistance = (): number => {
@@ -177,97 +36,46 @@ export function attachOrbitControls(
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // ── Click detection ────────────────────────────────────────────────────────
-  //
-  // We record the pointer-down position and compare it against pointer-up.
-  // The threshold is 4 CSS pixels (squared: 16) — small enough to ignore
-  // micro-jitter from a resting hand, large enough to never fire during
-  // an intentional drag.
-  //
-  // WHY SQUARED DISTANCE? Comparing dx²+dy² against 16 avoids calling
-  // Math.sqrt — the magnitude check becomes a single multiply-add-compare,
-  // which is cheaper and numerically identical in result.
-  let downX = 0; // client-space X at pointerdown
-  let downY = 0; // client-space Y at pointerdown
-
-  /** Squared pixel distance between pointerdown and pointerup. */
-  const CLICK_THRESHOLD_SQ = 4 * 4; // 4 px radius → 16 when squared
-
-  // Both zoom paths below (pinch, and a wheel tick during a held gesture) need
-  // the focused body's radius to taper/floor `zoomedDistance` against — read
-  // live through the caller's getter rather than cached, since this module
-  // never sees the scene and focus can change while controls stay attached.
-  const pivotRadius = (): number | null => options?.pivotRadiusMpc?.() ?? null;
+  // Click = pointerup within 4 CSS px of pointerdown, compared squared.
+  let downX = 0;
+  let downY = 0;
+  const CLICK_THRESHOLD_SQ = 4 * 4;
 
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
   const onDown = (e: PointerEvent) => {
-    // A mouse is strictly single-pointer, so a fresh mouse-down always
-    // begins a new gesture — it can never be the second finger of a
-    // pinch.  Clearing here heals state stranded by a `pointerup` we
-    // never saw: without pointer capture (removed for the iOS fix), a
-    // button released *outside* the viewport fires no `window`
-    // pointerup, which would otherwise leave a stale entry that promotes
-    // the next click to a bogus two-pointer 'pinch'.  Touch pointers are
-    // left untouched — their up/cancel reliably reach the window
-    // listeners via implicit capture.
+    // A mouse is strictly single-pointer, so a fresh mouse-down always begins a
+    // new gesture. Clearing heals state stranded by a `pointerup` we never saw:
+    // with no pointer capture (the iOS fix below), a button released outside the
+    // viewport fires no `window` pointerup, and the stale entry would promote the
+    // next click to a bogus two-pointer pinch. Touch is left alone — its up /
+    // cancel reach the window listeners via implicit capture.
     if (e.pointerType === 'mouse') {
       activePointers.clear();
       dragMode = null;
       dragPointerId = null;
-      lastPinchDist = 0;
     }
 
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (activePointers.size === 1) {
-      // First contact — pick the appropriate single-pointer mode.
-      //   - mouse button 1 / 2 (middle / right) → pan
-      //   - everything else (mouse left, touch, pen) → orbit
-      // Touch + pen never report buttons 1 / 2, so they always fall into
-      // orbit here.  Pinch is set later if a second contact arrives.
-      if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2)) {
-        dragMode = 'pan';
-      } else {
-        dragMode = 'orbit';
-      }
+      // Middle / right mouse → pan; everything else → orbit (touch and pen
+      // never report buttons 1 / 2).
+      dragMode = e.pointerType === 'mouse' && (e.button === 1 || e.button === 2) ? 'pan' : 'orbit';
       dragPointerId = e.pointerId;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      // Record the exact down position for click detection.
       downX = e.clientX;
       downY = e.clientY;
 
-      // Notify the engine that a new gesture is starting. The engine uses this
-      // to seed the drag register from the live produced pose (so a mid-tween
-      // grab continues from where the animation left the camera, not from a
-      // stale register) and to dispatch beginDrag() + cancelCameraTween().
-      // Only fires on the FIRST contact — a second finger promoting to pinch
-      // does NOT re-fire gesture-start.
-      options?.onGestureStart?.();
-
-      // No `setPointerCapture` here — see the module header. The move /
-      // up / cancel listeners live on `window`, so a drag keeps tracking
-      // outside the canvas without capture, and we sidestep the WebKit
-      // explicit-capture bug that silently kills touch gestures on iOS.
+      // First contact only — a second finger promoting to pinch does NOT start
+      // a new gesture. And no `setPointerCapture` (see the listeners below).
+      emit({ kind: 'gestureStart' });
+      emit({ kind: 'dragAnchor', xPx: e.clientX, yPx: e.clientY });
     } else if (activePointers.size === 2) {
-      // Second contact — promote the gesture to pinch and record the
-      // baseline distance.  Subsequent moves on either pointer will
-      // recompute the distance and scale `cam.distance` by the ratio.
-      // `dragPointerId` is left intact so we can still see the
-      // single-pointer driver, but `dragMode === 'pinch'` short-circuits
-      // the orbit/pan branch in `onMove`.
+      // `dragPointerId` stays intact; `dragMode` is what gates `onMove`.
       dragMode = 'pinch';
-      lastPinchDist = currentPinchDistance();
+      emit({ kind: 'pinchAnchor', distPx: currentPinchDistance() });
     }
-    // 3+ pointers: tracked in the map so they're consumed cleanly on
-    // pointerup, but they don't change `dragMode` — pinch stays a
-    // two-finger gesture.
-
-    // Notify the engine so it can wake the render loop — any subsequent
-    // pointermove will fire the same callback.  Calling here too means
-    // the click→hover-clear path also gets a frame.
-    options?.onChange?.();
+    // 3+ pointers change nothing — pinch stays a two-finger gesture.
   };
 
   // ── Pointer up — end drag (or click) ──────────────────────────────────────
@@ -276,23 +84,13 @@ export function attachOrbitControls(
     if (!activePointers.has(e.pointerId)) return;
     activePointers.delete(e.pointerId);
 
-    // No capture to release — we never call setPointerCapture (see the
-    // module header). Implicit touch capture auto-releases on pointerup.
-
     if (activePointers.size === 0) {
-      // All contacts lifted — close out the gesture.
       const endedMode = dragMode;
       dragMode = null;
       dragPointerId = null;
-      lastPinchDist = 0;
 
-      // ── Click detection ──────────────────────────────────────────────
-      // If the pointer barely moved between down and up, treat this as a
-      // click rather than a drag.  Only fires for ORBIT releases:
-      //   - pan releases (right/middle mouse) shouldn't pick a galaxy
-      //   - pinch releases obviously aren't a tap
-      // Without this gate, a flicker of the right mouse — or the second
-      // finger going up after a pinch — would clear the user's selection.
+      // Click only on an ORBIT release: a pan release (right/middle mouse) must
+      // not pick a galaxy, and the second finger of a pinch is not a tap.
       if (options?.onClick && endedMode === 'orbit') {
         const dx = e.clientX - downX;
         const dy = e.clientY - downY;
@@ -301,295 +99,85 @@ export function attachOrbitControls(
         }
       }
 
-      // All contacts lifted — commit the gesture's final pose to the Redux
-      // store and end the drag. This fires AFTER click detection so a click
-      // still resolves before the gesture-end commit (order is harmless
-      // either way; the click callback and the gesture-end dispatch are
-      // independent). The engine dispatches commitCameraPose THEN endDrag so
-      // the baked pose is in `base` before the orbitDrag driver deactivates.
-      options?.onGestureEnd?.();
+      emit({ kind: 'gestureEnd' });
     } else if (dragMode === 'pinch') {
-      // Pinch broken (one finger lifted, one or more still down) — end
-      // the gesture entirely.  We deliberately do NOT promote the
-      // remaining finger back into orbit mode: that would feel like the
-      // camera "snaps" when the user lifts a finger to readjust grip.
-      // The user has to lift everything and re-engage to start a new
-      // gesture, which keeps gesture boundaries clean.
+      // Pinch broken (one finger lifted, others down) — end the gesture rather
+      // than promote the survivor to orbit, which snaps on a grip readjust.
       dragMode = null;
       dragPointerId = null;
-      lastPinchDist = 0;
     }
   };
 
-  // ── Pointer move — update orbit ────────────────────────────────────────────
-
-  // ── Reusable scratch vectors for the pan path ────────────────────────────
-  //
-  // Allocated once at attach time and reused on every pointermove so the
-  // hot-path doesn't allocate.  vec3.subtract / vec3.normalize / vec3.scale all
-  // accept the `dst` as an optional LAST arg; we pass these scratches in as
-  // that destination to keep GC pressure at zero during a continuous drag.
-  // `imagePlaneBasis` writes its result into `basisScratch` for the same reason.
-  const forwardScratch: Vec3 = [0, 0, 0];
-  const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
-  const panDeltaScratch = vec3.create();
-  const upRefScratch: Vec3 = [0, 0, 0];
+  // ── Pointer move ───────────────────────────────────────────────────────────
 
   const onMove = (e: PointerEvent) => {
-    // Update the live position of whichever pointer this move belongs to.
-    // `pointermove` fires for ALL active pointers, not just the one
-    // driving an orbit — so we always update the map first, then decide
-    // what to do with the gesture as a whole.
+    // Fires for ALL active pointers: update the map first, decide after.
     const ptr = activePointers.get(e.pointerId);
     if (!ptr) return;
     ptr.x = e.clientX;
     ptr.y = e.clientY;
 
     if (dragMode === 'pinch') {
-      // ── Pinch — multi-touch zoom ────────────────────────────────────
-      //
-      // Use the ratio of last-distance to current-distance to scale
-      // `cam.distance` exponentially.  Pinch OUT (fingers move apart)
-      // grows current distance → ratio < 1 → camera distance shrinks →
-      // zoom IN.  Pinch IN does the inverse.  This matches the "grab
-      // the world and stretch" mental model that mobile users expect.
-      //
-      // Symmetric with the wheel zoom's exponential model — both feed the same
-      // ratio into `zoomedDistance` (see its module header). No need for a
-      // separate sensitivity tuning; raw pixel ratio is naturally calibrated
-      // to the user's hand.
-      if (activePointers.size < 2 || lastPinchDist === 0) return;
-      const newDist = currentPinchDistance();
-      if (newDist > 0) {
-        cam.distance = zoomedDistance(cam.distance, lastPinchDist / newDist, pivotRadius());
-        lastPinchDist = newDist;
-        updatePosition(cam);
-        options?.onChange?.();
-      }
+      if (activePointers.size < 2) return;
+      const dist = currentPinchDistance();
+      if (dist > 0) emit({ kind: 'pinchMove', distPx: dist });
       return;
     }
 
     if (dragMode === null) return;
-
-    // Orbit / pan: only the original gesture-driver pointer mutates the
-    // camera.  Other contacts (e.g. a stray third finger) are tracked
-    // for clean teardown but ignored here.  Without this guard, a
-    // second finger entering the canvas would yank `lastX`/`lastY`
-    // around between the two fingers and the orbit would jitter.
+    // Only the driving pointer drives: otherwise a second contact yanks the
+    // baseline back and forth and the orbit jitters.
     if (e.pointerId !== dragPointerId) return;
 
-    // Delta in CSS pixels from the last recorded position.
-    // We use client coordinates (viewport-relative) rather than offset
-    // coordinates (element-relative) so the delta is stable even when the
-    // canvas is scrolled, transformed, or when capture routes events from
-    // outside the element.
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-
-    if (dragMode === 'pan') {
-      // ── Pan (right / middle button drag) ────────────────────────────────
-      //
-      // Goal: the world point under the cursor should appear to follow the
-      // cursor as the user drags.  We do NOT reproject the picked-pixel into
-      // world space (which would be the most accurate but requires the
-      // depth buffer); instead we approximate by translating the camera
-      // target along the camera's right + up axes by a screen-aligned
-      // amount.
-      //
-      // Step 1: derive camera basis vectors.  `forward` is the unit vector
-      // from camera position toward the target — that's the negative of
-      // (position − target).  `imagePlaneBasis` turns it into the screen
-      // `right` axis (`forward × up`, the side-axis of the screen plane) and
-      // the orthonormal `up` axis (`right × forward`, recomputed orthogonal
-      // to forward + right rather than blindly using world-up, so it handles
-      // tilt cases correctly when pitch is non-zero). Roll is 0 here; the
-      // reference up is the frame pole (`frameUp(cam.upBasis)`; world +Y
-      // absent a basis), so the drag pan tracks whichever frame is active.
-      vec3.subtract(cam.target, cam.position, forwardScratch);
-      vec3.normalize(forwardScratch, forwardScratch);
-      const basis = imagePlaneBasis(
-        forwardScratch,
-        0,
-        frameUp(cam.upBasis, upRefScratch),
-        basisScratch,
-      );
-
-      // Step 2: convert pixel delta → world delta at the camera's focal
-      // distance.  At the target depth, one CSS pixel maps to
-      //   2 · cam.distance · tan(fovY/2) / canvasHeight
-      // world units along screen-up; the same factor applies to screen-right
-      // because pixels are square.  Using clientHeight (CSS pixels) rather
-      // than canvas.height (backing-store pixels) keeps the gesture's
-      // physical-feel consistent regardless of devicePixelRatio.
-      const cssHeight = canvas.clientHeight || 1;
-      const pxToWorld = (2 * cam.distance * Math.tan(cam.fovYRad / 2)) / cssHeight;
-
-      // Step 3: build the world-space translation.
-      //   - dragging RIGHT  (+dx CSS) → world point should slide RIGHT  →
-      //     camera target slides LEFT  (along -right):    -dx · right
-      //   - dragging DOWN   (+dy CSS) → world point should slide DOWN   →
-      //     camera target slides UP    (along +cam_up):   +dy · cam_up
-      // (CSS y grows downward; cam_up points toward +screen-up, which is
-      // the OPPOSITE of CSS y, so the +dy → +cam_up sign falls out
-      // naturally without an extra flip.)
-      vec3.scale(basis.right, -dx * pxToWorld, panDeltaScratch);
-      vec3.addScaled(panDeltaScratch, basis.up, dy * pxToWorld, panDeltaScratch);
-
-      // Step 4: shift the target.  Camera.position is recomputed from
-      // target + dir(yaw, pitch) · distance inside updatePosition, so we
-      // only mutate target — the orbit framing stays intact.
-      vec3.add(cam.target, panDeltaScratch, cam.target);
-      updatePosition(cam);
-      options?.onChange?.();
-      return;
-    }
-
-    // ── Orbit (left button drag) ──────────────────────────────────────────
-    //
-    // Yaw (left / right): we *subtract* dx so that dragging right (positive
-    // dx) decreases yaw, rotating the camera to the left around the scene —
-    // equivalent to "grabbing the world and pulling it right". This matches
-    // the intuitive globe-drag metaphor:  your hand moves right, the world
-    // rotates right.
-    //
-    // If we added dx instead, drag-right would swing the camera rightward,
-    // which feels like an FPS look — counter-intuitive for an orbiting view.
-    //
-    // Sensitivity: `orbitRadPerPixel` damps the flat rate by altitude above a
-    // focused body's surface so the ground under the cursor tracks the drag
-    // (see the util's module header for the derivation and its limits).
-    const cssHeight = canvas.clientHeight || 1;
-    const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivotRadius());
-
-    cam.yaw -= dx * radPerPixel;
-
-    // Pitch (up / down): dragging down (positive dy, because CSS Y grows
-    // downward) should tilt the camera upward toward the +Y pole — so we
-    // *add* dy to pitch.  Clamp to ±PITCH_LIMIT to prevent the gimbal-lock
-    // singularity at ±π/2 (see PITCH_LIMIT comment above). Same altitude-damped
-    // rate as yaw.
-    cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * radPerPixel));
-
-    // Recalculate cam.position from the updated yaw/pitch/distance.
-    // The render loop reads cam.position (via computeViewProj) on the next
-    // requestAnimationFrame tick, so this mutation is effectively immediate.
-    updatePosition(cam);
-    options?.onChange?.();
+    // Client (viewport-relative) coords survive a scrolled/transformed canvas.
+    emit({ kind: 'dragMove', mode: dragMode, xPx: e.clientX, yPx: e.clientY });
   };
 
   // ── Wheel — zoom ───────────────────────────────────────────────────────────
 
   const onWheel = (e: WheelEvent) => {
-    // Stop the page from scrolling while the user zooms the 3D view.
-    // This requires `{ passive: false }` on the listener (see below) because
-    // passive listeners cannot call `preventDefault()`.
+    // Suppress page scroll while zooming. Needs `{ passive: false }` below,
+    // since a passive listener may not call preventDefault.
     e.preventDefault();
-
-    // Exponential zoom: scale by e^(δ · k) per notch.
-    //
-    // Why exponential (multiplicative) rather than linear (additive)?
-    //
-    //   • Linear (+/−Δ per tick) feels fast when you're close (distance=0.1)
-    //     and sluggish when you're far (distance=1000).
-    //   • Exponential (×factor per tick) gives the same *proportional* step
-    //     regardless of the current distance — zooming in by 10% always looks
-    //     the same on screen, whether you're near or far.
-    //
-    // `Math.exp(deltaY * 0.001)`:
-    //   • `deltaY` is typically ±100 (one notch) on desktop mice with the
-    //     default "pixel" delta mode, or ±3–4 on high-resolution trackpads.
-    //   • k = 0.001 maps one notch (100 units) to e^0.1 ≈ 1.105 — about
-    //     10 % per notch. This is a comfortable zoom speed. Larger k zooms
-    //     faster; smaller k is more precise.
-    //   • Scroll down (positive deltaY) → factor > 1 → distance grows (zoom out).
-    //   • Scroll up   (negative deltaY) → factor < 1 → distance shrinks (zoom in).
-    //
-    // `zoomedDistance` applies that per-notch factor to altitude above a
-    // pivot's surface rather than raw distance (see its module header); the
-    // ceiling it still enforces via `clampDistance` prevents drifting off into
-    // the void beyond the deepest galaxy catalog, where the cloud collapses to
-    // a dot.
-    const factor = Math.exp(e.deltaY * 0.001);
-
-    if (activePointers.size > 0) {
-      // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
-      // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
-      // so the zoom shows immediately and rides the `onGestureEnd` commit.
-      cam.distance = zoomedDistance(cam.distance, factor, pivotRadius());
-      updatePosition(cam);
-      options?.onChange?.();
-      return;
-    }
-
-    // Discrete wheel zoom with NO gesture in progress: `dragging` is false, so
-    // the `resting` driver renders the store `base`, not `cam` — a `cam`
-    // mutation would be invisible. Commit the zoom straight into `base` via the
-    // engine callback (which also wakes the loop).
-    options?.onZoom?.(factor);
+    // With a pointer down the drag register is what renders (`orbitDrag`), so
+    // the zoom folds into it; at rest the store `base` renders instead.
+    emit({ kind: 'wheel', deltaY: e.deltaY, duringGesture: activePointers.size > 0 });
   };
 
   // ── Register listeners ─────────────────────────────────────────────────────
 
-  // `pointerdown` on the canvas — a drag only starts when the gesture
-  // begins on the drawing surface. The continuation events go on `window`
-  // (see the module header: drag-outside continuation + the iOS WebKit
-  // explicit-capture bug).
+  // `pointerdown` on the canvas (a gesture must START on the drawing surface),
+  // but move / up / cancel on `window`: a drag that leaves the canvas must keep
+  // orbiting, and — load-bearing on iOS — touch pointers get IMPLICIT capture on
+  // pointerdown, which WebKit then mishandles if an explicit
+  // `setPointerCapture()` is layered on top, silently killing `pointermove` /
+  // `pointerup` for single-finger orbit and pinch while desktop mouse is fine.
+  // So: never call `setPointerCapture`, listen on `window` instead.
+  // (`touch-action: none` on the canvas — global.css — still suppresses native
+  // scroll/zoom; that is keyed off the touch's TARGET element.)
+  // https://github.com/openseadragon/openseadragon/issues/1962
   canvas.addEventListener('pointerdown', onDown);
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointermove', onMove);
-  // `pointercancel` fires when the system pre-empts the gesture (notification
-  // shade, phone call, OS gesture-shelf swipe, low-memory pause).  It carries
-  // no end coordinate worth using for click detection, so we route it through
-  // the same teardown path as `pointerup` — the click branch will simply not
-  // fire because the cancelled pointer's recorded down/up positions don't
-  // reflect a real tap intent.
+  // `pointercancel` = the system pre-empted the gesture (notification shade,
+  // call, OS gesture shelf). No meaningful end coordinate, so routing it through
+  // the shared teardown simply will not fire the click branch.
   window.addEventListener('pointercancel', onUp);
 
-  // ── Double-click — delegate to the browser's `dblclick` event ────────────
-  //
-  // We don't track timing ourselves: the browser already implements the OS
-  // double-click threshold (typically 300–500 ms, configurable in the user's
-  // accessibility settings).  On touch screens the same event also fires for
-  // a quick double-tap, so this single listener covers desktop + mobile.
+  // Double-click detection is the browser's: it follows the OS threshold and
+  // the user's accessibility settings, and fires for a touch double-tap.
   const onDblClick = (e: MouseEvent) => {
     options?.onDoubleClick?.(e.clientX, e.clientY);
   };
   canvas.addEventListener('dblclick', onDblClick);
 
-  // ── Suppress the right-click context menu on the canvas ──────────────────
-  //
-  // The pan gesture uses the right mouse button (and middle), so a normal
-  // right-click would otherwise trigger the browser's context menu and cancel
-  // the drag.  We listen on the canvas only so the user can still right-click
-  // anywhere ELSE on the page (settings panel, info card link, etc.).
+  // Pan uses the right/middle button. Canvas only, so right-click still works
+  // everywhere else on the page.
   const onContextMenu = (e: Event) => e.preventDefault();
   canvas.addEventListener('contextmenu', onContextMenu);
 
-  // `{ passive: false }` is required for wheel events in modern browsers.
-  //
-  // Background: browsers optimise scrolling by treating wheel listeners as
-  // "passive" by default — they assume the handler will NOT call
-  // `preventDefault()` and scroll the page immediately on a separate thread
-  // without waiting for JavaScript. This gives buttery-smooth native scroll.
-  //
-  // Opting out (`passive: false`) tells the browser we *might* call
-  // `preventDefault()`, so it must wait for our handler to finish before
-  // deciding whether to scroll. This adds a small latency to scrolling
-  // elsewhere on the page, but it's the only way to suppress page scroll
-  // while the user is zooming the canvas.
   canvas.addEventListener('wheel', onWheel, { passive: false });
 
-  // ── Return teardown function ───────────────────────────────────────────────
-
-  // Returning a cleanup function is the standard "disposable" pattern in
-  // JavaScript. It mirrors React's `useEffect` cleanup, Svelte's `onDestroy`,
-  // and the raw `addEventListener` / `removeEventListener` contract.
-  //
-  // By capturing the exact same handler references in a closure, we guarantee
-  // that `removeEventListener` matches the original registrations —
-  // a different function object (even with identical body) would not match.
   return () => {
     canvas.removeEventListener('pointerdown', onDown);
     window.removeEventListener('pointerup', onUp);
