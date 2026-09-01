@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 
 import type { EarthImagerySource } from './EarthImagerySource';
+import { matchEoxSeaColour } from './matchEoxSeaColour';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** EOX only ever harvests z13 (`fetchEoxTiles.ts`'s header) — coarser levels
@@ -265,7 +266,9 @@ export async function eoxTileSource(opts: {
         .raw()
         .toBuffer();
 
-      return new Uint8Array(composited);
+      // Sea colour match runs here, at z13 (the only level this source ever
+      // reads at) — coarser levels inherit it via the bake's own 2x2 average.
+      return matchEoxSeaColour(new Uint8Array(composited), NATIVE_EDGE_PX, NATIVE_EDGE_PX);
     },
   };
 }

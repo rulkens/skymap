@@ -52,7 +52,7 @@ describe('earthHomePose', () => {
   });
 
   it('targets and frames Earth exactly as body focus does', () => {
-    const framing = bodyLikeFraming(earthPos, SCENE_EARTH.radiusKm, FOV_Y_RAD);
+    const framing = bodyLikeFraming(earthPos, SCENE_EARTH.radiusM, FOV_Y_RAD);
     expect(pose.target).toEqual(framing.target);
     expect(pose.distance).toBe(framing.distance);
   });

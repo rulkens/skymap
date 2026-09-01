@@ -15,6 +15,7 @@ import { createElement } from 'react';
 import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
 import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusable';
 import { SGR_A_STAR_ENTRY } from '../../../src/data/sources/sgr-a-star';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
 
@@ -23,7 +24,7 @@ const rigelTarget: BodyInfo = {
   id: 'rigel',
   label: 'Rigel',
   positionMpc: [0, 0, 0],
-  radiusKm: 5.5e7,
+  radiusM: 55000000000,
 };
 
 // Jupiter is a non-star body: its id misses FAMOUS_STAR_IDS, so the card takes
@@ -33,7 +34,7 @@ const jupiterTarget: BodyInfo = {
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [0, 0, 0],
-  radiusKm: 69911,
+  radiusM: 69911000,
 };
 
 const rigelMeta: FamousStarMetaEntry = {
@@ -89,7 +90,9 @@ describe('BodyDetailCard', () => {
 
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
     // Radius stays first (straight off BodyInfo).
-    expect(screen.getByText(`${jupiterTarget.radiusKm.toLocaleString()} km`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${(jupiterTarget.radiusM * SCALE_UNITS.M_TO_KM).toLocaleString()} km`),
+    ).toBeInTheDocument();
     // A few fact-sheet rows from BODY_FACTS.jupiter.
     expect(screen.getByText('317.8 M⊕')).toBeInTheDocument();
     expect(screen.getByText('2.53 g')).toBeInTheDocument();
@@ -125,7 +128,7 @@ describe('BodyDetailCard', () => {
       id: 's2',
       label: 'S2',
       positionMpc: [0, 0, 0],
-      radiusKm: 1e6,
+      radiusM: 1000000000,
     }) as BodyInfo;
 
     const { container } = render(createElement(BodyDetailCard, { target, famousStarsMeta: [] }));

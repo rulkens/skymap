@@ -25,7 +25,7 @@ export const zoneOfAvoidanceLayer: ContentLayer = {
   target: 'zoa',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     return deriveZoneOfAvoidanceLiveness(state, ctx) !== null;
   },
 

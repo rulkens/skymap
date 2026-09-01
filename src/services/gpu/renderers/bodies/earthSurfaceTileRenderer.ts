@@ -14,11 +14,17 @@
  * resolved atlas rect. One `pass.draw(VERTS_PER_TILE * tileCount)` reads
  * both via `@builtin(vertex_index)` alone — see `vertex.wesl`.
  *
- * `originRelCamMpc` and `camPosRelBodyMpc` are composed in native JS
- * `number` (f64) arithmetic here and narrowed to f32 only at the final
- * `DataView` write, mirroring `composeBodyMvp`/`rebaseViewProj`'s
- * discipline; `vertex.wesl` derives why that keeps the reconstructed local
- * normal f32-safe with no separate origin-direction field.
+ * `originRelCamM` is composed in native JS `number` (f64) arithmetic here and
+ * narrowed to f32 only at the final `DataView` write, mirroring
+ * `composeBodySlabMvp`'s discipline; `camPosRelBodyM` is the pose seam's own
+ * `eyeRelBodyM`, already in that same frame -- no further compose needed.
+ * `vertex.wesl` derives why that keeps the reconstructed local normal
+ * f32-safe with no separate origin-direction field. Both are body-fixed-axes
+ * quantities now, not world-axes: the body-slab pose seam (`bodyRelativePose`)
+ * already rotated the camera into Earth's own fixed frame, the SAME frame
+ * `tile.originLocal`/the baked mesh live in, so no orientation rotation is
+ * applied here -- `SurfaceTileUniforms.rotCol0/1/2` are fed the identity
+ * (kept only for the struct's parity-tested byte layout).
  *
  * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline
  * shares the base globe's nominal radius, so ties must resolve in ITS
@@ -35,10 +41,9 @@ import type {
   EarthSurfaceTileRenderer,
   EarthSurfaceTileDrawArgs,
 } from '../../../../@types/rendering/EarthSurfaceTileRenderer';
-import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SurfaceTileMeshCache } from '../../resources/surfaceTileMeshCache';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { rotateVec3ByTightMat3 } from '../../../../utils/math/rotateVec3ByTightMat3';
+import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/earthSurfaceTile/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earthSurfaceTile/fragment.wesl?static';
@@ -215,10 +220,8 @@ export function createEarthSurfaceTileRenderer(
     const {
       tiles,
       frame,
-      camPosMpc,
-      bodyPositionMpc,
-      orientation,
-      radiusMpc,
+      eyeRelBodyM,
+      radiusM,
       vp,
       sunDirLocal,
       roughnessBase,
@@ -239,14 +242,6 @@ export function createEarthSurfaceTileRenderer(
     if (tileCount === 0) return;
 
     ensureScratch(tileCount);
-
-    // Shared (per-draw, not per-tile) camera-relative-to-Earth facts, both
-    // f64-composed here and narrowed once — see the module header.
-    const camPosRelBodyMpc: Vec3 = [
-      camPosMpc[0] - bodyPositionMpc[0],
-      camPosMpc[1] - bodyPositionMpc[1],
-      camPosMpc[2] - bodyPositionMpc[2],
-    ];
 
     // Sampled ONCE per draw call (== once per frame; `earthLayer` calls
     // `draw` at most once), never per tile — every tile's fade weight must
@@ -271,13 +266,16 @@ export function createEarthSurfaceTileRenderer(
           ? 1
           : Math.min(1, Math.max(0, (nowMs - tile.resident.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
 
-      const rotatedOrigin = rotateVec3ByTightMat3(tile.originLocal, orientation);
+      // Body-fixed axes throughout (no orientation rotation): tile.originLocal
+      // is already the frame composeBodySlabMvp's model factor places bodies
+      // in, so the tile origin relative to the eye is a direct
+      // radius-scale-then-subtract, mirroring that same model.
       writeSurfaceTileNodeParams(
         nodeScratchView,
         i * NODE_PARAMS_BYTES,
-        radiusMpc * rotatedOrigin[0] + bodyPositionMpc[0] - camPosMpc[0],
-        radiusMpc * rotatedOrigin[1] + bodyPositionMpc[1] - camPosMpc[1],
-        radiusMpc * rotatedOrigin[2] + bodyPositionMpc[2] - camPosMpc[2],
+        radiusM * tile.originLocal[0] - eyeRelBodyM[0],
+        radiusM * tile.originLocal[1] - eyeRelBodyM[1],
+        radiusM * tile.originLocal[2] - eyeRelBodyM[2],
         vertexBase,
         tile.resident.atlasUvOrigin[0],
         tile.resident.atlasUvOrigin[1],
@@ -324,10 +322,13 @@ export function createEarthSurfaceTileRenderer(
     writeSurfaceTileUniforms(
       uniformView,
       vp,
-      orientation,
-      radiusMpc,
+      // Body-fixed frame throughout (see the module header) — the shader's
+      // rotCol0/1/2 slots are inert at identity, kept only for the struct's
+      // parity-tested byte layout.
+      IDENTITY_MAT3,
+      radiusM,
       vertsPerTile,
-      camPosRelBodyMpc,
+      eyeRelBodyM,
       sunDirLocal,
       roughnessBase,
       f0,

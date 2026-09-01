@@ -125,7 +125,7 @@ export const bodyGlintsLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first (short-circuits before any ctx / state.data read — matches
     // starPointsLayer), shared distance gate second, far-dissolve band third,
     // partition last.
@@ -158,7 +158,7 @@ export const bodyGlintsLayer: ContentLayer = {
   // the pick pass entirely. `enabled` stays glints-only so a caption-range frame
   // with no glints leaves no zero-glint row in the VISUAL pass plan. Same Earth
   // gate `drawPick` uses. See `ContentLayer.pickEnabled`.
-  pickEnabled(state, ctx) {
+  pickEnabled(state, ctx, _view) {
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     if (sceneBodyPartition(state, ctx).glints.length > 0) return true;
@@ -203,7 +203,7 @@ export const bodyGlintsLayer: ContentLayer = {
       const positionMpc = states.get(body.id)!.positionMpc;
       const diameterPx = bodyApparentDiameterPx({
         positionMpc,
-        radiusKm: body.radiusKm,
+        radiusM: body.radiusM,
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
         fovYRad: ctx.fovYRad,
@@ -289,9 +289,9 @@ export const bodyGlintsLayer: ContentLayer = {
   // so earth-over-planet-over-moon is an unconditional depth win and the ORDER the
   // points appear in this list carries no priority. See `starPointPick.wesl`.
   //
-  // `bodyPickRenderer.drawPoints` is safe to call once per caller per pass (it
-  // claims its own per-pass slot of buffers); this layer and `starPointsLayer` are
-  // its two callers, each calling exactly once per `drawPick`.
+  // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit
+  // (see its module header); this layer and `starPointsLayer` are its two
+  // callers, each calling exactly once per `drawPick`.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;
@@ -371,7 +371,7 @@ export const bodyGlintsLayer: ContentLayer = {
       // drawn set and beyond it they match.
       const diameterPx = bodyApparentDiameterPx({
         positionMpc,
-        radiusKm: body.radiusKm,
+        radiusM: body.radiusM,
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
         fovYRad: ctx.fovYRad,

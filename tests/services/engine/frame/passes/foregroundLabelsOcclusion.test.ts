@@ -1,15 +1,15 @@
 /**
- * foregroundLabelsOcclusion — guards the depth-view thread-through.
+ * foregroundLabelsOcclusion — guards the colour-view thread-through.
  *
- * The near-field captions and their leader lines occlude per-pixel behind
- * nearer solar-system bodies by sampling the `foreground:0` scene depth in
- * their fragment shaders. That only fires if the layer actually READS the
- * depth view from `ctx.renderTargets` and hands it to BOTH renderer draws as
- * the optional 4th `sceneDepthView` arg. Because that arg is optional, a
- * refactor could silently drop it — occlusion would turn OFF with no type
- * error and no failing draw-order test. This file pins the thread-through by
- * object identity: `depthViewOf('foreground:0')` is called, and its return
- * reaches both the caption and the leader-line draws.
+ * The near-field captions and their leader lines occlude per-pixel behind an
+ * opaque solar-system body by sampling the `foreground:0` scene colour's
+ * alpha in their fragment shaders. That only fires if the layer actually
+ * READS the colour view from `ctx.renderTargets` and hands it to BOTH
+ * renderer draws as the optional 4th `sceneColorView` arg. Because that arg
+ * is optional, a refactor could silently drop it — occlusion would turn OFF
+ * with no type error and no failing draw-order test. This file pins the
+ * thread-through by object identity: `viewOf('foreground:0')` is called, and
+ * its return reaches both the caption and the leader-line draws.
  *
  * The rest of the mock scaffolding mirrors `foregroundLabelsLayer.test.ts`.
  */
@@ -17,7 +17,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -30,26 +30,18 @@ import type { MarkerLine } from '../../../../../src/@types/rendering/MarkerLine'
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
 // A real NEAR0 slab — `near0LabelProjection` runs the genuine rebase chain
-// against it; these tests only care about the depth-view seam, not the
+// against it; these tests only care about the colour-view seam, not the
 // resulting vp, so its exact values don't matter.
 function makeCtx(
   renderedTargets: ReadonlySet<string>,
-  depthViewOf: (id: string) => GPUTextureView,
+  viewOf: (id: string) => GPUTextureView,
 ): ReadyFrameContext {
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
-    originRelative: true,
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab();
   return {
     slabs: [slab],
     drawCamPos: [2, 3, 5],
     canvasSize: { width: 1280, height: 720 },
-    renderTargets: { depthViewOf },
+    renderTargets: { viewOf },
     renderedTargets,
   } as unknown as ReadyFrameContext;
 }
@@ -83,42 +75,42 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
 // `view` is unused by `draw` (the projection comes from `near0LabelProjection(ctx)`).
 const VIEW_STUB = {} as unknown as SlabView;
 
-describe('foregroundLabelsLayer.draw — depth occlusion thread-through', () => {
-  it('passes the foreground:0 depth view to both draws when the body pass ran this frame', () => {
+describe('foregroundLabelsLayer.draw — coverage occlusion thread-through', () => {
+  it('passes the foreground:0 colour view to both draws when the body pass ran this frame', () => {
     const renderer = makeRenderer();
     const lineRenderer = makeLineRenderer();
     const state = makeState(renderer, lineRenderer);
-    const sentinelDepthView = {} as GPUTextureView;
-    const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => sentinelDepthView);
+    const sentinelColorView = {} as GPUTextureView;
+    const viewOf = vi.fn<(id: string) => GPUTextureView>(() => sentinelColorView);
     // `foreground:0` in the rendered set means the body pass drew this frame,
-    // so the depth is valid to sample.
-    const ctx = makeCtx(new Set(['foreground:0']), depthViewOf);
+    // so the colour is valid to sample.
+    const ctx = makeCtx(new Set(['foreground:0']), viewOf);
 
     foregroundLabelsLayer.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
-    expect(depthViewOf).toHaveBeenCalledWith('foreground:0');
+    expect(viewOf).toHaveBeenCalledWith('foreground:0');
     const labelDraw = renderer.draw as unknown as ReturnType<typeof vi.fn>;
     const lineDraw = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
-    expect(labelDraw.mock.calls[0]![3]).toBe(sentinelDepthView);
-    expect(lineDraw.mock.calls[0]![3]).toBe(sentinelDepthView);
+    expect(labelDraw.mock.calls[0]![3]).toBe(sentinelColorView);
+    expect(lineDraw.mock.calls[0]![3]).toBe(sentinelColorView);
   });
 
-  it('passes undefined depth to both draws when the body pass did NOT run this frame', () => {
-    // The stale-depth fix: when no foreground body rendered (the executor skips
+  it('passes undefined colour to both draws when the body pass did NOT run this frame', () => {
+    // The stale-colour fix: when no foreground body rendered (the executor skips
     // an empty render step), `foreground:0` is absent from `renderedTargets`, so
-    // its depth texture is uninitialised. Sampling it would spuriously discard
+    // its colour texture is uninitialised. Sampling it would spuriously discard
     // EVERY caption. The layer must instead hand the renderers `undefined`, so
     // they fall back to their plain pipeline and draw the captions un-occluded.
     const renderer = makeRenderer();
     const lineRenderer = makeLineRenderer();
     const state = makeState(renderer, lineRenderer);
-    const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
-    const ctx = makeCtx(new Set<string>(), depthViewOf);
+    const viewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
+    const ctx = makeCtx(new Set<string>(), viewOf);
 
     foregroundLabelsLayer.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
-    // The stale depth is never even read.
-    expect(depthViewOf).not.toHaveBeenCalled();
+    // The stale colour is never even read.
+    expect(viewOf).not.toHaveBeenCalled();
     const labelDraw = renderer.draw as unknown as ReturnType<typeof vi.fn>;
     const lineDraw = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
     expect(labelDraw.mock.calls[0]![3]).toBeUndefined();

@@ -34,6 +34,7 @@ import { CONST_J2000 } from '../../time/constJ2000';
 import { cosmicFlows } from './cosmicFlows';
 import { flyout } from './flyout';
 import { earthFlyout } from './earthFlyout';
+import { earthCosmicWebLoop } from './earthCosmicWebLoop';
 import { earthUniverseLoop } from './earthUniverseLoop';
 import { flowOrbit } from './flowOrbit';
 import { flyPathDemo } from './flyPathDemo';
@@ -63,6 +64,7 @@ export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   // The only instant-dependent clips: they read Earth's position at `simDays`.
   earthFlyout,
   earthUniverseLoop,
+  earthCosmicWebLoop,
   flowOrbit: () => flowOrbit,
   flyPathDemo: () => flyPathDemo,
   famousFlythrough: () => famousFlythrough,

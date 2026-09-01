@@ -83,26 +83,18 @@ import fsCode from '../../shaders/labels/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/labels/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
-  OCCLUSION_DEPTH_GROUP_INDEX,
-  OCCLUSION_DEPTH_LAYOUT_DESC,
-  createOcclusionDepthBindGroup,
-} from './occlusionDepthGroup';
+  OCCLUSION_COVERAGE_GROUP_INDEX,
+  OCCLUSION_COVERAGE_LAYOUT_DESC,
+  createOcclusionCoverageBindGroup,
+} from './occlusionCoverageGroup';
+import {
+  LABEL_MAX_PX_DEFAULT,
+  LABEL_MIN_PX_DEFAULT,
+  LABEL_WORLD_EM_MPC_DEFAULT,
+} from '../../../../data/labels/labelSizingDefaults';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
-
-// ─── sizing defaults ───────────────────────────────────────────────────────
-
-/**
- * Defaults applied when a Label omits its sizing fields (see the
- * corresponding docstrings on the Label type).  Exported because the
- * label director's rect-based declutter reproduces the vertex shader's
- * `clamp(worldLenToPx(worldEmMpc), minPx, maxPx)` on the CPU — reading
- * the defaults from here keeps the two computations from drifting.
- */
-export const LABEL_WORLD_EM_MPC_DEFAULT = 0.01;
-export const LABEL_MIN_PX_DEFAULT = 8;
-export const LABEL_MAX_PX_DEFAULT = 64;
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 
@@ -162,20 +154,12 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * defaults (64 × 64 = 4096 glyphs) cover the "you are here" + a few
  * future tagged-galaxy markers without a follow-up resize.
  *
- * `opts.occludeAgainstDepth` opts this instance into per-pixel occlusion
- * behind nearer solar-system bodies, and selects WHICH occluder.  When set,
- * the pipeline gains a group(1) depth binding (`OCCLUSION_DEPTH_LAYOUT_DESC`)
- * and compiles a discard-gated `fragmentOcclude.wesl` entry instead of the
- * plain `fragment.wesl`; `draw` then consumes a per-frame scene depth view.
- * The mode picks the entry point:
- *   - `'compare'`  → the `fs` entry (depth COMPARE) for NEAR0 foreground
- *     captions that share the bodies' slab, so a caption stays visible over
- *     its own body.
- *   - `'coverage'` → the `fsCoverage` entry (pure COVERAGE) for the COSMO
- *     overlay labels, whose window-Z is in a different projection than the
- *     NEAR0 body depths, so any body depth written at the pixel occludes them.
- * The default (opts omitted) keeps the plain single-BGL, non-occluding
- * pipeline — byte-for-byte unchanged.
+ * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
+ * behind the solar-system bodies.  When set, the pipeline gains a group(1)
+ * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
+ * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
+ * consumes a per-frame scene colour view.  The default (opts omitted) keeps
+ * the plain single-BGL pipeline — byte-for-byte unchanged.
  */
 export function createLabelRenderer(
   ctx: GpuContext,
@@ -183,7 +167,7 @@ export function createLabelRenderer(
   atlases: LoadedFontAtlases,
   maxLabels = 64,
   maxGlyphsPerLabel = 64,
-  opts?: { occludeAgainstDepth?: 'compare' | 'coverage' },
+  opts?: { occludeAgainstScene?: boolean },
 ): LabelRenderer {
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
@@ -231,12 +215,16 @@ export function createLabelRenderer(
   // by `setLabels`; read by `draw`, `glyphCount`, `labelCount`.
   let currentGlyphCount = 0;
   let currentLabelCount = 0;
+  // The rows `setLabels` actually packed, retained so the pick path can derive
+  // its hit rects from exactly what is on screen — `maxLabels`-truncated tail
+  // included, since a dropped row draws nothing and must not be clickable.
+  let currentLabels: readonly Label2D[] = [];
 
   // ── GPU resources (null when device is null) ─────────────────────────────
   //
   // The occlusion instance builds BOTH pipelines and picks per-draw:
-  // `plainPipeline` (single BGL) whenever no scene depth is supplied this frame,
-  // `occludePipeline` (two BGLs, discard-gated fragment) when it is. A
+  // `plainPipeline` (single BGL) whenever no scene colour is supplied this frame,
+  // `occludePipeline` (two BGLs, scene-attenuated fragment) when it is. A
   // non-occlusion instance builds only `plainPipeline` and leaves the other null.
   let plainPipeline: GPURenderPipeline | null = null;
   let occludePipeline: GPURenderPipeline | null = null;
@@ -246,16 +234,13 @@ export function createLabelRenderer(
   let cornerBuffer: GPUBuffer | null = null;
   let atlasTexture: GPUTexture | null = null;
   let bindGroup: GPUBindGroup | null = null;
-  // Retained only on the occlusion path — the group(1) depth BGL that
+  // Retained only on the occlusion path — the group(1) coverage BGL that
   // `draw` rebuilds a per-frame bind group against.  Null on the plain
   // path (and whenever device is null), which is what gates `draw`'s
   // occlusion branch.
-  let occlusionDepthBGL: GPUBindGroupLayout | null = null;
+  let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
 
-  // The occlude MODE, or undefined for a plain instance. Present ⇒ build the
-  // occlude pipeline + depth BGL (exactly as the old boolean did); the mode
-  // then selects the fragment ENTRY POINT — see the factory docblock.
-  const occludeMode = opts?.occludeAgainstDepth;
+  const occludesScene = opts?.occludeAgainstScene === true;
 
   if (device) {
     // ── Bind group layout ────────────────────────────────────────────────
@@ -291,28 +276,28 @@ export function createLabelRenderer(
 
     // ── Occlusion joint (opt-in) ─────────────────────────────────────────
     //
-    // When this instance occludes against scene depth, the pipeline gains a
-    // second bind-group layout at group 1 (the shared depth joint) and
-    // compiles the discard-gated fragment entry.  `occlusionDepthBGL` is
-    // retained so `draw` can rebuild its per-frame bind group (the depth
-    // view changes on every resize — see occlusionDepthGroup.ts).
-    if (occludeMode != null) {
-      occlusionDepthBGL = device.createBindGroupLayout(OCCLUSION_DEPTH_LAYOUT_DESC);
+    // When this instance attenuates against scene coverage, the pipeline gains
+    // a second bind-group layout at group 1 (the shared coverage joint).
+    // `occlusionCoverageBGL` is retained so `draw` can rebuild its per-frame
+    // bind group (the colour view changes on every resize — see
+    // occlusionCoverageGroup.ts).
+    if (occludesScene) {
+      occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
     }
 
     // ── Pipelines ────────────────────────────────────────────────────────
     //
     // An occlusion instance builds BOTH pipelines and picks per-draw. `draw`
-    // selects `occludePipeline` only when handed a scene depth view THIS frame,
+    // selects `occludePipeline` only when handed a scene colour view THIS frame,
     // and falls back to `plainPipeline` otherwise — so a frame in which no
-    // foreground body drew (hence no valid scene depth) still paints its
+    // foreground body drew (hence no valid scene colour) still paints its
     // captions un-occluded through a VALID draw, rather than an occlusion draw
     // with group(1) left unbound. A non-occlusion instance builds only the
     // plain pipeline.
     const vsModule = createShaderModuleWithDevLog(device, vsCode, 'labels.vertex');
 
     // Both pipelines draw the identical geometry into the identical target;
-    // only the fragment entry and the group(1) depth binding differ, so the
+    // only the fragment entry and the group(1) coverage binding differ, so the
     // vertex-buffer + colour-target descriptors are shared.
     const vertexBuffers: GPUVertexBufferLayout[] = [
       // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
@@ -354,7 +339,7 @@ export function createLabelRenderer(
       // in depth testing.
     });
 
-    if (occlusionDepthBGL) {
+    if (occlusionCoverageBGL) {
       const fsOccludeModule = createShaderModuleWithDevLog(
         device,
         fsOccludeCode,
@@ -364,17 +349,11 @@ export function createLabelRenderer(
         label: 'label-pipeline-occlude',
         layout: device.createPipelineLayout({
           label: 'label-pipeline-occlude-layout',
-          // group 0 = the label BGL; group 1 = the shared depth joint.
-          bindGroupLayouts: [bindGroupLayout, occlusionDepthBGL],
+          // group 0 = the label BGL; group 1 = the shared coverage joint.
+          bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
         vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
-        fragment: {
-          module: fsOccludeModule,
-          // COVERAGE for the cross-slab COSMO overlays, COMPARE for the
-          // same-slab NEAR0 captions — see the factory docblock.
-          entryPoint: occludeMode === 'coverage' ? 'fsCoverage' : 'fs',
-          targets: colorTargets,
-        },
+        fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
         primitive: { topology: 'triangle-strip' },
       });
     }
@@ -489,6 +468,7 @@ export function createLabelRenderer(
     currentLabelCount = 0;
 
     const count = Math.min(labels.length, maxLabels);
+    currentLabels = count === labels.length ? labels : labels.slice(0, count);
     for (let li = 0; li < count; li++) {
       const label = labels[li]!;
       // Each label specifies its own font; layout reads the font's
@@ -603,7 +583,7 @@ export function createLabelRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    sceneDepthView?: GPUTextureView,
+    sceneColorView?: GPUTextureView,
   ): void {
     if (
       !device ||
@@ -625,21 +605,21 @@ export function createLabelRenderer(
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion
-    // pipeline only when a scene depth view is supplied THIS frame, binding the
-    // group(1) depth joint rebuilt from that view. With no depth view (e.g. no
-    // foreground body rendered this frame), it falls back to the plain pipeline
-    // and draws the captions un-occluded — a valid draw, NOT an occlusion draw
-    // with group(1) left unbound. A non-occlusion instance (occludePipeline
-    // null) always takes the plain path.
-    if (occlusionDepthBGL && occludePipeline && sceneDepthView) {
+    // pipeline only when a scene colour view is supplied THIS frame, binding the
+    // group(1) coverage joint rebuilt from that view. With no colour view (e.g.
+    // no foreground body rendered this frame), it falls back to the plain
+    // pipeline and draws the captions un-occluded — a valid draw, NOT an
+    // occlusion draw with group(1) left unbound. A non-occlusion instance
+    // (occludePipeline null) always takes the plain path.
+    if (occlusionCoverageBGL && occludePipeline && sceneColorView) {
       pass.setPipeline(occludePipeline);
       pass.setBindGroup(0, bindGroup);
-      const depthBindGroup = createOcclusionDepthBindGroup(
+      const coverageBindGroup = createOcclusionCoverageBindGroup(
         device,
-        occlusionDepthBGL,
-        sceneDepthView,
+        occlusionCoverageBGL,
+        sceneColorView,
       );
-      pass.setBindGroup(OCCLUSION_DEPTH_GROUP_INDEX, depthBindGroup);
+      pass.setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, coverageBindGroup);
     } else {
       pass.setPipeline(plainPipeline);
       pass.setBindGroup(0, bindGroup);
@@ -694,6 +674,7 @@ export function createLabelRenderer(
     draw,
     glyphCount,
     labelCount,
+    packedLabels: () => currentLabels,
     destroy,
   };
   // `satisfies Renderer` confirms the shared label+destroy contract at

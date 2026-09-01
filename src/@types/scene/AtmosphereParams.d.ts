@@ -14,7 +14,7 @@ import type { Vec3 } from '../math/Vec3';
 import type { AtmosphereConstituent } from './AtmosphereConstituent';
 
 export type AtmosphereParams = {
-  readonly planetRadiusKm: number; // ground sphere (Earth 6371, matching SCENE_EARTH.radiusKm)
+  readonly planetRadiusKm: number; // ground sphere (Earth 6371, from SCENE_EARTH.radiusM)
   readonly atmosphereTopKm: number; // top-of-atmosphere radius (planetRadiusKm + visible-atmosphere thickness)
   readonly constituents: readonly AtmosphereConstituent[]; // ≤ MAX_CONSTITUENTS; list order is the accumulation order
   readonly groundAlbedo: Vec3; // isotropic ground bounce for the multi-scatter LUT

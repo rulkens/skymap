@@ -34,8 +34,13 @@ import type { EngineState } from '../state/EngineState';
 export type ContentLayer = {
   /** Stable identifier for debugging, test assertions, and the derived timing-slot list. */
   readonly name: string;
-  /** Index into the per-frame slab list this layer projects through. */
-  readonly slab: number;
+  /**
+   * Index into the per-frame slab list this layer projects through, or
+   * `'body'` — the frame program expands a `'body'` layer into one render
+   * step per body-slab row, and `enabled`/`draw` read `view.slab.frame.bodyId`
+   * to know which body this call is for.
+   */
+  readonly slab: number | 'body';
   /** The `RenderTargetSpec.id` this layer draws into. */
   readonly target: string;
   /**
@@ -52,8 +57,12 @@ export type ContentLayer = {
    * a target's mixed blends is the intended guardrail, not yet built.
    */
   readonly blend: Blend;
-  /** Whether this layer should record draw commands this frame. Pure: no side effects. */
-  enabled(state: EngineState, ctx: ReadyFrameContext): boolean;
+  /**
+   * Whether this layer should record draw commands this frame, given the
+   * step's already-resolved `SlabView` — a `'body'` layer reads
+   * `view.slab.frame.bodyId` to gate its own row. Pure: no side effects.
+   */
+  enabled(state: EngineState, ctx: ReadyFrameContext, view: SlabView): boolean;
   /**
    * Issue draw calls into the open render pass for this layer's
    * (target, slab) group. Called only when `enabled` returned `true`.
@@ -102,7 +111,7 @@ export type ContentLayer = {
    * When absent the pick program falls back to `enabled`. Pure: no side
    * effects.
    */
-  pickEnabled?(state: EngineState, ctx: ReadyFrameContext): boolean;
+  pickEnabled?(state: EngineState, ctx: ReadyFrameContext, view: SlabView): boolean;
   /**
    * Issue pick-ID draw calls for this layer, into the parallel pick
    * program's render pass. Optional: layers that don't participate in

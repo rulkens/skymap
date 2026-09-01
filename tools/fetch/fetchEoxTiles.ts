@@ -21,7 +21,7 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 const DEFAULT_MAX_ATTEMPTS = 8;
 const DEFAULT_BASE_DELAY_MS = 1000;
-const DEFAULT_THROTTLE_MS = 500; // ~2 req/s — polite to the EOX tile service.
+const DEFAULT_THROTTLE_MS = 250; // ~4 req/s — polite to the EOX tile service.
 
 const EOX_LAYER = 's2cloudless'; // 2016 layer ONLY — see module header, licence.
 

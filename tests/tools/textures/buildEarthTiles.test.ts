@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -557,6 +557,31 @@ describe('bakeAll', () => {
       await expect(
         bakeAll([{ source: west, minLevel: STUB_Z }], dir, { only: 'does-not-exist' }),
       ).rejects.toThrow(/stub-west/);
+    });
+
+    it('throws naming the band when its stitched index was written under a different TILE_PREFIX', async () => {
+      const dir = tmpDir();
+      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
+      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+      const bands = [
+        { source: west, minLevel: STUB_Z },
+        { source: east, minLevel: STUB_Z },
+      ];
+      await bakeAll(bands, dir);
+
+      // A stale per-band index left over from a run under an OLDER
+      // TILE_PREFIX — tiles are immutable and the index is read verbatim off
+      // disk, never rewritten, so a version bump between that run and now
+      // must fail loudly rather than ship a manifest at today's prefix
+      // pointing at index lines the new prefix never baked.
+      const eastIndexPath = join(dir, 'earth-tiles/index-stub-east.txt');
+      const stalePrefixed = readFileSync(eastIndexPath, 'utf8').replaceAll(
+        TILE_PREFIX,
+        'earth-tiles/v0',
+      );
+      writeFileSync(eastIndexPath, stalePrefixed);
+
+      await expect(bakeAll(bands, dir, { only: 'stub-west' })).rejects.toThrow(/stub-east/);
     });
   });
 });

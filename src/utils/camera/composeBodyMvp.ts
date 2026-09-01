@@ -1,18 +1,24 @@
 /**
- * composeBodyMvp — compose a full proj·view·model MVP for a spherical body
- * (planet, star, Earth), entirely in f64. Callers narrow to f32 themselves,
- * at whichever point their OWN use actually needs f32 — see "Why f64 all the
- * way out" below.
+ * composeBodyMvp — compose a full proj·view·model MVP for a resolved star
+ * sphere in the world-mpc (NEAR0) frame, entirely in f64. Callers narrow to
+ * f32 themselves, at whichever point their OWN use actually needs f32 — see
+ * "Why f64 all the way out" below.
  *
- * ### One unit (Mpc) across all bodies
+ * The body render slabs migration moved every OTHER spherical body (Earth,
+ * planets, textured bodies, rings, cloud/atmosphere shells) onto the
+ * metre-native `composeBodySlabMvp` seam. This function's surviving callers —
+ * `starSpheresLayer`, `fieldStarSphereLayer`, and their shared
+ * `drawFlooredSpherePick` pick pass — stay in world-mpc deliberately: S4 keeps
+ * star spheres out of body slabs (there is no per-star seam to key one on).
  *
- * Every body — from Earth (radius ~6,371 km) to a gas giant — is represented
- * as a unit sphere scaled by `radiusMpc`. This keeps the model matrix in the
- * same coordinate frame (Megaparsecs) as the galaxy catalog, so no per-kind
- * native-unit braid (km for planets, AU for orbits, Mpc for galaxies) ever
- * leaks into the composition path. Callers convert once at the call site:
+ * ### One unit (Mpc) for star spheres
  *
- *     radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC
+ * A star is represented as a unit sphere scaled by `radiusMpc`. This keeps the
+ * model matrix in the same coordinate frame (Megaparsecs) as the galaxy
+ * catalog, so no native-unit braid leaks into the composition path. Callers
+ * convert once at the call site:
+ *
+ *     radiusMpc = 6_371_000 * SCALE_UNITS.M_TO_MPC
  *
  * ### The model is `T · R · S` (translate · rotate · scale)
  *
@@ -31,8 +37,8 @@
  * is deliberately minimal) about flattening, the spheroid is baked into the
  * CPU-side model scale — the two equatorial axes scale by `radiusMpc`, the
  * polar (model-Z) axis by `radiusMpc·(1 − oblateness)`. A sphere is just the
- * `oblateness = 0` case, so the default leaves every uniform-radius caller
- * (Earth, planets) composing exactly the matrix they did before.
+ * `oblateness = 0` case, so the default leaves every uniform-radius star
+ * (most of them) composing exactly the matrix a true sphere would.
  *
  * Because the flatten lives in `S` — the INNERMOST model factor — the
  * orientation `R` rotates the ALREADY-flattened spheroid: a tilted oblate body
@@ -50,24 +56,8 @@
  * carries a large translation that nearly cancels it. Narrowing either
  * operand to f32 before the multiply loses the low-order bits that encode
  * the inter-body separation, misplacing the body by more than one radius.
- * `proj · view · model` is therefore computed entirely in f64 (`mat4d`).
- *
- * The result USED to narrow to f32 here too, on the reasoning that once the
- * cancellation above is resolved every element is "well-conditioned". That
- * held for every GPU-drawing caller (a sphere renderer's uniform write), but
- * `prepareEarthFrame` (`earthLayer.ts`) also feeds this SAME mvp to
- * `cutSurfaceTiles`, a CPU-side walk evaluating `mvp·p` at ground points
- * metres from the camera. There the `w`-row cancels its OWN large terms (the
- * `radiusMpc`-scale entries this function's model factor writes) down to
- * `w≈10⁻²¹` at ~60 m altitude — a SECOND, independent cancellation, internal
- * to this matrix rather than to the position delta above. Narrowing before
- * that walk runs reintroduces per-element f32 rounding at a magnitude that is
- * now a ~1% relative error on `w`, enough to corrupt the walk's bbox-cull
- * test and drop tiles that are actually on screen — see
- * `.superpowers/sdd/2026-08-20-earth-rtc-surface-foundation/cut-replay-exact-report.md`.
- * So this function returns the raw f64 result; a GPU-drawing caller narrows
- * via `narrowMat4` at its OWN upload site, and the CPU planner keeps `mvpLocal`
- * `Float64Array` all the way into `cutSurfaceTiles`.
+ * `proj · view · model` is therefore computed entirely in f64 (`mat4d`) and
+ * returned un-narrowed — callers narrow at their own upload site.
  *
  * The `foregroundVp` produced by `computeForegroundViewProj` is already
  * renderOrigin-relative, so the model's translation delta must be expressed
@@ -89,7 +79,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * @param renderOrigin  The render origin (same value passed to
  *                      `computeForegroundViewProj`).
  * @param radiusMpc     Equatorial body radius in Mpc (e.g.
- *                      `6371 * SCALE_UNITS.KM_TO_MPC`).
+ *                      `6_371_000 * SCALE_UNITS.M_TO_MPC`).
  * @param orientation   The body's baked local→equatorial-world rotation `R`,
  *                      embedded between translate and scale (`T·R·S`). Pass
  *                      `IDENTITY_MAT3` for a rotation-invariant body (a flat
@@ -99,9 +89,8 @@ import type { Vec3 } from '../../@types/math/Vec3';
  *                      so the flatten tilts with `orientation`. Defaults to `0`
  *                      (a true sphere), leaving uniform-radius callers unchanged.
  * @returns  A `Float64Array` of 16 values (column-major proj·view·model),
- *           composed entirely in f64. Narrow via `narrowMat4` before a GPU
- *           uniform write; a CPU-side consumer (the surface-tile planner)
- *           must keep it f64 — see the module header.
+ *           composed entirely in f64. Narrow via `narrowMat4` at the GPU
+ *           uniform write — see the module header.
  */
 export function composeBodyMvp(
   foregroundVp: Float64Array,

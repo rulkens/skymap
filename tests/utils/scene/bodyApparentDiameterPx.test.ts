@@ -19,17 +19,20 @@ const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
 const CAM: Vec3 = [0, 0, 0];
 
-/** A body of `radiusKm` sitting `distanceKm` down +x from the origin camera. */
-function at(radiusKm: number, distanceKm: number): {
+/** A body of `radiusM` sitting `distanceM` down +x from the origin camera. */
+function at(
+  radiusM: number,
+  distanceM: number,
+): {
   positionMpc: Vec3;
-  radiusKm: number;
+  radiusM: number;
   camPosMpc: Vec3;
   viewportHeightPx: number;
   fovYRad: number;
 } {
   return {
-    positionMpc: [distanceKm * SCALE_UNITS.KM_TO_MPC, 0, 0],
-    radiusKm,
+    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+    radiusM,
     camPosMpc: CAM,
     viewportHeightPx: VIEWPORT_HEIGHT_PX,
     fovYRad: FOV_Y_RAD,
@@ -38,24 +41,24 @@ function at(radiusKm: number, distanceKm: number): {
 
 describe('bodyApparentDiameterPx', () => {
   it('returns Infinity when the camera sits on the body (distance 0)', () => {
-    expect(bodyApparentDiameterPx(at(1000, 0))).toBe(Infinity);
+    expect(bodyApparentDiameterPx(at(1_000_000, 0))).toBe(Infinity);
   });
 
   it('is a positive finite size for a body in front of the camera', () => {
-    const px = bodyApparentDiameterPx(at(1000, 500_000));
+    const px = bodyApparentDiameterPx(at(1_000_000, 500_000_000));
     expect(px).toBeGreaterThan(0);
     expect(Number.isFinite(px)).toBe(true);
   });
 
   it('falls inversely with distance — a twin ten times farther is one tenth the size', () => {
-    const near = bodyApparentDiameterPx(at(1000, 500_000));
-    const far = bodyApparentDiameterPx(at(1000, 5_000_000));
+    const near = bodyApparentDiameterPx(at(1_000_000, 500_000_000));
+    const far = bodyApparentDiameterPx(at(1_000_000, 5_000_000_000));
     expect(far).toBeCloseTo(near / 10, 10);
   });
 
   it('rises linearly with radius — twice the radius is twice the apparent size', () => {
-    const small = bodyApparentDiameterPx(at(1000, 500_000));
-    const big = bodyApparentDiameterPx(at(2000, 500_000));
+    const small = bodyApparentDiameterPx(at(1_000_000, 500_000_000));
+    const big = bodyApparentDiameterPx(at(2_000_000, 500_000_000));
     expect(big).toBeCloseTo(small * 2, 10);
   });
 });

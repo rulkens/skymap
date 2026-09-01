@@ -10,6 +10,7 @@ import {
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { Source } from '../../../../src/data/sources';
@@ -116,7 +117,7 @@ describe('extractSelectionRow', () => {
       id: SCENE_EARTH.id,
       label: SCENE_EARTH.label,
       positionMpc: EARTH_POS,
-      radiusKm: SCENE_EARTH.radiusKm,
+      radiusM: SCENE_EARTH.radiusM,
     });
   });
 
@@ -164,7 +165,7 @@ describe('extractSelectionRow', () => {
       positionMpc: record.positionMpc,
       absMag: record.absMag,
       bpRp: record.bpRp,
-      radiusKm: SOLAR_RADIUS_KM,
+      radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
     });
   });
 
@@ -175,7 +176,9 @@ describe('extractSelectionRow', () => {
     const catalog = await makeStarCatalog();
     const starDeps: ResolveDeps = { ...deps, stars: { current: () => catalog } };
     const row = extractSelectionRow({ type: 'star', index: 0 }, starDeps, SIM_DAYS);
-    expect(row !== null && row.type === 'star' && row.radiusKm).toBe(SOLAR_RADIUS_KM);
+    expect(row !== null && row.type === 'star' && row.radiusM).toBe(
+      SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+    );
   });
 
   it('star ref with no loaded catalog → null (cloud not loaded yet)', () => {

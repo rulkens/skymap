@@ -1,19 +1,20 @@
 /**
- * ringsLayer — unit tests for the translucent planetary-ring row.
+ * ringsLayer — unit tests for the translucent planetary-ring row, one
+ * `'body'`-slab content row per host body.
  *
  * Load-bearing assertions:
  *
- *   1. The row profile: (foreground:0, NEAR0), blend 'over' — the one
- *      translucent member of the opaque foreground group.
- *   2. The gate: a ring draws only when its radial strip is resident AND its
- *      host body resolves; a null renderer, a non-resident strip, or the
- *      distance gate each disable the row.
+ *   1. The row profile: `slab: 'body'`, `(foreground:0)`, blend 'over'.
+ *   2. The gate: a row draws only when `SCENE_RINGS` has an entry for THIS
+ *      row's `bodyId` AND that ring's strip is resident — the required
+ *      "ringsLayer draws only for a body with a ring row" case: an earth row
+ *      and a saturn row, exactly one draw, on saturn.
  *   3. The f64 seam: the ring MVP composes from the slab's `Float64Array`
- *      view-projection (`view.slab.vp`), NOT the f32-narrowed `view.vp`, scaled
- *      to the ring's OUTER radius with the host body's orientation.
- *   4. The packed uniform: `packRingUniforms` carries the host sun direction,
- *      `planetRadiusRatio` (planet / outer) and `innerRatio` (inner / outer) in
- *      their byte slots.
+ *      view-projection (`view.slab.vp`), NOT the f32-narrowed `view.vp`,
+ *      scaled to the ring's OUTER radius, with the pose off `ctx.bodyPose`.
+ *   4. The two-radius asymmetry: `bodySlabCamLocal` is measured at the
+ *      PLANET's radius, NOT the ring's outer radius — inherited unchanged
+ *      from the pre-body-slabs layer (see the layer's module header).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -24,30 +25,31 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
-import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
-import type { Mat3 } from '../../../../../src/@types/math/Mat3';
+import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-// Mock composeBodyMvp so the test can assert which vp it consumed by identity.
-// Real composeBodyMvp returns f64; the layer narrows its own copy at the
-// GPU-upload boundary. The composition math is covered by composeBodyMvp's
-// own tests.
-vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
+// Mock the two body-slab compose primitives — real math is covered by their
+// own test files. This suite pins the ARGUMENTS the layer feeds them.
+const MOCK_MVP = new Float64Array(16);
+const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
+vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
+  composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
-import { composeBodyMvp } from '../../../../../src/utils/camera/composeBodyMvp';
+vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
+  bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
+}));
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
 
-// The layer reads each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). Stub it to a map built from the fixture
-// bodies, REUSING each record's own positionMpc/orientation refs — so the layer
-// sees the exact fixture values (identity-equal), keeping the `toBe(...)`
-// assertions below intact while the reads move off the baked record fields.
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
@@ -65,12 +67,40 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   }),
 }));
 
-const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
+const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
+const camLocalMock = bodySlabCamLocal as unknown as ReturnType<typeof vi.fn>;
 
-// A test fixture pairing the identity record with the J2000 state the snapshot
-// carries — position + orientation were lifted off the record onto the derive, so
-// the fixture supplies them here (keyed by id, refs reused by the mock above).
-type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
+
+const SATURN_RING = SCENE_RINGS.find((r) => r.textureId === 'saturn-ring')!;
+
+/** Saturn sitting down +x, firmly resolved on the fixture viewport. */
+function saturnBody(): SeededPlanet {
+  const radiusM = 58_232_000;
+  const distanceM = radiusM * 5;
+  return {
+    id: SATURN_RING.bodyId,
+    label: 'Saturn',
+    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+    radiusM,
+    albedo: [0.8, 0.7, 0.5],
+    orientation: IDENTITY_MAT3,
+  };
+}
+
+/** A ringless body, e.g. Earth, for the "no ring row" branch of the gate. */
+function earthBody(): SeededPlanet {
+  return {
+    id: 'earth',
+    label: 'Earth',
+    positionMpc: [1, 0, 0],
+    radiusM: 6371000,
+    albedo: [0.3, 0.4, 0.6],
+    orientation: IDENTITY_MAT3,
+  };
+}
+
+const STUB_POSE: BodyRelativePose = { eyeRelBodyM: [1, 2, 3], basisM: IDENTITY_MAT3 };
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -82,47 +112,20 @@ const PASS_STUB = {
 
 const CTX_STUB = {} as ReadyFrameContext;
 
-const IDENTITY_MAT3: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-
-const SATURN_RING = SCENE_RINGS.find((r) => r.textureId === 'saturn-ring')!;
-
-/** Saturn sitting down +x, firmly resolved on the 720-tall/60° fixture. */
-function saturnBody(orientation: Mat3 = IDENTITY_MAT3): SeededPlanet {
-  const radiusKm = 58232;
-  const distanceKm = radiusKm * 5;
-  return {
-    id: SATURN_RING.bodyId,
-    label: 'Saturn',
-    positionMpc: [distanceKm * SCALE_UNITS.KM_TO_MPC, 0, 0],
-    radiusKm,
-    albedo: [0.8, 0.7, 0.5],
-    orientation,
-  };
-}
-
-function makeCtx(distance: number): ReadyFrameContext {
+function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): ReadyFrameContext {
   return {
     cam: { distance },
     drawCamPos: [0, 0, 0],
+    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
     canvasSize: { width: 1280, height: 720 },
     fovYRad: Math.PI / 3,
   } as unknown as ReadyFrameContext;
 }
 
-const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
-
-function makeNear0View(): SlabView {
+function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    originRelative: true,
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', bodyId } });
   return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
 }
 
@@ -135,7 +138,6 @@ function makeState(
   bodies: readonly PlanetBody[],
   residentIds: readonly string[],
 ): EngineState {
-  // The residency lookup keys on the composite `${id}:surface` slot key.
   const bodyTextures = new Map(
     residentIds.map((id) => [`${id}:surface`, { current: () => ({}) as ImageBitmap }]),
   );
@@ -151,9 +153,9 @@ function makeRendererSpy() {
 }
 
 describe('ringsLayer row profile', () => {
-  it('is (foreground:0, NEAR0) with straight-alpha over', () => {
+  it('is a body-slab row over (foreground:0) with straight-alpha over', () => {
     expect(ringsLayer.name).toBe('rings');
-    expect(ringsLayer.slab).toBe(NEAR0);
+    expect(ringsLayer.slab).toBe('body');
     expect(ringsLayer.target).toBe('foreground:0');
     expect(ringsLayer.blend).toBe('over');
   });
@@ -161,55 +163,89 @@ describe('ringsLayer row profile', () => {
 
 describe('ringsLayer.enabled', () => {
   it('is false while the ringRenderer handle is null (bare ctx short-circuits)', () => {
-    expect(ringsLayer.enabled(makeState(null, [], []), CTX_STUB)).toBe(false);
+    const state = makeState(null, [], []);
+    expect(ringsLayer.enabled(state, CTX_STUB, makeBodyView('saturn' as BodyId))).toBe(false);
   });
 
   it('is false beyond the foreground gate even with a resident resolved ring', () => {
     const state = makeState(makeRendererSpy(), [saturnBody()], ['saturn-ring']);
-    expect(ringsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
+    expect(
+      ringsLayer.enabled(
+        state,
+        makeCtx(FOREGROUND_MAX_DISTANCE_MPC),
+        makeBodyView('saturn' as BodyId),
+      ),
+    ).toBe(false);
   });
 
   it('is false when the ring strip is NOT resident', () => {
-    // Host body present + resolved, but the radial strip has not committed.
     const state = makeState(makeRendererSpy(), [saturnBody()], []);
-    expect(ringsLayer.enabled(state, NEAR_CTX)).toBe(false);
+    expect(ringsLayer.enabled(state, makeCtx(), makeBodyView('saturn' as BodyId))).toBe(false);
   });
 
-  it('is true when the strip is resident and the host body resolves', () => {
-    const state = makeState(makeRendererSpy(), [saturnBody()], ['saturn-ring']);
-    expect(ringsLayer.enabled(state, NEAR_CTX)).toBe(true);
+  it('draws only for a body with a ring row: false for earth, true for saturn', () => {
+    const state = makeState(makeRendererSpy(), [earthBody(), saturnBody()], ['saturn-ring']);
+    const ctx = makeCtx();
+    expect(ringsLayer.enabled(state, ctx, makeBodyView('earth' as BodyId))).toBe(false);
+    expect(ringsLayer.enabled(state, ctx, makeBodyView('saturn' as BodyId))).toBe(true);
   });
 });
 
 describe('ringsLayer.draw', () => {
-  it('composes from the slab f64 vp scaled to the ring OUTER radius, with the host orientation', () => {
-    composeMock.mockClear();
+  it('draws exactly once across an earth row and a saturn row — the saturn row only', () => {
     const renderer = makeRendererSpy();
-    const view = makeNear0View();
-    const saturnOrient: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
-    const saturn = saturnBody(saturnOrient);
-    const state = makeState(renderer, [saturn], ['saturn-ring']);
+    const state = makeState(renderer, [earthBody(), saturnBody()], ['saturn-ring']);
+    const ctx = makeCtx();
 
-    ringsLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    ringsLayer.draw(PASS_STUB, makeBodyView('earth' as BodyId), ctx, state);
+    ringsLayer.draw(PASS_STUB, makeBodyView('saturn' as BodyId), ctx, state);
 
-    expect(composeMock).toHaveBeenCalledTimes(1);
-    const call = composeMock.mock.calls[0]!;
-    expect(call[0]).toBe(view.slab.vp);
-    expect(call[0]).not.toBe(view.vp);
-    expect(call[1]).toBe(saturn.positionMpc);
-    expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    // Scaled to the ring's OUTER radius (not the planet radius).
-    expect(call[3]).toBeCloseTo(SATURN_RING.outerRadiusKm * SCALE_UNITS.KM_TO_MPC);
-    expect(call[4]).toBe(saturn.orientation);
+    expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
 
-  it('packs the host sun, planetRadiusRatio@19, camPosLocal@20 and innerRatio@23 into a 24-float record', () => {
+  it('composes the MVP from view.slab.vp (never view.vp), scaled to the ring OUTER radius, from ctx.bodyPose', () => {
+    mvpMock.mockClear();
+    camLocalMock.mockClear();
     const renderer = makeRendererSpy();
-    const view = makeNear0View();
+    const view = makeBodyView('saturn' as BodyId);
     const saturn = saturnBody();
     const state = makeState(renderer, [saturn], ['saturn-ring']);
 
-    ringsLayer.draw(PASS_STUB, view, NEAR_CTX, state);
+    ringsLayer.draw(PASS_STUB, view, makeCtx(), state);
+
+    expect(mvpMock).toHaveBeenCalledTimes(1);
+    const call = mvpMock.mock.calls[0]!;
+    expect(call[0]).toBe(view.slab.vp);
+    expect(call[0]).not.toBe(view.vp);
+    expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
+    expect(call[2]).toBeCloseTo(SATURN_RING.outerRadiusKm * SCALE_UNITS.KM_TO_M);
+  });
+
+  it('measures bodySlabCamLocal at the PLANET radius, NOT the ring outer radius', () => {
+    camLocalMock.mockClear();
+    const renderer = makeRendererSpy();
+    const saturn = saturnBody();
+    const state = makeState(renderer, [saturn], ['saturn-ring']);
+
+    ringsLayer.draw(PASS_STUB, makeBodyView('saturn' as BodyId), makeCtx(), state);
+
+    expect(camLocalMock).toHaveBeenCalledTimes(1);
+    expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
+    // NOT the ring's outer radius — the fragment's in-front-of-planet test
+    // wants "planet radii", the same frame texturedBodiesLayer's Minnaert
+    // term uses.
+    expect(camLocalMock.mock.calls[0]![1]).toBe(saturn.radiusM);
+    expect(camLocalMock.mock.calls[0]![1]).not.toBeCloseTo(
+      SATURN_RING.outerRadiusKm * SCALE_UNITS.KM_TO_M,
+    );
+  });
+
+  it('packs the host sun@16..18, planetRadiusRatio@19, camPosLocal@20..22 and innerRatio@23', () => {
+    const renderer = makeRendererSpy();
+    const saturn = saturnBody();
+    const state = makeState(renderer, [saturn], ['saturn-ring']);
+
+    ringsLayer.draw(PASS_STUB, makeBodyView('saturn' as BodyId), makeCtx(), state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [pass, u] = renderer.draw.mock.calls[0]!;
@@ -217,33 +253,22 @@ describe('ringsLayer.draw', () => {
     expect(u).toBeInstanceOf(Float32Array);
     expect(u).toHaveLength(24);
 
-    // sunDirLocal at floats 16..18 (recomputed independently, so a rotate/pack
-    // drift lands here).
     const expectedSun = sunDirLocal(saturn.positionMpc, RENDER_ORIGIN_MPC, saturn.orientation);
     expect(u[16]).toBeCloseTo(expectedSun[0]);
     expect(u[17]).toBeCloseTo(expectedSun[1]);
     expect(u[18]).toBeCloseTo(expectedSun[2]);
-    // planetRadiusRatio = planet / ring outer at float 19.
-    expect(u[19]).toBeCloseTo(saturn.radiusKm / SATURN_RING.outerRadiusKm);
-    // camPosLocal at floats 20..22 (recomputed independently — a rotate/pack
-    // drift lands here, as with the sun above).
-    const radiusMpc = saturn.radiusKm * SCALE_UNITS.KM_TO_MPC;
-    const expectedCam = camPosLocal(
-      NEAR_CTX.drawCamPos,
-      saturn.positionMpc,
-      radiusMpc,
-      saturn.orientation,
-    );
-    expect(u[20]).toBeCloseTo(expectedCam[0]);
-    expect(u[21]).toBeCloseTo(expectedCam[1]);
-    expect(u[22]).toBeCloseTo(expectedCam[2]);
-    // innerRatio = ring inner / outer at float 23 (fills camPosLocal's vec3 tail).
+    expect(u[19]).toBeCloseTo((saturn.radiusM * SCALE_UNITS.M_TO_KM) / SATURN_RING.outerRadiusKm);
+    // camPosLocal is mocked — pin the PACKED value to the mock's return, the
+    // pairing/frame invariant is covered by the dedicated test above.
+    expect(u[20]).toBe(Math.fround(MOCK_CAM_LOCAL[0]));
+    expect(u[21]).toBe(Math.fround(MOCK_CAM_LOCAL[1]));
+    expect(u[22]).toBe(Math.fround(MOCK_CAM_LOCAL[2]));
     expect(u[23]).toBeCloseTo(SATURN_RING.innerRadiusKm / SATURN_RING.outerRadiusKm);
   });
 
   it('is a no-op when the ringRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View();
+    const view = makeBodyView('saturn' as BodyId);
     const state = makeState(null, [saturnBody()], ['saturn-ring']);
-    expect(() => ringsLayer.draw(PASS_STUB, view, NEAR_CTX, state)).not.toThrow();
+    expect(() => ringsLayer.draw(PASS_STUB, view, makeCtx(), state)).not.toThrow();
   });
 });

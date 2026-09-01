@@ -84,17 +84,29 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
+import { normalize3 } from '../../../utils/math/normalize3';
+import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
+import { starSphereRangeM } from '../../../utils/scene/starSphereRangeM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
+import { bodyRelativePose } from '../camera/bodyRelativePose';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
+import { deriveBodyStates } from './deriveBodyStates';
+import { visibleSlabBodies } from './visibleSlabBodies';
+import { visibleStars } from './visibleStars';
+import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 
 /**
  * Derive the per-frame context from an already-produced pose and projection.
@@ -169,13 +181,84 @@ export function deriveFrameContext(
   // derivations can't drift.
   const canvasSize = { width: canvas.width, height: canvas.height };
   const vp = computeViewProj(cam);
+
+  // This frame's ONE R_body(t) sample (spec §4). Called directly rather than
+  // via `sceneBodyStates(state, ctx)` because `ctx` does not exist yet at this
+  // point in its own derivation; `deriveBodyStates` memoizes one deep on
+  // `simDays`, so every later `sceneBodyStates(state, ctx)` call this frame
+  // returns this SAME Map by reference — no second cache, no drift.
+  const bodyStates = deriveBodyStates(simDays);
+
+  // Computed here (ahead of `visibleSlabBodies`, which needs it for the
+  // frustum cull) rather than inline in the pose-provider seam below, so
+  // both consumers share one derivation.
+  const camForward = normalize3([
+    cam.target[0] - cam.position[0],
+    cam.target[1] - cam.position[1],
+    cam.target[2] - cam.position[2],
+  ]);
+
+  const visibleBodies = visibleSlabBodies({
+    earth: state.data.bodies.earth,
+    planets: state.data.bodies.planets,
+    bodyStates,
+    camPosMpc: cam.position,
+    camForwardMpc: camForward,
+    viewportWidthPx: canvasSize.width,
+    viewportHeightPx: canvasSize.height,
+    fovYRad: cam.fovYRad,
+  });
+
+  // The pose provider seam (spec §5): a closure over provider A
+  // (`bodyRelativePose`), built HERE rather than inside `deriveSlabs` so a
+  // future provider B (spec 2) swaps in behind the same `BodyPoseProvider`
+  // type with `deriveSlabs` untouched. `camBasisWorld` reruns the roll-0
+  // image-plane basis NEAR0's own vp derivation uses (`imagePlaneBasis` is
+  // the shared seam both call, not a copy) so a body row's screen orientation
+  // matches NEAR0's. Forwarded onto `ReadyFrameContext.bodyPose` below (the
+  // SAME closure, not a second one) so a body-slab layer's own pose read
+  // (`prepareBodySurfaceFrame`) can never drift from the one `slabs` was
+  // built from — see that field's doc.
+  const { right: camRight, up: camUp } = imagePlaneBasis(camForward, 0, frameUp(cam.upBasis));
+  const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
+  const bodyPose: BodyPoseProvider = (bodyId) => {
+    const bodyState = bodyStates.get(bodyId);
+    if (bodyState === undefined) return null;
+    return bodyRelativePose({ camPosMpc: cam.position, camBasisWorld, bodyState });
+  };
+
+  // NEAR0's distanceRangeM (spec §7.1): the star spheres actually drawn this
+  // frame, not `foregroundFrustum`'s bracket. `positionedVisibleStars` needs
+  // `ctx.simDays` only, so its join is inlined by hand here for the same
+  // reason `bodyStates` is called directly above — `ctx` doesn't exist yet.
+  const positionedStars = visibleStars(state).map((star) => ({
+    ...star,
+    positionMpc: bodyStates.get(star.id)!.positionMpc,
+  }));
+  const { spheres } = partitionStarsByResolution({
+    stars: positionedStars,
+    camPosMpc: cam.position,
+    thresholdPx: STAR_RESOLVE_PX,
+    viewportHeightPx: canvasSize.height,
+    fovYRad: cam.fovYRad,
+  });
+  const starRangeM = starSphereRangeM({ spheres, camPosMpc: cam.position });
+
   // deriveSlabs is called here — alongside vp, not from a separate site —
   // so there is exactly one per-frame derivation of the slab table (see the
   // module header's point 2 on why derived scalars must not be recomputed
   // in two places). The focused pivot's radius (or null) lets the near-field
   // row key its near plane off ALTITUDE rather than raw distance — see
   // `slabs.ts: deriveSlabs`.
-  const slabs = deriveSlabs(cam, vp, pivotRadiusMpc(state.selectionRows.focus));
+  const slabs = deriveSlabs({
+    cam,
+    cosmoVp: vp,
+    pivotRadiusMpc: pivotRadiusMpc(state.selectionRows.focus),
+    pose: bodyPose,
+    visibleBodies,
+    viewportPx: [canvasSize.width, canvasSize.height] as Vec2,
+    starSphereRangeM: starRangeM,
+  });
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));
 
@@ -201,6 +284,7 @@ export function deriveFrameContext(
     cam,
     vp,
     slabs,
+    bodyPose,
     canvasSize,
     drawCamPos,
     drawPxPerRad,

@@ -16,7 +16,7 @@
  * snapshot (`sceneBodyStates`) at derivation, so the two consumers read one
  * resolved pairing and cannot drift to two positions. `body` is the union
  * `EarthBody | PlanetBody` carried for its authored identity alone — the derivation
- * reads only fields common to both (`id`, `radiusKm`), so an atmosphere body may be
+ * reads only fields common to both (`id`, `radiusM`), so an atmosphere body may be
  * Earth or any seeded planet with a params row.
  */
 
@@ -33,10 +33,4 @@ export type AtmosphereDrawEntry = {
   readonly positionMpc: Vec3;
   /** Live local → equatorial-world rotation — resolved from the per-frame snapshot. */
   readonly orientation: Mat3;
-  /** Camera position in atmosphere-top-radius units, body-local frame —
-   *  derived once here instead of independently by atmosphereShellLayer.draw
-   *  and encodeAtmosphereSkyView (was two call sites, same five inputs). */
-  readonly camPosLocal: Vec3;
-  /** Sun direction in the body's local frame — same hoist rationale. */
-  readonly sunDirLocal: Vec3;
 };

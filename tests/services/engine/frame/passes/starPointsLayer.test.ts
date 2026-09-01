@@ -43,6 +43,7 @@ import { SGR_A_STAR_ENTRY } from '../../../../../src/data/sources/sgr-a-star';
 import { Source } from '../../../../../src/data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -132,15 +133,7 @@ function halfAuFrom(positionMpc: Readonly<Vec3>): Vec3 {
 function makeNear0View(camPos: Vec3): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    originRelative: true,
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp });
   return {
     slab,
     vp: f32Vp,
@@ -203,6 +196,10 @@ function makeState(
   } as unknown as EngineState;
 }
 
+// `enabled` never reads `view` — an arbitrary NEAR0 view satisfies the 3-arg
+// signature for every gating case in this file.
+const VIEW_STUB = makeNear0View([0, 0, 0]);
+
 describe('starPointsLayer.enabled', () => {
   it('is false while starPointRenderer is null and while every star resolves; true with a point star', () => {
     const renderer = makeRenderer();
@@ -213,17 +210,20 @@ describe('starPointsLayer.enabled', () => {
       starPointsLayer.enabled(
         { gpu: { starPointRenderer: null } } as unknown as EngineState,
         CTX_STUB,
+        VIEW_STUB,
       ),
     ).toBe(false);
     // Renderer + the Sun alone with the camera half an AU off it: the Sun
     // resolves to a sphere, so the points branch is empty.
     const sunOnly = SCENE_STARS.filter((star) => star.id === 'sun');
     const onSunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
-    expect(starPointsLayer.enabled(makeState(renderer, sunOnly), onSunCtx)).toBe(false);
+    expect(starPointsLayer.enabled(makeState(renderer, sunOnly), onSunCtx, VIEW_STUB)).toBe(false);
     // Renderer + the full seed inside the gate at 5 kpc: every star — the
     // Sun included — is a sub-pixel point.
     const nearCtx = makeCtx(NEAR_FIELD_CAM);
-    expect(starPointsLayer.enabled(makeState(renderer, SCENE_STARS), nearCtx)).toBe(true);
+    expect(starPointsLayer.enabled(makeState(renderer, SCENE_STARS), nearCtx, VIEW_STUB)).toBe(
+      true,
+    );
   });
 
   it('is disabled beyond the foreground gate even with point stars present', () => {
@@ -232,9 +232,9 @@ describe('starPointsLayer.enabled', () => {
     // partition is even computed, so the (hdr, NEAR0) step can be skipped
     // wholesale. Derived from the gate so a farther seed growing it carries.
     const state = makeState(makeRenderer(), SCENE_STARS);
-    expect(starPointsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]))).toBe(
-      false,
-    );
+    expect(
+      starPointsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]), VIEW_STUB),
+    ).toBe(false);
   });
 
   it('is disabled once the backdrop band has dissolved, even inside the foreground gate', () => {
@@ -246,7 +246,7 @@ describe('starPointsLayer.enabled', () => {
     const beyondBand = SCALE_FADE_BANDS.starBackdrop.goneAt * 1.01;
     expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
     const state = makeState(makeRenderer(), SCENE_STARS);
-    expect(starPointsLayer.enabled(state, makeCtx([0, 0, beyondBand]))).toBe(false);
+    expect(starPointsLayer.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB)).toBe(false);
   });
 });
 
@@ -291,7 +291,9 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
-      CONTENT_LAYERS.filter((l) => l.target === 'hdr' && l.slab === NEAR0 && l.enabled(state, ctx));
+      CONTENT_LAYERS.filter(
+        (l) => l.target === 'hdr' && l.slab === NEAR0 && l.enabled(state, ctx, VIEW_STUB),
+      );
 
     // Below the gate: the point backdrop + the rings both draw. Uses
     // NEAR_ORBIT_CAM, not NEAR_FIELD_CAM — orbit-trails additionally requires
@@ -644,7 +646,7 @@ describe('the Galactic Centre pick stamp', () => {
       makeBodyItems((id) => (id === 'sun' || id === 's-star' ? { enabled: false } : {})),
     );
     const ctx = makeCtx(AT_GALACTIC_CENTRE);
-    expect(starPointsLayer.enabled(allStarsMuted, ctx)).toBe(false);
-    expect(starPointsLayer.pickEnabled!(allStarsMuted, ctx)).toBe(true);
+    expect(starPointsLayer.enabled(allStarsMuted, ctx, VIEW_STUB)).toBe(false);
+    expect(starPointsLayer.pickEnabled!(allStarsMuted, ctx, VIEW_STUB)).toBe(true);
   });
 });

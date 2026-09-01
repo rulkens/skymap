@@ -1,18 +1,22 @@
 /**
- * cloudShellLayer — unit tests for Earth's translucent cloud-shell content row.
+ * cloudShellLayer — unit tests for Earth's translucent cloud-shell `'body'`-
+ * slab content row.
  *
- * Scoped to the descent fade this task introduces: the load-bearing new
- * assertion is that `enabled` goes false once the camera is close enough to
- * the surface for the fade to reach 0 — even with the clouds slot resident
- * and Earth comfortably above the sub-pixel threshold — because a
- * fully-faded shell must leave the pass plan rather than draw a fully
- * transparent sphere (the house "opacity 0 ⇒ no render" rule). `draw` is
- * pinned separately to confirm the fade actually reaches the packed opacity,
- * not just the gate.
+ * Two things this suite pins beyond the descent fade (its original scope):
+ * the layer now reads its pose off `ctx.bodyPose(bodyId)` and composes
+ * against the slab's f64 `view.slab.vp` via `composeBodySlabMvp` (the seam
+ * every body-slab layer shares — see `earthLayer.test.ts`), and it must
+ * leave the pass plan for a body-m row that ISN'T Earth's (`cloudShellDraw`'s
+ * widened gate — CLOUD_SHELL_PARAMS has no per-body table, so today that
+ * means every non-Earth row).
  *
- * Reuses the fixture shape `earthLayer.test.ts` established for this same
- * seeded body (`composeBodyMvp` mocked for identity, `sceneBodyStates`
- * stubbed to a map keyed off the seeded record).
+ * The load-bearing descent-fade assertion carries over unchanged: `enabled`
+ * goes false once the camera is close enough to the surface for the fade to
+ * reach 0 — even with the clouds slot resident and Earth comfortably above
+ * the sub-pixel threshold — because a fully-faded shell must leave the pass
+ * plan rather than draw a fully transparent sphere (the house "opacity 0 ⇒
+ * no render" rule). `draw` is pinned separately to confirm the fade actually
+ * reaches the packed opacity, not just the gate.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -21,21 +25,24 @@ import { cloudShellLayer } from '../../../../../src/services/engine/frame/passes
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { bodyTextureSlotKey } from '../../../../../src/utils/scene/bodyTextureSlotKey';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
+import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
 
-// Mock composeBodyMvp so draw() never touches the real f64 composition —
-// covered by that util's own tests. Real composeBodyMvp returns f64; the
+// Mock composeBodySlabMvp so draw() never touches the real f64 composition —
+// covered by that util's own tests. Real composeBodySlabMvp returns f64; the
 // layer narrows its own copy at the GPU-upload boundary.
-vi.mock('../../../../../src/utils/camera/composeBodyMvp', () => ({
-  composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
+vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
+  composeBodySlabMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 
 // Stub the per-frame body-state snapshot to the seeded fixture's own
 // positionMpc/orientation refs, mirroring earthLayer.test.ts.
@@ -65,10 +72,15 @@ const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orien
 const EARTH: SeededEarth = {
   id: 'earth',
   label: 'Earth',
-  radiusKm: 6371,
+  radiusM: 6371000,
   positionMpc: [0, 0, 0],
   orientation: IDENTITY_MAT3,
 };
+
+// `composeBodySlabMvp` is mocked, so the pose's actual geometry never
+// matters — only that `ctx.bodyPose` returns a non-null value for the layer
+// to forward.
+const STUB_POSE: BodyRelativePose = { eyeRelBodyM: [1, 2, 3], basisM: IDENTITY_MAT3 };
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -78,18 +90,10 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-function makeNear0View(): SlabView {
+function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    originRelative: true,
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', bodyId } });
   return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
 }
 
@@ -99,11 +103,12 @@ function makeNear0View(): SlabView {
  * every test here isolates the descent-fade gate from the OTHER gates.
  */
 function ctxAtAltitude(altitudeRadii: number): ReadyFrameContext {
-  const radiusMpc = EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  const radiusMpc = EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
   const distanceMpc = radiusMpc * (1 + altitudeRadii);
   return {
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
     drawCamPos: [EARTH.positionMpc[0] - distanceMpc, EARTH.positionMpc[1], EARTH.positionMpc[2]],
+    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
     canvasSize: { width: 1280, height: 720 },
     fovYRad: (60 * Math.PI) / 180,
   } as unknown as ReadyFrameContext;
@@ -127,12 +132,16 @@ function makeState(renderer: unknown, resident: boolean): EngineState {
 describe('cloudShellLayer.enabled', () => {
   it('is false while the clouds slot is not resident, even well above the fade band', () => {
     const state = makeState({ draw: vi.fn() }, false);
-    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10))).toBe(false);
+    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10), makeBodyView('earth' as BodyId))).toBe(
+      false,
+    );
   });
 
   it('is true when resident and well above the fade band', () => {
     const state = makeState({ draw: vi.fn() }, true);
-    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10))).toBe(true);
+    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10), makeBodyView('earth' as BodyId))).toBe(
+      true,
+    );
   });
 
   it('is false once the camera descends below the fade-out altitude — resident and well above sub-pixel notwithstanding', () => {
@@ -146,7 +155,19 @@ describe('cloudShellLayer.enabled', () => {
     // right at the boundary (see cloudDeckFade's own tests).
     const state = makeState({ draw: vi.fn() }, true);
     const belowFadeFloor = ctxAtAltitude(CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii / 2);
-    expect(cloudShellLayer.enabled(state, belowFadeFloor)).toBe(false);
+    expect(cloudShellLayer.enabled(state, belowFadeFloor, makeBodyView('earth' as BodyId))).toBe(
+      false,
+    );
+  });
+
+  it('is false for a body-m row that is not Earth’s own, even resident and well above the fade band', () => {
+    // CLOUD_SHELL_PARAMS carries no per-body table — the deliberate lean
+    // choice (atmosphereShellLayer's header) — so every non-Earth row must
+    // leave the pass plan regardless of how favourable its OTHER gates are.
+    const state = makeState({ draw: vi.fn() }, true);
+    expect(cloudShellLayer.enabled(state, ctxAtAltitude(10), makeBodyView('mars' as BodyId))).toBe(
+      false,
+    );
   });
 });
 
@@ -157,7 +178,7 @@ describe('cloudShellLayer.draw', () => {
     const midAltitudeRadii =
       (CLOUD_SHELL_PARAMS.fadeStartAltitudeRadii + CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii) / 2;
     const ctx = ctxAtAltitude(midAltitudeRadii);
-    const view = makeNear0View();
+    const view = makeBodyView('earth' as BodyId);
 
     cloudShellLayer.draw(PASS_STUB, view, ctx, state);
 
@@ -168,5 +189,33 @@ describe('cloudShellLayer.draw', () => {
     // camera sits mid-band, not past the fade-out floor.
     expect(uniforms[19]).toBeGreaterThan(0);
     expect(uniforms[19]).toBeLessThan(CLOUD_SHELL_PARAMS.opacity);
+  });
+
+  it('composes from the slab f64 vp and the pose off ctx.bodyPose, never view.vp', () => {
+    const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
+    mvpMock.mockClear();
+    const drawSpy = vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array) => void>();
+    const state = makeState({ draw: drawSpy }, true);
+    const view = makeBodyView('earth' as BodyId);
+
+    cloudShellLayer.draw(PASS_STUB, view, ctxAtAltitude(10), state);
+
+    expect(mvpMock).toHaveBeenCalledTimes(1);
+    const call = mvpMock.mock.calls[0]!;
+    expect(call[0]).toBe(view.slab.vp);
+    expect(call[0]).not.toBe(view.vp);
+    // Second arg is the pose's eyeRelBodyM, forwarded by reference — proof the
+    // layer read ctx.bodyPose rather than re-deriving a pose of its own.
+    expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
+    // Third arg is the shell radius in METRES — earth.radiusM is already
+    // metres, so no Mpc conversion crosses this seam (the removed M_TO_MPC).
+    expect(call[2]).toBe(EARTH.radiusM * CLOUD_SHELL_PARAMS.radiusRatio);
+  });
+
+  it('is a no-op for a body-m row that is not Earth’s own', () => {
+    const drawSpy = vi.fn();
+    const state = makeState({ draw: drawSpy }, true);
+    cloudShellLayer.draw(PASS_STUB, makeBodyView('mars' as BodyId), ctxAtAltitude(10), state);
+    expect(drawSpy).not.toHaveBeenCalled();
   });
 });

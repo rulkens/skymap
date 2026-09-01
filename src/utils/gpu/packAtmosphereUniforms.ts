@@ -1,12 +1,12 @@
 /**
- * packAtmosphereUniforms — pure packer for the 112-byte `AtmosphereUniforms`
+ * packAtmosphereUniforms — pure packer for the 176-byte `AtmosphereUniforms`
  * struct (`shaders/lib/sphere.wesl`).
  *
- * The atmosphere shell is a proxy sphere scaled by `composeBodyMvp` to the
+ * The atmosphere shell is a proxy sphere scaled by `composeBodySlabMvp` to the
  * ATMOSPHERE-TOP radius, drawn just outside Earth's cloud shell. Its per-draw
  * uniform buffer carries the lit-body prefix (MVP + body-local sun direction)
  * plus the params its in-scatter fragment needs: the ground/atmosphere-top
- * radius ratio, the camera position, the sun brightness, and an exposure scale.
+ * radius ratio, the camera position, an exposure scale, and the inverse MVP.
  * This is the single source of truth for that byte layout — the atmosphere
  * renderer packs through here so the CPU write can never drift from the WGSL
  * struct (a drift the GPU would not report; on iOS it would drop the frame
@@ -57,7 +57,7 @@
  * frame) but packed for every body regardless — one struct, one packer, no
  * inside-only second buffer.
  *
- * @param mvp            16-element column-major MVP (from `composeBodyMvp`, narrowed).
+ * @param mvp            16-element column-major MVP (from `composeBodySlabMvp`, narrowed).
  * @param invMvp         16-element column-major inverse of `mvp` (narrowed).
  * @param sunDirLocal    Sun direction in the body's local frame.
  * @param camPosLocal    Camera position in atmosphere-top-radius units, centre at origin.

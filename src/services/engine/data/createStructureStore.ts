@@ -26,6 +26,8 @@ export function createStructureStore(): StructureStore {
   const groups = new Map<StructureGroupId, readonly StructureInfo[]>();
 
   const all = (): readonly StructureInfo[] => GROUP_ORDER.flatMap((id) => groups.get(id) ?? []);
+  const byCategory = (category: StructureId): readonly StructureInfo[] =>
+    all().filter((r) => r.category === category);
 
   return Object.freeze({
     setGroup(id: StructureGroupId, records: readonly StructureInfo[]): void {
@@ -38,8 +40,12 @@ export function createStructureStore(): StructureStore {
     byId(id: string): StructureInfo | null {
       return all().find((r) => r.id === id) ?? null;
     },
-    byCategory(category: StructureId): readonly StructureInfo[] {
-      return all().filter((r) => r.category === category);
+    byCategory,
+    // Built from `byCategory` itself so it can't drift from it — the single
+    // source for "position within byCategory(cat)" the ring pick-index and a
+    // structure's own label pick-id must both agree on.
+    categoryIndexOf(category: StructureId, id: string): number {
+      return byCategory(category).findIndex((r) => r.id === id);
     },
   });
 }

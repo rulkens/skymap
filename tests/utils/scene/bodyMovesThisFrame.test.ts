@@ -13,7 +13,7 @@ import { bodyMovesThisFrame } from '../../../src/utils/scene/bodyMovesThisFrame'
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
 function bodyRow(id: string): SelectionRow {
-  return { type: 'body', id, label: id, positionMpc: [0, 0, 0], radiusKm: 1 };
+  return { type: 'body', id, label: id, positionMpc: [0, 0, 0], radiusM: 1000 };
 }
 
 describe('bodyMovesThisFrame', () => {

@@ -45,23 +45,29 @@ export type LabelRenderer = {
    * implementation.  The pass's render target format must match the
    * `targetFormat` passed to `createLabelRenderer`.
    *
-   * `sceneDepthView` is consumed only by an instance created with
-   * `occludeAgainstDepth: 'compare' | 'coverage'`, where it feeds the group(1)
-   * depth joint so fragments behind a nearer solar-system body are discarded
-   * (per-pixel body occlusion).  The mode picks the occluder — `'compare'` for
-   * same-slab NEAR0 captions, `'coverage'` for cross-slab COSMO overlays.  A
-   * plain instance ignores it.
+   * `sceneColorView` is consumed only by an instance created with
+   * `occludeAgainstScene: true`, where it feeds the group(1) coverage joint so
+   * fragments are attenuated by how much of the background the foreground
+   * bodies already cover (read from that target's alpha — see
+   * lib/sceneDepth.wesl).  A plain instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    sceneDepthView?: GPUTextureView,
+    sceneColorView?: GPUTextureView,
   ): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */
   glyphCount(): number;
   /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
   labelCount(): number;
+  /**
+   * The label rows `setLabels` actually packed — the drawn set, `maxLabels`
+   * truncation applied. The pick path derives its hit rects from this so a
+   * label is clickable exactly where it is legible; nothing else should read
+   * it (the GPU buffers hold the authoritative copy).
+   */
+  packedLabels(): readonly Label2D[];
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;
 };

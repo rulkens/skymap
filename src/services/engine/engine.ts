@@ -284,6 +284,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // connectors under the scene-body captions. null until initGpu;
       // excluded from isEngineReady, null-checked at use.
       foregroundMarkerLineRenderer: null,
+      // The two label pick providers, one per slab. null until initGpu;
+      // excluded from isEngineReady, null-checked at use by the label layers'
+      // drawPick.
+      labelPickRenderer: null,
+      foregroundLabelPickRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use by
       // clipPathDebugLayer.
       debugLineRenderer: null,

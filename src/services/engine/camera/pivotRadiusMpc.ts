@@ -15,5 +15,5 @@ import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 export function pivotRadiusMpc(row: SelectionRow | null): number | null {
   if (row === null) return null;
   if (row.type !== 'body' && row.type !== 'star') return null;
-  return row.radiusKm * SCALE_UNITS.KM_TO_MPC;
+  return row.radiusM * SCALE_UNITS.M_TO_MPC;
 }

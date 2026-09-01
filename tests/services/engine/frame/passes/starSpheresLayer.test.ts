@@ -36,7 +36,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/sources';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -127,15 +127,7 @@ function halfAuFrom(positionMpc: Readonly<Vec3>): Vec3 {
 function makeNear0View(camPos: Vec3): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    originRelative: true,
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp });
   return {
     slab,
     vp: f32Vp,
@@ -165,6 +157,10 @@ function makeState(
   } as unknown as EngineState;
 }
 
+// `enabled` never reads `view` — an arbitrary NEAR0 view satisfies the 3-arg
+// signature for every gating case in this file.
+const VIEW_STUB = makeNear0View([0, 0, 0]);
+
 describe('starSpheresLayer.enabled', () => {
   it('is false while starRenderer is null and while no star resolves; true once one does', () => {
     const renderer = { draw: vi.fn() };
@@ -172,17 +168,25 @@ describe('starSpheresLayer.enabled', () => {
     // the handle check must short-circuit BEFORE either is touched
     // (renderFrame fixtures carry null handles and no bodies bag).
     expect(
-      starSpheresLayer.enabled({ gpu: { starRenderer: null } } as unknown as EngineState, CTX_STUB),
+      starSpheresLayer.enabled(
+        { gpu: { starRenderer: null } } as unknown as EngineState,
+        CTX_STUB,
+        VIEW_STUB,
+      ),
     ).toBe(false);
     // Renderer + below-gate camera: every star — the Sun included — is
     // sub-pixel at 5 kpc, so the spheres branch is empty (the Sun demotes to
     // a point rather than holding a row alive with an invisible sphere).
     const nearCtx = makeCtx(NEAR_FIELD_CAM);
-    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), nearCtx)).toBe(false);
+    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), nearCtx, VIEW_STUB)).toBe(
+      false,
+    );
     // Renderer + a camera half an AU off the Sun: the Sun resolves and the
     // spheres branch is non-empty.
     const sunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
-    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), sunCtx)).toBe(true);
+    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), sunCtx, VIEW_STUB)).toBe(
+      true,
+    );
   });
 
   it('is disabled beyond the foreground gate', () => {
@@ -190,10 +194,10 @@ describe('starSpheresLayer.enabled', () => {
     // gate turns the row off before the partition is computed, so the
     // (foreground:0, NEAR0) step can be skipped wholesale.
     const state = makeState({ draw: vi.fn() }, SCENE_STARS);
-    expect(starSpheresLayer.enabled(state, makeCtx([0, 0, 0.43]))).toBe(false);
-    expect(starSpheresLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toBe(
-      false,
-    );
+    expect(starSpheresLayer.enabled(state, makeCtx([0, 0, 0.43]), VIEW_STUB)).toBe(false);
+    expect(
+      starSpheresLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]), VIEW_STUB),
+    ).toBe(false);
   });
 });
 
@@ -215,10 +219,10 @@ describe('starSpheresLayer.draw', () => {
     // The load-bearing seam: first arg is the slab's Float64Array vp, NOT view.vp.
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
-    // Position, render origin, and the km→Mpc radius carried through.
+    // Position, render origin, and the m→Mpc radius carried through.
     expect(call[1]).toBe(SUN.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    expect(call[3]).toBe(SUN.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    expect(call[3]).toBe(SUN.radiusM * SCALE_UNITS.M_TO_MPC);
     // A star is a rotation-invariant emissive sphere — it forwards the identity.
     expect(call[4]).toBe(IDENTITY_MAT3);
 

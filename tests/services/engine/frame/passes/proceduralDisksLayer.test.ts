@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { proceduralDisksLayer } from '../../../../../src/services/engine/frame/passes/proceduralDisksLayer';
-import { COSMO } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
@@ -50,6 +50,9 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       lastOutput: { quads: [], disks: [] },
       hasInFlightWork: () => false,
     } as any,
+    // Nothing in this file reads bodyPose — a stub that never resolves a
+    // body is a safe default, overridable like every other field.
+    bodyPose: () => null,
     ...overrides,
   };
 }
@@ -57,15 +60,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
 /** Minimal SlabView matching the ctx above. `slab` is unused by this layer. */
 function makeView(ctx: ReadyFrameContext): SlabView {
   return {
-    slab: {
-      index: COSMO,
-      nearMpc: 0.01,
-      farMpc: 50000,
-      vp: new Float64Array(16),
-      originRelative: false,
-      precision: 'f32',
-      reversedZ: false,
-    },
+    slab: makeCosmoSlab(),
     vp: ctx.vp as unknown as Float32Array,
     camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
@@ -82,7 +77,8 @@ describe('proceduralDisksLayer', () => {
       subsystems: { proceduralDisks: null },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(proceduralDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
@@ -90,7 +86,8 @@ describe('proceduralDisksLayer', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(proceduralDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns false when lastOutput.instances is empty', () => {
@@ -98,7 +95,8 @@ describe('proceduralDisksLayer', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(proceduralDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns true with a non-empty lastOutput', () => {
@@ -106,7 +104,8 @@ describe('proceduralDisksLayer', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(proceduralDisksLayer.enabled(state, ctx, makeView(ctx))).toBe(true);
   });
 
   it('draw() forwards instances to state.gpu.proceduralDiskRenderer.draw', () => {

@@ -19,6 +19,7 @@ import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer'
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ConstellationRenderer } from '../../rendering/ConstellationRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
+import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
@@ -201,6 +202,22 @@ export type EngineGpuHandles = {
    * Released and re-nulled by `destroy()`.
    */
   foregroundLabelRenderer: LabelRenderer | null;
+  /**
+   * The r32uint pick provider for the COSMO text labels — one screen-space
+   * rectangle per legible label, stamping its subject's packed id so clicking
+   * a name selects the thing it names. A SEPARATE instance from
+   * `foregroundLabelPickRenderer` for the reason the two label renderers are
+   * separate, plus one more: the two slabs' pick targets carry different depth
+   * formats and opposite depth conventions, both baked into the pipeline.
+   * Null until `initGpu` builds it; `labelsLayer.drawPick` null-checks at use.
+   */
+  labelPickRenderer: LabelPickRenderer | null;
+  /**
+   * The NEAR0 sibling of `labelPickRenderer`, for the foreground body
+   * captions. Same lifecycle and rationale; `foregroundLabelsLayer.drawPick`
+   * null-checks at use.
+   */
+  foregroundLabelPickRenderer: LabelPickRenderer | null;
   /**
    * Second thick screen-space line renderer, the leader-line sibling of
    * `foregroundLabelRenderer`.  A SEPARATE instance from `markerLineRenderer`
@@ -465,17 +482,15 @@ export type EngineGpuHandles = {
    */
   starRenderer: StarRenderer | null;
   /**
-   * Flat-lit albedo planets — a SINGLE renderer instance that draws every
-   * seeded planet in one frame via GPU instancing: `planetsLayer` packs each
-   * body's MVP + albedo into a per-instance vertex-buffer record and hands
-   * the whole batch to one `draw` call, which does one `queue.writeBuffer`
-   * followed by one instanced `drawIndexed`. Each instance reads its OWN
-   * baked record, so there is no shared per-draw uniform for a later write
-   * to clobber (the writeBuffer-vs-submit landmine that a dynamic-offset or
-   * shared-slot design would have to guard against). Same `foreground:0`
-   * format invariant as the other sphere bodies. Excluded from
-   * `isEngineReady` and null-checked at use. Null until `initGpu` constructs
-   * it; released and re-nulled by `destroy()`.
+   * Flat-lit albedo planets — a SINGLE renderer instance, drawn one body-m
+   * slab row at a time: `planetsLayer` packs each row's MVP + albedo into a
+   * per-instance vertex-buffer record and hands it to `draw` keyed by that
+   * row's `bodyId`, so every body gets its OWN grow-only instance buffer (no
+   * shared buffer for a later same-submit row's `writeBuffer` to clobber —
+   * see `planetRenderer`'s header). Same `foreground:0` format invariant as
+   * the other sphere bodies. Excluded from `isEngineReady` and null-checked
+   * at use. Null until `initGpu` constructs it; released and re-nulled by
+   * `destroy()`.
    */
   planetRenderer: PlanetRenderer | null;
   /**
@@ -589,14 +604,15 @@ export type EngineGpuHandles = {
    * planets, and the ~25 seeded scene stars incl. the Sun) — the body-family
    * analogue of `starCatalogPickRenderer`.  Records ONE body sphere per
    * `drawSphere` call (via a 256-byte-aligned dynamic-offset uniform whose
-   * per-pass cursor sidesteps the writeBuffer/submit race) and the sub-pixel
-   * scene-star POINT partition as one instanced pick-billboard draw.  Depth-
-   * tested (`depth32float`, 'less') so overlapping bodies resolve nearest-wins.
-   * Constructed in `initGpu` alongside `starCatalogPickRenderer`; the body
-   * layers' `drawPick` rows (Task 11) drive it.  Excluded from `isEngineReady`
-   * and null-checked at use.  Released and re-nulled by `destroy()` (its sphere
-   * mesh VBO/IBO, the sphere dynamic-offset + point camera uniforms, and the
-   * grow-only point instance buffer).
+   * per-SUBMIT cursor sidesteps the writeBuffer/submit race — see
+   * `bodyPickRenderer`'s header) and the sub-pixel scene-star POINT partition
+   * as one instanced pick-billboard draw.  Depth-tested (`depth32float`,
+   * 'greater', the NEAR0 reversed-Z convention) so overlapping bodies resolve
+   * nearest-wins.  Constructed in `initGpu` alongside `starCatalogPickRenderer`;
+   * the body layers' `drawPick` rows (Task 11) drive it.  Excluded from
+   * `isEngineReady` and null-checked at use.  Released and re-nulled by
+   * `destroy()` (its sphere mesh VBO/IBO, the sphere dynamic-offset + point
+   * camera uniforms, and the grow-only point instance buffer).
    */
   bodyPickRenderer: BodyPickRenderer | null;
   /**

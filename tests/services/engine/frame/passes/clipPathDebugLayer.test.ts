@@ -3,6 +3,7 @@ import { clipPathDebugLayer } from '../../../../../src/services/engine/frame/pas
 import { NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -37,16 +38,19 @@ function makeCtx(): ReadyFrameContext {
   });
   const near0Slab: Slab = {
     index: NEAR0,
-    nearMpc: near,
-    farMpc: far,
+    near: near,
+    far: far,
     vp: near0Vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
+    distanceRangeM: [near * SCALE_UNITS.MPC_TO_M, far * SCALE_UNITS.MPC_TO_M],
     precision: 'f64',
     reversedZ: true,
   };
   return {
     isReady: true,
     renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
     cam: {} as never,
     vp: Float32Array.from(near0Vp) as unknown as Mat4,
     // slabViewOf(ctx, NEAR0) indexes ctx.slabs[NEAR0] (index 0).
@@ -111,17 +115,20 @@ const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 describe('clipPathDebugLayer.enabled', () => {
   it('is false when the renderer is null', () => {
     const state = makeState({ renderer: null, snapshot: SNAPSHOT });
-    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(clipPathDebugLayer.enabled(state, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 
   it('is false when there is no snapshot', () => {
     const state = makeState({ renderer: makeRendererSpy(), snapshot: null });
-    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(clipPathDebugLayer.enabled(state, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 
   it('is true when renderer + snapshot both present', () => {
     const state = makeState({ renderer: makeRendererSpy(), snapshot: SNAPSHOT });
-    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(clipPathDebugLayer.enabled(state, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
   });
 });
 

@@ -140,7 +140,7 @@ export const starPointsLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first, distance second, backdrop-band third, partition last —
     // see the module header's gate note.
     if (state.gpu.starPointRenderer === null) return false;
@@ -176,9 +176,9 @@ export const starPointsLayer: ContentLayer = {
   // Composed over `enabled` rather than restating its gates. The handle guard
   // is `drawPick`'s, checked first so a pre-bootstrap frame never reaches the
   // body-state snapshot. See `ContentLayer.pickEnabled`.
-  pickEnabled(state, ctx) {
+  pickEnabled(state, ctx, view) {
     if (state.gpu.bodyPickRenderer === null) return false;
-    if (starPointsLayer.enabled(state, ctx)) return true;
+    if (starPointsLayer.enabled(state, ctx, view)) return true;
     return sgrAStarCaptionPickable(state, ctx);
   },
 
@@ -276,10 +276,9 @@ export const starPointsLayer: ContentLayer = {
   // is pickable-as-a-point exactly when it draws as one (its complement rides
   // `starSpheresLayer`'s sphere pick).
   //
-  // `bodyPickRenderer.drawPoints` is safe to call once per caller per pass — each
-  // caller claims its own per-pass slot of buffers, so this layer's call and the
-  // body-glint layer's call in the same pick pass write DIFFERENT buffers and
-  // neither races `writeBuffer` against submit. This layer calls it exactly once
+  // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit —
+  // this layer's call and the body-glint layer's call claim DIFFERENT slots
+  // (see `bodyPickRenderer`'s module header). This layer calls it exactly once
   // per `drawPick`.
   //
   // Each point's packed id carries its STABLE seed-table index, NOT its slot in
@@ -323,7 +322,7 @@ export const starPointsLayer: ContentLayer = {
     // the whole gate. Emitted here rather than in a row of its own because this
     // is the layer already live at the Galactic Centre, stamping the S-stars
     // that orbit it, and `bodyPickRenderer.drawPoints` takes one array per
-    // caller per pass — so the anchor rides its satellites' single draw.
+    // caller per submit — so the anchor rides its satellites' single draw.
     let anchorScreenPx: Vec2 | null = null;
     if (sgrAStarCaptionPickable(state, ctx)) {
       const anchorPos = sceneBodyStates(state, ctx).get(SGR_A_STAR.id)!.positionMpc;

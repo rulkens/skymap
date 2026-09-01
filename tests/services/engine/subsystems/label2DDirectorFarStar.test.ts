@@ -121,10 +121,11 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
   });
   return {
     index: NEAR0,
-    nearMpc: near,
-    farMpc: far,
+    near: near,
+    far: far,
     vp,
-    originRelative: true,
+    frame: { kind: 'world-mpc', originRelative: true },
+    distanceRangeM: [near * SCALE_UNITS.MPC_TO_M, far * SCALE_UNITS.MPC_TO_M],
     precision: 'f64',
     reversedZ: false,
   };
@@ -240,7 +241,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     expect(line).toBeDefined();
 
     const len = (p: Vec3) => Math.hypot(p[0], p[1], p[2]);
-    const farMpc = slab.farMpc;
+    const farMpc = slab.far;
     // The lifted geometry is derived from the anchor pulled to just inside the
     // far plane, so — camera at the origin of the rebased frame — every point
     // sits within the far plane. Before the clamp these lengths are the raw

@@ -14,7 +14,12 @@ import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentatio
 
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+
+// Neither `enabled` nor `pickEnabled` reads `view` — both derive their answer
+// from ctx/state alone — so an opaque stub satisfies the 3-arg signature.
+const VIEW_STUB = {} as unknown as SlabView;
 
 // Toggle on and fully faded in, so both gates reduce to camera distance.
 // `opacityOf` is a MULTIPLIER in `deriveMilkyWayCloudAlpha`, not a fade-tail
@@ -46,21 +51,21 @@ describe('milkyWayLayer pick vs draw', () => {
     // Well inside the impostor, still an order of magnitude outside the 2 kpc
     // approach fade: the disc is DRAWN at full strength here.
     const inside = makeCtx(0.02);
-    expect(inside.cam.distance).toBeGreaterThan(SCALE_FADE_BANDS.milkyWayApproach.fullAt);
-    expect(milkyWayLayer.enabled(STATE, inside)).toBe(true);
-    expect(milkyWayLayer.pickEnabled!(STATE, inside)).toBe(false);
+    expect(inside.cam.distance).toBeGreaterThan(SCALE_FADE_BANDS.milkyWayApproachSun.fullAt);
+    expect(milkyWayLayer.enabled(STATE, inside, VIEW_STUB)).toBe(true);
+    expect(milkyWayLayer.pickEnabled!(STATE, inside, VIEW_STUB)).toBe(false);
 
     // Framing the galaxy from outside: draw and pick agree again.
     const outside = makeCtx(0.15);
-    expect(milkyWayLayer.enabled(STATE, outside)).toBe(true);
-    expect(milkyWayLayer.pickEnabled!(STATE, outside)).toBe(true);
+    expect(milkyWayLayer.enabled(STATE, outside, VIEW_STUB)).toBe(true);
+    expect(milkyWayLayer.pickEnabled!(STATE, outside, VIEW_STUB)).toBe(true);
   });
 
   it('stays unpickable wherever it is invisible — pick is a strict subset of draw', () => {
     // `pickEnabled` composes over `enabled` rather than restating its terms, so an
     // invisible disc cannot come back as a click target.
-    const dissolved = makeCtx(SCALE_FADE_BANDS.milkyWayApproach.goneAt / 2);
-    expect(milkyWayLayer.enabled(STATE, dissolved)).toBe(false);
-    expect(milkyWayLayer.pickEnabled!(STATE, dissolved)).toBe(false);
+    const dissolved = makeCtx(SCALE_FADE_BANDS.milkyWayApproachSun.goneAt / 2);
+    expect(milkyWayLayer.enabled(STATE, dissolved, VIEW_STUB)).toBe(false);
+    expect(milkyWayLayer.pickEnabled!(STATE, dissolved, VIEW_STUB)).toBe(false);
   });
 });

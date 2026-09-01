@@ -6,6 +6,7 @@ import { COSMO_LABEL_DIRECTOR } from '../../../../src/data/labels/cosmoLabelDire
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { cosmoLabelProjection } from '../../../../src/services/engine/frame/cosmoLabelProjection';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
   CAPTION_PRIORITY,
   CAPTION_TIER_SCALE,
@@ -51,10 +52,11 @@ function makeCtx(nowMs = 0): ReadyFrameContext {
 // like `makeCtx`'s COSMO one for screen math — same [x,y,0] → screen mapping.
 const NEAR0_SLAB: Slab = {
   index: NEAR0,
-  nearMpc: 1e-6,
-  farMpc: 1,
+  near: 1e-6,
+  far: 1,
   vp: mat4d.identity() as Float64Array,
-  originRelative: true,
+  frame: { kind: 'world-mpc', originRelative: true },
+  distanceRangeM: [1e-6 * SCALE_UNITS.MPC_TO_M, 1 * SCALE_UNITS.MPC_TO_M],
   precision: 'f64',
   reversedZ: true,
 };

@@ -27,19 +27,32 @@
  * instantiation (near-field bodies + cosmological scene) this spec ships.
  */
 
+import type { SlabFrame } from './SlabFrame';
+
 export type Slab = {
   /** 0 = nearest; higher = farther back. Composite order is high-to-low. */
-  index: number;
-  /** Near plane for this slab, in Mpc. */
-  nearMpc: number;
-  /** Far plane for this slab, in Mpc. */
-  farMpc: number;
-  /** proj·view for this slab (origin-relative for near slabs). */
-  vp: Float64Array;
-  /** True ⇒ geometry deltas are computed as pos − renderOrigin. */
-  originRelative: boolean;
+  readonly index: number;
+  /** Near plane, in THIS slab's units (see `frame.kind`). */
+  readonly near: number;
+  /** Far plane, in THIS slab's units. Ignored under infinite-far reversed-Z. */
+  readonly far: number;
+  /** proj·view. For `body-m`, built about the eye — RTC-native, no rebase step. */
+  readonly vp: Float64Array;
+  /** The frame and units `vp` and this slab's geometry are expressed in. */
+  readonly frame: SlabFrame;
+  /**
+   * Camera-distance interval, in METRES, spanned by the depth-bearing content
+   * this row contributes. Metres for EVERY row (including `world-mpc` ones) so
+   * the painter sort compares across frames without a per-row unit branch.
+   *
+   * `null` when the row resolved no such content this frame (only NEAR0 can:
+   * its interval is the star spheres actually drawn, spec §7.1). Nullable
+   * rather than a degenerate `[0, 0]`, which a sort reads as "nearest" — the
+   * opposite of what an unresolved row wants (`foregroundChainOrder`).
+   */
+  readonly distanceRangeM: readonly [number, number] | null;
   /** f64 ⇒ MVP is composed in double precision, then narrowed (composeBodyMvp path). */
-  precision: 'f32' | 'f64';
+  readonly precision: 'f32' | 'f64';
   /** true ⇒ this slab clears depth to 0, greater-wins, perspectiveReverseZ projection. */
-  reversedZ: boolean;
+  readonly reversedZ: boolean;
 };

@@ -48,7 +48,7 @@
  *
  * A NEAR0 target (a survey star, a planet, Earth, a scene star) is drawn as a
  * real sphere, so its `selectionHalo` descriptor carries a REAL physical
- * radius (`radiusKm` → Mpc) and `near0RingRadiusPx` sizes the halo like the
+ * radius (`radiusM` → Mpc) and `near0RingRadiusPx` sizes the halo like the
  * galaxy ring: `max(farFloor, 1.5 × apparentRadiusPx)`. Far away the sphere is
  * sub-pixel and the far floor wins — the same fixed-px `galaxyCatalogs.sizePx ·
  * 6` dot the COSMO helper produces at radius 0 — so nothing changes at
@@ -100,7 +100,7 @@ export const near0SelectionRingLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const row = state.selectionRows.select;
     // A row drives THIS ring iff the table yields a NEAR0-slab descriptor for
@@ -162,7 +162,7 @@ export const near0SelectionRingLayer: ContentLayer = {
     // is otherwise unobserved. Far side only: in practice the orbit target is
     // always at or beyond the anchor's scale when zoomed out, so the anchor can
     // only ever exit the FAR plane, never the near — no symmetric near clamp.
-    const clampedCentre = clampVec3Length(centre, view.slab.farMpc * NEAR0_FAR_CLAMP_FRACTION);
+    const clampedCentre = clampVec3Length(centre, view.slab.far * NEAR0_FAR_CLAMP_FRACTION);
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // centre. Uses the slab's f64 `vp`, narrowed HERE at the GPU-upload

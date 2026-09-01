@@ -129,7 +129,7 @@ function BodyDetailCard({
           <div className={styles.cardSection}>
             <CardRow
               label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
-              value={`${target.radiusKm.toLocaleString()} km`}
+              value={`${(target.radiusM * SCALE_UNITS.M_TO_KM).toLocaleString()} km`}
             />
             {distanceMpc != null && (
               <CardRow label="Distance" value={formatDistance(distanceMpc)} />

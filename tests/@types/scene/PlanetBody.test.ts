@@ -10,10 +10,10 @@ describe('PlanetBody type', () => {
     const mars: PlanetBody = {
       id: 'mars',
       label: 'Mars',
-      radiusKm: 3389.5,
+      radiusM: 3389500,
       albedo: [0.8, 0.4, 0.2],
     };
-    expect(mars.radiusKm).toBe(3389.5);
+    expect(mars.radiusM).toBe(3389500);
   });
 
   it('types albedo as a Vec3', () => {

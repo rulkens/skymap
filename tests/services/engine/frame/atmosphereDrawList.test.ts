@@ -14,8 +14,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { atmosphereDrawList } from '../../../../src/services/engine/frame/atmosphereDrawList';
-import { camPosLocal } from '../../../../src/utils/camera/camPosLocal';
-import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -51,18 +49,6 @@ vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
       });
     return m;
   }),
-}));
-
-// Wiring assertion, not a mirror: pins that atmosphereDrawList calls each util
-// exactly once per qualifying body (the hoist this task performs), without
-// recomputing the real camPosLocal/sunDirLocal formula.
-const CAM_POS_LOCAL_STUB: Vec3 = [1, 2, 3];
-const SUN_DIR_LOCAL_STUB: Vec3 = [4, 5, 6];
-vi.mock('../../../../src/utils/camera/camPosLocal', () => ({
-  camPosLocal: vi.fn(() => CAM_POS_LOCAL_STUB),
-}));
-vi.mock('../../../../src/utils/camera/sunDirLocal', () => ({
-  sunDirLocal: vi.fn(() => SUN_DIR_LOCAL_STUB),
 }));
 
 // Test fixtures pairing the identity records with the J2000 state the snapshot
@@ -112,9 +98,9 @@ function makeCtx(drawCamPos: Vec3, camDistance = 0): ReadyFrameContext {
 }
 
 /** A camera pose `radii` Earth-radii out from `body` along +x — sets the disc size. */
-function camRadiiOut(body: { positionMpc: Vec3; radiusKm: number }, radii: number): Vec3 {
+function camRadiiOut(body: { positionMpc: Vec3; radiusM: number }, radii: number): Vec3 {
   return [
-    body.positionMpc[0] + radii * body.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    body.positionMpc[0] + radii * body.radiusM * SCALE_UNITS.M_TO_MPC,
     body.positionMpc[1],
     body.positionMpc[2],
   ];
@@ -125,7 +111,7 @@ const NO_ROW_PLANET: SeededPlanet = {
   id: 'atmosphereless-test-body',
   label: 'No Atmosphere',
   positionMpc: SEEDED_EARTH.positionMpc,
-  radiusKm: 6371,
+  radiusM: 6371000,
   albedo: [0.5, 0.5, 0.5],
   orientation: [...IDENTITY_MAT3] as Mat3,
 };
@@ -137,17 +123,6 @@ describe('atmosphereDrawList', () => {
     expect(list).toHaveLength(1);
     expect(list[0]!.body).toBe(SEEDED_EARTH);
     expect(list[0]!.params).toBe(ATMOSPHERE_PARAMS['earth']);
-  });
-
-  it('derives camPosLocal/sunDirLocal once per body, not per consumer', () => {
-    vi.mocked(camPosLocal).mockClear();
-    vi.mocked(sunDirLocal).mockClear();
-    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
-    expect(list).toHaveLength(1);
-    expect(camPosLocal).toHaveBeenCalledTimes(1);
-    expect(sunDirLocal).toHaveBeenCalledTimes(1);
-    expect(list[0]!.camPosLocal).toBe(CAM_POS_LOCAL_STUB);
-    expect(list[0]!.sunDirLocal).toBe(SUN_DIR_LOCAL_STUB);
   });
 
   it('excludes a body with no ATMOSPHERE_PARAMS row', () => {

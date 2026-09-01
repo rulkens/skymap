@@ -1,5 +1,5 @@
 /**
- * SCALE_UNITS — unit conversion constants to Megaparsec (Mpc).
+ * SCALE_UNITS — unit conversion constants, named `<FROM>_TO_<TO>`.
  *
  * The renderer's per-object coordinate matrices are always expressed
  * in Megaparsecs (Mpc) — a scale that fits the ~300 Mpc observable
@@ -33,16 +33,27 @@ const KPC_TO_MPC = 1e-3;
 const MPC_TO_MPC = 1;
 const GPC_TO_MPC = 1e3;
 
+// Named locals: SI. Bodies are authored and framed in metres (the body-relative
+// render frames work in SI), while several catalog constants and the atmosphere
+// table are still km — so the km↔m pair is a real boundary, not a formality.
+const KM_TO_M = 1e3;
+const M_TO_KM = 1e-3;
+
 // Derived: composite conversions from other units.
 const KM_TO_MPC = PC_TO_MPC / PC_IN_KM;
 const AU_TO_MPC = AU_IN_KM * KM_TO_MPC;
 const LY_TO_MPC = PC_TO_MPC / PC_TO_LY;
+const M_TO_MPC = KM_TO_MPC / KM_TO_M;
+// Derived the same way as M_TO_MPC (from PC_IN_KM), not as 1 / M_TO_MPC — a
+// runtime reciprocal would round differently and the two directions would no
+// longer round-trip at f64.
+const MPC_TO_M = PC_IN_KM * 1e6 * KM_TO_M;
 
 /**
- * Unit conversion constants to Megaparsec (Mpc).
+ * Unit conversion constants, named `<FROM>_TO_<TO>`.
  *
  * Each key-value pair is a multiplication factor: multiply a distance
- * in the key's unit by the constant to get Megaparsecs.
+ * in the FROM unit by the constant to get the TO unit.
  *
  * Example: `distance_mpc = distance_au * SCALE_UNITS.AU_TO_MPC`.
  */
@@ -54,6 +65,10 @@ export const SCALE_UNITS: Readonly<{
   readonly MPC_TO_MPC: number;
   readonly GPC_TO_MPC: number;
   readonly LY_TO_MPC: number;
+  readonly KM_TO_M: number;
+  readonly M_TO_KM: number;
+  readonly M_TO_MPC: number;
+  readonly MPC_TO_M: number;
 }> = {
   KM_TO_MPC,
   AU_TO_MPC,
@@ -62,4 +77,8 @@ export const SCALE_UNITS: Readonly<{
   MPC_TO_MPC,
   GPC_TO_MPC,
   LY_TO_MPC,
+  KM_TO_M,
+  M_TO_KM,
+  M_TO_MPC,
+  MPC_TO_M,
 } as const;

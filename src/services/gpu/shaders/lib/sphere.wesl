@@ -56,11 +56,10 @@ struct SphereUniforms {
 // consumer (its emissive spectral colour); centralising the struct here
 // (rather than duplicating it per renderer) keeps the byte layout a
 // single source of truth across the vertex/fragment module pair and its
-// CPU-side uploader.  The planet renderer does NOT bind this struct —
-// it draws every seeded planet with one instanced draw, so its albedo
-// rides in a per-instance vertex attribute instead of a uniform; see
-// 'planetRenderer's module header for why instancing replaces a
-// per-draw uniform there.
+// CPU-side uploader.  The planet renderer does NOT bind this struct — its
+// albedo rides in a per-instance vertex attribute instead, one instance per
+// body-m row; see 'planetRenderer's module header for why instancing
+// replaces a per-draw uniform there.
 //
 // Why not extend 'SphereUniforms' with a colour field?  WGSL has no
 // optional fields — the Earth genuinely binds a 64-byte buffer, and

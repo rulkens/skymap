@@ -16,6 +16,11 @@ import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
+import { sceneBodyStates } from './sceneBodyStates';
+import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
+import { regionById } from '../../../utils/scene/regionById';
+
+const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
 export function deriveMilkyWayCloudAlpha(
   state: EngineState,
@@ -26,8 +31,15 @@ export function deriveMilkyWayCloudAlpha(
   }
 
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  // Near-side approach fade: shuts only deep inside the disc, once the Gaia star catalog has taken over.
-  const approach = fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc);
+  // Two independent near-side approach fades, combined by MIN: the Sun's own
+  // descent (`milkyWayApproachSun`, keyed on the origin — the Sun sits there —
+  // the hand-off to the real Gaia star catalog) and the galactic centre's
+  // (`milkyWayApproachGc`, keyed on distance from Sgr A*).
+  const bodyStates = sceneBodyStates(state, ctx);
+  const sunApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproachSun, camDistMpc);
+  const gcDistMpc = regionRelativeDistanceMpc(ctx.drawCamPos, GALACTIC_CENTRE_REGION, bodyStates);
+  const gcApproach = fadeBand(SCALE_FADE_BANDS.milkyWayApproachGc, gcDistMpc);
+  const approach = Math.min(sunApproach, gcApproach);
   if (approach <= 0) return null;
 
   const alpha =

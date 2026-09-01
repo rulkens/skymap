@@ -30,12 +30,12 @@ import { apparentSizePx } from '../math/apparentSizePx';
 
 export function bodyApparentDiameterPx(input: {
   positionMpc: Readonly<Vec3>;
-  radiusKm: number;
+  radiusM: number;
   camPosMpc: Readonly<Vec3>;
   viewportHeightPx: number;
   fovYRad: number;
 }): number {
-  const { positionMpc, radiusKm, camPosMpc, viewportHeightPx, fovYRad } = input;
+  const { positionMpc, radiusM, camPosMpc, viewportHeightPx, fovYRad } = input;
   const dx = positionMpc[0] - camPosMpc[0];
   const dy = positionMpc[1] - camPosMpc[1];
   const dz = positionMpc[2] - camPosMpc[2];
@@ -44,8 +44,8 @@ export function bodyApparentDiameterPx(input: {
   // that clears it (see the docblock). This is the single home for what used to
   // be three copies of the distance-0 guard.
   if (distanceMpc <= 0) return Infinity;
-  // Physical diameter in kpc: radiusKm·2 → Mpc → kpc, every step through a named
+  // Physical diameter in kpc: radiusM·2 → Mpc → kpc, every step through a named
   // SCALE_UNITS constant (no inline magic factors).
-  const diameterKpc = (radiusKm * 2 * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC;
+  const diameterKpc = (radiusM * 2 * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC;
   return apparentSizePx({ diameterKpc, distanceMpc, viewportHeightPx, fovYRad });
 }

@@ -8,7 +8,7 @@
  * whose apparent size clears `STAR_RESOLVE_PX` (the Sun included: below the
  * threshold it demotes to an additive point like any other star, so it
  * never vanishes) — each composed as a unit sphere scaled to the body's
- * equatorial radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
+ * equatorial radius (`radiusM` → Mpc via `SCALE_UNITS.M_TO_MPC`) and
  * translated to its `positionMpc` in the `RENDER_ORIGIN_MPC`-relative frame,
  * tinted by its blackbody colour — derived from its `temperatureK` via
  * `temperatureToLinearRgb`. A star's optional `oblateness` flattens
@@ -80,7 +80,7 @@ export const starSpheresLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first, distance second, partition last — see the module
     // header's gate note.
     if (state.gpu.starRenderer === null) return false;
@@ -110,7 +110,7 @@ export const starSpheresLayer: ContentLayer = {
 
     // Compose each resolved star's MVP from the slab's f64 vp — see the
     // module header's "f64 seam" note for why `view.slab.vp`, not `view.vp`.
-    // Radius is the authored kilometres resolved into Mpc at the draw site. A
+    // Radius is the authored metres resolved into Mpc at the draw site. A
     // star is a flat-emissive sphere — rotation-invariant — so it carries the
     // identity orientation rather than a baked facing; `oblateness` (absent ⇒
     // 0 ⇒ sphere) flattens the polar axis in the compose.
@@ -119,7 +119,7 @@ export const starSpheresLayer: ContentLayer = {
         view.slab.vp,
         star.positionMpc,
         RENDER_ORIGIN_MPC,
-        star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        star.radiusM * SCALE_UNITS.M_TO_MPC,
         IDENTITY_MAT3,
         star.oblateness,
       );
@@ -170,7 +170,7 @@ export const starSpheresLayer: ContentLayer = {
       drawFlooredSpherePick(pickRenderer, pass, {
         vp: view.slab.vp,
         positionMpc: star.positionMpc,
-        radiusMpc: star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        radiusMpc: star.radiusM * SCALE_UNITS.M_TO_MPC,
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: IDENTITY_MAT3,

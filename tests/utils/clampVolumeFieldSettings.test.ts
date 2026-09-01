@@ -42,7 +42,7 @@ const rawLow: VolumeFieldSettings = {
   densityScale: NaN,
   trim: -0.5,
   exposure: NaN,
-  bands: [SCALE_FADE_BANDS.milkyWayApproach],
+  bands: [SCALE_FADE_BANDS.milkyWayApproachSun],
 };
 
 describe('clampVolumeFieldSettings — paletteId and enabled pass through unchanged', () => {

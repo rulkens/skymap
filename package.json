@@ -1,6 +1,6 @@
 {
   "name": "skymap",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs.",
   "license": "MIT",
@@ -74,6 +74,7 @@
     "dev": "vite",
     "fetch-2mass-xsc": "tsx tools/fetch/fetch2massXsc.ts",
     "fetch-cf4": "tsx tools/fetch/fetchCosmicflows4.ts",
+    "fetch-data": "tsx tools/fetch/fetchPrebuiltData.ts",
     "fetch-desi": "tsx tools/fetch/fetchDesi.ts",
     "fetch-eox": "tsx tools/fetch/fetchEoxTiles.ts",
     "fetch-structures": "tsx tools/fetch/fetchStructureCatalogs.ts",

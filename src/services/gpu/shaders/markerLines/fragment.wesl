@@ -18,11 +18,9 @@
 import package::markerLines::io::VsOut;
 
 // The soft-edged thick-line shading body, factored out of the
-// '@fragment fn fs' entry so a depth-occluding variant
-// (markerLines/fragmentOcclude.wesl) can reuse the exact same shading
-// after its discard gate — one source of truth for line colour, two
-// entry points that differ only in whether they test the scene depth
-// first.
+// '@fragment fn fs' entry so the scene-attenuated variant
+// (markerLines/fragmentOcclude.wesl) scales this exact result rather
+// than re-deriving it — one source of truth for line colour.
 fn shadeLine(input: VsOut) -> vec4<f32> {
   // Triangular distance from the line's centerline: 0 at center, 1 at
   // either edge.  uv.y in [0, 1] is the across-line coordinate.

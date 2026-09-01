@@ -19,6 +19,9 @@ import {
   scalarVolumeLayer,
   galaxyPointSpritesLayer,
   filamentsLayer,
+  earthLayer,
+  planetsLayer,
+  texturedBodiesLayer,
   milkyWayLayer,
   horizonShellLayer,
   starPointsLayer,
@@ -32,6 +35,7 @@ import {
   structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
@@ -80,15 +84,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     hasInFlightWork: () => false,
   } as any;
   const drawCamPos = [0, 0, 5] as Readonly<[number, number, number]>;
-  const cosmoSlab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
-    vp: Float64Array.from(vp as unknown as Float32Array),
-    originRelative: false,
-    precision: 'f32',
-    reversedZ: false,
-  };
+  const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
     isReady: true,
     renderedTargets: new Set<string>(),
@@ -116,6 +112,9 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     galaxyPointRenderer,
     renderTargets,
     texturedDisks,
+    // Nothing in this file reads bodyPose — a stub that never resolves a
+    // body is a safe default, overridable like every other field.
+    bodyPose: () => null,
     ...overrides,
   };
 }
@@ -206,22 +205,17 @@ const HDR_NAMES = [
 const SWAP_NAMES = ['selection-ring', 'disk-radius-ring', 'marker-lines', 'labels'];
 
 // The near-field foreground group: the true-scale bodies drawn into the
-// depth-bearing `foreground:0` target through the near0 slab — Earth, the Sun
-// sphere, the selection-gated focused field-star sphere, the partition's
-// flat-lit `planets` branch, and its `textured-bodies` branch. Opaque
+// depth-bearing `foreground:0` target through the near0 slab — the Sun
+// sphere and the selection-gated focused field-star sphere. Opaque
 // (depth-tested), unlike the additive HDR group and the OVER swap group. The
 // focused-field-star sphere sits right after star-spheres — a selection-gated
-// sibling reusing the same star renderer. The translucent `cloud-shell` and
-// `rings` overlays are NOT in this list: both target foreground:0 but blend
-// OVER, so they are pinned separately (see the ringsLayer registry-row test
-// below).
-const FOREGROUND_NAMES = [
-  'earth',
-  'star-spheres',
-  'field-star-sphere',
-  'planets',
-  'textured-bodies',
-];
+// sibling reusing the same star renderer.
+// Earth, the partition's `planets`/`textured-bodies` branches, and the
+// translucent `cloud-shell`/`rings`/`atmosphere-shell` overlays are NOT in
+// this list: all ride the 'body' slab sentinel (Tasks 9-11, body render
+// slabs) instead of a fixed NEAR0 index — their own registry-row tests below
+// pin them separately.
+const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere'];
 
 // The near-field hdr rows: the layers that pair the hdr target with the
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
@@ -327,14 +321,25 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
 
 describe('CONTENT_LAYERS migration table (foreground group)', () => {
   it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
-    // The near-field bodies (Earth, the Sun sphere, the planets) leave the
-    // cosmological slab: they project through NEAR0 into the depth-bearing
+    // The near-field bodies still on a fixed NEAR0 index (the Sun sphere, the
+    // focused field star): project through NEAR0 into the depth-bearing
     // `foreground:0` target and are opaque (depth-tested), not additive. See
     // the renderer-unification design's migration table (spec line 215).
     const fgLayers = CONTENT_LAYERS.filter((layer) => FOREGROUND_NAMES.includes(layer.name));
     expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
     for (const layer of fgLayers) {
       expect(layer.slab).toBe(NEAR0);
+      expect(layer.target).toBe('foreground:0');
+      expect(layer.blend).toBe('opaque');
+    }
+  });
+
+  it("earth, planets, and textured-bodies ride the 'body' slab sentinel into foreground:0, opaque", () => {
+    // Task 9 (earth) / Task 11 (planets, textured-bodies): each expands into
+    // one render step per body-m row instead of a fixed NEAR0 index — see
+    // frameProgram.ts's 'body' expansion.
+    for (const layer of [earthLayer, planetsLayer, texturedBodiesLayer]) {
+      expect(layer.slab).toBe('body');
       expect(layer.target).toBe('foreground:0');
       expect(layer.blend).toBe('opaque');
     }
@@ -445,15 +450,17 @@ describe('CONTENT_LAYERS blend legality', () => {
 });
 
 describe('ringsLayer registry row', () => {
-  it('draws into foreground:0 through NEAR0 with over, AFTER the opaque bodies', () => {
+  it("rides the 'body' slab sentinel into foreground:0 with over, AFTER the opaque bodies", () => {
     // The ring is the translucent overlay half of Saturn's rings: it shares the
-    // opaque bodies' (foreground:0, NEAR0) render step but blends OVER, so it
+    // opaque bodies' (foreground:0, 'body') render step but blends OVER, so it
     // must be ordered after them to depth-test against their stamped z (far ring
-    // half occluded). It is deliberately NOT in FOREGROUND_NAMES (that group's
-    // opaque assertion), it is the exception.
+    // half occluded). Task 11 moved it off the fixed NEAR0 index onto the same
+    // 'body' expansion earth/planets/textured-bodies use. It is deliberately
+    // NOT in FOREGROUND_NAMES (that group's opaque assertion), it is the
+    // exception.
     const rings = CONTENT_LAYERS.find((layer) => layer.name === 'rings')!;
     expect(rings).toBeDefined();
-    expect(rings.slab).toBe(NEAR0);
+    expect(rings.slab).toBe('body');
     expect(rings.target).toBe('foreground:0');
     expect(rings.blend).toBe('over');
 
@@ -464,15 +471,17 @@ describe('ringsLayer registry row', () => {
 });
 
 describe('cloudShellLayer registry row', () => {
-  it('draws into foreground:0 through NEAR0 with over, AFTER earth', () => {
+  it("rides the 'body' slab sentinel into foreground:0 with over, AFTER earth", () => {
     // Earth's cloud deck is the second translucent overlay of the (foreground:0,
-    // NEAR0) group: it blends OVER, so it must be ordered after the opaque surface
-    // earthLayer stamps, to depth-test against its z (far hemisphere occluded). It
-    // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) — it
-    // is the exception, alongside the ring.
+    // 'body') group: it blends OVER, so it must be ordered after the opaque
+    // surface earthLayer stamps, to depth-test against its z (far hemisphere
+    // occluded). Task 10 (body render slabs) moved it off the fixed NEAR0 index
+    // onto the same 'body' expansion earthLayer uses — see frameProgram.ts. It
+    // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) —
+    // it is the exception, alongside the ring.
     const cloud = CONTENT_LAYERS.find((layer) => layer.name === 'cloud-shell')!;
     expect(cloud).toBeDefined();
-    expect(cloud.slab).toBe(NEAR0);
+    expect(cloud.slab).toBe('body');
     expect(cloud.target).toBe('foreground:0');
     expect(cloud.blend).toBe('over');
 
@@ -483,16 +492,18 @@ describe('cloudShellLayer registry row', () => {
 });
 
 describe('atmosphereShellLayer registry row', () => {
-  it('draws into foreground:0 through NEAR0 with over, LAST — after the rings overlay', () => {
+  it("rides the 'body' slab sentinel into foreground:0 with over, LAST — after the rings overlay", () => {
     // Earth's in-scatter atmosphere is the outermost translucent overlay of the
-    // (foreground:0, NEAR0) group (spec §8.3): it blends OVER and must be ordered
-    // AFTER every opaque sphere AND the ring overlay, so it depth-tests against
-    // their stamped z (over-disc occluded, limb over space passes). It is
-    // deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) — it is
-    // the third exception, alongside the ring and cloud shell. Non-pickable.
+    // (foreground:0, 'body') group (spec §8.3): it blends OVER and must be
+    // ordered AFTER every opaque sphere AND the ring overlay, so it depth-tests
+    // against their stamped z (over-disc occluded, limb over space passes).
+    // Task 10 moved it off the fixed NEAR0 index onto the same 'body' expansion
+    // earthLayer uses. It is deliberately NOT in FOREGROUND_NAMES (that group's
+    // opaque assertion) — it is the third exception, alongside the ring and
+    // cloud shell. Non-pickable.
     const atmosphere = CONTENT_LAYERS.find((layer) => layer.name === 'atmosphere-shell')!;
     expect(atmosphere).toBeDefined();
-    expect(atmosphere.slab).toBe(NEAR0);
+    expect(atmosphere.slab).toBe('body');
     expect(atmosphere.target).toBe('foreground:0');
     expect(atmosphere.blend).toBe('over');
     expect(atmosphere.drawPick).toBeUndefined();
@@ -503,7 +514,7 @@ describe('atmosphereShellLayer registry row', () => {
     const idxAtmosphere = CONTENT_LAYERS.findIndex((layer) => layer.name === 'atmosphere-shell');
     expect(idxAtmosphere).toBeGreaterThan(idxRings);
     const fgIndices = CONTENT_LAYERS.map((layer, i) => ({ layer, i })).filter(
-      ({ layer }) => layer.target === 'foreground:0' && layer.slab === NEAR0,
+      ({ layer }) => layer.target === 'foreground:0',
     );
     expect(fgIndices[fgIndices.length - 1]!.layer).toBe(atmosphere);
   });
@@ -545,9 +556,11 @@ describe('starAggregatesLayer registry row', () => {
 
 describe('galaxyPointSpritesLayer.enabled', () => {
   it('always returns true (no user-facing toggle for point-sprites)', () => {
-    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    const view = slabViewOf(ctx, COSMO);
+    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, ctx, view)).toBe(true);
     // Even when every other toggle is off, point-sprites still runs.
-    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, makeCtx())).toBe(true);
+    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, ctx, view)).toBe(true);
   });
 });
 
@@ -562,7 +575,8 @@ describe('filamentsLayer.enabled', () => {
       ...STATE_STUB,
       settings: { filaments: { enabled: true, intensity: 1 } },
     } as unknown as EngineState;
-    expect(filamentsLayer.enabled(stateOn, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(filamentsLayer.enabled(stateOn, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
   it('returns false when filaments.enabled is false AND fade opacity is 0', () => {
@@ -572,7 +586,8 @@ describe('filamentsLayer.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
-    expect(filamentsLayer.enabled(stateZeroFade, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(filamentsLayer.enabled(stateZeroFade, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('returns true when filaments.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
@@ -583,7 +598,8 @@ describe('filamentsLayer.enabled', () => {
       ...STATE_STUB,
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
-    expect(filamentsLayer.enabled(stateOffFading, makeCtx())).toBe(true);
+    const ctx = makeCtx();
+    expect(filamentsLayer.enabled(stateOffFading, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 });
 
@@ -623,7 +639,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOn, ctx)).toBe(true);
+    expect(milkyWayLayer.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
   });
 
   it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
@@ -633,7 +649,8 @@ describe('milkyWayLayer.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
-    expect(milkyWayLayer.enabled(stateOffZeroFade, makeCtx())).toBe(false);
+    const ctx = makeCtx();
+    expect(milkyWayLayer.enabled(stateOffZeroFade, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 
   it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
@@ -648,7 +665,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOffFading, ctx)).toBe(true);
+    expect(milkyWayLayer.enabled(stateOffFading, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
   });
 
   it('returns false once the disc shrinks past the GONE apparent size (no empty render pass)', () => {
@@ -663,7 +680,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [MW_GONE_DIST_MPC * 2, 0, 0] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOn, ctx)).toBe(false);
+    expect(milkyWayLayer.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 });
 
@@ -718,7 +735,8 @@ describe('horizonShellLayer.enabled', () => {
     // Camera at 5 Mpc is far below the shell's fade-in band (5% of
     // 14.3 Gpc ≈ 0.7 Gpc), so the layer is skipped — no empty
     // full-screen ray-march pass at galaxy-scale zoom.
-    expect(horizonShellLayer.enabled(STATE_STUB, makeCtx())).toBe(false);
+    const ctx0 = makeCtx();
+    expect(horizonShellLayer.enabled(STATE_STUB, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
   });
 
   it('returns true once the camera pulls back to cosmological scale', () => {
@@ -726,7 +744,7 @@ describe('horizonShellLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
-    expect(horizonShellLayer.enabled(STATE_STUB, ctx)).toBe(true);
+    expect(horizonShellLayer.enabled(STATE_STUB, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 });
 
@@ -902,14 +920,15 @@ describe('galaxyPointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly the twelve pickables expose drawPick, in registry order', () => {
+  it('exactly the fourteen pickables expose drawPick, in registry order', () => {
     // Pins the spec's migration table: the six COSMO/near-field survey
     // pickables (pointSprites / zoneOfAvoidance / proceduralDisks /
     // structureMarkers / milkyWay / starCatalog) PLUS the six NEAR0 true-scale
     // foreground bodies (starPoints / bodyGlints / earth / starSpheres /
     // focusedFieldStarSphere / planets), the selection-gated
     // focused-field-star sphere's pick and the sub-pixel body glints' pick
-    // among them. Order is registry order: the COSMO pick pass leads with
+    // among them — plus the two label rows, whose text is a click target for
+    // the subject it names. Order is registry order: the COSMO pick pass leads with
     // point-sprites (the @group(0) prefix contract); zone-of-avoidance sits
     // right after it in the registry for exactly that reason — its own
     // 'zoa' render target keeps it out of every VISUAL group regardless of
@@ -919,7 +938,17 @@ describe('drawPick migration-table rows', () => {
     // relative order carries no @group(0) dependence (it is depth-resolved,
     // nearest-wins). The production code stays name-blind — the pick program
     // filters by `drawPick` presence + `enabled`, never a hardcoded name
-    // list — so this test is the ONLY place the twelve names are asserted.
+    // list — so this test is the ONLY place the fourteen names are asserted.
+    //
+    // The two label rows are the exception to the ordering freedom above —
+    // not because their pick aspect needs a fixed slot (each restores the
+    // shared point-pick camera prefix before returning, same postcondition
+    // `proceduralDisksLayer` already satisfies from mid-registry — see
+    // `ContentLayer.drawPick`), but because CONTENT_LAYERS is the ONE list
+    // both the visual and pick programs filter, and 'labels' visual row must
+    // sit last among the swap-target layers so its text composites over the
+    // marker-line stroke it sits over (`passes/index.ts`). The pick filter
+    // inherits that position for free rather than keeping a second order.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'zone-of-avoidance',
@@ -929,10 +958,12 @@ describe('drawPick migration-table rows', () => {
       'star-points',
       'body-glints',
       'star-catalog',
+      'labels',
       'earth',
       'star-spheres',
       'field-star-sphere',
       'planets',
+      'foreground-labels',
     ]);
   });
 });
@@ -948,14 +979,11 @@ describe('structureMarkersLayer.enabled', () => {
       gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 3 } },
     } as unknown as EngineState;
     // Default fixture camera: 5 Mpc from origin, far outside the band.
-    expect(structureMarkersLayer.enabled(state, makeCtx())).toBe(true);
+    const farCtx = makeCtx();
+    expect(structureMarkersLayer.enabled(state, farCtx, slabViewOf(farCtx, COSMO))).toBe(true);
     // Inside goneAt (0.002 Mpc) → disabled despite queued markers.
-    expect(
-      structureMarkersLayer.enabled(
-        state,
-        makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> }),
-      ),
-    ).toBe(false);
+    const nearCtx = makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> });
+    expect(structureMarkersLayer.enabled(state, nearCtx, slabViewOf(nearCtx, COSMO))).toBe(false);
   });
 });
 

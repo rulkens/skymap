@@ -16,7 +16,7 @@ import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../src/data/defaults';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
-import { COSMO } from '../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -329,15 +329,9 @@ describe('renderFrame visual baseline', () => {
     // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
     // directly — this fixture needs a real row there, not the pre-slab
     // `slabs: []` shape.
-    const cosmoSlab: Slab = {
-      index: COSMO,
-      nearMpc: 0.01,
-      farMpc: 50000,
+    const cosmoSlab: Slab = makeCosmoSlab({
       vp: Float64Array.from(viewProj as unknown as Float32Array),
-      originRelative: false,
-      precision: 'f32',
-      reversedZ: false,
-    };
+    });
 
     // Subsystems with non-empty lastOutput so the LOD-1 / LOD-2 passes'
     // enabled() gates report true.  We populate one item in each list —
