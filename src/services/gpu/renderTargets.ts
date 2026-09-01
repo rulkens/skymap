@@ -300,6 +300,12 @@ export function createRenderTargets(
   // depth attachment", which is exactly what `depthViewOf` throws on.
   const textures = new Map<string, GPUTexture>();
   const views = new Map<string, GPUTextureView>();
+  // A dimension:'cube' view alongside `views`' default (2d-array) one, for the
+  // one row whose 6 layers are later sampled as a `texture_cube` (see
+  // `RenderTargets.cubeViewOf`'s doc). Keyed off `fixedSizePx.layers === 6`
+  // (data-driven, not a hardcoded 'sky-cubemap' id check) so a future second
+  // 6-layer row gets one for free.
+  const cubeViews = new Map<string, GPUTextureView>();
   const depthTextures = new Map<string, GPUTexture>();
   const depthViews = new Map<string, GPUTextureView>();
   // Recorded beside `textures`/`views` so `sizeOf` never reads a texture's
@@ -329,6 +335,17 @@ export function createRenderTargets(
     });
     textures.set(spec.id, texture);
     views.set(spec.id, texture.createView());
+    if (spec.fixedSizePx?.layers === 6) {
+      cubeViews.set(
+        spec.id,
+        texture.createView({
+          label: `render-target-${spec.id}-cube-view`,
+          dimension: 'cube',
+          baseArrayLayer: 0,
+          arrayLayerCount: 6,
+        }),
+      );
+    }
 
     if (spec.depth) {
       depthTextures.get(spec.id)?.destroy();
@@ -406,6 +423,15 @@ export function createRenderTargets(
       }
       return view;
     },
+    cubeViewOf(id: string): GPUTextureView {
+      const view = cubeViews.get(id);
+      if (!view) {
+        // Covers a row with < 6 layers, 'swap', unknown ids, and
+        // use-after-destroy — same loud-failure discipline as `viewOf`.
+        throw new Error(`renderTargets: no cube view for target '${id}'`);
+      }
+      return view;
+    },
     depthViewOf(id: string): GPUTextureView {
       const view = depthViews.get(id);
       if (!view) {
@@ -425,6 +451,7 @@ export function createRenderTargets(
       for (const texture of depthTextures.values()) texture.destroy();
       textures.clear();
       views.clear();
+      cubeViews.clear();
       depthTextures.clear();
       depthViews.clear();
       sizes.clear();

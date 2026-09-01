@@ -68,6 +68,9 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       },
       sizeOf: vi.fn(),
       viewOf: (id: string) => (id === 'volume' ? offscreenView : ({} as GPUTextureView)),
+      cubeViewOf: (id: string): GPUTextureView => {
+        throw new Error(`fixture renderTargets: no cube view for '${id}'`);
+      },
       // No row in this fixture declares depth, and the upsample layer never
       // asks for a depth view — throwing mirrors the real table's behaviour
       // for depthless rows.

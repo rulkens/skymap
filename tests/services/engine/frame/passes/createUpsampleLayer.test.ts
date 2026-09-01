@@ -66,6 +66,9 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       },
       sizeOf: vi.fn(),
       viewOf: (id: string) => (id === 'test-target' ? offscreenView : ({} as GPUTextureView)),
+      cubeViewOf: (id: string): GPUTextureView => {
+        throw new Error(`fixture renderTargets: no cube view for '${id}'`);
+      },
       depthViewOf: (id: string): GPUTextureView => {
         throw new Error(`fixture renderTargets: no depth view for '${id}'`);
       },

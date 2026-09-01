@@ -44,6 +44,7 @@ import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
 import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
+import { createSgrAStarLensingRenderer } from '../../gpu/renderers/bodies/sgrAStarLensingRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
@@ -362,6 +363,11 @@ export const GPU_HANDLE_ROWS = [
     key: 'bodyGlintRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+  },
+  {
+    key: 'sgrAStarLensingRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createSgrAStarLensingRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'starCatalogRenderer',

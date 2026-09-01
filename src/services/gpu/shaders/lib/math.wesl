@@ -120,3 +120,22 @@ fn toPolar(p: vec2<f32>) -> vec2<f32> {
 fn toRect(p: vec2<f32>) -> vec2<f32> {
   return p.x * vec2<f32>(cos(p.y), sin(p.y));
 }
+
+// ── rotateAroundAxis ─────────────────────────────────────────────────
+//
+// Rodrigues' rotation formula: rotate 'v' by 'angleRad' about 'axis'
+// (right-hand rule). First consumer: the Sgr A* lens fragment
+// (bodies/sgrAStarLensing/fragment.wesl), which has no camera-basis
+// uniform to build a billboard/deflection frame from and derives both
+// from a single direction vector instead — a general enough primitive
+// to live beside 'rot2' rather than inline in that one shader.
+//
+// 'axis' MUST already be a unit vector — the formula silently returns a
+// scaled/skewed result for a non-unit axis rather than erroring, so
+// every call site normalizes its own axis before calling this.
+
+fn rotateAroundAxis(v: vec3<f32>, axis: vec3<f32>, angleRad: f32) -> vec3<f32> {
+  let c = cos(angleRad);
+  let s = sin(angleRad);
+  return v * c + cross(axis, v) * s + axis * dot(axis, v) * (1.0 - c);
+}

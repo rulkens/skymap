@@ -379,6 +379,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // half of the body LOD, sibling of starPointRenderer. null until initGpu;
       // excluded from isEngineReady, null-checked at use by bodyGlintsLayer.
       bodyGlintRenderer: null,
+      // The Sgr A* lens pass — a single billboard draw on Sgr A*'s own
+      // body-m slab row. null until initGpu; excluded from isEngineReady,
+      // null-checked at use by sgrAStarLensingLayer.
+      sgrAStarLensingRenderer: null,
       starCatalogRenderer: null,
       starCatalogPickRenderer: null,
       // r32uint pick provider for the NEAR0 foreground bodies (Earth / planets /

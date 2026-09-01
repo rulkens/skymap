@@ -136,6 +136,21 @@ describe('createRenderTargets', () => {
     expect(desc.dimension).toBe('2d');
   });
 
+  it('cubeViewOf returns a dimension:cube view for a 6-layer row and throws for a non-cube row', () => {
+    const device = mockDevice();
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+      [FIXED_SIZE_ROW],
+    );
+    expect(targets.cubeViewOf('test:cubemap')).toBeDefined();
+    // 'hdr' has no fixedSizePx (a single layer), so it gets no cube view.
+    expect(() => targets.cubeViewOf('hdr')).toThrow();
+    expect(() => targets.cubeViewOf('nope')).toThrow();
+  });
+
   it('reconcile does not reallocate a fixedSizePx row when the canvas resizes', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;

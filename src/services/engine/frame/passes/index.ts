@@ -58,6 +58,12 @@
  *                            partition) as brightness-scaled additive points
  *                            (size x albedo x phase, cross-fading with the mesh
  *                            over 1-3 px), sibling of star-points (f64 rebase seam)
+ *  12c. sgr-a-star-lensing — the black-hole lens pass (Task 13): a `body`-slab
+ *                            row drawing ONLY on Sgr A*'s own row, PREMULTIPLIED
+ *                            OVER (not additive) into hdr — captured rays occlude
+ *                            the additive light already accumulated behind them;
+ *                            escaping rays sample the Task 11 sky-cubemap bent by
+ *                            the Task 9 LUT. Index provisional pending Task 14.
  *  13. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
  *                            flux-mip glows), drawn LINEAR into the half-res
  *                            `star-aggregates` offscreen by its own render step
@@ -234,6 +240,7 @@ import { constellationsLayer } from './constellationsLayer';
 import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 import { atmosphereShellLayer } from './atmosphereShellLayer';
+import { sgrAStarLensingLayer } from './sgrAStarLensingLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
@@ -296,6 +303,15 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // star-points. Additive into HDR through NEAR0, so its position among the
   // additive rows is a listing choice, not a compositing one.
   bodyGlintsLayer,
+  // The Sgr A* lens pass (Task 13): a 'body'-slab row, listed here beside its
+  // nearest sibling in shape (body-glints, also a per-body-row hdr draw) —
+  // Task 14 owns its final index. Its blend is 'over' (Blend.d.ts), not
+  // additive like its neighbours in this run, so — unlike the additive rows
+  // around it — its position IS load-bearing once it draws at all: it must
+  // occlude/replace light already accumulated by the additive COSMO+NEAR0
+  // steps, which frameProgram's own step order (independent of this array)
+  // already guarantees run first.
+  sgrAStarLensingLayer,
   // The survey (Gaia bin) stars split into two streams sharing one per-frame
   // walk: the AGGREGATE glow field draws LINEAR into the half-res
   // `star-aggregates` offscreen by its OWN render step (so its position here is
@@ -408,6 +424,7 @@ export { texturedBodiesLayer } from './texturedBodiesLayer';
 export { ringsLayer } from './ringsLayer';
 export { starPointsLayer } from './starPointsLayer';
 export { bodyGlintsLayer } from './bodyGlintsLayer';
+export { sgrAStarLensingLayer } from './sgrAStarLensingLayer';
 export { starCatalogLayer } from './starCatalogLayer';
 export { starAggregatesLayer } from './starAggregatesLayer';
 export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';

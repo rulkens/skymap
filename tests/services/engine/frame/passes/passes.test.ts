@@ -29,6 +29,7 @@ import {
   starCatalogLayer,
   starAggregatesLayer,
   starAggregateUpsampleLayer,
+  sgrAStarLensingLayer,
   foregroundLabelsLayer,
   near0SelectionRingLayer,
   clipPathDebugLayer,
@@ -393,12 +394,17 @@ describe('CONTENT_LAYERS blend legality', () => {
         // it's a correctness bug, not a new legal combination.
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'hdr') {
-        // hdr admits exactly one multiplicative row: the Milky Way dust pass
-        // extincts the emission already accumulated in HDR rather than adding
-        // to it, which is why its position in the near-hdr group is
-        // load-bearing. A second multiplicative hdr row should fail this test
-        // and be a deliberate decision.
-        expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
+        // hdr admits two exceptions to its additive default: the Milky Way
+        // dust pass extincts the emission already accumulated (its position
+        // in the near-hdr group is load-bearing for that), and the Sgr A*
+        // lens pass composites premultiplied-OVER so a captured ray truly
+        // occludes the additive light behind it instead of adding to it
+        // (Blend.d.ts's own doc names 'over' legal for any target, not just
+        // the swap-chain rows). A third non-additive hdr row should fail
+        // this test and be a deliberate decision.
+        const expected =
+          layer === milkyWayLayer ? 'multiply' : layer === sgrAStarLensingLayer ? 'over' : 'additive';
+        expect(layer.blend).toBe(expected);
       } else if (layer.target === 'foreground:0') {
         // The `foreground:0` group is opaque bodies EXCEPT the three translucent
         // overlays — the ring, Earth's cloud shell, and Earth's in-scatter
@@ -438,14 +444,16 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
-    // Ten layers blend OVER: the four COSMO swap overlays, the three (swap,
+    // Eleven layers blend OVER: the four COSMO swap overlays, the three (swap,
     // NEAR0) overlays (the near0 star selection ring, foreground-labels, and the
     // clip-path inspector route — moved here from the COSMO swap group so a
     // near-field clip's parsec-scale route is not clipped by the cosmological
-    // near plane), and the three translucent foreground members — the ring,
+    // near plane), the three translucent foreground members — the ring,
     // Earth's cloud shell, and Earth's in-scatter atmosphere (the three OVER
-    // members of the otherwise-opaque foreground group).
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(10);
+    // members of the otherwise-opaque foreground group) — and the Sgr A* lens
+    // pass, the one 'body'-slab, 'hdr'-target OVER row (see the hdr branch
+    // above).
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(11);
   });
 });
 
