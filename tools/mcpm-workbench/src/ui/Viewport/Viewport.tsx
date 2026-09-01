@@ -9,7 +9,6 @@
  * below notices a rebuild landed, to reset per-scene bookkeeping.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import { resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import { deriveGridBox } from '../../field/deriveGridBox';
@@ -21,7 +20,7 @@ import { volpathKeyFor } from '../../render/volpathKeyFor';
 import { gridShapeKeyFor } from '../../state/gridShapeKeyFor';
 import { resetHistogram } from '../../state/slices/histogramSlice';
 import { incrementStep } from '../../state/slices/simSlice';
-import { setFps, setPreviewPacked } from '../../state/slices/viewSlice';
+import { setFps } from '../../state/slices/viewSlice';
 import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
 import type { RegisterSagaContext, WorkbenchStore } from '../../store/types';
 import { frameNeedsRender } from '../frameNeedsRender';
@@ -73,11 +72,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     // turned on always differs from null, so enabling it always resets, per the
     // accumulation contract (task-V2A-report.md).
     let lastVolpathKey: string | null = null;
-    // The palette each attached pass was BUILT with (the LUT bakes into the pass's
-    // bind group at construction) — frame() re-attaches a pass when its slice value
-    // moves. Synced to the freshly-built palette by the epoch block below.
-    let attachedRaymarchPalette: ScalarFieldPaletteId | null = null;
-    let attachedVolpathPalette: ScalarFieldPaletteId | null = null;
     // Task FLE: the interaction-priority boost trigger — was camera-only (a per-frame
     // `cam` JSON comparison), now ANY UI store write (see the subscriber below), fanned
     // out to the path tracer AND raymarch divisors and the sim step cadence, all through
@@ -196,32 +190,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       lastFrameTime = now;
 
       graph.resize(canvas.width, canvas.height);
-
-      // Palette moves re-BUILD their pass (LUT bakes into the bind group at
-      // construction; see ViewSlice.d.ts) — cheap enough to do mid-loop, and the
-      // fresh volpath pass restarts accumulation exactly as the key change below
-      // demands anyway. The T18 preview pass also baked the old palette: un-toggle
-      // and let `watchPreviewPackedSaga`'s falling edge dispose it, the one owner
-      // of every preview-trace teardown.
-      if (h && s.view.raymarch.paletteId !== attachedRaymarchPalette) {
-        attachedRaymarchPalette = s.view.raymarch.paletteId;
-        graph.attachTrace({
-          traceBuffer: h.traceBuffer,
-          box: h.box,
-          element: h.element,
-          paletteId: attachedRaymarchPalette,
-        });
-        if (graph.hasPreviewTrace()) store.dispatch(setPreviewPacked(false));
-      }
-      if (h && s.view.pathTracer.paletteId !== attachedVolpathPalette) {
-        attachedVolpathPalette = s.view.pathTracer.paletteId;
-        graph.attachVolpath({
-          traceBuffer: h.traceBuffer,
-          box: h.box,
-          element: h.element,
-          paletteId: attachedVolpathPalette,
-        });
-      }
 
       const encoder = gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
       const cam = cameraViewFor(s, [canvas.width, canvas.height]);
@@ -344,8 +312,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         dirty = true;
         lastVolpathKey = null;
         lastInteractionMs = performance.now();
-        attachedRaymarchPalette = s.view.raymarch.paletteId;
-        attachedVolpathPalette = s.view.pathTracer.paletteId;
       }
 
       // Task FLE: one check feeds both render-on-demand's dirty flag AND the
