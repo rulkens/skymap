@@ -486,20 +486,19 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
       // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
       // one, so this is the only render layer none of the other gates exercise. The "Grid
-      // box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's `gridBoxOpen` starts
-      // false) and its body doesn't exist in the DOM until opened — the fold button's
-      // accessible name is its title text, not an aria-label. GridBoxPanel's "voxel size"
-      // ParamSlider is deriveGridBox's one resolution lever, regardless of how the box's
-      // center/size got set. Its accessible name is distinct from the raymarch preview's
-      // own "divisor" slider (see raymarch:divisor below) — a role="slider" with a
-      // different name, so no probe selector or screen-reader name collides. 'End' jumps
-      // the slider to its max, away from the probe boot's 3.125 Mpc (PROBE_VOXEL_SIZE_MPC,
-      // defaultAppState.ts) — read before/after, since a step that can silently degrade to
-      // a no-op drive must FAIL, not just run. BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth
-      // of frames comfortably outlasts it.
+      // box" CollapsibleSection defaults OPEN (ControlsPanel.tsx's `gridBoxOpen` starts
+      // true, since 14e095c75) — no fold click needed; a click here would instead TOGGLE
+      // it closed and take 'gizmo:hover-drag' below down with it (same slider group).
+      // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever,
+      // regardless of how the box's center/size got set. Its accessible name is distinct
+      // from the raymarch preview's own "divisor" slider (see raymarch:divisor below) — a
+      // role="slider" with a different name, so no probe selector or screen-reader name
+      // collides. 'End' jumps the slider to its max, away from the probe boot's 3.125 Mpc
+      // (PROBE_VOXEL_SIZE_MPC, defaultAppState.ts) — read before/after, since a step that
+      // can silently degrade to a no-op drive must FAIL, not just run. BOX_PREVIEW_MS is
+      // 200ms; SETTLE_FRAMES worth of frames comfortably outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
-        await page.getByRole('button', { name: 'Grid box', exact: true }).click();
         const voxelSize = page.getByRole('slider', { name: 'voxel size', exact: true });
         const before = await voxelSize.getAttribute('aria-valuenow');
         await pressSlider(page, 'voxel size', ['End']);
@@ -569,12 +568,16 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // it via a second TracePass — exercises pipeline code (pack, upload, a
       // second f16/f32-specialized shader compile) that no other step reaches.
       // sim.running stays true here, so by the time the async pack lands the
-      // preview is already stale; Viewport drops back to the live trace and
-      // un-checks this itself — the settle is what proves that whole round trip
-      // raises no GPU errors, not a picture the probe judges.
+      // preview is already stale; watchPreviewPackedSaga drops back to the live
+      // trace and un-checks this itself — often within the same settle below, so
+      // a plain `.click()` (fire the rising edge, don't assert the resulting
+      // checked state) is used instead of `.check()`, which retries against a
+      // checkbox this step EXPECTS to have already reverted by the time it looks.
+      // The settle is what proves the round trip raises no GPU errors, not a
+      // picture — or a checkbox state — the probe judges.
       name: 'raymarch:preview-packed',
       run: async (page) => {
-        await page.getByRole('checkbox', { name: 'preview packed export', exact: true }).check();
+        await page.getByRole('checkbox', { name: 'preview packed export', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

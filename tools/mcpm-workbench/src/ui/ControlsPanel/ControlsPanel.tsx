@@ -268,8 +268,9 @@ function ControlsPanel(): ReactNode {
             on={view.raymarch.additive}
             onChange={(on) => dispatch(setAdditive(on))}
           />
-          {/* T18: on demand, not a mode — Viewport packs once on the rising edge
-              and un-checks this itself once the sim steps past that snapshot. */}
+          {/* T18: on demand, not a mode — watchPreviewPackedSaga packs once on the
+              rising edge and un-checks this itself once the sim steps past that
+              snapshot. */}
           <ToggleRow
             label="preview packed export"
             on={view.raymarch.previewPacked}

@@ -18,19 +18,17 @@ import { createWorkbenchStore } from '../../store/createWorkbenchStore';
 import { defaultAppState } from '../../state/defaultAppState';
 import { loadPackedCatalog } from '../../field/loadPackedCatalog';
 import { setCatalogLoadStatus, setPackedCatalog } from '../../state/slices/catalogSlice';
-import { useAppSelector } from '../../store/hooks';
+import CatalogStatus from '../CatalogStatus/CatalogStatus';
 import Viewport from '../Viewport/Viewport';
 import ControlsPanel from '../ControlsPanel/ControlsPanel';
 import HistogramDock from '../HistogramDock/HistogramDock';
 import Hud from '../Hud/Hud';
-import { catalogStatusStyle } from './utils/catalogStatusStyle';
 import { readDroppedPackedCatalog } from './utils/readDroppedPackedCatalog';
 import { statusStyle } from './utils/statusStyle';
 
 function App(): ReactNode {
   const { store, registerSagaContext } = useMemo(() => createWorkbenchStore(defaultAppState), []);
   const [packedStatus, setPackedStatus] = useState<string | null>(null);
-  const catalogStatusMessage = useAppSelector((s) => s.catalog.statusMessage);
 
   const onDrop = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
@@ -65,7 +63,7 @@ function App(): ReactNode {
         <Hud />
         <HistogramDock />
         <ControlsPanel />
-        {catalogStatusMessage && <div style={catalogStatusStyle}>{catalogStatusMessage}</div>}
+        <CatalogStatus />
         {import.meta.env.DEV && packedStatus && <div style={statusStyle}>{packedStatus}</div>}
       </div>
     </Provider>
