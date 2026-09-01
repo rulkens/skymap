@@ -2,11 +2,11 @@
  * watchPreviewPackedSaga — packs (readback → widenTrace → previewPackedTrace
  * → attachPreviewTrace) on `setPreviewPacked`'s rising edge via `takeLatest`,
  * disposes on the falling edge; a second watcher disposes on `incrementStep`
- * once `stepCount` passes the packed snapshot. No aborted-flag/epoch guard
- * needed: `readbackTrace`'s own try/finally destroys its staging buffer
- * regardless of consumption, and every disposal-needing allocation runs
- * synchronously after that one `yield*` — a cancelled worker never reaches
- * it.
+ * once `stepCount` passes the packed snapshot. No aborted-flag guard needed:
+ * `readbackTrace`'s own try/finally destroys its staging buffer regardless of
+ * consumption, and every disposal-needing allocation runs synchronously
+ * after that one `yield*` — a cancelled worker never reaches it. An epoch
+ * snapshot still guards against a rebuild landing mid-readback (see below).
  */
 import { takeLatest, takeEvery, call, put, select, getContext } from 'typed-redux-saga';
 
@@ -37,12 +37,12 @@ export function* watchPreviewPackedSaga() {
     const h = resources.harness;
     const graph = resources.graph;
     if (!h || !graph) return;
+    const epoch = resources.epoch;
     try {
       const readback = yield* call(() => h.readbackTrace());
       // A scene rebuild (watchSceneSaga) can land mid-readback since nothing
-      // cancels this worker except another `setPreviewPacked` dispatch —
-      // `resources.harness` would already point at the new build (or null).
-      if (resources.harness !== h) return;
+      // cancels this worker except another `setPreviewPacked` dispatch.
+      if (resources.epoch !== epoch) return;
       const values = widenTrace(readback);
       disposePreview(resources);
       const paletteId = yield* select((s: RootState) => s.view.raymarch.paletteId);
