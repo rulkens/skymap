@@ -58,8 +58,12 @@ export function surfaceReadoutOf(pose: BodyFixedPose, bodyRadiusM: number): Surf
     ];
     rangeM = tNear;
   } else {
-    // Forward misses the sphere (looking at the sky, spec §6d) — fall back
-    // to the eye's own nadir footprint, the one ground point always defined.
+    // Forward misses the sphere (looking at the sky, spec §6d): standpoint
+    // SNAPS to the eye's nadir footprint — discontinuous at the tangency
+    // angle (arccos(R/(R+h)) from nadir), not a continuous limit of the hit
+    // case. This readout is display currency; engaged-path code (gestures,
+    // tilt enforcement) derives its own eye-anchored ENU rather than reading
+    // this fallback.
     const nadirDir = normalize(eye);
     target = [nadirDir[0] * bodyRadiusM, nadirDir[1] * bodyRadiusM, nadirDir[2] * bodyRadiusM];
     rangeM = altitudeM;
