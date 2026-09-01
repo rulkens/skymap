@@ -13,13 +13,7 @@ import { clearTraceRequested, resetRequested } from '../commands';
 import { setCatalogStatusMessage } from '../catalog/catalogSlice';
 import { resetHistogram } from '../histogram/histogramSlice';
 import { resetStepCount } from './simSlice';
-import {
-  defaultViewSlice,
-  setAutoRotate,
-  setCameraDistance,
-  setCameraTarget,
-  setCameraYawPitch,
-} from '../view/viewSlice';
+import { defaultViewSlice, commitCameraPose, setAutoRotate } from '../view/viewSlice';
 
 function* resetWorker() {
   const resources = yield* getContext<WorkbenchSagaContext['resources']>('resources');
@@ -33,13 +27,17 @@ function* resetWorker() {
     // Reset restores framing too, deliberately: the orbit target is absolute world
     // Mpc, not box-relative, so nothing else recenters the camera onto the box —
     // this is the one recovery path for "camera drifted" (Viewport's old comment).
-    // Four dispatches, not a whole-object write: RTK has no single "replace this
-    // nested object" action, and none of these camera fields are among
-    // watchSceneSaga's SCENE_REBUILD_TRIGGERS, so the split has no rebuild side effect.
+    // `autoRotate` stays its own dispatch — it's a toggle, not part of the pose
+    // `commitCameraPose` carries.
     const { camera } = defaultViewSlice;
-    yield* put(setCameraYawPitch({ yaw: camera.yaw, pitch: camera.pitch }));
-    yield* put(setCameraDistance(camera.distance));
-    yield* put(setCameraTarget(camera.targetMpc));
+    yield* put(
+      commitCameraPose({
+        yaw: camera.yaw,
+        pitch: camera.pitch,
+        distance: camera.distance,
+        targetMpc: camera.targetMpc,
+      }),
+    );
     yield* put(setAutoRotate(camera.autoRotate));
   } catch (err) {
     console.error('mcpm-workbench: reset failed', err);

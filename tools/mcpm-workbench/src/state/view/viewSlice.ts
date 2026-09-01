@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { ViewSlice } from '../../../@types/ViewSlice';
+import type { WorkbenchCameraPose } from '../../../@types/WorkbenchCameraPose';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /**
  * defaultViewSlice — raymarch + galaxies on, framing a box a few hundred Mpc across
@@ -66,7 +66,10 @@ export const defaultViewSlice: ViewSlice = {
   },
 };
 
-const PITCH_LIMIT = 1.5;
+// Shared with the input module's live drag register (createViewportInput.ts) so a
+// mid-gesture register value and a committed store value clamp identically.
+export const PITCH_LIMIT = 1.5;
+export const CAMERA_DISTANCE_FLOOR = 1;
 
 // 'divisor' and 'sampleCap' get their own setters (below), sibling-shaped to the
 // raymarch layer's setDivisor — excluded here the same way 'compressive' is.
@@ -104,15 +107,14 @@ export const viewSlice = createSlice({
     deviceLost: (state) => {
       state.deviceLost = true;
     },
-    setCameraYawPitch: (state, action: PayloadAction<{ yaw: number; pitch: number }>) => {
+    // The gesture-boundary commit (input module's gestureEnd / rest-wheel) and the
+    // reset saga's own restore both land here — one write site for the whole pose,
+    // clamped exactly like the deleted per-field setters were.
+    commitCameraPose: (state, action: PayloadAction<WorkbenchCameraPose>) => {
       state.camera.yaw = action.payload.yaw;
       state.camera.pitch = Math.min(PITCH_LIMIT, Math.max(-PITCH_LIMIT, action.payload.pitch));
-    },
-    setCameraDistance: (state, action: PayloadAction<number>) => {
-      state.camera.distance = Math.max(1, action.payload);
-    },
-    setCameraTarget: (state, action: PayloadAction<Vec3>) => {
-      state.camera.targetMpc = action.payload;
+      state.camera.distance = Math.max(CAMERA_DISTANCE_FLOOR, action.payload.distance);
+      state.camera.targetMpc = action.payload.targetMpc;
     },
     setAutoRotate: (state, action: PayloadAction<boolean>) => {
       state.camera.autoRotate = action.payload;
@@ -176,9 +178,7 @@ export const {
   setAgentPointSize,
   setFps,
   deviceLost,
-  setCameraYawPitch,
-  setCameraDistance,
-  setCameraTarget,
+  commitCameraPose,
   setAutoRotate,
   setOpticalThickness,
   setRaymarchPaletteId,
