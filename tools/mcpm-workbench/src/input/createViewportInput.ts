@@ -45,11 +45,12 @@ const PAN_SPEED = 0.0016;
 export type ViewportInputDeps = {
   readonly canvas: HTMLCanvasElement;
   readonly store: WorkbenchStore;
-  /** The persistent-toggle/post-edit-flash pair of boxWireframeVisible's three reasons
-   *  (F1.7) — Viewport's own render-loop state (`showGridBox`, `boxPreviewUntil`). The
-   *  third reason, an in-flight gizmo drag, is this module's own state and is ORed in by
-   *  `isWireframeVisible` below, so callers never recombine the three by hand. */
-  readonly isPreviewVisible: (s: RootState, now: number) => boolean;
+  /** The post-edit-flash reason of boxWireframeVisible's three (F1.7/F1.8) — Viewport's
+   *  own `boxPreviewUntil` timer. Deliberately ignores pointer position: the user's mouse
+   *  is on a panel control outside the canvas when the flash is the whole point. The other
+   *  two reasons (`showGridBox`, an in-flight gizmo drag) are this module's own state,
+   *  folded in by `isWireframeVisible` below. */
+  readonly isFlashVisible: (now: number) => boolean;
   /** Marks the render-on-demand loop dirty for closure-state-only changes (hover
    *  highlight, gizmo-drag start/end) that neither a store write nor a drained input
    *  step would otherwise surface. */
@@ -68,9 +69,10 @@ export type ViewportInput = {
   getHoverHandle(): GizmoHandleId | null;
   /** The handle currently being dragged, or null — drawBoxPreview's `activeHandle`. */
   getDragHandleId(): GizmoHandleId | null;
-  /** boxWireframeVisible's full OR (F1.7): the gizmo hit-test/hover-pick below must agree
-   *  with frame()'s draw call exactly, or picking an invisible handle would hijack an
-   *  orbit click while the wireframe is off. */
+  /** boxWireframeVisible's full OR (F1.7/F1.8): the gizmo hit-test/hover-pick below must
+   *  agree with frame()'s draw call exactly, or picking an invisible/hidden handle would
+   *  hijack an orbit click. `showGridBox` alone is gated on the pointer being over the
+   *  canvas; the flash and an in-flight drag are not (F1.8's binding exceptions). */
   isWireframeVisible(s: RootState, now: number): boolean;
   destroy(): void;
 };
@@ -80,7 +82,7 @@ function cloneTarget(t: Readonly<Vec3>): Vec3 {
 }
 
 export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
-  const { canvas, store, isPreviewVisible, markDirty } = deps;
+  const { canvas, store, isFlashVisible, markDirty } = deps;
 
   const aggregator = createInputAggregator();
 
@@ -102,6 +104,10 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   // every non-dragging canvas pointermove, purely for drawBoxPreview's glyph highlight.
   let gizmoDragging: GizmoDragState | null = null;
   let hoverHandle: GizmoHandleId | null = null;
+  // False on mount (no synthetic enter before the user's first real pointermove) — the
+  // showGridBox term of isWireframeVisible stays hidden until a pointerenter proves the
+  // mouse is actually over the canvas.
+  let pointerInside = false;
   // Which gesture a `dragAnchor` resolved into — decided once per gesture, at the first
   // dragAnchor — and what routes `dragMove`/`gestureEnd` for the rest of it. `null` between
   // gestures (also while a `gestureStart` hasn't yet seen its anchor).
@@ -112,7 +118,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   let pendingGestureStart = false;
 
   function isWireframeVisible(s: RootState, now: number): boolean {
-    return isPreviewVisible(s, now) || gizmoDragging !== null;
+    return isFlashVisible(now) || gizmoDragging !== null || (s.grid.showGridBox && pointerInside);
   }
 
   function getCameraPose(): WorkbenchCameraPose {
@@ -348,11 +354,20 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
     }
     markDirty();
   };
+  const onPointerEnter = (): void => {
+    pointerInside = true;
+    markDirty(); // wakes render-on-demand so showGridBox's wireframe reappears this frame
+  };
   const onPointerLeave = (): void => {
+    // Mid-drag the gesture is window-tracked with no pointer capture (F1.8's first
+    // exception), so this fires legitimately while a gizmo/camera drag is in flight —
+    // `gizmoDragging !== null` in isWireframeVisible covers that, not a check here.
+    pointerInside = false;
     hoverHandle = null;
     markDirty();
   };
   canvas.addEventListener('pointermove', onHoverMove);
+  canvas.addEventListener('pointerenter', onPointerEnter);
   canvas.addEventListener('pointerleave', onPointerLeave);
 
   const detachRecognizer = attachOrbitControls(canvas, handleGestureEvent);
@@ -367,6 +382,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
       detachRecognizer();
       unsubscribeAdopt();
       canvas.removeEventListener('pointermove', onHoverMove);
+      canvas.removeEventListener('pointerenter', onPointerEnter);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       aggregator.destroy();
     },

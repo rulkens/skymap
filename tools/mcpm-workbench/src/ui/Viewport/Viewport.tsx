@@ -312,15 +312,15 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     });
 
     // Orbit input → view slice camera (a gizmo handle hit short-circuits it into a
-    // drag instead) — DOM attach/detach, the gesture recognizer, hover/pick state and
-    // drag mechanics all live in createViewportInput (task input-port); this component
-    // only supplies the F1.7 preview-flash term (showGridBox/boxPreviewUntil) it can't
-    // see, drains it once per frame above, and reads back hover/drag-handle state for
-    // the box-preview draw call below.
+    // drag instead) — DOM attach/detach, the gesture recognizer, hover/pick state,
+    // pointer-inside tracking and drag mechanics all live in createViewportInput
+    // (task input-port); this component only supplies the F1.7 preview-flash term
+    // (`boxPreviewUntil`) it can't see — F1.8 keeps that term visible regardless of
+    // pointer position, unlike the module's own showGridBox term.
     const input = createViewportInput({
       canvas,
       store,
-      isPreviewVisible: (s, now) => s.grid.showGridBox || now < boxPreviewUntil,
+      isFlashVisible: (now) => now < boxPreviewUntil,
       markDirty: () => {
         dirty = true;
       },
