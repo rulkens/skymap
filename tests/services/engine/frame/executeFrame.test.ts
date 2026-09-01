@@ -31,6 +31,7 @@ import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlo
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 
 // ── Encoder / pass recorder ──────────────────────────────────────────────────
 //
@@ -141,6 +142,7 @@ const VOLUME_VIEW = { __id: 'volume-view' } as unknown as GPUTextureView;
 const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
 const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
 const SWAP_VIEW = { __id: 'swap-view' } as unknown as GPUTextureView;
+const SKY_CUBEMAP_VIEW = { __id: 'sky-cubemap-view' } as unknown as GPUTextureView;
 
 const EXEC_SPECS = [
   {
@@ -170,6 +172,14 @@ const EXEC_SPECS = [
     depth: null,
     scale: 1,
     clearValue: { r: 0, g: 0, b: 0, a: 1 },
+  },
+  {
+    id: 'sky-cubemap',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    fixedSizePx: { size: 256, layers: 6 },
   },
 ];
 
@@ -202,6 +212,7 @@ function makeCtx(): ReadyFrameContext {
         if (id === 'hdr') return HDR_VIEW;
         if (id === 'volume') return VOLUME_VIEW;
         if (id === 'foreground:0') return FG_VIEW;
+        if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
         throw new Error(`mock renderTargets: no view for '${id}'`);
       },
       depthViewOf: (id: string) => {
@@ -258,6 +269,7 @@ function makeArgs(over: {
   state?: EngineState;
   env?: ReturnType<typeof makeEncoderEnv>;
   ctx?: ReadyFrameContext;
+  skyCubemapFaceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
 }): { args: ExecuteFrameArgs; env: ReturnType<typeof makeEncoderEnv> } {
   const env = over.env ?? makeEncoderEnv();
   const args: ExecuteFrameArgs = {
@@ -269,6 +281,7 @@ function makeArgs(over: {
     strategy: over.strategy ?? 'merged',
     timing: over.timing ?? makeNoTiming(),
     swapView: SWAP_VIEW,
+    skyCubemapFaceContexts: over.skyCubemapFaceContexts,
   };
   return { args, env };
 }
@@ -725,5 +738,65 @@ describe('executeFrame', () => {
     const { args } = makeArgs({ program, layers: [layer] });
     executeFrame(args);
     expect(layer.draw).not.toHaveBeenCalled();
+  });
+
+  describe('sky-cubemap capture hand-off (Task 12)', () => {
+    // A step carrying `face` must resolve its OWN camera (`enabled`/`draw`'s
+    // `ctx`), not the frame-wide `args.ctx` — the runtime hand-off `renderFrame`
+    // derives per scheduled face via `skyCubemapFaceContext` and threads in as
+    // `skyCubemapFaceContexts`. Two distinct fixture contexts stand in for two
+    // faces' synthetic cameras; identity (`toBe`), not content, is what proves
+    // routing, since a real face ctx and the frame ctx share the same shape.
+    it("resolves each capture step's own face ctx, never the frame-wide ctx", () => {
+      const layer = makeLayer({ name: 'probe', target: 'sky-cubemap', slab: NEAR0 });
+      const face0Ctx = makeCtx();
+      const face1Ctx = makeCtx();
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1 },
+      ];
+      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
+        [0, face0Ctx],
+        [1, face1Ctx],
+      ]);
+      const { args } = makeArgs({ program, layers: [layer], skyCubemapFaceContexts });
+      executeFrame(args);
+
+      expect(layer.enabled).toHaveBeenCalledTimes(2);
+      expect(layer.draw).toHaveBeenCalledTimes(2);
+      expect(layer.enabled.mock.calls[0]![1]).toBe(face0Ctx);
+      expect(layer.draw.mock.calls[0]![2]).toBe(face0Ctx);
+      expect(layer.enabled.mock.calls[1]![1]).toBe(face1Ctx);
+      expect(layer.draw.mock.calls[1]![2]).toBe(face1Ctx);
+      // Neither call reached for the frame-wide ctx — the whole point of the
+      // per-step override.
+      expect(layer.draw.mock.calls[0]![2]).not.toBe(args.ctx);
+      expect(layer.draw.mock.calls[1]![2]).not.toBe(args.ctx);
+    });
+
+    it('skips a capture step cleanly when its face has no context (skyCubemapFaceContext returned null)', () => {
+      const layer = makeLayer({ name: 'probe', target: 'sky-cubemap', slab: NEAR0 });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 2 },
+      ];
+      // Map has no entry for face 2 — mirrors renderFrame omitting a face whose
+      // skyCubemapFaceContext call returned null (pre-bootstrap frame).
+      const { args } = makeArgs({
+        program,
+        layers: [layer],
+        skyCubemapFaceContexts: new Map(),
+      });
+      expect(() => executeFrame(args)).not.toThrow();
+      expect(layer.enabled).not.toHaveBeenCalled();
+      expect(layer.draw).not.toHaveBeenCalled();
+    });
+
+    it('an ordinary (non-face) render step is unaffected by an absent skyCubemapFaceContexts map', () => {
+      const layer = makeLayer({ name: 'a', target: 'hdr' });
+      const program: FrameStep[] = [{ kind: 'render', target: 'hdr', slab: COSMO }];
+      const { args } = makeArgs({ program, layers: [layer] });
+      executeFrame(args);
+      expect(layer.draw.mock.calls[0]![2]).toBe(args.ctx);
+    });
   });
 });

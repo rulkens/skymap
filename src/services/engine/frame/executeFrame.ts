@@ -167,7 +167,17 @@ function timestampSpread(
 }
 
 export function executeFrame(args: ExecuteFrameArgs): void {
-  const { encoder, ctx, state, program, layers, strategy, timing, swapView } = args;
+  const {
+    encoder,
+    ctx,
+    state,
+    program,
+    layers,
+    strategy,
+    timing,
+    swapView,
+    skyCubemapFaceContexts,
+  } = args;
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
   // first time a pass is opened against it, flipping subsequent passes from
@@ -189,6 +199,17 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         break;
       }
       case 'render': {
+        // The runtime hand-off (Task 12): a step carrying `face` (the
+        // black-hole lens's sky-cubemap capture) resolves EVERY per-step value
+        // below — slab view, enable gate, draw ctx — from ITS OWN camera
+        // (`renderFrame`'s per-face `skyCubemapFaceContext` derivation), not
+        // the frame-wide `ctx`. A missing map entry (that face's
+        // `skyCubemapFaceContext` returned null — e.g. a pre-bootstrap frame)
+        // skips the step cleanly, the same outcome an empty group already
+        // produces below. For every ordinary step `step.face` is undefined and
+        // `stepCtx` is just `ctx` — a no-op passthrough.
+        const stepCtx = step.face === undefined ? ctx : skyCubemapFaceContexts?.get(step.face);
+        if (stepCtx === undefined) break;
         // The DebugPanel renderer-toggle override is one-way: it hides a layer
         // whose own `enabled()` gate returned true, and can never force-enable
         // one whose gate returned false — hence the check follows the gate.
@@ -199,7 +220,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // (not after, as before body slabs): a 'body' layer's `enabled` needs
         // the view to read `view.slab.frame.bodyId`, and a step whose slab is
         // a body row still resolves cheaply even when its group ends up empty.
-        const view = slabViewOf(ctx, step.slab);
+        const view = slabViewOf(stepCtx, step.slab);
         const group = layers.filter(
           (l) =>
             l.target === step.target &&
@@ -209,7 +230,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
             // going through `isBodySlabIndex` (slabs.ts) — the index-only
             // sibling check `frameProgram.ts` uses where no `Slab` is in hand.
             (l.slab === step.slab || (l.slab === 'body' && view.slab.frame.kind === 'body-m')) &&
-            l.enabled(state, ctx, view) &&
+            l.enabled(state, stepCtx, view) &&
             disabledPasses[l.name] !== true,
         );
         if (group.length === 0) break;
@@ -225,7 +246,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const groupKey = renderStepTimingSlotName(groupKeyOf(step.target, step.slab), step.face);
         renderGroup(strategy, {
           encoder,
-          ctx,
+          ctx: stepCtx,
           state,
           timing,
           swapView,

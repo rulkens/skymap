@@ -1,39 +1,18 @@
 /**
  * skyCubemapCaptureSchedule — the black-hole sky cubemap's amortized capture
- * schedule, as a pure function. A full 6-face capture (re-drawing the roster
- * from a fixed eye) is too costly every frame, so this spreads the cost: one
- * full sweep on band ENTRY, then one face per frame in round-robin, with an
- * escape valve that pulls a face out of turn once it's gone stale (by age,
- * or because a camera move invalidates the whole cubemap at once).
- *
- * No GPU/engine state: every input is a plain value (`renderFrame.ts`'s call
- * site derives `bandJustEngaged`/`cameraMovedBeyondThreshold`), so this is
- * testable headlessly.
+ * schedule: a full 6-face sweep on band ENTRY, then one face per frame in
+ * round-robin, with an escape valve for a stale or camera-moved face. Pure —
+ * every input is a plain value — so it's testable headlessly.
  */
 
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 
 const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
-/**
- * How long a face may go without a recapture before the escape valve pulls
- * it back into the schedule out of turn, regardless of the round-robin's own
- * pick this frame. Data tuning, not architecture — sited beside the schedule
- * function it gates.
- */
+/** Escape-valve staleness threshold. Data tuning, sited beside the schedule it gates. */
 export const SKY_CUBEMAP_RECAPTURE_THRESHOLD_MS = 2000;
 
-/**
- * How far the camera may drift from its position at the last full sweep
- * (band entry or a prior escape-valve sweep) before `renderFrame` derives
- * `cameraMovedBeyondThreshold: true` — every face's captured content (which
- * galaxies/stars are visible, their backdrop-fade alpha) is keyed on the
- * PLAYER's camera position, not the fixed capture eye at Sgr A*, so a big
- * enough move stales the whole cubemap at once. Sited here (not in
- * `renderFrame.ts`, the actual comparison site) beside its sibling time
- * threshold — both are this feature's data-tuning knobs. Roughly a tenth of
- * the lensing band's `fullAt` edge (100 AU, `scaleFadeBands.ts`), eye-tuned.
- */
+/** Escape-valve camera-movement threshold, AU — see `renderFrame.ts`'s `cameraMovedBeyondThreshold` derivation for the comparison and why. */
 export const SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU = 10;
 
 export type SkyCubemapCaptureSchedule = {

@@ -53,6 +53,7 @@
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
@@ -63,6 +64,7 @@ import {
   skyCubemapCaptureSchedule,
   SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU,
 } from './skyCubemapCaptureSchedule';
+import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
 import { regionById } from '../../../utils/scene/regionById';
 import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
@@ -70,6 +72,7 @@ import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
 
 const SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_MPC =
   SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU * SCALE_UNITS.AU_TO_MPC;
@@ -152,6 +155,28 @@ export function renderFrame(input: RenderFrameInput): void {
   captureRuntime.wasBandActive = bandActive;
   captureRuntime.frameIndex += 1;
 
+  // The runtime hand-off (Task 12's brief, "Name the runtime hand-off"):
+  // `frameProgram` only knows WHICH faces to capture (static data); resolving
+  // each face's own synthetic camera is `renderFrame`'s job, done fresh every
+  // frame since the schedule's face LIST can change frame to frame.
+  // `faceSizePx` reads the sky-cubemap row's own declared size rather than a
+  // hard-coded constant, so the two can never drift. A face whose context
+  // comes back null (pre-bootstrap) is simply omitted — `executeFrame` treats
+  // a missing map entry as "skip this step cleanly" (see its module header).
+  const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
+  if (skyCubemapFacesToCapture.length > 0) {
+    const faceSizePx = ctx.renderTargets.specOf('sky-cubemap').fixedSizePx!.size;
+    for (const face of skyCubemapFacesToCapture) {
+      const faceCtx = skyCubemapFaceContext({
+        state,
+        eyeMpc: SGR_A_STAR_ANCHOR.positionMpc,
+        face,
+        faceSizePx,
+      });
+      if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
+    }
+  }
+
   executeFrame({
     encoder,
     ctx,
@@ -175,6 +200,7 @@ export function renderFrame(input: RenderFrameInput): void {
     strategy,
     timing: timingService,
     swapView,
+    skyCubemapFaceContexts,
   });
   timingService.endFrame(timingCtx, encoder);
 
