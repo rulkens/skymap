@@ -7,7 +7,10 @@
  * (C §5.1), and the choice is latched at gesture start and sticky for the
  * gesture (C §6.1) — re-deciding mid-drag oscillates between pan and trackball
  * at the limb. Every mode moves the pose so the grabbed content follows the
- * cursor; that rule fixes each sign below.
+ * cursor; that rule fixes each sign below. Altitude changes only through zoom,
+ * and zoom re-levels through the tilt ceiling, so every drivable path lands at
+ * tilt 0 by disengage — why the ceiling's zero sits exactly at
+ * `SURFACE_REGIME.disengageHR` (spec §12-R3).
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -21,8 +24,11 @@ import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from '../../utils/camera/anchoredDragRotation';
 import { anchoredZoomStep } from '../../utils/camera/anchoredZoomStep';
 import { cursorRayBodyLocal } from '../../utils/camera/cursorRayBodyLocal';
+import { maxTiltRad } from '../../utils/camera/maxTiltRad';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
 import { surfaceFloorM } from '../../utils/camera/surfaceFloorM';
+import { cross3 } from '../../utils/math/cross3';
+import { mat3FromColumns } from '../../utils/math/mat3FromColumns';
 import { multiplyQuat } from '../../utils/math/multiplyQuat';
 import { normalize3 } from '../../utils/math/normalize3';
 import { quatFromAxisAngle } from '../../utils/math/quatFromAxisAngle';
@@ -30,6 +36,10 @@ import { raySphereRoots } from '../../utils/math/raySphereRoots';
 import { rotateVec3ByQuat } from '../../utils/math/rotateVec3ByQuat';
 
 const BODY_CENTRE: Vec3 = [0, 0, 0];
+const POLAR_AXIS: Vec3 = [0, 0, 1];
+// sin(0.08°) — the horizontal-projection magnitude below which forward's
+// azimuth is unstable (mirrors surfaceReadoutOf's own nadir-escape guard).
+const NADIR_ESCAPE_SIN = Math.sin((0.08 * Math.PI) / 180);
 
 type Ray = { readonly originM: Vec3; readonly dir: Vec3 };
 type DragStep = Extract<InputStep, { kind: 'drag' }>;
@@ -79,6 +89,68 @@ function flooredPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
     ...pose,
     eyeRelAnchorM: [eyeM[0] * scale - a[0], eyeM[1] * scale - a[1], eyeM[2] * scale - a[2]],
   };
+}
+
+/**
+ * The tilt ceiling (spec §6, §12-R3), enforced after every driven write —
+ * never at arm entry, so a pose that arrives above the ceiling (a flyby, a
+ * tour keyframe) is left alone until the user's own next gesture. Derives
+ * its OWN eye-anchored ENU (never `surfaceReadoutOf`'s screen-centre one,
+ * which snaps discontinuously when the forward ray misses the sphere) and
+ * is a no-op below the ceiling, so it never disturbs a drag mode's own roll.
+ */
+function ceilingEnforcedPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
+  const eyeM = eyeOf(pose);
+  const eyeMagM = Math.hypot(...eyeM);
+  if (eyeMagM === 0) return pose; // no ENU exists at the centre
+  const localUp = normalize3(eyeM);
+
+  const b = pose.basisLocal;
+  const forward: Vec3 = [b[6], b[7], b[8]];
+  const fwdVert = dot3(forward, localUp);
+  const tiltRad = Math.acos(Math.max(-1, Math.min(1, -fwdVert)));
+  const ceilingRad = maxTiltRad(eyeMagM / bodyRadiusM - 1);
+  if (tiltRad <= ceilingRad) return pose;
+
+  const eastRaw = cross3(POLAR_AXIS, localUp);
+  const eastLen = Math.hypot(...eastRaw);
+  const east: Vec3 =
+    eastLen > 1e-9 ? [eastRaw[0] / eastLen, eastRaw[1] / eastLen, eastRaw[2] / eastLen] : [1, 0, 0];
+  const north = cross3(localUp, east);
+
+  // Reads heading off `up` rather than `forward` near nadir, for the same
+  // reason `surfaceReadoutOf` does: at tilt ≈ 0 forward's horizontal
+  // component vanishes and only `up` still carries the azimuth.
+  const up: Vec3 = [b[3], b[4], b[5]];
+  const fwdHorizMag = Math.sqrt(Math.max(0, 1 - fwdVert * fwdVert));
+  const headingSource = fwdHorizMag < NADIR_ESCAPE_SIN ? up : forward;
+  const headingRad = Math.atan2(dot3(headingSource, east), dot3(headingSource, north));
+
+  const ch = Math.cos(headingRad);
+  const sh = Math.sin(headingRad);
+  const ct = Math.cos(ceilingRad);
+  const st = Math.sin(ceilingRad);
+  const horiz: Vec3 = [
+    north[0] * ch + east[0] * sh,
+    north[1] * ch + east[1] * sh,
+    north[2] * ch + east[2] * sh,
+  ];
+  const newForward: Vec3 = [
+    horiz[0] * st - localUp[0] * ct,
+    horiz[1] * st - localUp[1] * ct,
+    horiz[2] * st - localUp[2] * ct,
+  ];
+  const newUp: Vec3 = [
+    horiz[0] * ct + localUp[0] * st,
+    horiz[1] * ct + localUp[1] * st,
+    horiz[2] * ct + localUp[2] * st,
+  ];
+  const newRight: Vec3 = [
+    east[0] * ch - north[0] * sh,
+    east[1] * ch - north[1] * sh,
+    east[2] * ch - north[2] * sh,
+  ];
+  return { ...pose, basisLocal: mat3FromColumns(newRight, newUp, newForward) };
 }
 
 /** Turn the whole pose — eye and basis — about a body-fixed point. */
@@ -232,7 +304,10 @@ function draggedPose(
     right[1] - upLocal[1] * radial,
     right[2] - upLocal[2] * radial,
   ]);
-  const q = multiplyQuat(quatFromAxisAngle(rotateVec3ByQuat(heading, eastM), pitchRad), heading);
+  // Inverted at this input mapping, not in the rotation math: Google Earth's
+  // right-drag convention is drag-down ⇒ tilt UP toward the horizon, the
+  // opposite sign from `pitchRad`'s screen-space (down-is-positive) origin.
+  const q = multiplyQuat(quatFromAxisAngle(rotateVec3ByQuat(heading, eastM), -pitchRad), heading);
   return { pose: rotatedAbout(arm, q, anchorM), mode };
 }
 
@@ -276,7 +351,15 @@ export function createSurfaceController(): SurfaceController {
     },
     apply: (arm, step, viewportPx, fovYRad, bodyRadiusM) => {
       if (step.kind === 'zoom') {
-        return zoomStep(arm, live?.gesture ?? null, step.factor, viewportPx, fovYRad, bodyRadiusM);
+        const zoomed = zoomStep(
+          arm,
+          live?.gesture ?? null,
+          step.factor,
+          viewportPx,
+          fovYRad,
+          bodyRadiusM,
+        );
+        return ceilingEnforcedPose(zoomed, bodyRadiusM);
       }
       // The gesture boundaries reach the controller through the two callbacks;
       // `drainInput` owns their store edges in the same pass.
@@ -285,8 +368,11 @@ export function createSurfaceController(): SurfaceController {
       const { pose, mode } = draggedPose(arm, gesture, step, viewportPx, fovYRad);
       live.gesture = { ...gesture, mode, prevPixel: step.endPx };
       // One floor site, after every position write — `anchoredZoomStep` owns
-      // its own, so the zoom arm above is already floored.
-      return flooredPose(pose, bodyRadiusM);
+      // its own, so the zoom arm above is already floored. Ceiling runs on
+      // the FLOORED pose: the floor moves the eye radially, and the ENU the
+      // ceiling enforces against has to be the final standpoint, not the
+      // pre-floor one.
+      return ceilingEnforcedPose(flooredPose(pose, bodyRadiusM), bodyRadiusM);
     },
   };
 }

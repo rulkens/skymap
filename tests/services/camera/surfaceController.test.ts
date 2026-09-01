@@ -10,7 +10,11 @@
 import { describe, it, expect } from 'vitest';
 
 import { createSurfaceController } from '../../../src/services/camera/surfaceController';
+import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
+import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
+import { maxTiltRad } from '../../../src/utils/camera/maxTiltRad';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
+import { raySphereRoots } from '../../../src/utils/math/raySphereRoots';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
@@ -42,6 +46,18 @@ function angleBetween(a: Vec3, b: Vec3): number {
   const lb = Math.hypot(...b);
   const c = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (la * lb);
   return Math.acos(Math.max(-1, Math.min(1, c)));
+}
+
+/**
+ * Right | up | forward for heading 0, tilt `theta` from nadir, at an eye on
+ * the +Z axis — the same closed form `ceilingEnforcedPose` reconstructs, so
+ * these fixtures can place a pose at an exact tilt without going through a
+ * gesture drag to get there.
+ */
+function basisAtTilt(theta: number): Mat3 {
+  const c = Math.cos(theta);
+  const s = Math.sin(theta);
+  return [1, 0, 0, 0, c, s, 0, s, -c];
 }
 
 /** One step through the controller with the fixture's viewport / FOV / radius. */
@@ -113,9 +129,11 @@ describe('surfaceController', () => {
 
   it('tilts about the already-yawed east, not a fixed screen axis', () => {
     // Anchor = the screen-centre pick [0,0,1]; the eye orbits it by heading ψ
-    // about the local up, THEN by tilt α about the yawed east. Closed form:
-    // eye = anchor + R(q1·east, α)·R(up, ψ)·(eye − anchor)
-    //     = [sinψ·sinα, −cosψ·sinα, 1 + cosα].
+    // about the local up, THEN by tilt −α about the yawed east — negated at
+    // the input mapping so drag-down tilts the view UP toward the horizon
+    // (Google Earth's right-drag convention). Closed form:
+    // eye = anchor + R(q1·east, −α)·R(up, ψ)·(eye − anchor)
+    //     = [−sinψ·sinα, cosψ·sinα, 1 + cosα].
     // The fixed-axis order leaves x at 0 — that is the whole difference.
     const c = createSurfaceController();
     c.onGestureStart();
@@ -124,8 +142,8 @@ describe('surfaceController', () => {
     const pose = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [50, 50], [70, 60]));
 
     const eye = eyeOf(pose);
-    expect(eye[0]).toBeCloseTo(Math.sin(psi) * Math.sin(alpha), 12);
-    expect(eye[1]).toBeCloseTo(-Math.cos(psi) * Math.sin(alpha), 12);
+    expect(eye[0]).toBeCloseTo(-Math.sin(psi) * Math.sin(alpha), 12);
+    expect(eye[1]).toBeCloseTo(Math.cos(psi) * Math.sin(alpha), 12);
     expect(eye[2]).toBeCloseTo(1 + Math.cos(alpha), 12);
     // The basis turned with the eye: right ends on the yawed east.
     expect(pose.basisLocal.slice(0, 3)).toEqual([
@@ -172,16 +190,26 @@ describe('surfaceController', () => {
   });
 
   it('re-picks the zoom anchor after the eye overshoots its tangent plane', () => {
-    // Tilt hard about the anchor [0.6,0,0.8] until the eye is BELOW its tangent
+    // Tilt hard about the picked anchor until the eye is BELOW its tangent
     // plane — the anchor is now behind the horizon, so zooming toward it would
-    // carry the camera backwards through it (C §6.7).
-    // The 160 px end is off the 100 px viewport on purpose: the recognizer
+    // carry the camera backwards through it (C §6.7). The anchor is the same
+    // ray-sphere pick `latchFor` makes, computed here rather than hand-solved
+    // (this pixel has no clean closed form the way [75,50] does).
+    // The −245 px end is off the 100 px viewport on purpose: the recognizer
     // binds move/up to `window` (the iOS implicit-capture fix), so dragging
     // past the canvas edge is an ordinary case the controller must handle.
+    const start = poseAt([0, 0, 2], NADIR);
+    const startRay = cursorRayBodyLocal(start, [60, 50], VIEWPORT, FOV);
+    const t0 = raySphereRoots(startRay.originM, startRay.dir, [0, 0, 0], R)![0];
+    const anchor: Vec3 = [
+      startRay.originM[0] + startRay.dir[0] * t0,
+      startRay.originM[1] + startRay.dir[1] * t0,
+      startRay.originM[2] + startRay.dir[2] * t0,
+    ];
+
     const c = createSurfaceController();
     c.onGestureStart();
-    const tilted = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [75, 50], [75, 160]));
-    const anchor: Vec3 = [0.6, 0, 0.8];
+    const tilted = apply(c, start, drag('pan', [60, 50], [60, -245]));
     const eye = eyeOf(tilted);
     expect(eye[0] * anchor[0] + eye[2] * anchor[2]).toBeLessThan(1);
 
@@ -196,5 +224,62 @@ describe('surfaceController', () => {
     ];
     expect(Math.hypot(...used)).toBeCloseTo(R, 12);
     expect(angleBetween(used, anchor)).toBeGreaterThan(0.5);
+  });
+
+  it('a zoom-out re-levels against the new local vertical', () => {
+    // Comfortably tilted at a low, wide-open ceiling; a factor-2 zoom-out
+    // (the per-tick maximum) lifts h/R past the point where the ceiling has
+    // narrowed below the held tilt, so the very same tick must re-level —
+    // no separate untilt tween runs afterward.
+    const c = createSurfaceController();
+    const theta = 2.5;
+    const start = poseAt([0, 0, R * 1.05], basisAtTilt(theta));
+    const zoomedOut = apply(c, start, { kind: 'zoom', factor: 2, duringGesture: false });
+
+    const eye = eyeOf(zoomedOut);
+    const hOverR = Math.hypot(...eye) / R - 1;
+    const forward: Vec3 = [
+      zoomedOut.basisLocal[6],
+      zoomedOut.basisLocal[7],
+      zoomedOut.basisLocal[8],
+    ];
+    const tiltAfter = angleBetween(forward, [-eye[0], -eye[1], -eye[2]]);
+
+    expect(tiltAfter).toBeLessThan(theta);
+    expect(tiltAfter).toBeCloseTo(maxTiltRad(hOverR), 10);
+  });
+
+  it('the pose reaching the disengage boundary has tilt 0', () => {
+    // maxTiltRad(disengageHR) === 0 (pinned in maxTiltRad.test.ts), so ANY
+    // held tilt at that altitude clamps all the way to nadir — the Q4
+    // invariant a world-arm pivot pin relies on at the seam.
+    const c = createSurfaceController();
+    const start = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(1.0));
+    const settled = apply(c, start, { kind: 'zoom', factor: 1, duringGesture: false });
+
+    const forward: Vec3 = [settled.basisLocal[6], settled.basisLocal[7], settled.basisLocal[8]];
+    expect(forward[0]).toBeCloseTo(0, 12);
+    expect(forward[1]).toBeCloseTo(0, 12);
+    expect(forward[2]).toBeCloseTo(-1, 12);
+  });
+
+  it('enforcement never moves the eye', () => {
+    const c = createSurfaceController();
+    const start = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(1.5));
+    const settled = apply(c, start, { kind: 'zoom', factor: 1, duringGesture: false });
+
+    expect(settled.anchorLocalM).toEqual(start.anchorLocalM);
+    expect(settled.eyeRelAnchorM).toEqual(start.eyeRelAnchorM);
+  });
+
+  it('a pose entering the arm above the ceiling is not clamped (spec §12-R3)', () => {
+    // No `onGestureStart`: this is a pose that has just landed in the arm
+    // (a flyby, a tour keyframe), not a driven write, so it must sit above
+    // the ceiling untouched until the user's own gesture moves it.
+    const c = createSurfaceController();
+    const entered = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(Math.PI / 2));
+    const untouched = apply(c, entered, drag('orbit', [50, 50], [60, 50]));
+
+    expect(untouched).toBe(entered);
   });
 });
