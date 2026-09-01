@@ -32,9 +32,13 @@
  *
  * ### Why pass an explicit input bag instead of capturing closure?
  *
- * This module owns no cross-frame state — every value it reads is recomputed
- * each frame. A free function taking a struct of inputs is trivially testable
- * and bounds the encoder lifetime to the function body.
+ * This module owns no cross-frame state of its OWN — every local value it
+ * computes is recomputed each frame. It DOES read/write one Resource, Task
+ * 12's `state.cameraRuntime.skyCubemapCapture` (the black-hole lens's
+ * amortized sky-capture bookkeeping), the same amortized-Resources shape
+ * `cameraRuntime`'s other fields already carry — see
+ * `SkyCubemapCaptureRuntime.d.ts`. A free function taking a struct of inputs
+ * is trivially testable and bounds the encoder lifetime to the function body.
  *
  * ### What stays in `runFrame()` (NOT here)
  *
@@ -48,12 +52,27 @@
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
+import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
+import {
+  skyCubemapCaptureSchedule,
+  SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU,
+} from './skyCubemapCaptureSchedule';
+import { sceneBodyStates } from './sceneBodyStates';
+import { regionById } from '../../../utils/scene/regionById';
+import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { fadeBand } from '../../../utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+
+const SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_MPC =
+  SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU * SCALE_UNITS.AU_TO_MPC;
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -92,6 +111,47 @@ export function renderFrame(input: RenderFrameInput): void {
   // makes that in-between frame correct, not just a safe fallback.
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
+
+  // The black-hole lens's amortized sky-cubemap capture schedule (Task 12).
+  // `bandAlpha` keys on the CAMERA's distance from the galactic-centre
+  // anchor, same quantity + region every `sgrAStarLensing`-band consumer
+  // reads (`scaleFadeBands.ts`). Bookkeeping lives on `cameraRuntime`, not
+  // here — see `SkyCubemapCaptureRuntime.d.ts` for why `renderFrame` (which
+  // owns no cross-frame state of its own) is still this bag's sole writer.
+  const captureRuntime = state.cameraRuntime.skyCubemapCapture;
+  const gcDistanceMpc = regionRelativeDistanceMpc(
+    ctx.drawCamPos,
+    regionById('galactic-centre'),
+    sceneBodyStates(state, ctx),
+  );
+  const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
+  const bandJustEngaged = bandActive && !captureRuntime.wasBandActive;
+  // Every captured face's content (which galaxies/stars are visible, their
+  // backdrop-fade alpha) is keyed on the PLAYER's camera position, not the
+  // fixed capture eye at Sgr A* — so a big enough move stales every face at
+  // once, same as band entry.
+  const cameraMovedBeyondThreshold =
+    captureRuntime.lastSweepCamPosMpc !== null &&
+    distanceMpc(ctx.drawCamPos, captureRuntime.lastSweepCamPosMpc) >
+      SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_MPC;
+  const skyCubemapFacesToCapture: readonly CubeFace[] = bandActive
+    ? skyCubemapCaptureSchedule({
+        bandJustEngaged,
+        frameIndex: captureRuntime.frameIndex,
+        lastCapturedAtMs: captureRuntime.lastCapturedAtMs,
+        nowMs: ctx.nowMs,
+        cameraMovedBeyondThreshold,
+      }).facesToCapture
+    : [];
+  for (const face of skyCubemapFacesToCapture) {
+    captureRuntime.lastCapturedAtMs.set(face, ctx.nowMs);
+  }
+  if (bandJustEngaged || cameraMovedBeyondThreshold) {
+    captureRuntime.lastSweepCamPosMpc = ctx.drawCamPos;
+  }
+  captureRuntime.wasBandActive = bandActive;
+  captureRuntime.frameIndex += 1;
+
   executeFrame({
     encoder,
     ctx,
@@ -109,6 +169,7 @@ export function renderFrame(input: RenderFrameInput): void {
       // Painter-ordered NEAR0 + body-row indices (Task 4) — the chain the
       // foreground:0 render expands into, one step per entry.
       foregroundChainOrder(ctx.slabs),
+      skyCubemapFacesToCapture,
     ),
     layers: CONTENT_LAYERS,
     strategy,

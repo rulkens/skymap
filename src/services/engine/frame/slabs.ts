@@ -102,6 +102,23 @@ export function layerTimingSlotName(layerName: string, slabIndex: number): strin
 }
 
 /**
+ * The per-STEP query-set slot name for a render step that may carry a
+ * `face` (Task 12's sky-cubemap capture) — `groupKey` unchanged, or
+ * `'<groupKey>·FACE[n]'` when a face is present. Six capture steps share one
+ * `(target, slab)` — `('sky-cubemap', NEAR0)` — because the array-layer they
+ * write isn't part of the `(target, slab)` key at all (unlike a body row,
+ * which gets its OWN `slab` index and so is already unique), so `groupKeyOf`
+ * alone collides across faces; this is `layerTimingSlotName`'s counterpart
+ * one level up, disambiguating the STEP's own slot rather than a layer's.
+ * `timedSlotRowsOf` (frameProgram.ts) allocates under this name;
+ * `executeFrame`'s merged pass must resolve the identical name via
+ * `descriptorFor`, so both call this rather than templating `·FACE[n]` twice.
+ */
+export function renderStepTimingSlotName(groupKey: string, face: number | undefined): string {
+  return face === undefined ? groupKey : `${groupKey}·FACE[${face}]`;
+}
+
+/**
  * The single source of each slab's depth convention: `false` ⇒ the classic
  * smaller-z-wins / clear-`1.0` / `mat4d.perspective` set; `true` ⇒ reversed-Z
  * (greater-wins / clear-`0` / `mat4d.perspectiveReverseZ`).

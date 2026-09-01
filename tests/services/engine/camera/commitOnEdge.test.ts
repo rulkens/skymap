@@ -94,6 +94,12 @@ function makeEngineState(): {
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      skyCubemapCapture: {
+        lastCapturedAtMs: new Map(),
+        frameIndex: 0,
+        wasBandActive: false,
+        lastSweepCamPosMpc: null,
+      },
     },
   };
 

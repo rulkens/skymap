@@ -63,7 +63,16 @@
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
-import { COSMO, NEAR0, groupKeyOf, isBodySlabIndex, layerTimingSlotName, slabName } from './slabs';
+import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import {
+  COSMO,
+  NEAR0,
+  groupKeyOf,
+  isBodySlabIndex,
+  layerTimingSlotName,
+  renderStepTimingSlotName,
+  slabName,
+} from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
@@ -100,11 +109,28 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * back-to-front) expands the ONE `foreground:0` render into one step per
  * entry, each `depthLoad: 'clear'` so a nearer body row doesn't test against
  * a farther row's depth — see the push loop below.
+ *
+ * `skyCubemapFacesToCapture` (`skyCubemapCaptureSchedule`'s output, computed
+ * by `renderFrame` each frame from the lensing band alpha — Task 12) is the
+ * black-hole lens's amortized sky-capture list: empty outside the band, so
+ * NO capture steps are emitted at all (Q6's zero-dispatch guarantee — this is
+ * the capture side of that contract, not just the lensing draw itself).
+ * Placed in the compute prelude's wake, ahead of every other render step, so
+ * a same-frame lensing draw (Task 13) can sample a cubemap this frame
+ * actually wrote. One step per requested face, at the NEAR0 slab — the
+ * majority of the fixed opt-in roster (star-points, star-catalog,
+ * star-aggregates) projects through NEAR0; `point-sprites` is COSMO-slab and
+ * is NOT yet reachable through this step (see the finding recorded in the
+ * Task 12 report — no `ContentLayer` row targets `'sky-cubemap'` today, so
+ * these steps presently select an empty group and draw nothing; they exist
+ * so the schedule, the timing-slot derivation, and the DebugPanel plumbing
+ * are ready for the roster wiring that follows).
  */
 export function frameProgram(
   tone: ToneMap,
   bloomEnabled: boolean,
   foregroundChain: readonly number[],
+  skyCubemapFacesToCapture: readonly CubeFace[],
 ): readonly FrameStep[] {
   const steps: FrameStep[] = [];
 
@@ -117,6 +143,10 @@ export function frameProgram(
   // Like `flow`, a `'compute'` step contributes no timing slot, so TIMED_SLOTS
   // is unaffected.
   steps.push({ kind: 'compute', name: 'atmosphereSkyView' });
+
+  for (const face of skyCubemapFacesToCapture) {
+    steps.push({ kind: 'render', target: 'sky-cubemap', slab: NEAR0, face });
+  }
 
   steps.push({ kind: 'render', target: 'volume', slab: COSMO });
   // Zone-of-avoidance band raymarch into its own reduced-res offscreen —
@@ -266,6 +296,10 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
   'mw-aggregate·NEAR0': 'Volumes & aggregates',
+  // The black-hole lens's amortized sky-capture steps (Task 12) — 0-6 of
+  // them per frame depending on `skyCubemapCaptureSchedule`, so its own
+  // group rather than folding into an existing title.
+  'sky-cubemap·NEAR0': 'Sky capture',
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   'foreground:0·NEAR0': 'Foreground bodies · depth',
@@ -333,11 +367,14 @@ function timedSlotRowsOf(
       // AFTER the layer loop so the group total trails its layers in draw order.
       // Emitted unconditionally for shape-stability; simply unused when the
       // group is empty (the executor's `if (group.length === 0) break;` opens no
-      // pass, so no timing is billed against it). `groupKey` is
-      // unique per step (each has a distinct `(target, slab)`) and never
-      // collides with a layer name, so it earns its own timing slot and, in the
-      // DebugPanel's grouped lists, its own row under the step's group title.
-      rows.push({ name: groupKey, groupKey });
+      // pass, so no timing is billed against it). `groupKey` is unique per step
+      // for every ordinary render step (each has a distinct `(target, slab)`)
+      // and never collides with a layer name — EXCEPT the sky-cubemap capture
+      // steps, which share `('sky-cubemap', NEAR0)` across all 6 faces;
+      // `renderStepTimingSlotName` appends the face there so each still earns
+      // its own slot (see its doc, slabs.ts). The DebugPanel bucket still uses
+      // the shared `groupKey`, so all 6 land under one "Sky capture" group.
+      rows.push({ name: renderStepTimingSlotName(groupKey, step.face), groupKey });
     } else if (step.kind === 'composite') {
       // A composite merges whole textures rather than projecting geometry — it
       // belongs to no slab, and all composites share the one infra group.
@@ -451,8 +488,17 @@ const MAX_FOREGROUND_CHAIN: readonly number[] = [
   ...Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
 ];
 
+/**
+ * All 6 `CubeFace` values — the same "maximum, not a real frame's shorter
+ * list" sizing rationale `MAX_FOREGROUND_CHAIN` documents above, so the
+ * DebugPanel's GPU-timing groups include the sky-cubemap capture rows even
+ * on a frame where the lensing band is inactive and the real capture list
+ * would be empty.
+ */
+const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
+
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
-  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN),
+  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN, ALL_CUBE_FACES),
   CONTENT_LAYERS,
 );
 
@@ -462,7 +508,7 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
  * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
  */
 export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
-  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN),
+  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN, ALL_CUBE_FACES),
   CONTENT_LAYERS,
 );
 
@@ -501,7 +547,7 @@ function plainLayerGroupKeys(
  * project them into the same groups the timing list uses.
  */
 const PASS_GROUP_KEYS: ReadonlyMap<string, string> = plainLayerGroupKeys(
-  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN),
+  frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN, ALL_CUBE_FACES),
   CONTENT_LAYERS,
 );
 

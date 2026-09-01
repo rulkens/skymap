@@ -65,7 +65,7 @@ import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import { slabViewOf, groupKeyOf, layerTimingSlotName } from './slabs';
+import { slabViewOf, groupKeyOf, layerTimingSlotName, renderStepTimingSlotName } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
@@ -217,7 +217,12 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
         // definition `timedSlotRowsOf` allocates the slot under — so
         // `descriptorFor(groupKey)` resolves exactly that slot.
-        const groupKey = groupKeyOf(step.target, step.slab);
+        // `renderStepTimingSlotName` appends `step.face` when present — the
+        // sky-cubemap capture's 6 faces all share `('sky-cubemap', NEAR0)`, so
+        // the bare groupKey would look up the SAME slot for all 6 (see its doc,
+        // slabs.ts); for every other step `step.face` is absent and this is a
+        // no-op passthrough of `groupKey`.
+        const groupKey = renderStepTimingSlotName(groupKeyOf(step.target, step.slab), step.face);
         renderGroup(strategy, {
           encoder,
           ctx,

@@ -39,6 +39,7 @@
  */
 
 import type { CompositeStep } from './CompositeStep';
+import type { CubeFace } from '../../rendering/CubeFace';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
@@ -54,6 +55,17 @@ export type FrameStep =
        * foreground row — declare `'clear'` to restart depth mid-frame.
        */
       depthLoad?: 'clear' | 'load';
+      /**
+       * Which array layer of a `fixedSizePx` target this step writes — today
+       * only the black-hole lens's 6-face sky-cubemap capture (Task 12).
+       * Absent for every ordinary render step. Its sole job is disambiguating
+       * several `(target, slab)` steps that would otherwise collide: all six
+       * faces share `('sky-cubemap', NEAR0)`, unlike a body row (which gets
+       * its own `slab` index and so is unique without help) — see
+       * `timedSlotRowsOf`'s per-step naming and `executeFrame`'s matching
+       * timing-slot lookup, frameProgram.ts / executeFrame.ts.
+       */
+      face?: CubeFace;
     }
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };

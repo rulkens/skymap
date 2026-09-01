@@ -569,6 +569,19 @@ function makeInput(
           fades: { opacityOf: () => 1 },
           clipPlayer: { clipOpacityOf: () => 1 },
         },
+        // Task 12's sky-cubemap capture bookkeeping — renderFrame reads/writes
+        // this every frame now, regardless of whether the lensing band is
+        // active (the fixture camera sits Mpc-scale away from Sgr A*, so the
+        // band alpha is 0 and `facesToCapture` stays empty; see
+        // `skyCubemapCaptureSchedule`'s call site in renderFrame.ts).
+        cameraRuntime: {
+          skyCubemapCapture: {
+            lastCapturedAtMs: new Map(),
+            frameIndex: 0,
+            wasBandActive: false,
+            lastSweepCamPosMpc: null,
+          },
+        },
       } as never,
       device,
       context,

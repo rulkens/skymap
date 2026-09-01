@@ -95,7 +95,7 @@ describe('frameProgram', () => {
     // Bloom OFF — the base thirteen-step shape (the bloom-enabled program splices
     // one bloom step between the foreground composite and the tone-map; see the
     // bloom-gating tests below).
-    expect(frameProgram(TONE, false, [NEAR0])).toEqual([
+    expect(frameProgram(TONE, false, [NEAR0], [])).toEqual([
       { kind: 'compute', name: 'flow' },
       { kind: 'compute', name: 'atmosphereSkyView' },
       { kind: 'render', target: 'volume', slab: COSMO },
@@ -123,7 +123,7 @@ describe('frameProgram', () => {
     // starts fresh rather than fighting a farther row's. The surrounding
     // steps — the preceding (hdr, NEAR0) render and the following
     // foreground:0→hdr composite — are unmoved.
-    const program = frameProgram(TONE, false, [NEAR0, 3, 2]);
+    const program = frameProgram(TONE, false, [NEAR0, 3, 2], []);
     const hdrNear0Idx = program.findIndex(
       (step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0,
     );
@@ -148,7 +148,7 @@ describe('frameProgram', () => {
     // so this is a no-op at runtime, but the step must still exist in the
     // program or a future chain-emitting frame's stale-touched bookkeeping
     // would be one step off.
-    const program = frameProgram(TONE, false, []);
+    const program = frameProgram(TONE, false, [], []);
     const hdrNear0Idx = program.findIndex(
       (step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0,
     );
@@ -167,7 +167,7 @@ describe('frameProgram', () => {
     // hdr→swap replace-composite carries the one real tone object (identity,
     // not just equal values). Exactly one composite therefore carries a
     // non-null tone — that lone tone-map is what gives the frame one curve.
-    const program = frameProgram(TONE, false, [NEAR0]);
+    const program = frameProgram(TONE, false, [NEAR0], []);
     const composites = program.filter((step) => step.kind === 'composite');
     const [foregroundComposite, hdrComposite] = composites;
     if (foregroundComposite?.kind !== 'composite' || hdrComposite?.kind !== 'composite') {
@@ -187,7 +187,7 @@ describe('frameProgram', () => {
     // BEFORE the tone-map, otherwise they'd be double-tonemapped (or skip the
     // curve entirely). Assert the linear body composite's index is below the
     // tone-map's.
-    const program = frameProgram(TONE, false, [NEAR0]);
+    const program = frameProgram(TONE, false, [NEAR0], []);
     const isComposite = (source: string, dest: string) => (step: FrameStep) =>
       step.kind === 'composite' && step.step.source === source && step.step.dest === dest;
     const foregroundIdx = program.findIndex(isComposite('foreground:0', 'hdr'));
@@ -210,7 +210,7 @@ describe('frameProgram', () => {
       viewportPx: [1920, 1080],
       starSphereRangeM: null,
     });
-    for (const step of frameProgram(TONE, true, [NEAR0])) {
+    for (const step of frameProgram(TONE, true, [NEAR0], [])) {
       if (step.kind === 'render') {
         expect([NEAR0, COSMO]).toContain(step.slab);
         expect(slabs[step.slab]).toBeDefined();
@@ -223,7 +223,7 @@ describe('frameProgram', () => {
     // the lone hdr→swap tone curve — so the single `{ kind: 'bloom' }` step must
     // sit after the linear foreground:0→hdr composite and before the hdr→swap
     // tone-map. Exactly one composite still carries a non-null tone.
-    const program = frameProgram(TONE, true, [NEAR0]);
+    const program = frameProgram(TONE, true, [NEAR0], []);
     const bloomSteps = program.filter((step) => step.kind === 'bloom');
     expect(bloomSteps).toHaveLength(1);
 
@@ -250,8 +250,8 @@ describe('frameProgram', () => {
     // Only `enabled` shapes the step list. Bloom-off is the base program; bloom-on
     // is that base with exactly ONE `{ kind: 'bloom' }` step spliced in between the
     // foreground composite and the tone-map — nothing else changes.
-    const off = frameProgram(TONE, false, [NEAR0]);
-    const on = frameProgram(TONE, true, [NEAR0]);
+    const off = frameProgram(TONE, false, [NEAR0], []);
+    const on = frameProgram(TONE, true, [NEAR0], []);
 
     const bloomSteps = on.filter((step) => step.kind === 'bloom');
     expect(bloomSteps).toEqual([{ kind: 'bloom' }]);
@@ -289,7 +289,7 @@ describe('timedSlotsOf', () => {
     // into HDR before the tone-map), so its group-key slot sits above them. The
     // zoa render step matches no fake layer either, so it contributes only
     // its own group-key slot, right after volume·COSMO.
-    expect(timedSlotsOf(frameProgram(TONE, false, [NEAR0]), layers)).toEqual([
+    expect(timedSlotsOf(frameProgram(TONE, false, [NEAR0], []), layers)).toEqual([
       'volume·COSMO',
       'zoa·COSMO',
       'point-sprites',
@@ -316,7 +316,7 @@ describe('timedSlotsOf', () => {
     ];
     // Bloom ON adds the single `'bloom'` slot; every render step now has a
     // distinct `(target, slab)`, so no slot name collides.
-    const slots = timedSlotsOf(frameProgram(TONE, true, [NEAR0]), layers);
+    const slots = timedSlotsOf(frameProgram(TONE, true, [NEAR0], []), layers);
     expect(new Set(slots).size).toBe(slots.length);
   });
 
@@ -351,7 +351,7 @@ describe('timedSlotsOf', () => {
     // group-key slot (the merged-pass timing slot Joint 2 adds), so
     // 'volume·COSMO' follows scalar-volume, 'hdr·COSMO' follows the eight COSMO
     // hdr layers, and so on down to 'swap·NEAR0' after the near-field captions.
-    expect(timedSlotsOf(frameProgram(TONE, true, [2, NEAR0]), CONTENT_LAYERS)).toEqual([
+    expect(timedSlotsOf(frameProgram(TONE, true, [2, NEAR0], []), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'volume·COSMO',
       'zone-of-avoidance',
@@ -468,7 +468,7 @@ describe('timedSlotGroupsOf', () => {
       fakeLayer('labels', 'swap', COSMO),
       fakeLayer('earth', 'foreground:0', NEAR0),
     ];
-    const groups = timedSlotGroupsOf(frameProgram(TONE, false, [NEAR0]), layers);
+    const groups = timedSlotGroupsOf(frameProgram(TONE, false, [NEAR0], []), layers);
 
     // Group titles in draw/table order. The two composites and pick collapse
     // into one trailing group.
@@ -508,9 +508,11 @@ describe('timedSlotGroupsOf', () => {
     // milky-way-aggregate (mw-aggregate·NEAR0) are non-adjacent steps that all
     // map to "Volumes & aggregates"; the two composites and pick — scattered
     // through execution order — collapse into
-    // the trailing "Composites & pick".
+    // the trailing "Composites & pick". "Sky capture" is TIMED_SLOTS' 6 capture
+    // steps (Task 12's ALL_CUBE_FACES sizing, one row per face).
     expect(TIMED_SLOT_GROUPS.map((g) => g.title)).toEqual([
       'Volumes & aggregates',
+      'Sky capture',
       'Cosmos · HDR',
       'Near field · HDR',
       'Foreground bodies · depth',
@@ -579,7 +581,7 @@ describe('timedSlotGroupsOf', () => {
       enabled: vi.fn<ContentLayer['enabled']>(() => true),
       draw: vi.fn<ContentLayer['draw']>(),
     };
-    const groups = timedSlotGroupsOf(frameProgram(TONE, false, [NEAR0, 2, 3]), [bodyLayer]);
+    const groups = timedSlotGroupsOf(frameProgram(TONE, false, [NEAR0, 2, 3], []), [bodyLayer]);
     const foreground = groups.find((g) => g.title === 'Foreground bodies · depth')!;
     expect(foreground.rows.map((r) => r.name)).toEqual([
       'foreground:0·NEAR0',

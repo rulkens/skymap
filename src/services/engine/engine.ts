@@ -181,6 +181,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // valid; `runFrame` overwrites it with the resolved B(t) each frame. Copied
     // so the seed never aliases the shared registry entry.
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
+    // Sky-cubemap capture bookkeeping (Task 12) — empty/false/null until the
+    // first frame the lensing band goes active; `renderFrame` is the sole
+    // writer thereafter.
+    skyCubemapCapture: {
+      lastCapturedAtMs: new Map(),
+      frameIndex: 0,
+      wasBandActive: false,
+      lastSweepCamPosMpc: null,
+    },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
