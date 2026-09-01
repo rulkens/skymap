@@ -119,6 +119,7 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/so
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 
@@ -239,6 +240,7 @@ function makeState(): EngineState {
       // runFrame resolves B(t) once per frame and writes it here — the box must
       // exist for that assignment. Seeded with the ecliptic (default) basis.
       upBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
+      surface: createSurfaceController(),
     },
   } as unknown as EngineState;
 }

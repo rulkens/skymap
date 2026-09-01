@@ -25,7 +25,7 @@
  * winner, guaranteeing that the driver's `pose` and the commit-on-edge guard
  * never disagree (invariant 1 of the frame-ordering contract).
  *
- * `buildCameraDrivers` produces the six-row table that reads directly from the
+ * `buildCameraDrivers` produces the seven-row table that reads directly from the
  * Redux store. Most drivers' `isActive` and `pose` read only `s.camera.*`; `cam`
  * is forwarded to the `orbitDrag` driver, which reads `state.cam` (the gesture
  * register) for its live yaw/pitch/distance. The `followBody` driver is the one
@@ -33,9 +33,9 @@
  * `EngineState`: follow reads the per-frame body-state snapshot (primed by
  * `runFrame` before produce), the live lens FOV, and the follow ease clock.
  *
- * Priorities: clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 > followBody 10
- * > resting 0. The gap between each step is deliberate headroom so a future
- * driver can slot in without renumbering.
+ * Priorities: surface 100 > clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 >
+ * followBody 10 > resting 0. The gap between each step is deliberate headroom
+ * so a future driver can slot in without renumbering.
  *
  * Body focus is UN-BRAIDED into two concerns: the focused body owns the PIVOT
  * (the pose target), and whichever driver wins owns the ORBIT terms (yaw / pitch
@@ -158,7 +158,7 @@ export function runCameraDrivers(
 }
 
 /**
- * Build the engine's camera-driver table — six rows, store-reading, returned
+ * Build the engine's camera-driver table — seven rows, store-reading, returned
  * in priority order for readability (the resolver uses a max-scan, so order
  * does not affect correctness).
  *
@@ -247,6 +247,17 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           ),
         );
       },
+    },
+    {
+      id: 'surface',
+      priority: 100,
+      // The body arm's gesture, in the slot the SpaceMouse driver vacated (spec
+      // §7). `drainInput` has already committed this frame's anchored pose into
+      // `base`, so the row authors nothing new — it exists to hold the camera
+      // for the gesture, above a clip that would otherwise keep playing under
+      // the user's finger. No pivot pin: that is a world-arm concern.
+      isActive: (s) => s.camera.dragging && s.camera.base.frame !== 'absolute',
+      pose: (s) => s.camera.base,
     },
     {
       id: 'orbitDrag',

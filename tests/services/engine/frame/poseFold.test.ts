@@ -78,6 +78,7 @@ import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { rootReducer } from '../../../../src/store/rootReducer';
@@ -103,6 +104,7 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -174,6 +176,7 @@ function makeState(): EngineState {
       prevActiveId: { current: 'resting' },
       lastRenderedSimDays: { current: SIM },
       upBasis: { current: [...B] },
+      surface: createSurfaceController(),
     },
   } as unknown as EngineState;
 }
@@ -198,6 +201,12 @@ function makeDeps(state: EngineState, store: ReturnType<typeof makeStore>): RunF
 function seedPose(store: ReturnType<typeof makeStore>, state: EngineState, pose: CameraPose): void {
   store.dispatch(commitCameraPose(absoluteArm(pose)));
   state.cameraRuntime.lastPose.current = absoluteArm(pose);
+}
+
+/** Geocentric range of a body-arm pose, metres — the anchor is the centre. */
+function rangeOf(framed: FramedCameraPose): number {
+  if (framed.frame === 'absolute') throw new Error('rangeOf: not a body arm');
+  return Math.hypot(...framed.pose.eyeRelAnchorM);
 }
 
 function commitCalls(spy: { mock: { calls: readonly (readonly unknown[])[] } }): unknown[] {
@@ -406,7 +415,9 @@ describe('runFrame — the regime fold', () => {
 
   it('the wheel does not route through applyWheelZoom in a body arm', () => {
     // Spec §7: the three world-arm distance owners are simply not consulted —
-    // in a body arm the range belongs to the anchored zoom gesture.
+    // in a body arm the range belongs to the anchored zoom gesture, which keeps
+    // the pose in body-fixed metres. `applyWheelZoom`'s answer would arrive as
+    // an ABSOLUTE arm, which is what the frame assertion below rules out.
     const store = makeStore();
     const state = makeState();
     const deps = makeDeps(state, store);
@@ -420,7 +431,10 @@ describe('runFrame — the regime fold', () => {
     state.subsystems.inputAggregator.push({ kind: 'wheel', deltaY: 240, duringGesture: false });
     runFrame(state, deps, 16);
 
-    expect(commitCalls(spy)).toHaveLength(0);
-    expect(state.cameraRuntime.lastPose.current).toBe(engaged);
+    const commits = commitCalls(spy) as { payload: FramedCameraPose }[];
+    expect(commits).toHaveLength(1);
+    expect(commits[0]!.payload.frame).toEqual(EARTH_ARM);
+    // deltaY > 0 zooms out, in metres off the body centre.
+    expect(rangeOf(store.getState().camera.base)).toBeGreaterThan(rangeOf(engaged));
   });
 });

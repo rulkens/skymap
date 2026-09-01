@@ -18,6 +18,7 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { createCameraClock } from './camera/cameraClock';
+import { createSurfaceController } from '../camera/surfaceController';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { CONST_J2000 } from '../../data/time/constJ2000';
@@ -183,6 +184,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // valid; `runFrame` overwrites it with the resolved B(t) each frame. Copied
     // so the seed never aliases the shared registry entry.
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
+    surface: createSurfaceController(),
   };
 
   // ── Settings — the injected Redux store ──────────────────────────

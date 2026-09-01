@@ -14,7 +14,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { raySphereRoots } from '../math/raySphereRoots';
 import { quatFromAxisAngle } from '../math/quatFromAxisAngle';
 import { rotateVec3ByQuat } from '../math/rotateVec3ByQuat';
-import { reorthonormalise } from '../math/reorthonormalise';
+import { rotateBasisByQuat } from './rotateBasisByQuat';
 import { cross3 } from '../math/cross3';
 
 const BODY_CENTRE: Vec3 = [0, 0, 0];
@@ -65,20 +65,10 @@ export function anchoredDragRotation(
   const cos = under[0] * grabbed[0] + under[1] * grabbed[1] + under[2] * grabbed[2];
   const q = quatFromAxisAngle([axis[0] / sin, axis[1] / sin, axis[2] / sin], Math.atan2(sin, cos));
 
-  const b = pose.basisLocal;
-  const right = rotateVec3ByQuat(q, [b[0], b[1], b[2]]);
-  const up = rotateVec3ByQuat(q, [b[3], b[4], b[5]]);
-  const forward = rotateVec3ByQuat(q, [b[6], b[7], b[8]]);
-  // `reorthonormalise` rebuilds its third column as `c0 × c1`, but this is the
-  // image-plane basis, where `right × up = −forward`. Passing the columns as
-  // (forward, up, right) lands the right axis in that slot, and leaves forward
-  // exact — the axis a drift would be most visible on.
-  const [fx, fy, fz, ux, uy, uz, rx, ry, rz] = reorthonormalise([...forward, ...up, ...right]);
-
   return {
     ...pose,
     anchorLocalM: rotateVec3ByQuat(q, pose.anchorLocalM),
     eyeRelAnchorM: rotateVec3ByQuat(q, pose.eyeRelAnchorM),
-    basisLocal: [rx, ry, rz, ux, uy, uz, fx, fy, fz],
+    basisLocal: rotateBasisByQuat(q, pose.basisLocal),
   };
 }

@@ -55,6 +55,7 @@ import {
   runCameraDrivers,
 } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
+import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import {
   createCameraClock,
   tweenElapsed,
@@ -97,6 +98,7 @@ function makeEngineState(): {
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      surface: createSurfaceController(),
     },
   };
 

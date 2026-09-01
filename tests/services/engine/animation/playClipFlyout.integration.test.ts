@@ -65,6 +65,7 @@ import {
 } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import { flyout } from '../../../../src/data/animation/clips/flyout';
@@ -121,6 +122,7 @@ function makeEngineState(startDistance: number): {
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      surface: createSurfaceController(),
     },
   };
 

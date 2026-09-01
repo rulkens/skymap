@@ -15,6 +15,7 @@ import { drainInput } from '../../../../src/services/engine/frame/drainInput';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import {
@@ -60,12 +61,14 @@ function makeHarness(distance = 100) {
       prevActiveId: { current: 'resting' },
       lastRenderedSimDays: { current: CONST_J2000 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      projection: { fovYRad: Math.PI / 3, aspect: 1, near: 0.01, far: 50000 },
+      surface: createSurfaceController(),
     },
   } as unknown as EngineState;
 
   const store = configureStore({ reducer: rootReducer });
   const deps = {
-    canvas: { clientHeight: 1000 } as HTMLCanvasElement,
+    canvas: { clientWidth: 1000, clientHeight: 1000 } as HTMLCanvasElement,
     cb: { store },
   } as unknown as RunFrameDeps;
 
@@ -103,13 +106,12 @@ describe('drainInput', () => {
     expect(store.getState().camera.dragging).toBe(false);
   });
 
-  it('does not commit the drag register on gesture end in a body arm', () => {
-    // The register is invisible in a body arm — `orbitDrag` is arm-gated off,
-    // so nothing moved while the gesture was held. Committing it on release
-    // would land the whole accumulated gesture in one frame, which the fold
-    // then re-engages: the register-vs-render divergence, at its worst. The
-    // anchored gestures that make a held drag real are the surface controller's
-    // (spec §6); until it exists, an unowned gesture does nothing.
+  it('routes a body-arm drag to the surface controller, never the register', () => {
+    // The register is invisible in a body arm — `orbitDrag` is arm-gated off —
+    // so committing it on release would land the whole accumulated gesture in
+    // one frame, which the fold then re-engages: the register-vs-render
+    // divergence at its worst. The anchored gesture is what moves the camera,
+    // and it stays in the body arm the whole way.
     const { agg, state, deps, store } = makeHarness();
     const earth = deriveBodyStates(CONST_J2000).get('earth')!;
     const B = ORIENTATION_FRAMES.ecliptic;
@@ -139,8 +141,11 @@ describe('drainInput', () => {
 
     drainInput(state, deps, 0);
 
-    expect(store.getState().camera.base).toBe(arm);
-    // The gesture still ENDS — only its pose commit is dropped.
+    const committed = store.getState().camera.base;
+    expect(committed.frame).toEqual({ body: 'earth' });
+    // The anchored drag moved the camera; the register's world pose did not
+    // land on top of it at gesture end.
+    expect(committed.pose).not.toBe(arm.pose);
     expect(store.getState().camera.dragging).toBe(false);
   });
 

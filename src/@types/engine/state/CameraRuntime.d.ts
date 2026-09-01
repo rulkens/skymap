@@ -71,6 +71,7 @@
 import type { CameraClock } from '../camera/CameraClock';
 import type { CameraProjection } from '../../camera/CameraProjection';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { SurfaceController } from '../../camera/SurfaceController';
 import type { Mat3 } from '../../math/Mat3';
 
 export type CameraRuntime = {
@@ -98,4 +99,10 @@ export type CameraRuntime = {
    * `runFrame` writes it, once per frame from `resolveFrameBasis`.
    */
   upBasis: { current: Mat3 };
+  /**
+   * The body arm's gesture register — `state.cam`'s counterpart for the engaged
+   * regime, and for the same reason: the latched gesture is live-session state
+   * that would be meaningless serialized. `drainInput` is its only caller.
+   */
+  surface: SurfaceController;
 };
