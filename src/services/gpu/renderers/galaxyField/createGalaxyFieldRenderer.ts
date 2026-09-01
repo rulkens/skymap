@@ -781,12 +781,14 @@ export function createGalaxyFieldRenderer(
     geo: GalaxyDescription,
     budget: PlaceDustBudget,
     /**
-     * Debug-only override: forcing this to `false` exercises placeDust.wesl's
-     * mode-1 (smoothDisc) branch directly, WITHOUT flipping
-     * `fieldTuning.ismMap.generator` — that would rerun the generator, both CDF
-     * scans and the placement, so two readbacks either side of it would no
-     * longer be over the same map and budget. The production path never passes
-     * this.
+     * Debug-only, and absent it follows the live
+     * `fieldTuning.ismMap.generator` — the production `place:dust` dispatch
+     * passes nothing. `probeGpuErrors.ts` passes `false` to reach
+     * placeDust.wesl's mode-1 (smoothDisc) branch, which nothing else in the
+     * repo executes. Flipping the tuning to a non-fluid generator instead
+     * would rerun the generator, both CDF scans and the placement, leaving two
+     * readbacks either side of it over different maps and budgets — and hits
+     * `docs/backlog/2026-08-12-ism-generator-none-copy-dst-crash.md`.
      */
     forceGeneratorIsFluid?: boolean,
   ): PlaceDustDispatchInput {
