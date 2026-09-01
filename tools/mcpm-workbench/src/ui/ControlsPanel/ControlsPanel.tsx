@@ -116,12 +116,10 @@ function ControlsPanel(): ReactNode {
       .text()
       .then((text) => {
         const imported = importParams(text);
-        // Grid/sim first, catalog LAST (only if present): Viewport's subscriber treats a
-        // catalog-identity (`catalogKey`) change as the immediate, undebounced rebuild
-        // trigger and reads the whole live state at that point — dispatching the catalog
-        // action after every other field lands means that one rebuild already sees the
-        // new grid box/agent count/params, matching the old single combined write's
-        // "one rebuild, not two" behaviour despite this now being several dispatches.
+        // Order doesn't matter for the rebuild itself — every dispatch here funnels
+        // into the same debounced `watchSceneSaga` trigger, which reads a fresh full
+        // state snapshot whenever it actually builds. Catalog dispatched last only
+        // because it's conditional (`imported.sources` may be absent).
         for (const key of MCPM_PARAM_KEYS)
           dispatch(setSimParam({ key, value: imported.params[key] }));
         dispatch(setInitMode(imported.initMode));

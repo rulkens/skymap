@@ -1,14 +1,14 @@
 /**
- * watchSceneSaga — the debounced build/rebuild/empty-scene/device-loss
- * pipeline that used to live in Viewport.tsx's closures (buildOnce/
- * buildFromPoints/buildEmptyScene/acquireGpu). `resources` (saga context)
- * replaces those closure locals — Viewport's frame driver now reads the
- * SAME object by reference. `takeLatest` wrapping `delay` reproduces the
- * old clearTimeout/setTimeout debounce; cancellation + `resources.epoch`
- * (bumped by every `disposeScene`, even a no-op one) replace `buildGeneration`/
- * `disposed`. `catalogLoaded` rides this SAME debounce — unlike the old
- * two-speed split (catalog: immediate, rest: debounced) — since a catalog
- * load already dwarfs `REBUILD_DEBOUNCE_MS`.
+ * watchSceneSaga — builds/rebuilds/disposes the MCPM scene (device, harness,
+ * render graph) into `resources` (saga context), which Viewport's frame
+ * driver reads by reference. `takeLatest` debounces every structural
+ * trigger by `REBUILD_DEBOUNCE_MS`: a new trigger cancels whatever the
+ * previous one was doing (still waiting, or mid-build) and restarts the
+ * wait. `resources.epoch` (bumped by every `disposeScene`, even a no-op
+ * one) lets an in-flight build detect it has been superseded and bail
+ * instead of stashing a stale result — see the epoch check around
+ * `createMcpmHarness` below for the one window `takeLatest` cancellation
+ * alone can't cover.
  */
 import {
   takeLatest,
@@ -43,7 +43,6 @@ import {
   setManualCenterMpc,
   setManualSizeMpc,
   setMaxBufferBytes,
-  setPaddingMpc,
   setResolvedGrid,
   setRotation,
   setVoxelSizeMpc,
@@ -65,21 +64,25 @@ const GPU_REQUEST_OPTIONS = {
 };
 
 /**
- * Every action that can move a field the old value-diffing `buildKey` (now
- * deleted) serialized — hand-enumerated since a saga reacts to actions, not
- * state diffs. `setSeed` is NOT in the brief's own list but IS in `buildKey`'s
- * old field set (`s.sim.seed`) — included here to match current behaviour;
- * dropping it would silently stop a seed change from rebuilding the harness.
- * `gridShapeOf.ts` is the field-level source of truth this list has to stay
- * in sync with by hand: a new GridSlice field there needs its setter added
- * here too. `resetRequested` is deliberately excluded — Task 7's `harness.
- * reset` reseeds in place, matching current behaviour.
+ * Every action that moves a field `deriveGridBox`/`createMcpmHarness` actually
+ * read — hand-enumerated since a saga reacts to actions, not state diffs.
+ * `gridShapeOf.ts` (`manualCenterMpc`/`manualSizeMpc`/`manualRotation`/
+ * `manualVoxelSizeMpc`) plus `grid.importedBox` is the field-level source of
+ * truth this list has to stay in sync with by hand — `watchSceneSaga.test.ts`'s
+ * exhaustive fixture is what catches a drift. `setPaddingMpc` is deliberately
+ * EXCLUDED: `paddingMpc` itself is outside `gridShapeOf` (baked into
+ * `manualSizeMpc` only at the next `fitBoxToCatalog` click), and clearing
+ * `importedBox` is a no-op from any state that already has it null — the one
+ * narrow miss (padding edited while a preset IS loaded) is accepted, not
+ * covered by the other setters riding this list. `setSeed` IS included (it's
+ * outside the brief's own worked example, but `createMcpmHarness` seeds agents
+ * from it at construction). `resetRequested` is excluded — Task 7's
+ * `harness.reset` reseeds in place, not a rebuild.
  */
-const SCENE_REBUILD_TRIGGERS = [
+export const SCENE_REBUILD_TRIGGERS = [
   catalogLoaded,
   setWeightMode,
   setVoxelSizeMpc,
-  setPaddingMpc,
   setManualCenterMpc,
   setManualSizeMpc,
   setRotation,
@@ -119,6 +122,10 @@ function* buildScene() {
 
   try {
     disposeScene(resources);
+    // The epoch this build owns: a NEWER build's own `disposeScene` (its first line,
+    // same as this one) bumps `resources.epoch` again — the guard below compares
+    // against this snapshot to detect that race.
+    const myEpoch = resources.epoch;
     const gpu = yield* call(initGpu, canvas, GPU_REQUEST_OPTIONS);
     resources.gpu = gpu;
     yield* spawn(watchDeviceLoss, resources, gpu);
@@ -156,6 +163,17 @@ function* buildScene() {
       initMode: s.sim.initMode,
       seed: s.sim.seed,
     });
+    // `createMcpmHarness` is async and allocates the full box-sized buffer set;
+    // `takeLatest` cancellation can't preempt that in-flight Promise, so a newer
+    // trigger's OWN `disposeScene` (bumping `resources.epoch` again) is the only
+    // signal this attempt has that it lost the race AFTER the harness already
+    // exists. Dispose it and bail instead of stashing an orphaned build's result
+    // into `resources` — this is the `generation !== buildGeneration` guarantee
+    // the old closure code gave, now keyed on epoch instead of a counter.
+    if (resources.epoch !== myEpoch) {
+      harness.dispose();
+      return;
+    }
     resources.harness = harness;
     resources.weights = weights;
 
@@ -188,13 +206,16 @@ function* buildScene() {
     resources.graph = graph;
     if (hasUrlGate('probe')) (window as unknown as ProbeReadyWindow).__mcpmProbeReady = true;
   } catch (err) {
+    console.error('mcpm-workbench: build failed', err);
     yield* put(setCatalogBuildError((err as Error).message));
   } finally {
-    // A newer trigger can cancel this generator (takeLatest's `iterator.
-    // return()`) at any yield point above, after harness/graph were already
-    // stashed into `resources` — dispose exactly what this half-finished
-    // attempt left behind rather than leaking it. Never runs on a clean
-    // finish: `cancelled()` is false there, leaving the finished scene alone.
+    // Covers cancellation at any yield point where something was ALREADY stashed
+    // into `resources` (e.g. `resources.gpu`/`resources.graph` on the empty-scene
+    // path, or between the harness-epoch check above and the final `resources.graph
+    // = graph` assignment) — NOT the harness-in-flight window, which the epoch
+    // check above handles on its own terms (the harness isn't in `resources` yet
+    // for this to dispose). Never runs on a clean finish: `cancelled()` is false
+    // there, leaving the finished scene alone.
     if (yield* cancelled()) disposeScene(resources);
   }
 }

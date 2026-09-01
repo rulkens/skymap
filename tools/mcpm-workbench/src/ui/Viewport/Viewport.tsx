@@ -4,14 +4,11 @@
  * hover/drag-handle state to the box-preview draw call. The scene itself
  * (device, harness, render graph, preview buffer) lives in `resources`
  * (`RenderResources`), created here and handed to `watchSceneSaga` via
- * `registerSagaContext` — the saga owns every write to it (build/rebuild/
- * dispose/GPU-acquire/device-loss), this component only reads it each frame.
- * `resources.epoch` (bumped on every dispose) is how the store subscriber
- * below notices a rebuild landed, to reset per-scene bookkeeping the same
- * way the old `startLoop()`/`buildFromPoints` closures used to inline.
+ * `registerSagaContext` — the saga owns every write to it, this component
+ * only reads it each frame. `resources.epoch` is how the store subscriber
+ * below notices a rebuild landed, to reset per-scene bookkeeping.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
-import type { AgentWeights } from '../../../@types/AgentWeights';
 import type { McpmHarness } from '../../../@types/McpmHarness';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import { resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
@@ -173,7 +170,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       const h = resources.harness;
       const s = store.getState();
       const pts = s.catalog.points;
-      const weights: AgentWeights | null = resources.weights;
+      const weights = resources.weights;
       if (!h || !pts || !weights) return;
       try {
         const readback = await h.readbackTrace();

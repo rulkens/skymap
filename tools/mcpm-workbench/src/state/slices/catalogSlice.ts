@@ -77,7 +77,7 @@ export const catalogSlice = createSlice({
     setCatalogLoadStatus: (state, action: PayloadAction<CatalogSlice['loadStatus']>) => {
       state.loadStatus = action.payload;
     },
-    /** Viewport's zero-point path sets this after `catalogLoaded` (which just cleared it). */
+    /** `watchSceneSaga`'s zero-point branch sets this after `catalogLoaded` (which just cleared it). */
     setCatalogStatusMessage: (state, action: PayloadAction<string | null>) => {
       state.statusMessage = action.payload;
     },
