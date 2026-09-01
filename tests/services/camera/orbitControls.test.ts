@@ -38,7 +38,8 @@
  *     a discrete wheel zoom (no gesture) fires `onZoom` instead.
  *   - `pivotRadiusMpc` reaches BOTH in-module clamp sites (pinch, and a wheel
  *     during a held gesture), so a zoom-in on a framed body stops just off its
- *     surface instead of passing through the centre.
+ *     surface instead of passing through the centre. `standoffRadii` reaches
+ *     the same two sites for a body's own floor override (Sgr A*'s 2 r_s).
  *
  * Vitest runs in `node` here (no jsdom), so — matching
  * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
@@ -465,6 +466,103 @@ describe('attachOrbitControls — the zoom floor stops at a focused body’s sur
       clientY: 100,
     });
     rec.fire('wheel', { deltaY: -20000, preventDefault: vi.fn() });
+
+    const radii = cam.distance / EARTH_RADIUS_MPC;
+    expect(radii).toBeGreaterThan(1);
+    expect(radii).toBeLessThan(1.05);
+  });
+});
+
+describe('attachOrbitControls — the standoff override reaches both zoom sites', () => {
+  // Same two in-module sites as the surface-floor tests above, but exercising
+  // the `standoffRadii` getter (Sgr A*'s Q10 2 r_s floor is the real case):
+  // without it reaching pinch + wheel-during-gesture, a body with an override
+  // would still stop at the Earth-tuned global ratio instead of its own.
+  const STANDOFF = 3.0; // well above SURFACE_STANDOFF_RADII (~1.0000024)
+
+  it('pinching in floors at the override, not the global ratio', () => {
+    const cam = makeCamera();
+    cam.distance = EARTH_RADIUS_MPC * 10;
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      standoffRadii: () => STANDOFF,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+    });
+    rec.fire('pointerdown', {
+      pointerId: 2,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 10,
+      clientY: 0,
+    });
+    for (const x of [1000, 100000, 10000000]) {
+      win.fire('pointermove', { pointerId: 2, clientX: x, clientY: 0 });
+    }
+
+    const radii = cam.distance / EARTH_RADIUS_MPC;
+    expect(radii).toBeGreaterThanOrEqual(STANDOFF);
+    expect(radii).toBeLessThan(STANDOFF * 1.05);
+  });
+
+  it('a wheel tick during a held gesture floors at the override, not the global ratio', () => {
+    const cam = makeCamera();
+    cam.distance = EARTH_RADIUS_MPC * 10;
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+      standoffRadii: () => STANDOFF,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    rec.fire('wheel', { deltaY: -20000, preventDefault: vi.fn() });
+
+    const radii = cam.distance / EARTH_RADIUS_MPC;
+    expect(radii).toBeGreaterThanOrEqual(STANDOFF);
+    expect(radii).toBeLessThan(STANDOFF * 1.05);
+  });
+
+  it('with no standoffRadii getter, the pinch floor is the global ratio unchanged', () => {
+    const cam = makeCamera();
+    cam.distance = EARTH_RADIUS_MPC * 4;
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, {
+      pivotRadiusMpc: () => EARTH_RADIUS_MPC,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+    });
+    rec.fire('pointerdown', {
+      pointerId: 2,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 10,
+      clientY: 0,
+    });
+    for (const x of [1000, 100000, 10000000]) {
+      win.fire('pointermove', { pointerId: 2, clientX: x, clientY: 0 });
+    }
 
     const radii = cam.distance / EARTH_RADIUS_MPC;
     expect(radii).toBeGreaterThan(1);

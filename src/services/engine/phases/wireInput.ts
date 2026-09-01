@@ -30,6 +30,7 @@ import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotStandoffRadii } from '../camera/pivotStandoffRadii';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
@@ -349,6 +350,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // The zoom floor's input, read live off the resolved focus row — same
     // derivation the `onZoom` path below uses.
     pivotRadiusMpc: () => pivotRadiusMpc(selectFocusRow(store.getState())),
+    // The zoom floor's per-body override (e.g. Sgr A*'s Q10 floor) — same
+    // derivation the `onZoom` path below uses.
+    standoffRadii: () => pivotStandoffRadii(selectFocusRow(store.getState())),
 
     // Discrete wheel zoom (no gesture in progress). The zoom goes to whichever
     // driver owns the distance this frame: while a body is followed the
@@ -374,6 +378,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         // Floors the zoom just off a focused body's surface for every arm of
         // applyWheelZoom, not only the follow driver.
         pivotRadiusMpc(selectFocusRow(root)),
+        // Per-body override of that floor (e.g. Sgr A*'s Q10 floor).
+        pivotStandoffRadii(selectFocusRow(root)),
       );
       if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
       // Unconditional — the follow branch (applyWheelZoom.ts:72-75) mutates followDistanceTarget

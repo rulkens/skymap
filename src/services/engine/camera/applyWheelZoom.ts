@@ -51,6 +51,10 @@
  * to the centre. All three arms need it: follow orbits the body by definition,
  * and the autoRotate / resting arms orbit it too whenever the frame loop's
  * pivot-pin is centring them on it.
+ *
+ * `standoffRadii` is the same focused body's `pivotStandoffRadii` read,
+ * forwarded alongside `pivotRadiusMpc` for the same three arms — optional so
+ * every existing caller (no per-body override) reaches the shared default.
  */
 
 import { autoRotateElapsed } from './cameraClock';
@@ -68,14 +72,25 @@ export function applyWheelZoom(
   autoRotate: { active: boolean; rate: number },
   nowMs: number,
   pivotRadiusMpc: number | null,
+  standoffRadii?: number,
 ): CameraPose | null {
   if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
-    clock.followDistanceTarget = zoomedDistance(clock.followDistanceTarget, factor, pivotRadiusMpc);
+    clock.followDistanceTarget = zoomedDistance(
+      clock.followDistanceTarget,
+      factor,
+      pivotRadiusMpc,
+      standoffRadii,
+    );
     return null;
   }
   if (prevActiveId === 'autoRotate') {
     const elapsed = autoRotateElapsed(clock, autoRotate.active, base, nowMs);
-    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), factor, pivotRadiusMpc);
+    return zoomedPose(
+      spinAutoRotate(base, autoRotate.rate, elapsed),
+      factor,
+      pivotRadiusMpc,
+      standoffRadii,
+    );
   }
-  return zoomedPose(base, factor, pivotRadiusMpc);
+  return zoomedPose(base, factor, pivotRadiusMpc, standoffRadii);
 }

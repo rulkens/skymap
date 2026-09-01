@@ -39,6 +39,9 @@ export const SGR_A_STAR: AnchorPointBody = {
   label: SGR_A_STAR_ENTRY.label,
   // Wire/authored value is km; runtime convention is metres.
   radiusM: SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+  // Q10's descent floor: the camera may approach to 2 r_s, well inside the
+  // Earth-tuned global SURFACE_STANDOFF_RADII (~1.0000024).
+  standoffRadii: 2.0,
 };
 
 export const SGR_A_STAR_ANCHOR: AnchorBody = {

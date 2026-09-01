@@ -31,6 +31,9 @@ export type SelectionRow =
       readonly label: string;
       readonly positionMpc: Vec3;
       readonly radiusM: number;
+      // Carried through from `AnchorPointBody.standoffRadii` (e.g. Sgr A*'s
+      // Q10 floor) — the zoom clamp reads it via `pivotStandoffRadii`.
+      readonly standoffRadii?: number;
     }
   // Star arm — the self-contained display projection of a picked star, its
   // physical fields (`positionMpc`/`absMag`/`bpRp`) snapshotted off the loaded

@@ -19,14 +19,19 @@
  *
  * `clampDistance` is called from inside here, not by the caller, so the
  * envelope stays enforced in exactly one place.
+ *
+ * `standoffRadii` is forwarded straight to every `clampDistance` call —
+ * optional so the flat-space arm and every existing caller (no per-body
+ * override) reach `clampDistance`'s own default unchanged.
  */
 
-import { clampDistance } from './clampDistance';
+import { clampDistance, SURFACE_STANDOFF_RADII } from './clampDistance';
 
 export function zoomedDistance(
   distance: number,
   factor: number,
   pivotRadiusMpc: number | null,
+  standoffRadii: number = SURFACE_STANDOFF_RADII,
 ): number {
   if (pivotRadiusMpc === null) {
     return clampDistance(distance * factor, null);
@@ -37,8 +42,8 @@ export function zoomedDistance(
     // Degenerate: `clampDistance` should prevent the camera reaching the
     // surface at all. Fall back to plain proportional scaling rather than
     // invent a geometric taper for a zero/negative altitude.
-    return clampDistance(distance * factor, pivotRadiusMpc);
+    return clampDistance(distance * factor, pivotRadiusMpc, standoffRadii);
   }
 
-  return clampDistance(pivotRadiusMpc + h * factor, pivotRadiusMpc);
+  return clampDistance(pivotRadiusMpc + h * factor, pivotRadiusMpc, standoffRadii);
 }

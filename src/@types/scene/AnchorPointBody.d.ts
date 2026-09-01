@@ -19,4 +19,6 @@ export type AnchorPointBody = {
   readonly id: string;
   readonly label: string;
   readonly radiusM: number;
+  /** Per-body override of `clampDistance`'s Earth-tuned `SURFACE_STANDOFF_RADII` — e.g. Sgr A*'s Q10 floor of 2 r_s. */
+  readonly standoffRadii?: number;
 };
