@@ -13,6 +13,7 @@ import { skyCubemapFaceContext } from '../../../../src/services/engine/frame/sky
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -166,5 +167,18 @@ describe('skyCubemapFaceContext', () => {
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
     expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state).draw);
+  });
+
+  it("clips well below the S-star scale, not the live cosmo camera's 10-kpc near plane", () => {
+    // The capture's actual content (S-stars, the field around Sgr A*) sits
+    // at hundreds of AU — reusing the live projection's near (0.01 Mpc /
+    // 10 kpc, PROJECTION above) would clip it all invisible. This is the
+    // regression the fix addresses; see skyCubemapFaceContext's
+    // SKY_CAPTURE_NEAR_MPC docblock.
+    const state = makeState();
+    const ctx = skyCubemapFaceContext({ state, eyeMpc: EYE_MPC, face: 0, faceSizePx: 256 });
+    expect(ctx).not.toBeNull();
+    if (ctx === null) return;
+    expect(ctx.cam.near).toBeLessThan(100 * SCALE_UNITS.AU_TO_MPC);
   });
 });

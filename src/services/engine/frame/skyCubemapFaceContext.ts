@@ -18,6 +18,18 @@ import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { cross3 } from '../../../utils/math/cross3';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+
+/**
+ * The synthetic frustum's near plane, NOT the live cosmo camera's (`0.01
+ * Mpc` / 10 kpc, sized for the whole scene). The capture's actual content —
+ * S-stars and the field around Sgr A* — sits at hundreds of AU, seven orders
+ * of magnitude inside that near plane; reusing it would clip every S-star
+ * invisible. `sky-cubemap` is depthless (`depth: null`), so near/far affect
+ * only clipping, never depth precision — free to pick a value sized for the
+ * capture scene instead of the main camera's.
+ */
+const SKY_CAPTURE_NEAR_MPC = 0.1 * SCALE_UNITS.AU_TO_MPC;
 
 /**
  * Forward axis per `CubeFace` (index order ±X/±Y/±Z, see `CubeFace.d.ts`).
@@ -79,13 +91,13 @@ export function skyCubemapFaceContext(input: {
     // real canvas for an offscreen capture, so a size-shaped stub stands in.
     { width: faceSizePx, height: faceSizePx } as unknown as HTMLCanvasElement,
     pose,
-    // 90° symmetric frustum sized for a cube face; near/far ride the live
-    // engine projection so the capture clips at the same distances the main
-    // camera does.
+    // 90° symmetric frustum sized for a cube face. near = SKY_CAPTURE_NEAR_MPC
+    // (see its docblock); far rides the live engine projection so distant
+    // stars/galaxies at cosmological range still survive the capture.
     {
       fovYRad: Math.PI / 2,
       aspect: 1,
-      near: state.cameraRuntime.projection.near,
+      near: SKY_CAPTURE_NEAR_MPC,
       far: state.cameraRuntime.projection.far,
     },
     basis,
