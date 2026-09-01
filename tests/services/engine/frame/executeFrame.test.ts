@@ -872,7 +872,41 @@ describe('executeFrame', () => {
       expect(new Set(viewsPerFace).size).toBe(6);
     });
 
-    it('two capture steps for different faces in ONE frame BOTH clear — a capture step never loads', () => {
+    it("the SECOND capture step for the SAME face loads — it must not wipe the first slab's draws", () => {
+      // Pins the real bug: `frameProgram` emits TWO steps per face (COSMO then
+      // NEAR0) because the roster spans both slabs. A blanket always-clear made
+      // the NEAR0 step clear the face the COSMO step had just drawn the galaxy
+      // points and textured disks into, so no COSMO content ever survived into
+      // the cubemap the lens samples.
+      const cosmoLayer = makeLayer({
+        name: 'textured-disks',
+        target: 'hdr',
+        slab: COSMO,
+        skyCapture: true,
+      });
+      const near0Layer = makeLayer({
+        name: 'star-points',
+        target: 'hdr',
+        slab: NEAR0,
+        skyCapture: true,
+      });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: COSMO, face: 0 },
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+      ];
+      const faceCtx = makeCtx();
+      const { args, env } = makeArgs({
+        program,
+        layers: [cosmoLayer, near0Layer],
+        skyCubemapFaceContexts: new Map([[0, faceCtx]]),
+      });
+      executeFrame(args);
+
+      expect(attachmentOfDraw(env, cosmoLayer).loadOp).toBe('clear');
+      expect(attachmentOfDraw(env, near0Layer).loadOp).toBe('load');
+    });
+
+    it('two capture steps for different faces in ONE frame BOTH clear — one face never loads another face', () => {
       // Pins the real bug: `touched` tracks by TARGET ('sky-cubemap'), not by
       // LAYER (face). Before the fix, face 0's pass cleared and marked
       // 'sky-cubemap' touched; face 1's pass then LOADED — against its own

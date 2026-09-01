@@ -51,10 +51,14 @@
  * A capture render step (`step.face !== undefined`) is the one exception: its
  * target ('sky-cubemap') has six LAYERS, one per face, but `touched` tracks by
  * target string alone — so it can't distinguish "this face's first pass this
- * frame" from "a DIFFERENT face already rendered this frame". Rather than grow
- * `touched` to (target, layer) granularity for this one target, a capture step
- * always clears: it redraws its whole face every time, so there's nothing worth
- * loading.
+ * frame" from "a DIFFERENT face already rendered this frame". Capture steps
+ * therefore take their first-touch fact from a private `(target, face)`-keyed
+ * set instead, rather than growing the public `renderedTargets` surface to that
+ * granularity. Per-face granularity is load-bearing in BOTH directions: the
+ * roster spans two slabs, so `frameProgram` emits TWO steps per face (COSMO
+ * then NEAR0) — a blanket always-clear made the NEAR0 step wipe the COSMO
+ * step's galaxy points and textured disks off the face it had just drawn them
+ * into.
  *
  * The same `touched` fact drives depth: a render step whose target row declares
  * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is
@@ -214,6 +218,10 @@ export function executeFrame(args: ExecuteFrameArgs): void {
   // executor populates it here and later layers read which targets rendered this
   // frame via `ctx.renderedTargets`.
   const touched = ctx.renderedTargets as Set<string>;
+  // Capture steps' own first-touch bookkeeping, keyed `<target>:<face>` —
+  // see the module header. Private to this call because `renderedTargets`
+  // is a public consumer surface keyed by bare target id.
+  const touchedFaces = new Set<string>();
 
   for (const step of program) {
     switch (step.kind) {
@@ -256,6 +264,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // (Ruling 6, resolving Task 12's own recorded finding). `step.face`
         // is the same discriminant `stepCtx` above already reads.
         const isCaptureStep = step.face !== undefined;
+        const faceKey = step.face === undefined ? null : `${step.target}:${step.face}`;
         const group = layers.filter(
           (l) =>
             (isCaptureStep ? l.skyCapture === true : l.target === step.target) &&
@@ -301,15 +310,15 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           view,
           groupKey,
           // `touched` tracks by TARGET, but a capture step's target
-          // ('sky-cubemap') has six LAYERS — one per face — so `touched`
-          // cannot tell "this face's first pass this frame" from "some
-          // OTHER face already rendered this frame". A capture step always
-          // clears instead: it redraws its whole face every time, so
-          // there's never content worth loading. See the module header.
-          alreadyTouched: step.face === undefined && touched.has(step.target),
+          // ('sky-cubemap') has six LAYERS — one per face — so it cannot tell
+          // "this face's first pass this frame" from "some OTHER face already
+          // rendered this frame". Capture steps read the face-keyed set
+          // instead. See the module header.
+          alreadyTouched: faceKey === null ? touched.has(step.target) : touchedFaces.has(faceKey),
           depthLoadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
         });
         touched.add(step.target);
+        if (faceKey !== null) touchedFaces.add(faceKey);
         break;
       }
       case 'composite': {
