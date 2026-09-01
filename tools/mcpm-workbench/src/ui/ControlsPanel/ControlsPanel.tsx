@@ -116,10 +116,13 @@ function ControlsPanel(): ReactNode {
       .text()
       .then((text) => {
         const imported = importParams(text);
-        // Order doesn't matter for the rebuild itself — every dispatch here funnels
-        // into the same debounced `watchSceneSaga` trigger, which reads a fresh full
-        // state snapshot whenever it actually builds. Catalog dispatched last only
-        // because it's conditional (`imported.sources` may be absent).
+        // Order doesn't matter for the eventual rebuild: setInitMode/setAgentCount/
+        // installImportedBox are direct `watchSceneSaga` triggers, and setCatalogSources
+        // reaches it indirectly (via `watchCatalogSaga` dispatching `catalogLoaded` once
+        // the load resolves) — either way, whichever debounced build actually runs reads
+        // a fresh full state snapshot at that point, not a snapshot from dispatch time.
+        // Catalog dispatched last only because it's conditional (`imported.sources` may
+        // be absent); setSimParam isn't a trigger at all (live params, no rebuild).
         for (const key of MCPM_PARAM_KEYS)
           dispatch(setSimParam({ key, value: imported.params[key] }));
         dispatch(setInitMode(imported.initMode));

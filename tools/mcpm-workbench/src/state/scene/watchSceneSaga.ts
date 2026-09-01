@@ -4,11 +4,11 @@
  * driver reads by reference. `takeLatest` debounces every structural
  * trigger by `REBUILD_DEBOUNCE_MS`: a new trigger cancels whatever the
  * previous one was doing (still waiting, or mid-build) and restarts the
- * wait. `resources.epoch` (bumped by every `disposeScene`, even a no-op
- * one) lets an in-flight build detect it has been superseded and bail
- * instead of stashing a stale result — see the epoch check around
- * `createMcpmHarness` below for the one window `takeLatest` cancellation
- * alone can't cover.
+ * wait. Cancellation unwinds the generator synchronously and redux-saga
+ * drops the eventual `createMcpmHarness()` result rather than resuming
+ * the generator with it — `acceptBuiltHarness` (called from inside that
+ * promise's own `.then()`, not after the `yield*`) is what disposes an
+ * orphaned build instead of leaking it; see its own doc comment.
  */
 import {
   takeLatest,
@@ -50,6 +50,7 @@ import {
 import { resetHistogram } from '../slices/histogramSlice';
 import { setAgentCount, setInitMode, setSeed, resetStepCount } from '../slices/simSlice';
 import { deviceLost } from '../slices/viewSlice';
+import { acceptBuiltHarness } from './acceptBuiltHarness';
 import { REBUILD_DEBOUNCE_MS } from './REBUILD_DEBOUNCE_MS';
 
 // Same shape as Viewport's old acquireGpu — the propagate kernel's compute
@@ -120,11 +121,16 @@ function* buildScene() {
   const resources = yield* getContext<WorkbenchSagaContext['resources']>('resources');
   if (!canvas || !resources) return; // context not registered yet — see sagaContextRegistered
 
+  // Declared OUTSIDE the try so `finally` (a separate block scope) can set it —
+  // read live from inside `acceptBuiltHarness`'s promise continuation, which is
+  // the only code that still runs if `takeLatest` cancels this generator.
+  const cancellation = { aborted: false };
   try {
     disposeScene(resources);
     // The epoch this build owns: a NEWER build's own `disposeScene` (its first line,
-    // same as this one) bumps `resources.epoch` again — the guard below compares
-    // against this snapshot to detect that race.
+    // same as this one) bumps `resources.epoch` again — the second, independent
+    // guard `acceptBuiltHarness` uses for a dispose that happens WITHOUT saga
+    // cancellation at all (Viewport's unmount calls `disposeScene` directly).
     const myEpoch = resources.epoch;
     const gpu = yield* call(initGpu, canvas, GPU_REQUEST_OPTIONS);
     resources.gpu = gpu;
@@ -154,26 +160,21 @@ function* buildScene() {
 
     const weights = deriveAgentWeights(points.log10StellarMass, s.catalog.weightMode);
     const box = deriveGridBox(s.grid);
-    const harness = yield* call(createMcpmHarness, {
-      gpu,
-      points,
-      weights,
-      box,
-      agentCount: s.sim.agentCount,
-      initMode: s.sim.initMode,
-      seed: s.sim.seed,
-    });
-    // `createMcpmHarness` is async and allocates the full box-sized buffer set;
-    // `takeLatest` cancellation can't preempt that in-flight Promise, so a newer
-    // trigger's OWN `disposeScene` (bumping `resources.epoch` again) is the only
-    // signal this attempt has that it lost the race AFTER the harness already
-    // exists. Dispose it and bail instead of stashing an orphaned build's result
-    // into `resources` — this is the `generation !== buildGeneration` guarantee
-    // the old closure code gave, now keyed on epoch instead of a counter.
-    if (resources.epoch !== myEpoch) {
-      harness.dispose();
-      return;
-    }
+    // The staleness check runs INSIDE this promise's own `.then()` (acceptBuiltHarness),
+    // not after the `yield*` below — see the module header for why code placed after
+    // the yield can never run for a build cancelled while this was in flight.
+    const harness = yield* call(() =>
+      createMcpmHarness({
+        gpu,
+        points,
+        weights,
+        box,
+        agentCount: s.sim.agentCount,
+        initMode: s.sim.initMode,
+        seed: s.sim.seed,
+      }).then((built) => acceptBuiltHarness(built, resources, myEpoch, cancellation)),
+    );
+    if (!harness) return; // stale — superseded while awaiting; already disposed
     resources.harness = harness;
     resources.weights = weights;
 
@@ -209,14 +210,21 @@ function* buildScene() {
     console.error('mcpm-workbench: build failed', err);
     yield* put(setCatalogBuildError((err as Error).message));
   } finally {
-    // Covers cancellation at any yield point where something was ALREADY stashed
-    // into `resources` (e.g. `resources.gpu`/`resources.graph` on the empty-scene
-    // path, or between the harness-epoch check above and the final `resources.graph
-    // = graph` assignment) — NOT the harness-in-flight window, which the epoch
-    // check above handles on its own terms (the harness isn't in `resources` yet
-    // for this to dispose). Never runs on a clean finish: `cancelled()` is false
-    // there, leaving the finished scene alone.
-    if (yield* cancelled()) disposeScene(resources);
+    // Runs SYNCHRONOUSLY at cancellation (before any pending promise can settle),
+    // which is what makes `cancellation.aborted` a reliable flag for
+    // `acceptBuiltHarness` to read later. Also disposes whatever this attempt had
+    // ALREADY stashed into `resources` before being cancelled — `resources.gpu`,
+    // or `resources.graph` on the empty-scene path, or the gap between
+    // `resources.harness` being assigned and the final `resources.graph = graph`.
+    // Does NOT cover the harness while `createMcpmHarness`'s promise is still in
+    // flight — that harness isn't reachable from `resources` yet, which is
+    // exactly why `acceptBuiltHarness` has to dispose it from inside the promise
+    // instead. Never runs on a clean finish: `cancelled()` is false there,
+    // leaving the finished scene alone.
+    if (yield* cancelled()) {
+      cancellation.aborted = true;
+      disposeScene(resources);
+    }
   }
 }
 

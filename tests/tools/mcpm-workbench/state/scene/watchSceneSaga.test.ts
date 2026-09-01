@@ -17,6 +17,10 @@ import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/GridBox
 import type { GridBudget } from '../../../../../tools/mcpm-workbench/@types/GridBudget';
 import { gridShapeOf } from '../../../../../tools/mcpm-workbench/src/state/gridShapeOf';
 import {
+  catalogLoaded,
+  setWeightMode,
+} from '../../../../../tools/mcpm-workbench/src/state/slices/catalogSlice';
+import {
   defaultGridSlice,
   gridSlice,
 } from '../../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
@@ -113,6 +117,22 @@ describe('sim-slice actions vs SCENE_REBUILD_TRIGGERS', () => {
     it(`${action.type}: trigger membership matches whether it moves agentCount/initMode/seed`, () => {
       const next = simSlice.reducer(defaultSimSlice, action);
       expect(TRIGGER_TYPES.has(action.type)).toBe(isSimStructural(next));
+    });
+  }
+});
+
+/**
+ * The two catalog-slice triggers don't fit the structural-field-diff pattern above
+ * (`catalogLoaded` isn't a value-diff trigger at all — see `watchSceneSaga.ts`'s own
+ * docblock; `setWeightMode` moves `catalog.weightMode`, a field neither `gridShapeOf`
+ * nor `isSimStructural` touches), so this is a plain membership check instead: without
+ * it, removing either from `SCENE_REBUILD_TRIGGERS` passes every OTHER test in this
+ * file yet silently stops a catalog load or a weight-mode change from ever rebuilding.
+ */
+describe('catalog-slice triggers are present in SCENE_REBUILD_TRIGGERS', () => {
+  for (const actionCreator of [catalogLoaded, setWeightMode]) {
+    it(`${actionCreator.type} is a trigger`, () => {
+      expect(TRIGGER_TYPES.has(actionCreator.type)).toBe(true);
     });
   }
 });
