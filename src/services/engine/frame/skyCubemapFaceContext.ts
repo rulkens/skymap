@@ -71,6 +71,24 @@ const FACE_BASES: readonly Mat3[] = FACE_FORWARD.map((forward, i): Mat3 => {
   return mat3FromColumns(cross3(up, back), up, back);
 });
 
+/**
+ * Negate a view-projection's clip-space Y row (column-major 1/5/9/13).
+ * The cube-face (s,t) convention is a MIRROR of any right-handed capture
+ * basis: `FACE_UP` is the classic GL capture table, which only samples
+ * upright under GL's bottom-left framebuffer origin. WebGPU rasterizes
+ * top-left, so every face would land vertically flipped (v = 1 − t) at
+ * `texture_cube` sample time — see audit-cubemap-alignment.md. No rotation
+ * can absorb a reflection, hence this clip-Y negation on every capture vp.
+ * The winding reversal it implies is harmless: the capture roster is
+ * entirely cull-free point/billboard pipelines.
+ */
+function flipClipY(vp: Float32Array | Float64Array): void {
+  vp[1] = -vp[1]!;
+  vp[5] = -vp[5]!;
+  vp[9] = -vp[9]!;
+  vp[13] = -vp[13]!;
+}
+
 export function skyCubemapFaceContext(input: {
   readonly state: EngineState;
   readonly eyeMpc: Readonly<Vec3>;
@@ -107,9 +125,14 @@ export function skyCubemapFaceContext(input: {
     performance.now(),
     state.cameraRuntime.lastRenderedSimDays.current,
   );
+  if (!ctx.isReady) return null;
+  // Mirror every capture vp (see flipClipY). In place: deriveFrameContext
+  // freshly allocated these arrays for this call, nothing else aliases them.
+  flipClipY(ctx.vp);
+  for (const slab of ctx.slabs) flipClipY(slab.vp);
   // Stamp this face's view slot (`face + 1` — slot 0 is the main view; see
   // `ReadyFrameContext.viewSlot`'s doc) so a roster renderer's view-slot
   // buffer helper keys this call's writes into a destination the main
   // view's own `viewSlot: 0` draw never touches.
-  return ctx.isReady ? { ...ctx, viewSlot: face + 1 } : null;
+  return { ...ctx, viewSlot: face + 1 };
 }

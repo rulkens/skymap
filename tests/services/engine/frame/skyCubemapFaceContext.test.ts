@@ -173,6 +173,77 @@ describe('skyCubemapFaceContext', () => {
     expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state).draw);
   });
 
+  it('renders a world direction to the exact (s,t) the WGSL cube sampler computes for it', () => {
+    // Capture↔sample identity (audit-cubemap-alignment.md): a star at world
+    // direction d must land, under the face camera's vp + WebGPU's top-left
+    // viewport transform, on the SAME (u,v) the GL/Vulkan/WGSL cube-face
+    // table derives from d. Independently implements both sides; fails as
+    // v = 1 − t if the capture's clip-Y mirror is ever dropped. One
+    // direction per face, all with t well away from the flip-invariant 0.5.
+    const state = makeState();
+    const directions: readonly Vec3[] = [
+      [0.9, 0.1, 0.3], // +X
+      [-0.9, 0.2, 0.15], // −X
+      [0.1, 0.8, 0.2], // +Y
+      [0.2, -0.85, 0.3], // −Y
+      [0.15, 0.2, 0.9], // +Z
+      [0.3, 0.2, -0.93], // −Z
+    ];
+
+    for (const d of directions) {
+      // Cube-face selection + (s,t) per the GL table 8.19 / WGSL rules.
+      const [x, y, z] = d;
+      const ax = Math.abs(x);
+      const ay = Math.abs(y);
+      const az = Math.abs(z);
+      let face: number;
+      let sc: number;
+      let tc: number;
+      let ma: number;
+      if (ax >= ay && ax >= az) {
+        face = x > 0 ? 0 : 1;
+        ma = ax;
+        sc = x > 0 ? -z : z;
+        tc = -y;
+      } else if (ay >= az) {
+        face = y > 0 ? 2 : 3;
+        ma = ay;
+        sc = x;
+        tc = y > 0 ? z : -z;
+      } else {
+        face = z > 0 ? 4 : 5;
+        ma = az;
+        sc = z > 0 ? x : -x;
+        tc = -y;
+      }
+      const s = (sc / ma + 1) / 2;
+      const t = (tc / ma + 1) / 2;
+
+      const ctx = skyCubemapFaceContext({
+        state,
+        eyeMpc: EYE_MPC,
+        face: face as CubeFace,
+        faceSizePx: 256,
+      });
+      expect(ctx).not.toBeNull();
+      if (ctx === null) continue;
+
+      // World point 1 Mpc out along d, through the face's cosmo vp
+      // (column-major, clip = vp · [p, 1]).
+      const p: Vec3 = [EYE_MPC[0] + d[0], EYE_MPC[1] + d[1], EYE_MPC[2] + d[2]];
+      const vp = ctx.vp;
+      const cx = vp[0]! * p[0] + vp[4]! * p[1] + vp[8]! * p[2] + vp[12]!;
+      const cy = vp[1]! * p[0] + vp[5]! * p[1] + vp[9]! * p[2] + vp[13]!;
+      const cw = vp[3]! * p[0] + vp[7]! * p[1] + vp[11]! * p[2] + vp[15]!;
+      // WebGPU viewport transform: top-left origin, y down.
+      const u = (cx / cw + 1) / 2;
+      const v = (1 - cy / cw) / 2;
+
+      expect(u).toBeCloseTo(s, 5);
+      expect(v).toBeCloseTo(t, 5);
+    }
+  });
+
   it("clips well below the S-star scale, not the live cosmo camera's 10-kpc near plane", () => {
     // The capture's actual content (S-stars, the field around Sgr A*) sits
     // at hundreds of AU — reusing the live projection's near (0.01 Mpc /
