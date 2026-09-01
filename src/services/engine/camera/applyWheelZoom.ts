@@ -23,9 +23,10 @@
  *     tick. We fold the accumulated spin into the committed pose instead: zoom
  *     the ALREADY-spun pose, so the elapsed reset lands on a base that already
  *     carries the spin and the spin continues seamlessly from there.
- *     `autoRotateElapsed` here is an idempotent READ — the driver already called
- *     it this frame with the same (active, base) refs, so re-reading it does not
- *     reset the start. Passing the REAL active bit matters: if auto-rotate was
+ *     `autoRotateElapsed` here is an idempotent READ — the frame's drain runs
+ *     before this frame's driver, so the last call was the PREVIOUS frame's,
+ *     with the same (active, base) refs; the start is not reset either way.
+ *     Passing the REAL active bit matters: if auto-rotate was
  *     switched off between frames, elapsed reads 0 and this branch degrades to
  *     the plain zoomed base.
  *

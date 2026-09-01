@@ -39,7 +39,7 @@ import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { EARTH_REF } from '../../../data/selection/earthRef';
-import { commitCameraPose } from '../../../state/camera/cameraSlice';
+import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
@@ -330,9 +330,23 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // The recognizer only emits; `drainInput` applies the frame's queue at the
   // top of `runFrame`. Waking the loop is this sink's job — without a frame
   // nothing would ever drain.
+  //
+  // The two gesture-start STORE edges fire here, at DOM time, not at the drain.
+  // `cancelCameraTween` must land before any tween the same click can start:
+  // `onDoubleClick` below dispatches focus synchronously and `watchFocusTweenSaga`
+  // reaches `put(startCameraTween)` with no intervening yield, so a cancel
+  // deferred to the next frame would kill the tween that double-tap-to-focus
+  // just started. `beginDrag` rides along to keep the pair atomic. Only the
+  // register seed and the camera math stay deferred — nothing between the
+  // pointerdown and the drain can move `lastPose.current`, which is the seed's
+  // only input.
   deps.detachControlsRef.current = attachOrbitControls(
     canvas,
     (event) => {
+      if (event.kind === 'gestureStart') {
+        store.dispatch(beginDrag());
+        store.dispatch(cancelCameraTween());
+      }
       state.subsystems.inputAggregator.push(event);
       state.subsystems.scheduler.requestRender();
     },

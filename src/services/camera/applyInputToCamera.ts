@@ -26,10 +26,9 @@ import type { Vec3 } from '../../@types/math/Vec3';
 const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
 /**
- * @param cssHeight       CSS height, NOT the backing store — gesture feel must
- *                        not depend on devicePixelRatio.
- * @param pivotRadiusMpc  Radius of whatever the camera orbits (null: no
- *                        surface). Damps the orbit rate and floors the zoom.
+ * `cssHeight` is the CSS height, NOT the backing store — gesture feel must not
+ * depend on devicePixelRatio. `pivotRadiusMpc` (null: no surface) damps the
+ * orbit rate and floors the zoom.
  */
 export function applyInputToCamera(
   cam: OrbitCamera,
@@ -48,9 +47,8 @@ export function applyInputToCamera(
 
   if (step.mode === 'pan') {
     // Approximate "the point under the cursor follows the cursor" by translating
-    // the target along the screen axes — no depth reprojection. The reference up
-    // is the frame pole (world +Y absent a basis), so the pan tracks whichever
-    // orientation frame is active.
+    // the target along the screen axes — no depth reprojection. Reference up is
+    // the frame pole (world +Y absent a basis), so the pan tracks the frame.
     const forward: Vec3 = [0, 0, 0];
     vec3.subtract(cam.target, cam.position, forward);
     vec3.normalize(forward, forward);

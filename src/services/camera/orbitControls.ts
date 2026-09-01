@@ -1,11 +1,9 @@
 /**
- * Orbit controls — the DOM gesture recognizer.
- *
- * Recognizes what gesture the pointer / wheel stream means and emits
- * `InputGestureEvent`s. It touches no camera and no engine state:
- * `inputAggregator` folds a frame's events and `drainInput` applies them. One
- * apply per frame rather than one per event is what keeps a second controller
- * from becoming a second writer of the same register.
+ * Orbit controls — the DOM gesture recognizer. Recognizes what the pointer /
+ * wheel stream means and emits `InputGestureEvent`s, touching no camera and no
+ * engine state: `inputAggregator` folds a frame's events and `drainInput`
+ * applies them. One apply per frame rather than one per event is what keeps a
+ * second controller from becoming a second writer of the same register.
  *
  * Pointer events, not mouse events: one handler covers mouse, pen and touch,
  * where `mousedown`/`mousemove` are never dispatched for touch at all.

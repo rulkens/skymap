@@ -1,13 +1,13 @@
 /**
- * drainInput — the single per-frame input-apply site.
- *
- * Runs at the top of `runFrame`, above the store read the driver table
- * resolves against, so a gesture that began between frames is already visible
- * to this frame's produce step — the same one-frame latency the per-event
- * apply had, with no ordering left to the DOM.
- *
+ * drainInput — the single per-frame input-apply site. Runs at the top of
+ * `runFrame`, above the store read the driver table resolves against, so a
+ * gesture that began between frames is visible to this frame's produce step.
  * Steps arrive in order, so a wheel tick between two drags still changes the
  * rate the second drag is applied at.
+ *
+ * `beginDrag` / `cancelCameraTween` are NOT here — the emit sink dispatches them
+ * at DOM time (`wireInput`) so a cancel cannot outlive the tween a double-click
+ * starts in the same gap.
  */
 
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
@@ -16,58 +16,59 @@ import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { poseOf } from '../camera/poseOf';
 import { selectFocusRow } from '../../../state/selection/selectors';
-import {
-  beginDrag,
-  endDrag,
-  cancelCameraTween,
-  commitCameraPose,
-} from '../../../state/camera/cameraSlice';
+import { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   const steps = state.subsystems.inputAggregator.drain();
-  const cam = state.cam;
-  // Pre-bootstrap there is no register and no attached recognizer, so the queue
-  // is empty; drained above regardless so nothing can accumulate stale.
-  if (steps.length === 0 || cam === null) return;
+  if (steps.length === 0) return;
 
   const store = deps.cb.store;
   const cssHeight = deps.canvas.clientHeight || 1;
+  // Pre-bootstrap `state.cam` is null and no recognizer is attached, so only the
+  // register arms need the guard — the store edges fired unconditionally in the
+  // callbacks this drain replaced, and stay unconditional.
+  const cam = state.cam;
 
   for (const step of steps) {
     switch (step.kind) {
       case 'gestureStart':
         // Seed from the live PRODUCED pose, not `camera.base`: mid-tween those
         // differ, and only the produced pose is where the user sees the camera.
-        // `cancelCameraTween` is the single cancel-on-grab path — a manual
-        // orbit always wins over a focus tween.
-        seedCameraFromBase(cam, state.cameraRuntime.lastPose.current);
-        store.dispatch(beginDrag());
-        store.dispatch(cancelCameraTween());
+        if (cam !== null) seedCameraFromBase(cam, state.cameraRuntime.lastPose.current);
         break;
 
       case 'gestureEnd':
         // Commit BEFORE `endDrag` so the baked pose is in `base` the moment the
         // orbitDrag driver deactivates — otherwise the next frame's resting
         // driver returns the pre-gesture base and the camera snaps back.
-        store.dispatch(commitCameraPose(poseOf(cam)));
+        if (cam !== null) store.dispatch(commitCameraPose(poseOf(cam)));
         store.dispatch(endDrag());
         break;
 
       case 'drag':
-        applyInputToCamera(cam, step, cssHeight, pivotRadiusMpc(selectFocusRow(store.getState())));
-        break;
-
-      case 'zoom': {
-        if (step.duringGesture) {
+        if (cam !== null) {
           applyInputToCamera(
             cam,
             step,
             cssHeight,
             pivotRadiusMpc(selectFocusRow(store.getState())),
           );
+        }
+        break;
+
+      case 'zoom': {
+        if (step.duringGesture) {
+          if (cam !== null) {
+            applyInputToCamera(
+              cam,
+              step,
+              cssHeight,
+              pivotRadiusMpc(selectFocusRow(store.getState())),
+            );
+          }
           break;
         }
         // At rest the register is invisible — `applyWheelZoom` routes the factor

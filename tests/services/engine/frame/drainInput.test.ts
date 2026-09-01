@@ -17,9 +17,11 @@ import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamer
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
+import { startCameraTween, beginDrag } from '../../../../src/state/camera/cameraSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 
@@ -72,6 +74,8 @@ describe('drainInput', () => {
     // already applied. Deferred, the moves must still land BEFORE the commit or
     // the store bakes a pose one frame stale.
     const { agg, state, deps, store } = makeHarness();
+    // The sink already flipped `dragging` at DOM time; the drain ends it.
+    store.dispatch(beginDrag());
     agg.push({ kind: 'gestureStart' });
     agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
     agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
@@ -81,6 +85,32 @@ describe('drainInput', () => {
 
     expect(store.getState().camera.base.yaw).toBeCloseTo(-50 * 0.005, 6);
     expect(store.getState().camera.dragging).toBe(false);
+  });
+
+  it('leaves a tween started after the pointerdown alone', () => {
+    // `cancelCameraTween` fires at DOM time (the emit sink), NOT here. A
+    // double-tap runs pointerdown → pointerup → click → dblclick → focus →
+    // `watchFocusTweenSaga` → `startCameraTween`, all before the next frame:
+    // cancelling at the drain would kill the tween the same tap just asked for
+    // and double-click-to-focus would select but never fly.
+    const { agg, state, deps, store } = makeHarness();
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
+    agg.push({ kind: 'gestureEnd' });
+    const pose = { target: [0, 0, 0] as Vec3, yaw: 1, pitch: 0, distance: 5 };
+    store.dispatch(
+      startCameraTween({
+        from: pose,
+        to: pose,
+        durationMs: 800,
+        easing: 'easeInOutCubic',
+        frame: 'ecliptic',
+      }),
+    );
+
+    drainInput(state, deps, 0);
+
+    expect(store.getState().camera.tween).not.toBeNull();
   });
 
   it('routes an at-rest wheel to the store base, not the drag register', () => {

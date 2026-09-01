@@ -101,6 +101,10 @@ import {
 } from '../../../../src/state/selection/selectionSlice';
 import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
+import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -172,6 +176,9 @@ function makeState(): EngineState {
       selection: { setHovered: vi.fn(), setSelected: vi.fn() },
       clickResolver: null,
       inputBindings: null,
+      // Real, not a stub: the emit-sink case below drains it to prove the
+      // recognizer's events actually reach the aggregator.
+      inputAggregator: createInputAggregator(),
     } as never,
     cam: null,
     cameraRuntime: {
@@ -259,6 +266,58 @@ describe('wireInput', () => {
     const root = deps.cb.store.getState();
     expect(selectSelectedRef(root)).toEqual(jupiter);
     expect(selectFocusRef(root)).toEqual(jupiter);
+  });
+
+  it('wires the recognizer’s emit sink to the aggregator and the render wake', async () => {
+    // This four-line sink is the ONLY path from a DOM event to the camera. Wire
+    // it to a locally-built aggregator, or drop the requestRender, and all input
+    // dies with every other unit test still green — the halves either side of it
+    // (`orbitControls`, `inputAggregator`, `drainInput`) each test a fake.
+    const state = makeState();
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    const emit = attachOrbitControlsSpy.mock.calls[0]?.[1] as
+      | ((e: InputGestureEvent) => void)
+      | undefined;
+    expect(emit).toBeTypeOf('function');
+
+    emit!({ kind: 'wheel', deltaY: 100, duringGesture: false });
+
+    expect(state.subsystems.inputAggregator.drain()).toHaveLength(1);
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
+  });
+
+  it('cancels an in-flight tween on the gesture-start emission, at DOM time', async () => {
+    // B1: `cancelCameraTween` must not wait for the frame's drain. A double-tap
+    // runs pointerdown → … → dblclick → `watchFocusTweenSaga` → `startCameraTween`
+    // inside one inter-frame gap, so a deferred cancel would kill the tween the
+    // tap just requested and the camera would never fly.
+    const state = makeState();
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    const pose = { target: [0, 0, 0] as Vec3, yaw: 1, pitch: 0, distance: 5 };
+    deps.cb.store.dispatch(
+      startCameraTween({
+        from: pose,
+        to: pose,
+        durationMs: 800,
+        easing: 'linear',
+        frame: 'ecliptic',
+      }),
+    );
+
+    const emit = attachOrbitControlsSpy.mock.calls[0]?.[1] as (e: InputGestureEvent) => void;
+    emit({ kind: 'gestureStart' });
+
+    const root = deps.cb.store.getState();
+    expect(root.camera.tween).toBeNull();
+    expect(root.camera.dragging).toBe(true);
   });
 
   it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {

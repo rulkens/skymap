@@ -1,17 +1,12 @@
 /**
  * InputStep — one frame's worth of input, collapsed by `inputAggregator`.
  *
- * A `drag` run carries absolute CSS pixels rather than a delta: `startPx` is
- * where the pointer stood at the END of the previous frame (or the press
- * point), `endPx` where it stands now. Anchored gestures need the two pixels
- * to cast rays through, and the delta is recoverable from them.
- *
- * `factor` is multiplicative on distance; wheel ticks and pinch ratios fold
- * into one because both are multiplicative on the same term. `duringGesture`
- * splits the two owners: with a pointer down the drag register is what
- * renders, at rest the store `base` is.
- *
- * Not readonly: the aggregator extends the run in place as events arrive.
+ * A `drag` run carries absolute CSS pixels, not a delta: `startPx` is where the
+ * pointer stood at the END of the previous frame (or the press point). Today's
+ * consumer only needs `end − start`; the encoding is chosen for spec 2's
+ * anchored arm, which casts a ray through each pixel. `duringGesture` splits
+ * the two zoom owners: pointer down ⇒ the drag register renders, at rest ⇒ the
+ * store `base` does. Not readonly — the aggregator extends a run in place.
  */
 
 import type { DragMode } from './DragMode';
