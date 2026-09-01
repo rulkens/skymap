@@ -329,7 +329,7 @@ function ControlsPanel(): ReactNode {
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
   const [dataOpen, setDataOpen] = useState(true);
-  const [gridBoxOpen, setGridBoxOpen] = useState(false);
+  const [gridBoxOpen, setGridBoxOpen] = useState(true);
   const [raymarchOpen, setRaymarchOpen] = useState(true);
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
