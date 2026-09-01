@@ -86,8 +86,8 @@ function flooredPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
 }
 
 /**
- * The tilt ceiling (spec §6, §12-R3), enforced after every driven write —
- * never at arm entry, so a pose that arrives above the ceiling (a flyby, a
+ * The orientation ceiling (spec §6, §12-R3/R4b), enforced after every driven
+ * write — never at arm entry, so a pose that arrives above it (a flyby, a
  * tour keyframe) is left alone until the user's own next gesture. Derives
  * its OWN eye-anchored ENU via `headingTiltAt` (never `surfaceReadoutOf`'s
  * screen-centre one, which snaps discontinuously when the forward ray misses
@@ -97,8 +97,30 @@ function flooredPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
  * so whatever roll that write carried snaps to 0 in that one tick (measured
  * 45°→0 on a single wheel notch). Flagged for the Task 22 feel gate — the
  * spec's rebuild has nowhere to put the roll, so this isn't fixed here.
+ *
+ * `clampHeading` adds the north-up half on ZOOM writes (ruled 2026-09-01,
+ * §12-R4b): the return to the canonical framing is a scale-keyed ceiling that
+ * tightens with altitude, not an animated blend — the shape Google Maps
+ * documents ("the range of angles varies with the current zoom level; values
+ * outside are clamped") and the shape T17's tilt ceiling already is
+ * (prior-art-cesium-ge.md Q3/Q4). `maxTiltRad` supplies BOTH limits: one
+ * off-canonical-authority scalar, so tilt and heading can never disagree about
+ * how constrained the pose is, and the disengage boundary stays one number.
+ * Convergence is then emergent and distance-keyed — it stops when zooming
+ * stops, has no overshoot, and cannot pop because there is no state to snap.
+ * Drags stay heading-free (ruled): the clamp is a zoom write's business.
+ *
+ * The clamp turns the basis about the eye's local vertical. That is the
+ * pixel-locking form (Q4c: a rigid rotation about an axis through the zoom
+ * anchor holds the anchor's camera-space coordinates) exactly when the anchor
+ * is the sub-eye point — i.e. on the recession, which is the only time this
+ * clamp is active, since climbing is what tightens the ceiling.
  */
-function ceilingEnforcedPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
+function ceilingEnforcedPose(
+  pose: BodyFixedPose,
+  bodyRadiusM: number,
+  clampHeading: boolean,
+): BodyFixedPose {
   const eyeM = eyeOf(pose);
   const eyeMagM = Math.hypot(...eyeM);
   if (eyeMagM === 0) return pose; // no ENU exists at the centre
@@ -110,12 +132,17 @@ function ceilingEnforcedPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixe
   const { headingRad, tiltRad, east, north } = headingTiltAt(localUp, forward, up);
 
   const ceilingRad = maxTiltRad(eyeMagM / bodyRadiusM - 1);
-  if (tiltRad <= ceilingRad) return pose;
+  // `headingRad` is `atan2`'s (−π, π], so clamping its MAGNITUDE keeps the sign
+  // and can never take the long way round the ±π seam.
+  const headingLimit = clampHeading ? ceilingRad : Math.PI;
+  const clampedHeading = Math.max(-headingLimit, Math.min(headingLimit, headingRad));
+  if (tiltRad <= ceilingRad && clampedHeading === headingRad) return pose;
 
-  const ch = Math.cos(headingRad);
-  const sh = Math.sin(headingRad);
-  const ct = Math.cos(ceilingRad);
-  const st = Math.sin(ceilingRad);
+  const clampedTilt = Math.min(tiltRad, ceilingRad);
+  const ch = Math.cos(clampedHeading);
+  const sh = Math.sin(clampedHeading);
+  const ct = Math.cos(clampedTilt);
+  const st = Math.sin(clampedTilt);
   const horiz: Vec3 = [
     north[0] * ch + east[0] * sh,
     north[1] * ch + east[1] * sh,
@@ -350,7 +377,14 @@ export function createSurfaceController(): SurfaceController {
           fovYRad,
           bodyRadiusM,
         );
-        return ceilingEnforcedPose(zoomed, bodyRadiusM);
+        // The heading limit rides the RECESSION only. The ceiling tightening
+        // with altitude was meant to make that automatic, and the tilt half is
+        // — but a dive near nadir generates heading faster than descending
+        // slackens the limit (forward's horizontal component is the lean, and
+        // it swings to π as the eye slides off the sub-anchor point), so a
+        // direction-blind clamp turns the view mid-dive: measured 0.37 rad of
+        // anchor drift over a 30-notch descent, breaking the first ruling.
+        return ceilingEnforcedPose(zoomed, bodyRadiusM, step.factor > 1);
       }
       // The gesture boundaries reach the controller through the two callbacks;
       // `drainInput` owns their store edges in the same pass.
@@ -363,7 +397,9 @@ export function createSurfaceController(): SurfaceController {
       // the FLOORED pose: the floor moves the eye radially, and the ENU the
       // ceiling enforces against has to be the final standpoint, not the
       // pre-floor one.
-      return ceilingEnforcedPose(flooredPose(pose, bodyRadiusM), bodyRadiusM);
+      // `false`: a drag owns its own heading — only a zoom write returns the
+      // view to north-up (ruled, §12-R4b).
+      return ceilingEnforcedPose(flooredPose(pose, bodyRadiusM), bodyRadiusM, false);
     },
   };
 }

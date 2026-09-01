@@ -61,9 +61,45 @@ function angleBetween(a: Vec3, b: Vec3): number {
  * gesture drag to get there.
  */
 function basisAtTilt(theta: number): Mat3 {
-  const c = Math.cos(theta);
-  const s = Math.sin(theta);
-  return [1, 0, 0, 0, c, s, 0, s, -c];
+  return basisAt(0, theta);
+}
+
+/**
+ * The same, for an arbitrary heading. At an eye on +Z the ENU is the fallback
+ * one — east = [1,0,0], north = [0,1,0] — so heading ψ reads straight off the
+ * forward column as `atan2(fx, fy)` and needs no import to check.
+ */
+function basisAt(psi: number, theta: number): Mat3 {
+  const ch = Math.cos(psi);
+  const sh = Math.sin(psi);
+  const ct = Math.cos(theta);
+  const st = Math.sin(theta);
+  const horiz: Vec3 = [sh, ch, 0];
+  return [ch, -sh, 0, horiz[0] * ct, horiz[1] * ct, st, horiz[0] * st, horiz[1] * st, -ct] as Mat3;
+}
+
+/** Heading of a pose whose eye is on +Z, from the closed form above. */
+function headingOf(pose: BodyFixedPose): number {
+  return Math.atan2(pose.basisLocal[6], pose.basisLocal[7]);
+}
+
+/** The surface point under a pixel, or null if that ray misses the body. */
+function pickThrough(pose: BodyFixedPose, px: Vec2): Vec3 | null {
+  const ray = cursorRayBodyLocal(pose, px, VIEWPORT, FOV);
+  const roots = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], R);
+  if (roots === null || roots[0] <= 0) return null;
+  return [
+    ray.originM[0] + ray.dir[0] * roots[0],
+    ray.originM[1] + ray.dir[1] * roots[0],
+    ray.originM[2] + ray.dir[2] * roots[0],
+  ];
+}
+
+/** Angle between the view axis and the direction to the body centre. */
+function bodyAngle(pose: BodyFixedPose): number {
+  const e = eyeOf(pose);
+  const f: Vec3 = [pose.basisLocal[6], pose.basisLocal[7], pose.basisLocal[8]];
+  return angleBetween(f, [-e[0], -e[1], -e[2]]);
 }
 
 /** One step through the controller with the fixture's viewport / FOV / radius. */
@@ -280,39 +316,128 @@ describe('surfaceController', () => {
     expect(tiltAfter).toBeCloseTo(maxTiltRad(hOverR), 10);
   });
 
-  it('holds the body still on screen through a zoom-out, cursor or no cursor', () => {
-    // The user-visible acceptance property: receding must not slide the body
-    // off view centre. It holds iff the zoom-out anchor lies on the EYE's own
-    // radial — the eye then recedes along the line it already sits on and the
-    // direction to the body centre is untouched. An off-nadir anchor (the
-    // cursor pick, a latched gesture anchor) swings the eye sideways and the
-    // body drifts, which is FW-H's repelling pivot seen from the screen.
+  it('returns the framing to base as it recedes, by ceiling not by blend', () => {
+    // The acceptance property for §12-R4b, and the shape it is built from: the
+    // ceiling is a function of ALTITUDE, so the framing converges because the
+    // eye climbs, not because a per-notch fraction fires. That distinction is
+    // observable — down here, where `maxTiltRad` is slack, a notch changes
+    // neither angle at all, which no blend implementation can reproduce.
     const c = createSurfaceController();
     const tilt = 0.5;
-    const start = poseAt([0, 0, R * 2], basisAtTilt(tilt));
-    const bodyAngle = (pose: BodyFixedPose): number => {
-      const e = eyeOf(pose);
-      const fwd: Vec3 = [pose.basisLocal[6], pose.basisLocal[7], pose.basisLocal[8]];
-      return angleBetween(fwd, [-e[0], -e[1], -e[2]]);
-    };
+    const psi = 1.2;
+    const start = poseAt([0, 0, R * 2], basisAt(psi, tilt));
 
-    // One notch, with a cursor parked well off the nadir: unchanged to the bit.
     const out = apply(c, start, zoom(1.5, false, [75, 50]));
     expect(Math.hypot(...eyeOf(out))).toBeGreaterThan(Math.hypot(...eyeOf(start)));
     expect(bodyAngle(out)).toBeCloseTo(tilt, 12);
+    expect(headingOf(out)).toBeCloseTo(psi, 12);
 
-    // And over a run: the ceiling eventually re-levels, which may only pull the
-    // body TOWARD centre. The angle never grows.
-    let pose = poseAt([0, 0, R * 1.5], basisAtTilt(tilt));
-    let previous = bodyAngle(pose);
-    for (let i = 0; i < 10; i += 1) {
+    // Climbing tightens it: each notch lands at exactly `min(held, ceiling)`,
+    // neither angle ever grows, and both are 0 by the disengage boundary.
+    let pose = start;
+    let lastAngle = bodyAngle(pose);
+    let lastHeading = Math.abs(headingOf(pose));
+    for (let i = 0; i < 12; i += 1) {
       pose = apply(c, pose, zoom(1.5, false, [75, 50]));
+      const ceiling = maxTiltRad(Math.hypot(...eyeOf(pose)) / R - 1);
       const angle = bodyAngle(pose);
-      expect(angle).toBeLessThanOrEqual(previous + 1e-12);
-      previous = angle;
+      const heading = Math.abs(headingOf(pose));
+      expect(angle).toBeCloseTo(Math.min(lastAngle, ceiling), 9);
+      expect(heading).toBeCloseTo(Math.min(lastHeading, ceiling), 9);
+      lastAngle = angle;
+      lastHeading = heading;
     }
-    // Not vacuous: the run ended past disengage, where the ceiling is 0.
-    expect(previous).toBeCloseTo(0, 9);
+    expect(Math.hypot(...eyeOf(pose)) / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
+    expect(lastAngle).toBeCloseTo(0, 12);
+    expect(lastHeading).toBeCloseTo(0, 12);
+  });
+
+  it('clamps a heading near ±π without crossing the seam', () => {
+    // The one place a heading correction can genuinely pop (prior art Q3): a
+    // residual taken the long way round the branch cut. Clamping the MAGNITUDE
+    // of `atan2`'s (−π, π] keeps the sign, so ±3 rad lands on ±ceiling —
+    // 0.17 rad of turn, not 5.1 the other way.
+    const c = createSurfaceController();
+    for (const psi of [3.0, -3.0]) {
+      const start = poseAt([0, 0, R * 3], basisAt(psi, 0.3));
+      const out = apply(c, start, zoom(1.5, false));
+      const ceiling = maxTiltRad(Math.hypot(...eyeOf(out)) / R - 1);
+      expect(headingOf(out)).toBeCloseTo(Math.sign(psi) * ceiling, 9);
+    }
+  });
+
+  it('never re-aims on the way IN, so the cursor keeps its ground point', () => {
+    // The approach is the cursor's (the first ruling). It needs no direction
+    // special case: diving LOOSENS the ceiling, so the clamp is inert on the
+    // way in and the picked point stays under the pixel. The body sliding off
+    // centre as the eye dives at an off-axis point is the intended look, and
+    // only the retreat undoes it.
+    const c = createSurfaceController();
+    const start = poseAt([0, 0, 2], basisAt(1.2, 0.5));
+    const anchorBefore = pickThrough(start, [50, 70]);
+    expect(anchorBefore).not.toBeNull();
+
+    const dived = apply(c, start, zoom(0.5, false, [50, 70]));
+
+    // Same ground point under the same pixel afterwards: the basis did not turn.
+    const anchorAfter = pickThrough(dived, [50, 70]);
+    expect(angleBetween(anchorAfter!, anchorBefore!)).toBeLessThan(1e-12);
+    expect(headingOf(dived)).toBeCloseTo(1.2, 12);
+    // Not vacuous: the dive DID move the body off view centre.
+    expect(bodyAngle(dived)).toBeGreaterThan(bodyAngle(start) + 0.03);
+  });
+
+  it('leaves a drag’s heading alone where the ceiling would clamp a zoom', () => {
+    // Same pose, same altitude, one write each: the zoom is north-clamped and
+    // the drag is not (ruled). T17's C1 pins that the clamp preserves the
+    // heading it MEASURES; this pins which writes get a heading limit at all.
+    // h/R = 2.25, where the ceiling (0.90) already bites the held heading of
+    // 1.2 — so the drag is a real test of the exemption, not of slack.
+    const start = poseAt([0, 0, R * 3.25], basisAt(1.2, 0.1));
+    expect(maxTiltRad(2.25)).toBeLessThan(1.2);
+
+    const dragged = createSurfaceController();
+    dragged.onGestureStart();
+    expect(headingOf(apply(dragged, start, drag('orbit', [50, 50], [50, 50])))).toBeCloseTo(
+      1.2,
+      12,
+    );
+
+    const zoomed = apply(createSurfaceController(), start, zoom(1.2, false));
+    const ceiling = maxTiltRad(Math.hypot(...eyeOf(zoomed)) / R - 1);
+    expect(ceiling).toBeLessThan(1.2); // the clamp has something to do here
+    expect(headingOf(zoomed)).toBeCloseTo(ceiling, 9);
+  });
+
+  it('round-trips: dive at an off-centre point, then recede to the base pose', () => {
+    const c = createSurfaceController();
+    let pose = poseAt([0, 0, 2], basisAt(1.2, 0.5));
+
+    const offCentreBefore = bodyAngle(pose);
+    for (let i = 0; i < 3; i += 1) pose = apply(c, pose, zoom(0.8, false, [50, 70]));
+    expect(bodyAngle(pose)).toBeGreaterThan(offCentreBefore);
+
+    for (let i = 0; i < 40; i += 1) pose = apply(c, pose, zoom(1.5, false, [50, 70]));
+
+    // Body centred, north up, top-down — read in the ENU at wherever the dive
+    // left the standpoint, since it no longer sits on the fixture's axis.
+    const eye = eyeOf(pose);
+    const mag = Math.hypot(...eye);
+    const localUp: Vec3 = [eye[0] / mag, eye[1] / mag, eye[2] / mag];
+    const eastRaw: Vec3 = [-localUp[1], localUp[0], 0];
+    const eastLen = Math.hypot(...eastRaw);
+    const east: Vec3 = [eastRaw[0] / eastLen, eastRaw[1] / eastLen, 0];
+    const north: Vec3 = [
+      localUp[1] * east[2] - localUp[2] * east[1],
+      localUp[2] * east[0] - localUp[0] * east[2],
+      localUp[0] * east[1] - localUp[1] * east[0],
+    ];
+
+    expect(mag / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
+    // 1e-8 is `acos`'s floor near 0 (the dot product is 1 to the ulp), not slack.
+    expect(bodyAngle(pose)).toBeLessThan(1e-7);
+    const upCol: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
+    expect(angleBetween(upCol, north)).toBeLessThan(1e-7);
   });
 
   it('the pose reaching the disengage boundary has tilt 0', () => {
