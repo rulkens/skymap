@@ -11,6 +11,7 @@ import { zoneOfAvoidanceLayer } from '../../../../../src/services/engine/frame/p
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -73,9 +74,12 @@ function liveState(
   } as unknown as EngineState;
 }
 
+// `enabled` never reads `view` — an opaque stub satisfies the 3-arg signature.
+const VIEW_STUB = {} as unknown as SlabView;
+
 describe('zoneOfAvoidanceLayer.enabled', () => {
   it('is enabled when the camera sits inside the visibility window', () => {
-    expect(zoneOfAvoidanceLayer.enabled(liveState(), makeCtx())).toBe(true);
+    expect(zoneOfAvoidanceLayer.enabled(liveState(), makeCtx(), VIEW_STUB)).toBe(true);
   });
 
   it('is disabled when the renderer is null (pre-bootstrap)', () => {
@@ -83,13 +87,13 @@ describe('zoneOfAvoidanceLayer.enabled', () => {
       gpu: { zoneOfAvoidanceRenderer: null },
       subsystems: { fades: { opacityOf: () => 1 } },
     } as unknown as EngineState;
-    expect(zoneOfAvoidanceLayer.enabled(state, makeCtx())).toBe(false);
+    expect(zoneOfAvoidanceLayer.enabled(state, makeCtx(), VIEW_STUB)).toBe(false);
   });
 
   it('is disabled once the camera is past the recede band (Local Group framed up)', () => {
     const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
     const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
-    expect(zoneOfAvoidanceLayer.enabled(liveState(), ctx)).toBe(false);
+    expect(zoneOfAvoidanceLayer.enabled(liveState(), ctx, VIEW_STUB)).toBe(false);
   });
 });
 

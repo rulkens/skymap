@@ -39,7 +39,7 @@
  *   f32 21     (byte 84..87): ambientLight (night-side floor; Earth-scoped)
  *   f32 22..23 (byte 88..95): _pad1/2 (zeroed; rounds struct to 96)
  *
- * @param mvp           16-element column-major MVP (from `composeBodyMvp`).
+ * @param mvp           16-element column-major MVP (from `composeBodySlabMvp`).
  * @param sunDirLocal   Sun direction in the body's local frame.
  * @param cloudOpacity  Coverage-to-alpha opacity multiplier for the shell.
  * @param sunIrradiance Direct-term scale (`EARTH_SURFACE_PARAMS.sunIrradiance`).

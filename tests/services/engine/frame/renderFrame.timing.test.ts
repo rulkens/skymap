@@ -15,7 +15,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
-import { COSMO } from '../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -232,15 +232,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   // The HDR encoders resolve one SlabView (COSMO) before the layer loop
   // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
   // directly — this fixture needs a real row there.
-  const cosmoSlab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
+  const cosmoSlab: Slab = makeCosmoSlab({
     vp: Float64Array.from(viewProj as unknown as Float32Array),
-    frame: { kind: 'world-mpc', originRelative: false },
-    precision: 'f32',
-    reversedZ: false,
-  };
+  });
 
   const ctx = {
     isReady: true as const,

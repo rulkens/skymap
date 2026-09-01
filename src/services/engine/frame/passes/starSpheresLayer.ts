@@ -80,7 +80,7 @@ export const starSpheresLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     // Handle first, distance second, partition last — see the module
     // header's gate note.
     if (state.gpu.starRenderer === null) return false;

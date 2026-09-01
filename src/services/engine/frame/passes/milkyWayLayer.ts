@@ -82,7 +82,7 @@ export const milkyWayLayer: ContentLayer = {
 
   // Shared with the aggregate producer and its upsample consumer — see
   // `milkyWayCloudLiveness` on why all three must answer identically.
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     return deriveMilkyWayCloudAlpha(state, ctx) !== null;
   },
 
@@ -92,8 +92,8 @@ export const milkyWayLayer: ContentLayer = {
   // is inside it: `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above carries the why.
   // Composed over `enabled` rather than restating its three terms, so the
   // shared gates cannot drift and pick stays a strict subset of draw.
-  pickEnabled(state, ctx) {
-    if (!milkyWayLayer.enabled(state, ctx)) return false;
+  pickEnabled(state, ctx, view) {
+    if (!milkyWayLayer.enabled(state, ctx, view)) return false;
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return camDistMpc >= MILKY_WAY_PICK_MIN_DISTANCE_MPC;
   },

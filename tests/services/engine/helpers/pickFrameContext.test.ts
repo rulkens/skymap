@@ -91,10 +91,20 @@ function makeState(
       // Fully faded by default; pick mask is driven by `enabled` alone anyway.
       fades: { opacityOf: (id: FadeId) => (id.kind === 'galaxyCatalog' ? 0 : 0) },
     },
-    settings: { galaxyCatalogs: { items }, orientation: 'equatorial' },
+    settings: {
+      galaxyCatalogs: { items },
+      orientation: 'equatorial',
+      // Read unconditionally by `visibleStars` past the ready gate — see
+      // frameContext.test.ts's makeState for the same addition and why.
+      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+      bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+    },
     // No focused pivot in this fixture — see frameContext.test.ts's makeState
     // for why `deriveSlabs` needs this field once a pivot radius is threaded in.
     selectionRows: { hover: null, select: null, focus: null },
+    // No seeded bodies/stars — see frameContext.test.ts's makeState for why
+    // `deriveFrameContext` needs this now.
+    data: { bodies: { earth: null, planets: [], stars: [] } },
     cameraRuntime: {
       lastPose: { current: LAST_POSE },
       projection: PROJECTION,

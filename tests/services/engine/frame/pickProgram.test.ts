@@ -26,14 +26,17 @@ vi.mock('../../../../src/services/engine/helpers/pickFrameContext', () => ({
 import { createPickProgram } from '../../../../src/services/engine/frame/pickProgram';
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
   PICK_SENTINEL_OFFSET,
   SELECTION_SOURCE_SHIFT,
 } from '../../../../src/data/selectionEncoding';
+import { makeSlab } from '../../../fixtures/makeSlab';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -43,10 +46,11 @@ const CANVAS = { width: 100, height: 80 } as unknown as HTMLCanvasElement;
 function makeCtx(): ReadyFrameContext {
   const slab = (index: number): Slab => ({
     index,
-    nearMpc: 0.01,
-    farMpc: 50000,
+    near: 0.01,
+    far: 50000,
     vp: new Float64Array(16),
     frame: { kind: 'world-mpc', originRelative: false },
+    distanceRangeM: [0.01 * SCALE_UNITS.MPC_TO_M, 50000 * SCALE_UNITS.MPC_TO_M],
     precision: 'f32',
     reversedZ: false,
   });
@@ -59,13 +63,26 @@ function makeCtx(): ReadyFrameContext {
 }
 
 /**
+ * `makeCtx()` plus body-slab rows appended at indices 2, 3, … — matching
+ * `deriveSlabs`' real layout. Built with `makeSlab` overrides per the fixture
+ * convention (see `executeFrame.test.ts`'s twin), rather than a hand literal.
+ */
+function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
+  const base = makeCtx();
+  const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', bodyId: bodyId as BodyId } }),
+  );
+  return { ...base, slabs: [...base.slabs, ...bodySlabs] };
+}
+
+/**
  * A fake layer. Omit `drawPick` to model a non-pickable layer. Pass
  * `pickEnabled` to model a layer whose pick gate diverges from its draw gate
  * (planetsLayer's flat ∪ textured, the Earth caption stamp).
  */
 function makeLayer(opts: {
   name: string;
-  slab: number;
+  slab: number | 'body';
   enabled: boolean;
   pickEnabled?: boolean;
   drawPick?: ContentLayer['drawPick'];
@@ -314,6 +331,170 @@ describe('createPickProgram', () => {
     expect(await program.pick(10, 10)).toEqual({ sourceCode: 5, localIdx: 10 });
   });
 
+  it("groups a 'body' layer into every body slab", async () => {
+    // A 'body' layer has no single fixed slabIndex — Task 7 widens
+    // `pickablesBySlab` to contribute it to every `body-m` row in `ctx.slabs`,
+    // the same expansion `executeFrame` applies to the visual program. Two
+    // body-m rows (indices 2, 3) → two pick passes, one drawPick call each —
+    // but ONE shared r32uint target (B1 fix: `pick()` reads a single texel per
+    // row, so every body row reuses the same viewport-sized texture instead of
+    // retaining one pair per row; see `bodyPickTarget` growth test below).
+    const { device, createTextureCalls } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+
+    const callLog: string[] = [];
+    const layers = [
+      makeLayer({
+        name: 'body-pick',
+        slab: 'body',
+        enabled: true,
+        drawPick: () => callLog.push('body-pick'),
+      }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      layers,
+    });
+
+    await program.pick(10, 10);
+    expect(callLog).toEqual(['body-pick', 'body-pick']);
+    expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(1);
+  });
+
+  describe('B1 — bounded pick-texture memory across many body rows', () => {
+    it('pick() shares ONE viewport-sized target across every body row and never grows across repeated calls', async () => {
+      const { device, createTextureCalls } = makeDevice();
+      const bodyIds = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus'];
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(bodyIds));
+
+      const callLog: string[] = [];
+      const layers = [
+        makeLayer({
+          name: 'body-pick',
+          slab: 'body',
+          enabled: true,
+          drawPick: () => callLog.push('draw'),
+        }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      await program.pick(10, 10);
+      expect(callLog).toHaveLength(bodyIds.length); // every row still draws
+
+      // ONE shared colour+depth pair for all six body rows — not one pair per
+      // row, which is what regressed to ≈500 MB on a Retina six-body scene
+      // (branch-review B1).
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(1);
+      expect(createTextureCalls.filter((c) => c.format === 'depth32float')).toHaveLength(1);
+
+      // A second pick at the same viewport size reuses the cached pair —
+      // zero NEW textures, regardless of body-row count.
+      await program.pick(20, 20);
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(1);
+      expect(createTextureCalls.filter((c) => c.format === 'depth32float')).toHaveLength(1);
+    });
+
+    it('destroy() releases the shared body target', async () => {
+      const { device } = makeDevice();
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+      const layers = [
+        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      await program.pick(10, 10);
+      const created = (device.createTexture as ReturnType<typeof vi.fn>).mock.results.map(
+        (r) => r.value as { destroy: ReturnType<typeof vi.fn> },
+      );
+      expect(created.length).toBeGreaterThan(0);
+
+      program.destroy();
+      for (const tex of created) {
+        expect(tex.destroy).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it("renderForDebug reuses each body row's target across calls at the same viewport size (no churn)", () => {
+      // Unlike pick(), the debug overlay needs every active row's FULL raster
+      // alive SIMULTANEOUSLY, so body rows can't share one texture here — but
+      // a row that's still present next call reuses its own target instead of
+      // being torn down and reallocated (N1: that used to be ~370 MB/frame
+      // churn with the pick-buffer overlay on).
+      const { device, createTextureCalls } = makeDevice();
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+      const layers = [
+        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      const first = program.renderForDebug() as unknown as ReadonlyArray<{
+        destroy: ReturnType<typeof vi.fn>;
+      }>;
+      expect(first).toHaveLength(2); // one colour texture per active body row
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
+
+      const second = program.renderForDebug();
+      // Same two rows touched again — reused, not recreated: no new textures,
+      // no destroys, same texture objects returned.
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
+      for (const tex of first) {
+        expect(tex.destroy).not.toHaveBeenCalled();
+      }
+      expect(second).toEqual(first);
+    });
+
+    it("renderForDebug destroys a body row's target once that row stops appearing", () => {
+      // The eviction half of N1: a row present last call but absent this call
+      // (its body left the frame, or its pick gate closed) must have its
+      // texture pair destroyed rather than retained forever.
+      const { device, createTextureCalls } = makeDevice();
+      const layers = [
+        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+      const first = program.renderForDebug() as unknown as ReadonlyArray<{
+        destroy: ReturnType<typeof vi.fn>;
+        __label?: string;
+      }>;
+      expect(first).toHaveLength(2);
+      const earthTarget = first.find((t) => t.__label?.includes('[2]'))!;
+      const marsTarget = first.find((t) => t.__label?.includes('[3]'))!;
+
+      // Mars's row (index 3) is gone next call; earth's (index 2) stays.
+      vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth']));
+      program.renderForDebug();
+
+      expect(earthTarget.destroy).not.toHaveBeenCalled(); // reused
+      expect(marsTarget.destroy).toHaveBeenCalledTimes(1); // evicted
+      // No new r32uint texture needed — earth's is reused, mars's is just dropped.
+      expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(2);
+    });
+  });
+
   it('never allocates pick:near0 at N=1 (no slab-0 pickable layer → one target)', async () => {
     // Only the cosmological slab has a pickable layer, so only pick:cosmo is
     // allocated: exactly one r32uint colour target, and no depth32float (the
@@ -454,6 +635,182 @@ describe('createPickProgram', () => {
     });
 
     expect(program.renderForDebug()).toEqual([]);
+  });
+
+  describe('slab fold order (near→far by real distance, not slab index)', () => {
+    // The regression: `pickablesBySlab` used to sort by raw numeric slab
+    // index, so NEAR0(0) always folded before any body row(2+) and COSMO(1)
+    // could even land ahead of a body row — regardless of which was actually
+    // nearer the camera. See pick-stars-investigation.md.
+    function makeNearBodyCtx(): ReadyFrameContext {
+      const base = makeCtx(); // NEAR0 distanceRangeM[0] = 0.01 Mpc (in metres)
+      const nearBody = makeSlab({
+        index: 2,
+        frame: { kind: 'body-m', bodyId: 'mars' as BodyId },
+        // Genuinely nearer than NEAR0's bracket above.
+        distanceRangeM: [0.0001 * SCALE_UNITS.MPC_TO_M, 0.0005 * SCALE_UNITS.MPC_TO_M],
+      });
+      return { ...base, slabs: [...base.slabs, nearBody] };
+    }
+
+    it('draws a nearer body row before NEAR0, and COSMO always last', async () => {
+      const { device } = makeDevice();
+      vi.mocked(pickFrameContext).mockReturnValue(makeNearBodyCtx());
+
+      const callLog: string[] = [];
+      const layers = [
+        makeLayer({
+          name: 'near0',
+          slab: NEAR0,
+          enabled: true,
+          drawPick: () => callLog.push('near0'),
+        }),
+        makeLayer({
+          name: 'cosmo',
+          slab: COSMO,
+          enabled: true,
+          drawPick: () => callLog.push('cosmo'),
+        }),
+        makeLayer({
+          name: 'body',
+          slab: 'body',
+          enabled: true,
+          drawPick: () => callLog.push('body'),
+        }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      await program.pick(10, 10);
+      expect(callLog).toEqual(['body', 'near0', 'cosmo']);
+    });
+
+    it('resolves a body row pick hit over COSMO even though COSMO has the smaller slab index', async () => {
+      // No NEAR0 candidate here, so the two staging labels stay unambiguous
+      // ('pick:near0' == the body row, 'pick:cosmo' == COSMO) — this proves
+      // the FINAL decoded value, not just draw order, tracks real distance.
+      const bodyRaw = ((5 << SELECTION_SOURCE_SHIFT) | (10 + PICK_SENTINEL_OFFSET)) >>> 0;
+      const cosmoRaw = ((2 << SELECTION_SOURCE_SHIFT) | (7 + PICK_SENTINEL_OFFSET)) >>> 0;
+      const { device } = makeDevice({
+        stagingValueForLabel: (label) => (label.includes('cosmo') ? cosmoRaw : bodyRaw),
+      });
+      vi.mocked(pickFrameContext).mockReturnValue(makeNearBodyCtx());
+
+      const layers = [
+        makeLayer({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
+        makeLayer({ name: 'body', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      expect(await program.pick(10, 10)).toEqual({ sourceCode: 5, localIdx: 10 });
+    });
+
+    it('sorts an unresolved NEAR0 range unknown-far, not nearest (Sun-disabled edge case)', async () => {
+      // No star sphere resolved this frame (starSphereRangeM null, slabs.ts) —
+      // must not let NEAR0 sort as nearest again.
+      const base = makeCtx();
+      const unresolvedNear0 = { ...base.slabs[0]!, distanceRangeM: null };
+      const body = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'mars' as BodyId } });
+      vi.mocked(pickFrameContext).mockReturnValue({
+        ...base,
+        slabs: [unresolvedNear0, base.slabs[1]!, body],
+      });
+      const { device } = makeDevice();
+
+      const callLog: string[] = [];
+      const layers = [
+        makeLayer({
+          name: 'near0',
+          slab: NEAR0,
+          enabled: true,
+          drawPick: () => callLog.push('near0'),
+        }),
+        makeLayer({
+          name: 'body',
+          slab: 'body',
+          enabled: true,
+          drawPick: () => callLog.push('body'),
+        }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        layers,
+      });
+
+      await program.pick(10, 10);
+      expect(callLog).toEqual(['body', 'near0']);
+    });
+  });
+
+  it('calls bodyPickRenderer.beginSubmit() ONCE per pick(), before any pass is recorded', async () => {
+    // The pick-clobber regression: a submit now spans multiple passes (one per
+    // body-m slab row). `beginSubmit()` must reset the sphere/point slot
+    // cursors exactly once, before the FIRST drawPick of the submit — not once
+    // per pass (that reset the cursor mid-submit and collapsed every sphere
+    // pick onto the last row's bytes; see bodyPickRenderer's module header).
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+
+    const callLog: string[] = [];
+    const beginSubmit = vi.fn(() => callLog.push('beginSubmit'));
+    const layers = [
+      makeLayer({
+        name: 'body-pick',
+        slab: 'body',
+        enabled: true,
+        drawPick: () => callLog.push('drawPick'),
+      }),
+    ];
+    const state = {
+      gpu: {
+        timingService: { descriptorFor: vi.fn(() => undefined) },
+        bodyPickRenderer: { beginSubmit },
+      },
+    } as unknown as EngineState;
+    const program = createPickProgram({ device, canvas: CANVAS, state, layers });
+
+    await program.pick(10, 10);
+    expect(beginSubmit).toHaveBeenCalledTimes(1);
+    // beginSubmit precedes BOTH body-m row draws (two rows this submit).
+    expect(callLog).toEqual(['beginSubmit', 'drawPick', 'drawPick']);
+  });
+
+  it('renderForDebug also calls bodyPickRenderer.beginSubmit() once, before recording', () => {
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
+
+    const callLog: string[] = [];
+    const beginSubmit = vi.fn(() => callLog.push('beginSubmit'));
+    const layers = [
+      makeLayer({
+        name: 'body-pick',
+        slab: 'body',
+        enabled: true,
+        drawPick: () => callLog.push('drawPick'),
+      }),
+    ];
+    const state = {
+      gpu: {
+        timingService: { descriptorFor: vi.fn(() => undefined) },
+        bodyPickRenderer: { beginSubmit },
+      },
+    } as unknown as EngineState;
+    const program = createPickProgram({ device, canvas: CANVAS, state, layers });
+
+    program.renderForDebug();
+    expect(beginSubmit).toHaveBeenCalledTimes(1);
+    expect(callLog).toEqual(['beginSubmit', 'drawPick', 'drawPick']);
   });
 
   it('returns null when the engine is not ready to pick', async () => {

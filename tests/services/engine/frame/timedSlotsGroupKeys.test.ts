@@ -18,12 +18,13 @@ import { describe, it, expect } from 'vitest';
 
 import { frameProgram, timedSlotsOf } from '../../../../src/services/engine/frame/frameProgram';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
+import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 
 describe('timedSlotsOf — per-render-step group keys', () => {
   // Bloom ON so the derivation covers the single `'bloom'` slot the sub-pipeline
   // adds alongside the per-render-step group keys.
   const slots = timedSlotsOf(
-    frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true),
+    frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true, [NEAR0]),
     CONTENT_LAYERS,
   );
 
@@ -31,8 +32,8 @@ describe('timedSlotsOf — per-render-step group keys', () => {
     // Each maps to a distinct render step in frameProgram(): the cosmological
     // HDR render (hdr·COSMO), the near-field HDR render (hdr·NEAR0), and the
     // foreground-bodies render (foreground:0·NEAR0). The middle-dot (U+00B7)
-    // and the `<target>·<SLAB_NAME>` shape must match the key executeFrame
-    // computes, or the merged pass finds no slot.
+    // and the `<target>·${slabName(slab)}` shape (slabs.ts) must match the
+    // key executeFrame computes, or the merged pass finds no slot.
     expect(slots).toContain('hdr·NEAR0');
     expect(slots).toContain('hdr·COSMO');
     expect(slots).toContain('foreground:0·NEAR0');
@@ -41,9 +42,13 @@ describe('timedSlotsOf — per-render-step group keys', () => {
   it('still includes per-layer slot names — the group rows are additions, not substitutions', () => {
     // A per-layer slot from the hdr·COSMO group and one from the
     // foreground:0·NEAR0 group: if the group-key push had replaced the layer
-    // loop rather than following it, these would be gone.
+    // loop rather than following it, these would be gone. 'star-spheres', not
+    // 'earth'/'planets' — those ride the 'body' slab step now (Tasks 9-11)
+    // and this fixture's `[NEAR0]` chain carries no body row for them to
+    // expand into; 'star-spheres' is one of the two foreground layers still
+    // literal NEAR0.
     expect(slots).toContain('point-sprites');
-    expect(slots).toContain('earth');
+    expect(slots).toContain('star-spheres');
   });
 
   it('keeps every slot name unique — no group key collides with a layer/composite/pick name', () => {

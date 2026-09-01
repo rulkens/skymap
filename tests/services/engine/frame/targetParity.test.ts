@@ -15,6 +15,7 @@ import { describe, it, expect } from 'vitest';
 import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
 import { frameProgram } from '../../../../src/services/engine/frame/frameProgram';
+import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 
 const ROWS = renderTargetRows('bgra8unorm');
 const ROW_IDS = new Set(ROWS.map((row) => row.id));
@@ -27,7 +28,9 @@ describe('render-target parity', () => {
   });
 
   it('every frameProgram step names a declared render-target row', () => {
-    const program = frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true);
+    const program = frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true, [
+      NEAR0,
+    ]);
     for (const step of program) {
       if (step.kind === 'render') {
         expect(ROW_IDS.has(step.target)).toBe(true);

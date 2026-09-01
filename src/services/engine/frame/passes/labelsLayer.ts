@@ -49,7 +49,7 @@ export const labelsLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (state.gpu.labelRenderer === null) return false;
     return state.gpu.labelRenderer.glyphCount() > 0;
   },
@@ -65,15 +65,15 @@ export const labelsLayer: ContentLayer = {
   },
 
   draw(pass, view, ctx, state) {
-    // Occlude the captions per-pixel behind nearer bodies ONLY when the body
-    // pass actually ran this frame — else the `foreground:0` depth is
-    // stale/uninitialised and would spuriously discard every caption. When
+    // Occlude the captions per-pixel behind an opaque body ONLY when the body
+    // pass actually ran this frame — else the `foreground:0` colour is
+    // stale/uninitialised and would spuriously blank every caption. When
     // undefined, the occlusion renderer falls back to its plain pipeline and
     // draws the captions un-occluded. Mirrors `foregroundLabelsLayer`'s guard.
-    const depthView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.depthViewOf('foreground:0')
+    const colorView = ctx.renderedTargets.has('foreground:0')
+      ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;
-    state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, depthView);
+    state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, colorView);
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with
@@ -81,7 +81,7 @@ export const labelsLayer: ContentLayer = {
   // projection the director declutters through, resolved fresh per pick call
   // so the boxes track where the glyphs are now.
   //
-  // Depth occlusion is deliberately NOT reproduced: the visual pass discards
+  // Scene occlusion is deliberately NOT reproduced: the visual pass fades
   // caption pixels behind a nearer body (`fragmentOcclude`), which the flat
   // pick quad can't see — so an occluded label stays clickable. Pick wider
   // than draw is the safe direction for a click affordance.

@@ -21,7 +21,19 @@
  * though the rendered camera comes from the assembled pose, not `state.cam`.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Wraps the REAL `deriveSlabs` in a spy so this file's identity test can
+// assert `deriveFrameContext` fed it the SAME `bodyPose` closure it forwards
+// onto `ReadyFrameContext.bodyPose` — the branch's central seam (six layer
+// headers assert it; nothing else in the suite can fail if a refactor mints a
+// second closure). Every other test in this file calls the real
+// implementation through the spy, so their assertions are unaffected.
+vi.mock('../../../../src/services/engine/frame/slabs', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../../../src/services/engine/frame/slabs')>();
+  return { ...actual, deriveSlabs: vi.fn(actual.deriveSlabs) };
+});
 
 import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -89,6 +101,15 @@ function makeState(
     // null`, reproducing the pre-feature (raw cam.distance) near-field bracket
     // every arithmetic assertion below was written against.
     selectionRows: { hover: null, select: null, focus: null },
+    // No seeded bodies/stars — `visibleSlabBodies` and `visibleStars` (both
+    // read unconditionally past the ready gate now) get an empty registry, so
+    // every fixture below stays a 2-row (NEAR0+COSMO) slab table, matching
+    // what every assertion in this file was written against.
+    data: { bodies: { earth: null, planets: [], stars: [] } },
+    settings: {
+      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+      bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+    },
   } as unknown as EngineState;
 }
 
@@ -259,7 +280,18 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
-    const expected = deriveSlabs(cam, computeViewProj(cam));
+    // The fixture seeds no bodies/stars, so every new deriveSlabs input beyond
+    // cam/cosmoVp/pivotRadiusMpc is inert (empty registry, no star spheres) —
+    // matching what `deriveFrameContext` itself derives from `makeState()`.
+    const expected = deriveSlabs({
+      cam,
+      cosmoVp: computeViewProj(cam),
+      pivotRadiusMpc: null,
+      pose: () => null,
+      visibleBodies: [],
+      viewportPx: [1920, 1080],
+      starSphereRangeM: null,
+    });
     expect(ctx.slabs).toHaveLength(2);
     expect(ctx.slabs[0]?.index).toBe(NEAR0);
     expect(ctx.slabs[1]?.index).toBe(COSMO);
@@ -362,5 +394,36 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.simDays).toBe(SCRUBBED);
+  });
+});
+
+describe('deriveFrameContext — bodyPose identity seam (m1)', () => {
+  it('feeds deriveSlabs the SAME bodyPose closure it forwards onto ctx.bodyPose', () => {
+    // `deriveSlabs` is the named import above — vi.mock intercepts module
+    // resolution, so this IS the spy-wrapped version.
+    const deriveSlabsSpy = vi.mocked(deriveSlabs);
+    deriveSlabsSpy.mockClear();
+
+    const ctx = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+      BASIS,
+      BASIS,
+      0xffffffff,
+      0,
+      CONST_J2000,
+    );
+
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    expect(deriveSlabsSpy).toHaveBeenCalledTimes(1);
+    // Reference equality, not "produces the same answer" — a refactor that
+    // mints a SECOND closure with identical behaviour would pass a
+    // value-equality check but reintroduce the drift this seam exists to
+    // prevent (a future pose provider swap, or a caching layer, could then
+    // change one without the other).
+    expect(deriveSlabsSpy.mock.calls[0]![0]!.pose).toBe(ctx.bodyPose);
   });
 });

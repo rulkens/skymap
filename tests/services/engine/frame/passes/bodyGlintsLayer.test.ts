@@ -32,7 +32,7 @@ import { Source } from '../../../../../src/data/sources';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -136,15 +136,7 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
 function makeNear0View(camPos: Vec3): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp });
   return { slab, vp: f32Vp, camPos, viewportPx: [1280, 720] };
 }
 
@@ -178,18 +170,23 @@ describe('bodyGlintsLayer.enabled', () => {
       bodyGlintsLayer.enabled(
         { gpu: { bodyGlintRenderer: null } } as unknown as EngineState,
         CTX_STUB,
+        makeNear0View(CAM_POS),
       ),
     ).toBe(false);
   });
 
   it('is true below the gate with a sub-pixel body, false beyond the foreground gate', () => {
     const state = makeState(makeRenderer(), [LIT, UNLIT]);
-    expect(bodyGlintsLayer.enabled(state, makeCtx(CAM_POS))).toBe(true);
+    expect(bodyGlintsLayer.enabled(state, makeCtx(CAM_POS), makeNear0View(CAM_POS))).toBe(true);
     // At galaxy scale the whole neighbourhood is far below a pixel: the shared
     // gate turns the glints off before the partition even matters.
-    expect(bodyGlintsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toBe(
-      false,
-    );
+    expect(
+      bodyGlintsLayer.enabled(
+        state,
+        makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]),
+        makeNear0View(CAM_POS),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -217,9 +214,13 @@ describe('bodyGlintsLayer.enabled — far dissolve (the bite)', () => {
     const glint = bodyAt('mars', 1, [0.6, 0.32, 0.23]);
     const state = makeState(makeRenderer(), [glint]);
 
-    expect(bodyGlintsLayer.enabled(state, makeCtx([dMid, 0, 0]))).toBe(true);
+    expect(bodyGlintsLayer.enabled(state, makeCtx([dMid, 0, 0]), makeNear0View(CAM_POS))).toBe(
+      true,
+    );
     // The bite: unfixed `enabled` has no far-dissolve check, so this reads true.
-    expect(bodyGlintsLayer.enabled(state, makeCtx([dGone, 0, 0]))).toBe(false);
+    expect(bodyGlintsLayer.enabled(state, makeCtx([dGone, 0, 0]), makeNear0View(CAM_POS))).toBe(
+      false,
+    );
   });
 });
 
@@ -296,18 +297,25 @@ describe('bodyGlintsLayer.pickEnabled (Bug B — Earth-stamp-only frame stays in
 
   it('is true when Earth is seeded within the caption gate even with an empty glints branch — while enabled is false', () => {
     const state = stampState(earthWithinGate);
+    const view = makeNear0View(camWithin);
     // No glints → the VISUAL draw gate is off.
-    expect(bodyGlintsLayer.enabled(state, makeCtx(camWithin))).toBe(false);
+    expect(bodyGlintsLayer.enabled(state, makeCtx(camWithin), view)).toBe(false);
     // But the Earth caption stamp must still be recorded → pick gate admits the row.
-    expect(bodyGlintsLayer.pickEnabled!(state, makeCtx(camWithin))).toBe(true);
+    expect(bodyGlintsLayer.pickEnabled!(state, makeCtx(camWithin), view)).toBe(true);
   });
 
   it('is false with no Earth and no glints, and false beyond the caption gate', () => {
-    expect(bodyGlintsLayer.pickEnabled!(stampState(null), makeCtx(camWithin))).toBe(false);
+    expect(
+      bodyGlintsLayer.pickEnabled!(stampState(null), makeCtx(camWithin), makeNear0View(camWithin)),
+    ).toBe(false);
     // Earth seeded but the camera is past the caption gate → no stamp to admit for.
-    expect(bodyGlintsLayer.pickEnabled!(stampState(earthWithinGate), makeCtx(camBeyond))).toBe(
-      false,
-    );
+    expect(
+      bodyGlintsLayer.pickEnabled!(
+        stampState(earthWithinGate),
+        makeCtx(camBeyond),
+        makeNear0View(camBeyond),
+      ),
+    ).toBe(false);
   });
 });
 

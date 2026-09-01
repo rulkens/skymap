@@ -47,7 +47,7 @@ export const selectionRingLayer: ContentLayer = {
   target: 'swap',
   blend: 'over',
 
-  enabled(state, _ctx) {
+  enabled(state, _ctx, _view) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const row = state.selectionRows.select;
     // A row drives THIS ring iff the table yields a COSMO-slab descriptor for
@@ -79,13 +79,13 @@ export const selectionRingLayer: ContentLayer = {
       state.settings.galaxyCatalogs.sizePx,
     );
 
-    // Occlude the ring per-pixel behind nearer bodies ONLY when the body pass
-    // actually ran this frame — else the `foreground:0` depth is stale/absent
-    // and would spuriously discard the whole ring. When undefined, the
+    // Occlude the ring per-pixel behind an opaque body ONLY when the body pass
+    // actually ran this frame — else the `foreground:0` colour is stale/absent
+    // and would spuriously blank the whole ring. When undefined, the
     // occlusion renderer falls back to its plain pipeline and draws the ring
     // un-occluded. Mirrors `markerLinesLayer`'s guard.
-    const depthView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.depthViewOf('foreground:0')
+    const colorView = ctx.renderedTargets.has('foreground:0')
+      ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;
 
     state.gpu.selectionRingRenderer!.draw(
@@ -93,7 +93,7 @@ export const selectionRingLayer: ContentLayer = {
       view.vp,
       view.viewportPx,
       { worldPos, ringRadiusPx },
-      depthView,
+      colorView,
     );
   },
 };

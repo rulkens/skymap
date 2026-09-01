@@ -112,7 +112,7 @@ function structLayout(fields: Array<{ name: string; type: string }>): {
  * (`orientation[N]`) can't distinguish them without the index.
  */
 function fieldForExpr(expr: string): string {
-  if (/originRelCamMpc/.test(expr)) return 'originRelCamMpc';
+  if (/originRelCamM/.test(expr)) return 'originRelCamM';
   if (/vertexBase/.test(expr)) return 'vertexBase';
   if (/fallbackUvOrigin/.test(expr)) return 'fallbackUvOrigin';
   if (/fallbackUvScale/.test(expr)) return 'fallbackUvScale';
@@ -128,10 +128,10 @@ function fieldForExpr(expr: string): string {
     const idx = Number(orientationIndex[1]);
     return idx < 3 ? 'rotCol0' : idx < 6 ? 'rotCol1' : 'rotCol2';
   }
-  if (/^radiusMpc$/.test(expr)) return 'radiusMpc';
+  if (/^radiusM$/.test(expr)) return 'radiusM';
   if (/^vertsPerTile\b/.test(expr)) return 'vertsPerTile';
   if (/^roughnessBase$/.test(expr)) return 'roughnessBase';
-  if (/^camPosRelBodyMpc\[/.test(expr)) return 'camPosRelBodyMpc';
+  if (/^camPosRelBodyM\[/.test(expr)) return 'camPosRelBodyM';
   if (/^f0$/.test(expr)) return 'f0';
   if (/^sunIrradiance$/.test(expr)) return 'sunIrradiance';
   if (/^sunDirLocal\[/.test(expr)) return 'sunDirLocal';

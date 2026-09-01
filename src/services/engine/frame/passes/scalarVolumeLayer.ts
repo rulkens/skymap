@@ -39,7 +39,7 @@ export const scalarVolumeLayer: ContentLayer = {
   target: 'volume',
   blend: 'additive',
 
-  enabled(state, ctx) {
+  enabled(state, ctx, _view) {
     return deriveVolumeLiveness(state, ctx) !== null;
   },
 

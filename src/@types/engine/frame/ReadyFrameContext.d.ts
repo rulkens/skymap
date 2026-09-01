@@ -55,6 +55,7 @@ import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Slab } from './Slab';
+import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -69,6 +70,17 @@ export type ReadyFrameContext = {
    * by indexing straight into this array.
    */
   slabs: readonly Slab[];
+  /**
+   * The SAME pose-provider closure `deriveSlabs` was fed to build `slabs`
+   * (spec §5's provider seam) — `frameContext.ts` builds it once, here and
+   * for `deriveSlabs`, so a body-slab layer's own `bodyRelativePose` read
+   * can never drift from the one the slab's `vp` was built from. A layer
+   * that re-derives the pose itself (a second `camBasisWorld` computation)
+   * is the exact bug this field exists to make impossible: correct today by
+   * coincidence, wrong the moment a future pose provider swaps in behind
+   * `BodyPoseProvider` and this ctx field doesn't move with it.
+   */
+  bodyPose: BodyPoseProvider;
   /** Backing-store-pixel viewport size; same as `canvas.{width,height}`. */
   canvasSize: { width: number; height: number };
   /** Snapshot of `cam.position` as a readonly tuple (no live Float32Array aliasing). */

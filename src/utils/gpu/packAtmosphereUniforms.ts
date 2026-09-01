@@ -2,7 +2,7 @@
  * packAtmosphereUniforms — pure packer for the 112-byte `AtmosphereUniforms`
  * struct (`shaders/lib/sphere.wesl`).
  *
- * The atmosphere shell is a proxy sphere scaled by `composeBodyMvp` to the
+ * The atmosphere shell is a proxy sphere scaled by `composeBodySlabMvp` to the
  * ATMOSPHERE-TOP radius, drawn just outside Earth's cloud shell. Its per-draw
  * uniform buffer carries the lit-body prefix (MVP + body-local sun direction)
  * plus the params its in-scatter fragment needs: the ground/atmosphere-top
@@ -51,7 +51,7 @@
  * opacity by the ring's blocking alpha). `ringOuterRatio == 0` is the no-ring
  * sentinel — the same data-gate `packTexturedBodyUniforms` uses.
  *
- * @param mvp            16-element column-major MVP (from `composeBodyMvp`).
+ * @param mvp            16-element column-major MVP (from `composeBodySlabMvp`).
  * @param sunDirLocal    Sun direction in the body's local frame.
  * @param camPosLocal    Camera position in atmosphere-top-radius units, centre at origin.
  * @param bottomRadius   Ground/atmosphere-top radius ratio (`planetRadiusKm / atmosphereTopKm`), ∈ (0,1).

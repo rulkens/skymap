@@ -31,6 +31,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/
 import { SCENE_ORBIT_CONICS } from '../../../../../src/data/bodies/sceneOrbitConics';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -125,15 +126,7 @@ function makeDrawCtx(): ReadyFrameContext {
 function makeNear0View(): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = {
-    index: NEAR0,
-    nearMpc: 0.0005,
-    farMpc: 500,
-    vp: f64Vp,
-    frame: { kind: 'world-mpc', originRelative: true },
-    precision: 'f64',
-    reversedZ: false,
-  };
+  const slab: Slab = makeSlab({ vp: f64Vp });
   return {
     slab,
     vp: f32Vp,
@@ -196,28 +189,35 @@ describe('orbitTrailsLayer registry row', () => {
 describe('orbitTrailsLayer.enabled', () => {
   it('gates on the renderer handle + the foreground distance — conics are static seeds', () => {
     const state = makeState(makeRendererSpy());
+    const view = makeNear0View();
     // Null handle (pre-bootstrap): the handle check short-circuits before the
     // ctx.cam read, so a bare ctx is safe.
-    expect(orbitTrailsLayer.enabled(makeState(null), CTX_STUB)).toBe(false);
+    expect(orbitTrailsLayer.enabled(makeState(null), CTX_STUB, view)).toBe(false);
     // Handle present, camera inside the shared foreground gate.
-    expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2))).toBe(true);
+    expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), view)).toBe(
+      true,
+    );
     // Beyond the gate the AU-to-lunar-scale trails are deep sub-pixel: off, so
     // the (hdr, NEAR0) step can be skipped wholesale at galaxy zoom. Gate edge +
     // a decade beyond, both derived so a farther seed growing the gate carries.
-    expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
-    expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toBe(false);
+    expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), view)).toBe(false);
+    expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), view)).toBe(
+      false,
+    );
   });
 
   it('gates on the orbitTrails visibility intent (opacity-0 ⇒ no render)', () => {
     // Camera at the origin, inside the foreground gate — the sub-pixel cull is
     // skipped, so the intent gate alone drives the result here.
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const view = makeNear0View();
     const renderer = makeRendererSpy();
     // Toggled off AND the fade fully receded → the whole (hdr, NEAR0) pass drops.
     expect(
       orbitTrailsLayer.enabled(
         makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0 }),
         ctx,
+        view,
       ),
     ).toBe(false);
     // Toggled off but a fade-out tail is still > 0 → keep drawing until it hits 0.
@@ -225,6 +225,7 @@ describe('orbitTrailsLayer.enabled', () => {
       orbitTrailsLayer.enabled(
         makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0.3 }),
         ctx,
+        view,
       ),
     ).toBe(true);
     // Toggled on → visible regardless of the (idle) fade value.
@@ -232,6 +233,7 @@ describe('orbitTrailsLayer.enabled', () => {
       orbitTrailsLayer.enabled(
         makeState(renderer, { orbitTrailsEnabled: true, layerOpacity: 0 }),
         ctx,
+        view,
       ),
     ).toBe(true);
   });
@@ -249,7 +251,7 @@ describe('orbitTrailsLayer.enabled', () => {
       canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
     } as unknown as ReadyFrameContext;
-    expect(orbitTrailsLayer.enabled(state, ctx)).toBe(false);
+    expect(orbitTrailsLayer.enabled(state, ctx, makeNear0View())).toBe(false);
   });
 
   it('the whole-layer cull still drops solar-system trails at galactic distance', () => {
@@ -265,7 +267,7 @@ describe('orbitTrailsLayer.enabled', () => {
       simDays: CONST_J2000,
     } as unknown as ReadyFrameContext;
     expect(ctx.cam.distance).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
-    expect(orbitTrailsLayer.enabled(state, ctx)).toBe(false);
+    expect(orbitTrailsLayer.enabled(state, ctx, makeNear0View())).toBe(false);
   });
 });
 

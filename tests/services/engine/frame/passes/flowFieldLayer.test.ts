@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { flowFieldLayer } from '../../../../../src/services/engine/frame/passes/flowFieldLayer';
-import { COSMO } from '../../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -19,6 +19,8 @@ function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
     renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
     cam: {} as never,
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],
@@ -45,15 +47,7 @@ function makeCtx(): ReadyFrameContext {
 /** Minimal SlabView matching the ctx above. `slab` is unused by this layer. */
 function makeView(): SlabView {
   return {
-    slab: {
-      index: COSMO,
-      nearMpc: 0.01,
-      farMpc: 50000,
-      vp: new Float64Array(16),
-      frame: { kind: 'world-mpc', originRelative: false },
-      precision: 'f32',
-      reversedZ: false,
-    },
+    slab: makeCosmoSlab(),
     vp: new Float32Array(16),
     camPos: [0, 0, 5],
     viewportPx: [1280, 720],
@@ -94,25 +88,37 @@ const PASS_STUB = {
 describe('flowFieldLayer.enabled', () => {
   it('returns false when the cube is not loaded (even if enabled)', () => {
     expect(
-      flowFieldLayer.enabled(makeState({ enabled: true, loaded: false, opacity: 1 }), makeCtx()),
+      flowFieldLayer.enabled(
+        makeState({ enabled: true, loaded: false, opacity: 1 }),
+        makeCtx(),
+        makeView(),
+      ),
     ).toBe(false);
   });
 
   it('returns true when enabled AND loaded', () => {
-    expect(flowFieldLayer.enabled(makeState({ enabled: true, loaded: true }), makeCtx())).toBe(
-      true,
-    );
+    expect(
+      flowFieldLayer.enabled(makeState({ enabled: true, loaded: true }), makeCtx(), makeView()),
+    ).toBe(true);
   });
 
   it('returns true when disabled but loaded and fade opacity > 0 (fade-out keep-alive)', () => {
     expect(
-      flowFieldLayer.enabled(makeState({ enabled: false, loaded: true, opacity: 0.3 }), makeCtx()),
+      flowFieldLayer.enabled(
+        makeState({ enabled: false, loaded: true, opacity: 0.3 }),
+        makeCtx(),
+        makeView(),
+      ),
     ).toBe(true);
   });
 
   it('returns false when disabled, loaded, and fade opacity is 0', () => {
     expect(
-      flowFieldLayer.enabled(makeState({ enabled: false, loaded: true, opacity: 0 }), makeCtx()),
+      flowFieldLayer.enabled(
+        makeState({ enabled: false, loaded: true, opacity: 0 }),
+        makeCtx(),
+        makeView(),
+      ),
     ).toBe(false);
   });
 });

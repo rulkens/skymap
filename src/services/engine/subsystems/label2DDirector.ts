@@ -649,7 +649,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       // the screen position is IDENTICAL and only depth slides into the
       // well-conditioned interior.
       const anchor = label.worldPos;
-      const liftAnchor = clampVec3Length(anchor, slab.farMpc * policy.farClampFraction);
+      const liftAnchor = clampVec3Length(anchor, slab.far * policy.farClampFraction);
 
       // Obligatory companion to the clamp: the label shader sizes glyphs as
       // `pxPerEm = worldEmMpc / clip.w`, so a PHYSICAL em at the clamped

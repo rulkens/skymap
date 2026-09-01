@@ -11,24 +11,19 @@ import type { Mat4 } from 'wgpu-matrix';
 import { filamentsLayer } from '../../../../../src/services/engine/frame/passes/filamentsLayer';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { FILAMENT_RECESSION } from '../../../../../src/services/engine/presentation/focusRecession';
+import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 
 function makeCtx(focusBlend: number): ReadyFrameContext {
   const vp = new Float32Array(16) as unknown as Mat4;
-  const cosmoSlab: Slab = {
-    index: COSMO,
-    nearMpc: 0.01,
-    farMpc: 50000,
-    vp: Float64Array.from(vp as unknown as Float32Array),
-    frame: { kind: 'world-mpc', originRelative: false },
-    precision: 'f32',
-    reversedZ: false,
-  };
+  const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
     isReady: true,
     renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],
@@ -112,8 +107,10 @@ describe('filamentsLayer.enabled is unaffected by focus recession', () => {
   it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
     // Pass enabled=false via state; settings arg is unused by the layer.
     const state = makeState(0, { enabled: false });
-    expect(filamentsLayer.enabled(state, makeCtx(0))).toBe(false);
-    expect(filamentsLayer.enabled(state, makeCtx(1))).toBe(false);
+    const ctx0 = makeCtx(0);
+    const ctx1 = makeCtx(1);
+    expect(filamentsLayer.enabled(state, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
+    expect(filamentsLayer.enabled(state, ctx1, slabViewOf(ctx1, COSMO))).toBe(false);
   });
 });
 
