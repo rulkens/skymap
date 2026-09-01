@@ -1,9 +1,8 @@
 /**
  * rotateBasisByQuat — turn a `BodyFixedPose.basisLocal` rigidly by `q`.
  * `reorthonormalise` rebuilds its third column as `c0 × c1`, but this is the
- * image-plane basis, where `right × up = −forward`. Passing the columns as
- * (forward, up, right) lands the right axis in that slot, and leaves forward
- * exact — the axis a drift would be most visible on.
+ * image-plane basis, where `right × up = −forward`: passing the columns as
+ * (forward, up, right) lands the right axis there and leaves forward exact.
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';

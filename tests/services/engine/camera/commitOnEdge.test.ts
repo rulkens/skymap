@@ -473,4 +473,37 @@ describe('commitOnEdge — clip deactivation', () => {
     expect(frame2.activeId).toBe('resting');
     expect(frame2.committed).toBe(false);
   });
+
+  it('a playing clip keeps the camera against a body-arm gesture', () => {
+    // The surface row sits at 100, above the clip's 95 — but taking the camera
+    // for a held gesture and handing it back to a clip whose commit-on-edge
+    // bakes its OWN final pose would discard the gesture whole at pointerup.
+    // The table's rule holds in both arms: a clip is not drag-interruptible.
+    const store = makeStore();
+    const { state } = makeEngineState();
+    const drivers = buildCameraDrivers(state as unknown as EngineState);
+
+    // The rows read `base.frame` only, so the pose value is irrelevant here.
+    store.dispatch(
+      commitCameraPose({
+        frame: { body: 'earth' },
+        pose: {
+          bodyId: 'earth',
+          anchorLocalM: [0, 0, 0],
+          eyeRelAnchorM: [0, 0, 1e7],
+          basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1],
+        },
+      }),
+    );
+    store.dispatch(beginDrag());
+    expect(activeDriverId(drivers, store.getState())).toBe('surface');
+
+    store.dispatch(
+      clipStarted({
+        data: { start: { target: [1, 2, 3], yaw: 0, pitch: 0, distance: 80 }, timeline: [] },
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+    expect(activeDriverId(drivers, store.getState())).toBe('clip');
+  });
 });

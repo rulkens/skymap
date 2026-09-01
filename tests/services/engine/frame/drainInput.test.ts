@@ -21,6 +21,7 @@ import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRo
 import {
   startCameraTween,
   beginDrag,
+  clipStarted,
   commitCameraPose,
 } from '../../../../src/state/camera/cameraSlice';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -75,6 +76,33 @@ function makeHarness(distance = 100) {
   return { cam, agg: inputAggregator, state, deps, store };
 }
 
+/** Earth's body arm, eye `radii` Earth-radii from the centre, looking at it. */
+function earthArm(radii: number): FramedCameraPose {
+  const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+  const B = ORIENTATION_FRAMES.ecliptic;
+  return {
+    frame: { body: 'earth' },
+    pose: toBodyArm(
+      {
+        target: [...earth.positionMpc] as Vec3,
+        yaw: 0.7,
+        pitch: 0.3,
+        distance: radii * 6371000 * SCALE_UNITS.M_TO_MPC,
+      },
+      B,
+      B,
+      'earth',
+      earth,
+    ),
+  } as FramedCameraPose;
+}
+
+/** Geocentric range of a body arm, metres — the anchor is the body centre. */
+function rangeM(framed: FramedCameraPose): number {
+  if (framed.frame === 'absolute') throw new Error('rangeM: not a body arm');
+  return Math.hypot(...framed.pose.eyeRelAnchorM);
+}
+
 describe('drainInput', () => {
   it('applies nothing until the frame drains', () => {
     const { cam, agg, state, deps } = makeHarness();
@@ -113,23 +141,7 @@ describe('drainInput', () => {
     // divergence at its worst. The anchored gesture is what moves the camera,
     // and it stays in the body arm the whole way.
     const { agg, state, deps, store } = makeHarness();
-    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
-    const B = ORIENTATION_FRAMES.ecliptic;
-    const arm = {
-      frame: { body: 'earth' },
-      pose: toBodyArm(
-        {
-          target: [...earth.positionMpc] as Vec3,
-          yaw: 0.7,
-          pitch: 0.3,
-          distance: 2 * 6371000 * SCALE_UNITS.M_TO_MPC,
-        },
-        B,
-        B,
-        'earth',
-        earth,
-      ),
-    } as FramedCameraPose;
+    const arm = earthArm(2);
     store.dispatch(commitCameraPose(arm));
     state.cameraRuntime.lastPose.current = arm;
     store.dispatch(beginDrag());
@@ -147,6 +159,62 @@ describe('drainInput', () => {
     // land on top of it at gesture end.
     expect(committed.pose).not.toBe(arm.pose);
     expect(store.getState().camera.dragging).toBe(false);
+  });
+
+  it('latches a body-arm gesture against the pose on screen, not a stale base', () => {
+    // `base` equals what is rendered only while the resting or surface driver
+    // wins: the fold commits on a REGIME edge, so mid-fly-to `base` still holds
+    // the last crossing pose while `lastPose` tracks the tween. A gesture that
+    // latched against `base` would take its mode, its anchor and its frozen pan
+    // radius from an altitude the user never saw — and keep them, stickily, for
+    // the whole gesture. `wireInput` cancels the tween at pointerdown, so
+    // double-click-to-focus then grab mid-flight is the ordinary path in.
+    const { agg, state, deps, store } = makeHarness();
+    const stale = earthArm(5);
+    const onScreen = earthArm(1.5);
+    store.dispatch(commitCameraPose(stale));
+    state.cameraRuntime.lastPose.current = onScreen;
+    store.dispatch(beginDrag());
+
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 500, yPx: 500 });
+    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 560, yPx: 500 });
+
+    drainInput(state, deps, 0);
+
+    // The centre pixel hits the body dead-on from either pose, so both latch
+    // `pan` — a rotation about the body centre. The range is then the
+    // fingerprint of which pose the gesture was applied to.
+    const committed = rangeM(store.getState().camera.base);
+    expect(committed / rangeM(onScreen)).toBeCloseTo(1, 9);
+    expect(committed / rangeM(stale)).toBeLessThan(0.5);
+  });
+
+  it('leaves the pose alone while a clip owns the camera', () => {
+    // The clip row (95) re-wins at pointerup and bakes its own final pose at
+    // its commit-on-edge, so a gesture applied underneath it is discarded
+    // whole. A playing clip is not interruptible by a drag in either arm.
+    const { agg, state, deps, store } = makeHarness();
+    const arm = earthArm(2);
+    store.dispatch(commitCameraPose(arm));
+    state.cameraRuntime.lastPose.current = arm;
+    store.dispatch(
+      clipStarted({
+        data: { start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }, timeline: [] },
+        frame: 'ecliptic',
+      }),
+    );
+    store.dispatch(beginDrag());
+
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 500, yPx: 500 });
+    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 560, yPx: 500 });
+    agg.push({ kind: 'wheel', deltaY: 240, duringGesture: false });
+    agg.push({ kind: 'gestureEnd' });
+
+    drainInput(state, deps, 0);
+
+    expect(store.getState().camera.base).toBe(arm);
   });
 
   it('leaves a tween started after the pointerdown alone', () => {

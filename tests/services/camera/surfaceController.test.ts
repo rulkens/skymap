@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { createSurfaceController } from '../../../src/services/camera/surfaceController';
+import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
@@ -155,10 +156,28 @@ describe('surfaceController', () => {
     expect(pose.basisLocal[5]).toBeCloseTo(cos30, 12);
   });
 
+  it('floors every position write at the surface', () => {
+    // A tilt orbits the anchor, so it holds |eye − anchor|, not |eye|: from
+    // 0.05 R up, 120° of it swings the eye past horizontal and under the
+    // ground. `anchoredZoomStep` carries the only other floor in the engaged
+    // path; spec §6(c)'s "the floor already forbids that" has to hold for the
+    // drag modes too.
+    const c = createSurfaceController();
+    c.onGestureStart();
+    const tilted = apply(c, poseAt([0, 0, 1.05], NADIR), drag('pan', [50, 50], [50, 183.3]));
+
+    expect(Math.hypot(...eyeOf(tilted))).toBeCloseTo(surfaceFloorM(R), 12);
+    // Radial push, so the view direction is untouched — no jerk to rotate out.
+    expect(tilted.basisLocal).not.toEqual(NADIR);
+  });
+
   it('re-picks the zoom anchor after the eye overshoots its tangent plane', () => {
     // Tilt hard about the anchor [0.6,0,0.8] until the eye is BELOW its tangent
     // plane — the anchor is now behind the horizon, so zooming toward it would
     // carry the camera backwards through it (C §6.7).
+    // The 160 px end is off the 100 px viewport on purpose: the recognizer
+    // binds move/up to `window` (the iOS implicit-capture fix), so dragging
+    // past the canvas edge is an ordinary case the controller must handle.
     const c = createSurfaceController();
     c.onGestureStart();
     const tilted = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [75, 50], [75, 160]));

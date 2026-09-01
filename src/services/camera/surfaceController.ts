@@ -22,6 +22,7 @@ import { anchoredDragRotation, MIN_INCIDENCE_COS } from '../../utils/camera/anch
 import { anchoredZoomStep } from '../../utils/camera/anchoredZoomStep';
 import { cursorRayBodyLocal } from '../../utils/camera/cursorRayBodyLocal';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
+import { surfaceFloorM } from '../../utils/camera/surfaceFloorM';
 import { multiplyQuat } from '../../utils/math/multiplyQuat';
 import { normalize3 } from '../../utils/math/normalize3';
 import { quatFromAxisAngle } from '../../utils/math/quatFromAxisAngle';
@@ -55,6 +56,29 @@ function pickOn(ray: Ray, radiusM: number): Pick | null {
     ray.originM[2] + ray.dir[2] * t,
   ];
   return { pointM, incidence: dot3(ray.dir, pointM) / radiusM };
+}
+
+/**
+ * The descent floor, unconditional and resampled after the last position write
+ * (spec §6, O §4). The push is radial, so it moves the eye without turning it —
+ * the same reason `anchoredZoomStep` rescales rather than rotating (C §6.6's
+ * "rotate the basis by the angle collision moved the eye" has zero angle here).
+ * A tilt about a surface anchor holds `|eye − anchor|`, not `|eye|`, so without
+ * this a long tilt drag walks the eye straight through the ground.
+ */
+function flooredPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
+  const eyeM = eyeOf(pose);
+  const magM = Math.hypot(...eyeM);
+  const floorM = surfaceFloorM(bodyRadiusM);
+  // An eye exactly at the centre has no push direction; no bounded step reaches
+  // it from a floored pose, and leaving it beats returning NaN.
+  if (magM >= floorM || magM === 0) return pose;
+  const scale = floorM / magM;
+  const { anchorLocalM: a } = pose;
+  return {
+    ...pose,
+    eyeRelAnchorM: [eyeM[0] * scale - a[0], eyeM[1] * scale - a[1], eyeM[2] * scale - a[2]],
+  };
 }
 
 /** Turn the whole pose — eye and basis — about a body-fixed point. */
@@ -137,6 +161,8 @@ function draggedPose(
     // A null answer covers a miss AND a grazing hit, and the two degrade
     // differently (C §2.6 / §6.4), so the incidence is re-measured here —
     // against the frozen sphere, never the display readout. Sticky either way.
+    // The CURRENT ray decides alone: when it was the previous one that grazed,
+    // trackball is the honest answer for a gesture already at the limb.
     const graze = pickOn(currRay, gesture.anchorRadiusM);
     mode = graze !== null && Math.abs(graze.incidence) < MIN_INCIDENCE_COS ? 'strafe' : 'trackball';
   }
@@ -258,7 +284,9 @@ export function createSurfaceController(): SurfaceController {
       const gesture = live.gesture ?? latchFor(arm, step, viewportPx, fovYRad, bodyRadiusM);
       const { pose, mode } = draggedPose(arm, gesture, step, viewportPx, fovYRad);
       live.gesture = { ...gesture, mode, prevPixel: step.endPx };
-      return pose;
+      // One floor site, after every position write — `anchoredZoomStep` owns
+      // its own, so the zoom arm above is already floored.
+      return flooredPose(pose, bodyRadiusM);
     },
   };
 }

@@ -21,9 +21,7 @@ describe('maxTiltRad', () => {
   });
 
   it('crosses 90 degrees near the midpoint of the two edges (~1.71 R)', () => {
-    const atMidpoint = maxTiltRad(
-      (SURFACE_REGIME.disengageHR + SURFACE_REGIME.tiltFullHR) / 2,
-    );
+    const atMidpoint = maxTiltRad((SURFACE_REGIME.disengageHR + SURFACE_REGIME.tiltFullHR) / 2);
     expect(atMidpoint).toBeCloseTo(Math.PI / 2, 12);
 
     // Loosely locate the 90 degree crossing itself, without pinning an exact
@@ -35,6 +33,15 @@ describe('maxTiltRad', () => {
     const crossing = samples.find((hOverR) => maxTiltRad(hOverR) <= Math.PI / 2);
     expect(crossing).toBeGreaterThan(1.6);
     expect(crossing).toBeLessThan(1.8);
+  });
+
+  it('opens the sky within ~3 degrees of where the surface arm engages', () => {
+    // `surfaceController`'s altitude tiebreak — a cursor miss below `engageHR`
+    // means sky (free-look), above it means off-limb space (trackball) — is
+    // derived from this coincidence and adds no constant of its own. All three
+    // ramp constants are feel-tunable, so retuning one without re-reading that
+    // derivation lands here rather than in a quietly false comment.
+    expect(maxTiltRad(SURFACE_REGIME.engageHR)).toBeCloseTo(Math.PI / 2, 1);
   });
 
   it('is monotonically non-increasing in h/R', () => {

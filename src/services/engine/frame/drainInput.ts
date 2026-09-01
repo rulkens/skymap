@@ -21,6 +21,7 @@ import { selectFocusRow } from '../../../state/selection/selectors';
 import { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 
+import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
@@ -32,28 +33,43 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
   const store = deps.cb.store;
   const cssHeight = deps.canvas.clientHeight || 1;
 
+  /** What this drain last handed the surface controller; null before the first. */
+  let armPose: BodyFixedPose | null = null;
+
   /**
    * The engaged arm's input owner (spec §6): anchored gestures, committed
-   * straight into `base` because a body arm has no register to render from.
-   * `false` hands the step back to the world-arm path, which is untouched. The
-   * store is re-read per step — each commit moves the pose the next builds on.
+   * straight into `base` because a body arm has no register to render from;
+   * `false` hands the step back to the untouched world-arm path. The GATE is
+   * the stored regime (`base.frame`, T15); the POSE is the live produced one,
+   * because the fold commits on a regime EDGE only — mid-tween `base` holds the
+   * last crossing pose while `lastPose` tracks the animation, and a latch taken
+   * against a pose the user never saw sticks for the whole gesture (FW-G).
    */
   const routeToSurface = (step: InputStep): boolean => {
-    const base = store.getState().camera.base;
+    const root = store.getState();
+    const base = root.camera.base;
     if (base.frame === 'absolute') return false;
+    // A playing clip owns the camera in both arms (the driver table's rule).
+    if (root.camera.clip !== null) return true;
+    // Unreachable: the fold only ever names a body it resolved.
     const body = SCENE_BODIES.find((row) => row.id === base.frame.body);
-    // The fold only ever names a body it resolved, so dropping the step here is
-    // an unreachable branch's harmless answer.
     if (body === undefined) return true;
+    const live = state.cameraRuntime.lastPose.current;
+    const from =
+      armPose ??
+      (live.frame !== 'absolute' && live.frame.body === base.frame.body ? live.pose : base.pose);
     const next = state.cameraRuntime.surface.apply(
-      base.pose,
+      from,
       step,
       [deps.canvas.clientWidth || 1, cssHeight],
       state.cameraRuntime.projection.fovYRad,
       body.radiusM,
     );
-    // `frame` is passed on BY REFERENCE: `frame.body` and `pose.bodyId` are one
-    // fact in two fields, and the controller never changes the body.
+    armPose = next;
+    // Identity, not equality: a declined step returns its input by reference
+    // (`anchoredZoomStep` always allocates, so a floored wheel still writes an
+    // equal pose — harmless, nothing subscribes). `frame` rides along BY
+    // REFERENCE: one fact in two fields, and the body never changes here.
     if (next !== base.pose) store.dispatch(commitCameraPose({ frame: base.frame, pose: next }));
     return true;
   };
@@ -95,9 +111,8 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         break;
 
       case 'zoom': {
-        // Both zoom owners route to the anchored step in a body arm: the arm
-        // owns its own range, so neither the register nor `applyWheelZoom`'s
-        // three world-arm distance owners are consulted (spec §7).
+        // Both zoom owners route to the anchored step in a body arm: it owns
+        // its range, so `applyWheelZoom`'s three owners go unconsulted (§7).
         if (routeToSurface(step)) break;
         if (step.duringGesture) {
           if (cam !== null) {

@@ -254,9 +254,16 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // The body arm's gesture, in the slot the SpaceMouse driver vacated (spec
       // §7). `drainInput` has already committed this frame's anchored pose into
       // `base`, so the row authors nothing new — it exists to hold the camera
-      // for the gesture, above a clip that would otherwise keep playing under
-      // the user's finger. No pivot pin: that is a world-arm concern.
-      isActive: (s) => s.camera.dragging && s.camera.base.frame !== 'absolute',
+      // for the gesture against every LOWER row. No pivot pin: that is a
+      // world-arm concern.
+      //
+      // A playing clip is not interruptible by a gesture in EITHER arm (the
+      // table's rule, above): the row stands down and `drainInput` leaves the
+      // pose alone, because taking the camera for the held gesture and handing
+      // it back to a clip whose commit-on-edge then bakes its own final pose
+      // would discard the whole gesture at pointerup.
+      isActive: (s) =>
+        s.camera.dragging && s.camera.base.frame !== 'absolute' && s.camera.clip === null,
       pose: (s) => s.camera.base,
     },
     {
