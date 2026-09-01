@@ -117,6 +117,10 @@ describe('skyCubemapFaceContext', () => {
       if (ctx === null) continue;
 
       expect(ctx.drawCamPos).toEqual(EYE_MPC);
+      // viewSlot = face + 1 (Task 13b) — slot 0 is reserved for the main
+      // view, so a roster renderer's view-slot buffer never confuses this
+      // face's write with the real frame's.
+      expect(ctx.viewSlot).toBe(face + 1);
 
       // Independent geometric check: the forward direction (target − eye,
       // read off the assembled camera, not re-derived from yaw/pitch) must

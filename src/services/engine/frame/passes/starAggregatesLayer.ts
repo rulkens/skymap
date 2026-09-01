@@ -38,6 +38,12 @@ export const starAggregatesLayer: ContentLayer = {
   slab: NEAR0,
   target: 'star-aggregates',
   blend: 'additive',
+  // Sky-cubemap capture roster (Task 13b, Ruling 6): the survey AGGREGATE
+  // stream is part of the black-hole lens's captured "sky", drawn straight
+  // into the capture target (a capture step selects by this flag, not by
+  // `target` — see `executeFrame`'s capture-step branch) rather than through
+  // its usual half-res-offscreen + knee'd upsample.
+  skyCapture: true,
 
   enabled: starCatalogVisible,
 
@@ -56,6 +62,14 @@ export const starAggregatesLayer: ContentLayer = {
     // mutated: one `SlabView` is shared by every layer in the render step.
     const { width: vw, height: vh } = ctx.renderTargets.sizeOf('star-aggregates');
 
-    drawStream(renderer, pass, { ...view, viewportPx: [vw, vh] }, prep, 'aggregate', ctx.fovYRad);
+    drawStream(
+      renderer,
+      pass,
+      { ...view, viewportPx: [vw, vh] },
+      prep,
+      'aggregate',
+      ctx.fovYRad,
+      ctx.viewSlot,
+    );
   },
 };

@@ -115,6 +115,37 @@ describe('frameProgram', () => {
     ]);
   });
 
+  it('emits a COSMO capture step alongside NEAR0 per requested face (Task 13b)', () => {
+    // The fixed opt-in roster spans both slabs — `point-sprites` (COSMO),
+    // `star-catalog`/`star-aggregates`/`star-points` (NEAR0) — and a capture
+    // step's `slab` still gates its group normally (only `target` selection
+    // is bypassed for a capture step). A NEAR0-only capture step would leave
+    // the COSMO half of the roster permanently unselected regardless of its
+    // `skyCapture` flag, so each requested face must get ONE step per slab.
+    const program = frameProgram(TONE, false, [NEAR0], [0, 2]);
+    const captureSteps = program.filter(
+      (step) => step.kind === 'render' && step.target === 'sky-cubemap',
+    );
+    expect(captureSteps).toEqual([
+      { kind: 'render', target: 'sky-cubemap', slab: COSMO, face: 0 },
+      { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+      { kind: 'render', target: 'sky-cubemap', slab: COSMO, face: 2 },
+      { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 2 },
+    ]);
+    // Ahead of every other render step, so a same-frame lensing draw can
+    // sample a cubemap this frame actually wrote.
+    expect(program[0]).toEqual({ kind: 'compute', name: 'flow' });
+    expect(program[1]).toEqual({ kind: 'compute', name: 'atmosphereSkyView' });
+    expect(program[2]).toEqual(captureSteps[0]);
+  });
+
+  it('emits no capture steps when no faces are requested (Q6 zero-dispatch)', () => {
+    const program = frameProgram(TONE, false, [NEAR0], []);
+    expect(program.some((step) => step.kind === 'render' && step.target === 'sky-cubemap')).toBe(
+      false,
+    );
+  });
+
   it('expands the foreground chain in painter order', () => {
     // Chain [NEAR0, 3, 2] (an out-of-numeric-order chain, as a painter-order
     // chain legitimately is — index order is assignment order, not draw

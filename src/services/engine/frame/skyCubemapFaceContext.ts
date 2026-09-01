@@ -107,5 +107,9 @@ export function skyCubemapFaceContext(input: {
     performance.now(),
     state.cameraRuntime.lastRenderedSimDays.current,
   );
-  return ctx.isReady ? ctx : null;
+  // Stamp this face's view slot (`face + 1` — slot 0 is the main view; see
+  // `ReadyFrameContext.viewSlot`'s doc) so a roster renderer's view-slot
+  // buffer helper keys this call's writes into a destination the main
+  // view's own `viewSlot: 0` draw never touches.
+  return ctx.isReady ? { ...ctx, viewSlot: face + 1 } : null;
 }

@@ -55,9 +55,17 @@ export type GalaxyPointDrawSettings = {
    * Look up the registry-managed opacity for a given source. Called
    * once per visible source per frame from the points draw loop;
    * the renderer writes the returned value into the per-source
-   * fadeBuffer. The renderer passes the numeric source code;
+   * fade ring's `viewSlot` slot. The renderer passes the numeric source code;
    * the `galaxyPointSpritesLayer` closure resolves it to the catalog's string
    * id and reads `state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, now)`.
    */
   readonly fadeOpacityOf: (source: SourceType) => number;
+  /**
+   * `ReadyFrameContext.viewSlot` — which view-slot buffer this call's
+   * per-frame uniform/fade writes land in (Task 13b). `0` for the main view;
+   * `1..6` for a sky-cubemap capture face. Lets several `draw()` calls with
+   * different cameras share one submit without one overwriting another's
+   * bytes before the GPU reads them (see `createViewSlotUniformRing`'s doc).
+   */
+  viewSlot: number;
 };

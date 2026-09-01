@@ -355,6 +355,10 @@ export const GPU_HANDLE_ROWS = [
           ...star,
           positionMpc: bootBodyStates.get(star.id)!.positionMpc,
         })),
+        // Boot seed, no frame yet — the main view's slot. `starPointsLayer`
+        // re-uploads every real frame (its own module header), so this is
+        // overwritten before the first draw.
+        0,
       );
       return starPointRenderer;
     },

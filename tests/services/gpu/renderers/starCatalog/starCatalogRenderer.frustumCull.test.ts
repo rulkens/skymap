@@ -100,6 +100,7 @@ function twoNodeArgs(
     aggregateIntensityCap: 0.06,
     frustumPlanes,
     glowMarginAngleRad: 0.0001,
+    viewSlot: 0,
   };
 }
 

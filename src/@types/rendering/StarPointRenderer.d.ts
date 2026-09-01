@@ -25,13 +25,17 @@ import type { PositionedStar } from '../scene/PositionedStar';
 
 export type StarPointRenderer = Renderer & {
   /**
-   * Upload the instance buffer from the seeded star bodies — position
-   * (`positionMpc` narrowed to f32, camera-relative per the layer's rebase),
-   * linear-RGB `color`, and `absMag` per star, 28 bytes each. Replaces any
-   * previous upload; an empty array clears the renderer back to drawing
-   * nothing.
+   * Upload `viewSlot`'s instance buffer from the seeded star bodies —
+   * position (`positionMpc` narrowed to f32, camera-relative per the
+   * layer's rebase), linear-RGB `color`, and `absMag` per star, 28 bytes
+   * each. Replaces any previous upload ON THAT SLOT; an empty array clears
+   * the slot back to drawing nothing. `viewSlot` (Task 13b) gives each
+   * sky-cubemap capture face — and the real view — its OWN buffer, because
+   * their camera-relative positions differ and all calls land before one
+   * `submit()` (see `createViewSlotUniformRing`'s doc for the race this
+   * avoids).
    */
-  setStars(stars: readonly PositionedStar[]): void;
+  setStars(stars: readonly PositionedStar[], viewSlot: number): void;
   /**
    * Draw every uploaded star as an instanced billboard into the current
    * (depthless, additive) pass. `viewProj` is the length-16 view-projection
@@ -40,13 +44,17 @@ export type StarPointRenderer = Renderer & {
    * the shared star appearance the survey stage also reads — `sizePx` (base
    * dot radius, the `starCatalogs.sizePx` slider) and `brightness` (the exposure
    * trim, already folded with the camera-distance ramp by the layer) — so a
-   * famous leaf and a survey leaf render pixel-identically. No-op until
+   * famous leaf and a survey leaf render pixel-identically. `viewSlot` is
+   * `ReadyFrameContext.viewSlot` (Task 13b) — which view-slot buffer this
+   * call's camera uniform lands in, so a sky-cubemap capture sweep's several
+   * `draw()` calls (different cameras, one submit) don't overwrite each
+   * other's bytes (see `createViewSlotUniformRing`'s doc). No-op until
    * `setStars` has delivered a non-empty upload.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
-    opts: { sizePx: number; brightness: number },
+    opts: { sizePx: number; brightness: number; viewSlot: number },
   ): void;
 };

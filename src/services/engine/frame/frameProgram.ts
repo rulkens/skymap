@@ -118,17 +118,17 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * the capture side of that contract, not just the lensing draw itself).
  * Placed in the compute prelude's wake, ahead of every other render step, so
  * a same-frame lensing draw (Task 13) can sample a cubemap this frame
- * actually wrote. One step per requested face, at the NEAR0 slab — the
- * fixed opt-in roster (`ContentLayer.skyCapture`, Ruling 6) is selected by
- * that flag rather than by `target` (see `executeFrame`'s capture-step
- * branch), so a flagged NEAR0-slab layer is reachable here; a COSMO-slab
- * candidate (`point-sprites`) would need its OWN COSMO-slab capture step,
- * which this program does not emit — moot today, since Task 13's
- * verification found every current roster candidate's GPU renderer assumes
- * at most one `draw()` call per submitted frame (the `queue.writeBuffer`/
- * `submit` landmine, docs/RENDERER.md), an invariant a multi-face capture
- * sweep breaks; no layer carries `skyCapture` yet, so these steps still
- * select an empty group and draw nothing pending that renderer-side fix.
+ * actually wrote. TWO steps per requested face — COSMO then NEAR0 — because
+ * the fixed opt-in roster (`ContentLayer.skyCapture`, Ruling 6) spans both
+ * slabs: `point-sprites` projects through COSMO, `star-catalog` /
+ * `star-aggregates` / `star-points` through NEAR0. A capture step selects
+ * its group by the flag rather than by `target` (`executeFrame`'s
+ * capture-step branch), but `slab` still gates normally — one step per slab
+ * is what makes BOTH halves of the roster reachable (Task 13b; a single
+ * NEAR0-only step left the COSMO half permanently unselected, the flag
+ * having no effect). Order (COSMO before NEAR0) mirrors the real `(hdr,
+ * COSMO)` → `(hdr, NEAR0)` sequence below, so the capture composites in the
+ * same order the live frame would.
  *
  * `sgrAStarLensingBodySlabs` (Task 14, Ruling 8) is the black-hole lens's OWN
  * missing step: no step here ever matched `sgrAStarLensingLayer` (`slab:
@@ -166,6 +166,7 @@ export function frameProgram(
   steps.push({ kind: 'compute', name: 'atmosphereSkyView' });
 
   for (const face of skyCubemapFacesToCapture) {
+    steps.push({ kind: 'render', target: 'sky-cubemap', slab: COSMO, face });
     steps.push({ kind: 'render', target: 'sky-cubemap', slab: NEAR0, face });
   }
 
@@ -330,9 +331,11 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
   'mw-aggregate·NEAR0': 'Volumes & aggregates',
-  // The black-hole lens's amortized sky-capture steps (Task 12) — 0-6 of
-  // them per frame depending on `skyCubemapCaptureSchedule`, so its own
-  // group rather than folding into an existing title.
+  // The black-hole lens's amortized sky-capture steps (Task 12) — 0-12 of
+  // them per frame (COSMO + NEAR0 per requested face, Task 13b) depending on
+  // `skyCubemapCaptureSchedule`, so its own group rather than folding into
+  // an existing title.
+  'sky-cubemap·COSMO': 'Sky capture',
   'sky-cubemap·NEAR0': 'Sky capture',
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',

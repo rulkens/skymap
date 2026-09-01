@@ -357,6 +357,23 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.focus.blend).toBe(0);
   });
 
+  it('stamps viewSlot 0 — the main view (Task 13b; skyCubemapFaceContext overrides to face + 1)', () => {
+    const ctx = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+      BASIS,
+      BASIS,
+      0,
+      0,
+      CONST_J2000,
+    );
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    expect(ctx.viewSlot).toBe(0);
+  });
+
   it('stamps nowMs onto the ready context', () => {
     const ctx = deriveFrameContext(
       makeState(),

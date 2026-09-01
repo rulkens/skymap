@@ -88,6 +88,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
     isReady: true,
+    viewSlot: 0,
     renderedTargets: new Set<string>(),
     cam,
     vp,
@@ -412,7 +413,11 @@ describe('CONTENT_LAYERS blend legality', () => {
         // the swap-chain rows). A third non-additive hdr row should fail
         // this test and be a deliberate decision.
         const expected =
-          layer === milkyWayLayer ? 'multiply' : layer === sgrAStarLensingLayer ? 'over' : 'additive';
+          layer === milkyWayLayer
+            ? 'multiply'
+            : layer === sgrAStarLensingLayer
+              ? 'over'
+              : 'additive';
         expect(layer.blend).toBe(expected);
       } else if (layer.target === 'foreground:0') {
         // The `foreground:0` group is opaque bodies EXCEPT the three translucent

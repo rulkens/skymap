@@ -105,6 +105,10 @@ import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { sphereOutsideFrustum } from '../../../../utils/camera/sphereOutsideFrustum';
 import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
+import {
+  createViewSlotUniformRing,
+  VIEW_SLOT_COUNT,
+} from '../../../../utils/gpu/createViewSlotUniformRing';
 // The NodeParams / StarUniforms byte layout lives in ONE home both star
 // renderers import — see starCatalogLayout.ts (the WESL structs in
 // shaders/starCatalog/io.wesl are the source of truth). This renderer never
@@ -124,11 +128,15 @@ import {
 } from './starCatalogLayout';
 
 /**
- * One draw stream's per-source storage buffers: the contiguous NodeParams block
- * and the parallel prefix sum, plus their shared grow-only capacity. A stream
- * (leaf or aggregate) owns its OWN pair — the two streams draw into different
- * passes in the same frame, so a shared pair would read only the last-written
- * stream's bytes at submit (the writeBuffer/submit landmine).
+ * One draw stream's per-source, per-view-slot storage buffers: the
+ * contiguous NodeParams block and the parallel prefix sum, plus their shared
+ * grow-only capacity. A stream (leaf or aggregate) owns its OWN pair per
+ * `ReadyFrameContext.viewSlot` (Task 13b) — a sky-cubemap capture sweep draws
+ * a source's cut once per face plus once for the real view, ALL before one
+ * `submit()`, and every one of those calls is a DIFFERENT cut (different
+ * camera), so a pair shared across view slots would read only the
+ * last-written call's bytes at submit (the writeBuffer/submit landmine —
+ * the same reason the two STREAMS already never share a pair).
  */
 type StreamBuffers = {
   /**
@@ -146,6 +154,11 @@ function emptyStreamBuffers(): StreamBuffers {
   return { nodeParamsBuffer: null, prefixBuffer: null, drawCapacity: 0 };
 }
 
+/** One draw stream's buffer pair, one per view slot (index = `viewSlot`). */
+function emptyStreamBuffersRing(): StreamBuffers[] {
+  return Array.from({ length: VIEW_SLOT_COUNT }, emptyStreamBuffers);
+}
+
 /** One committed catalog's GPU resources + the octree kept for the layer. */
 type LoadedStarSource = {
   catalog: StarCatalog;
@@ -153,8 +166,8 @@ type LoadedStarSource = {
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
   recordsBindGroup: GPUBindGroup;
-  /** The two draw streams' per-source buffer pairs (see `StreamBuffers`). */
-  streams: Record<StarDrawStream, StreamBuffers>;
+  /** The two draw streams' per-view-slot buffer-pair rings (see `StreamBuffers`). */
+  streams: Record<StarDrawStream, StreamBuffers[]>;
 };
 
 export function createStarCatalogRenderer(
@@ -165,17 +178,22 @@ export function createStarCatalogRenderer(
   // Sized to STAR_UNIFORM_BYTES: the 80-byte CameraUniforms prefix plus the
   // source-independent `sizePx` + `brightness` + `glowOverlap` scalars, matching
   // `struct StarUniforms`.
-  const cameraBuffer = device.createBuffer({
-    label: 'star-catalog-camera-uniform',
-    size: STAR_UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
   const cameraScratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
 
   // ── Bind-group layouts (explicit, not 'auto' — layouts don't cross pipelines) ─
   const cameraBgl = device.createBindGroupLayout({
     label: 'star-catalog-camera-bgl',
     entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
+  });
+  // One physical camera buffer + bind group per view slot (Task 13b): the
+  // camera is shared across SOURCES within one `draw` call, but NOT across
+  // view slots — a capture sweep's several `draw` calls (different faces,
+  // one submit) each carry a different vp (see the module header).
+  const cameraRing = createViewSlotUniformRing({
+    device,
+    label: 'star-catalog-camera-uniform',
+    byteSize: STAR_UNIFORM_BYTES,
+    layout: cameraBgl,
   });
   const drawBgl = device.createBindGroupLayout({
     label: 'star-catalog-draw-bgl',
@@ -206,12 +224,6 @@ export function createStarCatalogRenderer(
         buffer: { type: 'read-only-storage' },
       },
     ],
-  });
-
-  const cameraBindGroup = device.createBindGroup({
-    label: 'star-catalog-camera-bg',
-    layout: cameraBgl,
-    entries: [{ binding: 0, resource: { buffer: cameraBuffer } }],
   });
 
   // ── Shader modules + pipeline (additive, depthless — the hdr row has no depth) ─
@@ -306,15 +318,17 @@ export function createStarCatalogRenderer(
       catalog,
       recordsBuffer,
       recordsBindGroup,
-      streams: { leaf: emptyStreamBuffers(), aggregate: emptyStreamBuffers() },
+      streams: { leaf: emptyStreamBuffersRing(), aggregate: emptyStreamBuffersRing() },
     });
   }
 
-  /** Release both stream buffer pairs of a source (replace / unload / teardown). */
+  /** Release every stream × view-slot buffer pair of a source (replace / unload / teardown). */
   function destroyStreams(entry: LoadedStarSource): void {
     for (const stream of ['leaf', 'aggregate'] as const) {
-      entry.streams[stream].nodeParamsBuffer?.destroy();
-      entry.streams[stream].prefixBuffer?.destroy();
+      for (const buffers of entry.streams[stream]) {
+        buffers.nodeParamsBuffer?.destroy();
+        buffers.prefixBuffer?.destroy();
+      }
     }
   }
 
@@ -394,26 +408,30 @@ export function createStarCatalogRenderer(
       aggregateIntensityCap,
       frustumPlanes,
       glowMarginAngleRad,
+      viewSlot,
     } = args;
     const entry = sources.get(source);
     if (!entry || drawCount === 0) return;
-    const buffers = entry.streams[stream];
+    const buffers = entry.streams[stream][viewSlot]!;
 
-    // Camera uniform: identical bytes every source, so this repeated write is
-    // idempotent (see the module header). floats 18/19 stay zero-init.
-    // `sizePx`, `brightness`, `glowOverlap` and `aggregateIntensityCap` ride this
-    // buffer too — all four are source-independent (the same base star-dot size +
-    // exposure trim + glow spread + aggregate peak ceiling for every source this
+    // Camera uniform: identical bytes every source WITHIN one view slot (see
+    // the module header), but NOT across view slots — a sky-cubemap capture
+    // sweep's several `draw` calls (different faces, one submit) each carry
+    // a different vp, so this call's bytes land in THIS `viewSlot`'s own
+    // buffer (Task 13b). floats 18/19 stay zero-init. `sizePx`, `brightness`,
+    // `glowOverlap` and `aggregateIntensityCap` ride this buffer too — all
+    // four are source-independent (the same base star-dot size + exposure
+    // trim + glow spread + aggregate peak ceiling for every source this
     // frame), so appending them to the shared camera prefix is safe: each
-    // source's repeated write lands the identical values. Written here, ONCE per
-    // source before its draw, so there is no mid-frame mutation for the
+    // source's repeated write lands the identical values. Written here, ONCE
+    // per source before its draw, so there is no mid-frame mutation for the
     // writeBuffer/submit ordering race to corrupt.
     writeCameraPrefix(cameraScratch, vp, viewportPx);
     cameraScratch[SIZE_PX_FLOAT_INDEX] = sizePx;
     cameraScratch[BRIGHTNESS_FLOAT_INDEX] = brightness;
     cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = glowOverlap;
     cameraScratch[AGG_INTENSITY_CAP_FLOAT_INDEX] = aggregateIntensityCap;
-    device.queue.writeBuffer(cameraBuffer, 0, cameraScratch);
+    cameraRing.writeSlot(viewSlot, cameraScratch);
 
     // Pack every SURVIVING draw's params contiguously and build the exclusive
     // prefix sum of record counts in the same pass. Culled nodes are skipped
@@ -524,7 +542,7 @@ export function createStarCatalogRenderer(
     });
 
     pass.setPipeline(pipelines[stream]);
-    pass.setBindGroup(0, cameraBindGroup);
+    pass.setBindGroup(0, cameraRing.bindGroupOf(viewSlot));
     pass.setBindGroup(1, drawBindGroup);
     pass.setBindGroup(2, entry.recordsBindGroup);
     // ONE instanced draw for the whole cut: the vertex stage routes each instance
@@ -558,7 +576,7 @@ export function createStarCatalogRenderer(
       destroyStreams(entry);
     }
     sources.clear();
-    cameraBuffer.destroy();
+    cameraRing.destroy();
   }
 
   const renderer: StarCatalogRenderer = {

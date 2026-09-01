@@ -25,6 +25,7 @@ function makeCtx(): ReadyFrameContext {
   const cam = makeCam();
   return {
     isReady: true,
+    viewSlot: 0,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,

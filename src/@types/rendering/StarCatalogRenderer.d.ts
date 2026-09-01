@@ -189,6 +189,15 @@ export type StarCatalogDrawArgs = {
    * Ignored for aggregate nodes, whose glow spills a world (not angular) slack.
    */
   readonly glowMarginAngleRad: number;
+  /**
+   * `ReadyFrameContext.viewSlot` (Task 13b) — which view-slot's camera
+   * uniform + NodeParams/prefix buffer PAIR this call's writes land in. `0`
+   * for the main view; `1..6` for a sky-cubemap capture face. A capture
+   * sweep calls `draw` once per face plus once for the real view, all before
+   * one `submit()`, so each call needs its own destination (see
+   * `createViewSlotUniformRing`'s doc for the race this closes).
+   */
+  readonly viewSlot: number;
 };
 
 /**

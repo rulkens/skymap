@@ -303,6 +303,9 @@ export function deriveFrameContext(
     nowMs,
     simDays,
     fovYRad: cam.fovYRad,
+    // The main view. `skyCubemapFaceContext` overrides this to `face + 1` on
+    // the contexts it derives — see `ReadyFrameContext.viewSlot`'s doc.
+    viewSlot: 0,
     focusBlend: 0,
     visibleSourceMask,
     focus: ZERO_FOCUS,

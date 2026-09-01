@@ -870,6 +870,7 @@ function drawStream(
   prep: PreparedStarCut,
   stream: StarDrawStream,
   fovYRad: number,
+  viewSlot: number,
 ): void {
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
   // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
@@ -900,6 +901,7 @@ function drawStream(
       aggregateIntensityCap: prep.aggregateIntensityCap,
       frustumPlanes,
       glowMarginAngleRad,
+      viewSlot,
     });
   }
 }
@@ -911,6 +913,9 @@ export const starCatalogLayer: ContentLayer = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
+  // Sky-cubemap capture roster (Task 13b, Ruling 6): the survey LEAF stream
+  // is part of the black-hole lens's captured "sky".
+  skyCapture: true,
 
   enabled: starCatalogVisible,
 
@@ -920,7 +925,7 @@ export const starCatalogLayer: ContentLayer = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
     // The LEAF stream: full-resolution point stars into HDR, per-glow knee.
-    drawStream(renderer, pass, view, prep, 'leaf', ctx.fovYRad);
+    drawStream(renderer, pass, view, prep, 'leaf', ctx.fovYRad, ctx.viewSlot);
   },
 
   // Pick aspect — stamps every visible LEAF star's packed identity into the
