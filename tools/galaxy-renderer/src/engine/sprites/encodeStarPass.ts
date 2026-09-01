@@ -10,7 +10,7 @@
  */
 import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 
-import { beginClearPass } from '../passes/beginClearPass';
+import { beginClearPass } from '../../../../../src/services/gpu/lib/beginClearPass';
 
 export function encodeStarPass({
   enc,

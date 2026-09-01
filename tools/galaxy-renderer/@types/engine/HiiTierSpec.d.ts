@@ -1,16 +1,16 @@
 /**
  * HiiTierSpec — one row of `data/hiiTiers.ts`'s `HII_TIERS`, the table that
- * drives the per-tier target, divisor, bind group, header and timing slot
- * `createGalaxyEngine.ts`'s `drawFrame` builds for shells/dig/young instead
- * of copy-pasting DIG's split two more times.
+ * drives each tier's target, divisor, bind group, header and timing slot
+ * across the engine and the shared field renderer, instead of copy-pasting
+ * DIG's split two more times.
  */
-import type { HiiTierKind } from './HiiTierKind';
+import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
 import type { RenderSettings } from './RenderSettings';
 
 export type HiiTierSpec = {
-  readonly kind: HiiTierKind;
+  readonly kind: HiiTier;
   /**
-   * `model.hiiSegments`' own label for this tier (`hiiRegions.ts`'s
+   * `field.hiiSegments`' own label for this tier (`hiiRegions.ts`'s
    * `buildHiiRegionsWithSegments`) — restated here, not imported, since that
    * function returns plain string literals with no exported constant. Also
    * this tier's GPU-timing slot name (`timingSlots.ts`): one string serves

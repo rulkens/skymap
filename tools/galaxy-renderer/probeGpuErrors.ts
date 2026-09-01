@@ -1,16 +1,12 @@
 /**
  * probeGpuErrors — headless WebGPU *error* probe for the galaxy-renderer tool.
- *
  *   npx tsx tools/galaxy-renderer/probeGpuErrors.ts   # or: npm run galaxy-renderer:probe
  * No test in the repo can reach this tool's engine, so nothing but a human
  * eyeballing the canvas catches a bind group built against a destroyed
- * texture, a uniform buffer too small for its struct, or a shader that stops
- * linking. This drives the real UI in real Chromium and reports what the GPU
- * itself complained about. It judges NOTHING about the picture — errors only
- * — plus one numeric exception: `readback:ringMeans` below, which diffs a
- * real GPU compute output against its CPU reference (no headless WebGPU
- * runtime exists in this repo — see the plan's Task 5 for why this one
- * check rides the error probe instead of its own harness).
+ * texture or a shader that stops linking — this drives the real UI in real
+ * Chromium and reports what the GPU complained about. Errors only, plus one
+ * numeric exception: `readback:ringMeans`, diffing a real GPU compute output
+ * against its CPU reference (no headless WebGPU runtime exists in this repo).
  */
 
 import {
@@ -53,9 +49,9 @@ import {
 } from '../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
 import { discLightScaleLength } from '../../src/utils/galaxy/discLightScaleLength';
 import { buildHiiShellsAndYoungWithSegments } from '../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import { computePlaceDustBudget } from './src/engine/ismMap/computePlaceDustBudget';
-import { computeDigVeilBudget } from './src/engine/ismMap/computeDigVeilBudget';
-import { FIELD_COMPONENT_FLOATS } from './src/engine/field/packFieldUniforms';
+import { computePlaceDustBudget } from '../../src/services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
+import { computeDigVeilBudget } from '../../src/services/gpu/renderers/galaxyField/ismMap/computeDigVeilBudget';
+import { FIELD_COMPONENT_FLOATS } from '../../src/services/gpu/renderers/galaxyField/field/packFieldUniforms';
 
 const VIEWPORT = { width: 1400, height: 900 };
 // A control change reaches the GPU through store → engineBridge → the next rAF,

@@ -1,15 +1,12 @@
 /**
- * Parity guard: the flow-field constants mirrored into
- * `flow/constants.wesl` must equal the authoritative TS exports in
- * `flowFieldConstants.ts`. Because `?static` WESL linking does pure build-time
- * linking with NO value injection, the shader-side subset is a hand-written
- * mirror — so a test, not the compiler, is what keeps it from drifting. Mirrors
- * the runtime's `tests/data/selectionEncoding.test.ts` pattern (read the `.wesl`
- * as text, regex-extract each `const NAME: type = value;`, assert equality).
- *
- * Path is resolved from `process.cwd()` (the repo root under Vitest), matching
- * the convention used by `selectionEncoding.test.ts` — `__dirname` would not
- * work under the Vite/Vitest ESM runner.
+ * Parity guard: the flow-field constants mirrored into `flow/constants.wesl`
+ * must equal the authoritative TS exports in `flowFieldConstants.ts`.
+ * `?static` WESL linking does pure build-time linking with NO value
+ * injection, so the shader-side subset is a hand-written mirror — a test,
+ * not the compiler, keeps it from drifting (mirrors
+ * `tests/data/selectionEncoding.test.ts`'s read-as-text/regex-extract
+ * pattern). Path is resolved from `process.cwd()`, not `__dirname`, which
+ * doesn't work under the Vite/Vitest ESM runner.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,7 +23,7 @@ import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxy
 import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
-import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../tools/galaxy-renderer/src/engine/ismMap/packIsmMapFluidEvents';
+import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
 import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 
@@ -83,8 +80,8 @@ describe('flow/constants.wesl ↔ flowFieldConstants.ts parity', () => {
  * `@workgroup_size(16, 16)` is different: WGSL requires it as a compile-time
  * literal, so it genuinely stays duplicated across every ismMap compute entry
  * point rather than a single named const. This guards THAT duplication
- * against `ISM_MAP_WORKGROUP_SIZE` (`galaxyIsmMapArmForcing.ts`, which
- * `createGalaxyEngine.ts` also uses for dispatch-count math).
+ * against `ISM_MAP_WORKGROUP_SIZE` (`galaxyIsmMapArmForcing.ts`, which the
+ * ISM-map orientation/fluid runners also use for dispatch-count math).
  */
 describe('ismMap @workgroup_size(N, N) ↔ ISM_MAP_WORKGROUP_SIZE parity', () => {
   const files = [
