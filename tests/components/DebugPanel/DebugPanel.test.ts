@@ -35,6 +35,7 @@ import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
+import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
 import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/earthTileSubsystem';
 
 // ---------------------------------------------------------------------------
@@ -55,14 +56,33 @@ const stubTimingService: GpuTimingService = {
 
 const stubSlots = new Map();
 
-// Only `debug.earthTiles` is reached (via EarthTileAtlasSectionContainer) —
-// `flyToLonLat` now dispatches a store action rather than reading the handle
-// — the rest of EngineHandle is unused by DebugPanel's tree, so it's cast
-// rather than fully stubbed.
+/** A quiet, self-consistent stub — armMismatch/epochMismatch both false. */
+const EMPTY_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
+  storedFrame: 'absolute',
+  renderedFrame: 'absolute',
+  armMismatch: false,
+  engagedBodyId: null,
+  hOverR: null,
+  altitudeKm: null,
+  lastRenderedSimDays: 0,
+  liveSimDays: 0,
+  epochDeltaDays: 0,
+  epochMismatch: false,
+  anchorLocalKm: null,
+  eyeRelAnchorMagM: null,
+  activeDriverId: 'resting',
+};
+
+// `debug.earthTiles` (via EarthTileAtlasSectionContainer) and
+// `debug.cameraDebug` (via CameraStateSectionContainer) are the only fields
+// reached — `flyToLonLat` now dispatches a store action rather than reading
+// the handle — the rest of EngineHandle is unused by DebugPanel's tree, so
+// it's cast rather than fully stubbed.
 const stubEngineHandleRef = createRef<EngineHandle | null>();
 stubEngineHandleRef.current = {
   debug: {
     earthTiles: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+    cameraDebug: () => EMPTY_CAMERA_DEBUG_SNAPSHOT,
   },
 } as unknown as EngineHandle;
 

@@ -22,7 +22,8 @@ import { SURFACE_REGIME } from '../../../data/camera/surfaceRegime';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 import { bodyRelativePose } from './bodyRelativePose';
 
-function hOverR(eyeMpc: Readonly<Vec3>, bodyState: BodyState, radiusM: number): number {
+/** Exported for the camera debug readout (`cameraDebugSnapshotOf`), the one other h/R reader. */
+export function hOverR(eyeMpc: Readonly<Vec3>, bodyState: BodyState, radiusM: number): number {
   const { eyeRelBodyM } = bodyRelativePose({
     camPosMpc: eyeMpc,
     camBasisWorld: IDENTITY_MAT3,
@@ -55,7 +56,9 @@ export function regimeArmFor(
   }
 
   if (current === 'absolute') {
-    return nearestId !== null && nearestHR < SURFACE_REGIME.engageHR ? { body: nearestId } : 'absolute';
+    return nearestId !== null && nearestHR < SURFACE_REGIME.engageHR
+      ? { body: nearestId }
+      : 'absolute';
   }
 
   // The engaged body dropped out of the roster (unresolved this frame): hold

@@ -47,6 +47,13 @@ import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveWorldPose } from './helpers/liveWorldPose';
 import { liveFocusRow } from './helpers/liveFocusRow';
+import { deriveBodyStates } from './frame/deriveBodyStates';
+import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
+import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { selectTimeState } from '../../state/time/selectors';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyState } from '../../@types/scene/BodyState';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -947,6 +954,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // again after destroy), so the fallback keeps the panel's read total.
       earthTiles: () =>
         state.subsystems.earthTiles?.getDebugSnapshot() ?? EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+      // Off-frame read, so it goes through `liveWorldPose` + `deriveBodyStates`
+      // (memoized on `lastRenderedSimDays`, the same instant runFrame just
+      // primed) rather than re-deriving the fold — this getter never writes
+      // camera state. `liveSimDays` alone is resolved fresh at call time
+      // (`performance.now()`), the one deliberately "right now" read: it's
+      // what the epoch-mismatch check is comparing the render loop against.
+      cameraDebug: () => {
+        const rootState = store.getState();
+        const bodyStates = deriveBodyStates(
+          state.cameraRuntime.lastRenderedSimDays.current,
+        ) as ReadonlyMap<BodyId, BodyState>;
+        return cameraDebugSnapshotOf({
+          storedFrame: rootState.camera.base.frame,
+          renderedPose: state.cameraRuntime.lastPose.current,
+          eyeMpc: eyeMpcOf(liveWorldPose(state), ORIENTATION_FRAMES[state.settings.orientation]),
+          bodyStates,
+          lastRenderedSimDays: state.cameraRuntime.lastRenderedSimDays.current,
+          liveSimDays: deriveSimDays(selectTimeState(rootState), performance.now()),
+          activeDriverId: state.cameraRuntime.prevActiveId.current,
+        });
+      },
     },
 
     destroy,

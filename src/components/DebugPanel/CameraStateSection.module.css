@@ -1,0 +1,16 @@
+/*
+ * CameraStateSection — plain readout lines, borrowing debugSection's shared
+ * `readout` opacity for the healthy rows. `.mismatch` overrides it for the
+ * two rows this section exists to flag (arm + epoch): full opacity, a red
+ * that reads clearly against the panel's dark chrome, and bold so a glance
+ * catches it.
+ */
+
+.readout {
+  composes: readout from './debugSection.module.css';
+}
+
+.mismatch {
+  color: #f66;
+  font-weight: bold;
+}

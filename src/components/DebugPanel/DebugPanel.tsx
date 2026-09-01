@@ -3,7 +3,10 @@
  *
  * Sections: `AssetLoadingSection` (slot-progress rows),
  * `GpuTimingsSection` (per-pass GPU timing live readout),
- * `RenderTogglesSectionContainer` (per-pass on/off checkboxes for visual
+ * `CameraStateSectionContainer` (camera-pivot readout: stored vs. rendered
+ * arm, h/R against the engage/disengage band, render-vs-live epoch, and the
+ * engaged body's anchor/eye — see its own header for the two mismatch
+ * classes it flags), `RenderTogglesSectionContainer` (per-pass on/off checkboxes for visual
  * debugging), `FlowTuningSectionContainer`, `MilkyWayTuningSectionContainer`
  * (the Milky-Way star cloud's look knobs),
  * `ZoneOfAvoidanceTuningSectionContainer` (the galactic-plane guide band's
@@ -49,6 +52,7 @@ import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import EarthTileAtlasSectionContainer from '../containers/EarthTileAtlasSectionContainer';
+import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
 import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
@@ -92,6 +96,7 @@ function DebugPanel({
           GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />
       <GpuTimingsSection service={timingService} />
+      <CameraStateSectionContainer engineHandleRef={engineHandleRef} />
       <RenderTogglesSectionContainer passNames={passNames} />
       <FlowTuningSectionContainer />
       <MilkyWayTuningSectionContainer />
