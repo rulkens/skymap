@@ -1,7 +1,6 @@
 // src/components/containers/SgrAStarLensingTuningSectionContainer.tsx
 /**
- * TEMPORARY (Task 15) — store boundary for the DebugPanel's Sgr A* lens
- * tuning knobs, deleted at the removal step. Mirrors
+ * Store boundary for the DebugPanel's Sgr A* lens tuning knobs. Mirrors
  * `ZoneOfAvoidanceTuningSectionContainer`: `selectSgrAStarLensingTuning`
  * returns the whole cluster (the slider board reads every knob), so this
  * subtree re-renders on any write to it — the right granularity for a small

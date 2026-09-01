@@ -24,7 +24,9 @@ lenses and before the annotations that must stay unwarped.
 
 - Zero new user-facing settings (Q9) — the feature is physically parameterized
   from `BLACK_HOLES` + the shipped anchor body; dev-tuning constants ride the
-  existing DebugPanel and are removed before merge.
+  existing DebugPanel. **Amended during implementation:** that dev-tuning
+  section SHIPS rather than being deleted before merge — see the spec's
+  §Settings for why, and Task 15 below.
 - No Kerr metric, no full-GR observer view below 2 r_s, no cinematic
   accretion disc, no M87*/second black hole, no tour beat, no lensing of
   annotations (orbit trails, marker rings, labels, picking stay unlensed).
@@ -969,13 +971,18 @@ not a licence to build finite-distance geodesics.
 
 ---
 
-### Task 15: Debug-panel dev-tuning knobs (temporary, removed before merge)
+### Task 15: Debug-panel dev-tuning knobs
+
+**Amended during implementation — this section SHIPS.** The planned removal
+step is cancelled: the Tier-2 fields have no owner other than
+`settings.sgrAStarLensingTuning`, the look is taste that will keep being
+retuned, and `cubemapResolutionPx` is a live VRAM/sharpness trade. The
+176-byte uniform tail is therefore permanent. See the spec's §Settings.
 
 **Files:**
-- Create (temporary): `src/components/DebugPanel/SgrAStarLensingTuningSection.tsx`
-- Create (temporary): `src/components/containers/SgrAStarLensingTuningSectionContainer.tsx`
-- Modify (temporary, then reverted in this same task's later step):
-  `src/components/DebugPanel/DebugPanel.tsx`
+- Create: `src/components/DebugPanel/SgrAStarLensingTuningSection.tsx`
+- Create: `src/components/containers/SgrAStarLensingTuningSectionContainer.tsx`
+- Modify: `src/components/DebugPanel/DebugPanel.tsx`
 
 **Precedent:** `ZoneOfAvoidanceTuningSection.tsx` +
 `ZoneOfAvoidanceTuningSectionContainer.tsx` (and their sibling
@@ -996,21 +1003,12 @@ gate).
       that precedent uses — read its container before implementing, don't
       invent a new one).
 - [ ] Mount it in `DebugPanel.tsx` alongside the other tuning sections.
-- [ ] Use it during Task 17's visual gate to converge on final values for
-      `BLACK_HOLES`'s emission fields and the capture threshold constant.
-- [ ] **Removal step (same task, after Task 17 converges on final values):**
-      bake the tuned values back into `BLACK_HOLES` (Task 6) and the capture
-      threshold constant (Task 12) as the shipped literals, then DELETE
-      `SgrAStarLensingTuningSection.tsx` + its container via
-      `npm run refactor -- delete src/components/DebugPanel/SgrAStarLensingTuningSection.tsx src/components/containers/SgrAStarLensingTuningSectionContainer.tsx`
-      and remove its mount line from `DebugPanel.tsx` — this removal is part
-      of THIS task, not deferred to a cleanup task, per the spec's explicit
-      "removed before merge" posture (Q9).
+- [ ] Use it during Task 17's visual gate to converge on the DEFAULTS that
+      ship: Tier-1 values back into `BLACK_HOLES` (Task 6), Tier-2 values into
+      `DEFAULT_SGR_A_STAR_LENSING_TUNING` (`src/data/defaults.ts`). The
+      section itself stays mounted.
 - [ ] Run `npm test` and `npm run typecheck` — green.
-- [ ] Commit (the removal is its own commit within this task, after the
-      tuning-driven values are baked in — so the history shows tuning added,
-      then values baked + tuning removed, not squashed into one commit that
-      hides the knob ever existed).
+- [ ] Commit.
 
 ---
 

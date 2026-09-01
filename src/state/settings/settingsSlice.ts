@@ -198,9 +198,8 @@ const settingsSlice = createSlice({
       Object.assign(settings.zoneOfAvoidance, action.payload);
     },
 
-    // ── Sgr A* lens tuning — TEMPORARY (Task 15), deleted at the removal step
-    // ─ leaf-by-leaf patch, no visibility axis to protect (this cluster is
-    // pure knobs, not a singleton overlay).
+    // ── Sgr A* lens tuning — leaf-by-leaf patch, no visibility axis to
+    // protect (this cluster is pure knobs, not a singleton overlay).
     setSgrAStarLensingTuning: (settings, action: PayloadAction<Partial<SgrAStarLensingTuning>>) => {
       Object.assign(settings.sgrAStarLensingTuning, action.payload);
     },

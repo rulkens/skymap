@@ -199,9 +199,8 @@ export type EngineSettingsState = {
   zoneOfAvoidance: ZoneOfAvoidanceSettings;
 
   /**
-   * TEMPORARY (Task 15, deleted at its removal step once Task 17 converges) —
-   * the Sgr A* lens pass's DebugPanel tuning knobs. See `SgrAStarLensingTuning`
-   * for the tier breakdown and what each field replaces.
+   * The Sgr A* lens pass's DebugPanel tuning knobs. See
+   * `SgrAStarLensingTuning` for the tier breakdown and what each field owns.
    */
   sgrAStarLensingTuning: SgrAStarLensingTuning;
 

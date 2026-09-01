@@ -1,12 +1,9 @@
 /**
- * packSgrAStarLensingUniforms — pure packer for the `SgrAStarLensingUniforms`
- * struct (`shaders/lib/sgrAStarLensing.wesl`) — TEMPORARILY 176 bytes (Task
- * 15's Tier-2 DebugPanel knobs, incl. the 2nd-round emission strength/tint
- * addendum; shrinks back to 144 at Task 15's removal step once Task 17
- * converges — see that .wesl file's own header).
+ * packSgrAStarLensingUniforms — pure packer for the 176-byte
+ * `SgrAStarLensingUniforms` struct (`shaders/lib/sgrAStarLensing.wesl`).
  *
- * Task 10's half of the uniform contract between the Sgr A* lens pass
- * (Task 13, not yet written) and its WGSL. The struct is the shared
+ * The CPU half of the uniform contract between the Sgr A* lens pass and its
+ * WGSL. The struct is the shared
  * `CameraUniforms` prefix (`writeCameraPrefix`, the same helper every
  * world-space renderer uses) plus the lens's own scalar params, the LUT
  * addressing pair, this frame's fade-band alpha, and the camera-relative
@@ -32,12 +29,12 @@
  *   f32 30      (byte 120..123): lutSampleCount              f32
  *   f32 31      (byte 124..127): bandAlpha                  f32
  *   f32 32..34  (byte 128..139): anchorPosRelCamM            vec3<f32>
- *   f32 35      (byte 140..143): diskScaleHeightRs — T15 TEMP tuning knob
- *   f32 36      (byte 144..147): edgeFadeStartFraction — T15 TEMP tuning knob
- *   f32 37      (byte 148..151): dopplerStrength — T15 TEMP tuning knob
- *   f32 38      (byte 152..155): emissionStrength — T15 TEMP tuning knob (2nd addendum)
+ *   f32 35      (byte 140..143): diskScaleHeightRs — tuning knob
+ *   f32 36      (byte 144..147): edgeFadeStartFraction — tuning knob
+ *   f32 37      (byte 148..151): dopplerStrength — tuning knob
+ *   f32 38      (byte 152..155): emissionStrength — tuning knob
  *   f32 39      (byte 156..159): edgeFadeEndRs — per-frame derived (not a knob)
- *   f32 40..42  (byte 160..171): emissionTint — T15 TEMP tuning knob (2nd addendum), vec3<f32>
+ *   f32 40..42  (byte 160..171): emissionTint — tuning knob, vec3<f32>
  *   f32 43      (byte 172..175): quadPlaneRadiusRs — per-frame derived (not a knob)
  *
  * Total: 176 bytes / 44 f32. The 12 scalars at f32 20..31 exactly fill the
@@ -65,12 +62,12 @@
  * @param lutSampleCount       The LUT texture's texel count.
  * @param bandAlpha            This frame's fade-band alpha (gates emission/deflection strength in-shader).
  * @param anchorPosRelCamM     Camera-relative anchor position, metres.
- * @param diskScaleHeightRs    T15 TEMP — vertical falloff scale height, r_s units.
- * @param edgeFadeStartFraction T15 TEMP — escape-branch edge-fade start, as a fraction of `lutMaxImpactParamRs`.
- * @param dopplerStrength      T15 TEMP — Doppler-beaming strength factor.
- * @param emissionStrength     T15 TEMP (2nd addendum) — overall multiplier on the annulus emission's output intensity.
+ * @param diskScaleHeightRs    Vertical falloff scale height, r_s units.
+ * @param edgeFadeStartFraction Escape-branch edge-fade start, as a fraction of `lutMaxImpactParamRs`.
+ * @param dopplerStrength      Doppler-beaming strength factor.
+ * @param emissionStrength     Overall multiplier on the annulus emission's output intensity.
  * @param edgeFadeEndRs        Escape fade's end impact parameter, r_s units — derived per frame by the layer.
- * @param emissionTint         T15 TEMP (2nd addendum) — overall multiplier on the annulus emission's per-sample tint.
+ * @param emissionTint         Overall multiplier on the annulus emission's per-sample tint.
  * @param quadPlaneRadiusRs    Lens billboard half-size, r_s units — `lensQuadPlaneRadiusRs`, derived per frame.
  */
 
@@ -80,8 +77,8 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../services/gpu/lib/cameraUniforms';
 
 /** f32 count of `SgrAStarLensingUniforms` — 80-byte cam prefix (20) + 12
- *  scalars + anchorPosRelCamM (3) + T15 TEMP tuning knobs (4 scalars +
- *  emissionTint's 3) + edgeFadeEndRs + quadPlaneRadiusRs = 44. */
+ *  scalars + anchorPosRelCamM (3) + tuning knobs (4 scalars + emissionTint's
+ *  3) + edgeFadeEndRs + quadPlaneRadiusRs = 44. */
 export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 24;
 
 export function packSgrAStarLensingUniforms(
@@ -125,12 +122,12 @@ export function packSgrAStarLensingUniforms(
   out[32] = anchorPosRelCamM[0]; // byte 128 — vec3, 16-byte aligned
   out[33] = anchorPosRelCamM[1]; // byte 132
   out[34] = anchorPosRelCamM[2]; // byte 136
-  out[35] = diskScaleHeightRs; // byte 140 — T15 TEMP
-  out[36] = edgeFadeStartFraction; // byte 144 — T15 TEMP
-  out[37] = dopplerStrength; // byte 148 — T15 TEMP
-  out[38] = emissionStrength; // byte 152 — T15 TEMP (2nd addendum)
+  out[35] = diskScaleHeightRs; // byte 140
+  out[36] = edgeFadeStartFraction; // byte 144
+  out[37] = dopplerStrength; // byte 148
+  out[38] = emissionStrength; // byte 152
   out[39] = edgeFadeEndRs; // byte 156 — per-frame derived (not a knob)
-  out[40] = emissionTint[0]; // byte 160 — T15 TEMP (2nd addendum), vec3
+  out[40] = emissionTint[0]; // byte 160 — vec3
   out[41] = emissionTint[1]; // byte 164
   out[42] = emissionTint[2]; // byte 168
   out[43] = quadPlaneRadiusRs; // byte 172 — per-frame derived (not a knob)

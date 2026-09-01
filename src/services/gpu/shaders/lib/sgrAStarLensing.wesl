@@ -2,9 +2,7 @@
 // budget on that basis, same allowance camera.wesl takes) for the Sgr A*
 // lens pass's per-frame uniform buffer.
 //
-// This is the struct-only half of the contract task-10 owns; the pass that
-// binds it (the lens vertex/fragment pair, LUT texture sampling, the fold
-// image itself) is Task 13's job, not this file's. 'SchwarzschildDeflectionLut
+// This is the struct-only half of the contract. 'SchwarzschildDeflectionLut
 // .samples' upload as a separate 1D texture, NOT a field here — only the two
 // scalars that address it ('lutMinImpactParamRs'/'lutMaxImpactParamRs') and
 // its texel count ride in the uniform buffer.
@@ -27,17 +25,17 @@
 //   offset 120 : lutSampleCount           f32  — LUT texture's texel count
 //   offset 124 : bandAlpha                f32  — fade band's own alpha this frame
 //   offset 128 : anchorPosRelCamM         vec3<f32>  — camera-relative anchor, metres (f64->f32 rebase seam)
-//   offset 140 : diskScaleHeightRs        f32  — T15 TEMP tuning knob, was fragment.wesl's DISK_SCALE_HEIGHT_RS const
-//   offset 144 : edgeFadeStartFraction    f32  — T15 TEMP tuning knob, was the escape branch's hardcoded '* 0.7'
-//   offset 148 : dopplerStrength          f32  — T15 TEMP tuning knob, was fragment.wesl's DOPPLER_STRENGTH const
-//   offset 152 : emissionStrength         f32  — T15 TEMP tuning knob (2nd addendum), overall annulus-emission multiplier
-//   offset 156 : edgeFadeEndRs            f32  — escape fade's end impact parameter, r_s units (NOT a T15 knob:
-//                                                derived per frame by the layer — min(subpixel-deflection b, 0.6·camera
-//                                                distance), floored at lutMaxImpactParamRs; survives the T15 removal)
-//   offset 160 : emissionTint             vec3<f32>  — T15 TEMP tuning knob (2nd addendum), overall annulus-emission tint
-//   offset 172 : quadPlaneRadiusRs        f32  — lens billboard half-size, r_s units (NOT a T15 knob: derived per
-//                                                frame in f64 by the layer via 'lensQuadPlaneRadiusRs' — the in-shader
-//                                                f32 inversion shook close orbits; survives the T15 removal)
+//   offset 140 : diskScaleHeightRs        f32  — tuning knob (DebugPanel)
+//   offset 144 : edgeFadeStartFraction    f32  — tuning knob (DebugPanel)
+//   offset 148 : dopplerStrength          f32  — tuning knob (DebugPanel)
+//   offset 152 : emissionStrength         f32  — tuning knob, overall annulus-emission multiplier
+//   offset 156 : edgeFadeEndRs            f32  — escape fade's end impact parameter, r_s units (derived per
+//                                                frame by the layer — min(subpixel-deflection b, 0.6·camera
+//                                                distance), floored at lutMaxImpactParamRs)
+//   offset 160 : emissionTint             vec3<f32>  — tuning knob, overall annulus-emission tint
+//   offset 172 : quadPlaneRadiusRs        f32  — lens billboard half-size, r_s units (derived per frame in f64
+//                                                by the layer via 'lensQuadPlaneRadiusRs' — the in-shader f32
+//                                                inversion shook close orbits)
 //   total: 176 bytes.
 //
 // The 12 scalar fields (80..127, 48 bytes) exactly fill the run up to 128,
@@ -49,10 +47,9 @@
 // silently reads garbage — no compile error, no runtime error, just a wrong
 // (or on iOS, dropped) frame.
 //
-// TASK 15 TEMPORARY: every field after 'anchorPosRelCamM' is a DebugPanel
-// tuning knob (Tier 2 of the task-15 brief, plus its 2nd-round addendum
-// adding emissionStrength/emissionTint), deleted — struct shrunk back to
-// 144 bytes — at the removal step once Task 17 converges on final values.
+// Every field after 'anchorPosRelCamM' is either a DebugPanel tuning knob
+// ('settings.sgrAStarLensingTuning') or a per-frame layer-derived scalar, as
+// marked above.
 
 import package::lib::camera::CameraUniforms;
 

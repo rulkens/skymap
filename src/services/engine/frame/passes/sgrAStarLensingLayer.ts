@@ -35,13 +35,9 @@ import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
 // `BLACK_HOLES` is authored data guaranteed to carry a Sgr A* row; a missing
-// row is a wiring bug worth failing loudly on, not a silent no-op layer.
-// Checked once at module scope rather than every frame, the same "hoist the
-// constant lookup" convention `starPointsLayer`'s module-scope regions
-// follow. The row's VALUES are no longer read here — TEMPORARILY (Task 15),
-// `state.settings.sgrAStarLensingTuning` overrides them at pack time (seeded
-// from this same row — see `DEFAULT_SGR_A_STAR_LENSING_TUNING`); the removal
-// step reverts to reading `BLACK_HOLE.emission.*` directly.
+// row is a wiring bug worth failing loudly on, not a silent no-op layer. The
+// row's VALUES are not read here: `state.settings.sgrAStarLensingTuning` is
+// what packs (seeded from this same row — `DEFAULT_SGR_A_STAR_LENSING_TUNING`).
 if (BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id) === undefined) {
   throw new Error(`sgrAStarLensingLayer: BLACK_HOLES carries no row for '${SGR_A_STAR.id}'`);
 }
@@ -96,11 +92,9 @@ export const sgrAStarLensingLayer: ContentLayer = {
       -pose.eyeRelBodyM[2],
     ];
 
-    // TEMPORARY (Task 15): every emission field below reads the DebugPanel
-    // tuning cluster, not `BLACK_HOLE.emission` — see the module-scope guard's
-    // comment. `flickerPhase` must divide by the SAME `flickerTimescaleS` the
-    // packed uniform carries, or a live slider drag would desync the phase
-    // from the period it packs.
+    // `flickerPhase` must divide by the SAME `flickerTimescaleS` the packed
+    // uniform carries, or a live slider drag desyncs the phase from the
+    // period it packs.
     const tuning = state.settings.sgrAStarLensingTuning;
     const flickerPhase = (2 * Math.PI * (ctx.nowMs / 1000)) / tuning.flickerTimescaleS;
 

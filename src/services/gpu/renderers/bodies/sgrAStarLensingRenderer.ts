@@ -36,6 +36,7 @@ import fsCode from '../../shaders/bodies/sgrAStarLensing/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { buildSchwarzschildDeflectionLut } from '../../../../utils/lensing/buildSchwarzschildDeflectionLut';
+import { SGR_A_STAR_LENSING_UNIFORM_FLOATS } from '../../../../utils/gpu/packSgrAStarLensingUniforms';
 
 /**
  * LUT texel count: dense enough that the fragment's 2-tap lerp reads as
@@ -90,12 +91,11 @@ export function createSgrAStarLensingRenderer(
   const lutTexture = createLutTexture(device, lut);
   const lutView = lutTexture.createView({ label: 'sgr-a-star-lensing-lut-view' });
 
-  // ── Uniform buffer (176 bytes, byte-exact with SgrAStarLensingUniforms —
-  // TEMPORARILY grown from 144 for Task 15's Tier-2 DebugPanel knobs; shrinks
-  // back at the removal step once Task 17 converges) ──
+  // Sized off the packer's own float count, so a new struct field can't leave
+  // this buffer one `writeBuffer` validation error short at runtime.
   const uniformBuffer = device.createBuffer({
     label: 'sgr-a-star-lensing-uniform-buffer',
-    size: 176,
+    size: SGR_A_STAR_LENSING_UNIFORM_FLOATS * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 

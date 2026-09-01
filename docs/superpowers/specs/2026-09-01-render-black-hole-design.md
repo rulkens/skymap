@@ -372,8 +372,18 @@ it does not get waved through on the strength of the design.
 
 Zero new user-facing settings (Q9) — physically parameterized from
 `BLACK_HOLES` and the shipped anchor body (mass → r_s). Dev tuning of the
-emission/LUT/capture constants rides the existing debug panel and is removed
-before merge, the same posture the grill session settled on.
+emission/LUT/capture constants rides the existing debug panel.
+
+Amended during implementation: the grill session's original posture was that
+the tuning section would be deleted before merge, with its values baked back
+into `BLACK_HOLES` / shader consts. It ships instead. The emission look is a
+matter of taste that will keep being retuned, the section is dev-only
+(DebugPanel), and `settings.sgrAStarLensingTuning` is the honest single home
+for the Tier-2 fields (`diskScaleHeightRs`, `edgeFadeStartFraction`,
+`dopplerStrength`, `emissionStrength`, `emissionTint`) — they have no other
+owner. The uniform tail those fields ride (176 bytes) is therefore permanent.
+`cubemapResolutionPx` stays a knob for the same reason: it trades VRAM
+against lens sharpness on the viewer's own hardware.
 
 ---
 
@@ -433,7 +443,7 @@ touching no existing target row's derivation.
    seam, `oneMpcSeam.test.ts`) the rest of the feature is built on.
 4. **Feature implementation** — data rows, fade band, glint layer, LUT
    builder, geodesic shader, cubemap capture, lensing `ContentLayer`, draw-
-   order reorder, debug-panel dev tuning (removed before merge).
+   order reorder, debug-panel dev tuning.
 
 ## Relationship to open items
 

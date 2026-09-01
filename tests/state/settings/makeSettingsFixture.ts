@@ -142,7 +142,7 @@ export function makeSettingsFixture(
       enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
       ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
-    // TEMPORARY (Task 15) — mirrors initialState.ts's seed.
+    // Mirrors initialState.ts's seed.
     sgrAStarLensingTuning: {
       ...DEFAULT_SGR_A_STAR_LENSING_TUNING,
       skyCubemapRecaptureCameraMoveFraction: SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION,

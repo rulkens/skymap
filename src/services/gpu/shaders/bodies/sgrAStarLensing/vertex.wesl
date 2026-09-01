@@ -1,5 +1,5 @@
 // bodies/sgrAStarLensing/vertex.wesl — camera-facing billboard covering
-// Sgr A*'s lensing halo. Not a fullscreen triangle: the locked 144-byte
+// Sgr A*'s lensing halo. Not a fullscreen triangle:
 // 'SgrAStarLensingUniforms' carries no inverse-viewProj/camera basis, so a
 // flat quad's exact perspective-interpolated plane position stands in for
 // an unprojected ray (the fragment normalizes it) — the quad's own basis is

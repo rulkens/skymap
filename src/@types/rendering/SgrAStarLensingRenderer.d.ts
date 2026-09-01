@@ -19,7 +19,7 @@ export type SgrAStarLensingRenderer = Renderer & {
   readonly lut: SchwarzschildDeflectionLut;
   /**
    * Draw the lens billboard into the current (depthless, premultiplied-OVER)
-   * pass. `uniforms` is the packed 144-byte `SgrAStarLensingUniforms`
+   * pass. `uniforms` is the packed 176-byte `SgrAStarLensingUniforms`
    * (`packSgrAStarLensingUniforms`); `skyCubemapView` is this frame's
    * `dimension: 'cube'` view over the `sky-cubemap` render target
    * (`RenderTargets.cubeViewOf`) — read fresh by the caller every frame and

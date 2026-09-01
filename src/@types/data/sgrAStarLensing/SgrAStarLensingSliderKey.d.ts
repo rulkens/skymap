@@ -1,8 +1,8 @@
 import type { SgrAStarLensingTuning } from '../../settings/SgrAStarLensingTuning';
 
 /**
- * TEMPORARY (Task 15). Keys of `SgrAStarLensingTuning` that surface as
- * numeric DebugPanel sliders. `cubemapResolutionPx` (a discrete `<select>`)
+ * Keys of `SgrAStarLensingTuning` that surface as numeric DebugPanel
+ * sliders. `cubemapResolutionPx` (a discrete `<select>`)
  * and `emissionTint` (a `Vec3` colour picker) get bespoke controls instead —
  * the same split `ZoneOfAvoidanceSliderKey` makes for its colour fields.
  */

@@ -109,8 +109,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const lutSampleCount = 511;
     const bandAlpha = 512;
     const anchorPosRelCamM: Vec3 = [601, 602, 603];
-    // T15 TEMP tuning-knob fields — deleted along with these sentinels at the
-    // removal step once Task 17 converges.
+    // Tuning-knob fields.
     const diskScaleHeightRs = 701;
     const edgeFadeStartFraction = 702;
     const dopplerStrength = 703;

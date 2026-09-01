@@ -1,11 +1,10 @@
 // src/components/DebugPanel/SgrAStarLensingTuningSection.tsx
 /**
- * TEMPORARY (Task 15) — Sgr A* lens pass tuning subsection, deleted at the
- * removal step once Task 17 converges on final values (see
- * `SgrAStarLensingTuning`'s own docblock). Structural precedent:
- * `ZoneOfAvoidanceTuningSection.tsx`. `cubemapResolutionPx` gets a `<select>`
- * (four meaningful values) instead of riding the generic slider board — the
- * same "bespoke control after the rows" shape ZoA's colour pickers use.
+ * Sgr A* lens pass tuning subsection (see `SgrAStarLensingTuning`'s own
+ * docblock). Structural precedent: `ZoneOfAvoidanceTuningSection.tsx`.
+ * `cubemapResolutionPx` gets a `<select>` (four meaningful values) instead of
+ * riding the generic slider board — the same "bespoke control after the rows"
+ * shape ZoA's colour pickers use.
  *
  * 2048 costs ~192 MiB (2048² × 6 faces × 8 bytes/px rgba16float) — the row's
  * tooltip states the general formula rather than a per-option figure (no
@@ -38,7 +37,7 @@ export function SgrAStarLensingTuningSection({
 }: SgrAStarLensingTuningSectionProps): ReactElement {
   return (
     <DebugTuningSection
-      title="Sgr A* lens tuning (T15, temp)"
+      title="Sgr A* lens tuning"
       fields={SGR_A_STAR_LENSING_SLIDER_FIELDS}
       values={tuning}
       onSliderChange={(k, v) => onChange(sgrAStarLensingSliderPatch(k, v))}

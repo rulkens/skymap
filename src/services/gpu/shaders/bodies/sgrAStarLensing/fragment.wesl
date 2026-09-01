@@ -34,10 +34,9 @@ const MARCH_GATE_MARGIN_RS: f32 = 4.0;
 // Split across the bent-ray march's two segments (Task 13c finding 3).
 const SEGMENT_STEPS: i32 = MARCH_STEPS / 2;
 const RADIAL_EDGE_FEATHER_RS: f32 = 0.3; // inner/outer annulus edge softening width
-// DISK_SCALE_HEIGHT_RS / DOPPLER_STRENGTH used to live here as consts —
-// TEMPORARILY (Task 15) they ride 'u.diskScaleHeightRs' / 'u.dopplerStrength'
-// instead (DebugPanel tuning knobs), baked back into consts at the removal
-// step once Task 17 converges.
+// The disc scale height and Doppler strength are uniform fields
+// ('u.diskScaleHeightRs' / 'u.dopplerStrength'), not consts: both are live
+// DebugPanel knobs.
 
 // Two-tap manual lerp (r32float isn't sampler-filterable without the
 // optional feature, hence textureLoad + a texture_2d<f32>, not texture_1d —
@@ -139,7 +138,7 @@ fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>, closestT: f32, deflec
   // Applied to the SUMMED emission, not per-sample: a flat brightness/tint
   // multiplier on the whole march's output, not on the physical falloff that
   // feeds 'coverage' (which stays keyed to the modeled density/radial
-  // profile, unscaled — T15 TEMP tuning knobs, 2nd addendum).
+  // profile, unscaled).
   if (captured) {
     return vec4<f32>(emission * u.emissionStrength * u.emissionTint, coverage);
   }
@@ -205,9 +204,7 @@ fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
     // shows through — keyed to 'u.edgeFadeEndRs' (where deflection is
     // ~subpixel, layer-derived), NOT the LUT edge: fading at b = lutMax
     // blended a sky still deflected by degrees (~40 px) into the true sky,
-    // a visible double image at the ring. 'u.edgeFadeStartFraction' was a
-    // hardcoded '0.7' — TEMPORARILY (Task 15) a DebugPanel knob, baked back
-    // into a shader const at the removal step.
+    // a visible double image at the ring.
     let edgeFade = 1.0 - smoothstep(u.edgeFadeEndRs * u.edgeFadeStartFraction, u.edgeFadeEndRs, impactParamRs);
     alpha = u.bandAlpha * edgeFade;
   }

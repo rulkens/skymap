@@ -45,7 +45,7 @@ export type RenderTargetSpec = {
    * attachment). `scale` is ignored when this is present.
    *
    * `size` may be a FUNCTION for a row whose declared size is a live setting
-   * (`sky-cubemap`, T15 TEMPORARY DebugPanel knob) — the same
+   * (`sky-cubemap`'s DebugPanel knob) — the same
    * `scale`-is-a-function shape `mw-aggregate` uses, resolved by `reconcile`
    * every frame so a knob-driven row needs no rebuild path of its own.
    */

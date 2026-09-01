@@ -44,8 +44,7 @@ const LUT_MAX_IMPACT_PARAM_RS = 40.5;
 const LUT_SAMPLE_COUNT = 256;
 const BAND_ALPHA = 0.578125;
 const ANCHOR_POS_REL_CAM_M: Vec3 = [3.5, -1.25, 7.75];
-// T15 TEMP tuning-knob fields — deleted along with these sentinels at the
-// removal step once Task 17 converges.
+// Tuning-knob fields.
 const DISK_SCALE_HEIGHT_RS = 0.8125;
 const EDGE_FADE_START_FRACTION = 0.65625;
 const DOPPLER_STRENGTH = 0.46875;
@@ -117,13 +116,13 @@ describe('SgrAStarLensingUniforms byte offsets', () => {
     expect(rec[33]).toBe(ANCHOR_POS_REL_CAM_M[1]); // byte 132
     expect(rec[34]).toBe(ANCHOR_POS_REL_CAM_M[2]); // byte 136
 
-    // T15 TEMP tuning-knob fields, offset 140+ (float index 35+).
+    // Tuning-knob fields, offset 140+ (float index 35+).
     expect(rec[35]).toBe(DISK_SCALE_HEIGHT_RS); // byte 140
     expect(rec[36]).toBe(EDGE_FADE_START_FRACTION); // byte 144
     expect(rec[37]).toBe(DOPPLER_STRENGTH); // byte 148
     expect(rec[38]).toBe(EMISSION_STRENGTH); // byte 152
 
-    // edgeFadeEndRs — per-frame derived escape-fade end (not a T15 knob).
+    // edgeFadeEndRs — per-frame derived escape-fade end (not a knob).
     expect(rec[39]).toBe(EDGE_FADE_END_RS); // byte 156
 
     // emissionTint — vec3 at byte 160 (float index 40).

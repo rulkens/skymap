@@ -30,7 +30,7 @@ const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 const MW_DIVISOR = 2;
 
 // The production `sky-cubemap` row's `fixedSizePx.size` reads
-// `settings.sgrAStarLensingTuning.cubemapResolutionPx` (TEMPORARY, Task 15) —
+// `settings.sgrAStarLensingTuning.cubemapResolutionPx` —
 // every `createRenderTargets`/`reconcile` call below goes through the real
 // table (`extraRows` only APPENDS), so this fixture needs the field even in
 // tests that don't care about the sky-cubemap row itself.
@@ -62,8 +62,8 @@ const FIXED_SIZE_ROW: RenderTargetSpec = {
 };
 
 // A `fixedSizePx` row whose `size` is a FUNCTION of state (the
-// `sky-cubemap` production row's own shape, TEMPORARILY, Task 15) —
-// mirrors `mw-aggregate`'s state-driven `scale`.
+// `sky-cubemap` production row's own shape) — mirrors `mw-aggregate`'s
+// state-driven `scale`.
 const STATE_DRIVEN_FIXED_SIZE_ROW: RenderTargetSpec = {
   id: 'test:state-cubemap',
   format: 'rgba16float',

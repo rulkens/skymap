@@ -22,7 +22,7 @@ export const BLACK_HOLES: readonly BlackHoleRow[] = [
       // angle is unconstrained but fixed for reproducible renders.
       inclinationRad: 0.35, // ~20°
       // Major-axis position angle (E of N, standard astronomical convention).
-      // Entirely unconstrained; tuned via the Task 15 debug panel.
+      // Entirely unconstrained; tuned via the lens tuning debug panel.
       positionAngleRad: 2.21,
       // Stochastic brightening/dimming at minute-to-hour timescales (Sgr A* manifests
       // minute-scale near-IR flares; we borrow that timescale). Amplitude is tasteful

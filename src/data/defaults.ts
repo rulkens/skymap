@@ -267,26 +267,18 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
 };
 
 /**
- * TEMPORARY (Task 15, deleted at its removal step) — the Sgr A* lens pass's
- * DebugPanel tuning starting values.
+ * The Sgr A* lens pass's DebugPanel tuning defaults.
  *
  * Tier 1 (`innerRs`..`flickerTimescaleS`) seeds from `BLACK_HOLES`'s Sgr A*
- * row — that registry stays the single source of truth for these until the
- * removal step bakes the tuned values back into it.
+ * row — that registry is the single source of truth for those.
  *
- * Tier 2 (`diskScaleHeightRs` / `edgeFadeStartFraction` / `dopplerStrength`)
- * mirrors `fragment.wesl`'s former `DISK_SCALE_HEIGHT_RS` / the escape
- * branch's `* 0.7` edge-fade factor / `DOPPLER_STRENGTH` — this literal is
- * their new single source of truth until the removal step bakes the tuned
- * values back into the shader as consts. `emissionStrength: 1` /
- * `emissionTint: [1,1,1]` (2nd addendum) are no-op identities — the shader
- * had no such multiplier before, so a no-op default reproduces today's
- * brightness exactly.
+ * Tier 2 (`diskScaleHeightRs` / `edgeFadeStartFraction` / `dopplerStrength` /
+ * `emissionStrength` / `emissionTint`) has no other home: this literal IS
+ * their source of truth, and the shader reads them off the uniform.
  *
  * `cubemapResolutionPx` seeds the `sky-cubemap` render-target row's declared
- * size (`renderTargets.ts`) — 1024, per the user's live-view judgment against
- * the T15 addendum's own prior bump (256 -> 512 -> 1024); the knob's option
- * set stays 256/512/1024/2048.
+ * size (`renderTargets.ts`) — 1024, per a live-view judgment; the knob's
+ * option set is 256/512/1024/2048.
  *
  * NOT here: `skyCubemapRecaptureCameraMoveFraction`. Its owner is
  * `skyCubemapCaptureSchedule.ts` (a `services/` module `data/` doesn't

@@ -1,7 +1,7 @@
 /**
- * SGR_A_STAR_LENSING_SLIDER_FIELDS — TEMPORARY (Task 15), deleted at the
- * removal step. UI metadata for the Sgr A* lens pass's DebugPanel sliders —
- * same shape as `data/zoneOfAvoidance/zoneOfAvoidanceSliderFields.ts`: label,
+ * SGR_A_STAR_LENSING_SLIDER_FIELDS — UI metadata for the Sgr A* lens pass's
+ * DebugPanel sliders. Same shape as
+ * `data/zoneOfAvoidance/zoneOfAvoidanceSliderFields.ts`: label,
  * range, granularity and formatting live in ONE row per knob.
  * `cubemapResolutionPx` isn't here — see `SgrAStarLensingSliderKey`.
  */

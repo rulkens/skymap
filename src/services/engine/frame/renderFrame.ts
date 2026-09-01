@@ -142,9 +142,9 @@ export function renderFrame(input: RenderFrameInput): void {
   // their shared border and the whole cubemap flicker as the camera moved
   // (fix round 3). Threshold is a FRACTION of `gcDistanceMpc` — see
   // `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`'s own docblock for why a
-  // fixed AU distance is wrong here. Read off settings, not the module
-  // constant, TEMPORARILY (Task 15's DebugPanel knob) — the constant stays
-  // this value's real owner (`initialState.ts` seeds from it).
+  // fixed AU distance is wrong here. Read off settings (the DebugPanel knob),
+  // not the module constant — which stays this value's real owner
+  // (`initialState.ts` seeds from it).
   const cameraMovedBeyondThreshold =
     captureRuntime.pinnedEyeMpc !== null &&
     distanceMpc(ctx.drawCamPos, captureRuntime.pinnedEyeMpc) >
@@ -177,9 +177,9 @@ export function renderFrame(input: RenderFrameInput): void {
   // `faceSizePx` reads the sky-cubemap row's own ALLOCATED size (`sizeOf`,
   // this frame's already-reconciled pixels — see `RenderTargets.sizeOf`'s
   // doc), not `specOf().fixedSizePx.size` directly: that field is a live
-  // setting as of Task 15 (a function of state, not a plain number), so
-  // reading the resolved allocation is both simpler and the authoritative
-  // answer. A face whose context comes back null (pre-bootstrap) is simply
+  // setting (a function of state, not a plain number), so reading the
+  // resolved allocation is the authoritative answer.
+  // A face whose context comes back null (pre-bootstrap) is simply
   // omitted — `executeFrame` treats a missing map entry as "skip this step
   // cleanly" (see its module header).
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();

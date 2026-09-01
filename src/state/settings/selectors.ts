@@ -189,7 +189,7 @@ export const selectZoneOfAvoidanceEnabled = (state: RootState): boolean =>
 export const selectZoneOfAvoidance = (state: RootState): ZoneOfAvoidanceSettings =>
   selectSettings(state).zoneOfAvoidance;
 
-// --- sgrAStarLensingTuning cluster — TEMPORARY (Task 15) -----------------------
+// --- sgrAStarLensingTuning cluster ---------------------------------------------
 
 /** The whole tuning cluster — mirrors `selectMilkyWay` / `selectZoneOfAvoidance`. */
 export const selectSgrAStarLensingTuning = (state: RootState): SgrAStarLensingTuning =>
