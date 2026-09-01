@@ -2269,8 +2269,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // change" regression. DIG's reservation rides `hiiComps`, which only
       // `upload:hii` writes; the trigger that reaches that row with no DIG
       // input moving is `setExtras` — `extraHiiMixtures` moves `hiiPack`
-      // while `digBudget` stays put, so `place:dig` must re-run off
-      // `upload:hii`'s token alone.
+      // while `digBudget` stays put, so `place:dig` must re-run off the
+      // upstream movers rather than off anything of DIG's own.
       name: 'readback:placeDigVeil (survives an extras-only change)',
       run: async (page) => {
         const before = await page.evaluate(async () => {
