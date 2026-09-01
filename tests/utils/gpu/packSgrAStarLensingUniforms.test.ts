@@ -49,9 +49,11 @@ const ANCHOR_POS_REL_CAM_M: Vec3 = [3.5, -1.25, 7.75];
 const DISK_SCALE_HEIGHT_RS = 0.8125;
 const EDGE_FADE_START_FRACTION = 0.65625;
 const DOPPLER_STRENGTH = 0.46875;
+const EMISSION_STRENGTH = 0.90625;
+const EMISSION_TINT: Vec3 = [801, 802, 803];
 
 describe('SgrAStarLensingUniforms byte offsets', () => {
-  it('packs a 160-byte / 40-f32 record with each field at its documented offset', () => {
+  it('packs a 176-byte / 44-f32 record with each field at its documented offset', () => {
     const rec = packSgrAStarLensingUniforms(
       VIEW_PROJ,
       VIEWPORT_PX,
@@ -71,11 +73,13 @@ describe('SgrAStarLensingUniforms byte offsets', () => {
       DISK_SCALE_HEIGHT_RS,
       EDGE_FADE_START_FRACTION,
       DOPPLER_STRENGTH,
+      EMISSION_STRENGTH,
+      EMISSION_TINT,
     );
 
     expect(rec.length).toBe(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
-    expect(rec.length).toBe(40); // 160 bytes
-    expect(rec.byteLength).toBe(160);
+    expect(rec.length).toBe(44); // 176 bytes
+    expect(rec.byteLength).toBe(176);
 
     // cam.viewProj — all 16 floats verbatim at bytes 0..63.
     for (let i = 0; i < 16; i++) expect(rec[i]).toBe(VIEW_PROJ[i]);
@@ -113,9 +117,17 @@ describe('SgrAStarLensingUniforms byte offsets', () => {
     expect(rec[35]).toBe(DISK_SCALE_HEIGHT_RS); // byte 140
     expect(rec[36]).toBe(EDGE_FADE_START_FRACTION); // byte 144
     expect(rec[37]).toBe(DOPPLER_STRENGTH); // byte 148
+    expect(rec[38]).toBe(EMISSION_STRENGTH); // byte 152
 
-    // Trailing pad — rounds the struct to 160. Untouched, stays zero.
-    expect(rec[38]).toBe(0); // byte 152
+    // Pad before emissionTint's 16-byte alignment — untouched, stays zero.
     expect(rec[39]).toBe(0); // byte 156
+
+    // emissionTint — vec3 at byte 160 (float index 40).
+    expect(rec[40]).toBe(EMISSION_TINT[0]); // byte 160
+    expect(rec[41]).toBe(EMISSION_TINT[1]); // byte 164
+    expect(rec[42]).toBe(EMISSION_TINT[2]); // byte 168
+
+    // Trailing pad — rounds the struct to 176. Untouched, stays zero.
+    expect(rec[43]).toBe(0); // byte 172
   });
 });

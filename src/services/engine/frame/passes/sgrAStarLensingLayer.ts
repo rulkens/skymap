@@ -122,6 +122,8 @@ export const sgrAStarLensingLayer: ContentLayer = {
       tuning.diskScaleHeightRs,
       tuning.edgeFadeStartFraction,
       tuning.dopplerStrength,
+      tuning.emissionStrength,
+      tuning.emissionTint,
     );
 
     const skyCubemapView = ctx.renderTargets.cubeViewOf('sky-cubemap');

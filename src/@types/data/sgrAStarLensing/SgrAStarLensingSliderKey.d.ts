@@ -2,9 +2,11 @@ import type { SgrAStarLensingTuning } from '../../settings/SgrAStarLensingTuning
 
 /**
  * TEMPORARY (Task 15). Keys of `SgrAStarLensingTuning` that surface as
- * numeric DebugPanel sliders. `cubemapResolutionPx` is excluded: it only
- * takes three meaningful values (256/512/1024), so the section gives it a
- * `<select>` instead — the same "bespoke control for a non-slider field"
- * split `ZoneOfAvoidanceSliderKey` makes for its `Vec3` colour fields.
+ * numeric DebugPanel sliders. `cubemapResolutionPx` (a discrete `<select>`)
+ * and `emissionTint` (a `Vec3` colour picker) get bespoke controls instead —
+ * the same split `ZoneOfAvoidanceSliderKey` makes for its colour fields.
  */
-export type SgrAStarLensingSliderKey = Exclude<keyof SgrAStarLensingTuning, 'cubemapResolutionPx'>;
+export type SgrAStarLensingSliderKey = Exclude<
+  keyof SgrAStarLensingTuning,
+  'cubemapResolutionPx' | 'emissionTint'
+>;

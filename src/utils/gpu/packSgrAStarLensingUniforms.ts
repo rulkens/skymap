@@ -1,8 +1,9 @@
 /**
  * packSgrAStarLensingUniforms — pure packer for the `SgrAStarLensingUniforms`
- * struct (`shaders/lib/sgrAStarLensing.wesl`) — TEMPORARILY 160 bytes (Task
- * 15's Tier-2 DebugPanel knobs; shrinks back to 144 at Task 15's removal
- * step once Task 17 converges — see that .wesl file's own header).
+ * struct (`shaders/lib/sgrAStarLensing.wesl`) — TEMPORARILY 176 bytes (Task
+ * 15's Tier-2 DebugPanel knobs, incl. the 2nd-round emission strength/tint
+ * addendum; shrinks back to 144 at Task 15's removal step once Task 17
+ * converges — see that .wesl file's own header).
  *
  * Task 10's half of the uniform contract between the Sgr A* lens pass
  * (Task 13, not yet written) and its WGSL. The struct is the shared
@@ -34,9 +35,12 @@
  *   f32 35      (byte 140..143): diskScaleHeightRs — T15 TEMP tuning knob
  *   f32 36      (byte 144..147): edgeFadeStartFraction — T15 TEMP tuning knob
  *   f32 37      (byte 148..151): dopplerStrength — T15 TEMP tuning knob
- *   f32 38..39  (byte 152..159): untouched (zero) — struct's 16-byte round-up
+ *   f32 38      (byte 152..155): emissionStrength — T15 TEMP tuning knob (2nd addendum)
+ *   f32 39      (byte 156..159): untouched (zero) — pads emissionTint to 16-byte alignment
+ *   f32 40..42  (byte 160..171): emissionTint — T15 TEMP tuning knob (2nd addendum), vec3<f32>
+ *   f32 43      (byte 172..175): untouched (zero) — struct's 16-byte round-up
  *
- * Total: 160 bytes / 40 f32. The 12 scalars at f32 20..31 exactly fill the
+ * Total: 176 bytes / 44 f32. The 12 scalars at f32 20..31 exactly fill the
  * run up to f32 32, so `anchorPosRelCamM` lands on a 16-byte boundary with
  * no implicit padding — see the .wesl module header for the alignment
  * argument.
@@ -64,6 +68,8 @@
  * @param diskScaleHeightRs    T15 TEMP — vertical falloff scale height, r_s units.
  * @param edgeFadeStartFraction T15 TEMP — escape-branch edge-fade start, as a fraction of `lutMaxImpactParamRs`.
  * @param dopplerStrength      T15 TEMP — Doppler-beaming strength factor.
+ * @param emissionStrength     T15 TEMP (2nd addendum) — overall multiplier on the annulus emission's output intensity.
+ * @param emissionTint         T15 TEMP (2nd addendum) — overall multiplier on the annulus emission's per-sample tint.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
@@ -72,8 +78,9 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../services/gpu/lib/cameraUniforms';
 
 /** f32 count of `SgrAStarLensingUniforms` — 80-byte cam prefix (20) + 12
- *  scalars + anchorPosRelCamM (3) + T15 TEMP tuning knobs (3) + pad (2) = 40. */
-export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 20;
+ *  scalars + anchorPosRelCamM (3) + T15 TEMP tuning knobs (4 scalars +
+ *  emissionTint's 3) + pad (2) = 44. */
+export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 24;
 
 export function packSgrAStarLensingUniforms(
   viewProj: Float32Array | Mat4,
@@ -94,6 +101,8 @@ export function packSgrAStarLensingUniforms(
   diskScaleHeightRs: number,
   edgeFadeStartFraction: number,
   dopplerStrength: number,
+  emissionStrength: number,
+  emissionTint: Readonly<Vec3>,
 ): Float32Array {
   const out = new Float32Array(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
   writeCameraPrefix(out, viewProj, viewportPx); // f32 0..17; 18..19 stay zero
@@ -115,6 +124,11 @@ export function packSgrAStarLensingUniforms(
   out[35] = diskScaleHeightRs; // byte 140 — T15 TEMP
   out[36] = edgeFadeStartFraction; // byte 144 — T15 TEMP
   out[37] = dopplerStrength; // byte 148 — T15 TEMP
-  // out[38..39] (byte 152..159) stay zero — the struct's 16-byte round-up.
+  out[38] = emissionStrength; // byte 152 — T15 TEMP (2nd addendum)
+  // out[39] (byte 156..159) stays zero — pads emissionTint to 16-byte alignment.
+  out[40] = emissionTint[0]; // byte 160 — T15 TEMP (2nd addendum), vec3
+  out[41] = emissionTint[1]; // byte 164
+  out[42] = emissionTint[2]; // byte 168
+  // out[43] (byte 172..175) stays zero — the struct's 16-byte round-up.
   return out;
 }

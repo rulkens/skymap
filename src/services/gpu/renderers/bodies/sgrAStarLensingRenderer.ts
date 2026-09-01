@@ -90,12 +90,12 @@ export function createSgrAStarLensingRenderer(
   const lutTexture = createLutTexture(device, lut);
   const lutView = lutTexture.createView({ label: 'sgr-a-star-lensing-lut-view' });
 
-  // ── Uniform buffer (160 bytes, byte-exact with SgrAStarLensingUniforms —
+  // ── Uniform buffer (176 bytes, byte-exact with SgrAStarLensingUniforms —
   // TEMPORARILY grown from 144 for Task 15's Tier-2 DebugPanel knobs; shrinks
   // back at the removal step once Task 17 converges) ──
   const uniformBuffer = device.createBuffer({
     label: 'sgr-a-star-lensing-uniform-buffer',
-    size: 160,
+    size: 176,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 

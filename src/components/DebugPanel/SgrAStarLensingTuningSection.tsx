@@ -4,12 +4,20 @@
  * removal step once Task 17 converges on final values (see
  * `SgrAStarLensingTuning`'s own docblock). Structural precedent:
  * `ZoneOfAvoidanceTuningSection.tsx`. `cubemapResolutionPx` gets a `<select>`
- * (three meaningful values) instead of riding the generic slider board — the
+ * (four meaningful values) instead of riding the generic slider board — the
  * same "bespoke control after the rows" shape ZoA's colour pickers use.
+ *
+ * 2048 costs ~192 MiB (2048² × 6 faces × 8 bytes/px rgba16float) — the row's
+ * tooltip states the general formula rather than a per-option figure (no
+ * precedent in this codebase labels individual `<option>`s with a computed
+ * value), fine for a dev-only knob but worth knowing before dragging it up.
  */
 
 import type { ReactElement } from 'react';
 import type { SgrAStarLensingTuning } from '../../@types/settings/SgrAStarLensingTuning';
+import type { HexString } from '../../@types/math/HexString';
+import { hexToLinearRgb } from '../../utils/color/hexToLinearRgb';
+import { linearRgbToHex } from '../../utils/color/linearRgbToHex';
 import {
   SGR_A_STAR_LENSING_SLIDER_FIELDS,
   sgrAStarLensingSliderPatch,
@@ -22,7 +30,7 @@ export type SgrAStarLensingTuningSectionProps = {
   onChange: (patch: Partial<SgrAStarLensingTuning>) => void;
 };
 
-const CUBEMAP_RESOLUTIONS = [256, 512, 1024] as const;
+const CUBEMAP_RESOLUTIONS = [256, 512, 1024, 2048] as const;
 
 export function SgrAStarLensingTuningSection({
   tuning,
@@ -52,6 +60,22 @@ export function SgrAStarLensingTuningSection({
             </option>
           ))}
         </select>
+      </div>
+      <div
+        className={sliderStyles.root}
+        title="Overall tint multiplier on the annulus emission's summed output, linear RGB (picker speaks sRGB). [1,1,1] is a no-op."
+      >
+        <span className={sliderStyles.label}>emissionTint</span>
+        <span className={sliderStyles.readout}>{linearRgbToHex(tuning.emissionTint)}</span>
+        <input
+          type="color"
+          aria-label="emissionTint"
+          value={linearRgbToHex(tuning.emissionTint)}
+          onChange={(e) => {
+            const emissionTint = hexToLinearRgb(e.target.value as HexString);
+            onChange({ emissionTint });
+          }}
+        />
       </div>
     </DebugTuningSection>
   );

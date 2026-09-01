@@ -133,8 +133,12 @@ fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>, closestT: f32, deflec
     coverage = max(coverage, emissionSample.a);
   }
 
+  // Applied to the SUMMED emission, not per-sample: a flat brightness/tint
+  // multiplier on the whole march's output, not on the physical falloff that
+  // feeds 'coverage' (which stays keyed to the modeled density/radial
+  // profile, unscaled — T15 TEMP tuning knobs, 2nd addendum).
   if (captured) {
-    return vec4<f32>(emission, coverage);
+    return vec4<f32>(emission * u.emissionStrength * u.emissionTint, coverage);
   }
 
   let kink = rayDir * closestT; // camera-relative position at closest approach — the bend point
@@ -146,7 +150,7 @@ fn annulusEmission(rayDir: vec3<f32>, toAnchor: vec3<f32>, closestT: f32, deflec
     coverage = max(coverage, emissionSample.a);
   }
 
-  return vec4<f32>(emission, coverage);
+  return vec4<f32>(emission * u.emissionStrength * u.emissionTint, coverage);
 }
 
 @fragment

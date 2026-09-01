@@ -278,7 +278,10 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
  * mirrors `fragment.wesl`'s former `DISK_SCALE_HEIGHT_RS` / the escape
  * branch's `* 0.7` edge-fade factor / `DOPPLER_STRENGTH` — this literal is
  * their new single source of truth until the removal step bakes the tuned
- * values back into the shader as consts.
+ * values back into the shader as consts. `emissionStrength: 1` /
+ * `emissionTint: [1,1,1]` (2nd addendum) are no-op identities — the shader
+ * had no such multiplier before, so a no-op default reproduces today's
+ * brightness exactly.
  *
  * `cubemapResolutionPx` seeds the `sky-cubemap` render-target row's declared
  * size (`renderTargets.ts`) — 512, the user's visual-tuning call bumping it
@@ -304,6 +307,8 @@ export const DEFAULT_SGR_A_STAR_LENSING_TUNING: Omit<
   diskScaleHeightRs: 0.4,
   edgeFadeStartFraction: 0.7,
   dopplerStrength: 0.6,
+  emissionStrength: 1,
+  emissionTint: [1, 1, 1],
   cubemapResolutionPx: 512,
 };
 

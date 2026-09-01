@@ -30,9 +30,11 @@
 //   offset 140 : diskScaleHeightRs        f32  — T15 TEMP tuning knob, was fragment.wesl's DISK_SCALE_HEIGHT_RS const
 //   offset 144 : edgeFadeStartFraction    f32  — T15 TEMP tuning knob, was the escape branch's hardcoded '* 0.7'
 //   offset 148 : dopplerStrength          f32  — T15 TEMP tuning knob, was fragment.wesl's DOPPLER_STRENGTH const
-//   offset 152 : _pad3                    f32  — T15 TEMP, rounds the struct to 160 / 16-byte
-//   offset 156 : _pad4                    f32  — T15 TEMP, rounds the struct to 160 / 16-byte
-//   total: 160 bytes.
+//   offset 152 : emissionStrength         f32  — T15 TEMP tuning knob (2nd addendum), overall annulus-emission multiplier
+//   offset 156 : _pad4                    f32  — T15 TEMP, pads emissionStrength up to emissionTint's 16-byte alignment
+//   offset 160 : emissionTint             vec3<f32>  — T15 TEMP tuning knob (2nd addendum), overall annulus-emission tint
+//   offset 172 : _pad5                    f32  — T15 TEMP, rounds the struct to 176 / 16-byte
+//   total: 176 bytes.
 //
 // The 12 scalar fields (80..127, 48 bytes) exactly fill the run up to 128,
 // so 'anchorPosRelCamM' lands on a 16-byte boundary with no implicit padding
@@ -43,8 +45,9 @@
 // silently reads garbage — no compile error, no runtime error, just a wrong
 // (or on iOS, dropped) frame.
 //
-// TASK 15 TEMPORARY: the three fields after 'anchorPosRelCamM' are DebugPanel
-// tuning knobs (Tier 2 of the task-15 brief), deleted — struct shrunk back to
+// TASK 15 TEMPORARY: every field after 'anchorPosRelCamM' is a DebugPanel
+// tuning knob (Tier 2 of the task-15 brief, plus its 2nd-round addendum
+// adding emissionStrength/emissionTint), deleted — struct shrunk back to
 // 144 bytes — at the removal step once Task 17 converges on final values.
 
 import package::lib::camera::CameraUniforms;
@@ -67,6 +70,8 @@ struct SgrAStarLensingUniforms {
   diskScaleHeightRs: f32,
   edgeFadeStartFraction: f32,
   dopplerStrength: f32,
-  _pad3: f32,
+  emissionStrength: f32,
   _pad4: f32,
+  emissionTint: vec3<f32>,
+  _pad5: f32,
 };

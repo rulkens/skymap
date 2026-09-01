@@ -92,6 +92,20 @@ export const SGR_A_STAR_LENSING_SLIDER_FIELDS: readonly SgrAStarLensingSliderFie
     title: 'Doppler-beaming strength factor.',
   },
   {
+    key: 'emissionStrength',
+    label: 'emissionStrength',
+    min: 0,
+    // Generous both ways for judging faintness against the spec's "faint
+    // EHT-style glow" — SliderField has no log/curve option (a plain native
+    // range input), so a fine linear step stands in for log-ish granularity
+    // near 1x rather than a true log scale.
+    max: 8,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    title:
+      "Overall multiplier on the annulus emission's summed output intensity. 1 = today's brightness.",
+  },
+  {
     key: 'skyCubemapRecaptureCameraMoveFraction',
     label: 'recaptureMoveFraction',
     min: 0.005,

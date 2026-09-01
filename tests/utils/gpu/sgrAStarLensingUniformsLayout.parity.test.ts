@@ -114,6 +114,8 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const diskScaleHeightRs = 701;
     const edgeFadeStartFraction = 702;
     const dopplerStrength = 703;
+    const emissionStrength = 704;
+    const emissionTint: Vec3 = [801, 802, 803];
 
     const rec = packSgrAStarLensingUniforms(
       viewProj,
@@ -134,9 +136,11 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       diskScaleHeightRs,
       edgeFadeStartFraction,
       dopplerStrength,
+      emissionStrength,
+      emissionTint,
     );
 
-    const vectorByField: Record<string, Vec3> = { anchorPosRelCamM };
+    const vectorByField: Record<string, Vec3> = { anchorPosRelCamM, emissionTint };
     const scalarByField: Record<string, number> = {
       schwarzschildRadiusM,
       innerRs,
@@ -153,8 +157,9 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       diskScaleHeightRs,
       edgeFadeStartFraction,
       dopplerStrength,
+      emissionStrength,
     };
-    const zeroPadFields = new Set(['_pad3', '_pad4']);
+    const zeroPadFields = new Set(['_pad4', '_pad5']);
 
     for (const field of layout) {
       if (field.lanes === 0) {
