@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "leda1313424",
+  "crop": {
+    "x": 792.5304869532836,
+    "y": 874.16308354541,
+    "width": 2236.599182343433,
+    "height": 1817.976067836415,
+    "rotationDeg": 37.052843231943655
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/LEDA_1313424#/media/File:LEDA_1313424_(opo2506).jpg",
+    "license": "Public domain",
+    "author": "NASA, ESA, I. Pasha (Yale), P. van Dokkum (Yale)"
+  },
+  "processedAt": "2026-09-01T11:34:09.586Z",
+  "source": {
+    "width": 3840,
+    "height": 3604
+  },
+  "disk": {
+    "centerPx": [
+      1910.830078125,
+      1783.1511174636175
+    ],
+    "radiusPx": 894.6396729373731,
+    "paDeg": 37.052843231943655,
+    "axisRatio": 0.8128305161640993,
+    "deproject": true
+  }
+}
