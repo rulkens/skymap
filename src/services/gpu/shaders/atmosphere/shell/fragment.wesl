@@ -284,19 +284,13 @@ fn sampleShell(in: FsIn) -> ShellSample {
   // exclusive whatever the depth state (incl. the camera-inside case). Without
   // the near-wall guard the limb would double-count -- both walls pass the depth
   // test past the limb.
-  if (in.frontFacing && !out.intersectsGround) {
+  // Wrong wall <=> facing and ground-hit disagree (the front wall owns ground
+  // rays, the far wall owns the rest) -- one XOR covers both rejections.
+  if (in.frontFacing != out.intersectsGround) {
     out.hit = false;
     out.transmit = vec3<f32>(1.0);
     out.emission = vec3<f32>(0.0);
     out.coverage = 0.0;
-    return out;
-  }
-  if (!in.frontFacing && out.intersectsGround) {
-    out.hit = false;
-    out.transmit = vec3<f32>(1.0);
-    out.emission = vec3<f32>(0.0);
-    out.coverage = 0.0;
-    return out;
   }
   return out;
 }
