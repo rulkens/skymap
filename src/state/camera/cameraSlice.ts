@@ -7,8 +7,9 @@
  * should share a single authoritative source rather than coordinating via
  * callbacks or ref-passing. The slice owns three independent concerns:
  *
- *   `base`        — the committed resting orbit pose (target, yaw, pitch,
- *                   distance). Per-frame pose is DERIVED from `base` by the
+ *   `base`        — the committed resting pose AND the frame it lives in (a
+ *                   `FramedCameraPose`): the arm tag IS the regime, so nothing
+ *                   stores a separate flag. Per-frame pose is DERIVED from `base` by the
  *                   CameraDriver table (`runCameraDrivers`) — never written directly by renderers.
  *                   Bootstrap dispatches `commitCameraPose` once to overwrite
  *                   the placeholder initial value with the real computed pose.
@@ -50,8 +51,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
+import { absoluteArm } from '../../utils/camera/absoluteArm';
 import type { CameraState } from '../../@types/camera/CameraState';
 import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { FrameTween } from '../../@types/camera/FrameTween';
@@ -62,7 +65,7 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
 // the value the engine boots with, so any frame rendered before bootstrap is
 // at least in the right ballpark.
 const initialState: CameraState = {
-  base: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
+  base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 }),
   tween: null,
   autoRotate: {
     active: DEFAULT_AUTO_ROTATE,
@@ -91,7 +94,7 @@ const cameraSlice = createSlice({
     // ── committed resting pose ──────────────────────────────────────────────
     // Called once at bootstrap (after `computeInitialCamera`) and on every
     // orbit-controls pointerup to bake the user's new resting pose.
-    commitCameraPose: (camera, action: PayloadAction<CameraPose>) => {
+    commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
     },
 

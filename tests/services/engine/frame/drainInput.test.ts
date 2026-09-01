@@ -19,6 +19,10 @@ import { rootReducer } from '../../../../src/store/rootReducer';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { startCameraTween, beginDrag } from '../../../../src/state/camera/cameraSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { worldArmOf } from '../../../fixtures/worldArmOf';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -39,11 +43,16 @@ function makeHarness(distance = 100) {
   const inputAggregator = createInputAggregator();
   const state = {
     cam,
+    // The gesture seed resolves the live pose's arm, so the harness carries the
+    // orientation + epoch that resolution reads.
+    settings: { orientation: 'ecliptic' },
     subsystems: { inputAggregator },
     cameraRuntime: {
       clock: createCameraClock(),
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance } },
+      lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance }) },
       prevActiveId: { current: 'resting' },
+      lastRenderedSimDays: { current: CONST_J2000 },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   } as unknown as EngineState;
 
@@ -83,7 +92,7 @@ describe('drainInput', () => {
 
     drainInput(state, deps, 0);
 
-    expect(store.getState().camera.base.yaw).toBeCloseTo(-50 * 0.005, 6);
+    expect(worldArmOf(store.getState().camera.base).yaw).toBeCloseTo(-50 * 0.005, 6);
     expect(store.getState().camera.dragging).toBe(false);
   });
 
@@ -117,14 +126,14 @@ describe('drainInput', () => {
     // With no gesture the resting driver renders `base`, so a register mutation
     // would be invisible.
     const { cam, agg, state, deps, store } = makeHarness();
-    const baseBefore = store.getState().camera.base.distance;
+    const baseBefore = worldArmOf(store.getState().camera.base).distance;
     agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false });
 
     drainInput(state, deps, 0);
 
     expect(cam.distance).toBe(100);
     // deltaY > 0 zooms out, so the committed base grew.
-    expect(store.getState().camera.base.distance).toBeGreaterThan(baseBefore);
+    expect(worldArmOf(store.getState().camera.base).distance).toBeGreaterThan(baseBefore);
   });
 
   it('floors an in-gesture zoom at the focused body’s surface', () => {

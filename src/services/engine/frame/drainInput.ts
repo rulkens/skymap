@@ -15,6 +15,8 @@ import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { pivotFraming } from '../camera/pivotRadiusMpc';
 import { poseOf } from '../camera/poseOf';
+import { absoluteArm } from '../../../utils/camera/absoluteArm';
+import { liveWorldPose } from '../helpers/liveWorldPose';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 
@@ -37,14 +39,14 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
       case 'gestureStart':
         // Seed from the live PRODUCED pose, not `camera.base`: mid-tween those
         // differ, and only the produced pose is where the user sees the camera.
-        if (cam !== null) seedCameraFromBase(cam, state.cameraRuntime.lastPose.current);
+        if (cam !== null) seedCameraFromBase(cam, liveWorldPose(state));
         break;
 
       case 'gestureEnd':
         // Commit BEFORE `endDrag` so the baked pose is in `base` the moment the
         // orbitDrag driver deactivates — otherwise the next frame's resting
         // driver returns the pre-gesture base and the camera snaps back.
-        if (cam !== null) store.dispatch(commitCameraPose(poseOf(cam)));
+        if (cam !== null) store.dispatch(commitCameraPose(absoluteArm(poseOf(cam))));
         store.dispatch(endDrag());
         break;
 
@@ -57,7 +59,12 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
       case 'zoom': {
         if (step.duringGesture) {
           if (cam !== null) {
-            applyInputToCamera(cam, step, cssHeight, pivotFraming(selectFocusRow(store.getState())));
+            applyInputToCamera(
+              cam,
+              step,
+              cssHeight,
+              pivotFraming(selectFocusRow(store.getState())),
+            );
           }
           break;
         }
@@ -73,7 +80,7 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
           nowMs,
           pivotFraming(selectFocusRow(root)),
         );
-        if (zoomed !== null) store.dispatch(commitCameraPose(zoomed));
+        if (zoomed !== null) store.dispatch(commitCameraPose(absoluteArm(zoomed)));
         break;
       }
     }

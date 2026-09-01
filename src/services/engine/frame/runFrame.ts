@@ -46,6 +46,8 @@
  *      target with the live body position (for drivers that declare
  *      `pivotsOnFocusedBody`). The body owns the pivot; the driver owns the orbit
  *      terms — so a drag / auto-rotate orbits AROUND the moving body.
+ *   3c. RESOLVE the world arm, ONCE. `lastPose` stays framed; every world-Mpc
+ *      reader downstream takes this one value.
  *   4. UPDATE Resources: `prevActiveId.current = activeId`,
  *      `lastPose.current = pose`.
  *
@@ -57,11 +59,14 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
 
 import { drainInput } from './drainInput';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { resolveWorldArm } from '../camera/poseFrameConversion';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
@@ -248,10 +253,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // `deriveBodyStates(simDays)` primes the one-deep memo at this instant so the
   // pre-produce driver and every post-ready pass reader hit the SAME cached map
-  // by reference — one Kepler solve per frame, not one per reader. The result is
-  // intentionally discarded here; the memo IS the shared snapshot.
+  // by reference — one Kepler solve per frame, not one per reader. Bound to a
+  // local because the world-arm resolution below needs the map by value; every
+  // other reader still goes through `sceneBodyStates(state, ctx)`. The `BodyId`
+  // narrowing is the `id as BodyId` convention at this boundary (regimeArmFor).
   const simDays = deriveSimDays(selectTimeState(rootState), nowMs);
-  deriveBodyStates(simDays);
+  const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
 
   // Record the frame's instant as single-writer state, the exact analogue of
   // `lastPose.current` for the pose (updated in step 4 below). The pick path
@@ -432,6 +439,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     clock.followPanOffset,
   );
 
+  // ── WORLD-ARM RESOLUTION: once per frame, below every pose writer ─────────
+  //
+  // `lastPose` stays FRAMED (it is the authoritative pose); everything with a
+  // world-Mpc shape — the scale-bar snap, `deriveFrameContext`, and through it
+  // the whole draw path — consumes THIS value. Free by reference on the
+  // absolute arm. Task 15 slots the regime fold in immediately above this line.
+  const worldPose = resolveWorldArm(renderPose, bodyStates, poseBasis, upBasis);
+
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────
   //
   // `prevActiveId` and `lastPose` are updated AFTER the commit-on-edge so the
@@ -447,7 +462,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // lastPose + projection, not from state.cam.
   if (state.cam) {
     const snap = {
-      distance: lastPose.current.distance,
+      distance: worldPose.distance,
       fovYRad: state.cameraRuntime.projection.fovYRad,
     };
     const scaleInfo = computeScaleInfo({
@@ -472,7 +487,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const ctx = deriveFrameContext(
     state,
     deps.canvas,
-    renderPose,
+    worldPose,
     state.cameraRuntime.projection,
     // The committed pose basis (holds still through a roll) and the live up
     // basis (rolls) — the same split fed to the drag register above, so the

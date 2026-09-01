@@ -30,6 +30,7 @@ import {
   startFrameTween,
 } from '../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -61,9 +62,9 @@ const frameTween: FrameTween = {
 describe('selectCameraBase', () => {
   it('returns the committed base pose', () => {
     const store = makeStore();
-    store.dispatch(commitCameraPose(pose));
+    store.dispatch(commitCameraPose(absoluteArm(pose)));
 
-    expect(selectCameraBase(store.getState())).toEqual(pose);
+    expect(selectCameraBase(store.getState())).toEqual(absoluteArm(pose));
   });
 });
 

@@ -13,12 +13,13 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
+import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 export function liveRenderCamera(state: EngineState): OrbitCamera | null {
   if (!state.cam) return null;
   return assembleOrbitCamera(
-    state.cameraRuntime.lastPose.current,
+    liveWorldPose(state),
     state.cameraRuntime.projection,
     ORIENTATION_FRAMES[state.settings.orientation],
     state.cameraRuntime.upBasis.current,

@@ -21,6 +21,7 @@ import reducer, {
   clipEnded,
   resolveClipStart,
 } from '../../../src/state/camera/cameraSlice';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -61,8 +62,8 @@ const tween: CameraTweenDescriptor = {
 
 describe('cameraSlice — commitCameraPose', () => {
   it('replaces base with the dispatched pose', () => {
-    const next = reducer(base(), commitCameraPose(pose));
-    expect(next.base).toEqual(pose);
+    const next = reducer(base(), commitCameraPose(absoluteArm(pose)));
+    expect(next.base).toEqual(absoluteArm(pose));
   });
 });
 

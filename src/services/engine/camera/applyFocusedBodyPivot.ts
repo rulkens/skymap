@@ -32,28 +32,33 @@
  */
 
 import { liveBodyPosition } from './liveBodyPosition';
+import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function applyFocusedBodyPivot(
-  pose: CameraPose,
+  framed: FramedCameraPose,
   pivotsOnFocusedBody: boolean,
   focusRow: SelectionRow | null,
   simDays: number,
   panOffset: Vec3,
-): CameraPose {
-  if (!pivotsOnFocusedBody) return pose;
-  if (!bodyMovesThisFrame(focusRow)) return pose;
+): FramedCameraPose {
+  // A body arm co-rotates with its body, so "keep the moving body centred" is
+  // structurally satisfied and the pin has nothing to do (spec §7 step 4).
+  if (framed.frame !== 'absolute') return framed;
+  if (!pivotsOnFocusedBody) return framed;
+  if (!bodyMovesThisFrame(focusRow)) return framed;
   const pivot = liveBodyPosition(focusRow, simDays);
   // A moving body is in the snapshot by construction; the guard is the narrowing.
-  if (pivot === null) return pose;
-  return {
+  if (pivot === null) return framed;
+  const pose = framed.pose;
+  return absoluteArm({
     target: [pivot[0] + panOffset[0], pivot[1] + panOffset[1], pivot[2] + panOffset[2]],
     yaw: pose.yaw,
     pitch: pose.pitch,
     distance: pose.distance,
     roll: pose.roll,
-  };
+  });
 }

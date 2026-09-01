@@ -24,6 +24,8 @@ import { clampTier } from '../../../../src/utils/math/clampTier';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
@@ -94,9 +96,10 @@ function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): Engine
     // must be present. A far resting pose keeps the proximity-gated body-texture
     // rows out of the demand set.
     cameraRuntime: {
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 } },
+      lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
       lastRenderedSimDays: { current: CONST_J2000 },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   } as unknown as EngineState;
 }
@@ -327,9 +330,10 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
       // Per-call queue, for the same reasons spelled out on `makeState`.
       subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
       cameraRuntime: {
-        lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 } },
+        lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
         projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
         lastRenderedSimDays: { current: CONST_J2000 },
+        upBasis: { current: ORIENTATION_FRAMES.ecliptic },
       },
     } as unknown as EngineState;
   }

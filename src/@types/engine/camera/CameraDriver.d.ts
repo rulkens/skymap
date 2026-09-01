@@ -41,8 +41,11 @@
  *     so the resolver always has a winner. Takes the store `RootState`
  *     so drivers can read intent without coupling to EngineState.
  *
- *   - `pose(s, cam, elapsedMs)` — returns the `CameraPose` the resolver
- *     should apply this frame. Only the highest-priority active driver's
+ *   - `pose(s, cam, elapsedMs)` — returns the `FramedCameraPose` the resolver
+ *     should apply this frame, in the arm the driver AUTHORS: the world-arm
+ *     drivers wrap with `absoluteArm` and gate `isActive` on the absolute arm;
+ *     `resting` is arm-agnostic and returns `base` untouched. Only the
+ *     highest-priority active driver's
  *     `pose` is called — single-writer, no blending. The `cam` reference
  *     is forwarded so shim drivers (that still advance engine state) can
  *     read the live orbit params; real store-reading drivers read `s`
@@ -59,7 +62,7 @@
  */
 
 import type { OrbitCamera } from '../../camera/OrbitCamera';
-import type { CameraPose } from '../../camera/CameraPose';
+import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { RootState } from '../../../store/types';
 
 export type CameraDriver = {
@@ -77,5 +80,5 @@ export type CameraDriver = {
   // path (target included) and leave this unset so their target is honoured.
   readonly pivotsOnFocusedBody?: boolean;
   isActive(s: RootState): boolean;
-  pose(s: RootState, cam: OrbitCamera, elapsedMs: number): CameraPose;
+  pose(s: RootState, cam: OrbitCamera, elapsedMs: number): FramedCameraPose;
 };

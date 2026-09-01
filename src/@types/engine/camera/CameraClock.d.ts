@@ -19,6 +19,7 @@
 
 import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../camera/CameraPose';
+import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { CameraState } from '../../camera/CameraState';
 import type { SelectionRow } from '../SelectionRow';
 import type { FrameTween } from '../../camera/FrameTween';
@@ -100,7 +101,7 @@ export type CameraClock = {
   // NEW base object while auto-rotate stays active; the spin clock resets when
   // this changes so the freshly committed base spins from elapsed 0, not from
   // the stale accumulated time (which would jump the camera on resume).
-  lastBaseRef: CameraPose | null;
+  lastBaseRef: FramedCameraPose | null;
   // The clip clock keys on the `camera.clip` REFERENCE, not its contents.
   // A `startClip` dispatch installs a NEW `{ data, frame }` object each time,
   // so `!==` fires the zero exactly once on the transition frame — the same

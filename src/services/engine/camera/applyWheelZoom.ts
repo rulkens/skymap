@@ -60,24 +60,29 @@ import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { PivotFraming } from '../../../@types/camera/PivotFraming';
 
 export function applyWheelZoom(
   clock: CameraClock,
   prevActiveId: string,
-  base: CameraPose,
+  base: FramedCameraPose,
   factor: number,
   autoRotate: { active: boolean; rate: number },
   nowMs: number,
   pivot: PivotFraming,
 ): CameraPose | null {
+  // World arm only (spec §7): in a body arm the wheel routes to the surface
+  // gesture, which owns the range, and none of the three owners below is
+  // consulted. Stated here rather than left for a caller to remember.
+  if (base.frame !== 'absolute') return null;
   if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
     clock.followDistanceTarget = zoomedDistance(clock.followDistanceTarget, factor, pivot);
     return null;
   }
   if (prevActiveId === 'autoRotate') {
     const elapsed = autoRotateElapsed(clock, autoRotate.active, base, nowMs);
-    return zoomedPose(spinAutoRotate(base, autoRotate.rate, elapsed), factor, pivot);
+    return zoomedPose(spinAutoRotate(base.pose, autoRotate.rate, elapsed), factor, pivot);
   }
-  return zoomedPose(base, factor, pivot);
+  return zoomedPose(base.pose, factor, pivot);
 }

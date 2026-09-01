@@ -18,14 +18,15 @@
  * as `tween`. Null when no frame roll is in flight.
  */
 
-import type { CameraPose } from './CameraPose';
+import type { FramedCameraPose } from './FramedCameraPose';
 import type { CameraTweenDescriptor } from './CameraTweenDescriptor';
 import type { ClipData } from '../animation/ClipData';
 import type { FrameTween } from './FrameTween';
 import type { OrientationFrameId } from './OrientationFrameId';
 
 export type CameraState = {
-  base: CameraPose;
+  /** The committed pose AND the frame it lives in — the regime itself (spec §4). */
+  base: FramedCameraPose;
   tween: CameraTweenDescriptor | null;
   autoRotate: { active: boolean; rate: number };
   dragging: boolean;

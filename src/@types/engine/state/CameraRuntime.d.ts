@@ -24,7 +24,7 @@
  *                    the store because it is derived from the DOM canvas and the
  *                    FOV setting at bootstrap, not user camera intent.
  *
- *   `lastPose`     — the produced `CameraPose` from the previous frame, wrapped
+ *   `lastPose`     — the produced `FramedCameraPose` from the previous frame, wrapped
  *                    in a `{ current }` box so it can be updated in place without
  *                    reconstructing the reference that `wireInput` and the focus
  *                    handlers hold. The commit-on-edge logic reads this to bake
@@ -70,7 +70,7 @@
 
 import type { CameraClock } from '../camera/CameraClock';
 import type { CameraProjection } from '../../camera/CameraProjection';
-import type { CameraPose } from '../../camera/CameraPose';
+import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { Mat3 } from '../../math/Mat3';
 
 export type CameraRuntime = {
@@ -78,8 +78,13 @@ export type CameraRuntime = {
   clock: CameraClock;
   /** Live projection config; aspect patched on each canvas resize. */
   projection: CameraProjection;
-  /** Last produced pose; boxed so wireInput and focus handlers share the live reference. */
-  lastPose: { current: CameraPose };
+  /**
+   * Last produced pose, in the arm the frame produced it in — the AUTHORITATIVE
+   * pose. Boxed so wireInput and the focus handlers share the live reference.
+   * Off-frame readers that need world Mpc go through `liveWorldPose`, the one
+   * off-frame resolution site; nothing else re-resolves it.
+   */
+  lastPose: { current: FramedCameraPose };
   /** Winning driver id from the previous frame; boxed for the same reason. */
   prevActiveId: { current: string };
   /**

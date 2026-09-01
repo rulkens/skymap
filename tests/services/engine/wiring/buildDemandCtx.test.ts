@@ -14,6 +14,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildDemandCtx } from '../../../../src/services/engine/wiring/buildDemandCtx';
 import { Source } from '../../../../src/data/sources';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
@@ -60,9 +62,10 @@ function makeState(
       famousGalaxiesMeta,
     },
     cameraRuntime: {
-      lastPose: { current: pose },
+      lastPose: { current: absoluteArm(pose) },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
       lastRenderedSimDays: { current: opts.simDays ?? 0 },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   } as unknown as EngineState;
 }

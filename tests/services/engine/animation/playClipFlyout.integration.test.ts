@@ -74,6 +74,9 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { worldArmOf } from '../../../fixtures/worldArmOf';
+import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers — mirror the commitOnEdge.test.ts harness shape
@@ -108,12 +111,12 @@ function makeEngineState(startDistance: number): {
       clock,
       projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1_000_000 },
       lastPose: {
-        current: {
+        current: absoluteArm({
           target: [0, 0, 0] as Vec3,
           yaw: 0,
           pitch: 0,
           distance: startDistance,
-        } as CameraPose,
+        }),
       },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
@@ -149,7 +152,7 @@ function simulateFrame(
   drivers: ReturnType<typeof buildCameraDrivers>,
   clipPlayer: ReturnType<typeof createClipPlayer>,
   nowMs: number,
-): { pose: CameraPose; activeId: string; committed: boolean } {
+): { pose: FramedCameraPose; activeId: string; committed: boolean } {
   const { clock, lastPose, prevActiveId } = engineState.cameraRuntime;
 
   // Step 1 — clipPlayer fires FIRST, before the produce step.
@@ -197,21 +200,23 @@ describe('playClip — flyout seam', () => {
     // the correct floor and playClip's 'live' resolution captures the right
     // starting distance.
     store.dispatch(
-      commitCameraPose({
-        target: [0, 0, 0],
-        yaw: 0,
-        pitch: 0,
-        distance: LIVE_START_DISTANCE,
-      }),
+      commitCameraPose(
+        absoluteArm({
+          target: [0, 0, 0],
+          yaw: 0,
+          pitch: 0,
+          distance: LIVE_START_DISTANCE,
+        }),
+      ),
     );
 
     // Seed the cameraRuntime's lastPose to match.
-    state.cameraRuntime.lastPose.current = {
+    state.cameraRuntime.lastPose.current = absoluteArm({
       target: [0, 0, 0],
       yaw: 0,
       pitch: 0,
       distance: LIVE_START_DISTANCE,
-    };
+    });
 
     // Build the real driver table. `buildCameraDrivers` takes an EngineState
     // but the driver closures only read the Redux RootState at call time —
@@ -237,7 +242,7 @@ describe('playClip — flyout seam', () => {
     const playClip = createPlayClip({
       store,
       clipPlayer,
-      getLivePose: () => state.cameraRuntime.lastPose.current,
+      getLivePose: () => worldArmOf(state.cameraRuntime.lastPose.current),
     });
 
     // ── Kick off the flyout ──────────────────────────────────────────────────
@@ -265,11 +270,11 @@ describe('playClip — flyout seam', () => {
 
     // Early frame (2 s): distance has started moving toward the target.
     simulateFrame(state, store, drivers, clipPlayer, T0 + 2_000);
-    const earlyDistance = state.cameraRuntime.lastPose.current.distance;
+    const earlyDistance = worldArmOf(state.cameraRuntime.lastPose.current).distance;
 
     // Mid frame (11 s): distance continues to grow (log-dolly is monotonic).
     simulateFrame(state, store, drivers, clipPlayer, T0 + 11_000);
-    const midDistance = state.cameraRuntime.lastPose.current.distance;
+    const midDistance = worldArmOf(state.cameraRuntime.lastPose.current).distance;
 
     // --- ASSERTION 1: camera distance moves toward the target ----------------
     // Early distance must exceed the live start (clip has dolly'd forward).
@@ -290,7 +295,7 @@ describe('playClip — flyout seam', () => {
     const satFrame = simulateFrame(state, store, drivers, clipPlayer, T0 + DURATION_SEC * 1_000);
     expect(satFrame.activeId).toBe('clip'); // still active
     expect(satFrame.committed).toBe(false); // no commit yet
-    const saturatedDistance = state.cameraRuntime.lastPose.current.distance;
+    const saturatedDistance = worldArmOf(state.cameraRuntime.lastPose.current).distance;
 
     // Deferred-completion frame (23 s): clipPlayer.tick fires endClip() and
     // the Promise resolver. The clip driver sees null → resting wins. The
@@ -314,7 +319,7 @@ describe('playClip — flyout seam', () => {
     // --- ASSERTION 3: camera.base is committed to the saturated final pose ---
     // The commit-on-edge bake must write the saturated distance (≈ 29 500),
     // not a one-frame-stale pre-saturation pose.
-    const base = store.getState().camera.base;
+    const base = worldArmOf(store.getState().camera.base);
     // The log-dolly lands at exactly dollyTo's `to` value at t=durationSec.
     // Use a loose precision (toBeCloseTo with 0 decimal places) — floating-point
     // log-interpolation is very close but not necessarily a round integer.

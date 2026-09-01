@@ -21,6 +21,7 @@ import type { CameraState } from '../../../../src/@types/camera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 
 function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTweenDescriptor {
   return {
@@ -139,7 +140,7 @@ describe('autoRotateElapsed', () => {
   // A stable base reference; passing the SAME object each call means the
   // base-identity reset never fires, so these tests exercise only the
   // active-bit transitions.
-  const BASE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+  const BASE = absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 });
 
   it('returns 0 when auto-rotate is inactive from the start', () => {
     const clock = createCameraClock();
@@ -197,7 +198,7 @@ describe('autoRotateElapsed', () => {
     const clock = createCameraClock();
     autoRotateElapsed(clock, true, BASE, 2000); // activation → 0
     expect(autoRotateElapsed(clock, true, BASE, 2050)).toBe(50); // same base → grows
-    const NEW_BASE: CameraPose = { target: [1, 0, 0], yaw: 0.5, pitch: 0, distance: 80 };
+    const NEW_BASE = absoluteArm({ target: [1, 0, 0], yaw: 0.5, pitch: 0, distance: 80 });
     expect(autoRotateElapsed(clock, true, NEW_BASE, 2060)).toBe(0); // base changed → reset
     expect(autoRotateElapsed(clock, true, NEW_BASE, 2075)).toBe(15); // grows from new base
   });

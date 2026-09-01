@@ -29,11 +29,15 @@
 import { cameraRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
-import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
 export const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
 
-export const selectCameraBase = (state: RootState): CameraPose => selectCameraIntent(state).base;
+// The FRAMED base (spec §9): readers that are world-arm concerns by nature
+// resolve it through `resolveWorldArm` / `liveWorldPose` rather than assuming
+// the absolute arm.
+export const selectCameraBase = (state: RootState): FramedCameraPose =>
+  selectCameraIntent(state).base;
 
 export const selectAutoRotate = (state: RootState): boolean =>
   selectCameraIntent(state).autoRotate.active;

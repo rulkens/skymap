@@ -25,8 +25,10 @@ import {
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { PivotFraming } from '../../../../src/@types/camera/PivotFraming';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 
-const BASE: CameraPose = { target: [0, 0, 0], yaw: 1, pitch: 0.2, distance: 100 };
+const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 1, pitch: 0.2, distance: 100 };
+const BASE = absoluteArm(BASE_POSE);
 const FRAME_MS = 1000 / 60;
 const SPIN_OFF = { active: false, rate: 0 };
 /** Earth's mean radius (km → Mpc) — the pivot radius for the surface-floor case. */
@@ -108,7 +110,7 @@ describe('applyWheelZoom', () => {
 
     expect(result).not.toBeNull();
     // yaw = base.yaw + rate * (elapsedMs / FRAME_MS), elapsedMs = 500.
-    expect(result!.yaw).toBeCloseTo(BASE.yaw + rate * (500 / FRAME_MS), 9);
+    expect(result!.yaw).toBeCloseTo(BASE_POSE.yaw + rate * (500 / FRAME_MS), 9);
     expect(result!.distance).toBeCloseTo(50, 9); // 100 * 0.5
   });
 
@@ -126,7 +128,7 @@ describe('applyWheelZoom', () => {
       NO_PIVOT,
     );
     expect(result).not.toBeNull();
-    expect(result!.yaw).toBe(BASE.yaw); // no spin folded in
+    expect(result!.yaw).toBe(BASE_POSE.yaw); // no spin folded in
     expect(result!.distance).toBeCloseTo(50, 9); // 100 * 0.5
   });
 

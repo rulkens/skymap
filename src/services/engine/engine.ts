@@ -44,6 +44,7 @@ import { createInputAggregator } from './subsystems/inputAggregator';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
+import { liveWorldPose } from './helpers/liveWorldPose';
 import { liveFocusRow } from './helpers/liveFocusRow';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
@@ -163,9 +164,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // initial OrbitCamera exists.
   //
   // `lastPose` seeds from the camera slice's initial `base` — the single home
-  // for the pre-bootstrap placeholder pose — so the first resting frame has a
-  // stable pose to read before wireInput's commitCameraPose fires. Copied so a
-  // later per-frame `lastPose.current = …` never aliases the store's state.
+  // for the pre-bootstrap placeholder pose, arm tag included — so the first
+  // resting frame has a stable pose to read before wireInput's
+  // commitCameraPose fires. The framed wrapper is copied so the engine's
+  // Resource is never the store's own object.
   const cameraRuntime: CameraRuntime = {
     clock: createCameraClock(),
     projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
@@ -692,7 +694,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // No null-guard needed: lastPose.current is seeded from camera.base at
     // CameraRuntime construction (synchronous) and playClip is only ever
     // invoked from tour/tween sagas or the dev panel, all after construction.
-    getLivePose: () => state.cameraRuntime.lastPose.current,
+    getLivePose: () => liveWorldPose(state),
   });
 
   // Debug clip-path inspector seam — `watchClipPathInspectSaga` calls `compute`
@@ -712,7 +714,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // 8007 here; the renderer is built with 8192 in `initGpu`).
   const clipPathInspect = createClipPathInspectSeam({
     inspector: state.subsystems.clipPathInspector,
-    getLivePose: () => state.cameraRuntime.lastPose.current,
+    getLivePose: () => liveWorldPose(state),
     sampleCount: 4000,
   });
 
@@ -730,7 +732,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     cameraRuntime: () =>
       state.cam
         ? {
-            from: state.cameraRuntime.lastPose.current,
+            from: liveWorldPose(state),
             fovYRad: state.cameraRuntime.projection.fovYRad,
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }

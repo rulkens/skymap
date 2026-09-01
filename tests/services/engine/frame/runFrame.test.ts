@@ -119,6 +119,8 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/so
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { worldArmOf } from '../../../fixtures/worldArmOf';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -327,8 +329,8 @@ describe('runFrame — the input drain runs before the produce step', () => {
     const deps = makeCamDeps(state, store);
 
     const BASE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
-    store.dispatch(commitCameraPose(BASE));
-    state.cameraRuntime.lastPose.current = BASE;
+    store.dispatch(commitCameraPose(absoluteArm(BASE)));
+    state.cameraRuntime.lastPose.current = absoluteArm(BASE);
     // The emit sink's DOM-time edge, so `orbitDrag` (priority 80) is the winner.
     store.dispatch(beginDrag());
 
@@ -340,7 +342,7 @@ describe('runFrame — the input drain runs before the produce step', () => {
     runFrame(state, deps, 0);
 
     // Drag right 50 px at the flat 0.005 rad/px (no pivot to damp against).
-    expect(state.cameraRuntime.lastPose.current.yaw).toBeCloseTo(-0.25, 6);
+    expect(worldArmOf(state.cameraRuntime.lastPose.current).yaw).toBeCloseTo(-0.25, 6);
   });
 });
 
@@ -360,8 +362,8 @@ describe('runFrame — camera drivers (regression)', () => {
       pitch: 0,
       distance: 100,
     };
-    store.dispatch(commitCameraPose(BASE));
-    state.cameraRuntime.lastPose.current = BASE;
+    store.dispatch(commitCameraPose(absoluteArm(BASE)));
+    state.cameraRuntime.lastPose.current = absoluteArm(BASE);
 
     // Enable auto-rotate AND start a tween — both active so the resolver must
     // pick the higher-priority tween driver.
@@ -382,7 +384,7 @@ describe('runFrame — camera drivers (regression)', () => {
     // The tween wins: the yaw is somewhere between 0 and 1.5 (not auto-rotate's
     // yaw + 0.000873/frame). The exact value is easing-dependent; we only need
     // to verify it advanced toward the tween's to-yaw (1.5) and is not zero.
-    const yaw = state.cameraRuntime.lastPose.current.yaw;
+    const yaw = worldArmOf(state.cameraRuntime.lastPose.current).yaw;
     expect(yaw).toBeGreaterThan(0);
     expect(yaw).toBeLessThanOrEqual(1.5);
   });
@@ -393,13 +395,13 @@ describe('runFrame — camera drivers (regression)', () => {
     const deps = makeCamDeps(state, store);
 
     const BASE: CameraPose = { target: [0, 0, 0], yaw: 0.123, pitch: 0.456, distance: 77 };
-    store.dispatch(commitCameraPose(BASE));
-    state.cameraRuntime.lastPose.current = BASE;
+    store.dispatch(commitCameraPose(absoluteArm(BASE)));
+    state.cameraRuntime.lastPose.current = absoluteArm(BASE);
 
     runFrame(state, deps, 1000);
 
     // Resting driver returns `s.camera.base` as-is.
-    const pose = state.cameraRuntime.lastPose.current;
+    const pose = worldArmOf(state.cameraRuntime.lastPose.current);
     expect(pose.yaw).toBe(0.123);
     expect(pose.pitch).toBe(0.456);
     expect(pose.distance).toBe(77);
@@ -416,8 +418,8 @@ describe('runFrame — camera drivers (regression)', () => {
       pitch: 0,
       distance: 100,
     };
-    store.dispatch(commitCameraPose(BASE));
-    state.cameraRuntime.lastPose.current = BASE;
+    store.dispatch(commitCameraPose(absoluteArm(BASE)));
+    state.cameraRuntime.lastPose.current = absoluteArm(BASE);
 
     // Enable auto-rotate on the camera slice — the only home now.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
@@ -426,7 +428,7 @@ describe('runFrame — camera drivers (regression)', () => {
     runFrame(state, deps, 1000); // elapsed 1000 → yaw advances
 
     // After 1000 ms the yaw must have advanced from the base (0).
-    const yaw = state.cameraRuntime.lastPose.current.yaw;
+    const yaw = worldArmOf(state.cameraRuntime.lastPose.current).yaw;
     expect(yaw).toBeGreaterThan(0);
   });
 });
@@ -473,8 +475,8 @@ describe('runFrame — orientation-frame roll', () => {
     // A base pose whose view direction is well away from either pole, so the roll
     // is visible and the eye clearly orbits (yaw/pitch both non-trivial).
     const BASE: CameraPose = { target: [0, 0, 0], yaw: 0.7, pitch: 0.3, distance: 100 };
-    store.dispatch(commitCameraPose(BASE));
-    state.cameraRuntime.lastPose.current = BASE;
+    store.dispatch(commitCameraPose(absoluteArm(BASE)));
+    state.cameraRuntime.lastPose.current = absoluteArm(BASE);
 
     // Switch ecliptic → galactic over 1 s, linear so the slerp parameter is the
     // raw time fraction (monotonic pole rotation).
@@ -492,7 +494,12 @@ describe('runFrame — orientation-frame roll', () => {
     for (const t of [0, 250, 500, 750, 1000]) {
       runFrame(state, deps, t);
       const B = state.cameraRuntime.upBasis.current;
-      const cam = assembleOrbitCamera(state.cameraRuntime.lastPose.current, projection, B, B);
+      const cam = assembleOrbitCamera(
+        worldArmOf(state.cameraRuntime.lastPose.current),
+        projection,
+        B,
+        B,
+      );
       samples.push({
         t,
         target: [...cam.target],
@@ -549,8 +556,8 @@ describe('runFrame — orientation-frame roll', () => {
     const deps = makeCamDeps(state, store);
 
     const BASE: CameraPose = { target: [0, 0, 0], yaw: 0.7, pitch: 0.3, distance: 100 };
-    store.dispatch(commitCameraPose(BASE));
-    state.cameraRuntime.lastPose.current = BASE;
+    store.dispatch(commitCameraPose(absoluteArm(BASE)));
+    state.cameraRuntime.lastPose.current = absoluteArm(BASE);
 
     // Mirrors watchOrientationChangeSaga: setOrientation commits the
     // destination immediately, startFrameTween rolls the up-basis toward it.
@@ -568,7 +575,7 @@ describe('runFrame — orientation-frame roll', () => {
 
     runFrame(state, deps, 250);
     const cam1 = assembleOrbitCamera(
-      state.cameraRuntime.lastPose.current,
+      worldArmOf(state.cameraRuntime.lastPose.current),
       projection,
       state.cam!.poseBasis!,
       state.cam!.upBasis!,
@@ -576,7 +583,7 @@ describe('runFrame — orientation-frame roll', () => {
 
     runFrame(state, deps, 500);
     const cam2 = assembleOrbitCamera(
-      state.cameraRuntime.lastPose.current,
+      worldArmOf(state.cameraRuntime.lastPose.current),
       projection,
       state.cam!.poseBasis!,
       state.cam!.upBasis!,
@@ -604,8 +611,8 @@ describe('runFrame — orientation-frame roll', () => {
     const deps = makeCamDeps(state, store);
 
     const BASE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: PITCH_LIMIT, distance: 100 };
-    store.dispatch(commitCameraPose(BASE));
-    state.cameraRuntime.lastPose.current = BASE;
+    store.dispatch(commitCameraPose(absoluteArm(BASE)));
+    state.cameraRuntime.lastPose.current = absoluteArm(BASE);
 
     store.dispatch(
       startFrameTween({
@@ -619,7 +626,7 @@ describe('runFrame — orientation-frame roll', () => {
     const projection = state.cameraRuntime.projection;
     for (const t of [0, 250, 500, 750, 1000]) {
       runFrame(state, deps, t);
-      const pose = state.cameraRuntime.lastPose.current;
+      const pose = worldArmOf(state.cameraRuntime.lastPose.current);
       expect(Number.isFinite(pose.yaw)).toBe(true);
       expect(Number.isFinite(pose.pitch)).toBe(true);
       expect(Math.abs(pose.pitch)).toBeLessThanOrEqual(PITCH_LIMIT + 1e-9);
@@ -736,7 +743,7 @@ describe('runFrame — sim clock (Task 8)', () => {
       isActive: () => true,
       pose: () => {
         timeOrder.log.push('produce');
-        return { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+        return absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 });
       },
     };
     const deps: RunFrameDeps = { ...makeCamDeps(state, store), drivers: [stub] };

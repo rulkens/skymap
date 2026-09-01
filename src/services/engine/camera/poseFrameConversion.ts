@@ -15,6 +15,8 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -143,4 +145,29 @@ export function toWorldArm(
     distance,
     roll: rollFromScreenUp(viewDirWorld, upWorld, frameUp(upBasis)),
   };
+}
+
+/**
+ * The world arm of a framed pose. The absolute arm returns its own pose BY
+ * REFERENCE — the fold is free on every world-arm frame, which is what lets
+ * `runFrame` resolve unconditionally instead of branching (spec §7 step 6).
+ *
+ * Throws when the engaged body has no state or no registry row this instant:
+ * a body arm is only ever created for a body the roster resolved, so this is
+ * unreachable by construction and a silent fallback would teleport the camera.
+ */
+export function resolveWorldArm(
+  framed: FramedCameraPose,
+  bodyStates: ReadonlyMap<BodyId, BodyState>,
+  poseBasis: Readonly<Mat3>,
+  upBasis: Readonly<Mat3>,
+): CameraPose {
+  if (framed.frame === 'absolute') return framed.pose;
+  const bodyId = framed.frame.body;
+  const bodyState = bodyStates.get(bodyId);
+  const body = SCENE_BODIES.find((row) => row.id === bodyId);
+  if (bodyState === undefined || body === undefined) {
+    throw new Error(`resolveWorldArm: engaged body '${bodyId}' is unresolved this instant`);
+  }
+  return toWorldArm(framed.pose, bodyState, poseBasis, upBasis, body.radiusM);
 }

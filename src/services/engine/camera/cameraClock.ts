@@ -27,6 +27,7 @@ import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
 import type { FrameTween } from '../../../@types/camera/FrameTween';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { CameraState } from '../../../@types/camera/CameraState';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -123,7 +124,7 @@ export function frameTweenElapsed(
 export function autoRotateElapsed(
   clock: CameraClock,
   active: boolean,
-  base: CameraPose,
+  base: FramedCameraPose,
   nowMs: number,
 ): number {
   if (active !== clock.lastAutoRotateActive || base !== clock.lastBaseRef) {

@@ -53,12 +53,14 @@
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import { poseOf } from './poseOf';
+import { absoluteArm } from '../../../utils/camera/absoluteArm';
+import { liveWorldPose } from '../helpers/liveWorldPose';
 import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
 import { tweenElapsed, autoRotateElapsed, clipElapsed, followElapsed } from './cameraClock';
@@ -149,7 +151,7 @@ export function runCameraDrivers(
   cam: OrbitCamera,
   clock: CameraClock,
   nowMs: number,
-): CameraPose {
+): FramedCameraPose {
   const winner = pickWinner(drivers, s);
   const elapsed = elapsedForWinner(winner, s, clock, nowMs);
   return winner.pose(s, cam, elapsed);
@@ -205,7 +207,7 @@ export function runCameraDrivers(
  *
  *   - `autoRotate` (20) — the idle drift. Active while
  *     `s.camera.autoRotate.active` is true. Pure: returns
- *     `spinAutoRotate(s.camera.base, rate, elapsedMs)` — base is frozen while
+ *     `spinAutoRotate(base.pose, rate, elapsedMs)` — base is frozen while
  *     active, giving a rate-accurate spin regardless of frame rate.
  *     `pivotsOnFocusedBody`: with a body focused the spin orbits around the live
  *     body (the pivot-pin re-centres it), which is why it outranks followBody.
@@ -237,10 +239,12 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       pose: (s, _cam, elapsed) => {
         const clip = s.camera.clip!;
         const evaluated = evaluateClip(clip.data, elapsed, ORIENTATION_FRAMES[clip.frame]);
-        return reencodePose(
-          evaluated,
-          ORIENTATION_FRAMES[clip.frame],
-          ORIENTATION_FRAMES[s.settings.orientation],
+        return absoluteArm(
+          reencodePose(
+            evaluated,
+            ORIENTATION_FRAMES[clip.frame],
+            ORIENTATION_FRAMES[s.settings.orientation],
+          ),
         );
       },
     },
@@ -252,12 +256,14 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // frozen point (the body would otherwise drift out from under the cursor
       // mid-drag). Drag owns yaw/pitch/distance; the body owns the pivot.
       pivotsOnFocusedBody: true,
-      isActive: (s) => s.camera.dragging,
+      // World-arm producer: the drag register is Mpc orbit params, so the row
+      // only competes while the state is in the absolute arm (spec §7).
+      isActive: (s) => s.camera.dragging && s.camera.base.frame === 'absolute',
       // The live drag register is the source of truth while the gesture is
       // held — poseOf reads yaw/pitch/distance/target off the OrbitCamera
       // that orbitControls mutates in real time. The target it reads is only
       // used when NO body is focused; otherwise the pivot-pin overwrites it.
-      pose: (_s, cam) => poseOf(cam),
+      pose: (_s, cam) => absoluteArm(poseOf(cam)),
     },
     {
       id: 'followBody',
@@ -280,7 +286,10 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // drag takes the orbit terms while the pivot-pin keeps the body centred,
       // so the autoRotate button spins AROUND a focused body instead of being
       // blocked by follow.
-      isActive: (s) => bodyMovesThisFrame(s.selectionRows.focus),
+      // Also gated on the absolute arm (spec §7): the approach ease and the idle
+      // hold have no meaning once the state co-rotates with the body.
+      isActive: (s) =>
+        s.camera.base.frame === 'absolute' && bodyMovesThisFrame(s.selectionRows.focus),
       // The follow pose. `elapsed` is ms since the approach started (from
       // `followElapsed`, keyed on the focus row reference). The target term is
       // always the LIVE body position, so the camera tracks the body the sim
@@ -301,8 +310,12 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         // by construction — but a null-guard keeps the arm total, falling back to
         // the resting pose. The position itself comes from the shared
         // `liveBodyPosition` site.
+        const base = s.camera.base;
         const livePos = liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current);
-        if (focus === null || focus.type !== 'body' || livePos === null) return s.camera.base;
+        // `base.frame` is the isActive gate restated as the narrowing TS needs;
+        // returning `base` untouched is the resting floor's arm-agnostic answer.
+        if (focus === null || focus.type !== 'body' || livePos === null) return base;
+        if (base.frame !== 'absolute') return base;
 
         // Capture the `from` pose ONCE per activation. `followElapsed` nulls it
         // on the edge; the first produce after fills it from the LIVE rendered
@@ -310,7 +323,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         // starts where the camera visibly is — switching focus A→B eases from
         // framing-A, never jumping back to the committed base first.
         if (clock.followFrom === null) {
-          const cur = state.cameraRuntime.lastPose.current;
+          const cur = liveWorldPose(state);
           clock.followFrom = {
             target: [cur.target[0], cur.target[1], cur.target[2]],
             yaw: cur.yaw,
@@ -320,7 +333,6 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           };
         }
         const from = clock.followFrom;
-        const base = s.camera.base;
 
         // Resolve the distance target for this frame (the two-source un-braid).
         if (clock.followDistanceTarget === null) {
@@ -340,21 +352,21 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           // drag (or clip) interrupted the follow and committed a new pose into
           // `base`. Re-capture `base.distance` as the STEADY-STATE target so the
           // user's zoom sticks instead of snapping back to the framing distance.
-          clock.followDistanceTarget = base.distance;
+          clock.followDistanceTarget = base.pose.distance;
         }
         const distanceTarget = clock.followDistanceTarget;
 
         const t = easeOutCubic(elapsed / FOCUS_TWEEN_MS);
-        return {
+        return absoluteArm({
           // Alias the live snapshot position (a fresh, immutable per-frame array
           // downstream reads read-only) — the target is the body, always. (The
           // frame-loop pivot-pin sets the same value; keeping it here means the
           // driver's pose is correct in isolation too.)
           target: livePos,
-          yaw: lerp(from.yaw, base.yaw, t),
-          pitch: lerp(from.pitch, base.pitch, t),
+          yaw: lerp(from.yaw, base.pose.yaw, t),
+          pitch: lerp(from.pitch, base.pose.pitch, t),
           distance: lerp(from.distance, distanceTarget, t),
-        };
+        });
       },
     },
     {
@@ -379,10 +391,12 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           elapsedMs / 1000,
           ORIENTATION_FRAMES[tween.frame],
         );
-        return reencodePose(
-          evaluated,
-          ORIENTATION_FRAMES[tween.frame],
-          ORIENTATION_FRAMES[s.settings.orientation],
+        return absoluteArm(
+          reencodePose(
+            evaluated,
+            ORIENTATION_FRAMES[tween.frame],
+            ORIENTATION_FRAMES[s.settings.orientation],
+          ),
         );
       },
     },
@@ -397,13 +411,19 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // why followBody sits below autoRotate — the spin wins the orbit terms, the
       // body owns the pivot.
       pivotsOnFocusedBody: true,
-      isActive: (s) => s.camera.autoRotate.active,
+      // World-arm producer, gated on the absolute arm (spec §7): a yaw spin
+      // about the frame pole is not a thing a body-fixed arm expresses.
+      isActive: (s) => s.camera.autoRotate.active && s.camera.base.frame === 'absolute',
       // Spins from the FROZEN base: base does not update while autoRotate wins
       // (commit-on-edge only fires on driver deactivation), so the yaw advances
       // at the correct cumulative rate rather than a per-frame delta off a
       // moving base.
-      pose: (s, _cam, elapsedMs) =>
-        spinAutoRotate(s.camera.base, s.camera.autoRotate.rate, elapsedMs),
+      pose: (s, _cam, elapsedMs) => {
+        const base = s.camera.base;
+        // The isActive gate restated as the narrowing TS needs.
+        if (base.frame !== 'absolute') return base;
+        return absoluteArm(spinAutoRotate(base.pose, s.camera.autoRotate.rate, elapsedMs));
+      },
     },
     {
       id: 'resting',

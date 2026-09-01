@@ -10,6 +10,7 @@ import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { lonLatFocusPose } from '../../../src/utils/camera/lonLatFocusPose';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -41,7 +42,7 @@ describe('watchFlyToLonLatSaga', () => {
 
   it('commits the pose lonLatFocusPose computes from the selected orientation, resting distance, and derived Earth state', async () => {
     const restingPose: CameraPose = { target: [1, 2, 3], yaw: 0.4, pitch: -0.2, distance: 42 };
-    store.dispatch(commitCameraPose(restingPose));
+    store.dispatch(commitCameraPose(absoluteArm(restingPose)));
     store.dispatch(setOrientation('galactic'));
     // Freeze the sim clock at a specific off-epoch instant, nowMs-independent.
     store.dispatch(setSimDays({ simDays: SIM_DAYS, nowMs: 0 }));
@@ -59,6 +60,6 @@ describe('watchFlyToLonLatSaga', () => {
       ORIENTATION_FRAMES.galactic,
     );
 
-    expect(store.getState()[cameraRoute].base).toEqual(expected);
+    expect(store.getState()[cameraRoute].base).toEqual(absoluteArm(expected));
   });
 });
