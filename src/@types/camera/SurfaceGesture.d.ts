@@ -3,7 +3,7 @@ import type { Vec3 } from '../math/Vec3';
 
 /** Per-gesture, latched at gesture start, dead at pointerup (ruled, Q3). */
 export type SurfaceGesture = {
-  readonly mode: 'pan' | 'trackball' | 'strafe' | 'look' | 'tilt';
+  readonly mode: 'pan' | 'orbit' | 'strafe' | 'look' | 'tilt';
   /** |first pick| — the FROZEN pan sphere, body-fixed metres (C §2.3, §6.2). */
   readonly anchorRadiusM: number;
   /** Body-fixed, never world (C landmine #5). */

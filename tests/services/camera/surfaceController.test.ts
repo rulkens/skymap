@@ -11,7 +11,6 @@ import { describe, it, expect } from 'vitest';
 
 import { createSurfaceController } from '../../../src/services/camera/surfaceController';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
-import { anchoredZoomStep } from '../../../src/utils/camera/anchoredZoomStep';
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
 import { maxTiltRad } from '../../../src/utils/camera/maxTiltRad';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
@@ -200,7 +199,7 @@ describe('surfaceController', () => {
 
   it('keeps the rate currency bounded and single-signed across the limb (FW-D)', () => {
     // The limb sits at x ≈ 78.9 px from [0,0,2] with a 90° FOV. Walking a drag
-    // through it degrades pan → trackball once, and the currency must not
+    // through it degrades pan → orbit once, and the currency must not
     // alternate: every step turns the same way, none of them jumps.
     const c = createSurfaceController();
     c.onGestureStart();
@@ -353,101 +352,109 @@ describe('surfaceController', () => {
     expect(angleBetween(eyeOf(pose), anchor)).toBeLessThan(1e-3);
   });
 
-  it('a zoom-out re-levels against the new local vertical', () => {
-    // Comfortably tilted at a wide-open ceiling; a factor-2 zoom-out (the
-    // per-tick maximum) doubles the ALTITUDE — the anchor is the sub-eye
-    // surface point (§12-R4), so h/R 1 → 2 — past the point where the
-    // ceiling has narrowed below the held tilt, and the very same tick must
-    // re-level: no separate untilt tween runs afterward.
+  it('a zoom-out walks the view level by the bounded decay, never in one tick', () => {
+    // R1: recession converges toward the canonical framing through the SAME
+    // capped decay the approach uses — from 2.4 rad of held tilt no notch may
+    // turn the view by more than the per-axis cap sum, and the staircase still
+    // lands on nadir. (The old model clamped the whole excess to the altitude
+    // ceiling in one tick — a 153°-class snap from large residuals, C1.)
     const c = createSurfaceController();
-    const theta = 2.4;
-    const start = poseAt([0, 0, R * 2], basisAtTilt(theta));
-    const zoomedOut = apply(c, start, zoom(2, false));
-
-    const eye = eyeOf(zoomedOut);
-    const hOverR = Math.hypot(...eye) / R - 1;
-    const forward: Vec3 = [
-      zoomedOut.basisLocal[6],
-      zoomedOut.basisLocal[7],
-      zoomedOut.basisLocal[8],
-    ];
-    const tiltAfter = angleBetween(forward, [-eye[0], -eye[1], -eye[2]]);
-
-    expect(tiltAfter).toBeLessThan(theta);
-    expect(tiltAfter).toBeCloseTo(maxTiltRad(hOverR), 10);
-  });
-
-  it('returns the framing to base as it recedes, by ceiling not by blend', () => {
-    // The acceptance property for §12-R4b, and the shape it is built from: the
-    // ceiling is a function of ALTITUDE, so the framing converges because the
-    // eye climbs, not because a per-notch fraction fires. That distinction is
-    // observable — down here, where `maxTiltRad` is slack, a notch changes
-    // neither angle at all, which no blend implementation can reproduce.
-    const c = createSurfaceController();
-    const tilt = 0.5;
-    const psi = 1.2;
-    const start = poseAt([0, 0, R * 2], basisAt(psi, tilt));
-
-    const out = apply(c, start, zoom(1.5, false, [75, 50]));
-    expect(Math.hypot(...eyeOf(out))).toBeGreaterThan(Math.hypot(...eyeOf(start)));
-    expect(bodyAngle(out)).toBeCloseTo(tilt, 12);
-    expect(headingOnAxis(out)).toBeCloseTo(psi, 12);
-
-    // Climbing tightens it: each notch lands at exactly `min(held, ceiling)`,
-    // neither angle ever grows, and both are 0 by the disengage boundary.
-    let pose = start;
-    let lastAngle = bodyAngle(pose);
-    let lastHeading = Math.abs(headingOnAxis(pose));
-    for (let i = 0; i < 12; i += 1) {
-      pose = apply(c, pose, zoom(1.5, false, [75, 50]));
-      const ceiling = maxTiltRad(Math.hypot(...eyeOf(pose)) / R - 1);
-      const angle = bodyAngle(pose);
-      const heading = Math.abs(headingOnAxis(pose));
-      expect(angle).toBeCloseTo(Math.min(lastAngle, ceiling), 9);
-      expect(heading).toBeCloseTo(Math.min(lastHeading, ceiling), 9);
-      lastAngle = angle;
-      lastHeading = heading;
+    let pose = poseAt([0, 0, 2], basisAtTilt(2.4));
+    let lastTilt = bodyAngle(pose);
+    for (let i = 0; i < 40; i += 1) {
+      const upBefore: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
+      pose = apply(c, pose, zoom(1.05, false));
+      const upAfter: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
+      const tilt = bodyAngle(pose);
+      expect(tilt).toBeLessThanOrEqual(lastTilt + 1e-9);
+      // Heading, tilt and level each contribute at most one cap per notch.
+      expect(angleBetween(upBefore, upAfter)).toBeLessThan(0.3 + 1e-9);
+      lastTilt = tilt;
     }
-    expect(Math.hypot(...eyeOf(pose)) / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
-    expect(lastAngle).toBeCloseTo(0, 12);
-    expect(lastHeading).toBeCloseTo(0, 12);
+    expect(lastTilt).toBeLessThan(0.02);
   });
 
-  it('turns the image by no more than the residual it corrects', () => {
-    // Why the clamp is a DELTA rotation and not a `(heading, tilt)` rebuild: a
-    // rebuild has no roll term, so the tick that crosses a limit answers the
-    // violation — however small — by ALSO discarding the pose's roll. Here 0.8
-    // rad of roll would leave in one tick alongside a 0.27 rad heading
-    // correction. Turning by the residual leaves roll where it was.
+  it('a recession re-orients even where the ceiling is slack — one law, both directions', () => {
+    // The ruled symmetry (R1/I1): the recession is no longer a ceiling that
+    // only bites near disengage — it converges by the SAME `clamp(SHARE·r,
+    // ±CAP)` decay the approach uses, at every altitude. Down here the
+    // ceiling is wide open, so the old model changed neither angle at all;
+    // one notch out must now walk both toward canonical by exactly one cap.
+    const start = poseAt([0, 0, 2], basisAt(1.2, 0.5));
+    const out = apply(createSurfaceController(), start, zoom(1.5, false, [50, 70]));
+
+    const hOverR = Math.hypot(...eyeOf(out)) / R - 1;
+    expect(maxTiltRad(hOverR)).toBeGreaterThan(0.5); // the premise: slack
+    expect(northUpOffset(out)).toBeCloseTo(1.1, 9);
+    expect(bodyAngle(out)).toBeCloseTo(0.4, 9);
+  });
+
+  it('a receding staircase converges heading and tilt to the canonical framing', () => {
     const c = createSurfaceController();
-    // A small notch at h/R ≈ 2, where the ceiling has just closed past the
-    // held heading: the residual to correct is ~0.1 rad while the pose carries
-    // 1.2 rad of roll, so the two are impossible to confuse.
-    const start = poseAt([0, 0, R * 2.952], rolledAber(basisAt(1.2, 0.4), 1.2));
-    const upOf = (p: BodyFixedPose): Vec3 => [p.basisLocal[3], p.basisLocal[4], p.basisLocal[5]];
-
-    const out = apply(c, start, zoom(1.05, false));
-    const residual = 1.2 - maxTiltRad(Math.hypot(...eyeOf(out)) / R - 1);
-    expect(residual).toBeGreaterThan(0.02); // the clamp really did fire
-    expect(residual).toBeLessThan(0.3); // …and by much less than the roll
-
-    // The whole basis turned about the local vertical by the residual, so
-    // screen-up moved by at most that. A rebuild moves it by ~0.85 here.
-    expect(angleBetween(upOf(start), upOf(out))).toBeLessThanOrEqual(residual + 1e-12);
-    expect(angleBetween(upOf(start), upOf(out))).toBeGreaterThan(0);
+    let pose = poseAt([0, 0, 2], basisAt(1.2, 0.5));
+    let lastAngle = bodyAngle(pose);
+    let lastNorth = northUpOffset(pose);
+    for (let i = 0; i < 40; i += 1) {
+      pose = apply(c, pose, zoom(1.2, false, [75, 50]));
+      const angle = bodyAngle(pose);
+      const north = northUpOffset(pose);
+      // Monotone to a small slack: the three settle rotations pivot on
+      // different axes, so one can perturb another's readout by a hair.
+      expect(angle).toBeLessThanOrEqual(lastAngle + 0.02);
+      expect(north).toBeLessThanOrEqual(lastNorth + 0.02);
+      lastAngle = angle;
+      lastNorth = north;
+    }
+    expect(lastAngle).toBeLessThan(0.02);
+    expect(lastNorth).toBeLessThan(0.02);
   });
 
-  it('clamps a heading near ±π without crossing the seam', () => {
+  it('bleeds an arriving roll out over notches, never in one tick', () => {
+    // R1 point 4: roll only ever ARRIVES from outside (a flyby, a legacy
+    // pose) — gestures cannot create it — and it eases out on driven writes,
+    // capped, rather than being discarded by a `(heading, tilt)` rebuild in
+    // the tick that first touches the pose. 1.1 rad of roll at high tilt:
+    // every notch turns the image by a bounded amount and the bank decays.
+    const c = createSurfaceController();
+    let pose = poseAt([0, 0, R * 2.952], rolledAber(basisAt(0.3, 1.2), 1.1));
+    const upOf = (p: BodyFixedPose): Vec3 => [p.basisLocal[3], p.basisLocal[4], p.basisLocal[5]];
+    // Bank: how far the right axis is out of the horizontal plane — 0 for any
+    // roll-free pose, at every tilt.
+    const bankOf = (p: BodyFixedPose): number => {
+      const e = eyeOf(p);
+      const m = Math.hypot(...e);
+      const b = p.basisLocal;
+      return Math.abs((b[0] * e[0] + b[1] * e[1] + b[2] * e[2]) / m);
+    };
+
+    // `bank ≈ sin(roll)·sin(tilt)`, so normalise by tilt: the proxy isolates
+    // the roll decay from the tilt convergence that also shrinks the bank.
+    const rollProxyOf = (p: BodyFixedPose): number => bankOf(p) / Math.sin(bodyAngle(p));
+    expect(rollProxyOf(pose)).toBeGreaterThan(0.8); // the arrival really is banked
+    let lastProxy = rollProxyOf(pose);
+    for (let i = 0; i < 8; i += 1) {
+      const before = upOf(pose);
+      pose = apply(c, pose, zoom(1.05, false));
+      expect(angleBetween(before, upOf(pose))).toBeLessThan(0.3 + 1e-9);
+      const proxy = rollProxyOf(pose);
+      expect(proxy).toBeLessThanOrEqual(lastProxy + 0.02);
+      lastProxy = proxy;
+    }
+    // Eight capped notches take ~0.8 rad of the 1.1 rad bank out — eased, not
+    // snapped (one tick of the old rebuild would have zeroed it).
+    expect(lastProxy).toBeLessThan(0.4);
+  });
+
+  it('decays a heading near ±π toward north without crossing the seam', () => {
     // The one place a heading correction can genuinely pop (prior art Q3): a
-    // residual taken the long way round the branch cut. Clamping the MAGNITUDE
-    // of `atan2`'s (−π, π] keeps the sign, so ±3 rad lands on ±ceiling —
-    // 0.17 rad of turn, not 5.1 the other way.
+    // residual taken the long way round the branch cut. The decay acts on
+    // `atan2`'s (−π, π] residual, so ±3 rad steps to ±2.9 — one cap of turn,
+    // not 5.1 the other way.
     const c = createSurfaceController();
     for (const psi of [3.0, -3.0]) {
       const start = poseAt([0, 0, R * 3], basisAt(psi, 0.3));
       const out = apply(c, start, zoom(1.5, false));
-      const ceiling = maxTiltRad(Math.hypot(...eyeOf(out)) / R - 1);
-      expect(headingOnAxis(out)).toBeCloseTo(Math.sign(psi) * ceiling, 9);
+      expect(headingOnAxis(out)).toBeCloseTo(Math.sign(psi) * 2.9, 9);
     }
   });
 
@@ -476,8 +483,12 @@ describe('surfaceController', () => {
     // the eye moving is itself what turns the ENU under a fixed basis; that is
     // the error this correction exists to unwind, and it does, monotonically.)
     expect(northUpOffset(pose)).toBeLessThan(0.02);
-    // And no notch is a jump: the correction is capped per tick.
-    expect(maxTurn).toBeLessThan(0.1 + 1e-12);
+    // …and the view has settled looking straight down at the ground (ruled:
+    // the approach converges to nadir alongside north, R1 point 3).
+    expect(bodyAngle(pose)).toBeLessThan(0.02);
+    // And no notch is a jump: heading, tilt and level are each capped per
+    // tick, so even their composition stays a small bounded turn.
+    expect(maxTurn).toBeLessThan(0.3 + 1e-12);
   });
 
   it('measures north-up off SCREEN-UP, not off the forward azimuth', () => {
@@ -502,26 +513,12 @@ describe('surfaceController', () => {
     expect(northUpOffset(pose)).toBeLessThan(0.02);
   });
 
-  it('re-aims a dive for north only, never for centring', () => {
-    // The dive is still the cursor's: it does NOT pull the body back to view
-    // centre (that is the retreat's job, §12-R4b), so the body sliding off
-    // centre as the eye dives at an off-axis point survives the north-up work.
-    const c = createSurfaceController();
-    const start = poseAt([0, 0, 2], basisAt(1.2, 0.5));
-
-    const dived = apply(c, start, zoom(0.5, false, [50, 70]));
-
-    expect(bodyAngle(dived)).toBeGreaterThan(bodyAngle(start) + 0.03);
-  });
-
-  it('leaves a drag’s heading alone where the ceiling would clamp a zoom', () => {
-    // Same pose, same altitude, one write each: the zoom is north-clamped and
-    // the drag is not (ruled). T17's C1 pins that the clamp preserves the
-    // heading it MEASURES; this pins which writes get a heading limit at all.
-    // h/R = 2.25, where the ceiling (0.90) already bites the held heading of
-    // 1.2 — so the drag is a real test of the exemption, not of slack.
+  it('leaves a drag’s heading alone where a zoom notch would walk it north', () => {
+    // Same pose, one write each: the zoom decays the heading toward north and
+    // the drag does not (ruled: drags stay heading-free; only zoom writes
+    // re-orient). The drag's own wall and level must be exact no-ops on this
+    // roll-free, below-ceiling pose — heading 1.2 survives to the bit.
     const start = poseAt([0, 0, R * 3.25], basisAt(1.2, 0.1));
-    expect(maxTiltRad(2.25)).toBeLessThan(1.2);
 
     const dragged = createSurfaceController();
     dragged.onGestureStart();
@@ -531,18 +528,14 @@ describe('surfaceController', () => {
     );
 
     const zoomed = apply(createSurfaceController(), start, zoom(1.2, false));
-    const ceiling = maxTiltRad(Math.hypot(...eyeOf(zoomed)) / R - 1);
-    expect(ceiling).toBeLessThan(1.2); // the clamp has something to do here
-    expect(headingOnAxis(zoomed)).toBeCloseTo(ceiling, 9);
+    expect(headingOnAxis(zoomed)).toBeCloseTo(1.1, 12);
   });
 
   it('round-trips: dive at an off-centre point, then recede to the base pose', () => {
     const c = createSurfaceController();
     let pose = poseAt([0, 0, 2], basisAt(1.2, 0.5));
 
-    const offCentreBefore = bodyAngle(pose);
     for (let i = 0; i < 3; i += 1) pose = apply(c, pose, zoom(0.8, false, [50, 70]));
-    expect(bodyAngle(pose)).toBeGreaterThan(offCentreBefore);
 
     for (let i = 0; i < 40; i += 1) pose = apply(c, pose, zoom(1.5, false, [50, 70]));
 
@@ -561,56 +554,104 @@ describe('surfaceController', () => {
     ];
 
     expect(mag / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
-    // 1e-8 is `acos`'s floor near 0 (the dot product is 1 to the ulp), not slack.
-    expect(bodyAngle(pose)).toBeLessThan(1e-7);
+    // The residual is the capped decay's geometric tail — under 0.6°, visually
+    // nothing, but never exactly 0 the way the old hard clamp was.
+    expect(bodyAngle(pose)).toBeLessThan(0.01);
     const upCol: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
-    expect(angleBetween(upCol, north)).toBeLessThan(1e-7);
+    expect(angleBetween(upCol, north)).toBeLessThan(0.01);
   });
 
-  it('the pose reaching the disengage boundary has tilt 0', () => {
-    // maxTiltRad(disengageHR) === 0 (pinned in maxTiltRad.test.ts), so ANY
-    // held tilt at that altitude clamps all the way to nadir — the Q4
-    // invariant a world-arm pivot pin relies on at the seam.
-    const c = createSurfaceController();
-    const start = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(1.0));
-    const settled = apply(c, start, zoom(1, false));
+  it('the tilt wall denies a gesture’s own excess but eases an inherited one', () => {
+    // C1's tilt half, both sides of it. At the disengage altitude the ceiling
+    // is 0. A look drag pitching up from nadir is simply not granted the tilt
+    // (a wall the gesture presses against — continuous, proportional to the
+    // hand, eye untouched); a pose that ARRIVED above the ceiling loses at
+    // most one capped decay step per touch — never the 113°-in-one-tick snap.
+    const boundary = R * (1 + SURFACE_REGIME.disengageHR);
 
-    const forward: Vec3 = [settled.basisLocal[6], settled.basisLocal[7], settled.basisLocal[8]];
-    expect(forward[0]).toBeCloseTo(0, 12);
-    expect(forward[1]).toBeCloseTo(0, 12);
-    expect(forward[2]).toBeCloseTo(-1, 12);
+    const walled = createSurfaceController();
+    walled.onGestureStart();
+    const fromNadir = poseAt([0, 0, boundary], NADIR);
+    // [50, 10] misses the disc from up here, so the press latches free look.
+    const pitched = apply(walled, fromNadir, drag('orbit', [50, 10], [50, -40]));
+    expect(pitched.eyeRelAnchorM).toEqual(fromNadir.eyeRelAnchorM);
+    expect(bodyAngle(pitched)).toBeLessThan(1e-9);
+
+    const eased = createSurfaceController();
+    eased.onGestureStart();
+    const arrived = poseAt([0, 0, boundary], basisAtTilt(1.0));
+    const touched = apply(eased, arrived, drag('orbit', [50, 10], [51, 10]));
+    expect(bodyAngle(touched)).toBeGreaterThan(1.0 - 0.1 - 0.02);
+    expect(bodyAngle(touched)).toBeLessThan(1.0);
   });
 
-  it('enforcement never moves the eye', () => {
-    // A real (non-degenerate) zoom, not `factor: 1` — the eye MUST move, and
-    // by exactly what `anchoredZoomStep` alone would put it at (the same
-    // screen-centre pick `zoomStep` runs, reconstructed independently here),
-    // so "bit-identical" is pinned by the property, not by the factor.
-    const start = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(3.0));
-    const factor = 0.6;
-
-    const centerPx: Vec2 = [VIEWPORT[0] / 2, VIEWPORT[1] / 2];
-    const centerRay = cursorRayBodyLocal(start, centerPx, VIEWPORT, FOV);
-    const roots = raySphereRoots(centerRay.originM, centerRay.dir, [0, 0, 0], R);
-    const anchorM: Vec3 | null =
-      roots !== null && roots[0] > 0
-        ? [
-            centerRay.originM[0] + centerRay.dir[0] * roots[0],
-            centerRay.originM[1] + centerRay.dir[1] * roots[0],
-            centerRay.originM[2] + centerRay.dir[2] * roots[0],
-          ]
-        : null;
-    const unenforced = anchoredZoomStep(start, factor, anchorM, R);
-
+  it('a receding notch corrects a huge drag-authored heading by the cap, no more', () => {
+    // The C1 regression fixture the shipped tests lacked: the clamp fixture
+    // reached its limit with a 1e-5 rad residual, so an unbounded one-tick
+    // correction (measured 153°/notch) was invisible. Park the heading near
+    // 170° with a drag — legal, drags are heading-free — then recede once.
     const c = createSurfaceController();
-    const settled = apply(c, start, zoom(factor, false));
+    c.onGestureStart();
+    let pose = poseAt([0, 0, R * 3.5], NADIR);
+    // Ten horizontal right-drag (tilt-mode) steps, anchored at the sub-eye
+    // pick: pure heading spin, tilt stays 0. The pixels walk monotonically —
+    // each step's turn reads off `endPx − prevPixel`.
+    for (let i = 0; i < 10; i += 1) {
+      pose = apply(c, pose, drag('pan', [50 + 18.9 * i, 50], [50 + 18.9 * (i + 1), 50]));
+    }
+    c.onGestureEnd();
+    expect(Math.abs(headingOnAxis(pose))).toBeGreaterThan(2.8);
+    expect(bodyAngle(pose)).toBeLessThan(1e-9);
 
-    expect(settled.anchorLocalM).toEqual(unenforced.anchorLocalM);
-    expect(settled.eyeRelAnchorM).toEqual(unenforced.eyeRelAnchorM);
-    // Orientation DID get clamped — 3.0 rad of held tilt exceeds the ceiling
-    // at the post-zoom altitude too — so the eye match above is the
-    // ceiling's doing, not a no-op write.
-    expect(settled.basisLocal).not.toEqual(start.basisLocal);
+    const upBefore: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
+    const receded = apply(c, pose, zoom(1.5, false));
+    const upAfter: Vec3 = [receded.basisLocal[3], receded.basisLocal[4], receded.basisLocal[5]];
+    const turned = angleBetween(upBefore, upAfter);
+    expect(turned).toBeGreaterThan(0.1 - 1e-9);
+    expect(turned).toBeLessThan(0.1 + 1e-9);
+    expect(Math.abs(headingOnAxis(receded))).toBeCloseTo(Math.abs(headingOnAxis(pose)) - 0.1, 9);
+  });
+
+  it('a curved pan cannot rotate the image — north survives the corner', () => {
+    // I2: the rays-rigid rotation is exact for pixel-lock and, composed along
+    // a curved path, accumulates holonomy roll — at nadir an image rotation
+    // the user reads as north drifting. The per-step level transports the
+    // step's entry heading, so the drift is corrected the step it appears.
+    // Mid-latitude standpoint: over the pole the ENU itself spins under any
+    // pan and "north" is not a usable readout.
+    const lu: Vec3 = [Math.SQRT1_2, 0, Math.SQRT1_2];
+    const east: Vec3 = [0, 1, 0];
+    const north: Vec3 = [-Math.SQRT1_2, 0, Math.SQRT1_2];
+    const basis: Mat3 = [...east, ...north, -lu[0], -lu[1], -lu[2]] as Mat3;
+    const c = createSurfaceController();
+    c.onGestureStart();
+    let pose = poseAt([lu[0] * 2, lu[1] * 2, lu[2] * 2], basis);
+    // Small steps, so each one's convergence/holonomy demand sits below the
+    // cap and is corrected in full — the realistic pointer-move cadence.
+    const path: Vec2[] = [[50, 50]];
+    for (const [dx, dy] of [
+      [2, 0],
+      [2, 0],
+      [2, 0],
+      [0, -2],
+      [0, -2],
+      [-2, 0],
+      [-2, 0],
+      [-2, 0],
+      [0, 2],
+      [0, 2],
+    ]) {
+      const last = path[path.length - 1]!;
+      path.push([last[0] + dx!, last[1] + dy!]);
+    }
+    for (let i = 1; i < path.length; i += 1) {
+      pose = apply(c, pose, drag('orbit', path[i - 1]!, path[i]!));
+      // North never leaves screen-up by more than a hair at ANY point of the
+      // drag — not merely at closure, where holonomy could hide.
+      expect(northUpOffset(pose)).toBeLessThan(0.02);
+    }
+
+    expect(northUpOffset(pose)).toBeLessThan(5e-3);
   });
 
   it('an ungestured drag never triggers enforcement (spec §12-R3)', () => {

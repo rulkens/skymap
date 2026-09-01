@@ -5,8 +5,8 @@
  * Pole-free: no `cos(latitude)` term exists to be wrong, and dragging over the
  * pole is an ordinary rotation about a near-equatorial axis.
  *
- * `null` ⇒ the caller degrades the gesture (trackball on a miss, strafe in the
- * anchor plane at grazing incidence).
+ * `null` ⇒ the caller degrades the gesture (north-locked orbit on a miss,
+ * strafe in the anchor plane at grazing incidence).
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';

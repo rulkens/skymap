@@ -35,15 +35,6 @@ describe('maxTiltRad', () => {
     expect(crossing).toBeLessThan(1.8);
   });
 
-  it('opens the sky within ~3 degrees of where the surface arm engages', () => {
-    // `surfaceController`'s altitude tiebreak — a cursor miss below `engageHR`
-    // means sky (free-look), above it means off-limb space (trackball) — is
-    // derived from this coincidence and adds no constant of its own. All three
-    // ramp constants are feel-tunable, so retuning one without re-reading that
-    // derivation lands here rather than in a quietly false comment.
-    expect(maxTiltRad(SURFACE_REGIME.engageHR)).toBeCloseTo(Math.PI / 2, 1);
-  });
-
   it('is monotonically non-increasing in h/R', () => {
     let previous = maxTiltRad(0);
     for (let hOverR = 0; hOverR <= 4; hOverR += 0.05) {
