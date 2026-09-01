@@ -1,13 +1,12 @@
 /**
  * createIsmMapDustCdfScanDebugSample — ismMapDustCdfScan.wesl's own
- * numeric-validation exception: same shape as createArmRidgeDebugSample.ts
- * (own fixture, own dispatch, own one-shot readback, no production caller),
+ * numeric-validation exception: same shape as createArmRidgeDebugSample.ts,
  * but the fixture is real DATA (a small rgba32float texture, not baked WGSL
  * consts) — dispatchAndReadback hands the texel data straight back, so
  * probeGpuErrors.ts's CPU GalaxyIsmMap reference never hand-duplicates a
  * literal. The ring-means buffer is computed CPU-side ONCE from the SAME
- * fixture via ismMapRingMeans, so the GPU scan and the probe's own CPU
- * reference can never disagree about what the ring means ARE.
+ * fixture via ismMapRingMeans, so the GPU scan and the CPU reference can
+ * never disagree about what the ring means ARE.
  */
 import { createIsmMapDustCdfScan } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapDustCdfScan';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';

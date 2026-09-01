@@ -1,8 +1,8 @@
 /**
  * HiiTierSpec — one row of `data/hiiTiers.ts`'s `HII_TIERS`, the table that
- * drives the per-tier target, divisor, bind group, header and timing slot
- * `createGalaxyEngine.ts`'s `drawFrame` builds for shells/dig/young instead
- * of copy-pasting DIG's split two more times.
+ * drives each tier's target, divisor, bind group, header and timing slot
+ * across the engine and the shared field renderer, instead of copy-pasting
+ * DIG's split two more times.
  */
 import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
 import type { RenderSettings } from './RenderSettings';

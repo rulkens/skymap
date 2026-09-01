@@ -3,12 +3,10 @@
  * placeArmSpurCloud.wesl's `SpurRecord` reads, plus the pick-weight sum
  * `pickWeighted`'s port normalises against. `weight` is
  * `spurFootprintIntegral(spur, geometry, tuning)` — armSpurParticleCloud.ts's
- * own per-spur pick weight, computed HERE (the plan's "port the integral
- * into the packer, not the shader" contract) rather than in the shader,
- * which only ever reads the resulting table.
- *
- * THAT FILE'S `SpurRecord` IS THE OFFSET AUTHORITY — 8 floats/record (2
- * vec4 rows): phase, pitch, fadeRadius, spanStartLogR | age, weight, pad, pad.
+ * own per-spur pick weight — computed HERE, not in the shader, which only
+ * ever reads the resulting table. THAT FILE'S `SpurRecord` IS THE OFFSET
+ * AUTHORITY — 8 floats/record (2 vec4 rows): phase, pitch, fadeRadius,
+ * spanStartLogR | age, weight, pad, pad.
  */
 import { spurFootprintIntegral } from '../../../../engine/galaxyGenerator/v2/armSpurParticleCloud';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';

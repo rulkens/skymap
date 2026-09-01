@@ -1,19 +1,11 @@
 /**
- * createIsmMapPlaceArmSpurCloud — GPU replacement for the CPU's former
- * `buildArmSpurParticleCloud` placement body (`armSpurParticleCloud.ts`
- * survives only as `spurFootprintIntegral`/`deriveArmSpurCloudCount`'s
- * budget math). The CPU still decides slot COUNT and the per-spur
- * pick-weight table (`galaxyFieldMixture.ts`'s `spurCloudReservation`,
- * `packArmSpurCloudRecords.ts`);
+ * createIsmMapPlaceArmSpurCloud — the GPU placement kernel for the arm-spur
+ * cloud tier. The CPU decides slot COUNT and the per-spur pick-weight table
+ * (`armSpurParticleCloud.ts`'s budget math, `packArmSpurCloudRecords.ts`);
  * `placeArmSpurCloud.wesl` decides slot CONTENT — the weighted spur pick,
  * the rejection-sampled position, the Gaussian cross/pole scatter.
- *
- * `dispatchPlaceArmSpurCloud` rebuilds its bind group every call
- * (`createIsmMapPlaceDust.ts`'s own precedent): the per-spur records buffer
- * is recreated whenever its byte size changes (spur COUNT moves with
- * geometry/tuning), so pooling it buys nothing a growable buffer wouldn't
- * already cost less to reason about. `dispatchAndReadbackArmSpurCloud` is
- * the probe's own numeric/determinism exception — no production caller.
+ * `dispatchPlaceArmSpurCloud` rebuilds its bind group every call: the
+ * per-spur records buffer is recreated whenever its byte size changes.
  */
 import placeArmSpurCloudWgsl from '../../../shaders/milkyWay/ismMap/placeArmSpurCloud.wesl?static';
 

@@ -2,12 +2,11 @@
  * IsmMapSection — the shared ISM-map switch: `GalaxyFieldTuning.ismMap.generator`
  * (none | fluid) is the ONLY control here — dust seeding is just "the
  * generator is running", with no separate enable/seed toggles to keep in
- * sync.
- *
- * The COUPLING readout is permanent, not a one-off debug print — "sliders
- * don't move the dust" has three structurally different causes (readback
- * never landed, the generator has no measurable structure, or the coupling
- * already agrees with the arm tangent) — shown whenever the generator is active.
+ * sync. The COUPLING readout is permanent, not a one-off debug print —
+ * "sliders don't move the dust" has three structurally different causes
+ * (readback never landed, the generator has no measurable structure, or the
+ * coupling already agrees with the arm tangent) — shown whenever the
+ * generator is active.
  */
 import type { ReactNode } from 'react';
 import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';

@@ -1,9 +1,8 @@
 /**
- * HII_TIERS — each HII sub-tier's TOOL-ONLY lanes (its timing/segment label
- * and the render-bag divisor key), in the shared draw/composite/HUD order.
- * Membership and order both come from `src/data/hiiTiers.ts`, which the
- * shared field renderer loops over too — so a fourth tier is one row here
- * plus one entry there, and the two orders cannot drift.
+ * HII_TIERS — each HII sub-tier's TOOL-ONLY lanes (timing/segment label,
+ * render-bag divisor key), in the shared draw/composite/HUD order. Membership
+ * and order come from `src/data/hiiTiers.ts`, which the shared field renderer
+ * loops over too, so the two orders cannot drift.
  */
 import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
 import type { HiiTierSpec } from '../../@types/engine/HiiTierSpec';

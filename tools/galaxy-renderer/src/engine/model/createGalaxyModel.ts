@@ -2,12 +2,11 @@
  * createGalaxyModel — what a galaxy IS, as opposed to how a frame draws it:
  * the central galaxy's sprite buffers, the background extras, the bubble
  * overlay's placements, and the CPU readbacks of the ISM-map chain. The
- * analytic mixtures, the ISM map itself and every GPU record buffer they pack
- * into belong to `createGalaxyFieldRenderer`; this file feeds it
- * (`setMixture`) and reads its lanes back out.
- *
- * `setParams` / `setFieldTuning` / `setExtras` are the only writers; a tuning
- * slider is a CPU rebuild rather than a regenerate.
+ * analytic mixtures, the ISM map itself and every GPU record buffer they
+ * pack into belong to `createGalaxyFieldRenderer`; this file feeds it
+ * (`setMixture`) and reads its lanes back out. `setParams` / `setFieldTuning`
+ * / `setExtras` are the only writers; a tuning slider is a CPU rebuild
+ * rather than a regenerate.
  */
 
 import type { DebugViewKind } from '../../../../../src/@types/galaxy/DebugViewKind';

@@ -1,7 +1,6 @@
 /**
- * findHiiSegment — the lookup `drawFrame`'s per-tier and `hii:extras` passes
- * both use to find their own span in `model.hiiSegments`
- * (tools/galaxy-renderer/src/engine/field/findHiiSegment.ts).
+ * findHiiSegment — the lookup the per-tier and `hii:extras` passes both use
+ * to find their own span in `model.hiiSegments`.
  */
 import { describe, expect, it } from 'vitest';
 import { findHiiSegment } from '../../../../../../src/services/gpu/renderers/galaxyField/field/findHiiSegment';

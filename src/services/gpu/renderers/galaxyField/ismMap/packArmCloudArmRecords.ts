@@ -2,13 +2,11 @@
  * packArmCloudArmRecords — the per-arm storage buffer placeArmCloud.wesl's
  * `ArmCloudArmRecord` reads, plus the pick-weight sum `pickWeighted`'s port
  * normalises against. `weight` is `armAgeWeight(arm)` — clusteredDiscPlacement.ts's
- * own per-arm pick weight — computed HERE (packArmSpurCloudRecords.ts's own
- * "port the weight into the packer, not the shader" contract) rather than in
- * the shader, which only ever reads the resulting table.
- *
- * THAT FILE'S `ArmCloudArmRecord` IS THE OFFSET AUTHORITY — 12 floats/record
- * (3 vec4 rows): phase, pitch, meanderAmp, meanderFreq | meanderPhase, waveF1,
- * waveP1, waveF2 | waveP2, fadeRadius, spanStartLogR, weight.
+ * own per-arm pick weight — computed HERE, not in the shader, which only
+ * ever reads the resulting table. THAT FILE'S `ArmCloudArmRecord` IS THE
+ * OFFSET AUTHORITY — 12 floats/record (3 vec4 rows): phase, pitch,
+ * meanderAmp, meanderFreq | meanderPhase, waveF1, waveP1, waveF2 | waveP2,
+ * fadeRadius, spanStartLogR, weight.
  */
 import { armAgeWeight } from '../../../../engine/galaxyGenerator/v2/dustLaneFeatures';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';

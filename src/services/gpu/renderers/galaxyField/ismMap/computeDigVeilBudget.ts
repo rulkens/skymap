@@ -2,9 +2,9 @@
  * computeDigVeilBudget — the DIG veil's reservation + per-rebuild uniform
  * inputs; mirrors `buildDigVeil`'s gating/count logic through
  * `complexes`/`totalChildren`, but stops there — no rng draws, no per-child
- * loop, and deliberately no `cdf.total > 0` gate: that needs the CDF, which
- * now lives GPU-side only, so it moves into `placeDigVeil.wesl` as a
- * per-invocation zero-amplitude guard (this always reserves the full
+ * loop, and deliberately no `cdf.total > 0` gate: the CDF lives GPU-side
+ * only, so that gate is `placeDigVeil.wesl`'s own per-invocation
+ * zero-amplitude guard (this always reserves the full
  * `complexes x childrenPerComplex` count) — kept out of
  * `createIsmMapPlaceDigVeil.ts` so `probeGpuErrors.ts` can import it plain.
  */

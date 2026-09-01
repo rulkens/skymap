@@ -1,15 +1,12 @@
 /**
  * createIsmMapOrientation — the GPU structure-tensor chain over the ISM-map
  * generator's packed map (this module only ever sees `sourceTexture`, never
- * whether the generator that wrote it is even running): field blur
- * (separable) -> tensor -> tensor blur (separable) -> coherence, plus the
- * overlay that presents it. Entirely GPU-side: no readback to run FROM, no
- * JS blur, no upload back. The source is a texture WebGPU zero-initialises,
- * so `dispatch` is safe to call before the generator has ever run.
- *
- * The perf GATE (is any consumer live?) stays with the caller — it reads the
- * render bag and the field tuning, neither of which this module should know
- * about.
+ * whether the generator that wrote it is running): field blur (separable) ->
+ * tensor -> tensor blur (separable) -> coherence, plus the overlay that
+ * presents it. Entirely GPU-side, so the zero-initialised source texture
+ * makes `dispatch` safe before the generator has ever run. The perf GATE
+ * stays with the caller — it reads the render bag and field tuning, neither
+ * of which this module should know about.
  */
 import { ADDITIVE_BLEND } from '../../../lib/blendStates';
 import {

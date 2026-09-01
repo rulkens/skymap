@@ -1,19 +1,11 @@
 /**
- * createIsmMapPlaceArmCloud — GPU replacement for the CPU's former
- * `buildArmParticleCloud` placement body (`armParticleCloud.ts` survives
- * only as `deriveArmCloudCount`'s budget math). The CPU still decides slot
- * COUNT (`deriveArmCloudCount`, unchanged — `galaxyFieldMixture.ts`'s
- * `armCloudReservation`) and the per-arm pick-weight table
- * (`packArmCloudArmRecords.ts` ports `armAgeWeight` verbatim);
- * `placeArmCloud.wesl` decides slot CONTENT — the arm-lane-vs-smooth-disc
- * roll, the weighted arm pick, the rejection-sampled position, and the
- * complex/child clumping scatter.
- *
- * `dispatchPlaceArmCloud` rebuilds its bind group every call
- * (`createIsmMapPlaceArmSpurCloud.ts`'s own precedent): the per-arm records
- * buffer is recreated whenever its byte size changes (arm count moves with
- * geometry). `dispatchAndReadbackArmCloud` is the probe's own numeric/
- * determinism exception — no production caller.
+ * createIsmMapPlaceArmCloud — the GPU placement kernel for the arm-cloud
+ * tier. The CPU decides slot COUNT (`deriveArmCloudCount`, `armParticleCloud.ts`)
+ * and the per-arm pick-weight table (`packArmCloudArmRecords.ts` ports
+ * `armAgeWeight` verbatim); `placeArmCloud.wesl` decides slot CONTENT — the
+ * arm pick, the rejection-sampled position, and the complex/child clumping
+ * scatter. `dispatchPlaceArmCloud` rebuilds its bind group every call: the
+ * per-arm records buffer is recreated whenever its byte size changes.
  */
 import placeArmCloudWgsl from '../../../shaders/milkyWay/ismMap/placeArmCloud.wesl?static';
 

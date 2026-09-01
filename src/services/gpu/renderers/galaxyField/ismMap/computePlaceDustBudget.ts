@@ -1,16 +1,11 @@
 /**
- * computePlaceDustBudget — the reservation + per-rebuild uniform inputs the
- * CPU's former `buildDustParticleCloud` setup owned (`dustParticleCloud.ts`
- * survives only as the constants this file still imports), pure function of
- * (geometry, dust), no rng/placement work. `null` mirrors that function's
- * own early `return []`s (geometry/tau/count/size gates).
- *
- * Its own file, deliberately separate from `createIsmMapPlaceDust.ts`: THAT
- * file's `?static` shader import only resolves under the Vite/wesl-plugin
- * pipeline, but `probeGpuErrors.ts` imports this pure function directly on
- * the plain Node/tsx side (no Vite) for its own CPU budget-math check —
- * importing anything from a `?static`-importing module there throws
- * `ERR_UNKNOWN_FILE_EXTENSION` before the probe even boots a browser.
+ * computePlaceDustBudget — the reservation + per-rebuild uniform inputs, a
+ * pure function of (geometry, dust) with no rng/placement work. Its own
+ * file, deliberately separate from `createIsmMapPlaceDust.ts`: THAT file's
+ * `?static` shader import only resolves under the Vite/wesl-plugin pipeline,
+ * but `probeGpuErrors.ts` imports this pure function directly on the plain
+ * Node/tsx side — importing from a `?static`-importing module there throws
+ * `ERR_UNKNOWN_FILE_EXTENSION` before the probe boots a browser.
  */
 import {
   COMPLEX_SPREAD_PC,
@@ -18,10 +13,7 @@ import {
   SIZE_MAX_PC,
   SIZE_MIN_PC,
 } from '../../../../engine/galaxyGenerator/v2/dustParticleCloud';
-import {
-  dustDiscShape,
-  dustSigmaR,
-} from '../../../../engine/galaxyGenerator/v2/galaxyDustMixture';
+import { dustDiscShape, dustSigmaR } from '../../../../engine/galaxyGenerator/v2/galaxyDustMixture';
 import {
   DISC_SIGMA_RATIOS,
   DISC_SURFACE_WEIGHTS,

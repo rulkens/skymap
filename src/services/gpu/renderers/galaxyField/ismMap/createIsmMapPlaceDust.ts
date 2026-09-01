@@ -1,19 +1,12 @@
 /**
- * createIsmMapPlaceDust — GPU replacement for the CPU's former
- * `buildDustParticleCloud` map-seeded placement (`dustParticleCloud.ts`
- * survives only as the constants below import). The CPU still decides slot
- * COUNT (`computePlaceDustBudget` below, the same early-exit/clamp math that
- * function's own setup ran); `placeDust.wesl` decides slot CONTENT,
- * including the mapDensity/smoothDisc MODE itself, so nothing on this path
- * depends on an async ismMap readback landing.
- *
- * `dispatchPlaceDust` rebuilds its bind group every call
- * (`createIsmMapDustCdfScan.ts`'s own precedent): the CDF prefix buffer, ring-means
- * buffer and `fieldComps` buffer can all change identity (a growable record
- * buffer regrows; the ISM-map generator's own buffers are stable but this
- * keeps one discipline, not two). `dispatchAndReadbackDust` is the probe's
- * own numeric/determinism exception (`createArmRidgeDebugSample.ts`'s
- * "own encoder, no persistent stream to race" shape) — no production caller.
+ * createIsmMapPlaceDust — the GPU placement kernel for map-seeded dust. The
+ * CPU decides slot COUNT (`computePlaceDustBudget` below); `placeDust.wesl`
+ * decides slot CONTENT, including the mapDensity/smoothDisc MODE itself, so
+ * nothing on this path depends on an async ismMap readback landing.
+ * `dispatchPlaceDust` rebuilds its bind group every call: the CDF prefix
+ * buffer, ring-means buffer and `fieldComps` buffer can all change identity
+ * (a growable record buffer regrows; the ISM-map generator's own buffers are
+ * stable but this keeps one discipline, not two).
  */
 import placeDustWgsl from '../../../shaders/milkyWay/ismMap/placeDust.wesl?static';
 

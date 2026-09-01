@@ -1,14 +1,12 @@
 /**
- * DEBUG_VIEWS — the one place the four debug overlays are enumerated. Before
- * this they were listed independently in `debugGalaxyWeight`'s `Math.max`, in
- * `deriveFrameView`'s weight object, in `setRender`'s edge triggers and in
- * `drawFrame`'s pass gates, so a fifth view meant finding all four.
- *
- * A `Record` keyed by `DebugViewKind`, not an array: the compiler then
- * demands a row per kind. The `label`/`info` strings are here rather than in
- * DebugViewsSection so the panel can read them without a second copy — its
- * four view sliders are deliberately interleaved with five non-view ones, so
- * it cannot simply map this table.
+ * DEBUG_VIEWS — the one place the four debug overlays are enumerated:
+ * `debugGalaxyWeight`'s `Math.max`, `deriveFrameView`'s weight object,
+ * `setRender`'s edge triggers and `drawFrame`'s pass gates all read off it,
+ * so a fifth view is one new row here. A `Record` keyed by `DebugViewKind`,
+ * not an array: the compiler then demands a row per kind. The `label`/`info`
+ * strings live here rather than in DebugViewsSection so the panel can read
+ * them without a second copy — its four view sliders are deliberately
+ * interleaved with five non-view ones, so it cannot simply map this table.
  */
 
 import type { DebugViewKind } from '../../../../src/@types/galaxy/DebugViewKind';

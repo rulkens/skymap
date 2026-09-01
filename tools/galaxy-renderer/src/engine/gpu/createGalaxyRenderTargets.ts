@@ -4,10 +4,9 @@
  * / foreground rows this tool never draws, so the tool allocates its own `hdr`,
  * `mw-aggregate` and `bloom0..4` rows at the same formats and divisors.
  * `ldrTex` has no runtime counterpart: it is only the intermediate the
- * tool-only grade trailer reads.
- *
- * Bind groups are not cached here — the shared pass factories rebuild theirs
- * per draw. The engine's several that bind `dustMapTex` can't; hence the callback.
+ * tool-only grade trailer reads. Bind groups are not cached here — the shared
+ * pass factories rebuild theirs per draw. The engine's several that bind
+ * `dustMapTex` can't; hence the callback.
  */
 import type { HiiTier } from '../../../../../src/@types/galaxy/HiiTier';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
@@ -18,7 +17,7 @@ import { reducedTargetSize } from '../../../../../src/utils/gpu/reducedTargetSiz
 
 /**
  * The reduced targets' divisors, each its own live slider — `tiers` is keyed
- * by `HiiTierKind` (`data/hiiTiers.ts`'s `HII_TIERS`) rather than three more
+ * by `HiiTier` (`data/hiiTiers.ts`'s `HII_TIERS`) rather than three more
  * named fields, so a fourth tier is one table row, not a third field here
  * plus a third `reallocateIfResized` call below.
  */
@@ -194,8 +193,8 @@ export function createGalaxyRenderTargets(
       label: 'galaxy:dustMapTex',
       size: [w, h],
       format: formats.dustMap,
-      // COPY_SRC beyond RA_TB's production need: Task 9's own debug-only
-      // readback (readTextureChannelSum.ts) copies the whole map back to
+      // COPY_SRC beyond RA_TB's production need: a debug-only readback
+      // (readTextureChannelSum.ts) copies the whole map back to
       // observe the Larson renorm's ACTUAL rendered effect — same "debug
       // readback rides the production texture's own COPY_SRC flag"
       // precedent `fieldComps`/`hiiComps` already establish for buffers.

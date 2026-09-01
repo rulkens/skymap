@@ -17,9 +17,10 @@ export type YoungStarsLanes = {
    * eye is approaching starts fading (`hiiSplat/vertex.wesl`'s vs and
    * `hiiSplat/shadeCommon.wesl`'s fs, `hiiNearFade`). Optional, not
    * grouped with `contrastGamma`/`invMeanNorm` above: it rides `render`, not
-   * `fieldTuning`, so `createGalaxyEngine.ts` fills it in at the HII header
-   * call site rather than this row's other two lanes' own getter. Absent (or
-   * <= `nearFadeEnd`) packs 0, which the shader guard reads as "no fade."
+   * `fieldTuning`, so `buildFieldHeaderInputs.ts` fills it in at the HII
+   * header call site rather than this row's other two lanes' own getter.
+   * Absent (or <= `nearFadeEnd`) packs 0, which the shader guard reads as
+   * "no fade."
    */
   readonly nearFadeStart?: number;
   /** `render.hiiNearFadeEnd` — boundRadius multiple where the component has fully collapsed. See `nearFadeStart`. */

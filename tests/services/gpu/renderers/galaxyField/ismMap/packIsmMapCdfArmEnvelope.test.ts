@@ -1,13 +1,11 @@
 /**
  * Parity guard: `milkyWay/ismMap/ismMapDustCdfScan.wesl`'s
- * `IsmMapCdfArmEnvelopeEntry` is the offset authority — field order/count
- * is parsed from the shader source (not restated as a literal here), so a
- * reorder or an added/dropped field in either the packer or the WGSL
- * struct fails loudly. Same tooling and shape as
- * `packIsmMapCdfParams.test.ts`; the storage-buffer struct's stride comes
- * out identical to a uniform-address-space layout here because every
- * member is a bare `f32` (align 4), so no 16-byte vec3/vec4 rounding
- * applies either way.
+ * `IsmMapCdfArmEnvelopeEntry` is the offset authority — field order/count is
+ * parsed from the shader source (not restated as a literal here), so a
+ * reorder or an added/dropped field in either the packer or the WGSL struct
+ * fails loudly. Same tooling as `packIsmMapCdfParams.test.ts`; the
+ * storage-buffer struct's stride comes out identical to a uniform-
+ * address-space layout because every member is a bare `f32` (align 4).
  */
 import { describe, expect, it } from 'vitest';
 

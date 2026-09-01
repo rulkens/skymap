@@ -1,13 +1,11 @@
 /**
  * packPlaceDustParams — the uniform placeDust.wesl reads. THAT FILE'S
- * `PlaceDustParams` IS THE OFFSET AUTHORITY (same discipline
- * packIsmMapFluidConstants.ts documents for its own struct).
- *
- * Unlike packIsmMapCdfParams.ts's all-f32 convention, the u32 fields here
- * travel as REAL u32s: `seed` is a normalized int32 bit pattern
- * (normalizeGenerationSeed.ts) that can exceed f32's 24-bit exact-integer
- * range, so this packer aliases one ArrayBuffer with both a Uint32Array and
- * a Float32Array view rather than casting everything through f32.
+ * `PlaceDustParams` IS THE OFFSET AUTHORITY. Unlike packIsmMapCdfParams.ts's
+ * all-f32 convention, the u32 fields here travel as REAL u32s: `seed` is a
+ * normalized int32 bit pattern (normalizeGenerationSeed.ts) that can exceed
+ * f32's 24-bit exact-integer range, so this packer aliases one ArrayBuffer
+ * with both a Uint32Array and a Float32Array view rather than casting
+ * everything through f32.
  */
 
 /** Float count of placeDust.wesl's `PlaceDustParams` — 8 vec4 rows. */

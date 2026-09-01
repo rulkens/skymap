@@ -2,12 +2,11 @@
  * createIsmMapReadbacks — the two CPU copies of the ISM-map chain (the
  * generator's packed output and the orientation field), each with the
  * stream that fills it, over ONE `createReadbackQueue`. One queue is
- * load-bearing, not tidiness: two independent promise chains reintroduce
- * the 'buffer used in submit while mapped' race the queue exists to
- * prevent. Tokens stay per-stream so an orientation-only trigger (a sigma
- * move) cannot supersede a pending ismMap copy. Never a per-frame readback
- * — these land once per rebuild, and `dropIfGridMoved` is the only other
- * writer.
+ * load-bearing, not tidiness: two independent promise chains reintroduce the
+ * 'buffer used in submit while mapped' race the queue exists to prevent.
+ * Tokens stay per-stream so an orientation-only trigger (a sigma move)
+ * cannot supersede a pending ismMap copy. Never a per-frame readback — these
+ * land once per rebuild, and `dropIfGridMoved` is the only other writer.
  */
 
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';

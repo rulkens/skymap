@@ -1,7 +1,4 @@
-/**
- * dustSliceEdges — the dust map's per-frame depth-slice partition, extracted
- * from drawFrame's per-frame block (see tools/galaxy-renderer/src/engine/dustSliceEdges.ts).
- */
+/** dustSliceEdges — the dust map's per-frame depth-slice partition. */
 import { describe, expect, it } from 'vitest';
 import { dustSliceEdges } from '../../../../../../src/services/gpu/renderers/galaxyField/field/dustSliceEdges';
 

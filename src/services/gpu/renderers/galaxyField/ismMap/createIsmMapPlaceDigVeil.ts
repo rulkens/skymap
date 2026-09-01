@@ -1,20 +1,18 @@
 /**
- * createIsmMapPlaceDigVeil — GPU replacement for `buildDigVeil`'s
- * complex/children placement loop (`hiiRegions.ts:532-644`). The CPU still
- * decides slot COUNT (`computeDigVeilBudget.ts`, the same budget math
- * `buildDigVeil`'s own header runs up through `totalChildren`);
- * `placeDigVeil.wesl` decides slot CONTENT, including the map-usability gate
- * itself (that file's own `usesMap`), so nothing on this path depends on a
- * CPU `ismMap` readback.
- *
- * `dispatchPlaceDigVeil` rebuilds its bind group every call (`createIsmMapPlaceDust.ts`'s
- * own precedent): the CDF prefix buffer and `hiiComps` buffer can both change
- * identity (a growable record buffer regrows). `dispatchAndReadbackDigVeil`
- * is the probe's own numeric/determinism exception (no production caller).
+ * createIsmMapPlaceDigVeil — the GPU placement kernel for the DIG veil,
+ * mirroring `buildDigVeil`'s complex/children placement loop (`hiiRegions.ts`).
+ * The CPU decides slot COUNT (`computeDigVeilBudget.ts`); `placeDigVeil.wesl`
+ * decides slot CONTENT, including the map-usability gate itself (`usesMap`),
+ * so nothing on this path depends on a CPU `ismMap` readback.
+ * `dispatchPlaceDigVeil` rebuilds its bind group every call: the CDF prefix
+ * buffer and `hiiComps` buffer can both change identity.
  */
 import placeDigVeilWgsl from '../../../shaders/milkyWay/ismMap/placeDigVeil.wesl?static';
 
-import { packPlaceDigVeilParams, PLACE_DIG_VEIL_PARAMS_BUFFER_SIZE } from './packPlaceDigVeilParams';
+import {
+  packPlaceDigVeilParams,
+  PLACE_DIG_VEIL_PARAMS_BUFFER_SIZE,
+} from './packPlaceDigVeilParams';
 import type { PlaceDigVeilParamsInput } from './packPlaceDigVeilParams';
 import type { DigVeilBudget } from './computeDigVeilBudget';
 import { FIELD_COMPONENT_FLOATS } from '../field/packFieldUniforms';

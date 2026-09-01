@@ -1,13 +1,12 @@
 /**
  * deriveFrameView — everything one frame's camera and settings determine
  * before any GPU work: the matrices, the visibility fade, the debug-view
- * weights, the dust slice edges and the analytic exposure.
- *
- * Pure, and separated from `drawFrame` for that reason — this is where the
- * frame's arithmetic lives, and the only part of the frame a test can reach
- * without a device. What stays in the engine is the pass ENCODING, which is a
- * straight-line sequence over every pipeline and bind group it owns; routing
- * that through a parameter bag would trade a real dependency for a wide one.
+ * weights, the dust slice edges and the analytic exposure. Pure, and
+ * separated from `drawFrame` for that reason — the only part of the frame a
+ * test can reach without a device. What stays in the engine is the pass
+ * ENCODING, a straight-line sequence over every pipeline and bind group it
+ * owns; routing that through a parameter bag would trade a real dependency
+ * for a wide one.
  */
 import { mat4 } from 'wgpu-matrix';
 

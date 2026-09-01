@@ -1,16 +1,12 @@
 /**
  * createIsmMapRingReduce — GPU per-ring reductions over the ISM map,
- * starting with `ismMapTex`'s dust-channel row means (`ringReduce.wesl`'s
- * `csRingMeans`, `IsmMapOutput.ringMeansBuffer`'s producer). Built once
- * against the fixed-lifetime texture/buffer `createIsmMapOutput.ts` owns —
- * no per-call rebuild of the bind group, since neither object is ever
- * replaced, only its content changes. `dispatchSurvivorSum`'s
- * `dustRenormBuffer` bind group IS rebuilt fresh per call: its own
- * `massBuffer` input comes from `placeDust`, an external object this module
- * has no constructor-time handle on. `dispatchArmCloudFluxWeightSum`/
- * `dispatchArmSpurFluxWeightSum` are the same shape, one level simpler — no
- * `totalX` input at all (see `ringReduce.wesl`'s own doc for why the output
- * is a bare reciprocal).
+ * starting with `ismMapTex`'s dust-channel row means. Built once against the
+ * fixed-lifetime texture/buffer `createIsmMapOutput.ts` owns — no per-call
+ * bind-group rebuild, since neither object is ever replaced.
+ * `dispatchSurvivorSum`'s `dustRenormBuffer` bind group IS rebuilt fresh per
+ * call: its `massBuffer` input comes from `placeDust`, external to this
+ * module's constructor. The arm/spur cloud flux-weight-sum dispatches are
+ * the same shape, one level simpler.
  */
 import { ISM_MAP_RINGS } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 
