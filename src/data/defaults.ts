@@ -284,8 +284,9 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
  * brightness exactly.
  *
  * `cubemapResolutionPx` seeds the `sky-cubemap` render-target row's declared
- * size (`renderTargets.ts`) — 512, the user's visual-tuning call bumping it
- * off the original 256 (T15 addendum).
+ * size (`renderTargets.ts`) — 1024, per the user's live-view judgment against
+ * the T15 addendum's own prior bump (256 -> 512 -> 1024); the knob's option
+ * set stays 256/512/1024/2048.
  *
  * NOT here: `skyCubemapRecaptureCameraMoveFraction`. Its owner is
  * `skyCubemapCaptureSchedule.ts` (a `services/` module `data/` doesn't
@@ -309,7 +310,7 @@ export const DEFAULT_SGR_A_STAR_LENSING_TUNING: Omit<
   dopplerStrength: 0.6,
   emissionStrength: 1,
   emissionTint: [1, 1, 1],
-  cubemapResolutionPx: 512,
+  cubemapResolutionPx: 1024,
 };
 
 // ── HDR tone-mapping ────────────────────────────────────────────────────────

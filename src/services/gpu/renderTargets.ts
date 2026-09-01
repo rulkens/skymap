@@ -276,7 +276,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       // `size` is a live setting, TEMPORARILY (Task 15's DebugPanel resolution
-      // knob, 256/512/1024) — `reconcile` resolves it every frame exactly like
+      // knob, 256/512/1024/2048, default 1024) — `reconcile` resolves it every frame exactly like
       // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
       // (and its cube/layer views) without a rebuild path of its own.
       fixedSizePx: {
