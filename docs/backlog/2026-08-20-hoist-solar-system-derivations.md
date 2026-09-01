@@ -60,3 +60,14 @@ implementation as the template. Shape:
    re-doing the other's diff.
 4. Not gated on any ladder rung — decisions.md #7 names it as long-tail work
    independent of the umbrella `SubsystemBundle` reassessment.
+
+## Partial progress
+
+The [inside-atmosphere-rendering spec](../superpowers/specs/2026-08-24-inside-atmosphere-rendering-design.md)
+(§5a) hoisted a fifth, closely-related pair onto `AtmosphereDrawEntry`
+(551f62357) — but #634's body-slab restructure superseded that hoist with its
+own pose seam: at HEAD, `atmosphereShellLayer.ts` and
+`encodeAtmosphereSkyView.ts` each derive `camLocal`/`sunDirLocal`
+independently from `ctx.bodyPose` via the `bodySlabCamLocal`/`sunDirLocal`
+utils, not from a shared `AtmosphereDrawEntry` field. The atmosphere pair is
+STILL OPEN scope for this item, alongside the four derivations listed above.

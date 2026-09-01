@@ -154,4 +154,14 @@ describe('atmosphereDrawList', () => {
     const list = atmosphereDrawList(makeState({ earth: null, planets: [] }), makeCtx([0, 0, 0]));
     expect(list).toEqual([]);
   });
+
+  it('includes Earth when the camera is deep inside the atmosphere shell', () => {
+    // Half an Earth radius out — well inside the shell, but still a supra-pixel
+    // disc and inside the near-field edge. The regression lock spec §4.6 calls
+    // for: the sub-pixel cull must not accidentally exclude a body the camera
+    // sits deep inside.
+    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 0.5)));
+    expect(list).toHaveLength(1);
+    expect(list[0]!.body).toBe(SEEDED_EARTH);
+  });
 });
