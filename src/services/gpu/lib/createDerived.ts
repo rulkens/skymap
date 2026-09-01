@@ -18,8 +18,12 @@ export function createDerived<T>(spec: {
     get(): T {
       const key = spec.key();
       if (lastKey === undefined || !sameKey(lastKey, key)) {
+        // Recorded only after `compute` returns: a throw must leave the node
+        // owing its work, not remember the key and hand every later `get()` at
+        // it an unassigned `value` typed as `T`.
+        const computed = spec.compute();
         lastKey = key;
-        value = spec.compute();
+        value = computed;
       }
       return value;
     },

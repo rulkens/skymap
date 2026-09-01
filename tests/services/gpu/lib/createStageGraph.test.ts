@@ -117,10 +117,45 @@ describe('createStageGraph', () => {
     expect(downstreamRuns).toBe(2);
   });
 
+  it('retries a throwing stage, and leaves its token unmoved by the failed attempt', () => {
+    let shouldThrow = true;
+    let runs = 0;
+    const graph = createStageGraph<'a'>([
+      {
+        name: 'a',
+        phase: 'sync',
+        after: [],
+        key: () => [1],
+        run: () => {
+          runs++;
+          if (shouldThrow) throw new Error('boom');
+        },
+      },
+    ]);
+
+    const beforeAnyRun = graph.token('a');
+    expect(() => graph.run('sync')).toThrow('boom');
+    expect(graph.token('a')).toBe(beforeAnyRun);
+
+    // Same key, so only a stage that recorded nothing on the failure re-runs.
+    shouldThrow = false;
+    graph.run('sync');
+    expect(runs).toBe(2);
+    expect(graph.token('a')).not.toBe(beforeAnyRun);
+  });
+
   it('throws when an after-edge points forward in the table', () => {
     const stages: Stage<'a' | 'b'>[] = [
       { name: 'a', phase: 'sync', after: ['b'], key: () => [], run: () => {} },
       { name: 'b', phase: 'sync', after: [], key: () => [], run: () => {} },
+    ];
+    expect(() => createStageGraph(stages)).toThrow();
+  });
+
+  it('throws when a sync stage declares an after-edge to an earlier step stage', () => {
+    const stages: Stage<'early' | 'late'>[] = [
+      { name: 'early', phase: 'step', after: [], key: () => [], run: () => {} },
+      { name: 'late', phase: 'sync', after: ['early'], key: () => [], run: () => {} },
     ];
     expect(() => createStageGraph(stages)).toThrow();
   });

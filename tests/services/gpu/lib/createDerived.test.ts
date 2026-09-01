@@ -56,6 +56,24 @@ describe('createDerived', () => {
     expect(derived.get()).toBe(2);
   });
 
+  it('retries at the same key after a throwing compute', () => {
+    let shouldThrow = true;
+    let computes = 0;
+    const derived = createDerived({
+      key: () => [1],
+      compute: () => {
+        computes++;
+        if (shouldThrow) throw new Error('boom');
+        return 'value';
+      },
+    });
+
+    expect(() => derived.get()).toThrow('boom');
+    shouldThrow = false;
+    expect(derived.get()).toBe('value');
+    expect(computes).toBe(2);
+  });
+
   it('compares by Object.is, so NaN and -0 keys do not thrash', () => {
     let keyElement: number = NaN;
     let computes = 0;

@@ -13,8 +13,10 @@ consumer sweep
 normalize young-star fragment brightness every frame.
 
 This getter is never called from either readback-landing callback body
-(`scheduleIsmMapReadback`/`scheduleOrientationReadback`), so it is not "on the
-path to `rebuildDustMixture`/`rebuildHiiIfSeeded`" — Task 10's literal
+(`scheduleIsmMapReadback`/`scheduleOrientationReadback`), so it is not on the
+path to dust placement (`createGalaxyFieldRenderer.ts`'s `place:dust` stage row
+and its `dustBudget`/`fieldPack` derived nodes) or HII (`upload:hii` +
+`hiiPack`) — Task 10's literal
 brief invariant (no `mapAsync` between a rebuild and a drawn frame) holds. But
 it IS a live, always-active, non-debug rendering input that still depends on
 `readbacks.ismMapData` landing via the CPU `mapAsync` round trip. That is the

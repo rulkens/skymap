@@ -16,17 +16,28 @@ import type { StagePhase } from '../../../@types/gpu/StagePhase';
 export function createStageGraph<Name extends string>(
   stages: readonly Stage<Name>[],
 ): StageGraph<Name> {
-  const indexOf = new Map<Name, number>(stages.map((stage, i) => [stage.name, i]));
+  const declared = new Map<Name, { readonly index: number; readonly phase: StagePhase }>(
+    stages.map((stage, index) => [stage.name, { index, phase: stage.phase }]),
+  );
   for (const [i, stage] of stages.entries()) {
     for (const dep of stage.after) {
-      const depIndex = indexOf.get(dep);
-      if (depIndex === undefined) {
+      const target = declared.get(dep);
+      if (target === undefined) {
         throw new Error(`createStageGraph: "${stage.name}" names unknown after-edge "${dep}"`);
       }
-      if (depIndex >= i) {
+      if (target.index >= i) {
         throw new Error(
           `createStageGraph: "${stage.name}" has a forward after-edge to "${dep}" — ` +
             `"${dep}" must appear earlier in the table`,
+        );
+      }
+      // Table order only orders stages WITHIN a phase; across phases the caller's
+      // `run('sync')` always precedes `run('step')`, so this edge would read as
+      // satisfied at construction and be violated on every cycle.
+      if (target.phase === 'step' && stage.phase === 'sync') {
+        throw new Error(
+          `createStageGraph: sync stage "${stage.name}" has an after-edge to step stage "${dep}" — ` +
+            `sync runs first, so the edge can never hold`,
         );
       }
     }
@@ -45,9 +56,13 @@ export function createStageGraph<Name extends string>(
         const lastKey = lastKeys.get(stage.name);
         if (lastKey !== undefined && sameKey(lastKey, key)) continue;
 
+        // Recorded only after `run` returns: a throw must leave the stage owing
+        // its work, and must not bump a token downstream stages would read as
+        // "the effect landed". Still before the next row's `key()`, so a
+        // same-cycle transitive edge sees the bump.
+        stage.run();
         lastKeys.set(stage.name, key);
         tokens.set(stage.name, {});
-        stage.run();
       }
     },
     token(name: Name): object {
