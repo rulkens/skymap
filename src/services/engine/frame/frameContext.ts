@@ -89,6 +89,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
@@ -101,6 +102,7 @@ import { starSphereRangeM } from '../../../utils/scene/starSphereRangeM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
+import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
@@ -145,11 +147,17 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByR
  * wall-clock (drives fades and ramps), `simDays` is scene time (drives where
  * the planets are), and the two decouple whenever the clock is paused or
  * scrubbed.
+ *
+ * `arm` is the SAME framed pose `pose` was resolved from (`resolveWorldArm`,
+ * called once by the caller — never here, so a frame never resolves twice).
+ * It exists only for the pose-provider seam below (spec §5.2): everything
+ * else in this function reads `pose`/`projection`/the bases, never `arm`.
  */
 export function deriveFrameContext(
   state: EngineState,
   canvas: HTMLCanvasElement,
   pose: CameraPose,
+  arm: FramedCameraPose,
   projection: CameraProjection,
   poseBasis: Mat3,
   upBasis: Mat3,
@@ -233,7 +241,15 @@ export function deriveFrameContext(
     frameUp(cam.upBasis),
   );
   const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
+  // Provider B serves ONLY the engaged body, straight from its own stored
+  // pose — no Mpc round trip. Every other body, and the whole absolute arm,
+  // stay on provider A (spec §5.2, ruled S1: "B keeps A"). Task 15 is what
+  // makes `arm.frame` ever a body arm; until then this branch is dead code,
+  // exercised only by tests that construct one by hand.
   const bodyPose: BodyPoseProvider = (bodyId) => {
+    if (arm.frame !== 'absolute' && arm.frame.body === bodyId) {
+      return poseFromBodyArm(arm.pose);
+    }
     const bodyState = bodyStates.get(bodyId);
     if (bodyState === undefined) return null;
     return bodyRelativePose({ camPosMpc: cam.position, camBasisWorld, bodyState });

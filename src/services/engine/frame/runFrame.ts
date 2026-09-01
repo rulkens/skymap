@@ -488,6 +488,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state,
     deps.canvas,
     worldPose,
+    // The framed pose `worldPose` was resolved from — the pose-provider seam
+    // (spec §5.2) needs the arm tag to know which body, if any, is engaged.
+    renderPose,
     state.cameraRuntime.projection,
     // The committed pose basis (holds still through a roll) and the live up
     // basis (rolls) — the same split fed to the drag register above, so the

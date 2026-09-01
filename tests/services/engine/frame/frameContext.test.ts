@@ -1,15 +1,19 @@
 /**
  * frameContext — unit tests for the per-frame derived snapshot.
  *
- * `deriveFrameContext` receives an already-produced `CameraPose`, a
- * `CameraProjection`, and the frame's two orientation bases (`poseBasis`,
- * `upBasis` — the engine Resources), assembles the full `OrbitCamera` via
- * `assembleOrbitCamera`, and pre-computes the view-projection matrix,
- * camera-position tuple, and pixel-per-radian scalar. These tests pin both
- * halves: the branching shape (ready vs not-ready) and the arithmetic. They
- * use the SAME value for both basis arguments (`BASIS`) throughout — this
- * file exercises the assembly arithmetic, not the poseBasis/upBasis split
- * itself, which `runFrame.test.ts`'s orientation-frame-roll suite covers.
+ * `deriveFrameContext` receives an already-produced `CameraPose`, the
+ * `FramedCameraPose` (`arm`) it was resolved from, a `CameraProjection`, and
+ * the frame's two orientation bases (`poseBasis`, `upBasis` — the engine
+ * Resources), assembles the full `OrbitCamera` via `assembleOrbitCamera`, and
+ * pre-computes the view-projection matrix, camera-position tuple, and
+ * pixel-per-radian scalar. These tests pin both halves: the branching shape
+ * (ready vs not-ready) and the arithmetic. They use the SAME value for both
+ * basis arguments (`BASIS`) throughout — this file exercises the assembly
+ * arithmetic, not the poseBasis/upBasis split itself, which
+ * `runFrame.test.ts`'s orientation-frame-roll suite covers. Every fixture
+ * below passes `arm` as the absolute arm wrapping the same `pose` — the last
+ * two describe blocks are the only ones that construct a body arm, to
+ * exercise the pose-provider seam (spec §5.2, Task 14).
  *
  * The threaded-pose variant (binding decision 1) means `deriveFrameContext`
  * does NOT re-call `runCameraDrivers` internally; it only calls
@@ -40,14 +44,29 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
+import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { deriveSlabs, NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
+import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyRelativePose';
+import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
+// The absolute arm carrying `RESTING_POSE` — every fixture in this file predates
+// Task 14 and exercised only the absolute arm, so this reproduces that fixture
+// as a `FramedCameraPose` rather than changing what any test's `pose` means.
+const RESTING_ARM: FramedCameraPose = absoluteArm(RESTING_POSE);
 
 // Identity basis: the frame-local decode is already world space, so every case
 // below reproduces the pre-feature (basis-free) geometry exactly.
@@ -123,6 +142,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeState({ cam: null }),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -138,6 +158,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeState({ galaxyPointRenderer: null }),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -153,6 +174,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeState({ renderTargets: null }),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -168,6 +190,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeState({ texturedDisks: null }),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -187,6 +210,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       makeCanvas(),
       pose,
+      absoluteArm(pose),
       projection,
       BASIS,
       BASIS,
@@ -212,6 +236,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       projection,
       BASIS,
       BASIS,
@@ -231,6 +256,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       canvas,
       RESTING_POSE,
+      RESTING_ARM,
       projection,
       BASIS,
       BASIS,
@@ -251,6 +277,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       makeCanvas(),
       pose,
+      absoluteArm(pose),
       PROJECTION,
       BASIS,
       BASIS,
@@ -270,6 +297,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       makeCanvas(),
       pose,
+      absoluteArm(pose),
       PROJECTION,
       BASIS,
       BASIS,
@@ -304,6 +332,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       makeCanvas(800, 600),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -324,6 +353,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState({ galaxyPointRenderer, renderTargets, texturedDisks }),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -344,6 +374,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -362,6 +393,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -384,6 +416,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeState(),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -406,6 +439,7 @@ describe('deriveFrameContext — roll threads into camBasisWorld (P5)', () => {
       makeState(),
       makeCanvas(),
       pose0,
+      absoluteArm(pose0),
       PROJECTION,
       BASIS,
       BASIS,
@@ -417,6 +451,7 @@ describe('deriveFrameContext — roll threads into camBasisWorld (P5)', () => {
       makeState(),
       makeCanvas(),
       poseRolled,
+      absoluteArm(poseRolled),
       PROJECTION,
       BASIS,
       BASIS,
@@ -462,6 +497,7 @@ describe('deriveFrameContext — bodyPose identity seam (m1)', () => {
       makeState(),
       makeCanvas(),
       RESTING_POSE,
+      RESTING_ARM,
       PROJECTION,
       BASIS,
       BASIS,
@@ -479,5 +515,123 @@ describe('deriveFrameContext — bodyPose identity seam (m1)', () => {
     // prevent (a future pose provider swap, or a caching layer, could then
     // change one without the other).
     expect(deriveSlabsSpy.mock.calls[0]![0]!.pose).toBe(ctx.bodyPose);
+  });
+});
+
+// Provider A's floor (spec §11's structural criterion, ruled): "≈2 ulp at
+// heliocentric magnitude, ≈50 µm at 1 AU". `bodyRelativePose`'s Mpc-then-metre
+// subtraction is what sets it — see poseFrameConversion.test.ts's EYE_FLOOR_M
+// for the same value's derivation.
+const EYE_FLOOR_M = 5e-5;
+
+/**
+ * The world camera position and basis `frameContext.ts` itself derives from a
+ * `CameraPose` — the SAME `assembleOrbitCamera` + `imagePlaneBasis`/`frameUp`
+ * composition, so a test built from it exercises the seam's ROUTING (does the
+ * right provider fire for the right body?), not a second copy of the world
+ * decode arithmetic (already pinned by poseFrameConversion.test.ts).
+ */
+function worldCamera(
+  pose: CameraPose,
+  projection: CameraProjection,
+): { camPosMpc: Vec3; camBasisWorld: Mat3 } {
+  const cam = assembleOrbitCamera(pose, projection, BASIS, BASIS);
+  const camForward = normalize3([
+    cam.target[0] - cam.position[0],
+    cam.target[1] - cam.position[1],
+    cam.target[2] - cam.position[2],
+  ]);
+  const { right, up } = imagePlaneBasis(camForward, cam.roll ?? 0, frameUp(cam.upBasis));
+  return { camPosMpc: cam.position, camBasisWorld: mat3FromColumns(right, up, camForward) };
+}
+
+describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec §5.2)', () => {
+  it('provider B and provider A agree at the engage boundary — same camera, both providers', () => {
+    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
+    const earthState = deriveBodyStates(CONST_J2000).get('earth')!;
+
+    // Provider A's own answer for this camera — computed independently of the
+    // seam under test, from the SAME world camera `deriveFrameContext` derives.
+    const { camPosMpc, camBasisWorld } = worldCamera(pose, PROJECTION);
+    const providerA = bodyRelativePose({ camPosMpc, camBasisWorld, bodyState: earthState });
+
+    // The body arm engaging 'earth' at THIS camera — `toBodyArm` is Task 13's
+    // conversion, used here only as a fixture builder (its own correctness is
+    // poseFrameConversion.test.ts's job).
+    const bodyFixedPose = toBodyArm(pose, BASIS, BASIS, 'earth', earthState);
+    const arm: FramedCameraPose = { frame: { body: 'earth' }, pose: bodyFixedPose };
+
+    const ctx = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      pose,
+      arm,
+      PROJECTION,
+      BASIS,
+      BASIS,
+      0xffffffff,
+      0,
+      CONST_J2000,
+    );
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+
+    const providerB = ctx.bodyPose('earth');
+    expect(providerB).not.toBeNull();
+    if (providerB === null) return;
+
+    for (let i = 0; i < 3; i++) {
+      expect(
+        Math.abs(providerB.eyeRelBodyM[i]! - providerA.eyeRelBodyM[i]!),
+        `eyeRelBodyM component ${i}`,
+      ).toBeLessThan(EYE_FLOOR_M);
+    }
+    for (let i = 0; i < 9; i++) {
+      expect(
+        Math.abs(providerB.basisM[i]! - providerA.basisM[i]!),
+        `basisM element ${i}`,
+      ).toBeLessThan(1e-9);
+    }
+  });
+
+  it('provider A still serves every body that is not the engaged one', () => {
+    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
+    const marsState = deriveBodyStates(CONST_J2000).get('mars')!;
+    const earthState = deriveBodyStates(CONST_J2000).get('earth')!;
+
+    // Engage 'earth'; 'mars' is untouched by the arm and must still resolve
+    // through provider A, from the SAME world camera as the engaged body.
+    const arm: FramedCameraPose = {
+      frame: { body: 'earth' },
+      pose: toBodyArm(pose, BASIS, BASIS, 'earth', earthState),
+    };
+
+    const ctx = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      pose,
+      arm,
+      PROJECTION,
+      BASIS,
+      BASIS,
+      0xffffffff,
+      0,
+      CONST_J2000,
+    );
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+
+    const { camPosMpc, camBasisWorld } = worldCamera(pose, PROJECTION);
+    const expectedMars = bodyRelativePose({ camPosMpc, camBasisWorld, bodyState: marsState });
+    // `bodyStates` is keyed by the raw orbital-element id string ('mars'), one
+    // level narrower than the closed `BodyId` union the seam's public surface
+    // exposes — the same cast `slabs.ts`/`liveWorldPose.ts` use at this
+    // boundary (see their headers).
+    const actualMars = ctx.bodyPose('mars' as BodyId);
+    expect(actualMars).not.toBeNull();
+    if (actualMars === null) return;
+    // Provider A's own derivation, called directly — not a floor comparison:
+    // the seam did not touch 'mars' at all, so the two must match exactly.
+    expect(actualMars).toEqual(expectedMars);
   });
 });

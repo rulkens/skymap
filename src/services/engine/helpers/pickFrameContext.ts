@@ -65,6 +65,9 @@ export function pickFrameContext(
     // `deriveFrameContext` received, so the pick camera matches the frame on
     // screen.
     liveWorldPose(state),
+    // The framed pose `liveWorldPose` resolved from — same arm the last frame
+    // rendered, so the pick pass's provider-B routing matches the screen too.
+    state.cameraRuntime.lastPose.current,
     state.cameraRuntime.projection,
     // Pick is a demand read at rest (between frames), so the steady
     // `ORIENTATION_FRAMES[orientation]` is the correct basis for BOTH halves —

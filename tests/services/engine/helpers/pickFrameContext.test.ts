@@ -141,6 +141,7 @@ describe('pickFrameContext', () => {
       state,
       canvas,
       LAST_POSE,
+      absoluteArm(LAST_POSE),
       state.cameraRuntime.projection,
       // Same steady basis `pickFrameContext` resolves internally for BOTH
       // halves, so the two cameras decode position and screen-up through the
