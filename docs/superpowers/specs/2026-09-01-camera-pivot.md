@@ -1,8 +1,9 @@
 # Camera pivot — design (spec 2)
 
-> **Status.** Drafted 2026-09-01. Not yet built. §12 carries one decision left
-> OPEN for the user (T2) and three decisions taken here that the ruling record
-> did not settle — overrule any of them at spec review.
+> **Status.** Drafted 2026-09-01 as one of two adversarial variants (the Fable
+> variant is merged into this file and deleted; git history keeps it). T2 and
+> R1 RULED 2026-09-01 (see §12); remaining open at spec review: packaging (§2)
+> and feel constants.
 > **Date.** 2026-09-01.
 > **Ruling record.** [`docs/grill-sessions/globe-camera-pivot-2026-08-24.md`](../../grill-sessions/globe-camera-pivot-2026-08-24.md).
 > Decisions below cite it (`ruled, Q6`) rather than re-arguing. Where the
@@ -275,6 +276,10 @@ real-time rate the onset is far below perception. **H1 ships; the measurement
 is an acceptance item under an accelerated clock (§11); H2 — smoothstepping the
 co-rotation rate over ~1 s — is the bounded escalation path and is spent only
 on adverse evidence** (ruled, Q7).
+
+**The trade, stated for the record:** engaging this high means Earth stops
+visibly rotating once engaged — geostationary hover, sun and stars sweep under
+a fast clock; "planetarium Earth" lives above the band (ruled, Q6).
 
 ## 5. Provider B: the body arm
 
@@ -627,9 +632,10 @@ landing pipeline — land/park is the user's ruling, never process momentum.
 
 ## 12. Open questions
 
-**T2 — camera state: union, or both states synced? OPEN — for user ruling at
-spec review.** Deferred to this spec at the refactor-ground checkpoint
-(transcript addendum) and the one genuinely open decision here.
+**T2 — camera state: union, or both states synced? RULED 2026-09-01: the
+union.** Deferred to this spec at the refactor-ground checkpoint (transcript
+addendum). Both independently written spec variants proposed the union with
+the same mirror-state rationale, which is what settled it.
 
 _Proposal: the union_ — `camera.base` becomes `FramedCameraPose` (§3), exactly
 one arm authoritative at a time, with §5.1's lossless conversion at §7's fold.
@@ -653,8 +659,8 @@ out-of-scope. (c) **Union with a narrower body arm** (body-fixed target + angles
 rather than pose + basis) — rejected: it reintroduces a pole singularity in the
 one frame where the user walks over the pole (probe defect 1).
 
-**R1 — the disengage residual needs `roll`. DECIDED HERE; the transcript's
-mechanism was incomplete. Overrule at review.** Q4-iii rules that the tilt
+**R1 — the disengage residual needs `roll`. RULED IN by the user 2026-09-01;
+the transcript's mechanism was incomplete.** Q4-iii rules that the tilt
 ceiling makes the outbound pose "near-nadir and roll-free by construction, and
 `heading` maps exactly onto `yaw`". The first half holds; the second does not.
 At nadir the eye's position fixes `yaw` and `pitch` entirely, so `heading` — the
@@ -671,9 +677,7 @@ optional and defaults to 0. P5 adds it to `CameraPose`. The tilt ceiling then
 does what Q4-iii wanted it to do — deliver a nadir, pin-compatible pose at the
 boundary and the settle-to-top-down feel — while exactness comes from the
 conversion being lossless for _any_ pose, which is the stronger property Q1-A
-asks for. If this is overruled, the fallback is a bounded roll snap at
-disengage, and §11's pose-exactness criterion weakens to "eye and forward
-exact, screen-up may rotate".
+asks for.
 
 **R2 — the engaged body is chosen geometrically, never by focus. DECIDED HERE.**
 The transcript fixes the band but not which body it applies to. `argmin h/R`
@@ -690,6 +694,12 @@ ceiling (a flyby aimed away from the body, a tour keyframe). Since altitude only
 changes through zoom, and zoom re-levels through the ceiling (§6), every path
 the user can drive still lands at `tilt = 0` by the disengage boundary — the Q4
 invariant holds where it is load-bearing without a special case at the seam.
+
+**Small-body engage feel — flagged, not built.** Every planet/moon registry row
+can engage (R2's argmin is body-blind); on a ~10 km moon the band engages at
+~17 km altitude, which is correct but may feel abrupt. If the feel gate
+objects, the remedy is a per-row engage floor — a registry parameter, never a
+second regime.
 
 **Known, out of scope.** A tour that ends on a non-body-centred pose while a
 body is focused snaps when the resting driver's pivot pin resumes. That is an
