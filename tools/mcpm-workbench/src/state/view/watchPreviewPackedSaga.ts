@@ -1,25 +1,12 @@
 /**
- * watchPreviewPackedSaga — T18's preview-export view (readback → widenTrace →
- * `previewPackedTrace` → `graph.attachPreviewTrace`), moved out of Viewport's
- * own subscriber. `takeLatest(setPreviewPacked, …)` replaces the old
- * boolean-edge diffing: rising edge (`payload: true`) packs, falling edge
- * disposes — one worker, branching on the payload, so every falling-edge
- * caller (an explicit uncheck, a pack failure, Viewport's own palette
- * re-attach) shares the same disposal path.
- *
- * Unlike `watchSceneSaga`'s `buildScene`, no `acceptBuiltHarness`-style
- * cancellation guard is needed: the worker's only await (`readbackTrace`) is
- * a self-cleaning promise — its own try/finally destroys the MAP_READ
- * staging buffer regardless of whether the result is ever consumed — and
- * every later step that allocates something needing disposal
- * (`previewPackedTrace`'s GPU buffer, `attachPreviewTrace`) runs
- * SYNCHRONOUSLY after that one `yield*`. A `takeLatest` cancellation unwinds
- * before the generator resumes, so those lines simply never run for a
- * superseded worker rather than running and leaking.
- *
- * A second watcher disposes on `incrementStep` once `stepCount` moves past
- * the packed snapshot (`isPreviewStale`) — the sim steps up to 60x/s while
- * running, so it bails on one cheap `select` whenever nothing is packed.
+ * watchPreviewPackedSaga — packs (readback → widenTrace → previewPackedTrace
+ * → attachPreviewTrace) on `setPreviewPacked`'s rising edge via `takeLatest`,
+ * disposes on the falling edge; a second watcher disposes on `incrementStep`
+ * once `stepCount` passes the packed snapshot. No aborted-flag/epoch guard
+ * needed: `readbackTrace`'s own try/finally destroys its staging buffer
+ * regardless of consumption, and every disposal-needing allocation runs
+ * synchronously after that one `yield*` — a cancelled worker never reaches
+ * it.
  */
 import { takeLatest, takeEvery, call, put, select, getContext } from 'typed-redux-saga';
 
