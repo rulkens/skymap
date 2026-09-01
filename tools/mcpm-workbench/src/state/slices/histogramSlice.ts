@@ -43,11 +43,16 @@ export const histogramSlice = createSlice({
         { stepCount, meanLogTraceAtPoints: meanLogTraceAtPointsValue },
       ].slice(-MAX_HISTORY);
     },
+    /** T20: jittered-position samples and data-point samples are differently-defined
+     * statistics under the same `meanLogTraceAtPoints` name — every toggle edge resets
+     * the rest of the slice so the two never ride the same convergence curve. */
     setSampleRandomly: (state, action: PayloadAction<boolean>) => {
+      Object.assign(state, defaultHistogramSlice);
       state.sampleRandomly = action.payload;
     },
-    /** Viewport calls this alongside `resetStepCount` — old history entries would
-     * otherwise show larger step counts than the freshly zeroed HUD counter. */
+    /** Called alongside `resetStepCount` (watchSceneSaga, watchSimCommandsSaga) — old
+     * history entries would otherwise show larger step counts than the freshly zeroed
+     * HUD counter. */
     resetHistogram: (state) => {
       const { sampleRandomly } = state;
       Object.assign(state, defaultHistogramSlice);

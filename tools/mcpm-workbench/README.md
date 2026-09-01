@@ -23,6 +23,21 @@ Then open <http://localhost:5500>. The port (5500) is deliberately clear of
 the main app (5173), the curator (5200), flow-workbench (5300), and
 galaxy-renderer (5400) so all can run side-by-side.
 
+## Architecture
+
+State lives in an RTK store (`src/store/`) mirroring skymap's own `src/store/`
+scaffold: five slices (`catalog`, `grid`, `sim`, `view`, `histogram`) plus a
+`commands.ts` for one-shot actions (reset, clear-trace, export). Redux-saga
+owns every side effect — seven watch-sagas (catalog load, scene
+build/rebuild/device-loss, sim commands, npy/scfd export, previewPacked
+pack/dispose, histogram readback, palette re-attach) — each mediating one
+concern against the WebGPU objects held in `RenderResources`
+(`src/render/renderResources.ts`), handed to the saga layer once via
+`registerSagaContext`. `Viewport.tsx` stays a dumb frame driver: it owns the
+canvas and the rAF loop's dirty/FPS/interaction-boost bookkeeping and draws
+the per-frame layers off `resources`; it dispatches only `setFps` and the
+sim-step counter, everything else is a saga's job.
+
 ## Shaders
 
 The tool links against the runtime's canonical shader tree

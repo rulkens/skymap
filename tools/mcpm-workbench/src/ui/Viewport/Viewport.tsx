@@ -18,7 +18,6 @@ import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpat
 import { createRenderResources, disposeScene } from '../../render/renderResources';
 import { volpathKeyFor } from '../../render/volpathKeyFor';
 import { gridShapeKeyFor } from '../../state/gridShapeKeyFor';
-import { resetHistogram } from '../../state/slices/histogramSlice';
 import { incrementStep } from '../../state/slices/simSlice';
 import { setFps } from '../../state/slices/viewSlice';
 import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
@@ -64,10 +63,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     let rafHandle = 0;
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getState()));
     let boxPreviewUntil = 0;
-    // T20: jittered-position samples and data-point samples are differently-defined
-    // statistics under the same `meanLogTraceAtPoints` name — every toggle edge clears
-    // `history` (below) so the two never ride the same convergence curve.
-    let lastSampleRandomly = store.getState().histogram.sampleRandomly;
     // null whenever the path tracer is off — reaching this frame with the layer freshly
     // turned on always differs from null, so enabling it always resets, per the
     // accumulation contract (task-V2A-report.md).
@@ -239,24 +234,16 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
           s.view.pathTracer.divisor,
           now - lastInteractionMs,
         );
-        // Reset on any camera move or any pathTracer param change (divisor included,
-        // sampleCap excluded — see volpathKeyFor.ts) — `cam` is the SAME serialized
-        // object already computed above, so this can't drift from what actually
-        // drew. An explicit reset/clear-trace command no longer feeds this key —
-        // watchSimCommandsSaga calls `graph.resetVolpath()` itself when it handles
-        // those actions. Deliberately NOT keyed on `sim.stepCount`: an earlier
-        // version floored a step term in here so a running sim wiped the
-        // accumulator every 16 steps instead of every frame — still a periodic
-        // full-wipe, visible as never converging. The field drifts slowly enough
-        // (same reasoning that justified the 16-step floor) that letting samples
-        // ride across steps indefinitely is fine; a box change that actually
-        // invalidates the grid reaches here through a harness rebuild instead (the
-        // epoch reset below resets `lastVolpathKey` to null). Deliberately NOT
-        // keyed on `effectiveDivisor` either: VolpathPass's own accumulator already
-        // resizes (and so self-resets) the moment ITS size changes, which tracks
-        // effectiveDivisor directly — keying this string on it too would only add a
-        // second, redundant reset exactly 200ms after every interaction, on top of
-        // the resize the accumulator was always going to do on its own.
+        // Reset on camera move or pathTracer param change (divisor included, sampleCap
+        // excluded — volpathKeyFor.ts); an explicit reset/clear-trace no longer feeds
+        // this key (watchSimCommandsSaga calls graph.resetVolpath() directly).
+        // Deliberately NOT keyed on sim.stepCount: an earlier version wiped the
+        // accumulator every 16 steps, visible as never converging — the field drifts
+        // slowly enough to ride across steps, and a box change that invalidates the
+        // grid reaches here via a harness rebuild instead (epoch reset, below). Also
+        // NOT keyed on effectiveDivisor: VolpathPass's own accumulator already
+        // resizes/self-resets on that, so keying it here too would just add a
+        // redundant second reset 200ms after every interaction.
         const volpathKey = JSON.stringify(volpathKeyFor(cam, s.view.pathTracer));
         if (volpathKey !== lastVolpathKey) {
           graph.resetVolpath();
@@ -299,10 +286,8 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       const s = store.getState();
 
       // A rebuild (or teardown) landed since this subscriber last checked — reseed
-      // every piece of per-scene bookkeeping `buildFromPoints`/`startLoop` used to
-      // reset inline, BEFORE the checks below run against it (mirrors the old
-      // ordering: a token bumped while no harness existed must not immediately
-      // fire against the harness that just replaced it).
+      // per-scene bookkeeping BEFORE the checks below run (mirrors the old ordering:
+      // a token bumped while no harness existed must not fire against its replacement).
       if (resources.epoch !== lastSeenEpoch) {
         lastSeenEpoch = resources.epoch;
         lastFrameTime = -1;
@@ -322,20 +307,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         lastInteractionMs = performance.now();
       }
       lastDirtyCheckState = s;
-
-      if (resources.harness) {
-        // Reset/clear-trace/export/scfd used to be watched here (token-diff against
-        // sim.resetToken etc.) — that's gone now that those are plain commands;
-        // watchSimCommandsSaga/watchExportSaga (Tasks 7/8) take the actions directly
-        // instead of a subscriber diffing a counter.
-        // T20: jittered-position samples and data-point samples are differently-defined
-        // statistics under the same name — a toggle mid-run must not interleave them
-        // into one curve, so every edge clears history (and counts/mean) outright.
-        if (s.histogram.sampleRandomly !== lastSampleRandomly) {
-          lastSampleRandomly = s.histogram.sampleRandomly;
-          store.dispatch(resetHistogram());
-        }
-      }
     });
 
     // Orbit input → view slice camera (a gizmo handle hit short-circuits it into a
