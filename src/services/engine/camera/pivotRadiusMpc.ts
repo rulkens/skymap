@@ -1,14 +1,9 @@
 /**
- * pivotRadiusMpc — the physical radius (Mpc) of whatever sits at the camera's
- * orbit pivot, or `null` when the pivot has no surface.
- *
- * The one place that maps a resolved `SelectionRow` onto a pivot radius. A
- * body or survey star is a surface the camera can crash into; a galaxy, a
- * structure, or the Milky Way is a volume the camera flies INTO, so those stay
- * `null` and unfloored. `runFrame.ts`/`frameContext.ts`/`logCameraState.ts`
- * consume this scalar directly (altitude math, debug logging) — `pivotFraming`
- * below is the orbit-controls lane's own bundle, built beside it in the same
- * file rather than displacing this export.
+ * pivotRadiusMpc — physical radius (Mpc) of the camera's orbit pivot, or
+ * `null` when it has no surface (galaxy/structure/Milky Way — flown INTO,
+ * never floored). `runFrame.ts`/`frameContext.ts`/`logCameraState.ts` import
+ * this scalar directly, so `pivotFraming` (the orbit-controls zoom-floor
+ * bundle) is built beside it below rather than displacing it.
  */
 
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -23,10 +18,8 @@ export function pivotRadiusMpc(row: SelectionRow | null): number | null {
 }
 
 /**
- * pivotFraming — the orbit-controls lane's single getter target: radius +
- * precomputed zoom floor for the resolved focus row. `standoffRadii` reads a
- * body row's own override (Sgr A*'s Q10 floor) else the global ratio.
- * `radiusMpc ?? 0` makes a surfaceless pivot's floor collapse to
+ * pivotFraming — orbit-controls' single getter target: radius + precomputed
+ * zoom floor. `radiusMpc ?? 0` collapses a surfaceless pivot's floor to
  * `MIN_DISTANCE_MPC`, matching the old null-radius clamp exactly.
  */
 export function pivotFraming(row: SelectionRow | null): PivotFraming {
