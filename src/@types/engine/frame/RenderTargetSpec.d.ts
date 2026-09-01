@@ -37,4 +37,12 @@ export type RenderTargetSpec = {
    * pass, not fixed table data.
    */
   clearValue: GPUColor;
+  /**
+   * When present, this row's pixel size is `fixedSizePx.size` on each axis
+   * regardless of canvas size, and its texture has `fixedSizePx.layers`
+   * array layers (a `2d-array` texture, sampled as `texture_cube` by a
+   * consumer that binds all six as a cube — WebGPU has no cube-view render
+   * attachment). `scale` is ignored when this is present.
+   */
+  fixedSizePx?: { readonly size: number; readonly layers: number };
 };

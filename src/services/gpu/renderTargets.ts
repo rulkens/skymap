@@ -267,10 +267,15 @@ export function createRenderTargets(
   swapFormat: GPUTextureFormat,
   size: Size,
   state: EngineState,
+  // Test-only injection seam: appends rows the production table
+  // (`renderTargetRows`) doesn't declare yet, so `fixedSizePx` behaviour is
+  // exercisable before Phase B lands the real sky-cubemap row. No production
+  // caller passes this.
+  extraRows: readonly RenderTargetSpec[] = [],
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = renderTargetRows(swapFormat);
+  let specs = [...renderTargetRows(swapFormat), ...extraRows];
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.
@@ -297,7 +302,11 @@ export function createRenderTargets(
     const texture = device.createTexture({
       label: `render-target-${spec.id}`,
       format: spec.format,
-      size: { width, height },
+      // 'dimension: 2d' is WebGPU's default, but stated explicitly so a
+      // `fixedSizePx.layers > 1` row (a 2d-array texture, e.g. the sky
+      // cubemap's 6 faces) reads unambiguously beside `depthOrArrayLayers`.
+      dimension: '2d',
+      size: { width, height, depthOrArrayLayers: spec.fixedSizePx?.layers ?? 1 },
       // RENDER_ATTACHMENT lets the content layers' pipelines write into the
       // target; TEXTURE_BINDING lets the compositor / upsample fragment
       // shaders sample from it — for 'foreground:0' this is ALSO what the
@@ -314,7 +323,8 @@ export function createRenderTargets(
       const depthTexture = device.createTexture({
         label: `render-target-${spec.id}-depth`,
         format: spec.depth,
-        size: { width, height },
+        dimension: '2d',
+        size: { width, height, depthOrArrayLayers: spec.fixedSizePx?.layers ?? 1 },
         // RENDER_ATTACHMENT only: this feeds the depth-test while the
         // foreground pass draws opaque geometry, and nothing samples it
         // downstream any more. The caption occlusion pass (lib/sceneDepth.wesl)
@@ -337,7 +347,12 @@ export function createRenderTargets(
   // (`reducedTargetSize` is the shared sizing rule; see its docblock.)
   function reconcile(s: EngineState, canvas: Size): void {
     for (const spec of offscreenSpecs) {
-      const [width, height] = reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
+      // A fixed-size row is a size that never changes across resizes, not a
+      // separate code path past this one branch: the held-size comparison
+      // and `allocate` call below stay shared with every other row.
+      const [width, height] = spec.fixedSizePx
+        ? [spec.fixedSizePx.size, spec.fixedSizePx.size]
+        : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
       const held = sizes.get(spec.id);
       if (held !== undefined && held.width === width && held.height === height) continue;
       allocate(spec, width, height);
