@@ -439,7 +439,7 @@ export async function createGalaxyEngine(
       shiftX,
       viewportPx: [canvas.width, canvas.height],
       render,
-      dustReachR: model.dustHeaderLanes.reachR,
+      dustReachR: field.dustHeaderLanes.reachR,
     });
     const { view, viewProj: vp, fade, galaxyWeight, debugViews } = frameView;
     lastFade = fade;
@@ -497,18 +497,20 @@ export async function createGalaxyEngine(
       quad,
       instances: starInstances,
     });
-    // Each segment lookup below gates BOTH the pass that fills a target and
-    // the scene pass's composite that reads it. Read once, here, so the two
-    // cannot drift into compositing a target this frame never cleared (which
-    // sums the previous frame's content into HDR with nothing to catch it) —
-    // per tier independently, since a galaxy with DIG but no shells/young/
-    // extras must still skip those targets' composite push.
+    // Each segment lookup below gates the scene pass's composite that reads a
+    // target — `field.encode` below runs its own independent lookup gating
+    // the pass that FILLS the same target, off this same frame's
+    // `field.hiiSegments`, so the two can't drift into compositing a target
+    // this frame never cleared (which sums the previous frame's content into
+    // HDR with nothing to catch it) — per tier independently, since a galaxy
+    // with DIG but no shells/young/extras must still skip those targets'
+    // composite push.
     const analytic = render.analyticField;
     const tierSegments = HII_TIERS.map((tier) => ({
       tier,
-      segment: findHiiSegment(model.hiiSegments, tier.label),
+      segment: findHiiSegment(field.hiiSegments, tier.label),
     }));
-    const extrasSegment = findHiiSegment(model.hiiSegments, 'hii:extras');
+    const extrasSegment = findHiiSegment(field.hiiSegments, 'hii:extras');
     const drawDustView = debugViews.dust > 0;
     // Every field/HII pass this frame, into the caller-owned targets above —
     // `dustMap` before `field` is the only ordering the module owns; where
@@ -659,23 +661,27 @@ export async function createGalaxyEngine(
     // directly, never this readback; it feeds the seeding debug view and
     // `youngStars.invMeanNorm`'s contrast normalisation instead.
     getIsmMapData: (): GalaxyIsmMap | null => model.ismMapData,
-    // Debug-only: composes the model's own probe share with the readbacks
-    // that need `device`/`targets` and so can't live inside the model — see
-    // `GalaxyProbeApi.d.ts` for the full member docs. No production caller
-    // touches this.
+    // Debug-only: composes the field renderer's own probe share with the
+    // readbacks that need `device`/`targets` and so can't live inside it —
+    // see `GalaxyProbeApi.d.ts` for the full member docs. No production
+    // caller touches this.
     probe: {
-      ...model.probe,
+      peekRecords: field.probe.peekRecords,
+      requestDustPlacementReadback: field.probe.requestDustPlacementReadback,
+      requestArmSpurCloudPlacementReadback: field.probe.requestArmSpurCloudPlacementReadback,
+      requestArmCloudPlacementReadback: field.probe.requestArmCloudPlacementReadback,
+      requestDigVeilPlacementReadback: field.probe.requestDigVeilPlacementReadback,
       get fieldCounts() {
-        return model.fieldCounts;
+        return field.fieldCounts;
       },
       get hiiSegments() {
-        return model.hiiSegments;
+        return field.hiiSegments;
       },
       get armCloudReservation() {
-        return model.armCloudReservation;
+        return field.armCloudReservation;
       },
       get spurCloudReservation() {
-        return model.spurCloudReservation;
+        return field.spurCloudReservation;
       },
       // `reject` matters here: this is the queue's first EXTERNALLY-AWAITED
       // request (every other caller is fire-and-forget) — without it, a
@@ -692,7 +698,7 @@ export async function createGalaxyEngine(
       // live, not captured, since a resize or divisor drag replaces it.
       requestDustMapChannelSum: () => readTextureChannelSum(device, targets.dustMapTex),
       // Draws ONLY the arm-cloud reservation's own instance range
-      // (`model.armCloudReservation`) into `targets.fieldTex`, through the
+      // (`field.armCloudReservation`) into `targets.fieldTex`, through the
       // SAME `fieldSplatPipe`/`fieldSplatBG` the production draw uses — this
       // exercises the REAL fragment shader's REAL `armCloudRenorm[0]` read,
       // not a buffer readback that would validate the reduction but never the
@@ -701,7 +707,7 @@ export async function createGalaxyEngine(
       // cross-tier confound. `targets.fieldTex` is safely clobbered: the next
       // production frame's `encodeSplatPass` redraws it in full.
       async requestArmCloudRenderedFluxSum(): Promise<number | null> {
-        const reservation = model.armCloudReservation;
+        const reservation = field.armCloudReservation;
         if (!reservation) return null;
         const enc = device.createCommandEncoder({ label: 'galaxy:armCloudRenderedFluxSum' });
         encodeSplatPass({
@@ -718,7 +724,7 @@ export async function createGalaxyEngine(
       },
       // The spur-cloud twin of `requestArmCloudRenderedFluxSum` above.
       async requestArmSpurCloudRenderedFluxSum(): Promise<number | null> {
-        const reservation = model.spurCloudReservation;
+        const reservation = field.spurCloudReservation;
         if (!reservation) return null;
         const enc = device.createCommandEncoder({ label: 'galaxy:armSpurCloudRenderedFluxSum' });
         encodeSplatPass({

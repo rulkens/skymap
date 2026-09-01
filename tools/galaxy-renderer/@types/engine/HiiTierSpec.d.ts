@@ -10,7 +10,7 @@ import type { RenderSettings } from './RenderSettings';
 export type HiiTierSpec = {
   readonly kind: HiiTier;
   /**
-   * `model.hiiSegments`' own label for this tier (`hiiRegions.ts`'s
+   * `field.hiiSegments`' own label for this tier (`hiiRegions.ts`'s
    * `buildHiiRegionsWithSegments`) — restated here, not imported, since that
    * function returns plain string literals with no exported constant. Also
    * this tier's GPU-timing slot name (`timingSlots.ts`): one string serves

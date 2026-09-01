@@ -22,11 +22,10 @@ field/     createArmRidgeDebugSample — the one field-tier module still local
            to the tool; the pipelines, packers and encode passes it debugs
            moved to src/services/gpu/renderers/galaxyField/field/
 ismMap/     createIsmMapDustCdfScanDebugSample, createIsmMapReadbacks,
-           createOrientationDiagnostics, decodeIsmMapTexels,
-           decodeOrientationTexels, orientationCoherenceStats — readback and
-           diagnostic paths the matcher/probe drive; the generator and its
-           placement/orientation chain moved to
-           src/services/gpu/renderers/galaxyField/ismMap/
+           decodeIsmMapTexels, decodeOrientationTexels,
+           orientationCoherenceStats — readback and diagnostic paths the
+           matcher/probe drive; the generator and its placement/orientation
+           chain moved to src/services/gpu/renderers/galaxyField/ismMap/
 
 model/     createGalaxyModel — what a galaxy IS; drives BOTH tiers
 frame/     deriveFrameView + the pure per-frame arithmetic under it
@@ -34,9 +33,9 @@ passes/    beginClearPass (now src/services/gpu/lib/), encodeSceneComposites
            — the pass vocabulary the tier folders share
 post/      encodeBloomPyramid, packGradeUniforms, gradeIsActive
 gpu/       createGalaxyRenderTargets, createReadbackQueue,
-           readTextureChannelSum; the render targets' four field/ISM
-           textures and the grow-only record buffer moved to
-           src/services/gpu/renderers/galaxyField/gpu/
+           readTextureChannelSum — the field/ISM render targets stay HERE,
+           host-owned; only the grow-only record buffer and the volume-bake
+           helper moved to src/services/gpu/renderers/galaxyField/gpu/
 camera/    orbit input
 timing/    the frame median + the per-pass GPU spans (`timingSlots.ts`)
 probe/     the headless readback paths the matcher drives

@@ -1,12 +1,10 @@
 /**
  * beginClearPass — one colour attachment, cleared and stored: the descriptor
- * shape most render passes share. `alpha` is the clear alpha (0 for
- * offscreens an additive composite reads, 1 for HDR/LDR targets); `loadOp`
- * defaults to `'clear'`, with `'load'` for every sub-pass after the first
- * into the SAME attachment. `timestampWrites` arrives ALREADY RESOLVED:
- * `gpuTimingService.descriptorFor` marks its slot consumed as a side effect,
- * so that call must stay on the branch that actually opens the pass — a slot
- * consumed on a frame its pass never ran makes the HUD decode stale ticks.
+ * shape most render passes share. `timestampWrites` arrives ALREADY
+ * RESOLVED: `gpuTimingService.descriptorFor` marks its slot consumed as a
+ * side effect, so that call must stay on the branch that actually opens the
+ * pass — a slot consumed on a frame its pass never ran makes the HUD decode
+ * stale ticks.
  */
 export function beginClearPass(
   enc: GPUCommandEncoder,

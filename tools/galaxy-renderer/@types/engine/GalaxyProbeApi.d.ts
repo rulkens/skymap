@@ -1,12 +1,13 @@
 /**
  * GalaxyProbeApi — every debug/validation entry point `probeGpuErrors.ts`
  * reaches; no production caller touches `handle.probe`, so that separation
- * is structural rather than per-method comments. `createGalaxyModel.ts`
- * builds the model-level members (`peekRecords`, the four placement
- * readbacks, the live counts/reservations `peekRecords`' caller derives its
- * own offset/count from); `createGalaxyEngine.ts` spreads in the
- * device/texture-bound readbacks (arm-ridge sample, ISM-map dust-CDF-scan
- * sample, the rendered-flux sums) that can't live inside the model.
+ * is structural rather than per-method comments. `createGalaxyFieldRenderer`
+ * owns `peekRecords`, the four placement readbacks, and the live
+ * counts/reservations `peekRecords`' caller derives its own offset/count
+ * from; `createGalaxyEngine.ts` spreads those straight off `field.probe` and
+ * adds the device/texture-bound readbacks (arm-ridge sample, ISM-map
+ * dust-CDF-scan sample, the rendered-flux sums, ring means) that can't live
+ * inside the field renderer.
  */
 
 import type { FieldSliceCounts } from '../../../../src/@types/galaxy/FieldSliceCounts';

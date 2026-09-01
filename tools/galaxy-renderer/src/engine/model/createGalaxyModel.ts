@@ -10,21 +10,16 @@
  */
 
 import type { DebugViewKind } from '../../../../../src/@types/galaxy/DebugViewKind';
-import type { DustHeaderLanes } from '../../../../../src/@types/galaxy/DustHeaderLanes';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
-import type { FieldSliceCounts } from '../../../../../src/@types/galaxy/FieldSliceCounts';
-import type { HiiSegment } from '../../../../../src/@types/galaxy/HiiSegment';
 import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import type { IsmMapSeedingLanes } from '../../../../../src/@types/galaxy/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../../../../../src/@types/galaxy/YoungStarsLanes';
-import type { GalaxyProbeApi } from '../../../@types/engine/GalaxyProbeApi';
 
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldMixtureResult } from '../../../../../src/@types/galaxy/GalaxyFieldMixtureResult';
 import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
@@ -50,7 +45,7 @@ import { createKeyedRebuild } from '../../../../../src/services/gpu/lib/createKe
 import { createGrowOnlyRecordBuffer } from '../../../../../src/services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
 import type { GrowOnlyRecordBuffer } from '../../../../../src/services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
-import { createOrientationDiagnostics } from '../ismMap/createOrientationDiagnostics';
+import { orientationCoherenceStats } from '../ismMap/orientationCoherenceStats';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import {
   BUBBLE_RECORD_FLOATS,
@@ -108,9 +103,6 @@ export type GalaxyModel = {
   noteOrientationRebuilt(grid: GalaxyIsmMapGridRadius): void;
 
   readonly starCount: number;
-  readonly fieldCounts: FieldSliceCounts;
-  /** The header reads these every frame; they change only when dust does. */
-  readonly dustHeaderLanes: DustHeaderLanes;
   /**
    * §5's shader-side young-stars stars-map read (`hiiSplat/youngFragment.wesl`'s
    * `g3.w` branch) — `contrastGamma` reads `fieldTuning.hii.youngStars.contrast`
@@ -119,8 +111,6 @@ export type GalaxyModel = {
    * (map identity, gamma) since gamma can move between readback landings.
    */
   readonly youngStars: YoungStarsLanes;
-  /** `hiiComps`' buffer-wide segmentation — the per-tier passes' own draw bounds AND the scene composite's gate. */
-  readonly hiiSegments: readonly HiiSegment[];
   readonly bubbleComps: GrowOnlyRecordBuffer;
   /** Null until the first SSPSF readback lands. */
   readonly ismMapData: GalaxyIsmMap | null;
@@ -131,23 +121,13 @@ export type GalaxyModel = {
    * on a rebuild.
    */
   readonly ismMapSeedingView: IsmMapSeedingLanes;
-  readonly armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'];
-  readonly spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'];
   /**
-   * Debug-only (member docs live on `GalaxyProbeApi.d.ts`). The four placement
-   * readbacks and `peekRecords` delegate to the field renderer, which owns
-   * their reservations and buffers; `requestRingMeansReadback` stays
-   * callback-style here because the engine wraps it in a `Promise` on the way
-   * out.
+   * Debug-only (member docs live on `GalaxyProbeApi.d.ts`). Callback-style
+   * because the engine wraps it in a `Promise` on the way out; the four
+   * placement readbacks and `peekRecords` are field-owned, so the host calls
+   * `field.probe` directly for those.
    */
-  readonly probe: Pick<
-    GalaxyProbeApi,
-    | 'peekRecords'
-    | 'requestDustPlacementReadback'
-    | 'requestArmSpurCloudPlacementReadback'
-    | 'requestArmCloudPlacementReadback'
-    | 'requestDigVeilPlacementReadback'
-  > & {
+  readonly probe: {
     requestRingMeansReadback(
       onLand: (means: Float32Array) => void,
       onError?: (err: unknown) => void,
@@ -236,8 +216,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     ismMapGenerator: field.ismMapGenerator,
     orientation: field.ismMapOrientation,
   });
-  const orientationDiagnostics = createOrientationDiagnostics();
-
   /** Every input the field renderer's rebuild is a function of, from this file's cached state plus the live render bag. */
   function mixtureInput(): GalaxyFieldMixtureInput {
     return {
@@ -291,16 +269,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     const invMeanNorm = shapedMean > 0 ? 1 / shapedMean : 1;
     youngStarsMeanCache = { map, gamma, invMeanNorm };
     return invMeanNorm;
-  }
-
-  /** Event-driven off the orientation readback landing, not a per-frame poll. */
-  function reportOrientationDiagnostics(): void {
-    deps.onOrientationDiagnostics?.(
-      orientationDiagnostics.report({
-        hasData: readbacks.orientationData !== null,
-        generation: readbacks.orientationGeneration,
-      }),
-    );
   }
 
   /**
@@ -504,19 +472,17 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       readbacks.requestOrientation(grid, ({ data }) => {
         // Folded in once here, at the one point a fresh grid exists — not per
         // frame or per dust build.
-        orientationDiagnostics.noteCoherence(data);
-        reportOrientationDiagnostics();
+        const stats = orientationCoherenceStats(data);
+        deps.onOrientationDiagnostics?.({
+          generation: readbacks.orientationGeneration,
+          meanCoherence: stats.mean,
+          maxCoherence: stats.max,
+        });
       });
     },
 
     get starCount(): number {
       return starCount;
-    },
-    get fieldCounts(): FieldSliceCounts {
-      return field.fieldCounts;
-    },
-    get dustHeaderLanes(): DustHeaderLanes {
-      return field.dustHeaderLanes;
     },
     get youngStars(): YoungStarsLanes {
       // `?? 1`: the stale-stored-tuning guard a preset saved before
@@ -524,9 +490,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       // field's own neutral default.
       const gamma = fieldTuning.hii.youngStars?.contrast ?? 1;
       return { contrastGamma: gamma, invMeanNorm: invMeanNormFor(readbacks.ismMapData, gamma) };
-    },
-    get hiiSegments(): readonly HiiSegment[] {
-      return field.hiiSegments;
     },
     bubbleComps,
     get ismMapData(): GalaxyIsmMap | null {
@@ -550,22 +513,10 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
       };
     },
 
-    get armCloudReservation(): GalaxyFieldMixtureResult['armCloudReservation'] {
-      return field.armCloudReservation;
-    },
-    get spurCloudReservation(): GalaxyFieldMixtureResult['spurCloudReservation'] {
-      return field.spurCloudReservation;
-    },
-
     probe: {
       requestRingMeansReadback(onLand, onError): void {
         readbacks.requestRingMeans(onLand, onError);
       },
-      peekRecords: field.probe.peekRecords,
-      requestDustPlacementReadback: field.probe.requestDustPlacementReadback,
-      requestArmSpurCloudPlacementReadback: field.probe.requestArmSpurCloudPlacementReadback,
-      requestArmCloudPlacementReadback: field.probe.requestArmCloudPlacementReadback,
-      requestDigVeilPlacementReadback: field.probe.requestDigVeilPlacementReadback,
     },
 
     starInstances(): InstanceDraw[] {

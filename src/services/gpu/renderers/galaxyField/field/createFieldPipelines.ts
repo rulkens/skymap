@@ -77,11 +77,11 @@ export type FieldPipelines = {
 
   /** Rebuilds only `dustMapBG` — the one builder that never touches `targets`, so it is also the INITIAL build, called once right after `model` exists and before `targets` does. */
   rebuildDustMapBindGroup(fieldCompsBuffer: GPUBuffer): void;
-  /** `model`'s `onFieldCompsRegrow` — always fires after `targets` exists (a regrow is a later `write`, never the first). Rebuilds `dustMapBG` AND `fieldSplatBG`. */
+  /** `fieldComps`' `onRegrow` — always fires after `targets` exists (a regrow is a later `write`, never the first). Rebuilds `dustMapBG` AND `fieldSplatBG`. */
   rebuildFieldCompsBindGroups(fieldCompsBuffer: GPUBuffer): void;
-  /** `model`'s `onHiiCompsRegrow` — rebuilds `hiiBG` and every `HII_TIERS` row's own bind group; they share `hiiCompsBuffer`/`dustMapTex`, so everywhere one needs rebuilding, all do. */
+  /** `hiiComps`' `onRegrow` — rebuilds `hiiBG` and every `HII_TIERS` row's own bind group; they share `hiiCompsBuffer`/`dustMapTex`, so everywhere one needs rebuilding, all do. */
   rebuildTierBindGroups(hiiCompsBuffer: GPUBuffer): void;
-  /** `targets`' dust-map-recreated callback — every group holding a view of the fresh `dustMapTex`, plus the stale-map latch (a fresh texture is zero-initialised, so the latch resets with it). */
+  /** `onDustMapReallocated` — every group holding a view of the fresh `dustMapTex`, plus the stale-map latch (a fresh texture is zero-initialised, so the latch resets with it). */
   rebuildDustMapDependents(fieldCompsBuffer: GPUBuffer, hiiCompsBuffer: GPUBuffer): void;
 };
 
