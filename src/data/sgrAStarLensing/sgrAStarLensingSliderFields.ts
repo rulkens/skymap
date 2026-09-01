@@ -80,7 +80,7 @@ export const SGR_A_STAR_LENSING_SLIDER_FIELDS: readonly SgrAStarLensingSliderFie
     max: 1,
     step: 0.01,
     format: (v) => v.toFixed(2),
-    title: "Escape branch's edge-fade start, as a fraction of the LUT's max impact parameter.",
+    title: "Escape branch's edge-fade start, as a fraction of the frame's derived edge-fade end.",
   },
   {
     key: 'dopplerStrength',

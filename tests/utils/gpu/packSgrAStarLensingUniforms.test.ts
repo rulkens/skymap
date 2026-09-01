@@ -50,6 +50,7 @@ const DISK_SCALE_HEIGHT_RS = 0.8125;
 const EDGE_FADE_START_FRACTION = 0.65625;
 const DOPPLER_STRENGTH = 0.46875;
 const EMISSION_STRENGTH = 0.90625;
+const EDGE_FADE_END_RS = 1875.5;
 const EMISSION_TINT: Vec3 = [801, 802, 803];
 
 describe('SgrAStarLensingUniforms byte offsets', () => {
@@ -74,6 +75,7 @@ describe('SgrAStarLensingUniforms byte offsets', () => {
       EDGE_FADE_START_FRACTION,
       DOPPLER_STRENGTH,
       EMISSION_STRENGTH,
+      EDGE_FADE_END_RS,
       EMISSION_TINT,
     );
 
@@ -119,8 +121,8 @@ describe('SgrAStarLensingUniforms byte offsets', () => {
     expect(rec[37]).toBe(DOPPLER_STRENGTH); // byte 148
     expect(rec[38]).toBe(EMISSION_STRENGTH); // byte 152
 
-    // Pad before emissionTint's 16-byte alignment — untouched, stays zero.
-    expect(rec[39]).toBe(0); // byte 156
+    // edgeFadeEndRs — per-frame derived escape-fade end (not a T15 knob).
+    expect(rec[39]).toBe(EDGE_FADE_END_RS); // byte 156
 
     // emissionTint — vec3 at byte 160 (float index 40).
     expect(rec[40]).toBe(EMISSION_TINT[0]); // byte 160

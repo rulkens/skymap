@@ -31,7 +31,9 @@
 //   offset 144 : edgeFadeStartFraction    f32  — T15 TEMP tuning knob, was the escape branch's hardcoded '* 0.7'
 //   offset 148 : dopplerStrength          f32  — T15 TEMP tuning knob, was fragment.wesl's DOPPLER_STRENGTH const
 //   offset 152 : emissionStrength         f32  — T15 TEMP tuning knob (2nd addendum), overall annulus-emission multiplier
-//   offset 156 : _pad4                    f32  — T15 TEMP, pads emissionStrength up to emissionTint's 16-byte alignment
+//   offset 156 : edgeFadeEndRs            f32  — escape fade's end impact parameter, r_s units (NOT a T15 knob:
+//                                                derived per frame by the layer — min(subpixel-deflection b, 0.6·camera
+//                                                distance), floored at lutMaxImpactParamRs; survives the T15 removal)
 //   offset 160 : emissionTint             vec3<f32>  — T15 TEMP tuning knob (2nd addendum), overall annulus-emission tint
 //   offset 172 : _pad5                    f32  — T15 TEMP, rounds the struct to 176 / 16-byte
 //   total: 176 bytes.
@@ -71,7 +73,7 @@ struct SgrAStarLensingUniforms {
   edgeFadeStartFraction: f32,
   dopplerStrength: f32,
   emissionStrength: f32,
-  _pad4: f32,
+  edgeFadeEndRs: f32,
   emissionTint: vec3<f32>,
   _pad5: f32,
 };

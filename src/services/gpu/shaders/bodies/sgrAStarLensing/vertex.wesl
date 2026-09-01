@@ -11,9 +11,10 @@ import package::lib::billboard::quadCorner;
 
 @group(0) @binding(0) var<uniform> u: SgrAStarLensingUniforms;
 
-// Half-size as a multiple of the LUT's max impact parameter — margin past
-// the fragment's matching edge fade so the two can't drift apart.
-const BILLBOARD_MARGIN: f32 = 1.5;
+// Slack on the exactly-computed fade-covering plane radius below — only
+// float rounding to absorb, so the fragment's fade always reaches 0 strictly
+// inside the quad.
+const BILLBOARD_MARGIN: f32 = 1.1;
 
 struct VsOut {
   @builtin(position) clip: vec4<f32>,
@@ -33,7 +34,18 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   let right = normalize(cross(worldUp, forward));
   let up = cross(forward, right);
 
-  let worldRadiusM = u.schwarzschildRadiusM * u.lutMaxImpactParamRs * BILLBOARD_MARGIN;
+  // Cover impact parameters out to the fragment's fade end: a fragment at
+  // plane radius R (anchor distance d) rides a ray with impact parameter
+  // b = R·d/sqrt(R^2 + d^2), so R = b·d/sqrt(d^2 - b^2). The layer caps
+  // 'edgeFadeEndRs' at 0.6·d (in r_s), bounding this stretch at 1.25 — but
+  // its lutMax floor can exceed d during a close descent, where the max()
+  // degenerates the sqrt and R blows up to an effectively fullscreen quad:
+  // exactly the right limit there (everything on screen is strongly lensed),
+  // clip does the bounding.
+  let dRs = anchorDistM / u.schwarzschildRadiusM;
+  let fadeEndRs = u.edgeFadeEndRs;
+  let planeRadiusRs = fadeEndRs * dRs / sqrt(max(dRs * dRs - fadeEndRs * fadeEndRs, 1e-6));
+  let worldRadiusM = u.schwarzschildRadiusM * planeRadiusRs * BILLBOARD_MARGIN;
   let corner = quadCorner(vi);
   let posRelCamM = toAnchor + right * (corner.x * worldRadiusM) + up * (corner.y * worldRadiusM);
 

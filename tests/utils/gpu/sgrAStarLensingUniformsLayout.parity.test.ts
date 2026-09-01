@@ -115,6 +115,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const edgeFadeStartFraction = 702;
     const dopplerStrength = 703;
     const emissionStrength = 704;
+    const edgeFadeEndRs = 705;
     const emissionTint: Vec3 = [801, 802, 803];
 
     const rec = packSgrAStarLensingUniforms(
@@ -137,6 +138,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       edgeFadeStartFraction,
       dopplerStrength,
       emissionStrength,
+      edgeFadeEndRs,
       emissionTint,
     );
 
@@ -158,8 +160,9 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       edgeFadeStartFraction,
       dopplerStrength,
       emissionStrength,
+      edgeFadeEndRs,
     };
-    const zeroPadFields = new Set(['_pad4', '_pad5']);
+    const zeroPadFields = new Set(['_pad5']);
 
     for (const field of layout) {
       if (field.lanes === 0) {

@@ -73,6 +73,21 @@ describe('buildSchwarzschildDeflectionLut', () => {
     expect(lut.samples[belowCriticalIndex]).toBe(Infinity);
   });
 
+  it('ends within a few percent above the analytic 2/b, so the shader 1/b tail is continuous', () => {
+    // The fragment extends the deflection beyond the LUT domain as
+    // endpoint · (bMax/b) — exactly continuous at the handoff by
+    // construction, and a valid ~1/b weak-field tail ONLY IF the endpoint
+    // itself sits just above the leading term 2/b (the next-order correction
+    // 15π/16 b² is +3.0% at b = 50). A drifted endpoint (bigger LUT domain,
+    // broken quadrature) would silently bend the tail; this pins the
+    // assumption the shader relies on.
+    const lut = buildSchwarzschildDeflectionLut(4096);
+    const endpoint = lut.samples[lut.samples.length - 1]!;
+    const leading = 2 / lut.maxImpactParamRs;
+    expect(endpoint).toBeGreaterThan(leading);
+    expect(endpoint).toBeLessThan(leading * 1.05);
+  });
+
   it('strictly decreases across the escaping (finite) branch as impact parameter grows', () => {
     // The sign/ordering check the two point-value tests above could miss:
     // a formula with e.g. a flipped sign would still hit isolated literals

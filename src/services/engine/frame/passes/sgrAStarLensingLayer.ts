@@ -103,6 +103,23 @@ export const sgrAStarLensingLayer: ContentLayer = {
     const tuning = state.settings.sgrAStarLensingTuning;
     const flickerPhase = (2 * Math.PI * (ctx.nowMs / 1000)) / tuning.flickerTimescaleS;
 
+    // Where the escape fade must reach zero: weak-field deflection is 2/b rad
+    // (b in r_s), so it drops below one screen pixel at b = 2·drawPxPerRad.
+    // Capped at 0.6× the camera's distance (in r_s) because a billboard's
+    // impact-parameter coverage can never exceed that distance — 0.6 bounds
+    // the vertex's plane-stretch factor at 1.25 (see vertex.wesl) — and
+    // floored at the LUT max so the fade never cuts into the LUT-resolved
+    // strong-field region during a close descent. Fading at the raw LUT edge
+    // instead blended a sky still deflected ~40 px into the true sky (see
+    // audit-cubemap-alignment.md §7).
+    const distRs =
+      Math.hypot(anchorPosRelCamM[0], anchorPosRelCamM[1], anchorPosRelCamM[2]) /
+      SCHWARZSCHILD_RADIUS_M;
+    const edgeFadeEndRs = Math.max(
+      renderer.lut.maxImpactParamRs,
+      Math.min(2 * ctx.drawPxPerRad, 0.6 * distRs),
+    );
+
     const uniforms = packSgrAStarLensingUniforms(
       view.vp,
       view.viewportPx,
@@ -123,6 +140,7 @@ export const sgrAStarLensingLayer: ContentLayer = {
       tuning.edgeFadeStartFraction,
       tuning.dopplerStrength,
       tuning.emissionStrength,
+      edgeFadeEndRs,
       tuning.emissionTint,
     );
 

@@ -28,6 +28,9 @@ struct FsIn {
 const CAPTURE_THRESHOLD_RAD: f32 = 500.0;
 
 const MARCH_STEPS: i32 = 48; // within the spec's 32-64-step bound
+// Impact-parameter margin past outerRs beyond which the annulus march is
+// skipped (see the gate in 'fs' for the exactness argument).
+const MARCH_GATE_MARGIN_RS: f32 = 4.0;
 // Split across the bent-ray march's two segments (Task 13c finding 3).
 const SEGMENT_STEPS: i32 = MARCH_STEPS / 2;
 const RADIAL_EDGE_FEATHER_RS: f32 = 0.3; // inner/outer annulus edge softening width
@@ -174,7 +177,14 @@ fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
   // comes out true and the march still runs — skipping it here only cut a
   // black bite out of the shadow centre where the disk's front crossing
   // should read (Task 13d audit finding 3).
-  let bendAngle = sampleLut(impactParamRs);
+  // Beyond the LUT domain the deflection continues as ~1/b (weak field:
+  // alpha = 2/b + O(1/b^2), r_s units). Scaling the clamped endpoint sample
+  // by lutMax/b extends it with EXACT continuity at the handoff — no reliance
+  // on the quadrature matching the asymptote — and only ~3% high in a tail
+  // that is already near-subpixel. tailScale = 1 inside the domain, so the
+  // capture sentinel (b <= b_c, far inside) is untouched.
+  let tailScale = min(u.lutMaxImpactParamRs / max(impactParamRs, 1e-6), 1.0);
+  let bendAngle = sampleLut(impactParamRs) * tailScale;
   let captured = bendAngle >= CAPTURE_THRESHOLD_RAD;
   // Bruneton: delta_prime = delta + deflection — the backward lookup must
   // rotate the ray TOWARD the hole to recover the source's asymptotic
@@ -192,16 +202,28 @@ fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
     color = textureSampleLevel(skyTex, skySampler, deflected, 0.0).rgb;
 
     // Soft edge fade to the billboard's rim so the earlier-drawn roster
-    // shows through once deflection is negligible (Blend.d.ts's 'over').
-    // 'u.edgeFadeStartFraction' was a hardcoded '0.7' — TEMPORARILY (Task 15)
-    // a DebugPanel knob, baked back into a shader const at the removal step.
-    let edgeFade = 1.0 - smoothstep(u.lutMaxImpactParamRs * u.edgeFadeStartFraction, u.lutMaxImpactParamRs, impactParamRs);
+    // shows through — keyed to 'u.edgeFadeEndRs' (where deflection is
+    // ~subpixel, layer-derived), NOT the LUT edge: fading at b = lutMax
+    // blended a sky still deflected by degrees (~40 px) into the true sky,
+    // a visible double image at the ring. 'u.edgeFadeStartFraction' was a
+    // hardcoded '0.7' — TEMPORARILY (Task 15) a DebugPanel knob, baked back
+    // into a shader const at the removal step.
+    let edgeFade = 1.0 - smoothstep(u.edgeFadeEndRs * u.edgeFadeStartFraction, u.edgeFadeEndRs, impactParamRs);
     alpha = u.bandAlpha * edgeFade;
   }
 
-  let annulus = annulusEmission(rayDir, toAnchor, closestT, deflected, captured, fragCoord.xy);
-  color += annulus.rgb;
-  alpha = max(alpha, u.bandAlpha * annulus.a);
+  // March only where it can contribute: every sample's radialWeight is
+  // exactly 0 once the ray's closest approach clears outerRs +
+  // RADIAL_EDGE_FEATHER_RS, and that approach is >= b·cos(bend) > outerRs +
+  // feather for all b > outerRs + 4 across the tuning range — so the skip is
+  // output-identical, and spares the 48-step march over the (much larger,
+  // now fade-extended) escape region. Captured rays (b <= b_c ~ 2.6) always
+  // pass this gate.
+  if (impactParamRs <= u.outerRs + MARCH_GATE_MARGIN_RS) {
+    let annulus = annulusEmission(rayDir, toAnchor, closestT, deflected, captured, fragCoord.xy);
+    color += annulus.rgb;
+    alpha = max(alpha, u.bandAlpha * annulus.a);
+  }
 
   return vec4<f32>(color * alpha, alpha); // premultiplied, per PREMULTIPLIED_OVER_BLEND
 }

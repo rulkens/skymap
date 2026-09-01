@@ -36,7 +36,7 @@
  *   f32 36      (byte 144..147): edgeFadeStartFraction — T15 TEMP tuning knob
  *   f32 37      (byte 148..151): dopplerStrength — T15 TEMP tuning knob
  *   f32 38      (byte 152..155): emissionStrength — T15 TEMP tuning knob (2nd addendum)
- *   f32 39      (byte 156..159): untouched (zero) — pads emissionTint to 16-byte alignment
+ *   f32 39      (byte 156..159): edgeFadeEndRs — per-frame derived (not a knob)
  *   f32 40..42  (byte 160..171): emissionTint — T15 TEMP tuning knob (2nd addendum), vec3<f32>
  *   f32 43      (byte 172..175): untouched (zero) — struct's 16-byte round-up
  *
@@ -69,6 +69,7 @@
  * @param edgeFadeStartFraction T15 TEMP — escape-branch edge-fade start, as a fraction of `lutMaxImpactParamRs`.
  * @param dopplerStrength      T15 TEMP — Doppler-beaming strength factor.
  * @param emissionStrength     T15 TEMP (2nd addendum) — overall multiplier on the annulus emission's output intensity.
+ * @param edgeFadeEndRs        Escape fade's end impact parameter, r_s units — derived per frame by the layer.
  * @param emissionTint         T15 TEMP (2nd addendum) — overall multiplier on the annulus emission's per-sample tint.
  */
 
@@ -79,7 +80,7 @@ import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../services/gpu/lib/
 
 /** f32 count of `SgrAStarLensingUniforms` — 80-byte cam prefix (20) + 12
  *  scalars + anchorPosRelCamM (3) + T15 TEMP tuning knobs (4 scalars +
- *  emissionTint's 3) + pad (2) = 44. */
+ *  emissionTint's 3) + edgeFadeEndRs + pad (1) = 44. */
 export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 24;
 
 export function packSgrAStarLensingUniforms(
@@ -102,6 +103,7 @@ export function packSgrAStarLensingUniforms(
   edgeFadeStartFraction: number,
   dopplerStrength: number,
   emissionStrength: number,
+  edgeFadeEndRs: number,
   emissionTint: Readonly<Vec3>,
 ): Float32Array {
   const out = new Float32Array(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
@@ -125,7 +127,7 @@ export function packSgrAStarLensingUniforms(
   out[36] = edgeFadeStartFraction; // byte 144 — T15 TEMP
   out[37] = dopplerStrength; // byte 148 — T15 TEMP
   out[38] = emissionStrength; // byte 152 — T15 TEMP (2nd addendum)
-  // out[39] (byte 156..159) stays zero — pads emissionTint to 16-byte alignment.
+  out[39] = edgeFadeEndRs; // byte 156 — per-frame derived (not a knob)
   out[40] = emissionTint[0]; // byte 160 — T15 TEMP (2nd addendum), vec3
   out[41] = emissionTint[1]; // byte 164
   out[42] = emissionTint[2]; // byte 168
