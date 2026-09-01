@@ -15,11 +15,23 @@ import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import type { TimeState } from '../../../src/@types/time/TimeState';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const EARTH_RADIUS_M = 6371000;
 const MOON_RADIUS_M = 1737000;
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+// Live mode's tolerance (`deriveSimDays` advances 1 sim-day per real-day)
+// reduces to the branch's original fixed constant, so every pre-existing
+// assertion below keeps its exact original threshold under this fixture.
+const LIVE_TIME: TimeState = {
+  mode: 'live',
+  anchor: { simDays: 0, realMs: 0 },
+  rateIndex: 0,
+  direction: 1,
+  paused: false,
+};
 
 const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
 const bodyId = (id: string): BodyId => id as BodyId;
@@ -52,6 +64,7 @@ describe('cameraDebugSnapshotOf', () => {
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(snap.armMismatch).toBe(false);
@@ -65,6 +78,7 @@ describe('cameraDebugSnapshotOf', () => {
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(snap.armMismatch).toBe(false);
@@ -78,6 +92,7 @@ describe('cameraDebugSnapshotOf', () => {
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(snap.armMismatch).toBe(true);
@@ -94,6 +109,7 @@ describe('cameraDebugSnapshotOf', () => {
       ]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(snap.armMismatch).toBe(true);
@@ -107,6 +123,7 @@ describe('cameraDebugSnapshotOf', () => {
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100 + 0.5 / 86_400,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(snap.epochMismatch).toBe(false);
@@ -120,6 +137,7 @@ describe('cameraDebugSnapshotOf', () => {
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100 + 10 / 86_400,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(snap.epochMismatch).toBe(true);
@@ -139,6 +157,7 @@ describe('cameraDebugSnapshotOf', () => {
       ]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(snap.engagedBodyId).toBe('earth');
@@ -157,6 +176,7 @@ describe('cameraDebugSnapshotOf', () => {
       ]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(snap.engagedBodyId).toBe('moon');
@@ -170,6 +190,7 @@ describe('cameraDebugSnapshotOf', () => {
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(withBody.anchorLocalKm).toEqual([1, 2, 3]);
@@ -182,9 +203,49 @@ describe('cameraDebugSnapshotOf', () => {
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
+      time: LIVE_TIME,
       activeDriverId: 'resting',
     });
     expect(absolute.anchorLocalKm).toBeNull();
     expect(absolute.eyeRelAnchorMagM).toBeNull();
+  });
+
+  it('scales the epoch-mismatch floor to the active time-ladder rate (I4)', () => {
+    // rateIndex 6 = '1 day/s' (86_400 simSecPerRealSec): a routine ~250 ms
+    // poll gap advances the sim by ~0.25 days, four orders over the OLD fixed
+    // real-time-tuned constant — this must still read healthy at this rate.
+    const fastTime: TimeState = {
+      mode: 'manual',
+      anchor: { simDays: 0, realMs: 0 },
+      rateIndex: 6,
+      direction: 1,
+      paused: false,
+    };
+
+    const healthy = cameraDebugSnapshotOf({
+      storedFrame: 'absolute',
+      renderedPose: absoluteFramed(),
+      eyeMpc: eyeAt(EARTH_RADIUS_M, 2.0),
+      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      lastRenderedSimDays: 100,
+      liveSimDays: 100.25,
+      time: fastTime,
+      activeDriverId: 'resting',
+    });
+    expect(healthy.epochMismatch).toBe(false);
+
+    // 10 sim-days at this rate is ~10 real-seconds of actual stall — still a
+    // genuine mismatch, not swallowed by the widened floor.
+    const stalled = cameraDebugSnapshotOf({
+      storedFrame: 'absolute',
+      renderedPose: absoluteFramed(),
+      eyeMpc: eyeAt(EARTH_RADIUS_M, 2.0),
+      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      lastRenderedSimDays: 100,
+      liveSimDays: 110,
+      time: fastTime,
+      activeDriverId: 'resting',
+    });
+    expect(stalled.epochMismatch).toBe(true);
   });
 });

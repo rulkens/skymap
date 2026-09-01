@@ -11,20 +11,11 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { SurfaceReadout } from '../../@types/camera/SurfaceReadout';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { cross3 } from '../math/cross3';
+import { headingTiltAt } from './headingTiltAt';
 import { raySphereRoots } from '../math/raySphereRoots';
 import { directionToLonLatDeg } from '../scene/directionToLonLatDeg';
 
 const ORIGIN: Vec3 = [0, 0, 0];
-const POLAR_AXIS: Vec3 = [0, 0, 1];
-
-// sin(0.08°) — the horizontal-projection magnitude below which forward's
-// azimuth is unstable (spec §14's nadir escape).
-const NADIR_ESCAPE_SIN = Math.sin((0.08 * Math.PI) / 180);
-
-function dot(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
 
 function normalize(v: Readonly<Vec3>): Vec3 {
   const len = Math.hypot(v[0], v[1], v[2]) || 1;
@@ -71,21 +62,7 @@ export function surfaceReadoutOf(pose: BodyFixedPose, bodyRadiusM: number): Surf
 
   const localUp = normalize(target);
   const standpoint = directionToLonLatDeg(localUp);
-
-  // East off the radial vector, not lon/atan2 — stays finite at the pole,
-  // where a lon-driven East would divide by the vanishing cos(lat).
-  const eastRaw = cross3(POLAR_AXIS, localUp);
-  const eastLen = Math.hypot(eastRaw[0], eastRaw[1], eastRaw[2]);
-  const east: Vec3 =
-    eastLen > 1e-9 ? [eastRaw[0] / eastLen, eastRaw[1] / eastLen, eastRaw[2] / eastLen] : [1, 0, 0];
-  const north = cross3(localUp, east);
-
-  const fwdVert = dot(forward, localUp);
-  const fwdHorizMag = Math.sqrt(Math.max(0, 1 - fwdVert * fwdVert));
-  const headingSource = fwdHorizMag < NADIR_ESCAPE_SIN ? up : forward;
-  const headingRad = Math.atan2(dot(headingSource, east), dot(headingSource, north));
-
-  const tiltRad = Math.acos(Math.max(-1, Math.min(1, -fwdVert)));
+  const { headingRad, tiltRad } = headingTiltAt(localUp, forward, up);
 
   return { standpoint, headingRad, tiltRad, rangeM, altitudeM };
 }

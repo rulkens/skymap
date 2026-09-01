@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 
 import { createSurfaceController } from '../../../src/services/camera/surfaceController';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
+import { anchoredZoomStep } from '../../../src/utils/camera/anchoredZoomStep';
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
 import { maxTiltRad } from '../../../src/utils/camera/maxTiltRad';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
@@ -264,18 +265,44 @@ describe('surfaceController', () => {
   });
 
   it('enforcement never moves the eye', () => {
-    const c = createSurfaceController();
-    const start = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(1.5));
-    const settled = apply(c, start, { kind: 'zoom', factor: 1, duringGesture: false });
+    // A real (non-degenerate) zoom, not `factor: 1` — the eye MUST move, and
+    // by exactly what `anchoredZoomStep` alone would put it at (the same
+    // screen-centre pick `zoomStep` runs, reconstructed independently here),
+    // so "bit-identical" is pinned by the property, not by the factor.
+    const start = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(3.0));
+    const factor = 0.6;
 
-    expect(settled.anchorLocalM).toEqual(start.anchorLocalM);
-    expect(settled.eyeRelAnchorM).toEqual(start.eyeRelAnchorM);
+    const centerPx: Vec2 = [VIEWPORT[0] / 2, VIEWPORT[1] / 2];
+    const centerRay = cursorRayBodyLocal(start, centerPx, VIEWPORT, FOV);
+    const roots = raySphereRoots(centerRay.originM, centerRay.dir, [0, 0, 0], R);
+    const anchorM: Vec3 | null =
+      roots !== null && roots[0] > 0
+        ? [
+            centerRay.originM[0] + centerRay.dir[0] * roots[0],
+            centerRay.originM[1] + centerRay.dir[1] * roots[0],
+            centerRay.originM[2] + centerRay.dir[2] * roots[0],
+          ]
+        : null;
+    const unenforced = anchoredZoomStep(start, factor, anchorM, R);
+
+    const c = createSurfaceController();
+    const settled = apply(c, start, { kind: 'zoom', factor, duringGesture: false });
+
+    expect(settled.anchorLocalM).toEqual(unenforced.anchorLocalM);
+    expect(settled.eyeRelAnchorM).toEqual(unenforced.eyeRelAnchorM);
+    // Orientation DID get clamped — 3.0 rad of held tilt exceeds the ceiling
+    // at the post-zoom altitude too — so the eye match above is the
+    // ceiling's doing, not a no-op write.
+    expect(settled.basisLocal).not.toEqual(start.basisLocal);
   });
 
-  it('a pose entering the arm above the ceiling is not clamped (spec §12-R3)', () => {
-    // No `onGestureStart`: this is a pose that has just landed in the arm
-    // (a flyby, a tour keyframe), not a driven write, so it must sit above
-    // the ceiling untouched until the user's own gesture moves it.
+  it('an ungestured drag never triggers enforcement (spec §12-R3)', () => {
+    // No `onGestureStart`: this models a pose that has just landed in the
+    // arm (a flyby, a tour keyframe) with no driven write yet — real arm
+    // ENTRY is decided in `regimeArmFor`/the fold, which this test cannot
+    // observe; it only pins that the controller's own `live === null`
+    // pass-through, the one path an entering pose could reach this file
+    // through, does not smuggle enforcement in.
     const c = createSurfaceController();
     const entered = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(Math.PI / 2));
     const untouched = apply(c, entered, drag('orbit', [50, 50], [60, 50]));

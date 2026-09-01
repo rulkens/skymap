@@ -1,16 +1,14 @@
 /**
- * surfaceController — the body arm's gesture register (spec §6). All of it runs
- * in body-fixed metres and reads no world position, which is what makes a fast
- * clock unable to slide the ground under a gesture.
+ * surfaceController — the body arm's gesture register (spec §6). All of it
+ * runs in body-fixed metres and reads no world position, so a fast clock
+ * cannot slide the ground under a gesture.
  *
- * What the cursor is over picks the control model; altitude is only a tiebreak
- * (C §5.1), and the choice is latched at gesture start and sticky for the
- * gesture (C §6.1) — re-deciding mid-drag oscillates between pan and trackball
- * at the limb. Every mode moves the pose so the grabbed content follows the
- * cursor; that rule fixes each sign below. Altitude changes only through zoom,
- * and zoom re-levels through the tilt ceiling, so every drivable path lands at
- * tilt 0 by disengage — why the ceiling's zero sits exactly at
- * `SURFACE_REGIME.disengageHR` (spec §12-R3).
+ * What the cursor is over picks the control model; altitude is only a
+ * tiebreak (C §5.1) — every mode moves the pose so the grabbed content
+ * follows the cursor, which fixes each sign below. Altitude changes only
+ * through zoom, and zoom re-levels through the tilt ceiling, so every
+ * drivable path lands at tilt 0 by disengage — why the ceiling's zero sits
+ * exactly at `SURFACE_REGIME.disengageHR` (spec §12-R3).
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -24,10 +22,10 @@ import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from '../../utils/camera/anchoredDragRotation';
 import { anchoredZoomStep } from '../../utils/camera/anchoredZoomStep';
 import { cursorRayBodyLocal } from '../../utils/camera/cursorRayBodyLocal';
+import { headingTiltAt } from '../../utils/camera/headingTiltAt';
 import { maxTiltRad } from '../../utils/camera/maxTiltRad';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
 import { surfaceFloorM } from '../../utils/camera/surfaceFloorM';
-import { cross3 } from '../../utils/math/cross3';
 import { mat3FromColumns } from '../../utils/math/mat3FromColumns';
 import { multiplyQuat } from '../../utils/math/multiplyQuat';
 import { normalize3 } from '../../utils/math/normalize3';
@@ -36,10 +34,6 @@ import { raySphereRoots } from '../../utils/math/raySphereRoots';
 import { rotateVec3ByQuat } from '../../utils/math/rotateVec3ByQuat';
 
 const BODY_CENTRE: Vec3 = [0, 0, 0];
-const POLAR_AXIS: Vec3 = [0, 0, 1];
-// sin(0.08°) — the horizontal-projection magnitude below which forward's
-// azimuth is unstable (mirrors surfaceReadoutOf's own nadir-escape guard).
-const NADIR_ESCAPE_SIN = Math.sin((0.08 * Math.PI) / 180);
 
 type Ray = { readonly originM: Vec3; readonly dir: Vec3 };
 type DragStep = Extract<InputStep, { kind: 'drag' }>;
@@ -95,9 +89,14 @@ function flooredPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
  * The tilt ceiling (spec §6, §12-R3), enforced after every driven write —
  * never at arm entry, so a pose that arrives above the ceiling (a flyby, a
  * tour keyframe) is left alone until the user's own next gesture. Derives
- * its OWN eye-anchored ENU (never `surfaceReadoutOf`'s screen-centre one,
- * which snaps discontinuously when the forward ray misses the sphere) and
- * is a no-op below the ceiling, so it never disturbs a drag mode's own roll.
+ * its OWN eye-anchored ENU via `headingTiltAt` (never `surfaceReadoutOf`'s
+ * screen-centre one, which snaps discontinuously when the forward ray misses
+ * the sphere), and is a no-op below the ceiling, so it never disturbs a drag
+ * mode's own roll — EXCEPT on the tick that first crosses it: the rebuild
+ * below is a 2-parameter `(heading, tilt)` reconstruction with no roll term,
+ * so whatever roll that write carried snaps to 0 in that one tick (measured
+ * 45°→0 on a single wheel notch). Flagged for the Task 22 feel gate — the
+ * spec's rebuild has nowhere to put the roll, so this isn't fixed here.
  */
 function ceilingEnforcedPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
   const eyeM = eyeOf(pose);
@@ -107,24 +106,11 @@ function ceilingEnforcedPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixe
 
   const b = pose.basisLocal;
   const forward: Vec3 = [b[6], b[7], b[8]];
-  const fwdVert = dot3(forward, localUp);
-  const tiltRad = Math.acos(Math.max(-1, Math.min(1, -fwdVert)));
+  const up: Vec3 = [b[3], b[4], b[5]];
+  const { headingRad, tiltRad, east, north } = headingTiltAt(localUp, forward, up);
+
   const ceilingRad = maxTiltRad(eyeMagM / bodyRadiusM - 1);
   if (tiltRad <= ceilingRad) return pose;
-
-  const eastRaw = cross3(POLAR_AXIS, localUp);
-  const eastLen = Math.hypot(...eastRaw);
-  const east: Vec3 =
-    eastLen > 1e-9 ? [eastRaw[0] / eastLen, eastRaw[1] / eastLen, eastRaw[2] / eastLen] : [1, 0, 0];
-  const north = cross3(localUp, east);
-
-  // Reads heading off `up` rather than `forward` near nadir, for the same
-  // reason `surfaceReadoutOf` does: at tilt ≈ 0 forward's horizontal
-  // component vanishes and only `up` still carries the azimuth.
-  const up: Vec3 = [b[3], b[4], b[5]];
-  const fwdHorizMag = Math.sqrt(Math.max(0, 1 - fwdVert * fwdVert));
-  const headingSource = fwdHorizMag < NADIR_ESCAPE_SIN ? up : forward;
-  const headingRad = Math.atan2(dot3(headingSource, east), dot3(headingSource, north));
 
   const ch = Math.cos(headingRad);
   const sh = Math.sin(headingRad);

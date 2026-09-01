@@ -962,6 +962,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // what the epoch-mismatch check is comparing the render loop against.
       cameraDebug: () => {
         const rootState = store.getState();
+        const time = selectTimeState(rootState);
         const bodyStates = deriveBodyStates(
           state.cameraRuntime.lastRenderedSimDays.current,
         ) as ReadonlyMap<BodyId, BodyState>;
@@ -971,7 +972,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           eyeMpc: eyeMpcOf(liveWorldPose(state), ORIENTATION_FRAMES[state.settings.orientation]),
           bodyStates,
           lastRenderedSimDays: state.cameraRuntime.lastRenderedSimDays.current,
-          liveSimDays: deriveSimDays(selectTimeState(rootState), performance.now()),
+          liveSimDays: deriveSimDays(time, performance.now()),
+          time,
           activeDriverId: state.cameraRuntime.prevActiveId.current,
         });
       },

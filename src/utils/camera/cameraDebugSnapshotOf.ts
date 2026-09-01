@@ -5,12 +5,13 @@
  * cross-checks the camera-pivot branch needs watched: stored vs. rendered
  * arm, and rendered vs. live epoch.
  *
- * `EPOCH_DELTA_EPS_DAYS` bounds the gap a HEALTHY live-ticking scene shows
- * between "what the last frame drew" and "what the clock reads right now":
- * the idle heartbeat (`LIVE_IDLE_TICK_MS`, 500 ms) plus this readout's own
- * poll jitter. A stalled loop (dropped `requestRender`, a stuck driver)
- * separates the two by seconds, not milliseconds — two orders of magnitude
- * above the floor, so the threshold doesn't need tuning to the heartbeat.
+ * The epoch-mismatch floor is `liveSimDays`'s own currency (sim-days), so it
+ * has to scale with the CURRENT time-ladder rate rather than a fixed
+ * constant: at "1 day/s" a routine 250 ms poll gap alone advances the sim by
+ * ~0.25 days, four orders above a real-time-tuned threshold (I4). `deriveSimDays`
+ * is affine in `nowMs` for a fixed `time`, so its slope — two wall-clock
+ * seconds of healthy poll/heartbeat jitter, in the active rate's units — is
+ * the same at any sampled instant.
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';
@@ -18,11 +19,13 @@ import type { BodyState } from '../../@types/scene/BodyState';
 import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
+import type { TimeState } from '../../@types/time/TimeState';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { hOverR } from '../../services/engine/camera/regimeArmFor';
+import { deriveSimDays } from '../time/deriveSimDays';
 
-const EPOCH_DELTA_EPS_DAYS = 2 / 86_400;
+const EPOCH_DELTA_TOLERANCE_MS = 2_000;
 
 function sameFrame(a: PoseFrame, b: PoseFrame): boolean {
   if (a === 'absolute' || b === 'absolute') return a === b;
@@ -36,6 +39,7 @@ export function cameraDebugSnapshotOf(input: {
   readonly bodyStates: ReadonlyMap<BodyId, BodyState>;
   readonly lastRenderedSimDays: number;
   readonly liveSimDays: number;
+  readonly time: TimeState;
   readonly activeDriverId: string;
 }): CameraDebugSnapshot {
   const {
@@ -45,6 +49,7 @@ export function cameraDebugSnapshotOf(input: {
     bodyStates,
     lastRenderedSimDays,
     liveSimDays,
+    time,
     activeDriverId,
   } = input;
   const renderedFrame = renderedPose.frame;
@@ -88,6 +93,9 @@ export function cameraDebugSnapshotOf(input: {
   const eyeRelAnchorMagM = engagedPose !== null ? Math.hypot(...engagedPose.eyeRelAnchorM) : null;
 
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;
+  const epochDeltaEpsDays = Math.abs(
+    deriveSimDays(time, EPOCH_DELTA_TOLERANCE_MS) - deriveSimDays(time, 0),
+  );
 
   return {
     storedFrame,
@@ -99,7 +107,7 @@ export function cameraDebugSnapshotOf(input: {
     lastRenderedSimDays,
     liveSimDays,
     epochDeltaDays,
-    epochMismatch: Math.abs(epochDeltaDays) > EPOCH_DELTA_EPS_DAYS,
+    epochMismatch: Math.abs(epochDeltaDays) > epochDeltaEpsDays,
     anchorLocalKm,
     eyeRelAnchorMagM,
     activeDriverId,
