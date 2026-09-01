@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
@@ -245,5 +246,36 @@ describe('visibleSlabBodies', () => {
     });
 
     expect(visible.map((body) => body.id)).toEqual(['visible-anchor']);
+  });
+
+  it("keeps Sgr A* for its lens band's whole support, even sub-pixel and off-axis", () => {
+    // The lens pass's slab must be born where its fade band OPENS (alpha = 0,
+    // 500 AU), not where the hole's own r_s-scale disc clears the 1-px floor
+    // (~346 AU on a dpr-2 1080p-class viewport — bandAlpha already ~0.4
+    // there: the pop this pins, audit-cubemap-alignment.md §8). Placed
+    // sub-pixel AND behind the camera: both culls must be bypassed inside
+    // the band, since the lensed footprint isn't the disc.
+    const sgrAStar = SGR_A_STAR;
+    const insideBandMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
+    const outsideBandMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
+
+    for (const [distanceMpc, expected] of [
+      [insideBandMpc, [SGR_A_STAR.id]],
+      [outsideBandMpc, []],
+    ] as const) {
+      const bodyStates = new Map<string, BodyState>([
+        [SGR_A_STAR.id, makeState(offAxisPositionMpc(180, distanceMpc))],
+      ]);
+      const visible = visibleSlabBodies({
+        bodies: [sgrAStar],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        viewportWidthPx: 1000,
+        viewportHeightPx: 1000,
+        fovYRad: Math.PI / 2,
+      });
+      expect(visible.map((body) => body.id)).toEqual(expected);
+    }
   });
 });
