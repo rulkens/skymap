@@ -9,7 +9,6 @@
  * below notices a rebuild landed, to reset per-scene bookkeeping.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
-import type { McpmHarness } from '../../../@types/McpmHarness';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import { resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
@@ -20,7 +19,7 @@ import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpat
 import { createRenderResources, disposeScene } from '../../render/renderResources';
 import { volpathKeyFor } from '../../render/volpathKeyFor';
 import { gridShapeKeyFor } from '../../state/gridShapeKeyFor';
-import { recordHistogramSample, resetHistogram } from '../../state/slices/histogramSlice';
+import { resetHistogram } from '../../state/slices/histogramSlice';
 import { incrementStep } from '../../state/slices/simSlice';
 import { setFps, setPreviewPacked } from '../../state/slices/viewSlice';
 import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
@@ -31,7 +30,6 @@ import { canvasStyle } from './utils/canvasStyle';
 import { CONTRAST } from './utils/CONTRAST';
 import { EXPOSURE } from './utils/EXPOSURE';
 import { FPS_PUSH_INTERVAL_MS } from './utils/FPS_PUSH_INTERVAL_MS';
-import { HISTOGRAM_INTERVAL_STEPS } from './utils/HISTOGRAM_INTERVAL_STEPS';
 import { traceViewFor } from './utils/traceViewFor';
 
 /**
@@ -104,10 +102,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     // Cadence throttle's own frame counter — only meaningful while sim.running; not
     // reset on rebuild, since "every Nth frame" doesn't care where N last landed.
     let simFrameCounter = 0;
-    // Guards against overlapping readbacks: a mapAsync round trip can outlive the next
-    // throttle boundary on a slow device, and stacking calls would only queue more of
-    // the same expensive wait.
-    let histogramInFlight = false;
     // The epoch this component last reacted to — `watchSceneSaga` bumps `resources.epoch`
     // on every dispose (including a no-op one), so a mismatch here means a rebuild landed
     // (or tore down) since the last time the subscriber checked.
@@ -118,27 +112,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     if (hasUrlGate('probe')) {
       (window as unknown as ProbeWindow).__mcpmProbeMeanLogTraceAtPoints = () =>
         store.getState().histogram.meanLogTraceAtPoints;
-    }
-
-    /**
-     * T20: throttled histogram readback (HISTOGRAM_INTERVAL_STEPS above) — reads back
-     * whatever `step()`'s last dispatch left in the histogram counts + densities
-     * buffers and derives `meanLogTraceAtPoints` from it. `resources.harness !== h`
-     * guards the same rebuild race `watchPreviewPackedSaga`'s own readback does:
-     * a catalog switch can land mid-await.
-     */
-    async function runHistogram(h: McpmHarness, stepCount: number): Promise<void> {
-      if (histogramInFlight) return;
-      histogramInFlight = true;
-      try {
-        const { counts, sampledCount, densities } = await h.readHistogram();
-        if (disposed || resources.harness !== h) return;
-        store.dispatch(recordHistogramSample({ counts, sampledCount, densities, stepCount }));
-      } catch (err) {
-        console.error('mcpm-workbench: histogram readback failed', err);
-      } finally {
-        histogramInFlight = false;
-      }
     }
 
     const frame = (): void => {
@@ -166,9 +139,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         const cadenceDivisor = effectiveVolpathDivisor(1, now - lastInteractionMs);
         if (simFrameCounter % cadenceDivisor === 0) {
           h.step(s.sim.params, s.histogram.sampleRandomly);
-          const nextStepCount = s.sim.stepCount + 1;
           store.dispatch(incrementStep());
-          if (nextStepCount % HISTOGRAM_INTERVAL_STEPS === 0) void runHistogram(h, nextStepCount);
         }
       }
 

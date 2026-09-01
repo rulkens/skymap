@@ -2,7 +2,7 @@
  * HistogramPlot — the live convergence readout (task T20): the fork's 17-bin
  * density histogram as bars, plus `meanLogTraceAtPoints`'s time series as a
  * line beneath it. A small canvas, redrawn only when `histogram` changes —
- * Viewport already throttles how often that is (HISTOGRAM_INTERVAL_STEPS).
+ * watchHistogramSaga already throttles how often that is (HISTOGRAM_INTERVAL_STEPS).
  *
  * Bin 16 (constants.wesl's `N_HISTOGRAM_BINS - 1`) is not a count — it's the
  * running `atomicMax(1e5 * density)` marker — so only bins 0..15 draw as
