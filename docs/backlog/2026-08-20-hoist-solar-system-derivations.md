@@ -64,8 +64,10 @@ implementation as the template. Shape:
 ## Partial progress
 
 The [inside-atmosphere-rendering spec](../superpowers/specs/2026-08-24-inside-atmosphere-rendering-design.md)
-(§5a) hoists a fifth, closely-related pair on its own branch:
-`atmosphereShellLayer.draw` and `encodeAtmosphereSkyView` each independently
-recompute `camPosLocal`/`sunDirLocal` per body per frame from the same five
-inputs. That pair is handled there, not here. The four derivations listed
-above are untouched by that work and this item stays open for them.
+(§5a) hoisted a fifth, closely-related pair onto `AtmosphereDrawEntry`
+(551f62357) — but #634's body-slab restructure superseded that hoist with its
+own pose seam: at HEAD, `atmosphereShellLayer.ts` and
+`encodeAtmosphereSkyView.ts` each derive `camLocal`/`sunDirLocal`
+independently from `ctx.bodyPose` via the `bodySlabCamLocal`/`sunDirLocal`
+utils, not from a shared `AtmosphereDrawEntry` field. The atmosphere pair is
+STILL OPEN scope for this item, alongside the four derivations listed above.

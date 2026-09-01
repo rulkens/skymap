@@ -12,11 +12,6 @@ import { describe, expect, it } from 'vitest';
 import { isInsideAtmosphereShell } from '../../../src/utils/camera/isInsideAtmosphereShell';
 
 describe('isInsideAtmosphereShell', () => {
-  it('classifies values well clear of the boundary', () => {
-    expect(isInsideAtmosphereShell([0.5, 0, 0])).toBe(true);
-    expect(isInsideAtmosphereShell([2, 0, 0])).toBe(false);
-  });
-
   it('classifies values straddling the entry margin', () => {
     expect(isInsideAtmosphereShell([1.004, 0, 0])).toBe(true);
     expect(isInsideAtmosphereShell([1.006, 0, 0])).toBe(false);

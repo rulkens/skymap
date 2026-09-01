@@ -67,7 +67,7 @@ fn vs(@location(0) position: vec3<f32>) -> VsOut {
   return out;
 }
 
-// Inside-shell path (Task 6's froxel-adjacent full-screen pass): no proxy
+// The inside-shell full-screen pass: no proxy
 // mesh, no vertex buffer -- just the covering triangle. The fragment
 // reconstructs the view ray by unprojecting through 'u.invMvp' instead of
 // reading an interpolated local position.

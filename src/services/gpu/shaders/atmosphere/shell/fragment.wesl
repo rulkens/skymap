@@ -286,10 +286,16 @@ fn sampleShell(in: FsIn) -> ShellSample {
   // test past the limb.
   if (in.frontFacing && !out.intersectsGround) {
     out.hit = false;
+    out.transmit = vec3<f32>(1.0);
+    out.emission = vec3<f32>(0.0);
+    out.coverage = 0.0;
     return out;
   }
   if (!in.frontFacing && out.intersectsGround) {
     out.hit = false;
+    out.transmit = vec3<f32>(1.0);
+    out.emission = vec3<f32>(0.0);
+    out.coverage = 0.0;
     return out;
   }
   return out;
@@ -320,7 +326,7 @@ fn fsAdd(in: FsIn) -> @location(0) vec4<f32> {
   return vec4<f32>(s.emission, s.coverage);
 }
 
-// ── Inside-shell path (full-screen pass, Task 6 wires the pipeline) ────────
+// ── Inside-shell path (full-screen pass) ────────────────────────────────
 //
 // Camera inside the atmosphere shell: there is no proxy mesh to interpolate a
 // local position from, so the view ray is reconstructed by unprojecting the

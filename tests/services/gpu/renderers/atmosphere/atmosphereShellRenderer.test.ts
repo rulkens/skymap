@@ -126,7 +126,7 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
       drawIndexed: vi.fn(() => order.push('draw')),
     } as unknown as GPURenderPassEncoder;
 
-    renderer.draw(pass, 'earth', new Float32Array(28), false);
+    renderer.draw(pass, 'earth', new Float32Array(ATMOSPHERE_UNIFORM_FLOATS), false);
 
     expect(order).toEqual(['multiply', 'draw', 'add', 'draw']);
   });

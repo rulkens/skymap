@@ -236,6 +236,11 @@ feature's own design in §4.
 
 ### 5a. Hoist the atmosphere pair of per-body derivations
 
+[This hoist shipped, then was superseded by #634's body-slab restructure: both
+consumers now derive `camLocal`/`sunDirLocal` from the same `ctx.bodyPose`
+seam instead of a shared `AtmosphereDrawEntry` field, preserving this
+section's real goal — bake↔draw can't drift.]
+
 `atmosphereShellLayer.draw` and `encodeAtmosphereSkyView` each independently
 recompute `camPosLocal`/`sunDirLocal` per body, per frame
 (`atmosphereShellLayer.ts:96–113`, `encodeAtmosphereSkyView.ts:90–96`) — two

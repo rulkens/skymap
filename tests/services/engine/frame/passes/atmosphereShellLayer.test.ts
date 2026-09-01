@@ -253,8 +253,9 @@ describe('invMvp inversion sanity (mat4d.inverse dst-last / f64 contract)', () =
     const mvp = mat4d.multiply(mat4d.translation([5, 0, 0]), mat4d.scaling([2, 2, 2]));
 
     // Its inverse undoes that in the opposite order: local = 0.5*(world - (5,0,0)),
-    // i.e. S(0.5) * T(-5,0,0) — NOT computed via mat4d.inverse, so this isn't a
-    // mirror test of the function under test.
+    // i.e. S(0.5) * T(-5,0,0). The expected values below are this hand-derived
+    // formula, not mat4d.inverse's own output, so the assertion doesn't mirror
+    // the function under test.
     const invMvp = mat4d.inverse(mvp);
     const invMvpF32 = narrowMat4(invMvp);
 

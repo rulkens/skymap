@@ -17,8 +17,14 @@
  * LUT (baked by the `atmosphereSkyView` compute step, in the compute prelude)
  * to compose the in-scattered radiance: a blue limb over the day side, a
  * reddened arc along the terminator/sunset, and haze greying the disc with
- * distance. Per-pixel scene-depth-aware aerial perspective (arbitrary occluder
- * depth, in-atmosphere descent) is the deferred froxel upgrade.
+ * distance. Per-pixel scene-depth-aware aerial perspective on down-view/
+ * ground rays (haze between the camera and terrain while inside the shell) is
+ * the deferred froxel upgrade, tracked as its own backlog item.
+ *
+ * Below `hypot(camPosLocal) < 1.005` the layer switches to a full-screen
+ * covering-triangle pipeline pair instead — no wall split, `depthCompare:
+ * 'always'`, the ray reconstructed per-fragment from `invMvp` via a
+ * homogeneous unproject (see `shell/fragment.wesl`'s `insideRayDir`).
  *
  * ### Why it draws LAST, OVER not opaque (spec §8.3)
  *

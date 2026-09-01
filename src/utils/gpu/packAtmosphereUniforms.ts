@@ -70,8 +70,8 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
-/** f32 count of `AtmosphereUniforms` — 16 mvp + 4 (sun+bottom) + 4 (cam+irr) +
- *  exposure + 2 ring ratios + 1 pad + 16 invMvp. */
+/** f32 count of `AtmosphereUniforms` — mvp 16 + invMvp 16 + sun/bottom 4 +
+ *  cam/pad 4 + exposure/rings/pad 4 = 44. */
 export const ATMOSPHERE_UNIFORM_FLOATS = 44;
 
 export function packAtmosphereUniforms(
