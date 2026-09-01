@@ -163,34 +163,37 @@ fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
   var color = vec3<f32>(0.0);
   var alpha = 0.0;
 
-  if (impactParamRs < u.lutMinImpactParamRs) {
-    alpha = u.bandAlpha; // below the LUT's own domain — deep in the capture region
+  // No 'b < lutMinImpactParamRs' early-out: sampleLut's saturate already
+  // clamps that domain to the sentinel texel, so 'captured' below still
+  // comes out true and the march still runs — skipping it here only cut a
+  // black bite out of the shadow centre where the disk's front crossing
+  // should read (Task 13d audit finding 3).
+  let bendAngle = sampleLut(impactParamRs);
+  let captured = bendAngle >= CAPTURE_THRESHOLD_RAD;
+  // Bruneton: delta_prime = delta + deflection — the backward lookup must
+  // rotate the ray TOWARD the hole to recover the source's asymptotic
+  // direction. The apparent image is displaced outward, so undoing that
+  // displacement moves inward; '-bendAngle' bent the wrong way, which is
+  // why the disk's far side never rendered (Task 13d audit finding 1).
+  // Reused below as the annulus march's segment-2 bend (finding 3) — one
+  // basis for both consumers.
+  let axis = normalize(cross(rayDir, toAnchor));
+  let deflected = normalize(rotateAroundAxis(rayDir, axis, bendAngle));
+
+  if (captured) {
+    alpha = u.bandAlpha;
   } else {
-    let bendAngle = sampleLut(impactParamRs);
-    let captured = bendAngle >= CAPTURE_THRESHOLD_RAD;
-    // Lensing displaces the apparent background AWAY from the lens centre:
-    // rotate the ray away from the hole by the LUT's bend angle to recover
-    // the source's asymptotic direction (sign/axis unverified visually,
-    // Task 17 gate). Reused below as the annulus march's segment-2 bend
-    // (finding 3) — one basis for both consumers.
-    let axis = normalize(cross(rayDir, toAnchor));
-    let deflected = normalize(rotateAroundAxis(rayDir, axis, -bendAngle));
+    color = textureSampleLevel(skyTex, skySampler, deflected, 0.0).rgb;
 
-    if (captured) {
-      alpha = u.bandAlpha;
-    } else {
-      color = textureSampleLevel(skyTex, skySampler, deflected, 0.0).rgb;
-
-      // Soft edge fade to the billboard's rim so the earlier-drawn roster
-      // shows through once deflection is negligible (Blend.d.ts's 'over').
-      let edgeFade = 1.0 - smoothstep(u.lutMaxImpactParamRs * 0.7, u.lutMaxImpactParamRs, impactParamRs);
-      alpha = u.bandAlpha * edgeFade;
-    }
-
-    let annulus = annulusEmission(rayDir, toAnchor, closestT, deflected, captured, fragCoord.xy);
-    color += annulus.rgb;
-    alpha = max(alpha, u.bandAlpha * annulus.a);
+    // Soft edge fade to the billboard's rim so the earlier-drawn roster
+    // shows through once deflection is negligible (Blend.d.ts's 'over').
+    let edgeFade = 1.0 - smoothstep(u.lutMaxImpactParamRs * 0.7, u.lutMaxImpactParamRs, impactParamRs);
+    alpha = u.bandAlpha * edgeFade;
   }
+
+  let annulus = annulusEmission(rayDir, toAnchor, closestT, deflected, captured, fragCoord.xy);
+  color += annulus.rgb;
+  alpha = max(alpha, u.bandAlpha * annulus.a);
 
   return vec4<f32>(color * alpha, alpha); // premultiplied, per PREMULTIPLIED_OVER_BLEND
 }
