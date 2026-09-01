@@ -314,12 +314,14 @@ export function createGalaxyFieldRenderer(
   const { makeShader, hdrFormat, dustMapFormat } = deps;
 
   // ---- ownership ledger ----
-  // Every allocation this module makes registers at its own site; `dispose`
-  // walks it in reverse. Resources that own their own teardown (the ISM
-  // chain, the two record buffers) delegate instead and are deliberately
-  // absent, which is also why nothing registered here is ever reassigned.
-  const owned: { destroy(): void }[] = [];
-  const own = <T extends { destroy(): void }>(resource: T): T => {
+  // Every GPU-destroyable resource this module allocates registers here at
+  // its own site — `dispose` is the single reverse walk, calling whichever
+  // teardown method the entry has. Sub-factories spell it `dispose()`
+  // (the ISM chain, the two record buffers); raw buffers/textures spell it
+  // `destroy()`. Pipelines, bind groups and shader modules have neither in
+  // WebGPU and so are never registered — nothing here is ever reassigned.
+  const owned: ({ destroy(): void } | { dispose(): void })[] = [];
+  const own = <T extends { destroy(): void } | { dispose(): void }>(resource: T): T => {
     owned.push(resource);
     return resource;
   };
@@ -409,47 +411,57 @@ export function createGalaxyFieldRenderer(
   // ---- ISM-map generator + its orientation chain ----
   // Each owns every resource it touches, including its readback staging
   // buffers; this module keeps only the handles and the gates.
-  const ismMapGenerator = createIsmMapGenerator(device, {
-    makeShader,
-    hdrFormat,
-    fieldUbo,
-  });
-  const ismMapOrientation = createIsmMapOrientation(device, {
-    makeShader,
-    hdrFormat,
-    fieldUbo,
-    sourceTexture: ismMapGenerator.texture,
-  });
+  const ismMapGenerator = own(
+    createIsmMapGenerator(device, {
+      makeShader,
+      hdrFormat,
+      fieldUbo,
+    }),
+  );
+  const ismMapOrientation = own(
+    createIsmMapOrientation(device, {
+      makeShader,
+      hdrFormat,
+      fieldUbo,
+      sourceTexture: ismMapGenerator.texture,
+    }),
+  );
   // GPU replacement for `ismMapRingMeans.ts`'s CPU loop — see its own header.
-  const ringReduce = createIsmMapRingReduce(device, {
-    makeShader,
-    ismMapTexture: ismMapGenerator.texture,
-    ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
-  });
+  const ringReduce = own(
+    createIsmMapRingReduce(device, {
+      makeShader,
+      ismMapTexture: ismMapGenerator.texture,
+      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+    }),
+  );
   // GPU replacement for `buildIsmMapDustCdf.ts`'s CPU prefix sum.
-  const dustCdfScan = createIsmMapDustCdfScan(device, {
-    makeShader,
-    maxRings: ISM_MAP_RINGS,
-    maxAz: ISM_MAP_AZ,
-  });
+  const dustCdfScan = own(
+    createIsmMapDustCdfScan(device, {
+      makeShader,
+      maxRings: ISM_MAP_RINGS,
+      maxAz: ISM_MAP_AZ,
+    }),
+  );
   // A SECOND instance of the same factory, at the same ceiling — the DIG
   // veil's own arm-biased weight table. Its OWN buffer, never sharing
   // `dustCdfScan`'s: dust's and DIG's placement dispatches are each deferred
   // independently to `stepIsmMap()`, so one shared `prefixBuffer` would let
   // whichever dispatch runs second silently overwrite the first's input.
-  const digCdfScan = createIsmMapDustCdfScan(device, {
-    makeShader,
-    maxRings: ISM_MAP_RINGS,
-    maxAz: ISM_MAP_AZ,
-  });
+  const digCdfScan = own(
+    createIsmMapDustCdfScan(device, {
+      makeShader,
+      maxRings: ISM_MAP_RINGS,
+      maxAz: ISM_MAP_AZ,
+    }),
+  );
   // GPU replacement for `buildDustParticleCloud`'s map-seeded placement.
-  const placeDust = createIsmMapPlaceDust(device, { makeShader });
+  const placeDust = own(createIsmMapPlaceDust(device, { makeShader }));
   // GPU replacement for `buildArmSpurParticleCloud`'s placement body.
-  const placeArmSpurCloud = createIsmMapPlaceArmSpurCloud(device, { makeShader });
+  const placeArmSpurCloud = own(createIsmMapPlaceArmSpurCloud(device, { makeShader }));
   // GPU replacement for `buildArmParticleCloud`'s placement body.
-  const placeArmCloud = createIsmMapPlaceArmCloud(device, { makeShader });
+  const placeArmCloud = own(createIsmMapPlaceArmCloud(device, { makeShader }));
   // GPU replacement for `buildDigVeil`'s complex/children placement.
-  const placeDigVeil = createIsmMapPlaceDigVeil(device, { makeShader });
+  const placeDigVeil = own(createIsmMapPlaceDigVeil(device, { makeShader }));
 
   // `getDustMapTex` is a thunk because `createFieldPipelines` is built before
   // the host has allocated anything; `onDustMapReallocated` supplies the
@@ -533,35 +545,39 @@ export function createGalaxyFieldRenderer(
   // cap. Starts at one galaxy's EMISSION ceiling; the trailing dust slice is a
   // particle cloud thousands of components deep, so the first mixture with
   // dust on regrows this regardless.
-  const fieldComps = createGrowOnlyRecordBuffer({
-    device,
-    label: 'galaxy:fieldComps',
-    // COPY_SRC beyond STORAGE|COPY_DST's production need: the debug-only
-    // dust-slot readback copies that range back to the CPU.
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-    floatsPerRecord: FIELD_COMPONENT_FLOATS,
-    initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
-    // A regrow REPLACES the GPUBuffer and a bind group holds the exact object
-    // it was built against — internal now that both live here.
-    onRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(fieldComps.buffer),
-  });
+  const fieldComps = own(
+    createGrowOnlyRecordBuffer({
+      device,
+      label: 'galaxy:fieldComps',
+      // COPY_SRC beyond STORAGE|COPY_DST's production need: the debug-only
+      // dust-slot readback copies that range back to the CPU.
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      floatsPerRecord: FIELD_COMPONENT_FLOATS,
+      initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
+      // A regrow REPLACES the GPUBuffer and a bind group holds the exact object
+      // it was built against — internal now that both live here.
+      onRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(fieldComps.buffer),
+    }),
+  );
   // The HII tier's own storage buffer, byte-identical layout to `fieldComps`
   // but never concatenated into it — see `docs/research/milky-way/
   // hii-regions.md`: a shell sprite is small and bright by construction, so
   // sharing the smooth field's coarser target collapsed it into a bloom
   // firefly. Own buffer, own target, own divisor, own admission ceiling.
-  const hiiComps = createGrowOnlyRecordBuffer({
-    device,
-    label: 'galaxy:hiiComps',
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-    floatsPerRecord: FIELD_COMPONENT_FLOATS,
-    // + DIG_MAX_COUNT: the DIG veil rides this SAME buffer as a bounded group
-    // pushed after `HII_MAX_COUNT`'s admission, not a reservation carved out
-    // of it — so the common case never regrows on first activation.
-    // + YOUNG_CHAIN_MAX_COMPONENTS: the young-stars chain rides it too.
-    initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + YOUNG_CHAIN_MAX_COMPONENTS,
-    onRegrow: () => fieldPipelines.rebuildTierBindGroups(hiiComps.buffer),
-  });
+  const hiiComps = own(
+    createGrowOnlyRecordBuffer({
+      device,
+      label: 'galaxy:hiiComps',
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      floatsPerRecord: FIELD_COMPONENT_FLOATS,
+      // + DIG_MAX_COUNT: the DIG veil rides this SAME buffer as a bounded group
+      // pushed after `HII_MAX_COUNT`'s admission, not a reservation carved out
+      // of it — so the common case never regrows on first activation.
+      // + YOUNG_CHAIN_MAX_COMPONENTS: the young-stars chain rides it too.
+      initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + YOUNG_CHAIN_MAX_COMPONENTS,
+      onRegrow: () => fieldPipelines.rebuildTierBindGroups(hiiComps.buffer),
+    }),
+  );
 
   /**
    * peekScratchBuffer — the ONE shared COPY_DST|MAP_READ target behind
@@ -1623,18 +1639,11 @@ export function createGalaxyFieldRenderer(
     },
 
     dispose(): void {
-      ismMapGenerator.dispose();
-      ismMapOrientation.dispose();
-      ringReduce.dispose();
-      dustCdfScan.dispose();
-      digCdfScan.dispose();
-      placeDust.dispose();
-      placeArmSpurCloud.dispose();
-      placeArmCloud.dispose();
-      placeDigVeil.dispose();
-      fieldComps.destroy();
-      hiiComps.destroy();
-      for (let i = owned.length - 1; i >= 0; i--) owned[i]!.destroy();
+      for (let i = owned.length - 1; i >= 0; i--) {
+        const resource = owned[i]!;
+        if ('destroy' in resource) resource.destroy();
+        else resource.dispose();
+      }
     },
   };
 }
