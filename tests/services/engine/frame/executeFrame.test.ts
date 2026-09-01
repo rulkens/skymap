@@ -120,12 +120,16 @@ function makeLayer(init: {
   // `slab.frame.bodyId`) instead of the constant `enabled` flag above.
   enabledFor?: (view: SlabView) => boolean;
   log?: string[];
+  // Ruling 6: opts this fixture layer into the sky-cubemap capture roster —
+  // see `ContentLayer.skyCapture`'s doc.
+  skyCapture?: true;
 }): SpyLayer {
   return {
     name: init.name,
     slab: init.slab ?? COSMO,
     target: init.target,
     blend: 'additive',
+    ...(init.skyCapture ? { skyCapture: true as const } : {}),
     enabled: vi.fn<ContentLayer['enabled']>((_state, _ctx, view) =>
       init.enabledFor ? init.enabledFor(view) : (init.enabled ?? true),
     ),
@@ -748,7 +752,7 @@ describe('executeFrame', () => {
     // faces' synthetic cameras; identity (`toBe`), not content, is what proves
     // routing, since a real face ctx and the frame ctx share the same shape.
     it("resolves each capture step's own face ctx, never the frame-wide ctx", () => {
-      const layer = makeLayer({ name: 'probe', target: 'sky-cubemap', slab: NEAR0 });
+      const layer = makeLayer({ name: 'probe', target: 'hdr', slab: NEAR0, skyCapture: true });
       const face0Ctx = makeCtx();
       const face1Ctx = makeCtx();
       const program: FrameStep[] = [
@@ -797,6 +801,51 @@ describe('executeFrame', () => {
       const { args } = makeArgs({ program, layers: [layer] });
       executeFrame(args);
       expect(layer.draw.mock.calls[0]![2]).toBe(args.ctx);
+    });
+
+    // Ruling 6: capture steps select by `skyCapture`, not `target` — the
+    // whole point being that a roster layer keeps its ordinary `target`
+    // ('hdr') for its normal per-frame draw and is ALSO reachable from a
+    // capture step via the flag alone.
+    it("selects a capture step group by the skyCapture flag, ignoring the layer's own target", () => {
+      const layer = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const program: FrameStep[] = [{ kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 3 }];
+      const faceCtx = makeCtx();
+      const { args, env } = makeArgs({
+        program,
+        layers: [layer],
+        skyCubemapFaceContexts: new Map([[3, faceCtx]]),
+      });
+      executeFrame(args);
+      expect(layer.draw).toHaveBeenCalledTimes(1);
+      // The pass it drew into is the 'sky-cubemap' colour attachment, not
+      // 'hdr' — the step's target wins for the PASS, regardless of the
+      // layer's own `target` field (which only gated selection above).
+      expect(attachmentOfDraw(env, layer).view).toBe(SKY_CUBEMAP_VIEW);
+    });
+
+    it('never selects a capture step group by target alone — a layer targeting sky-cubemap without the flag is skipped', () => {
+      const layer = makeLayer({ name: 'unflagged', target: 'sky-cubemap', slab: NEAR0 });
+      const program: FrameStep[] = [{ kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 }];
+      const faceCtx = makeCtx();
+      const { args } = makeArgs({
+        program,
+        layers: [layer],
+        skyCubemapFaceContexts: new Map([[0, faceCtx]]),
+      });
+      executeFrame(args);
+      expect(layer.draw).not.toHaveBeenCalled();
+    });
+
+    it('a skyCapture-flagged layer is NOT drawn by its own ordinary (non-capture) render step under target-matching alone — slab/target still gate normally', () => {
+      // The flag only changes SELECTION for a capture step; an ordinary step
+      // still requires target-matching, so a flagged layer with a mismatched
+      // target is skipped exactly as before Ruling 6.
+      const layer = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const program: FrameStep[] = [{ kind: 'render', target: 'sky-cubemap', slab: NEAR0 }];
+      const { args } = makeArgs({ program, layers: [layer] });
+      executeFrame(args);
+      expect(layer.draw).not.toHaveBeenCalled();
     });
   });
 });

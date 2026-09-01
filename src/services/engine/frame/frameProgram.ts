@@ -118,13 +118,16 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * Placed in the compute prelude's wake, ahead of every other render step, so
  * a same-frame lensing draw (Task 13) can sample a cubemap this frame
  * actually wrote. One step per requested face, at the NEAR0 slab — the
- * majority of the fixed opt-in roster (star-points, star-catalog,
- * star-aggregates) projects through NEAR0; `point-sprites` is COSMO-slab and
- * is NOT yet reachable through this step (see the finding recorded in the
- * Task 12 report — no `ContentLayer` row targets `'sky-cubemap'` today, so
- * these steps presently select an empty group and draw nothing; they exist
- * so the schedule, the timing-slot derivation, and the DebugPanel plumbing
- * are ready for the roster wiring that follows).
+ * fixed opt-in roster (`ContentLayer.skyCapture`, Ruling 6) is selected by
+ * that flag rather than by `target` (see `executeFrame`'s capture-step
+ * branch), so a flagged NEAR0-slab layer is reachable here; a COSMO-slab
+ * candidate (`point-sprites`) would need its OWN COSMO-slab capture step,
+ * which this program does not emit — moot today, since Task 13's
+ * verification found every current roster candidate's GPU renderer assumes
+ * at most one `draw()` call per submitted frame (the `queue.writeBuffer`/
+ * `submit` landmine, docs/RENDERER.md), an invariant a multi-face capture
+ * sweep breaks; no layer carries `skyCapture` yet, so these steps still
+ * select an empty group and draw nothing pending that renderer-side fix.
  */
 export function frameProgram(
   tone: ToneMap,
