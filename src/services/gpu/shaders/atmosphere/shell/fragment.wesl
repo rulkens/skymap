@@ -333,16 +333,20 @@ fn fsAdd(in: FsIn) -> @location(0) vec4<f32> {
 // scaled model transform -- same reason 'sampleShell's dir derivation does).
 fn insideRayDir(uv: vec2<f32>) -> vec3<f32> {
   let xy = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-  // NDC z = 0.5, NOT 0.0: any z on the pixel's ray works in exact math, but the
-  // body slab's reversed-Z projection puts z = 0 at the FAR plane, where the
-  // unprojected w collapses toward 0 and the f32 divide turns 'p' into noise --
-  // in practice every pixel degenerated to near-one direction and the whole sky
-  // veiled uniformly grey. Mid-frustum keeps w healthy under either depth
-  // convention.
-  let clip = vec4<f32>(xy, 0.5, 1.0);
-  let world = u.invMvp * clip;
-  let p = world.xyz / world.w;
-  return normalize(p - u.camPosLocal);
+  // Homogeneous far-point form -- never divide by w, never subtract camPos
+  // from a divided point. Under reversed-Z, z = 0 is the FAR plane: dividing
+  // there blows up (w -> 0, the uniform grey veil), and any finite z puts the
+  // unprojected point a few near-plane distances from the camera, so
+  // 'p - camPosLocal' is a metres-scale difference of unit-scale f32 vectors
+  // that shimmers as the near plane shrinks on descent. Algebra instead:
+  // p - cam = (P.xyz - cam * P.w) / P.w for P = invMvp * clip, so the
+  // direction is normalize(P.xyz - cam * P.w) with P.w's sign folded in --
+  // and at w -> 0 it degrades gracefully to normalize(P.xyz), the ray's own
+  // point at infinity.
+  let hp = u.invMvp * vec4<f32>(xy, 0.0, 1.0);
+  var v = hp.xyz - u.camPosLocal * hp.w;
+  if (hp.w < 0.0) { v = -v; }
+  return normalize(v);
 }
 
 @fragment
