@@ -1,6 +1,4 @@
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { EarthBody } from '../../../@types/scene/EarthBody';
-import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
@@ -10,9 +8,9 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
 
 /**
- * visibleSlabBodies — which of `[earth, ...planets]` get a body slab row this
- * frame: apparent diameter clears `SUB_PIXEL_BODY_CULL_PX` (spec §4) AND the
- * body's angular disc reaches inside the view frustum — off-axis angle minus
+ * visibleSlabBodies — which of `bodies` get a body slab row this frame:
+ * apparent diameter clears `SUB_PIXEL_BODY_CULL_PX` (spec §4) AND the body's
+ * angular disc reaches inside the view frustum — off-axis angle minus
  * angular radius, vs. the frustum half-diagonal, never a projected-CENTRE
  * test (`saturn-vanish-investigation.md` Phase 2: centre/clip-axis confusion
  * is exactly the bug class this avoids). Both culls key on the SAME `rEffM`
@@ -21,11 +19,12 @@ import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
  * the pixel floor while the bare globe doesn't, and this roster gate runs
  * upstream of any per-layer gate that might otherwise still draw it (radar
  * frame finding 2). A missing `bodyStates` entry is dropped, not thrown
- * (feeds a slab COUNT the frame program pool-sizes from, spec §6).
+ * (feeds a slab COUNT the frame program pool-sizes from, spec §6). The
+ * candidate list is the caller's to assemble — this gate treats every
+ * `SceneBody` union arm identically, culling on its shared `radiusM`/`id`.
  */
 export function visibleSlabBodies(input: {
-  readonly earth: EarthBody | null;
-  readonly planets: readonly PlanetBody[];
+  readonly bodies: readonly SceneBody[];
   readonly bodyStates: ReadonlyMap<string, BodyState>;
   readonly camPosMpc: Readonly<Vec3>;
   readonly camForwardMpc: Readonly<Vec3>;
@@ -34,8 +33,7 @@ export function visibleSlabBodies(input: {
   readonly fovYRad: number;
 }): readonly SceneBody[] {
   const {
-    earth,
-    planets,
+    bodies: candidates,
     bodyStates,
     camPosMpc,
     camForwardMpc,
@@ -43,7 +41,6 @@ export function visibleSlabBodies(input: {
     viewportHeightPx,
     fovYRad,
   } = input;
-  const candidates: readonly SceneBody[] = earth === null ? planets : [earth, ...planets];
 
   // Half-diagonal (corner, not edge — the widest off-axis angle a fully
   // on-screen body can have), padded by FRUSTUM_CULL_MARGIN_FACTOR: this is

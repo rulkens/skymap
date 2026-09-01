@@ -17,15 +17,27 @@ import {
   createCameraClock,
   autoRotateElapsed,
 } from '../../../../src/services/engine/camera/cameraClock';
-import { MAX_DISTANCE_MPC } from '../../../../src/utils/camera/clampDistance';
+import {
+  MIN_DISTANCE_MPC,
+  MAX_DISTANCE_MPC,
+  SURFACE_STANDOFF_RADII,
+} from '../../../../src/utils/camera/clampDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { PivotFraming } from '../../../../src/@types/camera/PivotFraming';
 
 const BASE: CameraPose = { target: [0, 0, 0], yaw: 1, pitch: 0.2, distance: 100 };
 const FRAME_MS = 1000 / 60;
 const SPIN_OFF = { active: false, rate: 0 };
 /** Earth's mean radius (km → Mpc) — the pivot radius for the surface-floor case. */
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
+/** No focused pivot — the absolute floor, no taper anchor. */
+const NO_PIVOT: PivotFraming = { radiusMpc: null, floorMpc: MIN_DISTANCE_MPC };
+/** The bundle a resolved Earth focus row resolves to (`pivotFraming`, no override). */
+const EARTH_PIVOT: PivotFraming = {
+  radiusMpc: EARTH_RADIUS_MPC,
+  floorMpc: EARTH_RADIUS_MPC * SURFACE_STANDOFF_RADII,
+};
 
 describe('applyWheelZoom', () => {
   it('scales the follow distance target in place while following (zoom is not swallowed)', () => {
@@ -36,7 +48,7 @@ describe('applyWheelZoom', () => {
     const clock = createCameraClock();
     clock.followDistanceTarget = 50;
 
-    const result = applyWheelZoom(clock, 'followBody', BASE, 1.2, SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'followBody', BASE, 1.2, SPIN_OFF, 0, NO_PIVOT);
 
     expect(result).toBeNull(); // nothing to commit into the store
     expect(clock.followDistanceTarget).toBeCloseTo(60, 9); // 50 * 1.2
@@ -45,7 +57,7 @@ describe('applyWheelZoom', () => {
   it('clamps the scaled follow target to the shared zoom envelope', () => {
     const clock = createCameraClock();
     clock.followDistanceTarget = MAX_DISTANCE_MPC;
-    applyWheelZoom(clock, 'followBody', BASE, 1000, SPIN_OFF, 0, null);
+    applyWheelZoom(clock, 'followBody', BASE, 1000, SPIN_OFF, 0, NO_PIVOT);
     expect(clock.followDistanceTarget).toBe(MAX_DISTANCE_MPC);
   });
 
@@ -57,7 +69,7 @@ describe('applyWheelZoom', () => {
     // standing between the camera and the mantle.
     const clock = createCameraClock();
     clock.followDistanceTarget = EARTH_RADIUS_MPC * 4;
-    applyWheelZoom(clock, 'followBody', BASE, 1e-6, SPIN_OFF, 0, EARTH_RADIUS_MPC);
+    applyWheelZoom(clock, 'followBody', BASE, 1e-6, SPIN_OFF, 0, EARTH_PIVOT);
 
     const radii = clock.followDistanceTarget! / EARTH_RADIUS_MPC;
     expect(radii).toBeGreaterThan(1);
@@ -66,7 +78,7 @@ describe('applyWheelZoom', () => {
 
   it('commits the zoomed base when the resting driver owns the distance', () => {
     const clock = createCameraClock();
-    const result = applyWheelZoom(clock, 'resting', BASE, 2, SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'resting', BASE, 2, SPIN_OFF, 0, NO_PIVOT);
     expect(result).not.toBeNull();
     expect(result!.distance).toBeCloseTo(200, 9); // 100 * 2
     // The follow target is untouched — resting reads base, not the follow clock.
@@ -91,7 +103,7 @@ describe('applyWheelZoom', () => {
       0.5,
       { active: true, rate },
       500,
-      null,
+      NO_PIVOT,
     );
 
     expect(result).not.toBeNull();
@@ -111,7 +123,7 @@ describe('applyWheelZoom', () => {
       0.5,
       { active: false, rate: 0.01 },
       500,
-      null,
+      NO_PIVOT,
     );
     expect(result).not.toBeNull();
     expect(result!.yaw).toBe(BASE.yaw); // no spin folded in
@@ -124,7 +136,7 @@ describe('applyWheelZoom', () => {
     // the framing distance on its first produce.
     const clock = createCameraClock();
     clock.followDistanceTarget = null;
-    const result = applyWheelZoom(clock, 'followBody', BASE, 1.1, SPIN_OFF, 0, null);
+    const result = applyWheelZoom(clock, 'followBody', BASE, 1.1, SPIN_OFF, 0, NO_PIVOT);
     expect(result).not.toBeNull();
     expect(result!.distance).toBeCloseTo(110, 9);
   });

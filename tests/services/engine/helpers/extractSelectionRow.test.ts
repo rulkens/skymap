@@ -8,6 +8,7 @@ import {
   decodeStarCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -119,6 +120,27 @@ describe('extractSelectionRow', () => {
       positionMpc: EARTH_POS,
       radiusM: SCENE_EARTH.radiusM,
     });
+  });
+
+  it('body ref for a body with no standoffRadii override → the row field is undefined', () => {
+    // Earth carries no `standoffRadii` on its seed. Explicit `.toBeUndefined()`
+    // (not the earlier `toEqual` case, which is lenient about missing keys) so
+    // a reversed `'standoffRadii' in body` condition — one that would instead
+    // stamp a real number onto every non-overriding body — fails here too.
+    const row = extractSelectionRow({ type: 'body', id: 'earth' }, deps, SIM_DAYS);
+    expect(row !== null && row.type === 'body' && row.standoffRadii).toBeUndefined();
+  });
+
+  it('body ref for Sgr A* carries its standoffRadii override through', () => {
+    // The real regression this guards: `extractSelectionRow`'s
+    // `'standoffRadii' in body` narrowing is exercised here against the ACTUAL
+    // SCENE_BODIES seed (not a hand-built row with the field already set, the
+    // way every downstream zoom test constructs its fixtures) — a typo'd
+    // property name or a reversed condition would silently drop Sgr A*'s Q10
+    // floor while every other test in the suite stays green.
+    const row = extractSelectionRow({ type: 'body', id: SGR_A_STAR.id }, deps, SIM_DAYS);
+    expect(row !== null && row.type === 'body' && row.standoffRadii).toBe(SGR_A_STAR.standoffRadii);
+    expect(SGR_A_STAR.standoffRadii).toBe(2.0); // guards against both sides drifting to `undefined`
   });
 
   it('body ref resolves the position at the PASSED simDays, not a fixed epoch', () => {

@@ -5,10 +5,11 @@ import { Source } from '../source';
  * Sagittarius A\* — the Galactic Centre's supermassive black hole, and the
  * focus every S-star orbit hangs off.
  *
- * It DRAWS NOTHING: no sphere, no point, no glint. Its whole on-screen presence
- * is its caption, so `bearsLabel` is the one capability flag that matters here
- * and the caption production path (`captionPriority` / `captionFadeRules` /
- * `sceneBodyLabels`) is where its visibility actually lives.
+ * Today it draws only its caption, so `bearsLabel` is the one capability flag
+ * that matters here and the caption production path (`captionPriority` /
+ * `captionFadeRules` / `sceneBodyLabels`) is where its visibility actually
+ * lives. A future far-field glint and lensing-band geodesic pass ride
+ * dedicated `ContentLayer` rows keyed on its id, not this flag.
  *
  * Its own registry row rather than a member of the curated star map, for the
  * reason the Sun's row records: a row makes the star map's gate a plain
