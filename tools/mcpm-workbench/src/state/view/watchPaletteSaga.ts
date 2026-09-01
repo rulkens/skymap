@@ -13,6 +13,7 @@
 import { takeEvery, put, getContext } from 'typed-redux-saga';
 
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
+import { setCatalogStatusMessage } from '../slices/catalogSlice';
 import {
   setPathTracerPaletteId,
   setPreviewPacked,
@@ -32,16 +33,21 @@ export function* watchPaletteSaga() {
     // snapshot — the change is silently dropped until the next palette
     // change or rebuild.
     if (!resources || !h || !graph) return;
-    graph.attachTrace({
-      traceBuffer: h.traceBuffer,
-      box: h.box,
-      element: h.element,
-      paletteId: action.payload,
-    });
-    // Re-attaching invalidates a packed preview baked from the old palette —
-    // `watchPreviewPackedSaga`'s falling edge is the one owner of the actual
-    // dispose, this only flips the toggle.
-    if (graph.hasPreviewTrace()) yield* put(setPreviewPacked(false));
+    try {
+      graph.attachTrace({
+        traceBuffer: h.traceBuffer,
+        box: h.box,
+        element: h.element,
+        paletteId: action.payload,
+      });
+      // Re-attaching invalidates a packed preview baked from the old palette —
+      // `watchPreviewPackedSaga`'s falling edge is the one owner of the actual
+      // dispose, this only flips the toggle.
+      if (graph.hasPreviewTrace()) yield* put(setPreviewPacked(false));
+    } catch (err) {
+      console.error('mcpm-workbench: attach trace failed', err);
+      yield* put(setCatalogStatusMessage(`palette change failed: ${(err as Error).message}`));
+    }
   });
 
   yield* takeEvery(setPathTracerPaletteId, function* (action) {
@@ -49,11 +55,16 @@ export function* watchPaletteSaga() {
     const h = resources?.harness;
     const graph = resources?.graph;
     if (!resources || !h || !graph) return;
-    graph.attachVolpath({
-      traceBuffer: h.traceBuffer,
-      box: h.box,
-      element: h.element,
-      paletteId: action.payload,
-    });
+    try {
+      graph.attachVolpath({
+        traceBuffer: h.traceBuffer,
+        box: h.box,
+        element: h.element,
+        paletteId: action.payload,
+      });
+    } catch (err) {
+      console.error('mcpm-workbench: attach volpath failed', err);
+      yield* put(setCatalogStatusMessage(`palette change failed: ${(err as Error).message}`));
+    }
   });
 }
