@@ -22,6 +22,7 @@ import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { updatePosition } from '../../../../src/utils/camera/updatePosition';
 import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
+import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
 import { rotYMat3 } from '../../../../src/utils/math/rotYMat3';
@@ -30,6 +31,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 
@@ -253,11 +255,11 @@ describe('poseFrameConversion', () => {
     },
   );
 
-  it('falls back to the body centre when the sightline misses the body', () => {
-    // Eye high above the body, aimed straight away from it: the line still has
-    // two roots, but both are BEHIND the eye. Spec §5.1 puts the target at the
-    // centre there — the eye survives, the view axis does not, which is why the
-    // tilt ceiling keeps this case off the disengage boundary.
+  it('keeps the target on the forward ray when the sightline misses the body', () => {
+    // Eye high above the body, aimed straight away from it: no root ahead, and
+    // the closest approach is behind, so the altitude floor sets the range. The
+    // pose still denotes the SAME view axis — the retired body-centre fallback
+    // turned it by the whole off-nadir angle (180° here).
     const positionMpc: Vec3 = [AU, 0, 0];
     const state = bodyState(positionMpc, IDENTITY);
     const pose: CameraPose = {
@@ -274,14 +276,14 @@ describe('poseFrameConversion', () => {
       EARTH_RADIUS_M,
     );
 
-    expect(back.target).toEqual([...positionMpc]);
-    const eyeRel = eyeRelM(worldPoseOf(pose, IDENTITY, IDENTITY).eye, positionMpc);
-    expect(back.distance * SCALE_UNITS.MPC_TO_M).toBeCloseTo(Math.hypot(...eyeRel), 3);
-    expectVec3Near(
-      eyeRelM(worldPoseOf(back, IDENTITY, IDENTITY).eye, positionMpc),
-      eyeRel,
-      EYE_FLOOR_M,
-      'fallback eye',
+    const before = worldPoseOf(pose, IDENTITY, IDENTITY);
+    const after = worldPoseOf(back, IDENTITY, IDENTITY);
+    const eyeRel = eyeRelM(before.eye, positionMpc);
+    expectVec3Near(after.forward, before.forward, DIR_FLOOR, 'miss-branch forward');
+    expectVec3Near(eyeRelM(after.eye, positionMpc), eyeRel, EYE_FLOOR_M, 'miss-branch eye');
+    expect(back.distance * SCALE_UNITS.MPC_TO_M).toBeCloseTo(
+      Math.hypot(...eyeRel) - EARTH_RADIUS_M,
+      3,
     );
   });
 
@@ -357,6 +359,123 @@ describe('poseFrameConversion', () => {
         expect(Math.abs(b.basisLocal[i]! - a.basisM[i]!), `basis element ${i}`).toBeLessThan(1e-12);
       }
     }
+  });
+});
+
+/**
+ * The limb crossing (the "Earth pop"). Body at the WORLD ORIGIN under the
+ * identity orientation on purpose: at heliocentric magnitude the Mpc f64 grid
+ * is ~25 µm and would swallow the metre-scale steps measured here.
+ *
+ * h/R = 2.665 and R = 6371 km are the reported geometry — eye 23,350 km from
+ * the centre, tangency at asin(R/d) = 15.8° off nadir. Before the fix the miss
+ * branch re-aimed the pose at the body centre there: 15.8° of direction and
+ * 8.9e5 m of range, in one frame.
+ */
+const LIMB_EYE_M = EARTH_RADIUS_M * (1 + 2.665);
+const LIMB_TANGENT_RAD = Math.asin(EARTH_RADIUS_M / LIMB_EYE_M);
+
+// A screen-up rolled OFF the +y pole. At roll 0 screen-up IS the pole and
+// `rollFromScreenUp` answers 0 in every branch, which would make the roll
+// assertions below pass vacuously — and roll is the term the disengage fold
+// bakes into the absolute arm permanently.
+const LIMB_ROLL_RAD = 0.3;
+
+/** Eye at `LIMB_EYE_M` on +z, view axis tilted `tiltRad` off nadir in the xz plane. */
+function limbPose(tiltRad: number): BodyFixedPose {
+  const forward: Vec3 = [Math.sin(tiltRad), 0, -Math.cos(tiltRad)];
+  const { right, up } = imagePlaneBasis(forward, LIMB_ROLL_RAD, [0, 1, 0]);
+  return {
+    bodyId: 'earth',
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: [0, 0, LIMB_EYE_M],
+    basisLocal: mat3FromColumns(right, up, forward),
+  };
+}
+
+describe('toWorldArm across the limb', () => {
+  it('reproduces the view axis and the roll at every tilt through tangency', () => {
+    const state = bodyState([0, 0, 0], IDENTITY);
+    const SPAN_RAD = 0.02;
+    const STEPS = 41;
+    let hits = 0;
+    for (let i = 0; i < STEPS; i++) {
+      const tilt = LIMB_TANGENT_RAD - SPAN_RAD + (2 * SPAN_RAD * i) / (STEPS - 1);
+      const arm = limbPose(tilt);
+      if (
+        raySphereRoots(
+          arm.eyeRelAnchorM,
+          [Math.sin(tilt), 0, -Math.cos(tilt)],
+          [0, 0, 0],
+          EARTH_RADIUS_M,
+        ) !== null
+      )
+        hits++;
+      const back = toWorldArm(arm, state, IDENTITY, IDENTITY, EARTH_RADIUS_M);
+      const { eye, forward } = worldPoseOf(back, IDENTITY, IDENTITY);
+
+      expectVec3Near(forward, [Math.sin(tilt), 0, -Math.cos(tilt)], DIR_FLOOR, `tilt ${tilt} axis`);
+      expectVec3Near(
+        [
+          eye[0] * SCALE_UNITS.MPC_TO_M,
+          eye[1] * SCALE_UNITS.MPC_TO_M,
+          eye[2] * SCALE_UNITS.MPC_TO_M,
+        ],
+        [0, 0, LIMB_EYE_M],
+        EYE_FLOOR_M,
+        `tilt ${tilt} eye`,
+      );
+      expect(back.roll ?? 0, `tilt ${tilt} roll`).toBeCloseTo(LIMB_ROLL_RAD, 12);
+    }
+    // Anti-vacuity: the sweep must actually straddle the crossing, or the
+    // assertions above only ever exercise one branch.
+    expect(hits, 'hitting samples').toBeGreaterThan(0);
+    expect(STEPS - hits, 'missing samples').toBeGreaterThan(0);
+  });
+
+  /** What the pose does across a step of ±`epsRad` straddling tangency. */
+  function jumpAcross(epsRad: number): {
+    axisRad: number;
+    rangeM: number;
+    targetM: number;
+    rollRad: number;
+  } {
+    const state = bodyState([0, 0, 0], IDENTITY);
+    const at = (tilt: number): CameraPose =>
+      toWorldArm(limbPose(tilt), state, IDENTITY, IDENTITY, EARTH_RADIUS_M);
+    const inside = at(LIMB_TANGENT_RAD - epsRad);
+    const outside = at(LIMB_TANGENT_RAD + epsRad);
+    const a = worldPoseOf(inside, IDENTITY, IDENTITY).forward;
+    const b = worldPoseOf(outside, IDENTITY, IDENTITY).forward;
+    return {
+      axisRad: Math.acos(Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])),
+      rangeM: Math.abs(inside.distance - outside.distance) * SCALE_UNITS.MPC_TO_M,
+      targetM:
+        Math.hypot(
+          inside.target[0] - outside.target[0],
+          inside.target[1] - outside.target[1],
+          inside.target[2] - outside.target[2],
+        ) * SCALE_UNITS.MPC_TO_M,
+      rollRad: Math.abs((inside.roll ?? 0) - (outside.roll ?? 0)),
+    };
+  }
+
+  it('crosses tangency continuously — the range gap vanishes with the step', () => {
+    // Continuity, not smallness: the range is C⁰ but NOT C¹ here (`√disc` has
+    // infinite slope at tangency), so the gap is `√(2·d·R·cosθ·ε)` — 170 m at
+    // ε=1e-10, and it must shrink as √ε. A discontinuity holds its size: the
+    // body-centre fallback jumped 8.9e5 m at EVERY ε.
+    const coarse = jumpAcross(1e-8);
+    const fine = jumpAcross(1e-12);
+    expect(coarse.rangeM, 'coarse range gap, m').toBeLessThan(2e3);
+    expect(fine.rangeM, 'fine range gap, m').toBeLessThan(coarse.rangeM / 50);
+    expect(fine.targetM, 'fine target gap, m').toBeLessThan(coarse.targetM / 50);
+    // The view axis never moves at all — the target stays on the ray, so the
+    // only difference between the two samples is the 2ε of tilt itself.
+    expect(coarse.axisRad, 'view-axis jump, rad').toBeLessThan(1e-7);
+    // The roll the fold bakes into the absolute arm at disengage is a function
+    // of that axis, which is what made a jumping axis a jumping roll.
+    expect(coarse.rollRad, 'roll jump, rad').toBeLessThan(1e-7);
   });
 });
 

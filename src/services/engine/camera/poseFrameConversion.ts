@@ -27,6 +27,7 @@ import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { cross3 } from '../../../utils/math/cross3';
 import { raySphereRoots } from '../../../utils/math/raySphereRoots';
+import { surfaceFloorM } from '../../../utils/camera/surfaceFloorM';
 import { bodyRelativePose } from './bodyRelativePose';
 
 const BODY_CENTRE: Vec3 = [0, 0, 0];
@@ -102,17 +103,30 @@ export function toWorldArm(
     anchorLocalM[2] + eyeRelAnchorM[2],
   ];
   const forwardLocal: Vec3 = [basisLocal[6], basisLocal[7], basisLocal[8]];
+  const eyeMagM = Math.hypot(eyeLocalM[0], eyeLocalM[1], eyeLocalM[2]);
 
-  // The point under the screen centre: the nearest root AHEAD of the eye (both
-  // roots behind ⇒ the body is not in front ⇒ same as a miss). A miss puts the
-  // target at the body centre — pivot-pin-compatible, and unreachable at the
-  // disengage boundary, where the tilt ceiling has already levelled the view.
+  // The target stays ON the forward ray whatever the sightline does, so the
+  // view axis IS `forwardLocal` and crossing the limb cannot turn the pose.
+  // Range is the near root on a hit and the closest approach `t*` on a miss —
+  // continuously the same number, since `t* − √disc → t*` at tangency (Cesium's
+  // `grazingAltitudeLocation`, prior-art Q1). Re-aiming at the body centre on a
+  // miss is what popped the scene by `asin(R/d)`.
   const roots = raySphereRoots(eyeLocalM, forwardLocal, BODY_CENTRE, bodyRadiusM);
-  const rangeM = roots?.find((t) => t > 0);
-  const armLocalM: Vec3 =
-    rangeM === undefined
-      ? [-eyeLocalM[0], -eyeLocalM[1], -eyeLocalM[2]]
-      : [forwardLocal[0] * rangeM, forwardLocal[1] * rangeM, forwardLocal[2] * rangeM];
+  const grazingM = -dot3(eyeLocalM, forwardLocal);
+  // Floored at the eye's altitude — the scale `cam.distance` consumers want
+  // when the ray points at sky, and positive, which the encoding needs to carry
+  // a direction at all. It cannot reopen the crossing: `t* = √(d²−R²) ≥ d−R`
+  // there. `eyeMagM`'s own floor guards only an eye at or below the surface,
+  // which the surface arm's descent floor already stands off from.
+  const rangeM = Math.max(
+    roots === null ? grazingM : roots[0],
+    Math.max(eyeMagM, surfaceFloorM(bodyRadiusM)) - bodyRadiusM,
+  );
+  const armLocalM: Vec3 = [
+    forwardLocal[0] * rangeM,
+    forwardLocal[1] * rangeM,
+    forwardLocal[2] * rangeM,
+  ];
 
   const { orientation, positionMpc } = bodyState;
   const targetWorldM = rotateVec3ByTightMat3(
@@ -129,9 +143,7 @@ export function toWorldArm(
   const distance = Math.hypot(armLocalM[0], armLocalM[1], armLocalM[2]) * SCALE_UNITS.M_TO_MPC;
 
   // The orbit convention aims the camera AT its target, so the reconstructed
-  // view axis is the arm — identical to `forwardLocal` on a hit, and toward the
-  // centre on the fallback. Deriving both the angles and the roll from it keeps
-  // the returned pose self-consistent in either branch.
+  // view axis is the arm — `forwardLocal` in world, exactly, at every range.
   const viewDirWorld = normalize3(rotateVec3ByTightMat3(armLocalM, orientation));
   // `orbitAnglesLookingAlong` predates the readonly-basis convention and takes
   // a mutable `Mat3`; it only reads the nine cells.
