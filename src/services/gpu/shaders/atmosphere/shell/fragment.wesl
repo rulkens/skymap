@@ -333,8 +333,13 @@ fn fsAdd(in: FsIn) -> @location(0) vec4<f32> {
 // scaled model transform -- same reason 'sampleShell's dir derivation does).
 fn insideRayDir(uv: vec2<f32>) -> vec3<f32> {
   let xy = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-  // Any NDC z works -- every point on the same camera ray unprojects to a proportional direction.
-  let clip = vec4<f32>(xy, 0.0, 1.0);
+  // NDC z = 0.5, NOT 0.0: any z on the pixel's ray works in exact math, but the
+  // body slab's reversed-Z projection puts z = 0 at the FAR plane, where the
+  // unprojected w collapses toward 0 and the f32 divide turns 'p' into noise --
+  // in practice every pixel degenerated to near-one direction and the whole sky
+  // veiled uniformly grey. Mid-frustum keeps w healthy under either depth
+  // convention.
+  let clip = vec4<f32>(xy, 0.5, 1.0);
   let world = u.invMvp * clip;
   let p = world.xyz / world.w;
   return normalize(p - u.camPosLocal);
