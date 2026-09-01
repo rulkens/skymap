@@ -120,17 +120,21 @@ braid "the pose grew a field" with "the camera grew an arm" in one diff.
 
 **P6 — input: recognizer, aggregator, one apply point.** `orbitControls.ts`
 mutates the `state.cam` register inside DOM handlers, one apply per event
-(`wireInput.ts:342-405`, `seedCameraFromBase.ts`). A surface controller added
-beside that becomes a second input path writing a second register — the
+(`orbitControls.ts:466-478`, `seedCameraFromBase.ts`). A surface controller
+added beside that becomes a second input path writing a second register — the
 parallel-path smell, and the ordering artefact behind FW-D's mid-drag desync
 and the register-vs-render divergence. The prep splits the file along the line
 DESIGN-INPUT §5 draws: `orbitControls` becomes a pure **gesture recognizer**
 (it keeps its hard-won DOM knowledge — pointer events, `window`-bound
-move/up/cancel for the iOS implicit-capture bug, `touch-action: none`, the
-150 ms wheel-gesture gap — and mutates nothing); a per-frame **aggregator**
-collapses every move since the last frame into one `{startPixel, endPixel}`
-(C §2.1); the incumbent orbit math moves behind a controller that _returns_ a
-pose. Behaviour-preserving, and it is the joint both arms plug into.
+move/up/cancel for the iOS implicit-capture bug, `touch-action: none` — and
+mutates nothing; FW-C's trackpad-burst handling is feature work for the
+surface controller, not prep); a per-frame **aggregator** collapses every move
+since the last frame into one `{startPixel, endPixel}` (C §2.1) and drains it
+at one apply point in the frame loop — a new site (`runFrame` / the
+`orbitDrag` driver path; the P6 implementer picks the exact site and the plan
+confirms it) that replaces orbitControls' own per-event register mutation; the
+incumbent orbit math moves behind a controller that _returns_ a pose.
+Behaviour-preserving, and it is the joint both arms plug into.
 
 **Packaging is an open ask at the checkpoint, as always: do P5 and P6 land as
 their own PR off `main` before the feature commits, or ride this spec's PR?**
@@ -736,7 +740,7 @@ src/@types/camera/CameraPose.d.ts                 (roll)
 src/utils/camera/reencodePose.ts
 src/services/engine/camera/{poseOf,assembleOrbitCamera}.ts
 src/services/camera/orbitControls.ts              (recognizer only)
-src/services/engine/phases/wireInput.ts           (aggregator + one apply point)
+src/services/engine/frame/runFrame.ts             (P6: per-frame gesture drain — exact site TBD, see §2)
 ```
 
 Modified (feature):
