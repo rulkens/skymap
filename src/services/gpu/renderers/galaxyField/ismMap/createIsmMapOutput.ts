@@ -142,7 +142,10 @@ export function createIsmMapOutput(
     size: [ISM_MAP_AZ, ISM_MAP_RINGS],
     format: 'rgba16float',
     usage:
-      GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
+      GPUTextureUsage.STORAGE_BINDING |
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_SRC |
+      GPUTextureUsage.COPY_DST,
   });
   // S4's low-pass divisor — one texel per BLUR_FACTOR x BLUR_FACTOR src
   // block (192x64 at the current grid). rgba16float for the same
@@ -151,7 +154,8 @@ export function createIsmMapOutput(
     label: 'galaxy:ismMapDustBlurTex',
     size: [ISM_MAP_AZ / DUST_BLUR_FACTOR, ISM_MAP_RINGS / DUST_BLUR_FACTOR],
     format: 'rgba16float',
-    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    usage:
+      GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
   // Stage 1 of the dust-seeding perf spike (docs/research/m74-jwst/
   // 07-sprite-seeding.md): a cartesian re-bake of ismMapCartesianBake.wesl's
@@ -162,7 +166,8 @@ export function createIsmMapOutput(
     label: 'galaxy:ismMapCartesianTex',
     size: [ISM_MAP_CARTESIAN_SIZE, ISM_MAP_CARTESIAN_SIZE],
     format: 'rgba16float',
-    usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    usage:
+      GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
   // `copyTextureToBuffer` forces `bytesPerRow` to a 256-byte multiple; the
   // readback's decode strips the padding so it never reaches `GalaxyIsmMap.data`.
@@ -280,7 +285,9 @@ export function createIsmMapOutput(
 
     clear(): void {
       // All-zero bytes decode to 0.0 in rgba16float, so the zero-fill trick
-      // needs only the right row width (8 bytes/texel).
+      // needs only the right row width (8 bytes/texel). COPY_DST on all three
+      // targets exists for these writes ALONE — drop it and every clear becomes
+      // a silent validation failure that leaves the previous map on screen.
       device.queue.writeTexture(
         { texture },
         new Uint8Array(ISM_MAP_AZ * ISM_MAP_RINGS * 8),

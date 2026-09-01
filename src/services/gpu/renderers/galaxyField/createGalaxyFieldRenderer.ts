@@ -20,6 +20,7 @@ import type { HiiTextureLanes } from '../../../../@types/galaxy/HiiTextureLanes'
 import type { HiiTier } from '../../../../@types/galaxy/HiiTier';
 import type { IsmMapSeedingLanes } from '../../../../@types/galaxy/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../../../../@types/galaxy/YoungStarsLanes';
+import type { StageGraph } from '../../../../@types/gpu/StageGraph';
 import type { TimingSlotName } from '../../../../@types/gpu/timing/TimingSlotName';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -53,6 +54,7 @@ import { HII_TIER_KINDS, mapHiiTiers } from '../../../../data/hiiTiers';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { createDerived } from '../../lib/createDerived';
 import { createKeyedRebuild } from '../../lib/createKeyedRebuild';
+import { createStageGraph } from '../../lib/createStageGraph';
 
 import { buildFieldHeaderInputs } from './field/buildFieldHeaderInputs';
 import type { FieldHeaderFrameLanes, FieldHeaderRenderLanes } from './field/buildFieldHeaderInputs';
@@ -155,8 +157,8 @@ export type GalaxyFieldRendererDeps = {
 /**
  * Everything the mixture/ISM rebuild is a function of. The first three are
  * the galaxy itself; `extras` is the rest of the scene (the component buffers
- * are scene-wide, not per-galaxy — see `repackFieldComponents`); the last
- * three are host render knobs the orientation chain consumes.
+ * are scene-wide, not per-galaxy — see `fieldPack`); the last three are host
+ * render knobs the orientation chain consumes.
  */
 export type GalaxyFieldMixtureInput = {
   readonly geometry: GalaxyDescription | null;
@@ -791,8 +793,8 @@ export function createGalaxyFieldRenderer(
    * independent consumers — the debug overlay reads the texture on the GPU,
    * dust placement the same texture — either enough to justify the six
    * dispatches. Needs no readback to run FROM: ismMapTex is a GPU texture
-   * WebGPU zero-initialises, so dispatching before `rebuildIsmMap` has ever
-   * populated it is safe. Invalidated by `rebuildIsmMap` and by a sigma move.
+   * WebGPU zero-initialises, so dispatching before the `ismMap` stage has ever
+   * populated it is safe. Invalidated by that stage and by a sigma move.
    */
   const orientationTexRebuild = createKeyedRebuild({
     wanted: () => current.orientationViewWanted || current.fieldTuning.ismMap.generator !== 'none',
@@ -819,106 +821,6 @@ export function createGalaxyFieldRenderer(
       orientationDataRebuild.invalidate();
     },
   });
-
-  /**
-   * dispatchDustCdfScan — (re)scans the CURRENT `ismMapTex` with the CURRENT
-   * `cloud.dustPlacementCap`, own encoder/submit. Two independent triggers
-   * call this, not one: the map's own CONTENT changes only from
-   * `rebuildIsmMap`, but the SCAN's cap input can also move on its own via a
-   * bare dust-tuning drag — missing either trigger leaves `dustPlacementCap`
-   * (or a stepped map) stale in `prefixBuf` until some unrelated later
-   * rebuild happens to re-scan it.
-   */
-  function dispatchDustCdfScan(): void {
-    if (!current.geometry || current.fieldTuning.ismMap.generator !== 'fluid') return;
-    const grid = ismMapGridRadiusOrDefault(current.geometry);
-    const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDustCdfScanRebuild' });
-    // `ringCap` reproduces dustParticleCloud.ts's density() ring-mean-
-    // normalised, capped placement density (ismMapDustCdfScan.wesl's own doc).
-    dustCdfScan.dispatchScan(enc, {
-      ismMapTexture: ismMapGenerator.texture,
-      grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
-      weights: {
-        kind: 'channel',
-        channelWeights: { gas: 0, stars: 0, activity: 0, dust: 1 },
-        ringCap: current.fieldTuning.dust.cloud.dustPlacementCap ?? 0,
-      },
-      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
-    });
-    device.queue.submit([enc.finish()]);
-    dustPlacementRebuild.invalidate();
-  }
-
-  /**
-   * dispatchDigCdfScan — the DIG veil's own arm-biased counterpart, own
-   * encoder/submit, own `digCdfScan` instance (see its declaration for why a
-   * shared `prefixBuffer` would race). Two independent triggers, same shape
-   * as dust's: the map's own content, and DIG's own tuning. `armBias` is
-   * CLAMPED here, at the packing call site — `buildDigVeil`'s CPU original
-   * clamps to `[0, 1]` before ever building the envelope, and the scan shader
-   * trusts whatever `params.armBias` the caller packed.
-   */
-  function dispatchDigCdfScan(): void {
-    const geo = current.geometry;
-    if (!geo || current.fieldTuning.ismMap.generator !== 'fluid') return;
-    const grid = ismMapGridRadiusOrDefault(geo);
-    const armBias = Math.min(1, Math.max(0, current.fieldTuning.hii.dig?.armBias ?? 0));
-    const armCount = geo.arms.length;
-    const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDigCdfScanRebuild' });
-    digCdfScan.dispatchScan(enc, {
-      ismMapTexture: ismMapGenerator.texture,
-      grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
-      weights: {
-        kind: 'armBiased',
-        // DIG's own CDF weights the map's `activity` channel alone.
-        channelWeights: { gas: 0, stars: 0, activity: 1, dust: 0 },
-        armBias,
-        armCount,
-        entries: buildDigArmEnvelopeTable(geo, current.fieldTuning, {
-          rings: ISM_MAP_RINGS,
-          rMin: grid.rMin,
-          rMax: grid.rMax,
-        }),
-      },
-      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
-    });
-    device.queue.submit([enc.finish()]);
-    digPlacementRebuild.invalidate();
-  }
-
-  /**
-   * rebuildIsmMap — reruns the fluid generator from scratch off the CACHED
-   * geometry. NEVER per frame. `createIsmMapGenerator` owns the dispatch and
-   * the none/fluid gate; what stays here is the pair of things that follow it
-   * either way — and the readback hook fires on BOTH exits, the disabled one
-   * too, so the host's CPU copy reflects the cleared texture it just wrote
-   * rather than an earlier galaxy's map.
-   */
-  function rebuildIsmMap(): void {
-    const grid = ismMapGenerator.rebuild({
-      geometry: current.geometry,
-      tuning: current.fieldTuning,
-      seed: current.seed,
-    });
-    if (current.fieldTuning.ismMap.generator === 'fluid') {
-      const enc = device.createCommandEncoder({ label: 'galaxy:ismMapRingReduceRebuild' });
-      // ringMeansBuffer written HERE; dispatchDustCdfScan's own LATER submit
-      // reads it — WebGPU's cross-SUBMIT ordering on one queue is what makes
-      // that safe with no barrier of our own.
-      ringReduce.dispatchRingMeans(enc);
-      device.queue.submit([enc.finish()]);
-      dispatchDustCdfScan();
-      dispatchDigCdfScan();
-    }
-    deps.onIsmMapRebuilt?.(grid);
-    orientationTexRebuild.invalidate();
-    // The map itself just changed (or was cleared) — placement must
-    // re-dispatch even when the budgets' OWN inputs didn't move, e.g. a bare
-    // ismMapFluid tuning drag, which reaches here with no repack of its own
-    // to own the invalidation.
-    dustPlacementRebuild.invalidate();
-    digPlacementRebuild.invalidate();
-  }
 
   /**
    * dustPlacementRebuild — encodes `placeDust.wesl` into its own encoder, off
@@ -1106,31 +1008,6 @@ export function createGalaxyFieldRenderer(
     };
   }
 
-  /**
-   * repackFieldComponents — `fieldPack`'s array into `fieldComps`. The write's
-   * own job is sizing/growing the buffer so the placement passes have somewhere
-   * to write; the regrow still happens HERE, synchronously.
-   *
-   * All three placement invalidations are UNCONDITIONAL, because every call
-   * overwrites the WHOLE buffer and so clobbers whatever the spur/arm-cloud/
-   * dust dispatches last GPU-filled — including calls whose own trigger has
-   * nothing to do with those tiers. Making each caller invalidate for itself is
-   * exactly the gap that let a dust-only patch leave the spur cloud vanished
-   * until an unrelated change fired it.
-   */
-  function repackFieldComponents(): void {
-    spurCloudPlacementRebuild.invalidate();
-    armCloudPlacementRebuild.invalidate();
-    dustPlacementRebuild.invalidate();
-    fieldComps.write(fieldPack.get().packed);
-  }
-
-  /** `hiiPack`'s array into `hiiComps` — the HII tier's counterpart, same clobber discipline. */
-  function repackHiiComponents(): void {
-    digPlacementRebuild.invalidate();
-    hiiComps.write(hiiPack.get().packed);
-  }
-
   /** Into world space — extras only; the central galaxy stays in its own frame. */
   function place(
     components: readonly GalaxyFieldComponent[],
@@ -1165,114 +1042,166 @@ export function createGalaxyFieldRenderer(
     );
   }
 
-  /** A new galaxy: every effect its geometry feeds, plus an unconditional ISM-map regenerate. */
-  function rebuildForGeometry(): void {
-    dispatchDustCdfScan();
-    dispatchDigCdfScan();
-    repackFieldComponents();
-    repackHiiComponents();
-    // Always — a new galaxy means new geometry/arms, so the active generator
-    // and the ridge it forces/biases against are both stale otherwise.
-    rebuildIsmMap();
-  }
+  type StageName = 'ismMap' | 'scan:dust' | 'scan:dig' | 'upload:field' | 'upload:hii';
 
   /**
-   * A tuning move: reference identity per SECTION is the change signal.
-   * Sections are replaced wholesale (`GalaxyFieldTuning`'s contract) and the
-   * host's merge is shallow, so an untouched section arrives as the same
-   * object. What each one feeds:
+   * The effect half of this module's dependency graph, as data: table order IS
+   * the schedule and `after` only proves it. `ismMap` leads the two scans, so a
+   * new galaxy scans once from the final map instead of once per trigger.
    *
-   *   disc          -> field mixture
-   *   arms          -> field mixture, HII tier
-   *   hii           -> HII tier
-   *   starFormation -> HII tier (same path as hii)
-   *   dust          -> dust reservation + the header's dust lanes
-   *   ismMap        -> the shared enabled/generator switch
-   *   ismMapFluid   -> the fluid generator's own params
+   * TRANSITIONAL: every row still hand-invalidates the six surviving
+   * `createKeyedRebuild` nodes, reproducing what the deleted rebuild functions
+   * did. Those nodes become the table's own step-phase rows, and these calls go
+   * with them.
    */
-  function rebuildForTuning(prev: GalaxyFieldTuning): void {
-    const tuning = current.fieldTuning;
-    // `arms.widthScale` reaches further than the arms: `armCrossSigma` sizes
-    // the cross-arm scatter `buildSfEventCatalog` draws every SF event from.
-    // `arms.cloud` shares this flag by construction — the UI cannot replace
-    // the cloud without replacing the `arms` object around it.
-    const armsMoved = prev.arms !== tuning.arms;
-    const fieldMoved = armsMoved || prev.disc !== tuning.disc;
-    const armsWidthMoved = prev.arms.widthScale !== tuning.arms.widthScale;
-    // `starFormation` feeds the HII tier alone (dust reads none of it), so it
-    // joins `hiiMoved` rather than getting its own flag.
-    const starFormationMoved = prev.starFormation !== tuning.starFormation;
-    const hiiMoved = armsWidthMoved || starFormationMoved || prev.hii !== tuning.hii;
-    const dustMoved = prev.dust !== tuning.dust;
+  const graph: StageGraph<StageName> = createStageGraph<StageName>([
+    {
+      name: 'ismMap',
+      phase: 'sync',
+      after: [],
+      // No `arms.widthScale`, though the forcing field bakes against the ridge
+      // it sizes: this rebuild is N compute dispatches, so keying on it would
+      // make an arm-width drag pay them per frame. Deliberately left stale
+      // until `ismMap` itself moves.
+      key: () => [
+        current.geometry,
+        current.fieldTuning.ismMap,
+        current.fieldTuning.ismMapFluid,
+        current.seed,
+      ],
+      run: () => {
+        const grid = ismMapGenerator.rebuild({
+          geometry: current.geometry,
+          tuning: current.fieldTuning,
+          seed: current.seed,
+        });
+        if (current.fieldTuning.ismMap.generator === 'fluid') {
+          const enc = device.createCommandEncoder({ label: 'galaxy:ismMapRingReduceRebuild' });
+          // ringMeansBuffer written HERE; the two scan rows' own LATER submits
+          // read it — WebGPU's cross-SUBMIT ordering on one queue is what makes
+          // that safe with no barrier of our own.
+          ringReduce.dispatchRingMeans(enc);
+          device.queue.submit([enc.finish()]);
+        }
+        // Fires on BOTH exits, the disabled one too, so the host's CPU copy
+        // reflects the cleared texture rather than an earlier galaxy's map.
+        deps.onIsmMapRebuilt?.(grid);
+        orientationTexRebuild.invalidate();
+        dustPlacementRebuild.invalidate();
+        digPlacementRebuild.invalidate();
+      },
+    },
+    {
+      name: 'scan:dust',
+      phase: 'sync',
+      after: ['ismMap'],
+      // No `geometry` of its own — the map token already moves on one — and
+      // `dustPlacementCap` is the only `dust` lane the scan reads.
+      key: () => [
+        graph.token('ismMap'),
+        current.fieldTuning.dust.cloud.dustPlacementCap,
+        current.fieldTuning.ismMap,
+      ],
+      run: () => {
+        if (!current.geometry || current.fieldTuning.ismMap.generator !== 'fluid') return;
+        const grid = ismMapGridRadiusOrDefault(current.geometry);
+        const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDustCdfScanRebuild' });
+        // `ringCap` reproduces dustParticleCloud.ts's density() ring-mean-
+        // normalised, capped placement density (ismMapDustCdfScan.wesl's own doc).
+        dustCdfScan.dispatchScan(enc, {
+          ismMapTexture: ismMapGenerator.texture,
+          grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
+          weights: {
+            kind: 'channel',
+            channelWeights: { gas: 0, stars: 0, activity: 0, dust: 1 },
+            ringCap: current.fieldTuning.dust.cloud.dustPlacementCap ?? 0,
+          },
+          ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+        });
+        device.queue.submit([enc.finish()]);
+        dustPlacementRebuild.invalidate();
+      },
+    },
+    {
+      name: 'scan:dig',
+      phase: 'sync',
+      after: ['ismMap'],
+      // `arms.widthScale` because `buildDigArmEnvelopeTable` sizes its
+      // cross-arm sigma from it (`armCrossSigma`) — the same single lane
+      // `centralHii` keys on, and the only part of `arms` this row reads.
+      key: () => [
+        graph.token('ismMap'),
+        current.fieldTuning.hii.dig,
+        current.fieldTuning.arms.widthScale,
+        current.fieldTuning.ismMap,
+        current.geometry,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        if (!geo || current.fieldTuning.ismMap.generator !== 'fluid') return;
+        const grid = ismMapGridRadiusOrDefault(geo);
+        // Clamped HERE, at the packing call site: `buildDigVeil`'s CPU original
+        // clamps to [0, 1] before ever building the envelope, and the scan
+        // shader trusts whatever `params.armBias` it is handed.
+        const armBias = Math.min(1, Math.max(0, current.fieldTuning.hii.dig?.armBias ?? 0));
+        const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDigCdfScanRebuild' });
+        digCdfScan.dispatchScan(enc, {
+          ismMapTexture: ismMapGenerator.texture,
+          grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
+          weights: {
+            kind: 'armBiased',
+            // DIG's own CDF weights the map's `activity` channel alone.
+            channelWeights: { gas: 0, stars: 0, activity: 1, dust: 0 },
+            armBias,
+            armCount: geo.arms.length,
+            entries: buildDigArmEnvelopeTable(geo, current.fieldTuning, {
+              rings: ISM_MAP_RINGS,
+              rMin: grid.rMin,
+              rMax: grid.rMax,
+            }),
+          },
+          ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+        });
+        device.queue.submit([enc.finish()]);
+        digPlacementRebuild.invalidate();
+      },
+    },
+    {
+      name: 'upload:field',
+      phase: 'sync',
+      after: [],
+      key: () => [fieldPack.get()],
+      run: () => {
+        spurCloudPlacementRebuild.invalidate();
+        armCloudPlacementRebuild.invalidate();
+        dustPlacementRebuild.invalidate();
+        fieldComps.write(fieldPack.get().packed);
+      },
+    },
+    {
+      name: 'upload:hii',
+      phase: 'sync',
+      after: [],
+      key: () => [hiiPack.get()],
+      run: () => {
+        digPlacementRebuild.invalidate();
+        hiiComps.write(hiiPack.get().packed);
+      },
+    },
+  ]);
 
-    if (hiiMoved) dispatchDigCdfScan();
-    if (dustMoved) dispatchDustCdfScan();
-    // The dust mixture is the trailing slice of the SAME buffer the emission
-    // mixtures pack into, so either moving needs the one repack.
-    if (fieldMoved || dustMoved) repackFieldComponents();
-    if (hiiMoved) repackHiiComponents();
-    // A generator rebuild is N compute dispatches, far more expensive than
-    // the CPU mixture rebuilds above. `arms.widthScale` feeds the ridge its
-    // forcing field bakes, but re-triggering on it would make an arm-width
-    // drag pay this cost per frame — deliberately left stale until `ismMap`
-    // moves.
-    const generatorMoved = prev.ismMap !== tuning.ismMap;
-    const fluidParamsMoved = prev.ismMapFluid !== tuning.ismMapFluid;
-    if (generatorMoved || fluidParamsMoved) {
-      rebuildIsmMap();
-    }
-    // `generator` gates `placeDust.wesl`'s own in-shader placement mode
-    // (map-seeded vs `smoothDisc`) from the `ismMap` section rather than
-    // `dust`, so a generator flip is invisible to `dustMoved` and needs its
-    // own rebuild — or the previous generator's reservation/CDF-scan state
-    // keeps drawing as live until an unrelated change rebuilds it.
-    if (generatorMoved && !dustMoved) {
-      dispatchDustCdfScan();
-      repackFieldComponents();
-    }
-  }
-
-  /**
-   * setMixture — the three movers (a new galaxy, a tuning patch, a new extras
-   * set) each arrive from their own host call site, one at a time; the render
-   * knobs at the end ride whichever call the host makes next and are compared
-   * on every call, since the host re-pushes its whole bag on any knob.
-   */
   function setMixture(input: GalaxyFieldMixtureInput): void {
-    const prev = current;
-    // `geometry` alone, not `seed`: a seed change always arrives with a fresh
-    // `describeGalaxy` result, and every dispatch reads `seed` live anyway.
-    const geometryMoved = input.geometry !== prev.geometry;
-    const tuningMoved = input.fieldTuning !== prev.fieldTuning;
-    const extrasMoved = input.extras !== prev.extras;
-    // The two sigmas are the only render lanes the orientation chain reads,
-    // and the host re-pushes the WHOLE bag on any knob — so an unconditional
-    // invalidate here would redispatch the six stages, and with a generator
-    // active the readback and dust rebuild behind them, on every frame of an
-    // unrelated exposure drag. No crossing to catch alongside them: an
-    // invalidation raised while nothing wanted the value is retained, so the
-    // overlay turning on rebuilds by itself.
+    // Transitional alongside the table: the sigma lanes are the orientation
+    // row's key element, and that row is still a `createKeyedRebuild`. An
+    // unconditional invalidate would redispatch the six orientation stages on
+    // every frame of an unrelated exposure drag, since the host re-pushes its
+    // whole bag on any knob.
     const sigmasMoved =
-      input.sigmaDerivTexels !== prev.sigmaDerivTexels ||
-      input.sigmaIntegTexels !== prev.sigmaIntegTexels;
-
+      input.sigmaDerivTexels !== current.sigmaDerivTexels ||
+      input.sigmaIntegTexels !== current.sigmaIntegTexels;
     current = input;
-
     if (sigmasMoved) orientationTexRebuild.invalidate();
-
-    if (geometryMoved) {
-      rebuildForGeometry();
-    } else if (tuningMoved) {
-      rebuildForTuning(prev.fieldTuning);
-    }
-    // Outside the chain, not an `else if` tail: a call that moves extras AND
-    // tuning would otherwise leave the extras' new components unwritten, since
-    // `rebuildForTuning`'s repacks are gated on which tuning section moved.
-    // `rebuildForGeometry` already repacked.
-    if (extrasMoved && !geometryMoved) {
-      repackFieldComponents();
-      repackHiiComponents();
-    }
+    graph.run('sync');
   }
 
   function stepIsmMap(): { readonly done: boolean } {
@@ -1420,7 +1349,7 @@ export function createGalaxyFieldRenderer(
       });
     }
 
-    // One draw for the WHOLE emission list `repackFieldComponents` wrote —
+    // One draw for the WHOLE emission list `upload:field` wrote —
     // central galaxy's components then every extra's. `fieldCounts.emission`,
     // NOT the packed total: the trailing dust slice is never drawn as its own
     // quad, only read from inside a primary emission fragment.
