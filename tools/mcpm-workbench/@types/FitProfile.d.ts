@@ -6,10 +6,9 @@
  */
 export type FitProfile = {
   readonly count: number;
-  /** Point indices into the source `positions`, ascending by normalized L∞ distance from the robust center. */
-  readonly sortedIndices: Uint32Array;
-  /** Interleaved xyz, length count*3. Entry k = min bounds over sortedIndices[0..k]. */
+  /** Interleaved xyz, length count*3. Entry k = min bounds over the k+1 points ranked
+   * closest (by normalized L∞ distance from the robust center) up to and including rank k. */
   readonly prefixMin: Float32Array;
-  /** Interleaved xyz, length count*3. Entry k = max bounds over sortedIndices[0..k]. */
+  /** Interleaved xyz, length count*3. Entry k = max bounds over the same k+1 points. */
   readonly prefixMax: Float32Array;
 };

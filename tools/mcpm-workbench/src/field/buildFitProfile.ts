@@ -14,7 +14,6 @@ export function buildFitProfile(positions: Float32Array): FitProfile {
   if (count === 0) {
     return {
       count: 0,
-      sortedIndices: new Uint32Array(0),
       prefixMin: new Float32Array(0),
       prefixMax: new Float32Array(0),
     };
@@ -75,7 +74,7 @@ export function buildFitProfile(positions: Float32Array): FitProfile {
     }
   }
 
-  return { count, sortedIndices, prefixMin, prefixMax };
+  return { count, prefixMin, prefixMax };
 }
 
 // Type-7 (R/NumPy default) linear-interpolation quantile over an already-sorted array.

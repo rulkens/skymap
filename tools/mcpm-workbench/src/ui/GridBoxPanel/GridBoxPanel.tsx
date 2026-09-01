@@ -103,32 +103,37 @@ function GridBoxPanel(): ReactNode {
         info="Keeps the box wireframe and its drag handles on screen, instead of only the 200ms flash after a slider edit."
         onChange={(on) => dispatch(setShowGridBox(on))}
       />
-      <ParamSlider
-        label="fit %"
-        value={grid.autoFitPercent}
-        min={80}
-        max={100}
-        step={1}
-        format={(v) => v.toFixed(0)}
-        info="Fraction of catalog points the next Auto fit keeps, evicting the farthest-from-median fringe."
-        onChange={(v) => dispatch(setAutoFitPercent(v))}
-        path="grid.autoFitPercent"
-      />
-      {grid.autoFitPercent < 100 && <div style={dimsReadoutStyle}>evicts {evictedCount} pts</div>}
-      <Button
-        className={styles.autoFitButton}
-        disabled={!catalogBoundsMpc}
-        onClick={() => {
-          if (!catalogBoundsMpc) return;
-          dispatch(
-            fitBoxToCatalog(
-              resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
-            ),
-          );
-        }}
-      >
-        auto fit
-      </Button>
+      {/* Group div so the slider's own margin (not the root grid's gap) sets its
+          spacing to the readout/button it controls — same principle as the
+          seven-slider wrapper below, applied to this one slider+button pairing. */}
+      <div>
+        <ParamSlider
+          label="fit %"
+          value={grid.autoFitPercent}
+          min={80}
+          max={100}
+          step={1}
+          format={(v) => v.toFixed(0)}
+          info="Fraction of catalog points the next Auto fit keeps, evicting the farthest-from-median fringe."
+          onChange={(v) => dispatch(setAutoFitPercent(v))}
+          path="grid.autoFitPercent"
+        />
+        {grid.autoFitPercent < 100 && <div style={dimsReadoutStyle}>evicts {evictedCount} pts</div>}
+        <Button
+          className={styles.autoFitButton}
+          disabled={!catalogBoundsMpc}
+          onClick={() => {
+            if (!catalogBoundsMpc) return;
+            dispatch(
+              fitBoxToCatalog(
+                resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
+              ),
+            );
+          }}
+        >
+          auto fit
+        </Button>
+      </div>
       <div style={dimsReadoutStyle}>
         {box.dims[0]} × {box.dims[1]} × {box.dims[2]} vox · {box.voxelSizeMpc.toFixed(2)} Mpc/vox ·{' '}
         {formatBytes(estimatedBytes)}
