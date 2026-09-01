@@ -53,7 +53,6 @@ import { HII_TIER_KINDS, mapHiiTiers } from '../../../../data/hiiTiers';
 
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { createDerived } from '../../lib/createDerived';
-import { createKeyedRebuild } from '../../lib/createKeyedRebuild';
 import { createStageGraph } from '../../lib/createStageGraph';
 
 import { buildFieldHeaderInputs } from './field/buildFieldHeaderInputs';
@@ -694,7 +693,7 @@ export function createGalaxyFieldRenderer(
    * `fieldComps`' whole contents: the central galaxy's emission mixture, then
    * every extra's (already in world space), then the central galaxy's dust
    * RESERVATION — a zero block (amplitude 0 draws nothing) that
-   * `dustPlacementRebuild` fills in a LATER, separate GPU pass; the pack's own
+   * the `place:dust` stage fills in a LATER, separate GPU pass; the pack's own
    * job is sizing it. Dust trails every emission component (never interleaved)
    * so `dustOffset == counts.emission` holds with no bookkeeping pass of its
    * own — see io.wesl's layout comment.
@@ -777,81 +776,7 @@ export function createGalaxyFieldRenderer(
     },
   });
 
-  /**
-   * The CPU copy of the orientation field — diagnostics-only (the host's
-   * coherence-stat report); dust placement reads `orientationTex` on the GPU
-   * directly. Still gated on the generator being active: a disabled generator
-   * has nothing coherent to report either.
-   */
-  const orientationDataRebuild = createKeyedRebuild({
-    wanted: () => current.fieldTuning.ismMap.generator !== 'none',
-    build: () => deps.onOrientationRebuilt?.(ismMapGridRadiusOrDefault(current.geometry)),
-  });
-
-  /**
-   * The GPU structure-tensor chain over the CURRENT `ismMapTex`. Two
-   * independent consumers — the debug overlay reads the texture on the GPU,
-   * dust placement the same texture — either enough to justify the six
-   * dispatches. Needs no readback to run FROM: ismMapTex is a GPU texture
-   * WebGPU zero-initialises, so dispatching before the `ismMap` stage has ever
-   * populated it is safe. Invalidated by that stage and by a sigma move.
-   */
-  const orientationTexRebuild = createKeyedRebuild({
-    wanted: () => current.orientationViewWanted || current.fieldTuning.ismMap.generator !== 'none',
-    build: () => {
-      // gasFloor=1 when the generator is off: the map texture is a cleared
-      // (all-zero) blank then, and ismMapOrientationField.wesl's
-      // IsmMapOrientationPedestal derives its zero-gradient invariant from
-      // gasProfile(r) collapsing to a flat 1.0 — a real fluid gasFloor here
-      // would subtract a non-flat pedestal from that blank data and paint a
-      // fake radial gradient into the orientation view. gasScaleLength must
-      // still be finite even though it's then algebraically unused.
-      const pedestal =
-        current.fieldTuning.ismMap.generator === 'fluid'
-          ? current.fieldTuning.ismMapFluid
-          : { gasFloor: 1, gasScaleLength: 1 };
-      ismMapOrientation.dispatch({
-        grid: ismMapGridRadiusOrDefault(current.geometry),
-        sigmaDerivTexels: current.sigmaDerivTexels,
-        sigmaIntegTexels: current.sigmaIntegTexels,
-        gasFloor: pedestal.gasFloor,
-        gasScaleLength: pedestal.gasScaleLength,
-        ambient: ISM_MAP_AMBIENT_DUST,
-      });
-      orientationDataRebuild.invalidate();
-    },
-  });
-
-  /**
-   * dustPlacementRebuild — encodes `placeDust.wesl` into its own encoder, off
-   * the CURRENT `dustBudget`. Consumed from `stepIsmMap()` AFTER
-   * `orientationTexRebuild`, never synchronously from the rebuilds above:
-   * this dispatch needs `orientationTex` already fresh for whatever
-   * `ismMapTex` the rebuild wrote, and the lazy per-frame gate is what
-   * guarantees that ordering. A one-frame-late fill is the honest cost.
-   */
-  const dustPlacementRebuild = createKeyedRebuild({
-    wanted: () => dustBudget.get() !== null,
-    build: () => {
-      const geo = current.geometry;
-      const budget = dustBudget.get();
-      if (!geo || !budget) return;
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeDust' });
-      placeDust.dispatchPlaceDust(enc, dustDispatchInput(geo, budget));
-      // Survivor-sum + Larson renorm, encoded into the SAME encoder/submit
-      // right after the dispatch: cross-pass ordering within one submit is
-      // what lets this read `placeDust.massBuffer` fresh with no readback of
-      // its own, tying the renorm's freshness to THIS placement rebuild.
-      ringReduce.dispatchSurvivorSum(enc, {
-        massBuffer: placeDust.massBuffer,
-        count: budget.count,
-        totalMass: budget.totalMass,
-      });
-      device.queue.submit([enc.finish()]);
-    },
-  });
-
-  /** Shared by `dustPlacementRebuild` and the debug readback — one input shape, one place that assembles it. */
+  /** Shared by the `place:dust` stage and the debug readback — one input shape, one place that assembles it. */
   function dustDispatchInput(
     geo: GalaxyDescription,
     budget: PlaceDustBudget,
@@ -886,31 +811,7 @@ export function createGalaxyFieldRenderer(
     };
   }
 
-  /**
-   * spurCloudPlacementRebuild — the same deferred-dispatch shape
-   * `dustPlacementRebuild` uses. Unlike dust, this tier reads no ISM-map/
-   * orientation texture at all (`armRidge.wesl`'s ridge math is self-contained
-   * off the per-spur record table), so there is no ordering dependency on
-   * `orientationTexRebuild`; it is placed after it anyway, for one discipline
-   * rather than two.
-   */
-  const spurCloudPlacementRebuild = createKeyedRebuild({
-    wanted: () => centralField.get().spurCloudReservation !== null,
-    build: () => {
-      const geo = current.geometry;
-      const reservation = centralField.get().spurCloudReservation;
-      if (!geo || !reservation) return;
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloud' });
-      placeArmSpurCloud.dispatchPlaceArmSpurCloud(enc, spurCloudDispatchInput(geo, reservation));
-      ringReduce.dispatchArmSpurFluxWeightSum(enc, {
-        fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
-        count: reservation.count,
-      });
-      device.queue.submit([enc.finish()]);
-    },
-  });
-
-  /** Shared by `spurCloudPlacementRebuild` and the debug readback. */
+  /** Shared by the `place:spur` stage and the debug readback. */
   function spurCloudDispatchInput(
     geo: GalaxyDescription,
     reservation: NonNullable<GalaxyFieldMixtureResult['spurCloudReservation']>,
@@ -927,29 +828,7 @@ export function createGalaxyFieldRenderer(
     };
   }
 
-  /**
-   * armCloudPlacementRebuild — the arm-cloud twin. Its own
-   * `orientationTexture` bind is a dead pass-through (see
-   * `placeArmCloud.wesl`), so this too has no real ordering dependency on
-   * `orientationTexRebuild`.
-   */
-  const armCloudPlacementRebuild = createKeyedRebuild({
-    wanted: () => centralField.get().armCloudReservation !== null,
-    build: () => {
-      const geo = current.geometry;
-      const reservation = centralField.get().armCloudReservation;
-      if (!geo || !reservation) return;
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloud' });
-      placeArmCloud.dispatchPlaceArmCloud(enc, armCloudDispatchInput(geo, reservation));
-      ringReduce.dispatchArmCloudFluxWeightSum(enc, {
-        fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
-        count: reservation.count,
-      });
-      device.queue.submit([enc.finish()]);
-    },
-  });
-
-  /** Shared by `armCloudPlacementRebuild` and the debug readback. */
+  /** Shared by the `place:arm` stage and the debug readback. */
   function armCloudDispatchInput(
     geo: GalaxyDescription,
     reservation: NonNullable<GalaxyFieldMixtureResult['armCloudReservation']>,
@@ -961,29 +840,14 @@ export function createGalaxyFieldRenderer(
       flux: reservation.flux,
       geometry: geo,
       tuning: current.fieldTuning,
+      // A dead pass-through — `placeArmCloud.wesl` binds it and never samples
+      // it, which is why `place:arm` declares no edge to `orientation:tex`.
       orientationTexture: ismMapOrientation.texture,
       fieldCompsBuffer: fieldComps.getBuffer(),
     };
   }
 
-  /**
-   * digPlacementRebuild — the DIG twin. Reads no `orientationTex` at all
-   * (this tier has no coherence-blend mode), so no real ordering dependency
-   * either; placed after it anyway, one discipline rather than four.
-   */
-  const digPlacementRebuild = createKeyedRebuild({
-    wanted: () => digBudget.get() !== null,
-    build: () => {
-      const geo = current.geometry;
-      const budget = digBudget.get();
-      if (!geo || !budget) return;
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeDigVeil' });
-      placeDigVeil.dispatchPlaceDigVeil(enc, digDispatchInput(geo, budget));
-      device.queue.submit([enc.finish()]);
-    },
-  });
-
-  /** Shared by `digPlacementRebuild` and the debug readback. */
+  /** Shared by the `place:dig` stage and the debug readback. */
   function digDispatchInput(
     geo: GalaxyDescription,
     budget: DigVeilBudget,
@@ -1043,17 +907,26 @@ export function createGalaxyFieldRenderer(
     );
   }
 
-  type StageName = 'ismMap' | 'scan:dust' | 'scan:dig' | 'upload:field' | 'upload:hii';
+  type StageName =
+    | 'ismMap'
+    | 'scan:dust'
+    | 'scan:dig'
+    | 'upload:field'
+    | 'upload:hii'
+    | 'orientation:tex'
+    | 'orientation:data'
+    | 'place:dust'
+    | 'place:spur'
+    | 'place:arm'
+    | 'place:dig';
 
   /**
    * The effect half of this module's dependency graph, as data: table order IS
    * the schedule and `after` only proves it. `ismMap` leads the two scans, so a
-   * new galaxy scans once from the final map instead of once per trigger.
-   *
-   * TRANSITIONAL: every row still hand-invalidates the six surviving
-   * `createKeyedRebuild` nodes, reproducing what the deleted rebuild functions
-   * did. Those nodes become the table's own step-phase rows, and these calls go
-   * with them.
+   * new galaxy scans once from the final map instead of once per trigger. The
+   * `sync` rows run inside `setMixture`; the `step` rows are deferred to
+   * `stepIsmMap`, which the host calls before the frame's own encoder exists —
+   * each of them submits an encoder of its own that has to precede it.
    */
   const graph: StageGraph<StageName> = createStageGraph<StageName>([
     {
@@ -1087,9 +960,6 @@ export function createGalaxyFieldRenderer(
         // Fires on BOTH exits, the disabled one too, so the host's CPU copy
         // reflects the cleared texture rather than an earlier galaxy's map.
         deps.onIsmMapRebuilt?.(grid);
-        orientationTexRebuild.invalidate();
-        dustPlacementRebuild.invalidate();
-        digPlacementRebuild.invalidate();
       },
     },
     {
@@ -1120,7 +990,6 @@ export function createGalaxyFieldRenderer(
           ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
         });
         device.queue.submit([enc.finish()]);
-        dustPlacementRebuild.invalidate();
       },
     },
     {
@@ -1164,7 +1033,6 @@ export function createGalaxyFieldRenderer(
           ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
         });
         device.queue.submit([enc.finish()]);
-        digPlacementRebuild.invalidate();
       },
     },
     {
@@ -1172,50 +1040,178 @@ export function createGalaxyFieldRenderer(
       phase: 'sync',
       after: [],
       key: () => [fieldPack.get()],
-      run: () => {
-        spurCloudPlacementRebuild.invalidate();
-        armCloudPlacementRebuild.invalidate();
-        dustPlacementRebuild.invalidate();
-        fieldComps.write(fieldPack.get().packed);
-      },
+      run: () => fieldComps.write(fieldPack.get().packed),
     },
     {
       name: 'upload:hii',
       phase: 'sync',
       after: [],
       key: () => [hiiPack.get()],
+      run: () => hiiComps.write(hiiPack.get().packed),
+    },
+    {
+      name: 'orientation:tex',
+      phase: 'step',
+      after: ['ismMap'],
+      // Two independent consumers — the debug overlay and dust placement, each
+      // reading `orientationTex` on the GPU — so either one alone is worth the
+      // six dispatches. Needs no readback to run FROM: ismMapTex is a texture
+      // WebGPU zero-initialises, so dispatching before `ismMap` has ever
+      // populated it is safe.
+      wanted: () =>
+        current.orientationViewWanted || current.fieldTuning.ismMap.generator !== 'none',
+      key: () => [
+        graph.token('ismMap'),
+        current.sigmaDerivTexels,
+        current.sigmaIntegTexels,
+        current.geometry,
+      ],
       run: () => {
-        digPlacementRebuild.invalidate();
-        hiiComps.write(hiiPack.get().packed);
+        // gasFloor=1 when the generator is off: the map texture is a cleared
+        // (all-zero) blank then, and ismMapOrientationField.wesl's
+        // IsmMapOrientationPedestal derives its zero-gradient invariant from
+        // gasProfile(r) collapsing to a flat 1.0 — a real fluid gasFloor here
+        // would subtract a non-flat pedestal from that blank data and paint a
+        // fake radial gradient into the orientation view. gasScaleLength must
+        // still be finite even though it's then algebraically unused.
+        const pedestal =
+          current.fieldTuning.ismMap.generator === 'fluid'
+            ? current.fieldTuning.ismMapFluid
+            : { gasFloor: 1, gasScaleLength: 1 };
+        ismMapOrientation.dispatch({
+          grid: ismMapGridRadiusOrDefault(current.geometry),
+          sigmaDerivTexels: current.sigmaDerivTexels,
+          sigmaIntegTexels: current.sigmaIntegTexels,
+          gasFloor: pedestal.gasFloor,
+          gasScaleLength: pedestal.gasScaleLength,
+          ambient: ISM_MAP_AMBIENT_DUST,
+        });
+      },
+    },
+    {
+      name: 'orientation:data',
+      phase: 'step',
+      after: ['orientation:tex'],
+      // The CPU copy of the orientation field — diagnostics-only (the host's
+      // coherence-stat report); a disabled generator has nothing coherent to
+      // report either.
+      wanted: () => current.fieldTuning.ismMap.generator !== 'none',
+      key: () => [graph.token('orientation:tex')],
+      run: () => deps.onOrientationRebuilt?.(ismMapGridRadiusOrDefault(current.geometry)),
+    },
+    {
+      name: 'place:dust',
+      phase: 'step',
+      after: ['orientation:tex', 'scan:dust', 'upload:field'],
+      wanted: () => dustBudget.get() !== null,
+      key: () => [
+        graph.token('upload:field'),
+        graph.token('scan:dust'),
+        graph.token('orientation:tex'),
+        dustBudget.get(),
+        current.seed,
+        current.fieldTuning.ismMap.generator,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        const budget = dustBudget.get();
+        if (!geo || !budget) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeDust' });
+        placeDust.dispatchPlaceDust(enc, dustDispatchInput(geo, budget));
+        // Survivor-sum + Larson renorm, encoded into the SAME encoder/submit
+        // right after the dispatch: cross-pass ordering within one submit is
+        // what lets this read `placeDust.massBuffer` fresh with no readback of
+        // its own, tying the renorm's freshness to THIS placement.
+        ringReduce.dispatchSurvivorSum(enc, {
+          massBuffer: placeDust.massBuffer,
+          count: budget.count,
+          totalMass: budget.totalMass,
+        });
+        device.queue.submit([enc.finish()]);
+      },
+    },
+    {
+      name: 'place:spur',
+      phase: 'step',
+      after: ['upload:field'],
+      wanted: () => centralField.get().spurCloudReservation !== null,
+      key: () => [
+        graph.token('upload:field'),
+        centralField.get(),
+        current.seed,
+        current.fieldTuning.arms,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        const reservation = centralField.get().spurCloudReservation;
+        if (!geo || !reservation) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloud' });
+        placeArmSpurCloud.dispatchPlaceArmSpurCloud(enc, spurCloudDispatchInput(geo, reservation));
+        ringReduce.dispatchArmSpurFluxWeightSum(enc, {
+          fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
+          count: reservation.count,
+        });
+        device.queue.submit([enc.finish()]);
+      },
+    },
+    {
+      name: 'place:arm',
+      phase: 'step',
+      after: ['upload:field'],
+      wanted: () => centralField.get().armCloudReservation !== null,
+      key: () => [
+        graph.token('upload:field'),
+        centralField.get(),
+        current.seed,
+        current.fieldTuning.arms,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        const reservation = centralField.get().armCloudReservation;
+        if (!geo || !reservation) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloud' });
+        placeArmCloud.dispatchPlaceArmCloud(enc, armCloudDispatchInput(geo, reservation));
+        ringReduce.dispatchArmCloudFluxWeightSum(enc, {
+          fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
+          count: reservation.count,
+        });
+        device.queue.submit([enc.finish()]);
+      },
+    },
+    {
+      name: 'place:dig',
+      phase: 'step',
+      after: ['scan:dig', 'upload:hii'],
+      wanted: () => digBudget.get() !== null,
+      // `hiiPack` and not just its token: this dispatch writes at the segment
+      // table's `hii:dig` offset, so a repack that moves that span has to
+      // re-place even when the buffer upload itself was a no-op.
+      key: () => [
+        graph.token('upload:hii'),
+        graph.token('scan:dig'),
+        digBudget.get(),
+        hiiPack.get(),
+        current.seed,
+        current.fieldTuning.ismMap.generator,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        const budget = digBudget.get();
+        if (!geo || !budget) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeDigVeil' });
+        placeDigVeil.dispatchPlaceDigVeil(enc, digDispatchInput(geo, budget));
+        device.queue.submit([enc.finish()]);
       },
     },
   ]);
 
   function setMixture(input: GalaxyFieldMixtureInput): void {
-    // Transitional alongside the table: the sigma lanes are the orientation
-    // row's key element, and that row is still a `createKeyedRebuild`. An
-    // unconditional invalidate would redispatch the six orientation stages on
-    // every frame of an unrelated exposure drag, since the host re-pushes its
-    // whole bag on any knob.
-    const sigmasMoved =
-      input.sigmaDerivTexels !== current.sigmaDerivTexels ||
-      input.sigmaIntegTexels !== current.sigmaIntegTexels;
     current = input;
-    if (sigmasMoved) orientationTexRebuild.invalidate();
     graph.run('sync');
   }
 
   function stepIsmMap(): { readonly done: boolean } {
-    // Texture before CPU copy — the first invalidates the second.
-    orientationTexRebuild.ensureFresh();
-    orientationDataRebuild.ensureFresh();
-    // AFTER orientationTexRebuild, never before: placeDust.wesl reads
-    // orientationTex on the GPU directly, so it needs THIS rebuild's own
-    // dispatch (if any) to have already run in this same call.
-    dustPlacementRebuild.ensureFresh();
-    spurCloudPlacementRebuild.ensureFresh();
-    armCloudPlacementRebuild.ensureFresh();
-    digPlacementRebuild.ensureFresh();
+    graph.run('step');
     return { done: true };
   }
 
