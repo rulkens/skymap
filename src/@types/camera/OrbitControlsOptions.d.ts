@@ -71,6 +71,13 @@ export type OrbitControlsOptions = {
    */
   pivotRadiusMpc?: () => number | null;
   /**
+   * Per-pivot override of `clampDistance`'s global `SURFACE_STANDOFF_RADII`
+   * (e.g. Sgr A*'s Q10 floor of 2 r_s), read alongside `pivotRadiusMpc` at the
+   * same two call sites. A getter for the same reason; the engine wires it to
+   * `pivotStandoffRadii(selectFocusRow(...))`. Omitted ⇒ the global ratio.
+   */
+  standoffRadii?: () => number;
+  /**
    * Called on the first pointer contact that begins a new gesture (i.e. when
    * `activePointers.size === 1` on `pointerdown`). Subsequent fingers (pinch
    * promotion) do NOT re-fire this.

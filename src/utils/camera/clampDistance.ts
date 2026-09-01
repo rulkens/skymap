@@ -60,18 +60,24 @@ export const MAX_DISTANCE_MPC = 30000;
 
 /**
  * Clamp a candidate distance to the zoom envelope: ceiling `MAX_DISTANCE_MPC`,
- * floor `max(MIN_DISTANCE_MPC, pivotRadiusMpc · SURFACE_STANDOFF_RADII)`.
+ * floor `max(MIN_DISTANCE_MPC, pivotRadiusMpc · standoffRadii)`.
  *
  * @param d               Candidate `cam.distance`, Mpc.
  * @param pivotRadiusMpc  Physical radius of the orbit pivot, Mpc, or `null` when
  *   it has no surface to stand off from (empty space, a galaxy, a structure,
  *   the Milky Way — volumes the camera flies INTO, never a floor).
+ * @param standoffRadii   Per-pivot override of `SURFACE_STANDOFF_RADII` — see
+ *   `AnchorPointBody.standoffRadii` for why a body needs its own ratio.
  */
-export function clampDistance(d: number, pivotRadiusMpc: number | null): number {
+export function clampDistance(
+  d: number,
+  pivotRadiusMpc: number | null,
+  standoffRadii: number = SURFACE_STANDOFF_RADII,
+): number {
   const floor =
     pivotRadiusMpc === null
       ? MIN_DISTANCE_MPC
-      : Math.max(MIN_DISTANCE_MPC, pivotRadiusMpc * SURFACE_STANDOFF_RADII);
+      : Math.max(MIN_DISTANCE_MPC, pivotRadiusMpc * standoffRadii);
   if (d < floor) return floor;
   if (d > MAX_DISTANCE_MPC) return MAX_DISTANCE_MPC;
   return d;

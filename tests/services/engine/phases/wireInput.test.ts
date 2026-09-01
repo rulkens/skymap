@@ -103,6 +103,7 @@ import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
 import type { OrbitControlsOptions } from '../../../../src/@types/camera/OrbitControlsOptions';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -300,6 +301,39 @@ describe('wireInput', () => {
       }),
     );
     expect(read!()).toBeCloseTo(6371 * SCALE_UNITS.KM_TO_MPC, 30);
+  });
+
+  it('hands the orbit controls a live read of the focused body’s standoff override', async () => {
+    // Same wiring gap, one field over: without this getter, Sgr A*'s Q10 floor
+    // (`standoffRadii: 2.0`) never reaches the pinch / wheel-during-gesture
+    // sites and the camera stops at the Earth-tuned global ratio instead.
+    const state = makeState();
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
+    const read = options?.standoffRadii;
+    expect(read).toBeTypeOf('function');
+
+    // Nothing resolved yet: no per-body override, so the global ratio applies.
+    expect(read!()).toBe(SURFACE_STANDOFF_RADII);
+
+    deps.cb.store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'sgr-a-star',
+          label: 'Sagittarius A*',
+          positionMpc: [0, 0, 0],
+          radiusM: 1.269e10,
+          standoffRadii: 2.0,
+        },
+      }),
+    );
+    expect(read!()).toBe(2.0);
   });
 
   it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {

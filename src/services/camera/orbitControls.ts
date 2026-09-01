@@ -198,6 +198,10 @@ export function attachOrbitControls(
   // live through the caller's getter rather than cached, since this module
   // never sees the scene and focus can change while controls stay attached.
   const pivotRadius = (): number | null => options?.pivotRadiusMpc?.() ?? null;
+  // Same live-read reasoning, for the per-pivot standoff override (e.g. Sgr
+  // A*'s 2 r_s floor). Undefined (no getter, or the getter's own default)
+  // reaches `zoomedDistance`'s own default unchanged.
+  const standoffRadius = (): number | undefined => options?.standoffRadii?.();
 
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
@@ -361,7 +365,12 @@ export function attachOrbitControls(
       if (activePointers.size < 2 || lastPinchDist === 0) return;
       const newDist = currentPinchDistance();
       if (newDist > 0) {
-        cam.distance = zoomedDistance(cam.distance, lastPinchDist / newDist, pivotRadius());
+        cam.distance = zoomedDistance(
+          cam.distance,
+          lastPinchDist / newDist,
+          pivotRadius(),
+          standoffRadius(),
+        );
         lastPinchDist = newDist;
         updatePosition(cam);
         options?.onChange?.();
@@ -517,7 +526,7 @@ export function attachOrbitControls(
       // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
       // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
       // so the zoom shows immediately and rides the `onGestureEnd` commit.
-      cam.distance = zoomedDistance(cam.distance, factor, pivotRadius());
+      cam.distance = zoomedDistance(cam.distance, factor, pivotRadius(), standoffRadius());
       updatePosition(cam);
       options?.onChange?.();
       return;

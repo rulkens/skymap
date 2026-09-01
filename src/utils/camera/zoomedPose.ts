@@ -17,6 +17,9 @@
  * Pure by design: the wheel handler reads `camera.base` from the store, hands
  * it here, and dispatches the result — so the zoom arithmetic (and its clamp
  * behaviour) is unit-testable without a store, a canvas, or a render loop.
+ *
+ * `standoffRadii` forwards straight to `zoomedDistance`, optional for the same
+ * reason: every caller without a per-body override reaches the shared default.
  */
 
 import { zoomedDistance } from './zoomedDistance';
@@ -26,11 +29,12 @@ export function zoomedPose(
   base: CameraPose,
   factor: number,
   pivotRadiusMpc: number | null,
+  standoffRadii?: number,
 ): CameraPose {
   return {
     target: [base.target[0], base.target[1], base.target[2]],
     yaw: base.yaw,
     pitch: base.pitch,
-    distance: zoomedDistance(base.distance, factor, pivotRadiusMpc),
+    distance: zoomedDistance(base.distance, factor, pivotRadiusMpc, standoffRadii),
   };
 }

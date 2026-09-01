@@ -60,6 +60,8 @@ const EXTRACT_ROW: {
       label: body.label,
       positionMpc: [p[0], p[1], p[2]],
       radiusM: body.radiusM,
+      // Only the AnchorPointBody arm of the SceneBody union carries this field.
+      standoffRadii: 'standoffRadii' in body ? body.standoffRadii : undefined,
     };
   },
   // The star's physical fields are resolved off the LIVE catalog through the

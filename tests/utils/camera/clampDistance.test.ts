@@ -15,6 +15,7 @@ import {
   clampDistance,
   MIN_DISTANCE_MPC,
   MAX_DISTANCE_MPC,
+  SURFACE_STANDOFF_RADII,
 } from '../../../src/utils/camera/clampDistance';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { bodyFocusDistance } from '../../../src/services/engine/camera/bodyFocusDistance';
@@ -83,5 +84,26 @@ describe('clampDistance — pivoted on a body', () => {
     // would be clamped and land somewhere other than where the framing asked for.
     const framing = bodyFocusDistance(EARTH_RADIUS_MPC, (Math.PI / 180) * 60);
     expect(clampDistance(framing, EARTH_RADIUS_MPC)).toBe(framing);
+  });
+});
+
+describe('clampDistance — per-body standoff', () => {
+  it('floors at the given ratio instead of SURFACE_STANDOFF_RADII', () => {
+    // Sgr A*'s descent floor (2 r_s) is far outside the Earth-tuned global
+    // ratio, so a body that opts in must be floored at ITS OWN multiple, not
+    // the shared constant.
+    const radiusMpc = EARTH_RADIUS_MPC; // any body radius exercises the same math
+    const belowFloor = radiusMpc * 0.5; // deep inside the body
+    expect(clampDistance(belowFloor, radiusMpc, 2.0)).toBeCloseTo(radiusMpc * 2.0, 30);
+  });
+
+  it('omitted standoffRadii keeps Earth’s current floor unchanged', () => {
+    // The zero-change proof: every existing two-arg call site (every body that
+    // doesn't carry a `standoffRadii` override) must be byte-identical to
+    // today's behaviour.
+    const belowFloor = EARTH_RADIUS_MPC * 0.5;
+    expect(clampDistance(belowFloor, EARTH_RADIUS_MPC)).toBe(
+      clampDistance(belowFloor, EARTH_RADIUS_MPC, SURFACE_STANDOFF_RADII),
+    );
   });
 });
