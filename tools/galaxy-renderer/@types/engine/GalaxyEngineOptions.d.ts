@@ -15,8 +15,8 @@ export type GalaxyEngineOptions = {
   // Faster than the perf cadence: the fade tracks the camera, so at 0.5 s a
   // wheel-zoom would land long before the numbers explaining it did.
   readonly onFade?: (readout: MilkyWayFadeReadout) => void; // every 0.1 s from the rAF loop
-  // Event-driven, not timed: fires once per `rebuildDustMixture` (a sigma/
-  // elongation drag) and once per orientation readback landing — see
-  // createGalaxyModel.ts's `reportOrientationDiagnostics`.
+  // Event-driven, not timed: fires once per orientation readback landing,
+  // which a sigma/elongation drag reaches by way of the orientation
+  // redispatch — see createGalaxyModel.ts's `noteOrientationRebuilt`.
   readonly onOrientationDiagnostics?: (diagnostics: OrientationDiagnostics) => void;
 };

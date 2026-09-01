@@ -2044,8 +2044,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // Checked instead: (1) determinism; (2) count matches
       // `computeDigVeilBudget`'s own CPU budget math for the boot preset,
       // fed `shellFluxSum`/`recentEventCount` off a FRESH
-      // `buildHiiShellsAndYoungWithSegments` run (the SAME two values
-      // `createGalaxyModel.ts`'s own `rebuildDigVeilBudget` captures); (3)
+      // `buildHiiShellsAndYoungWithSegments` run (the SAME two values the
+      // renderer's `digBudget` node reads off `centralHii`); (3)
       // liveness — `buildDigVeil`'s own loop never zeroes an individual
       // child (no survival filter on this tier, matching placeArmSpurCloud/
       // placeArmCloud's own liveness bar, not placeDust's partial-survival
