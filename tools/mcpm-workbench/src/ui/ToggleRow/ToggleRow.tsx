@@ -8,7 +8,7 @@
  */
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import CompactInfoTip from '../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './ToggleRow.module.css';
 
 export type ToggleRowProps = {

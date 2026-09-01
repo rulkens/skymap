@@ -9,52 +9,52 @@
  * are debounced; params/run tokens/camera are live.
  */
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import type { AgentWeights } from '../../@types/AgentWeights';
-import type { AppState } from '../../@types/AppState';
-import type { CatalogPoints } from '../../@types/CatalogPoints';
-import type { GridBox } from '../../@types/GridBox';
-import type { McpmHarness } from '../../@types/McpmHarness';
-import type { Store } from '../../@types/Store';
-import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import { initGpu, resizeCanvasToDisplay } from '../../../../src/services/gpu/device';
-import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
-import { downloadStem } from '../export/downloadStem';
-import { emitTraceSidecar } from '../export/emitTraceSidecar';
-import { exportNpy } from '../export/exportNpy';
-import { exportScfd } from '../export/exportScfd';
-import { previewPackedTrace } from '../export/previewPackedTrace';
-import { triggerDownload } from '../export/triggerDownload';
-import { widenTrace } from '../export/widenTrace';
-import { catalogBounds } from '../field/catalogBounds';
-import { deriveAgentWeights } from '../field/deriveAgentWeights';
-import { deriveGridBox } from '../field/deriveGridBox';
-import { loadCatalogPoints } from '../field/loadCatalogPoints';
-import { syntheticCatalog } from '../field/syntheticCatalog';
-import { createViewportInput } from '../input/createViewportInput';
-import { cameraViewFor } from '../render/cameraViewFor';
-import { effectiveVolpathDivisor, SETTLE_MS } from '../render/effectiveVolpathDivisor';
-import { createRenderGraph, type RenderGraph } from '../render/RenderGraph';
-import type { TraceView } from '../render/tracePass';
-import { volpathKeyFor } from '../render/volpathKeyFor';
-import type { McpmCameraView } from '../render/writeMcpmCamera';
-import { createMcpmHarness } from '../sim/createMcpmHarness';
-import { planGridBudget } from '../sim/planGridBudget';
+import type { AgentWeights } from '../../../@types/AgentWeights';
+import type { AppState } from '../../../@types/AppState';
+import type { CatalogPoints } from '../../../@types/CatalogPoints';
+import type { GridBox } from '../../../@types/GridBox';
+import type { McpmHarness } from '../../../@types/McpmHarness';
+import type { Store } from '../../../@types/Store';
+import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
+import { initGpu, resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
+import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
+import { downloadStem } from '../../export/downloadStem';
+import { emitTraceSidecar } from '../../export/emitTraceSidecar';
+import { exportNpy } from '../../export/exportNpy';
+import { exportScfd } from '../../export/exportScfd';
+import { previewPackedTrace } from '../../export/previewPackedTrace';
+import { triggerDownload } from '../../export/triggerDownload';
+import { widenTrace } from '../../export/widenTrace';
+import { catalogBounds } from '../../field/catalogBounds';
+import { deriveAgentWeights } from '../../field/deriveAgentWeights';
+import { deriveGridBox } from '../../field/deriveGridBox';
+import { loadCatalogPoints } from '../../field/loadCatalogPoints';
+import { syntheticCatalog } from '../../field/syntheticCatalog';
+import { createViewportInput } from '../../input/createViewportInput';
+import { cameraViewFor } from '../../render/cameraViewFor';
+import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpathDivisor';
+import { createRenderGraph, type RenderGraph } from '../../render/RenderGraph';
+import type { TraceView } from '../../render/tracePass';
+import { volpathKeyFor } from '../../render/volpathKeyFor';
+import type { McpmCameraView } from '../../render/writeMcpmCamera';
+import { createMcpmHarness } from '../../sim/createMcpmHarness';
+import { planGridBudget } from '../../sim/planGridBudget';
 import {
   setCatalogBuildError,
   setCatalogLoadStatus,
   setCatalogLoaded,
   setCatalogStatusMessage,
-} from '../state/slices/catalogSlice';
-import { buildKey } from '../state/buildKey';
-import { gridShapeKeyFor } from '../state/gridShapeKeyFor';
-import { createTokenWatcher } from '../state/tokenWatcher';
-import { setMaxBufferBytes, setResolvedGrid } from '../state/slices/gridSlice';
-import { recordHistogramSample, resetHistogram } from '../state/slices/histogramSlice';
-import { incrementStep, resetStepCount } from '../state/slices/simSlice';
-import { defaultViewSlice, setFps, setPreviewPacked } from '../state/slices/viewSlice';
-import { storeWriteIsDirty } from '../state/storeWriteIsDirty';
-import { frameNeedsRender } from './frameNeedsRender';
+} from '../../state/slices/catalogSlice';
+import { buildKey } from '../../state/buildKey';
+import { gridShapeKeyFor } from '../../state/gridShapeKeyFor';
+import { createTokenWatcher } from '../../state/tokenWatcher';
+import { setMaxBufferBytes, setResolvedGrid } from '../../state/slices/gridSlice';
+import { recordHistogramSample, resetHistogram } from '../../state/slices/histogramSlice';
+import { incrementStep, resetStepCount } from '../../state/slices/simSlice';
+import { defaultViewSlice, setFps, setPreviewPacked } from '../../state/slices/viewSlice';
+import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
+import { frameNeedsRender } from '../frameNeedsRender';
 
 // The fork's ps_volume_trace multiplies fragment rgb by 2.0; the port dropped that,
 // so exposure 2 reproduces it exactly through the blit.

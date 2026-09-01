@@ -10,14 +10,14 @@
  * so no extra wiring is needed here.
  */
 import type { CSSProperties, ReactNode } from 'react';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import Button from '../../../../src/components/common/Button/Button';
-import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
-import { deriveGridBox } from '../field/deriveGridBox';
-import { BYTES_PER_ELEMENT } from '../sim/createGridBuffers';
-import { minFeasibleVoxelSizeMpc } from '../sim/minFeasibleVoxelSizeMpc';
-import { estimateGridBudgetBytes } from '../sim/planGridBudget';
-import { useStore } from '../state/useStore';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import Button from '../../../../../src/components/common/Button/Button';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
+import { deriveGridBox } from '../../field/deriveGridBox';
+import { BYTES_PER_ELEMENT } from '../../sim/createGridBuffers';
+import { minFeasibleVoxelSizeMpc } from '../../sim/minFeasibleVoxelSizeMpc';
+import { estimateGridBudgetBytes } from '../../sim/planGridBudget';
+import { useStore } from '../../state/useStore';
 import {
   fitBoxToCatalog,
   setManualCenterMpc,
@@ -25,10 +25,10 @@ import {
   setPaddingMpc,
   setShowGridBox,
   setVoxelSizeMpc,
-} from '../state/slices/gridSlice';
-import { useAppStore } from './storeContext';
-import { formatBytes } from './formatBytes';
-import ToggleRow from './ToggleRow';
+} from '../../state/slices/gridSlice';
+import { useAppStore } from '../storeContext';
+import { formatBytes } from '../formatBytes';
+import ToggleRow from '../ToggleRow/ToggleRow';
 import styles from './GridBoxPanel.module.css';
 
 // Range and log-scale intent per the grid-voxel-size-currency decision record

@@ -17,10 +17,10 @@
  * (the brief's "no layout jump") in both coordinate spaces.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
-import CompactInfoTip from '../../../../src/components/common/CompactInfoTip/CompactInfoTip';
-import { HISTOGRAM_BASE, HISTOGRAM_BINS } from '../sim/createGridBuffers';
-import { useStore } from '../state/useStore';
-import { useAppStore } from './storeContext';
+import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import { HISTOGRAM_BASE, HISTOGRAM_BINS } from '../../sim/createGridBuffers';
+import { useStore } from '../../state/useStore';
+import { useAppStore } from '../storeContext';
 import styles from './HistogramPlot.module.css';
 
 const COUNT_BIN_COUNT = HISTOGRAM_BINS - 1; // bins 0..15; bin 16 is the max marker

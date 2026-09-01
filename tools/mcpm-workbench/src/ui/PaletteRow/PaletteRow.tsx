@@ -3,8 +3,8 @@
  * rows around it (same row chrome and label typography).
  */
 import type { ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
-import { PaletteSelect } from '../../../../src/components/common/PaletteSelect/PaletteSelect';
+import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import { PaletteSelect } from '../../../../../src/components/common/PaletteSelect/PaletteSelect';
 import styles from './PaletteRow.module.css';
 
 export type PaletteRowProps = {

@@ -12,7 +12,7 @@
  */
 import '../../../src/styles/global.css';
 import { createRoot } from 'react-dom/client';
-import App from './ui/App';
+import App from './ui/App/App';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('MCPM Workbench: #root element not found');

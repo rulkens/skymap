@@ -9,28 +9,28 @@
  * subset may be on.
  */
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import type { McpmParams } from '../../@types/McpmParams';
-import type { ViewSlice } from '../../@types/ViewSlice';
-import Button from '../../../../src/components/common/Button/Button';
-import CollapsibleSection from '../../../../src/components/common/CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../../../../src/components/common/ParamSlider/ParamSlider';
-import SliderGroup from '../../../../src/components/common/SliderGroup/SliderGroup';
-import { SOURCE_REGISTRY } from '../../../../src/data/sources';
-import { tierTarget } from '../../../../src/data/tierTargets';
-import { downloadStem } from '../export/downloadStem';
-import { triggerDownload } from '../export/triggerDownload';
-import { deriveGridBox } from '../field/deriveGridBox';
-import { useStore } from '../state/useStore';
+import type { McpmParams } from '../../../@types/McpmParams';
+import type { ViewSlice } from '../../../@types/ViewSlice';
+import Button from '../../../../../src/components/common/Button/Button';
+import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
+import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
+import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
+import { SOURCE_REGISTRY } from '../../../../../src/data/sources';
+import { tierTarget } from '../../../../../src/data/tierTargets';
+import { downloadStem } from '../../export/downloadStem';
+import { triggerDownload } from '../../export/triggerDownload';
+import { deriveGridBox } from '../../field/deriveGridBox';
+import { useStore } from '../../state/useStore';
 import {
   setCatalogSources,
   setCatalogTier,
   setWeightMode,
   toggleCatalogSource,
   WORKBENCH_SOURCES,
-} from '../state/slices/catalogSlice';
-import { exportParams, MCPM_PARAM_KEYS } from '../state/exportParams';
-import { installImportedBox } from '../state/slices/gridSlice';
-import { importParams } from '../state/importParams';
+} from '../../state/slices/catalogSlice';
+import { exportParams, MCPM_PARAM_KEYS } from '../../state/exportParams';
+import { installImportedBox } from '../../state/slices/gridSlice';
+import { importParams } from '../../state/importParams';
 import {
   requestClearTrace,
   requestExport,
@@ -40,7 +40,7 @@ import {
   setInitMode,
   setRunning,
   setSimParam,
-} from '../state/slices/simSlice';
+} from '../../state/slices/simSlice';
 import {
   setAdditive,
   setAgentIntensity,
@@ -60,12 +60,12 @@ import {
   setSampleWeight,
   setStepVoxels,
   setTrimDensity,
-} from '../state/slices/viewSlice';
-import { useAppStore } from './storeContext';
-import PaletteRow from './PaletteRow';
-import Toggle from './Toggle';
-import ToggleRow from './ToggleRow';
-import GridBoxPanel from './GridBoxPanel';
+} from '../../state/slices/viewSlice';
+import { useAppStore } from '../storeContext';
+import PaletteRow from '../PaletteRow/PaletteRow';
+import Toggle from '../Toggle/Toggle';
+import ToggleRow from '../ToggleRow/ToggleRow';
+import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import styles from './ControlsPanel.module.css';
 
 type ParamSliderSpec = {

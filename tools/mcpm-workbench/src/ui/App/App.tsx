@@ -11,17 +11,17 @@
  * consumer reads `catalog.packedOverride` the same way it reads a fetch.
  */
 import { useMemo, useState, type CSSProperties, type DragEvent, type ReactNode } from 'react';
-import { createStore } from '../state/createStore';
-import { defaultAppState } from '../state/defaultAppState';
-import { deriveAgentWeights } from '../field/deriveAgentWeights';
-import { loadPackedCatalog } from '../field/loadPackedCatalog';
-import { setCatalogLoadStatus, setPackedCatalog } from '../state/slices/catalogSlice';
-import { useStore } from '../state/useStore';
-import { StoreContext } from './storeContext';
-import Viewport from './Viewport';
-import ControlsPanel from './ControlsPanel';
-import HistogramDock from './HistogramDock';
-import Hud from './Hud';
+import { createStore } from '../../state/createStore';
+import { defaultAppState } from '../../state/defaultAppState';
+import { deriveAgentWeights } from '../../field/deriveAgentWeights';
+import { loadPackedCatalog } from '../../field/loadPackedCatalog';
+import { setCatalogLoadStatus, setPackedCatalog } from '../../state/slices/catalogSlice';
+import { useStore } from '../../state/useStore';
+import { StoreContext } from '../storeContext';
+import Viewport from '../Viewport/Viewport';
+import ControlsPanel from '../ControlsPanel/ControlsPanel';
+import HistogramDock from '../HistogramDock/HistogramDock';
+import Hud from '../Hud/Hud';
 
 const statusStyle: CSSProperties = {
   position: 'fixed',

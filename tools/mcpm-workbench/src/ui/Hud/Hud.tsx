@@ -7,9 +7,9 @@
  * off the store — fps is Viewport's own throttled push, not measured here.
  */
 import type { ReactNode } from 'react';
-import { useStore } from '../state/useStore';
-import { useAppStore } from './storeContext';
-import { formatBytes } from './formatBytes';
+import { useStore } from '../../state/useStore';
+import { useAppStore } from '../storeContext';
+import { formatBytes } from '../formatBytes';
 import styles from './Hud.module.css';
 
 function Hud(): ReactNode {

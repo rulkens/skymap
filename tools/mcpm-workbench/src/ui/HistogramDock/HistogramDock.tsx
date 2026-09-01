@@ -4,11 +4,11 @@
  * in the sidebar, so it stays visible while the sidebar scrolls elsewhere.
  */
 import { type ReactNode } from 'react';
-import { setSampleRandomly } from '../state/slices/histogramSlice';
-import { useStore } from '../state/useStore';
-import { useAppStore } from './storeContext';
-import HistogramPlot from './HistogramPlot';
-import ToggleRow from './ToggleRow';
+import { setSampleRandomly } from '../../state/slices/histogramSlice';
+import { useStore } from '../../state/useStore';
+import { useAppStore } from '../storeContext';
+import HistogramPlot from '../HistogramPlot/HistogramPlot';
+import ToggleRow from '../ToggleRow/ToggleRow';
 import styles from './HistogramDock.module.css';
 
 function HistogramDock(): ReactNode {
