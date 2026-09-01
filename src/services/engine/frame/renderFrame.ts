@@ -62,7 +62,7 @@ import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import {
   skyCubemapCaptureSchedule,
-  SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU,
+  SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION,
 } from './skyCubemapCaptureSchedule';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -71,11 +71,7 @@ import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDi
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SGR_A_STAR, SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
-
-const SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_MPC =
-  SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU * SCALE_UNITS.AU_TO_MPC;
+import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -145,14 +141,14 @@ export function renderFrame(input: RenderFrameInput): void {
       )?.index ?? null)
     : null;
   const bandJustEngaged = bandActive && !captureRuntime.wasBandActive;
-  // Every captured face's content (which galaxies/stars are visible, their
-  // backdrop-fade alpha) is keyed on the PLAYER's camera position, not the
-  // fixed capture eye at Sgr A* — so a big enough move stales every face at
-  // once, same as band entry.
+  // Threshold is a FRACTION of `gcDistanceMpc`, not an absolute distance:
+  // the capture eye is the camera itself, so a fixed AU threshold would
+  // near-never fire at the 2·r_s descent floor (~0.17 AU) while being too
+  // loose at the 500 AU band edge — see the constant's own docblock.
   const cameraMovedBeyondThreshold =
     captureRuntime.lastSweepCamPosMpc !== null &&
     distanceMpc(ctx.drawCamPos, captureRuntime.lastSweepCamPosMpc) >
-      SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_MPC;
+      SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION * gcDistanceMpc;
   const skyCubemapFacesToCapture: readonly CubeFace[] = bandActive
     ? skyCubemapCaptureSchedule({
         bandJustEngaged,
@@ -185,7 +181,13 @@ export function renderFrame(input: RenderFrameInput): void {
     for (const face of skyCubemapFacesToCapture) {
       const faceCtx = skyCubemapFaceContext({
         state,
-        eyeMpc: SGR_A_STAR_ANCHOR.positionMpc,
+        // The live camera's position, NOT the hole's: a hole-centred capture
+        // parallaxes against the camera's own view for near-field content
+        // (S-stars at AU distances), visibly mismatching the lens against
+        // the directly rendered sky at the escape-fade boundary. Capturing
+        // from the camera converges to exactly what it sees where deflection
+        // is negligible — standard environment-map practice (Bruneton).
+        eyeMpc: ctx.drawCamPos,
         face,
         faceSizePx,
       });

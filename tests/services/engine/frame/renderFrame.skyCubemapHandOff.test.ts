@@ -28,6 +28,7 @@ vi.mock('../../../../src/services/engine/frame/skyCubemapFaceContext', () => ({
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
@@ -99,7 +100,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     skyCubemapFaceContextMock.mockClear();
   });
 
-  it('derives each scheduled face via skyCubemapFaceContext(eye=Sgr A*, faceSizePx=row size) and threads the map into executeFrame', () => {
+  it('derives each scheduled face via skyCubemapFaceContext(eye=camera, faceSizePx=row size) and threads the map into executeFrame', () => {
     const faceCtxByFace = new Map<CubeFace, ReadyFrameContext>();
     skyCubemapFaceContextMock.mockImplementation((input: { face: CubeFace }) => {
       const ctx = { __face: input.face } as unknown as ReadyFrameContext;
@@ -107,13 +108,22 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
       return ctx;
     });
 
-    const ctx = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
+    // Offset 50 AU from the anchor — inside the lensing band (fullAt = 100
+    // AU) but NOT at the anchor itself, so a wrong revert to a hole-centred
+    // capture (`eyeMpc: SGR_A_STAR_ANCHOR.positionMpc`) is distinguishable
+    // from the fix (`eyeMpc: ctx.drawCamPos`) instead of the two coinciding.
+    const camPos: readonly [number, number, number] = [
+      SGR_A_STAR_ANCHOR.positionMpc[0] + 50 * SCALE_UNITS.AU_TO_MPC,
+      SGR_A_STAR_ANCHOR.positionMpc[1],
+      SGR_A_STAR_ANCHOR.positionMpc[2],
+    ];
+    const ctx = makeCtx(camPos);
     renderFrame(makeInput(ctx, makeState()));
 
-    // Distance 0 from the anchor, first frame ever ⇒ bandJustEngaged ⇒ full sweep.
+    // First frame ever ⇒ bandJustEngaged ⇒ full sweep.
     expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
     for (const call of skyCubemapFaceContextMock.mock.calls) {
-      expect(call[0]).toMatchObject({ eyeMpc: SGR_A_STAR_ANCHOR.positionMpc, faceSizePx: 256 });
+      expect(call[0]).toMatchObject({ eyeMpc: camPos, faceSizePx: 256 });
     }
     expect(skyCubemapFaceContextMock.mock.calls.map((c) => c[0].face).sort()).toEqual([
       ...ALL_FACES,

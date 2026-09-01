@@ -12,8 +12,16 @@ const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 /** Escape-valve staleness threshold. Data tuning, sited beside the schedule it gates. */
 export const SKY_CUBEMAP_RECAPTURE_THRESHOLD_MS = 2000;
 
-/** Escape-valve camera-movement threshold, AU — see `renderFrame.ts`'s `cameraMovedBeyondThreshold` derivation for the comparison and why. */
-export const SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_AU = 10;
+/**
+ * Escape-valve camera-movement threshold, as a FRACTION of the camera's
+ * current distance to Sgr A* — not an absolute distance. The capture eye is
+ * now the camera itself (fix round 2), so the parallax a given displacement
+ * introduces scales with displacement/distance, not displacement alone: a
+ * fixed AU threshold would near-never fire during the descent to the event
+ * horizon (camera distance ~0.17 AU at the 2·r_s floor) while under-firing
+ * nowhere else. See `renderFrame.ts`'s `cameraMovedBeyondThreshold` derivation.
+ */
+export const SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION = 0.03;
 
 export type SkyCubemapCaptureSchedule = {
   readonly facesToCapture: readonly CubeFace[]; // this frame's capture list
