@@ -79,10 +79,19 @@ export type ViewSlice = {
      * On demand, never per frame: true marches the packed export cube (the real
      * `packLogTraceVoxels`, same call as the `.scfd` leg) instead of the live trace
      * buffer — a structure check for a transpose/shift regression, not a brightness
-     * match (packed values are log-transfer). Viewport packs once on the false→true
-     * edge and flips this back once `sim.stepCount` moves past the packed snapshot.
+     * match (packed values are log-transfer). `watchPreviewPackedSaga` packs once on
+     * the false→true edge and flips this back once `sim.stepCount` moves past the
+     * packed snapshot (`previewPackedAtStep`, below).
      */
     readonly previewPacked: boolean;
+    /**
+     * The `sim.stepCount` at the moment `previewPacked`'s pack landed, or `null`
+     * while nothing is packed. Viewport's frame driver reads this as a pure
+     * value (`previewPackedAtStep === sim.stepCount`) to decide whether the
+     * packed cube is still fresh enough to draw; `watchPreviewPackedSaga` owns
+     * every write.
+     */
+    readonly previewPackedAtStep: number | null;
   };
   /**
    * The volumetric path tracer's own knobs — field names match `VolpathParams`

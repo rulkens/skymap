@@ -30,6 +30,7 @@ export const defaultViewSlice: ViewSlice = {
     stepVoxels: 1,
     additive: true,
     previewPacked: false,
+    previewPackedAtStep: null,
     // S10: shipped default 3 = main-app volume-row parity (renderTargets.ts's
     // `scale: 3`) — slide to 1 for full-res, no offscreen target.
     divisor: 3,
@@ -137,10 +138,14 @@ export const viewSlice = createSlice({
     setDivisor: (state, action: PayloadAction<number>) => {
       state.raymarch.divisor = action.payload;
     },
-    /** T18: Viewport both sets this true on the ControlsPanel toggle and flips it
-     * back to false itself once the packed preview goes stale — see ViewSlice. */
+    /** T18: ControlsPanel's toggle dispatches this directly; `watchPreviewPackedSaga`
+     * flips it back to false itself once the packed preview goes stale — see ViewSlice. */
     setPreviewPacked: (state, action: PayloadAction<boolean>) => {
       state.raymarch.previewPacked = action.payload;
+    },
+    /** T9: written only by `watchPreviewPackedSaga` — see ViewSlice. */
+    setPreviewPackedAtStep: (state, action: PayloadAction<number | null>) => {
+      state.raymarch.previewPackedAtStep = action.payload;
     },
     setPathTracerPaletteId: (state, action: PayloadAction<ScalarFieldPaletteId>) => {
       state.pathTracer.paletteId = action.payload;
@@ -183,6 +188,7 @@ export const {
   setAdditive,
   setDivisor,
   setPreviewPacked,
+  setPreviewPackedAtStep,
   setPathTracerPaletteId,
   setPathTracerParam,
   setPathTracerCompressive,

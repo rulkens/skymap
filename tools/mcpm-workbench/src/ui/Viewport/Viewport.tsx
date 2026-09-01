@@ -13,8 +13,6 @@ import type { McpmHarness } from '../../../@types/McpmHarness';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import { resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
-import { previewPackedTrace } from '../../export/previewPackedTrace';
-import { widenTrace } from '../../export/widenTrace';
 import { deriveGridBox } from '../../field/deriveGridBox';
 import { createViewportInput } from '../../input/createViewportInput';
 import { cameraViewFor } from '../../render/cameraViewFor';
@@ -69,14 +67,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     let rafHandle = 0;
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getState()));
     let boxPreviewUntil = 0;
-    // T18 preview-export view: a second TracePass over a packed-cube buffer, owned by
-    // RenderGraph (attachPreviewTrace/drawPreviewTrace/disposePreviewTrace — task R7),
-    // built once per false→true edge of `view.raymarch.previewPacked` (see the
-    // subscriber below) rather than every frame. `resources.previewBuffer` is the
-    // buffer itself; `previewPackedAtStep` is the `sim.stepCount` taken the moment the
-    // pack landed — frame() drops back to the live trace once `stepCount` moves past it.
-    let previewPackedAtStep = -1;
-    let lastPreviewPacked = store.getState().view.raymarch.previewPacked;
     // T20: jittered-position samples and data-point samples are differently-defined
     // statistics under the same `meanLogTraceAtPoints` name — every toggle edge clears
     // `history` (below) so the two never ride the same convergence curve.
@@ -130,59 +120,12 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         store.getState().histogram.meanLogTraceAtPoints;
     }
 
-    /** Frees the T18 preview pass (RenderGraph's own) + its packed buffer
-     * (`resources`' own). Idempotent. */
-    function disposePreview(): void {
-      resources.graph?.disposePreviewTrace();
-      resources.previewBuffer?.destroy();
-      resources.previewBuffer = null;
-    }
-
-    /**
-     * T18: readback → widen → `previewPackedTrace` (the REAL packLogTraceVoxels,
-     * the same packing the export saga's `.scfd` leg uses) → `graph.attachPreviewTrace`,
-     * RenderGraph's own TracePass construction. Runs once per toggle-on; frame()
-     * below is what decides every frame whether the result is still fresh enough
-     * to draw. `resources.harness !== h` guards the rebuild race the same way
-     * `buildFromPoints` used to — `readbackTrace` can outlive a catalog switch
-     * that starts mid-await. The `previewPacked` re-check guards a second race:
-     * the user can uncheck before this lands, and only the flag at COMMIT time
-     * (not at call time) says whether the result is still wanted — skip
-     * installing rather than build-then-dispose, so nothing orphaned is ever
-     * created.
-     */
-    async function runPreviewPacked(): Promise<void> {
-      const h = resources.harness;
-      const graph = resources.graph;
-      if (!h || !graph) return;
-      try {
-        const readback = await h.readbackTrace();
-        const values = widenTrace(readback);
-        if (disposed || resources.harness !== h) return;
-        if (!store.getState().view.raymarch.previewPacked) return;
-        disposePreview();
-        const packed = previewPackedTrace(h.gpu.device, values, h.box);
-        resources.previewBuffer = packed.buffer;
-        graph.attachPreviewTrace({
-          traceBuffer: packed.buffer,
-          box: h.box,
-          element: packed.element,
-          paletteId: store.getState().view.raymarch.paletteId,
-        });
-        previewPackedAtStep = store.getState().sim.stepCount;
-      } catch (err) {
-        console.error('mcpm-workbench: preview packed trace failed', err);
-        disposePreview();
-        store.dispatch(setPreviewPacked(false));
-      }
-    }
-
     /**
      * T20: throttled histogram readback (HISTOGRAM_INTERVAL_STEPS above) — reads back
      * whatever `step()`'s last dispatch left in the histogram counts + densities
      * buffers and derives `meanLogTraceAtPoints` from it. `resources.harness !== h`
-     * guards the same rebuild race `runPreviewPacked` does: a catalog switch can land
-     * mid-await.
+     * guards the same rebuild race `watchPreviewPackedSaga`'s own readback does:
+     * a catalog switch can land mid-await.
      */
     async function runHistogram(h: McpmHarness, stepCount: number): Promise<void> {
       if (histogramInFlight) return;
@@ -286,8 +229,9 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       // Palette moves re-BUILD their pass (LUT bakes into the bind group at
       // construction; see ViewSlice.d.ts) — cheap enough to do mid-loop, and the
       // fresh volpath pass restarts accumulation exactly as the key change below
-      // demands anyway. The T18 preview pass also baked the old palette: drop it
-      // and un-toggle, the same recovery the staleness path below uses.
+      // demands anyway. The T18 preview pass also baked the old palette: un-toggle
+      // and let `watchPreviewPackedSaga`'s falling edge dispose it, the one owner
+      // of every preview-trace teardown.
       if (h && s.view.raymarch.paletteId !== attachedRaymarchPalette) {
         attachedRaymarchPalette = s.view.raymarch.paletteId;
         graph.attachTrace({
@@ -296,10 +240,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
           element: h.element,
           paletteId: attachedRaymarchPalette,
         });
-        if (graph.hasPreviewTrace()) {
-          disposePreview();
-          store.dispatch(setPreviewPacked(false));
-        }
+        if (graph.hasPreviewTrace()) store.dispatch(setPreviewPacked(false));
       }
       if (h && s.view.pathTracer.paletteId !== attachedVolpathPalette) {
         attachedVolpathPalette = s.view.pathTracer.paletteId;
@@ -325,22 +266,19 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
           now - lastInteractionMs,
         );
         // T18: previewPacked wants the packed cube, but only while it is still
-        // the pack of THIS stepCount — a sim step invalidates it (spec's
-        // "STALE"), and the fallback IS the live trace, not a blank frame.
+        // the pack of THIS stepCount — `watchPreviewPackedSaga` owns disposing a
+        // stale one (spec's "STALE"), so this is a pure read; the fallback IS
+        // the live trace, not a blank frame.
         if (
           s.view.raymarch.previewPacked &&
           graph.hasPreviewTrace() &&
-          previewPackedAtStep === s.sim.stepCount
+          s.view.raymarch.previewPackedAtStep === s.sim.stepCount
         ) {
           // drawPreviewTrace routes through the same drawTracePass divisor path as
           // drawTrace (RenderGraph owns both passes symmetrically — task R7) — same
           // reduced target, same upsample, no special-casing for the packed source.
           graph.drawPreviewTrace(encoder, traceViewFor(s, h.box, cam), effectiveRaymarchDivisor);
         } else {
-          if (s.view.raymarch.previewPacked && graph.hasPreviewTrace()) {
-            disposePreview();
-            store.dispatch(setPreviewPacked(false));
-          }
           graph.drawTrace(encoder, traceViewFor(s, h.box, cam), effectiveRaymarchDivisor);
         }
       }
@@ -437,8 +375,6 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         lastInteractionMs = performance.now();
         attachedRaymarchPalette = s.view.raymarch.paletteId;
         attachedVolpathPalette = s.view.pathTracer.paletteId;
-        lastPreviewPacked = false;
-        previewPackedAtStep = -1;
       }
 
       // Task FLE: one check feeds both render-on-demand's dirty flag AND the
@@ -462,18 +398,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
           lastSampleRandomly = s.histogram.sampleRandomly;
           store.dispatch(resetHistogram());
         }
-        // T18: a boolean edge, not a token — ControlsPanel's checkbox already
-        // IS the one-shot trigger (checking it twice without unchecking is a
-        // no-op, unlike reset/export's repeatable click), and frame() above
-        // owns the false transition it fires on staleness, so mirroring that
-        // here too keeps a manual uncheck responsive without waiting a frame.
-        if (s.view.raymarch.previewPacked && !lastPreviewPacked) {
-          void runPreviewPacked();
-        } else if (!s.view.raymarch.previewPacked && lastPreviewPacked) {
-          disposePreview();
-        }
       }
-      lastPreviewPacked = s.view.raymarch.previewPacked;
     });
 
     // Orbit input → view slice camera (a gizmo handle hit short-circuits it into a
