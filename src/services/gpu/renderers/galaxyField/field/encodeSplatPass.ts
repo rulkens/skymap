@@ -4,8 +4,8 @@
  * into its own reduced-resolution target — the smooth field, `hii:extras`,
  * and every `HII_TIERS` tier share this encoding, differing only in label,
  * timing slot, target, pipeline, bind group and instance range. `firstInstance`
- * lets a tier draw its own span of the SHARED `model.hiiComps.buffer` with no
- * shader change — `@builtin(instance_index)` includes the offset.
+ * lets a tier draw its own span of the SHARED `model.hiiComps.getBuffer()`
+ * with no shader change — `@builtin(instance_index)` includes the offset.
  */
 import { beginClearPass } from '../../../lib/beginClearPass';
 

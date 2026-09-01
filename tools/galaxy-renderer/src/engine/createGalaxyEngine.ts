@@ -570,7 +570,7 @@ export async function createGalaxyEngine(
           orientation: debugViews.orientation > 0,
           bubbles:
             bubblesLive && model.bubbleComps.count > 0
-              ? { buf: model.bubbleComps.buffer, count: model.bubbleComps.count }
+              ? { buf: model.bubbleComps.getBuffer(), count: model.bubbleComps.count }
               : null,
         });
       }

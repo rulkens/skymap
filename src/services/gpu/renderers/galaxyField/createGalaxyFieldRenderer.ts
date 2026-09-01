@@ -556,7 +556,7 @@ export function createGalaxyFieldRenderer(
       initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
       // A regrow REPLACES the GPUBuffer and a bind group holds the exact object
       // it was built against — internal now that both live here.
-      onRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(fieldComps.buffer),
+      onRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(fieldComps.getBuffer()),
     }),
   );
   // The HII tier's own storage buffer, byte-identical layout to `fieldComps`
@@ -575,7 +575,7 @@ export function createGalaxyFieldRenderer(
       // of it — so the common case never regrows on first activation.
       // + YOUNG_CHAIN_MAX_COMPONENTS: the young-stars chain rides it too.
       initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + YOUNG_CHAIN_MAX_COMPONENTS,
-      onRegrow: () => fieldPipelines.rebuildTierBindGroups(hiiComps.buffer),
+      onRegrow: () => fieldPipelines.rebuildTierBindGroups(hiiComps.getBuffer()),
     }),
   );
 
@@ -600,7 +600,7 @@ export function createGalaxyFieldRenderer(
   // `dustMapBG` is the only one of the five bind groups that doesn't
   // reference `dustMapTex` (it is the pass that WRITES that texture), so it
   // is also the only one buildable before the host has any targets.
-  fieldPipelines.rebuildDustMapBindGroup(fieldComps.buffer);
+  fieldPipelines.rebuildDustMapBindGroup(fieldComps.getBuffer());
 
   // ---- mixture state ----
   let geometry: GalaxyDescription | null = null;
@@ -869,7 +869,7 @@ export function createGalaxyFieldRenderer(
       ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
       ismMapTexture: ismMapGenerator.texture,
       orientationTexture: ismMapOrientation.texture,
-      fieldCompsBuffer: fieldComps.buffer,
+      fieldCompsBuffer: fieldComps.getBuffer(),
     };
   }
 
@@ -912,7 +912,7 @@ export function createGalaxyFieldRenderer(
       spurArms: reservation.spurArms,
       geometry: geo,
       tuning: fieldTuning,
-      fieldCompsBuffer: fieldComps.buffer,
+      fieldCompsBuffer: fieldComps.getBuffer(),
     };
   }
 
@@ -950,7 +950,7 @@ export function createGalaxyFieldRenderer(
       geometry: geo,
       tuning: fieldTuning,
       orientationTexture: ismMapOrientation.texture,
-      fieldCompsBuffer: fieldComps.buffer,
+      fieldCompsBuffer: fieldComps.getBuffer(),
     };
   }
 
@@ -992,7 +992,7 @@ export function createGalaxyFieldRenderer(
         outerRadius: geo.outerRadius,
       },
       prefixBuffer: digCdfScan.prefixBuffer,
-      hiiCompsBuffer: hiiComps.buffer,
+      hiiCompsBuffer: hiiComps.getBuffer(),
     };
   }
 
@@ -1504,7 +1504,7 @@ export function createGalaxyFieldRenderer(
 
     onDustMapReallocated(next: GPUTexture): void {
       dustMapTex = next;
-      fieldPipelines.rebuildDustMapDependents(fieldComps.buffer, hiiComps.buffer);
+      fieldPipelines.rebuildDustMapDependents(fieldComps.getBuffer(), hiiComps.getBuffer());
       dustMapPopulated = false;
     },
 
@@ -1533,7 +1533,7 @@ export function createGalaxyFieldRenderer(
         count: number,
       ): Promise<Float32Array> {
         if (count <= 0) return new Float32Array(0);
-        const source = buffer === 'field' ? fieldComps.buffer : hiiComps.buffer;
+        const source = buffer === 'field' ? fieldComps.getBuffer() : hiiComps.getBuffer();
         const byteSize = count * FIELD_COMPONENT_FLOATS * 4;
         const byteOffset = offset * FIELD_COMPONENT_FLOATS * 4;
         const enc = device.createCommandEncoder({ label: 'galaxy:peekRecords' });

@@ -36,7 +36,6 @@ export type PlaceArmSpurCloudDispatchInput = {
   readonly spurArms: readonly GalaxyFieldArmRecord[];
   readonly geometry: GalaxyDescription;
   readonly tuning: GalaxyFieldTuning;
-  /** The LIVE fieldComps buffer — re-read after every regrow, never cached across calls. */
   readonly fieldCompsBuffer: GPUBuffer;
 };
 
@@ -116,7 +115,7 @@ export function createIsmMapPlaceArmSpurCloud(
     if (!(weightSum > 0)) return false;
 
     recordsBuffer.write(recordsData);
-    const buf = recordsBuffer.buffer;
+    const buf = recordsBuffer.getBuffer();
 
     const { geometry, tuning } = input;
     device.queue.writeBuffer(

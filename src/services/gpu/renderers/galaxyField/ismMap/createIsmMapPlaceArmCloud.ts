@@ -51,7 +51,6 @@ export type PlaceArmCloudDispatchInput = {
    * engine's EXISTING orientation texture costs nothing extra to bind.
    */
   readonly orientationTexture: GPUTexture;
-  /** The LIVE fieldComps buffer — re-read after every regrow, never cached across calls. */
   readonly fieldCompsBuffer: GPUBuffer;
 };
 
@@ -136,7 +135,7 @@ export function createIsmMapPlaceArmCloud(
     if (!(weightSum > 0)) return false;
 
     recordsBuffer.write(recordsData);
-    const buf = recordsBuffer.buffer;
+    const buf = recordsBuffer.getBuffer();
 
     const { geometry, tuning } = input;
     const hLight = discLightScaleLength(geometry);
