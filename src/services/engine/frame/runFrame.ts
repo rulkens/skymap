@@ -63,6 +63,8 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { Mat3 } from '../../../@types/math/Mat3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { drainInput } from './drainInput';
 import { runCameraDrivers } from '../camera/cameraDrivers';
@@ -72,6 +74,8 @@ import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
 import { regimeArmFor } from '../camera/regimeArmFor';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { normalize3 } from '../../../utils/math/normalize3';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { tweenElapsed, accumulateFollowPan, frameTweenElapsed } from '../camera/cameraClock';
@@ -462,9 +466,36 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // the produced pose would re-engage on every frame of an animation inside
     // the band and would apply the engage test where the disengage one is due.
     const regime = rootState.camera.base.frame;
-    const arm = regimeArmFor(regime, eyeMpcOf(worldPose, poseBasis), bodyStates);
+    const eyeMpc = eyeMpcOf(worldPose, poseBasis);
+    const arm = regimeArmFor(regime, eyeMpc, bodyStates);
     if (arm === 'absolute') {
-      if (renderPose.frame !== 'absolute') renderPose = absoluteArm(worldPose);
+      if (renderPose.frame !== 'absolute') {
+        // Disengage commits the pose ALREADY IN the incumbent convention —
+        // target at the disengaging body's centre, eye preserved — because the
+        // pivot pin re-reads an absolute `target` as the focused body's centre
+        // one frame later and rebuilds the eye from `target + dir·distance`:
+        // committing `worldPose`'s on-ray surface target verbatim teleported
+        // the eye one body radius inward on the first at-rest frame (pop-2).
+        // Driven recessions reach the boundary at tilt ≈ 0, where forward
+        // already runs through the centre, so this is view-exact too; an
+        // undriven crossing re-aims by at most its tilt on the flip frame,
+        // where the fold owns continuity policy — bounded, unlike the pin's
+        // eye jump.
+        const centreMpc = bodyStates.get(renderPose.frame.body)!.positionMpc;
+        const toCentre: Vec3 = [
+          centreMpc[0] - eyeMpc[0],
+          centreMpc[1] - eyeMpc[1],
+          centreMpc[2] - eyeMpc[2],
+        ];
+        const { yaw, pitch } = orbitAnglesLookingAlong(normalize3(toCentre), poseBasis as Mat3);
+        renderPose = absoluteArm({
+          target: [centreMpc[0], centreMpc[1], centreMpc[2]],
+          yaw,
+          pitch,
+          distance: Math.hypot(toCentre[0], toCentre[1], toCentre[2]),
+          roll: worldPose.roll,
+        });
+      }
     } else if (renderPose.frame === 'absolute') {
       // Total: `regimeArmFor` only names a body it resolved out of THIS map.
       const bodyState = bodyStates.get(arm.body)!;

@@ -320,6 +320,64 @@ describe('runFrame — the regime fold', () => {
     expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
   });
 
+  it('disengaging with a moving body focused keeps the eye continuous past the pivot pin', () => {
+    // Pop-2: the disengage commit and the pivot pin must agree on what an
+    // absolute pose's target MEANS near a focused body — the body centre.
+    // Committing the fold's on-ray surface target instead let the flip frame
+    // render continuously while the NEXT frame's pin re-read `target` as the
+    // centre and rebuilt the eye from `target + dir·distance`: a one-body-
+    // radius (6,371 km) eye teleport on the first at-rest frame after the flip.
+    const store = makeStore();
+    const state = makeState();
+    probe.state = state;
+    const deps = makeDeps(state, store);
+    // Body arm just inside the band, tilt 0 (looking at the centre) — the pose
+    // every driven recession reaches the boundary with.
+    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, 3.39);
+    const arm = {
+      frame: EARTH_ARM,
+      pose: toBodyArm(NEAR_EDGE, B, B, EARTH_ARM.body, EARTH),
+    } as const;
+    store.dispatch(commitCameraPose(arm));
+    state.cameraRuntime.lastPose.current = arm;
+    // Earth focused and MOVING (in ORBITAL_ELEMENTS): the pin fires at rest.
+    store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
+          radiusM: SCENE_EARTH.radiusM,
+        },
+      }),
+    );
+
+    // One wheel notch out (factor e^0.24 ≈ 1.27 on altitude ⇒ crosses 3.4).
+    state.subsystems.inputAggregator.push({
+      kind: 'wheel',
+      deltaY: 240,
+      duringGesture: false,
+      xPx: 50,
+      yPx: 50,
+    });
+    runFrame(state, deps, 0); // frame N: the zoom lands, the fold flips
+    runFrame(state, deps, 16); // frame N+1: at rest, the pin re-reads the target
+
+    expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+    const flip = renderedCamera(probe.drawnPoses[0] as CameraPose);
+    const pinned = renderedCamera(probe.drawnPoses[1] as CameraPose);
+    for (let i = 0; i < 3; i++) {
+      // The same conversion-floor bound the engage no-snap test uses; the bug
+      // this pins was a 6.4e6 m jump, eleven decades above it.
+      const eyeDriftM = Math.abs(pinned.eye[i]! - flip.eye[i]!) * SCALE_UNITS.MPC_TO_M;
+      expect(eyeDriftM).toBeLessThan(5e-5);
+      // Tilt 0 at the crossing ⇒ the retarget is view-exact too.
+      expect(Math.abs(pinned.forward[i]! - flip.forward[i]!)).toBeLessThan(1e-9);
+    }
+  });
+
   it('a gesture in flight cannot change the arm', () => {
     // Ruled Q6 / spec §4: the predicate is SKIPPED while a gesture is live and
     // re-evaluated at gesture end — which subsumes the mid-drag wheel guard and
