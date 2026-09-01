@@ -1,7 +1,7 @@
 /**
  * FieldDustNoise — the dust-noise erosion lane (io.wesl's `dustNoise`). Unlike
- * the camera/exposure lanes these are cached in `createGalaxyModel.ts`'s
- * `rebuildDustMixture` — they only change when the dust params or geometry do,
+ * the camera/exposure lanes these come from the renderer's `dustHeaderLanes`
+ * node — they only change when the dust params or geometry do,
  * not every `drawFrame`.
  */
 

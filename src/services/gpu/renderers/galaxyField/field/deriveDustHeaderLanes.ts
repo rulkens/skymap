@@ -1,16 +1,13 @@
 /**
  * deriveDustHeaderLanes — the galaxy-dependent dust lanes of the field header,
- * as one pure function over the same inputs `rebuildDustMixture` builds the
- * mixture from. `drawFrame` reads the result every frame; it changes only when
+ * as one pure function over the same inputs the dust RESERVATION is built
+ * from. `drawFrame` reads the result every frame; it changes only when
  * the dust params, the geometry or the `dust.enabled` pill do.
  */
 import type { GalaxyDustParams } from '../../../../../@types/galaxy/GalaxyDustParams';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import { DISC_SIGMA_RATIOS } from '../../../../engine/galaxyGenerator/v2/discSurfaceFit';
-import {
-  dustDiscShape,
-  dustSigmaR,
-} from '../../../../engine/galaxyGenerator/v2/galaxyDustMixture';
+import { dustDiscShape, dustSigmaR } from '../../../../engine/galaxyGenerator/v2/galaxyDustMixture';
 import { dustNoiseTileUnits } from '../../../../engine/galaxyGenerator/v2/dustParticleCloud';
 import { dustExtinctionRgb } from '../../../../../utils/galaxy/dustExtinctionRgb';
 import { stretchExtinctionChroma } from '../../../../../utils/galaxy/stretchExtinctionChroma';
