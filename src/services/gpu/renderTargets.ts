@@ -252,6 +252,18 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
         clearValue: { r: 0, g: 0, b: 0, a: 0 },
       }),
     ),
+    // The black-hole lens's captured environment: 6 layers of a fixed-size
+    // 2d-array, later bound as a `texture_cube` (see `CubeFace.d.ts`). Same
+    // depthless/additive/zero-clear profile as `hdr` — the captured roster
+    // (point-sprites, star-catalog/aggregates, S-star glints) is additive.
+    {
+      id: 'sky-cubemap',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: 1, // unused: fixedSizePx below overrides it (required by the type).
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+      fixedSizePx: { size: 256, layers: 6 },
+    },
     {
       id: 'swap',
       format: swapFormat,
