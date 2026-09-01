@@ -610,11 +610,8 @@ export function createGalaxyFieldRenderer(
   let shellFluxSum = 0;
   let recentEventCount = 0;
   // The DIG veil's RESERVATION, CENTRAL galaxy only. `null` means none
-  // reserved this rebuild. `digOffset` is its absolute index into `hiiComps`,
-  // set by `repackHiiComponents` — the one place that decides where the DIG
-  // span lands between shells and young.
+  // reserved this rebuild.
   let digBudget: DigVeilBudget | null = null;
-  let digOffset = 0;
   // The analytic dust lane's RESERVATION, CENTRAL galaxy only. The CPU only
   // ever sees this budget/uniform shape — `placeDust.wesl` decides slot
   // CONTENT on the GPU.
@@ -975,7 +972,7 @@ export function createGalaxyFieldRenderer(
     return {
       seed,
       budget,
-      reservationOffset: digOffset,
+      reservationOffset: findHiiSegment(hiiSegments, 'hii:dig')?.first ?? 0,
       generatorIsFluid: fieldTuning.ismMap.generator === 'fluid',
       cdfRings: ISM_MAP_RINGS,
       cdfAz: ISM_MAP_AZ,
@@ -1070,7 +1067,7 @@ export function createGalaxyFieldRenderer(
     let offset = 0;
     total.set(packedShells, offset);
     offset += packedShells.length;
-    digOffset = offset / FIELD_COMPONENT_FLOATS;
+    const digOffset = offset / FIELD_COMPONENT_FLOATS;
     offset += digCount * FIELD_COMPONENT_FLOATS; // zero block — digPlacementRebuild fills it later
     total.set(packedYoung, offset);
     offset += packedYoung.length;
@@ -1631,7 +1628,7 @@ export function createGalaxyFieldRenderer(
         );
         return {
           count: budget.count,
-          offset: digOffset,
+          offset: findHiiSegment(hiiSegments, 'hii:dig')?.first ?? 0,
           amplitudeBase: budget.amplitudeBase,
           records,
         };
