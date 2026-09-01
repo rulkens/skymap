@@ -15,8 +15,6 @@ import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescript
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
 import type { GalaxyFieldMixtureResult } from '../../../../@types/galaxy/GalaxyFieldMixtureResult';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
-import type { GalaxyIsmMapFluidParams } from '../../../../@types/galaxy/GalaxyIsmMapFluidParams';
-import type { GalaxyIsmMapParams } from '../../../../@types/galaxy/GalaxyIsmMapParams';
 import type { HiiSegment } from '../../../../@types/galaxy/HiiSegment';
 import type { HiiTextureLanes } from '../../../../@types/galaxy/HiiTextureLanes';
 import type { HiiTier } from '../../../../@types/galaxy/HiiTier';
@@ -628,10 +626,6 @@ export function createGalaxyFieldRenderer(
   // first in `repackFieldComponents`' concatenation.
   let spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'] = null;
   let armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'] = null;
-  // What the ISM map was last rebuilt against — two keys: `ismMap` is the
-  // shared switch, `ismMapFluid` the generator's own param block.
-  let ismMapKey: GalaxyIsmMapParams = fieldTuning.ismMap;
-  let ismMapFluidKey: GalaxyIsmMapFluidParams = fieldTuning.ismMapFluid;
   // Cached, not recomputed per frame: the header reads all three every frame,
   // but they only change when `rebuildDustMixture` runs. Seeded at the
   // no-galaxy answer, which is what the first frames draw.
@@ -1232,11 +1226,9 @@ export function createGalaxyFieldRenderer(
     // forcing field bakes, but re-triggering on it would make an arm-width
     // drag pay this cost per frame — deliberately left stale until `ismMap`
     // moves.
-    const generatorMoved = ismMapKey !== fieldTuning.ismMap;
-    const fluidParamsMoved = ismMapFluidKey !== fieldTuning.ismMapFluid;
+    const generatorMoved = prev.ismMap !== fieldTuning.ismMap;
+    const fluidParamsMoved = prev.ismMapFluid !== fieldTuning.ismMapFluid;
     if (generatorMoved || fluidParamsMoved) {
-      ismMapKey = fieldTuning.ismMap;
-      ismMapFluidKey = fieldTuning.ismMapFluid;
       rebuildIsmMap();
     }
     // `generator` gates `placeDust.wesl`'s own in-shader placement mode
