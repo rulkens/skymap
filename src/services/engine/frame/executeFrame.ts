@@ -65,6 +65,7 @@ import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
+import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import {
   slabViewOf,
   groupKeyOf,
@@ -99,9 +100,21 @@ const COMPUTE: Record<
  * allocated texture like the offscreen rows — so it stays confined to this one
  * site: every other id resolves through the render-target table, which throws
  * for ids it never allocated.
+ *
+ * `face` (present only for a sky-cubemap capture render step, `FrameStep.face`)
+ * routes through `layerViewOf` instead of `viewOf` — the default view spans
+ * every array layer, which WebGPU rejects as a colour attachment once a row
+ * has more than one, so every capture face would otherwise write the SAME
+ * multi-layer view.
  */
-function viewFor(id: string, ctx: ReadyFrameContext, swapView: GPUTextureView): GPUTextureView {
+function viewFor(
+  id: string,
+  ctx: ReadyFrameContext,
+  swapView: GPUTextureView,
+  face?: CubeFace,
+): GPUTextureView {
   if (id === 'swap') return swapView;
+  if (face !== undefined) return ctx.renderTargets.layerViewOf(id, face);
   return ctx.renderTargets.viewOf(id);
 }
 
@@ -275,6 +288,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           timing,
           swapView,
           target: step.target,
+          face: step.face,
           group,
           view,
           groupKey,
@@ -343,6 +357,7 @@ function renderGroup(
     timing: GpuTimingService;
     swapView: GPUTextureView;
     target: string;
+    face?: CubeFace;
     group: readonly ContentLayer[];
     view: SlabView;
     groupKey: string;
@@ -357,13 +372,14 @@ function renderGroup(
     timing,
     swapView,
     target,
+    face,
     group,
     view,
     groupKey,
     alreadyTouched,
     depthLoadOp,
   } = p;
-  const targetView = viewFor(target, ctx, swapView);
+  const targetView = viewFor(target, ctx, swapView, face);
 
   if (strategy === 'merged') {
     // Tile-local: one pass holds the whole group, so OVER blends read coherent

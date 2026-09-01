@@ -306,6 +306,13 @@ export function createRenderTargets(
   // (data-driven, not a hardcoded 'sky-cubemap' id check) so a future second
   // 6-layer row gets one for free.
   const cubeViews = new Map<string, GPUTextureView>();
+  // One single-array-layer `dimension: '2d'` view per layer, for a row whose
+  // `views`' default (a whole-array `2d-array` view with no `baseArrayLayer`)
+  // is unusable as a COLOUR ATTACHMENT when the row has more than one layer —
+  // WebGPU rejects a multi-layer view there. Only the sky-cubemap capture
+  // needs this today (`executeFrame`'s per-face colour attachment), gated the
+  // same data-driven way as `cubeViews` rather than a hardcoded id check.
+  const layerViews = new Map<string, readonly GPUTextureView[]>();
   const depthTextures = new Map<string, GPUTexture>();
   const depthViews = new Map<string, GPUTextureView>();
   // Recorded beside `textures`/`views` so `sizeOf` never reads a texture's
@@ -344,6 +351,20 @@ export function createRenderTargets(
           baseArrayLayer: 0,
           arrayLayerCount: 6,
         }),
+      );
+    }
+    const layerCount = spec.fixedSizePx?.layers ?? 1;
+    if (layerCount > 1) {
+      layerViews.set(
+        spec.id,
+        Array.from({ length: layerCount }, (_unused, layer) =>
+          texture.createView({
+            label: `render-target-${spec.id}-layer${layer}-view`,
+            dimension: '2d',
+            baseArrayLayer: layer,
+            arrayLayerCount: 1,
+          }),
+        ),
       );
     }
 
@@ -432,6 +453,16 @@ export function createRenderTargets(
       }
       return view;
     },
+    layerViewOf(id: string, layer: number): GPUTextureView {
+      const view = layerViews.get(id)?.[layer];
+      if (!view) {
+        // Covers a row with <= 1 layer, an out-of-range layer index, 'swap',
+        // unknown ids, and use-after-destroy — same loud-failure discipline
+        // as `viewOf`.
+        throw new Error(`renderTargets: no layer view for target '${id}' layer ${layer}`);
+      }
+      return view;
+    },
     depthViewOf(id: string): GPUTextureView {
       const view = depthViews.get(id);
       if (!view) {
@@ -452,6 +483,7 @@ export function createRenderTargets(
       textures.clear();
       views.clear();
       cubeViews.clear();
+      layerViews.clear();
       depthTextures.clear();
       depthViews.clear();
       sizes.clear();

@@ -151,6 +151,12 @@ const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
 const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
 const SWAP_VIEW = { __id: 'swap-view' } as unknown as GPUTextureView;
 const SKY_CUBEMAP_VIEW = { __id: 'sky-cubemap-view' } as unknown as GPUTextureView;
+// One distinct view per capture face — proves `layerViewOf` (not the shared
+// `viewOf`) resolves a capture step's colour attachment, and that each face
+// lands on its OWN layer rather than all six colliding on one.
+const SKY_CUBEMAP_FACE_VIEWS: readonly GPUTextureView[] = [0, 1, 2, 3, 4, 5].map(
+  (face) => ({ __id: `sky-cubemap-face${face}-view` }) as unknown as GPUTextureView,
+);
 
 const EXEC_SPECS = [
   {
@@ -223,6 +229,11 @@ function makeCtx(): ReadyFrameContext {
         if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
         throw new Error(`mock renderTargets: no view for '${id}'`);
       },
+      layerViewOf: (id: string, face: number) => {
+        const view = id === 'sky-cubemap' ? SKY_CUBEMAP_FACE_VIEWS[face] : undefined;
+        if (!view) throw new Error(`mock renderTargets: no layer view for '${id}' layer ${face}`);
+        return view;
+      },
       depthViewOf: (id: string) => {
         if (id === 'foreground:0') return FG_DEPTH_VIEW;
         throw new Error(`mock renderTargets: no depth view for '${id}'`);
@@ -294,16 +305,17 @@ function makeArgs(over: {
   return { args, env };
 }
 
-/** The recorded attachment of the pass a given layer.draw spy drew into. */
+/** The recorded attachment of the pass a given layer.draw spy's `callIndex` call drew into. */
 function attachmentOfDraw(
   env: ReturnType<typeof makeEncoderEnv>,
   layer: SpyLayer,
+  callIndex = 0,
 ): {
   loadOp: string;
   clearValue?: GPUColor;
   view: GPUTextureView;
 } {
-  const pass = layer.draw.mock.calls[0]![0] as GPURenderPassEncoder;
+  const pass = layer.draw.mock.calls[callIndex]![0] as GPURenderPassEncoder;
   const rec = env.passes.find((p) => p.pass === pass)!;
   const att = Array.from(rec.desc.colorAttachments as Iterable<unknown>)[0] as {
     view: GPUTextureView;
@@ -824,10 +836,40 @@ describe('executeFrame', () => {
       });
       executeFrame(args);
       expect(layer.draw).toHaveBeenCalledTimes(1);
-      // The pass it drew into is the 'sky-cubemap' colour attachment, not
-      // 'hdr' — the step's target wins for the PASS, regardless of the
-      // layer's own `target` field (which only gated selection above).
-      expect(attachmentOfDraw(env, layer).view).toBe(SKY_CUBEMAP_VIEW);
+      // The pass it drew into is face 3's OWN sky-cubemap layer view, not
+      // 'hdr' and not the shared whole-array `viewOf('sky-cubemap')` — the
+      // step's `(target, face)` wins for the PASS, regardless of the layer's
+      // own `target` field (which only gated selection above).
+      expect(attachmentOfDraw(env, layer).view).toBe(SKY_CUBEMAP_FACE_VIEWS[3]);
+      expect(attachmentOfDraw(env, layer).view).not.toBe(SKY_CUBEMAP_VIEW);
+    });
+
+    it('resolves EACH capture face to its OWN colour-attachment view, distinct per face and from viewOf', () => {
+      // Pins the real bug: before the fix, every capture step resolved the
+      // same multi-layer `viewOf('sky-cubemap')` regardless of `step.face`,
+      // so all 6 faces wrote the same texture layer.
+      const layer = makeLayer({ name: 'probe', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const program: FrameStep[] = [0, 1, 2, 3, 4, 5].map(
+        (face): FrameStep => ({
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: NEAR0,
+          face: face as CubeFace,
+        }),
+      );
+      const faceCtx = makeCtx();
+      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>(
+        [0, 1, 2, 3, 4, 5].map((face) => [face as CubeFace, faceCtx]),
+      );
+      const { args, env } = makeArgs({ program, layers: [layer], skyCubemapFaceContexts });
+      executeFrame(args);
+
+      expect(layer.draw).toHaveBeenCalledTimes(6);
+      const viewsPerFace = [0, 1, 2, 3, 4, 5].map(
+        (face) => attachmentOfDraw(env, layer, face).view,
+      );
+      for (const view of viewsPerFace) expect(view).not.toBe(SKY_CUBEMAP_VIEW);
+      expect(new Set(viewsPerFace).size).toBe(6);
     });
 
     it('never selects a capture step group by target alone — a layer targeting sky-cubemap without the flag is skipped', () => {

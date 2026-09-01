@@ -62,6 +62,18 @@ export type RenderTargets = {
    */
   cubeViewOf(id: string): GPUTextureView;
   /**
+   * A single-array-layer `dimension: '2d'` view over one layer of a row whose
+   * spec declares `fixedSizePx.layers > 1` — `viewOf`'s default view spans
+   * every layer (`2d-array`, no `baseArrayLayer`), which WebGPU rejects as a
+   * COLOUR ATTACHMENT once a texture has more than one layer. A capture pass
+   * that writes one array layer at a time (the Sgr A* lens's per-face
+   * sky-cubemap sweep) needs this instead of `viewOf`. Stable until the next
+   * `reconcile()` that changes this row's size, same guarantee as `viewOf`.
+   * Throws for a row with <= 1 layer, an out-of-range `layer`, `swap`, and
+   * any unknown id.
+   */
+  layerViewOf(id: string, layer: number): GPUTextureView;
+  /**
    * Current depth-attachment view for a row whose spec declares `depth`
    * (`foreground:0`). Stable until the next `reconcile()` that changes this
    * row's size, same guarantee as `viewOf`. Throws for depthless rows (`hdr`,

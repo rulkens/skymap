@@ -70,6 +70,9 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       cubeViewOf: (id: string): GPUTextureView => {
         throw new Error(`fixture renderTargets: no cube view for '${id}'`);
       },
+      layerViewOf: (id: string, layer: number): GPUTextureView => {
+        throw new Error(`fixture renderTargets: no layer view for '${id}' layer ${layer}`);
+      },
       depthViewOf: (id: string): GPUTextureView => {
         throw new Error(`fixture renderTargets: no depth view for '${id}'`);
       },

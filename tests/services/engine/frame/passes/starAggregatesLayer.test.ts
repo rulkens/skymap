@@ -37,17 +37,20 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
 
 // The layer reads its viewport via `sizeOf('star-aggregates')` — the fixture
 // hardcodes the size the production table's scale: 2 implies for the 1280x720
-// canvas below (floor(1280 / 2), floor(720 / 2)).
-function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
+// canvas below (floor(1280 / 2), floor(720 / 2)) — or, during a capture draw
+// (`viewSlot !== 0`), `sizeOf('sky-cubemap')`'s fixed 256px face.
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): ReadyFrameContext {
   return {
     drawCamPos: camPos,
     nowMs,
+    viewSlot,
     canvasSize: { width: 1280, height: 720 },
     renderTargets: {
       specs: [{ id: 'star-aggregates', scale: 2 }],
       sizeOf: (id: string) => {
-        if (id !== 'star-aggregates') throw new Error(`fixture renderTargets: no size for '${id}'`);
-        return { width: 640, height: 360 };
+        if (id === 'star-aggregates') return { width: 640, height: 360 };
+        if (id === 'sky-cubemap') return { width: 256, height: 256 };
+        throw new Error(`fixture renderTargets: no size for '${id}'`);
       },
     },
   } as unknown as ReadyFrameContext;
@@ -137,6 +140,16 @@ describe('starAggregatesLayer', () => {
     // this layer must copy it, not mutate it, or siblings drawing after it
     // would inherit the halved viewport.
     expect(view.viewportPx).toEqual([1280, 720]);
+  });
+
+  it('sizes sprites against the sky-cubemap face during a capture draw (viewSlot !== 0), not star-aggregates', () => {
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
+    const camPos = camAtPcVec(FAR_PC);
+    const view = makeNear0View(camPos);
+    starAggregatesLayer.draw(PASS_STUB, view, makeCtx(camPos, 0, 1), makeState(renderer));
+
+    const args = renderer.draw.mock.calls[0]![1];
+    expect(args.viewportPx).toEqual([256, 256]);
   });
 
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {
