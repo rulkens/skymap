@@ -66,6 +66,7 @@ import { classifyBound } from '../utils/perf/classifyBound';
 import { ansiPalette } from '../utils/cli/ansiPalette';
 import type { PerfSample } from '../../src/@types/perf/PerfSample';
 import type { Tier } from '../../src/@types/data/Tier';
+import { TIER_LADDER } from '../../src/data/tierLadder';
 
 // Fixed viewport for every non-sweep run: pixel area is part of what determines
 // pass cost, so it stays constant across scenarios and only --dpr scales the
@@ -84,13 +85,6 @@ const SWEEP_SCALES = [0.5, 1.0, 1.5, 2.0] as const;
 // bills one slot per individual layer (the attribution shape). Running both is
 // what makes the floor estimate possible.
 const STRATEGIES = ['merged', 'perLayerTimed'] as const;
-
-// The catalog tiers `--tier` validates against and `--compare-tiers` walks. No
-// exported runtime tiers array exists to reuse (each builder defines its own
-// module-local `TIER_ORDER`/`TIERS` — see buildAllBins.ts, clampTier.ts), so
-// this mirrors that local-const pattern rather than inventing a shared export
-// the harness would be the only extra consumer of.
-const TIERS: readonly Tier[] = ['small', 'medium', 'large'];
 
 type PerfOptions = {
   /** Scenario name filter; empty = all of PERF_SCENARIOS. */
@@ -162,8 +156,8 @@ function parseArgs(argv: readonly string[]): PerfOptions {
       }
       if (arg === '--url') options.url = value.replace(/\/$/, '');
       if (arg === '--tier') {
-        if (!TIERS.includes(value as Tier)) {
-          throw new Error(`unknown tier '${value}' (known: ${TIERS.join(', ')})`);
+        if (!TIER_LADDER.includes(value as Tier)) {
+          throw new Error(`unknown tier '${value}' (known: ${TIER_LADDER.join(', ')})`);
         }
         options.tier = value as Tier;
       }
@@ -483,11 +477,11 @@ async function measureTierCompare(
   options: PerfOptions,
 ): Promise<TierCompareReport> {
   const pageErrors: string[] = [];
-  // Per tier, index-aligned to TIERS: merged per-group stats + whole-frame median.
+  // Per tier, index-aligned to TIER_LADDER: merged per-group stats + whole-frame median.
   const mergedByTier: LayerStat[][] = [];
   const totalMedianByTier: number[] = [];
 
-  for (const tier of TIERS) {
+  for (const tier of TIER_LADDER) {
     const context = await browser.newContext({
       viewport: VIEWPORT,
       deviceScaleFactor: options.dpr,
@@ -532,7 +526,7 @@ async function measureTierCompare(
     viewport: VIEWPORT,
     dpr: options.dpr,
     frames: options.frames,
-    tiers: TIERS,
+    tiers: TIER_LADDER,
     passes,
     total: { perTierMs: totalMedianByTier },
     pageErrors,
@@ -582,7 +576,7 @@ async function main(): Promise<void> {
       const mode = options.sweep
         ? `sweep ${SWEEP_SCALES.join('/')}×`
         : options.compareTiers
-          ? `tier compare ${TIERS.join('/')}`
+          ? `tier compare ${TIER_LADDER.join('/')}`
           : `${options.frames} frames`;
       console.error(`\nmeasuring '${scenario.name}' (${mode} @ dpr ${options.dpr}) ...`);
       try {
