@@ -39,7 +39,14 @@ export async function matchEoxSeaColour(
     const bg = blurred[i + 1]!;
     const bb = blurred[i + 2]!;
     const luma = 0.299 * br + 0.587 * bg + 0.114 * bb;
-    const blueness = clamp01((bb - Math.max(br, bg) - 6) / 14);
+    // Relative, not absolute, blue-dominance: dark water compresses all three
+    // channels toward 0, so a fixed (bb - max(br,bg)) gap shrinks exactly
+    // where the BMNG mismatch is largest. Dividing by brightness (floored at
+    // 24 so near-black pixels don't blow up the ratio) scores near-black navy
+    // fully — spike-checked against Everest shadow / Hong Kong / New York
+    // urban darks, which still score 0.
+    const rel = (bb - Math.max(br, bg)) / Math.max(bb, 24);
+    const blueness = clamp01((rel - 0.08) / 0.18);
     const darkness = clamp01((110 - luma) / 50);
     const score = blueness * darkness;
 
