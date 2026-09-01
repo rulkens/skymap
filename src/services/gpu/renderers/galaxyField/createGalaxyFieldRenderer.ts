@@ -249,7 +249,12 @@ export type GalaxyFieldProbe = {
   } | null>;
   /** The REAL production pair, so a host-side isolated-range draw exercises the real fragment shader. */
   readonly fieldSplatPipe: GPURenderPipeline;
-  /** `null` until the first `encode` has synced the bind groups against its own targets. */
+  /**
+   * `null` until the first `encode` has synced; afterwards it reflects the LAST
+   * `encode`'s resources — a `setMixture` that regrew `fieldComps` leaves this
+   * bound to the destroyed buffer until the next `encode`. Probe callers must
+   * render a frame between mutation and readback (`settleFrames` already does).
+   */
   readonly fieldSplatBG: GPUBindGroup | null;
 };
 

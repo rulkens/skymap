@@ -164,9 +164,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // The bubble-view overlay's own instance buffer (bubblePresent.wesl): a plain
   // VERTEX buffer, not a storage array — there is no per-fragment lookup by
   // index, just one instance-stepped attribute pair per placement, so it binds
-  // into no 'auto'-layout bind group and needs no `onRegrow`. Sized at both
-  // placement builders' admission ceilings, so the first activation never
-  // regrows.
+  // into no 'auto'-layout bind group. Sized at both placement builders'
+  // admission ceilings, so the first activation never regrows.
   const bubbleComps = createGrowOnlyRecordBuffer({
     device,
     label: 'galaxy:bubbleComps',

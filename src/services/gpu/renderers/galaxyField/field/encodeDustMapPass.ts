@@ -6,7 +6,7 @@
  * RETURNS the new value of the caller's "holds anything but zeros" latch, and
  * the caller MUST assign it — a skipped pass leaves whatever the last frame
  * wrote, so the latch is what makes skipping safe across a nonzero -> zero
- * transition (see `dustMapPopulated`'s declaration).
+ * transition (the caller's own `dustMap.populated` slot).
  */
 import { beginClearPass } from '../../../lib/beginClearPass';
 
