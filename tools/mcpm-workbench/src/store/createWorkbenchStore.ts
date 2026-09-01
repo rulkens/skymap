@@ -1,21 +1,15 @@
 /**
- * createWorkbenchStore — a factory (not a module singleton) mirroring
- * `src/store/createAppStore.ts`: wires RTK's `configureStore` plus saga
- * middleware, runs `mainSaga`, and hands back a `registerSagaContext` setter
- * that delegates to `sagaMiddleware.setContext` and then dispatches
- * `sagaContextRegistered` — the same "merge, then announce" ordering the main
- * app's factory uses. No consumer waits on it yet (rootSaga is `all([])`);
- * the seam exists so later tasks can register the canvas/render resources
- * without touching the factory again.
+ * createWorkbenchStore — a factory (not a module singleton), mirroring
+ * `src/store/createAppStore.ts` including its `registerSagaContext`
+ * merge-then-announce ordering (see that file's header for the full
+ * argument); no consumer awaits it yet, `rootSaga` being `all([])`.
  *
  * Unlike the main app, this state legitimately holds typed arrays —
- * `catalog.packedOverride` (a dev-dropped catalog's `Float32Array` positions/
- * masses) and `histogram.counts` (`Uint32Array`) — so, unlike
- * `createAppStore.ts`'s "notably absent" serializableCheck config, both
- * checks here ignore exactly those paths (state and the actions that carry
- * them): flagging every dispatch near a multi-million-float catalog as
- * "non-serializable" is noise, and immutableCheck's deep freeze/diff over the
- * same arrays every dispatch is a real per-frame cost, not just a warning.
+ * `catalog.packedOverride`'s `Float32Array`s and `histogram.counts`'s
+ * `Uint32Array` — so both RTK dev checks ignore exactly those paths: flagging
+ * every dispatch near a multi-million-float catalog as non-serializable is
+ * noise, and immutableCheck's deep freeze/diff over the same arrays is a
+ * real per-frame cost, not just a warning.
  */
 import { configureStore } from '@reduxjs/toolkit';
 import createSagaMiddleware from 'redux-saga';
