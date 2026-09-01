@@ -112,6 +112,7 @@ describe('skyCubemapFaceContext', () => {
         eyeMpc: EYE_MPC,
         face: face as CubeFace,
         faceSizePx: 256,
+        nowMs: 0,
       });
       expect(ctx).not.toBeNull();
       if (ctx === null) continue;
@@ -145,6 +146,7 @@ describe('skyCubemapFaceContext', () => {
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,
+        nowMs: 0,
       }),
     ).toBeNull();
     expect(
@@ -153,6 +155,7 @@ describe('skyCubemapFaceContext', () => {
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,
+        nowMs: 0,
       }),
     ).toBeNull();
     expect(
@@ -161,13 +164,20 @@ describe('skyCubemapFaceContext', () => {
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,
+        nowMs: 0,
       }),
     ).toBeNull();
   });
 
   it('carries the draw mask, not the pick mask, as visibleSourceMask', () => {
     const state = makeState();
-    const ctx = skyCubemapFaceContext({ state, eyeMpc: EYE_MPC, face: 0, faceSizePx: 256 });
+    const ctx = skyCubemapFaceContext({
+      state,
+      eyeMpc: EYE_MPC,
+      face: 0,
+      faceSizePx: 256,
+      nowMs: 0,
+    });
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
     expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state).draw);
@@ -224,6 +234,7 @@ describe('skyCubemapFaceContext', () => {
         eyeMpc: EYE_MPC,
         face: face as CubeFace,
         faceSizePx: 256,
+        nowMs: 0,
       });
       expect(ctx).not.toBeNull();
       if (ctx === null) continue;
@@ -251,7 +262,13 @@ describe('skyCubemapFaceContext', () => {
     // regression the fix addresses; see skyCubemapFaceContext's
     // SKY_CAPTURE_NEAR_MPC docblock.
     const state = makeState();
-    const ctx = skyCubemapFaceContext({ state, eyeMpc: EYE_MPC, face: 0, faceSizePx: 256 });
+    const ctx = skyCubemapFaceContext({
+      state,
+      eyeMpc: EYE_MPC,
+      face: 0,
+      faceSizePx: 256,
+      nowMs: 0,
+    });
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
     expect(ctx.cam.near).toBeLessThan(100 * SCALE_UNITS.AU_TO_MPC);

@@ -73,24 +73,24 @@ describe('both backdrop bands derive from one shape', () => {
   });
 });
 
-describe('sgrAStarLensing band — 100/500 AU envelope in Mpc, approach direction', () => {
-  it('the sgrAStarLensing fade band engages on approach to Sgr A*', () => {
-    // The band classification is critical: since fullAt < goneAt, fadeBand
-    // returns 1 at the close edge and 0 at the far edge, implementing a fade-IN
-    // as the camera approaches. A retune that swapped the edges would flip the
-    // direction and cause the lens pass to fade OUT on approach (the opposite of
-    // the intended effect). This test pins the edge ordering; classifiers catch
-    // backwards bands.
-    const fullAtMpc = 100 * SCALE_UNITS.AU_TO_MPC;
-    const goneAtMpc = 500 * SCALE_UNITS.AU_TO_MPC;
+describe('sgrAStarLensing band', () => {
+  // The DIRECTION is the load-bearing fact: `fullAt < goneAt` makes this an
+  // approach fade, so the lens engages as the camera closes on Sgr A*. Edges
+  // swapped, it would fade OUT on approach — the opposite of the effect — and
+  // still type-check. Read off the band itself, so an intentional retune of
+  // where the envelope sits stays green.
+  it('fades IN on approach, monotonically across the envelope', () => {
+    const { fullAt, goneAt } = SCALE_FADE_BANDS.sgrAStarLensing;
+    expect(fullAt).toBeLessThan(goneAt);
 
-    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, fullAtMpc)).toBe(1);
-    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, goneAtMpc)).toBe(0);
-
-    // A midpoint value is strictly between 0 and 1, confirming the smooth ramp.
-    const midpointMpc = (fullAtMpc + goneAtMpc) / 2;
-    const midpointAlpha = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpointMpc);
-    expect(midpointAlpha).toBeGreaterThan(0);
-    expect(midpointAlpha).toBeLessThan(1);
+    const midpoint = (fullAt + goneAt) / 2;
+    const nearMid = (fullAt + midpoint) / 2;
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, fullAt)).toBe(1);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, goneAt)).toBe(0);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, nearMid)).toBeGreaterThan(
+      fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint),
+    );
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint)).toBeGreaterThan(0);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint)).toBeLessThan(1);
   });
 });

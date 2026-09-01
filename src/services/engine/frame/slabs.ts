@@ -91,14 +91,19 @@ export function groupKeyOf(target: string, slab: number): string {
  * `layerName` for NEAR0/COSMO (one instance per frame, already unique), or
  * `'<layerName>·BODY[k]'` for a body row, so two body rows sharing one
  * `'body'`-slab layer (e.g. `planetsLayer` drawing Jupiter AND a moon) don't
- * collide on the same query-set index pair. `timedSlotRowsOf`
+ * collide on the same query-set index pair. A capture step's `face` appends
+ * the same way and for the same reason: a roster layer draws once per
+ * captured face AND once for the real view, all on `(hdr|sky-cubemap, NEAR0)`
+ * — without the face, all seven passes would attach the same query pair and
+ * the last one silently overwrite the rest. `timedSlotRowsOf`
  * (frameProgram.ts, the build-time slot-list/query-set-size derivation) and
  * `executeFrame`'s `perLayerTimed` pass (the runtime `descriptorFor` lookup)
  * both call this, so the allocated slot and the looked-up slot can never
  * drift apart.
  */
-export function layerTimingSlotName(layerName: string, slabIndex: number): string {
-  return isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
+export function layerTimingSlotName(layerName: string, slabIndex: number, face?: number): string {
+  const base = isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
+  return face === undefined ? base : `${base}·FACE[${face}]`;
 }
 
 /**

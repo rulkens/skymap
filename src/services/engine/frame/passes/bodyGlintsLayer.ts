@@ -11,8 +11,8 @@
  * where sub-pixel bodies simply vanished (the mesh culled them and nothing drew
  * the glint) is closed here.
  *
- * A SECOND, independent source rides the same buffer: `SCENE_ANCHOR_POINT_BODIES`
- * (today, only Sgr A*). An anchor never resolves to a mesh, so the partition's
+ * A SECOND, independent source rides the same buffer: Sgr A*, the one scene
+ * anchor. An anchor never resolves to a mesh, so the partition's
  * XOR doesn't apply to it — it gets its own fixed tint/intensity, crossfading
  * OUT as the black-hole lens pass engages on close approach, with none of the
  * seeded glints' apparent-size or solar-system-backdrop fades (it is meant to
@@ -79,7 +79,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
-import { SCENE_ANCHOR_POINT_BODIES } from '../../../../data/bodies/sceneAnchorPointBodies';
+import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -176,7 +176,7 @@ export const bodyGlintsLayer: ContentLayer = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const states = sceneBodyStates(state, ctx);
     // Sgr A*'s far-field glint is unconditional on the solar-system backdrop
-    // (SCENE_ANCHOR_POINT_BODIES never resolves to a mesh, so the near/far
+    // (a scene anchor never resolves to a mesh, so the near/far
     // dissolves built for the seeded planets don't apply — module header), so
     // it is checked BEFORE that gate: an empty `glints` partition, or a camera
     // the backdrop has already dissolved, must not drop the row while the
@@ -236,8 +236,9 @@ export const bodyGlintsLayer: ContentLayer = {
     // glint shares one camera), so it is hoisted OUT of the per-body loop. It
     // scales every glint's brightness so the whole sub-pixel body field dissolves
     // as the camera pulls back from the solar system, mirroring
-    // `starPointsLayer`'s backdrop fade. `enabled` already dropped the layer once
-    // this hit 0, so here it is > 0.
+    // `starPointsLayer`'s backdrop fade. May be 0 when only the Sgr A* anchor
+    // glint keeps the layer alive (`enabled`'s widening); the seeded glints
+    // then all fall out on the `GLINT_MIN_BRIGHTNESS` skip below.
     const backdropFade = fadeBand(
       SCALE_FADE_BANDS.bodyGlintBackdrop,
       regionRelativeDistanceMpc(camPos, GLINT_BACKDROP_REGION, states),
@@ -283,24 +284,28 @@ export const bodyGlintsLayer: ContentLayer = {
     }
 
     // A second, independent packed source, appended to the SAME buffer/count:
-    // Sgr A*'s far-field glint. SCENE_ANCHOR_POINT_BODIES never resolves to a
-    // mesh, so it isn't part of `glints` and carries none of the seeded
-    // bodies' apparent-size or backdrop terms — see the module header and
-    // `sgrAStarGlintBrightness`.
-    for (const anchor of SCENE_ANCHOR_POINT_BODIES) {
-      if (count >= MAX_GLINTS) break;
-      const brightness = sgrAStarGlintBrightness(camPos, states);
-      if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
-
-      const anchorPositionMpc = states.get(anchor.id)!.positionMpc;
+    // Sgr A*'s far-field glint. It never resolves to a mesh, so it isn't part
+    // of `glints` and carries none of the seeded bodies' apparent-size or
+    // backdrop terms — see the module header and `sgrAStarGlintBrightness`.
+    // Addressed directly rather than looped over `SCENE_ANCHOR_POINT_BODIES`:
+    // the brightness band and the tint below are Sgr A*'s own, so a second
+    // anchor row would silently inherit them. Give the second anchor its own
+    // band + tint on its data row when there is one.
+    const sgrAStarState = states.get(SGR_A_STAR.id);
+    const anchorBrightness = sgrAStarGlintBrightness(camPos, states);
+    if (
+      count < MAX_GLINTS &&
+      sgrAStarState !== undefined &&
+      anchorBrightness > GLINT_MIN_BRIGHTNESS
+    ) {
       const base = count * INSTANCE_FLOATS;
-      staging[base + 0] = anchorPositionMpc[0] - camPos[0];
-      staging[base + 1] = anchorPositionMpc[1] - camPos[1];
-      staging[base + 2] = anchorPositionMpc[2] - camPos[2];
+      staging[base + 0] = sgrAStarState.positionMpc[0] - camPos[0];
+      staging[base + 1] = sgrAStarState.positionMpc[1] - camPos[1];
+      staging[base + 2] = sgrAStarState.positionMpc[2] - camPos[2];
       staging[base + 3] = SGR_A_STAR_GLINT_TINT[0];
       staging[base + 4] = SGR_A_STAR_GLINT_TINT[1];
       staging[base + 5] = SGR_A_STAR_GLINT_TINT[2];
-      staging[base + 6] = brightness;
+      staging[base + 6] = anchorBrightness;
       count++;
     }
     if (count === 0) return;

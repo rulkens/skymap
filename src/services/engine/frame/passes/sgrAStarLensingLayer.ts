@@ -44,6 +44,9 @@ if (BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id) === undefined) {
 
 const SCHWARZSCHILD_RADIUS_M = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
 
+/** `ctx.simDays` is Julian days; `flickerTimescaleS` is seconds. */
+const SECONDS_PER_DAY = 86_400;
+
 /** This frame's fade-band alpha (Q6's zero-dispatch gate) — shared by `enabled` and `draw`. */
 function bandAlphaFor(state: EngineState, ctx: ReadyFrameContext): number {
   const distMpc = regionRelativeDistanceMpc(
@@ -78,8 +81,9 @@ export const sgrAStarLensingLayer: ContentLayer = {
     const pose = ctx.bodyPose(view.slab.frame.bodyId);
     if (pose === null) return;
 
+    // `> 0` by construction: `enabled` gates on it, and `frameProgram` only
+    // emits this step at all while the band is open.
     const bandAlpha = bandAlphaFor(state, ctx);
-    if (bandAlpha <= 0) return; // "opacity 0 ⇒ no render" house rule
 
     // Sgr A*'s position relative to the camera, in the SAME body-local frame
     // `view.slab.vp` was built in (camera at the origin) — the negation of
@@ -92,11 +96,15 @@ export const sgrAStarLensingLayer: ContentLayer = {
       -pose.eyeRelBodyM[2],
     ];
 
-    // `flickerPhase` must divide by the SAME `flickerTimescaleS` the packed
-    // uniform carries, or a live slider drag desyncs the phase from the
-    // period it packs.
+    // Keyed on the SIM clock, so a paused clock holds the flicker still and
+    // time-scrubbing carries it (spec §Data). Divides by the SAME
+    // `flickerTimescaleS` the packed uniform carries, or a live slider drag
+    // desyncs the phase from the period it packs. Wrapped into [0, 2π) HERE,
+    // in f64: the raw phase is ~1e9 rad at J2000 epochs, which an f32 uniform
+    // could not resolve to a fraction of a cycle.
     const tuning = state.settings.sgrAStarLensingTuning;
-    const flickerPhase = (2 * Math.PI * (ctx.nowMs / 1000)) / tuning.flickerTimescaleS;
+    const simSeconds = ctx.simDays * SECONDS_PER_DAY;
+    const flickerPhase = ((2 * Math.PI * simSeconds) / tuning.flickerTimescaleS) % (2 * Math.PI);
 
     // Where the escape fade must reach zero: weak-field deflection is 2/b rad
     // (b in r_s), so it drops below one screen pixel at b = 2·drawPxPerRad.
@@ -120,30 +128,30 @@ export const sgrAStarLensingLayer: ContentLayer = {
     // interpolation shook every ray — see lensQuadPlaneRadiusRs's docblock.
     const quadPlaneRadiusRs = lensQuadPlaneRadiusRs(edgeFadeEndRs, distRs);
 
-    const uniforms = packSgrAStarLensingUniforms(
-      view.vp,
-      view.viewportPx,
-      SCHWARZSCHILD_RADIUS_M,
-      tuning.innerRs,
-      tuning.outerRs,
-      tuning.inclinationRad,
-      tuning.positionAngleRad,
-      tuning.flickerAmp,
-      tuning.flickerTimescaleS,
+    const uniforms = packSgrAStarLensingUniforms({
+      viewProj: view.vp,
+      viewportPx: view.viewportPx,
+      schwarzschildRadiusM: SCHWARZSCHILD_RADIUS_M,
+      innerRs: tuning.innerRs,
+      outerRs: tuning.outerRs,
+      inclinationRad: tuning.inclinationRad,
+      positionAngleRad: tuning.positionAngleRad,
+      flickerAmp: tuning.flickerAmp,
+      flickerTimescaleS: tuning.flickerTimescaleS,
       flickerPhase,
-      renderer.lut.minImpactParamRs,
-      renderer.lut.maxImpactParamRs,
-      renderer.lut.samples.length,
+      lutMinImpactParamRs: renderer.lut.minImpactParamRs,
+      lutMaxImpactParamRs: renderer.lut.maxImpactParamRs,
+      lutSampleCount: renderer.lut.samples.length,
       bandAlpha,
       anchorPosRelCamM,
-      tuning.diskScaleHeightRs,
-      tuning.edgeFadeStartFraction,
-      tuning.dopplerStrength,
-      tuning.emissionStrength,
+      diskScaleHeightRs: tuning.diskScaleHeightRs,
+      edgeFadeStartFraction: tuning.edgeFadeStartFraction,
+      dopplerStrength: tuning.dopplerStrength,
+      emissionStrength: tuning.emissionStrength,
       edgeFadeEndRs,
-      tuning.emissionTint,
+      emissionTint: tuning.emissionTint,
       quadPlaneRadiusRs,
-    );
+    });
 
     const skyCubemapView = ctx.renderTargets.cubeViewOf('sky-cubemap');
     renderer.draw(pass, uniforms, skyCubemapView);

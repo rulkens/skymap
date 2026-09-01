@@ -436,7 +436,7 @@ function renderGroup(
   // others' timestamps (see `layerTimingSlotName`'s doc, slabs.ts).
   group.forEach((layer, i) => {
     const touchedBefore = alreadyTouched || i > 0;
-    const slot = layerTimingSlotName(layer.name, view.slab.index);
+    const slot = layerTimingSlotName(layer.name, view.slab.index, face);
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${slot}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],

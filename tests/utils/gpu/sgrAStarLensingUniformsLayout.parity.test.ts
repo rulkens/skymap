@@ -118,7 +118,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const quadPlaneRadiusRs = 706;
     const emissionTint: Vec3 = [801, 802, 803];
 
-    const rec = packSgrAStarLensingUniforms(
+    const rec = packSgrAStarLensingUniforms({
       viewProj,
       viewportPx,
       schwarzschildRadiusM,
@@ -141,7 +141,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       edgeFadeEndRs,
       emissionTint,
       quadPlaneRadiusRs,
-    );
+    });
 
     const vectorByField: Record<string, Vec3> = { anchorPosRelCamM, emissionTint };
     const scalarByField: Record<string, number> = {

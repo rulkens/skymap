@@ -392,6 +392,10 @@ function timedSlotRowsOf(
       // partitions the registry between them), so no per-layer dedup is
       // needed; only the group-TOTAL row below needs the split disambiguated.
       const groupKey = groupKeyOf(step.target, step.slab);
+      // A capture step selects its group by the `skyCapture` opt-in, not by
+      // `target` — the same discriminant `executeFrame` applies, so the slots
+      // allocated here are exactly the ones its per-layer passes look up.
+      const isCaptureStep = step.face !== undefined;
       for (const layer of layers) {
         // A 'body' layer has no fixed slab index — it matches every body-row
         // step, the same widening `executeFrame` applies via
@@ -401,16 +405,21 @@ function timedSlotRowsOf(
         // same fact (slabs.ts).
         const matchesStep =
           layer.slab === step.slab || (layer.slab === 'body' && isBodySlabIndex(step.slab));
+        const matchesTarget = isCaptureStep
+          ? layer.skyCapture === true
+          : layer.target === step.target;
         if (
-          layer.target === step.target &&
+          matchesTarget &&
           matchesStep &&
           matchesLensPhase(layer.hdrPostLensing, step.lensPhase)
         ) {
-          // `layerTimingSlotName` carries the row into the slot NAME for a body
-          // step, so two body rows sharing one layer (Jupiter + a moon, both
-          // drawn by `planetsLayer`) each get their own query-set slot instead
-          // of colliding on the same two indices (see its doc, slabs.ts).
-          rows.push({ name: layerTimingSlotName(layer.name, step.slab), groupKey });
+          // `layerTimingSlotName` carries the body row and the capture face
+          // into the slot NAME, so two body rows sharing one layer (Jupiter +
+          // a moon, both drawn by `planetsLayer`) — or one roster layer drawn
+          // once per captured face and once for the real view — each get their
+          // own query-set slot instead of colliding on the same two indices
+          // (see its doc, slabs.ts).
+          rows.push({ name: layerTimingSlotName(layer.name, step.slab, step.face), groupKey });
         }
       }
       // One extra slot per render STEP whose NAME is the groupKey itself, so

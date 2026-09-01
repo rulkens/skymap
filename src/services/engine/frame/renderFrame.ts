@@ -70,6 +70,11 @@ import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 
+// Hoisted rather than resolved per frame (a linear `.find` over `BODY_REGIONS`),
+// matching the other two consumers of the same lookup — `sgrAStarLensingLayer`
+// and `bodyGlintsLayer`.
+const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
+
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
  * has the buffer queued. Order of operations is the `frameProgram` step list
@@ -117,7 +122,7 @@ export function renderFrame(input: RenderFrameInput): void {
   const captureRuntime = state.cameraRuntime.skyCubemapCapture;
   const gcDistanceMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
-    regionById('galactic-centre'),
+    GALACTIC_CENTRE_REGION,
     sceneBodyStates(state, ctx),
   );
   const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
@@ -214,6 +219,7 @@ export function renderFrame(input: RenderFrameInput): void {
           eyeMpc: pinnedEyeMpc,
           face,
           faceSizePx,
+          nowMs: ctx.nowMs,
         });
         if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
       }

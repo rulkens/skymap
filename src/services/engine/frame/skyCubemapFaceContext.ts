@@ -94,8 +94,11 @@ export function skyCubemapFaceContext(input: {
   readonly eyeMpc: Readonly<Vec3>;
   readonly face: CubeFace;
   readonly faceSizePx: number;
+  /** The FRAME's stamped clock, so a roster layer that animates on `nowMs`
+   *  ticks identically on a captured face and in the direct view. */
+  readonly nowMs: number;
 }): ReadyFrameContext | null {
-  const { state, eyeMpc, face, faceSizePx } = input;
+  const { state, eyeMpc, face, faceSizePx, nowMs } = input;
   const forward = FACE_FORWARD[face]!;
   const basis = FACE_BASES[face]!;
   // target = eyeMpc + forward, distance = 1: `updatePosition` then derives
@@ -122,7 +125,7 @@ export function skyCubemapFaceContext(input: {
     basis,
     // Draw mask, not pick: this is a real capture pass, not a click target.
     deriveSourceMasks(state).draw,
-    performance.now(),
+    nowMs,
     state.cameraRuntime.lastRenderedSimDays.current,
   );
   if (!ctx.isReady) return null;

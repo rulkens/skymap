@@ -223,6 +223,39 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
     expect(uniformWrites).toHaveLength(2);
   });
 
+  // The instance buffer is deliberately NOT ringed per view slot, unlike the
+  // uniform: the justification is that every draw in a frame re-uploads
+  // byte-identical instance bytes, so the last write is the right one for all
+  // of them. That is a live invariant — the day a `DiskInstance` field becomes
+  // camera-dependent, only the last captured face would render correctly and
+  // nothing else would notice.
+  it('packs identical instance bytes for different view slots and cameras', () => {
+    const { ctx, writeBufferCalls } = makeStubCtx();
+    const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);
+    renderer.bindAtlas({} as GPUTextureView);
+    renderer.bindHiResArray({} as GPUTextureView);
+
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    const instances: DiskInstance[] = [fakeDiskInstance({ hiResLayerIdx: 2 })];
+    const vpA = Float32Array.from({ length: 16 }, (_unused, i) => i);
+    const vpB = Float32Array.from({ length: 16 }, (_unused, i) => 100 - i);
+
+    renderer.draw(pass, vpA as never, [512, 512], [0, 0, 0], FOCUS_BIND_GROUP, instances, 1);
+    renderer.draw(pass, vpB as never, [800, 600], [7, -3, 11], FOCUS_BIND_GROUP, instances, 2);
+
+    const instanceWrites = writeBufferCalls.filter(
+      (c) => c.data.length === instances.length * FLOATS_PER_INSTANCE,
+    );
+    expect(instanceWrites).toHaveLength(2);
+    expect(Array.from(instanceWrites[0]!.data)).toEqual(Array.from(instanceWrites[1]!.data));
+  });
+
   it('defaults viewSlot to 0 when omitted', () => {
     const { ctx } = makeStubCtx();
     const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);

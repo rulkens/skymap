@@ -55,30 +55,30 @@ const QUAD_PLANE_RADIUS_RS = 2343.75;
 
 describe('SgrAStarLensingUniforms byte offsets', () => {
   it('packs a 176-byte / 44-f32 record with each field at its documented offset', () => {
-    const rec = packSgrAStarLensingUniforms(
-      VIEW_PROJ,
-      VIEWPORT_PX,
-      SCHWARZSCHILD_RADIUS_M,
-      INNER_RS,
-      OUTER_RS,
-      INCLINATION_RAD,
-      POSITION_ANGLE_RAD,
-      FLICKER_AMP,
-      FLICKER_TIMESCALE_S,
-      FLICKER_PHASE,
-      LUT_MIN_IMPACT_PARAM_RS,
-      LUT_MAX_IMPACT_PARAM_RS,
-      LUT_SAMPLE_COUNT,
-      BAND_ALPHA,
-      ANCHOR_POS_REL_CAM_M,
-      DISK_SCALE_HEIGHT_RS,
-      EDGE_FADE_START_FRACTION,
-      DOPPLER_STRENGTH,
-      EMISSION_STRENGTH,
-      EDGE_FADE_END_RS,
-      EMISSION_TINT,
-      QUAD_PLANE_RADIUS_RS,
-    );
+    const rec = packSgrAStarLensingUniforms({
+      viewProj: VIEW_PROJ,
+      viewportPx: VIEWPORT_PX,
+      schwarzschildRadiusM: SCHWARZSCHILD_RADIUS_M,
+      innerRs: INNER_RS,
+      outerRs: OUTER_RS,
+      inclinationRad: INCLINATION_RAD,
+      positionAngleRad: POSITION_ANGLE_RAD,
+      flickerAmp: FLICKER_AMP,
+      flickerTimescaleS: FLICKER_TIMESCALE_S,
+      flickerPhase: FLICKER_PHASE,
+      lutMinImpactParamRs: LUT_MIN_IMPACT_PARAM_RS,
+      lutMaxImpactParamRs: LUT_MAX_IMPACT_PARAM_RS,
+      lutSampleCount: LUT_SAMPLE_COUNT,
+      bandAlpha: BAND_ALPHA,
+      anchorPosRelCamM: ANCHOR_POS_REL_CAM_M,
+      diskScaleHeightRs: DISK_SCALE_HEIGHT_RS,
+      edgeFadeStartFraction: EDGE_FADE_START_FRACTION,
+      dopplerStrength: DOPPLER_STRENGTH,
+      emissionStrength: EMISSION_STRENGTH,
+      edgeFadeEndRs: EDGE_FADE_END_RS,
+      emissionTint: EMISSION_TINT,
+      quadPlaneRadiusRs: QUAD_PLANE_RADIUS_RS,
+    });
 
     expect(rec.length).toBe(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
     expect(rec.length).toBe(44); // 176 bytes

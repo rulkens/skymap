@@ -47,28 +47,13 @@
  * plausible LUT size, so there is no precision reason to special-case a
  * `u32` write into this otherwise-uniform `Float32Array`).
  *
- * @param viewProj             16-element column-major view-projection, already camera-rebased.
- * @param viewportPx           Viewport size in device pixels.
- * @param schwarzschildRadiusM r_s in metres — the pass's own scale unit.
- * @param innerRs              Emission annulus inner edge, r_s units.
- * @param outerRs              Emission annulus outer edge, r_s units.
- * @param inclinationRad       Disk inclination, radians.
- * @param positionAngleRad     Disk position angle, radians.
- * @param flickerAmp           Emission flicker amplitude.
- * @param flickerTimescaleS    Emission flicker timescale, seconds.
- * @param flickerPhase         Sim-clock-derived flicker phase, uploaded per frame.
- * @param lutMinImpactParamRs  `SchwarzschildDeflectionLut.minImpactParamRs`.
- * @param lutMaxImpactParamRs  `SchwarzschildDeflectionLut.maxImpactParamRs`.
- * @param lutSampleCount       The LUT texture's texel count.
- * @param bandAlpha            This frame's fade-band alpha (gates emission/deflection strength in-shader).
- * @param anchorPosRelCamM     Camera-relative anchor position, metres.
- * @param diskScaleHeightRs    Vertical falloff scale height, r_s units.
- * @param edgeFadeStartFraction Escape-branch edge-fade start, as a fraction of `lutMaxImpactParamRs`.
- * @param dopplerStrength      Doppler-beaming strength factor.
- * @param emissionStrength     Overall multiplier on the annulus emission's output intensity.
- * @param edgeFadeEndRs        Escape fade's end impact parameter, r_s units — derived per frame by the layer.
- * @param emissionTint         Overall multiplier on the annulus emission's per-sample tint.
- * @param quadPlaneRadiusRs    Lens billboard half-size, r_s units — `lensQuadPlaneRadiusRs`, derived per frame.
+ * Takes a NAMED bag, not positional args: 17 of these fields are bare
+ * `number`s, so a transposition (`innerRs`/`outerRs`,
+ * `diskScaleHeightRs`/`edgeFadeStartFraction`) would type-check, pass the
+ * offset parity test, and render subtly wrong. The table above documents each
+ * field; `viewProj` is already camera-rebased and column-major, `bandAlpha`
+ * is this frame's fade-band alpha, and everything in r_s or metres says so in
+ * its name.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
@@ -81,30 +66,54 @@ import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../services/gpu/lib/
  *  3) + edgeFadeEndRs + quadPlaneRadiusRs = 44. */
 export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 24;
 
-export function packSgrAStarLensingUniforms(
-  viewProj: Float32Array | Mat4,
-  viewportPx: Vec2,
-  schwarzschildRadiusM: number,
-  innerRs: number,
-  outerRs: number,
-  inclinationRad: number,
-  positionAngleRad: number,
-  flickerAmp: number,
-  flickerTimescaleS: number,
-  flickerPhase: number,
-  lutMinImpactParamRs: number,
-  lutMaxImpactParamRs: number,
-  lutSampleCount: number,
-  bandAlpha: number,
-  anchorPosRelCamM: Readonly<Vec3>,
-  diskScaleHeightRs: number,
-  edgeFadeStartFraction: number,
-  dopplerStrength: number,
-  emissionStrength: number,
-  edgeFadeEndRs: number,
-  emissionTint: Readonly<Vec3>,
-  quadPlaneRadiusRs: number,
-): Float32Array {
+export function packSgrAStarLensingUniforms(input: {
+  readonly viewProj: Float32Array | Mat4;
+  readonly viewportPx: Vec2;
+  readonly schwarzschildRadiusM: number;
+  readonly innerRs: number;
+  readonly outerRs: number;
+  readonly inclinationRad: number;
+  readonly positionAngleRad: number;
+  readonly flickerAmp: number;
+  readonly flickerTimescaleS: number;
+  readonly flickerPhase: number;
+  readonly lutMinImpactParamRs: number;
+  readonly lutMaxImpactParamRs: number;
+  readonly lutSampleCount: number;
+  readonly bandAlpha: number;
+  readonly anchorPosRelCamM: Readonly<Vec3>;
+  readonly diskScaleHeightRs: number;
+  readonly edgeFadeStartFraction: number;
+  readonly dopplerStrength: number;
+  readonly emissionStrength: number;
+  readonly edgeFadeEndRs: number;
+  readonly emissionTint: Readonly<Vec3>;
+  readonly quadPlaneRadiusRs: number;
+}): Float32Array {
+  const {
+    viewProj,
+    viewportPx,
+    schwarzschildRadiusM,
+    innerRs,
+    outerRs,
+    inclinationRad,
+    positionAngleRad,
+    flickerAmp,
+    flickerTimescaleS,
+    flickerPhase,
+    lutMinImpactParamRs,
+    lutMaxImpactParamRs,
+    lutSampleCount,
+    bandAlpha,
+    anchorPosRelCamM,
+    diskScaleHeightRs,
+    edgeFadeStartFraction,
+    dopplerStrength,
+    emissionStrength,
+    edgeFadeEndRs,
+    emissionTint,
+    quadPlaneRadiusRs,
+  } = input;
   const out = new Float32Array(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
   writeCameraPrefix(out, viewProj, viewportPx); // f32 0..17; 18..19 stay zero
   out[20] = schwarzschildRadiusM; // byte 80

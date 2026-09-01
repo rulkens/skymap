@@ -1,11 +1,11 @@
 # Lens crossfade handoff shows subtle duplicate points
 
-**Reported:** 2026-09-02, user eyeball during the Sgr A* black-hole close-up landing
+**Reported:** 2026-09-02, user eyeball during the Sgr A\* black-hole close-up landing
 (branch worktree-render-black-hole).
 
 ## Symptom
 
-While the camera crosses the black-hole fade band (~500 → 100 AU from Sgr A*),
+While the camera crosses the black-hole fade band (~500 → 100 AU from Sgr A\*),
 the sky briefly shows subtle doubled points: each star/galaxy appears once from
 the direct-view roster layers and once from the lensed sky-cubemap the lens quad
 blends in on top. Fully outside or fully inside the band the sky is single.
@@ -31,6 +31,6 @@ one — hence doubles rather than a clean brightness ramp.
 ## Pointers
 
 - Band definition + alpha: `SCALE_FADE_BANDS` row for `sgr-a-star` (T7).
-- Step split predicate: `src/services/engine/frame/slabs.ts` /
-  `visibleSlabBodies.ts` (`matchesLensPhase`).
+- Step split predicate: `matchesLensPhase` in
+  `src/services/engine/frame/slabs.ts`.
 - Lens quad edge fade: `sgrAStarLensing/fragment.wesl` (`edgeFadeEndRs`).

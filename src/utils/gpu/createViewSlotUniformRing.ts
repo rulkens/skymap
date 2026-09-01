@@ -59,11 +59,21 @@ export function createViewSlotUniformRing(init: {
     );
   }
 
+  // Loud on an out-of-range slot rather than a bare `TypeError` out of
+  // `queue.writeBuffer` — same discipline as `renderTargets.viewOf`.
+  function slotInRange(slot: number): void {
+    if (slot < 0 || slot >= slotCount) {
+      throw new Error(`${label}: view slot ${slot} out of range (${slotCount} slots)`);
+    }
+  }
+
   function writeSlot(slot: number, data: BufferSource): void {
+    slotInRange(slot);
     device.queue.writeBuffer(buffers[slot]!, 0, data);
   }
 
   function bindGroupOf(slot: number): GPUBindGroup {
+    slotInRange(slot);
     return bindGroups[slot]!;
   }
 
