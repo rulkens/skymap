@@ -52,6 +52,7 @@ import {
   setPathTracerSampleCap,
   setPreviewPacked,
   setRaymarchPaletteId,
+  setRaymarchParam,
 } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../store/hooks';
 import PaletteRow from '../PaletteRow/PaletteRow';
@@ -60,7 +61,6 @@ import ToggleRow from '../ToggleRow/ToggleRow';
 import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import { PARAM_SLIDER_SPECS } from './utils/PARAM_SLIDER_SPECS';
 import { PATHTRACER_SLIDERS } from './utils/PATHTRACER_SLIDERS';
-import { RAYMARCH_SETTERS } from './utils/RAYMARCH_SETTERS';
 import { RAYMARCH_SLIDERS } from './utils/RAYMARCH_SLIDERS';
 import styles from './ControlsPanel.module.css';
 
@@ -294,7 +294,9 @@ function ControlsPanel(): ReactNode {
                 format={spec.format}
                 info={spec.info}
                 onChange={(v) =>
-                  dispatch(RAYMARCH_SETTERS[spec.key](spec.log ? Math.pow(10, v) : v))
+                  dispatch(
+                    setRaymarchParam({ key: spec.key, value: spec.log ? Math.pow(10, v) : v }),
+                  )
                 }
                 path={`view.raymarch.${spec.key}`}
               />

@@ -1,4 +1,12 @@
-import type { RaymarchSliderKey } from '../../../../@types/RaymarchSliderKey';
+import type { ViewSlice } from '../../../../@types/ViewSlice';
+
+// 'divisor' gets its own dedicated ParamSlider below (the "Preview" group);
+// 'additive'/preview fields aren't slider-driven — excluded the same way
+// PATHTRACER_SLIDERS' own key type excludes its non-slider siblings.
+type RaymarchSliderKey = Exclude<
+  keyof ViewSlice['raymarch'],
+  'paletteId' | 'additive' | 'divisor' | 'previewPacked' | 'previewPackedAtStep'
+>;
 
 type RaymarchSliderSpec = {
   readonly key: RaymarchSliderKey;

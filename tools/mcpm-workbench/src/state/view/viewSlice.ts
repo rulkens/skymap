@@ -77,6 +77,13 @@ type PathTracerNumericKey = Exclude<
   'compressive' | 'divisor' | 'sampleCap' | 'paletteId'
 >;
 
+// 'divisor' gets its own setter (setDivisor) and 'additive'/preview fields aren't
+// slider-driven — excluded here the same way PathTracerNumericKey excludes its own.
+type RaymarchNumericKey = Exclude<
+  keyof ViewSlice['raymarch'],
+  'paletteId' | 'additive' | 'divisor' | 'previewPacked' | 'previewPackedAtStep'
+>;
+
 export const viewSlice = createSlice({
   name: 'view',
   initialState: defaultViewSlice,
@@ -115,20 +122,16 @@ export const viewSlice = createSlice({
       state.camera.distance = Math.max(CAMERA_DISTANCE_FLOOR, action.payload.distance);
       state.camera.targetMpc = action.payload.targetMpc;
     },
-    setOpticalThickness: (state, action: PayloadAction<number>) => {
-      state.raymarch.opticalThickness = action.payload;
-    },
     setRaymarchPaletteId: (state, action: PayloadAction<ScalarFieldPaletteId>) => {
       state.raymarch.paletteId = action.payload;
     },
-    setTrimDensity: (state, action: PayloadAction<number>) => {
-      state.raymarch.trimDensity = action.payload;
-    },
-    setSampleWeight: (state, action: PayloadAction<number>) => {
-      state.raymarch.sampleWeight = action.payload;
-    },
-    setStepVoxels: (state, action: PayloadAction<number>) => {
-      state.raymarch.stepVoxels = action.payload;
+    // Mirrors setPathTracerParam — one keyed action over the raymarch layer's four
+    // numeric knobs, rather than a setter per field.
+    setRaymarchParam: (
+      state,
+      action: PayloadAction<{ key: RaymarchNumericKey; value: number }>,
+    ) => {
+      state.raymarch[action.payload.key] = action.payload.value;
     },
     setAdditive: (state, action: PayloadAction<boolean>) => {
       state.raymarch.additive = action.payload;
@@ -175,11 +178,8 @@ export const {
   setFps,
   deviceLost,
   commitCameraPose,
-  setOpticalThickness,
   setRaymarchPaletteId,
-  setTrimDensity,
-  setSampleWeight,
-  setStepVoxels,
+  setRaymarchParam,
   setAdditive,
   setDivisor,
   setPreviewPacked,
