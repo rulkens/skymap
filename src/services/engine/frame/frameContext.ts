@@ -219,14 +219,19 @@ export function deriveFrameContext(
   // The pose provider seam (spec §5): a closure over provider A
   // (`bodyRelativePose`), built HERE rather than inside `deriveSlabs` so a
   // future provider B (spec 2) swaps in behind the same `BodyPoseProvider`
-  // type with `deriveSlabs` untouched. `camBasisWorld` reruns the roll-0
-  // image-plane basis NEAR0's own vp derivation uses (`imagePlaneBasis` is
-  // the shared seam both call, not a copy) so a body row's screen orientation
-  // matches NEAR0's. Forwarded onto `ReadyFrameContext.bodyPose` below (the
-  // SAME closure, not a second one) so a body-slab layer's own pose read
-  // (`prepareBodySurfaceFrame`) can never drift from the one `slabs` was
-  // built from — see that field's doc.
-  const { right: camRight, up: camUp } = imagePlaneBasis(camForward, 0, frameUp(cam.upBasis));
+  // type with `deriveSlabs` untouched. `camBasisWorld` reruns the SAME roll
+  // NEAR0's own vp derivation uses (`imagePlaneBasis` is the shared seam both
+  // call, not a copy) so a body row's screen orientation matches NEAR0's —
+  // reading `cam.roll` here rather than hard-coding 0 is what keeps that true
+  // once something sets a non-zero roll (spec 2 §5.2). Forwarded onto
+  // `ReadyFrameContext.bodyPose` below (the SAME closure, not a second one) so
+  // a body-slab layer's own pose read (`prepareBodySurfaceFrame`) can never
+  // drift from the one `slabs` was built from — see that field's doc.
+  const { right: camRight, up: camUp } = imagePlaneBasis(
+    camForward,
+    cam.roll ?? 0,
+    frameUp(cam.upBasis),
+  );
   const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
   const bodyPose: BodyPoseProvider = (bodyId) => {
     const bodyState = bodyStates.get(bodyId);

@@ -101,13 +101,10 @@ import {
 } from '../../../../src/state/selection/selectionSlice';
 import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
-import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import {
-  MIN_DISTANCE_MPC,
-  SURFACE_STANDOFF_RADII,
-} from '../../../../src/utils/camera/clampDistance';
-import type { OrbitControlsOptions } from '../../../../src/@types/camera/OrbitControlsOptions';
+import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -179,6 +176,9 @@ function makeState(): EngineState {
       selection: { setHovered: vi.fn(), setSelected: vi.fn() },
       clickResolver: null,
       inputBindings: null,
+      // Real, not a stub: the emit-sink case below drains it to prove the
+      // recognizer's events actually reach the aggregator.
+      inputAggregator: createInputAggregator(),
     } as never,
     cam: null,
     cameraRuntime: {
@@ -268,65 +268,56 @@ describe('wireInput', () => {
     expect(selectFocusRef(root)).toEqual(jupiter);
   });
 
-  it('hands the orbit controls a live read of the focused body’s radius + zoom floor', async () => {
-    // The zoom floor lives in clampDistance, but the pinch / wheel-during-gesture
-    // sites inside orbitControls can only apply it if this phase supplies the
-    // getter. Drop the wiring and the camera silently scrolls through the planet
-    // again with every unit test still green — hence the assertion here.
+  it('wires the recognizer’s emit sink to the aggregator and the render wake', async () => {
+    // This four-line sink is the ONLY path from a DOM event to the camera. Wire
+    // it to a locally-built aggregator, or drop the requestRender, and all input
+    // dies with every other unit test still green — the halves either side of it
+    // (`orbitControls`, `inputAggregator`, `drainInput`) each test a fake.
     const state = makeState();
     const deps = makeDeps();
-    // Earlier cases in this file attached against their own stores; take the call
-    // this `wireInput` made, not the first one recorded.
     attachOrbitControlsSpy.mockClear();
 
     await wireInput(state, deps);
 
-    const options = attachOrbitControlsSpy.mock.calls[0]?.[2] as OrbitControlsOptions | undefined;
-    const read = options?.pivotFraming;
-    expect(read).toBeTypeOf('function');
+    const emit = attachOrbitControlsSpy.mock.calls[0]?.[1] as
+      | ((e: InputGestureEvent) => void)
+      | undefined;
+    expect(emit).toBeTypeOf('function');
 
-    // Nothing resolved yet (the row cache is saga-filled and no saga runs here):
-    // no surface to stand off from, so the absolute floor applies.
-    expect(read!()).toEqual({ radiusMpc: null, floorMpc: MIN_DISTANCE_MPC });
+    emit!({ kind: 'wheel', deltaY: 100, duringGesture: false });
 
-    // With Earth's row resolved, the getter reports its radius (Mpc) and the
-    // global-ratio floor — read through on every call, so a focus change needs
-    // no re-attach.
+    expect(state.subsystems.inputAggregator.drain()).toHaveLength(1);
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
+  });
+
+  it('cancels an in-flight tween on the gesture-start emission, at DOM time', async () => {
+    // B1: `cancelCameraTween` must not wait for the frame's drain. A double-tap
+    // runs pointerdown → … → dblclick → `watchFocusTweenSaga` → `startCameraTween`
+    // inside one inter-frame gap, so a deferred cancel would kill the tween the
+    // tap just requested and the camera would never fly.
+    const state = makeState();
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    const pose = { target: [0, 0, 0] as Vec3, yaw: 1, pitch: 0, distance: 5 };
     deps.cb.store.dispatch(
-      setSelectionRow({
-        slot: 'focus',
-        row: {
-          type: 'body',
-          id: 'earth',
-          label: 'Earth',
-          positionMpc: [0, 0, 0],
-          radiusM: 6371000,
-        },
+      startCameraTween({
+        from: pose,
+        to: pose,
+        durationMs: 800,
+        easing: 'linear',
+        frame: 'ecliptic',
       }),
     );
-    const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
-    expect(read!().radiusMpc).toBeCloseTo(earthRadiusMpc, 30);
-    expect(read!().floorMpc).toBeCloseTo(earthRadiusMpc * SURFACE_STANDOFF_RADII, 30);
 
-    // Swapping to a body with its own override (Sgr A*'s Q10 floor of 2 r_s)
-    // changes the floor to ITS multiple, not the Earth-tuned global ratio —
-    // without this getter reaching `pivotFraming`, the camera would stop at
-    // the wrong surface.
-    deps.cb.store.dispatch(
-      setSelectionRow({
-        slot: 'focus',
-        row: {
-          type: 'body',
-          id: 'sgr-a-star',
-          label: 'Sagittarius A*',
-          positionMpc: [0, 0, 0],
-          radiusM: 1.269e10,
-          standoffRadii: 2.0,
-        },
-      }),
-    );
-    const sgrARadiusMpc = 1.269e10 * SCALE_UNITS.M_TO_MPC;
-    expect(read!()).toEqual({ radiusMpc: sgrARadiusMpc, floorMpc: sgrARadiusMpc * 2.0 });
+    const emit = attachOrbitControlsSpy.mock.calls[0]?.[1] as (e: InputGestureEvent) => void;
+    emit({ kind: 'gestureStart' });
+
+    const root = deps.cb.store.getState();
+    expect(root.camera.tween).toBeNull();
+    expect(root.camera.dragging).toBe(true);
   });
 
   it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {

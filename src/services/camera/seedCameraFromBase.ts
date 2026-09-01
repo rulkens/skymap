@@ -25,9 +25,9 @@ import type { CameraPose } from '../../@types/camera/CameraPose';
 import { updatePosition } from '../../utils/camera/updatePosition';
 
 /**
- * Copy the four orbit parameters from `pose` onto the live drag register `cam`
- * and recompute `cam.position` so the first drag delta is relative to exactly
- * where the animation left the camera.
+ * Copy the orbit parameters (including `roll`) from `pose` onto the live drag
+ * register `cam` and recompute `cam.position` so the first drag delta is
+ * relative to exactly where the animation left the camera.
  *
  * `cam.fovYRad`, `cam.aspect`, `cam.near`, and `cam.far` are NOT touched —
  * those come from the projection Resource (`state.cameraRuntime.projection`)
@@ -43,6 +43,7 @@ export function seedCameraFromBase(cam: OrbitCamera, pose: CameraPose): void {
   cam.yaw = pose.yaw;
   cam.pitch = pose.pitch;
   cam.distance = pose.distance;
+  cam.roll = pose.roll;
   // Recompute the world-space position from the updated orbit params so the
   // first pointermove delta is computed from the correct starting position.
   updatePosition(cam);

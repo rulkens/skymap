@@ -33,8 +33,8 @@ const FRAME_MS = 1000 / 60;
  * Return a fresh pose with `yaw` advanced by the rotation implied by
  * `rate` radians-per-frame over `elapsedMs` milliseconds at 60 fps.
  *
- * Only `yaw` changes; `target` (fresh copy), `pitch`, and `distance` are
- * carried through unchanged.
+ * Only `yaw` changes; `target` (fresh copy), `pitch`, `distance`, and `roll`
+ * are carried through unchanged.
  *
  * @param base      The current camera pose (not mutated).
  * @param rate      Yaw advance in radians per assumed-60-fps frame
@@ -52,5 +52,6 @@ export function spinAutoRotate(base: CameraPose, rate: number, elapsedMs: number
     yaw: base.yaw + rate * (elapsedMs / FRAME_MS),
     pitch: base.pitch,
     distance: base.distance,
+    roll: base.roll,
   };
 }

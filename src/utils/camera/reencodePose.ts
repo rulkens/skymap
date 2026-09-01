@@ -37,5 +37,6 @@ export function reencodePose(
     yaw,
     pitch,
     distance: pose.distance,
+    roll: pose.roll,
   };
 }

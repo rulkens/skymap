@@ -97,6 +97,7 @@ import {
   setAutoRotate,
   commitCameraPose,
   startFrameTween,
+  beginDrag,
 } from '../../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../../src/state/settings/settingsSlice';
 import {
@@ -117,6 +118,7 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -211,6 +213,8 @@ function makeState(): EngineState {
       texturedDisks: null,
       clickResolver: null,
       inputBindings: null,
+      // Non-nullable from t=0: runFrame drains it before the produce step.
+      inputAggregator: createInputAggregator(),
       loadProgress: null,
     },
     cam: null,
@@ -310,6 +314,35 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
     drivers: buildCameraDrivers(state),
   };
 }
+
+describe('runFrame — the input drain runs before the produce step', () => {
+  it('applies this frame’s queued gesture to the pose this frame renders', () => {
+    // `drainInput` sits above the produce step AND above the `getState()` the
+    // driver table resolves against. Move it below either — a plausible reorder
+    // in any future runFrame edit — and every grab costs a frame: the first
+    // frame of a drag is produced from the pre-drag register (here) and an
+    // at-rest wheel commit lands a frame late. Nothing else in the suite sees it.
+    const store = makeStore();
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    const BASE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+    store.dispatch(commitCameraPose(BASE));
+    state.cameraRuntime.lastPose.current = BASE;
+    // The emit sink's DOM-time edge, so `orbitDrag` (priority 80) is the winner.
+    store.dispatch(beginDrag());
+
+    const agg = state.subsystems.inputAggregator;
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
+    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
+
+    runFrame(state, deps, 0);
+
+    // Drag right 50 px at the flat 0.005 rad/px (no pivot to damp against).
+    expect(state.cameraRuntime.lastPose.current.yaw).toBeCloseTo(-0.25, 6);
+  });
+});
 
 describe('runFrame — camera drivers (regression)', () => {
   it('tween wins over auto-rotate; lastPose.current reflects the tween pose, not auto-rotate', () => {
