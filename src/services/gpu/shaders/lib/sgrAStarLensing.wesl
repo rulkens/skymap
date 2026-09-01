@@ -35,7 +35,9 @@
 //                                                derived per frame by the layer — min(subpixel-deflection b, 0.6·camera
 //                                                distance), floored at lutMaxImpactParamRs; survives the T15 removal)
 //   offset 160 : emissionTint             vec3<f32>  — T15 TEMP tuning knob (2nd addendum), overall annulus-emission tint
-//   offset 172 : _pad5                    f32  — T15 TEMP, rounds the struct to 176 / 16-byte
+//   offset 172 : quadPlaneRadiusRs        f32  — lens billboard half-size, r_s units (NOT a T15 knob: derived per
+//                                                frame in f64 by the layer via 'lensQuadPlaneRadiusRs' — the in-shader
+//                                                f32 inversion shook close orbits; survives the T15 removal)
 //   total: 176 bytes.
 //
 // The 12 scalar fields (80..127, 48 bytes) exactly fill the run up to 128,
@@ -75,5 +77,5 @@ struct SgrAStarLensingUniforms {
   emissionStrength: f32,
   edgeFadeEndRs: f32,
   emissionTint: vec3<f32>,
-  _pad5: f32,
+  quadPlaneRadiusRs: f32,
 };

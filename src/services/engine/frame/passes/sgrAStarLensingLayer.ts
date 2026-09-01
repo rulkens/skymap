@@ -25,6 +25,7 @@ import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
 import { SGR_A_STAR_MASS_SOLAR } from '../../../../data/bodies/sgrAStarMassSolar';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { packSgrAStarLensingUniforms } from '../../../../utils/gpu/packSgrAStarLensingUniforms';
+import { lensQuadPlaneRadiusRs } from '../../../../utils/lensing/lensQuadPlaneRadiusRs';
 import { regionById } from '../../../../utils/scene/regionById';
 import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -119,6 +120,11 @@ export const sgrAStarLensingLayer: ContentLayer = {
       renderer.lut.maxImpactParamRs,
       Math.min(2 * ctx.drawPxPerRad, 0.6 * distRs),
     );
+    // Billboard half-size in f64 HERE, not in the vertex shader: the f32
+    // in-shader inversion degenerated close-in (edgeFadeEndRs >= distRs via
+    // the lutMax floor) into a ~5e4x-oversized quad whose varying
+    // interpolation shook every ray — see lensQuadPlaneRadiusRs's docblock.
+    const quadPlaneRadiusRs = lensQuadPlaneRadiusRs(edgeFadeEndRs, distRs);
 
     const uniforms = packSgrAStarLensingUniforms(
       view.vp,
@@ -142,6 +148,7 @@ export const sgrAStarLensingLayer: ContentLayer = {
       tuning.emissionStrength,
       edgeFadeEndRs,
       tuning.emissionTint,
+      quadPlaneRadiusRs,
     );
 
     const skyCubemapView = ctx.renderTargets.cubeViewOf('sky-cubemap');

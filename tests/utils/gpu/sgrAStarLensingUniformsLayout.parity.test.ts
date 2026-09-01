@@ -116,6 +116,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const dopplerStrength = 703;
     const emissionStrength = 704;
     const edgeFadeEndRs = 705;
+    const quadPlaneRadiusRs = 706;
     const emissionTint: Vec3 = [801, 802, 803];
 
     const rec = packSgrAStarLensingUniforms(
@@ -140,6 +141,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       emissionStrength,
       edgeFadeEndRs,
       emissionTint,
+      quadPlaneRadiusRs,
     );
 
     const vectorByField: Record<string, Vec3> = { anchorPosRelCamM, emissionTint };
@@ -161,8 +163,11 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       dopplerStrength,
       emissionStrength,
       edgeFadeEndRs,
+      quadPlaneRadiusRs,
     };
-    const zeroPadFields = new Set(['_pad5']);
+    // No zero-pad fields remain past the cam prefix — every trailing slot is
+    // a real packed field now.
+    const zeroPadFields = new Set<string>();
 
     for (const field of layout) {
       if (field.lanes === 0) {

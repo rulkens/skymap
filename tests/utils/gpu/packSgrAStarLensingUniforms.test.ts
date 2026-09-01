@@ -52,6 +52,7 @@ const DOPPLER_STRENGTH = 0.46875;
 const EMISSION_STRENGTH = 0.90625;
 const EDGE_FADE_END_RS = 1875.5;
 const EMISSION_TINT: Vec3 = [801, 802, 803];
+const QUAD_PLANE_RADIUS_RS = 2343.75;
 
 describe('SgrAStarLensingUniforms byte offsets', () => {
   it('packs a 176-byte / 44-f32 record with each field at its documented offset', () => {
@@ -77,6 +78,7 @@ describe('SgrAStarLensingUniforms byte offsets', () => {
       EMISSION_STRENGTH,
       EDGE_FADE_END_RS,
       EMISSION_TINT,
+      QUAD_PLANE_RADIUS_RS,
     );
 
     expect(rec.length).toBe(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
@@ -129,7 +131,7 @@ describe('SgrAStarLensingUniforms byte offsets', () => {
     expect(rec[41]).toBe(EMISSION_TINT[1]); // byte 164
     expect(rec[42]).toBe(EMISSION_TINT[2]); // byte 168
 
-    // Trailing pad — rounds the struct to 176. Untouched, stays zero.
-    expect(rec[43]).toBe(0); // byte 172
+    // quadPlaneRadiusRs — per-frame derived billboard half-size (not a knob).
+    expect(rec[43]).toBe(QUAD_PLANE_RADIUS_RS); // byte 172
   });
 });

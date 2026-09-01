@@ -38,7 +38,7 @@
  *   f32 38      (byte 152..155): emissionStrength — T15 TEMP tuning knob (2nd addendum)
  *   f32 39      (byte 156..159): edgeFadeEndRs — per-frame derived (not a knob)
  *   f32 40..42  (byte 160..171): emissionTint — T15 TEMP tuning knob (2nd addendum), vec3<f32>
- *   f32 43      (byte 172..175): untouched (zero) — struct's 16-byte round-up
+ *   f32 43      (byte 172..175): quadPlaneRadiusRs — per-frame derived (not a knob)
  *
  * Total: 176 bytes / 44 f32. The 12 scalars at f32 20..31 exactly fill the
  * run up to f32 32, so `anchorPosRelCamM` lands on a 16-byte boundary with
@@ -71,6 +71,7 @@
  * @param emissionStrength     T15 TEMP (2nd addendum) — overall multiplier on the annulus emission's output intensity.
  * @param edgeFadeEndRs        Escape fade's end impact parameter, r_s units — derived per frame by the layer.
  * @param emissionTint         T15 TEMP (2nd addendum) — overall multiplier on the annulus emission's per-sample tint.
+ * @param quadPlaneRadiusRs    Lens billboard half-size, r_s units — `lensQuadPlaneRadiusRs`, derived per frame.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
@@ -80,7 +81,7 @@ import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../services/gpu/lib/
 
 /** f32 count of `SgrAStarLensingUniforms` — 80-byte cam prefix (20) + 12
  *  scalars + anchorPosRelCamM (3) + T15 TEMP tuning knobs (4 scalars +
- *  emissionTint's 3) + edgeFadeEndRs + pad (1) = 44. */
+ *  emissionTint's 3) + edgeFadeEndRs + quadPlaneRadiusRs = 44. */
 export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 24;
 
 export function packSgrAStarLensingUniforms(
@@ -105,6 +106,7 @@ export function packSgrAStarLensingUniforms(
   emissionStrength: number,
   edgeFadeEndRs: number,
   emissionTint: Readonly<Vec3>,
+  quadPlaneRadiusRs: number,
 ): Float32Array {
   const out = new Float32Array(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
   writeCameraPrefix(out, viewProj, viewportPx); // f32 0..17; 18..19 stay zero
@@ -131,6 +133,6 @@ export function packSgrAStarLensingUniforms(
   out[40] = emissionTint[0]; // byte 160 — T15 TEMP (2nd addendum), vec3
   out[41] = emissionTint[1]; // byte 164
   out[42] = emissionTint[2]; // byte 168
-  // out[43] (byte 172..175) stays zero — the struct's 16-byte round-up.
+  out[43] = quadPlaneRadiusRs; // byte 172 — per-frame derived (not a knob)
   return out;
 }
