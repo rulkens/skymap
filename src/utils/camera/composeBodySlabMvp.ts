@@ -14,11 +14,10 @@ export function composeBodySlabMvp(
   slabVp: Float64Array,
   eyeRelBodyM: Readonly<Vec3>,
   radiusM: number,
-  oblateness = 0,
 ): Float64Array {
   const model = mat4d.multiply(
     mat4d.translation([-eyeRelBodyM[0], -eyeRelBodyM[1], -eyeRelBodyM[2]]),
-    mat4d.scaling([radiusM, radiusM, radiusM * (1 - oblateness)]),
+    mat4d.scaling([radiusM, radiusM, radiusM]),
   ) as Float64Array;
 
   return mat4d.multiply(slabVp, model) as Float64Array;

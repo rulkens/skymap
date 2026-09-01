@@ -9,6 +9,11 @@
  * `drawFlooredSpherePick`'s Mpc/world-relative frame, so that helper doesn't
  * apply here — this one composes via `composeBodySlabMvp`/`bodySlabCamLocal`
  * instead.
+ *
+ * The floored `pickRadiusM` can exceed `bodySlabRow`'s near-plane margin for a
+ * small, distant body, pushing the proxy's near cap in front of the row's own
+ * near plane — safe ONLY because `bodyPickRenderer`'s sphere pipeline culls
+ * FRONT faces, so the clipped near cap is never the fragment that's rasterised.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';

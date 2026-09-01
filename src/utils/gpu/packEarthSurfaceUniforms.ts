@@ -65,7 +65,7 @@
  *   f32 29     (byte 116..119): baseGlobeAlpha (descent-fade multiplier under the tile cut)
  *   f32 30..31 (byte 120..127): padding (zeroed)
  *
- * @param mvp                 16-element column-major MVP (from `composeBodyMvp`).
+ * @param mvp                 16-element column-major MVP (from `composeBodySlabMvp`).
  * @param sunDirLocal         Sun direction in the body's local frame.
  * @param camPosLocal         Camera position in the body's local frame.
  * @param roughnessBase       Base surface roughness for GGX specular.

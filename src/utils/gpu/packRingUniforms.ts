@@ -10,7 +10,7 @@
  *
  * ## Byte layout (matches `RingUniforms`)
  *
- *   f32 0..15  (byte 0..63):  mvp (column-major, from `composeBodyMvp`)
+ *   f32 0..15  (byte 0..63):  mvp (column-major, from `composeBodySlabMvp`)
  *   f32 16..18 (byte 64..75): sunDirLocal (body-local sun direction)
  *   f32 19     (byte 76..79): planetRadiusRatio (planet radius / ring outer)
  *   f32 20..22 (byte 80..91): camPosLocal (camera in body-local, planet radii)
@@ -19,7 +19,7 @@
  * The ambient floor is not packed — the ring fragment's `litShade`
  * (`lib/bodyLighting.wesl`) reads the shared `AMBIENT` const directly.
  *
- * @param mvp               16-element column-major MVP (from `composeBodyMvp`).
+ * @param mvp               16-element column-major MVP (from `composeBodySlabMvp`).
  * @param sunDirLocal       Sun direction in the host body's local frame.
  * @param planetRadiusRatio Planet radius / ring OUTER radius (in (0, 1)).
  * @param camPosLocal       Camera in the body's local frame, in planet radii
