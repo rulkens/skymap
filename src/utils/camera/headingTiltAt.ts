@@ -1,8 +1,8 @@
 /**
  * headingTiltAt — heading/tilt of a `forward`/`up` pair in the ENU at
- * `localUp`. Single home for `surfaceReadoutOf`'s display readout and the
- * surface controller's tilt-ceiling enforcement, which used to inline this
- * byte-for-byte, including two copies of the 0.08° nadir threshold.
+ * `localUp`. Single home for the surface controller's tilt-ceiling
+ * enforcement, which used to inline this byte-for-byte, including two
+ * copies of the 0.08° nadir threshold.
  *
  * East is built off the radial vector, not lon/atan2 — stays finite at the
  * pole, where a lon-driven East would divide by the vanishing cos(lat).

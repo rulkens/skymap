@@ -1,6 +1,6 @@
 /**
- * headingTiltAt — the extracted ENU/heading/tilt math `surfaceReadoutOf` and
- * `surfaceController`'s tilt-ceiling enforcement both consume. Every fixture
+ * headingTiltAt — the extracted ENU/heading/tilt math `surfaceController`'s
+ * tilt-ceiling enforcement consumes. Every fixture
  * here sits OFF the polar axis with a non-zero heading, deliberately: a
  * standpoint on +Z degenerates `east`/`north` to their pole-fallback values
  * and heading to a coordinate that's invariant under a heading-zeroing bug,

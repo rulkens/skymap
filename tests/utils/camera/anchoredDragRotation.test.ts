@@ -39,8 +39,8 @@ function unitAt(lonDeg: number, latDeg: number): Vec3 {
 
 /**
  * A surface-camera pose at a standpoint, built from the ENU there: tilt is
- * measured from NADIR (0 = straight down) and heading from north toward east,
- * matching `SurfaceReadout`. `right`/`up`/`forward` follow `imagePlaneBasis`'s
+ * measured from NADIR (0 = straight down) and heading from north toward east.
+ * `right`/`up`/`forward` follow `imagePlaneBasis`'s
  * handedness (`right × up = −forward`), so these fixtures are the shape the
  * real converter produces.
  *
