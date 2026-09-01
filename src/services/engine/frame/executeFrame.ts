@@ -48,6 +48,14 @@
  * filtered to enabled layers — a non-empty group always has a first layer to
  * carry the clear.
  *
+ * A capture render step (`step.face !== undefined`) is the one exception: its
+ * target ('sky-cubemap') has six LAYERS, one per face, but `touched` tracks by
+ * target string alone — so it can't distinguish "this face's first pass this
+ * frame" from "a DIFFERENT face already rendered this frame". Rather than grow
+ * `touched` to (target, layer) granularity for this one target, a capture step
+ * always clears: it redraws its whole face every time, so there's nothing worth
+ * loading.
+ *
  * The same `touched` fact drives depth: a render step whose target row declares
  * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is
  * `'clear'` (to this slab's far-plane depth via `depthClearValueFor` — `0.0` under
@@ -292,7 +300,13 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           group,
           view,
           groupKey,
-          alreadyTouched: touched.has(step.target),
+          // `touched` tracks by TARGET, but a capture step's target
+          // ('sky-cubemap') has six LAYERS — one per face — so `touched`
+          // cannot tell "this face's first pass this frame" from "some
+          // OTHER face already rendered this frame". A capture step always
+          // clears instead: it redraws its whole face every time, so
+          // there's never content worth loading. See the module header.
+          alreadyTouched: step.face === undefined && touched.has(step.target),
           depthLoadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
         });
         touched.add(step.target);

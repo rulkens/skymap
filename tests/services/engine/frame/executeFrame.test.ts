@@ -872,6 +872,29 @@ describe('executeFrame', () => {
       expect(new Set(viewsPerFace).size).toBe(6);
     });
 
+    it('two capture steps for different faces in ONE frame BOTH clear — a capture step never loads', () => {
+      // Pins the real bug: `touched` tracks by TARGET ('sky-cubemap'), not by
+      // LAYER (face). Before the fix, face 0's pass cleared and marked
+      // 'sky-cubemap' touched; face 1's pass then LOADED — against its own
+      // stale prior-frame content, not face 0's — and stars drew additively
+      // over it, flickering the cubemap bright/dim by capture order.
+      const layer = makeLayer({ name: 'probe', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1 },
+      ];
+      const faceCtx = makeCtx();
+      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
+        [0, faceCtx],
+        [1, faceCtx],
+      ]);
+      const { args, env } = makeArgs({ program, layers: [layer], skyCubemapFaceContexts });
+      executeFrame(args);
+
+      expect(attachmentOfDraw(env, layer, 0).loadOp).toBe('clear');
+      expect(attachmentOfDraw(env, layer, 1).loadOp).toBe('clear');
+    });
+
     it('never selects a capture step group by target alone — a layer targeting sky-cubemap without the flag is skipped', () => {
       const layer = makeLayer({ name: 'unflagged', target: 'sky-cubemap', slab: NEAR0 });
       const program: FrameStep[] = [
