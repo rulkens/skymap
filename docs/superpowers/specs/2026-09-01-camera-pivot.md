@@ -130,10 +130,12 @@ move/up/cancel for the iOS implicit-capture bug, `touch-action: none` — and
 mutates nothing; FW-C's trackpad-burst handling is feature work for the
 surface controller, not prep); a per-frame **aggregator** collapses every move
 since the last frame into one `{startPixel, endPixel}` (C §2.1) and drains it
-at one apply point in the frame loop — a new site (`runFrame` / the
-`orbitDrag` driver path; the P6 implementer picks the exact site and the plan
-confirms it) that replaces orbitControls' own per-event register mutation; the
-incumbent orbit math moves behind a controller that _returns_ a pose.
+at one apply point in the frame loop — `drainInput`, at the top of `runFrame`,
+above the driver table's `getState()` — that replaces orbitControls' own
+per-event register mutation. As landed (PR #648), the incumbent orbit math
+still mutates the OrbitCamera register at that single drain rather than
+returning a pose — the returns-pose shape is deferred to this spec's surface
+controller / provider B.
 Behaviour-preserving, and it is the joint both arms plug into.
 
 **Packaging is an open ask at the checkpoint, as always: do P5 and P6 land as
