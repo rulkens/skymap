@@ -27,10 +27,10 @@ import { fileURLToPath } from 'node:url';
 import type { DataManifest } from '../../src/@types/data/DataManifest';
 import type { SourceEntry } from '../../src/@types/data/SourceEntry';
 import { SOURCE_ENTRIES } from '../../src/data/sourceEntries';
+import { TIER_LADDER } from '../../src/data/tierLadder';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 
 const DATA_DIR = 'public/data';
-const TIERS = ['small', 'medium', 'large'] as const;
 
 /**
  * `.scfd` filename -> its registry row's `visible` default, for every
@@ -50,7 +50,7 @@ export function volumeVisibilityByFileName(entries: readonly SourceEntry[]): Map
     if (base == null) continue; // procedural debug fixtures have no on-disk file
     const fileNames =
       entry.type === 'volume' && entry.tiered
-        ? TIERS.map((tier) => `${base}-${tier}.scfd`)
+        ? TIER_LADDER.map((tier) => `${base}-${tier}.scfd`)
         : [`${base}.scfd`];
     for (const fileName of fileNames) map.set(fileName, entry.visible);
   }

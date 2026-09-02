@@ -15,14 +15,12 @@ A second drill-core cone was requested through the Coma cluster, alongside the s
 
 ## Implementation scope
 
-The shipped pipeline is deliberately single-cone: one `DESI_CONE` constant, one bin (`desi-deep.bin`), one `Source` enum entry. A second cone is not a config tweak — it needs:
-
-- a new `Source` enum code (append-only, per `src/data/source.ts`'s docstring rule)
-- a registry entry + settings row
-- its own bin + an R2 `ALLOW` entry (`tools/deploy/syncR2.ts`)
-- generalizing `loadDesi` from a single hardcoded cone to per-cone file/filter pairs (the SGC fetch is a second file set, not a filter change)
-
-Small spec + plan of its own, not a fold into the existing plan.
+`tools/catalog/desiPatches.ts` (#421) has since generalized cones into a
+`DESI_PATCHES` table — adding a drill geometry is "one row here plus one
+`Source` registration," not a cloned pipeline path (`desiPatches.ts`'s own
+docstring). The single-cone cost list this section used to carry is
+largely obsolete; what remains is the Coma-vs-Stripe-82 target decision
+below, plus the SGC clustering-file fetch Stripe 82 specifically needs.
 
 ## Decision needed
 

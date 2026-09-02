@@ -170,8 +170,8 @@ export type RenderSettings = {
    * structure-tensor pass chain's coherence-scaled crest orientation alone,
    * same seam as `ismMapViewIntensity`. Hue is the pitch angle (period π, so
    * it fills the full hue wheel — see `orientationPresent.wesl`), value is
-   * coherence. One of the two things that keep the pass chain alive — see
-   * `createGalaxyModel.ts`'s `orientationTexRebuild`; the other is
+   * coherence. One of the two things that keep the pass chain alive — see the
+   * `orientation:tex` stage row's `wanted`; the other is
    * `fieldTuning.ismMap.generator !== 'none'`.
    */
   readonly orientationViewIntensity: number;

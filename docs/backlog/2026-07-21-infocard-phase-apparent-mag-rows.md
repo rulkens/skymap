@@ -5,18 +5,20 @@
 
 ## Context
 
-The time-control feature publishes a throttled `TimeReport`
-(`state.engine.timeReport`) that carries `simDays` and
-`focusedBodyDistanceMpc`. The InfoCard's body detail card renders a live
-Distance row from it. The spec's surface section also named phase and
-apparent magnitude as time-dependent rows; those need per-body ephemeris
-quantities the pub does not carry (phase angle from the sun-body-observer
-geometry; apparent magnitude from distance + phase + albedo model), so they
-were disclosed as partial delivery rather than grown into the pub mid-plan.
+The time-control feature publishes throttled per-focus distance
+(`selectEngine(state).focusedBodyDistanceMpc`, via the `engineBodyDistanceReported`
+pub) that the InfoCard's body detail card renders as a live Distance row.
+`simDays` lives in the `time` slice (`state/time/timeSlice.ts`), not on this
+pub. The spec's surface section also named phase and apparent magnitude as
+time-dependent rows; those need per-body ephemeris quantities the pub does not
+carry (phase angle from the sun-body-observer geometry; apparent magnitude
+from distance + phase + albedo model), so they were disclosed as partial
+delivery rather than grown into the pub mid-plan.
 
-Related open question (radar finding, PR #472 description): `TimeReport.simDays`
-currently has no reader — growing the pub for phase rows would either justify
-it or supersede it.
+Related open question from the original radar finding (PR #472 description,
+against the now-removed `TimeReport` pub): whether growing a pub for phase
+rows is still the right shape, given `simDays` already lives on the `time`
+slice's `anchor` and could be read from there directly instead.
 
 ## The work
 

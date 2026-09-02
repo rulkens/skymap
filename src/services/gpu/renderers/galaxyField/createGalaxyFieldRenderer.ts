@@ -20,6 +20,7 @@ import type { HiiTextureLanes } from '../../../../@types/galaxy/HiiTextureLanes'
 import type { HiiTier } from '../../../../@types/galaxy/HiiTier';
 import type { IsmMapSeedingLanes } from '../../../../@types/galaxy/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../../../../@types/galaxy/YoungStarsLanes';
+import type { StageGraph } from '../../../../@types/gpu/StageGraph';
 import type { TimingSlotName } from '../../../../@types/gpu/timing/TimingSlotName';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -39,8 +40,10 @@ import {
   buildHiiRegions,
   buildHiiShellsAndYoungWithSegments,
   DIG_MAX_COUNT,
+  EMPTY_SHELLS_AND_YOUNG,
   HII_MAX_COUNT,
 } from '../../../engine/galaxyGenerator/v2/hiiRegions';
+import type { HiiShellsAndYoungResult } from '../../../engine/galaxyGenerator/v2/hiiRegions';
 import { MAX_PARTICLE_COUNT } from '../../../engine/galaxyGenerator/v2/dustParticleCloud';
 import { YOUNG_CHAIN_MAX_COMPONENTS } from '../../../engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../utils/galaxy/ismMapAmbientDust';
@@ -49,11 +52,13 @@ import { transformGalaxyFieldComponent } from '../../../../utils/galaxy/transfor
 import { HII_TIER_KINDS, mapHiiTiers } from '../../../../data/hiiTiers';
 
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { createKeyedRebuild } from '../../lib/createKeyedRebuild';
+import { createDerived } from '../../lib/createDerived';
+import { createStageGraph } from '../../lib/createStageGraph';
 
 import { buildFieldHeaderInputs } from './field/buildFieldHeaderInputs';
 import type { FieldHeaderFrameLanes, FieldHeaderRenderLanes } from './field/buildFieldHeaderInputs';
 import { createFieldPipelines } from './field/createFieldPipelines';
+import type { FieldBindGroups } from './field/createFieldPipelines';
 import { deriveDustHeaderLanes } from './field/deriveDustHeaderLanes';
 import { encodeDustMapPass } from './field/encodeDustMapPass';
 import { encodeDustPresentPass } from './field/encodeDustPresentPass';
@@ -151,8 +156,8 @@ export type GalaxyFieldRendererDeps = {
 /**
  * Everything the mixture/ISM rebuild is a function of. The first three are
  * the galaxy itself; `extras` is the rest of the scene (the component buffers
- * are scene-wide, not per-galaxy — see `repackFieldComponents`); the last
- * three are host render knobs the orientation chain consumes.
+ * are scene-wide, not per-galaxy — see `fieldPack`); the last three are host
+ * render knobs the orientation chain consumes.
  */
 export type GalaxyFieldMixtureInput = {
   readonly geometry: GalaxyDescription | null;
@@ -164,12 +169,20 @@ export type GalaxyFieldMixtureInput = {
   readonly orientationViewWanted: boolean;
 };
 
+const EMPTY_INPUT: GalaxyFieldMixtureInput = {
+  geometry: null,
+  fieldTuning: DEFAULT_GALAXY_FIELD_TUNING,
+  seed: 0,
+  extras: [],
+  sigmaDerivTexels: 0,
+  sigmaIntegTexels: 0,
+  orientationViewWanted: false,
+};
+
 /**
  * Render targets the HOST allocates and owns. `GPUTexture` rather than
  * `GPUTextureView`: every field/HII/tier header packs `targetSizePx` off the
- * target's own pixel size, and a view exposes no dimensions. `dustMapTex` is
- * SAMPLED as well as written, so a reallocation must reach
- * `onDustMapReallocated` — a fresh view at encode time is not enough.
+ * target's own pixel size, and a view exposes no dimensions.
  */
 export type GalaxyFieldRenderTargets = {
   readonly fieldTex: GPUTexture;
@@ -242,7 +255,13 @@ export type GalaxyFieldProbe = {
   } | null>;
   /** The REAL production pair, so a host-side isolated-range draw exercises the real fragment shader. */
   readonly fieldSplatPipe: GPURenderPipeline;
-  readonly fieldSplatBG: GPUBindGroup;
+  /**
+   * `null` until the first `encode` has synced; afterwards it reflects the LAST
+   * `encode`'s resources — a `setMixture` that regrew `fieldComps` leaves this
+   * bound to the destroyed buffer until the next `encode`. Probe callers must
+   * render a frame between mutation and readback (`settleFrames` already does).
+   */
+  readonly fieldSplatBG: GPUBindGroup | null;
 };
 
 export type GalaxyFieldRenderer = {
@@ -273,19 +292,10 @@ export type GalaxyFieldRenderer = {
   ): void;
   /** The three present overlays, into the host's already-open scene pass. */
   encodeOverlays(pass: GPURenderPassEncoder, overlays: GalaxyFieldOverlays): void;
-  /**
-   * The host reallocated `dustMapTex`. Rebuilds every `layout: 'auto'` bind
-   * group holding a view of the old texture and resets the stale-map latch —
-   * must be called from the allocation itself, never hoisted to a caller
-   * that may skip it (the latch reset asserts the texture is zeroed, true
-   * only of one just created).
-   */
-  onDustMapReallocated(dustMapTex: GPUTexture): void;
 
   readonly fieldCounts: FieldSliceCounts;
-  /** Cached by the dust rebuild — the header reads these every frame, they change only when dust does. */
   readonly dustHeaderLanes: DustHeaderLanes;
-  /** `hiiComps`' buffer-wide segmentation, recomputed on every repack — the host's composite gates read it. */
+  /** `hiiComps`' buffer-wide segmentation — the host's composite gates read it. */
   readonly hiiSegments: readonly HiiSegment[];
   readonly armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'];
   readonly spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'];
@@ -306,12 +316,14 @@ export function createGalaxyFieldRenderer(
   const { makeShader, hdrFormat, dustMapFormat } = deps;
 
   // ---- ownership ledger ----
-  // Every allocation this module makes registers at its own site; `dispose`
-  // walks it in reverse. Resources that own their own teardown (the ISM
-  // chain, the two record buffers) delegate instead and are deliberately
-  // absent, which is also why nothing registered here is ever reassigned.
-  const owned: { destroy(): void }[] = [];
-  const own = <T extends { destroy(): void }>(resource: T): T => {
+  // Every GPU-destroyable resource this module allocates registers here at
+  // its own site — `dispose` is the single reverse walk, calling whichever
+  // teardown method the entry has. Sub-factories spell it `dispose()`
+  // (the ISM chain, the two record buffers); raw buffers/textures spell it
+  // `destroy()`. Pipelines, bind groups and shader modules have neither in
+  // WebGPU and so are never registered — nothing here is ever reassigned.
+  const owned: ({ destroy(): void } | { dispose(): void })[] = [];
+  const own = <T extends { destroy(): void } | { dispose(): void }>(resource: T): T => {
     owned.push(resource);
     return resource;
   };
@@ -401,58 +413,62 @@ export function createGalaxyFieldRenderer(
   // ---- ISM-map generator + its orientation chain ----
   // Each owns every resource it touches, including its readback staging
   // buffers; this module keeps only the handles and the gates.
-  const ismMapGenerator = createIsmMapGenerator(device, {
-    makeShader,
-    hdrFormat,
-    fieldUbo,
-  });
-  const ismMapOrientation = createIsmMapOrientation(device, {
-    makeShader,
-    hdrFormat,
-    fieldUbo,
-    sourceTexture: ismMapGenerator.texture,
-  });
+  const ismMapGenerator = own(
+    createIsmMapGenerator(device, {
+      makeShader,
+      hdrFormat,
+      fieldUbo,
+    }),
+  );
+  const ismMapOrientation = own(
+    createIsmMapOrientation(device, {
+      makeShader,
+      hdrFormat,
+      fieldUbo,
+      sourceTexture: ismMapGenerator.texture,
+    }),
+  );
   // GPU replacement for `ismMapRingMeans.ts`'s CPU loop — see its own header.
-  const ringReduce = createIsmMapRingReduce(device, {
-    makeShader,
-    ismMapTexture: ismMapGenerator.texture,
-    ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
-  });
+  const ringReduce = own(
+    createIsmMapRingReduce(device, {
+      makeShader,
+      ismMapTexture: ismMapGenerator.texture,
+      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+    }),
+  );
   // GPU replacement for `buildIsmMapDustCdf.ts`'s CPU prefix sum.
-  const dustCdfScan = createIsmMapDustCdfScan(device, {
-    makeShader,
-    maxRings: ISM_MAP_RINGS,
-    maxAz: ISM_MAP_AZ,
-  });
+  const dustCdfScan = own(
+    createIsmMapDustCdfScan(device, {
+      makeShader,
+      maxRings: ISM_MAP_RINGS,
+      maxAz: ISM_MAP_AZ,
+    }),
+  );
   // A SECOND instance of the same factory, at the same ceiling — the DIG
   // veil's own arm-biased weight table. Its OWN buffer, never sharing
   // `dustCdfScan`'s: dust's and DIG's placement dispatches are each deferred
   // independently to `stepIsmMap()`, so one shared `prefixBuffer` would let
   // whichever dispatch runs second silently overwrite the first's input.
-  const digCdfScan = createIsmMapDustCdfScan(device, {
-    makeShader,
-    maxRings: ISM_MAP_RINGS,
-    maxAz: ISM_MAP_AZ,
-  });
+  const digCdfScan = own(
+    createIsmMapDustCdfScan(device, {
+      makeShader,
+      maxRings: ISM_MAP_RINGS,
+      maxAz: ISM_MAP_AZ,
+    }),
+  );
   // GPU replacement for `buildDustParticleCloud`'s map-seeded placement.
-  const placeDust = createIsmMapPlaceDust(device, { makeShader });
+  const placeDust = own(createIsmMapPlaceDust(device, { makeShader }));
   // GPU replacement for `buildArmSpurParticleCloud`'s placement body.
-  const placeArmSpurCloud = createIsmMapPlaceArmSpurCloud(device, { makeShader });
+  const placeArmSpurCloud = own(createIsmMapPlaceArmSpurCloud(device, { makeShader }));
   // GPU replacement for `buildArmParticleCloud`'s placement body.
-  const placeArmCloud = createIsmMapPlaceArmCloud(device, { makeShader });
+  const placeArmCloud = own(createIsmMapPlaceArmCloud(device, { makeShader }));
   // GPU replacement for `buildDigVeil`'s complex/children placement.
-  const placeDigVeil = createIsmMapPlaceDigVeil(device, { makeShader });
+  const placeDigVeil = own(createIsmMapPlaceDigVeil(device, { makeShader }));
 
-  // `getDustMapTex` is a thunk because `createFieldPipelines` is built before
-  // the host has allocated anything; `onDustMapReallocated` supplies the
-  // first (and every later) texture. Every other reader takes the targets
-  // `encode` is handed for that frame.
-  let dustMapTex: GPUTexture | null = null;
-  // Whether `dustMapTex` currently holds anything but zeros — the encode
-  // gate's clear-on-drop-to-zero latch (see its own comment below). Reset
-  // here rather than left stale whenever `onDustMapReallocated` hands in a
-  // fresh (zero-initialised) texture.
-  let dustMapPopulated = false;
+  /** The dust map this module last saw, and whether it holds anything but zeros. */
+  let dustMap: { readonly tex: GPUTexture; populated: boolean } | null = null;
+  /** What the last `encode`'s `sync` returned — the probe's isolated-range draw reads it. */
+  let bindGroups: FieldBindGroups | null = null;
 
   // ---- field/HII splat pipelines + their bind-group apparatus ----
   // Must come after everything above: it takes all three UBOs, the generator,
@@ -476,7 +492,6 @@ export function createGalaxyFieldRenderer(
     dustRenormBuffer: ringReduce.dustRenormBuffer,
     armRenormBuffer: ringReduce.armCloudRenormBuffer,
     spurRenormBuffer: ringReduce.spurCloudRenormBuffer,
-    getDustMapTex: () => dustMapTex!,
   });
 
   // ---- bubble-view overlay: the SF-event catalog's own placements ----
@@ -525,41 +540,41 @@ export function createGalaxyFieldRenderer(
   // cap. Starts at one galaxy's EMISSION ceiling; the trailing dust slice is a
   // particle cloud thousands of components deep, so the first mixture with
   // dust on regrows this regardless.
-  const fieldComps = createGrowOnlyRecordBuffer({
-    device,
-    label: 'galaxy:fieldComps',
-    // COPY_SRC beyond STORAGE|COPY_DST's production need: the debug-only
-    // dust-slot readback copies that range back to the CPU.
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-    floatsPerRecord: FIELD_COMPONENT_FLOATS,
-    initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
-    // A regrow REPLACES the GPUBuffer and a bind group holds the exact object
-    // it was built against — internal now that both live here.
-    onRegrow: () => fieldPipelines.rebuildFieldCompsBindGroups(fieldComps.buffer),
-  });
+  const fieldComps = own(
+    createGrowOnlyRecordBuffer({
+      device,
+      label: 'galaxy:fieldComps',
+      // COPY_SRC beyond STORAGE|COPY_DST's production need: the debug-only
+      // dust-slot readback copies that range back to the CPU.
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      floatsPerRecord: FIELD_COMPONENT_FLOATS,
+      initialCapacity: GALAXY_FIELD_MAX_COMPONENTS,
+    }),
+  );
   // The HII tier's own storage buffer, byte-identical layout to `fieldComps`
   // but never concatenated into it — see `docs/research/milky-way/
   // hii-regions.md`: a shell sprite is small and bright by construction, so
   // sharing the smooth field's coarser target collapsed it into a bloom
   // firefly. Own buffer, own target, own divisor, own admission ceiling.
-  const hiiComps = createGrowOnlyRecordBuffer({
-    device,
-    label: 'galaxy:hiiComps',
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-    floatsPerRecord: FIELD_COMPONENT_FLOATS,
-    // + DIG_MAX_COUNT: the DIG veil rides this SAME buffer as a bounded group
-    // pushed after `HII_MAX_COUNT`'s admission, not a reservation carved out
-    // of it — so the common case never regrows on first activation.
-    // + YOUNG_CHAIN_MAX_COMPONENTS: the young-stars chain rides it too.
-    initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + YOUNG_CHAIN_MAX_COMPONENTS,
-    onRegrow: () => fieldPipelines.rebuildTierBindGroups(hiiComps.buffer),
-  });
+  const hiiComps = own(
+    createGrowOnlyRecordBuffer({
+      device,
+      label: 'galaxy:hiiComps',
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      floatsPerRecord: FIELD_COMPONENT_FLOATS,
+      // + DIG_MAX_COUNT: the DIG veil rides this SAME buffer as a bounded group
+      // pushed after `HII_MAX_COUNT`'s admission, not a reservation carved out
+      // of it — so the common case never regrows on first activation.
+      // + YOUNG_CHAIN_MAX_COMPONENTS: the young-stars chain rides it too.
+      initialCapacity: HII_MAX_COUNT + DIG_MAX_COUNT + YOUNG_CHAIN_MAX_COMPONENTS,
+    }),
+  );
 
   /**
    * peekScratchBuffer — the ONE shared COPY_DST|MAP_READ target behind
    * `probe.peekRecords`: a peek COPIES whatever is CURRENTLY sitting in
    * `fieldComps`/`hiiComps` without dispatching anything, so the host's probe
-   * can tell "the keyed rebuilds refilled the slots the last repack zeroed"
+   * can tell "the `place:*` rows refilled the slots the last upload zeroed"
    * apart from "the placement kernel itself is correct" (the readbacks below
    * re-dispatch fresh and so cannot see the former). Sized at
    * `MAX_PARTICLE_COUNT`, the largest of the four tiers. ONE peek at a time:
@@ -573,287 +588,216 @@ export function createGalaxyFieldRenderer(
     }),
   );
 
-  // `dustMapBG` is the only one of the five bind groups that doesn't
-  // reference `dustMapTex` (it is the pass that WRITES that texture), so it
-  // is also the only one buildable before the host has any targets.
-  fieldPipelines.rebuildDustMapBindGroup(fieldComps.buffer);
+  // ---- mixture state: one input record, and the values derived from it ----
+  // Every node below recomputes exactly when its declared key moves, so none
+  // of them has (or needs) an invalidation site of its own.
+  let current: GalaxyFieldMixtureInput = EMPTY_INPUT;
 
-  // ---- mixture state ----
-  let geometry: GalaxyDescription | null = null;
-  let fieldTuning: GalaxyFieldTuning = DEFAULT_GALAXY_FIELD_TUNING;
-  let seed = 0;
-  let extras: readonly GalaxyFieldExtra[] = [];
-  /** Each extra's own mixtures, already in world space — index-parallel to `extras`. */
-  let extraMixtures: readonly {
-    readonly fieldMixture: readonly GalaxyFieldComponent[];
-    readonly hiiMixture: readonly GalaxyFieldComponent[];
-  }[] = [];
-  let sigmaDerivTexels = 0;
-  let sigmaIntegTexels = 0;
-  let orientationViewWanted = false;
-
-  // The CENTRAL galaxy's emission mixture. Empty until the first
-  // `setMixture`: a field of zero components draws nothing, which is not the
-  // same as stale.
-  let fieldMixture: readonly GalaxyFieldComponent[] = [];
-  // The CENTRAL galaxy's HII tier, cached like `fieldMixture` but never
-  // concatenated into it (see `hiiComps`).
-  let hiiMixture: readonly GalaxyFieldComponent[] = [];
-  // The central galaxy's own tier boundaries within `hiiMixture`, captured
-  // alongside it at every rebuild site; `repackHiiComponents` extends this
-  // with the extras span to get the buffer-wide `hiiSegments`.
-  let hiiTierSegments: readonly HiiSegment[] = [];
-  let hiiSegments: readonly HiiSegment[] = [];
-  // The shell tier's own flux total and the recent-event population — DIG's
-  // own two inputs, captured alongside `hiiMixture` since both are a
-  // byproduct of `buildHiiShellsAndYoungWithSegments`.
-  let shellFluxSum = 0;
-  let recentEventCount = 0;
-  // The DIG veil's RESERVATION, CENTRAL galaxy only. `null` means none
-  // reserved this rebuild. `digOffset` is its absolute index into `hiiComps`,
-  // set by `repackHiiComponents` — the one place that decides where the DIG
-  // span lands between shells and young.
-  let digBudget: DigVeilBudget | null = null;
-  let digOffset = 0;
-  // The analytic dust lane's RESERVATION, CENTRAL galaxy only. The CPU only
-  // ever sees this budget/uniform shape — `placeDust.wesl` decides slot
-  // CONTENT on the GPU.
-  let dustBudget: PlaceDustBudget | null = null;
-  // The spur-cloud and arm-cloud tiers' RESERVATIONS, CENTRAL galaxy only.
-  // Captured alongside `fieldMixture` at every central rebuild site since
-  // each `offset` is a local index into THAT mixture, valid as an absolute
-  // `fieldComps` index only because the central galaxy's mixture always sits
-  // first in `repackFieldComponents`' concatenation.
-  let spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'] = null;
-  let armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'] = null;
-  // Cached, not recomputed per frame: the header reads all three every frame,
-  // but they only change when `rebuildDustMixture` runs. Seeded at the
-  // no-galaxy answer, which is what the first frames draw.
-  let dustHeaderLanes = deriveDustHeaderLanes(null, DEFAULT_GALAXY_FIELD_TUNING.dust, false);
-  // How the last `repackFieldComponents` concatenation sliced `fieldComps`.
-  let fieldCounts: FieldSliceCounts = { emission: 0, primary: 0, dust: 0 };
-
-  /**
-   * The CPU copy of the orientation field — diagnostics-only (the host's
-   * coherence-stat report); dust placement reads `orientationTex` on the GPU
-   * directly. Still gated on the generator being active: a disabled generator
-   * has nothing coherent to report either.
-   */
-  const orientationDataRebuild = createKeyedRebuild({
-    wanted: () => fieldTuning.ismMap.generator !== 'none',
-    build: () => deps.onOrientationRebuilt?.(ismMapGridRadiusOrDefault(geometry)),
-  });
-
-  /**
-   * The GPU structure-tensor chain over the CURRENT `ismMapTex`. Two
-   * independent consumers — the debug overlay reads the texture on the GPU,
-   * dust placement the same texture — either enough to justify the six
-   * dispatches. Needs no readback to run FROM: ismMapTex is a GPU texture
-   * WebGPU zero-initialises, so dispatching before `rebuildIsmMap` has ever
-   * populated it is safe. Invalidated by `rebuildIsmMap` and by a sigma move.
-   */
-  const orientationTexRebuild = createKeyedRebuild({
-    wanted: () => orientationViewWanted || fieldTuning.ismMap.generator !== 'none',
-    build: () => {
-      // gasFloor=1 when the generator is off: the map texture is a cleared
-      // (all-zero) blank then, and ismMapOrientationField.wesl's
-      // IsmMapOrientationPedestal derives its zero-gradient invariant from
-      // gasProfile(r) collapsing to a flat 1.0 — a real fluid gasFloor here
-      // would subtract a non-flat pedestal from that blank data and paint a
-      // fake radial gradient into the orientation view. gasScaleLength must
-      // still be finite even though it's then algebraically unused.
-      const pedestal =
-        fieldTuning.ismMap.generator === 'fluid'
-          ? fieldTuning.ismMapFluid
-          : { gasFloor: 1, gasScaleLength: 1 };
-      ismMapOrientation.dispatch({
-        grid: ismMapGridRadiusOrDefault(geometry),
-        sigmaDerivTexels,
-        sigmaIntegTexels,
-        gasFloor: pedestal.gasFloor,
-        gasScaleLength: pedestal.gasScaleLength,
-        ambient: ISM_MAP_AMBIENT_DUST,
-      });
-      orientationDataRebuild.invalidate();
+  /** The CENTRAL galaxy's field mixture, with the spur/arm-cloud reservations it carries. */
+  const centralField = createDerived<GalaxyFieldMixtureResult>({
+    key: () => [current.geometry, current.fieldTuning.disc, current.fieldTuning.arms],
+    compute: () => {
+      const geo = current.geometry;
+      // No galaxy means zero components — which draws nothing, not the same as stale.
+      if (!geo) return { components: [], spurCloudReservation: null, armCloudReservation: null };
+      return buildGalaxyFieldMixture(geo, current.fieldTuning);
     },
   });
 
   /**
-   * dispatchDustCdfScan — (re)scans the CURRENT `ismMapTex` with the CURRENT
-   * `cloud.dustPlacementCap`, own encoder/submit. Two independent triggers
-   * call this, not one: the map's own CONTENT changes only from
-   * `rebuildIsmMap`, but the SCAN's cap input can also move on its own via a
-   * bare dust-tuning drag — missing either trigger leaves `dustPlacementCap`
-   * (or a stepped map) stale in `prefixBuf` until some unrelated later
-   * rebuild happens to re-scan it.
+   * The central galaxy's HII tier — extras never take DIG, so only this path
+   * pays `buildHiiShellsAndYoungWithSegments`' bookkeeping. `arms` enters the
+   * key as `widthScale` alone: HII reads the arms only through `armCrossSigma`,
+   * so a whole-section edge would rebuild its O(rings x az x arms) CDF sweep on
+   * an arm-cloud drag that cannot change the output.
    */
-  function dispatchDustCdfScan(): void {
-    if (!geometry || fieldTuning.ismMap.generator !== 'fluid') return;
-    const grid = ismMapGridRadiusOrDefault(geometry);
-    const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDustCdfScanRebuild' });
-    // `ringCap` reproduces dustParticleCloud.ts's density() ring-mean-
-    // normalised, capped placement density (ismMapDustCdfScan.wesl's own doc).
-    dustCdfScan.dispatchScan(enc, {
-      ismMapTexture: ismMapGenerator.texture,
-      grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
-      weights: {
-        kind: 'channel',
-        channelWeights: { gas: 0, stars: 0, activity: 0, dust: 1 },
-        ringCap: fieldTuning.dust.cloud.dustPlacementCap ?? 0,
-      },
-      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
-    });
-    device.queue.submit([enc.finish()]);
-    dustPlacementRebuild.invalidate();
-  }
-
-  /**
-   * dispatchDigCdfScan — the DIG veil's own arm-biased counterpart, own
-   * encoder/submit, own `digCdfScan` instance (see its declaration for why a
-   * shared `prefixBuffer` would race). Two independent triggers, same shape
-   * as dust's: the map's own content, and DIG's own tuning. `armBias` is
-   * CLAMPED here, at the packing call site — `buildDigVeil`'s CPU original
-   * clamps to `[0, 1]` before ever building the envelope, and the scan shader
-   * trusts whatever `params.armBias` the caller packed.
-   */
-  function dispatchDigCdfScan(): void {
-    if (!geometry || fieldTuning.ismMap.generator !== 'fluid') return;
-    const grid = ismMapGridRadiusOrDefault(geometry);
-    const armBias = Math.min(1, Math.max(0, fieldTuning.hii.dig?.armBias ?? 0));
-    const armCount = geometry.arms.length;
-    const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDigCdfScanRebuild' });
-    digCdfScan.dispatchScan(enc, {
-      ismMapTexture: ismMapGenerator.texture,
-      grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
-      weights: {
-        kind: 'armBiased',
-        // DIG's own CDF weights the map's `activity` channel alone.
-        channelWeights: { gas: 0, stars: 0, activity: 1, dust: 0 },
-        armBias,
-        armCount,
-        entries: buildDigArmEnvelopeTable(geometry, fieldTuning, {
-          rings: ISM_MAP_RINGS,
-          rMin: grid.rMin,
-          rMax: grid.rMax,
-        }),
-      },
-      ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
-    });
-    device.queue.submit([enc.finish()]);
-    digPlacementRebuild.invalidate();
-  }
-
-  /**
-   * rebuildDustMixture — recomputes the central galaxy's dust RESERVATION off
-   * the CACHED geometry + dust params, then re-scans the CDF for the CURRENT
-   * `cloud.dustPlacementCap` (the map itself may already be fresh, but the
-   * cap value is this function's own to apply). Gated on
-   * `fieldTuning.dust.enabled` the same way `disc.enabled`/`arms.enabled`
-   * gate their shader loops — an off pill skips the work entirely.
-   *
-   * Does NOT invalidate `dustPlacementRebuild` itself: `repackFieldComponents`
-   * owns that, and every call site here is unconditionally followed by one in
-   * the same synchronous invocation.
-   */
-  function rebuildDustMixture(): void {
-    const dust = fieldTuning.dust;
-    dustHeaderLanes = deriveDustHeaderLanes(geometry, dust, fieldTuning.dust.enabled);
-    dustBudget =
-      geometry && fieldTuning.dust.enabled ? computePlaceDustBudget(geometry, dust) : null;
-    dispatchDustCdfScan();
-  }
-
-  /**
-   * rebuildDigVeilBudget — the DIG twin of `rebuildDustMixture`: a pure
-   * function of geometry + `fieldTuning.hii.dig` + `shellFluxSum`/
-   * `recentEventCount` (the two values the shell/young build this rebuild's
-   * callers ALWAYS run first), then the arm-biased CDF rescan. Same
-   * "whoever zeroes the slots owns the invalidation" split as dust's.
-   */
-  function rebuildDigVeilBudget(): void {
-    digBudget = geometry
-      ? computeDigVeilBudget(geometry, fieldTuning, shellFluxSum, recentEventCount)
-      : null;
-    dispatchDigCdfScan();
-  }
-
-  /**
-   * rebuildIsmMap — reruns the fluid generator from scratch off the CACHED
-   * geometry. NEVER per frame. `createIsmMapGenerator` owns the dispatch and
-   * the none/fluid gate; what stays here is the pair of things that follow it
-   * either way — and the readback hook fires on BOTH exits, the disabled one
-   * too, so the host's CPU copy reflects the cleared texture it just wrote
-   * rather than an earlier galaxy's map.
-   */
-  function rebuildIsmMap(): void {
-    const grid = ismMapGenerator.rebuild({ geometry, tuning: fieldTuning, seed });
-    if (fieldTuning.ismMap.generator === 'fluid') {
-      const enc = device.createCommandEncoder({ label: 'galaxy:ismMapRingReduceRebuild' });
-      // ringMeansBuffer written HERE; dispatchDustCdfScan's own LATER submit
-      // reads it — WebGPU's cross-SUBMIT ordering on one queue is what makes
-      // that safe with no barrier of our own.
-      ringReduce.dispatchRingMeans(enc);
-      device.queue.submit([enc.finish()]);
-      dispatchDustCdfScan();
-      dispatchDigCdfScan();
-    }
-    deps.onIsmMapRebuilt?.(grid);
-    orientationTexRebuild.invalidate();
-    // The map itself just changed (or was cleared) — placement must
-    // re-dispatch even when the budgets' OWN inputs didn't move, e.g. a bare
-    // ismMapFluid tuning drag, which reaches here with no repack of its own
-    // to own the invalidation.
-    dustPlacementRebuild.invalidate();
-    digPlacementRebuild.invalidate();
-  }
-
-  /**
-   * dustPlacementRebuild — encodes `placeDust.wesl` into its own encoder, off
-   * the CURRENT `dustBudget`. Consumed from `stepIsmMap()` AFTER
-   * `orientationTexRebuild`, never synchronously from the rebuilds above:
-   * this dispatch needs `orientationTex` already fresh for whatever
-   * `ismMapTex` the rebuild wrote, and the lazy per-frame gate is what
-   * guarantees that ordering. A one-frame-late fill is the honest cost.
-   */
-  const dustPlacementRebuild = createKeyedRebuild({
-    wanted: () => dustBudget !== null,
-    build: () => {
-      const budget = dustBudget;
-      if (!geometry || !budget) return;
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeDust' });
-      placeDust.dispatchPlaceDust(enc, dustDispatchInput(geometry, budget));
-      // Survivor-sum + Larson renorm, encoded into the SAME encoder/submit
-      // right after the dispatch: cross-pass ordering within one submit is
-      // what lets this read `placeDust.massBuffer` fresh with no readback of
-      // its own, tying the renorm's freshness to THIS placement rebuild.
-      ringReduce.dispatchSurvivorSum(enc, {
-        massBuffer: placeDust.massBuffer,
-        count: budget.count,
-        totalMass: budget.totalMass,
-      });
-      device.queue.submit([enc.finish()]);
+  const centralHii = createDerived<HiiShellsAndYoungResult>({
+    key: () => [
+      current.geometry,
+      current.fieldTuning.hii,
+      current.fieldTuning.starFormation,
+      current.fieldTuning.arms.widthScale,
+    ],
+    compute: () => {
+      const geo = current.geometry;
+      if (!geo) return EMPTY_SHELLS_AND_YOUNG;
+      return buildHiiShellsAndYoungWithSegments(
+        geo,
+        current.fieldTuning,
+        current.fieldTuning.starFormation,
+        geo.seed,
+      );
     },
   });
 
-  /** Shared by `dustPlacementRebuild` and the debug readback — one input shape, one place that assembles it. */
+  /**
+   * Each extra's own mixtures, already in world space — index-parallel to
+   * `current.extras`. Two nodes rather than one pair: the tiers answer to
+   * different tuning sections, so a move rebuilds only the half that moved.
+   */
+  const extraFieldMixtures = createDerived<readonly (readonly GalaxyFieldComponent[])[]>({
+    key: () => [current.extras, current.fieldTuning.disc, current.fieldTuning.arms],
+    compute: () => current.extras.map((extra) => extraFieldMixture(extra)),
+  });
+
+  const extraHiiMixtures = createDerived<readonly (readonly GalaxyFieldComponent[])[]>({
+    key: () => [
+      current.extras,
+      current.fieldTuning.hii,
+      current.fieldTuning.starFormation,
+      current.fieldTuning.arms.widthScale,
+    ],
+    compute: () => current.extras.map((extra) => extraHiiMixture(extra)),
+  });
+
+  /** The header's dust lanes — read every frame, moved only by geometry or the dust section. */
+  const dustHeaderLanes = createDerived<DustHeaderLanes>({
+    key: () => [current.geometry, current.fieldTuning.dust],
+    compute: () => {
+      const dust = current.fieldTuning.dust;
+      return deriveDustHeaderLanes(current.geometry, dust, dust.enabled);
+    },
+  });
+
+  /**
+   * The analytic dust lane's RESERVATION, CENTRAL galaxy only. The CPU only
+   * ever sees this budget/uniform shape — `placeDust.wesl` decides slot
+   * CONTENT on the GPU. `dust.enabled` gates it the way `disc.enabled`/
+   * `arms.enabled` gate their shader loops: an off pill reserves nothing.
+   */
+  const dustBudget = createDerived<PlaceDustBudget | null>({
+    key: () => [current.geometry, current.fieldTuning.dust],
+    compute: () => {
+      const geo = current.geometry;
+      const dust = current.fieldTuning.dust;
+      return geo && dust.enabled ? computePlaceDustBudget(geo, dust) : null;
+    },
+  });
+
+  /**
+   * The DIG veil's RESERVATION, CENTRAL galaxy only. Keyed on `centralHii`'s
+   * whole record rather than the two flux lanes it reads: what used to be a
+   * "call this after the HII rebuild" rule at two sites is now a declared edge.
+   */
+  const digBudget = createDerived<DigVeilBudget | null>({
+    key: () => [current.geometry, current.fieldTuning.hii.dig, centralHii.get()],
+    compute: () => {
+      const geo = current.geometry;
+      if (!geo) return null;
+      const hii = centralHii.get();
+      return computeDigVeilBudget(geo, current.fieldTuning, hii.shellFluxSum, hii.recentEventCount);
+    },
+  });
+
+  /**
+   * `fieldComps`' whole contents: the central galaxy's emission mixture, then
+   * every extra's (already in world space), then the central galaxy's dust
+   * RESERVATION — a zero block (amplitude 0 draws nothing) that
+   * the `place:dust` stage fills in a LATER, separate GPU pass; the pack's own
+   * job is sizing it. Dust trails every emission component (never interleaved)
+   * so `dustOffset == counts.emission` holds with no bookkeeping pass of its
+   * own — see io.wesl's layout comment.
+   */
+  const fieldPack = createDerived<{ packed: Float32Array; counts: FieldSliceCounts }>({
+    key: () => [centralField.get(), extraFieldMixtures.get(), dustBudget.get()],
+    compute: () => {
+      const primary = centralField.get().components;
+      const emission: GalaxyFieldComponent[] = [...primary];
+      for (const extra of extraFieldMixtures.get()) emission.push(...extra);
+      const dustCount = dustBudget.get()?.count ?? 0;
+      const counts: FieldSliceCounts = {
+        emission: emission.length,
+        primary: primary.length,
+        dust: dustCount,
+      };
+      const packedEmission = packFieldComponents(emission);
+      if (dustCount <= 0) return { packed: packedEmission, counts };
+      const packed = new Float32Array(packedEmission.length + dustCount * FIELD_COMPONENT_FLOATS);
+      packed.set(packedEmission, 0);
+      return { packed, counts };
+    },
+  });
+
+  /**
+   * `hiiComps`' whole contents plus its buffer-wide segmentation. A SEPARATE
+   * buffer rather than a further slice of `fieldComps`: see `hiiComps` for why
+   * the tier cannot share the field's target, and a shared BUFFER with a
+   * separate TARGET would still mean one draw painting into two attachments,
+   * which WebGPU has no way to do. DIG's span is a RESERVATION written zero
+   * here, exactly `fieldPack`'s dust-tail discipline, except EMBEDDED between
+   * shells and young (matching the tier's original ordering).
+   */
+  const hiiPack = createDerived<{ packed: Float32Array; segments: readonly HiiSegment[] }>({
+    key: () => [centralHii.get(), extraHiiMixtures.get(), digBudget.get()],
+    compute: () => {
+      const hii = centralHii.get();
+      const shellsCount = hii.segments.find((s) => s.label === 'hii:shells')?.count ?? 0;
+      const digCount = digBudget.get()?.count ?? 0;
+      const packedShells = packFieldComponents(hii.components.slice(0, shellsCount));
+      const packedYoung = packFieldComponents(hii.components.slice(shellsCount));
+      const extrasComponents: GalaxyFieldComponent[] = [];
+      for (const extra of extraHiiMixtures.get()) extrasComponents.push(...extra);
+      const packedExtras = packFieldComponents(extrasComponents);
+
+      const packed = new Float32Array(
+        packedShells.length +
+          digCount * FIELD_COMPONENT_FLOATS +
+          packedYoung.length +
+          packedExtras.length,
+      );
+      let offset = 0;
+      packed.set(packedShells, offset);
+      offset += packedShells.length;
+      const digOffset = offset / FIELD_COMPONENT_FLOATS;
+      offset += digCount * FIELD_COMPONENT_FLOATS;
+      packed.set(packedYoung, offset);
+      offset += packedYoung.length;
+      packed.set(packedExtras, offset);
+
+      const youngCount = hii.components.length - shellsCount;
+      const extrasCount = extrasComponents.length;
+      return {
+        packed,
+        segments: [
+          { label: 'hii:shells', first: 0, count: shellsCount },
+          { label: 'hii:dig', first: digOffset, count: digCount },
+          { label: 'hii:young', first: digOffset + digCount, count: youngCount },
+          ...(extrasCount > 0
+            ? [
+                {
+                  label: 'hii:extras',
+                  first: digOffset + digCount + youngCount,
+                  count: extrasCount,
+                },
+              ]
+            : []),
+        ],
+      };
+    },
+  });
+
+  /** Shared by the `place:dust` stage and the debug readback — one input shape, one place that assembles it. */
   function dustDispatchInput(
     geo: GalaxyDescription,
     budget: PlaceDustBudget,
     /**
-     * Debug-only override: forcing this to `false` exercises placeDust.wesl's
-     * mode-1 (smoothDisc) branch directly, WITHOUT flipping
-     * `fieldTuning.ismMap.generator` — the real 'none' transition hits an
-     * unrelated, pre-existing bug in `ismMapGenerator.rebuild`'s clear path.
-     * The production path never passes this.
+     * Debug-only, and absent it follows the live
+     * `fieldTuning.ismMap.generator` — the production `place:dust` dispatch
+     * passes nothing. `probeGpuErrors.ts` passes `false` to reach
+     * placeDust.wesl's mode-1 (smoothDisc) branch, which nothing else in the
+     * repo executes. Flipping the tuning to a non-fluid generator instead
+     * would rerun the generator, both CDF scans and the placement, leaving two
+     * readbacks either side of it over different maps and budgets — and hits
+     * `docs/backlog/2026-08-12-ism-generator-none-copy-dst-crash.md`.
      */
     forceGeneratorIsFluid?: boolean,
   ): PlaceDustDispatchInput {
     const grid = ismMapGridRadiusOrDefault(geo);
     return {
-      seed,
+      seed: current.seed,
       budget,
-      dustOffset: fieldCounts.emission,
-      generatorIsFluid: forceGeneratorIsFluid ?? fieldTuning.ismMap.generator === 'fluid',
+      dustOffset: fieldPack.get().counts.emission,
+      generatorIsFluid: forceGeneratorIsFluid ?? current.fieldTuning.ismMap.generator === 'fluid',
       grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
       warp: {
         warpStrength: geo.warpStrength,
@@ -865,118 +809,57 @@ export function createGalaxyFieldRenderer(
       ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
       ismMapTexture: ismMapGenerator.texture,
       orientationTexture: ismMapOrientation.texture,
-      fieldCompsBuffer: fieldComps.buffer,
+      fieldCompsBuffer: fieldComps.getBuffer(),
     };
   }
 
-  /**
-   * spurCloudPlacementRebuild — the same deferred-dispatch shape
-   * `dustPlacementRebuild` uses. Unlike dust, this tier reads no ISM-map/
-   * orientation texture at all (`armRidge.wesl`'s ridge math is self-contained
-   * off the per-spur record table), so there is no ordering dependency on
-   * `orientationTexRebuild`; it is placed after it anyway, for one discipline
-   * rather than two.
-   */
-  const spurCloudPlacementRebuild = createKeyedRebuild({
-    wanted: () => spurCloudReservation !== null,
-    build: () => {
-      const reservation = spurCloudReservation;
-      if (!geometry || !reservation) return;
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloud' });
-      placeArmSpurCloud.dispatchPlaceArmSpurCloud(
-        enc,
-        spurCloudDispatchInput(geometry, reservation),
-      );
-      ringReduce.dispatchArmSpurFluxWeightSum(enc, {
-        fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
-        count: reservation.count,
-      });
-      device.queue.submit([enc.finish()]);
-    },
-  });
-
-  /** Shared by `spurCloudPlacementRebuild` and the debug readback. */
+  /** Shared by the `place:spur` stage and the debug readback. */
   function spurCloudDispatchInput(
     geo: GalaxyDescription,
     reservation: NonNullable<GalaxyFieldMixtureResult['spurCloudReservation']>,
   ): PlaceArmSpurCloudDispatchInput {
     return {
-      seed,
+      seed: current.seed,
       offset: reservation.offset,
       count: reservation.count,
       flux: reservation.flux,
       spurArms: reservation.spurArms,
       geometry: geo,
-      tuning: fieldTuning,
-      fieldCompsBuffer: fieldComps.buffer,
+      tuning: current.fieldTuning,
+      fieldCompsBuffer: fieldComps.getBuffer(),
     };
   }
 
-  /**
-   * armCloudPlacementRebuild — the arm-cloud twin. Its own
-   * `orientationTexture` bind is a dead pass-through (see
-   * `placeArmCloud.wesl`), so this too has no real ordering dependency on
-   * `orientationTexRebuild`.
-   */
-  const armCloudPlacementRebuild = createKeyedRebuild({
-    wanted: () => armCloudReservation !== null,
-    build: () => {
-      const reservation = armCloudReservation;
-      if (!geometry || !reservation) return;
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloud' });
-      placeArmCloud.dispatchPlaceArmCloud(enc, armCloudDispatchInput(geometry, reservation));
-      ringReduce.dispatchArmCloudFluxWeightSum(enc, {
-        fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
-        count: reservation.count,
-      });
-      device.queue.submit([enc.finish()]);
-    },
-  });
-
-  /** Shared by `armCloudPlacementRebuild` and the debug readback. */
+  /** Shared by the `place:arm` stage and the debug readback. */
   function armCloudDispatchInput(
     geo: GalaxyDescription,
     reservation: NonNullable<GalaxyFieldMixtureResult['armCloudReservation']>,
   ): PlaceArmCloudDispatchInput {
     return {
-      seed,
+      seed: current.seed,
       offset: reservation.offset,
       count: reservation.count,
       flux: reservation.flux,
       geometry: geo,
-      tuning: fieldTuning,
+      tuning: current.fieldTuning,
+      // A dead pass-through — `placeArmCloud.wesl` binds it and never samples
+      // it, which is why `place:arm` declares no edge to `orientation:tex`.
       orientationTexture: ismMapOrientation.texture,
-      fieldCompsBuffer: fieldComps.buffer,
+      fieldCompsBuffer: fieldComps.getBuffer(),
     };
   }
 
-  /**
-   * digPlacementRebuild — the DIG twin. Reads no `orientationTex` at all
-   * (this tier has no coherence-blend mode), so no real ordering dependency
-   * either; placed after it anyway, one discipline rather than four.
-   */
-  const digPlacementRebuild = createKeyedRebuild({
-    wanted: () => digBudget !== null,
-    build: () => {
-      const budget = digBudget;
-      if (!geometry || !budget) return;
-      const enc = device.createCommandEncoder({ label: 'galaxy:placeDigVeil' });
-      placeDigVeil.dispatchPlaceDigVeil(enc, digDispatchInput(geometry, budget));
-      device.queue.submit([enc.finish()]);
-    },
-  });
-
-  /** Shared by `digPlacementRebuild` and the debug readback. */
+  /** Shared by the `place:dig` stage and the debug readback. */
   function digDispatchInput(
     geo: GalaxyDescription,
     budget: DigVeilBudget,
   ): PlaceDigVeilDispatchInput {
     const grid = ismMapGridRadiusOrDefault(geo);
     return {
-      seed,
+      seed: current.seed,
       budget,
-      reservationOffset: digOffset,
-      generatorIsFluid: fieldTuning.ismMap.generator === 'fluid',
+      reservationOffset: findHiiSegment(hiiPack.get().segments, 'hii:dig')?.first ?? 0,
+      generatorIsFluid: current.fieldTuning.ismMap.generator === 'fluid',
       cdfRings: ISM_MAP_RINGS,
       cdfAz: ISM_MAP_AZ,
       cdfRMin: grid.rMin,
@@ -988,105 +871,8 @@ export function createGalaxyFieldRenderer(
         outerRadius: geo.outerRadius,
       },
       prefixBuffer: digCdfScan.prefixBuffer,
-      hiiCompsBuffer: hiiComps.buffer,
+      hiiCompsBuffer: hiiComps.getBuffer(),
     };
-  }
-
-  /**
-   * repackFieldComponents — central galaxy's emission mixture, then every
-   * extra's (already in world space), then the central galaxy's dust
-   * RESERVATION last, into one `fieldComps` write. Runs whenever a mixture
-   * changes, never per frame.
-   *
-   * The dust range is written ZERO here (amplitude 0 draws nothing) —
-   * `dustPlacementRebuild` fills it in a LATER, separate GPU pass. This
-   * write's only job is sizing/growing `fieldComps` so that pass has
-   * somewhere to write into; the regrow (and the bind-group rebuild it
-   * triggers) still happens HERE, synchronously.
-   *
-   * Dust trails every emission component (never interleaved) so
-   * `dustOffset == fieldCounts.emission` always holds without a separate
-   * bookkeeping pass — see io.wesl's layout comment.
-   *
-   * All three placement invalidations are UNCONDITIONAL here, because every
-   * call overwrites the WHOLE buffer from the CPU-held arrays and so clobbers
-   * whatever the spur/arm-cloud/dust dispatches last GPU-filled — including
-   * calls whose own trigger has nothing to do with those tiers. Making each
-   * caller invalidate for itself is exactly the gap that let a dust-only
-   * patch leave the spur cloud vanished until an unrelated change fired it.
-   */
-  function repackFieldComponents(): void {
-    const emission: GalaxyFieldComponent[] = [...fieldMixture];
-    for (const e of extraMixtures) emission.push(...e.fieldMixture);
-    const dustCount = dustBudget?.count ?? 0;
-    fieldCounts = {
-      emission: emission.length,
-      primary: fieldMixture.length,
-      dust: dustCount,
-    };
-    spurCloudPlacementRebuild.invalidate();
-    armCloudPlacementRebuild.invalidate();
-    dustPlacementRebuild.invalidate();
-    const packedEmission = packFieldComponents(emission);
-    if (dustCount <= 0) {
-      fieldComps.write(packedEmission);
-      return;
-    }
-    const combined = new Float32Array(packedEmission.length + dustCount * FIELD_COMPONENT_FLOATS);
-    combined.set(packedEmission, 0);
-    fieldComps.write(combined);
-  }
-
-  /**
-   * repackHiiComponents — `repackFieldComponents`'s counterpart for the HII
-   * tier. A SEPARATE buffer rather than a further slice of `fieldComps`: see
-   * `hiiComps` for why the tier cannot share the field's target, and a shared
-   * BUFFER with a separate TARGET would still mean one draw painting into two
-   * attachments, which WebGPU has no way to do.
-   *
-   * `hiiMixture` is shells+young ONLY — DIG's span is a RESERVATION written
-   * zero here, exactly `repackFieldComponents`' dust-tail discipline, except
-   * EMBEDDED between shells and young (matching the tier's original ordering)
-   * rather than appended at the buffer's end.
-   */
-  function repackHiiComponents(): void {
-    const shellsSegment = hiiTierSegments.find((s) => s.label === 'hii:shells');
-    const shellsCount = shellsSegment?.count ?? 0;
-    const digCount = digBudget?.count ?? 0;
-    const packedShells = packFieldComponents(hiiMixture.slice(0, shellsCount));
-    const packedYoung = packFieldComponents(hiiMixture.slice(shellsCount));
-    const extrasComponents: GalaxyFieldComponent[] = [];
-    for (const e of extraMixtures) extrasComponents.push(...e.hiiMixture);
-    const packedExtras = packFieldComponents(extrasComponents);
-
-    digPlacementRebuild.invalidate();
-
-    const total = new Float32Array(
-      packedShells.length +
-        digCount * FIELD_COMPONENT_FLOATS +
-        packedYoung.length +
-        packedExtras.length,
-    );
-    let offset = 0;
-    total.set(packedShells, offset);
-    offset += packedShells.length;
-    digOffset = offset / FIELD_COMPONENT_FLOATS;
-    offset += digCount * FIELD_COMPONENT_FLOATS; // zero block — digPlacementRebuild fills it later
-    total.set(packedYoung, offset);
-    offset += packedYoung.length;
-    total.set(packedExtras, offset);
-    hiiComps.write(total);
-
-    const youngCount = hiiMixture.length - shellsCount;
-    const extrasCount = extrasComponents.length;
-    hiiSegments = [
-      { label: 'hii:shells', first: 0, count: shellsCount },
-      { label: 'hii:dig', first: digOffset, count: digCount },
-      { label: 'hii:young', first: digOffset + digCount, count: youngCount },
-      ...(extrasCount > 0
-        ? [{ label: 'hii:extras', first: digOffset + digCount + youngCount, count: extrasCount }]
-        : []),
-    ];
   }
 
   /** Into world space — extras only; the central galaxy stays in its own frame. */
@@ -1097,13 +883,11 @@ export function createGalaxyFieldRenderer(
     return components.map((c) => transformGalaxyFieldComponent(c, transform));
   }
 
-  /**
-   * The two analytic tiers are built SEPARATELY rather than as one pair: they
-   * answer to different tuning sections, so a tuning move rebuilds only the
-   * one whose inputs moved.
-   */
   function extraFieldMixture(extra: GalaxyFieldExtra): readonly GalaxyFieldComponent[] {
-    return place(buildGalaxyFieldMixture(extra.geometry, fieldTuning).components, extra.transform);
+    return place(
+      buildGalaxyFieldMixture(extra.geometry, current.fieldTuning).components,
+      extra.transform,
+    );
   }
 
   /**
@@ -1116,8 +900,8 @@ export function createGalaxyFieldRenderer(
     return place(
       buildHiiRegions(
         extra.geometry,
-        fieldTuning,
-        fieldTuning.starFormation,
+        current.fieldTuning,
+        current.fieldTuning.starFormation,
         extra.geometry.seed,
         null,
       ),
@@ -1125,189 +909,315 @@ export function createGalaxyFieldRenderer(
     );
   }
 
-  /**
-   * Central-galaxy mixture rebuild that also captures the spur-cloud AND
-   * arm-cloud reservations — extras never take either (only the central
-   * galaxy's mixture is ever GPU-filled today), so only this path pays for it.
-   */
-  function rebuildCentralFieldMixture(geo: GalaxyDescription): void {
-    const result = buildGalaxyFieldMixture(geo, fieldTuning);
-    fieldMixture = result.components;
-    spurCloudReservation = result.spurCloudReservation;
-    armCloudReservation = result.armCloudReservation;
-  }
+  type StageName =
+    | 'ismMap'
+    | 'scan:dust'
+    | 'scan:dig'
+    | 'upload:field'
+    | 'upload:hii'
+    | 'orientation:tex'
+    | 'orientation:data'
+    | 'place:dust'
+    | 'place:spur'
+    | 'place:arm'
+    | 'place:dig';
 
   /**
-   * Central-galaxy HII rebuild that also captures the tier's segmentation and
-   * the two values DIG's own budget needs — `shellFluxSum`/`recentEventCount`
-   * — extras need none of it (they have no DIG at all), so only this path
-   * pays for `buildHiiShellsAndYoungWithSegments`' bookkeeping.
+   * The effect half of this module's dependency graph, as data: table order IS
+   * the schedule and `after` only proves it. `ismMap` leads the two scans, so a
+   * new galaxy scans once from the final map instead of once per trigger. The
+   * `sync` rows run inside `setMixture`; the `step` rows are deferred to
+   * `stepIsmMap`, which the host must call before the frame's own encoder
+   * exists — the four `place:*` rows and `orientation:tex` each submit an
+   * encoder of their own that has to precede it (`orientation:data` alone
+   * submits nothing: it is the CPU-side readback hook).
    */
-  function rebuildCentralHiiMixture(geo: GalaxyDescription): void {
-    const result = buildHiiShellsAndYoungWithSegments(
-      geo,
-      fieldTuning,
-      fieldTuning.starFormation,
-      geo.seed,
-    );
-    hiiMixture = result.components;
-    hiiTierSegments = result.segments;
-    shellFluxSum = result.shellFluxSum;
-    recentEventCount = result.recentEventCount;
-  }
-
-  /** A new galaxy: everything derived from its geometry, plus an unconditional ISM-map regenerate. */
-  function rebuildForGeometry(): void {
-    if (geometry) {
-      rebuildCentralFieldMixture(geometry);
-      rebuildCentralHiiMixture(geometry);
-    }
-    rebuildDustMixture();
-    rebuildDigVeilBudget();
-    repackFieldComponents();
-    repackHiiComponents();
-    // Always — a new galaxy means new geometry/arms, so the active generator
-    // and the ridge it forces/biases against are both stale otherwise.
-    rebuildIsmMap();
-  }
-
-  /**
-   * A tuning move: reference identity per SECTION is the change signal.
-   * Sections are replaced wholesale (`GalaxyFieldTuning`'s contract) and the
-   * host's merge is shallow, so an untouched section arrives as the same
-   * object. What each one feeds:
-   *
-   *   disc          -> field mixture
-   *   arms          -> field mixture, HII tier
-   *   hii           -> HII tier
-   *   starFormation -> HII tier (same path as hii)
-   *   dust          -> dust mixture + the header's dust lanes
-   *   ismMap        -> the shared enabled/generator switch
-   *   ismMapFluid   -> the fluid generator's own params
-   */
-  function rebuildForTuning(prev: GalaxyFieldTuning): void {
-    // `arms.widthScale` reaches further than the arms: `armCrossSigma` sizes
-    // the cross-arm scatter `buildSfEventCatalog` draws every SF event from.
-    // `arms.cloud` shares this flag by construction — the UI cannot replace
-    // the cloud without replacing the `arms` object around it.
-    const armsMoved = prev.arms !== fieldTuning.arms;
-    const fieldMoved = armsMoved || prev.disc !== fieldTuning.disc;
-    // HII reads `tuning.arms` ONLY through `armCrossSigma`'s `widthScale`, so
-    // a whole-section identity check here would rebuild HII's
-    // ~O(rings x az x arms) CDF sweep on an arm-cloud drag that cannot change
-    // its output.
-    const armsWidthMoved = prev.arms.widthScale !== fieldTuning.arms.widthScale;
-    // `starFormation` feeds the HII tier alone (dust reads none of it), so it
-    // joins `hiiMoved` rather than getting its own flag.
-    const starFormationMoved = prev.starFormation !== fieldTuning.starFormation;
-    const hiiMoved = armsWidthMoved || starFormationMoved || prev.hii !== fieldTuning.hii;
-    const dustMoved = prev.dust !== fieldTuning.dust;
-
-    if (fieldMoved || hiiMoved) {
-      if (geometry) {
-        if (fieldMoved) rebuildCentralFieldMixture(geometry);
-        if (hiiMoved) {
-          rebuildCentralHiiMixture(geometry);
-          rebuildDigVeilBudget();
+  const graph: StageGraph<StageName> = createStageGraph<StageName>([
+    {
+      name: 'ismMap',
+      phase: 'sync',
+      after: [],
+      // No `arms.widthScale`, though the forcing field bakes against the ridge
+      // it sizes: this rebuild is N compute dispatches, so keying on it would
+      // make an arm-width drag pay them per frame. Deliberately left stale
+      // until `ismMap` itself moves.
+      key: () => [
+        current.geometry,
+        current.fieldTuning.ismMap,
+        current.fieldTuning.ismMapFluid,
+        current.seed,
+      ],
+      run: () => {
+        const grid = ismMapGenerator.rebuild({
+          geometry: current.geometry,
+          tuning: current.fieldTuning,
+          seed: current.seed,
+        });
+        if (current.fieldTuning.ismMap.generator === 'fluid') {
+          const enc = device.createCommandEncoder({ label: 'galaxy:ismMapRingReduceRebuild' });
+          // ringMeansBuffer written HERE; the two scan rows' own LATER submits
+          // read it — WebGPU's cross-SUBMIT ordering on one queue is what makes
+          // that safe with no barrier of our own.
+          ringReduce.dispatchRingMeans(enc);
+          device.queue.submit([enc.finish()]);
         }
-      }
-      extraMixtures = extras.map((extra, i) => ({
-        fieldMixture: fieldMoved ? extraFieldMixture(extra) : extraMixtures[i]!.fieldMixture,
-        hiiMixture: hiiMoved ? extraHiiMixture(extra) : extraMixtures[i]!.hiiMixture,
-      }));
-    }
-    if (dustMoved) rebuildDustMixture();
-    // The dust mixture is the trailing slice of the SAME buffer the emission
-    // mixtures pack into, so either moving needs the one repack.
-    if (fieldMoved || dustMoved) repackFieldComponents();
-    if (hiiMoved) repackHiiComponents();
-    // A generator rebuild is N compute dispatches, far more expensive than
-    // the CPU mixture rebuilds above. `arms.widthScale` feeds the ridge its
-    // forcing field bakes, but re-triggering on it would make an arm-width
-    // drag pay this cost per frame — deliberately left stale until `ismMap`
-    // moves.
-    const generatorMoved = prev.ismMap !== fieldTuning.ismMap;
-    const fluidParamsMoved = prev.ismMapFluid !== fieldTuning.ismMapFluid;
-    if (generatorMoved || fluidParamsMoved) {
-      rebuildIsmMap();
-    }
-    // `generator` gates `placeDust.wesl`'s own in-shader placement mode
-    // (map-seeded vs `smoothDisc`) from the `ismMap` section rather than
-    // `dust`, so a generator flip is invisible to `dustMoved` and needs its
-    // own rebuild — or the previous generator's reservation/CDF-scan state
-    // keeps drawing as live until an unrelated change rebuilds it.
-    if (generatorMoved && !dustMoved) {
-      rebuildDustMixture();
-      repackFieldComponents();
-    }
-  }
+        // Fires on BOTH exits, the disabled one too, so the host's CPU copy
+        // reflects the cleared texture rather than an earlier galaxy's map.
+        deps.onIsmMapRebuilt?.(grid);
+      },
+    },
+    {
+      name: 'scan:dust',
+      phase: 'sync',
+      after: ['ismMap'],
+      // No `geometry` of its own — the map token already moves on one — and
+      // `dustPlacementCap` is the only `dust` lane the scan reads.
+      key: () => [
+        graph.token('ismMap'),
+        current.fieldTuning.dust.cloud.dustPlacementCap,
+        current.fieldTuning.ismMap,
+      ],
+      run: () => {
+        if (!current.geometry || current.fieldTuning.ismMap.generator !== 'fluid') return;
+        const grid = ismMapGridRadiusOrDefault(current.geometry);
+        const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDustCdfScanRebuild' });
+        // `ringCap` reproduces dustParticleCloud.ts's density() ring-mean-
+        // normalised, capped placement density (ismMapDustCdfScan.wesl's own doc).
+        dustCdfScan.dispatchScan(enc, {
+          ismMapTexture: ismMapGenerator.texture,
+          grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
+          weights: {
+            kind: 'channel',
+            channelWeights: { gas: 0, stars: 0, activity: 0, dust: 1 },
+            ringCap: current.fieldTuning.dust.cloud.dustPlacementCap ?? 0,
+          },
+          ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+        });
+        device.queue.submit([enc.finish()]);
+      },
+    },
+    {
+      name: 'scan:dig',
+      phase: 'sync',
+      after: ['ismMap'],
+      // `arms.widthScale` because `buildDigArmEnvelopeTable` sizes its
+      // cross-arm sigma from it (`armCrossSigma`) — the same single lane
+      // `centralHii` keys on, and the only part of `arms` this row reads.
+      key: () => [
+        graph.token('ismMap'),
+        current.fieldTuning.hii.dig,
+        current.fieldTuning.arms.widthScale,
+        current.fieldTuning.ismMap,
+        current.geometry,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        if (!geo || current.fieldTuning.ismMap.generator !== 'fluid') return;
+        const grid = ismMapGridRadiusOrDefault(geo);
+        // Clamped HERE, at the packing call site: `buildDigVeil`'s CPU original
+        // clamps to [0, 1] before ever building the envelope, and the scan
+        // shader trusts whatever `params.armBias` it is handed.
+        const armBias = Math.min(1, Math.max(0, current.fieldTuning.hii.dig?.armBias ?? 0));
+        const enc = device.createCommandEncoder({ label: 'galaxy:ismMapDigCdfScanRebuild' });
+        digCdfScan.dispatchScan(enc, {
+          ismMapTexture: ismMapGenerator.texture,
+          grid: { rings: ISM_MAP_RINGS, az: ISM_MAP_AZ, rMin: grid.rMin, rMax: grid.rMax },
+          weights: {
+            kind: 'armBiased',
+            // DIG's own CDF weights the map's `activity` channel alone.
+            channelWeights: { gas: 0, stars: 0, activity: 1, dust: 0 },
+            armBias,
+            armCount: geo.arms.length,
+            entries: buildDigArmEnvelopeTable(geo, current.fieldTuning, {
+              rings: ISM_MAP_RINGS,
+              rMin: grid.rMin,
+              rMax: grid.rMax,
+            }),
+          },
+          ringMeansBuffer: ismMapGenerator.ringMeansBuffer,
+        });
+        device.queue.submit([enc.finish()]);
+      },
+    },
+    {
+      name: 'upload:field',
+      phase: 'sync',
+      after: [],
+      key: () => [fieldPack.get()],
+      run: () => fieldComps.write(fieldPack.get().packed),
+    },
+    {
+      name: 'upload:hii',
+      phase: 'sync',
+      after: [],
+      key: () => [hiiPack.get()],
+      run: () => hiiComps.write(hiiPack.get().packed),
+    },
+    {
+      name: 'orientation:tex',
+      phase: 'step',
+      after: ['ismMap'],
+      // Two independent consumers — the debug overlay and dust placement, each
+      // reading `orientationTex` on the GPU — so either one alone is worth the
+      // six dispatches. Needs no readback to run FROM: ismMapTex is a texture
+      // WebGPU zero-initialises, so dispatching before `ismMap` has ever
+      // populated it is safe.
+      wanted: () =>
+        current.orientationViewWanted || current.fieldTuning.ismMap.generator !== 'none',
+      key: () => [
+        graph.token('ismMap'),
+        current.sigmaDerivTexels,
+        current.sigmaIntegTexels,
+        current.geometry,
+      ],
+      run: () => {
+        // gasFloor=1 when the generator is off: the map texture is a cleared
+        // (all-zero) blank then, and ismMapOrientationField.wesl's
+        // IsmMapOrientationPedestal derives its zero-gradient invariant from
+        // gasProfile(r) collapsing to a flat 1.0 — a real fluid gasFloor here
+        // would subtract a non-flat pedestal from that blank data and paint a
+        // fake radial gradient into the orientation view. gasScaleLength must
+        // still be finite even though it's then algebraically unused.
+        const pedestal =
+          current.fieldTuning.ismMap.generator === 'fluid'
+            ? current.fieldTuning.ismMapFluid
+            : { gasFloor: 1, gasScaleLength: 1 };
+        ismMapOrientation.dispatch({
+          grid: ismMapGridRadiusOrDefault(current.geometry),
+          sigmaDerivTexels: current.sigmaDerivTexels,
+          sigmaIntegTexels: current.sigmaIntegTexels,
+          gasFloor: pedestal.gasFloor,
+          gasScaleLength: pedestal.gasScaleLength,
+          ambient: ISM_MAP_AMBIENT_DUST,
+        });
+      },
+    },
+    {
+      name: 'orientation:data',
+      phase: 'step',
+      after: ['orientation:tex'],
+      // The CPU copy of the orientation field — diagnostics-only (the host's
+      // coherence-stat report); a disabled generator has nothing coherent to
+      // report either.
+      wanted: () => current.fieldTuning.ismMap.generator !== 'none',
+      key: () => [graph.token('orientation:tex')],
+      run: () => deps.onOrientationRebuilt?.(ismMapGridRadiusOrDefault(current.geometry)),
+    },
+    {
+      name: 'place:dust',
+      phase: 'step',
+      after: ['orientation:tex', 'scan:dust', 'upload:field'],
+      wanted: () => dustBudget.get() !== null,
+      key: () => [
+        graph.token('upload:field'),
+        graph.token('scan:dust'),
+        graph.token('orientation:tex'),
+        dustBudget.get(),
+        current.seed,
+        current.fieldTuning.ismMap.generator,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        const budget = dustBudget.get();
+        if (!geo || !budget) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeDust' });
+        placeDust.dispatchPlaceDust(enc, dustDispatchInput(geo, budget));
+        // Survivor-sum + Larson renorm, encoded into the SAME encoder/submit
+        // right after the dispatch: cross-pass ordering within one submit is
+        // what lets this read `placeDust.massBuffer` fresh with no readback of
+        // its own, tying the renorm's freshness to THIS placement.
+        ringReduce.dispatchSurvivorSum(enc, {
+          massBuffer: placeDust.massBuffer,
+          count: budget.count,
+          totalMass: budget.totalMass,
+        });
+        device.queue.submit([enc.finish()]);
+      },
+    },
+    {
+      name: 'place:spur',
+      phase: 'step',
+      after: ['upload:field'],
+      wanted: () => centralField.get().spurCloudReservation !== null,
+      key: () => [
+        graph.token('upload:field'),
+        centralField.get(),
+        current.seed,
+        current.fieldTuning.arms,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        const reservation = centralField.get().spurCloudReservation;
+        if (!geo || !reservation) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloud' });
+        placeArmSpurCloud.dispatchPlaceArmSpurCloud(enc, spurCloudDispatchInput(geo, reservation));
+        ringReduce.dispatchArmSpurFluxWeightSum(enc, {
+          fluxWeightBuffer: placeArmSpurCloud.fluxWeightBuffer,
+          count: reservation.count,
+        });
+        device.queue.submit([enc.finish()]);
+      },
+    },
+    {
+      name: 'place:arm',
+      phase: 'step',
+      after: ['upload:field'],
+      wanted: () => centralField.get().armCloudReservation !== null,
+      key: () => [
+        graph.token('upload:field'),
+        centralField.get(),
+        current.seed,
+        current.fieldTuning.arms,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        const reservation = centralField.get().armCloudReservation;
+        if (!geo || !reservation) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeArmCloud' });
+        placeArmCloud.dispatchPlaceArmCloud(enc, armCloudDispatchInput(geo, reservation));
+        ringReduce.dispatchArmCloudFluxWeightSum(enc, {
+          fluxWeightBuffer: placeArmCloud.fluxWeightBuffer,
+          count: reservation.count,
+        });
+        device.queue.submit([enc.finish()]);
+      },
+    },
+    {
+      name: 'place:dig',
+      phase: 'step',
+      after: ['scan:dig', 'upload:hii'],
+      wanted: () => digBudget.get() !== null,
+      // `hiiPack` is redundant with `token('upload:hii')` as the table stands
+      // (that row keys on exactly this node and has no `wanted`). Declared
+      // anyway: this dispatch writes at the segment table's `hii:dig` offset,
+      // so a `wanted` added to `upload:hii` later must not be able to leave
+      // the DIG span silently misaddressed.
+      key: () => [
+        graph.token('upload:hii'),
+        graph.token('scan:dig'),
+        digBudget.get(),
+        hiiPack.get(),
+        current.seed,
+        current.fieldTuning.ismMap.generator,
+      ],
+      run: () => {
+        const geo = current.geometry;
+        const budget = digBudget.get();
+        if (!geo || !budget) return;
+        const enc = device.createCommandEncoder({ label: 'galaxy:placeDigVeil' });
+        placeDigVeil.dispatchPlaceDigVeil(enc, digDispatchInput(geo, budget));
+        device.queue.submit([enc.finish()]);
+      },
+    },
+  ]);
 
-  /**
-   * setMixture — the three movers (a new galaxy, a tuning patch, a new extras
-   * set) each arrive from their own host call site, one at a time; the render
-   * knobs at the end ride whichever call the host makes next and are compared
-   * on every call, since the host re-pushes its whole bag on any knob.
-   */
   function setMixture(input: GalaxyFieldMixtureInput): void {
-    // `geometry` alone, not `seed`: a seed change always arrives with a fresh
-    // `describeGalaxy` result, and every dispatch reads `seed` live anyway.
-    const geometryMoved = input.geometry !== geometry;
-    const tuningMoved = input.fieldTuning !== fieldTuning;
-    const extrasMoved = input.extras !== extras;
-    // The two sigmas are the only render lanes the orientation chain reads,
-    // and the host re-pushes the WHOLE bag on any knob — so an unconditional
-    // invalidate here would redispatch the six stages, and with a generator
-    // active the readback and dust rebuild behind them, on every frame of an
-    // unrelated exposure drag. No crossing to catch alongside them: an
-    // invalidation raised while nothing wanted the value is retained, so the
-    // overlay turning on rebuilds by itself.
-    const sigmasMoved =
-      input.sigmaDerivTexels !== sigmaDerivTexels || input.sigmaIntegTexels !== sigmaIntegTexels;
-
-    const prevTuning = fieldTuning;
-    geometry = input.geometry;
-    fieldTuning = input.fieldTuning;
-    seed = input.seed;
-    extras = input.extras;
-    sigmaDerivTexels = input.sigmaDerivTexels;
-    sigmaIntegTexels = input.sigmaIntegTexels;
-    orientationViewWanted = input.orientationViewWanted;
-
-    if (sigmasMoved) orientationTexRebuild.invalidate();
-
-    if (extrasMoved) {
-      extraMixtures = extras.map((extra) => ({
-        fieldMixture: extraFieldMixture(extra),
-        hiiMixture: extraHiiMixture(extra),
-      }));
-    }
-
-    if (geometryMoved) {
-      rebuildForGeometry();
-    } else if (tuningMoved) {
-      rebuildForTuning(prevTuning);
-    }
-    // Outside the chain, not an `else if` tail: a call that moves extras AND
-    // tuning would otherwise compute the extras' new components above and
-    // never write them, since `rebuildForTuning`'s own repacks are gated on
-    // which tuning section moved. `rebuildForGeometry` already repacked.
-    if (extrasMoved && !geometryMoved) {
-      repackFieldComponents();
-      repackHiiComponents();
-    }
+    current = input;
+    graph.run('sync');
   }
 
   function stepIsmMap(): { readonly done: boolean } {
-    // Texture before CPU copy — the first invalidates the second.
-    orientationTexRebuild.ensureFresh();
-    orientationDataRebuild.ensureFresh();
-    // AFTER orientationTexRebuild, never before: placeDust.wesl reads
-    // orientationTex on the GPU directly, so it needs THIS rebuild's own
-    // dispatch (if any) to have already run in this same call.
-    dustPlacementRebuild.ensureFresh();
-    spurCloudPlacementRebuild.ensureFresh();
-    armCloudPlacementRebuild.ensureFresh();
-    digPlacementRebuild.ensureFresh();
+    graph.run('step');
     return { done: true };
   }
 
@@ -1325,8 +1235,8 @@ export function createGalaxyFieldRenderer(
     // applies at its own per-group `texture` reads — a preset saved before
     // this knob existed carries no such key.
     return {
-      scale: fieldTuning.hii.shells.textureScale ?? 0,
-      contrast: fieldTuning.hii.shells.textureContrast ?? 1,
+      scale: current.fieldTuning.hii.shells.textureScale ?? 0,
+      contrast: current.fieldTuning.hii.shells.textureContrast ?? 1,
     };
   }
 
@@ -1335,12 +1245,26 @@ export function createGalaxyFieldRenderer(
     frameTargets: GalaxyFieldRenderTargets,
     frame: GalaxyFieldFrame,
   ): void {
+    // Pulled, not pushed: the bind groups any pass below binds are the ones
+    // built from THIS frame's own resources, so a buffer regrow or a target
+    // reallocation the module was never told about cannot leave a group
+    // holding a dead object.
+    bindGroups = fieldPipelines.sync({
+      fieldComps: fieldComps.getBuffer(),
+      hiiComps: hiiComps.getBuffer(),
+      dustMap: frameTargets.dustMapTex,
+    });
+
     // Every FieldHeaderInput this frame needs — field, `hii:extras`, and
     // every tier — assembled in one pure call off explicit mixture lanes,
     // host render settings and this frame's own derived view. Target sizes
     // come off the textures themselves: every reduced target is allocated at
     // exactly the pixel size its divisor floors to, and that lane feeds
     // `counts2.w`, which the shader's footprint gates read directly.
+    const fieldCounts = fieldPack.get().counts;
+    const hiiSegments = hiiPack.get().segments;
+    const central = centralField.get();
+
     const headers = buildFieldHeaderInputs({
       eye: frame.eye,
       fov: frame.fov,
@@ -1349,13 +1273,13 @@ export function createGalaxyFieldRenderer(
       render: frame.render,
       model: {
         fieldCounts,
-        dustHeaderLanes,
+        dustHeaderLanes: dustHeaderLanes.get(),
         ismMapSeeding: frame.ismMapSeeding,
         hiiCount: hiiComps.count,
         hiiTexture: hiiTextureLanes(),
         youngStars: frame.youngStars,
-        armCloudReservation,
-        spurCloudReservation,
+        armCloudReservation: central.armCloudReservation,
+        spurCloudReservation: central.spurCloudReservation,
       },
       targetSizes: {
         field: [frameTargets.fieldTex.width, frameTargets.fieldTex.height],
@@ -1377,6 +1301,7 @@ export function createGalaxyFieldRenderer(
     }
 
     if (!frame.render.analyticField) return;
+    const groups = bindGroups;
     const timestampWrites = frame.timestampWrites ?? ((): undefined => undefined);
     // The JWST view's own gate, read off the same `debugViews` the headers
     // above were packed from — one lane per fact, so the pass and its header
@@ -1389,18 +1314,24 @@ export function createGalaxyFieldRenderer(
     // pass's own source whenever the JWST view is live — so it has to run
     // whenever either consumer needs it.
     //
-    // The third disjunct is `dustMapPopulated`: a skipped pass leaves the
-    // last frame's contents, so the frame the dust count drops to zero still
-    // has to run — as the clear that empties the map. Assigning the returned
-    // latch is what carries that across; drop the assignment and the map
-    // freezes at the previous galaxy's dust.
-    if (fieldCounts.dust > 0 || drawDustView || dustMapPopulated) {
-      dustMapPopulated = encodeDustMapPass({
+    // The third disjunct is `populated`: a skipped pass leaves the last
+    // frame's contents, so the frame the dust count drops to zero still has to
+    // run — as the clear that empties the map. Assigning the returned latch is
+    // what carries that across; drop the assignment and the map freezes at the
+    // previous galaxy's dust. A texture WebGPU just created is zeroed, so a
+    // moved identity implies `populated: false` rather than the host having to
+    // announce it.
+    if (dustMap?.tex !== frameTargets.dustMapTex) {
+      dustMap = { tex: frameTargets.dustMapTex, populated: false };
+    }
+    const dustState = dustMap;
+    if (fieldCounts.dust > 0 || drawDustView || dustState.populated) {
+      dustState.populated = encodeDustMapPass({
         enc: encoder,
         timestampWrites: timestampWrites('dustMap'),
         targetView: frameTargets.dustMapTex.createView(),
         pipeline: fieldPipelines.dustMapPipe,
-        bindGroup: fieldPipelines.dustMapBG,
+        bindGroup: groups.dustMap,
         instanceCount: fieldCounts.dust,
       });
     }
@@ -1414,11 +1345,11 @@ export function createGalaxyFieldRenderer(
         enc: encoder,
         targetView: frameTargets.dustViewTex.createView(),
         pipeline: fieldPipelines.dustPresentPipe,
-        bindGroup: fieldPipelines.dustPresentBG,
+        bindGroup: groups.dustPresent,
       });
     }
 
-    // One draw for the WHOLE emission list `repackFieldComponents` wrote —
+    // One draw for the WHOLE emission list `upload:field` wrote —
     // central galaxy's components then every extra's. `fieldCounts.emission`,
     // NOT the packed total: the trailing dust slice is never drawn as its own
     // quad, only read from inside a primary emission fragment.
@@ -1428,7 +1359,7 @@ export function createGalaxyFieldRenderer(
       timestampWrites: timestampWrites('field'),
       targetView: frameTargets.fieldTex.createView(),
       pipeline: fieldPipelines.fieldSplatPipe,
-      bindGroup: fieldPipelines.fieldSplatBG,
+      bindGroup: groups.fieldSplat,
       instanceCount: fieldCounts.emission,
     });
 
@@ -1449,7 +1380,7 @@ export function createGalaxyFieldRenderer(
         timestampWrites: timestampWrites(`hii:${kind}`),
         targetView: frameTargets.hiiTiers[kind].createView(),
         pipeline: fieldPipelines.hiiTierPipeline(kind),
-        bindGroup: fieldPipelines.tierBG(kind),
+        bindGroup: groups.tier(kind),
         instanceCount: segment.count,
         firstInstance: segment.first,
       });
@@ -1465,7 +1396,7 @@ export function createGalaxyFieldRenderer(
         timestampWrites: timestampWrites('hii:extras'),
         targetView: frameTargets.hiiTex.createView(),
         pipeline: fieldPipelines.hiiExtrasPipe,
-        bindGroup: fieldPipelines.hiiBG,
+        bindGroup: groups.hii,
         instanceCount: extrasSegment.count,
         firstInstance: extrasSegment.first,
       });
@@ -1507,26 +1438,20 @@ export function createGalaxyFieldRenderer(
     encode,
     encodeOverlays,
 
-    onDustMapReallocated(next: GPUTexture): void {
-      dustMapTex = next;
-      fieldPipelines.rebuildDustMapDependents(fieldComps.buffer, hiiComps.buffer);
-      dustMapPopulated = false;
-    },
-
     get fieldCounts(): FieldSliceCounts {
-      return fieldCounts;
+      return fieldPack.get().counts;
     },
     get dustHeaderLanes(): DustHeaderLanes {
-      return dustHeaderLanes;
+      return dustHeaderLanes.get();
     },
     get hiiSegments(): readonly HiiSegment[] {
-      return hiiSegments;
+      return hiiPack.get().segments;
     },
     get armCloudReservation(): GalaxyFieldMixtureResult['armCloudReservation'] {
-      return armCloudReservation;
+      return centralField.get().armCloudReservation;
     },
     get spurCloudReservation(): GalaxyFieldMixtureResult['spurCloudReservation'] {
-      return spurCloudReservation;
+      return centralField.get().spurCloudReservation;
     },
     ismMapGenerator,
     ismMapOrientation,
@@ -1538,7 +1463,7 @@ export function createGalaxyFieldRenderer(
         count: number,
       ): Promise<Float32Array> {
         if (count <= 0) return new Float32Array(0);
-        const source = buffer === 'field' ? fieldComps.buffer : hiiComps.buffer;
+        const source = buffer === 'field' ? fieldComps.getBuffer() : hiiComps.getBuffer();
         const byteSize = count * FIELD_COMPONENT_FLOATS * 4;
         const byteOffset = offset * FIELD_COMPONENT_FLOATS * 4;
         const enc = device.createCommandEncoder({ label: 'galaxy:peekRecords' });
@@ -1553,10 +1478,10 @@ export function createGalaxyFieldRenderer(
       },
 
       async requestDustPlacementReadback(opts) {
-        const budget = dustBudget;
-        if (!geometry || !budget) return null;
+        const budget = dustBudget.get();
+        if (!current.geometry || !budget) return null;
         const { records, mass } = await placeDust.dispatchAndReadbackDust(
-          dustDispatchInput(geometry, budget, opts?.forceGeneratorIsFluid),
+          dustDispatchInput(current.geometry, budget, opts?.forceGeneratorIsFluid),
         );
         // Own encoder/submit, AFTER the placement dispatch above's submit has
         // already retired — `placeDust.massBuffer` holds THIS dispatch's
@@ -1574,10 +1499,10 @@ export function createGalaxyFieldRenderer(
       },
 
       async requestArmSpurCloudPlacementReadback() {
-        const reservation = spurCloudReservation;
-        if (!geometry || !reservation) return null;
+        const reservation = centralField.get().spurCloudReservation;
+        if (!current.geometry || !reservation) return null;
         const { records, fluxWeight } = await placeArmSpurCloud.dispatchAndReadbackArmSpurCloud(
-          spurCloudDispatchInput(geometry, reservation),
+          spurCloudDispatchInput(current.geometry, reservation),
         );
         const enc = device.createCommandEncoder({
           label: 'galaxy:placeArmSpurCloudDebugFluxWeightSum',
@@ -1599,10 +1524,10 @@ export function createGalaxyFieldRenderer(
       },
 
       async requestArmCloudPlacementReadback() {
-        const reservation = armCloudReservation;
-        if (!geometry || !reservation) return null;
+        const reservation = centralField.get().armCloudReservation;
+        if (!current.geometry || !reservation) return null;
         const { records, fluxWeight } = await placeArmCloud.dispatchAndReadbackArmCloud(
-          armCloudDispatchInput(geometry, reservation),
+          armCloudDispatchInput(current.geometry, reservation),
         );
         const enc = device.createCommandEncoder({
           label: 'galaxy:placeArmCloudDebugFluxWeightSum',
@@ -1624,38 +1549,31 @@ export function createGalaxyFieldRenderer(
       },
 
       async requestDigVeilPlacementReadback() {
-        const budget = digBudget;
-        if (!geometry || !budget) return null;
+        const budget = digBudget.get();
+        if (!current.geometry || !budget) return null;
         const records = await placeDigVeil.dispatchAndReadbackDigVeil(
-          digDispatchInput(geometry, budget),
+          digDispatchInput(current.geometry, budget),
         );
         return {
           count: budget.count,
-          offset: digOffset,
+          offset: findHiiSegment(hiiPack.get().segments, 'hii:dig')?.first ?? 0,
           amplitudeBase: budget.amplitudeBase,
           records,
         };
       },
 
       fieldSplatPipe: fieldPipelines.fieldSplatPipe,
-      get fieldSplatBG(): GPUBindGroup {
-        return fieldPipelines.fieldSplatBG;
+      get fieldSplatBG(): GPUBindGroup | null {
+        return bindGroups?.fieldSplat ?? null;
       },
     },
 
     dispose(): void {
-      ismMapGenerator.dispose();
-      ismMapOrientation.dispose();
-      ringReduce.dispose();
-      dustCdfScan.dispose();
-      digCdfScan.dispose();
-      placeDust.dispose();
-      placeArmSpurCloud.dispose();
-      placeArmCloud.dispose();
-      placeDigVeil.dispose();
-      fieldComps.destroy();
-      hiiComps.destroy();
-      for (let i = owned.length - 1; i >= 0; i--) owned[i]!.destroy();
+      for (let i = owned.length - 1; i >= 0; i--) {
+        const resource = owned[i]!;
+        if ('destroy' in resource) resource.destroy();
+        else resource.dispose();
+      }
     },
   };
 }

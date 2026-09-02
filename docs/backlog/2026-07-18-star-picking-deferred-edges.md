@@ -1,10 +1,10 @@
-# Star/body picking — two deferred behavioural edges
+# Star picking — deferred behavioural edge
 
 Adjudicated during PR #448's T17 sweep (final review + fix wave, 2026-07-18):
-both real, both narrow, neither worth blocking the feature. Evidence and
-dispositions in the PR's review trail.
+real, narrow, not worth blocking the feature. Evidence and disposition in the
+PR's review trail.
 
-## 1. `star-<n>` deep link waits forever when the Gaia catalog is disabled
+## `star-<n>` deep link waits forever when the Gaia catalog is disabled
 
 `watchFocusTweenSaga`'s star arm defers focus until the star catalog reports
 loaded (`engineSourceCountReported`), which is correct at boot — but a user
@@ -14,12 +14,3 @@ feedback. Options: (a) time out + toast; (b) auto-enable the source for the
 deep link (matches the "deep link expresses intent" reading); (c) resolve the
 row from the .skst directly without the GPU catalog. (b) is probably the
 honest one — a star deep link IS a request to see that star.
-
-## 2. Selection ring collapses when `sizePx` computes to 0
-
-The NEAR0 ring radius math floors at the ring's minimum draw size, but a
-degenerate `sizePx = 0` input (body exactly behind the camera plane during a
-tween frame) collapses the ring for that frame instead of holding the floor.
-One-frame cosmetic blink, only during aggressive tweens. Guard where
-`ringRadiusPx` is derived (keep the floor as the lower bound for ALL inputs,
-not just small-positive ones).

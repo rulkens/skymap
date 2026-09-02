@@ -12,45 +12,23 @@ const CAM: McpmCameraView = {
 };
 
 const { pathTracer } = defaultAppState.view;
-const { sim } = defaultAppState;
 
 describe('volpathKeyFor', () => {
   it('is unchanged when only sampleCap moves — a cap change must not reset accumulation', () => {
-    const before = volpathKeyFor(CAM, pathTracer, sim.clearTraceToken, sim.resetToken);
-    const after = volpathKeyFor(
-      CAM,
-      { ...pathTracer, sampleCap: pathTracer.sampleCap * 8 },
-      sim.clearTraceToken,
-      sim.resetToken,
-    );
+    const before = volpathKeyFor(CAM, pathTracer);
+    const after = volpathKeyFor(CAM, { ...pathTracer, sampleCap: pathTracer.sampleCap * 8 });
     expect(JSON.stringify(after)).toBe(JSON.stringify(before));
   });
 
   it('differs when a real pathTracer param moves', () => {
-    const before = volpathKeyFor(CAM, pathTracer, sim.clearTraceToken, sim.resetToken);
-    const after = volpathKeyFor(
-      CAM,
-      { ...pathTracer, divisor: pathTracer.divisor + 1 },
-      sim.clearTraceToken,
-      sim.resetToken,
-    );
+    const before = volpathKeyFor(CAM, pathTracer);
+    const after = volpathKeyFor(CAM, { ...pathTracer, divisor: pathTracer.divisor + 1 });
     expect(JSON.stringify(after)).not.toBe(JSON.stringify(before));
   });
 
   it('differs when the camera moves', () => {
-    const before = volpathKeyFor(CAM, pathTracer, sim.clearTraceToken, sim.resetToken);
-    const after = volpathKeyFor(
-      { ...CAM, eyeMpc: [1, 0, 600] },
-      pathTracer,
-      sim.clearTraceToken,
-      sim.resetToken,
-    );
-    expect(JSON.stringify(after)).not.toBe(JSON.stringify(before));
-  });
-
-  it('differs when resetToken moves', () => {
-    const before = volpathKeyFor(CAM, pathTracer, sim.clearTraceToken, sim.resetToken);
-    const after = volpathKeyFor(CAM, pathTracer, sim.clearTraceToken, sim.resetToken + 1);
+    const before = volpathKeyFor(CAM, pathTracer);
+    const after = volpathKeyFor({ ...CAM, eyeMpc: [1, 0, 600] }, pathTracer);
     expect(JSON.stringify(after)).not.toBe(JSON.stringify(before));
   });
 });

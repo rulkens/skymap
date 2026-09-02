@@ -17,9 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelForTier';
 import { tierToTexturePx } from '../../../src/utils/math/tierToTexturePx';
 import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../../src/data/bodies/earthTileParams';
-import type { Tier } from '../../../src/@types/data/Tier';
-
-const TIERS: readonly Tier[] = ['small', 'medium', 'large'];
+import { TIER_LADDER } from '../../../src/data/tierLadder';
 
 describe('earthBaseLevelForTier', () => {
   it('drops exactly one level per tier step down', () => {
@@ -29,7 +27,7 @@ describe('earthBaseLevelForTier', () => {
   });
 
   it('inverts the ladder exactly, at an integer level, for every tier', () => {
-    for (const tier of TIERS) {
+    for (const tier of TIER_LADDER) {
       const z = earthBaseLevelForTier(tier);
       // Asserted separately because `<<` truncates its operand: a `Math.log2`
       // result of 4.999 would satisfy the width check below and still hand the

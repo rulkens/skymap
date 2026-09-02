@@ -5,7 +5,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { DECAY_WG_EDGE } from '../sim/encodeStep';
-import { WORKBENCH_SOURCES } from './slices/catalogSlice';
+import { WORKBENCH_SOURCES } from './catalog/catalogSlice';
 import { MCPM_PARAM_KEYS, MCPM_PARAMS_FORMAT, MCPM_PARAMS_VERSION } from './exportParams';
 
 export type ImportedParams = {

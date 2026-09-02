@@ -636,7 +636,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // with 144 steps, so `setParams` in Viewport.tsx already dispatched
       // `ringReduce` and scheduled the CPU `ismMapData` readback before this
       // step runs — no preset picking needed, just enough settle for both
-      // async landings (see createGalaxyModel.ts's `rebuildIsmMap`).
+      // async landings (see the field renderer's `ismMap` stage row).
       name: 'readback:ringMeans',
       run: async (page) => {
         await settleFrames(page, SETTLE_FRAMES);
@@ -1537,16 +1537,13 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       },
     },
     {
-      // Task 14 fix round 1's own regression exception — the review caught
-      // that `setFieldTuning`'s dust-only path clobbered the spur-cloud
-      // range back to zero (via the unconditional `repackFieldComponents`
-      // rewrite) WITHOUT re-invalidating `spurCloudPlacementRebuild`, so the
-      // next `ensureFresh()` never re-filled it. A readback that always
-      // re-dispatches fresh (like the step above) cannot see this —
-      // `probe.peekRecords`, driven off `probe.spurCloudReservation`, exists
-      // specifically to read the PRODUCTION buffer's own current content,
-      // through the SAME `setFieldTuning` -> `ensureFresh()` path a real
-      // dust slider drag takes.
+      // The regression this guards: a dust-only `setFieldTuning` re-zeroes the
+      // spur range through `upload:field` without `place:spur` re-running to
+      // refill it. A readback that always re-dispatches fresh (like the step
+      // above) cannot see that — `probe.peekRecords`, driven off
+      // `probe.spurCloudReservation`, reads the PRODUCTION buffer's own
+      // current content through the SAME `setFieldTuning` -> `stepIsmMap()`
+      // path a real dust slider drag takes.
       name: 'readback:placeArmSpurCloud (survives dust-only tuning change)',
       run: async (page) => {
         const before = await page.evaluate(async () => {
@@ -1576,9 +1573,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           );
         }
 
-        // A dust-only patch: touches `fieldTuning.dust` alone, so
-        // `fieldMoved` stays false and `dustMoved` alone drives
-        // `setFieldTuning`'s `repackFieldComponents()` call.
+        // A dust-only patch: touches `fieldTuning.dust` alone, which moves
+        // `dustBudget` and so `fieldPack`, leaving `centralField` put.
         await page.evaluate(async (dust) => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
@@ -1609,7 +1605,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         if (afterLive === 0) {
           throw new Error(
-            `readback:placeArmSpurCloud (survives dust-only tuning change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before a dust-only setFieldTuning patch, 0 after — repackFieldComponents() zeroed the spur range and spurCloudPlacementRebuild was never re-invalidated to refill it`,
+            `readback:placeArmSpurCloud (survives dust-only tuning change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before a dust-only setFieldTuning patch, 0 after — upload:field zeroed the spur range and the place:spur stage row never re-ran to refill it`,
           );
         }
         console.error(
@@ -1883,12 +1879,9 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       },
     },
     {
-      // Task 13's own regression exception, the arm-cloud twin of
-      // `readback:placeArmSpurCloud (survives dust-only tuning change)` —
-      // `armCloudPlacementRebuild` joined `repackFieldComponents`'s
-      // unconditional invalidation set at the same time this task wired the
-      // reservation up (createGalaxyModel.ts's own doc), so this checks that
-      // fix rather than re-discovering the gap it fixes.
+      // The arm-cloud twin of `readback:placeArmSpurCloud (survives dust-only
+      // tuning change)` — same "`upload:field` zeroes the range, `place:arm`
+      // must refill it" edge, over the arm-cloud reservation.
       name: 'readback:placeArmCloud (survives dust-only tuning change)',
       run: async (page) => {
         const before = await page.evaluate(async () => {
@@ -1918,9 +1911,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           );
         }
 
-        // A dust-only patch: touches `fieldTuning.dust` alone, so
-        // `fieldMoved` stays false and `dustMoved` alone drives
-        // `setFieldTuning`'s `repackFieldComponents()` call.
+        // A dust-only patch: touches `fieldTuning.dust` alone, which moves
+        // `dustBudget` and so `fieldPack`, leaving `centralField` put.
         await page.evaluate(async (dust) => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
@@ -1951,7 +1943,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         if (afterLive === 0) {
           throw new Error(
-            `readback:placeArmCloud (survives dust-only tuning change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before a dust-only setFieldTuning patch, 0 after — repackFieldComponents() zeroed the arm-cloud range and armCloudPlacementRebuild was never re-invalidated to refill it`,
+            `readback:placeArmCloud (survives dust-only tuning change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before a dust-only setFieldTuning patch, 0 after — upload:field zeroed the arm-cloud range and the place:arm stage row never re-ran to refill it`,
           );
         }
         console.error(
@@ -1960,19 +1952,12 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       },
     },
     {
-      // Task 14's own dust-twin follow-up — the review confirmed
-      // `dustPlacementRebuild` has the mirror-image gap: `setFieldTuning`'s
-      // `fieldMoved`-only path (an arms/disc-only slider drag) ALSO reaches
-      // `repackFieldComponents()` (`if (fieldMoved || dustMoved)`), which
-      // re-zeroes the dust tail the same unconditional way it re-zeroes the
-      // spur range — but `dustMoved` stays false on this path, so nothing
-      // used to re-invalidate `dustPlacementRebuild`. Fixed by the SAME
-      // change that fixed spur: `repackFieldComponents()` now owns both
-      // invalidations unconditionally. This step is the exact mirror of the
-      // one above, `probe.peekRecords` off `probe.fieldCounts.dust` (dust
-      // has no reservation object — its offset is always
-      // `fieldCounts.emission`) in place of `spurCloudReservation`, an
-      // arms-only patch in place of a dust-only one.
+      // The dust twin, with the trigger mirrored: an arms/disc-only drag moves
+      // `centralField` and so `fieldPack`, re-zeroing the dust tail even
+      // though no dust knob moved, so `place:dust` must re-run off
+      // `upload:field`'s token. `probe.peekRecords` reads off
+      // `probe.fieldCounts.dust` — dust has no reservation object, its offset
+      // is always `fieldCounts.emission`.
       name: 'readback:placeDust (survives arms-only tuning change)',
       run: async (page) => {
         const before = await page.evaluate(async () => {
@@ -1998,11 +1983,10 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
           );
         }
 
-        // An arms-only patch: a NEW `arms` object (reference inequality
-        // drives `fieldMoved`) with `contrast` nudged rather than
-        // `widthScale` — `widthScale` also flips `armsWidthMoved`
-        // (`hiiMoved`), which this step has no need to exercise; `dust`
-        // stays untouched so `dustMoved` reads false.
+        // An arms-only patch: a NEW `arms` object (reference inequality is
+        // what `centralField`'s key tests) with `contrast` nudged rather than
+        // `widthScale` — `widthScale` also enters `centralHii`'s key, which
+        // this step has no need to exercise; `dust` stays untouched.
         await page.evaluate(async (arms) => {
           const bridge = (globalThis as unknown as { __probeEngine?: GalaxyEngineHandle })
             .__probeEngine;
@@ -2029,7 +2013,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         if (afterLive === 0) {
           throw new Error(
-            `readback:placeDust (survives arms-only tuning change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before an arms-only setFieldTuning patch, 0 after — repackFieldComponents() zeroed the dust range and dustPlacementRebuild was never re-invalidated to refill it`,
+            `readback:placeDust (survives arms-only tuning change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before an arms-only setFieldTuning patch, 0 after — upload:field zeroed the dust range and the place:dust stage row never re-ran to refill it`,
           );
         }
         console.error(
@@ -2044,8 +2028,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // Checked instead: (1) determinism; (2) count matches
       // `computeDigVeilBudget`'s own CPU budget math for the boot preset,
       // fed `shellFluxSum`/`recentEventCount` off a FRESH
-      // `buildHiiShellsAndYoungWithSegments` run (the SAME two values
-      // `createGalaxyModel.ts`'s own `rebuildDigVeilBudget` captures); (3)
+      // `buildHiiShellsAndYoungWithSegments` run (the SAME two values the
+      // renderer's `digBudget` node reads off `centralHii`); (3)
       // liveness — `buildDigVeil`'s own loop never zeroes an individual
       // child (no survival filter on this tier, matching placeArmSpurCloud/
       // placeArmCloud's own liveness bar, not placeDust's partial-survival
@@ -2282,17 +2266,11 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
     },
     {
       // The DIG twin of the arm/spur-cloud "survives an unrelated tuning
-      // change" regression — but DIG's own reservation rides `hiiComps`,
-      // which ONLY `repackHiiComponents()` ever writes, and that function
-      // invalidates `digPlacementRebuild` unconditionally on every call (see
-      // its own doc) — there is no OTHER `setFieldTuning` branch that
-      // reaches `repackHiiComponents()` without ALSO having just recomputed
-      // `digBudget` (both live behind the same `if (hiiMoved)` guard). The
-      // one caller that DOES reach it without touching DIG at all is
-      // `setExtras` (`repackFieldComponents(); repackHiiComponents();`
-      // unconditionally, regardless of whether DIG's own inputs moved) —
-      // that is the trigger this step drives, to exercise the invalidation
-      // this task's own `repackHiiComponents` rewrite is responsible for.
+      // change" regression. DIG's reservation rides `hiiComps`, which only
+      // `upload:hii` writes; the trigger that reaches that row with no DIG
+      // input moving is `setExtras` — `extraHiiMixtures` moves `hiiPack`
+      // while `digBudget` stays put, so `place:dig` must re-run off the
+      // upstream movers rather than off anything of DIG's own.
       name: 'readback:placeDigVeil (survives an extras-only change)',
       run: async (page) => {
         const before = await page.evaluate(async () => {
@@ -2344,7 +2322,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         }
         if (afterLive === 0) {
           throw new Error(
-            `readback:placeDigVeil (survives an extras-only change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before an extras-only setExtras([]) patch, 0 after — repackHiiComponents() zeroed the DIG range and digPlacementRebuild was never re-invalidated to refill it`,
+            `readback:placeDigVeil (survives an extras-only change) — VANISHED: ${beforeLive}/${before.length / FIELD_COMPONENT_FLOATS} records were live before an extras-only setExtras([]) patch, 0 after — upload:hii zeroed the DIG range and the place:dig stage row never re-ran to refill it`,
           );
         }
         console.error(

@@ -1,4 +1,4 @@
-# GPU-handle nullability + the `ctx`/`PassDeps` re-threading it forces
+# GPU-handle nullability
 
 > **Backlog item** · `deferred` · area: Engine & State
 > **Promote to:** a spec in `docs/superpowers/specs/` when picked up.
@@ -19,9 +19,14 @@ Four access styles coexist for the same kind of thing:
 
 `runFrame`→`renderFrame` even pulls renderers from two sources inconsistently (`runFrame.ts:344-348`: some from `deps`, some from `state.gpu`).
 
-## `PassDeps` is the renderer-equivalent of `RenderFrameSettings`
+## `PassDeps` — OVERTAKEN, deleted by #420
 
-It re-threads renderers already on `state.gpu` purely to launder the `| null` into a non-null shape at the `renderFrame` boundary — the docblock admits `texturedDiskRenderer`/`proceduralDiskRenderer`/`milkyWayRenderer` live on the bag _only_ for `destroy()` reachability and "are not consumed via this bag at runtime." Fix the nullability once and passes read `state.gpu.X` directly (they already get `state`); `PassDeps` sheds its renderer fields. Same for the `ctx` half (it re-declares `state.gpu.*` handles — the same narrowing-laundering).
+This section originally described `PassDeps` re-threading renderers already on
+`state.gpu` purely to launder the `| null` into a non-null shape at the
+`renderFrame` boundary. `PassDeps` no longer exists in the codebase (deleted
+by #420, alongside the picking-GPU-subsystem migration); passes now read
+`state.gpu.X` directly. The remaining scope of this item is the
+`EngineGpuHandles` nullability itself, below.
 
 ## The careful caveat (scar tissue)
 
@@ -37,7 +42,7 @@ Separate the three concerns currently fused under one `| null`:
 
 Narrow the bootstrap-guaranteed handles once into a non-null "ready GPU" view (extend `ReadyFrameContext` or add a `ReadyGpu` bag), keep `| null` only for the genuinely-absent-at-draw-time ones (some via a `timingService`-style null-object), let `destroy()` iterate the raw bag. Done incrementally, respecting the teardown asymmetry — never a big-bang ready flag.
 
-## Current state (verified 2026-06-29)
+## Current state (verified 2026-06-29; `PassDeps` note added 2026-09-02)
 
 - Prerequisite done: `RenderFrameSettings` fully dissolved (zero matches in src/tools; passes read `state.settings.*`).
-- Follow-on NOT done: all `EngineGpuHandles` fields still `T | null` (`EngineGpuHandles.d.ts:68-221`); **no `ReadyGpu` type** exists; `PassDeps.d.ts` still carries seven renderer fields (textured/procedural/filament/volumeField/flowField/milkyWay/horizonShell), all still threaded by `RenderFrameInput`. The only narrowing is the pre-existing `ReadyFrameContext` (the four bootstrap-gate handles).
+- Follow-on NOT done: all `EngineGpuHandles` fields still `T | null` (`EngineGpuHandles.d.ts:68-221`); **no `ReadyGpu` type** exists. The only narrowing is the pre-existing `ReadyFrameContext` (the four bootstrap-gate handles). `PassDeps` itself is gone (deleted by #420) — see above.

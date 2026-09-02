@@ -85,8 +85,8 @@
 // (dustAttenuation.wesl, dustPresent/fragment.wesl): both read the eroded column from here
 // with no second code path. contrastExp (.w) is dustMap.wesl's signed power
 // exponent shaping the noise about its own midpoint — 1/textureContrast,
-// inverted CPU-side (createGalaxyEngine.ts's rebuildDustMixture) so a HIGHER
-// contrast slider value maps to a SMALLER exponent (harder filament edges)
+// inverted CPU-side (deriveDustHeaderLanes.ts) so a HIGHER contrast slider
+// value maps to a SMALLER exponent (harder filament edges)
 // with the shader itself doing one plain pow().
 //
 // dustSlices (offset 144) is the VIEW-DEPENDENT depth partition the dust map
@@ -99,7 +99,7 @@
 // the tau in front of IT, so opacity can go to 100% as tau does.
 // createGalaxyEngine.ts's drawFrame computes t1..t3 once per frame from
 // D = distance(eye, origin) and R = the dust's own reach (3x its widest
-// component's sigmaR, cached by rebuildDustMixture): tNear = max(D-R,
+// component's sigmaR, held by the dustHeaderLanes node): tNear = max(D-R,
 // 0.02*R), tFar = D+R, t_k = tNear*(tFar/tNear)^(k/4). Geometric, not linear,
 // spacing: from OUTSIDE the galaxy D-R is large and the [tNear,tFar] band is
 // thin, where geometric spacing degenerates to linear across exactly the

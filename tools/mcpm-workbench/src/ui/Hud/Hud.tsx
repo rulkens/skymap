@@ -1,0 +1,60 @@
+/**
+ * Hud — the tool's title block plus the diagnostic readout the spec requires
+ * AT ALL TIMES: point count, NaN-fill count and fraction, resolved
+ * GridElement, summed byte budget, step counter, fps. The NaN fraction is
+ * the one number that says what a median-filled fit stands on (spec §6), so
+ * it's never hidden behind a toggle. Read-only: every value comes straight
+ * off the store — fps is Viewport's own throttled push, not measured here.
+ */
+import type { ReactNode } from 'react';
+import { useAppSelector } from '../../store/hooks';
+import { formatBytes } from '../formatBytes';
+import styles from './Hud.module.css';
+
+function Hud(): ReactNode {
+  const catalog = useAppSelector((s) => s.catalog);
+  const grid = useAppSelector((s) => s.grid);
+  const stepCount = useAppSelector((s) => s.sim.stepCount);
+  const fps = useAppSelector((s) => s.view.fps);
+
+  const nanFraction = catalog.pointCount > 0 ? catalog.nanFillCount / catalog.pointCount : 0;
+
+  return (
+    <div className={styles.root}>
+      <div className={styles.eyebrow}>SKYMAP · WEBGPU</div>
+      <div className={styles.title}>MCPM Workbench</div>
+      <div className={styles.badges}>
+        <div className={styles.badge}>
+          <span className={styles.label}>points</span>
+          <span className={styles.value}>{catalog.pointCount.toLocaleString()}</span>
+        </div>
+        <div className={styles.badge}>
+          <span className={styles.label}>NaN fill</span>
+          <span className={styles.value}>
+            {catalog.nanFillCount.toLocaleString()} ({(nanFraction * 100).toFixed(1)}%)
+          </span>
+        </div>
+        <div className={styles.badge}>
+          <span className={styles.label}>element</span>
+          <span className={styles.value}>{grid.resolvedElement ?? '—'}</span>
+        </div>
+        <div className={styles.badge}>
+          <span className={styles.label}>budget</span>
+          <span className={styles.value}>
+            {grid.byteBudget ? formatBytes(grid.byteBudget.totalBytes) : '—'}
+          </span>
+        </div>
+        <div className={styles.badge}>
+          <span className={styles.label}>step</span>
+          <span className={styles.value}>{stepCount.toLocaleString()}</span>
+        </div>
+        <div className={styles.badge}>
+          <span className={styles.label}>fps</span>
+          <span className={styles.value}>{fps === 0 ? '—' : fps}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Hud;

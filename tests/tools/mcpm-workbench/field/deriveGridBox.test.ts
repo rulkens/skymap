@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { deriveGridBox } from '../../../../tools/mcpm-workbench/src/field/deriveGridBox';
-import { defaultGridSlice } from '../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
+import { defaultGridSlice } from '../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
 
 describe('deriveGridBox', () => {
   it('derives from manualCenterMpc/manualSizeMpc at the panel manualVoxelSizeMpc', () => {

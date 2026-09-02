@@ -16,10 +16,7 @@ because each is a mechanical extract-one-helper, not a design question:
    as the pattern to extract to; the seven-plus copies vary by stride,
    label, usage, count unit, and overflow policy.
 2. **16-byte fade-scratch duplication, ×4** (one existing comment already
-   admits "same shape as filamentRenderer's"); additionally
-   `structureMarkerRenderer` re-declares the dummy-fade pair the shared
-   `createDummyFadeBindGroup` helper already provides — a redundant
-   fifth instance of a problem the shared helper was built to solve.
+   admits "same shape as filamentRenderer's").
 3. **Fullscreen-triangle duplication, ×5 + a second implementation.**
    Byte-identical vertex bodies across `additiveUpsample`,
    `starAggregateUpsample`, `compositor`, and `bloom`, plus
@@ -59,8 +56,7 @@ them together beyond "extract the existing pattern"):
    `instancedQuadRenderer`'s existing `capacity` config, threading
    stride/label/usage/count-unit/overflow-policy as config fields.
 2. Fade-scratch: consolidate the 4 duplicated 16-byte scratch buffers onto
-   one shared helper; fix `structureMarkerRenderer` to call
-   `createDummyFadeBindGroup` instead of re-declaring the dummy-fade pair.
+   one shared helper.
 3. Fullscreen-tri: pick one of the two implementations
    (`lib/fullscreenTri.wesl` vs. the ×5 inline copies) as canonical and
    migrate the other four call sites onto it; decide whether `bloom`

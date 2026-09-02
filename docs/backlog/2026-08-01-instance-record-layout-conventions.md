@@ -9,12 +9,16 @@ renderer.
 Four renderers each pack a per-instance record into one `Float32Array` and each
 invent the same conventions independently:
 
-| renderer               | floats |
-| ---------------------- | ------ |
-| `planetRenderer`       | 24     |
-| `structureMarker`      | 12     |
-| `bodyGlint`            | 7      |
-| `orbitTrail`           | 34     |
+| renderer          | floats |
+| ----------------- | ------ |
+| `planetRenderer`  | 28     |
+| `structureMarker` | 12     |
+| `bodyGlint`       | 7      |
+| `orbitTrail`      | 34     |
+
+(`planetRenderer` moved 24 → 28 in #634, unnoticed here until this backlog
+sweep — itself evidence for the item: the table drifted from the code with
+nothing to catch it.)
 
 For each one, a single fact — "this record has these fields in this order" — is
 encoded three times in three languages that nothing cross-checks:

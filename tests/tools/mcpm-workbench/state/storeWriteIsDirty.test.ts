@@ -10,12 +10,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defaultAppState';
-import {
-  setFps,
-  setLayerEnabled,
-} from '../../../../tools/mcpm-workbench/src/state/slices/viewSlice';
-import { incrementStep } from '../../../../tools/mcpm-workbench/src/state/slices/simSlice';
-import { recordHistogramSample } from '../../../../tools/mcpm-workbench/src/state/slices/histogramSlice';
+import { viewSlice } from '../../../../tools/mcpm-workbench/src/state/view/viewSlice';
+import { simSlice } from '../../../../tools/mcpm-workbench/src/state/sim/simSlice';
+import { histogramSlice } from '../../../../tools/mcpm-workbench/src/state/histogram/histogramSlice';
 import { storeWriteIsDirty } from '../../../../tools/mcpm-workbench/src/state/storeWriteIsDirty';
 
 describe('storeWriteIsDirty', () => {
@@ -24,37 +21,57 @@ describe('storeWriteIsDirty', () => {
   });
 
   it('is false for an fps-only write', () => {
-    const next = { ...defaultAppState, view: setFps(defaultAppState.view, 42) };
+    const next = {
+      ...defaultAppState,
+      view: viewSlice.reducer(defaultAppState.view, viewSlice.actions.setFps(42)),
+    };
     expect(storeWriteIsDirty(defaultAppState, next)).toBe(false);
   });
 
   it('is false for a stepCount-only write (a running sim, every step)', () => {
-    const next = { ...defaultAppState, sim: incrementStep(defaultAppState.sim) };
+    const next = {
+      ...defaultAppState,
+      sim: simSlice.reducer(defaultAppState.sim, simSlice.actions.incrementStep()),
+    };
     expect(storeWriteIsDirty(defaultAppState, next)).toBe(false);
   });
 
   it('is false for any histogram-only write (a running sim, every 20th step)', () => {
     const next = {
       ...defaultAppState,
-      histogram: recordHistogramSample(
+      histogram: histogramSlice.reducer(
         defaultAppState.histogram,
-        new Uint32Array(17),
-        1,
-        new Float32Array(1),
-        20,
+        histogramSlice.actions.recordHistogramSample({
+          counts: new Uint32Array(17),
+          sampledCount: 1,
+          densities: new Float32Array(1),
+          stepCount: 20,
+        }),
       ),
     };
     expect(storeWriteIsDirty(defaultAppState, next)).toBe(false);
   });
 
   it('is true when a real view field changes alongside fps', () => {
-    const withFps = { ...defaultAppState, view: setFps(defaultAppState.view, 42) };
-    const next = { ...withFps, view: setLayerEnabled(withFps.view, 'agents', true) };
+    const withFps = {
+      ...defaultAppState,
+      view: viewSlice.reducer(defaultAppState.view, viewSlice.actions.setFps(42)),
+    };
+    const next = {
+      ...withFps,
+      view: viewSlice.reducer(
+        withFps.view,
+        viewSlice.actions.setLayerEnabled({ layer: 'agents', on: true }),
+      ),
+    };
     expect(storeWriteIsDirty(withFps, next)).toBe(true);
   });
 
   it('is true when a real sim field changes alongside stepCount', () => {
-    const stepped = { ...defaultAppState, sim: incrementStep(defaultAppState.sim) };
+    const stepped = {
+      ...defaultAppState,
+      sim: simSlice.reducer(defaultAppState.sim, simSlice.actions.incrementStep()),
+    };
     const next = { ...stepped, sim: { ...stepped.sim, running: !stepped.sim.running } };
     expect(storeWriteIsDirty(stepped, next)).toBe(true);
   });

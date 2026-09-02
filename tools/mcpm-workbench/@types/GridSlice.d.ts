@@ -6,8 +6,10 @@ import type { GridElement } from './GridElement';
 
 /**
  * GridSlice — the grid-box CONFIG (what the panel edits) plus the last
- * RESOLVED box (what the sim runs on); `box`/`resolvedElement`/`byteBudget`
- * are null until the first successful build. The manual path (center + size
+ * RESOLVED build's own facts; `resolvedElement`/`byteBudget` are null until
+ * the first successful build (the resolved box itself is re-derived from the
+ * manual/imported fields via `deriveGridBox`, not stored). The manual path
+ * (center + size
  * + a directly-stored `manualVoxelSizeMpc`) is the only resolution lever — a
  * physical Mpc size, not a scale factor, so resolution stays stable under
  * resize/refit (grid-voxel-size-currency decision, Q1/Q2).
@@ -27,6 +29,11 @@ import type { GridElement } from './GridElement';
  * `manualVoxelSizeMpc` up in `deriveGridBox`; set only by
  * `setMaxBufferBytes`, which — like `setResolvedGrid` — does NOT clear
  * `importedBox`.
+ *
+ * `autoFitPercent` — like `paddingMpc`, a one-shot input baked in at the
+ * NEXT "auto fit" click, not a live modifier of the box already showing:
+ * excluded from `gridShapeOf` and `SCENE_REBUILD_TRIGGERS` for the same
+ * reason. 100 reproduces today's full-catalog-bounds fit exactly.
  */
 export type GridSlice = {
   readonly manualVoxelSizeMpc: number;
@@ -35,9 +42,11 @@ export type GridSlice = {
   readonly manualSizeMpc: Vec3;
   readonly manualRotation: Readonly<Vec4>;
   readonly importedBox: GridBox | null;
-  readonly box: GridBox | null;
   readonly resolvedElement: GridElement | null;
   readonly byteBudget: GridBudget | null;
   readonly showGridBox: boolean;
   readonly maxBufferBytes: number | null;
+  /** Integer 80–100 (%): fraction of catalog points Auto fit keeps, evicting the
+   * L∞-farthest-from-median fringe (see `denseFractionBounds`). */
+  readonly autoFitPercent: number;
 };
