@@ -368,6 +368,10 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           yaw: lerp(from.yaw, base.pose.yaw, t),
           pitch: lerp(from.pitch, base.pose.pitch, t),
           distance: lerp(from.distance, distanceTarget, t),
+          // Ride `base.roll` like yaw/pitch do: the approach frame-alignment
+          // (ruling 8) lands there per wheel notch, and dropping it pinned a
+          // followed approach to scene-frame up until the engage edge.
+          roll: lerp(from.roll ?? 0, base.pose.roll ?? 0, t),
         });
       },
     },

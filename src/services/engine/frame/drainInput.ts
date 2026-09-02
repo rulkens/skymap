@@ -18,15 +18,21 @@
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
+import { frameAlignedRoll } from '../camera/frameAlignedRoll';
 import { pivotFraming } from '../camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { liveWorldPose } from '../helpers/liveWorldPose';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
+import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectFocusRow } from '../../../state/selection/selectors';
+import { selectTimeState } from '../../../state/time/selectors';
 import { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
+import { deriveBodyStates } from './deriveBodyStates';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
@@ -160,7 +166,29 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
           nowMs,
           pivotFraming(selectFocusRow(root)),
         );
-        if (zoomed !== null) store.dispatch(commitCameraPose(absoluteArm(zoomed)));
+        // Ruling 8: the world-arm notch also walks the roll toward the nearest
+        // body's frame (a no-op outside the band — `frameAlignedRoll` is where
+        // the altitude keying lives). One-deep memo: `runFrame` re-derives the
+        // same instant, so this costs no second Kepler solve.
+        const bodyStates = deriveBodyStates(
+          deriveSimDays(selectTimeState(root), nowMs),
+        ) as ReadonlyMap<BodyId, BodyState>;
+        const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
+        const upBasis = state.cameraRuntime.upBasis.current;
+        if (zoomed !== null) {
+          const roll = frameAlignedRoll(zoomed, bodyStates, poseBasis, upBasis);
+          store.dispatch(commitCameraPose(absoluteArm({ ...zoomed, roll })));
+        } else if (root.camera.base.frame === 'absolute') {
+          // The followBody owner swallowed the distance (it eases its own
+          // target); the alignment still rides the notch. Measured on the LIVE
+          // rendered pose (the follow ease, not the stale base), landed on
+          // `base.roll`, which the follow pose lerps toward.
+          const basePose = root.camera.base.pose;
+          const roll = frameAlignedRoll(liveWorldPose(state), bodyStates, poseBasis, upBasis);
+          if (roll !== (basePose.roll ?? 0)) {
+            store.dispatch(commitCameraPose(absoluteArm({ ...basePose, roll })));
+          }
+        }
         break;
       }
     }

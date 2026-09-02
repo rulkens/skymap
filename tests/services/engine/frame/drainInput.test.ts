@@ -345,6 +345,75 @@ describe('drainInput', () => {
     expect(Math.hypot(...state.cameraRuntime.clock.followPanOffset)).toBeCloseTo(50 * pxToWorld, 9);
   });
 
+  it('an at-rest notch inside a body’s band walks the committed roll toward its frame', () => {
+    // Ruling 8: the scene-frame → body-frame transition is a blend over the
+    // altitude band, ridden by the wheel — the notch's commit carries a roll
+    // stepped toward the body pole, never the input roll unchanged (that was
+    // the height-triggered switch at engage) and never by more than the cap.
+    const { agg, state, deps, store } = makeHarness();
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const nearEarth = absoluteArm({
+      target: [...earth.positionMpc] as Vec3,
+      yaw: 0.7,
+      pitch: 0.3,
+      distance: 2.5 * 6371000 * SCALE_UNITS.M_TO_MPC, // h/R 1.5, mid-band
+      roll: 1.4,
+    });
+    store.dispatch(commitCameraPose(nearEarth));
+    state.cameraRuntime.lastPose.current = nearEarth;
+
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+    drainInput(state, deps, 0);
+
+    const committed = worldArmOf(store.getState().camera.base);
+    const moved = Math.abs((committed.roll ?? 0) - 1.4);
+    expect(moved).toBeGreaterThan(0.01);
+    expect(moved).toBeLessThanOrEqual(0.1 + 1e-12);
+  });
+
+  it('a followed-body notch lands the frame alignment on base.roll', () => {
+    // While followBody owns the wheel (it eases its own distance target and
+    // `applyWheelZoom` commits nothing), the alignment must still ride the
+    // notch — committed via `base.roll`, the term the follow pose lerps toward.
+    const { agg, state, deps, store } = makeHarness();
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const nearEarth = absoluteArm({
+      target: [...earth.positionMpc] as Vec3,
+      yaw: 0.7,
+      pitch: 0.3,
+      distance: 2.5 * 6371000 * SCALE_UNITS.M_TO_MPC,
+      roll: 1.4,
+    });
+    store.dispatch(commitCameraPose(nearEarth));
+    state.cameraRuntime.lastPose.current = nearEarth;
+    store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusM: 6371000,
+        },
+      }),
+    );
+    state.cameraRuntime.prevActiveId.current = 'followBody';
+    state.cameraRuntime.clock.followDistanceTarget = 2.5 * EARTH_RADIUS_MPC;
+    const targetBefore = state.cameraRuntime.clock.followDistanceTarget;
+
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+    drainInput(state, deps, 0);
+
+    // The distance went to the follow's own slot, the roll to the base.
+    expect(state.cameraRuntime.clock.followDistanceTarget).toBeGreaterThan(targetBefore);
+    const committed = worldArmOf(store.getState().camera.base);
+    expect(committed.distance).toBeCloseTo(2.5 * 6371000 * SCALE_UNITS.M_TO_MPC, 12);
+    const moved = Math.abs((committed.roll ?? 0) - 1.4);
+    expect(moved).toBeGreaterThan(0.01);
+    expect(moved).toBeLessThanOrEqual(0.1 + 1e-12);
+  });
+
   it('floors an in-gesture zoom at the focused body’s surface', () => {
     const { agg, state, deps, store } = makeHarness(EARTH_RADIUS_MPC * 4);
     store.dispatch(

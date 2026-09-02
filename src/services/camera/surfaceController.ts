@@ -6,9 +6,9 @@
  * What the cursor is over picks the control model; every mode moves the pose
  * so the grabbed content follows the cursor, which fixes each sign below.
  * One orientation authority (R1): gestures never create roll, and every zoom
- * notch — both directions — walks the view toward the canonical framing
- * (heading north, tilt nadir) by one bounded decay, so driven recessions
- * converge on the straight-down pose the disengage fold retargets from.
+ * notch — both directions — walks heading north and roll level by one bounded
+ * decay; a dive walks tilt to nadir, a recession only back inside the
+ * altitude-keyed band, whose ceiling reaches 0 at the disengage boundary.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -19,9 +19,11 @@ import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { Vec4 } from '../../@types/math/Vec4';
+import { ORIENT_DECAY } from '../../data/camera/orientDecay';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from '../../utils/camera/anchoredDragRotation';
 import { anchoredZoomStep } from '../../utils/camera/anchoredZoomStep';
 import { cappedRotationToward } from '../../utils/camera/cappedRotationToward';
+import { orientStepRad } from '../../utils/camera/orientStepRad';
 import { cursorRayBodyLocal } from '../../utils/camera/cursorRayBodyLocal';
 import { headingTiltAt } from '../../utils/camera/headingTiltAt';
 import { maxTiltRad } from '../../utils/camera/maxTiltRad';
@@ -84,22 +86,6 @@ function flooredPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
     ...pose,
     eyeRelAnchorM: [eyeM[0] * scale - a[0], eyeM[1] * scale - a[1], eyeM[2] * scale - a[2]],
   };
-}
-
-/**
- * The one convergence law (R1): every driven write moves an orientation
- * residual toward its target by `clamp(SHARE·residual, ±CAP)` — the fraction
- * eases, the cap bounds any single tick, and no threshold or direction split
- * exists to snap. Shared by heading and tilt in BOTH zoom directions, so the
- * in-range and out-range re-orientation are structurally one motion.
- * Feel-open until Task 22.
- */
-const ORIENT_SHARE = 0.25;
-const ORIENT_CAP_RAD = 0.1;
-
-function orientStepRad(residualRad: number): number {
-  const share = ORIENT_SHARE * residualRad;
-  return Math.sign(share) * Math.min(Math.abs(share), ORIENT_CAP_RAD);
 }
 
 /**
@@ -249,7 +235,7 @@ function levelledPose(pose: BodyFixedPose, heldAzimuthRad: number | null): BodyF
   const frame = eyeFrameOf(pose);
   if (frame === null) return pose;
   const target = canonicalBasisAt(frame, heldAzimuthRad ?? frame.azimuthRad, frame.tiltRad);
-  const q = cappedRotationToward(pose.basisLocal, target, ORIENT_CAP_RAD);
+  const q = cappedRotationToward(pose.basisLocal, target, ORIENT_DECAY.capRad);
   if (q === null) return pose;
   return { ...pose, basisLocal: rotateBasisByQuat(q, pose.basisLocal) };
 }
@@ -316,7 +302,7 @@ function canonicalledPose(
     const q = cappedRotationToward(
       out.basisLocal,
       canonicalBasisAt(f2, f2.azimuthRad, f2.tiltRad),
-      ORIENT_CAP_RAD,
+      ORIENT_DECAY.capRad,
     );
     if (q !== null) out = toNadir ? rotatedAbout(out, q, anchorM) : withBasis(out, q);
   }

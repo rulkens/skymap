@@ -571,6 +571,27 @@ describe('buildCameraDrivers — followBody', () => {
     expect(result.target).not.toEqual(EARTH_ROW.positionMpc);
   });
 
+  it('carries base.roll into the follow pose like yaw and pitch', () => {
+    // The at-rest wheel's frame alignment (ruling 8) lands on `base.roll`
+    // while followBody owns the distance; a follow pose that drops roll would
+    // pin a followed approach to scene-frame up until the engage edge.
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(commitCameraPose(absoluteArm({ ...BASE_POSE, roll: 0.6 })));
+    const s = store.getState() as unknown as RootState;
+
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+      followFrom: BASE_POSE,
+    });
+    const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
+
+    const result = worldArmOf(follow.pose(s, FOCUS_TWEEN_MS));
+    expect(result.roll).toBeCloseTo(0.6, 12);
+  });
+
   it('deactivates when focus leaves the body; pickWinner hands off to the next driver', () => {
     // autoRotate off so the resting floor is the fallback winner.
     const store = makeStore();

@@ -22,10 +22,10 @@ import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { rollFromScreenUp } from '../../../utils/camera/rollFromScreenUp';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { normalize3 } from '../../../utils/math/normalize3';
-import { cross3 } from '../../../utils/math/cross3';
 import { raySphereRoots } from '../../../utils/math/raySphereRoots';
 import { surfaceFloorM } from '../../../utils/camera/surfaceFloorM';
 import { bodyRelativePose } from './bodyRelativePose';
@@ -34,20 +34,6 @@ const BODY_CENTRE: Vec3 = [0, 0, 0];
 
 function dot3(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-/**
- * The roll that reproduces `screenUp` through `imagePlaneBasis`. That function
- * rotates the frame pole about the view axis into `up(θ) = e2·cosθ − e1·sinθ`,
- * with `e1 = normalize(forward × upRef)` and `e2 = e1 × forward` its θ=0 axes
- * (the minus is its sinθ term crossing `upRef × forward`), so θ is just the two
- * projections. `forward ∥ upRef` leaves `e1 ≈ 0` and yields 0 — the same
- * pole-aligned degeneracy `imagePlaneBasis` leaves to its callers.
- */
-function rollFromScreenUp(forward: Vec3, screenUp: Vec3, upRef: Vec3): number {
-  const e1 = normalize3(cross3(forward, upRef));
-  const e2 = cross3(e1, forward);
-  return Math.atan2(-dot3(screenUp, e1), dot3(screenUp, e2));
 }
 
 export function toBodyArm(
