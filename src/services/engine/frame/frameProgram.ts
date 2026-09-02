@@ -121,7 +121,9 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * actually wrote. TWO steps per requested face — COSMO then NEAR0 — because
  * the fixed opt-in roster (`ContentLayer.skyCapture`) spans both
  * slabs: `point-sprites` / `textured-disks` project through COSMO;
- * `star-catalog` / `star-aggregates` / `star-points` through NEAR0. A
+ * `star-catalog` / `star-aggregates` through NEAR0. (`star-points` is
+ * deliberately NOT on it — the S-stars are near enough that the at-infinity
+ * cubemap is wrong for them; see that layer's header.) A
  * capture step selects its group by the flag rather than by `target`
  * (`executeFrame`'s capture-step branch), but `slab` still gates normally —
  * one step per slab is what makes BOTH halves of the roster reachable (a

@@ -377,6 +377,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the (foreground:0, NEAR0) group and also read by the atmosphereSkyView step.
       atmosphereShellRenderer: null,
       starPointRenderer: null,
+      // The S-stars' analytically lensed images inside the Sgr A* lens band —
+      // its own StarPointRenderer, because setStars is a writeBuffer and two
+      // layers cannot share one instance buffer in a frame. null until initGpu;
+      // excluded from isEngineReady, null-checked by sStarLensedImagesLayer.
+      sStarLensedImageRenderer: null,
       // Sub-pixel bodies (the glints branch of the body partition) as
       // brightness-scaled additive points on the (hdr, NEAR0) step — the far
       // half of the body LOD, sibling of starPointRenderer. null until initGpu;

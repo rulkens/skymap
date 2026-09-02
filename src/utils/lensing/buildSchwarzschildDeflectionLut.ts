@@ -10,8 +10,8 @@
  */
 
 import type { SchwarzschildDeflectionLut } from '../../@types/lensing/SchwarzschildDeflectionLut';
+import { CRITICAL_IMPACT_PARAM_RS } from './criticalImpactParamRs';
 
-const CRITICAL_IMPACT_PARAM_RS = (3 * Math.sqrt(3)) / 2; // b_c = 3root3/2 r_s, photon-sphere impact parameter
 const MIN_IMPACT_PARAM_RS = 1; // below b_c throughout: exercises the capture sentinel
 const MAX_IMPACT_PARAM_RS = 50; // deep weak-field: 2/b ~ 0.04 rad, matches the asymptotic formula closely
 const PHOTON_SPHERE_U = 2 / 3; // u = 1/r at r = 1.5 r_s, the upper bound for the turning-point search

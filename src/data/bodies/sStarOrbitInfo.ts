@@ -10,16 +10,14 @@
  */
 
 import { pericentreSpeedKmS } from '../../utils/orbit/pericentreSpeedKmS';
-import { schwarzschildRadiusM } from '../../utils/physics/schwarzschildRadiusM';
+import { SGR_A_STAR_SCHWARZSCHILD_RADIUS_MPC } from './sgrAStarSchwarzschildRadiusMpc';
 import { SCALE_UNITS } from '../scaleUnits';
 import { sStar } from './makers/sStar';
 import { SGR_A_STAR } from './sceneSgrAStar';
-import { SGR_A_STAR_MASS_SOLAR } from './sgrAStarMassSolar';
 import { S_STAR_SEEDS } from './sStarElements';
 import type { BodyOrbitInfo } from '../../@types/engine/BodyOrbitInfo';
 
-const SCHWARZSCHILD_RADIUS_AU =
-  (schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR) * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.AU_TO_MPC;
+const SCHWARZSCHILD_RADIUS_AU = SGR_A_STAR_SCHWARZSCHILD_RADIUS_MPC / SCALE_UNITS.AU_TO_MPC;
 
 const S_STAR_ORBIT_INFO: ReadonlyMap<string, BodyOrbitInfo> = new Map(
   S_STAR_SEEDS.map((seed): [string, BodyOrbitInfo] => {

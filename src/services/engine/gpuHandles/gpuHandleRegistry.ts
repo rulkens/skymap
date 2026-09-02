@@ -364,6 +364,15 @@ export const GPU_HANDLE_ROWS = [
     },
   },
   {
+    // The S-stars' lensed images (`sStarLensedImagesLayer`). Its OWN renderer,
+    // not a second use of the row above: `setStars` is a `queue.writeBuffer`,
+    // so two layers sharing one instance buffer in a frame would both draw the
+    // last upload. No boot seed — nothing to draw until the lens band opens.
+    key: 'sStarLensedImageRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createStarPointRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+  },
+  {
     key: 'bodyGlintRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),

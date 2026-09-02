@@ -10,8 +10,6 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { BLACK_HOLES } from '../../../../data/blackHoles';
 import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
@@ -19,13 +17,7 @@ import { SGR_A_STAR_MASS_SOLAR } from '../../../../data/bodies/sgrAStarMassSolar
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { packSgrAStarLensingUniforms } from '../../../../utils/gpu/packSgrAStarLensingUniforms';
 import { lensQuadPlaneRadiusRs } from '../../../../utils/lensing/lensQuadPlaneRadiusRs';
-import { regionById } from '../../../../utils/scene/regionById';
-import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
-import { sceneBodyStates } from '../sceneBodyStates';
-import { fadeBand } from '../../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
-
-const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
+import { sgrAStarLensBandAlpha } from '../sgrAStarLensBandAlpha';
 
 // `BLACK_HOLES` is authored data guaranteed to carry a Sgr A* row; a missing
 // row is a wiring bug worth failing loudly on, not a silent no-op layer. The
@@ -40,16 +32,6 @@ const SCHWARZSCHILD_RADIUS_M = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
 /** `ctx.simDays` is Julian days; `flickerTimescaleS` is seconds. */
 const SECONDS_PER_DAY = 86_400;
 
-/** This frame's fade-band alpha (Q6's zero-dispatch gate) — shared by `enabled` and `draw`. */
-function bandAlphaFor(state: EngineState, ctx: ReadyFrameContext): number {
-  const distMpc = regionRelativeDistanceMpc(
-    ctx.drawCamPos,
-    GALACTIC_CENTRE_REGION,
-    sceneBodyStates(state, ctx),
-  );
-  return fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, distMpc);
-}
-
 export const sgrAStarLensingLayer: ContentLayer = {
   name: 'sgr-a-star-lensing',
   slab: 'body',
@@ -61,7 +43,7 @@ export const sgrAStarLensingLayer: ContentLayer = {
       return false;
     }
     if (state.gpu.sgrAStarLensingRenderer === null) return false;
-    return bandAlphaFor(state, ctx) > 0;
+    return sgrAStarLensBandAlpha(state, ctx) > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -76,7 +58,7 @@ export const sgrAStarLensingLayer: ContentLayer = {
 
     // `> 0` by construction: `enabled` gates on it, and `frameProgram` only
     // emits this step at all while the band is open.
-    const bandAlpha = bandAlphaFor(state, ctx);
+    const bandAlpha = sgrAStarLensBandAlpha(state, ctx);
 
     // Sgr A*'s position relative to the camera, in the SAME body-local frame
     // `view.slab.vp` was built in (camera at the origin) — the negation of

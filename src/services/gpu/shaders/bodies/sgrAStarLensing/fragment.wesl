@@ -166,12 +166,12 @@ fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
   let tailScale = min(u.lutMaxImpactParamRs / max(impactParamRs, 1e-6), 1.0);
   let bendAngle = sampleLut(impactParamRs) * tailScale;
   let captured = bendAngle >= CAPTURE_THRESHOLD_RAD;
-  // Bruneton 2020 (arXiv:2010.08735): delta_prime = delta + deflection — the backward lookup must
-  // rotate the ray TOWARD the hole to recover the source's asymptotic
-  // direction. The apparent image is displaced outward, so undoing that
-  // displacement moves inward; '-bendAngle' bends the wrong way and the
-  // disk's far side never renders. Reused below as the march's segment-2
-  // bend — one basis for both consumers.
+  // Bruneton 2020 (arXiv:2010.08735): delta_prime = delta + deflection — the
+  // backward lookup must rotate the ray TOWARD the hole to recover the
+  // source's asymptotic direction. The apparent image is displaced outward,
+  // so undoing that displacement moves inward; '-bendAngle' bends the wrong
+  // way and the disk's far side never renders. Reused below as the march's
+  // segment-2 bend — one basis for both consumers.
   let axis = normalize(cross(rayDir, toAnchor));
   let deflected = normalize(rotateAroundAxis(rayDir, axis, bendAngle));
 

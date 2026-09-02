@@ -117,7 +117,7 @@ describe('frameProgram', () => {
 
   it('emits a COSMO capture step alongside NEAR0 per requested face (Task 13b)', () => {
     // The fixed opt-in roster spans both slabs — `point-sprites` (COSMO),
-    // `star-catalog`/`star-aggregates`/`star-points` (NEAR0) — and a capture
+    // `star-catalog`/`star-aggregates` (NEAR0) — and a capture
     // step's `slab` still gates its group normally (only `target` selection
     // is bypassed for a capture step). A NEAR0-only capture step would leave
     // the COSMO half of the roster permanently unselected regardless of its
@@ -452,6 +452,7 @@ describe('timedSlotsOf', () => {
       'constellations',
       'orbit-trails',
       'body-glints',
+      's-star-lensed-images',
       'hdr·NEAR0',
       // The body-m step (Task 9-11): every 'body'-slab layer matches EVERY
       // body row, so earth, cloud-shell, planets, textured-bodies, rings, and

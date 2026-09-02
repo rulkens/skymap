@@ -245,6 +245,7 @@ const NEAR_HDR_NAMES = [
   'constellations',
   'orbit-trails',
   'body-glints',
+  's-star-lensed-images',
 ];
 
 // The near-field swap group: the overlays that pair the swap target with the

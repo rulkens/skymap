@@ -95,6 +95,11 @@
  *                            over 1-3 px), sibling of star-points (f64 rebase
  *                            seam); opts into the lens's `'post'` split half
  *                            for the same reason
+ *  17c. s-star-lensed-images — the S-stars' analytically lensed images, drawn
+ *                            through the same point renderer on the lens's
+ *                            `'post'` half; the sky cubemap the lens samples is
+ *                            an at-infinity approximation these sources are far
+ *                            too close for (see the layer header)
  *
  * The next six are premultiplied-OVER overlays, projected through the
  * cosmological slab (except near0-selection-ring, which rides near0) and drawn
@@ -253,6 +258,7 @@ import { texturedBodiesLayer } from './texturedBodiesLayer';
 import { ringsLayer } from './ringsLayer';
 import { starPointsLayer } from './starPointsLayer';
 import { bodyGlintsLayer } from './bodyGlintsLayer';
+import { sStarLensedImagesLayer } from './sStarLensedImagesLayer';
 import { starCatalogLayer } from './starCatalogLayer';
 import { starAggregatesLayer } from './starAggregatesLayer';
 import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
@@ -359,6 +365,10 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // star-points. Additive into HDR through NEAR0, so its position among the
   // additive rows is a listing choice, not a compositing one.
   bodyGlintsLayer,
+  // The S-stars' lensed images, on the lens's `'post'` half like the two rows
+  // above and for the same reason — an OVER blend would wipe them. Listed after
+  // body-glints so the images read over the far-field glint marking the hole.
+  sStarLensedImagesLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the debug
   // clip-path overlay is the very last swap row (below, past the NEAR0 group) so
@@ -455,6 +465,7 @@ export { texturedBodiesLayer } from './texturedBodiesLayer';
 export { ringsLayer } from './ringsLayer';
 export { starPointsLayer } from './starPointsLayer';
 export { bodyGlintsLayer } from './bodyGlintsLayer';
+export { sStarLensedImagesLayer } from './sStarLensedImagesLayer';
 export { sgrAStarLensingLayer } from './sgrAStarLensingLayer';
 export { starCatalogLayer } from './starCatalogLayer';
 export { starAggregatesLayer } from './starAggregatesLayer';

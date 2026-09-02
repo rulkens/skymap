@@ -558,6 +558,16 @@ export type EngineGpuHandles = {
    */
   starPointRenderer: StarPointRenderer | null;
   /**
+   * A SECOND `StarPointRenderer`, drawing only the S-stars' analytically lensed
+   * images inside the Sgr A* lens band (`s-star-lensed-images` layer, the
+   * `'post'` half of the split `(hdr, NEAR0)` step). Separate from
+   * `starPointRenderer` because `setStars` is a `queue.writeBuffer`: two layers
+   * sharing one instance buffer in a frame would both draw the LAST upload
+   * (docs/RENDERER.md). Needs no boot seed — it has nothing to draw until the
+   * band opens. Excluded from `isEngineReady` and null-checked at use.
+   */
+  sStarLensedImageRenderer: StarPointRenderer | null;
+  /**
    * The sub-pixel scene bodies (the `glints` branch of
    * `partitionBodiesByPresentation`) as brightness-scaled additive point sprites
    * into the depthless HDR target — the far half of the body LOD (`body-glints`
