@@ -295,17 +295,17 @@ describe('drainInput', () => {
     expect(store.getState().camera.tween).not.toBeNull();
   });
 
-  it('routes an at-rest wheel to the store base, not the gesture register', () => {
+  it('routes an at-rest wheel to the store base, where the resting driver reads it', () => {
     // With no gesture the resting driver renders `base`, so a register-only
-    // write would be invisible.
+    // write would be invisible — the STORE must carry the notch. (The live
+    // register is refreshed too, so a drag later in the same drain chains
+    // from the notch — the I1 regression tests below.)
     const { agg, state, deps, store } = makeHarness();
-    const registerBefore = state.cameraRuntime.lastPose.current;
     const baseBefore = worldArmOf(store.getState().camera.base).distance;
     agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
 
     drainInput(state, deps, 0);
 
-    expect(state.cameraRuntime.lastPose.current).toBe(registerBefore);
     // deltaY > 0 zooms out, so the committed base grew.
     expect(worldArmOf(store.getState().camera.base).distance).toBeGreaterThan(baseBefore);
   });
@@ -343,6 +343,47 @@ describe('drainInput', () => {
     // 50 px at the image plane: 2 · distance · tan(fov/2) / cssHeight per px.
     const pxToWorld = (2 * 100 * Math.tan(Math.PI / 6)) / 1000;
     expect(Math.hypot(...state.cameraRuntime.clock.followPanOffset)).toBeCloseTo(50 * pxToWorld, 9);
+  });
+
+  it('a drag in the same drain as an at-rest body-arm notch chains from the notch, not before it', () => {
+    // Review I1: the at-rest branch committed to the store but left the live
+    // register stale, so a `[wheel, gestureStart, drag]` drain (routine in a
+    // 33-50 ms frame window, or trackpad scroll → click-drag) folded the drag
+    // from the PRE-notch pose and the gesture-end commit then overwrote the
+    // notch — user input silently discarded.
+    const { agg, state, deps, store } = makeHarness();
+    const arm = earthArm(3);
+    store.dispatch(commitCameraPose(arm));
+    state.cameraRuntime.lastPose.current = arm;
+    const rangeBefore = rangeM(arm);
+
+    agg.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 500, yPx: 500 });
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 500, yPx: 500 });
+    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 520, yPx: 500 });
+    drainInput(state, deps, 0);
+
+    // The drag is a pan (range-preserving rotation), so the register keeps
+    // the notch's range iff the drag chained from the post-notch pose. The
+    // notch scales ALTITUDE by e^0.24, so range grows (1+2·1.271)/3 ≈ 1.18.
+    expect(rangeM(state.cameraRuntime.lastPose.current) / rangeBefore).toBeGreaterThan(1.15);
+  });
+
+  it('a world-arm drag in the same drain as an at-rest notch chains from the notch too', () => {
+    // The world-arm twin of the same staleness (pre-existing before the
+    // simplification wave; fixed in the same pass). Base seeded to match the
+    // register — at rest the two agree in production (runFrame restamps).
+    const { agg, state, deps, store } = makeHarness();
+    store.dispatch(
+      commitCameraPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 })),
+    );
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 500, yPx: 500 });
+    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 520, yPx: 500 });
+    drainInput(state, deps, 0);
+
+    expect(worldArmOf(state.cameraRuntime.lastPose.current).distance).toBeGreaterThan(105);
   });
 
   it('an at-rest notch inside a body’s band walks the committed roll toward its frame', () => {

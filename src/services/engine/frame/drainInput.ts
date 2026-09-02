@@ -72,15 +72,17 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
       state.cameraRuntime.projection.fovYRad,
       body.radiusM,
     );
+    // EVERY step writes the register — a later step in the same drain chains
+    // from it, so an at-rest notch left out of it would be folded over and
+    // silently discarded by a drag arriving in the same frame window.
+    register.current = { frame: base.frame, pose: next };
     if (step.kind === 'zoom' && !step.duringGesture) {
       // An at-rest notch is its own atomic gesture, so the commit is its
       // gesture end — a register-only write would be invisible (the resting
       // driver renders `base`). Identity, not equality: a declined step
       // returns its input by reference. `frame` rides along BY REFERENCE:
       // one fact in two fields, and the body never changes here.
-      if (next !== from) store.dispatch(commitCameraPose({ frame: base.frame, pose: next }));
-    } else {
-      register.current = { frame: base.frame, pose: next };
+      if (next !== from) store.dispatch(commitCameraPose(register.current));
     }
     return true;
   };
@@ -177,7 +179,10 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         const upBasis = state.cameraRuntime.upBasis.current;
         if (zoomed !== null) {
           const roll = frameAlignedRoll(zoomed, bodyStates, poseBasis, upBasis);
-          store.dispatch(commitCameraPose(absoluteArm({ ...zoomed, roll })));
+          // Register too, not only the store: a drag later in this same drain
+          // folds from the live register (the body-arm branch's I1 twin).
+          register.current = absoluteArm({ ...zoomed, roll });
+          store.dispatch(commitCameraPose(register.current));
         } else if (root.camera.base.frame === 'absolute') {
           // The followBody owner swallowed the distance (it eases its own
           // target); the alignment still rides the notch. Measured on the LIVE
