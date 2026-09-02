@@ -1,8 +1,8 @@
-# Render Sgr A* Black Hole Implementation Plan
+# Render Sgr A\* Black Hole Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking. This plan follows `docs/superpowers/conventions/plan-style.md` — contract code (signatures, test names+assertions, byte tables) yes, implementation bodies no.
 
-**Goal:** Render a physically-grounded Schwarzschild close-up of Sgr A* inside a
+**Goal:** Render a physically-grounded Schwarzschild close-up of Sgr A\* inside a
 new `sgrAStarLensing` fade band (500→100 AU), with a far-field warm-orange
 glint marking it from any distance while on screen, replacing the current
 "draws nothing" `AnchorPointBody`.
@@ -28,7 +28,7 @@ lenses and before the annotations that must stay unwarped.
   section SHIPS rather than being deleted before merge — see the spec's
   §Settings for why, and Task 15 below.
 - No Kerr metric, no full-GR observer view below 2 r_s, no cinematic
-  accretion disc, no M87*/second black hole, no tour beat, no lensing of
+  accretion disc, no M87\*/second black hole, no tour beat, no lensing of
   annotations (orbit trails, marker rings, labels, picking stay unlensed).
 - `npm run perf` is a hard gate, before AND after the feature work (read
   `.claude/skills/perf/SKILL.md` first; pass `--url` against this worktree's
@@ -47,6 +47,7 @@ lenses and before the annotations that must stay unwarped.
 ### Task 1: P1 — slab candidacy admits anchor bodies, `BODY_SLAB_CAPACITY` derives from the same set
 
 **Files:**
+
 - Create: `src/data/bodies/sceneAnchorPointBodies.ts`
 - Modify: `src/services/engine/frame/visibleSlabBodies.ts:26-46`
 - Modify: `src/services/engine/frame/frameContext.ts:201-209` (the sole call site)
@@ -57,10 +58,11 @@ lenses and before the annotations that must stay unwarped.
 - Modify: `tests/data/bodies/orientationForBody.test.ts` (anchor-identity assertion)
 
 **Interfaces:**
+
 - Produces: `SCENE_ANCHOR_POINT_BODIES: readonly AnchorPointBody[]` — mirrors
   `SCENE_PLANETS`'s shape (`src/data/bodies/scenePlanets.ts:14`), one element
   (`SGR_A_STAR`, imported from `sceneSgrAStar.ts`) today. Appending a second
-  `AnchorPointBody` (M87*, spec non-goal) is a data change to this array, not
+  `AnchorPointBody` (M87\*, spec non-goal) is a data change to this array, not
   a code change anywhere it's consumed.
 - Consumes/produces: `visibleSlabBodies` signature changes from
   `{ earth: EarthBody | null; planets: readonly PlanetBody[]; ... }` to
@@ -104,9 +106,9 @@ lenses and before the annotations that must stay unwarped.
       above; import `SCENE_ANCHOR_POINT_BODIES`.
 - [x] Run `npm test -- visibleSlabBodies frameContext frameProgram` — all pass.
 - [x] Add the test (in `orientationForBody.test.ts`) `returns identity for
-      the Sgr A* anchor` — asserts `orientationForBody('sgr-a-star', <any
-      simDays>)` equals `IDENTITY_MAT3`. This is the P1 "anchor
-      orientation-identity verification through bodyRelativePose": Sgr A* is
+    the Sgr A* anchor` — asserts `orientationForBody('sgr-a-star', <any
+    simDays>)` equals `IDENTITY_MAT3`. This is the P1 "anchor
+      orientation-identity verification through bodyRelativePose": Sgr A\* is
       not in `BODY_TEXTURE_REGISTRY`, so `orientationForBody`'s existing
       membership gate (`orientationForBody.ts:33`) already returns identity —
       the test pins that fact so a future accidental texture-registry entry
@@ -125,7 +127,7 @@ lenses and before the annotations that must stay unwarped.
 - [x] Run `npm test` (full suite) and `npm run typecheck` — green.
 - [x] Commit.
 
-**Proof obligation (spec):** with Sgr A* far outside the lensing band (any
+**Proof obligation (spec):** with Sgr A\* far outside the lensing band (any
 framing wider than the galactic centre), `visibleSlabBodies` returns exactly
 what it returns today for Earth + planets — the anchor's frustum/pixel culls
 reject it at any sane viewing distance. The updated existing test cases
@@ -137,12 +139,14 @@ scenes.
 ### Task 2: P2 — per-body camera-standoff floor (`standoffRadii`)
 
 **Files:**
+
 - Modify: `src/utils/camera/clampDistance.ts:70-78`
 - Modify: `src/data/bodies/sceneSgrAStar.ts` (add `standoffRadii: 2.0` to `SGR_A_STAR`)
 - Modify: `src/@types/scene/AnchorPointBody.d.ts` (add optional `standoffRadii` field)
 - Modify: `tests/utils/camera/clampDistance.test.ts`
 
 **Interfaces:**
+
 - `clampDistance(d: number, pivotRadiusMpc: number | null, standoffRadii: number = SURFACE_STANDOFF_RADII): number`
   — third param optional, defaulting to the existing global constant so every
   existing call site (which passes only two args) is untouched.
@@ -163,7 +167,7 @@ scenes.
       `EARTH_RADIUS_MPC`-relative tests assert (body radii, not raw Mpc — see
       the file's own header rationale).
 - [x] Add the test `clampDistance — omitted standoffRadii keeps Earth's
-      current floor unchanged`: `clampDistance(d, EARTH_RADIUS_MPC)` (two-arg
+    current floor unchanged`: `clampDistance(d, EARTH_RADIUS_MPC)` (two-arg
       call, exactly as today's call sites use it) is byte-identical to
       today's behaviour — this is the zero-change proof for every body that
       doesn't opt in.
@@ -191,6 +195,7 @@ scenes.
 ### Task 3: P3 — fixed-size render targets, for the sky cubemap
 
 **Files:**
+
 - Modify: `src/@types/engine/frame/RenderTargetSpec.d.ts:14-40`
 - Modify: `src/services/gpu/renderTargets.ts:265-350` (`allocate`, `reconcile`)
 - Modify: `tests/services/gpu/renderTargets.test.ts`
@@ -221,7 +226,7 @@ export type RenderTargetSpec = {
 **Steps:**
 
 - [x] Add the test `createRenderTargets — a fixedSizePx row allocates at its
-      declared size regardless of canvas size`: construct
+    declared size regardless of canvas size`: construct
       `createRenderTargets` with a test-only `RenderTargetSpec` row (or, if
       `renderTargetRows` isn't the seam under test, inject via whatever seam
       the existing tests use) carrying `fixedSizePx: { size: 256, layers: 6 }`;
@@ -229,7 +234,7 @@ export type RenderTargetSpec = {
       `{ width: 256, height: 256, depthOrArrayLayers: 6 }` at a canvas of
       `{ width: 900, height: 600 }`.
 - [x] Add the test `createRenderTargets — reconcile does not reallocate a
-      fixedSizePx row when the canvas resizes`: call `reconcile` with a
+    fixedSizePx row when the canvas resizes`: call `reconcile` with a
       DIFFERENT canvas size than construction; assert `device.createTexture`
       was NOT called again for that row's id (mirrors the existing
       "reallocates... when the canvas size changes" test's call-count
@@ -269,7 +274,7 @@ export type RenderTargetSpec = {
   `renderTargets.ts` fixed-size allocation branch.
 - **Named observable behaviours (smoke pass):** none visual — this PR changes
   no draw output for any existing scene (the P1 proof obligation holds by
-  construction: Sgr A* still fails both culls at every framing wider than the
+  construction: Sgr A\* still fails both culls at every framing wider than the
   galactic centre, since Phase B's lensing/glint layers don't exist yet to
   read the widened slab candidacy).
 - **Deferral boundary:** the sky-cubemap render target ROW itself (data, not
@@ -296,11 +301,11 @@ scope — see the STOP-and-consult step below).
 
 **Steps:**
 
-- [x] Start the dev server (`/dev` skill or `npm run dev`), focus Sgr A*
+- [x] Start the dev server (`/dev` skill or `npm run dev`), focus Sgr A\*
       (already selectable/focusable today — `AnchorPointBody` is in
       `SCENE_BODIES` and carries a caption).
 - [x] With Phase A merged (the slab-candidacy + standoff-floor prep live),
-      descend toward Sgr A* to the P2 floor (2 r_s — `standoffRadii: 2.0`
+      descend toward Sgr A\* to the P2 floor (2 r_s — `standoffRadii: 2.0`
       now stops the camera there).
 - [x] Observe: camera jitter at the floor, frustum near-plane behaviour
       (`bodySlabRow`'s `near` derivation, `slabs.ts:219-236`), and S-star
@@ -318,9 +323,10 @@ scope — see the STOP-and-consult step below).
 
 ---
 
-### Task 5: Sgr A* mass + Schwarzschild radius (data + physics util)
+### Task 5: Sgr A\* mass + Schwarzschild radius (data + physics util)
 
 **Files:**
+
 - Create: `src/data/bodies/sgrAStarMassSolar.ts`
 - Create: `src/utils/physics/schwarzschildRadiusM.ts`
 - Create: `tests/utils/physics/schwarzschildRadiusM.test.ts`
@@ -386,6 +392,7 @@ export function schwarzschildRadiusM(massSolar: number): number; // r_s = 2GM/c�
 ### Task 6: `BlackHoleRow` type + `BLACK_HOLES` registry
 
 **Files:**
+
 - Create: `src/@types/data/BlackHoleRow.d.ts`
 - Create: `src/data/blackHoles.ts`
 
@@ -412,7 +419,7 @@ export const BLACK_HOLES: readonly BlackHoleRow[]; // one row: sgr-a-star
 **Steps:**
 
 - [x] Add `BlackHoleRow.d.ts` per the contract above, with a docblock stating
-      the registry is built to hold more than one row (M87* is data, not
+      the registry is built to hold more than one row (M87\* is data, not
       code, per the spec's non-goals) — mirrors `SCENE_PLANETS`'s
       append-only framing.
 - [x] Add `blackHoles.ts` with `BLACK_HOLES` holding the `sgr-a-star` row:
@@ -434,6 +441,7 @@ export const BLACK_HOLES: readonly BlackHoleRow[]; // one row: sgr-a-star
 ### Task 7: `sgrAStarLensing` fade band + far-field glint alpha derivation
 
 **Files:**
+
 - Modify: `src/services/engine/presentation/scaleFadeBands.ts`
 - Modify: `tests/services/engine/presentation/scaleFadeBands.test.ts` (or
   wherever `fadeBand` + `SCALE_FADE_BANDS` band-math is currently tested —
@@ -457,7 +465,7 @@ sgrAStarLensing: {
 **Steps:**
 
 - [x] Add the test `SCALE_FADE_BANDS.sgrAStarLensing — 100/500 AU envelope in
-      Mpc, approach direction`: assert `fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, x)`
+    Mpc, approach direction`: assert `fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, x)`
       is `1` at/inside `100 * SCALE_UNITS.AU_TO_MPC`, `0` at/outside
       `500 * SCALE_UNITS.AU_TO_MPC`, and strictly between at a midpoint —
       this pins the DIRECTION (full at the close edge, per the spec's
@@ -477,12 +485,14 @@ sgrAStarLensing: {
 
 ---
 
-### Task 8: Far-field glint — Sgr A* rides `bodyGlintsLayer`
+### Task 8: Far-field glint — Sgr A\* rides `bodyGlintsLayer`
 
 **Files:**
+
 - Modify: `src/services/engine/frame/passes/bodyGlintsLayer.ts`
 
 **Interfaces:**
+
 - No new exported symbols — this widens `bodyGlintsLayer`'s existing
   `enabled`/`draw` internals with a second, independent packed source
   alongside the `sceneBodyPartition(...).glints` branch. `SCENE_ANCHOR_POINT_BODIES`
@@ -502,7 +512,7 @@ intensity constant × `1 - fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, distMpc)`
 apparent-size term (an anchor never hands off to a resolved mesh, so the
 existing `bodyGlint` 1–3px band, which exists for exactly that handoff,
 doesn't apply here) and NO `bodyGlintBackdrop` far-dissolve (the spec's Goal
-states the glint is "present the moment Sgr A* is on screen at all" —
+states the glint is "present the moment Sgr A\* is on screen at all" —
 unconditional on far distance, unlike the seeded planets' glints).
 
 **Steps:**
@@ -526,7 +536,7 @@ unconditional on far distance, unlike the seeded planets' glints).
       header documents for the Earth caption stamp (`bodyGlintsLayer.ts:153-166`),
       but for `enabled` itself since this is a VISUAL row, not a pick-only
       widening.
-- [x] No `drawPick` change — the spec states Sgr A*'s existing pick stamp
+- [x] No `drawPick` change — the spec states Sgr A\*'s existing pick stamp
       (its caption) is untouched by this feature; the far-field glint carries
       no pick aspect of its own.
 - [x] Add a behavioural test (in the existing
@@ -548,6 +558,7 @@ unconditional on far distance, unlike the seeded planets' glints).
 ### Task 9: `SchwarzschildDeflectionLut` type + `buildSchwarzschildDeflectionLut`
 
 **Files:**
+
 - Create: `src/@types/lensing/SchwarzschildDeflectionLut.d.ts`
 - Create: `src/utils/lensing/buildSchwarzschildDeflectionLut.ts`
 - Create: `tests/utils/lensing/buildSchwarzschildDeflectionLut.test.ts`
@@ -612,6 +623,7 @@ export function buildSchwarzschildDeflectionLut(sampleCount: number): Schwarzsch
 ### Task 10: Lensing WGSL uniform struct — byte/offset table
 
 **Files:**
+
 - Create: `src/services/gpu/shaders/lib/sgrAStarLensing.wesl` (or fold into
   an existing lensing-adjacent lib module if one is created by Task 13 —
   implementer's call on the exact filename; the byte table below is the
@@ -627,25 +639,25 @@ Follows the `CameraUniforms` shared-prefix pattern from
 `viewportPx` + 2 pad floats), renderer-specific fields at offset 80+,
 16-byte-aligned before any `vec3`/`vec4`:
 
-| Offset (bytes) | Field | Type | Notes |
-|---|---|---|---|
-| 0–63 | `cam.viewProj` | `mat4x4<f32>` | shared `CameraUniforms` prefix |
-| 64–71 | `cam.viewportPx` | `vec2<f32>` | shared prefix |
-| 72–79 | `cam._pad0`, `cam._pad1` | `f32`, `f32` | shared prefix pads |
-| 80–83 | `schwarzschildRadiusM` | `f32` | r_s in metres — the pass's own scale unit |
-| 84–87 | `innerRs` | `f32` | emission annulus inner edge, r_s units |
-| 88–91 | `outerRs` | `f32` | emission annulus outer edge, r_s units |
-| 92–95 | `inclinationRad` | `f32` | |
-| 96–99 | `positionAngleRad` | `f32` | |
-| 100–103 | `flickerAmp` | `f32` | |
-| 104–107 | `flickerTimescaleS` | `f32` | |
-| 108–111 | `flickerPhase` | `f32` | sim-clock-derived phase, uploaded per frame (not a `BLACK_HOLES` constant) |
-| 112–115 | `lutMinImpactParamRs` | `f32` | from `SchwarzschildDeflectionLut.minImpactParamRs` |
-| 116–119 | `lutMaxImpactParamRs` | `f32` | from `SchwarzschildDeflectionLut.maxImpactParamRs` |
-| 120–123 | `lutSampleCount` | `f32` (or `u32`, matching the LUT texture's actual texel count) | |
-| 124–127 | `bandAlpha` | `f32` | the fade band's own alpha this frame — gates emission/deflection strength in-shader for the crossfade, avoiding a second CPU-side branch |
-| 128–139 | `anchorPosRelCamM` | `vec3<f32>` | camera-relative anchor position, metres — the f64→f32 rebase seam, same pattern `bodyGlintsLayer`/`starPointsLayer` use |
-| 140–143 | `_pad2` | `f32` | pad to keep the following field 16-byte aligned if one is added later; omit if 140 already satisfies alignment for the struct's end |
+| Offset (bytes) | Field                    | Type                                                            | Notes                                                                                                                                    |
+| -------------- | ------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 0–63           | `cam.viewProj`           | `mat4x4<f32>`                                                   | shared `CameraUniforms` prefix                                                                                                           |
+| 64–71          | `cam.viewportPx`         | `vec2<f32>`                                                     | shared prefix                                                                                                                            |
+| 72–79          | `cam._pad0`, `cam._pad1` | `f32`, `f32`                                                    | shared prefix pads                                                                                                                       |
+| 80–83          | `schwarzschildRadiusM`   | `f32`                                                           | r_s in metres — the pass's own scale unit                                                                                                |
+| 84–87          | `innerRs`                | `f32`                                                           | emission annulus inner edge, r_s units                                                                                                   |
+| 88–91          | `outerRs`                | `f32`                                                           | emission annulus outer edge, r_s units                                                                                                   |
+| 92–95          | `inclinationRad`         | `f32`                                                           |                                                                                                                                          |
+| 96–99          | `positionAngleRad`       | `f32`                                                           |                                                                                                                                          |
+| 100–103        | `flickerAmp`             | `f32`                                                           |                                                                                                                                          |
+| 104–107        | `flickerTimescaleS`      | `f32`                                                           |                                                                                                                                          |
+| 108–111        | `flickerPhase`           | `f32`                                                           | sim-clock-derived phase, uploaded per frame (not a `BLACK_HOLES` constant)                                                               |
+| 112–115        | `lutMinImpactParamRs`    | `f32`                                                           | from `SchwarzschildDeflectionLut.minImpactParamRs`                                                                                       |
+| 116–119        | `lutMaxImpactParamRs`    | `f32`                                                           | from `SchwarzschildDeflectionLut.maxImpactParamRs`                                                                                       |
+| 120–123        | `lutSampleCount`         | `f32` (or `u32`, matching the LUT texture's actual texel count) |                                                                                                                                          |
+| 124–127        | `bandAlpha`              | `f32`                                                           | the fade band's own alpha this frame — gates emission/deflection strength in-shader for the crossfade, avoiding a second CPU-side branch |
+| 128–139        | `anchorPosRelCamM`       | `vec3<f32>`                                                     | camera-relative anchor position, metres — the f64→f32 rebase seam, same pattern `bodyGlintsLayer`/`starPointsLayer` use                  |
+| 140–143        | `_pad2`                  | `f32`                                                           | pad to keep the following field 16-byte aligned if one is added later; omit if 140 already satisfies alignment for the struct's end      |
 
 Total struct size: 144 bytes (rounds to a 16-byte multiple). The
 `SchwarzschildDeflectionLut.samples` themselves are NOT part of this uniform
@@ -679,6 +691,7 @@ absent file) the spec cites.
 ### Task 11: Sky-capture — fixed-size cubemap target row + `skyCubemapFaceContext`
 
 **Files:**
+
 - Modify: `src/services/gpu/renderTargets.ts` (`renderTargetRows` — new row)
 - Create: `src/services/engine/frame/skyCubemapFaceContext.ts`
 - Create: `tests/services/engine/frame/skyCubemapFaceContext.test.ts`
@@ -705,16 +718,16 @@ export function skyCubemapFaceContext(input: {
   the roster's additive draws keep their dynamic range), `depth: null` (the
   captured roster — point-sprites, star-catalog/aggregates, S-star glints —
   is depthless/additive, same profile as `hdr`), `clearValue: { r: 0, g: 0,
-  b: 0, a: 0 }` (same additive-identity reason every reduced-res row in the
+b: 0, a: 0 }` (same additive-identity reason every reduced-res row in the
   table clears to zero — see `renderTargets.ts`'s module header), `fixedSizePx: { size: 256,
-  layers: 6 }` (Task 3's mechanism), `scale` unused/irrelevant when
+layers: 6 }` (Task 3's mechanism), `scale` unused/irrelevant when
   `fixedSizePx` is set (per Task 3's contract) but the field is still
   required by the type — set it to `1` as an inert placeholder.
 
 **Steps:**
 
 - [x] Add the test `skyCubemapFaceContext — derives a ReadyFrameContext with
-      the eye at the anchor position, looking along the requested face axis`:
+    the eye at the anchor position, looking along the requested face axis`:
       call it for each of the 6 `CubeFace` values with a fixture `eyeMpc`,
       assert the returned context's camera position matches `eyeMpc` and its
       view direction matches the ±X/±Y/±Z convention documented on `CubeFace`
@@ -745,6 +758,7 @@ export function skyCubemapFaceContext(input: {
 ### Task 12: Capture scheduling + roster wiring
 
 **Files:**
+
 - Create: `src/services/engine/frame/skyCubemapCaptureSchedule.ts`
 - Create: `tests/services/engine/frame/skyCubemapCaptureSchedule.test.ts`
 - Modify: `src/services/engine/frame/frameProgram.ts` (capture render steps,
@@ -793,14 +807,14 @@ available via `ctx`/`state`) and passes it as the new fourth argument.
 **Steps:**
 
 - [x] Add the test `skyCubemapCaptureSchedule — full 6-face capture on band
-      entry`: `bandJustEngaged: true` → `facesToCapture` has all 6 faces
+    entry`: `bandJustEngaged: true` → `facesToCapture` has all 6 faces
       regardless of `frameIndex`.
 - [x] Add the test `skyCubemapCaptureSchedule — round-robins one face per
-      frame otherwise`: `bandJustEngaged: false`, vary `frameIndex` across 6
+    frame otherwise`: `bandJustEngaged: false`, vary `frameIndex` across 6
       consecutive values → each yields exactly one face, cycling through all
       6 without repeats within the cycle.
 - [x] Add the test `skyCubemapCaptureSchedule — escape valve re-captures a
-      stale or camera-moved face out of turn`: a face whose
+    stale or camera-moved face out of turn`: a face whose
       `lastCapturedAtMs` predates `nowMs` by more than the threshold (or
       `cameraMovedBeyondThreshold: true`) appears in `facesToCapture` even
       when the round-robin wouldn't select it this frame.
@@ -845,6 +859,7 @@ available via `ctx`/`state`) and passes it as the new fourth argument.
 ### Task 13: `ContentLayer` row `sgrAStarLensing` + the geodesic WESL shader
 
 **Files:**
+
 - Create: `src/services/gpu/shaders/bodies/sgrAStarLensing/vertex.wesl`
 - Create: `src/services/gpu/shaders/bodies/sgrAStarLensing/fragment.wesl`
 - Create: `src/services/gpu/renderers/bodies/sgrAStarLensingRenderer.ts`
@@ -853,6 +868,7 @@ available via `ctx`/`state`) and passes it as the new fourth argument.
   layer + import export)
 
 **Interfaces:**
+
 - `sgrAStarLensingLayer: ContentLayer` — `slab: 'body'`, `target: 'hdr'`,
   `blend: 'over'` (per-pixel alpha lets the roster show through where
   deflection is negligible — the spec's "per-pixel alpha does the rest of
@@ -936,6 +952,7 @@ not a licence to build finite-distance geodesics.
 ### Task 14: Draw-order reorder — lensing before `orbit-trails`/`body-glints`
 
 **Files:**
+
 - Modify: `src/services/engine/frame/passes/index.ts`
 
 **Interfaces:** none new — a reorder of `CONTENT_LAYERS`'s existing array
@@ -980,6 +997,7 @@ retuned, and `cubemapResolutionPx` is a live VRAM/sharpness trade. The
 176-byte uniform tail is therefore permanent. See the spec's §Settings.
 
 **Files:**
+
 - Create: `src/components/DebugPanel/SgrAStarLensingTuningSection.tsx`
 - Create: `src/components/containers/SgrAStarLensingTuningSectionContainer.tsx`
 - Modify: `src/components/DebugPanel/DebugPanel.tsx`
@@ -1023,13 +1041,13 @@ gate).
       read `.claude/skills/perf/SKILL.md` first, then run `npm run perf`
       with `--url http://localhost:<this worktree's dev-server port>` (read
       the port off this worktree's own `npm run dev` output — never another
-      branch's server). Record the baseline numbers outside the band (Sgr A*
+      branch's server). Record the baseline numbers outside the band (Sgr A\*
       far off-frame) and note there is no "inside the band" baseline yet
       (the feature doesn't exist).
 - [x] AFTER Task 15 (all feature work done — the tuning section ships, per
       the Settings amendment above, so there is no removal step to wait on):
       re-run
-      `npm run perf` the same way, twice — once with Sgr A* far outside the
+      `npm run perf` the same way, twice — once with Sgr A\* far outside the
       lensing band (expect a neutral delta vs. the baseline — Q6's zero-cost
       guarantee), once with the camera inside the band (expect a bounded,
       not unbounded, cost — the six-face capture amortized per Q8, the LUT
@@ -1058,7 +1076,7 @@ gate).
 
 **Steps:**
 
-- [x] With the dev server running and the feature complete, focus Sgr A* and
+- [x] With the dev server running and the feature complete, focus Sgr A\* and
       descend into the lensing band. Verify, with the user, EACH of the
       spec's five checklist items verbatim:
   - [x] shadow diameter reads as ~5.2 r_s (the EHT-consistent apparent size);
@@ -1085,6 +1103,7 @@ gate).
 ## Definition of Done
 
 **Deliverable inventory:**
+
 - Phase A: `SCENE_ANCHOR_POINT_BODIES`, `visibleSlabBodies`'s `{bodies}`
   signature, the three-term `BODY_SLAB_CAPACITY`, `clampDistance`'s
   `standoffRadii` param, `SGR_A_STAR.standoffRadii`, `RenderTargetSpec.fixedSizePx`.
@@ -1098,7 +1117,8 @@ gate).
   deleted with both its readers migrated.
 
 **Named observable behaviours (manual smoke pass):**
-- Sgr A* shows a faint warm-orange glint from any distance while on screen,
+
+- Sgr A\* shows a faint warm-orange glint from any distance while on screen,
   with no mesh (confirms `AnchorPointBody`'s corrected docblock is honest).
 - Descending inside 500 AU, the glint crossfades into a lensed close-up with
   no pop; inside 100 AU the close-up is fully engaged.
@@ -1112,12 +1132,13 @@ gate).
   pre-feature baseline; inside the band, the cost is bounded, not runaway.
 
 **Deferral boundary (from the spec's non-goals — do not chase these):**
+
 - No Kerr metric (Schwarzschild only).
 - No full-GR observer view below 2 r_s (no local-frame aberration/redshift;
   the descent floor stops the camera at the boundary where the shader's
   static-viewpoint model is still defensible).
 - No cinematic accretion disc (EHT-style faint glow only).
-- No M87* or any second black hole (`BLACK_HOLES` holds room for one; not
+- No M87\* or any second black hole (`BLACK_HOLES` holds room for one; not
   populated here).
 - No tour beat.
 - No lensing of annotations (orbit trails, marker rings, labels, picking

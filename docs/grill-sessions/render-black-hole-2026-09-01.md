@@ -1,21 +1,21 @@
-# Grill Session: Rendering Sgr A* (black-hole close-up) — 2026-09-01
+# Grill Session: Rendering Sgr A\* (black-hole close-up) — 2026-09-01
 
-Source: live brainstorming session, pivoting from a Gaia-data research question ("what's near the GC?") to the deliberate follow-up the S-star spec deferred: giving Sgr A* a visual treatment. Prior art surveyed: PR #365 `feat/gravitational-lensing` (cluster lensing).
+Source: live brainstorming session, pivoting from a Gaia-data research question ("what's near the GC?") to the deliberate follow-up the S-star spec deferred: giving Sgr A\* a visual treatment. Prior art surveyed: PR #365 `feat/gravitational-lensing` (cluster lensing).
 
-Goal: when the camera descends past the S-stars onto Sgr A*, show a physically-grounded black-hole close-up — shadow, photon ring, gravitationally lensed background — instead of today's nothing.
+Goal: when the camera descends past the S-stars onto Sgr A\*, show a physically-grounded black-hole close-up — shadow, photon ring, gravitationally lensed background — instead of today's nothing.
 
 Context findings that framed the session (Explore survey of main @ 9dce415f4):
 
-- Sgr A* ships as an `AnchorPointBody` (position, label, real Schwarzschild radius 12.69×10⁶ km ≈ 0.085 AU) that deliberately draws nothing; the S-star spec's non-goals name "black disc, lensing, photon ring" as a dedicated follow-up — this feature.
+- Sgr A\* ships as an `AnchorPointBody` (position, label, real Schwarzschild radius 12.69×10⁶ km ≈ 0.085 AU) that deliberately draws nothing; the S-star spec's non-goals name "black disc, lensing, photon ring" as a dedicated follow-up — this feature.
 - The scale ladder already reaches it: focus + per-body standoff + NEAR0 adaptive frustum let the camera descend to ~1× r_s today.
 - PR #365 (SIS/NFW cluster lensing, 40 commits, June 2026) is **template, not base**: different feature (background galaxies lensed by clusters, vertex-stage thin-lens), ~53-file conflicts after the `galaxyCatalog/` shader reorg, 257 commits stale. Reusable ideas: two-vec4 lens uniform pattern, precompute-a-LUT-instead-of-per-vertex-root-finding.
-- Landmine: backlog item `2026-07-30-camera-target-vs-origin-distance-gates.md` names Sgr A* as the first case where origin-relative NEAR0 gate derivation diverges from target-relative reads.
+- Landmine: backlog item `2026-07-30-camera-target-vs-origin-distance-gates.md` names Sgr A\* as the first case where origin-relative NEAR0 gate derivation diverges from target-relative reads.
 
 ---
 
 ## Q1: Visual ambition
 
-**The question:** What should "rendering Sgr A*" deliver when the camera approaches — how big is this feature?
+**The question:** What should "rendering Sgr A\*" deliver when the camera approaches — how big is this feature?
 
 **Considerations:**
 
@@ -27,15 +27,15 @@ Context findings that framed the session (Explore survey of main @ 9dce415f4):
 
 ## Q2: Physical honesty of the emission
 
-**The question:** Sgr A* is quiescent — no bright Interstellar-style accretion disc exists in reality. How honest is the close-up?
+**The question:** Sgr A\* is quiescent — no bright Interstellar-style accretion disc exists in reality. How honest is the close-up?
 
 **Considerations:**
 
 - **Option A (honest quiescent):** shadow + photon ring + lensed starfield only. Fully defensible; relies on lensing alone for spectacle.
 - **Option B (cinematic disc):** glowing doppler-beamed disc. Spectacular but fictional for this object; large extra shader surface.
-- **Option C (faint EHT-style glow):** honest scene plus a dim ring-hugging emission matched to the EHT Sgr A* image geometry. Small addition; keeps the "this is what it looks like" claim defensible with a documented false-colour note.
+- **Option C (faint EHT-style glow):** honest scene plus a dim ring-hugging emission matched to the EHT Sgr A\* image geometry. Small addition; keeps the "this is what it looks like" claim defensible with a documented false-colour note.
 
-**Decision:** **Faint EHT-style glow (C).** Middle path: the glow marks the object from afar and gives the lensing something to act on, while staying anchored to a real measurement. Noted honestly: at visual wavelengths Sgr A* is dark — EHT orange is 230 GHz false colour, so the glow is documented artistic licence.
+**Decision:** **Faint EHT-style glow (C).** Middle path: the glow marks the object from afar and gives the lensing something to act on, while staying anchored to a real measurement. Noted honestly: at visual wavelengths Sgr A\* is dark — EHT orange is 230 GHz false colour, so the glow is documented artistic licence.
 
 ## Q3: Lensing technique
 
@@ -56,7 +56,7 @@ Context findings that framed the session (Explore survey of main @ 9dce415f4):
 **Considerations:**
 
 - **Option A (Schwarzschild):** no spin. Closed-form-ish deflection, 1D LUT, simple shadow geometry.
-- **Option B (Kerr):** spin adds frame-dragging asymmetry — but Sgr A*'s spin magnitude/orientation are poorly constrained, geodesics need a 4D LUT or full integration everywhere, and the shadow-shape difference is a few percent.
+- **Option B (Kerr):** spin adds frame-dragging asymmetry — but Sgr A\*'s spin magnitude/orientation are poorly constrained, geodesics need a 4D LUT or full integration everywhere, and the shadow-shape difference is a few percent.
 
 **Decision:** **Schwarzschild (A).** We don't know the spin, so Kerr would be heavy machinery in service of an unverifiable claim; the doppler asymmetry people actually notice comes from disc-material motion, modelled regardless.
 
@@ -73,12 +73,12 @@ Context findings that framed the session (Explore survey of main @ 9dce415f4):
 
 ## Q6: Activation envelope and far-field presence
 
-**The question:** When does the expensive pass run, and what exists at Sgr A* before it engages?
+**The question:** When does the expensive pass run, and what exists at Sgr A\* before it engages?
 
 **Considerations:**
 
 - **Empty far field (status quo):** nothing until the pass engages — the object pops into existence.
-- **Far-field glint + fade band:** a faint orange point-glint at the anchor from afar (the real compact source), crossfading into the geodesic pass via the existing `SCALE_FADE_BANDS` mechanism keyed on distance to the Sgr A* anchor (the same pattern the GC Milky-Way fade shipped on in #642).
+- **Far-field glint + fade band:** a faint orange point-glint at the anchor from afar (the real compact source), crossfading into the geodesic pass via the existing `SCALE_FADE_BANDS` mechanism keyed on distance to the Sgr A\* anchor (the same pattern the GC Milky-Way fade shipped on in #642).
 
 **Decision:** **Glint + fade band**, roughly engage ≤ 500 AU → fully on by ~100 AU (the shadow is subpixel until a few hundred AU, conveniently inside the S-star cluster scale). Pass cost is exactly zero outside the band.
 
@@ -86,7 +86,7 @@ Context findings that framed the session (Explore survey of main @ 9dce415f4):
 
 **The question:** What emission model, and does it vary in time?
 
-**Considerations:** thin equatorial annulus at ~3–6 r_s (ISCO outward → the ~5 r_s lensed ring the EHT measured), Keplerian doppler brightening on the approaching side, near face-on viewing (EHT constrains inclination ≲ 30°), warm orange, calibrated fainter than the S-stars. Position angle unconstrained observationally — pick one and note it. Variability: Sgr A* flickers on minute timescales (its EHT image needed variability correction); options were skip (less shader surface) vs include minimally.
+**Considerations:** thin equatorial annulus at ~3–6 r_s (ISCO outward → the ~5 r_s lensed ring the EHT measured), Keplerian doppler brightening on the approaching side, near face-on viewing (EHT constrains inclination ≲ 30°), warm orange, calibrated fainter than the S-stars. Position angle unconstrained observationally — pick one and note it. Variability: Sgr A\* flickers on minute timescales (its EHT image needed variability correction); options were skip (less shader surface) vs include minimally.
 
 **Decision:** annulus model as above, **flicker included, minimally** — one global sim-clock-driven brightness modulation, no patch structure.
 
@@ -105,7 +105,7 @@ Context findings that framed the session (Explore survey of main @ 9dce415f4):
 
 **The question:** Any settings — toggle, strength slider?
 
-**Considerations:** PR #365 had a `lensStrength` slider because cluster lensing at physical 1× is invisible; here physical 1× *is* the show. A toggle would exist only as a perf escape hatch, but the pass is already proximity-gated to ~zero cost elsewhere.
+**Considerations:** PR #365 had a `lensStrength` slider because cluster lensing at physical 1× is invisible; here physical 1× _is_ the show. A toggle would exist only as a perf escape hatch, but the pass is already proximity-gated to ~zero cost elsewhere.
 
 **Decision:** **Zero new settings.** Physically parameterized from the shipped anchor body (mass → r_s). Dev tuning through the existing debug panel, removed before merge. Code-is-liability default.
 
@@ -123,7 +123,7 @@ Context findings that framed the session (Explore survey of main @ 9dce415f4):
 
 ## Q11: Sequencing — park on the body slab
 
-**The question:** Ground prep was about to include a precision/gate probe (AU-scale scene 8.2 kpc from render origin ≈ f32 epsilon territory; the target-vs-origin NEAR0 gate item names Sgr A* as first victim). But a **body slab** is being implemented in another worktree (riding the Earth RTC camera effort) — probe now, or wait?
+**The question:** Ground prep was about to include a precision/gate probe (AU-scale scene 8.2 kpc from render origin ≈ f32 epsilon territory; the target-vs-origin NEAR0 gate item names Sgr A\* as first victim). But a **body slab** is being implemented in another worktree (riding the Earth RTC camera effort) — probe now, or wait?
 
 **Considerations:**
 
@@ -136,6 +136,6 @@ Context findings that framed the session (Explore survey of main @ 9dce415f4):
 
 ## Resume checklist (when the body slab lands)
 
-1. Probe: focus Sgr A*, force distance to ~2 r_s, observe jitter / frustum / S-star sprite stability under the new slab.
+1. Probe: focus Sgr A\*, force distance to ~2 r_s, observe jitter / frustum / S-star sprite stability under the new slab.
 2. Run `refactor-ground`; decide whether `docs/backlog/2026-07-30-camera-target-vs-origin-distance-gates.md` becomes prep inside this feature.
 3. Write the spec from this transcript (decisions Q1–Q10 are settled; don't re-litigate without new evidence).

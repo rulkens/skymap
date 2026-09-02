@@ -4,7 +4,7 @@
  */
 
 const C_M_S = 299792458;
-const G_M3_KG_S2 = 6.67430e-11;
+const G_M3_KG_S2 = 6.6743e-11;
 const SOLAR_MASS_KG = 1.98892e30;
 
 export function schwarzschildRadiusM(massSolar: number): number {

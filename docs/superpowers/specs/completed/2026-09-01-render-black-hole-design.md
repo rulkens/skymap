@@ -48,16 +48,16 @@ the close-up crossfades in. The camera may descend to 2 Schwarzschild radii
 
 ## Data
 
-| quantity                             | value                                              |
-| ------------------------------------- | --------------------------------------------------- |
-| Sgr A\* mass                          | 4.297 × 10⁶ M☉ (GRAVITY Collaboration 2019, A&A 625, L10) |
-| Schwarzschild radius (derived)        | `2GM/c²` ≈ 12.69 × 10⁶ km ≈ 0.085 AU — same figure `sgrAStarSchwarzschildRadiusKm.ts` hand-authored today |
-| Emission annulus                      | 3–6 r_s (ISCO outward to the ~5 r_s EHT-measured lensed ring) |
-| Inclination                           | ≲ 30° from face-on (EHT constraint) |
-| Position angle                        | unconstrained observationally; one value chosen and noted as such |
-| Flicker                               | one global sim-clock brightness modulation, minute-scale timescale, no patch structure (Q7) |
-| Lensing band (Q6)                     | engage ≤ 500 AU, full by 100 AU |
-| Descent floor (Q10)                   | 2 r_s, via per-body `standoffRadii` override |
+| quantity                       | value                                                                                                     |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Sgr A\* mass                   | 4.297 × 10⁶ M☉ (GRAVITY Collaboration 2019, A&A 625, L10)                                                 |
+| Schwarzschild radius (derived) | `2GM/c²` ≈ 12.69 × 10⁶ km ≈ 0.085 AU — same figure `sgrAStarSchwarzschildRadiusKm.ts` hand-authored today |
+| Emission annulus               | 3–6 r_s (ISCO outward to the ~5 r_s EHT-measured lensed ring)                                             |
+| Inclination                    | ≲ 30° from face-on (EHT constraint)                                                                       |
+| Position angle                 | unconstrained observationally; one value chosen and noted as such                                         |
+| Flicker                        | one global sim-clock brightness modulation, minute-scale timescale, no patch structure (Q7)               |
+| Lensing band (Q6)              | engage ≤ 500 AU, full by 100 AU                                                                           |
+| Descent floor (Q10)            | 2 r_s, via per-body `standoffRadii` override                                                              |
 
 ```ts
 // src/data/bodies/sgrAStarMassSolar.ts — one symbol per file.
