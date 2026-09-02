@@ -9,7 +9,9 @@
  * the engage flip, a ~0.12 rad pop walked out by the decay).
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
 
 import { bandRollTarget } from '../../../../src/services/engine/camera/frameAlignedRoll';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -63,30 +65,42 @@ const STANDPOINTS = [
   { yaw: 2.1, pitch: -0.4 },
 ];
 
-describe('orientation-target symmetry (ruling 10)', () => {
-  it.each(STANDPOINTS)('world and engaged targets agree at every altitude (yaw %j)', (sp) => {
-    for (const hr of HRS) {
-      const pose = poseAtHR(hr, sp.yaw, sp.pitch);
-      const target = bandRollTarget(pose, BODIES, B, B);
-      expect(target).not.toBeNull();
+// Both blend spaces (ruling 11): the toggle changes the weight's parameter
+// space in the ONE home, so cross-arm equality must survive either setting.
+describe.each(['log', 'lin'] as const)(
+  'orientation-target symmetry (ruling 10, %s space)',
+  (space) => {
+    beforeEach(() => {
+      ORIENT_TUNING.blendSpace = space;
+    });
+    afterEach(() => {
+      ORIENT_TUNING.blendSpace = 'log';
+    });
 
-      const eye = eyeMpcOf(pose, B);
-      const forward = normalize3([
-        pose.target[0]! - eye[0]!,
-        pose.target[1]! - eye[1]!,
-        pose.target[2]! - eye[2]!,
-      ] as Vec3);
-      const worldUp = [...imagePlaneBasis(forward, target!, UP_REF).up] as Vec3;
+    it.each(STANDPOINTS)('world and engaged targets agree at every altitude (yaw %j)', (sp) => {
+      for (const hr of HRS) {
+        const pose = poseAtHR(hr, sp.yaw, sp.pitch);
+        const target = bandRollTarget(pose, BODIES, B, B);
+        expect(target).not.toBeNull();
 
-      // The engaged settle's reference north at the SAME standpoint/altitude,
-      // built in body axes and rotated back to world.
-      const luWorld = normalize3([-forward[0]!, -forward[1]!, -forward[2]!] as Vec3);
-      const luBody = rotateVec3ByTightMat3T(luWorld, EARTH.orientation);
-      const sceneUpBody = rotateVec3ByTightMat3T(UP_REF, EARTH.orientation);
-      const { north } = blendedEnuAt(luBody, bodyUpWeight(hr), sceneUpBody, null);
-      const engagedUp = rotateVec3ByTightMat3(north, EARTH.orientation);
+        const eye = eyeMpcOf(pose, B);
+        const forward = normalize3([
+          pose.target[0]! - eye[0]!,
+          pose.target[1]! - eye[1]!,
+          pose.target[2]! - eye[2]!,
+        ] as Vec3);
+        const worldUp = [...imagePlaneBasis(forward, target!, UP_REF).up] as Vec3;
 
-      expect(angleBetween(worldUp, engagedUp)).toBeLessThan(1e-6);
-    }
-  });
-});
+        // The engaged settle's reference north at the SAME standpoint/altitude,
+        // built in body axes and rotated back to world.
+        const luWorld = normalize3([-forward[0]!, -forward[1]!, -forward[2]!] as Vec3);
+        const luBody = rotateVec3ByTightMat3T(luWorld, EARTH.orientation);
+        const sceneUpBody = rotateVec3ByTightMat3T(UP_REF, EARTH.orientation);
+        const { north } = blendedEnuAt(luBody, bodyUpWeight(hr), sceneUpBody, null);
+        const engagedUp = rotateVec3ByTightMat3(north, EARTH.orientation);
+
+        expect(angleBetween(worldUp, engagedUp)).toBeLessThan(1e-6);
+      }
+    });
+  },
+);

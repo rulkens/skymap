@@ -9,7 +9,7 @@
  * bounded settle step; the defect is the burst AFTER it.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
@@ -39,6 +39,7 @@ import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENT_DECAY } from '../../../../src/data/camera/orientDecay';
+import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -147,55 +148,67 @@ function turnBetween(a: FrameSample, b: FrameSample): number {
 }
 
 describe('engage-flip pop (round 8)', () => {
-  it('a focused dive through engage settles monotonically — no post-flip burst', () => {
-    const { state, deps } = makeHarness();
-    const events: { t: number; deltaY: number }[] = [];
-    let t = 1000; // the follow approach settles at the framing distance first
-    for (let i = 0; i < 25; i += 1, t += 33) events.push({ t, deltaY: -100 });
-    const endT = t + 2000;
-
-    const samples: FrameSample[] = [];
-    let evIdx = 0;
-    for (let tt = 0; tt <= endT; tt += 16) {
-      while (evIdx < events.length && events[evIdx]!.t <= tt) {
-        (state.subsystems.inputAggregator as { push: (x: unknown) => void }).push({
-          kind: 'wheel',
-          deltaY: events[evIdx]!.deltaY,
-          duringGesture: false,
-          xPx: 50,
-          yPx: 50,
-        });
-        evIdx += 1;
-      }
-      runFrame(state, deps, tt);
-      samples.push(sampleOf(state));
-    }
-
-    const flipIdx = samples.findIndex(
-      (s, i) => i > 0 && s.arm === 'body' && samples[i - 1]!.arm === 'abs',
-    );
-    expect(flipIdx).toBeGreaterThan(0); // the dive really crossed engage
-
-    let maxPre = 0; // per-frame turns while the world arm still owned the dive
-    for (let i = 1; i < flipIdx; i += 1) {
-      maxPre = Math.max(maxPre, turnBetween(samples[i - 1]!, samples[i]!));
-    }
-    let maxPost = 0;
-    let cumPost = 0; // total image turn AFTER the conversion notch
-    for (let i = flipIdx + 1; i < samples.length; i += 1) {
-      const turn = turnBetween(samples[i - 1]!, samples[i]!);
-      maxPost = Math.max(maxPost, turn);
-      cumPost += turn;
-    }
-
-    // No whip anywhere near engage — the ruled per-notch envelope.
-    expect(maxPre).toBeLessThanOrEqual(ORIENT_DECAY.rideBoundRad + 2 * ORIENT_DECAY.capRad + 0.02);
-    // Monotone hand-off: the engaged settle may only CONTINUE the world arm's
-    // convergence, never open a fresh residual. Pre-fix: 0.030 > 0.024 (the
-    // flip minted ~0.12 rad of new deviation from the target-curve seam).
-    expect(maxPost).toBeLessThanOrEqual(maxPre + 1e-3);
-    // The pop itself: pre-fix the post-flip window walked 0.119 rad
-    // (unified field: 1.8e-4 — the flip finds no fresh residual to spend).
-    expect(cumPost).toBeLessThan(0.01);
+  afterEach(() => {
+    ORIENT_TUNING.blendSpace = 'log';
   });
+
+  // Both blend spaces (ruling 11): the seam guard must hold whichever
+  // parameter space the one-home weight runs in.
+  it.each(['log', 'lin'] as const)(
+    'a focused dive through engage settles monotonically — no post-flip burst (%s space)',
+    (space) => {
+      ORIENT_TUNING.blendSpace = space;
+      const { state, deps } = makeHarness();
+      const events: { t: number; deltaY: number }[] = [];
+      let t = 1000; // the follow approach settles at the framing distance first
+      for (let i = 0; i < 25; i += 1, t += 33) events.push({ t, deltaY: -100 });
+      const endT = t + 2000;
+
+      const samples: FrameSample[] = [];
+      let evIdx = 0;
+      for (let tt = 0; tt <= endT; tt += 16) {
+        while (evIdx < events.length && events[evIdx]!.t <= tt) {
+          (state.subsystems.inputAggregator as { push: (x: unknown) => void }).push({
+            kind: 'wheel',
+            deltaY: events[evIdx]!.deltaY,
+            duringGesture: false,
+            xPx: 50,
+            yPx: 50,
+          });
+          evIdx += 1;
+        }
+        runFrame(state, deps, tt);
+        samples.push(sampleOf(state));
+      }
+
+      const flipIdx = samples.findIndex(
+        (s, i) => i > 0 && s.arm === 'body' && samples[i - 1]!.arm === 'abs',
+      );
+      expect(flipIdx).toBeGreaterThan(0); // the dive really crossed engage
+
+      let maxPre = 0; // per-frame turns while the world arm still owned the dive
+      for (let i = 1; i < flipIdx; i += 1) {
+        maxPre = Math.max(maxPre, turnBetween(samples[i - 1]!, samples[i]!));
+      }
+      let maxPost = 0;
+      let cumPost = 0; // total image turn AFTER the conversion notch
+      for (let i = flipIdx + 1; i < samples.length; i += 1) {
+        const turn = turnBetween(samples[i - 1]!, samples[i]!);
+        maxPost = Math.max(maxPost, turn);
+        cumPost += turn;
+      }
+
+      // No whip anywhere near engage — the ruled per-notch envelope.
+      expect(maxPre).toBeLessThanOrEqual(
+        ORIENT_DECAY.rideBoundRad + 2 * ORIENT_DECAY.capRad + 0.02,
+      );
+      // Monotone hand-off: the engaged settle may only CONTINUE the world arm's
+      // convergence, never open a fresh residual. Pre-fix: 0.030 > 0.024 (the
+      // flip minted ~0.12 rad of new deviation from the target-curve seam).
+      expect(maxPost).toBeLessThanOrEqual(maxPre + 1e-3);
+      // The pop itself: pre-fix the post-flip window walked 0.119 rad
+      // (unified field: 1.8e-4 — the flip finds no fresh residual to spend).
+      expect(cumPost).toBeLessThan(0.01);
+    },
+  );
 });

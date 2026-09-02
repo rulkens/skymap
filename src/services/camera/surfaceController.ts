@@ -20,6 +20,7 @@ import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { Vec4 } from '../../@types/math/Vec4';
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
+import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from '../../utils/camera/anchoredDragRotation';
 import { anchoredZoomStep } from '../../utils/camera/anchoredZoomStep';
 import { blendedEnuAt } from '../../utils/camera/blendedEnuAt';
@@ -307,13 +308,21 @@ function canonicalledPose(
   // measured at the pre-notch pose against ITS reference) decays, capped.
   // Feeding the whole residual to the decay is the freeze the round-5 sim
   // measured.
-  const dPsi = diveAnchorM
-    ? orientStepRad(f0.azimuthRad)
-    : (() => {
-        const dPre = preBlendAzimuthRad ?? f0.azimuthRad;
-        const moveRaw = Math.atan2(Math.sin(f0.azimuthRad - dPre), Math.cos(f0.azimuthRad - dPre));
-        return riddenOrientStepRad(dPre, moveRaw);
-      })();
+  // `northUp` (ruling 11 trial) gates heading + roll authority ONLY — the
+  // tilt block below stays live: its tilt-0-at-disengage wall is what keeps
+  // the fold retarget view-exact, toggle or no toggle.
+  const dPsi = !ORIENT_TUNING.northUp
+    ? 0
+    : diveAnchorM
+      ? orientStepRad(f0.azimuthRad)
+      : (() => {
+          const dPre = preBlendAzimuthRad ?? f0.azimuthRad;
+          const moveRaw = Math.atan2(
+            Math.sin(f0.azimuthRad - dPre),
+            Math.cos(f0.azimuthRad - dPre),
+          );
+          return riddenOrientStepRad(dPre, moveRaw);
+        })();
   if (dPsi !== 0) {
     const q = quatFromAxisAngle(diveAnchorM ? normalize3(diveAnchorM) : f0.localUp, dPsi);
     out = diveAnchorM ? rotatedAbout(out, q, BODY_CENTRE) : withBasis(out, q);
@@ -343,14 +352,16 @@ function canonicalledPose(
     }
   }
 
-  const f2 = eyeFrameOf(out, blendW, sceneUpLocal);
-  if (f2 !== null) {
-    const q = cappedRotationToward(
-      out.basisLocal,
-      canonicalBasisAt(f2, f2.azimuthRad, f2.tiltRad),
-      ORIENT_DECAY.capRad,
-    );
-    if (q !== null) out = diveAnchorM ? rotatedAbout(out, q, diveAnchorM) : withBasis(out, q);
+  if (ORIENT_TUNING.northUp) {
+    const f2 = eyeFrameOf(out, blendW, sceneUpLocal);
+    if (f2 !== null) {
+      const q = cappedRotationToward(
+        out.basisLocal,
+        canonicalBasisAt(f2, f2.azimuthRad, f2.tiltRad),
+        ORIENT_DECAY.capRad,
+      );
+      if (q !== null) out = diveAnchorM ? rotatedAbout(out, q, diveAnchorM) : withBasis(out, q);
+    }
   }
   return flooredPose(out, bodyRadiusM);
 }

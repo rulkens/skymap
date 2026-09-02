@@ -13,11 +13,19 @@
  * bakes.
  */
 
+import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { smoothstep } from '../math/smoothstep';
 
 export function bodyUpWeight(hOverR: number): number {
   // edge0 > edge1 is deliberate: the weight opens as h/R falls (same
-  // descending-ramp convention as maxTiltRad).
-  return smoothstep(SURFACE_REGIME.disengageHR, SURFACE_REGIME.engageHR, hOverR);
+  // descending-ramp convention as maxTiltRad). In 'log' space (ruling 11
+  // trial) the same smoothstep runs over log(h/R) — same edges, half-weight
+  // at the geometric midpoint, because zoom notches are multiplicative. The
+  // max() guards an at-surface pose against log(0).
+  const { engageHR, disengageHR } = SURFACE_REGIME;
+  if (ORIENT_TUNING.blendSpace === 'log') {
+    return smoothstep(Math.log(disengageHR), Math.log(engageHR), Math.log(Math.max(hOverR, 1e-9)));
+  }
+  return smoothstep(disengageHR, engageHR, hOverR);
 }

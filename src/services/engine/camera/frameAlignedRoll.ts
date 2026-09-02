@@ -18,6 +18,7 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import { ORIENT_TUNING } from '../../../data/camera/orientTuning';
 import { blendedUpDir } from '../../../utils/camera/blendedUpDir';
 import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
@@ -76,6 +77,9 @@ export function frameAlignedRoll(
   upBasis: Readonly<Mat3>,
 ): number {
   const currentRoll = postPose.roll ?? 0;
+  // Ruling 11 trial: north-up off switches the roll authority off whole —
+  // same gate the engaged heading/level settles read (one home).
+  if (!ORIENT_TUNING.northUp) return currentRoll;
   const tPre = bandRollTarget(prePose, bodyStates, poseBasis, upBasis);
   const tNew = bandRollTarget(postPose, bodyStates, poseBasis, upBasis);
   if (tPre === null || tNew === null) return currentRoll;

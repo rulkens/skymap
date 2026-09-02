@@ -14,6 +14,7 @@ import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapsho
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import DebugSection from './DebugSection';
+import OrientationTuning from './OrientationTuning';
 import styles from './CameraStateSection.module.css';
 
 export type CameraStateSectionProps = {
@@ -155,6 +156,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
           </div>
         </div>
       ))}
+      <OrientationTuning />
     </DebugSection>
   );
 }
