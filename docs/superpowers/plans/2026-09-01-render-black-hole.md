@@ -77,33 +77,33 @@ lenses and before the annotations that must stay unwarped.
 
 **Steps:**
 
-- [ ] Write `SCENE_ANCHOR_POINT_BODIES` (`sceneAnchorPointBodies.ts`):
+- [x] Write `SCENE_ANCHOR_POINT_BODIES` (`sceneAnchorPointBodies.ts`):
       `export const SCENE_ANCHOR_POINT_BODIES: readonly AnchorPointBody[] = [SGR_A_STAR];`
       importing `SGR_A_STAR` from `./sceneSgrAStar`.
-- [ ] Update the failing/changed tests in `visibleSlabBodies.test.ts` FIRST:
+- [x] Update the failing/changed tests in `visibleSlabBodies.test.ts` FIRST:
       every existing case's `{ earth, planets, bodyStates, ... }` call
       becomes `{ bodies: [...], bodyStates, ... }` (fold `earth`/`planets`
       into one array per case, preserving each case's asserted behaviour
       unchanged — this IS the zero-behaviour-change proof for those cases).
-- [ ] Add the test `admits an AnchorPointBody candidate on the same terms as a planet`:
+- [x] Add the test `admits an AnchorPointBody candidate on the same terms as a planet`:
       construct a synthetic `AnchorPointBody` (arbitrary `radiusM`) at a
       position/distance that clears both culls with a `bodyStates` entry,
       assert it appears in the result; construct a second one far outside the
       frustum, assert it does not.
-- [ ] Run `npm test -- visibleSlabBodies` — new tests fail (no `bodies` param
+- [x] Run `npm test -- visibleSlabBodies` — new tests fail (no `bodies` param
       yet), existing tests fail on the old `{earth, planets}` shape.
-- [ ] Implement: change `visibleSlabBodies`'s param to `bodies: readonly SceneBody[]`,
+- [x] Implement: change `visibleSlabBodies`'s param to `bodies: readonly SceneBody[]`,
       drop the internal concat (`visibleSlabBodies.ts:46`), keep every
       downstream line (`FRUSTUM_CULL_MARGIN_FACTOR`, `isInsideFrustum`,
       `bodyApparentDiameterPx`) untouched — they already operate on the
       `SceneBody` union's shared `radiusM`/`id` fields.
-- [ ] Update `frameContext.ts:201-209`'s call site to assemble `bodies` from
+- [x] Update `frameContext.ts:201-209`'s call site to assemble `bodies` from
       `state.data.bodies.earth` (null-checked), `state.data.bodies.planets`,
       and `SCENE_ANCHOR_POINT_BODIES`.
-- [ ] Update `BODY_SLAB_CAPACITY` (`frameProgram.ts:77`) to the three-term sum
+- [x] Update `BODY_SLAB_CAPACITY` (`frameProgram.ts:77`) to the three-term sum
       above; import `SCENE_ANCHOR_POINT_BODIES`.
-- [ ] Run `npm test -- visibleSlabBodies frameContext frameProgram` — all pass.
-- [ ] Add the test (in `orientationForBody.test.ts`) `returns identity for
+- [x] Run `npm test -- visibleSlabBodies frameContext frameProgram` — all pass.
+- [x] Add the test (in `orientationForBody.test.ts`) `returns identity for
       the Sgr A* anchor` — asserts `orientationForBody('sgr-a-star', <any
       simDays>)` equals `IDENTITY_MAT3`. This is the P1 "anchor
       orientation-identity verification through bodyRelativePose": Sgr A* is
@@ -112,18 +112,18 @@ lenses and before the annotations that must stay unwarped.
       the test pins that fact so a future accidental texture-registry entry
       for `sgr-a-star` can't silently rotate the body-slab basis
       `bodyRelativePose` builds from it.
-- [ ] Correct `AnchorPointBody.d.ts:2-3`'s docblock: replace "DRAWS NOTHING:
+- [x] Correct `AnchorPointBody.d.ts:2-3`'s docblock: replace "DRAWS NOTHING:
       no mesh, no point, no glint" with a statement that an anchor may draw a
       far-field glint and, inside its lensing band, a geodesic pass — both
       via dedicated `ContentLayer` rows keyed on its id (Phase B), never via
       the flat/textured/glint partition planets use. Keep the surrounding
       "identity fields only" rationale (still true — `AnchorPointBody` gained
       no new fields).
-- [ ] Correct the matching claim at `src/data/sources/sgr-a-star.ts:8` ("It
+- [x] Correct the matching claim at `src/data/sources/sgr-a-star.ts:8` ("It
       DRAWS NOTHING: no sphere, no point, no glint") the same way — same fact,
       second home, same staleness risk.
-- [ ] Run `npm test` (full suite) and `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run `npm test` (full suite) and `npm run typecheck` — green.
+- [x] Commit.
 
 **Proof obligation (spec):** with Sgr A* far outside the lensing band (any
 framing wider than the galactic centre), `visibleSlabBodies` returns exactly
@@ -156,35 +156,35 @@ scenes.
 
 **Steps:**
 
-- [ ] Add the test `clampDistance — per-body standoff` describing the
+- [x] Add the test `clampDistance — per-body standoff` describing the
       contract: with a `standoffRadii` of e.g. `2.0` and a pivot radius `R`,
       `clampDistance(smallD, R, 2.0)` floors at `2.0 * R` (not
       `SURFACE_STANDOFF_RADII * R`), asserted the same way the existing
       `EARTH_RADIUS_MPC`-relative tests assert (body radii, not raw Mpc — see
       the file's own header rationale).
-- [ ] Add the test `clampDistance — omitted standoffRadii keeps Earth's
+- [x] Add the test `clampDistance — omitted standoffRadii keeps Earth's
       current floor unchanged`: `clampDistance(d, EARTH_RADIUS_MPC)` (two-arg
       call, exactly as today's call sites use it) is byte-identical to
       today's behaviour — this is the zero-change proof for every body that
       doesn't opt in.
-- [ ] Run `npm test -- clampDistance` — new tests fail.
-- [ ] Implement the third parameter with the stated default; the floor
+- [x] Run `npm test -- clampDistance` — new tests fail.
+- [x] Implement the third parameter with the stated default; the floor
       becomes `Math.max(MIN_DISTANCE_MPC, pivotRadiusMpc * standoffRadii)`.
-- [ ] Run `npm test -- clampDistance` — passes.
-- [ ] Add `standoffRadii?: number` to `AnchorPointBody.d.ts`, with a one-line
+- [x] Run `npm test -- clampDistance` — passes.
+- [x] Add `standoffRadii?: number` to `AnchorPointBody.d.ts`, with a one-line
       doc note citing Q10 (2 r_s descent floor) as the reason a per-body
       override exists at all — the global `SURFACE_STANDOFF_RADII` stays
       tuned for Earth's imagery resolution (see `clampDistance.ts:26-46`) and
       must not regress.
-- [ ] Set `standoffRadii: 2.0` on `SGR_A_STAR` in `sceneSgrAStar.ts`.
-- [ ] Find and update the focus/zoom call site that currently calls
+- [x] Set `standoffRadii: 2.0` on `SGR_A_STAR` in `sceneSgrAStar.ts`.
+- [x] Find and update the focus/zoom call site that currently calls
       `clampDistance(d, pivotRadiusMpc)` for a focused `SceneBody` (a
       two-arg call somewhere in the orbit-camera/focus-tween path) to read an
       optional `standoffRadii` off the focused body when present, passing it
       as the third arg; every other body (no such field) falls through to
       the default.
-- [ ] Run `npm test` and `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run `npm test` and `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -220,7 +220,7 @@ export type RenderTargetSpec = {
 
 **Steps:**
 
-- [ ] Add the test `createRenderTargets — a fixedSizePx row allocates at its
+- [x] Add the test `createRenderTargets — a fixedSizePx row allocates at its
       declared size regardless of canvas size`: construct
       `createRenderTargets` with a test-only `RenderTargetSpec` row (or, if
       `renderTargetRows` isn't the seam under test, inject via whatever seam
@@ -228,35 +228,35 @@ export type RenderTargetSpec = {
       assert the allocated texture's `size` descriptor is
       `{ width: 256, height: 256, depthOrArrayLayers: 6 }` at a canvas of
       `{ width: 900, height: 600 }`.
-- [ ] Add the test `createRenderTargets — reconcile does not reallocate a
+- [x] Add the test `createRenderTargets — reconcile does not reallocate a
       fixedSizePx row when the canvas resizes`: call `reconcile` with a
       DIFFERENT canvas size than construction; assert `device.createTexture`
       was NOT called again for that row's id (mirrors the existing
       "reallocates... when the canvas size changes" test's call-count
       assertion style at `renderTargets.test.ts:52-88`, inverted).
-- [ ] Run `npm test -- renderTargets` — new tests fail (no such row exists
+- [x] Run `npm test -- renderTargets` — new tests fail (no such row exists
       yet to construct against — write them against a literal test spec
       object passed through whatever `renderTargetRows`-adjacent seam the
       implementer adds for injectability, OR against a temporary row added to
       `renderTargetRows` and removed once Phase B's real cubemap row lands;
       implementer's call, documented inline in the test file).
-- [ ] Add `fixedSizePx` to `RenderTargetSpec.d.ts` as above.
-- [ ] In `renderTargets.ts`, grow `reconcile`'s per-row loop
+- [x] Add `fixedSizePx` to `RenderTargetSpec.d.ts` as above.
+- [x] In `renderTargets.ts`, grow `reconcile`'s per-row loop
       (`renderTargets.ts:338-345`) so a `fixedSizePx` row computes
       `[fixedSizePx.size, fixedSizePx.size]` instead of calling
       `reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s))`
       — the held-size comparison and `allocate` call stay shared with every
       other row (a fixed size is just a size that never changes across
       resizes, not a separate code path past this one branch).
-- [ ] Grow `allocate` (`renderTargets.ts:293-330`) to pass
+- [x] Grow `allocate` (`renderTargets.ts:293-330`) to pass
       `depthOrArrayLayers: spec.fixedSizePx?.layers ?? 1` and
       `dimension: '2d'` (explicit — WebGPU defaults to `'2d'` already, but
       state it so a `layers > 1` row is unambiguous) in the texture
       descriptor's `size`, for both the colour and (if `spec.depth`) depth
       texture creation calls.
-- [ ] Run `npm test -- renderTargets` — passes.
-- [ ] Run `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run `npm test -- renderTargets` — passes.
+- [x] Run `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -296,23 +296,23 @@ scope — see the STOP-and-consult step below).
 
 **Steps:**
 
-- [ ] Start the dev server (`/dev` skill or `npm run dev`), focus Sgr A*
+- [x] Start the dev server (`/dev` skill or `npm run dev`), focus Sgr A*
       (already selectable/focusable today — `AnchorPointBody` is in
       `SCENE_BODIES` and carries a caption).
-- [ ] With Phase A merged (the slab-candidacy + standoff-floor prep live),
+- [x] With Phase A merged (the slab-candidacy + standoff-floor prep live),
       descend toward Sgr A* to the P2 floor (2 r_s — `standoffRadii: 2.0`
       now stops the camera there).
-- [ ] Observe: camera jitter at the floor, frustum near-plane behaviour
+- [x] Observe: camera jitter at the floor, frustum near-plane behaviour
       (`bodySlabRow`'s `near` derivation, `slabs.ts:219-236`), and S-star
       sprite/orbit-trail stability at that range (they ride the same NEAR0
       slab and f64 rebase seam).
-- [ ] **USER-ATTESTED GATE:** report findings to the user — this is a visual
+- [x] **USER-ATTESTED GATE:** report findings to the user — this is a visual
       judgment call, not a scripted assertion. If jitter/instability appears,
       STOP and consult before proceeding: does it implicate
       `docs/backlog/2026-07-30-camera-target-vs-origin-distance-gates.md`
       (per the spec's "Relationship to open items")? That folding decision is
       the user's call, made HERE, not assumed by this plan.
-- [ ] On a clean probe, proceed to Task 5. On a fold-in verdict, the folded
+- [x] On a clean probe, proceed to Task 5. On a fold-in verdict, the folded
       scope becomes new tasks inserted here (not silently absorbed into a
       later task's steps).
 
@@ -340,7 +340,7 @@ export function schwarzschildRadiusM(massSolar: number): number; // r_s = 2GM/c�
 
 **Steps:**
 
-- [ ] Add the test `schwarzschildRadiusM` (in
+- [x] Add the test `schwarzschildRadiusM` (in
       `tests/utils/physics/schwarzschildRadiusM.test.ts`) asserting
       `schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR)` is within float tolerance
       of the KNOWN figure — 12.69e6 km = 1.269e10 m (equivalently 0.085 AU,
@@ -350,20 +350,20 @@ export function schwarzschildRadiusM(massSolar: number): number; // r_s = 2GM/c�
       tolerance appropriate for a physical-constant computation (e.g.
       `toBeCloseTo` with a precision chosen so the real constants G/c round
       correctly, not an arbitrarily loose bound).
-- [ ] Run the test — fails (function doesn't exist).
-- [ ] Implement `schwarzschildRadiusM` using named physical constants (G, c)
+- [x] Run the test — fails (function doesn't exist).
+- [x] Implement `schwarzschildRadiusM` using named physical constants (G, c)
       — no existing G/c constant module was found in this codebase's
       `utils/`; add them as named locals in this file with their SI values
       and a one-line citation, following the `scaleUnits.ts` convention of
       named locals with IAU/physical-constant citations rather than inline
       magic numbers.
-- [ ] Run the test — passes.
-- [ ] Create `sgrAStarMassSolar.ts` with the single constant above.
-- [ ] In `sceneSgrAStar.ts`, replace the `SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM`
+- [x] Run the test — passes.
+- [x] Create `sgrAStarMassSolar.ts` with the single constant above.
+- [x] In `sceneSgrAStar.ts`, replace the `SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM`
       import and `radiusM: SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM * SCALE_UNITS.KM_TO_M`
       (line 41) with `radiusM: schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR)`
       (the function returns metres directly — no `KM_TO_M` step).
-- [ ] In `sStarOrbitInfo.ts:16-21`, replace the
+- [x] In `sStarOrbitInfo.ts:16-21`, replace the
       `SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM`-based `SCHWARZSCHILD_RADIUS_AU`
       derivation with one reading `schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR)`
       (converted through `SCALE_UNITS.M_TO_MPC` / `SCALE_UNITS.AU_TO_MPC` —
@@ -372,14 +372,14 @@ export function schwarzschildRadiusM(massSolar: number): number; // r_s = 2GM/c�
       (`BodyOrbitInfo.pericentreSchwarzschildRadii`, consumed by
       `BodyDetailCard.tsx:206-212`), migrated per the spec's explicit
       instruction rather than left orphaned.
-- [ ] Delete `sgrAStarSchwarzschildRadiusKm.ts` via
+- [x] Delete `sgrAStarSchwarzschildRadiusKm.ts` via
       `npm run refactor -- delete src/data/bodies/sgrAStarSchwarzschildRadiusKm.ts`
       (per plan-style rule 5 — never `git mv`/manual delete + hand-edited
       imports; the refactor CLI confirms no remaining importers before
       removing the file).
-- [ ] Run `npm test` and `npm run typecheck` — green (no remaining
+- [x] Run `npm test` and `npm run typecheck` — green (no remaining
       `SGR_A_STAR_SCHWARZSCHILD_RADIUS_KM` references).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -411,23 +411,23 @@ export const BLACK_HOLES: readonly BlackHoleRow[]; // one row: sgr-a-star
 
 **Steps:**
 
-- [ ] Add `BlackHoleRow.d.ts` per the contract above, with a docblock stating
+- [x] Add `BlackHoleRow.d.ts` per the contract above, with a docblock stating
       the registry is built to hold more than one row (M87* is data, not
       code, per the spec's non-goals) — mirrors `SCENE_PLANETS`'s
       append-only framing.
-- [ ] Add `blackHoles.ts` with `BLACK_HOLES` holding the `sgr-a-star` row:
+- [x] Add `blackHoles.ts` with `BLACK_HOLES` holding the `sgr-a-star` row:
       `emission.innerRs = 3`, `outerRs = 6` (ISCO-to-EHT-ring, spec Data
       table); `inclinationRad`/`positionAngleRad` chosen values (document the
       position-angle choice as unconstrained-but-fixed, per the spec); a
       flicker amplitude + timescale (minute-scale, spec Data table — no
       externally-known reference value exists for these, so pick and
       document as taste/dev-tuning-adjustable via Task 15's debug panel).
-- [ ] No test — this is a literal data table (a registry-restatement test
+- [x] No test — this is a literal data table (a registry-restatement test
       here would fail `testing.md`'s bar; the structural invariant worth
       testing, if any — e.g. `bodyId` values are valid `BodyId`s — is already
       enforced by `tsc` through the `BodyId` type itself).
-- [ ] Run `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -456,7 +456,7 @@ sgrAStarLensing: {
 
 **Steps:**
 
-- [ ] Add the test `SCALE_FADE_BANDS.sgrAStarLensing — 100/500 AU envelope in
+- [x] Add the test `SCALE_FADE_BANDS.sgrAStarLensing — 100/500 AU envelope in
       Mpc, approach direction`: assert `fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, x)`
       is `1` at/inside `100 * SCALE_UNITS.AU_TO_MPC`, `0` at/outside
       `500 * SCALE_UNITS.AU_TO_MPC`, and strictly between at a midpoint —
@@ -467,13 +467,13 @@ sgrAStarLensing: {
       band authored backwards) would flip this and is exactly what a
       classifier-direction test is for per `testing.md`'s boundary-test
       keep-rule.
-- [ ] Run the test — fails (row doesn't exist).
-- [ ] Add the `sgrAStarLensing` row to `SCALE_FADE_BANDS`, per the contract
+- [x] Run the test — fails (row doesn't exist).
+- [x] Add the `sgrAStarLensing` row to `SCALE_FADE_BANDS`, per the contract
       above, importing `SCALE_UNITS` (already imported in this file) — no new
       import needed for `AU_TO_MPC`, it already exists in `scaleUnits.ts`.
-- [ ] Run the test — passes.
-- [ ] Run `npm test` and `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run the test — passes.
+- [x] Run `npm test` and `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -507,10 +507,10 @@ unconditional on far distance, unlike the seeded planets' glints).
 
 **Steps:**
 
-- [ ] Add a named constant for the glint's fixed tint (warm-orange, linear
+- [x] Add a named constant for the glint's fixed tint (warm-orange, linear
       RGB) and its base intensity, beside the layer's existing
       `GLINT_MIN_BRIGHTNESS` constant.
-- [ ] In `draw`, after the existing `glints` packing loop, add a second loop
+- [x] In `draw`, after the existing `glints` packing loop, add a second loop
       over `SCENE_ANCHOR_POINT_BODIES`: for each anchor body, compute
       `distMpc` via `regionRelativeDistanceMpc(camPos, regionById('galactic-centre'), states)`
       (same helper/region `milkyWayCloudLiveness.ts:40` already uses for the
@@ -520,16 +520,16 @@ unconditional on far distance, unlike the seeded planets' glints).
       0 ⇒ no render"), else pack the same 7-float camera-relative record
       shape (`positionMpc - camPos`, tint, brightness) the existing loop
       writes, continuing the shared `count`/`staging` buffer.
-- [ ] Widen `enabled`: the layer must stay in the pass plan when the anchor
+- [x] Widen `enabled`: the layer must stay in the pass plan when the anchor
       loop would pack ≥1 record even if `sceneBodyPartition(...).glints` is
       empty — mirrors the existing `pickEnabled`-widening pattern the file's
       header documents for the Earth caption stamp (`bodyGlintsLayer.ts:153-166`),
       but for `enabled` itself since this is a VISUAL row, not a pick-only
       widening.
-- [ ] No `drawPick` change — the spec states Sgr A*'s existing pick stamp
+- [x] No `drawPick` change — the spec states Sgr A*'s existing pick stamp
       (its caption) is untouched by this feature; the far-field glint carries
       no pick aspect of its own.
-- [ ] Add a behavioural test (in the existing
+- [x] Add a behavioural test (in the existing
       `tests/services/engine/frame/passes/bodyGlintsLayer.test.ts`) asserting
       the layer's `enabled` returns `true` when the anchor's crossfade alpha
       is positive even with an empty `glints` partition (construct a fixture
@@ -540,8 +540,8 @@ unconditional on far distance, unlike the seeded planets' glints).
       such that the anchor's computed brightness is 0 (if any such condition
       exists given the "always present" design — if none does, state that in
       the test file instead of writing a vacuous test, per `testing.md`).
-- [ ] Run `npm test -- bodyGlintsLayer` and `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run `npm test -- bodyGlintsLayer` and `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -575,7 +575,7 @@ export function buildSchwarzschildDeflectionLut(sampleCount: number): Schwarzsch
 
 **Steps:**
 
-- [ ] Add the test `buildSchwarzschildDeflectionLut` with 2–3 literal
+- [x] Add the test `buildSchwarzschildDeflectionLut` with 2–3 literal
       reference values (hand-computed, not re-derived from the same formula
       the implementation uses — a genuine independent check per
       `testing.md`'s no-mirror rule):
@@ -595,17 +595,17 @@ export function buildSchwarzschildDeflectionLut(sampleCount: number): Schwarzsch
   - a monotonicity property: deflection strictly decreases as `b` increases
     across the sampled range (an independent property per `testing.md`'s
     "Do" list, catching a sign/ordering bug the two point values might miss).
-- [ ] Run the test — fails (function doesn't exist).
-- [ ] Implement `buildSchwarzschildDeflectionLut`: for `sampleCount` grid
+- [x] Run the test — fails (function doesn't exist).
+- [x] Implement `buildSchwarzschildDeflectionLut`: for `sampleCount` grid
       points spanning a chosen `[minImpactParamRs, maxImpactParamRs]` range
       (must comfortably straddle the photon sphere at `~2.598 r_s` and reach
       out to where the weak-field approximation is already accurate, so the
       pass's O(1) LUT lookup covers both the escape and near-capture
       regimes), numerically integrate (or closed-form where available) the
       Schwarzschild bending-angle relation and populate `samples`.
-- [ ] Run the test — passes.
-- [ ] Run `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run the test — passes.
+- [x] Run `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -655,24 +655,24 @@ absent file) the spec cites.
 
 **Steps:**
 
-- [ ] Write the WESL struct declaration matching the table exactly (field
+- [x] Write the WESL struct declaration matching the table exactly (field
       order, offsets via WGSL's natural alignment rules — verify each `f32`
       run before a `vec3` lands on a 16-byte boundary per the `wesl-shaders`
       skill's CameraUniforms pattern).
-- [ ] Write the CPU-side `Float32Array` packer function with an inline
+- [x] Write the CPU-side `Float32Array` packer function with an inline
       docblock offset table matching this one (the wesl-shaders skill: "The
       CPU-side Float32Array write must match the WGSL struct byte-for-byte
       ... Document the offset table in a docblock on the renderer's TS
       file").
-- [ ] Add a byte-offset parity test in the style of existing WGSL/TS parity
+- [x] Add a byte-offset parity test in the style of existing WGSL/TS parity
       tests (`tests/services/gpu/shaders/constants.parity.test.ts` precedent,
       per the wesl-shaders skill) OR a direct assertion that the packer
       writes each named field at its documented float index — this is a
       `testing.md` KEEP-RULE case (WGSL/TS parity + uniform byte-layout), not
       a constant restatement: it catches shader/TS drift invisible until a
       GPU silently reads garbage.
-- [ ] Run `npm test` and `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run `npm test` and `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -713,7 +713,7 @@ export function skyCubemapFaceContext(input: {
 
 **Steps:**
 
-- [ ] Add the test `skyCubemapFaceContext — derives a ReadyFrameContext with
+- [x] Add the test `skyCubemapFaceContext — derives a ReadyFrameContext with
       the eye at the anchor position, looking along the requested face axis`:
       call it for each of the 6 `CubeFace` values with a fixture `eyeMpc`,
       assert the returned context's camera position matches `eyeMpc` and its
@@ -721,11 +721,11 @@ export function skyCubemapFaceContext(input: {
       (an independent geometric check — e.g. dot the returned forward
       direction with the expected axis vector — not a re-derivation of
       whatever `deriveFrameContext` internally does).
-- [ ] Add the test `skyCubemapFaceContext — returns null before bootstrap`
+- [x] Add the test `skyCubemapFaceContext — returns null before bootstrap`
       (mirrors `pickFrameContext`'s `isReady` guard,
       `pickFrameContext.ts:56-90`).
-- [ ] Run the tests — fail (function doesn't exist).
-- [ ] Implement `skyCubemapFaceContext` following the `pickFrameContext.ts`
+- [x] Run the tests — fail (function doesn't exist).
+- [x] Implement `skyCubemapFaceContext` following the `pickFrameContext.ts`
       precedent exactly: re-derive a full `ReadyFrameContext` via
       `deriveFrameContext` from a SYNTHETIC camera pose (position = `eyeMpc`,
       orientation = the face's fixed look direction/up pair, a 90°
@@ -735,10 +735,10 @@ export function skyCubemapFaceContext(input: {
       `ctx.drawPxPerRad` as frame-globals for angular sizing, not just
       `viewProj` (same rationale `pickFrameContext.ts:1-48`'s docblock gives
       for its own re-derivation choice).
-- [ ] Add the `sky-cubemap` row to `renderTargetRows` per the contract above.
-- [ ] Run `npm test -- skyCubemapFaceContext renderTargets` and
+- [x] Add the `sky-cubemap` row to `renderTargetRows` per the contract above.
+- [x] Run `npm test -- skyCubemapFaceContext renderTargets` and
       `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -792,22 +792,22 @@ available via `ctx`/`state`) and passes it as the new fourth argument.
 
 **Steps:**
 
-- [ ] Add the test `skyCubemapCaptureSchedule — full 6-face capture on band
+- [x] Add the test `skyCubemapCaptureSchedule — full 6-face capture on band
       entry`: `bandJustEngaged: true` → `facesToCapture` has all 6 faces
       regardless of `frameIndex`.
-- [ ] Add the test `skyCubemapCaptureSchedule — round-robins one face per
+- [x] Add the test `skyCubemapCaptureSchedule — round-robins one face per
       frame otherwise`: `bandJustEngaged: false`, vary `frameIndex` across 6
       consecutive values → each yields exactly one face, cycling through all
       6 without repeats within the cycle.
-- [ ] Add the test `skyCubemapCaptureSchedule — escape valve re-captures a
+- [x] Add the test `skyCubemapCaptureSchedule — escape valve re-captures a
       stale or camera-moved face out of turn`: a face whose
       `lastCapturedAtMs` predates `nowMs` by more than the threshold (or
       `cameraMovedBeyondThreshold: true`) appears in `facesToCapture` even
       when the round-robin wouldn't select it this frame.
-- [ ] Run the tests — fail.
-- [ ] Implement `skyCubemapCaptureSchedule` (pure function, no GPU/engine
+- [x] Run the tests — fail.
+- [x] Implement `skyCubemapCaptureSchedule` (pure function, no GPU/engine
       state — testable headlessly per the file's own test above).
-- [ ] Wire the schedule into `frameProgram`: when the lensing band alpha is
+- [x] Wire the schedule into `frameProgram`: when the lensing band alpha is
       positive, emit one `{ kind: 'render', target: 'sky-cubemap', slab: ... }`
       step per face in `facesToCapture` (each drawing the fixed opt-in roster
       — `point-sprites`, `star-catalog` + `star-aggregates`, and the S-star
@@ -815,7 +815,7 @@ available via `ctx`/`state`) and passes it as the new fourth argument.
       the band alpha is 0, emit NO capture steps at all (Q6's "pass cost is
       exactly zero outside the band" guarantee, restated for the capture
       side of the feature, not just the lensing draw itself).
-- [ ] Update `frameProgram.ts`'s two static `TIMED_SLOTS`/`TIMED_SLOT_GROUPS`
+- [x] Update `frameProgram.ts`'s two static `TIMED_SLOTS`/`TIMED_SLOT_GROUPS`
       builds (`frameProgram.ts:452-465`, which call
       `frameProgram(PLACEHOLDER_TONE, true, MAX_FOREGROUND_CHAIN)`) to pass
       all 6 `CubeFace` values as the new fourth argument — the same
@@ -823,7 +823,7 @@ available via `ctx`/`state`) and passes it as the new fourth argument.
       `MAX_FOREGROUND_CHAIN` already documents, so the DebugPanel's GPU-timing
       groups include the sky-cubemap capture rows even on a frame where the
       band is inactive and the real list would be empty.
-- [ ] Name the runtime hand-off: `renderFrame.ts` (not `frameProgram`, which
+- [x] Name the runtime hand-off: `renderFrame.ts` (not `frameProgram`, which
       is static) derives the scheduled faces' `skyCubemapFaceContext`s each
       frame and passes them to the executor alongside the steps, so a capture
       step can resolve its face's context at execution time — the exact
@@ -831,14 +831,14 @@ available via `ctx`/`state`) and passes it as the new fourth argument.
       the implementer's call, but the responsibility split (renderFrame
       derives, executor consumes, frameProgram stays static data) is the
       contract.
-- [ ] Confirm (read each roster layer's `draw`) whether reusing the existing
+- [x] Confirm (read each roster layer's `draw`) whether reusing the existing
       `CONTENT_LAYERS` rows' `draw` calls against a synthetic per-face `ctx`
       "just works," or whether a layer reads something a synthetic context
       can't supply (e.g. a GPU handle keyed to the real frame). Report any
       such finding rather than papering over it with a special case.
-- [ ] Run `npm test -- skyCubemapCaptureSchedule frameProgram` and
+- [x] Run `npm test -- skyCubemapCaptureSchedule frameProgram` and
       `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -894,19 +894,19 @@ not a licence to build finite-distance geodesics.
 
 **Steps:**
 
-- [ ] Write `vertex.wesl`: minimal fullscreen-triangle (or quad) vertex
+- [x] Write `vertex.wesl`: minimal fullscreen-triangle (or quad) vertex
       stage producing clip position + a per-pixel view-ray direction varying,
       importing `CameraUniforms` from `package::lib::camera` per the
       wesl-shaders skill's shared-prefix convention (gotcha #2: `package::`,
       never the npm name; gotcha #3: imports at the top).
-- [ ] Write `fragment.wesl` implementing the escape/annulus/capture
+- [x] Write `fragment.wesl` implementing the escape/annulus/capture
       classification above, sampling the Task 9 LUT texture and the Task 11
       sky-cubemap texture array as `texture_cube`. No backticks in comments
       (wesl-shaders gotcha #1); no brace-list imports (gotcha #4); one
       `import` per identifier (gotcha #5) — cite `lib/math.wesl` as the
       "one cohesive multi-function module" precedent if any shared helper
       (e.g. a ray-sphere or ray-annulus intersection) is factored out.
-- [ ] Write `sgrAStarLensingRenderer.ts`: the TS pipeline (pipeline layout,
+- [x] Write `sgrAStarLensingRenderer.ts`: the TS pipeline (pipeline layout,
       bind group with the Task 10 uniform buffer + LUT texture + cubemap
       texture, `createShaderModuleWithDevLog` per the shader-compile-logger
       convention every renderer in this tree already follows) — cite
@@ -918,18 +918,18 @@ not a licence to build finite-distance geodesics.
       the spec's cited (but absent from this repo) `createNfwLensLutTexture`;
       define it in this file rather than inventing a second lensing-utils
       home for one function.
-- [ ] Write `sgrAStarLensingLayer.ts` implementing the `ContentLayer`
+- [x] Write `sgrAStarLensingLayer.ts` implementing the `ContentLayer`
       contract above.
-- [ ] Register `sgrAStarLensingLayer` in `passes/index.ts`'s import list and
+- [x] Register `sgrAStarLensingLayer` in `passes/index.ts`'s import list and
       `CONTENT_LAYERS` array (position per Task 14's reorder — this task adds
       the row; Task 14 fixes its exact index relative to `orbit-trails` /
       `body-glints`).
-- [ ] Manual dev-server smoke check that the shader module compiles (no
+- [x] Manual dev-server smoke check that the shader module compiles (no
       `Invalid ShaderModule` in the console per the wesl-shaders skill's
       dev-mode logger) — this is not the full visual gate (Task 17), just
       confirming the pipeline builds.
-- [ ] Run `npm test` and `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run `npm test` and `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -943,7 +943,7 @@ not a licence to build finite-distance geodesics.
 
 **Steps:**
 
-- [ ] Re-read `passes/index.ts`'s current order at the time of this task
+- [x] Re-read `passes/index.ts`'s current order at the time of this task
       (Task 13 already inserted `sgrAStarLensingLayer` somewhere) — confirm
       the current indices of `milkyWayAggregateLayer`/`milkyWayUpsampleLayer`/`milkyWayLayer`/`starPointsLayer`
       (which the lensing pass must draw AFTER, since it samples the roster)
@@ -951,23 +951,23 @@ not a licence to build finite-distance geodesics.
       header's numbered list at the time this plan was written — re-verify
       against the live file, since Task 8 modified `bodyGlintsLayer` but not
       its position).
-- [ ] Move `sgrAStarLensingLayer` to sit AFTER `starAggregateUpsampleLayer`/`constellationsLayer`
+- [x] Move `sgrAStarLensingLayer` to sit AFTER `starAggregateUpsampleLayer`/`constellationsLayer`
       (the last roster row the lensing pass samples — point-sprites,
       milky-way, star-points, star-aggregates, star-catalog are all upstream
       by the time `constellationsLayer` runs) and BEFORE `orbitTrailsLayer`.
-- [ ] Move `orbitTrailsLayer` and `bodyGlintsLayer` to sit AFTER
+- [x] Move `orbitTrailsLayer` and `bodyGlintsLayer` to sit AFTER
       `sgrAStarLensingLayer` in the array (a two-row reorder — the spec's
       explicit "orbit-trails and body-glints therefore move to draw AFTER
       sgrAStarLensing").
-- [ ] Update the module header's numbered draw-order comment (`passes/index.ts:1-198`)
+- [x] Update the module header's numbered draw-order comment (`passes/index.ts:1-198`)
       to reflect the new positions — this comment is the file's own
       authoritative map and must not go stale (it directly documents load-
       bearing order, unlike a narrative aside).
-- [ ] Run `npm test` and `npm run typecheck` — green (no test should assert
+- [x] Run `npm test` and `npm run typecheck` — green (no test should assert
       the old literal order without a real reason; if one does, per
       `testing.md` judge whether it's a legitimate order-dependency test —
       update it if so, delete it if it was a restatement).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -997,18 +997,18 @@ gate).
 
 **Steps:**
 
-- [ ] Add the tuning section + container following the
+- [x] Add the tuning section + container following the
       `ZoneOfAvoidanceTuningSection*` structural precedent, wired to mutate
       the relevant constants at runtime (via whatever live-settings seam
       that precedent uses — read its container before implementing, don't
       invent a new one).
-- [ ] Mount it in `DebugPanel.tsx` alongside the other tuning sections.
-- [ ] Use it during Task 17's visual gate to converge on the DEFAULTS that
+- [x] Mount it in `DebugPanel.tsx` alongside the other tuning sections.
+- [x] Use it during Task 17's visual gate to converge on the DEFAULTS that
       ship: Tier-1 values back into `BLACK_HOLES` (Task 6), Tier-2 values into
       `DEFAULT_SGR_A_STAR_LENSING_TUNING` (`src/data/defaults.ts`). The
       section itself stays mounted.
-- [ ] Run `npm test` and `npm run typecheck` — green.
-- [ ] Commit.
+- [x] Run `npm test` and `npm run typecheck` — green.
+- [x] Commit.
 
 ---
 
@@ -1018,7 +1018,7 @@ gate).
 
 **Steps:**
 
-- [ ] BEFORE any Phase B code lands (i.e., run this against Phase A's merged
+- [x] BEFORE any Phase B code lands (i.e., run this against Phase A's merged
       state, or the earliest point in Phase B history before Task 5):
       read `.claude/skills/perf/SKILL.md` first, then run `npm run perf`
       with `--url http://localhost:<this worktree's dev-server port>` (read
@@ -1026,7 +1026,7 @@ gate).
       branch's server). Record the baseline numbers outside the band (Sgr A*
       far off-frame) and note there is no "inside the band" baseline yet
       (the feature doesn't exist).
-- [ ] AFTER Task 15 (all feature work done — the tuning section ships, per
+- [x] AFTER Task 15 (all feature work done — the tuning section ships, per
       the Settings amendment above, so there is no removal step to wait on):
       re-run
       `npm run perf` the same way, twice — once with Sgr A* far outside the
@@ -1035,12 +1035,12 @@ gate).
       not unbounded, cost — the six-face capture amortized per Q8, the LUT
       lookup O(1) per pixel, the bounded 32–64-step march only for
       annulus-adjacent pixels).
-- [ ] The report must carry a VRAM line for the `sky-cubemap` row alongside
+- [x] The report must carry a VRAM line for the `sky-cubemap` row alongside
       the timing numbers: 0 B outside the band, 50 MB in-band at the shipped
       1024 px resolution, 201 MB at the 2048 px knob — the row is lazily
       allocated (`renderTargets.ts`), so this cost is invisible to a timing
       reading alone.
-- [ ] Report both readings plainly. Per the spec's Perf section and the
+- [x] Report both readings plainly. Per the spec's Perf section and the
       project's code-is-liability convention: a regression outside the band,
       or an unbounded/unacceptable cost inside it, HALTS the landing
       pipeline — this is the user's ruling to make, not something this task
