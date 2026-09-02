@@ -22,7 +22,7 @@ import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { TimeState } from '../../@types/time/TimeState';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
-import { hOverR } from '../../services/engine/camera/regimeArmFor';
+import { hOverR } from '../../services/engine/camera/hOverR';
 import { deriveSimDays } from '../time/deriveSimDays';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;

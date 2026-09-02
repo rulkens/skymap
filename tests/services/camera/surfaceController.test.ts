@@ -55,9 +55,9 @@ function angleBetween(a: Vec3, b: Vec3): number {
 
 /**
  * Right | up | forward for heading 0, tilt `theta` from nadir, at an eye on
- * the +Z axis — the same closed form `ceilingEnforcedPose` reconstructs, so
- * these fixtures can place a pose at an exact tilt without going through a
- * gesture drag to get there.
+ * the +Z axis — the controller's canonical roll-free basis, so these fixtures
+ * can place a pose at an exact tilt without going through a gesture drag to
+ * get there.
  */
 function basisAtTilt(theta: number): Mat3 {
   return basisAt(0, theta);

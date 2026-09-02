@@ -220,7 +220,7 @@ export type SurfaceReadout = {
 // src/@types/camera/SurfaceGesture.d.ts
 /** Per-gesture, latched at gesture start, dead at pointerup (ruled, Q3). */
 export type SurfaceGesture = {
-  readonly mode: 'pan' | 'trackball' | 'strafe' | 'look' | 'tilt';
+  readonly mode: 'pan' | 'orbit' | 'strafe' | 'look' | 'tilt';
   /** |first pick| — the FROZEN pan sphere, body-fixed metres (C §2.3, §6.2). */
   readonly anchorRadiusM: number;
   /** Body-fixed, never world (C landmine #5). */
@@ -351,19 +351,11 @@ roughly µm view scale and no further. Re-anchoring moves the anchor toward the
 eye and subtracts the same delta, so the pair keeps naming the same point while
 both stored magnitudes shrink.
 
-```ts
-// src/utils/camera/reanchoredPose.ts
-export function reanchoredPose(pose: BodyFixedPose): BodyFixedPose;
-```
-
-Contract: the shift is **quantized to the ulp of the anchor's own magnitude**
-before it is applied, so both updates are exact — `anchorLocalM + d` rounds to
-nothing and `eyeRelAnchorM − d` is exact. Trigger: range below a
-magnitude-relative fraction of `|anchorLocalM|`, so the rule is body-independent
-and needs no per-body constant. The first landing runs with anchor = body centre
-(ruled, S2) and never fires the trigger at the shipped descent floor; the
-operation is built and tested now because deep-zoom anchors are wanted now and
-the user is not redoing this later.
+`reanchoredPose` was DELETED by the 2026-09-02 simplification wave: it
+shipped with zero importers and a trigger the shipped descent floor can never
+fire (admitted above). The floor analysis stands — re-derive the operation
+from this section's contract (ulp-quantized shift, both updates exact) when a
+deep-zoom feature actually needs sub-µm anchors.
 
 ## 6. Gestures
 
@@ -372,10 +364,11 @@ fast-clock property). Per-gesture anchors are body-fixed and die at pointerup
 (ruled, Q3); there is no persistent target, which is what makes FW-H's proven
 root cause — an accumulating stored pivot — unreachable rather than handled.
 
-**The control model is chosen by what the cursor is over; altitude is only a
-tiebreak** (C §5.1). Cursor hits the body → anchored pan at any altitude;
-cursor misses and high → trackball; cursor misses and low → free-look. The mode
-is latched at gesture start and is sticky for the gesture (C §6.1).
+**The control model is chosen by what the cursor is over** (C §5.1). Cursor
+hits the body → anchored pan at any altitude; cursor misses → free-look (R1,
+2026-09-02, deleted the trackball's free rotation and with it the altitude
+tiebreak a miss used to consult). The mode is latched at gesture start and is
+sticky for the gesture (C §6.1).
 
 New primitive, since no cursor-ray path exists on main:
 
@@ -400,23 +393,23 @@ position **and** basis — by the inverse of the quaternion carrying `p̂₀` to
 Eight lines, pole-free, exact, identical at every latitude. No `cos(latitude)`
 term exists to be wrong; dragging over the pole is an ordinary rotation with a
 near-equatorial axis. A ray that misses the frozen sphere degrades the gesture
-to trackball, stickily (C §2.6). At grazing incidence (`|ray·normal| < 0.05`) a
+to the north-locked orbit — the same transported pan continued about the body
+centre — stickily (C §2.6; R1 deleted the free trackball). At grazing incidence (`|ray·normal| < 0.05`) a
 rotation is a teleport, so the gesture strafes in the plane through the anchor
 instead (C §2.8) — a hard test, never MapLibre's blend, which would be a second
 path hiding drift.
 
-**(b) Zoom to cursor, direction-asymmetric.** `eye′ = anchor + factor·(eye −
-anchor)`: stateless per tick, no accumulator (FW-B). Two points stay separate —
-the distance _measure_ comes from the screen centre, the _anchor_ from the
-cursor (C §3.1). Approaching with a cursor hit anchors on the cursor —
-**at rest on the wheel's own cursor pixel**, during a gesture on the latched
-one (ruled 2026-09-01, §12-R4); **zoom-out and cursor misses always fall back
-to the centre-directed anchor: the surface point under the eye** (FW-H). The
-cursor anchor is a repelling fixed point on the way out, and the offset it
-accumulates is `altitude · tan(off-axis)` at every scale — geometry, not a
-storage artefact, so deleting the stored pivot does not delete it. The sub-eye
-point sits on the eye's own radial, so recession is centre-directed exactly as
-before while the step scales _altitude_ rather than geocentric range. Guards, all
+**(b) Zoom to cursor, BOTH directions** (ruling 7, 2026-09-02 — supersedes
+the original direction asymmetry and FW-H's zoom-out carve-out). `eye′ =
+anchor + factor·(eye − anchor)`: stateless per tick, no accumulator (FW-B).
+Two points stay separate — the distance _measure_ comes from the screen
+centre, the _anchor_ from the cursor (C §3.1). A cursor hit anchors the step
+in **both** wheel directions — at rest on the wheel's own cursor pixel, during
+a gesture on the latched one (ruled 2026-09-01, §12-R4) — so the point under
+the cursor stays pinned in and out alike (GM). **A miss falls back to the
+surface point under the eye**, which sits on the eye's own radial, so a
+missed recession is centre-directed while the step scales _altitude_ rather
+than geocentric range. Guards, all
 cheap and all evidence-backed: clamp step **magnitude** on both signs (C §6.15);
 force a fresh anchor pick after an overshoot past the anchor's tangent plane
 (C §6.7); gate the approach on _closing distance_, never on absolute altitude
@@ -606,8 +599,11 @@ Each is a requirement on the engaged arm, and each is one test:
   accelerated clock: `ω × r` residual is exactly zero, not small.
 - **FW-G** the rendered sightline and the interaction register are the same
   pose; the fold runs below driver arbitration at one site.
-- **FW-H** zoom-out never anchors on the cursor; 260 notches out and back with
-  the cursor unmoved returns to the starting view.
+- **FW-H** (amended by ruling 7, 2026-09-02) the wheel anchors on the cursor
+  pick in BOTH directions; with the cursor unmoved the picks coincide, so 260
+  notches out and back return to the starting view. FW-H's surviving content
+  is the MISS fallback (sub-eye point) and the no-stored-pivot rule; recession
+  ORIENTATION carries no pixel promise.
 - **FW-I** drag tracking is sub-pixel exact at every latitude and altitude, with
   no best-iterate escape hatch.
 
@@ -725,9 +721,10 @@ aggregator, alongside the drag arms' pixels. (ii) Zoom-out anchored at the
 body CENTRE scaled the geocentric range, so near the ground one notch out
 climbed ~700 km while the notch in it should undo had moved ~100 m — the
 recession raced. The fallback is now the surface point under the eye: still
-on the eye's radial, so FW-H's "the cursor never anchors a zoom-out" and the
-centre-directed recession both stand unchanged, but `f` and `1/f` are
-reciprocal in ALTITUDE at every altitude. A pinch, which has no single
+on the eye's radial, so a missed recession stays centre-directed and `f` and
+`1/f` are reciprocal in ALTITUDE at every altitude. (Ruling 7, 2026-09-02,
+later made a cursor HIT anchor the zoom-out too — the sub-eye point is the
+miss fallback only.) A pinch, which has no single
 cursor, keeps the screen-centre pick.
 
 **R4b — the retreat returns to the base pose, as a ceiling. RULED BY THE USER
@@ -750,9 +747,11 @@ a 1e-5 rad heading violation could spin the image 90° in one frame at ~170 km
 altitude, which is the pop this ruling forbids. The delta form is identical for
 a roll-free pose, leaves roll alone otherwise, and retires the roll-snap
 deviation R3 shipped with. The _centring_ half needs no
-separate term: with the sub-eye zoom-out anchor the body centre lies along the
-eye's radial, so the aim error the user sees as "the globe slid off centre" IS
-the tilt the same ceiling closes. Prior art and its limits are recorded in
+separate term: on a missed recession the sub-eye anchor keeps the body centre
+along the eye's radial, and on a cursor-anchored one (ruling 7) the same
+ceiling wall closes the tilt — either way the aim error the user sees as "the
+globe slid off centre" IS the tilt the ceiling removes by the disengage
+boundary. Prior art and its limits are recorded in
 [`prior-art-cesium-ge.md`](../../../.superpowers/sdd/2026-09-01-camera-pivot/prior-art-cesium-ge.md)
 Q3/Q4 — Cesium re-centres inward on the cursor and never returns to a canonical
 pose, so the retreat attractor is ours, not adopted.
@@ -810,9 +809,11 @@ src/utils/camera/cursorRayBodyLocal.ts
 src/utils/camera/anchoredDragRotation.ts
 src/utils/camera/anchoredZoomStep.ts
 src/utils/camera/maxTiltRad.ts
-src/utils/camera/reanchoredPose.ts
-src/utils/camera/surfaceReadoutOf.ts
 tests/** mirroring the above
+
+(`reanchoredPose.ts` and `surfaceReadoutOf.ts` shipped here and were deleted
+by the 2026-09-02 simplification wave — zero importers; see §5.3 and the
+audit.)
 ```
 
 Modified (prep P5/P6 — packaging per §2):
@@ -852,9 +853,8 @@ asserting pose exactness and provider A/B agreement at the flip; the anchored
 drag rotation against hand-computed two-ray fixtures at the equator, at 80°
 latitude, and across the pole; the zoom round trip (260 out, 260 in, cursor
 parked) asserting return-to-start; `maxTiltRad` against the invariant and the
-90°-crossing; `reanchoredPose` asserting both updates are exact and the named
-point is unmoved; the readout's nadir escape (heading from the up vector inside
-~0.08° of vertical) and its pole escape.
+90°-crossing; the nadir escape (heading from the up vector inside ~0.08° of
+vertical) and its pole escape, now pinned via `headingTiltAt`.
 
 **Frame-loop.** The fold runs after every pose writer, at one site (assert the
 call order, the FW-G finding); a gesture in flight blocks the arm change; the

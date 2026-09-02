@@ -544,8 +544,10 @@ export function createSurfaceController(): SurfaceController {
       // no drag may ROLL: pan and orbit hold the heading they entered with
       // (the transport that makes holonomy unrepresentable), look and tilt
       // level around the heading they authored. Strafe translates with its
-      // basis untouched: at its near-nadir home the level/heading split is
-      // degenerate, and the next pan or notch settles the residual anyway.
+      // basis untouched — a known small hole in the no-roll rule: it lives in
+      // a few-pixel grazing-incidence latch window at the limb, where a
+      // standpoint translation does turn the ENU (~0.03 rad over 30 steps at
+      // the boundary, measured); the next pan or notch settles the residual.
       if (mode === 'strafe' || pre === null) return walled;
       return levelledPose(walled, mode === 'pan' || mode === 'orbit' ? pre.azimuthRad : null);
     },
