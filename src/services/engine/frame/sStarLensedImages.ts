@@ -4,26 +4,37 @@
  * both drawing the same star.
  *
  * The lens pass's sky cubemap is an at-infinity approximation these sources are
- * far too close for, so they get `lensPointSource` per frame. Positions come
- * back CAMERA-RELATIVE — the frame the point renderer's f32 upload needs.
+ * far too close for, so they get `lensPointSource` per frame, on the EXACT
+ * bending angle. No brightness floor and no shadow cull: the exact deflection
+ * diverges at the photon sphere, so an image can never land inside the shadow
+ * and its magnification reaches nothing continuously — the two guards this row
+ * used to need were the two things that made an S-star pop in and out.
+ * Positions come back CAMERA-RELATIVE — the frame the point renderer needs.
  */
 
 import type { PositionedStar } from '../../../@types/scene/PositionedStar';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { SCENE_S_STARS } from '../../../data/bodies/sceneSStars';
 import { lensPointSource } from '../../../utils/physics/lensPointSource';
-import { CRITICAL_IMPACT_PARAM_RS } from '../../../utils/lensing/criticalImpactParamRs';
+import { buildSchwarzschildDeflectionLut } from '../../../utils/lensing/buildSchwarzschildDeflectionLut';
+import { sampleSchwarzschildDeflection } from '../../../utils/lensing/sampleSchwarzschildDeflection';
+import type { SchwarzschildDeflectionLut } from '../../../@types/lensing/SchwarzschildDeflectionLut';
 
 /** Membership IS the identity — the seed table, not a second flag to keep in step. */
 export const S_STAR_IDS: ReadonlySet<string> = new Set(SCENE_S_STARS.map((star) => star.id));
 
 /**
- * Faintest image worth a draw, as a flux ratio: 1e-3 is 7.5 magnitudes down,
- * far under the additive sprite's visible floor. The "opacity 0 ⇒ no render"
- * house rule — a black sprite still costs a draw. Only ever culls secondaries;
- * the primary's magnification is >= 1 by construction.
+ * Denser than the lens pass's 512-texel GPU copy: the fragment lerps a smooth
+ * screen-space field, this table gets root-found and differentiated instead, and
+ * the near-shadow curvature is exactly where the secondary lives. ~25 ms to
+ * build, so it waits for the first frame INSIDE the band rather than import.
  */
-const MIN_MAGNIFICATION = 1e-3;
+const LUT_SAMPLE_COUNT = 4096;
+let deflectionLut: SchwarzschildDeflectionLut | null = null;
+const deflection = (impactParamRs: number): number => {
+  deflectionLut ??= buildSchwarzschildDeflectionLut(LUT_SAMPLE_COUNT);
+  return sampleSchwarzschildDeflection(deflectionLut, impactParamRs);
+};
 
 /**
  * A point source ON the caustic magnifies infinitely — a measure-zero geometry
@@ -47,21 +58,6 @@ export function sStarLensedImages(input: {
 }): readonly PositionedStar[] {
   const { stars, camPosMpc, lensPosMpc, schwarzschildRadiusMpc } = input;
 
-  const lensRelCam: Vec3 = [
-    lensPosMpc[0] - camPosMpc[0],
-    lensPosMpc[1] - camPosMpc[1],
-    lensPosMpc[2] - camPosMpc[2],
-  ];
-  const lensDistMpc = Math.hypot(lensRelCam[0], lensRelCam[1], lensRelCam[2]);
-  if (lensDistMpc <= 0) return [];
-  const lensAxis: Vec3 = [
-    lensRelCam[0] / lensDistMpc,
-    lensRelCam[1] / lensDistMpc,
-    lensRelCam[2] / lensDistMpc,
-  ];
-  // Rays aimed inside the photon sphere never reach the eye — the shadow.
-  const shadowRad = (CRITICAL_IMPACT_PARAM_RS * schwarzschildRadiusMpc) / lensDistMpc;
-
   const images: PositionedStar[] = [];
   for (const star of stars) {
     if (!S_STAR_IDS.has(star.id)) continue;
@@ -75,12 +71,9 @@ export function sStarLensedImages(input: {
       lens: lensPosMpc,
       source: star.positionMpc,
       schwarzschildRadius: schwarzschildRadiusMpc,
+      deflection,
     })) {
-      if (image.magnification < MIN_MAGNIFICATION) continue;
       const { direction } = image;
-      const axisCos =
-        direction[0] * lensAxis[0] + direction[1] * lensAxis[1] + direction[2] * lensAxis[2];
-      if (Math.acos(Math.min(1, Math.max(-1, axisCos))) < shadowRad) continue;
       images.push({
         ...star,
         positionMpc: [
