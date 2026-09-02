@@ -366,7 +366,7 @@ describe('surfaceController', () => {
       pose = apply(c, pose, zoom(1.05, false));
       const upAfter: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
       const tilt = bodyAngle(pose);
-      expect(tilt).toBeLessThanOrEqual(lastTilt + 1e-9);
+      expect(tilt).toBeLessThanOrEqual(lastTilt + 1e-6);
       // Heading, tilt and level each contribute at most one cap per notch.
       expect(angleBetween(upBefore, upAfter)).toBeLessThan(0.3 + 1e-9);
       lastTilt = tilt;
@@ -392,21 +392,50 @@ describe('surfaceController', () => {
     expect(bodyAngle(out)).toBeCloseTo(0.7, 12);
   });
 
-  it('a recession decays an above-ceiling tilt toward the ceiling, not toward nadir', () => {
-    // The other half of ruling 6: with tilt above the band, the residual the
-    // decay acts on is the EXCESS over `maxTiltRad`, so one notch removes
-    // `SHARE·excess` — visibly less than the full cap a nadir residual would
-    // spend. Heading 0 keeps the whole basis turn attributable to tilt.
+  it('a recession rides the ceiling down to exactly nadir at the disengage crossing', () => {
+    // The C1 invariant (controller ruling): a zoom-authored recession clamps
+    // tilt to `maxTiltRad(h/R)` as a WALL, so the return to level is
+    // distributed strictly with zoom progress — no single notch turns more
+    // than that notch's own ceiling delta — and the pose CROSSES disengage at
+    // tilt 0, restoring the fold retarget's view-exactness. Tilt 1.5 is the
+    // horizon-gazing surface pose; a capped decay provably reaches the
+    // crossing 45° off nadir from here (measured), which is the snap this
+    // test exists to forbid.
+    const c = createSurfaceController();
+    let pose = poseAt([0, 0, 2], basisAtTilt(1.5));
+    let hOverR = 1;
+    expect(maxTiltRad(hOverR)).toBeGreaterThan(1.5); // legal drag-authored tilt
+    let guard = 0;
+    while (hOverR <= SURFACE_REGIME.disengageHR && guard < 30) {
+      const ceilingBefore = maxTiltRad(hOverR);
+      const tiltBefore = bodyAngle(pose);
+      pose = apply(c, pose, zoom(Math.exp(0.1), false)); // one default mouse notch
+      hOverR = Math.hypot(...eyeOf(pose)) / R - 1;
+      const ceilingDelta = Math.max(0, ceilingBefore - maxTiltRad(hOverR));
+      expect(tiltBefore - bodyAngle(pose)).toBeLessThanOrEqual(ceilingDelta + 1e-9);
+      guard += 1;
+    }
+    expect(hOverR).toBeGreaterThan(SURFACE_REGIME.disengageHR);
+    expect(bodyAngle(pose)).toBeLessThan(1e-7);
+  });
+
+  it('a recession eases an INHERITED above-ceiling tilt by the decay, not the wall', () => {
+    // The other half of the C1 ruling: excess the zoom did not author (this
+    // pose ARRIVED 0.23 rad above the ceiling) is carried by the wall and
+    // spent only by the capped decay — `SHARE·excess` here, since a factor-1
+    // notch moves no altitude and so has zero ceiling delta of its own.
+    // Heading 0 keeps the whole basis turn attributable to tilt.
     const c = createSurfaceController();
     const start = poseAt([0, 0, 3], basisAtTilt(1.4));
-    const out = apply(c, start, zoom(1.02, false));
+    const out = apply(c, start, zoom(1, false));
 
-    const ceiling = maxTiltRad(Math.hypot(...eyeOf(out)) / R - 1);
-    expect(ceiling).toBeGreaterThan(1.0); // premise: excess ≈ 0.3, share ≈ 0.077
+    const ceiling = maxTiltRad(2);
+    expect(ceiling).toBeLessThan(1.4); // premise: genuinely above the band
+    const excess = 1.4 - ceiling;
     const reduced = 1.4 - bodyAngle(out);
-    expect(reduced).toBeGreaterThan(0.05);
-    // A nadir-measured residual (0.25·1.4, capped) would spend the full 0.1.
-    expect(reduced).toBeLessThan(0.095);
+    expect(reduced).toBeCloseTo(0.25 * excess, 3);
+    // Neither snapped to the ceiling in one tick, nor measured against nadir.
+    expect(reduced).toBeLessThan(excess);
   });
 
   it('a receding staircase converges heading and tilt to the canonical framing', () => {

@@ -447,11 +447,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // one frame later and rebuilds the eye from `target + dir·distance`:
         // committing `worldPose`'s on-ray surface target verbatim teleported
         // the eye one body radius inward on the first at-rest frame (pop-2).
-        // Driven recessions reach the boundary at tilt ≈ 0, where forward
-        // already runs through the centre, so this is view-exact too; an
-        // undriven crossing re-aims by at most its tilt on the flip frame,
-        // where the fold owns continuity policy — bounded, unlike the pin's
-        // eye jump.
+        // Zoom-driven recessions cross at tilt 0 — the settle's ceiling wall
+        // (structurally 0 at disengageHR) guarantees it — so forward already
+        // runs through the centre and this is view-exact too; an undriven or
+        // inherited-excess crossing re-aims by at most its remaining tilt on
+        // the flip frame, where the fold owns continuity policy — bounded,
+        // unlike the pin's eye jump.
         const centreMpc = bodyStates.get(renderPose.frame.body)!.positionMpc;
         const toCentre: Vec3 = [
           centreMpc[0] - eyeMpc[0],

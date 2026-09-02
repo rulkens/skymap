@@ -244,31 +244,32 @@ function levelledPose(pose: BodyFixedPose, heldAzimuthRad: number | null): BodyF
  * The zoom path's orientation settle (R1 + rulings 5-7): every notch, both
  * directions, walks heading → north and roll → level by the one bounded
  * decay; the tilt target is the ruled asymmetry — a dive converges to NADIR
- * (ruling 5), a recession only back INTO the altitude-keyed band (ruling 6):
- * below `maxTiltRad` a notch out leaves tilt alone, and the ceiling
- * tightening to 0 at disengage distributes the return over the whole
- * recession instead of front-loading it.
+ * (ruling 5); a recession RIDES the altitude-keyed ceiling as a wall
+ * (rulings 6 + C1): below `maxTiltRad` a notch out leaves tilt alone, and
+ * each notch may squeeze by its own ceiling delta — proportionate to the
+ * user's zoom, distributed strictly with progress, and structurally 0 at the
+ * disengage boundary, which is what keeps the fold's retarget view-exact.
+ * Only `inheritedTiltRad` — excess the zoom did NOT author (a clip/tour
+ * arrival, a drag parked above the band) — eases by the capped decay instead.
  *
- * WHERE the corrections pivot follows convergence geometry, not symmetry: on
- * a dive they are rigid rotations about axes THROUGH the anchor — its
- * camera-space coordinates are invariant (prior art Q4c), so the dived-on
- * point keeps its pixel exactly, and the shrinking eye–anchor range makes the
- * corrections land in full by the ground. On a recession the same rotations
- * pivoting the anchor are self-defeating — the eye orbits the anchor and the
- * standpoint's own ENU turn cancels ~h/(R+h) of every correction (measured:
- * 0.071 rad commanded, 0.023 achieved at h = 2R), so the ceiling decay could
- * never land by disengage — hence they turn the basis about the EYE instead:
- * FW-H withdraws the pixel promise for recession ORIENTATION, while the
- * position step above still pins the cursor point (ruling 7). The heading
- * half's dive axis runs through the body centre too, so altitude is
- * untouched; a tilt about a surface anchor holds `|eye − anchor|`, not
- * `|eye|`, hence the floor resample at the end.
+ * `diveAnchorM !== null` IS the dive: its corrections are rigid rotations
+ * about axes THROUGH the anchor — camera-space coordinates invariant (Q4c),
+ * the dived-on point pixel-locked, and the shrinking eye–anchor range lands
+ * the corrections in full by the ground. A recession (null) turns the basis
+ * about the EYE: anchor-pivoting there is self-defeating — the eye orbits
+ * the anchor and the standpoint's own ENU turn cancels ~h/(R+h) of every
+ * correction (measured: 0.071 rad commanded, 0.023 achieved at h = 2R) —
+ * and FW-H never promised recession-orientation pixels anyway; the position
+ * step above still pins the cursor point (ruling 7). The dive's heading axis
+ * runs through the body centre too, so altitude is untouched; a tilt about a
+ * surface anchor holds `|eye − anchor|`, not `|eye|`, hence the floor
+ * resample at the end.
  */
 function canonicalledPose(
   pose: BodyFixedPose,
-  anchorM: Readonly<Vec3>,
+  diveAnchorM: Readonly<Vec3> | null,
   bodyRadiusM: number,
-  toNadir: boolean,
+  inheritedTiltRad: number,
 ): BodyFixedPose {
   let out = pose;
   const f0 = eyeFrameOf(out);
@@ -278,22 +279,28 @@ function canonicalledPose(
   // positive for any anchor ahead of its own tangent plane — the sign is
   // always right and only the rate varies.
   if (dPsi !== 0) {
-    const q = quatFromAxisAngle(toNadir ? normalize3(anchorM) : f0.localUp, dPsi);
-    out = toNadir ? rotatedAbout(out, q, BODY_CENTRE) : withBasis(out, q);
+    const q = quatFromAxisAngle(diveAnchorM ? normalize3(diveAnchorM) : f0.localUp, dPsi);
+    out = diveAnchorM ? rotatedAbout(out, q, BODY_CENTRE) : withBasis(out, q);
   }
 
   const f1 = eyeFrameOf(out);
   if (f1 !== null) {
-    const eyeM = eyeOf(out);
-    const residualRad = toNadir
-      ? f1.tiltRad
-      : Math.max(0, f1.tiltRad - maxTiltRad(Math.hypot(...eyeM) / bodyRadiusM - 1));
-    const dTau = orientStepRad(residualRad);
+    let dTau: number;
+    if (diveAnchorM) {
+      dTau = orientStepRad(f1.tiltRad);
+    } else {
+      const eyeM = eyeOf(out);
+      const ceilingRad = maxTiltRad(Math.hypot(...eyeM) / bodyRadiusM - 1);
+      // The wall carries the inherited excess; the decay eats it, capped.
+      const allowed = Math.min(f1.tiltRad, ceilingRad + inheritedTiltRad);
+      const target = allowed - orientStepRad(Math.max(0, allowed - ceilingRad));
+      dTau = f1.tiltRad - target;
+    }
     const b = out.basisLocal;
     const axisRaw = cross3([b[6], b[7], b[8]], f1.localUp);
     if (dTau !== 0 && Math.hypot(...axisRaw) > 1e-12) {
       const q = quatFromAxisAngle(normalize3(axisRaw), -dTau);
-      out = toNadir ? rotatedAbout(out, q, anchorM) : withBasis(out, q);
+      out = diveAnchorM ? rotatedAbout(out, q, diveAnchorM) : withBasis(out, q);
     }
   }
 
@@ -304,7 +311,7 @@ function canonicalledPose(
       canonicalBasisAt(f2, f2.azimuthRad, f2.tiltRad),
       ORIENT_DECAY.capRad,
     );
-    if (q !== null) out = toNadir ? rotatedAbout(out, q, anchorM) : withBasis(out, q);
+    if (q !== null) out = diveAnchorM ? rotatedAbout(out, q, diveAnchorM) : withBasis(out, q);
   }
   return flooredPose(out, bodyRadiusM);
 }
@@ -479,24 +486,18 @@ function zoomStep(
       : (pickOn(cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad), bodyRadiusM)?.pointM ?? null);
   const stepped = anchoredZoomStep(arm, factor, cursorAnchorM, bodyRadiusM);
   // A dive at the sky has no ground point to converge over and keeps its
-  // framing. Otherwise the settle pivots on the zoom's own anchor — the
-  // cursor pick in BOTH directions (ruling 7), the sub-eye footprint on a
-  // recession miss — so the pinned point holds its pixel through the
-  // orientation walk, in and out alike.
+  // framing; a dive with one settles about it (pixel-locked). A recession
+  // settles about the eye and needs no anchor at all.
   if (factor < 1 && cursorAnchorM === null) return stepped;
-  const eyeM = eyeOf(stepped);
-  const eyeMagM = Math.hypot(...eyeM);
-  const anchorM: Vec3 | null =
-    cursorAnchorM !== null
-      ? [cursorAnchorM[0], cursorAnchorM[1], cursorAnchorM[2]]
-      : eyeMagM === 0
-        ? null
-        : [
-            (eyeM[0] / eyeMagM) * bodyRadiusM,
-            (eyeM[1] / eyeMagM) * bodyRadiusM,
-            (eyeM[2] / eyeMagM) * bodyRadiusM,
-          ];
-  return anchorM === null ? stepped : canonicalledPose(stepped, anchorM, bodyRadiusM, factor < 1);
+  // Excess the zoom did NOT author — tilt already above the ceiling BEFORE
+  // this notch (a clip/tour arrival, a drag parked above the band). The
+  // settle's wall carries it; only the capped decay may spend it.
+  const pre = eyeFrameOf(arm);
+  const inheritedRad =
+    pre === null
+      ? 0
+      : Math.max(0, pre.tiltRad - maxTiltRad(Math.hypot(...eyeOf(arm)) / bodyRadiusM - 1));
+  return canonicalledPose(stepped, factor < 1 ? cursorAnchorM : null, bodyRadiusM, inheritedRad);
 }
 
 export function createSurfaceController(): SurfaceController {
