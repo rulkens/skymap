@@ -1,6 +1,6 @@
 # Render Sgr A* Black Hole Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. This plan follows `docs/superpowers/conventions/plan-style.md` — contract code (signatures, test names+assertions, byte tables) yes, implementation bodies no.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking. This plan follows `docs/superpowers/conventions/plan-style.md` — contract code (signatures, test names+assertions, byte tables) yes, implementation bodies no.
 
 **Goal:** Render a physically-grounded Schwarzschild close-up of Sgr A* inside a
 new `sgrAStarLensing` fade band (500→100 AU), with a far-field warm-orange
@@ -1058,26 +1058,26 @@ gate).
 
 **Steps:**
 
-- [ ] With the dev server running and the feature complete, focus Sgr A* and
+- [x] With the dev server running and the feature complete, focus Sgr A* and
       descend into the lensing band. Verify, with the user, EACH of the
       spec's five checklist items verbatim:
-  - [ ] shadow diameter reads as ~5.2 r_s (the EHT-consistent apparent size);
-  - [ ] an Einstein ring is visible on background stars crossing near the
+  - [x] shadow diameter reads as ~5.2 r_s (the EHT-consistent apparent size);
+  - [x] an Einstein ring is visible on background stars crossing near the
         shadow;
-  - [ ] doppler asymmetry favours the correct side of the annulus (the
+  - [x] doppler asymmetry favours the correct side of the annulus (the
         approaching material's side, given the chosen inclination/position
         angle);
-  - [ ] the fade band crossfades without a pop at either edge;
-  - [ ] the far-field glint hands off to the close-up without a visible seam.
-- [ ] Also judge two items outside the spec's original five, added by the fix
+  - [x] the fade band crossfades without a pop at either edge;
+  - [x] the far-field glint hands off to the close-up without a visible seam.
+- [x] Also judge two items outside the spec's original five, added by the fix
       round's re-review: the Milky-Way discontinuity at the lens quad's rim
       (the MW cloud is deliberately not in the capture roster, so its edge
       against the captured sky can show a seam), and the capture-face
       aggregate knee (relabelled kneed/un-kneed this round — never eyeballed
       before this gate).
-- [ ] Report the outcome per item. Any failing item is a STOP — fix and
+- [x] Report the outcome per item. Any failing item is a STOP — fix and
       re-gate, not a partial ship.
-- [ ] Only once every item passes AND Task 16's perf gate is clean does this
+- [x] Only once every item passes AND Task 16's perf gate is clean does this
       plan's feature work count as ready for `/feature-done`.
 
 ---
