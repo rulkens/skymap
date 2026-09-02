@@ -515,6 +515,21 @@ The volumetric raymarched fragment shader at the heart of
   post-processing (gamma, contrast, vignette) was deleted so the
   engine's HDR tone-map pass can run on a clean linear-light input.
 
+### Sgr A\* lens — Bruneton 2020
+
+- **Use:** Reference and audit baseline only — no code reused. The Sgr A\*
+  lens computes its own Schwarzschild bending-angle LUT by quadrature
+  (`src/utils/lensing/buildSchwarzschildDeflectionLut.ts`) and its own march
+  (`src/services/gpu/shaders/bodies/sgrAStarLensing/fragment.wesl`), design
+  descended from an earlier in-repo NFW lens LUT. Bruneton's paper informed
+  the backward-lookup convention (rotate the escape ray toward the hole by
+  the bending angle) and served as the comparison baseline for the
+  emission-disk and LUT math audit during development.
+- **Reference:** Eric Bruneton, "Real-time High-Quality Rendering of
+  Non-Rotating Black Holes," 2020, [arXiv:2010.08735](https://arxiv.org/abs/2010.08735);
+  reference implementation <https://github.com/ebruneton/black_hole_shader>.
+- **Licence:** BSD-3-Clause (reference implementation).
+
 ## Vendored data
 
 ### d3-celestial — constellation line data
