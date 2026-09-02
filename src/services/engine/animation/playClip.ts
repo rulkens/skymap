@@ -71,9 +71,10 @@ export type PlayClipDeps = {
   clipPlayer: Pick<ClipPlayer, 'stop' | 'registerEndResolver'>;
 
   /**
-   * Accessor for the live produced camera pose. Reads
-   * `state.cameraRuntime.lastPose.current` (the pose the user actually sees,
-   * not the potentially-stale `camera.base`).
+   * Accessor for the live produced camera pose, in world Mpc: the engine binds
+   * it to `liveWorldPose` (the pose the user actually sees, resolved out of its
+   * arm — not the potentially-stale `camera.base`). Clip endpoints are absolute
+   * until Task 20 tags them.
    *
    * A closure accessor (not the pose value itself) so 'live' resolution always
    * captures the pose at dispatch time rather than at factory-creation time.

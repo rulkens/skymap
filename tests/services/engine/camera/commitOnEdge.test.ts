@@ -55,6 +55,7 @@ import {
   runCameraDrivers,
 } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
+import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import {
   createCameraClock,
   tweenElapsed,
@@ -63,6 +64,9 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { worldArmOf } from '../../../fixtures/worldArmOf';
+import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 
 /**
  * Minimal EngineState fixture with a live cameraRuntime Resource bag. Used by
@@ -90,10 +94,11 @@ function makeEngineState(): {
     cameraRuntime: {
       clock: createCameraClock(),
       projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } as CameraPose },
+      lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }) },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      surface: createSurfaceController(),
     },
   };
 
@@ -120,11 +125,11 @@ function simulateFrame(
   store: ReturnType<typeof makeStore>,
   drivers: ReturnType<typeof buildCameraDrivers>,
   nowMs: number,
-): { pose: CameraPose; activeId: string; committed: boolean } {
+): { pose: FramedCameraPose; activeId: string; committed: boolean } {
   const rootState = store.getState();
   const { clock, lastPose, prevActiveId } = engineState.cameraRuntime;
 
-  const pose = runCameraDrivers(drivers, rootState, engineState.cam!, clock, nowMs);
+  const pose = runCameraDrivers(drivers, rootState, clock, nowMs);
   const currActiveId = activeDriverId(drivers, rootState);
 
   // Step 2: Tween completion.
@@ -268,7 +273,7 @@ describe('commitOnEdge — tween settles', () => {
     simulateFrame(state, store, drivers, 200); // cancel frame: elapsed 200 >= durationMs, lastPose := saturated TO
     simulateFrame(state, store, drivers, 220); // commit frame: base := lastPose == TO
 
-    const base = store.getState().camera.base;
+    const base = worldArmOf(store.getState().camera.base);
     expect(base.yaw).toBeCloseTo(TO.yaw, 6);
     expect(base.pitch).toBeCloseTo(TO.pitch, 6);
     expect(base.distance).toBeCloseTo(TO.distance, 6);
@@ -286,7 +291,7 @@ describe('commitOnEdge — tween settles', () => {
     const PRE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
     const TO: CameraPose = { target: [5, 10, 15], yaw: 2.5, pitch: -0.3, distance: 40 };
 
-    store.dispatch(commitCameraPose(PRE));
+    store.dispatch(commitCameraPose(absoluteArm(PRE)));
     store.dispatch(
       startCameraTween({
         from: PRE,
@@ -305,8 +310,8 @@ describe('commitOnEdge — tween settles', () => {
     expect(edge.activeId).toBe('resting');
     expect(edge.committed).toBe(true);
     // The rendered pose is the committed target, NOT the stale pre-tween base.
-    expect(edge.pose.yaw).toBeCloseTo(TO.yaw, 6);
-    expect(edge.pose.distance).toBeCloseTo(TO.distance, 6);
+    expect(worldArmOf(edge.pose).yaw).toBeCloseTo(TO.yaw, 6);
+    expect(worldArmOf(edge.pose).distance).toBeCloseTo(TO.distance, 6);
   });
 });
 
@@ -349,7 +354,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     const drivers = buildCameraDrivers(state as unknown as EngineState);
 
     const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
-    store.dispatch(commitCameraPose(BASE_POSE));
+    store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
     store.dispatch(
       startCameraTween({
         from: BASE_POSE,
@@ -366,8 +371,8 @@ describe('commitOnEdge — no-jump-on-grab', () => {
 
     // `lastPose.current` must NOT equal the stale `base` (which is still
     // the pre-tween committed pose).
-    const lastPose = state.cameraRuntime.lastPose.current;
-    const base = store.getState().camera.base;
+    const lastPose = worldArmOf(state.cameraRuntime.lastPose.current);
+    const base = worldArmOf(store.getState().camera.base);
     // After 500ms of a 1000ms tween the yaw is somewhere between 0 and 1.
     expect(lastPose.yaw).not.toBe(base.yaw);
   });
@@ -467,5 +472,38 @@ describe('commitOnEdge — clip deactivation', () => {
     const frame2 = simulateFrame(state, store, drivers, 16);
     expect(frame2.activeId).toBe('resting');
     expect(frame2.committed).toBe(false);
+  });
+
+  it('a playing clip keeps the camera against a body-arm gesture', () => {
+    // Taking the camera for a held gesture and handing it back to a clip whose
+    // commit-on-edge bakes its OWN final pose would discard the gesture whole
+    // at pointerup. The gesture row serves both arms at 80; the clip's 95
+    // outranks it either way: a clip is not drag-interruptible.
+    const store = makeStore();
+    const { state } = makeEngineState();
+    const drivers = buildCameraDrivers(state as unknown as EngineState);
+
+    // The rows read `base.frame` only, so the pose value is irrelevant here.
+    store.dispatch(
+      commitCameraPose({
+        frame: { body: 'earth' },
+        pose: {
+          bodyId: 'earth',
+          anchorLocalM: [0, 0, 0],
+          eyeRelAnchorM: [0, 0, 1e7],
+          basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1],
+        },
+      }),
+    );
+    store.dispatch(beginDrag());
+    expect(activeDriverId(drivers, store.getState())).toBe('orbitDrag');
+
+    store.dispatch(
+      clipStarted({
+        data: { start: { target: [1, 2, 3], yaw: 0, pitch: 0, distance: 80 }, timeline: [] },
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+    expect(activeDriverId(drivers, store.getState())).toBe('clip');
   });
 });

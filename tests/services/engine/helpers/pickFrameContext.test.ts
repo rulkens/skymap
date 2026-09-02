@@ -24,6 +24,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -106,9 +107,10 @@ function makeState(
     // `deriveFrameContext` needs this now.
     data: { bodies: { earth: null, planets: [], stars: [] } },
     cameraRuntime: {
-      lastPose: { current: LAST_POSE },
+      lastPose: { current: absoluteArm(LAST_POSE) },
       projection: PROJECTION,
       lastRenderedSimDays: { current: LAST_SIM_DAYS },
+      upBasis: { current: ORIENTATION_FRAMES.equatorial },
     },
   } as unknown as EngineState;
 }
@@ -138,7 +140,8 @@ describe('pickFrameContext', () => {
     const expected = deriveFrameContext(
       state,
       canvas,
-      state.cameraRuntime.lastPose.current,
+      LAST_POSE,
+      absoluteArm(LAST_POSE),
       state.cameraRuntime.projection,
       // Same steady basis `pickFrameContext` resolves internally for BOTH
       // halves, so the two cameras decode position and screen-up through the

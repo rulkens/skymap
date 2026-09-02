@@ -75,6 +75,7 @@
 import { isPerfMode } from '../../utils/url/isPerfMode';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { clearSelection } from '../selection/selectionSlice';
 import { setRenderStrategy } from '../settings/settingsSlice';
 import { requestTier } from '../tier/requestTier';
@@ -128,12 +129,14 @@ async function setPose(store: AppStore, pose: PerfPose): Promise<void> {
   }
   store.dispatch(cancelCameraTween());
   store.dispatch(
-    commitCameraPose({
-      target: pose.target,
-      yaw: pose.yaw,
-      pitch: pose.pitch,
-      distance: pose.distance,
-    }),
+    commitCameraPose(
+      absoluteArm({
+        target: pose.target,
+        yaw: pose.yaw,
+        pitch: pose.pitch,
+        distance: pose.distance,
+      }),
+    ),
   );
   store.dispatch(setAutoRotate({ active: true, rate: pose.rate ?? PERF_AUTO_ROTATE_RATE }));
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));

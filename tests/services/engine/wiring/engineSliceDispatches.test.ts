@@ -110,6 +110,8 @@ import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wir
 import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -286,9 +288,12 @@ function makeSyntheticFallbackState(): {
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set.
     cameraRuntime: {
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      lastPose: {
+        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+      },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
       lastRenderedSimDays: { current: CONST_J2000 },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   } as unknown as EngineState;
 

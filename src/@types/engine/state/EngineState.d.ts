@@ -30,7 +30,8 @@
  *   - `state.picking`    — hover / click / drag mutables.
  *   - `state.gpu`        — pipelines / textures allocated lazily.
  *   - `state.subsystems` — owned long-lived helpers.
- *   - `state.cam`        — the orbit camera (null until first cloud).
+ *   - `state.cam`        — the boot framing camera; non-null once `wireInput`
+ *                          ran (the bootstrap-ready proxy).
  *
  * ### Why a single `const` instead of a class?
  *

@@ -51,6 +51,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { deriveFrameContext } from '../frame/frameContext';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
+import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 export function pickFrameContext(
@@ -63,6 +64,9 @@ export function pickFrameContext(
     // The pose the last frame actually rendered — the same value that frame's
     // `deriveFrameContext` received, so the pick camera matches the frame on
     // screen.
+    liveWorldPose(state),
+    // The framed pose `liveWorldPose` resolved from — same arm the last frame
+    // rendered, so the pick pass's provider-B routing matches the screen too.
     state.cameraRuntime.lastPose.current,
     state.cameraRuntime.projection,
     // Pick is a demand read at rest (between frames), so the steady

@@ -254,7 +254,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
         // count: a wheel tick during a gizmo drag must still zoom (old behaviour), which
         // means committing immediately (the "rest" path) since a gizmo gestureEnd never
         // commits the camera.
-        aggregator.push({ kind: 'wheel', deltaY: event.deltaY, duringGesture: route === 'camera' });
+        aggregator.push({ ...event, duringGesture: route === 'camera' });
         return;
 
       case 'gestureEnd':

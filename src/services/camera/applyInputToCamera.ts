@@ -1,6 +1,6 @@
 /**
- * applyInputToCamera — apply one aggregated input step to the drag register.
- * Only the register is written; committing to the store is the drain's job.
+ * applyInputToCamera — fold one aggregated input step over a world-arm pose.
+ * Pure: returns the next pose; committing to the store is the drain's job.
  *
  * Drag right (+dx) DECREASES yaw: the world follows the hand ("globe" drag)
  * rather than the camera swinging rightward (FPS look).
@@ -8,15 +8,16 @@
 
 import { vec3 } from 'wgpu-matrix';
 
-import { updatePosition } from '../../utils/camera/updatePosition';
 import { zoomedDistance } from '../../utils/camera/zoomedDistance';
 import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../utils/camera/frameUp';
+import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 
-import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
+import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { InputStep } from '../../@types/camera/InputStep';
 import type { PivotFraming } from '../../@types/camera/PivotFraming';
+import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
@@ -29,18 +30,20 @@ const PITCH_LIMIT = Math.PI / 2 - 0.01;
 /**
  * `cssHeight` is the CSS height, NOT the backing store — gesture feel must not
  * depend on devicePixelRatio. `pivot` (radius `null`: no surface) damps the
- * orbit rate and floors the zoom.
+ * orbit rate and floors the zoom. `poseBasis` decodes the eye for the pan's
+ * image plane; `upBasis` supplies the pole the pan tracks.
  */
 export function applyInputToCamera(
-  cam: OrbitCamera,
+  pose: CameraPose,
   step: Extract<InputStep, { kind: 'drag' } | { kind: 'zoom' }>,
   cssHeight: number,
   pivot: PivotFraming,
-): void {
+  fovYRad: number,
+  poseBasis: Readonly<Mat3>,
+  upBasis: Readonly<Mat3>,
+): CameraPose {
   if (step.kind === 'zoom') {
-    cam.distance = zoomedDistance(cam.distance, step.factor, pivot);
-    updatePosition(cam);
-    return;
+    return { ...pose, distance: zoomedDistance(pose.distance, step.factor, pivot) };
   }
 
   const dx = step.endPx[0] - step.startPx[0];
@@ -49,28 +52,31 @@ export function applyInputToCamera(
   if (step.mode === 'pan') {
     // Approximate "the point under the cursor follows the cursor" by translating
     // the target along the screen axes — no depth reprojection. Reference up is
-    // the frame pole (world +Y absent a basis), so the pan tracks the frame.
+    // the frame pole, so the pan tracks the frame.
+    const eye = eyeMpcOf(pose, poseBasis);
     const forward: Vec3 = [0, 0, 0];
-    vec3.subtract(cam.target, cam.position, forward);
+    vec3.subtract(pose.target, eye, forward);
     vec3.normalize(forward, forward);
-    const basis = imagePlaneBasis(forward, 0, frameUp(cam.upBasis));
+    const basis = imagePlaneBasis(forward, 0, frameUp(upBasis));
 
     // World units per CSS pixel at the target depth, both axes (pixels square).
-    const pxToWorld = (2 * cam.distance * Math.tan(cam.fovYRad / 2)) / cssHeight;
+    const pxToWorld = (2 * pose.distance * Math.tan(fovYRad / 2)) / cssHeight;
 
     // Drag right → world slides right → target slides left. CSS y grows down
     // and cam-up points up-screen, so +dy → +up needs no extra flip.
-    const panDelta = vec3.create();
-    vec3.scale(basis.right, -dx * pxToWorld, panDelta);
-    vec3.addScaled(panDelta, basis.up, dy * pxToWorld, panDelta);
-    vec3.add(cam.target, panDelta, cam.target);
-    updatePosition(cam);
-    return;
+    const target: Vec3 = [
+      pose.target[0] + basis.right[0] * -dx * pxToWorld + basis.up[0] * dy * pxToWorld,
+      pose.target[1] + basis.right[1] * -dx * pxToWorld + basis.up[1] * dy * pxToWorld,
+      pose.target[2] + basis.right[2] * -dx * pxToWorld + basis.up[2] * dy * pxToWorld,
+    ];
+    return { ...pose, target };
   }
 
   // Damped by altitude above a focused body so the ground tracks the drag.
-  const radPerPixel = orbitRadPerPixel(cam.fovYRad, cam.distance, cssHeight, pivot.radiusMpc);
-  cam.yaw -= dx * radPerPixel;
-  cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * radPerPixel));
-  updatePosition(cam);
+  const radPerPixel = orbitRadPerPixel(fovYRad, pose.distance, cssHeight, pivot.radiusMpc);
+  return {
+    ...pose,
+    yaw: pose.yaw - dx * radPerPixel,
+    pitch: Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pose.pitch + dy * radPerPixel)),
+  };
 }

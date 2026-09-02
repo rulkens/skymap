@@ -264,6 +264,8 @@ import { filamentFetcher } from '../../../../src/services/loading/fetchers/filam
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
 import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -499,9 +501,12 @@ function makeState(
     // body-texture rows out of the demand set (boot-load expectations stay
     // sdss/2mrs/glade/…, no Blue Marble fetch).
     cameraRuntime: {
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      lastPose: {
+        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+      },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
       lastRenderedSimDays: { current: CONST_J2000 },
+      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
     assetSlots: {
       points: points as Map<SourceType, never>,

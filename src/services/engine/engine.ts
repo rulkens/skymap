@@ -18,6 +18,7 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { createCameraClock } from './camera/cameraClock';
+import { createSurfaceController } from '../camera/surfaceController';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { CONST_J2000 } from '../../data/time/constJ2000';
@@ -44,7 +45,15 @@ import { createInputAggregator } from './subsystems/inputAggregator';
 import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
+import { liveWorldPose } from './helpers/liveWorldPose';
 import { liveFocusRow } from './helpers/liveFocusRow';
+import { deriveBodyStates } from './frame/deriveBodyStates';
+import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
+import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { selectTimeState } from '../../state/time/selectors';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyState } from '../../@types/scene/BodyState';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -163,9 +172,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // initial OrbitCamera exists.
   //
   // `lastPose` seeds from the camera slice's initial `base` — the single home
-  // for the pre-bootstrap placeholder pose — so the first resting frame has a
-  // stable pose to read before wireInput's commitCameraPose fires. Copied so a
-  // later per-frame `lastPose.current = …` never aliases the store's state.
+  // for the pre-bootstrap placeholder pose, arm tag included — so the first
+  // resting frame has a stable pose to read before wireInput's
+  // commitCameraPose fires. The framed wrapper is copied so the engine's
+  // Resource is never the store's own object.
   const cameraRuntime: CameraRuntime = {
     clock: createCameraClock(),
     projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
@@ -181,6 +191,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // valid; `runFrame` overwrites it with the resolved B(t) each frame. Copied
     // so the seed never aliases the shared registry entry.
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
+    surface: createSurfaceController(),
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -692,7 +703,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // No null-guard needed: lastPose.current is seeded from camera.base at
     // CameraRuntime construction (synchronous) and playClip is only ever
     // invoked from tour/tween sagas or the dev panel, all after construction.
-    getLivePose: () => state.cameraRuntime.lastPose.current,
+    getLivePose: () => liveWorldPose(state),
   });
 
   // Debug clip-path inspector seam — `watchClipPathInspectSaga` calls `compute`
@@ -712,7 +723,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // 8007 here; the renderer is built with 8192 in `initGpu`).
   const clipPathInspect = createClipPathInspectSeam({
     inspector: state.subsystems.clipPathInspector,
-    getLivePose: () => state.cameraRuntime.lastPose.current,
+    getLivePose: () => liveWorldPose(state),
     sampleCount: 4000,
   });
 
@@ -730,7 +741,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     cameraRuntime: () =>
       state.cam
         ? {
-            from: state.cameraRuntime.lastPose.current,
+            from: liveWorldPose(state),
             fovYRad: state.cameraRuntime.projection.fovYRad,
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
@@ -943,6 +954,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // again after destroy), so the fallback keeps the panel's read total.
       earthTiles: () =>
         state.subsystems.earthTiles?.getDebugSnapshot() ?? EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+      // Off-frame read, so it goes through `liveWorldPose` + `deriveBodyStates`
+      // (memoized on `lastRenderedSimDays`, the same instant runFrame just
+      // primed) rather than re-deriving the fold — this getter never writes
+      // camera state. `liveSimDays` alone is resolved fresh at call time
+      // (`performance.now()`), the one deliberately "right now" read: it's
+      // what the epoch-mismatch check is comparing the render loop against.
+      cameraDebug: () => {
+        const rootState = store.getState();
+        const time = selectTimeState(rootState);
+        const bodyStates = deriveBodyStates(
+          state.cameraRuntime.lastRenderedSimDays.current,
+        ) as ReadonlyMap<BodyId, BodyState>;
+        return cameraDebugSnapshotOf({
+          storedFrame: rootState.camera.base.frame,
+          renderedPose: state.cameraRuntime.lastPose.current,
+          eyeMpc: eyeMpcOf(liveWorldPose(state), ORIENTATION_FRAMES[state.settings.orientation]),
+          bodyStates,
+          lastRenderedSimDays: state.cameraRuntime.lastRenderedSimDays.current,
+          liveSimDays: deriveSimDays(time, performance.now()),
+          time,
+          activeDriverId: state.cameraRuntime.prevActiveId.current,
+        });
+      },
     },
 
     destroy,

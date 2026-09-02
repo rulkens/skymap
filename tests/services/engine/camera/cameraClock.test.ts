@@ -14,13 +14,13 @@ import {
   autoRotateElapsed,
   clipElapsed,
   followElapsed,
-  accumulateFollowPan,
 } from '../../../../src/services/engine/camera/cameraClock';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { CameraState } from '../../../../src/@types/camera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 
 function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTweenDescriptor {
   return {
@@ -139,7 +139,7 @@ describe('autoRotateElapsed', () => {
   // A stable base reference; passing the SAME object each call means the
   // base-identity reset never fires, so these tests exercise only the
   // active-bit transitions.
-  const BASE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+  const BASE = absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 });
 
   it('returns 0 when auto-rotate is inactive from the start', () => {
     const clock = createCameraClock();
@@ -197,7 +197,7 @@ describe('autoRotateElapsed', () => {
     const clock = createCameraClock();
     autoRotateElapsed(clock, true, BASE, 2000); // activation → 0
     expect(autoRotateElapsed(clock, true, BASE, 2050)).toBe(50); // same base → grows
-    const NEW_BASE: CameraPose = { target: [1, 0, 0], yaw: 0.5, pitch: 0, distance: 80 };
+    const NEW_BASE = absoluteArm({ target: [1, 0, 0], yaw: 0.5, pitch: 0, distance: 80 });
     expect(autoRotateElapsed(clock, true, NEW_BASE, 2060)).toBe(0); // base changed → reset
     expect(autoRotateElapsed(clock, true, NEW_BASE, 2075)).toBe(15); // grows from new base
   });
@@ -262,54 +262,18 @@ describe('clipElapsed', () => {
   });
 });
 
-// ── follow-body pan (strafe) offset ──────────────────────────────────────────
-
-describe('accumulateFollowPan', () => {
-  it('folds the frame-to-frame cam.target delta into the offset while follow-dragging', () => {
-    const clock = createCameraClock();
-    // First follow-drag frame only seeds the delta chain (offset unchanged) — the
-    // absolute seeded cam.target must NOT leak into the offset.
-    accumulateFollowPan(clock, true, [0, 0, 0]);
-    expect(clock.followPanOffset).toEqual([0, 0, 0]);
-    accumulateFollowPan(clock, true, [5, 0, 0]); // +[5,0,0]
-    accumulateFollowPan(clock, true, [5, 3, 0]); // +[0,3,0]
-    expect(clock.followPanOffset).toEqual([5, 3, 0]);
-  });
-
-  it('holds the offset and drops the delta chain on non-drag frames', () => {
-    const clock = createCameraClock();
-    accumulateFollowPan(clock, true, [0, 0, 0]);
-    accumulateFollowPan(clock, true, [4, 0, 0]);
-    expect(clock.followPanOffset).toEqual([4, 0, 0]);
-
-    // A non-drag frame must NOT accumulate, and must reset lastPanTarget so the
-    // NEXT grab starts a fresh delta chain rather than jumping the offset by the gap.
-    accumulateFollowPan(clock, false, [999, 999, 999]);
-    expect(clock.followPanOffset).toEqual([4, 0, 0]);
-    expect(clock.lastPanTarget).toBeNull();
-
-    // Next grab: first frame seeds (offset unchanged), then accumulates the delta.
-    accumulateFollowPan(clock, true, [100, 0, 0]);
-    expect(clock.followPanOffset).toEqual([4, 0, 0]);
-    accumulateFollowPan(clock, true, [102, 0, 0]);
-    expect(clock.followPanOffset).toEqual([6, 0, 0]);
-  });
-});
-
 describe('followElapsed — pan offset reset', () => {
-  it('zeroes followPanOffset and drops the delta chain on a focus ref change', () => {
+  it('zeroes followPanOffset on a focus ref change', () => {
     const clock = createCameraClock();
     const rowA = { type: 'body', id: 'earth' } as unknown as SelectionRow;
     followElapsed(clock, rowA, 1000); // install rowA as the current focus ref
 
     // Simulate an accumulated strafe under that steady focus.
     clock.followPanOffset = [1, 2, 3];
-    clock.lastPanTarget = [1, 2, 3];
 
-    // A NEW focus ref is a fresh target: the offset must zero and the chain drop.
+    // A NEW focus ref is a fresh target: the offset must zero.
     const rowB = { type: 'body', id: 'mars' } as unknown as SelectionRow;
     followElapsed(clock, rowB, 2000);
     expect(clock.followPanOffset).toEqual([0, 0, 0]);
-    expect(clock.lastPanTarget).toBeNull();
   });
 });

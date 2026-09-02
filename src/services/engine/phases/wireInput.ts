@@ -40,6 +40,7 @@ import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { EARTH_REF } from '../../../data/selection/earthRef';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
+import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
@@ -192,8 +193,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   //      authoritative before the first produced frame, so the `resting` driver
   //      returns the correct pose and the first frame does not jump.
   state.cameraRuntime.projection = projectionOf(cam);
-  state.cameraRuntime.lastPose.current = poseOf(cam);
-  store.dispatch(commitCameraPose(poseOf(cam)));
+  state.cameraRuntime.lastPose.current = absoluteArm(poseOf(cam));
+  store.dispatch(commitCameraPose(absoluteArm(poseOf(cam))));
 
   // ── Home selection seed ──────────────────────────────────────────────────
   //
@@ -337,9 +338,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // reaches `put(startCameraTween)` with no intervening yield, so a cancel
   // deferred to the next frame would kill the tween that double-tap-to-focus
   // just started. `beginDrag` rides along to keep the pair atomic. Only the
-  // register seed and the camera math stay deferred — nothing between the
-  // pointerdown and the drain can move `lastPose.current`, which is the seed's
-  // only input.
+  // camera math stays deferred — nothing between the pointerdown and the drain
+  // can move `lastPose.current`, the pose the drain's first fold reads.
   deps.detachControlsRef.current = attachOrbitControls(
     canvas,
     (event) => {

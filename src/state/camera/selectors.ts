@@ -29,11 +29,15 @@
 import { cameraRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
-import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
 export const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
 
-export const selectCameraBase = (state: RootState): CameraPose => selectCameraIntent(state).base;
+// The FRAMED base (spec §9): readers that are world-arm concerns by nature
+// resolve it through `resolveWorldArm` / `liveWorldPose` rather than assuming
+// the absolute arm.
+export const selectCameraBase = (state: RootState): FramedCameraPose =>
+  selectCameraIntent(state).base;
 
 export const selectAutoRotate = (state: RootState): boolean =>
   selectCameraIntent(state).autoRotate.active;
@@ -46,13 +50,19 @@ export const selectAutoRotateRate = (state: RootState): number =>
 // movers to decide whether to reschedule the next frame. The clip term keeps
 // the loop alive for the full duration of an animation clip; the frameTween
 // term keeps it alive through an orientation-frame roll's up-basis slerp.
+//
+// The auto-rotate term carries the same arm gate as the DRIVER it stands for
+// (`cameraDrivers`): in a body arm the flag is stored intent with nothing
+// acting on it, and an ungated term would pin the loop at 60 fps with nothing
+// moving. `dragging` is deliberately NOT gated — the surface controller is the
+// body arm's gesture driver.
 export const selectCameraActive = (state: RootState): boolean => {
   const c = selectCameraIntent(state);
   return (
     c.clip !== null ||
     c.dragging ||
     c.tween !== null ||
-    c.autoRotate.active ||
+    (c.autoRotate.active && c.base.frame === 'absolute') ||
     c.frameTween !== null
   );
 };

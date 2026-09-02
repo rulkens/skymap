@@ -92,13 +92,23 @@ describe('zoomedDistance', () => {
     expect(zoomedDistance(100, 0.5, NO_PIVOT)).toBe(50);
   });
 
-  it('falls back to the proportional model (still respecting the floor) if already at or below the surface', () => {
-    // A state the clamp is supposed to prevent, but if it ever occurs, halving
-    // an already-negative-or-zero altitude has no sensible taper — the
-    // fallback should still land the camera on the standoff floor rather than
-    // diverging or returning something below the pivot's surface.
-    const distance = EARTH_RADIUS_MPC * 0.5; // already inside the body
-    const result = zoomedDistance(distance, 0.9, EARTH_PIVOT);
-    expect(result).toBeCloseTo(EARTH_RADIUS_MPC * SURFACE_STANDOFF_RADII, 12);
+  it('never ratchets a distance already inside the pivot floor outward', () => {
+    // Reachable, and not by the camera being inside a body: a pose that left
+    // the surface arm carries a range along its VIEW RAY, and the focused pivot
+    // need not be the body it was engaged on. Disengaging from the Moon at
+    // h/R 3.4 gives 5 907 km — under Earth's 6 371 km floor if Earth is the
+    // focus row. Clamping UP to that floor moved the eye 464 km outward on ONE
+    // notch (`zoomedPose` carries target/yaw/pitch, so |Δeye| = |Δdistance|):
+    // the snap class the ray-target conversion fix exists to remove.
+    const distance = 5907.2 * SCALE_UNITS.KM_TO_MPC;
+    expect(distance).toBeLessThan(EARTH_PIVOT.floorMpc);
+
+    // Zoom IN holds station rather than jumping out …
+    expect(zoomedDistance(distance, 0.9, EARTH_PIVOT)).toBe(distance);
+    // … and zoom OUT steps by the notch, so the pose can climb back out of the
+    // floor under its own power and rejoin the taper.
+    const out = zoomedDistance(distance, 1.1, EARTH_PIVOT);
+    expect(out).toBeCloseTo(distance * 1.1, 12);
+    expect(zoomedDistance(out, 1.1, EARTH_PIVOT)).toBeGreaterThan(out);
   });
 });

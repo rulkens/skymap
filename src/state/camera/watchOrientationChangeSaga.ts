@@ -18,6 +18,7 @@ import { setOrientation } from '../settings/settingsSlice';
 import { selectOrientation } from '../settings/selectors';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { reencodePose } from '../../utils/camera/reencodePose';
+import { absoluteArm } from '../../utils/camera/absoluteArm';
 import type { SagaContext } from '../../store/types';
 
 // Frame-roll duration (~1 s, spec §8); co-located since only this saga uses it.
@@ -34,9 +35,17 @@ export function* watchOrientationChangeSaga() {
     const base = yield* select(selectCameraBase);
 
     yield* put(setOrientation(frame));
-    yield* put(
-      commitCameraPose(reencodePose(base, ORIENTATION_FRAMES[previous], ORIENTATION_FRAMES[frame])),
-    );
+    // World arm only: a body arm's pose is stored in the body's own axes, so no
+    // (yaw, pitch) is expressed against the pole that just moved.
+    if (base.frame === 'absolute') {
+      yield* put(
+        commitCameraPose(
+          absoluteArm(
+            reencodePose(base.pose, ORIENTATION_FRAMES[previous], ORIENTATION_FRAMES[frame]),
+          ),
+        ),
+      );
+    }
 
     // The re-encode above needs no camera (pure store + registry); only the
     // roll does. Pre-bootstrap/post-destroy, the frame and pose already landed.

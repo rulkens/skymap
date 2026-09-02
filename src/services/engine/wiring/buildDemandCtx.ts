@@ -23,6 +23,7 @@
 
 import { slotFor } from './slotFor';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
+import { liveWorldPose } from '../helpers/liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 import type { DemandCtx } from '../../../@types/loading/DemandCtx';
@@ -59,7 +60,7 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // and an orientation tween is a transient the proximity gate is insensitive
     // to. (Task 9 owns the per-frame resolved basis on the draw path.)
     cameraPosMpc: assembleOrbitCamera(
-      state.cameraRuntime.lastPose.current,
+      liveWorldPose(state),
       state.cameraRuntime.projection,
       ORIENTATION_FRAMES[state.settings.orientation],
       ORIENTATION_FRAMES[state.settings.orientation],

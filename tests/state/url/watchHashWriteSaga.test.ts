@@ -44,6 +44,7 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { timeRoute } from '../../../src/store/constants';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
@@ -167,7 +168,7 @@ describe('watchHashWriteSaga', () => {
     // Widening any row's `writesOn` to a slice prefix over camera, or to `'*'`,
     // fails here and nowhere else.
     buildHarness().dispatch(
-      commitCameraPose({ target: [1, 2, 3], yaw: 0.5, pitch: 0.2, distance: 12 }),
+      commitCameraPose(absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: 0.2, distance: 12 })),
     );
     await settle();
 

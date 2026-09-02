@@ -130,9 +130,10 @@ export const SLAB_REVERSED_Z: Readonly<Record<number, boolean>> = {
 };
 
 // The near-field lookAt derives its image-plane up through the shared
-// `imagePlaneBasis` seam. The base up is the frame pole (`frameUp(cam.upBasis)`;
-// world +Y absent a basis). Roll is 0 here — roll parity with the cosmological
-// slab's `computeViewProj` is deferred alongside the zoom-to-earth series.
+// `imagePlaneBasis` seam, with `cam.roll` applied — the SAME roll the
+// cosmological slab's `computeViewProj` and the body rows' `camBasisWorld`
+// honour. `toWorldArm` sets a non-zero roll whenever the body arm is live, so
+// dropping it here rotates every NEAR0 layer against every other slab.
 
 // Module-scope scratch reused each frame: the forward view direction, the
 // frame-pole reference up, and the roll-adjusted basis. `deriveSlabs` runs once
@@ -336,9 +337,9 @@ export function deriveSlabs(input: {
   // change as the user zooms, only the near-field's does.
   const altitudeMpc = pivotRadiusMpc !== null ? cam.distance - pivotRadiusMpc : cam.distance;
   const { near, far } = foregroundFrustum(altitudeMpc);
-  // The image-plane up comes from the shared basis seam. At roll 0 `rolledUp`
-  // is exactly the frame pole (`frameUp(cam.upBasis)`; world +Y absent a
-  // basis), so this tracks the cosmological slab's up through the one seam.
+  // The image-plane up comes from the shared basis seam, roll included, so
+  // this tracks the cosmological slab's up through the one seam (roll parity
+  // — see the module-scope note above).
   const fx = cam.target[0] - cam.position[0];
   const fy = cam.target[1] - cam.position[1];
   const fz = cam.target[2] - cam.position[2];
@@ -348,7 +349,7 @@ export function deriveSlabs(input: {
   forwardScratch[2] = fz / flen;
   const { rolledUp } = imagePlaneBasis(
     forwardScratch,
-    0,
+    cam.roll ?? 0,
     frameUp(cam.upBasis, upRefScratch),
     basisScratch,
   );

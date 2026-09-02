@@ -83,9 +83,9 @@ export type OrbitCameraInit = {
    * world +Y. Every non-engine caller (synthetic clouds, focus tween, dev-tool
    * cameras) omits it and is byte-for-byte unchanged — mirrors `roll?`.
    *
-   * Mutable (like `roll`, `yaw`, `pitch`): the engine's drag register
-   * (`state.cam`) has this overwritten once per frame (alongside `upBasis`)
-   * with the resolved B(t), so a grab decodes through the current pole.
+   * Mutable (like `roll`, `yaw`, `pitch`) so per-frame assembly can stamp the
+   * resolved bases; the gesture fold takes both bases as explicit parameters
+   * instead of reading them off a stored camera.
    */
   poseBasis?: Mat3;
 

@@ -6,7 +6,7 @@
  *
  *   - Each driver's `isActive` reads the right slice field.
  *   - Each driver's `pose` produces the correct result (evaluateClip via
- *     tweenToClip for tween, spinAutoRotate, s.camera.base, or poseOf(cam)).
+ *     tweenToClip for tween, spinAutoRotate, s.camera.base, or the register).
  *   - `pickWinner` selects by priority, not list order (incl. clip > orbitDrag).
  *   - `pickWinner` and `activeDriverId` always agree (invariant 1).
  *   - `runCameraDrivers` passes the winner's elapsed (tween/autoRotate use
@@ -24,7 +24,6 @@ import { lerp } from '../../../../src/utils/math/lerp';
 
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RootState } from '../../../../src/store/types';
 import {
@@ -33,7 +32,6 @@ import {
   runCameraDrivers,
 } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
-import { poseOf } from '../../../../src/services/engine/camera/poseOf';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
 import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
 import { spinAutoRotate } from '../../../../src/services/engine/camera/spinAutoRotate';
@@ -58,6 +56,9 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { worldArmOf } from '../../../fixtures/worldArmOf';
+import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
@@ -80,19 +81,12 @@ const TWEEN_DESC: CameraTweenDescriptor = {
   frame: DEFAULT_ORIENTATION,
 };
 
-const CAM_STUB: OrbitCamera = {
-  target: [5, 5, 5],
-  yaw: 0.7,
-  pitch: -0.1,
-  distance: 200,
-  position: new Float32Array([0, 0, 200]),
-  fovYRad: 1,
-  aspect: 1,
-  near: 0.01,
-  far: 50000,
-} as unknown as OrbitCamera;
+/** The live gesture register `orbitDrag` holds — drainInput's fold output. */
+const REGISTER_POSE = absoluteArm({ target: [5, 5, 5], yaw: 0.7, pitch: -0.1, distance: 200 });
 
-const FAKE_ENGINE_STATE = {} as EngineState;
+const FAKE_ENGINE_STATE = {
+  cameraRuntime: { lastPose: { current: REGISTER_POSE } },
+} as unknown as EngineState;
 
 // Minimal ClipData fixture — no effects, just the required timeline field.
 // The clip row only needs `data` to be a non-null object for isActive; the
@@ -159,10 +153,12 @@ describe('buildCameraDrivers — pose functions', () => {
     return drivers.find((d) => d.id === id)!;
   }
 
-  it('orbitDrag.pose returns poseOf(cam)', () => {
+  it('orbitDrag.pose returns the live gesture register by reference', () => {
+    // drainInput folds every step into `cameraRuntime.lastPose` before the
+    // produce step; the row holds exactly that pose, in whichever arm.
     const s = {} as RootState;
-    const result = byId('orbitDrag').pose(s, CAM_STUB, 0);
-    expect(result).toEqual(poseOf(CAM_STUB));
+    const result = byId('orbitDrag').pose(s, 0);
+    expect(result).toBe(REGISTER_POSE);
   });
 
   it('tween.pose returns evaluateClip(tweenToClip(descriptor), elapsed / 1000)', () => {
@@ -172,7 +168,7 @@ describe('buildCameraDrivers — pose functions', () => {
     store.dispatch(startCameraTween(TWEEN_DESC));
     const s = store.getState() as unknown as RootState;
     const elapsedMs = 300;
-    const result = byId('tween').pose(s, CAM_STUB, elapsedMs);
+    const result = worldArmOf(byId('tween').pose(s, elapsedMs));
     expect(result).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), elapsedMs / 1000));
   });
 
@@ -204,7 +200,7 @@ describe('buildCameraDrivers — pose functions', () => {
     const s = store.getState() as unknown as RootState;
 
     const elapsedMs = 500;
-    const result = byId('tween').pose(s, CAM_STUB, elapsedMs);
+    const result = worldArmOf(byId('tween').pose(s, elapsedMs));
 
     // Independent oracle: easeOutCubic(0.5) = 0.875; lerp(10, 1000, 0.875) = 876.25
     const expectedDistance = lerp(10, 1000, easeOutCubic(0.5));
@@ -217,20 +213,20 @@ describe('buildCameraDrivers — pose functions', () => {
 
   it('autoRotate.pose returns spinAutoRotate(base, rate, elapsed)', () => {
     const store = makeStore();
-    store.dispatch(commitCameraPose(BASE_POSE));
+    store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
     const s = store.getState() as unknown as RootState;
     const elapsed = 500;
-    const result = byId('autoRotate').pose(s, CAM_STUB, elapsed);
+    const result = worldArmOf(byId('autoRotate').pose(s, elapsed));
     expect(result).toEqual(spinAutoRotate(BASE_POSE, 0.000873, elapsed));
   });
 
   it('resting.pose returns s.camera.base', () => {
     const store = makeStore();
-    store.dispatch(commitCameraPose(BASE_POSE));
+    store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
     const s = store.getState() as unknown as RootState;
-    const result = byId('resting').pose(s, CAM_STUB, 0);
-    expect(result).toEqual(BASE_POSE);
+    const result = byId('resting').pose(s, 0);
+    expect(result).toEqual(absoluteArm(BASE_POSE));
   });
 });
 
@@ -267,11 +263,11 @@ describe('buildCameraDrivers — clip pins the frame it started under', () => {
     const elapsed = 2;
 
     // Sample #1: settings.orientation still matches the pinned frame.
-    const pose1 = byId('clip').pose(store.getState() as unknown as RootState, CAM_STUB, elapsed);
+    const pose1 = worldArmOf(byId('clip').pose(store.getState() as unknown as RootState, elapsed));
 
     // Mid-clip switch: settings.orientation moves; camera.clip.frame does not.
     store.dispatch(setOrientation('galactic'));
-    const pose2 = byId('clip').pose(store.getState() as unknown as RootState, CAM_STUB, elapsed);
+    const pose2 = worldArmOf(byId('clip').pose(store.getState() as unknown as RootState, elapsed));
 
     // The re-encode actually did something — the raw angles moved.
     expect(pose2.yaw).not.toBeCloseTo(pose1.yaw, 5);
@@ -320,11 +316,15 @@ describe('buildCameraDrivers — tween pins the frame it started under', () => {
     const elapsedMs = 2000; // past durationMs — saturated at `to`
 
     // Sample #1: settings.orientation still matches the pinned frame.
-    const pose1 = byId('tween').pose(store.getState() as unknown as RootState, CAM_STUB, elapsedMs);
+    const pose1 = worldArmOf(
+      byId('tween').pose(store.getState() as unknown as RootState, elapsedMs),
+    );
 
     // Mid-tween switch: settings.orientation moves; camera.tween.frame does not.
     store.dispatch(setOrientation('galactic'));
-    const pose2 = byId('tween').pose(store.getState() as unknown as RootState, CAM_STUB, elapsedMs);
+    const pose2 = worldArmOf(
+      byId('tween').pose(store.getState() as unknown as RootState, elapsedMs),
+    );
 
     // The re-encode actually did something — the raw angles moved.
     expect(pose2.yaw).not.toBeCloseTo(pose1.yaw, 5);
@@ -347,12 +347,9 @@ describe('pickWinner', () => {
       id,
       priority,
       isActive: vi.fn<(s: RootState) => boolean>(() => active),
-      pose: vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(() => ({
-        target: [0, 0, 0],
-        yaw: 0,
-        pitch: 0,
-        distance: 1,
-      })),
+      pose: vi.fn<(s: RootState, e: number) => FramedCameraPose>(() =>
+        absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
+      ),
     };
   }
 
@@ -426,13 +423,13 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     const nowMs = 500;
 
     // First call — tween starts here, elapsed = 0 on first frame.
-    const pose0 = runCameraDrivers(drivers, s, CAM_STUB, clock, nowMs);
+    const pose0 = runCameraDrivers(drivers, s, clock, nowMs);
     // tween wins; elapsedMs == 0 on first-ever call for a fresh descriptor.
-    expect(pose0).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), 0));
+    expect(pose0).toEqual(absoluteArm(evaluateClip(tweenToClip(TWEEN_DESC), 0)));
 
     // Second call at nowMs + 200 — same descriptor reference, elapsedMs = 200.
-    const pose200 = runCameraDrivers(drivers, s, CAM_STUB, clock, nowMs + 200);
-    expect(pose200).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000));
+    const pose200 = runCameraDrivers(drivers, s, clock, nowMs + 200);
+    expect(pose200).toEqual(absoluteArm(evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000)));
   });
 
   it('passes 0 elapsed to orbitDrag (pose does not use elapsed)', () => {
@@ -442,14 +439,12 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
     const clock = createCameraClock();
 
-    const poseSpy = vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(() =>
-      poseOf(CAM_STUB),
-    );
+    const poseSpy = vi.fn<(s: RootState, e: number) => FramedCameraPose>(() => REGISTER_POSE);
     // Replace just the orbitDrag driver's pose fn to capture elapsed.
     const patchedDrivers = drivers.map((d) => (d.id === 'orbitDrag' ? { ...d, pose: poseSpy } : d));
 
-    runCameraDrivers(patchedDrivers, s, CAM_STUB, clock, 9999);
-    expect(poseSpy).toHaveBeenCalledWith(s, CAM_STUB, 0);
+    runCameraDrivers(patchedDrivers, s, clock, 9999);
+    expect(poseSpy).toHaveBeenCalledWith(s, 0);
   });
 
   it('passes 0 elapsed to resting (pose does not use elapsed)', () => {
@@ -460,15 +455,13 @@ describe('runCameraDrivers — elapsed dispatch', () => {
 
     // Force resting to win by ensuring default state has autoRotate inactive.
     // (DEFAULT_AUTO_ROTATE is false, so resting wins by default.)
-    const poseSpy = vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(
-      () => s.camera.base,
-    );
+    const poseSpy = vi.fn<(s: RootState, e: number) => FramedCameraPose>(() => s.camera.base);
     const patchedDrivers = drivers.map((d) => (d.id === 'resting' ? { ...d, pose: poseSpy } : d));
 
-    runCameraDrivers(patchedDrivers, s, CAM_STUB, clock, 9999);
+    runCameraDrivers(patchedDrivers, s, clock, 9999);
     // resting wins when nothing else is active; elapsed must be 0.
     if (poseSpy.mock.calls.length > 0) {
-      expect(poseSpy.mock.calls[0]![2]).toBe(0);
+      expect(poseSpy.mock.calls[0]![1]).toBe(0);
     }
   });
 
@@ -485,19 +478,17 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     const installMs = 1000;
 
     // First call — clip installs at installMs, elapsed = 0 s on the first frame.
-    runCameraDrivers(drivers, s, CAM_STUB, clock, installMs);
+    runCameraDrivers(drivers, s, clock, installMs);
 
     // Spy-patch the clip pose to capture the elapsed value passed in.
-    const poseSpy = vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(
-      () => s.camera.base,
-    );
+    const poseSpy = vi.fn<(s: RootState, e: number) => FramedCameraPose>(() => s.camera.base);
     const patchedDrivers = drivers.map((d) => (d.id === 'clip' ? { ...d, pose: poseSpy } : d));
 
     // Second call 1500 ms later — clip still active (same reference).
     // clipElapsed returns (nowMs - clipStartMs) / 1000 = 1500 / 1000 = 1.5 s.
-    runCameraDrivers(patchedDrivers, s, CAM_STUB, clock, installMs + 1500);
+    runCameraDrivers(patchedDrivers, s, clock, installMs + 1500);
     expect(poseSpy).toHaveBeenCalledTimes(1);
-    expect(poseSpy.mock.calls[0]![2]).toBeCloseTo(1.5, 5);
+    expect(poseSpy.mock.calls[0]![1]).toBeCloseTo(1.5, 5);
   });
 });
 
@@ -539,12 +530,16 @@ function makeFollowEngineState(opts: {
   clock.followFrom = opts.followFrom ?? null;
   clock.followDistanceTarget = opts.followDistanceTarget ?? null;
   return {
+    // The follow driver's `from` capture resolves the live pose's arm, which
+    // reads the orientation + up-basis; the harness carries both.
+    settings: { orientation: DEFAULT_ORIENTATION },
     cameraRuntime: {
       clock,
       projection: { fovYRad: opts.fovYRad, aspect: 1, near: 0.01, far: 50000 },
-      lastPose: { current: opts.lastPose },
+      lastPose: { current: absoluteArm(opts.lastPose) },
       prevActiveId: { current: opts.prevActiveId ?? 'followBody' },
       lastRenderedSimDays: { current: opts.simDays },
+      upBasis: { current: ORIENTATION_FRAMES[DEFAULT_ORIENTATION] },
     },
   } as unknown as EngineState;
 }
@@ -569,11 +564,32 @@ describe('buildCameraDrivers — followBody', () => {
     const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
 
     // After approach saturation the target is the live body position.
-    const result = follow.pose(s, CAM_STUB, FOCUS_TWEEN_MS);
+    const result = worldArmOf(follow.pose(s, FOCUS_TWEEN_MS));
     expect(result.target).toEqual(livePos);
     // And it is NOT the row's static positionMpc ([0,0,0]) — proving it reads the
     // live snapshot, whose Earth sits far from the origin at this instant.
     expect(result.target).not.toEqual(EARTH_ROW.positionMpc);
+  });
+
+  it('carries base.roll into the follow pose like yaw and pitch', () => {
+    // The at-rest wheel's frame alignment (ruling 8) lands on `base.roll`
+    // while followBody owns the distance; a follow pose that drops roll would
+    // pin a followed approach to scene-frame up until the engage edge.
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(commitCameraPose(absoluteArm({ ...BASE_POSE, roll: 0.6 })));
+    const s = store.getState() as unknown as RootState;
+
+    const engineState = makeFollowEngineState({
+      simDays: FOLLOW_SIM_DAYS,
+      fovYRad: FOLLOW_FOV,
+      lastPose: BASE_POSE,
+      followFrom: BASE_POSE,
+    });
+    const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
+
+    const result = worldArmOf(follow.pose(s, FOCUS_TWEEN_MS));
+    expect(result.roll).toBeCloseTo(0.6, 12);
   });
 
   it('deactivates when focus leaves the body; pickWinner hands off to the next driver', () => {
@@ -635,15 +651,18 @@ describe('buildCameraDrivers — followBody', () => {
     const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
 
     // At activation (elapsed 0) the distance is the captured `from` distance.
-    expect(follow.pose(s, CAM_STUB, 0).distance).toBeCloseTo(FROM.distance, 9);
+    expect(worldArmOf(follow.pose(s, 0)).distance).toBeCloseTo(FROM.distance, 9);
 
     // At (and past) saturation the distance is the framing distance.
-    expect(follow.pose(s, CAM_STUB, FOCUS_TWEEN_MS).distance).toBeCloseTo(framingDistance, 12);
-    expect(follow.pose(s, CAM_STUB, FOCUS_TWEEN_MS * 2).distance).toBeCloseTo(framingDistance, 12);
+    expect(worldArmOf(follow.pose(s, FOCUS_TWEEN_MS)).distance).toBeCloseTo(framingDistance, 12);
+    expect(worldArmOf(follow.pose(s, FOCUS_TWEEN_MS * 2)).distance).toBeCloseTo(
+      framingDistance,
+      12,
+    );
 
     // Monotone convergence: sampling forward in time moves strictly toward the
     // framing distance (Earth's framing distance is tiny, so distance decreases).
-    const samples = [0, 150, 300, 450, 600].map((ms) => follow.pose(s, CAM_STUB, ms).distance);
+    const samples = [0, 150, 300, 450, 600].map((ms) => worldArmOf(follow.pose(s, ms)).distance);
     for (let i = 1; i < samples.length; i++) {
       expect(samples[i]!).toBeLessThan(samples[i - 1]!);
     }
@@ -673,7 +692,9 @@ describe('buildCameraDrivers — followBody', () => {
     // Commit the post-drag pose into base (this is what orbitDrag's gesture-end
     // bakes). Only `distance` matters for the assertion.
     store.dispatch(
-      commitCameraPose({ target: [0, 0, 0], yaw: 1.2, pitch: 0.3, distance: COMMITTED_DIST }),
+      commitCameraPose(
+        absoluteArm({ target: [0, 0, 0], yaw: 1.2, pitch: 0.3, distance: COMMITTED_DIST }),
+      ),
     );
     const s = store.getState() as unknown as RootState;
 
@@ -691,7 +712,7 @@ describe('buildCameraDrivers — followBody', () => {
     const follow = buildCameraDrivers(engineState).find((d) => d.id === 'followBody')!;
 
     // Saturated (t=1): distance is the committed base distance, NOT framing.
-    const result = follow.pose(s, CAM_STUB, FOCUS_TWEEN_MS * 4);
+    const result = worldArmOf(follow.pose(s, FOCUS_TWEEN_MS * 4));
     expect(result.distance).toBeCloseTo(COMMITTED_DIST, 9);
     // Guard the snap-back regression explicitly: the framing distance is tiny, so
     // 'equals framing' would be a hard failure the old code produced.
@@ -730,7 +751,7 @@ describe('buildCameraDrivers — followBody priority under body focus', () => {
   it('yaw advances over frames while auto-rotating a focused body', () => {
     const store = makeStore();
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
-    store.dispatch(commitCameraPose(BASE_POSE));
+    store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
     store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
     const s = store.getState() as unknown as RootState;
 
@@ -742,8 +763,8 @@ describe('buildCameraDrivers — followBody priority under body focus', () => {
     const drivers = buildCameraDrivers(engineState);
     const clock = createCameraClock();
 
-    const p0 = runCameraDrivers(drivers, s, CAM_STUB, clock, 1000);
-    const p1 = runCameraDrivers(drivers, s, CAM_STUB, clock, 1500);
+    const p0 = worldArmOf(runCameraDrivers(drivers, s, clock, 1000));
+    const p1 = worldArmOf(runCameraDrivers(drivers, s, clock, 1500));
     // autoRotate is authoring (not blocked by follow) → yaw advances with elapsed.
     expect(p0.yaw).toBeCloseTo(BASE_POSE.yaw, 9); // elapsed 0 on the arrival frame
     expect(p1.yaw).not.toBe(p0.yaw);

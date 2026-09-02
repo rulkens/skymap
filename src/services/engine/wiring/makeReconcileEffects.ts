@@ -21,8 +21,8 @@
  *                    the `void` discards the Promise, matching setBiasMode's
  *                    intent not to await (mirrors setBiasMode's setMode call).
  *   logCameraState — prints the LIVE rendered pose + focus via logCameraState,
- *                    assembled fresh (not from the stale `state.cam` drag
- *                    register — mirrors the engine's logCameraStateFn).
+ *                    assembled fresh (not from the stale `state.cam` boot
+ *                    camera — mirrors the engine's logCameraStateFn).
  *   applySwapFormat — forwards straight to the `applySwapFormat` phase, which
  *                    owns the reconfigure-then-rebuild sequence and its own
  *                    already-live guard.

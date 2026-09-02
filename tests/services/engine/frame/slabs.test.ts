@@ -24,6 +24,7 @@ import {
 } from '../../../../src/services/engine/frame/slabs';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
+import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import {
   foregroundFrustum,
   MIN_NEAR_M,
@@ -387,6 +388,64 @@ describe('deriveSlabs', () => {
     expect(row.near).toBeCloseTo(expectedNear, 6);
     expect(row.near).not.toBe(MIN_NEAR_M);
     expect(row.near).toBeGreaterThan(1); // metres-scale, not the 1e-6 m floor
+  });
+
+  it('NEAR0 honours a non-zero camera roll identically to COSMO (roll parity)', () => {
+    // Regression for the layer-shear bug: `deriveSlabs` hard-coded roll 0 in
+    // its `imagePlaneBasis` call while COSMO's `computeViewProj` honoured
+    // `cam.roll` — so the moment `toWorldArm` produced a non-zero roll (the
+    // body arm engaging), stars/MW/orbit-trails (NEAR0) rotated about the
+    // screen centre against galaxies (COSMO). Cross-derivation agreement:
+    // project one off-axis world point through both slabs' vps and require
+    // the same screen position. Nothing exercised a non-zero roll across two
+    // slabs before, which is how the parity gap shipped.
+    const roll = 0.3;
+    const cam = createOrbitCamera({
+      target: [0, 0, 0],
+      yaw: 0.3,
+      pitch: 0.1,
+      distance: 100,
+      fovYRad: 1,
+      aspect: 16 / 9,
+      near: 0.1,
+      far: 10000,
+      roll,
+    });
+    const cosmoVp = computeViewProj(cam);
+    const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
+
+    // An off-axis point: 20 Mpc lateral of the target at 100 Mpc range
+    // (~11° off forward, several hundred px out at fovY 1 rad). The lateral
+    // direction is hand-derived (forward × world-up), not taken from
+    // `imagePlaneBasis` — the assertion compares two projections of the same
+    // point, so the point's construction must not lean on the code under test.
+    const f: Vec3 = [-cam.position[0] / 100, -cam.position[1] / 100, -cam.position[2] / 100];
+    const rx = f[1] * 0 - f[2] * 1;
+    const ry = f[2] * 0 - f[0] * 0;
+    const rz = f[0] * 1 - f[1] * 0;
+    const rlen = Math.hypot(rx, ry, rz);
+    const point: Vec3 = [(rx / rlen) * 20, (ry / rlen) * 20, (rz / rlen) * 20];
+
+    const cosmoNdc = vec3d.transformMat4(point, cosmoVp);
+    const near0Ndc = vec3d.transformMat4(
+      [
+        point[0] - RENDER_ORIGIN_MPC[0],
+        point[1] - RENDER_ORIGIN_MPC[1],
+        point[2] - RENDER_ORIGIN_MPC[2],
+      ],
+      slabs[0]!.vp,
+    );
+    // Sub-pixel on a 1920-wide viewport: |Δndc| · 960 < 0.5. Under the bug
+    // the point rotates about the screen centre by the full roll (0.3 rad),
+    // several to hundreds of px depending on axis.
+    expect(Math.abs(cosmoNdc[0]! - near0Ndc[0]!) * 960).toBeLessThan(0.5);
+    expect(Math.abs(cosmoNdc[1]! - near0Ndc[1]!) * 540).toBeLessThan(0.5);
+
+    // Anti-vacuity: the roll parameter must be live in the NEAR0 derivation —
+    // the same camera with roll 0 has to produce a different NEAR0 vp, or the
+    // parity above would pass with roll dead on both sides.
+    const flat = deriveSlabs(baseInput({ cam: { ...cam, roll: 0 }, cosmoVp }));
+    expect(Array.from(slabs[0]!.vp)).not.toEqual(Array.from(flat[0]!.vp));
   });
 
   it("builds a body row's vp about the eye — RTC-native, no translation, body centre projects to screen centre", () => {

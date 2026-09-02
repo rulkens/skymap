@@ -19,6 +19,7 @@
 
 import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../camera/CameraPose';
+import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { CameraState } from '../../camera/CameraState';
 import type { SelectionRow } from '../SelectionRow';
 import type { FrameTween } from '../../camera/FrameTween';
@@ -77,30 +78,25 @@ export type CameraClock = {
   // is (or was) in flight, so a not-follow-previous frame is a drag reactivation.
   followDistanceTarget: number | null;
   // ── follow-body pan (strafe) offset ────────────────────────────────────────
-  // A right-drag strafe while following a body cannot move `cam.target` (the
-  // pivot-pin overwrites it with the body position every frame). Instead the
-  // strafe accumulates here as a WORLD-frame offset, and the pivot resolves to
-  // `bodyPosition + followPanOffset` — so the offset rides along with the body's
-  // motion (translate-follow keeps tracking the body, just shifted). World-frame
-  // is chosen for simplicity: at the scales a followed body is viewed, a fixed
-  // world-space offset reads as a stable screen strafe, and it needs no camera
-  // basis re-projection. The reset is winner-gated: `followElapsed` zeroes it
-  // (alongside the other follow fields) on a focus ROW ref change, but it only
-  // runs when followBody wins the frame. So an offset can outlive a focus switch
-  // while a higher driver (e.g. autoRotate) holds the win; it clears the next
-  // time followBody wins, and the new target starts centred from there.
+  // A pan strafe while following a body cannot move the pose target (the
+  // pivot-pin overwrites it with the body position every frame). Instead
+  // `drainInput` folds each pan step's own delta here as a WORLD-frame offset,
+  // and the pivot resolves to `bodyPosition + followPanOffset` — so the offset
+  // rides along with the body's motion (translate-follow keeps tracking the
+  // body, just shifted). World-frame is chosen for simplicity: at the scales a
+  // followed body is viewed, a fixed world-space offset reads as a stable
+  // screen strafe, and it needs no camera basis re-projection. The reset is
+  // winner-gated: `followElapsed` zeroes it (alongside the other follow
+  // fields) on a focus ROW ref change, but it only runs when followBody wins
+  // the frame. So an offset can outlive a focus switch while a higher driver
+  // (e.g. autoRotate) holds the win; it clears the next time followBody wins,
+  // and the new target starts centred from there.
   followPanOffset: Vec3;
-  // The `cam.target` recorded on the previous follow-drag frame, so the strafe is
-  // folded in as the frame-to-frame DELTA of `cam.target` (which, during a drag,
-  // is pure pan — orbit changes yaw/pitch, and the body's own motion never
-  // touches `cam.target`). Null when no follow-drag is in progress, so each grab
-  // starts a fresh delta chain rather than re-basing the offset.
-  lastPanTarget: Vec3 | null;
   // The `base` reference auto-rotate last spun from. A commit-on-edge installs a
   // NEW base object while auto-rotate stays active; the spin clock resets when
   // this changes so the freshly committed base spins from elapsed 0, not from
   // the stale accumulated time (which would jump the camera on resume).
-  lastBaseRef: CameraPose | null;
+  lastBaseRef: FramedCameraPose | null;
   // The clip clock keys on the `camera.clip` REFERENCE, not its contents.
   // A `startClip` dispatch installs a NEW `{ data, frame }` object each time,
   // so `!==` fires the zero exactly once on the transition frame — the same

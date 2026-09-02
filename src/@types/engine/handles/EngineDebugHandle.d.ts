@@ -30,6 +30,7 @@
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { FrameStats } from '../FrameStats';
 import type { EarthTileDebugSnapshot } from '../../scene/EarthTileDebugSnapshot';
+import type { CameraDebugSnapshot } from '../../camera/CameraDebugSnapshot';
 
 /**
  * `passOverrides` — read-only pass-name list for the DebugPanel's
@@ -85,4 +86,15 @@ export type EngineDebugHandle = {
    * absent-subsystem branch.
    */
   readonly earthTiles: () => EarthTileDebugSnapshot;
+  /**
+   * Camera-pivot readout for the DebugPanel's "Camera" section: stored vs.
+   * rendered arm (and the mismatch that flags), h/R and altitude against the
+   * engaged/nearest body, the render loop's epoch vs. the live clock's, and
+   * (when engaged) the body-fixed anchor/eye. A getter, not a snapshot, for
+   * the same reason as `frameStats`/`earthTiles`: every field is read off a
+   * live Resource (`cameraRuntime`, the store) at call time, never cached —
+   * a fresh derivation, never a per-frame write, so an unopened panel costs
+   * nothing.
+   */
+  readonly cameraDebug: () => CameraDebugSnapshot;
 };

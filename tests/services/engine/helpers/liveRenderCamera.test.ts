@@ -12,10 +12,14 @@ import { describe, it, expect } from 'vitest';
 import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRenderCamera';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 const PROJECTION = { fovYRad: 0.9, aspect: 16 / 9, near: 0.01, far: 1e4 };
 const UP_BASIS = ORIENTATION_FRAMES.galactic;
+const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: -0.2, distance: 10 };
 
 function makeState(overrides?: { cam?: unknown }): EngineState {
   return {
@@ -40,9 +44,10 @@ function makeState(overrides?: { cam?: unknown }): EngineState {
           },
     settings: { orientation: 'galactic' },
     cameraRuntime: {
-      lastPose: { current: { target: [1, 2, 3], yaw: 0.5, pitch: -0.2, distance: 10 } },
+      lastPose: { current: absoluteArm(LAST_POSE) },
       projection: PROJECTION,
       upBasis: { current: UP_BASIS },
+      lastRenderedSimDays: { current: CONST_J2000 },
     },
   } as unknown as EngineState;
 }
@@ -57,7 +62,7 @@ describe('liveRenderCamera', () => {
     const out = liveRenderCamera(state);
 
     const expected = assembleOrbitCamera(
-      state.cameraRuntime.lastPose.current,
+      LAST_POSE,
       state.cameraRuntime.projection,
       ORIENTATION_FRAMES.galactic,
       state.cameraRuntime.upBasis.current,

@@ -24,27 +24,38 @@ import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { lonLatFocusPose } from '../../utils/camera/lonLatFocusPose';
+import { absoluteArm } from '../../utils/camera/absoluteArm';
+import { resolveWorldArm } from '../../services/engine/camera/poseFrameConversion';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyState } from '../../@types/scene/BodyState';
 
 export function* watchFlyToLonLatSaga() {
   yield* takeLatest(flyToLonLat, function* (action) {
     const { lonDeg, latDeg } = action.payload;
 
-    const distance = (yield* select(selectCameraBase)).distance;
+    const base = yield* select(selectCameraBase);
     const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
     const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
-    const earthState = deriveBodyStates(simDays).get(SCENE_EARTH.id);
+    const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
+    const earthState = bodyStates.get(SCENE_EARTH.id as BodyId);
     if (earthState === undefined) return;
+
+    // The range is a world-arm reading, so the base is resolved first; this is an
+    // idle instrument, so the steady frame basis serves for both halves.
+    const distance = resolveWorldArm(base, bodyStates, frameBasis, frameBasis).distance;
 
     yield* put(
       commitCameraPose(
-        lonLatFocusPose(
-          { lonDeg, latDeg },
-          earthState.positionMpc,
-          distance,
-          earthState.orientation,
-          frameBasis,
+        absoluteArm(
+          lonLatFocusPose(
+            { lonDeg, latDeg },
+            earthState.positionMpc,
+            distance,
+            earthState.orientation,
+            frameBasis,
+          ),
         ),
       ),
     );

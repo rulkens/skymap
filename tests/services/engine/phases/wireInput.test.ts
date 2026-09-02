@@ -284,7 +284,7 @@ describe('wireInput', () => {
       | undefined;
     expect(emit).toBeTypeOf('function');
 
-    emit!({ kind: 'wheel', deltaY: 100, duringGesture: false });
+    emit!({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
 
     expect(state.subsystems.inputAggregator.drain()).toHaveLength(1);
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
