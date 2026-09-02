@@ -30,6 +30,8 @@ export type CameraDebugSnapshot = {
   readonly ceilingRad: number | null;
   /** `ceilingRad / tiltMaxRad` — the band authority scalar in [0, 1]. */
   readonly bandAuthority: number | null;
+  /** `bodyUpWeight(hOverR)` — the engaged settle's pole↔scene-up blend weight. */
+  readonly bandUpWeight: number | null;
   /** Body-local heading/tilt of the rendered view (`headingTiltAt`); null off-roster. */
   readonly headingRad: number | null;
   readonly tiltRad: number | null;

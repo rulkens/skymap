@@ -4,8 +4,10 @@
  * recomputes the regime itself) and derives the full orientation pipeline —
  * roll against BOTH references (configured scene up, body spin axis), the
  * band's blended ride target, body-local heading/tilt — through the same
- * helpers the live path uses (`bandRollTarget`, `headingTiltAt`,
- * `bodyRelativePose`), so the readout can never drift from the mechanism.
+ * helpers the live path uses (`bandRollTarget`, `blendedEnuAt`,
+ * `bodyRelativePose`), so the readout can never drift from the mechanism —
+ * the heading is measured in the band-blended reference frame the engaged
+ * settle actually converges against, never the raw pole frame.
  *
  * The epoch-mismatch floor is `liveSimDays`'s own currency (sim-days), so it
  * scales with the CURRENT time-ladder rate: `deriveSimDays` is affine in
@@ -31,7 +33,9 @@ import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose'
 import { deriveSimDays } from '../time/deriveSimDays';
 import { eyeMpcOf } from './eyeMpcOf';
 import { frameUp } from './frameUp';
-import { headingTiltAt } from './headingTiltAt';
+import { blendedEnuAt } from './blendedEnuAt';
+import { bodyUpWeight } from './bodyUpWeight';
+import { rotateVec3ByTightMat3T } from '../math/rotateVec3ByTightMat3T';
 import { imagePlaneBasis } from './imagePlaneBasis';
 import { maxTiltRad } from './maxTiltRad';
 import { rollFromScreenUp } from './rollFromScreenUp';
@@ -135,13 +139,33 @@ export function cameraDebugSnapshotOf(input: {
       bodyState,
     });
     const localUp = normalize3(eyeRelBodyM);
-    const measured = headingTiltAt(
+    // The SAME band-blended reference the engaged settle converges against
+    // (one home, `blendedEnuAt`) — a pole-frame heading here showed non-zero
+    // for a converged camera inside the window, misleading the capture. The
+    // azimuth source rule mirrors the settle's (`eyeFrameOf`): screen-up
+    // below 45° tilt, forward above.
+    const sceneUpLocalBody = rotateVec3ByTightMat3T(upRef, bodyState.orientation);
+    const { east, north } = blendedEnuAt(
       localUp,
-      [basisM[6], basisM[7], basisM[8]],
-      [basisM[3], basisM[4], basisM[5]],
+      hr !== null ? bodyUpWeight(hr) : 1,
+      sceneUpLocalBody,
     );
-    headingRad = measured.headingRad;
-    tiltRad = measured.tiltRad;
+    const forwardLocal: Vec3 = [basisM[6], basisM[7], basisM[8]];
+    const upLocal: Vec3 = [basisM[3], basisM[4], basisM[5]];
+    const fwdVert =
+      forwardLocal[0] * localUp[0] + forwardLocal[1] * localUp[1] + forwardLocal[2] * localUp[2];
+    tiltRad = Math.acos(Math.max(-1, Math.min(1, -fwdVert)));
+    const src = fwdVert < -Math.SQRT1_2 ? upLocal : forwardLocal;
+    const srcVert = src[0] * localUp[0] + src[1] * localUp[1] + src[2] * localUp[2];
+    const horizPart: Vec3 = [
+      src[0] - localUp[0] * srcVert,
+      src[1] - localUp[1] * srcVert,
+      src[2] - localUp[2] * srcVert,
+    ];
+    headingRad = Math.atan2(
+      horizPart[0] * east[0] + horizPart[1] * east[1] + horizPart[2] * east[2],
+      horizPart[0] * north[0] + horizPart[1] * north[1] + horizPart[2] * north[2],
+    );
 
     const pole = rotateVec3ByTightMat3([0, 0, 1], bodyState.orientation);
     const vert = pole[0] * forward[0] + pole[1] * forward[1] + pole[2] * forward[2];
@@ -173,6 +197,7 @@ export function cameraDebugSnapshotOf(input: {
     orientationFrame,
     ceilingRad,
     bandAuthority,
+    bandUpWeight: hr !== null ? bodyUpWeight(hr) : null,
     headingRad,
     tiltRad,
     rollRad,

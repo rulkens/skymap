@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 
 import { frameAlignedRoll } from '../../../../src/services/engine/camera/frameAlignedRoll';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { ORIENT_DECAY } from '../../../../src/data/camera/orientDecay';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -141,6 +142,38 @@ describe('frameAlignedRoll', () => {
     // Screen-up sits on the galactic frame's own up — not its negation, not
     // a perpendicular.
     expect(screenUpOffset(settled, alt, frameUp(alt) as Vec3)).toBeLessThan(1e-6);
+  });
+
+  it('the anti-parallel knot rides continuity-bounded, no single-notch flip (round 6)', () => {
+    // R5-2's locus: at yaw 0 / pitch −1.40 in the default frame the blend's
+    // raw terms cancel across the band, `normalize` reverses, and the
+    // pre-round-6 ride applied the π flip in one notch (measured 3.1416 rad).
+    // The continuity bound treats the excess as unauthored; parking at a
+    // stable altitude afterwards converges fully by the capped decay.
+    let roll = convergedRoll(poseAtHR(1.2, 0, 0, -1.4), B, 300);
+    let hr = 1.2;
+    let maxStep = 0;
+    while (hr < SURFACE_REGIME.disengageHR - 0.2) {
+      const nextHR = hr * 1.1;
+      const next = frameAlignedRoll(
+        poseAtHR(hr, roll, 0, -1.4),
+        poseAtHR(nextHR, roll, 0, -1.4),
+        BODIES,
+        B,
+        B,
+      );
+      maxStep = Math.max(maxStep, Math.abs(next - roll));
+      roll = next;
+      hr = nextHR;
+    }
+    expect(maxStep).toBeLessThanOrEqual(ORIENT_DECAY.rideBoundRad + ORIENT_DECAY.capRad + 1e-9);
+
+    // Park in-band: the target is stable, so the deviation decays to it.
+    let pose = poseAtHR(hr, roll, 0, -1.4);
+    const settled = convergedRoll(pose, B, 300);
+    pose = { ...pose, roll: settled };
+    const drift = Math.abs(frameAlignedRoll(pose, pose, BODIES, B, B) - settled);
+    expect(drift).toBeLessThan(1e-9); // genuinely at the fixed point — converged
   });
 
   it('a view near the spin axis converges to the scene up — no projection chase', () => {

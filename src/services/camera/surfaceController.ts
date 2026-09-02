@@ -22,6 +22,7 @@ import type { Vec4 } from '../../@types/math/Vec4';
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from '../../utils/camera/anchoredDragRotation';
 import { anchoredZoomStep } from '../../utils/camera/anchoredZoomStep';
+import { blendedEnuAt } from '../../utils/camera/blendedEnuAt';
 import { bodyUpWeight } from '../../utils/camera/bodyUpWeight';
 import { cappedRotationToward } from '../../utils/camera/cappedRotationToward';
 import { orientStepRad } from '../../utils/camera/orientStepRad';
@@ -107,22 +108,23 @@ type EyeFrame = {
 };
 
 /**
- * ENU built about `refAxis` — `headingTiltAt`'s construction with a
- * configurable pole: the band blend swings the settle's reference from the
- * body pole toward the scene up across the hysteresis window (round 5).
+ * The pose's orientation readout in the band-blended reference ENU
+ * (`blendedEnuAt` — one home, shared with the debug readout): `blendW = 1` is
+ * the pure body ENU (every drag site), lower weights swing north toward the
+ * scene up across the hysteresis window (the zoom settle, round 5/6).
  */
-function eyeFrameOf(pose: BodyFixedPose, refAxis: Readonly<Vec3>): EyeFrame | null {
+function eyeFrameOf(
+  pose: BodyFixedPose,
+  blendW: number,
+  sceneUpLocal: Readonly<Vec3>,
+): EyeFrame | null {
   const eyeM = eyeOf(pose);
   if (Math.hypot(...eyeM) === 0) return null; // no ENU exists at the centre
   const localUp = normalize3(eyeM);
   const b = pose.basisLocal;
   const forward: Vec3 = [b[6], b[7], b[8]];
   const up: Vec3 = [b[3], b[4], b[5]];
-  const eastRaw = cross3(refAxis, localUp);
-  const eastLen = Math.hypot(...eastRaw);
-  const east: Vec3 =
-    eastLen > 1e-9 ? [eastRaw[0] / eastLen, eastRaw[1] / eastLen, eastRaw[2] / eastLen] : [1, 0, 0];
-  const north = cross3(localUp, east);
+  const { east, north } = blendedEnuAt(localUp, blendW, sceneUpLocal);
   const fwdVert = dot3(forward, localUp);
   const tiltRad = Math.acos(Math.max(-1, Math.min(1, -fwdVert)));
   const source = fwdVert < -Math.SQRT1_2 ? up : forward;
@@ -139,22 +141,6 @@ function eyeFrameOf(pose: BodyFixedPose, refAxis: Readonly<Vec3>): EyeFrame | nu
     north,
     azimuthRad: Math.atan2(dot3(horiz, east), dot3(horiz, north)),
   };
-}
-
-/**
- * The settle's reference up at this altitude: the body pole weighted by
- * `bodyUpWeight` against the scene up (both unit, body-fixed axes). The one
- * anti-parallel knot falls back to the pole — a held no-op, same policy as
- * the world-arm blend.
- */
-function blendedRefAxis(hOverR: number, sceneUpLocal: Readonly<Vec3>): Vec3 {
-  const w = bodyUpWeight(hOverR);
-  const blend: Vec3 = [
-    w * BODY_POLE[0] + (1 - w) * sceneUpLocal[0],
-    w * BODY_POLE[1] + (1 - w) * sceneUpLocal[1],
-    w * BODY_POLE[2] + (1 - w) * sceneUpLocal[2],
-  ];
-  return Math.hypot(...blend) < 1e-9 ? BODY_POLE : normalize3(blend);
 }
 
 /** The roll-free basis at `frame`'s standpoint with this azimuth and tilt. */
@@ -260,7 +246,7 @@ function walledTiltPose(
  * gesture-created roll unrepresentable rather than merely damped.
  */
 function levelledPose(pose: BodyFixedPose, heldAzimuthRad: number | null): BodyFixedPose {
-  const frame = eyeFrameOf(pose, BODY_POLE);
+  const frame = eyeFrameOf(pose, 1, BODY_POLE);
   if (frame === null) return pose;
   const target = canonicalBasisAt(frame, heldAzimuthRad ?? frame.azimuthRad, frame.tiltRad);
   const q = cappedRotationToward(pose.basisLocal, target, ORIENT_DECAY.capRad);
@@ -299,7 +285,7 @@ function canonicalledPose(
   bodyRadiusM: number,
   inheritedTiltRad: number,
   sceneUpLocal: Readonly<Vec3>,
-  preAzimuthRad: number | null,
+  preBlendAzimuthRad: number | null,
 ): BodyFixedPose {
   let out = pose;
   // The reference up this settle norths toward is the BAND BLEND (round 5):
@@ -308,30 +294,34 @@ function canonicalledPose(
   // construction, and the bake it commits carries ≈0 scene roll.
   const eyeM0 = eyeOf(out);
   if (Math.hypot(...eyeM0) === 0) return pose;
-  const refAxis = blendedRefAxis(Math.hypot(...eyeM0) / bodyRadiusM - 1, sceneUpLocal);
-  const f0 = eyeFrameOf(out, refAxis);
+  const blendW = bodyUpWeight(Math.hypot(...eyeM0) / bodyRadiusM - 1);
+  const f0 = eyeFrameOf(out, blendW, sceneUpLocal);
   if (f0 === null) return pose;
   // Dive: bounded decay toward north-of-ref — the ENU turning under a moving
   // eye is not notch-authored, so it eases (ruled smooth; near the anchor
   // `d(azimuth)/dδ ≈ −1`, further off scaled by `Â·up̂`, always the right
   // sign). Recession: the RIDE — the reference's own band swing (and a
-  // cursor-anchored notch's ENU turn) IS notch-authored and tracks in full;
-  // only deviation the zoom did not author (`preAzimuthRad`, measured at the
+  // cursor-anchored notch's ENU turn) IS notch-authored and tracks; only
+  // deviation the zoom did not author (`preBlendAzimuthRad`, measured at the
   // pre-notch pose against ITS reference) decays, capped. Feeding the whole
-  // residual to the decay is the freeze the round-5 sim measured.
+  // residual to the decay is the freeze the round-5 sim measured — but the
+  // ride is CONTINUITY-BOUNDED (round 6): a per-notch reference move beyond
+  // `rideBoundRad` is a blend degeneracy flipping, not authored motion, so
+  // the excess joins the deviation and decays instead of whipping the image.
   const dPsi = diveAnchorM
     ? orientStepRad(f0.azimuthRad)
     : (() => {
-        const dPre = preAzimuthRad ?? f0.azimuthRad;
-        const kept = dPre - orientStepRad(dPre);
-        return Math.atan2(Math.sin(f0.azimuthRad - kept), Math.cos(f0.azimuthRad - kept));
+        const dPre = preBlendAzimuthRad ?? f0.azimuthRad;
+        const moveRaw = Math.atan2(Math.sin(f0.azimuthRad - dPre), Math.cos(f0.azimuthRad - dPre));
+        const move = Math.sign(moveRaw) * Math.min(Math.abs(moveRaw), ORIENT_DECAY.rideBoundRad);
+        return move + orientStepRad(dPre);
       })();
   if (dPsi !== 0) {
     const q = quatFromAxisAngle(diveAnchorM ? normalize3(diveAnchorM) : f0.localUp, dPsi);
     out = diveAnchorM ? rotatedAbout(out, q, BODY_CENTRE) : withBasis(out, q);
   }
 
-  const f1 = eyeFrameOf(out, refAxis);
+  const f1 = eyeFrameOf(out, blendW, sceneUpLocal);
   if (f1 !== null) {
     let dTau: number;
     if (diveAnchorM) {
@@ -340,6 +330,9 @@ function canonicalledPose(
       const eyeM = eyeOf(out);
       const ceilingRad = maxTiltRad(Math.hypot(...eyeM) / bodyRadiusM - 1);
       // The wall carries the inherited excess; the decay eats it, capped.
+      // Load-bearing for `bodyUpWeight`'s scene-aligned bake: tilt 0 at
+      // disengage is what makes the image plane the horizontal plane there,
+      // so the blended "north" IS the world arm's screen-up at the handoff.
       const allowed = Math.min(f1.tiltRad, ceilingRad + inheritedTiltRad);
       const target = allowed - orientStepRad(Math.max(0, allowed - ceilingRad));
       dTau = f1.tiltRad - target;
@@ -352,7 +345,7 @@ function canonicalledPose(
     }
   }
 
-  const f2 = eyeFrameOf(out, refAxis);
+  const f2 = eyeFrameOf(out, blendW, sceneUpLocal);
   if (f2 !== null) {
     const q = cappedRotationToward(
       out.basisLocal,
@@ -544,15 +537,16 @@ function zoomStep(
   // may spend it) and the azimuth deviation the recession ride preserves
   // rather than re-authoring.
   const hrPre = Math.hypot(...eyeOf(arm)) / bodyRadiusM - 1;
-  const pre = eyeFrameOf(arm, blendedRefAxis(hrPre, sceneUpLocal));
-  const inheritedRad = pre === null ? 0 : Math.max(0, pre.tiltRad - maxTiltRad(hrPre));
+  const preInBlendFrame = eyeFrameOf(arm, bodyUpWeight(hrPre), sceneUpLocal);
+  const inheritedRad =
+    preInBlendFrame === null ? 0 : Math.max(0, preInBlendFrame.tiltRad - maxTiltRad(hrPre));
   return canonicalledPose(
     stepped,
     factor < 1 ? cursorAnchorM : null,
     bodyRadiusM,
     inheritedRad,
     sceneUpLocal,
-    pre?.azimuthRad ?? null,
+    preInBlendFrame?.azimuthRad ?? null,
   );
 }
 
@@ -592,14 +586,18 @@ export function createSurfaceController(): SurfaceController {
       // heading pan transports. Drags level against the PURE body ENU — the
       // band blend is the zoom's authority; a drag-created deviation from the
       // blend is "unauthored" and the next notch's decay settles it.
-      const pre = eyeFrameOf(arm, BODY_POLE);
+      const preInPoleFrame = eyeFrameOf(arm, 1, BODY_POLE);
       const { pose, mode } = draggedPose(arm, gesture, step, viewportPx, fovYRad);
       live.gesture = { ...gesture, mode, prevPixel: step.endPx };
       // One floor site, after every position write — `anchoredZoomStep` owns
       // its own, so the zoom arm above is already floored. The wall and the
       // level run on the FLOORED pose: the floor moves the eye radially, and
       // the ENU they settle against has to be the final standpoint.
-      const walled = walledTiltPose(flooredPose(pose, bodyRadiusM), pre?.tiltRad ?? 0, bodyRadiusM);
+      const walled = walledTiltPose(
+        flooredPose(pose, bodyRadiusM),
+        preInPoleFrame?.tiltRad ?? 0,
+        bodyRadiusM,
+      );
       // Drags stay heading-free (ruled) — only zoom writes walk north up — but
       // no drag may ROLL: pan and orbit hold the heading they entered with
       // (the transport that makes holonomy unrepresentable), look and tilt
@@ -608,8 +606,11 @@ export function createSurfaceController(): SurfaceController {
       // a few-pixel grazing-incidence latch window at the limb, where a
       // standpoint translation does turn the ENU (~0.03 rad over 30 steps at
       // the boundary, measured); the next pan or notch settles the residual.
-      if (mode === 'strafe' || pre === null) return walled;
-      return levelledPose(walled, mode === 'pan' || mode === 'orbit' ? pre.azimuthRad : null);
+      if (mode === 'strafe' || preInPoleFrame === null) return walled;
+      return levelledPose(
+        walled,
+        mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
+      );
     },
   };
 }

@@ -404,9 +404,10 @@ describe('surfaceController', () => {
     // is zero. The settle's reference is now the band blend — pure body ENU
     // at/below engage, the scene up at disengage — so the pose the fold bakes
     // is scene-aligned by construction. Scene up tilted 0.41 rad off the pole
-    // (the Earth-vs-ecliptic magnitude); sub-eye recession keeps the eye on
-    // the fixture's axis, so the ENU readouts stay closed-form.
-    const sceneUp: Vec3 = [Math.sin(0.41), 0, Math.cos(0.41)];
+    // (the Earth-vs-ecliptic magnitude) toward +y — PERPENDICULAR to the
+    // standpoint's meridian, so the two references' horizontal projections
+    // genuinely disagree and the final assertions discriminate.
+    const sceneUp: Vec3 = [0, Math.sin(0.41), Math.cos(0.41)];
     const normalizeV = (v: Vec3): Vec3 => {
       const m = Math.hypot(...v);
       return [v[0] / m, v[1] / m, v[2] / m];
@@ -432,9 +433,18 @@ describe('surfaceController', () => {
       );
     };
 
+    // Mid-latitude standpoint (the pole standpoint is itself the degeneracy —
+    // `pole_h ≡ 0` there, so "body north" is the arbitrary fallback; the
+    // locus tests own that). Nadir view converged on the pole-ENU north.
+    const lu: Vec3 = [Math.SQRT1_2, 0, Math.SQRT1_2];
+    const north: Vec3 = [-Math.SQRT1_2, 0, Math.SQRT1_2];
+    const forward: Vec3 = [-lu[0], -lu[1], -lu[2]];
+    const right = crossV(forward, north);
+    const basis: Mat3 = [...right, ...north, ...forward] as Mat3;
+
     const c = createSurfaceController();
-    // Converged deep state: nadir view, screen-up on body north (azimuth 0).
-    let pose = poseAt([0, 0, 2], NADIR);
+    let pose = poseAt([lu[0] * 2, lu[1] * 2, lu[2] * 2], basis);
+    expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeLessThan(1e-12); // converged deep
     let hr = 1;
     let guard = 0;
     while (hr <= SURFACE_REGIME.disengageHR && guard < 30) {
@@ -447,6 +457,122 @@ describe('surfaceController', () => {
     // ride tracked the reference swing exactly (deviation stayed 0).
     expect(Math.abs(azimuthVs(pose, sceneUp))).toBeLessThan(1e-6);
     expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeGreaterThan(0.05);
+  });
+
+  it('the blend flip on the pole→sceneUp locus is continuity-bounded, then converges (round 6)', () => {
+    // R5-1's basin: a standpoint ON the arc between the body pole and the
+    // scene up sees the two horizontal projections anti-parallel, so the
+    // blended north flips π as the weight crosses their ratio (~mid-band).
+    // Pre-fix the ride applied that flip in ONE notch (measured 180°); the
+    // continuity bound treats the excess as unauthored, so no notch may turn
+    // the basis by more than rideBound + the two decay caps, and parking
+    // in-band afterwards converges fully.
+    const sceneUp: Vec3 = [Math.sin(0.41), 0, Math.cos(0.41)];
+    const lu: Vec3 = [Math.sin(0.205), 0, Math.cos(0.205)]; // ON the arc, midway
+    const eastRaw: Vec3 = [-lu[1], lu[0], 0];
+    const east: Vec3 = [
+      eastRaw[0] / Math.hypot(...eastRaw),
+      eastRaw[1] / Math.hypot(...eastRaw),
+      0,
+    ];
+    const north: Vec3 = [
+      lu[1] * east[2] - lu[2] * east[1],
+      lu[2] * east[0] - lu[0] * east[2],
+      lu[0] * east[1] - lu[1] * east[0],
+    ];
+    const forward: Vec3 = [-lu[0], -lu[1], -lu[2]];
+    const right: Vec3 = [
+      forward[1] * north[2] - forward[2] * north[1],
+      forward[2] * north[0] - forward[0] * north[2],
+      forward[0] * north[1] - forward[1] * north[0],
+    ];
+    const basis: Mat3 = [...right, ...north, ...forward] as Mat3;
+    const upOf = (p: BodyFixedPose): Vec3 => [p.basisLocal[3], p.basisLocal[4], p.basisLocal[5]];
+
+    const c = createSurfaceController();
+    let pose = poseAt([lu[0] * 2.2, lu[1] * 2.2, lu[2] * 2.2], basis); // h/R 1.2
+    let maxTurn = 0;
+    // Altitude scales by e^0.03 per sub-eye notch: 33 notches ⇒ h/R 3.23,
+    // through the w = 0.5 flip at h/R ≈ 2.55, stopping in-band for the park.
+    for (let i = 0; i < 33; i += 1) {
+      const before = upOf(pose);
+      pose = apply(c, pose, zoom(Math.exp(0.03), false), sceneUp);
+      maxTurn = Math.max(maxTurn, angleBetween(before, upOf(pose)));
+    }
+    // rideBound (0.3) + azimuth decay cap (0.1) + level cap (0.1) + slack.
+    expect(maxTurn).toBeGreaterThan(0.05); // the flip really was crossed
+    expect(maxTurn).toBeLessThanOrEqual(0.52);
+
+    // Park in-band (factor-1 notches, target stable) ⇒ full convergence…
+    for (let i = 0; i < 60; i += 1) pose = apply(c, pose, zoom(1, false), sceneUp);
+    // …then cross: the bake is on the scene up, the flip fully spent.
+    for (let i = 0; i < 3; i += 1) pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
+    const e = eyeOf(pose);
+    expect(Math.hypot(...e) / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
+    const luEnd: Vec3 = [e[0] / Math.hypot(...e), e[1] / Math.hypot(...e), e[2] / Math.hypot(...e)];
+    const sVert = sceneUp[0] * luEnd[0] + sceneUp[1] * luEnd[1] + sceneUp[2] * luEnd[2];
+    const sHoriz: Vec3 = [
+      sceneUp[0] - luEnd[0] * sVert,
+      sceneUp[1] - luEnd[1] * sVert,
+      sceneUp[2] - luEnd[2] * sVert,
+    ];
+    const up = upOf(pose);
+    expect(angleBetween(up, sHoriz)).toBeLessThan(1e-2);
+  });
+
+  it('near (not on) the locus, the projection blend stays continuous and lands the bake (round 6)', () => {
+    // The (a)-discriminator: 10° off the arc the horizontal projections never
+    // cancel, so the target sweeps fast but finitely and a plain recession
+    // converges without parking. Blending the raw AXES here whipped 101° in
+    // one notch (measured) — unrecoverable in the remaining band notches.
+    const sceneUp: Vec3 = [Math.sin(0.41), 0, Math.cos(0.41)];
+    const offRad = 0.175; // 10°
+    const lu: Vec3 = [
+      Math.sin(0.205) * Math.cos(offRad),
+      Math.sin(offRad),
+      Math.cos(0.205) * Math.cos(offRad),
+    ];
+    const luN = Math.hypot(...lu);
+    const lun: Vec3 = [lu[0] / luN, lu[1] / luN, lu[2] / luN];
+    const eastRaw: Vec3 = [-lun[1], lun[0], 0];
+    const eN = Math.hypot(...eastRaw);
+    const east: Vec3 = [eastRaw[0] / eN, eastRaw[1] / eN, 0];
+    const north: Vec3 = [
+      lun[1] * east[2] - lun[2] * east[1],
+      lun[2] * east[0] - lun[0] * east[2],
+      lun[0] * east[1] - lun[1] * east[0],
+    ];
+    const forward: Vec3 = [-lun[0], -lun[1], -lun[2]];
+    const right: Vec3 = [
+      forward[1] * north[2] - forward[2] * north[1],
+      forward[2] * north[0] - forward[0] * north[2],
+      forward[0] * north[1] - forward[1] * north[0],
+    ];
+    const basis: Mat3 = [...right, ...north, ...forward] as Mat3;
+
+    const c = createSurfaceController();
+    let pose = poseAt([lun[0] * 2, lun[1] * 2, lun[2] * 2], basis);
+    let hr = 1;
+    let guard = 0;
+    while (hr <= SURFACE_REGIME.disengageHR && guard < 20) {
+      pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
+      hr = Math.hypot(...eyeOf(pose)) / R - 1;
+      guard += 1;
+    }
+
+    const e = eyeOf(pose);
+    const luEnd: Vec3 = [e[0] / Math.hypot(...e), e[1] / Math.hypot(...e), e[2] / Math.hypot(...e)];
+    const sVert = sceneUp[0] * luEnd[0] + sceneUp[1] * luEnd[1] + sceneUp[2] * luEnd[2];
+    const sHoriz: Vec3 = [
+      sceneUp[0] - luEnd[0] * sVert,
+      sceneUp[1] - luEnd[1] * sVert,
+      sceneUp[2] - luEnd[2] * sVert,
+    ];
+    const up: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
+    // ~0.17 rad: the bounded ride's tail through the fast sweep — the raw
+    // AXIS blend left ~1 rad here (a 101° single-notch whip, unrecoverable
+    // in the remaining band notches).
+    expect(angleBetween(up, sHoriz)).toBeLessThan(0.25);
   });
 
   it('a recession rides the ceiling down to exactly nadir at the disengage crossing', () => {

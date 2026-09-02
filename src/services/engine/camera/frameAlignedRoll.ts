@@ -20,6 +20,7 @@ import { SURFACE_REGIME } from '../../../data/camera/surfaceRegime';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { maxTiltRad } from '../../../utils/camera/maxTiltRad';
+import { ORIENT_DECAY } from '../../../data/camera/orientDecay';
 import { orientStepRad } from '../../../utils/camera/orientStepRad';
 import { rollFromScreenUp } from '../../../utils/camera/rollFromScreenUp';
 import { normalize3 } from '../../../utils/math/normalize3';
@@ -88,8 +89,15 @@ export function frameAlignedRoll(
   // Wholly outside the band the mechanism owns nothing — an arrival roll in
   // deep space is not bled by wheel notches.
   if (tPre.authority <= 0 && tNew.authority <= 0) return currentRoll;
-  // Ride the target's own movement in full (the notch authored it); decay
-  // only the pre-existing deviation, capped — the tilt wall's exact shape.
+  // Ride the target's own movement (the notch authored it); decay only the
+  // pre-existing deviation, capped — the tilt wall's exact shape. The ride is
+  // CONTINUITY-BOUNDED (round 6): the raw blend has an anti-parallel knot
+  // where `normalize` reverses (measured: a π single-notch flip at yaw 0 /
+  // pitch −1.40 / h/R 1.69 in the default frame), so a target move beyond
+  // `rideBoundRad` is treated as unauthored — the excess lands in the next
+  // notch's deviation and decays instead of whipping the image.
   const dRad = Math.atan2(Math.sin(currentRoll - tPre.rad), Math.cos(currentRoll - tPre.rad));
-  return tNew.rad + dRad - orientStepRad(dRad);
+  const moveRaw = Math.atan2(Math.sin(tNew.rad - tPre.rad), Math.cos(tNew.rad - tPre.rad));
+  const move = Math.sign(moveRaw) * Math.min(Math.abs(moveRaw), ORIENT_DECAY.rideBoundRad);
+  return tPre.rad + move + dRad - orientStepRad(dRad);
 }

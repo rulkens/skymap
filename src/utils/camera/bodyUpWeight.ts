@@ -4,6 +4,11 @@
  * `disengageHR`. The band IS the hysteresis window — the altitude range the
  * body arm owns during a recession — so a disengaging pose is scene-aligned
  * by construction. One home; the settle never restates the edges.
+ *
+ * Load-bearing partner: the recession tilt wall (`canonicalledPose`) lands
+ * tilt 0 at disengage, which makes the image plane the horizontal plane there
+ * — without it the scene-aligned "north" would not be the screen-up the fold
+ * bakes.
  */
 
 import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';

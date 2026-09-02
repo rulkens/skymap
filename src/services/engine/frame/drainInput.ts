@@ -24,6 +24,7 @@ import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { liveWorldPose } from '../helpers/liveWorldPose';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { frameUp } from '../../../utils/camera/frameUp';
+import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import { selectTimeState } from '../../../state/time/selectors';
@@ -68,19 +69,13 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
     const from =
       live.frame !== 'absolute' && live.frame.body === base.frame.body ? live.pose : base.pose;
     // The configured scene up, rotated into the body's fixed axes for the
-    // settle's band blend (`orientationᵀ·v` — orthonormal, so transpose is
-    // inverse). A missing snapshot degrades to the pole: blend = body ENU.
+    // settle's band blend. A missing snapshot degrades to the pole: the
+    // blend collapses to the body ENU.
     const bodyState = deriveBodyStates(deriveSimDays(selectTimeState(root), nowMs)).get(
       base.frame.body,
     );
-    const upWorld = frameUp(state.cameraRuntime.upBasis.current);
-    const o = bodyState?.orientation;
-    const sceneUpLocal: Vec3 = o
-      ? [
-          o[0] * upWorld[0] + o[1] * upWorld[1] + o[2] * upWorld[2],
-          o[3] * upWorld[0] + o[4] * upWorld[1] + o[5] * upWorld[2],
-          o[6] * upWorld[0] + o[7] * upWorld[1] + o[8] * upWorld[2],
-        ]
+    const sceneUpLocal: Vec3 = bodyState
+      ? rotateVec3ByTightMat3T(frameUp(state.cameraRuntime.upBasis.current), bodyState.orientation)
       : [0, 0, 1];
     const next = state.cameraRuntime.surface.apply(
       from,
