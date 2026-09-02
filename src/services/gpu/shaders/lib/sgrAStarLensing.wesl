@@ -18,7 +18,10 @@
 //   offset  92 : inclinationRad           f32
 //   offset  96 : positionAngleRad         f32
 //   offset 100 : flickerAmp               f32
-//   offset 104 : flickerTimescaleS        f32
+//   offset 104 : _pad0                    f32  — unread; flickerTimescaleS only
+//                                                 feeds the CPU-side flickerPhase
+//                                                 precompute (sgrAStarLensingLayer.ts),
+//                                                 never sampled by this shader
 //   offset 108 : flickerPhase             f32  — sim-clock-derived, per-frame
 //   offset 112 : lutMinImpactParamRs      f32  — SchwarzschildDeflectionLut.minImpactParamRs
 //   offset 116 : lutMaxImpactParamRs      f32  — SchwarzschildDeflectionLut.maxImpactParamRs
@@ -61,7 +64,7 @@ struct SgrAStarLensingUniforms {
   inclinationRad: f32,
   positionAngleRad: f32,
   flickerAmp: f32,
-  flickerTimescaleS: f32,
+  _pad0: f32,
   flickerPhase: f32,
   lutMinImpactParamRs: f32,
   lutMaxImpactParamRs: f32,

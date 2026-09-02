@@ -255,44 +255,4 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
     expect(instanceWrites).toHaveLength(2);
     expect(Array.from(instanceWrites[0]!.data)).toEqual(Array.from(instanceWrites[1]!.data));
   });
-
-  it('defaults viewSlot to 0 when omitted', () => {
-    const { ctx } = makeStubCtx();
-    const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);
-    renderer.bindAtlas({} as GPUTextureView);
-    renderer.bindHiResArray({} as GPUTextureView);
-
-    const bindGroupsAt0: unknown[] = [];
-    const pass = {
-      setPipeline: vi.fn(),
-      setBindGroup: (slot: number, bg: unknown) => {
-        if (slot === 0) bindGroupsAt0.push(bg);
-      },
-      setVertexBuffer: vi.fn(),
-      draw: vi.fn(),
-    } as unknown as GPURenderPassEncoder;
-
-    const instances: DiskInstance[] = [fakeDiskInstance()];
-    renderer.draw(
-      pass,
-      new Float32Array(16) as never,
-      [800, 600],
-      [0, 0, 0],
-      FOCUS_BIND_GROUP,
-      instances,
-    );
-    renderer.draw(
-      pass,
-      new Float32Array(16) as never,
-      [800, 600],
-      [0, 0, 0],
-      FOCUS_BIND_GROUP,
-      instances,
-      0,
-    );
-
-    // Both calls land on slot 0's SAME bind group — an omitted viewSlot is
-    // byte-identical to an explicit 0.
-    expect(bindGroupsAt0[0]).toBe(bindGroupsAt0[1]);
-  });
 });

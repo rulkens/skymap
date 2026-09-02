@@ -127,7 +127,6 @@ export const sgrAStarLensingLayer: ContentLayer = {
       inclinationRad: tuning.inclinationRad,
       positionAngleRad: tuning.positionAngleRad,
       flickerAmp: tuning.flickerAmp,
-      flickerTimescaleS: tuning.flickerTimescaleS,
       flickerPhase,
       lutMinImpactParamRs: renderer.lut.minImpactParamRs,
       lutMaxImpactParamRs: renderer.lut.maxImpactParamRs,

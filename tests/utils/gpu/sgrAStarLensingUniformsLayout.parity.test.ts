@@ -1,18 +1,16 @@
 /**
- * SgrAStarLensingUniforms WESL<->packer parity — nothing previously read the
- * WGSL struct itself, so a field reorder in `sgrAStarLensing.wesl` (a field
- * inserted ahead of `anchorPosRelCamM`, say) would drift silently past
- * `packSgrAStarLensingUniforms.test.ts` (which only re-asserts the packer's
- * own documented offsets against itself) and hand the GPU a shifted struct.
- * This parses `struct SgrAStarLensingUniforms` out of the .wesl file, derives
- * its std140 float offsets, then drives the REAL packer with a distinct
- * sentinel per field and asserts each sentinel lands where the struct — not
- * the packer — says it should. Follows the `atmosphereUniformsLayout.parity
- * .test.ts` / `nodeParamsLayout.test.ts` precedent for locating/parsing the
- * struct and computing WGSL alignment; the embedded `cam: CameraUniforms`
- * prefix is treated as an opaque 80-byte block (its own byte-for-byte parity
- * lives in `cameraUniforms.test.ts` and this file's sibling
- * `packSgrAStarLensingUniforms.test.ts`, which both cover its content).
+ * SgrAStarLensingUniforms WESL<->packer parity — nothing else reads the WGSL
+ * struct itself, so a field reorder in `sgrAStarLensing.wesl` (a field
+ * inserted ahead of `anchorPosRelCamM`, say) would drift silently past a
+ * packer test asserting only its own documented offsets and hand the GPU a
+ * shifted struct. This parses `struct SgrAStarLensingUniforms` out of the
+ * .wesl file, derives its std140 float offsets, then drives the REAL packer
+ * with a distinct sentinel per field and asserts each sentinel lands where
+ * the struct — not the packer — says it should. Follows the
+ * `atmosphereUniformsLayout.parity.test.ts` / `nodeParamsLayout.test.ts`
+ * precedent for locating/parsing the struct and computing WGSL alignment;
+ * the embedded `cam: CameraUniforms` prefix is treated as an opaque 80-byte
+ * block, its own byte-for-byte parity living in `cameraUniforms.test.ts`.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -102,7 +100,6 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const inclinationRad = 504;
     const positionAngleRad = 505;
     const flickerAmp = 506;
-    const flickerTimescaleS = 507;
     const flickerPhase = 508;
     const lutMinImpactParamRs = 509;
     const lutMaxImpactParamRs = 510;
@@ -127,7 +124,6 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       inclinationRad,
       positionAngleRad,
       flickerAmp,
-      flickerTimescaleS,
       flickerPhase,
       lutMinImpactParamRs,
       lutMaxImpactParamRs,
@@ -151,7 +147,6 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       inclinationRad,
       positionAngleRad,
       flickerAmp,
-      flickerTimescaleS,
       flickerPhase,
       lutMinImpactParamRs,
       lutMaxImpactParamRs,
@@ -164,9 +159,10 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       edgeFadeEndRs,
       quadPlaneRadiusRs,
     };
-    // No zero-pad fields remain past the cam prefix — every trailing slot is
-    // a real packed field now.
-    const zeroPadFields = new Set<string>();
+    // `_pad0` (byte 104) is unwritten — flickerTimescaleS moved CPU-side
+    // (sgrAStarLensingLayer.ts's flickerPhase precompute) and is never
+    // sampled by the shader, so its old uniform slot stays zero.
+    const zeroPadFields = new Set<string>(['_pad0']);
 
     for (const field of layout) {
       if (field.lanes === 0) {

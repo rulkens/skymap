@@ -327,15 +327,10 @@ export function createRenderTargets(
   swapFormat: GPUTextureFormat,
   size: Size,
   state: EngineState,
-  // Test-only injection seam: appends rows the production table
-  // (`renderTargetRows`) doesn't declare yet, so `fixedSizePx` behaviour is
-  // exercisable before Phase B lands the real sky-cubemap row. No production
-  // caller passes this.
-  extraRows: readonly RenderTargetSpec[] = [],
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = [...renderTargetRows(swapFormat), ...extraRows];
+  let specs = [...renderTargetRows(swapFormat)];
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.

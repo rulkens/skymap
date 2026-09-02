@@ -22,9 +22,7 @@ import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
  * span most of the view, so no conservative disc-based cull is available,
  * and one always-on slab row is negligible.
  */
-const BAND_SLAB_FLOOR_MPC: ReadonlyMap<string, number> = new Map([
-  [SGR_A_STAR.id, SCALE_FADE_BANDS.sgrAStarLensing.goneAt],
-]);
+const BAND_SLAB_FLOOR_MPC = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
 
 /**
  * visibleSlabBodies — which of `bodies` get a body slab row this frame:
@@ -75,12 +73,11 @@ export function visibleSlabBodies(input: {
 
     // Band-bearing lens body: candidacy for the whole band support, both
     // culls bypassed — see BAND_SLAB_FLOOR_MPC.
-    const bandFloorMpc = BAND_SLAB_FLOOR_MPC.get(body.id);
-    if (bandFloorMpc !== undefined) {
+    if (body.id === SGR_A_STAR.id) {
       const bdx = state.positionMpc[0] - camPosMpc[0];
       const bdy = state.positionMpc[1] - camPosMpc[1];
       const bdz = state.positionMpc[2] - camPosMpc[2];
-      if (Math.hypot(bdx, bdy, bdz) < bandFloorMpc) return true;
+      if (Math.hypot(bdx, bdy, bdz) < BAND_SLAB_FLOOR_MPC) return true;
     }
 
     // The widest thing this row can draw — the same value the frustum cull

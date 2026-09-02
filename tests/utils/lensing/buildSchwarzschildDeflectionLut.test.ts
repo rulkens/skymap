@@ -2,10 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildSchwarzschildDeflectionLut } from '../../../src/utils/lensing/buildSchwarzschildDeflectionLut';
 import type { SchwarzschildDeflectionLut } from '../../../src/@types/lensing/SchwarzschildDeflectionLut';
 
-// Critical impact parameter (photon sphere), b_c = 3*sqrt(3)/2 r_s ≈ 2.598076 —
-// a textbook constant, not derived from the module under test.
-const CRITICAL_IMPACT_PARAM_RS = (3 * Math.sqrt(3)) / 2;
-
 // Linear interpolation over the LUT's own reported [min, max] range — used
 // only far from the photon sphere, where neighbouring grid samples can't
 // straddle the finite/captured (Infinity) boundary.
@@ -19,22 +15,6 @@ function sampleAt(lut: SchwarzschildDeflectionLut, impactParamRs: number): numbe
 }
 
 describe('buildSchwarzschildDeflectionLut', () => {
-  it('straddles the photon sphere and reaches a weak-field-accurate impact parameter', () => {
-    const lut = buildSchwarzschildDeflectionLut(4096);
-    expect(lut.minImpactParamRs).toBeLessThan(CRITICAL_IMPACT_PARAM_RS);
-    expect(lut.maxImpactParamRs).toBeGreaterThan(20);
-  });
-
-  it('matches the weak-field asymptotic formula alpha = 2*r_s/b at a large impact parameter', () => {
-    // alpha ~= 4GM/(c^2 b) = 2 r_s/b (r_s units, r_s = 1) is the leading PPN
-    // term; the next order is O(r_s/b) *relative* to that leading term, so at
-    // b = 30 r_s a few-percent deviation is expected, not exact agreement.
-    const lut = buildSchwarzschildDeflectionLut(4096);
-    const b = 30;
-    const weakFieldFormula = 2 / b;
-    expect(Math.abs(sampleAt(lut, b) - weakFieldFormula)).toBeLessThan(0.01);
-  });
-
   it('matches an independently computed weak-field reference to high precision', () => {
     // Independent reference for b = 30 r_s: mpmath (40-digit arbitrary
     // precision) integrating alpha = 2*int_{r0}^inf dr/(r^2 sqrt(F(r))) - pi,

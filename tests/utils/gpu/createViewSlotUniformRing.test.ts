@@ -42,13 +42,6 @@ describe('createViewSlotUniformRing', () => {
     }
   });
 
-  it('honours an explicit slotCount', () => {
-    const device = mockDevice();
-    createViewSlotUniformRing({ device, label: 'x', byteSize: 16, layout: LAYOUT, slotCount: 3 });
-    const createBuffer = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
-    expect(createBuffer).toHaveBeenCalledTimes(3);
-  });
-
   it('bindGroupOf returns a DIFFERENT bind group per slot', () => {
     const device = mockDevice();
     const ring = createViewSlotUniformRing({ device, label: 'x', byteSize: 16, layout: LAYOUT });
@@ -79,13 +72,7 @@ describe('createViewSlotUniformRing', () => {
   it('destroy releases every slot buffer exactly once', () => {
     const device = mockDevice();
     const createBuffer = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
-    const ring = createViewSlotUniformRing({
-      device,
-      label: 'x',
-      byteSize: 16,
-      layout: LAYOUT,
-      slotCount: 4,
-    });
+    const ring = createViewSlotUniformRing({ device, label: 'x', byteSize: 16, layout: LAYOUT });
     const buffers = createBuffer.mock.results.map((r) => r.value as { destroy: () => void });
 
     ring.destroy();

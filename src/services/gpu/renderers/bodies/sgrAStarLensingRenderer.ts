@@ -27,7 +27,7 @@ import { SGR_A_STAR_LENSING_UNIFORM_FLOATS } from '../../../../utils/gpu/packSgr
  * curvature aliasing (Simpson quadrature is cheap CPU-side and this runs
  * once at construction, so there is no reason to skimp).
  */
-export const LUT_SAMPLE_COUNT = 512;
+const LUT_SAMPLE_COUNT = 512;
 
 /**
  * Stand-in for a captured LUT sample once uploaded to the `r32float`
@@ -38,7 +38,7 @@ export const LUT_SAMPLE_COUNT = 512;
  * `f32`'s own range, so the value survives the GPU upload with no risk of
  * becoming `inf` itself.
  */
-export const CAPTURE_SENTINEL_RAD = 1000;
+const CAPTURE_SENTINEL_RAD = 1000;
 
 function createLutTexture(device: GPUDevice, lut: SchwarzschildDeflectionLut): GPUTexture {
   const texture = device.createTexture({

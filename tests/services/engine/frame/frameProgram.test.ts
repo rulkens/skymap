@@ -294,11 +294,7 @@ describe('frameProgram', () => {
   });
 
   it('sgrAStarLensingBodySlabs omitted or empty: no extra step, program identical to the base list (zero-cost outside the band)', () => {
-    const withDefault = frameProgram(TONE, false, [NEAR0], []);
-    const withEmpty = frameProgram(TONE, false, [NEAR0], [], []);
     const base = frameProgram(TONE, false, [NEAR0], [], undefined);
-    expect(withDefault).toEqual(base);
-    expect(withEmpty).toEqual(base);
     expect(base.some((step) => step.kind === 'render' && step.slab >= 2)).toBe(false);
     // Task 14b: the split discriminant must not leak outside the
     // band either — the (hdr, NEAR0) step stays the single untagged step it

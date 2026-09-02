@@ -19,15 +19,12 @@ export function createViewSlotUniformRing(init: {
   readonly label: string;
   readonly byteSize: number;
   readonly layout: GPUBindGroupLayout;
-  /** @default VIEW_SLOT_COUNT */
-  readonly slotCount?: number;
 }): ViewSlotUniformRing {
   const { device, label, byteSize, layout } = init;
-  const slotCount = init.slotCount ?? VIEW_SLOT_COUNT;
 
   const buffers: GPUBuffer[] = [];
   const bindGroups: GPUBindGroup[] = [];
-  for (let slot = 0; slot < slotCount; slot++) {
+  for (let slot = 0; slot < VIEW_SLOT_COUNT; slot++) {
     const buffer = device.createBuffer({
       label: `${label}-slot${slot}`,
       size: byteSize,
@@ -46,8 +43,8 @@ export function createViewSlotUniformRing(init: {
   // Loud on an out-of-range slot rather than a bare `TypeError` out of
   // `queue.writeBuffer` — same discipline as `renderTargets.viewOf`.
   function slotInRange(slot: number): void {
-    if (slot < 0 || slot >= slotCount) {
-      throw new Error(`${label}: view slot ${slot} out of range (${slotCount} slots)`);
+    if (slot < 0 || slot >= VIEW_SLOT_COUNT) {
+      throw new Error(`${label}: view slot ${slot} out of range (${VIEW_SLOT_COUNT} slots)`);
     }
   }
 

@@ -22,7 +22,9 @@
  *   f32 23      (byte  92.. 95): inclinationRad             f32
  *   f32 24      (byte  96.. 99): positionAngleRad           f32
  *   f32 25      (byte 100..103): flickerAmp                 f32
- *   f32 26      (byte 104..107): flickerTimescaleS          f32
+ *   f32 26      (byte 104..107): _pad0 — unwritten (zero); flickerTimescaleS
+ *                                        only feeds the CPU-side flickerPhase
+ *                                        precompute, never read by the shader
  *   f32 27      (byte 108..111): flickerPhase               f32
  *   f32 28      (byte 112..115): lutMinImpactParamRs        f32
  *   f32 29      (byte 116..119): lutMaxImpactParamRs        f32
@@ -75,7 +77,6 @@ export function packSgrAStarLensingUniforms(input: {
   readonly inclinationRad: number;
   readonly positionAngleRad: number;
   readonly flickerAmp: number;
-  readonly flickerTimescaleS: number;
   readonly flickerPhase: number;
   readonly lutMinImpactParamRs: number;
   readonly lutMaxImpactParamRs: number;
@@ -99,7 +100,6 @@ export function packSgrAStarLensingUniforms(input: {
     inclinationRad,
     positionAngleRad,
     flickerAmp,
-    flickerTimescaleS,
     flickerPhase,
     lutMinImpactParamRs,
     lutMaxImpactParamRs,
@@ -122,7 +122,7 @@ export function packSgrAStarLensingUniforms(input: {
   out[23] = inclinationRad; // byte 92
   out[24] = positionAngleRad; // byte 96
   out[25] = flickerAmp; // byte 100
-  out[26] = flickerTimescaleS; // byte 104
+  // out[26] (byte 104) stays 0 — _pad0, unread by the shader.
   out[27] = flickerPhase; // byte 108
   out[28] = lutMinImpactParamRs; // byte 112
   out[29] = lutMaxImpactParamRs; // byte 116
