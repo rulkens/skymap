@@ -1,14 +1,16 @@
 /**
- * frameAlignedRoll — the world-arm frame transition (ruling 8, tilt
- * discipline per fix round 3): the altitude curve defines the roll TARGET — a
- * screen-up blend from the nearest body's spin axis (band floor) to the
- * configured scene up (band top, via `frameUp(upBasis)` — never hardcoded) —
- * and each at-rest notch RIDES the target's change in full, so a recession is
- * structurally back at the global up by h/R 3.4. The capped `orientStepRad`
- * decay is reserved for deviation the zoom did not author (arrivals). The
- * blend is taken on VECTORS, weighting the pole term by its own projection
- * size, so a view passing near either axis degrades smoothly instead of
- * chasing a flipping projection.
+ * frameAlignedRoll — the world-arm frame transition (rulings 8 + 10): the
+ * roll TARGET is the ONE reference field (`blendedUpDir` on `bodyUpWeight`'s
+ * band — the same objects the engaged settle norths toward, read in the image
+ * plane), and each driven notch applies the ONE settle discipline
+ * (`riddenOrientStepRad`). Nothing here can disagree with the engaged arm:
+ * at the engage flip both arms' targets are the same function of altitude,
+ * which is what makes the zoom-in/zoom-out pop unrepresentable. Above the
+ * band the target is structurally the scene up, so the formula reduces to
+ * deviation-only capped decay — the round-7 drain for the singular-locus
+ * debt (~π of INTRINSIC up-rotation a 2–4-notch band crossing cannot spend
+ * at the no-whip rate). Ruled cost: a deep-space arrival roll bleeds on
+ * at-rest world-arm notches.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
@@ -16,39 +18,38 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { SURFACE_REGIME } from '../../../data/camera/surfaceRegime';
+import { blendedUpDir } from '../../../utils/camera/blendedUpDir';
+import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { frameUp } from '../../../utils/camera/frameUp';
-import { maxTiltRad } from '../../../utils/camera/maxTiltRad';
-import { ORIENT_DECAY } from '../../../data/camera/orientDecay';
-import { orientStepRad } from '../../../utils/camera/orientStepRad';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { riddenOrientStepRad } from '../../../utils/camera/riddenOrientStepRad';
 import { rollFromScreenUp } from '../../../utils/camera/rollFromScreenUp';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { nearestBodyHR } from './nearestBodyHR';
 
-/** `v` minus its `forward` component — the image-plane part, unnormalized. */
-function imagePlanePart(v: Readonly<Vec3>, forward: Readonly<Vec3>): Vec3 {
-  const vert = v[0] * forward[0] + v[1] * forward[1] + v[2] * forward[2];
-  return [v[0] - forward[0] * vert, v[1] - forward[1] * vert, v[2] - forward[2] * vert];
+function wrapRad(rad: number): number {
+  return Math.atan2(Math.sin(rad), Math.cos(rad));
 }
 
 /**
- * The curve-defined roll target at this pose, with the band authority it was
- * blended at; `null` when no target exists (empty roster, forward down the
- * frame pole, or the blend's one anti-parallel knot) — callers hold the roll.
- * Exported for the camera debug readout, the one other consumer.
+ * The field-defined roll target at this pose; `null` when no target exists
+ * (empty roster, forward down the frame pole — roll itself is undefined
+ * there — or the field degenerate with nothing to carry): callers hold the
+ * roll. The pose's own screen-up is the hold-and-transport carry, so inside
+ * the singular neighbourhood the target IS the current roll and the settle
+ * is inert. Exported for the camera debug readout, the one other consumer.
  */
 export function bandRollTarget(
   pose: CameraPose,
   bodyStates: ReadonlyMap<BodyId, BodyState>,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
-): { readonly rad: number; readonly authority: number } | null {
+): number | null {
   const eyeMpc = eyeMpcOf(pose, poseBasis);
   const nearest = nearestBodyHR(eyeMpc, bodyStates);
   if (nearest === null) return null;
-  const authority = maxTiltRad(nearest.hr) / SURFACE_REGIME.tiltMaxRad;
 
   const forward = normalize3([
     pose.target[0] - eyeMpc[0],
@@ -56,23 +57,15 @@ export function bandRollTarget(
     pose.target[2] - eyeMpc[2],
   ]);
   const upRef = frameUp(upBasis);
-  const uRaw = imagePlanePart(upRef, forward);
-  if (Math.hypot(...uRaw) < 1e-9) return null; // roll itself is undefined here
-  const pRaw = imagePlanePart(
-    rotateVec3ByTightMat3([0, 0, 1], nearest.bodyState.orientation),
-    forward,
-  );
-  // Raw (unnormalized) projections: the pole term carries its own sin∠ weight,
-  // so a view near the spin axis hands the target to the scene up smoothly —
-  // normalizing first is what chased a flipping projection (measured: 85° of
-  // roll from 2° off-axis).
-  const blend: Vec3 = [
-    authority * pRaw[0] + (1 - authority) * uRaw[0],
-    authority * pRaw[1] + (1 - authority) * uRaw[1],
-    authority * pRaw[2] + (1 - authority) * uRaw[2],
-  ];
-  if (Math.hypot(...blend) < 1e-9) return null; // pole-down anti-parallel knot
-  return { rad: rollFromScreenUp(forward, normalize3(blend), upRef), authority };
+  const upVert = upRef[0] * forward[0] + upRef[1] * forward[1] + upRef[2] * forward[2];
+  const upPlaneSq =
+    upRef[0] * upRef[0] + upRef[1] * upRef[1] + upRef[2] * upRef[2] - upVert * upVert;
+  if (upPlaneSq < 1e-18) return null; // forward ∥ frame pole: roll is undefined
+  const pole = rotateVec3ByTightMat3([0, 0, 1], nearest.bodyState.orientation);
+  const carry = imagePlaneBasis(forward, pose.roll ?? 0, upRef).up;
+  const dir = blendedUpDir(forward, pole, bodyUpWeight(nearest.hr), upRef, carry);
+  if (dir === null) return null;
+  return rollFromScreenUp(forward, dir, upRef);
 }
 
 export function frameAlignedRoll(
@@ -86,23 +79,9 @@ export function frameAlignedRoll(
   const tPre = bandRollTarget(prePose, bodyStates, poseBasis, upBasis);
   const tNew = bandRollTarget(postPose, bodyStates, poseBasis, upBasis);
   if (tPre === null || tNew === null) return currentRoll;
-  // Wholly above the band the target is the scene up (authority 0 ⇒ rad 0),
-  // so the formula below reduces to deviation-only capped decay — the drain
-  // (round 7). It exists because the singular-locus rotation is INTRINSIC:
-  // anti-parallel reference endpoints demand ~π of physical up-rotation that
-  // a 2–4-notch band crossing cannot spend at the no-whip rate, so the ride
-  // debt that survives the disengage bake must drain here instead of
-  // freezing. Cost, accepted by ruling: a deep-space arrival roll now also
-  // bleeds on at-rest world-arm notches.
-  // Ride the target's own movement (the notch authored it); decay only the
-  // pre-existing deviation, capped — the tilt wall's exact shape. The ride is
-  // CONTINUITY-BOUNDED (round 6): the raw blend has an anti-parallel knot
-  // where `normalize` reverses (measured: a π single-notch flip at yaw 0 /
-  // pitch −1.40 / h/R 1.69 in the default frame), so a target move beyond
-  // `rideBoundRad` is treated as unauthored — the excess lands in the next
-  // notch's deviation and decays instead of whipping the image.
-  const dRad = Math.atan2(Math.sin(currentRoll - tPre.rad), Math.cos(currentRoll - tPre.rad));
-  const moveRaw = Math.atan2(Math.sin(tNew.rad - tPre.rad), Math.cos(tNew.rad - tPre.rad));
-  const move = Math.sign(moveRaw) * Math.min(Math.abs(moveRaw), ORIENT_DECAY.rideBoundRad);
-  return tPre.rad + move + dRad - orientStepRad(dRad);
+  // Deviation vs the PRE-notch target decays; the deviation's own movement
+  // (the notch's authored target swing) rides — one shared discipline.
+  const dPre = wrapRad(currentRoll - tPre);
+  const dNewRaw = wrapRad(currentRoll - tNew);
+  return currentRoll - riddenOrientStepRad(dPre, wrapRad(dNewRaw - dPre));
 }

@@ -298,9 +298,6 @@ describe('cameraDebugSnapshotOf', () => {
 
     expect(snap.rollRad).toBe(0.3);
     expect(snap.lastZoomDirection).toBe('out');
-    expect(snap.bandAuthority).toBeGreaterThan(0);
-    expect(snap.bandAuthority).toBeLessThan(1);
-    expect(snap.ceilingRad).toBeCloseTo(snap.bandAuthority! * Math.PI, 12);
     expect(snap.tiltRad).toBeCloseTo(0, 6); // looking straight at the centre
     expect(snap.poleRollRad).not.toBeNull();
     expect(snap.rollToPoleRad).toBeCloseTo(0.3 - snap.poleRollRad!, 6);

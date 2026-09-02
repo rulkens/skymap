@@ -26,7 +26,6 @@ import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
 import type { TimeState } from '../../@types/time/TimeState';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
-import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { hOverR } from '../../services/engine/camera/hOverR';
 import { bandRollTarget } from '../../services/engine/camera/frameAlignedRoll';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
@@ -115,7 +114,6 @@ export function cameraDebugSnapshotOf(input: {
     bodyId !== null ? SCENE_BODIES.find((row) => row.id === bodyId)?.radiusM : undefined;
   const altitudeM = hr !== null && radiusM !== undefined ? hr * radiusM : null;
   const ceilingRad = hr !== null ? maxTiltRad(hr) : null;
-  const bandAuthority = ceilingRad !== null ? ceilingRad / SURFACE_REGIME.tiltMaxRad : null;
 
   // ── The orientation pipeline, derived exactly as the live paths derive it ──
   const rollRad = worldPose.roll ?? 0;
@@ -188,15 +186,14 @@ export function cameraDebugSnapshotOf(input: {
     distanceMpc: worldPose.distance,
     orientationFrame,
     ceilingRad,
-    bandAuthority,
     bandUpWeight: hr !== null ? bodyUpWeight(hr) : null,
     headingRad,
     tiltRad,
     rollRad,
     poleRollRad,
     rollToPoleRad: poleRollRad !== null ? wrapRad(rollRad - poleRollRad) : null,
-    bandTargetRollRad: target?.rad ?? null,
-    rollToTargetRad: target !== null ? wrapRad(rollRad - target.rad) : null,
+    bandTargetRollRad: target,
+    rollToTargetRad: target !== null ? wrapRad(rollRad - target) : null,
     lastRenderedSimDays,
     liveSimDays,
     epochDeltaDays,

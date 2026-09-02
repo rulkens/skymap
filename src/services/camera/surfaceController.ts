@@ -27,6 +27,7 @@ import { bodyUpWeight } from '../../utils/camera/bodyUpWeight';
 import { cappedRotationToward } from '../../utils/camera/cappedRotationToward';
 import { orientStepRad } from '../../utils/camera/orientStepRad';
 import { refAzimuthOf } from '../../utils/camera/refAzimuthOf';
+import { riddenOrientStepRad } from '../../utils/camera/riddenOrientStepRad';
 import { cursorRayBodyLocal } from '../../utils/camera/cursorRayBodyLocal';
 import { maxTiltRad } from '../../utils/camera/maxTiltRad';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
@@ -298,21 +299,19 @@ function canonicalledPose(
   // Dive: bounded decay toward north-of-ref — the ENU turning under a moving
   // eye is not notch-authored, so it eases (ruled smooth; near the anchor
   // `d(azimuth)/dδ ≈ −1`, further off scaled by `Â·up̂`, always the right
-  // sign). Recession: the RIDE — the reference's own band swing (and a
-  // cursor-anchored notch's ENU turn) IS notch-authored and tracks; only
-  // deviation the zoom did not author (`preBlendAzimuthRad`, measured at the
-  // pre-notch pose against ITS reference) decays, capped. Feeding the whole
-  // residual to the decay is the freeze the round-5 sim measured — but the
-  // ride is CONTINUITY-BOUNDED (round 6): a per-notch reference move beyond
-  // `rideBoundRad` is a blend degeneracy flipping, not authored motion, so
-  // the excess joins the deviation and decays instead of whipping the image.
+  // sign). Recession: the ONE settle discipline (`riddenOrientStepRad`,
+  // ruling 10 — shared with the world arm's roll ride): the reference's own
+  // band swing (and a cursor-anchored notch's ENU turn) is notch-authored and
+  // rides; only deviation the zoom did not author (`preBlendAzimuthRad`,
+  // measured at the pre-notch pose against ITS reference) decays, capped.
+  // Feeding the whole residual to the decay is the freeze the round-5 sim
+  // measured.
   const dPsi = diveAnchorM
     ? orientStepRad(f0.azimuthRad)
     : (() => {
         const dPre = preBlendAzimuthRad ?? f0.azimuthRad;
         const moveRaw = Math.atan2(Math.sin(f0.azimuthRad - dPre), Math.cos(f0.azimuthRad - dPre));
-        const move = Math.sign(moveRaw) * Math.min(Math.abs(moveRaw), ORIENT_DECAY.rideBoundRad);
-        return move + orientStepRad(dPre);
+        return riddenOrientStepRad(dPre, moveRaw);
       })();
   if (dPsi !== 0) {
     const q = quatFromAxisAngle(diveAnchorM ? normalize3(diveAnchorM) : f0.localUp, dPsi);

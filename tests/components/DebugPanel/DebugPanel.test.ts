@@ -67,7 +67,6 @@ const EMPTY_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
   distanceMpc: 1,
   orientationFrame: 'ecliptic',
   ceilingRad: null,
-  bandAuthority: null,
   bandUpWeight: null,
   headingRad: null,
   tiltRad: null,

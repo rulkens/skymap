@@ -78,8 +78,8 @@ const EARTH_POLE = rotateVec3ByTightMat3([0, 0, 1], EARTH.orientation);
 
 describe('frameAlignedRoll', () => {
   it('aligns screen-up with the body pole at the band floor', () => {
-    // Deep in the band the blend is pole-dominated; the small scene-up share
-    // (1 − authority ≈ 4e-4 at h/R 0.1) is the tolerance.
+    // Below engage the blend is the pure pole (`bodyUpWeight` = 1 exactly,
+    // ruling 10 — the same reference the engaged settle norths toward).
     const pose = poseAtHR(0.1, 1.4);
     const misaligned = screenUpOffset(pose, B, EARTH_POLE);
     expect(misaligned).toBeGreaterThan(0.5); // the fixture really is off
@@ -198,6 +198,10 @@ describe('frameAlignedRoll', () => {
     // NORMALIZED, a view 2° off the spin axis chased the near-degenerate
     // direction to −1.49 rad of roll (measured at the previous HEAD). The
     // raw-projection blend hands the target to the scene up there instead.
+    // Fixture sits MID-WINDOW (h/R 2.55, w = 0.5): ruling 10 re-keyed the
+    // band to `bodyUpWeight`, so below engage the field is the pure body
+    // ENU by construction — identical to the engaged arm — and the blend
+    // (where the hand-off property lives) spans the hysteresis window.
     const tiltRad = (2 * Math.PI) / 180;
     const perp: Vec3 = Math.abs(EARTH_POLE[0]!) < 0.9 ? [1, 0, 0] : [0, 1, 0];
     const dir = normalize3([
@@ -212,7 +216,7 @@ describe('frameAlignedRoll', () => {
 
     // In-band settle: bounded and near the scene up (the raw-weighted pole
     // term is only sin 2° strong; the old chase converged 1.4 rad off).
-    let pose = poseAtHR(1.0, 0, yaw, pitch);
+    let pose = poseAtHR(2.55, 0, yaw, pitch);
     let maxStep = 0;
     for (let i = 0; i < 60; i += 1) {
       const next = frameAlignedRoll(pose, pose, BODIES, B, B);
@@ -224,7 +228,7 @@ describe('frameAlignedRoll', () => {
 
     // Recede past the band top: the ride lands screen-up on the configured
     // global up — not its negation, not a perpendicular.
-    let hr = 1.0;
+    let hr = 2.55;
     while (hr <= SURFACE_REGIME.disengageHR) {
       const nextHR = hr * 1.15;
       const next = frameAlignedRoll(

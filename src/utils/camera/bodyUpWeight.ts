@@ -1,9 +1,11 @@
 /**
- * bodyUpWeight — the engaged settle's reference-up blend weight (ruling 8,
- * round 5): 1 = pure body ENU at/below `engageHR`, 0 = pure scene up at/above
+ * bodyUpWeight — BOTH arms' reference-up blend weight (rulings 8 + 10):
+ * 1 = pure body ENU at/below `engageHR`, 0 = pure scene up at/above
  * `disengageHR`. The band IS the hysteresis window — the altitude range the
  * body arm owns during a recession — so a disengaging pose is scene-aligned
- * by construction. One home; the settle never restates the edges.
+ * by construction, and the world arm's roll target agrees with the engaged
+ * reference at every altitude (the engage-flip pop is unrepresentable).
+ * One home; no consumer restates the edges.
  *
  * Load-bearing partner: the recession tilt wall (`canonicalledPose`) lands
  * tilt 0 at disengage, which makes the image plane the horizontal plane there

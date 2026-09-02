@@ -60,7 +60,6 @@ function groupsOf(snap: CameraDebugSnapshot): Group[] {
           value: `${SURFACE_REGIME.engageHR} / ${SURFACE_REGIME.disengageHR}`,
         },
         { key: 'ceiling_maxTiltRad', value: num(snap.ceilingRad) },
-        { key: 'band_authority', value: num(snap.bandAuthority) },
         { key: 'band_up_weight', value: num(snap.bandUpWeight) },
       ],
     },

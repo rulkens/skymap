@@ -26,11 +26,9 @@ export type CameraDebugSnapshot = {
   readonly distanceMpc: number;
   /** `settings.orientation` — the configured scene frame. */
   readonly orientationFrame: string;
-  /** `maxTiltRad(hOverR)` — the tilt/roll authority ceiling here; null with `hOverR`. */
+  /** `maxTiltRad(hOverR)` — the tilt ceiling here; null with `hOverR`. */
   readonly ceilingRad: number | null;
-  /** `ceilingRad / tiltMaxRad` — the band authority scalar in [0, 1]. */
-  readonly bandAuthority: number | null;
-  /** `bodyUpWeight(hOverR)` — the engaged settle's pole↔scene-up blend weight. */
+  /** `bodyUpWeight(hOverR)` — BOTH arms' pole↔scene-up blend weight (ruling 10). */
   readonly bandUpWeight: number | null;
   /** Body-local heading/tilt of the rendered view (`headingTiltAt`); null off-roster. */
   readonly headingRad: number | null;
@@ -41,7 +39,7 @@ export type CameraDebugSnapshot = {
   readonly poleRollRad: number | null;
   /** Wrapped `rollRad − poleRollRad` — residual to pure spin-axis alignment. */
   readonly rollToPoleRad: number | null;
-  /** `bandRollTarget` — the authority-blended target the notch ride follows. */
+  /** `bandRollTarget` — the band-blended target the notch ride follows. */
   readonly bandTargetRollRad: number | null;
   /** Wrapped `rollRad − bandTargetRollRad` — residual to the ride's target. */
   readonly rollToTargetRad: number | null;
