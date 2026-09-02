@@ -921,8 +921,8 @@ export const starCatalogLayer: ContentLayer = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
-  // Sky-cubemap capture roster (Task 13b, Ruling 6): the survey LEAF stream
-  // is part of the black-hole lens's captured "sky".
+  // Sky-cubemap capture roster (Task 13b): the survey LEAF stream is part of
+  // the black-hole lens's captured "sky".
   skyCapture: true,
 
   enabled: starCatalogVisible,

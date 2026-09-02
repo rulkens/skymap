@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets } from '../../../src/services/gpu/renderTargets';
+import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 
@@ -39,17 +40,21 @@ const SKY_CUBEMAP_RESOLUTION_PX = 256;
 // The production `sky-cubemap` row is lazy: its `allocateWhen` reads the
 // lensing band flag `renderFrame` maintains, so every state fixture carries
 // one. Default `true` keeps the row present for the tests that count textures.
+// `gcDistanceMpc` defaults far outside the release margin so the pre-existing
+// bandActive-false tests (written before the row grew hysteresis) keep their
+// original "closes immediately" behaviour.
 function stateWithDivisor(
   aggregateDivisor: number,
   cubemapResolutionPx: number = SKY_CUBEMAP_RESOLUTION_PX,
   bandActive = true,
+  gcDistanceMpc = Number.POSITIVE_INFINITY,
 ): EngineState {
   return {
     settings: {
       milkyWay: { aggregateDivisor },
       sgrAStarLensingTuning: { cubemapResolutionPx },
     },
-    cameraRuntime: { skyCubemapCapture: { bandActive } },
+    cameraRuntime: { skyCubemapCapture: { bandActive, gcDistanceMpc } },
   } as unknown as EngineState;
 }
 
@@ -274,6 +279,43 @@ describe('createRenderTargets', () => {
     targets.reconcile(stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false), canvas);
 
     expect(texture.destroy).toHaveBeenCalled();
+    expect(() => targets.cubeViewOf('sky-cubemap')).toThrow();
+  });
+
+  it('an allocateWhen row with a release margin survives a frame just past its condition, and releases beyond the margin', () => {
+    // Guards NEW-1 from the black-hole fix round's re-review: a camera
+    // dithering across the band edge must not destroy + reallocate the
+    // row's 50 MB every frame. `goneAt` is the band's close distance;
+    // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (1.5×, named beside the row in
+    // `renderTargets.ts`) is the row's own wider release edge.
+    const goneAt = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const canvas = { width: 900, height: 600 };
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      canvas,
+      stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, true, 0),
+    );
+    const cubemapCallCount = (): number =>
+      create.mock.calls.filter((c) => c[0].label === 'render-target-sky-cubemap').length;
+    expect(cubemapCallCount()).toBe(1);
+
+    // Band just closed (bandActive false), but the camera sits just outside
+    // `goneAt` — still inside the 1.5× margin — so the row must survive.
+    targets.reconcile(
+      stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false, goneAt * 1.1),
+      canvas,
+    );
+    expect(cubemapCallCount()).toBe(1);
+    expect(targets.cubeViewOf('sky-cubemap')).toBeDefined();
+
+    // Past the margin: the row releases.
+    targets.reconcile(
+      stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false, goneAt * 1.6),
+      canvas,
+    );
     expect(() => targets.cubeViewOf('sky-cubemap')).toThrow();
   });
 

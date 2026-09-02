@@ -58,8 +58,8 @@ export type ContentLayer = {
    */
   readonly blend: Blend;
   /**
-   * Opt-in to the black-hole lens's sky-cubemap capture roster (Task 12/13,
-   * Ruling 6). A capture step (`FrameStep.face` present) selects its group by
+   * Opt-in to the black-hole lens's sky-cubemap capture roster (Task 12/13).
+   * A capture step (`FrameStep.face` present) selects its group by
    * THIS flag instead of `target` — the six capture steps all target
    * `'sky-cubemap'`, not this layer's own `target`, so target-matching can't
    * select the roster at all (see `executeFrame`'s capture-step branch).
@@ -72,7 +72,7 @@ export type ContentLayer = {
   readonly skyCapture?: true;
   /**
    * Opt-in to the `'post'` half of the black-hole lens's `(hdr, NEAR0)`
-   * step split (Task 14b, Ruling 9): set only by `orbitTrailsLayer` and
+   * step split (Task 14b): set only by `orbitTrailsLayer` and
    * `bodyGlintsLayer`, the two rows the spec keeps unwarped ON TOP of the
    * lens rather than sampled by it. `frameProgram` only emits the split
    * (and a `'post'` step) when the lens's own `(hdr, BODY[k])` step fires —

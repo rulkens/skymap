@@ -122,6 +122,7 @@ function makeEngineState(startDistance: number): {
         lastCapturedAtMs: new Map(),
         frameIndex: 0,
         bandActive: false,
+        gcDistanceMpc: Number.POSITIVE_INFINITY,
         pinnedEyeMpc: null,
       },
     },

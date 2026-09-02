@@ -131,7 +131,7 @@ import {
  * One draw stream's per-source, per-view-slot storage buffers: the
  * contiguous NodeParams block and the parallel prefix sum, plus their shared
  * grow-only capacity. A stream (leaf or aggregate) owns its OWN pair per
- * `ReadyFrameContext.viewSlot` (Task 13b) — a sky-cubemap capture sweep draws
+ * `ReadyFrameContext.viewSlot` — a sky-cubemap capture sweep draws
  * a source's cut once per face plus once for the real view, ALL before one
  * `submit()`, and every one of those calls is a DIFFERENT cut (different
  * camera), so a pair shared across view slots would read only the
@@ -185,7 +185,7 @@ export function createStarCatalogRenderer(
     label: 'star-catalog-camera-bgl',
     entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
   });
-  // One physical camera buffer + bind group per view slot (Task 13b): the
+  // One physical camera buffer + bind group per view slot: the
   // camera is shared across SOURCES within one `draw` call, but NOT across
   // view slots — a capture sweep's several `draw` calls (different faces,
   // one submit) each carry a different vp (see the module header).
@@ -259,8 +259,8 @@ export function createStarCatalogRenderer(
   // knee'd pipeline when it draws somewhere the knee'd upsample can't follow
   // it (a sky-cubemap capture face — see `StarCatalogDrawArgs.knee`).
   const pipelines = {
-    kneed: makePipeline('star-catalog-leaf-pipeline', 'fs'),
-    linear: makePipeline('star-catalog-aggregate-pipeline', 'fsLinear'),
+    kneed: makePipeline('star-catalog-kneed-pipeline', 'fs'),
+    linear: makePipeline('star-catalog-linear-pipeline', 'fsLinear'),
   };
 
   // ── Per-source store ──────────────────────────────────────────────────────
@@ -422,7 +422,7 @@ export function createStarCatalogRenderer(
     // the module header), but NOT across view slots — a sky-cubemap capture
     // sweep's several `draw` calls (different faces, one submit) each carry
     // a different vp, so this call's bytes land in THIS `viewSlot`'s own
-    // buffer (Task 13b). floats 18/19 stay zero-init. `sizePx`, `brightness`,
+    // buffer. floats 18/19 stay zero-init. `sizePx`, `brightness`,
     // `glowOverlap` and `aggregateIntensityCap` ride this buffer too — all
     // four are source-independent (the same base star-dot size + exposure
     // trim + glow spread + aggregate peak ceiling for every source this

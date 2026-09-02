@@ -63,6 +63,12 @@ export type RenderTargetSpec = {
    * resolution, read only within ~500 AU of Sgr A*). A consumer must be
    * gated on the SAME condition — `viewOf`/`sizeOf` throw while the row is
    * released.
+   *
+   * `isAllocated` is `reconcile`'s own record of whether the row currently
+   * holds a texture — passed in so a row can add hysteresis around its own
+   * activation condition (keep the row through a brief close, drop it only
+   * once truly gone) without `renderTargets.ts` growing bespoke state to
+   * track it.
    */
-  allocateWhen?: (state: EngineState) => boolean;
+  allocateWhen?: (state: EngineState, isAllocated: boolean) => boolean;
 };

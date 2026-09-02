@@ -1026,13 +1026,20 @@ gate).
       branch's server). Record the baseline numbers outside the band (Sgr A*
       far off-frame) and note there is no "inside the band" baseline yet
       (the feature doesn't exist).
-- [ ] AFTER Task 15 (all feature work + tuning-removal done): re-run
+- [ ] AFTER Task 15 (all feature work done — the tuning section ships, per
+      the Settings amendment above, so there is no removal step to wait on):
+      re-run
       `npm run perf` the same way, twice — once with Sgr A* far outside the
       lensing band (expect a neutral delta vs. the baseline — Q6's zero-cost
       guarantee), once with the camera inside the band (expect a bounded,
       not unbounded, cost — the six-face capture amortized per Q8, the LUT
       lookup O(1) per pixel, the bounded 32–64-step march only for
       annulus-adjacent pixels).
+- [ ] The report must carry a VRAM line for the `sky-cubemap` row alongside
+      the timing numbers: 0 B outside the band, 50 MB in-band at the shipped
+      1024 px resolution, 201 MB at the 2048 px knob — the row is lazily
+      allocated (`renderTargets.ts`), so this cost is invisible to a timing
+      reading alone.
 - [ ] Report both readings plainly. Per the spec's Perf section and the
       project's code-is-liability convention: a regression outside the band,
       or an unbounded/unacceptable cost inside it, HALTS the landing
@@ -1062,6 +1069,12 @@ gate).
         angle);
   - [ ] the fade band crossfades without a pop at either edge;
   - [ ] the far-field glint hands off to the close-up without a visible seam.
+- [ ] Also judge two items outside the spec's original five, added by the fix
+      round's re-review: the Milky-Way discontinuity at the lens quad's rim
+      (the MW cloud is deliberately not in the capture roster, so its edge
+      against the captured sky can show a seam), and the capture-face
+      aggregate knee (relabelled kneed/un-kneed this round — never eyeballed
+      before this gate).
 - [ ] Report the outcome per item. Any failing item is a STOP — fix and
       re-gate, not a partial ship.
 - [ ] Only once every item passes AND Task 16's perf gate is clean does this

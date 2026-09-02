@@ -122,6 +122,10 @@ export function renderFrame(input: RenderFrameInput): void {
     GALACTIC_CENTRE_REGION,
     sceneBodyStates(state, ctx),
   );
+  // Recorded unconditionally (not just while the band is active) — the
+  // `sky-cubemap` row's release-margin check needs the distance on the very
+  // frame the band closes, not one frame later.
+  captureRuntime.gcDistanceMpc = gcDistanceMpc;
   const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
 
   const bandJustEngaged = bandActive && !captureRuntime.bandActive;

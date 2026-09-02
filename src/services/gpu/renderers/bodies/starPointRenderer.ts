@@ -112,7 +112,7 @@ export function createStarPointRenderer(
       },
     ],
   });
-  // One physical buffer + bind group per view slot (Task 13b): a sky-cubemap
+  // One physical buffer + bind group per view slot: a sky-cubemap
   // capture sweep calls `draw()` several times per frame with different
   // cameras, all before one `submit()` — a shared buffer would keep only the
   // last call's camera (see `createViewSlotUniformRing`'s doc).
@@ -171,8 +171,8 @@ export function createStarPointRenderer(
   // `setStars` EVERY frame — the camera-relative anchors it hands us change
   // per frame (the eye is subtracted in f64 before narrowing here). A
   // create/destroy of the GPU buffer per call would mean a fresh allocation
-  // and release 60×/sec on a hot path. Instead each `viewSlot` (Task 13b) gets
-  // its OWN buffer, allocated once sized to that slot's first non-empty set
+  // and release 60×/sec on a hot path. Instead each `viewSlot` gets its OWN
+  // buffer, allocated once sized to that slot's first non-empty set
   // and reallocated ONLY when a later set on that SAME slot exceeds its
   // capacity. One buffer per slot, not one shared buffer, because a
   // sky-cubemap capture sweep calls `setStars` once per face plus once for the
@@ -244,7 +244,7 @@ export function createStarPointRenderer(
     // tail's alignment pad — never written, so they hold their construction-time
     // zeros across frames. sizePx / brightness ride the tail at floats 20 / 21
     // (byte-exact with StarPointUniforms in starPoints/io.wesl). Written into
-    // THIS call's own `viewSlot` buffer (Task 13b) — see the ring's doc.
+    // THIS call's own `viewSlot` buffer — see the ring's doc.
     writeCameraPrefix(uniformScratch, viewProj, viewportPx);
     uniformScratch[UNIFORM_SIZEPX_INDEX] = opts.sizePx;
     uniformScratch[UNIFORM_BRIGHTNESS_INDEX] = opts.brightness;

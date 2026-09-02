@@ -1,6 +1,6 @@
 /**
  * SkyCubemapCaptureRuntime — cross-frame memory for the black-hole lens's
- * amortized sky-cubemap capture (Task 12). `skyCubemapCaptureSchedule` is
+ * amortized sky-cubemap capture. `skyCubemapCaptureSchedule` is
  * pure, but its inputs (`lastCapturedAtMs`, the round-robin `frameIndex`, the
  * `bandJustEngaged` edge) need somewhere to live between frames —
  * `renderFrame` "owns no cross-frame state" by design (see its module
@@ -25,6 +25,14 @@ export type SkyCubemapCaptureRuntime = {
    * whether its texture exists at all (`renderTargets.ts`).
    */
   bandActive: boolean;
+  /**
+   * The camera's distance from the galactic-centre anchor as of the last
+   * rendered frame, Mpc — updated every frame regardless of `bandActive`.
+   * The `sky-cubemap` row's `allocateWhen` reads it to decide whether an
+   * already-allocated row should survive a bit past band close (hysteresis
+   * margin — see `renderTargets.ts`).
+   */
+  gcDistanceMpc: number;
   /**
    * The eye EVERY face was captured from at the last full sweep. Round-robin
    * refreshes reuse this same pinned eye rather than the live camera each

@@ -278,7 +278,7 @@ describe('frameProgram', () => {
   });
 
   it('sgrAStarLensingBodySlabs: emits an (hdr, slab) step per entry, after (hdr, NEAR0) and before the foreground chain', () => {
-    // Task 14 (Ruling 8): before this, no step ever matched
+    // Task 14: before this, no step ever matched
     // sgrAStarLensingLayer's (slab: 'body', target: 'hdr') row. One render
     // step per requested body-slab index, positioned so the lens's OVER blend
     // occludes the (hdr, NEAR0) roster already accumulated above it.
@@ -300,14 +300,14 @@ describe('frameProgram', () => {
     expect(withDefault).toEqual(base);
     expect(withEmpty).toEqual(base);
     expect(base.some((step) => step.kind === 'render' && step.slab >= 2)).toBe(false);
-    // Task 14b (Ruling 9): the split discriminant must not leak outside the
+    // Task 14b: the split discriminant must not leak outside the
     // band either — the (hdr, NEAR0) step stays the single untagged step it
     // always was, byte-identical to pre-Task-14b.
     expect(base.some((step) => step.kind === 'render' && 'lensPhase' in step)).toBe(false);
   });
 
-  it('sgrAStarLensingBodySlabs active: orbit-trails/body-glints move to their own step AFTER the lens step (Task 14b, Ruling 9)', () => {
-    // Ruling 9's evidenced gap: orbit-trails and body-glints (the S-star
+  it('sgrAStarLensingBodySlabs active: orbit-trails/body-glints move to their own step AFTER the lens step (Task 14b)', () => {
+    // The evidenced gap: orbit-trails and body-glints (the S-star
     // trails and the Sgr A* far-field glint among them) used to share the
     // pre-lens (hdr, NEAR0) roster step and so drew UNDER the lens's OVER
     // blend. `ContentLayer.hdrPostLensing` moves them into a step that runs

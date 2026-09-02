@@ -68,7 +68,7 @@ export type FrameStep =
       face?: CubeFace;
       /**
        * Splits the shared `(hdr, NEAR0)` roster step around the black-hole
-       * lens's own `(hdr, BODY[k])` step (Task 14b, Ruling 9), so
+       * lens's own `(hdr, BODY[k])` step (Task 14b), so
        * `orbit-trails`/`body-glints` draw AFTER the lens rather than being
        * sampled by it. Absent ⇒ every layer matches, the pre-Task-14b
        * behaviour. `'pre'` admits every `(hdr, NEAR0)` layer EXCEPT those

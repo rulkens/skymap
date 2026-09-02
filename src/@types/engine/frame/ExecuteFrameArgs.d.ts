@@ -18,7 +18,7 @@
  *     production); `swapView` is this frame's acquired swap-chain view, the
  *     one render target that is not an allocated offscreen texture.
  *   - `skyCubemapFaceContexts` is the black-hole lens's per-face camera
- *     override (Task 12's runtime hand-off): a step carrying `face`
+ *     override, its runtime hand-off: a step carrying `face`
  *     resolves its `SlabView`/`ctx` from THIS map instead of the frame-wide
  *     `ctx` above. `renderFrame` derives it each frame (one
  *     `skyCubemapFaceContext` call per scheduled face); `frameProgram`

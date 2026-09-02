@@ -146,6 +146,7 @@ import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
+import { SCALE_FADE_BANDS } from '../engine/presentation/scaleFadeBands';
 
 /**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
@@ -161,6 +162,16 @@ const STAR_AGGREGATE_DIVISOR = 2;
  * same one-line-change reason as `STAR_AGGREGATE_DIVISOR`.
  */
 const ZONE_OF_AVOIDANCE_DIVISOR = 5;
+
+/**
+ * Hysteresis margin for the `sky-cubemap` row's `allocateWhen`: once
+ * allocated, the row survives until the camera-to-anchor distance exceeds
+ * this multiple of the lensing band's `goneAt` (500 AU) — 750 AU — rather
+ * than releasing the instant the band itself closes. Without it, a camera
+ * dithering across the 500 AU edge destroys and reallocates the row's 50 MB
+ * + 7 views every frame.
+ */
+const SKY_CUBEMAP_ROW_RELEASE_MARGIN = 1.5;
 
 /** A row's divisor for this state — constant rows ignore the state entirely. */
 function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
@@ -272,14 +283,26 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // lens draws only within ~500 AU of Sgr A*, so the texture exists only
     // while the band does. `renderFrame` writes the band flag and reconciles
     // on its edge, so the row is there on the band-entry frame — the frame
-    // that sweeps all six faces.
+    // that sweeps all six faces. Once allocated it outlives a brief close by
+    // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (a camera dithering across the band
+    // edge would otherwise destroy + reallocate the row every frame); a row
+    // never allocated does not spring into existence from proximity alone —
+    // only `bandActive` triggers first allocation.
     {
       id: 'sky-cubemap',
       format: HDR_TARGET_FORMAT,
       depth: null,
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
-      allocateWhen: (state) => state.cameraRuntime.skyCubemapCapture.bandActive,
+      allocateWhen: (state, isAllocated) => {
+        const capture = state.cameraRuntime.skyCubemapCapture;
+        if (capture.bandActive) return true;
+        return (
+          isAllocated &&
+          capture.gcDistanceMpc <=
+            SKY_CUBEMAP_ROW_RELEASE_MARGIN * SCALE_FADE_BANDS.sgrAStarLensing.goneAt
+        );
+      },
       // `size` is a live setting (the DebugPanel resolution knob,
       // 256/512/1024/2048) — `reconcile` resolves it every frame exactly like
       // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
@@ -443,7 +466,11 @@ export function createRenderTargets(
       // A row that declares `allocateWhen` holds VRAM only while its
       // condition does — same per-frame seam as a moved size, so entering
       // and leaving the condition need no lifecycle path of their own.
-      if (spec.allocateWhen !== undefined && !spec.allocateWhen(s)) {
+      // `sizes.has` (not `textures.has`) is the "currently allocated" signal
+      // a hysteresis predicate needs — it's cleared by `release` in lockstep
+      // with the texture, so a row can't observe itself as allocated the
+      // frame after it was dropped.
+      if (spec.allocateWhen !== undefined && !spec.allocateWhen(s, sizes.has(spec.id))) {
         release(spec.id);
         continue;
       }

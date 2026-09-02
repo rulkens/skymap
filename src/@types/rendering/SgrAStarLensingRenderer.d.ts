@@ -5,8 +5,8 @@
  * accretion annulus (bounded-march emission), composited premultiplied-OVER
  * into the depthless `hdr` target.
  *
- * The LUT (Task 9's `SchwarzschildDeflectionLut`) is built once at
- * construction and uploaded to a static `r32float` texture — `lut` is
+ * The LUT (`SchwarzschildDeflectionLut`) is built once at construction and
+ * uploaded to a static `r32float` texture — `lut` is
  * exposed back so the layer can read `minImpactParamRs`/`maxImpactParamRs`/
  * `samples.length` for the uniform pack without re-deriving them.
  */
