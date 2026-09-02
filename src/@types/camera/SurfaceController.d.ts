@@ -1,5 +1,6 @@
 import type { BodyFixedPose } from './BodyFixedPose';
 import type { InputStep } from './InputStep';
+import type { SurfaceGesture } from './SurfaceGesture';
 import type { Vec2 } from '../math/Vec2';
 
 /**
@@ -18,4 +19,9 @@ export type SurfaceController = {
   ) => BodyFixedPose;
   readonly onGestureStart: () => void;
   readonly onGestureEnd: () => void;
+  /**
+   * Read-only view of the live latch for the debug readout: null with the
+   * pointer up, `mode: null` between press and the first latching drag step.
+   */
+  readonly debugGesture: () => { readonly gesture: SurfaceGesture | null } | null;
 };

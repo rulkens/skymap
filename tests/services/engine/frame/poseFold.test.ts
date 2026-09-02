@@ -177,6 +177,7 @@ function makeState(): EngineState {
       lastRenderedSimDays: { current: SIM },
       upBasis: { current: [...B] },
       surface: createSurfaceController(),
+      lastZoomFactor: { current: null },
     },
   } as unknown as EngineState;
 }

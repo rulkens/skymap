@@ -1,16 +1,45 @@
 /*
- * CameraStateSection — plain readout lines, borrowing debugSection's shared
- * `readout` opacity for the healthy rows. `.mismatch` overrides it for the
- * two rows this section exists to flag (arm + epoch): full opacity, a red
- * that reads clearly against the panel's dark chrome, and bold so a glance
- * catches it.
+ * CameraStateSection — grouped, aligned key/value rows in the panel's mono
+ * face, built for scan-and-copy: the key column is fixed-width so values line
+ * up, and `.rowWarn` overrides the shared readout opacity for the mismatch
+ * rows this section exists to flag.
  */
 
-.readout {
-  composes: readout from './debugSection.module.css';
+.grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 10px;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  /* Opacity lives on the grid, not the rows: `display: contents` rows have no
+   * box for opacity to apply to (per spec), while color still inherits. */
+  opacity: 0.85;
 }
 
-.mismatch {
+.groupTitle {
+  composes: readout from './debugSection.module.css';
+  font-weight: bold;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+}
+
+.row {
+  display: contents;
+}
+
+.rowWarn {
+  display: contents;
   color: #f66;
   font-weight: bold;
+}
+
+.key {
+  opacity: 0.75;
+}
+
+.copyButton {
+  composes: button from './debugSection.module.css';
+  align-self: flex-start;
 }

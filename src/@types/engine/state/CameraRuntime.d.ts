@@ -109,4 +109,9 @@ export type CameraRuntime = {
    * serialized. `drainInput` is its only caller.
    */
   surface: SurfaceController;
+  /**
+   * The last zoom step's factor (either arm), for the debug readout's
+   * direction line; null until the first notch. `drainInput` is the writer.
+   */
+  lastZoomFactor: { current: number | null };
 };

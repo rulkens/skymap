@@ -4,9 +4,10 @@ import type { Vec3 } from '../math/Vec3';
 
 /**
  * CameraDebugSnapshot — the DebugPanel's "Camera" section readout (spec
- * 2026-09-01-camera-pivot §4/§6). Surfaces the two known bug classes this
- * branch introduces: `armMismatch` (stored regime vs. what actually rendered)
- * and `epochMismatch` (the render loop's clock lagging the live one).
+ * 2026-09-01-camera-pivot §4/§6). Surfaces the branch's two known bug classes
+ * (`armMismatch`, `epochMismatch`) plus the full orientation pipeline: the
+ * roll's two references (configured scene up, body spin axis), the band's
+ * blended target, and the input/gesture state driving them.
  */
 export type CameraDebugSnapshot = {
   /** `camera.base.frame` — the regime itself, per the store's own doc comment. */
@@ -19,8 +20,29 @@ export type CameraDebugSnapshot = {
   readonly engagedBodyId: BodyId | null;
   /** h/R for `engagedBodyId`; null when no scene body resolved this instant. */
   readonly hOverR: number | null;
-  /** Altitude above `engagedBodyId`'s surface, km; null alongside `hOverR`. */
-  readonly altitudeKm: number | null;
+  /** Altitude above `engagedBodyId`'s surface, metres; null alongside `hOverR`. */
+  readonly altitudeM: number | null;
+  /** The rendered world pose's orbit distance, Mpc. */
+  readonly distanceMpc: number;
+  /** `settings.orientation` — the configured scene frame. */
+  readonly orientationFrame: string;
+  /** `maxTiltRad(hOverR)` — the tilt/roll authority ceiling here; null with `hOverR`. */
+  readonly ceilingRad: number | null;
+  /** `ceilingRad / tiltMaxRad` — the band authority scalar in [0, 1]. */
+  readonly bandAuthority: number | null;
+  /** Body-local heading/tilt of the rendered view (`headingTiltAt`); null off-roster. */
+  readonly headingRad: number | null;
+  readonly tiltRad: number | null;
+  /** The pose's roll — 0 IS the configured scene up, by the roll convention. */
+  readonly rollRad: number;
+  /** The roll that would put the body spin axis up on screen; null when degenerate. */
+  readonly poleRollRad: number | null;
+  /** Wrapped `rollRad − poleRollRad` — residual to pure spin-axis alignment. */
+  readonly rollToPoleRad: number | null;
+  /** `bandRollTarget` — the authority-blended target the notch ride follows. */
+  readonly bandTargetRollRad: number | null;
+  /** Wrapped `rollRad − bandTargetRollRad` — residual to the ride's target. */
+  readonly rollToTargetRad: number | null;
   /** `cameraRuntime.lastRenderedSimDays.current` — the epoch last frame drew at. */
   readonly lastRenderedSimDays: number;
   /** The live clock's instant, resolved at read time (not what any frame drew). */
@@ -29,10 +51,16 @@ export type CameraDebugSnapshot = {
   readonly epochDeltaDays: number;
   /** True when `epochDeltaDays` exceeds normal render-loop/poll drift. */
   readonly epochMismatch: boolean;
-  /** Body-fixed anchor, km, when `renderedFrame` is a body arm; else null. */
-  readonly anchorLocalKm: Vec3 | null;
+  /** Body-fixed anchor, metres, when `renderedFrame` is a body arm; else null. */
+  readonly anchorLocalM: Vec3 | null;
   /** `|eyeRelAnchorM|`, metres, when `renderedFrame` is a body arm; else null. */
   readonly eyeRelAnchorMagM: number | null;
   /** `cameraRuntime.prevActiveId.current` — last frame's driver-table winner. */
   readonly activeDriverId: string;
+  /** Latched gesture mode; 'down (unlatched)' between press and first step; null at rest. */
+  readonly gestureMode: string | null;
+  /** Whether the latched gesture holds a cursor ground hit; null without a latch. */
+  readonly gestureCursorHit: boolean | null;
+  /** 'in' | 'out' from the last zoom step's factor; null before the first notch. */
+  readonly lastZoomDirection: 'in' | 'out' | null;
 };

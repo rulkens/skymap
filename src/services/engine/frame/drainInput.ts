@@ -149,6 +149,7 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         break;
 
       case 'zoom': {
+        state.cameraRuntime.lastZoomFactor.current = step.factor; // debug readout
         // Both zoom owners route to the anchored step in a body arm: it owns
         // its range, so `applyWheelZoom`'s three owners go unconsulted (§7).
         if (routeToSurface(step)) break;

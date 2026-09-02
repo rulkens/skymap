@@ -514,6 +514,7 @@ export function createSurfaceController(): SurfaceController {
     onGestureEnd: () => {
       live = null;
     },
+    debugGesture: () => live,
     apply: (arm, step, viewportPx, fovYRad, bodyRadiusM) => {
       if (step.kind === 'zoom') {
         return zoomStep(

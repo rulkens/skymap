@@ -68,6 +68,7 @@ function makeHarness(distance = 100) {
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
       projection: { fovYRad: Math.PI / 3, aspect: 1, near: 0.01, far: 50000 },
       surface: createSurfaceController(),
+      lastZoomFactor: { current: null },
     },
   } as unknown as EngineState;
 

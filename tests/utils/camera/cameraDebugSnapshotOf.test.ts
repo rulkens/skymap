@@ -36,6 +36,21 @@ const LIVE_TIME: TimeState = {
 const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
 const bodyId = (id: string): BodyId => id as BodyId;
 
+/** Eye placed via a zero-distance pose; forward is degenerate on purpose —
+ * these tests pin the regime/epoch fields, not the orientation pipeline. */
+function poseWithEye(eyeMpc: Vec3): CameraPose {
+  return { target: eyeMpc, yaw: 0, pitch: 0, distance: 0 };
+}
+
+/** The new-in-round-4 inputs the pre-existing assertions never read. */
+const SNAP_COMMON = {
+  poseBasis: IDENTITY,
+  upBasis: IDENTITY,
+  orientationFrame: 'ecliptic',
+  gesture: null,
+  lastZoomFactor: null,
+} as const;
+
 function bodyState(positionMpc: Vec3): BodyState {
   return { positionMpc, orientation: IDENTITY, meanAnomalyRad: 0 };
 }
@@ -60,7 +75,8 @@ describe('cameraDebugSnapshotOf', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: 'absolute',
       renderedPose: absoluteFramed(),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 2.0),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
@@ -74,7 +90,8 @@ describe('cameraDebugSnapshotOf', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: { body: bodyId('earth') },
       renderedPose: bodyFramed(bodyId('earth'), [0, 0, 0], [1, 0, 0]),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 0.5),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 0.5)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
@@ -88,7 +105,8 @@ describe('cameraDebugSnapshotOf', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: { body: bodyId('earth') },
       renderedPose: absoluteFramed(),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 0.5),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 0.5)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
@@ -102,7 +120,8 @@ describe('cameraDebugSnapshotOf', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: { body: bodyId('earth') },
       renderedPose: bodyFramed(bodyId('moon'), [0, 0, 0], [1, 0, 0]),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 0.5),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 0.5)),
       bodyStates: new Map([
         [bodyId('earth'), bodyState([0, 0, 0])],
         [bodyId('moon'), bodyState([m(EARTH_RADIUS_M * 5), 0, 0])],
@@ -119,7 +138,8 @@ describe('cameraDebugSnapshotOf', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: 'absolute',
       renderedPose: absoluteFramed(),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 2.0),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100 + 0.5 / 86_400,
@@ -133,7 +153,8 @@ describe('cameraDebugSnapshotOf', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: 'absolute',
       renderedPose: absoluteFramed(),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 2.0),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100 + 10 / 86_400,
@@ -150,7 +171,8 @@ describe('cameraDebugSnapshotOf', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: { body: bodyId('earth') },
       renderedPose: bodyFramed(bodyId('earth'), [0, 0, 0], [m(EARTH_RADIUS_M * 2), 0, 0]),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 1.0),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 1.0)),
       bodyStates: new Map([
         [bodyId('earth'), bodyState([0, 0, 0])],
         [bodyId('moon'), bodyState([m(MOON_RADIUS_M * -1.5), 0, 0])],
@@ -162,14 +184,15 @@ describe('cameraDebugSnapshotOf', () => {
     });
     expect(snap.engagedBodyId).toBe('earth');
     expect(snap.hOverR).toBeCloseTo(1.0, 6);
-    expect(snap.altitudeKm).toBeCloseTo(EARTH_RADIUS_M / 1000, 3);
+    expect(snap.altitudeM).toBeCloseTo(EARTH_RADIUS_M, 0);
   });
 
   it('falls back to the roster-wide nearest body while in the absolute arm', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: 'absolute',
       renderedPose: absoluteFramed(),
-      eyeMpc: [m(MOON_RADIUS_M * 1.5), 0, 0],
+      ...SNAP_COMMON,
+      worldPose: poseWithEye([m(MOON_RADIUS_M * 1.5), 0, 0]),
       bodyStates: new Map([
         [bodyId('earth'), bodyState([m(EARTH_RADIUS_M * 5), 0, 0])],
         [bodyId('moon'), bodyState([0, 0, 0])],
@@ -186,27 +209,29 @@ describe('cameraDebugSnapshotOf', () => {
     const withBody = cameraDebugSnapshotOf({
       storedFrame: { body: bodyId('earth') },
       renderedPose: bodyFramed(bodyId('earth'), [1000, 2000, 3000], [3, 4, 0]),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 1.0),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 1.0)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
       time: LIVE_TIME,
       activeDriverId: 'resting',
     });
-    expect(withBody.anchorLocalKm).toEqual([1, 2, 3]);
+    expect(withBody.anchorLocalM).toEqual([1000, 2000, 3000]);
     expect(withBody.eyeRelAnchorMagM).toBeCloseTo(5, 6);
 
     const absolute = cameraDebugSnapshotOf({
       storedFrame: 'absolute',
       renderedPose: absoluteFramed(),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 2.0),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
       time: LIVE_TIME,
       activeDriverId: 'resting',
     });
-    expect(absolute.anchorLocalKm).toBeNull();
+    expect(absolute.anchorLocalM).toBeNull();
     expect(absolute.eyeRelAnchorMagM).toBeNull();
   });
 
@@ -225,7 +250,8 @@ describe('cameraDebugSnapshotOf', () => {
     const healthy = cameraDebugSnapshotOf({
       storedFrame: 'absolute',
       renderedPose: absoluteFramed(),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 2.0),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100.25,
@@ -239,7 +265,8 @@ describe('cameraDebugSnapshotOf', () => {
     const stalled = cameraDebugSnapshotOf({
       storedFrame: 'absolute',
       renderedPose: absoluteFramed(),
-      eyeMpc: eyeAt(EARTH_RADIUS_M, 2.0),
+      ...SNAP_COMMON,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
       bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 110,
@@ -247,5 +274,37 @@ describe('cameraDebugSnapshotOf', () => {
       activeDriverId: 'resting',
     });
     expect(stalled.epochMismatch).toBe(true);
+  });
+
+  it('derives a self-consistent orientation pipeline for a real in-band pose', () => {
+    // The round-4 readout: the residual columns the user pastes back must be
+    // the wrapped differences of the raw columns beside them, and the band
+    // scalars must come off the one curve — a wiring slip here would send us
+    // debugging fabricated numbers.
+    const eye = eyeAt(EARTH_RADIUS_M, 2.0);
+    const snap = cameraDebugSnapshotOf({
+      storedFrame: 'absolute',
+      renderedPose: absoluteFramed(),
+      ...SNAP_COMMON,
+      // A REAL pose (non-degenerate forward): eye out on +x looking at the body.
+      worldPose: { target: [0, 0, 0], yaw: Math.PI / 2, pitch: 0, distance: eye[0], roll: 0.3 },
+      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      lastRenderedSimDays: 100,
+      liveSimDays: 100,
+      time: LIVE_TIME,
+      activeDriverId: 'resting',
+      lastZoomFactor: 1.2,
+    });
+
+    expect(snap.rollRad).toBe(0.3);
+    expect(snap.lastZoomDirection).toBe('out');
+    expect(snap.bandAuthority).toBeGreaterThan(0);
+    expect(snap.bandAuthority).toBeLessThan(1);
+    expect(snap.ceilingRad).toBeCloseTo(snap.bandAuthority! * Math.PI, 12);
+    expect(snap.tiltRad).toBeCloseTo(0, 6); // looking straight at the centre
+    expect(snap.poleRollRad).not.toBeNull();
+    expect(snap.rollToPoleRad).toBeCloseTo(0.3 - snap.poleRollRad!, 6);
+    expect(snap.bandTargetRollRad).not.toBeNull();
+    expect(snap.rollToTargetRad).toBeCloseTo(0.3 - snap.bandTargetRollRad!, 6);
   });
 });

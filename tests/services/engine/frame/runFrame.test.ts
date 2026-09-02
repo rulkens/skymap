@@ -241,6 +241,7 @@ function makeState(): EngineState {
       // exist for that assignment. Seeded with the ecliptic (default) basis.
       upBasis: { current: [...ORIENTATION_FRAMES.ecliptic] },
       surface: createSurfaceController(),
+      lastZoomFactor: { current: null },
     },
   } as unknown as EngineState;
 }

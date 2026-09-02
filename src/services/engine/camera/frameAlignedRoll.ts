@@ -36,8 +36,9 @@ function imagePlanePart(v: Readonly<Vec3>, forward: Readonly<Vec3>): Vec3 {
  * The curve-defined roll target at this pose, with the band authority it was
  * blended at; `null` when no target exists (empty roster, forward down the
  * frame pole, or the blend's one anti-parallel knot) — callers hold the roll.
+ * Exported for the camera debug readout, the one other consumer.
  */
-function bandRollTarget(
+export function bandRollTarget(
   pose: CameraPose,
   bodyStates: ReadonlyMap<BodyId, BodyState>,
   poseBasis: Readonly<Mat3>,

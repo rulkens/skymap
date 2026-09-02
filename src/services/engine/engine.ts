@@ -192,6 +192,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // so the seed never aliases the shared registry entry.
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
     surface: createSurfaceController(),
+    lastZoomFactor: { current: null },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -969,12 +970,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         return cameraDebugSnapshotOf({
           storedFrame: rootState.camera.base.frame,
           renderedPose: state.cameraRuntime.lastPose.current,
-          eyeMpc: eyeMpcOf(liveWorldPose(state), ORIENTATION_FRAMES[state.settings.orientation]),
+          worldPose: liveWorldPose(state),
+          poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
+          upBasis: state.cameraRuntime.upBasis.current,
+          orientationFrame: state.settings.orientation,
           bodyStates,
           lastRenderedSimDays: state.cameraRuntime.lastRenderedSimDays.current,
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: state.cameraRuntime.prevActiveId.current,
+          gesture: state.cameraRuntime.surface.debugGesture(),
+          lastZoomFactor: state.cameraRuntime.lastZoomFactor.current,
         });
       },
     },
