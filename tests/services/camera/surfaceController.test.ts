@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { createSurfaceController } from '../../../src/services/camera/surfaceController';
+import { createSurfaceController, TILT_GAIN } from '../../../src/services/camera/surfaceController';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
 import { maxTiltRad } from '../../../src/utils/camera/maxTiltRad';
@@ -236,7 +236,7 @@ describe('surfaceController', () => {
     const c = createSurfaceController();
     c.onGestureStart();
     const psi = (20 / 100) * FOV;
-    const alpha = (10 / 100) * FOV;
+    const alpha = (10 / 100) * FOV * TILT_GAIN;
     const pose = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [50, 50], [70, 60]));
 
     const eye = eyeOf(pose);
@@ -293,9 +293,10 @@ describe('surfaceController', () => {
     // carry the camera backwards through it (C §6.7). The anchor is the same
     // ray-sphere pick `latchFor` makes, computed here rather than hand-solved
     // (this pixel has no clean closed form the way [75,50] does).
-    // The −245 px end is off the 100 px viewport on purpose: the recognizer
-    // binds move/up to `window` (the iOS implicit-capture fix), so dragging
-    // past the canvas edge is an ordinary case the controller must handle.
+    // The off-viewport end is on purpose: the recognizer binds move/up to
+    // `window` (the iOS implicit-capture fix), so dragging past the canvas
+    // edge is an ordinary case the controller must handle. The pixel count is
+    // TILT_GAIN-corrected to keep the physical tilt the closed form expects.
     const start = poseAt([0, 0, 2], NADIR);
     const startRay = cursorRayBodyLocal(start, [60, 50], VIEWPORT, FOV);
     const t0 = raySphereRoots(startRay.originM, startRay.dir, [0, 0, 0], R)![0];
@@ -307,7 +308,7 @@ describe('surfaceController', () => {
 
     const c = createSurfaceController();
     c.onGestureStart();
-    const tilted = apply(c, start, drag('pan', [60, 50], [60, -245]));
+    const tilted = apply(c, start, drag('pan', [60, 50], [60, 50 - 295 / TILT_GAIN]));
     const eye = eyeOf(tilted);
     expect(eye[0] * anchor[0] + eye[2] * anchor[2]).toBeLessThan(1);
 
@@ -316,7 +317,7 @@ describe('surfaceController', () => {
     // is about an axis through A, so that distance survives it untouched. The
     // fresh screen-centre pick satisfies the law; the latched anchor does not.
     // The gesture is live, so the re-pick goes through the drag's last pixel.
-    const fresh = pickThrough(tilted, [60, -245])!;
+    const fresh = pickThrough(tilted, [60, 50 - 295 / TILT_GAIN])!;
     expect(fresh).not.toBeNull();
     const zoomedEye = eyeOf(apply(c, tilted, zoom(0.5, true)));
     const rangeTo = (a: Vec3, e: Vec3): number => Math.hypot(e[0] - a[0], e[1] - a[1], e[2] - a[2]);

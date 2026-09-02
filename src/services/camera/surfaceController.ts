@@ -41,6 +41,7 @@ import { rotateVec3ByQuat } from '../../utils/math/rotateVec3ByQuat';
 
 const BODY_CENTRE: Vec3 = [0, 0, 0];
 const BODY_POLE: Vec3 = [0, 0, 1];
+export const TILT_GAIN = 1.6;
 
 type Ray = { readonly originM: Vec3; readonly dir: Vec3 };
 type DragStep = Extract<InputStep, { kind: 'drag' }>;
@@ -490,7 +491,13 @@ function draggedPose(
   // Inverted at this input mapping, not in the rotation math: Google Earth's
   // right-drag convention is drag-down ⇒ tilt UP toward the horizon, the
   // opposite sign from `pitchRad`'s screen-space (down-is-positive) origin.
-  const q = multiplyQuat(quatFromAxisAngle(rotateVec3ByQuat(heading, eastM), -pitchRad), heading);
+  // TILT_GAIN breaks the one-FOV-per-screen-height rate law for this handle
+  // only: tilting spans ~90° of travel where orbit spans a hemisphere, so the
+  // uniform rate reads as sluggish here (user feel ruling, 2026-09-03).
+  const q = multiplyQuat(
+    quatFromAxisAngle(rotateVec3ByQuat(heading, eastM), -pitchRad * TILT_GAIN),
+    heading,
+  );
   return { pose: rotatedAbout(arm, q, anchorM), mode };
 }
 
