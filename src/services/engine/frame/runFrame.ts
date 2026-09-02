@@ -438,7 +438,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // the band and would apply the engage test where the disengage one is due.
     const regime = rootState.camera.base.frame;
     const eyeMpc = eyeMpcOf(worldPose, poseBasis);
-    const arm = regimeArmFor(regime, eyeMpc, bodyStates);
+    // The focused body constrains the regime (round 10): the SAME store
+    // snapshot the drivers and the pivot pin resolved against, so the fold
+    // can never disagree with them about what is focused.
+    const arm = regimeArmFor(
+      regime,
+      eyeMpc,
+      bodyStates,
+      pivotFocus?.type === 'body' ? pivotFocus.id : null,
+    );
     if (arm === 'absolute') {
       if (renderPose.frame !== 'absolute') {
         // Disengage commits the pose ALREADY IN the incumbent convention —
