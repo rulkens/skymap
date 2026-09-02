@@ -87,9 +87,26 @@ describe('frameAlignedRoll', () => {
     expect(screenUpOffset(settled, B, EARTH_POLE)).toBeLessThan(0.02);
   });
 
-  it('is inert wholly above the band — deep-space roll is not bled by notches', () => {
-    const pose = poseAtHR(5, 1.4);
-    expect(frameAlignedRoll(pose, poseAtHR(5.5, 1.4), BODIES, B, B)).toBe(1.4);
+  it('above the band, leftover roll drains toward the scene up, capped (round 7)', () => {
+    // The (D) drain: the singular-locus rotation is intrinsic (~π across a
+    // 2–4 notch band crossing), so ride debt surviving the disengage bake
+    // MUST spend itself up here — deviation-only capped decay toward roll 0,
+    // never a ride (the target is static above the band). Ruled cost: a
+    // deep-space arrival roll now bleeds on notches too.
+    const stepped = frameAlignedRoll(poseAtHR(5, 1.4), poseAtHR(5.5, 1.4), BODIES, B, B);
+    expect(stepped).toBeCloseTo(1.4 - ORIENT_DECAY.capRad, 12);
+
+    let roll = 2.0; // worst-cell-class residual
+    let hr = 3.6;
+    let notches = 0;
+    while (Math.abs(roll) >= 1e-2 && notches < 40) {
+      const nextHR = hr * 1.15;
+      roll = frameAlignedRoll(poseAtHR(hr, roll), poseAtHR(nextHR, roll), BODIES, B, B);
+      hr = nextHR;
+      notches += 1;
+    }
+    expect(Math.abs(roll)).toBeLessThan(1e-2);
+    expect(notches).toBeLessThanOrEqual(30);
   });
 
   it('a recession rides the target to exactly the global up at the band top', () => {

@@ -26,6 +26,7 @@ import { blendedEnuAt } from '../../utils/camera/blendedEnuAt';
 import { bodyUpWeight } from '../../utils/camera/bodyUpWeight';
 import { cappedRotationToward } from '../../utils/camera/cappedRotationToward';
 import { orientStepRad } from '../../utils/camera/orientStepRad';
+import { refAzimuthOf } from '../../utils/camera/refAzimuthOf';
 import { cursorRayBodyLocal } from '../../utils/camera/cursorRayBodyLocal';
 import { maxTiltRad } from '../../utils/camera/maxTiltRad';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
@@ -124,22 +125,19 @@ function eyeFrameOf(
   const b = pose.basisLocal;
   const forward: Vec3 = [b[6], b[7], b[8]];
   const up: Vec3 = [b[3], b[4], b[5]];
-  const { east, north } = blendedEnuAt(localUp, blendW, sceneUpLocal);
+  // The pose's own screen-up is the hold-and-transport carry: inside the
+  // blend's singular neighbourhood the reference is wherever the settle
+  // already put the view (round 7) — stateless, and consistent between the
+  // pre-notch and post-notch measures because both read their own pose.
+  const { east, north } = blendedEnuAt(localUp, blendW, sceneUpLocal, up);
   const fwdVert = dot3(forward, localUp);
   const tiltRad = Math.acos(Math.max(-1, Math.min(1, -fwdVert)));
-  const source = fwdVert < -Math.SQRT1_2 ? up : forward;
-  const vert = dot3(source, localUp);
-  const horiz: Vec3 = [
-    source[0] - localUp[0] * vert,
-    source[1] - localUp[1] * vert,
-    source[2] - localUp[2] * vert,
-  ];
   return {
     localUp,
     tiltRad,
     east,
     north,
-    azimuthRad: Math.atan2(dot3(horiz, east), dot3(horiz, north)),
+    azimuthRad: refAzimuthOf(localUp, forward, up, east, north),
   };
 }
 

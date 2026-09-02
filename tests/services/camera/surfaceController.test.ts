@@ -442,21 +442,26 @@ describe('surfaceController', () => {
     const right = crossV(forward, north);
     const basis: Mat3 = [...right, ...north, ...forward] as Mat3;
 
-    const c = createSurfaceController();
-    let pose = poseAt([lu[0] * 2, lu[1] * 2, lu[2] * 2], basis);
-    expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeLessThan(1e-12); // converged deep
-    let hr = 1;
-    let guard = 0;
-    while (hr <= SURFACE_REGIME.disengageHR && guard < 30) {
-      pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
-      hr = Math.hypot(...eyeOf(pose)) / R - 1;
-      guard += 1;
-    }
+    // Both cadences of the round-7 protocol: default e^0.10 and brisk e^0.24
+    // (folded notches). Off the singular neighbourhood the ride is exact and
+    // the bake lands under the amended 1e-2 bar at either pacing.
+    for (const lnf of [0.1, 0.24]) {
+      const c = createSurfaceController();
+      let pose = poseAt([lu[0] * 2, lu[1] * 2, lu[2] * 2], basis);
+      expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeLessThan(1e-12); // converged deep
+      let hr = 1;
+      let guard = 0;
+      while (hr <= SURFACE_REGIME.disengageHR && guard < 30) {
+        pose = apply(c, pose, zoom(Math.exp(lnf), false), sceneUp);
+        hr = Math.hypot(...eyeOf(pose)) / R - 1;
+        guard += 1;
+      }
 
-    // Screen-up sits on the SCENE up's meridian, not the body pole's: the
-    // ride tracked the reference swing exactly (deviation stayed 0).
-    expect(Math.abs(azimuthVs(pose, sceneUp))).toBeLessThan(1e-6);
-    expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeGreaterThan(0.05);
+      // Screen-up sits on the SCENE up's meridian, not the body pole's: the
+      // ride tracked the reference swing (deviation decayed within the run).
+      expect(Math.abs(azimuthVs(pose, sceneUp))).toBeLessThan(1e-2);
+      expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeGreaterThan(0.05);
+    }
   });
 
   it('the blend flip on the pole→sceneUp locus is continuity-bounded, then converges (round 6)', () => {

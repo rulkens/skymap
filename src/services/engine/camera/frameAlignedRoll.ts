@@ -86,9 +86,14 @@ export function frameAlignedRoll(
   const tPre = bandRollTarget(prePose, bodyStates, poseBasis, upBasis);
   const tNew = bandRollTarget(postPose, bodyStates, poseBasis, upBasis);
   if (tPre === null || tNew === null) return currentRoll;
-  // Wholly outside the band the mechanism owns nothing — an arrival roll in
-  // deep space is not bled by wheel notches.
-  if (tPre.authority <= 0 && tNew.authority <= 0) return currentRoll;
+  // Wholly above the band the target is the scene up (authority 0 ⇒ rad 0),
+  // so the formula below reduces to deviation-only capped decay — the drain
+  // (round 7). It exists because the singular-locus rotation is INTRINSIC:
+  // anti-parallel reference endpoints demand ~π of physical up-rotation that
+  // a 2–4-notch band crossing cannot spend at the no-whip rate, so the ride
+  // debt that survives the disengage bake must drain here instead of
+  // freezing. Cost, accepted by ruling: a deep-space arrival roll now also
+  // bleeds on at-rest world-arm notches.
   // Ride the target's own movement (the notch authored it); decay only the
   // pre-existing deviation, capped — the tilt wall's exact shape. The ride is
   // CONTINUITY-BOUNDED (round 6): the raw blend has an anti-parallel knot
