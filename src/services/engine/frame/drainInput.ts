@@ -168,28 +168,37 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
           nowMs,
           pivotFraming(selectFocusRow(root)),
         );
-        // Ruling 8: the world-arm notch also walks the roll toward the nearest
-        // body's frame (a no-op outside the band — `frameAlignedRoll` is where
-        // the altitude keying lives). One-deep memo: `runFrame` re-derives the
-        // same instant, so this costs no second Kepler solve.
+        // Ruling 8: the world-arm notch also rides the roll target toward the
+        // nearest body's frame — pre AND post poses go in, so the notch's own
+        // target movement is ridden in full (a no-op outside the band —
+        // `frameAlignedRoll` is where the altitude keying lives). One-deep
+        // memo: `runFrame` re-derives the same instant, so this costs no
+        // second Kepler solve.
         const bodyStates = deriveBodyStates(
           deriveSimDays(selectTimeState(root), nowMs),
         ) as ReadonlyMap<BodyId, BodyState>;
         const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
         const upBasis = state.cameraRuntime.upBasis.current;
-        if (zoomed !== null) {
-          const roll = frameAlignedRoll(zoomed, bodyStates, poseBasis, upBasis);
+        if (zoomed !== null && root.camera.base.frame === 'absolute') {
+          const roll = frameAlignedRoll(
+            root.camera.base.pose,
+            zoomed,
+            bodyStates,
+            poseBasis,
+            upBasis,
+          );
           // Register too, not only the store: a drag later in this same drain
           // folds from the live register (the body-arm branch's I1 twin).
           register.current = absoluteArm({ ...zoomed, roll });
           store.dispatch(commitCameraPose(register.current));
-        } else if (root.camera.base.frame === 'absolute') {
+        } else if (zoomed === null && root.camera.base.frame === 'absolute') {
           // The followBody owner swallowed the distance (it eases its own
           // target); the alignment still rides the notch. Measured on the LIVE
           // rendered pose (the follow ease, not the stale base), landed on
           // `base.roll`, which the follow pose lerps toward.
           const basePose = root.camera.base.pose;
-          const roll = frameAlignedRoll(liveWorldPose(state), bodyStates, poseBasis, upBasis);
+          const live = liveWorldPose(state);
+          const roll = frameAlignedRoll(live, live, bodyStates, poseBasis, upBasis);
           if (roll !== (basePose.roll ?? 0)) {
             store.dispatch(commitCameraPose(absoluteArm({ ...basePose, roll })));
           }

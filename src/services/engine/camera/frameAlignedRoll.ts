@@ -1,11 +1,14 @@
 /**
- * frameAlignedRoll — the world-arm half of the frame transition (ruling 8):
- * per at-rest wheel notch, the pose's roll decays toward the value that puts
- * the nearest body's spin axis up on screen, by the same `orientStepRad`
- * decay scaled by the same altitude-keyed curve — `maxTiltRad` rises
- * smoothly from 0 at the band's top (h/R 3.4), so the alignment fades in
- * over the band and hands off to the engaged settles already converging. No
- * new constants, no second blend mechanism ("same lerp").
+ * frameAlignedRoll — the world-arm frame transition (ruling 8, tilt
+ * discipline per fix round 3): the altitude curve defines the roll TARGET — a
+ * screen-up blend from the nearest body's spin axis (band floor) to the
+ * configured scene up (band top, via `frameUp(upBasis)` — never hardcoded) —
+ * and each at-rest notch RIDES the target's change in full, so a recession is
+ * structurally back at the global up by h/R 3.4. The capped `orientStepRad`
+ * decay is reserved for deviation the zoom did not author (arrivals). The
+ * blend is taken on VECTORS, weighting the pole term by its own projection
+ * size, so a view passing near either axis degrades smoothly instead of
+ * chasing a flipping projection.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
@@ -23,42 +26,69 @@ import { normalize3 } from '../../../utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { nearestBodyHR } from './nearestBodyHR';
 
-export function frameAlignedRoll(
+/** `v` minus its `forward` component — the image-plane part, unnormalized. */
+function imagePlanePart(v: Readonly<Vec3>, forward: Readonly<Vec3>): Vec3 {
+  const vert = v[0] * forward[0] + v[1] * forward[1] + v[2] * forward[2];
+  return [v[0] - forward[0] * vert, v[1] - forward[1] * vert, v[2] - forward[2] * vert];
+}
+
+/**
+ * The curve-defined roll target at this pose, with the band authority it was
+ * blended at; `null` when no target exists (empty roster, forward down the
+ * frame pole, or the blend's one anti-parallel knot) — callers hold the roll.
+ */
+function bandRollTarget(
   pose: CameraPose,
   bodyStates: ReadonlyMap<BodyId, BodyState>,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
-): number {
-  const currentRoll = pose.roll ?? 0;
+): { readonly rad: number; readonly authority: number } | null {
   const eyeMpc = eyeMpcOf(pose, poseBasis);
-
-  // The regime predicate's own roster rule decides which body owns the
-  // approach — one home (`nearestBodyHR`), so the two can never disagree.
   const nearest = nearestBodyHR(eyeMpc, bodyStates);
-  if (nearest === null) return currentRoll;
+  if (nearest === null) return null;
   const authority = maxTiltRad(nearest.hr) / SURFACE_REGIME.tiltMaxRad;
-  if (authority <= 0) return currentRoll;
 
   const forward = normalize3([
     pose.target[0] - eyeMpc[0],
     pose.target[1] - eyeMpc[1],
     pose.target[2] - eyeMpc[2],
   ]);
-  const poleWorld = rotateVec3ByTightMat3([0, 0, 1], nearest.bodyState.orientation);
-  // The pole's image-plane part is the "north up" screen-up target; a view
-  // straight down the spin axis has no such direction and keeps its roll.
-  const vert = forward[0] * poleWorld[0] + forward[1] * poleWorld[1] + forward[2] * poleWorld[2];
-  const horiz: Vec3 = [
-    poleWorld[0] - forward[0] * vert,
-    poleWorld[1] - forward[1] * vert,
-    poleWorld[2] - forward[2] * vert,
-  ];
-  if (Math.hypot(...horiz) < 1e-9) return currentRoll;
-
-  const desiredRoll = rollFromScreenUp(forward, normalize3(horiz), frameUp(upBasis));
-  const wrapped = Math.atan2(
-    Math.sin(desiredRoll - currentRoll),
-    Math.cos(desiredRoll - currentRoll),
+  const upRef = frameUp(upBasis);
+  const uRaw = imagePlanePart(upRef, forward);
+  if (Math.hypot(...uRaw) < 1e-9) return null; // roll itself is undefined here
+  const pRaw = imagePlanePart(
+    rotateVec3ByTightMat3([0, 0, 1], nearest.bodyState.orientation),
+    forward,
   );
-  return currentRoll + orientStepRad(wrapped) * authority;
+  // Raw (unnormalized) projections: the pole term carries its own sin∠ weight,
+  // so a view near the spin axis hands the target to the scene up smoothly —
+  // normalizing first is what chased a flipping projection (measured: 85° of
+  // roll from 2° off-axis).
+  const blend: Vec3 = [
+    authority * pRaw[0] + (1 - authority) * uRaw[0],
+    authority * pRaw[1] + (1 - authority) * uRaw[1],
+    authority * pRaw[2] + (1 - authority) * uRaw[2],
+  ];
+  if (Math.hypot(...blend) < 1e-9) return null; // pole-down anti-parallel knot
+  return { rad: rollFromScreenUp(forward, normalize3(blend), upRef), authority };
+}
+
+export function frameAlignedRoll(
+  prePose: CameraPose,
+  postPose: CameraPose,
+  bodyStates: ReadonlyMap<BodyId, BodyState>,
+  poseBasis: Readonly<Mat3>,
+  upBasis: Readonly<Mat3>,
+): number {
+  const currentRoll = postPose.roll ?? 0;
+  const tPre = bandRollTarget(prePose, bodyStates, poseBasis, upBasis);
+  const tNew = bandRollTarget(postPose, bodyStates, poseBasis, upBasis);
+  if (tPre === null || tNew === null) return currentRoll;
+  // Wholly outside the band the mechanism owns nothing — an arrival roll in
+  // deep space is not bled by wheel notches.
+  if (tPre.authority <= 0 && tNew.authority <= 0) return currentRoll;
+  // Ride the target's own movement in full (the notch authored it); decay
+  // only the pre-existing deviation, capped — the tilt wall's exact shape.
+  const dRad = Math.atan2(Math.sin(currentRoll - tPre.rad), Math.cos(currentRoll - tPre.rad));
+  return tNew.rad + dRad - orientStepRad(dRad);
 }
