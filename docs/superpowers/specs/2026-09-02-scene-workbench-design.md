@@ -453,9 +453,8 @@ real RTK + `redux-saga`, chosen over custom-store watchers for idiom parity with
 `react-redux` is fine here; `src/state`'s no-react-redux ESLint rule does not cover
 `tools/`.
 
-> **Dependency:** that rewrite lands with PR #651. Every `tools/mcpm-workbench/src/{state,store}`
-> citation below describes the post-#651 tree; the plan for this tool should not start
-> until it is on `main`, or it will mirror the hand-rolled store it replaced.
+> That rewrite is on `main` as PR #651 (`aa62736d7`). Every `tools/mcpm-workbench/src/{state,store}`
+> citation below describes that post-#651 tree, not the hand-rolled store it replaced.
 
 `store/` — seven files, mirroring the MCPM tool's `store/`, itself modelled on
 `src/store/`:
