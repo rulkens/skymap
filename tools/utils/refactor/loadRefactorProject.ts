@@ -30,6 +30,6 @@ export function loadRefactorProject(): Project {
     tsConfigFilePath: 'tsconfig.json',
     skipAddingFilesFromTsConfig: true,
   });
-  project.addSourceFilesAtPaths(['src/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}', 'tools/**/*.ts']);
+  project.addSourceFilesAtPaths(['src/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}', 'tools/**/*.{ts,tsx}']);
   return project;
 }

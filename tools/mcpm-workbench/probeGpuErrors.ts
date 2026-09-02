@@ -20,14 +20,15 @@ const VIEWPORT = { width: 1280, height: 800 };
 // A control change reaches the GPU through store → Viewport's rAF loop, so
 // every step lets a few frames encode before its errors are drained.
 const SETTLE_FRAMES = 6;
-// T20: Viewport.tsx throttles the histogram READBACK to every 20 steps
+// T20: watchHistogramSaga throttles the histogram READBACK to every 20 steps
 // (HISTOGRAM_INTERVAL_STEPS) — the dispatch itself runs every step (encodeStep.ts)
 // and so is already covered by every other settle above, but the readbackHistogram
 // mapAsync round trip needs a longer settle to guarantee it fires at least once.
 const HISTOGRAM_SETTLE_FRAMES = 21;
 const BOOT_TIMEOUT_MS = 60_000;
-// T25 (spec §12): 5x HISTOGRAM_INTERVAL_STEPS (Viewport.tsx) so 'sim:energy-smoke'
-// below rides 5 periodic histogram readbacks, not just the first noisy one.
+// T25 (spec §12): 5x HISTOGRAM_INTERVAL_STEPS (watchHistogramSaga) so
+// 'sim:energy-smoke' below rides 5 periodic histogram readbacks, not just the
+// first noisy one.
 const ENERGY_SMOKE_STEPS = 100;
 // Same margin as HISTOGRAM_SETTLE_FRAMES: settling only ENERGY_SMOKE_STEPS frames
 // races the LAST periodic readback's own mapAsync round trip.
@@ -148,15 +149,15 @@ async function launchChromium(headed: boolean): Promise<Browser> {
 
 /**
  * The load-bearing hook, installed before a single page script runs: the page
- * bundle acquires its device via `Viewport`'s own `initGpu` call (task R5 moved
- * that call out of `createMcpmHarness`), so patching `GPUAdapter.prototype` is
- * the only way to reach it regardless of which module calls it. `uncapturederror`
- * is WHERE WebGPU validation failures surface — un-listened-to they are a
- * console line nobody reads.
+ * bundle acquires its device via `watchSceneSaga`'s `initGpu` call (task R5
+ * moved that call out of `createMcpmHarness`), so patching `GPUAdapter.prototype`
+ * is the only way to reach it regardless of which module calls it.
+ * `uncapturederror` is WHERE WebGPU validation failures surface —
+ * un-listened-to they are a console line nobody reads.
  *
- * A `device.lost` with reason 'destroyed' is Viewport's own `disposeHarness`
- * (every rebuild tears down the old device) and is deliberately dropped; any
- * other reason is a crash.
+ * A `device.lost` with reason 'destroyed' fires for the old, abandoned device
+ * on a rebuild (`watchSceneSaga` requests a fresh one via `initGpu` each time)
+ * and is deliberately dropped; any other reason is a crash.
  */
 async function installGpuProbe(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -269,8 +270,8 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       name: 'boot',
       run: async (page) => {
-        // `?probe` is what makes Viewport.tsx load `syntheticCatalog()` instead
-        // of the network catalogs, and defaultAppState.ts seed a 100k-agent,
+        // `?probe` is what makes `watchCatalogSaga` load `syntheticCatalog()`
+        // instead of the network catalogs, and defaultAppState.ts seed a 100k-agent,
         // <=128-long-axis grid — see their own docs. `__mcpmProbeReady` is set
         // once the harness + render graph exist and the rAF loop has started.
         await page.goto(`${url}/?probe`, { waitUntil: 'load', timeout: BOOT_TIMEOUT_MS });
@@ -381,10 +382,10 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       // V3: the full save→load round trip through the real DOM — exportParams'
       // download, fed straight back into the hidden file input importParams
-      // reads. The GPU-relevant half is what installImportedBox provokes: it
-      // lands in buildKey (Viewport.tsx), so this is the only step that exercises a
-      // harness rebuild triggered by a grid-box change with none of voxel size /
-      // manual bounds moving.
+      // reads. The GPU-relevant half is what installImportedBox provokes: it's
+      // one of watchSceneSaga's structural triggers, so this is the only step
+      // that exercises a harness rebuild triggered by a grid-box change with
+      // none of voxel size / manual bounds moving.
       name: 'params:save-load',
       run: async (page) => {
         const [download] = await Promise.all([
@@ -486,20 +487,19 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
       // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
       // one, so this is the only render layer none of the other gates exercise. The "Grid
-      // box" CollapsibleSection defaults CLOSED (ControlsPanel.tsx's `gridBoxOpen` starts
-      // false) and its body doesn't exist in the DOM until opened — the fold button's
-      // accessible name is its title text, not an aria-label. GridBoxPanel's "voxel size"
-      // ParamSlider is deriveGridBox's one resolution lever, regardless of how the box's
-      // center/size got set. Its accessible name is distinct from the raymarch preview's
-      // own "divisor" slider (see raymarch:divisor below) — a role="slider" with a
-      // different name, so no probe selector or screen-reader name collides. 'End' jumps
-      // the slider to its max, away from the probe boot's 3.125 Mpc (PROBE_VOXEL_SIZE_MPC,
-      // defaultAppState.ts) — read before/after, since a step that can silently degrade to
-      // a no-op drive must FAIL, not just run. BOX_PREVIEW_MS is 200ms; SETTLE_FRAMES worth
-      // of frames comfortably outlasts it.
+      // box" CollapsibleSection defaults OPEN (ControlsPanel.tsx's `gridBoxOpen` starts
+      // true, since 14e095c75) — no fold click needed; a click here would instead TOGGLE
+      // it closed and take 'gizmo:hover-drag' below down with it (same slider group).
+      // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever,
+      // regardless of how the box's center/size got set. Its accessible name is distinct
+      // from the raymarch preview's own "divisor" slider (see raymarch:divisor below) — a
+      // role="slider" with a different name, so no probe selector or screen-reader name
+      // collides. 'End' jumps the slider to its max, away from the probe boot's 3.125 Mpc
+      // (PROBE_VOXEL_SIZE_MPC, defaultAppState.ts) — read before/after, since a step that
+      // can silently degrade to a no-op drive must FAIL, not just run. BOX_PREVIEW_MS is
+      // 200ms; SETTLE_FRAMES worth of frames comfortably outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
-        await page.getByRole('button', { name: 'Grid box', exact: true }).click();
         const voxelSize = page.getByRole('slider', { name: 'voxel size', exact: true });
         const before = await voxelSize.getAttribute('aria-valuenow');
         await pressSlider(page, 'voxel size', ['End']);
@@ -569,12 +569,16 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // it via a second TracePass — exercises pipeline code (pack, upload, a
       // second f16/f32-specialized shader compile) that no other step reaches.
       // sim.running stays true here, so by the time the async pack lands the
-      // preview is already stale; Viewport drops back to the live trace and
-      // un-checks this itself — the settle is what proves that whole round trip
-      // raises no GPU errors, not a picture the probe judges.
+      // preview is already stale; watchPreviewPackedSaga drops back to the live
+      // trace and un-checks this itself — often within the same settle below, so
+      // a plain `.click()` (fire the rising edge, don't assert the resulting
+      // checked state) is used instead of `.check()`, which retries against a
+      // checkbox this step EXPECTS to have already reverted by the time it looks.
+      // The settle is what proves the round trip raises no GPU errors, not a
+      // picture — or a checkbox state — the probe judges.
       name: 'raymarch:preview-packed',
       run: async (page) => {
-        await page.getByRole('checkbox', { name: 'preview packed export', exact: true }).check();
+        await page.getByRole('checkbox', { name: 'preview packed export', exact: true }).click();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

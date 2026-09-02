@@ -252,7 +252,7 @@ export function createRenderGraph(
   // building it here (graph construction) is what makes a broken boxLines.wesl fail at
   // boot instead of surviving until someone drags a grid-box slider. This is about
   // WITHIN one graph's construction, not across rebuilds — createRenderGraph itself runs
-  // inside Viewport's buildFromPoints, so every pass here, this one included, is torn
+  // inside watchSceneSaga's build, so every pass here, this one included, is torn
   // down and rebuilt with the rest of the graph on every harness rebuild.
   const boxPreviewPass: BoxPreviewPass = createBoxPreviewPass({
     device,

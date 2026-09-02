@@ -1,20 +1,18 @@
-import type { AppState } from '../../@types/AppState';
+import type { RootState } from '../store/types';
 
 /**
- * storeWriteIsDirty — did a store write change anything the frame loop draws, or
- * anything a user actually did (as opposed to the loop's own bookkeeping)? Both
- * render-on-demand's dirty flag and the interaction-priority boost trigger
- * (Viewport.tsx) share this one check. Every slice reducer returns a fresh object
- * only on a real change (createStore.ts's own docstring), so reference comparisons
- * are exact and free — except for the loop's own per-frame writes, excluded the same
- * way `view.fps` is: `sim.stepCount` (compared field-by-field, not by slice
- * reference — every OTHER `sim` field still counts) and the WHOLE `histogram` slice
- * (nothing in the canvas draw path reads it, and it churns every
- * HISTOGRAM_INTERVAL_STEPS regardless of any UI write — counting it very nearly
- * pins the interaction boost on for the whole time a sim is running, since a
- * running sim always has fresh histogram writes a few hundred ms apart).
+ * storeWriteIsDirty — did a store write change anything the frame loop draws,
+ * or anything a user actually did (as opposed to the loop's own bookkeeping)?
+ * Render-on-demand's dirty flag and the interaction-priority boost trigger
+ * share this one check. Immer only produces a fresh object on a real change,
+ * so reference comparisons are exact and free — except the loop's own
+ * per-frame writes, excluded the same way as `view.fps`: `sim.stepCount`
+ * (field-by-field, every OTHER `sim` field still counts by reference) and the
+ * WHOLE `histogram` slice (nothing in the canvas draw path reads it, and
+ * counting its churn would pin the interaction boost on for the whole time a
+ * sim is running).
  */
-export function storeWriteIsDirty(prev: AppState, next: AppState): boolean {
+export function storeWriteIsDirty(prev: RootState, next: RootState): boolean {
   if (prev === next) return false;
   return (
     prev.catalog !== next.catalog ||
@@ -29,17 +27,13 @@ export function storeWriteIsDirty(prev: AppState, next: AppState): boolean {
   );
 }
 
-function isSimMeaningfullyChanged(prev: AppState['sim'], next: AppState['sim']): boolean {
+function isSimMeaningfullyChanged(prev: RootState['sim'], next: RootState['sim']): boolean {
   if (prev === next) return false;
   return (
     prev.params !== next.params ||
     prev.agentCount !== next.agentCount ||
     prev.initMode !== next.initMode ||
     prev.running !== next.running ||
-    prev.seed !== next.seed ||
-    prev.resetToken !== next.resetToken ||
-    prev.clearTraceToken !== next.clearTraceToken ||
-    prev.exportToken !== next.exportToken ||
-    prev.scfdToken !== next.scfdToken
+    prev.seed !== next.seed
   );
 }

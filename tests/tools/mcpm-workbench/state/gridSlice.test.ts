@@ -13,15 +13,10 @@ import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import {
   defaultGridSlice,
-  fitBoxToCatalog,
-  installImportedBox,
-  setManualCenterMpc,
-  setManualSizeMpc,
-  setMaxBufferBytes,
-  setPaddingMpc,
-  setRotation,
-  setVoxelSizeMpc,
-} from '../../../../tools/mcpm-workbench/src/state/slices/gridSlice';
+  gridSlice,
+} from '../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
+
+const { actions, reducer } = gridSlice;
 
 // centerMpc/sizeMpc/rotation deliberately differ from defaultGridSlice's manual
 // values on every axis — an installImportedBox test asserting sync against
@@ -40,35 +35,53 @@ const withImportedBox = { ...defaultGridSlice, importedBox: IMPORTED_BOX };
 
 describe('gridSlice setters clear importedBox on any user edit', () => {
   it('setVoxelSizeMpc clears it', () => {
-    expect(setVoxelSizeMpc(withImportedBox, 2).importedBox).toBeNull();
+    expect(reducer(withImportedBox, actions.setVoxelSizeMpc(2)).importedBox).toBeNull();
   });
 
   it('setPaddingMpc clears it', () => {
-    expect(setPaddingMpc(withImportedBox, 10).importedBox).toBeNull();
+    expect(reducer(withImportedBox, actions.setPaddingMpc(10)).importedBox).toBeNull();
   });
 
   it('setManualCenterMpc clears it', () => {
-    expect(setManualCenterMpc(withImportedBox, [1, 2, 3]).importedBox).toBeNull();
+    expect(reducer(withImportedBox, actions.setManualCenterMpc([1, 2, 3])).importedBox).toBeNull();
   });
 
   it('setManualSizeMpc clears it', () => {
-    expect(setManualSizeMpc(withImportedBox, [50, 50, 50]).importedBox).toBeNull();
+    expect(reducer(withImportedBox, actions.setManualSizeMpc([50, 50, 50])).importedBox).toBeNull();
   });
 
   it('setRotation clears it', () => {
     const rotation: Vec4 = [0, 0, Math.SQRT1_2, Math.SQRT1_2];
-    expect(setRotation(withImportedBox, rotation).importedBox).toBeNull();
+    expect(reducer(withImportedBox, actions.setRotation(rotation)).importedBox).toBeNull();
   });
 
   it('fitBoxToCatalog clears it', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
-    expect(fitBoxToCatalog(withImportedBox, bounds).importedBox).toBeNull();
+    expect(reducer(withImportedBox, actions.fitBoxToCatalog(bounds)).importedBox).toBeNull();
+  });
+
+  it('setAutoFitPercent clears it', () => {
+    expect(reducer(withImportedBox, actions.setAutoFitPercent(90)).importedBox).toBeNull();
+  });
+});
+
+describe('setAutoFitPercent', () => {
+  it('clamps below 80 up to 80', () => {
+    expect(reducer(defaultGridSlice, actions.setAutoFitPercent(50)).autoFitPercent).toBe(80);
+  });
+
+  it('clamps above 100 down to 100', () => {
+    expect(reducer(defaultGridSlice, actions.setAutoFitPercent(150)).autoFitPercent).toBe(100);
+  });
+
+  it('passes an in-range integer through unchanged', () => {
+    expect(reducer(defaultGridSlice, actions.setAutoFitPercent(92)).autoFitPercent).toBe(92);
   });
 });
 
 describe('installImportedBox', () => {
   it('syncs manualCenterMpc/manualSizeMpc/manualRotation/manualVoxelSizeMpc to the imported box while installing it (S17, F2.5, V1)', () => {
-    const next = installImportedBox(defaultGridSlice, IMPORTED_BOX);
+    const next = reducer(defaultGridSlice, actions.installImportedBox(IMPORTED_BOX));
     expect(next.importedBox).toEqual(IMPORTED_BOX);
     expect(next.manualCenterMpc).toEqual(IMPORTED_BOX.centerMpc);
     expect(next.manualSizeMpc).toEqual(IMPORTED_BOX.sizeMpc);
@@ -77,16 +90,16 @@ describe('installImportedBox', () => {
   });
 
   it('a subsequent setManualSizeMpc still clears importedBox (V3 ruling stays green)', () => {
-    const loaded = installImportedBox(defaultGridSlice, IMPORTED_BOX);
-    expect(setManualSizeMpc(loaded, [50, 50, 50]).importedBox).toBeNull();
+    const loaded = reducer(defaultGridSlice, actions.installImportedBox(IMPORTED_BOX));
+    expect(reducer(loaded, actions.setManualSizeMpc([50, 50, 50])).importedBox).toBeNull();
   });
 
   it('a subsequent resize/translate drag on a loaded rotated box keeps its rotation (no snap to identity)', () => {
     // F2.5 regression: manualRotation must be synced at install time, not left at the
     // default identity — otherwise clearing importedBox (any manual edit, V3) would fall
     // onto deriveGridBox's manual path and silently reset a loaded box's orientation.
-    const loaded = installImportedBox(defaultGridSlice, IMPORTED_BOX);
-    const afterDrag = setManualCenterMpc(loaded, [20, 20, 20]);
+    const loaded = reducer(defaultGridSlice, actions.installImportedBox(IMPORTED_BOX));
+    const afterDrag = reducer(loaded, actions.setManualCenterMpc([20, 20, 20]));
     expect(afterDrag.importedBox).toBeNull();
     expect(afterDrag.manualRotation).toEqual(IMPORTED_BOX.rotation);
   });
@@ -94,7 +107,7 @@ describe('installImportedBox', () => {
 
 describe('setMaxBufferBytes', () => {
   it('records the device limit without clearing importedBox — a hardware fact, not a user edit', () => {
-    const next = setMaxBufferBytes(withImportedBox, 4 * 1024 ** 3);
+    const next = reducer(withImportedBox, actions.setMaxBufferBytes(4 * 1024 ** 3));
     expect(next.maxBufferBytes).toBe(4 * 1024 ** 3);
     expect(next.importedBox).toEqual(IMPORTED_BOX);
   });
@@ -103,15 +116,15 @@ describe('setMaxBufferBytes', () => {
 describe('fitBoxToCatalog', () => {
   it('centers on the bounds midpoint and pads the extent by 2x paddingMpc per axis', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
-    const next = fitBoxToCatalog({ ...defaultGridSlice, paddingMpc: 5 }, bounds);
+    const next = reducer({ ...defaultGridSlice, paddingMpc: 5 }, actions.fitBoxToCatalog(bounds));
     expect(next.manualCenterMpc).toEqual([50, 25, 15]);
     expect(next.manualSizeMpc).toEqual([110, 60, 40]);
   });
 
   it('bakes paddingMpc in at click time — a later paddingMpc change does not retroactively resize', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
-    const fitted = fitBoxToCatalog({ ...defaultGridSlice, paddingMpc: 5 }, bounds);
-    const afterPaddingEdit = setPaddingMpc(fitted, 50);
+    const fitted = reducer({ ...defaultGridSlice, paddingMpc: 5 }, actions.fitBoxToCatalog(bounds));
+    const afterPaddingEdit = reducer(fitted, actions.setPaddingMpc(50));
     expect(afterPaddingEdit.manualSizeMpc).toEqual(fitted.manualSizeMpc);
   });
 });

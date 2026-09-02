@@ -1,0 +1,47 @@
+/* Small chrome, same badge vocabulary as Hud's — a bordered panel-surface box
+   rather than a bespoke look, so this reads as part of the same HUD family. */
+.root {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.canvasBox {
+  position: relative;
+  border-radius: 6px;
+  border: 1px solid var(--border-divider);
+  background: var(--surface-panel);
+  padding: var(--space-3);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 110px;
+}
+
+/* The E / M / null% / log-base column — same offsets (4px) and 12px row pitch
+   the canvas text used, and the same font tokens draw() measures with, so the
+   bars' reserved strip stays honest. Right-aligned: a value's width change
+   never nudges anything else. */
+.readout {
+  position: absolute;
+  top: calc(var(--space-3) + 4px);
+  right: calc(var(--space-3) + 4px);
+  display: grid;
+  justify-items: end;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  line-height: 12px;
+  text-align: right;
+}
+
+.readoutRow {
+  color: var(--color-fg-muted);
+  cursor: help;
+}
+
+/* E alone shares the mean-trace line's colour — it IS that series' readout. */
+.readoutEmphasis {
+  color: var(--color-fg-base);
+  cursor: help;
+}

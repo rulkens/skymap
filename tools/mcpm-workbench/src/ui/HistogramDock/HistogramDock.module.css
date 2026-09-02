@@ -1,0 +1,28 @@
+/* Floating bottom-left home for the convergence readout — same glass chrome
+   as ControlsPanel so it reads as the same family, but freestanding so the
+   histogram stays visible while the sidebar scrolls elsewhere. Left offset
+   matches Hud's 24px column; bottom clears App's status lines (bottom 12/44),
+   which render later and would otherwise sit on top of the plot. */
+.root {
+  position: absolute;
+  left: 24px;
+  bottom: 76px;
+  width: 300px;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-fg-base);
+  font-family: var(--font-family-mono);
+}
+
+.eyebrow {
+  font-size: var(--font-size-sm);
+  letter-spacing: 2px;
+  color: var(--color-fg-dim);
+  font-weight: 600;
+  user-select: none;
+}
