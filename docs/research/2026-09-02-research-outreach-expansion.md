@@ -71,11 +71,49 @@ These have ingredients 2 and 4: an open algorithm, a contested parameter, and a 
 - **Spine / H-Spine — Miguel Aragon-Calvo (UNAM).** Watershed hierarchy of voids, walls and filaments ([H-Spine, 2024](https://arxiv.org/abs/2308.16186)). He builds his own visualisations and would likely engage on method; the hierarchy (voids nested in voids) is a good zoom story.
 - **CLUES / HESTIA — Noam Libeskind (AIP Potsdam), Jenny Sorce, Yehuda Hoffman.** Constrained simulations of the Local Group and local volume from Cosmicflows velocities ([HESTIA](https://academic.oup.com/mnras/article/498/2/2968/5897372)). Offer: a "simulated twin" toggle beside the real 2MRS/GLADE local volume. Overlaps the Cosmicflows contact (Hoffman is on both).
 
-### Tier 3 — Milky Way and stars (Gaia DR4 timing)
+### Tier 3 — the stellar neighbourhood, rung by rung (parsecs to the Galactic centre)
 
-- **Radcliffe Wave / Local Bubble — Catherine Zucker (STScI), Alyssa Goodman (CfA), João Alves (Vienna).** They already publish interactive 3D figures (glue, plotly exports) and a 3D [Local Bubble surface model](https://arxiv.org/abs/2403.04961). Skymap has Gaia stars and a [young-stars field](../grill-sessions/young-stars-field-2026-08-09.md); adding the bubble surface and the wave in true scale, then zooming out to the cosmic web, is a Powers-of-Ten beat they do not have. They are the most viz-literate group on this list and the easiest to talk to about method.
-- **Gaia DPAC — Anthony Brown (Leiden).** DR4 on 2 December 2026; Leiden runs the Dutch press side. A skymap DR4 layer ready on release day is an outreach asset for them, not a research one.
-- **Peers, not targets:** Kevin Jardine ([galaxymap.org](http://galaxymap.org/), independent Gaia structure mapper who already collaborates with Leiden and Heidelberg), Toni Sagristà (Gaia Sky, Heidelberg ARI), OpenSpace (AMNH / Linköping). Worth knowing; they are the people who will tell you which DR4 tables matter.
+Below supergalactic scale the map changes character: the objects are stars with full 6D phase space, the science is _kinematic_, and almost every group's headline result is a **time** story (traceback, flyby, tidal tail, stream, orbit). Skymap already has the two things those groups lack in a browser: a true-scale continuous zoom and a simulation clock. The backlog item [Grand tour: Earth start + scale rungs](../backlog/2026-07-22-grand-tour-earth-start.md) is the internal hook; each rung below wants one group.
+
+**The one workbench that serves the whole tier:** a GPU orbit integrator in a fixed Galactic potential (a Milky Way model of the McMillan or galpy kind), driven by the existing clock, over Gaia 6D stars. Every group below runs that integration offline (galpy, Agama, N-body) and none has it live. Rewinding Sco-Cen 20 Myr to its birth sites, running Gliese 710 forward to its 1.3 Myr flyby, unwinding the Hyades tails, and tracing Gaia-Enceladus debris are all the same compute shader with a different selection. It is the MCPM-workbench move for this scale, and it is GPU-shaped in exactly the way MCPM was.
+
+#### 0–20 pc: the Sun's immediate surroundings
+
+- **Cluster of Local Interstellar Clouds — Jeffrey Linsky (JILA), Seth Redfield (Wesleyan).** Fifteen warm clouds within ~15 pc; the Sun sits at the edge of the Local Interstellar Cloud, and a 2025 paper on the [origin of the cluster](https://arxiv.org/abs/2504.00093) gives a 3D morphology. Nobody renders this; it is the first thing outside the heliosphere in the zoom and skymap currently shows nothing between Pluto and the nearest stars. Data is small (spherical-harmonic surfaces); a layer, not a workbench.
+- **20 pc census — Davy Kirkpatrick (IPAC) and Backyard Worlds (Zooniverse, Aaron Meisner, Adam Schneider).** [~3,600 stars and brown dwarfs](https://arxiv.org/pdf/2312.03639) with distances, the most complete volume-limited sample anywhere. Citizen-science project, so the outreach fit is exact: their discoverers already want to "see" where their brown dwarf sits. Skymap's GCNS layer stops at what Gaia sees; the Y dwarfs are missing.
+- **Habitable Worlds Observatory target stars — NASA ExEP.** [~160 nearby stars](https://science.nasa.gov/exoplanets/target-star-catalog/) chosen for the 2040s exo-Earth survey, each already with a per-star 3D page. A `#focus=` tour through them is trivial; the value is that NASA's outreach office is looking for exactly this kind of embed.
+- **Close stellar encounters — Coryn Bailer-Jones (MPIA Heidelberg).** [Gaia DR3 flybys](https://iopscience.iop.org/article/10.3847/2041-8213/ac816a): Gliese 710 to 0.06 pc in 1.3 Myr, HD 7977 inside 0.05 pc 2.8 Myr ago, Oort-cloud perturbation as the consequence. Pure time-control demo: scrub ±6 Myr and watch stars come and go. The dataset is a table of ~60 stars; the integrator above is what makes it a workbench.
+
+#### 100–500 pc: the Local Bubble and the star-forming neighbourhood
+
+This is the richest rung and one institute is the hub: **the Vienna group of João Alves** (Radcliffe Wave PI; Stefan Meingast, tidal tails and extended stellar systems; Sebastian Ratzenböck, SigMA clustering; Núria Miret-Roig, traceback ages), tightly linked to **Goodman and Zucker** (CfA / STScI) and to **Leiden** (Eleonora Zari's [3D young-star density maps](https://arxiv.org/abs/1810.09819), Anthony Brown as co-author).
+
+- **Local Bubble surface and Radcliffe Wave.** The [Local Chimney model](https://arxiv.org/abs/2403.04961) and the wave are published 3D surfaces; skymap's Edenhofer dust layer, once wired, shows the same structures as density. Rendering surface + dust + Gaia young stars in one frame is the beat; these people already export interactive figures and will engage on method.
+- **Sco-Cen as 37 clusters — Ratzenböck et al.** [SigMA](https://www.aanda.org/articles/aa/full_html/2023/10/aa46901-23/aa46901-23.html) found 13,000 members in 37 coeval, comoving clusters with ages 3–21 Myr arranged in chains, with a [2026 velocity-dispersion follow-up](https://www.aanda.org/articles/aa/full_html/2026/05/aa55519-25/aa55519-25.html). Their narrative is sequential star formation propagating along chains; rewinding it live is the figure they draw as arrows today. SigMA itself is a density-based clustering that could be a second, smaller workbench with the density threshold as the contested knob.
+- **Hyades tidal tails — Tereza Jerabkova (ESO), Meingast, and a [2026 paper](https://arxiv.org/html/2603.29360v1) using the tails to constrain bar and spiral pattern speeds.** 800 pc of stars trailing a cluster you can see with the naked eye. Skymap renders the Hyades already; the tails are a membership list.
+- **Open-cluster census — Emily Hunt and Sabine Reffert (Heidelberg).** [7,167 clusters](https://www.aanda.org/articles/aa/full_html/2023/05/aa46285-23/aa46285-23.html), 1.3M member stars, with a [2026 selection-function paper](https://www.aanda.org/articles/aa/full_html/2026/02/aa57781-25/aa57781-25.html). Same shape as skymap's structure markers, one scale down: cluster rings + labels + membership colouring in the star field. Cheap layer, big visual payoff, and the "structure marker" machinery already exists.
+
+#### 1–3 kpc: dust and the Local Arm
+
+- **3D dust from Paris — Rosine Lallement and Jean-Luc Vergely (Observatoire de Paris).** The other dust-map lineage beside Edenhofer, and the one with an existing EU-funded web viewer: [G-Tomo-3D](https://github.com/explore-platform/g-tomo-3d) from the EXPLORE platform. Treat as a peer to compare notes with, and as a second dust volume for an A/B toggle (two independent reconstructions of the same clouds is the same argument as MCPM vs Manticore, one scale down).
+- **Kevin Jardine** ([galaxymap.org](http://galaxymap.org/)) sits here too: his OB-star density isosurfaces out to 3 kpc are exactly a skymap layer, and he already works with Leiden and Heidelberg.
+
+#### 3–10 kpc: the disc as a dynamical system
+
+- **Spiral arms and warp — Eloisa Poggio and Ronald Drimmel (INAF Torino).** Gaia-mapped arm segments and the disc warp; skymap's Milky Way is the Freudenreich analytic model with the warp unmodelled ([science.md](../science.md#measured-derived-or-modelled)). Their maps are the measured replacement for the modelled disc, the same swap MPA offers for dust.
+- **Phase spiral — Teresa Antoja (Barcelona), Jason Hunt (Toronto).** The 2018 discovery that the disc is still ringing from a perturbation. Not a spatial structure, so it needs a velocity-space view toggle; lower priority, but it is the single most famous Gaia result and the disc groups would notice a tool that shows it.
+
+#### Halo and streams: Galactic archaeology (the 2026 hook)
+
+- **Amina Helmi (Kapteyn, Groningen)** shared the **2026 Kavli Prize in Astrophysics** with Vasily Belokurov (Cambridge) and Rodrigo Ibata (Strasbourg) for the Gaia-Enceladus merger and the streams work ([Kavli](https://www.kavliprize.org/bio/amina-helmi)). Dutch, prize year, and a story with a Powers-of-Ten shape: the stars around the Sun include debris of a galaxy swallowed ten billion years ago. Colour Gaia stars by kinematic origin (disc, Gaia-Enceladus, Helmi streams) and the neighbourhood becomes an archaeology dig. Ibata's STREAMFINDER streams are the halo-scale arcs. The orbit integrator is again the workbench; their own visualisation is velocity-space scatter plots.
+
+#### Galactic centre: S-stars (same-week email)
+
+- **GRAVITY collaboration — Frank Eisenhauer, Stefan Gillessen (MPE Garching).** Skymap already renders 39 S-star orbits from Gillessen 2017 and, as of [#645](https://github.com/rulkens/skymap/pull/645), a lensed close-up of Sgr A\*. On **19 August 2026** MPE announced [S301](https://www.mpe.mpg.de/8222492/news20260819-2), a star reaching 280 gravitational radii with the prospect of measuring the black hole's spin. Adding S301 and refreshing the orbital elements is a data edit, and the email writes itself: "your press release, live, in a true-scale zoom from Earth". Their press office already produces videos; a browser embed is the one thing they do not have.
+
+### Peers at this scale, not targets
+
+Gaia Sky (Toni Sagristà, Heidelberg ARI), OpenSpace (AMNH / Linköping), and G-Tomo-3D (EXPLORE). They are the people who will say which Gaia DR4 tables matter on 2 December; talk to them before then.
 
 ### Also on the radar
 
@@ -86,16 +124,21 @@ These have ingredients 2 and 4: an open algorithm, a contested parameter, and a 
 
 ## 3. Scoring
 
-| Group                    | Product to render      | Open GPU-able method             | Their viz is offline | Contested knob         | Validation target            | Existing skymap thread       |
-| ------------------------ | ---------------------- | -------------------------------- | -------------------- | ---------------------- | ---------------------------- | ---------------------------- |
-| Cosmicflows              | yes                    | streamlines + watershed          | yes (SDvision)       | smoothing, basin edges | manlius/laniakea, Dupuy 2023 | CF4 density, flow, ZoA layer |
-| MPA cartography          | yes (dust, HI, CO)     | no (IFT) — but posterior samples | yes                  | none live; uncertainty | published samples            | Edenhofer `.scfd` waiting    |
-| Aquila / Manticore       | yes (posterior, voids) | no (HMC) — but 50 realisations   | yes                  | prior, bias model      | same SDSS box as MCPM        | void markers, MCPM VAC       |
-| DisPerSE                 | yes                    | partly (precomputed cuts)        | yes                  | persistence σ          | our own edge-lock finding    | buildFilaments               |
-| NEXUS+                   | catalog-derived        | **yes** (Hessian filter)         | yes                  | scale range            | Cautun's public code         | none yet                     |
-| Bisous                   | yes (VizieR)           | weak (MCMC)                      | yes                  | none                   | VizieR catalog               | none yet                     |
-| Radcliffe / Local Bubble | yes (surface models)   | n/a                              | no (glue, plotly)    | none                   | published models             | young-stars field            |
-| GLADE+                   | yes                    | n/a                              | 2D only              | completeness           | GLADE v2.3 pipeline          | GLADE parser                 |
+| Group                        | Product to render           | Open GPU-able method              | Their viz is offline       | Contested knob                         | Validation target            | Existing skymap thread               |
+| ---------------------------- | --------------------------- | --------------------------------- | -------------------------- | -------------------------------------- | ---------------------------- | ------------------------------------ |
+| Cosmicflows                  | yes                         | streamlines + watershed           | yes (SDvision)             | smoothing, basin edges                 | manlius/laniakea, Dupuy 2023 | CF4 density, flow, ZoA layer         |
+| MPA cartography              | yes (dust, HI, CO)          | no (IFT) — but posterior samples  | yes                        | none live; uncertainty                 | published samples            | Edenhofer `.scfd` waiting            |
+| Aquila / Manticore           | yes (posterior, voids)      | no (HMC) — but 50 realisations    | yes                        | prior, bias model                      | same SDSS box as MCPM        | void markers, MCPM VAC               |
+| DisPerSE                     | yes                         | partly (precomputed cuts)         | yes                        | persistence σ                          | our own edge-lock finding    | buildFilaments                       |
+| NEXUS+                       | catalog-derived             | **yes** (Hessian filter)          | yes                        | scale range                            | Cautun's public code         | none yet                             |
+| Bisous                       | yes (VizieR)                | weak (MCMC)                       | yes                        | none                                   | VizieR catalog               | none yet                             |
+| Radcliffe / Local Bubble     | yes (surface models)        | n/a                               | no (glue, plotly)          | none                                   | published models             | young-stars field                    |
+| Vienna (Alves) neighbourhood | yes (surfaces, memberships) | **yes** (orbit integrator, SigMA) | partly (glue, plotly)      | traceback potential, density threshold | published members/ages       | Gaia stars, young-stars field, clock |
+| Helmi / Galactic archaeology | yes (membership labels)     | **yes** (orbit integrator)        | yes (velocity-space plots) | potential, selection                   | published stream members     | Gaia stars, clock                    |
+| GRAVITY (S-stars)            | yes (orbital elements)      | n/a                               | video only                 | none                                   | Gillessen 2017 in-app        | S-stars + Sgr A\* lens               |
+| Bailer-Jones encounters      | yes (60-star table)         | **yes** (orbit integrator)        | yes                        | potential                              | published table              | clock                                |
+| Hunt & Reffert clusters      | yes (VizieR)                | n/a                               | yes                        | none                                   | VizieR                       | structure markers                    |
+| GLADE+                       | yes                         | n/a                               | 2D only                    | completeness                           | GLADE v2.3 pipeline          | GLADE parser                         |
 
 ## 4. What the offer looks like (reusable package)
 
@@ -112,7 +155,10 @@ Every approach so far has converged on the same four deliverables. Naming them m
 2. **MPA Galactic Cartography** now: ship the Edenhofer layer first, then write. Target being in place before Gaia DR4 on 2 December.
 3. **NEXUS+ (Cautun/van de Weygaert)** in parallel: the only Dutch cosmic-web group, and the only Tier 2 method that ports as cleanly as MCPM did.
 4. **Aquila / Manticore** once one of the above is public: the MCPM-vs-Manticore comparison is the research payoff, and it is a stronger pitch with the MCPM group's name attached.
-5. DisPerSE, Bisous, Radcliffe, GLADE+ as follow-ons that mostly reuse existing formats.
+5. **GRAVITY / MPE** this week: S301 is a data edit on a layer that already exists, and the press release is three weeks old.
+6. **Vienna (Alves group)** before Gaia DR4: the orbit-integrator workbench is the second MCPM-shaped tool, and it lands on the four groups (Sco-Cen, Radcliffe, Hyades tails, encounters) in one build. Open with the Local Bubble + Radcliffe layer.
+7. **Helmi (Kapteyn)** in the Kavli year, once the integrator exists; same tool, halo selection.
+8. DisPerSE, Bisous, GLADE+, Hunt & Reffert, the 20 pc census, and the Local Interstellar Clouds as follow-ons that mostly reuse existing formats.
 
 ## 6. Funding note (NL)
 
