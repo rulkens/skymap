@@ -95,15 +95,31 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
     if (root.camera.clip !== null) return;
     const focus = selectFocusRow(root);
     const world = liveWorldPose(state);
-    const next = applyInputToCamera(
+    const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
+    let next = applyInputToCamera(
       world,
       step,
       cssHeight,
       pivotFraming(focus),
       state.cameraRuntime.projection.fovYRad,
-      ORIENTATION_FRAMES[state.settings.orientation],
+      poseBasis,
       state.cameraRuntime.upBasis.current,
     );
+    if (step.kind === 'zoom') {
+      // The roll ride runs on EVERY driven zoom path — a gesture-held wheel
+      // moves altitude exactly like the at-rest one.
+      const bodyStates = deriveBodyStates(
+        deriveSimDays(selectTimeState(root), nowMs),
+      ) as ReadonlyMap<BodyId, BodyState>;
+      const roll = frameAlignedRoll(
+        world,
+        next,
+        bodyStates,
+        poseBasis,
+        state.cameraRuntime.upBasis.current,
+      );
+      next = { ...next, roll };
+    }
     if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
       // Followed-body strafe: the pivot-pin owns the target
       // (`bodyPosition + followPanOffset`), so the pan step's own delta goes
@@ -160,6 +176,9 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         // At rest the register is not rendered — `applyWheelZoom` routes the
         // factor to whichever driver actually owns the distance this frame.
         const root = store.getState();
+        // Captured BEFORE the call: the followBody branch scales this in
+        // place, and the roll ride below needs the notch's pre/post pair.
+        const followTargetBefore = state.cameraRuntime.clock.followDistanceTarget;
         const zoomed = applyWheelZoom(
           state.cameraRuntime.clock,
           state.cameraRuntime.prevActiveId.current,
@@ -193,13 +212,24 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
           register.current = absoluteArm({ ...zoomed, roll });
           store.dispatch(commitCameraPose(register.current));
         } else if (zoomed === null && root.camera.base.frame === 'absolute') {
-          // The followBody owner swallowed the distance (it eases its own
-          // target); the alignment still rides the notch. Measured on the LIVE
-          // rendered pose (the follow ease, not the stale base), landed on
-          // `base.roll`, which the follow pose lerps toward.
+          // The followBody owner swallowed the distance into its own target;
+          // the roll ride must still see the notch's authored altitude move,
+          // which HERE is the followDistanceTarget change — feeding the live
+          // pose twice gave the ride a zero target delta and left the band
+          // roll frozen on the default (focused) path. Pre/post = the live
+          // rendered pose at the OLD and NEW target distances (the ease
+          // arrives there; the roll may lead it by the sub-second ease lag).
+          // Landed on `base.roll`, which the follow pose lerps toward.
           const basePose = root.camera.base.pose;
+          const followTargetAfter = state.cameraRuntime.clock.followDistanceTarget;
           const live = liveWorldPose(state);
-          const roll = frameAlignedRoll(live, live, bodyStates, poseBasis, upBasis);
+          const roll = frameAlignedRoll(
+            { ...live, distance: followTargetBefore ?? live.distance },
+            { ...live, distance: followTargetAfter ?? live.distance },
+            bodyStates,
+            poseBasis,
+            upBasis,
+          );
           if (roll !== (basePose.roll ?? 0)) {
             store.dispatch(commitCameraPose(absoluteArm({ ...basePose, roll })));
           }

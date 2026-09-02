@@ -456,6 +456,106 @@ describe('drainInput', () => {
     expect(moved).toBeLessThanOrEqual(0.1 + 1e-12);
   });
 
+  it('a FOCUSED zoom-out rides the roll back to the scene up (the default path)', () => {
+    // The user's real configuration: Earth focused, followBody owns the wheel
+    // (`applyWheelZoom` scales `followDistanceTarget`; the driver eases to
+    // it). Feeding the ride identical pre/post poses there zeroed the target
+    // delta — the ride was dead exactly on the default path, and once the
+    // eased altitude left the band the notches went fully inert, freezing the
+    // in-band roll (the "equatorial is still there" report). The notch's
+    // authored altitude change IS the followDistanceTarget change, so the
+    // ride must run across it. Ease simulated as saturated between notches
+    // (the register stamped with the target-distance pose, as runFrame would).
+    const { agg, state, deps, store } = makeHarness();
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const poseAt = (distMpc: number, roll: number) => ({
+      target: [...earth.positionMpc] as Vec3,
+      yaw: 0.7,
+      pitch: 0.3,
+      distance: distMpc,
+      roll,
+    });
+    store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusM: 6371000,
+        },
+      }),
+    );
+    // In-band start with the band's pole-aligned roll held (the user's state
+    // after an approach). Converge the roll onto the ride's own fixed point
+    // first with factor-1 notches, so the recession isolates the RIDE.
+    const startDist = EARTH_RADIUS_MPC * 2.5;
+    store.dispatch(commitCameraPose(absoluteArm(poseAt(startDist, -0.26))));
+    state.cameraRuntime.lastPose.current = absoluteArm(poseAt(startDist, -0.26));
+    state.cameraRuntime.prevActiveId.current = 'followBody';
+    state.cameraRuntime.clock.followDistanceTarget = startDist;
+    const rollOfBase = (): number => {
+      const base = store.getState().camera.base;
+      if (base.frame !== 'absolute') throw new Error('expected absolute base');
+      return (base.pose as { roll?: number }).roll ?? 0;
+    };
+    const settle = (nowMs: number): void => {
+      // The saturated follow ease: register renders at the target distance
+      // carrying base.roll (the follow pose lerps roll toward base).
+      state.cameraRuntime.lastPose.current = absoluteArm(
+        poseAt(state.cameraRuntime.clock.followDistanceTarget!, rollOfBase()),
+      );
+      void nowMs;
+    };
+    for (let i = 0; i < 60; i += 1) {
+      agg.push({ kind: 'wheel', deltaY: 0, duringGesture: false, xPx: 500, yPx: 500 });
+      drainInput(state, deps, i);
+      settle(i);
+    }
+    expect(Math.abs(rollOfBase())).toBeGreaterThan(0.05); // in-band target held
+
+    let guard = 0;
+    while (
+      state.cameraRuntime.clock.followDistanceTarget! / EARTH_RADIUS_MPC - 1 < 4.5 &&
+      guard < 30
+    ) {
+      agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+      drainInput(state, deps, 1000 + guard);
+      settle(1000 + guard);
+      guard += 1;
+    }
+
+    // Above the band the scene frame owns the view again — no frozen residual
+    // (1e-4 rad ≈ 0.006°: the live clock advancing between notches feeds the
+    // decay a hair of target drift; the dead-ride bug left 5e-2 here and the
+    // real-pacing case the whole band roll).
+    expect(Math.abs(rollOfBase())).toBeLessThan(1e-4);
+  });
+
+  it('a gesture-held wheel notch rides the roll too — every driven zoom path', () => {
+    const { agg, state, deps, store } = makeHarness();
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const inBand = absoluteArm({
+      target: [...earth.positionMpc] as Vec3,
+      yaw: 0.7,
+      pitch: 0.3,
+      distance: EARTH_RADIUS_MPC * 2.5,
+      roll: 1.0,
+    });
+    store.dispatch(commitCameraPose(inBand));
+    state.cameraRuntime.lastPose.current = inBand;
+
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: true, xPx: 500, yPx: 500 });
+    drainInput(state, deps, 0);
+
+    const folded = state.cameraRuntime.lastPose.current;
+    if (folded.frame !== 'absolute') throw new Error('expected absolute register');
+    const roll = (folded.pose as { roll?: number }).roll ?? 0;
+    expect(Math.abs(roll - 1.0)).toBeGreaterThan(0.01);
+  });
+
   it('floors an in-gesture zoom at the focused body’s surface', () => {
     const { agg, state, deps, store } = makeHarness(EARTH_RADIUS_MPC * 4);
     store.dispatch(
