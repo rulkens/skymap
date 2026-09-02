@@ -515,6 +515,25 @@ The volumetric raymarched fragment shader at the heart of
   post-processing (gamma, contrast, vignette) was deleted so the
   engine's HDR tone-map pass can run on a clean linear-light input.
 
+### Atmospheres — Bruneton & Neyret 2008, Hillaire 2020
+
+- **Use:** Method reference, no code reused. The three-LUT atmosphere pipeline
+  (`src/services/gpu/shaders/atmosphere/`) follows Bruneton's transmittance-LUT
+  horizon-packing (r, mu) uv parametrisation (`scattering.wesl`,
+  `transmittanceLut.wesl`) and Hillaire's closed-form single-order
+  approximation of the multiple-scattering series (`multiScatterLut.wesl`);
+  the shell fragment's segment-transmittance ratio (`shell/fragment.wesl`) is
+  Bruneton's ratio identity. `AtmosphereShellRenderer.d.ts` and
+  `atmosphereParams.ts` describe the same three-LUT structure.
+- **Reference:** Bruneton, E. & Neyret, F. 2008, "Precomputed Atmospheric
+  Scattering", EGSR / Computer Graphics Forum 27(4); reference implementation
+  <https://github.com/ebruneton/precomputed_atmospheric_scattering> (BSD-3).
+  Hillaire, S. 2020, "A Scalable and Production Ready Sky and Atmosphere
+  Rendering Technique", EGSR / Computer Graphics Forum 39(4),
+  <https://sebh.github.io/publications/egsr2020.pdf>.
+- **Licence:** Both papers are cited above; no code from either is reused, so
+  no licence obligation applies beyond citation.
+
 ### Sgr A\* lens — Bruneton 2020
 
 - **Use:** Reference and audit baseline only — no code reused. The Sgr A\*
