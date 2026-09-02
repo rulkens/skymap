@@ -2,6 +2,7 @@ import type { BodyFixedPose } from './BodyFixedPose';
 import type { InputStep } from './InputStep';
 import type { SurfaceGesture } from './SurfaceGesture';
 import type { Vec2 } from '../math/Vec2';
+import type { Vec3 } from '../math/Vec3';
 
 /**
  * The body arm's input register (spec §6): `drainInput` hands it this frame's
@@ -16,6 +17,13 @@ export type SurfaceController = {
     viewportPx: Readonly<Vec2>,
     fovYRad: number,
     bodyRadiusM: number,
+    /**
+     * The configured scene frame's up, expressed in BODY-FIXED axes (unit) —
+     * the band top of the settle's reference-up blend (ruling 8, round 5).
+     * Time-dependent (the body rotates under it); the caller resamples per
+     * drain.
+     */
+    sceneUpLocal: Readonly<Vec3>,
   ) => BodyFixedPose;
   readonly onGestureStart: () => void;
   readonly onGestureEnd: () => void;

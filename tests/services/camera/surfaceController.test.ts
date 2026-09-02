@@ -153,13 +153,18 @@ function bodyAngle(pose: BodyFixedPose): number {
   return angleBetween(f, [-e[0], -e[1], -e[2]]);
 }
 
-/** One step through the controller with the fixture's viewport / FOV / radius. */
+/**
+ * One step through the controller with the fixture's viewport / FOV / radius.
+ * `sceneUpLocal` defaults to the body pole, which makes the band blend the
+ * pure body ENU at every altitude — every pre-round-5 fixture unchanged.
+ */
 function apply(
   controller: ReturnType<typeof createSurfaceController>,
   pose: BodyFixedPose,
   step: InputStep,
+  sceneUpLocal: Vec3 = [0, 0, 1],
 ): BodyFixedPose {
-  return controller.apply(pose, step, VIEWPORT, FOV, R);
+  return controller.apply(pose, step, VIEWPORT, FOV, R, sceneUpLocal);
 }
 
 describe('surfaceController', () => {
@@ -390,6 +395,58 @@ describe('surfaceController', () => {
     expect(maxTiltRad(hOverR)).toBeGreaterThan(0.7); // the premise: slack
     expect(northUpOffset(out)).toBeCloseTo(1.1, 9);
     expect(bodyAngle(out)).toBeCloseTo(0.7, 12);
+  });
+
+  it('an engaged recession blends the reference up onto the scene up by disengage (round 5)', () => {
+    // The freeze the round-5 sim measured: the engaged settle northed toward
+    // the BODY pole for the whole recession, then disengage baked that as
+    // scene-frame roll at exactly the altitude where the world-arm authority
+    // is zero. The settle's reference is now the band blend — pure body ENU
+    // at/below engage, the scene up at disengage — so the pose the fold bakes
+    // is scene-aligned by construction. Scene up tilted 0.41 rad off the pole
+    // (the Earth-vs-ecliptic magnitude); sub-eye recession keeps the eye on
+    // the fixture's axis, so the ENU readouts stay closed-form.
+    const sceneUp: Vec3 = [Math.sin(0.41), 0, Math.cos(0.41)];
+    const normalizeV = (v: Vec3): Vec3 => {
+      const m = Math.hypot(...v);
+      return [v[0] / m, v[1] / m, v[2] / m];
+    };
+    const crossV = (a: Vec3, b: Vec3): Vec3 => [
+      a[1] * b[2] - a[2] * b[1],
+      a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0],
+    ];
+    const azimuthVs = (pose: BodyFixedPose, ref: Vec3): number => {
+      const e = eyeOf(pose);
+      const lu = normalizeV(e);
+      const eastRaw = crossV(ref, lu);
+      // The production fallback: ref ∥ localUp (the polar fixture axis).
+      const east = Math.hypot(...eastRaw) > 1e-9 ? normalizeV(eastRaw) : ([1, 0, 0] as Vec3);
+      const north = crossV(lu, east);
+      const up: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
+      const vert = up[0] * lu[0] + up[1] * lu[1] + up[2] * lu[2];
+      const horiz: Vec3 = [up[0] - lu[0] * vert, up[1] - lu[1] * vert, up[2] - lu[2] * vert];
+      return Math.atan2(
+        horiz[0] * east[0] + horiz[1] * east[1] + horiz[2] * east[2],
+        horiz[0] * north[0] + horiz[1] * north[1] + horiz[2] * north[2],
+      );
+    };
+
+    const c = createSurfaceController();
+    // Converged deep state: nadir view, screen-up on body north (azimuth 0).
+    let pose = poseAt([0, 0, 2], NADIR);
+    let hr = 1;
+    let guard = 0;
+    while (hr <= SURFACE_REGIME.disengageHR && guard < 30) {
+      pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
+      hr = Math.hypot(...eyeOf(pose)) / R - 1;
+      guard += 1;
+    }
+
+    // Screen-up sits on the SCENE up's meridian, not the body pole's: the
+    // ride tracked the reference swing exactly (deviation stayed 0).
+    expect(Math.abs(azimuthVs(pose, sceneUp))).toBeLessThan(1e-6);
+    expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeGreaterThan(0.05);
   });
 
   it('a recession rides the ceiling down to exactly nadir at the disengage crossing', () => {

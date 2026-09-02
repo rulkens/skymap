@@ -23,6 +23,7 @@ import { pivotFraming } from '../camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { liveWorldPose } from '../helpers/liveWorldPose';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
+import { frameUp } from '../../../utils/camera/frameUp';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import { selectTimeState } from '../../../state/time/selectors';
@@ -36,6 +37,7 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   const steps = state.subsystems.inputAggregator.drain();
@@ -65,12 +67,28 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
     const live = register.current;
     const from =
       live.frame !== 'absolute' && live.frame.body === base.frame.body ? live.pose : base.pose;
+    // The configured scene up, rotated into the body's fixed axes for the
+    // settle's band blend (`orientationᵀ·v` — orthonormal, so transpose is
+    // inverse). A missing snapshot degrades to the pole: blend = body ENU.
+    const bodyState = deriveBodyStates(deriveSimDays(selectTimeState(root), nowMs)).get(
+      base.frame.body,
+    );
+    const upWorld = frameUp(state.cameraRuntime.upBasis.current);
+    const o = bodyState?.orientation;
+    const sceneUpLocal: Vec3 = o
+      ? [
+          o[0] * upWorld[0] + o[1] * upWorld[1] + o[2] * upWorld[2],
+          o[3] * upWorld[0] + o[4] * upWorld[1] + o[5] * upWorld[2],
+          o[6] * upWorld[0] + o[7] * upWorld[1] + o[8] * upWorld[2],
+        ]
+      : [0, 0, 1];
     const next = state.cameraRuntime.surface.apply(
       from,
       step,
       [deps.canvas.clientWidth || 1, cssHeight],
       state.cameraRuntime.projection.fovYRad,
       body.radiusM,
+      sceneUpLocal,
     );
     // EVERY step writes the register — a later step in the same drain chains
     // from it, so an at-rest notch left out of it would be folded over and
