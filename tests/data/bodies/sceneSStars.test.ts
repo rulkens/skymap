@@ -1,5 +1,5 @@
 /**
- * SCENE_S_STARS — the 39 drawn records, and the two registries they must join.
+ * SCENE_S_STARS — the 40 drawn records, and the two registries they must join.
  *
  * The seed→record map itself is a one-liner the compiler checks. What can break
  * silently is membership: an S-star absent from `SCENE_BODIES` produces NO
@@ -44,10 +44,10 @@ describe('SCENE_S_STARS', () => {
     expect(SCENE_BODIES.some((body) => body.id === 's2')).toBe(true);
   });
 
-  it('S2 is findable by name, and the 39 new rows do not swamp another query', () => {
+  it('S2 is findable by name, and the other new rows do not swamp another query', () => {
     // Searchability is a free consequence of `SCENE_BODIES` membership — the
     // palette scores every row — so this is the reachable end of the same
-    // registration. The second half is the cost side: 39 short, digit-bearing
+    // registration. The second half is the cost side: 40 short, digit-bearing
     // labels are exactly the shape that pollutes unrelated queries.
     const s2Rows = rankPaletteMatches([], [], [], 'S2').filter(
       (row) => row.kind === 'body' && row.body.id === 's2',
