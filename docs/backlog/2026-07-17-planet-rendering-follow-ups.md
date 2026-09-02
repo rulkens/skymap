@@ -14,8 +14,9 @@ review record.
    delete the ones that can't.
 3. **`UNIFORM_BUFFER_SIZE = 96` hardcode** — the textured-body uniform byte size
    is restated beside the packer's own length; derive one from the other.
-4. **Stale plan-reference comment** — `bodyTextureSlotRegistry.ts:100-101` still
-   says "route in Task 8" (a plan-execution artifact); reword timelessly on next
-   touch (`feedback_comment_style`).
+
+(A fourth knot — a stale "route in Task 8" plan-reference comment in
+`bodyTextureSlotRegistry.ts` — has since been removed, so it drops off this
+list.)
 
 Related, already indexed separately: "Tier-ladder single home".
