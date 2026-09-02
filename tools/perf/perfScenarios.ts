@@ -126,6 +126,19 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
       clearFocus: true,
     },
   },
+  // Inside the Sgr A* lensing band (~96 AU, band alpha 1): the one regime
+  // where the sky-cubemap capture + lens pass exist. galactic-centre above
+  // sits at ~100k AU, far outside the band, and measures the zero-cost side.
+  {
+    name: 'sgr-a-star-lens',
+    pose: {
+      target: SGR_A_STAR_TARGET,
+      distance: 4.666596145942944e-10,
+      yaw: -1.1153012483898652,
+      pitch: -0.2734819118684762,
+      clearFocus: true,
+    },
+  },
   {
     name: 'local-group',
     pose: { target: EARTH_TARGET, distance: 21.268361, yaw: 8.2811, pitch: 0.5612 },
