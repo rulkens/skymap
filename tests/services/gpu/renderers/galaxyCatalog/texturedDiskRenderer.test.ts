@@ -168,3 +168,91 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
     expect(target!.format).toBe('rgba16float');
   });
 });
+
+describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
+  it('two draw() calls with different viewSlot land their @group(0) uniform write in different buffers', () => {
+    const { ctx, writeBufferCalls } = makeStubCtx();
+    const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);
+    renderer.bindAtlas({} as GPUTextureView);
+    renderer.bindHiResArray({} as GPUTextureView);
+
+    const bindGroupsAt0: unknown[] = [];
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: (slot: number, bg: unknown) => {
+        if (slot === 0) bindGroupsAt0.push(bg);
+      },
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    const instances: DiskInstance[] = [fakeDiskInstance()];
+
+    // A sky-cubemap capture sweep: two `draw()` calls (different faces) in
+    // the same frame, both before one `submit()` — mirrors the roster
+    // convention pinned in `galaxyPointRenderer.test.ts` /
+    // `starCatalogRenderer`'s own viewSlot tests.
+    renderer.draw(
+      pass,
+      new Float32Array(16) as never,
+      [512, 512],
+      [0, 0, 0],
+      FOCUS_BIND_GROUP,
+      instances,
+      1,
+    );
+    renderer.draw(
+      pass,
+      new Float32Array(16) as never,
+      [512, 512],
+      [0, 0, 0],
+      FOCUS_BIND_GROUP,
+      instances,
+      2,
+    );
+
+    // The @group(0) bind group resolves to a DIFFERENT physical bind group
+    // (over a different uniform buffer) per view slot — slot 2's write can
+    // never land in slot 1's buffer (the writeBuffer/submit race this
+    // closes; docs/RENDERER.md landmine #1).
+    expect(bindGroupsAt0[0]).not.toBe(bindGroupsAt0[1]);
+
+    // Two uniform writeBuffer calls (96 bytes / 24 floats each — the
+    // instance-bytes writes are a separate, larger payload), one per slot.
+    const uniformWrites = writeBufferCalls.filter((c) => c.data.length === 96 / 4);
+    expect(uniformWrites).toHaveLength(2);
+  });
+
+  // The instance buffer is deliberately NOT ringed per view slot, unlike the
+  // uniform: the justification is that every draw in a frame re-uploads
+  // byte-identical instance bytes, so the last write is the right one for all
+  // of them. That is a live invariant — the day a `DiskInstance` field becomes
+  // camera-dependent, only the last captured face would render correctly and
+  // nothing else would notice.
+  it('packs identical instance bytes for different view slots and cameras', () => {
+    const { ctx, writeBufferCalls } = makeStubCtx();
+    const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);
+    renderer.bindAtlas({} as GPUTextureView);
+    renderer.bindHiResArray({} as GPUTextureView);
+
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    const instances: DiskInstance[] = [fakeDiskInstance({ hiResLayerIdx: 2 })];
+    const vpA = Float32Array.from({ length: 16 }, (_unused, i) => i);
+    const vpB = Float32Array.from({ length: 16 }, (_unused, i) => 100 - i);
+
+    renderer.draw(pass, vpA as never, [512, 512], [0, 0, 0], FOCUS_BIND_GROUP, instances, 1);
+    renderer.draw(pass, vpB as never, [800, 600], [7, -3, 11], FOCUS_BIND_GROUP, instances, 2);
+
+    const instanceWrites = writeBufferCalls.filter(
+      (c) => c.data.length === instances.length * FLOATS_PER_INSTANCE,
+    );
+    expect(instanceWrites).toHaveLength(2);
+    expect(Array.from(instanceWrites[0]!.data)).toEqual(Array.from(instanceWrites[1]!.data));
+  });
+});

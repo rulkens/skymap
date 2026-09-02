@@ -45,6 +45,7 @@ import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniform
 import vsCode from '../../shaders/galaxyCatalog/texturedDisks/vertex.wesl?static';
 import fsCode from '../../shaders/galaxyCatalog/texturedDisks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
+import { VIEW_SLOT_COUNT } from '../../../../utils/gpu/createViewSlotUniformRing';
 
 type Init = {
   device: GPUDevice;
@@ -80,6 +81,10 @@ export function createTexturedDiskRenderer(
     // fade-to-black at thumbnail edges.
     blend: 'additive',
     targetFormat: init.targetFormat,
+    // Sky-cubemap capture roster (Task 13b, Ruling 6): texturedDisksLayer's
+    // draw() calls span the main view plus up to 6 captured faces, all
+    // before one submit() — see `InstancedQuadConfig.viewSlotCount`'s doc.
+    viewSlotCount: VIEW_SLOT_COUNT,
   });
 
   function bindAtlas(atlasView: GPUTextureView): void {
@@ -102,6 +107,7 @@ export function createTexturedDiskRenderer(
     camPos: Readonly<Vec3>,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,
+    viewSlot = 0,
   ): void {
     if (instances.length === 0) return;
 
@@ -143,6 +149,7 @@ export function createTexturedDiskRenderer(
       focusBindGroup,
       // pxPerRad omitted — the disk geometry sizes itself in world
       // space, so the trailing uniform slot stays zero-padded.
+      viewSlot,
     });
   }
 

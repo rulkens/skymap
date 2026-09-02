@@ -26,6 +26,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const vp = new Float32Array(16) as unknown as Mat4;
   return {
     isReady: true,
+    viewSlot: 0,
     renderedTargets: new Set<string>(),
     cam,
     vp,

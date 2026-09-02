@@ -43,6 +43,32 @@ export type RenderTargetSpec = {
    * array layers (a `2d-array` texture, sampled as `texture_cube` by a
    * consumer that binds all six as a cube — WebGPU has no cube-view render
    * attachment). `scale` is ignored when this is present.
+   *
+   * `size` may be a FUNCTION for a row whose declared size is a live setting
+   * (`sky-cubemap`'s DebugPanel knob) — the same
+   * `scale`-is-a-function shape `mw-aggregate` uses, resolved by `reconcile`
+   * every frame so a knob-driven row needs no rebuild path of its own.
    */
-  fixedSizePx?: { readonly size: number; readonly layers: number };
+  fixedSizePx?: {
+    readonly size: number | ((state: EngineState) => number);
+    readonly layers: number;
+  };
+  /**
+   * When present, this row's texture exists only on the frames this returns
+   * `true`; `reconcile` releases it (and its views) again the frame it turns
+   * `false`. Absent — every other row — means "always allocated", which is
+   * the right default for a viewport-sized row a pass may touch on any frame.
+   * It is worth declaring for a row whose VRAM is large and whose consumers
+   * are gated on one narrow condition (`sky-cubemap`: 50 MB at the shipped
+   * resolution, read only within ~500 AU of Sgr A*). A consumer must be
+   * gated on the SAME condition — `viewOf`/`sizeOf` throw while the row is
+   * released.
+   *
+   * `isAllocated` is `reconcile`'s own record of whether the row currently
+   * holds a texture — passed in so a row can add hysteresis around its own
+   * activation condition (keep the row through a brief close, drop it only
+   * once truly gone) without `renderTargets.ts` growing bespoke state to
+   * track it.
+   */
+  allocateWhen?: (state: EngineState, isAllocated: boolean) => boolean;
 };

@@ -29,6 +29,7 @@ import {
   starCatalogLayer,
   starAggregatesLayer,
   starAggregateUpsampleLayer,
+  sgrAStarLensingLayer,
   foregroundLabelsLayer,
   near0SelectionRingLayer,
   clipPathDebugLayer,
@@ -87,6 +88,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
     isReady: true,
+    viewSlot: 0,
     renderedTargets: new Set<string>(),
     cam,
     vp,
@@ -224,20 +226,25 @@ const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere'];
 // Milky-Way cloud's UPSAMPLE composite first, then the cloud's dust pass (its
 // multiplicative transmittance must land on the upsampled starlight, and must
 // never darken the local starfield drawn after it), then the far-partition
-// star points, the orbit trails, the survey star LEAF catalog, and the survey
-// aggregate UPSAMPLE composite (adjacent to the leaf draw it composites).
-// Neither aggregate STREAM is here — the Milky Way's star billboards target
-// 'mw-aggregate' and the survey's target 'star-aggregates', so both sit
-// outside the hdr group.
+// star points, the survey star LEAF catalog, the survey aggregate UPSAMPLE
+// composite (adjacent to the leaf draw it composites), and the constellation
+// figures — that whole run is the "sky" roster the Sgr A* lens pass samples
+// from its OWN (hdr, BODY[k]) step (frameProgram.ts). `orbit-trails` and
+// `body-glints` trail LAST here (Task 14) so they draw unwarped over the lens
+// pass rather than sitting among the roster it samples. Neither aggregate
+// STREAM is here — the Milky Way's star billboards target 'mw-aggregate' and
+// the survey's target 'star-aggregates', so both sit outside the hdr group;
+// `sgrAStarLensingLayer` itself is ALSO not here — its slab is 'body', not
+// NEAR0.
 const NEAR_HDR_NAMES = [
   'milky-way-upsample',
   'milky-way',
   'star-points',
-  'orbit-trails',
-  'body-glints',
   'star-catalog',
   'star-upsample',
   'constellations',
+  'orbit-trails',
+  'body-glints',
 ];
 
 // The near-field swap group: the overlays that pair the swap target with the
@@ -274,18 +281,22 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
-  it('the (hdr, NEAR0) group holds milky-way-upsample, milky-way, star-points, orbit-trails, star-catalog, additive', () => {
+  it('the (hdr, NEAR0) group holds the sky roster, then orbit-trails/body-glints LAST (Task 14), additive', () => {
     // The hdr rows outside the cosmological slab: the Milky-Way cloud's
-    // upsample + dust, the far-partition neighbourhood stars, and the orbit
-    // trails, projected through NEAR0 (COSMO's FIXED 0.01 Mpc near plane would
-    // clip their kpc-to-AU-scale anchors — for the Milky Way it clipped the
-    // disc mid-descent before the approach fade completed) but accumulating
-    // into the same HDR target so they ride the galaxies' tone-map. Drawn by
-    // the program's dedicated (hdr, NEAR0) step before the hdr→swap composite.
-    // The two Milky-Way rows MUST lead, in this order: the upsample adds the
-    // cloud's own starlight into HDR, then the multiplicative dust extincts it
-    // along with the cosmological accumulation behind it — and leading the
-    // group keeps the local starfield drawn after out of that multiply.
+    // upsample + dust, the far-partition neighbourhood stars, the survey
+    // catalog/upsample, and the constellation figures, projected through
+    // NEAR0 (COSMO's FIXED 0.01 Mpc near plane would clip their kpc-to-AU-scale
+    // anchors — for the Milky Way it clipped the disc mid-descent before the
+    // approach fade completed) but accumulating into the same HDR target so
+    // they ride the galaxies' tone-map. Drawn by the program's dedicated (hdr,
+    // NEAR0) step before the hdr→swap composite. The two Milky-Way rows MUST
+    // lead, in this order: the upsample adds the cloud's own starlight into
+    // HDR, then the multiplicative dust extincts it along with the
+    // cosmological accumulation behind it — and leading the group keeps the
+    // local starfield drawn after out of that multiply. `orbit-trails` and
+    // `body-glints` moved LAST here (Task 14, spec "Draw order") so they draw
+    // over the Sgr A* lens pass's OWN (hdr, BODY[k]) step rather than being
+    // sampled by it.
     const nearHdr = CONTENT_LAYERS.filter(
       (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
     );
@@ -393,12 +404,21 @@ describe('CONTENT_LAYERS blend legality', () => {
         // it's a correctness bug, not a new legal combination.
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'hdr') {
-        // hdr admits exactly one multiplicative row: the Milky Way dust pass
-        // extincts the emission already accumulated in HDR rather than adding
-        // to it, which is why its position in the near-hdr group is
-        // load-bearing. A second multiplicative hdr row should fail this test
-        // and be a deliberate decision.
-        expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
+        // hdr admits two exceptions to its additive default: the Milky Way
+        // dust pass extincts the emission already accumulated (its position
+        // in the near-hdr group is load-bearing for that), and the Sgr A*
+        // lens pass composites premultiplied-OVER so a captured ray truly
+        // occludes the additive light behind it instead of adding to it
+        // (Blend.d.ts's own doc names 'over' legal for any target, not just
+        // the swap-chain rows). A third non-additive hdr row should fail
+        // this test and be a deliberate decision.
+        const expected =
+          layer === milkyWayLayer
+            ? 'multiply'
+            : layer === sgrAStarLensingLayer
+              ? 'over'
+              : 'additive';
+        expect(layer.blend).toBe(expected);
       } else if (layer.target === 'foreground:0') {
         // The `foreground:0` group is opaque bodies EXCEPT the three translucent
         // overlays — the ring, Earth's cloud shell, and Earth's in-scatter
@@ -438,14 +458,16 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
-    // Ten layers blend OVER: the four COSMO swap overlays, the three (swap,
+    // Eleven layers blend OVER: the four COSMO swap overlays, the three (swap,
     // NEAR0) overlays (the near0 star selection ring, foreground-labels, and the
     // clip-path inspector route — moved here from the COSMO swap group so a
     // near-field clip's parsec-scale route is not clipped by the cosmological
-    // near plane), and the three translucent foreground members — the ring,
+    // near plane), the three translucent foreground members — the ring,
     // Earth's cloud shell, and Earth's in-scatter atmosphere (the three OVER
-    // members of the otherwise-opaque foreground group).
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(10);
+    // members of the otherwise-opaque foreground group) — and the Sgr A* lens
+    // pass, the one 'body'-slab, 'hdr'-target OVER row (see the hdr branch
+    // above).
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(11);
   });
 });
 
@@ -956,8 +978,8 @@ describe('drawPick migration-table rows', () => {
       'structure-markers',
       'milky-way',
       'star-points',
-      'body-glints',
       'star-catalog',
+      'body-glints',
       'labels',
       'earth',
       'star-spheres',

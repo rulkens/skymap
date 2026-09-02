@@ -34,6 +34,10 @@ export type SelectionRow =
       // Carried through from `AnchorPointBody.standoffRadii` (e.g. Sgr A*'s
       // Q10 floor) — the zoom clamp reads it via `pivotFraming`.
       readonly standoffRadii?: number;
+      // Carried through from `AnchorPointBody.focusDistanceRadii` (e.g. Sgr
+      // A*'s ~30.4 r_s) — `focusFraming` reads it to override the default
+      // screen-fill arrival distance.
+      readonly focusDistanceRadii?: number;
     }
   // Star arm — the self-contained display projection of a picked star, its
   // physical fields (`positionMpc`/`absMag`/`bpRp`) snapshotted off the loaded

@@ -390,6 +390,7 @@ function makeInput(
   });
   const ctx = {
     isReady: true as const,
+    viewSlot: 0,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
@@ -568,6 +569,21 @@ function makeInput(
           // keeps the gate from crashing.
           fades: { opacityOf: () => 1 },
           clipPlayer: { clipOpacityOf: () => 1 },
+        },
+        // The sky-cubemap capture bookkeeping — `bandActive`/`gcDistanceMpc`
+        // update every frame, but the schedule fields (`frameIndex`,
+        // `lastCapturedAtMs`) only advance while the lensing band is active.
+        // The fixture camera sits Mpc-scale away from Sgr A*, so the band
+        // stays closed and `facesToCapture` stays empty; see
+        // `skyCubemapCaptureSchedule`'s call site in renderFrame.ts.
+        cameraRuntime: {
+          skyCubemapCapture: {
+            lastCapturedAtMs: new Map(),
+            frameIndex: 0,
+            bandActive: false,
+            gcDistanceMpc: Number.POSITIVE_INFINITY,
+            pinnedEyeMpc: null,
+          },
         },
       } as never,
       device,

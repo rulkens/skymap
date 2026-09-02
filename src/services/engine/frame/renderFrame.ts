@@ -32,9 +32,12 @@
  *
  * ### Why pass an explicit input bag instead of capturing closure?
  *
- * This module owns no cross-frame state — every value it reads is recomputed
- * each frame. A free function taking a struct of inputs is trivially testable
- * and bounds the encoder lifetime to the function body.
+ * This module owns no cross-frame state of its OWN — every local value it
+ * computes is recomputed each frame. It DOES read/write one Resource,
+ * `state.cameraRuntime.skyCubemapCapture` (the black-hole lens's amortized
+ * sky-capture bookkeeping), the same amortized-Resources shape
+ * `cameraRuntime`'s other fields already carry. A free function taking a
+ * struct of inputs bounds the encoder lifetime to the function body.
  *
  * ### What stays in `runFrame()` (NOT here)
  *
@@ -48,12 +51,28 @@
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
+import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
+import { skyCubemapCaptureSchedule } from './skyCubemapCaptureSchedule';
+import { skyCubemapFaceContext } from './skyCubemapFaceContext';
+import { sceneBodyStates } from './sceneBodyStates';
+import { regionById } from '../../../utils/scene/regionById';
+import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { fadeBand } from '../../../utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
+import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
+
+// Hoisted rather than resolved per frame (a linear `.find` over `BODY_REGIONS`),
+// matching the other two consumers of the same lookup — `sgrAStarLensingLayer`
+// and `bodyGlintsLayer`.
+const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -92,6 +111,107 @@ export function renderFrame(input: RenderFrameInput): void {
   // makes that in-between frame correct, not just a safe fallback.
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
+
+  // The black-hole lens's amortized sky-cubemap capture schedule. The band
+  // keys on the CAMERA's distance from the galactic-centre anchor, the same
+  // quantity + region every `sgrAStarLensing`-band consumer reads. The
+  // bookkeeping lives on `cameraRuntime` — see `SkyCubemapCaptureRuntime`.
+  const captureRuntime = state.cameraRuntime.skyCubemapCapture;
+  const gcDistanceMpc = regionRelativeDistanceMpc(
+    ctx.drawCamPos,
+    GALACTIC_CENTRE_REGION,
+    sceneBodyStates(state, ctx),
+  );
+  // Recorded unconditionally (not just while the band is active) — the
+  // `sky-cubemap` row's release-margin check needs the distance on the very
+  // frame the band closes, not one frame later.
+  captureRuntime.gcDistanceMpc = gcDistanceMpc;
+  const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
+
+  const bandJustEngaged = bandActive && !captureRuntime.bandActive;
+  // The `sky-cubemap` row's 50 MB exists only while the band does (its
+  // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`
+  // runs BEFORE this frame's camera pose is produced, so it cannot see the
+  // band open; the edge reconciles here instead, because the entry frame is
+  // also the frame that sweeps all six faces and would otherwise read a row
+  // that does not exist yet.
+  if (bandActive !== captureRuntime.bandActive) {
+    captureRuntime.bandActive = bandActive;
+    ctx.renderTargets.reconcile(state, ctx.canvasSize);
+  }
+
+  // `frameProgram` only knows WHICH faces to capture; each face's own
+  // synthetic camera is resolved here, fresh every frame, since the face LIST
+  // changes frame to frame. `faceSizePx` reads the row's ALLOCATED size, not
+  // `specOf().fixedSizePx.size`: that field is a live setting (a function of
+  // state), so the resolved allocation is the authoritative answer. A face
+  // whose context comes back null (pre-bootstrap) is omitted — `executeFrame`
+  // treats a missing map entry as "skip this step cleanly".
+  const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
+  let skyCubemapFacesToCapture: readonly CubeFace[] = [];
+  // Sgr A*'s own body-m slab row this frame: `frameProgram` emits the
+  // (hdr, BODY[k]) lens step off it. Resolved here, not in `frameProgram`,
+  // because the row's painter-order index comes from `deriveSlabs` (computed
+  // upstream of this function) — the same "resolve here, hand data down"
+  // split `earthSlab` in `runFrame.ts` already follows for the identical
+  // `frame.kind === 'body-m'` lookup. Stays `null` when the row isn't in
+  // `ctx.slabs` this frame (e.g. frustum-culled despite the distance band).
+  let sgrAStarBodySlab: number | null = null;
+  if (bandActive) {
+    sgrAStarBodySlab =
+      ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
+        ?.index ?? null;
+    // Measured against the PINNED eye, not the live camera each frame: a
+    // fresh live eye per round-robin face made adjacent faces disagree at
+    // their shared border and the whole cubemap flicker as the camera moved.
+    // Threshold is a FRACTION of `gcDistanceMpc` — see
+    // `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`'s own docblock for why a
+    // fixed AU distance is wrong here. Read off settings (the DebugPanel
+    // knob), not the module constant — which stays this value's real owner
+    // (`initialState.ts` seeds from it).
+    const cameraMovedBeyondThreshold =
+      captureRuntime.pinnedEyeMpc !== null &&
+      distanceMpc(ctx.drawCamPos, captureRuntime.pinnedEyeMpc) >
+        state.settings.sgrAStarLensingTuning.skyCubemapRecaptureCameraMoveFraction * gcDistanceMpc;
+    const fullSweepTriggered = bandJustEngaged || cameraMovedBeyondThreshold;
+    // Re-pin BEFORE scheduling so a triggered full sweep — including this
+    // frame's own faces — samples the eye it was triggered by, not the eye it
+    // just moved past.
+    if (fullSweepTriggered) {
+      captureRuntime.pinnedEyeMpc = ctx.drawCamPos;
+    }
+    skyCubemapFacesToCapture = skyCubemapCaptureSchedule({
+      fullSweepTriggered,
+      frameIndex: captureRuntime.frameIndex,
+      lastCapturedAtMs: captureRuntime.lastCapturedAtMs,
+      nowMs: ctx.nowMs,
+    }).facesToCapture;
+    for (const face of skyCubemapFacesToCapture) {
+      captureRuntime.lastCapturedAtMs.set(face, ctx.nowMs);
+    }
+    captureRuntime.frameIndex += 1;
+
+    const pinnedEyeMpc = captureRuntime.pinnedEyeMpc;
+    if (skyCubemapFacesToCapture.length > 0 && pinnedEyeMpc !== null) {
+      const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
+      for (const face of skyCubemapFacesToCapture) {
+        const faceCtx = skyCubemapFaceContext({
+          state,
+          // The PINNED eye (see `pinnedEyeMpc`'s docblock), not the live
+          // camera: all six faces must share one eye or they disagree at
+          // their shared border. Still camera-relative overall, not the
+          // hole's — a hole-centred eye put the capture's own boundary seam
+          // where the lens magnifies it most.
+          eyeMpc: pinnedEyeMpc,
+          face,
+          faceSizePx,
+          nowMs: ctx.nowMs,
+        });
+        if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
+      }
+    }
+  }
+
   executeFrame({
     encoder,
     ctx,
@@ -106,14 +226,17 @@ export function renderFrame(input: RenderFrameInput): void {
       // The master bloom toggle is the ONLY bloom value that shapes the step
       // list; strength/threshold are read live by the bloom layers each draw.
       state.settings.bloom.enabled,
-      // Painter-ordered NEAR0 + body-row indices (Task 4) — the chain the
+      // Painter-ordered NEAR0 + body-row indices — the chain the
       // foreground:0 render expands into, one step per entry.
       foregroundChainOrder(ctx.slabs),
+      skyCubemapFacesToCapture,
+      sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
     ),
     layers: CONTENT_LAYERS,
     strategy,
     timing: timingService,
     swapView,
+    skyCubemapFaceContexts,
   });
   timingService.endFrame(timingCtx, encoder);
 

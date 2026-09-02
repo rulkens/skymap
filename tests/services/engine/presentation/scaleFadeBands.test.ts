@@ -16,6 +16,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/fra
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { regionById } from '../../../../src/utils/scene/regionById';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { fadeBand } from '../../../../src/utils/math/fadeBand';
 
 const NEIGHBOURHOOD_EXTENT_MPC = regionById('solar-neighbourhood').extentMpc;
 const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;
@@ -69,5 +70,27 @@ describe('both backdrop bands derive from one shape', () => {
     expect(SCALE_FADE_BANDS.starBackdrop.goneAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
       SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
+  });
+});
+
+describe('sgrAStarLensing band', () => {
+  // The DIRECTION is the load-bearing fact: `fullAt < goneAt` makes this an
+  // approach fade, so the lens engages as the camera closes on Sgr A*. Edges
+  // swapped, it would fade OUT on approach — the opposite of the effect — and
+  // still type-check. Read off the band itself, so an intentional retune of
+  // where the envelope sits stays green.
+  it('fades IN on approach, monotonically across the envelope', () => {
+    const { fullAt, goneAt } = SCALE_FADE_BANDS.sgrAStarLensing;
+    expect(fullAt).toBeLessThan(goneAt);
+
+    const midpoint = (fullAt + goneAt) / 2;
+    const nearMid = (fullAt + midpoint) / 2;
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, fullAt)).toBe(1);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, goneAt)).toBe(0);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, nearMid)).toBeGreaterThan(
+      fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint),
+    );
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint)).toBeGreaterThan(0);
+    expect(fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, midpoint)).toBeLessThan(1);
   });
 });

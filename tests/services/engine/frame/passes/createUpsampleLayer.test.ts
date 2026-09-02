@@ -36,6 +36,7 @@ const FIXTURE_SPECS = [
 function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFrameContext {
   return {
     isReady: true,
+    viewSlot: 0,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
@@ -66,6 +67,12 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       },
       sizeOf: vi.fn(),
       viewOf: (id: string) => (id === 'test-target' ? offscreenView : ({} as GPUTextureView)),
+      cubeViewOf: (id: string): GPUTextureView => {
+        throw new Error(`fixture renderTargets: no cube view for '${id}'`);
+      },
+      layerViewOf: (id: string, layer: number): GPUTextureView => {
+        throw new Error(`fixture renderTargets: no layer view for '${id}' layer ${layer}`);
+      },
       depthViewOf: (id: string): GPUTextureView => {
         throw new Error(`fixture renderTargets: no depth view for '${id}'`);
       },

@@ -53,9 +53,11 @@ import type { BuildPointInterleavedBufferInput } from '../../../../@types/engine
 import type { BuildPointInterleavedBufferResult } from '../../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
+import type { ViewSlotUniformRing } from '../../../../@types/rendering/ViewSlotUniformRing';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/sources';
 import { cloneGalaxyCatalogForTransfer } from '../../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../../utils/worker/runDisposableWorker';
+import { createViewSlotUniformRing } from '../../../../utils/gpu/createViewSlotUniformRing';
 import { SLOTS_PER_GALAXY_POINT } from './galaxyPointVertexLayout';
 
 // `?worker` emits the worker as a separate chunk and exports a class
@@ -148,9 +150,14 @@ type LoadedSource = {
    * cloud itself; freed when the source unloads.
    */
   interleaved: Float32Array;
-  /** Per-source FadeUniforms (opacity + pad) written once per frame. */
-  fadeBuffer: GPUBuffer;
-  fadeBindGroup: GPUBindGroup;
+  /**
+   * Per-source FadeUniforms (opacity + pad), one physical buffer per view
+   * slot (Task 13b) — a sky-cubemap capture sweep draws this catalog once
+   * per face plus once for the real view, all before one `submit()`, so a
+   * single shared buffer would keep only the last call's opacity (see
+   * `createViewSlotUniformRing`'s doc).
+   */
+  fade: ViewSlotUniformRing;
   /** Per-source SourceUniforms (6-bit sourceCode + pad) written once at upload. */
   sourceBuffer: GPUBuffer;
   sourceBindGroup: GPUBindGroup;
@@ -166,8 +173,7 @@ export type CatalogDrawEntry = {
   source: SourceType;
   count: number;
   vertexBuffer: GPUBuffer;
-  fadeBuffer: GPUBuffer;
-  fadeBindGroup: GPUBindGroup;
+  fade: ViewSlotUniformRing;
   sourceBindGroup: GPUBindGroup;
 };
 
@@ -289,7 +295,7 @@ export function createCatalogStore(init: {
       const stale = galaxyCatalogs.get(id);
       if (stale) {
         stale.buffer.destroy();
-        stale.fadeBuffer.destroy();
+        stale.fade.destroy();
         stale.sourceBuffer.destroy();
       }
       galaxyCatalogs.delete(id);
@@ -309,7 +315,7 @@ export function createCatalogStore(init: {
     const prev = galaxyCatalogs.get(id);
     if (prev) {
       prev.buffer.destroy();
-      prev.fadeBuffer.destroy();
+      prev.fade.destroy();
       prev.sourceBuffer.destroy();
     }
 
@@ -320,15 +326,13 @@ export function createCatalogStore(init: {
     });
     device.queue.writeBuffer(buffer, 0, interleaved);
 
-    const fadeBuffer = device.createBuffer({
-      label: `points-fade-uniform-${id}`,
-      size: 16,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    const fadeBindGroup = device.createBindGroup({
-      label: `points-fade-bg-${id}`,
+    // One physical 16-byte fade buffer per view slot (Task 13b) — see
+    // `LoadedSource.fade`'s doc.
+    const fade = createViewSlotUniformRing({
+      device,
+      label: `points-fade-${id}`,
+      byteSize: 16,
       layout: fadeBgl,
-      entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
 
     // SourceUniforms: 6-bit sourceCode + per-source sbBoost +
@@ -358,8 +362,7 @@ export function createCatalogStore(init: {
       buffer,
       count: galaxyCatalog.count,
       interleaved,
-      fadeBuffer,
-      fadeBindGroup,
+      fade,
       sourceBuffer,
       sourceBindGroup,
     });
@@ -372,7 +375,7 @@ export function createCatalogStore(init: {
     const entry = galaxyCatalogs.get(id);
     if (!entry) return;
     entry.buffer.destroy();
-    entry.fadeBuffer.destroy();
+    entry.fade.destroy();
     entry.sourceBuffer.destroy();
     galaxyCatalogs.delete(id);
     const source = CODE_OF_ID.get(id);
@@ -527,8 +530,7 @@ export function createCatalogStore(init: {
         source: code,
         count: entry.count,
         vertexBuffer: entry.buffer,
-        fadeBuffer: entry.fadeBuffer,
-        fadeBindGroup: entry.fadeBindGroup,
+        fade: entry.fade,
         sourceBindGroup: entry.sourceBindGroup,
       };
     }
@@ -550,7 +552,7 @@ export function createCatalogStore(init: {
   function destroy(): void {
     for (const entry of galaxyCatalogs.values()) {
       entry.buffer.destroy();
-      entry.fadeBuffer.destroy();
+      entry.fade.destroy();
       entry.sourceBuffer.destroy();
     }
     galaxyCatalogs.clear();

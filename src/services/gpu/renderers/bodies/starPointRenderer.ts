@@ -64,6 +64,10 @@ import vsCode from '../../shaders/bodies/starPoints/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/starPoints/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import {
+  createViewSlotUniformRing,
+  VIEW_SLOT_COUNT,
+} from '../../../../utils/gpu/createViewSlotUniformRing';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
 /**
@@ -90,19 +94,14 @@ export function createStarPointRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): StarPointRenderer {
-  // ── Uniform buffer + CPU scratch ──────────────────────────────────────────
+  // ── Uniform ring + CPU scratch ─────────────────────────────────────────────
   //
   // The 80-byte CameraUniforms prefix (floats 0..15 = viewProj, 16..17 =
   // viewportPx, 18..19 = named pads, stay 0) plus the sizePx / brightness tail
   // at floats 20 / 21 (22..23 pad, stay 0). See STAR_POINT_UNIFORM_BYTES.
-  const uniformBuffer = device.createBuffer({
-    label: 'star-points-uniform-buffer',
-    size: STAR_POINT_UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
   const uniformScratch = new Float32Array(STAR_POINT_UNIFORM_BYTES / 4);
 
-  // ── Bind group (explicit layout, not 'auto') ──────────────────────────────
+  // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'star-points-bgl',
     entries: [
@@ -113,10 +112,15 @@ export function createStarPointRenderer(
       },
     ],
   });
-  const bindGroup = device.createBindGroup({
-    label: 'star-points-bg',
+  // One physical buffer + bind group per view slot: a sky-cubemap
+  // capture sweep calls `draw()` several times per frame with different
+  // cameras, all before one `submit()` — a shared buffer would keep only the
+  // last call's camera (see `createViewSlotUniformRing`'s doc).
+  const uniformRing = createViewSlotUniformRing({
+    device,
+    label: 'star-points-uniform',
+    byteSize: STAR_POINT_UNIFORM_BYTES,
     layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
 
   // ── Shader modules ────────────────────────────────────────────────────────
@@ -161,31 +165,34 @@ export function createStarPointRenderer(
     // NO depthStencil: the hdr target has no depth attachment.
   });
 
-  // ── Star instance buffer (late-bound via setStars) ────────────────────────
+  // ── Star instance buffers (late-bound via setStars) ───────────────────────
   //
   // Grow-only reuse, NOT replace-on-upload. `starPointsLayer.draw` calls
   // `setStars` EVERY frame — the camera-relative anchors it hands us change
   // per frame (the eye is subtracted in f64 before narrowing here). A
   // create/destroy of the GPU buffer per call would mean a fresh allocation
-  // and release 60×/sec on a hot path. Instead the buffer is allocated once
-  // sized to the first non-empty set and reallocated ONLY when a later set
-  // exceeds the current capacity; each call re-uploads the live subset via
-  // `writeBuffer`. With the static `SCENE_STARS` seed the star count never
-  // grows post-boot, so this is one bounded allocation for the process
-  // lifetime. `capacityStars` (buffer capacity) is tracked separately from
-  // `starCount` (the live count `draw` instances) so a shrink reuses the
-  // larger buffer and draws the smaller subset.
+  // and release 60×/sec on a hot path. Instead each `viewSlot` gets its OWN
+  // buffer, allocated once sized to that slot's first non-empty set
+  // and reallocated ONLY when a later set on that SAME slot exceeds its
+  // capacity. One buffer per slot, not one shared buffer, because a
+  // sky-cubemap capture sweep calls `setStars` once per face plus once for the
+  // real view — different camera-relative positions — all before one
+  // `submit()`; a shared buffer would keep only the last call's positions
+  // (see `createViewSlotUniformRing`'s doc — the same race, for a
+  // variable-length upload the fixed-size ring can't carry). `capacity[slot]`
+  // is tracked separately from `count[slot]` so a shrink reuses the larger
+  // buffer and draws the smaller subset.
 
-  let instanceBuffer: GPUBuffer | null = null;
-  let capacityStars = 0;
-  let starCount = 0;
+  const instanceBuffers: (GPUBuffer | null)[] = new Array(VIEW_SLOT_COUNT).fill(null);
+  const capacityStars: number[] = new Array(VIEW_SLOT_COUNT).fill(0);
+  const starCounts: number[] = new Array(VIEW_SLOT_COUNT).fill(0);
 
-  function setStars(stars: readonly PositionedStar[]): void {
-    starCount = stars.length;
-    // Empty set clears the renderer to the no-op draw state; keep any
-    // existing buffer allocated (it is bounded, and a later non-empty set
-    // reuses it). `createBuffer({ size: 0 })` is forbidden by the spec, so
-    // never allocate here.
+  function setStars(stars: readonly PositionedStar[], viewSlot: number): void {
+    starCounts[viewSlot] = stars.length;
+    // Empty set clears this slot to the no-op draw state; keep any existing
+    // buffer allocated (it is bounded, and a later non-empty set reuses it).
+    // `createBuffer({ size: 0 })` is forbidden by the spec, so never allocate
+    // here.
     if (stars.length === 0) return;
 
     const interleaved = new Float32Array(stars.length * FLOATS_PER_STAR);
@@ -203,19 +210,21 @@ export function createStarPointRenderer(
       interleaved[base + 6] = star.absMag;
     }
 
-    // Reallocate only when the current buffer can't hold the new set.
+    // Reallocate only when this slot's current buffer can't hold the new set.
     // `destroy()` on the old one is safe even if a prior frame referenced
     // it — WebGPU defers the actual release until in-flight work completes.
-    if (instanceBuffer === null || stars.length > capacityStars) {
-      instanceBuffer?.destroy();
-      capacityStars = stars.length;
-      instanceBuffer = device.createBuffer({
-        label: 'star-points-instance-buffer',
-        size: capacityStars * STAR_STRIDE,
+    let buffer = instanceBuffers[viewSlot]!;
+    if (buffer === null || stars.length > capacityStars[viewSlot]!) {
+      buffer?.destroy();
+      capacityStars[viewSlot] = stars.length;
+      buffer = device.createBuffer({
+        label: `star-points-instance-buffer-slot${viewSlot}`,
+        size: capacityStars[viewSlot]! * STAR_STRIDE,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
+      instanceBuffers[viewSlot] = buffer;
     }
-    device.queue.writeBuffer(instanceBuffer, 0, interleaved);
+    device.queue.writeBuffer(buffer, 0, interleaved);
   }
 
   // ── draw ──────────────────────────────────────────────────────────────────
@@ -224,21 +233,25 @@ export function createStarPointRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
-    opts: { sizePx: number; brightness: number },
+    opts: { sizePx: number; brightness: number; viewSlot: number },
   ): void {
+    const { viewSlot } = opts;
+    const instanceBuffer = instanceBuffers[viewSlot]!;
+    const starCount = starCounts[viewSlot]!;
     if (instanceBuffer === null || starCount === 0) return;
 
     // uniformScratch[18..19] are CameraUniforms' named pads and [22..23] the
     // tail's alignment pad — never written, so they hold their construction-time
     // zeros across frames. sizePx / brightness ride the tail at floats 20 / 21
-    // (byte-exact with StarPointUniforms in starPoints/io.wesl).
+    // (byte-exact with StarPointUniforms in starPoints/io.wesl). Written into
+    // THIS call's own `viewSlot` buffer — see the ring's doc.
     writeCameraPrefix(uniformScratch, viewProj, viewportPx);
     uniformScratch[UNIFORM_SIZEPX_INDEX] = opts.sizePx;
     uniformScratch[UNIFORM_BRIGHTNESS_INDEX] = opts.brightness;
-    device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
+    uniformRing.writeSlot(viewSlot, uniformScratch);
 
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(0, uniformRing.bindGroupOf(viewSlot));
     pass.setVertexBuffer(0, instanceBuffer);
     // Six vertices per instanced billboard quad — the vertex stage maps
     // vertex_index 0..5 through lib/billboard's quadCorner.
@@ -248,11 +261,13 @@ export function createStarPointRenderer(
   // ── destroy ───────────────────────────────────────────────────────────────
 
   function destroy(): void {
-    instanceBuffer?.destroy();
-    instanceBuffer = null;
-    capacityStars = 0;
-    starCount = 0;
-    uniformBuffer.destroy();
+    for (let slot = 0; slot < VIEW_SLOT_COUNT; slot++) {
+      instanceBuffers[slot]?.destroy();
+      instanceBuffers[slot] = null;
+      capacityStars[slot] = 0;
+      starCounts[slot] = 0;
+    }
+    uniformRing.destroy();
   }
 
   const renderer: StarPointRenderer = {

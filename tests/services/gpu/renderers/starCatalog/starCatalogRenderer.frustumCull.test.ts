@@ -83,6 +83,7 @@ function twoNodeArgs(
   return {
     source: Source.GaiaStars,
     stream: 'leaf',
+    knee: true,
     vp: new Float32Array(16),
     viewportPx: [1280, 720],
     drawCount: 2,
@@ -100,6 +101,7 @@ function twoNodeArgs(
     aggregateIntensityCap: 0.06,
     frustumPlanes,
     glowMarginAngleRad: 0.0001,
+    viewSlot: 0,
   };
 }
 

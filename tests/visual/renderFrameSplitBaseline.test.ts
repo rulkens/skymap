@@ -500,6 +500,17 @@ describe('renderFrame visual baseline', () => {
           },
           clipPlayer: { clipOpacityOf: () => 1 },
         },
+        // The sky-cubemap capture bookkeeping — see the matching fixture
+        // comment in renderFrame.test.ts.
+        cameraRuntime: {
+          skyCubemapCapture: {
+            lastCapturedAtMs: new Map(),
+            frameIndex: 0,
+            bandActive: false,
+            gcDistanceMpc: Number.POSITIVE_INFINITY,
+            pinnedEyeMpc: null,
+          },
+        },
       } as never,
       device,
       context,
@@ -533,7 +544,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "procedural-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1]",
+          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1],undefined",
           "renderer": "textured-disks",
         },
         {

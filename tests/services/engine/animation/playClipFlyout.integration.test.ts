@@ -118,6 +118,13 @@ function makeEngineState(startDistance: number): {
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      skyCubemapCapture: {
+        lastCapturedAtMs: new Map(),
+        frameIndex: 0,
+        bandActive: false,
+        gcDistanceMpc: Number.POSITIVE_INFINITY,
+        pinnedEyeMpc: null,
+      },
     },
   };
 

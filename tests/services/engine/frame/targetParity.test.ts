@@ -28,9 +28,16 @@ describe('render-target parity', () => {
   });
 
   it('every frameProgram step names a declared render-target row', () => {
-    const program = frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true, [
-      NEAR0,
-    ]);
+    // All 6 faces requested, so this also covers the sky-cubemap capture
+    // steps' `target` — a wrong string there would silently draw nothing
+    // (see the module header), so it earns the same parity check as every
+    // other step.
+    const program = frameProgram(
+      { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 },
+      true,
+      [NEAR0],
+      [0, 1, 2, 3, 4, 5],
+    );
     for (const step of program) {
       if (step.kind === 'render') {
         expect(ROW_IDS.has(step.target)).toBe(true);

@@ -139,6 +139,10 @@ export const starPointsLayer: ContentLayer = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
+  // Sky-cubemap capture roster (Task 13b, Ruling 6): the S-star partition
+  // branch is part of the black-hole lens's captured "sky" — NOT
+  // body-glints, whichever branch the S-stars fall into at capture range.
+  skyCapture: true,
 
   enabled(state, ctx, _view) {
     // Handle first, distance second, backdrop-band third, partition last —
@@ -237,7 +241,7 @@ export const starPointsLayer: ContentLayer = {
         star.color[2] * backdropFade,
       ] as Vec3,
     }));
-    renderer.setStars(rebasedPoints);
+    renderer.setStars(rebasedPoints, ctx.viewSlot);
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // anchors. Uses the slab's f64 `vp`, NOT the f32-narrowed `view.vp` —
@@ -263,7 +267,7 @@ export const starPointsLayer: ContentLayer = {
         state.settings.starCatalogs.exposureMidX,
         state.settings.starCatalogs.exposureFarX,
       );
-    renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness });
+    renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness, viewSlot: ctx.viewSlot });
   },
 
   // Pick aspect — stamps the POINT-partition scene stars into the NEAR0 r32uint

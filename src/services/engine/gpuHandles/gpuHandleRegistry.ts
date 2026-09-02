@@ -44,6 +44,7 @@ import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
 import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
+import { createSgrAStarLensingRenderer } from '../../gpu/renderers/bodies/sgrAStarLensingRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
@@ -354,6 +355,10 @@ export const GPU_HANDLE_ROWS = [
           ...star,
           positionMpc: bootBodyStates.get(star.id)!.positionMpc,
         })),
+        // Boot seed, no frame yet — the main view's slot. `starPointsLayer`
+        // re-uploads every real frame (its own module header), so this is
+        // overwritten before the first draw.
+        0,
       );
       return starPointRenderer;
     },
@@ -362,6 +367,14 @@ export const GPU_HANDLE_ROWS = [
     key: 'bodyGlintRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+  },
+  {
+    // Boot-eager like every other renderer row, deliberately: the deflection
+    // LUT build + its 2 KB texture + two pipelines are a one-off cost, unlike
+    // the 50 MB `sky-cubemap` target, which is lazy (`allocateWhen`).
+    key: 'sgrAStarLensingRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createSgrAStarLensingRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'starCatalogRenderer',

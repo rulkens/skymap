@@ -118,6 +118,7 @@ export function createInstancedQuadRenderer(
     targetFormat,
     focusBgl,
     uniformVisibility = GPUShaderStage.VERTEX,
+    viewSlotCount = 1,
   } = config;
 
   // ── Bind group layout ──────────────────────────────────────────────
@@ -206,11 +207,17 @@ export function createInstancedQuadRenderer(
     primitive: { topology: 'triangle-list' },
   });
 
-  const uniformBuffer = device.createBuffer({
-    label: `${label}-uniforms`,
-    size: UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  // One `@group(0)` buffer per view slot (default 1 — see `viewSlotCount`'s
+  // doc on `InstancedQuadConfig`). Slot 0 keeps the original `${label}-uniforms`
+  // label so devtools output is unchanged for every consumer that never
+  // multiplexes; only extra slots (TexturedDiskRenderer) get a `-slotN` suffix.
+  const uniformBuffers: GPUBuffer[] = Array.from({ length: viewSlotCount }, (_, slot) =>
+    device.createBuffer({
+      label: slot === 0 ? `${label}-uniforms` : `${label}-uniforms-slot${slot}`,
+      size: UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    }),
+  );
 
   // Bilinear + clamp-to-edge by default; consumers can override via
   // 'atlas.samplerDescriptor'.
@@ -241,17 +248,19 @@ export function createInstancedQuadRenderer(
       })
     : undefined;
 
-  // Without atlas: build the 1-binding bind group eagerly. With atlas:
-  // leave it undefined until 'bindAtlas' is called — 'draw' no-ops
-  // until then, which is the expected interim state during engine
-  // startup before the atlas texture exists.
-  let bindGroup: GPUBindGroup | undefined;
+  // Without atlas: build the 1-binding bind group eagerly, one per view
+  // slot. With atlas: leave every slot undefined until 'bindAtlas' is
+  // called — 'draw' no-ops until then, which is the expected interim state
+  // during engine startup before the atlas texture exists.
+  const bindGroups: (GPUBindGroup | undefined)[] = new Array(viewSlotCount).fill(undefined);
   if (atlas === undefined) {
-    bindGroup = device.createBindGroup({
-      label: `${label}-bg`,
-      layout: bindGroupLayout,
-      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-    });
+    for (let slot = 0; slot < viewSlotCount; slot++) {
+      bindGroups[slot] = device.createBindGroup({
+        label: slot === 0 ? `${label}-bg` : `${label}-bg-slot${slot}`,
+        layout: bindGroupLayout,
+        entries: [{ binding: 0, resource: { buffer: uniformBuffers[slot]! } }],
+      });
+    }
   }
 
   // 'fixed': preallocated up front. 'grow': null until first non-empty
@@ -283,26 +292,32 @@ export function createInstancedQuadRenderer(
   let lastHiResView: GPUTextureView | undefined;
   let lastHiResSampler: GPUSampler | undefined;
 
+  // Atlas + hi-res-array views are shared across every view slot (one atlas
+  // texture, uploaded once); only the @group(0) uniform buffer differs per
+  // slot. So recomposing on bind rebuilds all `viewSlotCount` bind groups,
+  // each pairing the shared atlas resources with ITS OWN uniform buffer.
   function composeAtlasBindGroup(): void {
     if (!lastAtlasView) return; // atlas not bound yet — keep no-op
     if (atlas?.hiResArray && !lastHiResView) return; // hi-res not bound yet
 
-    const entries: GPUBindGroupEntry[] = [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: lastAtlasView },
-      { binding: 2, resource: sampler! },
-    ];
-    if (atlas?.hiResArray) {
-      entries.push(
-        { binding: 3, resource: lastHiResView! },
-        { binding: 4, resource: lastHiResSampler ?? defaultHiResSampler! },
-      );
+    for (let slot = 0; slot < viewSlotCount; slot++) {
+      const entries: GPUBindGroupEntry[] = [
+        { binding: 0, resource: { buffer: uniformBuffers[slot]! } },
+        { binding: 1, resource: lastAtlasView },
+        { binding: 2, resource: sampler! },
+      ];
+      if (atlas?.hiResArray) {
+        entries.push(
+          { binding: 3, resource: lastHiResView! },
+          { binding: 4, resource: lastHiResSampler ?? defaultHiResSampler! },
+        );
+      }
+      bindGroups[slot] = device.createBindGroup({
+        label: slot === 0 ? `${label}-bg` : `${label}-bg-slot${slot}`,
+        layout: bindGroupLayout,
+        entries,
+      });
     }
-    bindGroup = device.createBindGroup({
-      label: `${label}-bg`,
-      layout: bindGroupLayout,
-      entries,
-    });
   }
 
   function bindAtlas(atlasView: GPUTextureView): void {
@@ -329,8 +344,13 @@ export function createInstancedQuadRenderer(
      *  the engine against the canonical focusBgl; the same group serves
      *  every impostor pipeline. */
     focusBindGroup: GPUBindGroup;
+    /** Which @group(0) copy this call targets. Defaults to 0 — see
+     *  `InstancedQuadConfig.viewSlotCount`'s doc. */
+    viewSlot?: number;
   }): void {
     if (args.instanceCount === 0) return;
+    const viewSlot = args.viewSlot ?? 0;
+    const bindGroup = bindGroups[viewSlot];
     if (!bindGroup) return; // atlas-capable renderer with no atlas bound yet
 
     // ── Grow instance buffer if needed (grow strategy only) ─────────
@@ -362,7 +382,12 @@ export function createInstancedQuadRenderer(
     uniformScratch[21] = args.camPosWorld?.[1] ?? 0;
     uniformScratch[22] = args.camPosWorld?.[2] ?? 0;
     uniformScratch[23] = args.pxPerRad ?? 0;
-    device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
+    // THIS call's own slot's buffer — a sky-cubemap capture sweep's several
+    // `draw()` calls (different faces, one submit) each carry a different
+    // viewProj/viewport/camPos, so a shared buffer would keep only the last
+    // call's bytes at submit time (see `InstancedQuadConfig.viewSlotCount`'s
+    // doc / docs/RENDERER.md landmine #1).
+    device.queue.writeBuffer(uniformBuffers[viewSlot]!, 0, uniformScratch);
 
     // Forward the exact byte count, not 'instanceBytes.byteLength' —
     // an oversized consumer scratch buffer must not write past the
@@ -383,7 +408,7 @@ export function createInstancedQuadRenderer(
   }
 
   function destroy(): void {
-    uniformBuffer.destroy();
+    for (const buffer of uniformBuffers) buffer.destroy();
     instanceBuffer?.destroy();
     instanceBuffer = null;
   }

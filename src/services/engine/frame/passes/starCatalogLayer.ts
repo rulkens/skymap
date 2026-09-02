@@ -870,6 +870,7 @@ function drawStream(
   prep: PreparedStarCut,
   stream: StarDrawStream,
   fovYRad: number,
+  viewSlot: number,
 ): void {
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
   // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
@@ -878,12 +879,20 @@ function drawStream(
   // and forwarded identically to every source's draw (the shared-vp invariant).
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
   const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], fovYRad).leaf;
+  // The aggregate stream's knee normally lands in `star-upsample`, over the
+  // summed half-res field. A sky-cubemap capture face (`viewSlot !== 0`) has
+  // no such pass behind it — the face IS the sky the lens samples — so the
+  // aggregate quads carry the knee themselves there, or captured glows read
+  // brighter and more saturated than the same stars in the direct view drawn
+  // beside them at the band crossfade.
+  const knee = stream === 'leaf' || viewSlot !== 0;
   for (const s of prep.sources) {
     const nodes = s[stream];
     if (nodes.count === 0) continue;
     renderer.draw(pass, {
       source: s.source,
       stream,
+      knee,
       vp: rebasedVp,
       viewportPx: view.viewportPx,
       drawCount: nodes.count,
@@ -900,6 +909,7 @@ function drawStream(
       aggregateIntensityCap: prep.aggregateIntensityCap,
       frustumPlanes,
       glowMarginAngleRad,
+      viewSlot,
     });
   }
 }
@@ -911,6 +921,9 @@ export const starCatalogLayer: ContentLayer = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
+  // Sky-cubemap capture roster (Task 13b): the survey LEAF stream is part of
+  // the black-hole lens's captured "sky".
+  skyCapture: true,
 
   enabled: starCatalogVisible,
 
@@ -920,7 +933,7 @@ export const starCatalogLayer: ContentLayer = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
     // The LEAF stream: full-resolution point stars into HDR, per-glow knee.
-    drawStream(renderer, pass, view, prep, 'leaf', ctx.fovYRad);
+    drawStream(renderer, pass, view, prep, 'leaf', ctx.fovYRad, ctx.viewSlot);
   },
 
   // Pick aspect — stamps every visible LEAF star's packed identity into the

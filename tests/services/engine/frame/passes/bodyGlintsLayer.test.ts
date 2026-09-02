@@ -21,6 +21,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { bodyGlintsLayer } from '../../../../../src/services/engine/frame/passes/bodyGlintsLayer';
+import { sceneBodyStates } from '../../../../../src/services/engine/frame/sceneBodyStates';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
@@ -29,7 +30,7 @@ import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { Source } from '../../../../../src/data/sources';
-import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
+import { SGR_A_STAR_ANCHOR } from '../../../../../src/data/bodies/sceneSgrAStar';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -56,6 +57,20 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
     // module's IDENTITY const: this factory is hoisted above IDENTITY's
     // declaration and runs at first import, a TDZ hazard.
     m.set('sun', {
+      positionMpc: [0, 0, 0],
+      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as BodyState['orientation'],
+      meanAnomalyRad: 0,
+    });
+    // The 'galactic-centre' region's anchor — co-located with the Sun, NOT
+    // Sgr A*'s real ~8 kpc position. `draw`/`enabled` now read this anchor
+    // unconditionally (task 8's far-field glint), so an absent entry would
+    // crash on `.positionMpc` of undefined; a REAL-position entry would instead
+    // make every near-Sun fixture in this file read Sgr A* as "far" (crossfade
+    // full), forcing unrelated tests to fight the glint off. Co-locating at the
+    // origin keeps the anchor INERT by default (distance 0 is deep inside
+    // `sgrAStarLensing.fullAt`, 100 AU) — the far-field-glint tests below move
+    // it out explicitly via `statesWithAnchorPinnedAt`.
+    m.set(SGR_A_STAR_ANCHOR.id, {
       positionMpc: [0, 0, 0],
       orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as BodyState['orientation'],
       meanAnomalyRad: 0,
@@ -164,6 +179,43 @@ function makeState(bodyGlintRenderer: unknown, planets: readonly PlanetBody[]): 
   } as unknown as EngineState;
 }
 
+/**
+ * A `sceneBodyStates` override pinning Sgr A* at an arbitrary position instead
+ * of its default origin-co-located one — everything else matches the default
+ * factory above. Paired with `mockImplementationOnce` (queued once per
+ * anticipated `sceneBodyStates` call — `enabled` and `draw` each make 1 or 2
+ * depending on which branch they take) rather than a persistent
+ * `mockImplementation`, so there is nothing to restore afterward. Used where a
+ * test's own camera range crosses into `sgrAStarLensing`'s partial-fade zone
+ * (the far-dissolve test below) or needs the anchor moved OUT to a visible
+ * distance (the far-field-glint tests).
+ */
+function statesWithAnchorPinnedAt(
+  anchorPositionMpc: Vec3,
+): (state: EngineState) => ReadonlyMap<string, BodyState> {
+  return (state) => {
+    const m = new Map<string, BodyState>();
+    m.set('sun', { positionMpc: [0, 0, 0], orientation: IDENTITY, meanAnomalyRad: 0 });
+    m.set(SGR_A_STAR_ANCHOR.id, {
+      positionMpc: anchorPositionMpc,
+      orientation: IDENTITY,
+      meanAnomalyRad: 0,
+    });
+    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
+      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
+    }
+    const earth = state.data.bodies.earth as SeededPlanet | null;
+    if (earth) {
+      m.set(earth.id, {
+        positionMpc: earth.positionMpc,
+        orientation: earth.orientation,
+        meanAnomalyRad: 0,
+      });
+    }
+    return m;
+  };
+}
+
 describe('bodyGlintsLayer.enabled', () => {
   it('is false while the renderer handle is null (short-circuits before ctx / state.data)', () => {
     expect(
@@ -214,13 +266,58 @@ describe('bodyGlintsLayer.enabled — far dissolve (the bite)', () => {
     const glint = bodyAt('mars', 1, [0.6, 0.32, 0.23]);
     const state = makeState(makeRenderer(), [glint]);
 
+    // dMid (~181 AU) and dGone (~605 AU) both land INSIDE `sgrAStarLensing`'s
+    // own (100, 500 AU) range — the default origin-co-located anchor is only
+    // inert within 100 AU, so at these two specific camera positions it would
+    // otherwise give `enabled` a SECOND, unrelated reason to stay/go true (its
+    // own coverage lives in the "Sgr A* far-field glint" describe block
+    // below). Pin it at each call's own camera position instead (distance 0,
+    // always inert) to isolate the SEEDED glint's backdrop dissolve, the
+    // concern under test here. `enabled` calls `sceneBodyStates` twice when it
+    // reaches `sceneBodyPartition` (the dMid case) and once when the backdrop
+    // gate alone already returns false (the dGone case) — queue exactly that
+    // many `mockImplementationOnce` per call.
+    const pinAtDMid = statesWithAnchorPinnedAt([dMid, 0, 0]);
+    vi.mocked(sceneBodyStates).mockImplementationOnce(pinAtDMid).mockImplementationOnce(pinAtDMid);
     expect(bodyGlintsLayer.enabled(state, makeCtx([dMid, 0, 0]), makeNear0View(CAM_POS))).toBe(
       true,
     );
+    vi.mocked(sceneBodyStates).mockImplementationOnce(statesWithAnchorPinnedAt([dGone, 0, 0]));
     // The bite: unfixed `enabled` has no far-dissolve check, so this reads true.
     expect(bodyGlintsLayer.enabled(state, makeCtx([dGone, 0, 0]), makeNear0View(CAM_POS))).toBe(
       false,
     );
+  });
+});
+
+describe('bodyGlintsLayer — Sgr A* far-field glint (task 8)', () => {
+  it('enabled is true when the anchor alpha is positive even with an empty glints partition', () => {
+    // No seeded planets — the row can only be admitted by the anchor. Move it
+    // OUT to its real ~8 kpc position (the default fixture keeps it inert,
+    // co-located with the Sun) — astronomically farther than
+    // `sgrAStarLensing.goneAt` (500 AU), a large but finite distance, not the
+    // "unresolved anchor" Infinity case — so the crossfade alone carries
+    // `enabled`. This is the "present the moment it's on screen" contract: no
+    // far-side dissolve narrows it back off. `enabled` calls `sceneBodyStates`
+    // once here (the anchor check short-circuits before `sceneBodyPartition`).
+    const state = makeState(makeRenderer(), []);
+    vi.mocked(sceneBodyStates).mockImplementationOnce(
+      statesWithAnchorPinnedAt(SGR_A_STAR_ANCHOR.positionMpc),
+    );
+    expect(bodyGlintsLayer.enabled(state, makeCtx(CAM_POS), makeNear0View(CAM_POS))).toBe(true);
+  });
+
+  it('draw skips the anchor once its own crossfade reaches 0 (the default fixture keeps it inert)', () => {
+    // `1 - fadeBand(sgrAStarLensing, distMpc)` is the one way the anchor's
+    // brightness reaches 0: the lens pass has fully engaged (distMpc <=
+    // fullAt, 100 AU). The default fixture already co-locates the mock anchor
+    // with the Sun — well within `fullAt` of CAM_POS (~0.0067 AU) — so no
+    // override is needed: no seeded planets, so an empty batch means the
+    // renderer never draws.
+    const renderer = makeRenderer();
+    const state = makeState(renderer, []);
+    bodyGlintsLayer.draw(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), state);
+    expect(renderer.draw).not.toHaveBeenCalled();
   });
 });
 
@@ -253,6 +350,13 @@ describe('bodyGlintsLayer.draw — far-dissolve brightness scaling', () => {
         orientation: IDENTITY,
       };
       const renderer = makeRenderer();
+      // dMid (~181 AU) sits inside `sgrAStarLensing`'s own (100, 500 AU) range,
+      // where the default origin-co-located anchor is no longer inert — pin it
+      // at each call's own camera regardless of camX so this test's only
+      // packed record stays the seeded body, at both cameras. `draw` calls
+      // `sceneBodyStates` twice (via `sceneBodyPartition` and its own read).
+      const pinAtCam = statesWithAnchorPinnedAt(camPos);
+      vi.mocked(sceneBodyStates).mockImplementationOnce(pinAtCam).mockImplementationOnce(pinAtCam);
       bodyGlintsLayer.draw(
         PASS_STUB,
         makeNear0View(camPos),
@@ -298,7 +402,15 @@ describe('bodyGlintsLayer.pickEnabled (Bug B — Earth-stamp-only frame stays in
   it('is true when Earth is seeded within the caption gate even with an empty glints branch — while enabled is false', () => {
     const state = stampState(earthWithinGate);
     const view = makeNear0View(camWithin);
-    // No glints → the VISUAL draw gate is off.
+    // No glints, no Earth-caption dependency on `enabled` → the VISUAL draw
+    // gate is off. `camWithin` is only 1e-6 Mpc — tiny in Mpc terms, but that
+    // is still ~206,000 AU, well past `sgrAStarLensing.goneAt` (500 AU) — so
+    // the default origin-co-located anchor reads as "far" (crossfade full),
+    // an unrelated second reason for `enabled` to go true. Pin it AT the test
+    // camera instead (distance 0, always inert) to isolate the Earth-caption
+    // concern under test here. `enabled` calls `sceneBodyStates` once (the
+    // backdrop gate alone already returns false, before `sceneBodyPartition`).
+    vi.mocked(sceneBodyStates).mockImplementationOnce(statesWithAnchorPinnedAt(camWithin));
     expect(bodyGlintsLayer.enabled(state, makeCtx(camWithin), view)).toBe(false);
     // But the Earth caption stamp must still be recorded → pick gate admits the row.
     expect(bodyGlintsLayer.pickEnabled!(state, makeCtx(camWithin), view)).toBe(true);
@@ -330,7 +442,11 @@ describe('bodyGlintsLayer.draw', () => {
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [passArg, instances, count, vpArg, viewportArg] = renderer.draw.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
-    // The unlit body added nothing → exactly one record packed.
+    // The unlit body added nothing → exactly one record packed. (Task 8's
+    // Sgr A* far-field glint doesn't contribute here: the default fixture
+    // keeps it co-located with the Sun, well inside `sgrAStarLensing.fullAt`
+    // of CAM_POS — see "Sgr A* far-field glint" describe block for its own
+    // coverage.)
     expect(count).toBe(1);
     // The single packed record's brightness is a strict fraction in (0, 1): the
     // phase term (full phase = 1) × size × albedo × the partial cross-fade.
@@ -354,7 +470,8 @@ describe('bodyGlintsLayer.draw', () => {
   it('is a no-op when every glint is unlit (nothing packed → no draw)', () => {
     const renderer = makeRenderer();
     // Only the unlit body present: its brightness rounds to 0, so the batch is
-    // empty and the additive pass submits nothing.
+    // empty and the additive pass submits nothing. (Task 8's Sgr A* far-field
+    // glint doesn't contribute either — see the note above.)
     const state = makeState(renderer, [UNLIT]);
     bodyGlintsLayer.draw(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), state);
     expect(renderer.draw).not.toHaveBeenCalled();

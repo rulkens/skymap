@@ -17,6 +17,15 @@
  *   - `timing` supplies the per-pass `timestampWrites` descriptor (a no-op in
  *     production); `swapView` is this frame's acquired swap-chain view, the
  *     one render target that is not an allocated offscreen texture.
+ *   - `skyCubemapFaceContexts` is the black-hole lens's per-face camera
+ *     override, its runtime hand-off: a step carrying `face`
+ *     resolves its `SlabView`/`ctx` from THIS map instead of the frame-wide
+ *     `ctx` above. `renderFrame` derives it each frame (one
+ *     `skyCubemapFaceContext` call per scheduled face); `frameProgram`
+ *     stays static and never sees it. Absent/missing-face ⇒ that step is
+ *     skipped cleanly (no throw) — the same outcome as
+ *     `skyCubemapFaceContext` itself returning `null` for a pre-bootstrap
+ *     frame.
  */
 
 import type { ReadyFrameContext } from './ReadyFrameContext';
@@ -25,6 +34,7 @@ import type { ContentLayer } from './ContentLayer';
 import type { RenderStrategy } from './RenderStrategy';
 import type { EngineState } from '../state/EngineState';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
+import type { CubeFace } from '../../rendering/CubeFace';
 
 export type ExecuteFrameArgs = {
   /** The single per-frame command encoder every step records into. */
@@ -43,4 +53,6 @@ export type ExecuteFrameArgs = {
   timing: GpuTimingService;
   /** This frame's swap-chain view — the `'swap'` target's texture view. */
   swapView: GPUTextureView;
+  /** Per-face camera override for sky-cubemap capture steps; see above. */
+  skyCubemapFaceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
 };

@@ -143,6 +143,18 @@ describe('extractSelectionRow', () => {
     expect(SGR_A_STAR.standoffRadii).toBe(2.0); // guards against both sides drifting to `undefined`
   });
 
+  it('body ref for Sgr A* carries its focusDistanceRadii override through', () => {
+    // Same regression shape as the standoffRadii guard above, for the
+    // arrival-distance override: a typo'd property name or a reversed
+    // `'focusDistanceRadii' in body` condition would silently drop the user's
+    // framed ~30.4 r_s arrival distance while the rest of the suite stays green.
+    const row = extractSelectionRow({ type: 'body', id: SGR_A_STAR.id }, deps, SIM_DAYS);
+    expect(row !== null && row.type === 'body' && row.focusDistanceRadii).toBe(
+      SGR_A_STAR.focusDistanceRadii,
+    );
+    expect(SGR_A_STAR.focusDistanceRadii).toBe(30.4); // guards against drift to `undefined`
+  });
+
   it('body ref resolves the position at the PASSED simDays, not a fixed epoch', () => {
     // The whole point of the fix: two different simDays for the same orbiting
     // body must yield two different positions, sourced from deriveBodyStates at

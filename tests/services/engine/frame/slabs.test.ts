@@ -480,6 +480,7 @@ describe('slabViewOf', () => {
     const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
     return {
       isReady: true,
+      viewSlot: 0,
       renderedTargets: new Set<string>(),
       cam,
       vp: cosmoVp,
