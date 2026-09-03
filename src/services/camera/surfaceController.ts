@@ -614,11 +614,21 @@ export function createSurfaceController(): SurfaceController {
   // unrepresentable rather than guarded.
   let live: { gesture: SurfaceGesture | null } | null = null;
   // Ruling 12: the session's remembered tilt — ONE home, default 0 (looking
-  // from above). Survives gestures, disengage/re-engage and engaged-body
-  // switches by design (per-session global, not per-body).
+  // from above). Survives gestures and same-body disengage/re-engage; a BODY
+  // SWITCH wipes it (ruling 18, superseding round 11's survive-the-switch
+  // scope): the memory belongs to the body that was current when it was
+  // authored, and is never restored per body. `memoryBodyId` tracks that
+  // body via `noteBody` (runFrame, the one caller) — null notes (no body
+  // engaged or focused) change nothing, so a null-focus stint keeps it.
   let rememberedTiltRad = 0;
+  let memoryBodyId: string | null = null;
 
   return {
+    noteBody: (bodyId) => {
+      if (bodyId === null) return;
+      if (memoryBodyId !== null && memoryBodyId !== bodyId) rememberedTiltRad = 0;
+      memoryBodyId = bodyId;
+    },
     onGestureStart: () => {
       live = { gesture: null };
     },

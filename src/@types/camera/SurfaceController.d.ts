@@ -9,8 +9,8 @@ import type { Vec3 } from '../math/Vec3';
  * steps and commits the pose that comes back. Its state is the latched
  * gesture (dies at pointerup — no target survives a gesture, so FW-H's
  * accumulating pivot is unreachable rather than handled) plus the session's
- * remembered tilt (ruling 12), which by design DOES survive gestures,
- * disengage and re-engage.
+ * remembered tilt (ruling 12), which by design DOES survive gestures and
+ * same-body disengage/re-engage — but not a body switch (ruling 18).
  */
 export type SurfaceController = {
   readonly apply: (
@@ -40,4 +40,12 @@ export type SurfaceController = {
    * 0 until set. Read-only — the controller's drag path is the only writer.
    */
   readonly rememberedTiltRad: () => number;
+  /**
+   * Ruling 18: the memory belongs to the body it was authored on. runFrame
+   * notes the camera's CURRENT body (engaged body, else the focused body)
+   * once per frame; a note naming a DIFFERENT body wipes the memory to 0 —
+   * a full reset, never a per-body restore. Null keeps it, so same-body
+   * disengage/re-engage (round 11) survives.
+   */
+  readonly noteBody: (bodyId: string | null) => void;
 };

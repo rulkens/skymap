@@ -446,6 +446,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the non-pivoting edge override, whose displayed render is compensated by
   // `authoredOverride`.
   let authoredPose = authoredOverride ?? renderPose;
+  // Ruling 18: a body switch wipes the remembered tilt. The camera's current
+  // body — the ENGAGED one while a body arm holds (a differing focus has
+  // already released it by this frame), else the FOCUSED one — is noted here,
+  // the one site that sees both, before the projection below reads the memory.
+  const regimeFrame = rootState.camera.base.frame;
+  state.cameraRuntime.surface.noteBody(
+    regimeFrame !== 'absolute'
+      ? regimeFrame.body
+      : pivotFocus?.type === 'body'
+        ? pivotFocus.id
+        : null,
+  );
   // The world arm's tilt expression (ruling 13) sits between the pin (which
   // owns WHERE the view pivots) and the fold (which converts THIS pose at
   // engage): a pure projection of the one display-tilt mapping, so the

@@ -60,6 +60,15 @@ export type CameraClock = {
   // (only the driver can see the live register, so the capture is split from
   // the timer).
   followFrom: CameraPose | null;
+  // The body id the follow last captured a `from` for — the body-SWITCH
+  // detector (ruling 18): a capture for a DIFFERENT body adopts the framing
+  // distance instead of carrying the old body's orbit distance (an
+  // Earth-engaged distance sits INSIDE Saturn; the fold would engage there
+  // and the absolute-arm gate would strand the camera). Deliberately NOT
+  // reset by `followElapsed` — it must survive the activation edge to
+  // compare across it. Null only before the first-ever follow, which keeps
+  // its captured distance (the deep-space fly-in ease).
+  followBodyId: string | null;
   // The distance the approach eases TOWARD. Two distinct sources feed it, and
   // conflating them is the bug this field un-braids:
   //

@@ -334,11 +334,26 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         // continuity is what this choice preserves, not what it trades away.
         if (clock.followFrom === null) {
           const cur = authoredWorldPose(state);
+          // Ruling 18: a body SWITCH adopts the framing distance outright.
+          // The captured distance is the OLD body's orbit scale — an
+          // Earth-engaged ~2 R⊕ (13,400 km) sits INSIDE Saturn (R 58,232 km)
+          // — and easing out from it hands the fold an in-planet frame to
+          // engage on, which then blocks this driver (absolute-arm gate) and
+          // strands the camera there. Same-body re-focus keeps the ease;
+          // `followBodyId` null (first-ever follow) keeps the deep-space
+          // fly-in ease too.
+          const switched = clock.followBodyId !== null && clock.followBodyId !== focus.id;
+          clock.followBodyId = focus.id;
           clock.followFrom = {
             target: [cur.target[0], cur.target[1], cur.target[2]],
             yaw: cur.yaw,
             pitch: cur.pitch,
-            distance: cur.distance,
+            distance: switched
+              ? bodyFocusDistance(
+                  focus.radiusM * SCALE_UNITS.M_TO_MPC,
+                  state.cameraRuntime.projection.fovYRad,
+                )
+              : cur.distance,
             roll: cur.roll,
           };
         }

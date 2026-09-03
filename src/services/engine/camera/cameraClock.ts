@@ -46,6 +46,7 @@ export function createCameraClock(): CameraClock {
     followStartMs: null,
     lastFollowRef: null,
     followFrom: null,
+    followBodyId: null,
     followDistanceTarget: null,
     followPanOffset: [0, 0, 0],
   };
