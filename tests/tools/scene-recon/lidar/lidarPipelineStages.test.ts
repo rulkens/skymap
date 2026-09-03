@@ -42,7 +42,7 @@ describe('lidarPipelineStages', () => {
       'readers.las',
       'filters.reprojection',
       'filters.crop',
-      'filters.range',
+      'filters.expression',
       'filters.colorization',
       'filters.reprojection',
       'filters.sample',
@@ -79,10 +79,13 @@ describe('lidarPipelineStages', () => {
     expect(colorization!.raster).toBe('/tmp/ortho.vrt');
   });
 
-  it('excludes each dropped classification from the range filter', () => {
+  it('drops every listed classification with AND semantics', () => {
+    // filters.range would OR "Classification![7:7], Classification![18:18]"
+    // together on the same dimension and exclude nothing — filters.expression
+    // with `&&` is the only way to require both exclusions to hold at once.
     const stages = lidarPipelineStages(SPEC);
-    const range = stages.find((stage) => stage.type === 'filters.range');
-    expect(range, 'range stage').toBeTruthy();
-    expect(range!.limits).toBe('Classification![7:7], Classification![18:18]');
+    const expression = stages.find((stage) => stage.type === 'filters.expression');
+    expect(expression, 'expression stage').toBeTruthy();
+    expect(expression!.expression).toBe('Classification != 7 && Classification != 18');
   });
 });

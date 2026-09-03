@@ -9,9 +9,16 @@
  * group's topocentric ENU metre frame (`in_srs` is EPSG:4326, the first
  * stage's output) and must run before `filters.sample`, whose `radius` is
  * metres — meaningless while points are still in degrees.
+ *
+ * Dropping classifications is `filters.expression`, not `filters.range`:
+ * PDAL ORs multiple range clauses on the same dimension, so a chained
+ * `Classification![7:7], Classification![18:18]` excludes nothing.
  */
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
+
+/** `writers.text`'s `order` — shared with `readPdalCsv` so the two cannot drift apart. */
+export const PDAL_CSV_COLUMNS = 'X,Y,Z,Red,Green,Blue,Classification';
 
 export type LidarBakeSpec = {
   readonly lazFiles: readonly string[];
@@ -38,14 +45,14 @@ export function lidarPipelineStages(spec: LidarBakeSpec): readonly PdalStage[] {
   } = spec;
   const { west, east, south, north } = bounds;
 
-  const rangeLimits = dropClassifications.map((c) => `Classification![${c}:${c}]`).join(', ');
+  const dropExpression = dropClassifications.map((c) => `Classification != ${c}`).join(' && ');
   const topocentricSrs = `+proj=topocentric +lat_0=${anchor.latDeg} +lon_0=${anchor.lonDeg} +h_0=${anchor.heightMDvr90} +ellps=GRS80`;
 
   return [
     ...lazFiles.map((filename): PdalStage => ({ type: 'readers.las', filename })),
     { type: 'filters.reprojection', out_srs: 'EPSG:4326' },
     { type: 'filters.crop', bounds: `([${west},${east}],[${south},${north}])` },
-    { type: 'filters.range', limits: rangeLimits },
+    { type: 'filters.expression', expression: dropExpression },
     {
       type: 'filters.colorization',
       raster: orthoVrtPath,
@@ -56,7 +63,7 @@ export function lidarPipelineStages(spec: LidarBakeSpec): readonly PdalStage[] {
     {
       type: 'writers.text',
       format: 'csv',
-      order: 'X,Y,Z,Red,Green,Blue,Classification',
+      order: PDAL_CSV_COLUMNS,
       keep_unspecified: false,
       filename: outCsvPath,
     },

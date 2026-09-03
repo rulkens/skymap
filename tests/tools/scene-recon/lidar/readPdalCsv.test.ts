@@ -21,6 +21,14 @@ const CSV = [
   '-0.001,42.42,-777.7,1,254,128,7',
 ].join('\n');
 
+async function collect(csvPath: string): Promise<ScenePoint[]> {
+  const points: ScenePoint[] = [];
+  for await (const point of readPdalCsv(csvPath)) {
+    points.push(point);
+  }
+  return points;
+}
+
 describe('readPdalCsv', () => {
   let dir: string;
 
@@ -31,10 +39,7 @@ describe('readPdalCsv', () => {
     const csvPath = join(dir, 'points.csv');
     writeFileSync(csvPath, CSV);
 
-    const points: ScenePoint[] = [];
-    for await (const point of readPdalCsv(csvPath)) {
-      points.push(point);
-    }
+    const points = await collect(csvPath);
 
     expect(points).toHaveLength(5);
     expect(points[0]).toEqual({
@@ -55,5 +60,21 @@ describe('readPdalCsv', () => {
       b: 32,
       classification: 18,
     });
+  });
+
+  it('throws on a row with an empty field and on a header that does not match the writer order', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'pdal-csv-bad-'));
+
+    // Blue is empty — a truncated write, not a legitimate zero (that's "0").
+    const malformedRowPath = join(dir, 'malformed-row.csv');
+    writeFileSync(
+      malformedRowPath,
+      ['X,Y,Z,Red,Green,Blue,Classification', '10.5,20.25,100.125,255,0,,2'].join('\n'),
+    );
+    await expect(collect(malformedRowPath)).rejects.toThrow(/line 2.*Blue/);
+
+    const badHeaderPath = join(dir, 'bad-header.csv');
+    writeFileSync(badHeaderPath, ['X,Y,Z,R,G,B,C', '10.5,20.25,100.125,255,0,17,2'].join('\n'));
+    await expect(collect(badHeaderPath)).rejects.toThrow(/header/i);
   });
 });
