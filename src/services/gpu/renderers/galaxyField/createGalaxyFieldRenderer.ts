@@ -18,7 +18,6 @@ import type { GalaxyFieldRenderer } from '../../../../@types/galaxy/GalaxyFieldR
 import type { GalaxyFieldRendererDeps } from '../../../../@types/galaxy/GalaxyFieldRendererDeps';
 import type { GalaxyFieldRenderTargets } from '../../../../@types/galaxy/GalaxyFieldRenderTargets';
 import type { GalaxyFieldStageContext } from '../../../../@types/galaxy/GalaxyFieldStageContext';
-import type { GalaxyFieldStageName } from '../../../../@types/galaxy/GalaxyFieldStageName';
 import type { HiiSegment } from '../../../../@types/galaxy/HiiSegment';
 import type { HiiTextureLanes } from '../../../../@types/galaxy/HiiTextureLanes';
 import type { HiiTier } from '../../../../@types/galaxy/HiiTier';
@@ -259,8 +258,7 @@ export function createGalaxyFieldRenderer(
   const model = createGalaxyFieldModel({ input: () => current });
   const { centralField, dustHeaderLanes, dustBudget, digBudget, fieldPack, hiiPack } = model;
 
-  const graph: StageGraph<GalaxyFieldStageName, GalaxyFieldStageContext> =
-    createStageGraph(GALAXY_FIELD_STAGES);
+  const graph: StageGraph<GalaxyFieldStageContext> = createStageGraph(GALAXY_FIELD_STAGES);
 
   // Rebuilt per run rather than held: `setMixture` REASSIGNS `current`, so a
   // context captured once would key every stage on the galaxy it was built for.

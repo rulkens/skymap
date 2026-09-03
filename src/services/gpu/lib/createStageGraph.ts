@@ -16,7 +16,7 @@ import type { StagePhase } from '../../../@types/gpu/StagePhase';
 
 export function createStageGraph<Name extends string, Ctx = void>(
   stages: readonly Stage<Name, Ctx>[],
-): StageGraph<Name, Ctx> {
+): StageGraph<Ctx> {
   const declared = new Map<Name, { readonly index: number; readonly phase: StagePhase }>(
     stages.map((stage, index) => [stage.name, { index, phase: stage.phase }]),
   );
