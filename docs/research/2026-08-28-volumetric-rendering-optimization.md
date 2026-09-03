@@ -9,9 +9,10 @@ gate per the project's measure-first rule.
 **Rev 2 folds in the in-repo prior art** — the pressure-tested verdicts and dead ends
 in [`2026-07-30-galaxy-rendering-primitives.md`](2026-07-30-galaxy-rendering-primitives.md)
 (§5 raymarch cost, §11 prior art, §12 verdicts) and the measurement lessons in
-[`milky-way/measurement.md`](milky-way/measurement.md) — and the confirmed sparsity
-fact: **the shipped cubes are very sparse, 99%+ of voxels empty** (USER-STATED,
-2026-08-28). Rev 1's temporal-reprojection framing conflicted with a standing verdict
+[`milky-way/measurement.md`](milky-way/measurement.md) — and the sparsity of the
+shipped cubes, now **measured over the deployed `.scfd` files** (see the sparsity
+table in §1: 92–99.7% render-empty at default knobs across the three wired fields).
+Rev 1's temporal-reprojection framing conflicted with a standing verdict
 and is corrected below; rev 1 also missed the survey's analytic-integration result,
 now suggestion 2.
 
@@ -83,12 +84,39 @@ The cubes:
 | MCPM small / medium / large | 89×150×91 / 178×300×182 / 356×600×364 | 1.2M / 9.7M / 77.8M | 2.4 / 19.4 / 155.5 MB | `log(1+v)/log(1+max)`; raw stats min=0, max≈40 000, mean≈16, p99≈320 |
 | CF-4 density                | 128³                                  | 2.1M                | 4.2 MB                | symmetric linear, cosmic mean at 0.5 (divergent palette)             |
 
-**Sparsity (USER-STATED, 2026-08-28): most cubes are 99%+ empty.** Consistent with
-the raw MCPM stats above (p99 ≈ 320 of max ≈ 40 000 — the signal is a thin
-filamentary tail) and with the `--clamp`/`zeroBelowThreshold` import path (#580)
-that zeroes sub-deadband voxels at build time. This makes empty-space skipping the
-structurally right lever, and makes the fixed 128-step-every-ray march ~99%
-wasted work along void rays.
+**Sparsity (MEASURED, 2026-09-03, over the deployed R2 `.scfd` files).** Per-voxel
+histograms of every deployed cube, plus 8³-brick occupancy. "Render-empty" applies
+`applyContrastWindow`'s exact math at the registry-default knobs (visibility = 0,
+i.e. `dev ≤ deadband − 0.05`); "empty bricks" = 8³ bricks with no render-visible
+voxel — the fraction a min/max brick grid (suggestion 1) skips outright at
+default settings:
+
+| cube                 | exact 0             | render-empty (default knobs)         | empty 8³ bricks     | zero 8³ bricks      |
+| -------------------- | ------------------- | ------------------------------------ | ------------------- | ------------------- |
+| cf4_density          | 0.00%               | 95.94% (deadband 0.167)              | 87.6%               | 0.0%                |
+| mcpm s/m/l           | 69.9 / 73.4 / 78.8% | 91.7 / 95.2 / 96.6% (deadband 0.412) | 67.2 / 70.5 / 76.2% | 58.2 / 63.5 / 67.1% |
+| polyphorm-2mrs s/m/l | 98.7 / 99.0 / 99.1% | 99.4 / 99.6 / 99.7%                  | 95.7 / 96.5 / 97.4% | 91.6 / 92.9 / 95.6% |
+| edenhofer-dust s/m/l | 49.5 / 48.9 / 48.7% | n/a (no registry row yet)            | n/a                 | 36.9 / 42.6 / 44.5% |
+
+(Dust is bimodal: ~49% exact zeros but 99.1–99.2% of voxels < 0.01 — its
+skippability will be decided by the transfer its future renderer applies.)
+
+Three consequences:
+
+- **The "99%+ empty" intuition is literally true for polyphorm-2mrs** (99.1% zeros
+  at large) and true _after classification_ for MCPM and CF-4 (92–97% render-empty)
+  — but **CF-4 has zero value-level sparsity** (a dense linear field around 0.5) and
+  MCPM's zeros stop at ~79%. So an occupancy structure keyed on _stored values_
+  would do nothing for CF-4 and undersell MCPM; only the **transfer-aware** min/max
+  form (suggestion 1) captures the real emptiness. This measurement is the
+  strongest argument for that design choice.
+- **Brick-level skippability at defaults: 88% (CF-4), 67–76% (MCPM), 96–97%
+  (polyphorm)** — the brick grid's win is real at brick granularity, not just voxel
+  granularity, and void regions are contiguous so per-ray savings exceed the brick
+  fraction.
+- **polyphorm-2mrs-large is 216 MB with 95.6% all-zero bricks** — the single
+  strongest candidate for suggestion 9's sparse brick storage (~10 MB of occupied
+  bricks), ahead of MCPM-large (155 MB, 67% zero bricks).
 
 The workbench path tracer (`shaders/mcpm/volpath.wesl`, offline tool only): Woodcock
 delta tracking against a single global majorant, capped at `MAX_TRACK_STEPS = 512`,
