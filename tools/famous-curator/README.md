@@ -2,7 +2,7 @@
 
 Local-only Vite dev tool for hand-curating thumbnails for the ~75-entry
 Famous catalog. Run with `npm run curate-famous` from the repo root;
-opens on http://localhost:5200.
+opens on http://localhost:5200 (see `tools/utils/io/devPorts.ts`).
 
 Spec: `docs/superpowers/specs/2026-05-18-famous-galaxy-curator-design.md`.
 

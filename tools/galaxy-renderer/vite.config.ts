@@ -1,6 +1,7 @@
 /**
- * Galaxy Renderer — Vite dev server config. A sibling dev tool (own port
- * 5400, own `root` at this directory), not part of the runtime bundle.
+ * Galaxy Renderer — Vite dev server config. A sibling dev tool (own port,
+ * see `../utils/io/devPorts.ts`; own `root` at this directory), not part of
+ * the runtime bundle.
  * `publicDir` points at the repo's `public/` so the compare panel can serve
  * curated reference images from one source; most shaders are the runtime's
  * own, reached via `resolve:` + `wesl.toml` symlinks.
@@ -17,6 +18,7 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
+import { DEV_PORTS } from '../utils/io/devPorts.ts';
 import { distDir } from '../utils/io/distDir.ts';
 import { toolPages } from '../utils/io/toolPages.ts';
 
@@ -30,7 +32,7 @@ export default defineConfig(({ command }) => ({
   publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
   envDir: resolve(import.meta.dirname, '../../'),
   build: { outDir: resolve(distDir, toolPages.galaxyRenderer), emptyOutDir: true },
-  server: { port: 5400 },
+  server: { port: DEV_PORTS.galaxyRenderer },
   resolve: {
     // Cross-root WESL: the shared shader families live under the MAIN app's
     // wesl root (src/services/gpu/shaders/<family>) and are reached here

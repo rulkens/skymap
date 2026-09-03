@@ -18,9 +18,8 @@ part of the skymap runtime bundle.
 npm run galaxy-renderer
 ```
 
-Then open <http://localhost:5400>. The port (5400) is deliberately clear of
-the main app (5173), the curator (5200), and the flow-workbench (5300), so
-all four can run side-by-side.
+Then open <http://localhost:5400> (see `tools/utils/io/devPorts.ts` for the
+full port registry).
 
 ## Controls
 
