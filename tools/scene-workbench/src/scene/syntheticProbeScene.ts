@@ -1,23 +1,16 @@
 /**
  * syntheticProbeScene — the `?probe` gate's in-tool stand-in for a baked
  * LiDAR group (mirrors mcpm-workbench's `syntheticCatalog.ts`): a ground
- * plane plus a raised box, ~10k points total, deterministic. Packed by hand
- * with the SAME `points.bin` layout `packPoints.ts` writes (`pointCloudFormat.ts`)
- * — that packer lives in the Node-only `tools/scene-recon` CLI, out of reach
- * from this browser-bundled tool. Manifest and points both ride a `Blob` +
- * `URL.createObjectURL`; `watchRegistrySaga.ts` unwraps the resulting blob:
- * URLs back through `dataUrl()`'s mangling.
+ * plane plus a raised box, ~10k points total, deterministic. Manifest and
+ * points both ride a `Blob` + `URL.createObjectURL`, so the probe needs no
+ * baked data; `resolveAssetUrl.ts` is what lets the resulting blob: URLs
+ * through the saga's fetches unprefixed.
  */
 import type { GroupAnchor } from '../../@types/GroupAnchor';
 import type { GroupRegistryEntry } from '../../@types/GroupRegistryEntry';
 import type { PointCloudAsset } from '../../@types/PointCloudAsset';
 import type { SceneManifest } from '../../@types/SceneManifest';
-import {
-  POINTS_FORMAT_VERSION,
-  POINTS_HEADER_BYTES,
-  POINTS_MAGIC,
-  POINTS_RECORD_BYTES,
-} from '../../../scene-recon/pack/pointCloudFormat';
+import { packPoints, type ScenePoint } from '../../../scene-recon/pack/packPoints';
 
 const GROUND_HALF_EXTENT_M = 35;
 const GROUND_STEPS = 88; // 89x89 grid, ~7.9k points
@@ -28,20 +21,8 @@ const BOX_HEIGHT_M = 8;
 const BOX_STEPS = 20; // 21x21 per face — 4 walls + roof, ~2.2k points
 const BOX_RGB = [150, 122, 92] as const; // masonry tan, ASPRS class 6 (building)
 
-// So the near-clamp dolly step (probeGpuErrors.ts) has geometry in front of
-// it: the box straddles the camera's default target [0, 0, 0].
-type SyntheticPoint = {
-  readonly xM: number;
-  readonly yM: number;
-  readonly zM: number;
-  readonly r: number;
-  readonly g: number;
-  readonly b: number;
-  readonly classification: number;
-};
-
-function groundPoints(): SyntheticPoint[] {
-  const points: SyntheticPoint[] = [];
+function groundPoints(): ScenePoint[] {
+  const points: ScenePoint[] = [];
   const spacing = (2 * GROUND_HALF_EXTENT_M) / GROUND_STEPS;
   for (let i = 0; i <= GROUND_STEPS; i++) {
     const x = -GROUND_HALF_EXTENT_M + i * spacing;
@@ -61,8 +42,10 @@ function groundPoints(): SyntheticPoint[] {
   return points;
 }
 
-function boxPoints(): SyntheticPoint[] {
-  const points: SyntheticPoint[] = [];
+// So the near-clamp dolly step (probeGpuErrors.ts) has geometry in front of
+// it: the box straddles the camera's default target [0, 0, 0].
+function boxPoints(): ScenePoint[] {
+  const points: ScenePoint[] = [];
   const spacingXY = (2 * BOX_HALF_EXTENT_M) / BOX_STEPS;
   const spacingZ = BOX_HEIGHT_M / BOX_STEPS;
   const push = (xM: number, yM: number, zM: number): void => {
@@ -88,28 +71,6 @@ function boxPoints(): SyntheticPoint[] {
   return points;
 }
 
-// Returns the raw ArrayBuffer, not a Uint8Array view — Blob's BlobPart type
-// wants an ArrayBuffer-backed view specifically, and a fresh Uint8Array's
-// inferred `.buffer` type is the wider (SharedArrayBuffer-including) ArrayBufferLike.
-function packSyntheticPoints(points: readonly SyntheticPoint[]): ArrayBuffer {
-  const buffer = new ArrayBuffer(POINTS_HEADER_BYTES + points.length * POINTS_RECORD_BYTES);
-  const dv = new DataView(buffer);
-  for (let i = 0; i < POINTS_MAGIC.length; i++) dv.setUint8(i, POINTS_MAGIC.charCodeAt(i));
-  dv.setUint32(4, POINTS_FORMAT_VERSION, true);
-  dv.setUint32(8, points.length, true);
-  points.forEach((point, i) => {
-    const offset = POINTS_HEADER_BYTES + i * POINTS_RECORD_BYTES;
-    dv.setFloat32(offset, point.xM, true);
-    dv.setFloat32(offset + 4, point.yM, true);
-    dv.setFloat32(offset + 8, point.zM, true);
-    dv.setUint8(offset + 12, point.r);
-    dv.setUint8(offset + 13, point.g);
-    dv.setUint8(offset + 14, point.b);
-    dv.setUint8(offset + 15, point.classification);
-  });
-  return buffer;
-}
-
 const PROBE_ANCHOR: GroupAnchor = {
   kind: 'geodetic',
   latDeg: 55.6761,
@@ -120,8 +81,12 @@ const PROBE_ANCHOR: GroupAnchor = {
 
 export function syntheticProbeScene(): GroupRegistryEntry {
   const points = [...groundPoints(), ...boxPoints()];
-  const packed = packSyntheticPoints(points);
-  const artifactUrl = URL.createObjectURL(new Blob([packed], { type: 'application/octet-stream' }));
+  const packed = packPoints(points);
+  const artifactUrl = URL.createObjectURL(
+    // `BlobPart` wants an ArrayBuffer-backed view; `Uint8Array`'s declared
+    // `.buffer` is the wider, SharedArrayBuffer-including `ArrayBufferLike`.
+    new Blob([packed.buffer as ArrayBuffer], { type: 'application/octet-stream' }),
+  );
 
   const asset: PointCloudAsset = {
     id: 'probe-points',
