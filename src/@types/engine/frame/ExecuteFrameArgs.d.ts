@@ -20,8 +20,8 @@
  *   - `skyCubemapFaceContexts` is the black-hole lens's per-face camera
  *     override, its runtime hand-off: a step carrying `face`
  *     resolves its `SlabView`/`ctx` from THIS map instead of the frame-wide
- *     `ctx` above. `renderFrame` derives it each frame (one
- *     `skyCubemapFaceContext` call per scheduled face); `frameProgram`
+ *     `ctx` above. `renderFrame` derives it on a bake (one
+ *     `skyCubemapFaceContext` call per face); `frameProgram`
  *     stays static and never sees it. Absent/missing-face ⇒ that step is
  *     skipped cleanly (no throw) — the same outcome as
  *     `skyCubemapFaceContext` itself returning `null` for a pre-bootstrap

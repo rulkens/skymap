@@ -116,12 +116,13 @@ describe('frameProgram', () => {
   });
 
   it('emits a COSMO capture step alongside NEAR0 per requested face (Task 13b)', () => {
-    // The fixed opt-in roster spans both slabs — `point-sprites` (COSMO),
-    // `star-catalog`/`star-aggregates`/`star-points` (NEAR0) — and a capture
-    // step's `slab` still gates its group normally (only `target` selection
-    // is bypassed for a capture step). A NEAR0-only capture step would leave
-    // the COSMO half of the roster permanently unselected regardless of its
-    // `skyCapture` flag, so each requested face must get ONE step per slab.
+    // The fixed opt-in roster spans both slabs — `point-sprites`/
+    // `textured-disks` (COSMO), `star-catalog`/`star-aggregates` (NEAR0) —
+    // and a capture step's `slab` still gates its group normally (only
+    // `target` selection is bypassed for a capture step). A NEAR0-only
+    // capture step would leave the COSMO half of the roster permanently
+    // unselected regardless of its `skyCapture` flag, so each requested face
+    // must get ONE step per slab.
     const program = frameProgram(TONE, false, [NEAR0], [0, 2]);
     const captureSteps = program.filter(
       (step) => step.kind === 'render' && step.target === 'sky-cubemap',

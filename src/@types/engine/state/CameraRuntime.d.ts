@@ -62,10 +62,9 @@
  *                    and is its SINGLE writer — the one place that answers 'which
  *                    way is up this frame' for every reader.
  *
- *   `skyCubemapCapture` — the black-hole lens's amortized sky-capture
- *                    bookkeeping (`lastCapturedAtMs`, round-robin
- *                    `frameIndex`, the band-active edge, last-sweep camera
- *                    position). Not boxed — `renderFrame` is its only
+ *   `skyCubemapCapture` — the black-hole lens's sky-cubemap bake bookkeeping
+ *                    (the band-active edge, GC distance, and what the current
+ *                    bake was keyed on). Not boxed — `renderFrame` is its only
  *                    reader/writer, so no other module needs a shared live
  *                    reference. See `SkyCubemapCaptureRuntime.d.ts`.
  *
@@ -101,6 +100,6 @@ export type CameraRuntime = {
    * `runFrame` writes it, once per frame from `resolveFrameBasis`.
    */
   upBasis: { current: Mat3 };
-  /** The black-hole lens's amortized sky-capture bookkeeping; single-writer `renderFrame`. */
+  /** The black-hole lens's sky-cubemap bake bookkeeping; single-writer `renderFrame`. */
   skyCubemapCapture: SkyCubemapCaptureRuntime;
 };

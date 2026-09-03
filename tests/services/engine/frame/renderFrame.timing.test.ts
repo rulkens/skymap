@@ -369,18 +369,19 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // blanket 0 would disable the three cloud rows the test is about
         // (opacity 0 ⇒ no render). Production seeds that fade from
         // `settings.milkyWay.enabled`, which is true here, hence 1.
-        fades: { opacityOf: (id: { kind: string }) => (id.kind === 'milkyWay' ? 1 : 0) },
+        fades: {
+          opacityOf: (id: { kind: string }) => (id.kind === 'milkyWay' ? 1 : 0),
+          isAnyAnimating: () => false,
+        },
         clipPlayer: { clipOpacityOf: () => 1 },
       },
       // The sky-cubemap capture bookkeeping — see the matching fixture
       // comment in renderFrame.test.ts.
       cameraRuntime: {
         skyCubemapCapture: {
-          lastCapturedAtMs: new Map(),
-          frameIndex: 0,
           bandActive: false,
           gcDistanceMpc: Number.POSITIVE_INFINITY,
-          pinnedEyeMpc: null,
+          bakedFrom: null,
         },
       },
     } as never,

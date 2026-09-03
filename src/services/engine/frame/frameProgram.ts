@@ -111,14 +111,15 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * entry, each `depthLoad: 'clear'` so a nearer body row doesn't test against
  * a farther row's depth — see the push loop below.
  *
- * `skyCubemapFacesToCapture` (`skyCubemapCaptureSchedule`'s output, computed
- * by `renderFrame` each frame from the lensing band alpha) is the
- * black-hole lens's amortized sky-capture list: empty outside the band, so
- * NO capture steps are emitted at all (Q6's zero-dispatch guarantee — this is
- * the capture side of that contract, not just the lensing draw itself).
- * Placed in the compute prelude's wake, ahead of every other render step, so
- * a same-frame lensing draw can sample a cubemap this frame
- * actually wrote. TWO steps per requested face — COSMO then NEAR0 — because
+ * `skyCubemapFacesToCapture` (computed by `renderFrame` from
+ * `skyCubemapNeedsBake` — empty outside the band, and empty in-band on every
+ * frame except the one that (re)bakes) is the black-hole lens's sky-cubemap
+ * bake list: empty most frames, so NO capture steps are emitted at all (Q6's
+ * zero-dispatch guarantee — this is the capture side of that contract, not
+ * just the lensing draw itself). Placed in the compute prelude's wake, ahead
+ * of every other render step, so a same-frame lensing draw can sample a
+ * cubemap this frame actually wrote. TWO steps per requested face — COSMO
+ * then NEAR0 — because
  * the fixed opt-in roster (`ContentLayer.skyCapture`) spans both
  * slabs: `point-sprites` / `textured-disks` project through COSMO;
  * `star-catalog` / `star-aggregates` / `star-points` through NEAR0. A
@@ -330,10 +331,9 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
   'mw-aggregate·NEAR0': 'Volumes & aggregates',
-  // The black-hole lens's amortized sky-capture steps — 0-12 of
-  // them per frame (COSMO + NEAR0 per requested face) depending on
-  // `skyCubemapCaptureSchedule`, so its own group rather than folding into
-  // an existing title.
+  // The black-hole lens's sky-cubemap bake steps — 0 or 12 of them per frame
+  // (COSMO + NEAR0 per face, all six or none), so its own group rather than
+  // folding into an existing title.
   'sky-cubemap·COSMO': 'Sky capture',
   'sky-cubemap·NEAR0': 'Sky capture',
   'hdr·COSMO': 'Cosmos · HDR',

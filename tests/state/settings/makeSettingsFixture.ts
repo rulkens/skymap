@@ -81,7 +81,6 @@ import {
 } from '../../../src/data/defaults';
 import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION } from '../../../src/services/engine/frame/skyCubemapCaptureSchedule';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
@@ -143,10 +142,7 @@ export function makeSettingsFixture(
       ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
     // Mirrors initialState.ts's seed.
-    sgrAStarLensingTuning: {
-      ...DEFAULT_SGR_A_STAR_LENSING_TUNING,
-      skyCubemapRecaptureCameraMoveFraction: SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION,
-    },
+    sgrAStarLensingTuning: DEFAULT_SGR_A_STAR_LENSING_TUNING,
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,

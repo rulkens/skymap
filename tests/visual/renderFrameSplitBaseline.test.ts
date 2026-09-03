@@ -504,11 +504,9 @@ describe('renderFrame visual baseline', () => {
         // comment in renderFrame.test.ts.
         cameraRuntime: {
           skyCubemapCapture: {
-            lastCapturedAtMs: new Map(),
-            frameIndex: 0,
             bandActive: false,
             gcDistanceMpc: Number.POSITIVE_INFINITY,
-            pinnedEyeMpc: null,
+            bakedFrom: null,
           },
         },
       } as never,
