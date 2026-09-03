@@ -84,15 +84,11 @@ closed unmerged, branch kept). User ruling: not now.
 5. Interplay with `2026-09-02-lens-crossfade-duplicate-points.md`: that item
    fades the direct roster; this one hard-swaps the S-stars. Keep them agreeing.
 
-## Follow-on once S-stars are off the cubemap
+## Follow-on
 
-**Freeze the cubemap.** With only kpc-scale content on the roster, one 6-face
-sweep on band entry / reallocation is texel-exact for the whole band (1024²
-face texel ≈ 1.5 mrad; a texel of parallax at 8 kpc needs ~12 pc of camera
-travel). Delete the 2 s staleness valve, the camera-move fraction knob and its
-settings row, the per-frame round-robin, and pinned-eye tracking; keep the
-full-sweep path. Accept stale roster-toggle-in-band or key on a few booleans.
-Paired A/B on `sgr-a-star-lens` expected to drop one face render per frame.
+Freezing the cubemap to a static bake is its own item,
+`2026-09-03-sky-cubemap-static-bake.md`: doable on main today, since the
+S-stars never reach the capture anyway.
 
 ## Cheaper wrong fix, for the record
 
