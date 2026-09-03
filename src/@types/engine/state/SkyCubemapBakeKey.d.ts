@@ -15,6 +15,6 @@ export type SkyCubemapBakeKey = {
   readonly tier: Tier;
   /** The `sky-cubemap` row's ALLOCATED per-axis size; the resolution knob reallocates the row (fresh, cleared texture). */
   readonly faceSizePx: number;
-  /** A source-visibility ramp changes the capture every frame it runs; forces a re-bake each frame until the ramp settles, then one final settled bake. */
-  readonly fadesAnimating: boolean;
+  /** True while any roster layer's input is still moving — a source-visibility ramp, or a thumbnail bitmap in flight / in its load fade; the bake runs every such frame and once more when it settles. */
+  readonly rosterSettling: boolean;
 };

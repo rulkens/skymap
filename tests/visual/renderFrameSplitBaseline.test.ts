@@ -344,6 +344,7 @@ describe('renderFrame visual baseline', () => {
       lastOutput: {
         disks: [{ stub: true }] as unknown[],
       },
+      hasInFlightWork: () => false,
     };
 
     const ctx = {

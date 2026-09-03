@@ -56,7 +56,10 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
     },
     selection: { hover: null, select: null, focus: null },
     tier: 'medium',
-    subsystems: { fades: { isAnyAnimating: () => false } },
+    subsystems: {
+      fades: { isAnyAnimating: () => false },
+      texturedDisks: { hasInFlightWork: () => false },
+    },
     cameraRuntime: { skyCubemapCapture: makeCaptureRuntime() },
     ...overrides,
   } as unknown as EngineState;
@@ -246,6 +249,25 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
 
     const state = makeState({
       subsystems: { fades: { isAnyAnimating: () => true } },
+    } as Partial<EngineState>);
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes.
+    skyCubemapFaceContextMock.mockClear();
+
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+
+    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('fades settled but a thumbnail is still in flight ⇒ a second in-band frame with unchanged state still sweeps all six faces', () => {
+    skyCubemapFaceContextMock.mockImplementation(
+      (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
+    );
+
+    const state = makeState({
+      subsystems: {
+        fades: { isAnyAnimating: () => false },
+        texturedDisks: { hasInFlightWork: () => true },
+      },
     } as Partial<EngineState>);
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes.
     skyCubemapFaceContextMock.mockClear();

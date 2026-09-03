@@ -171,11 +171,14 @@ export function renderFrame(input: RenderFrameInput): void {
       selection: state.selection,
       tier: state.tier,
       faceSizePx,
-      // A source-visibility ramp (e.g. toggling a galaxy catalog) writes
-      // settings ONCE at the start, then runs for hundreds of ms with no
-      // further settings write — without this, the cubemap would freeze the
-      // pre-toggle look for the ramp's whole duration.
-      fadesAnimating: state.subsystems.fades.isAnyAnimating(ctx.nowMs),
+      // Two roster inputs move without a settings write: a source-visibility
+      // ramp (settings write fires once, at the ramp's START), and a
+      // famous-galaxy thumbnail's atlas upload + 400 ms load fade (arrives
+      // async, after the ramp has already settled). Either forces a re-bake
+      // every frame it runs, plus one final settled bake.
+      rosterSettling:
+        state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
+        (state.subsystems.texturedDisks?.hasInFlightWork() ?? false),
     };
     if (skyCubemapNeedsBake(captureRuntime.bakedFrom, bakeKey)) {
       for (const face of ALL_CUBE_FACES) {

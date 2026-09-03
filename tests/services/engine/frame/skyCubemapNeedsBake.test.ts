@@ -8,7 +8,7 @@ function makeKey(overrides: Partial<SkyCubemapBakeKey> = {}): SkyCubemapBakeKey 
     selection: {} as SkyCubemapBakeKey['selection'],
     tier: 'medium',
     faceSizePx: 1024,
-    fadesAnimating: false,
+    rosterSettling: false,
     ...overrides,
   };
 }
@@ -28,21 +28,21 @@ describe('skyCubemapNeedsBake', () => {
     ['selection', { selection: {} as SkyCubemapBakeKey['selection'] }],
     ['tier', { tier: 'small' as const }],
     ['faceSizePx', { faceSizePx: 512 }],
-    ['fadesAnimating', { fadesAnimating: true }],
+    ['rosterSettling', { rosterSettling: true }],
   ])('%s differing ⇒ true', (_name, override) => {
     const base = makeKey();
     expect(skyCubemapNeedsBake(base, makeKey({ ...base, ...override }))).toBe(true);
   });
 
-  it('current.fadesAnimating true ⇒ true even with every other field identical to baked', () => {
-    const baked = makeKey({ fadesAnimating: false });
-    const current = makeKey({ ...baked, fadesAnimating: true });
+  it('current.rosterSettling true ⇒ true even with every other field identical to baked', () => {
+    const baked = makeKey({ rosterSettling: false });
+    const current = makeKey({ ...baked, rosterSettling: true });
     expect(skyCubemapNeedsBake(baked, current)).toBe(true);
   });
 
   it('a ramp settling (baked animating, current settled) ⇒ true once, then false once baked catches up', () => {
-    const animating = makeKey({ fadesAnimating: true });
-    const settled = makeKey({ ...animating, fadesAnimating: false });
+    const animating = makeKey({ rosterSettling: true });
+    const settled = makeKey({ ...animating, rosterSettling: false });
 
     // The frame the ramp stops: baked still carries the mid-ramp key, current
     // has settled — one final bake to capture the resolved look.
