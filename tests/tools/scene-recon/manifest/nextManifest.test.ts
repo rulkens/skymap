@@ -27,6 +27,7 @@ const GROUP: SceneGroupDefinition = {
   anchor: { kind: 'geodetic', latDeg: 55.67, lonDeg: 12.53, heightMDvr90: 18.53, headingDeg: 0 },
   bounds: { west: 12.51, south: 55.662, east: 12.55, north: 55.678 },
   dhmTiles: [],
+  sourceSrs: 'EPSG:25832',
   minPointSpacingM: 1,
   dropClassifications: [7, 18],
 };

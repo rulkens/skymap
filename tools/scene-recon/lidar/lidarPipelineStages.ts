@@ -15,13 +15,16 @@ import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
 export const PDAL_CSV_COLUMNS = 'X,Y,Z,Red,Green,Blue,Classification';
 
 export type LidarBakeSpec = {
-  readonly lazFiles: readonly string[];
+  readonly lasFiles: readonly string[];
   readonly bounds: LonLatBounds;
   readonly orthoVrtPath: string;
   readonly anchor: GroupAnchor;
   readonly minPointSpacingM: number;
   readonly dropClassifications: readonly number[];
   readonly outCsvPath: string;
+  /** The tiles' own CRS: Punktsky LAS files embed none, and
+   *  `filters.reprojection` refuses to run without one. */
+  readonly defaultSrs: string;
 };
 
 export type PdalStage = Readonly<Record<string, unknown>>;
@@ -29,13 +32,14 @@ export type PdalStage = Readonly<Record<string, unknown>>;
 /** The `pipeline` array of a PDAL pipeline JSON, in execution order. */
 export function lidarPipelineStages(spec: LidarBakeSpec): readonly PdalStage[] {
   const {
-    lazFiles,
+    lasFiles,
     bounds,
     orthoVrtPath,
     anchor,
     minPointSpacingM,
     dropClassifications,
     outCsvPath,
+    defaultSrs,
   } = spec;
   const { west, east, south, north } = bounds;
 
@@ -48,7 +52,9 @@ export function lidarPipelineStages(spec: LidarBakeSpec): readonly PdalStage[] {
     `+step +proj=topocentric +lat_0=${anchor.latDeg} +lon_0=${anchor.lonDeg} +h_0=${anchor.heightMDvr90} +ellps=GRS80`;
 
   return [
-    ...lazFiles.map((filename): PdalStage => ({ type: 'readers.las', filename })),
+    ...lasFiles.map(
+      (filename): PdalStage => ({ type: 'readers.las', filename, default_srs: defaultSrs }),
+    ),
     { type: 'filters.reprojection', out_srs: 'EPSG:4326' },
     { type: 'filters.crop', bounds: `([${west},${east}],[${south},${north}])` },
     { type: 'filters.expression', expression: dropExpression },

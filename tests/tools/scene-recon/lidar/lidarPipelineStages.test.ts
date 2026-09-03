@@ -24,13 +24,14 @@ const ANCHOR: GroupAnchor = {
 };
 
 const SPEC: LidarBakeSpec = {
-  lazFiles: ['/data/raw/lidar/tile_a.laz', '/data/raw/lidar/tile_b.laz'],
+  lasFiles: ['/data/raw/lidar/tile_a.las', '/data/raw/lidar/tile_b.las'],
   bounds: BOUNDS,
   orthoVrtPath: '/tmp/ortho.vrt',
   anchor: ANCHOR,
   minPointSpacingM: 0.1,
   dropClassifications: [7, 18],
   outCsvPath: '/tmp/out.csv',
+  defaultSrs: 'EPSG:25832',
 };
 
 describe('lidarPipelineStages', () => {
@@ -48,6 +49,12 @@ describe('lidarPipelineStages', () => {
       'filters.sample',
       'writers.text',
     ]);
+  });
+
+  it('names the source CRS on every reader — the LAS tiles embed none', () => {
+    const readers = lidarPipelineStages(SPEC).filter((stage) => stage.type === 'readers.las');
+    expect(readers).toHaveLength(2);
+    for (const reader of readers) expect(reader.default_srs).toBe('EPSG:25832');
   });
 
   it('writes the anchor into the topocentric coordinate-operation pipeline', () => {

@@ -52,11 +52,11 @@ export async function bakeLidar(
   deps: { readonly runPdal: PdalRunner; readonly pdalVersion: () => string },
 ): Promise<PointCloudAsset> {
   const dhmDir = rawDataPath('dhm.dir');
-  const lazFiles = group.dhmTiles.map((tile) => join(dhmDir, `${tile}.las`));
-  const missing = lazFiles.filter((path) => !existsSync(path));
+  const lasFiles = group.dhmTiles.map((tile) => join(dhmDir, `${tile}.las`));
+  const missing = lasFiles.filter((path) => !existsSync(path));
   if (missing.length > 0) {
     throw new Error(
-      `bakeLidar: ${missing.length}/${lazFiles.length} DHM tile(s) missing from ${dhmDir} ` +
+      `bakeLidar: ${missing.length}/${lasFiles.length} DHM tile(s) missing from ${dhmDir} ` +
         `— run \`npm run fetch-dhm\` first:\n${missing.map((path) => `  ${path}`).join('\n')}`,
     );
   }
@@ -74,19 +74,15 @@ export async function bakeLidar(
 
   const csvPath = join(workDir, `${group.id}.csv`);
   const stages = lidarPipelineStages({
-    lazFiles,
+    lasFiles,
     bounds: group.bounds,
     orthoVrtPath: vrtPath,
     anchor: group.anchor,
     minPointSpacingM: group.minPointSpacingM,
     dropClassifications: group.dropClassifications,
     outCsvPath: csvPath,
-  }).map((stage) =>
-    // The Punktsky LAS tiles carry no embedded CRS (data/raw/dhm/README.md
-    // "Tile CRS: EPSG:25832") — `filters.reprojection` refuses to run
-    // without one, so every `readers.las` stage gets it as a default.
-    stage.type === 'readers.las' ? { ...stage, default_srs: 'EPSG:25832' } : stage,
-  );
+    defaultSrs: group.sourceSrs,
+  });
   const pipelineJsonPath = join(workDir, `${group.id}-pipeline.json`);
   await writeFile(pipelineJsonPath, JSON.stringify({ pipeline: stages }, null, 2));
 

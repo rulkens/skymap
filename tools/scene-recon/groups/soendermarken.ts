@@ -19,6 +19,9 @@ export type SceneGroupDefinition = {
   readonly bounds: LonLatBounds;
   /** DHM 1 km tile names to fetch (task 1's list). */
   readonly dhmTiles: readonly string[];
+  /** The tiles' CRS. Punktsky LAS files embed none, so the pipeline's
+   *  `readers.las` stages must state it or `filters.reprojection` refuses. */
+  readonly sourceSrs: string;
   /** `filters.sample` radius, metres — the density cap that keeps points.bin loadable. */
   readonly minPointSpacingM: number;
   /** ASPRS classes dropped before packing (7 = low noise, 18 = high noise). */
@@ -51,6 +54,7 @@ export const SOENDERMARKEN: SceneGroupDefinition = {
     'punktsky_1km_6175_722',
     'punktsky_1km_6175_723',
   ],
+  sourceSrs: 'EPSG:25832',
   minPointSpacingM: 1.0,
   dropClassifications: [7, 18],
 };
