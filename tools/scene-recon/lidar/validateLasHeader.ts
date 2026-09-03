@@ -1,19 +1,11 @@
 /**
- * validateLasHeader — catches the truncation class of bug the entitlement
- * probe hit: the LASF public header block is fixed at 227 bytes through the
- * Z-bounds field (ASPRS LAS 1.2+), so a short read or a zero point count are
- * cheap, no-dependency truncation signals that don't require parsing a
- * single point record.
- *
- * No absolute Z-bounds plausibility band: a live fetch of every Søndermarken
- * tile showed EVERY one reports a header Z range in the hundreds of metres
- * (e.g. -52.68..895.9 for punktsky_1km_6175_721) while its byte count matches
- * `offsetToPointData + pointCount * recordLength` exactly — genuinely
- * complete, not truncated. This is the header-bbox landmine
- * `data/raw/dhm/README.md` already documents (unfiltered Classification 6/7
- * noise-class outliers), present on every tile regardless of completeness —
- * so it cannot be used to detect truncation. The byte-size formula below is
- * the decisive signal for these uncompressed `.las` tiles.
+ * validateLasHeader — catches a truncated download. The LASF public header
+ * block is fixed at 227 bytes through the Z-bounds field (ASPRS LAS 1.2+):
+ * a short read or a zero point count are cheap truncation signals. The
+ * decisive check is the byte-size formula below (offset + pointCount *
+ * recordLength vs. actual file size) — NOT the header's Z bounds, which are
+ * garbage on every real tile regardless of completeness (see
+ * data/raw/dhm/README.md's "LAS header Z bounds are garbage" landmine).
  */
 const LAS_HEADER_BYTES = 227;
 

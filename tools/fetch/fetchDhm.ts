@@ -3,14 +3,11 @@
  * fetchDhm — download the Søndermarken DHM/Punktsky LAS tiles from the
  * Datafordeler Fildownload REST endpoint into `data/raw/dhm/` (see
  * `data/raw/dhm/README.md` for endpoint shape, licence, and landmines).
- *
- * The server ignores `Range` (verified: a ranged GET still returns the
- * full body with `200`, never `206`) — every download is a whole-file GET,
- * never a resumed partial. Because of that, and because the entitlement
- * probe caught a ~13 MB truncated tile passing a naive "non-zero size"
- * resume check, every tile — freshly downloaded or already on disk — is
- * verified via `validateLasHeader` before it's trusted; a tile that fails
- * is deleted rather than left for a future run to mistake for done.
+ * The server ignores `Range` (a ranged GET still returns `200`, never
+ * `206`) so every download is a whole-file GET; every tile — freshly
+ * downloaded or already on disk — is verified via `validateLasHeader`
+ * (byte formula, not header Z bounds — see that file's header) before
+ * it's trusted, and a failing tile is deleted rather than left on disk.
  */
 import {
   closeSync,
