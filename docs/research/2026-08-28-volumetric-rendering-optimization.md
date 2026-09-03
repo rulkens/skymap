@@ -121,6 +121,24 @@ Three consequences:
   strongest candidate for suggestion 9's sparse brick storage (~10 MB of occupied
   bricks), ahead of MCPM-large (155 MB, 67% zero bricks).
 
+**Why polyphorm is 99% zeros and MCPM isn't (MEASURED, 2026-09-03): the import
+path, not the simulations.** polyphorm-2mrs was imported with
+`buildRhizomeVolume.ts --clamp 0.2` (recorded in `docs/DATA.md` — sub-deadband
+voxels zeroed at build time, gzipped large tier 194 MB → 2.3 MB "at no visible
+cost"); its smallest nonzero voxel is exactly 0.2, the clamp's signature.
+`buildMcpmVolume.ts` has no clamp option, so MCPM ships its fog: beyond the sim's
+genuine 78.8% voids, ~13.9% of large-tier voxels sit in (0.01, 0.36) normalised —
+raw trace ~0.1–45 against max ≈ 40 000 / p99 ≈ 320, the agents' faint wander
+haze — every one of them _exactly_ invisible at default knobs (visibility floor
+0.362). Simulated `--clamp 0.2` on mcpm-large: 90.8% zeros, gzipped 31.0 MB →
+14.3 MB (−54%). Two caveats before adopting it (suggestion 9's cheapest rung):
+clamping is a **wire/storage win only** — the shader still fetches the zeros, so
+GPU time comes from the brick grid, which is transfer-aware and indifferent to
+whether fog is stored or zeroed; and the contrast slider reaches 0.25 (deadband 0) with trim 0, so the haze IS reachable by a user exploring low-contrast today —
+after clamping it has a hard floor at 0.2. polyphorm already accepted that trade;
+whether MCPM's low-contrast exploration mode is worth 16.7 MB of wire is a user
+ruling, not a default.
+
 The workbench path tracer (`shaders/mcpm/volpath.wesl`, offline tool only): Woodcock
 delta tracking against a single global majorant, capped at `MAX_TRACK_STEPS = 512`,
 HG phase sampling, Russian roulette from bounce 2, progressive accumulation buffer.
