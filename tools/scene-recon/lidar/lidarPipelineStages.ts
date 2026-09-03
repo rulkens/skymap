@@ -1,26 +1,12 @@
 /**
  * lidarPipelineStages — the PDAL pipeline JSON as data, so the LiDAR bake's
- * stage graph is testable without PDAL installed (the wrapper's actual
- * `spawnSync` runner is a separate, injected concern).
- *
- * The first `filters.reprojection` (→ EPSG:4326) puts `filters.crop` and the
- * ortho VRT in the same degree frame, before colorization ever samples a
- * pixel. The topocentric ENU metre frame after it must run before
- * `filters.sample`, whose `radius` is metres — meaningless while points are
- * still in degrees. It's `filters.projpipeline`, not a second
- * `filters.reprojection`: GDAL's CRS machinery can't promote a bare
- * `+proj=topocentric ...` string to a `SingleCRS` (verified: both
- * `out_srs: topocentricSrs` and wrapping it in `+proj=pipeline` fail —
- * `cs2cs`'s equivalent failure is in `data/raw/dhm/README.md`'s landmines).
- * `filters.projpipeline`'s `coord_op` runs an explicit PROJ pipeline
- * instead — `+proj=cart` then `+proj=topocentric` — and needs its own
- * `unitconvert` step first: PROJ pipelines execute in radians, unlike the
- * `cct` CLI (used to verify this exact pipeline in the README) which
- * converts degree input for you.
- *
- * Dropping classifications is `filters.expression`, not `filters.range`:
- * PDAL ORs multiple range clauses on the same dimension, so a chained
- * `Classification![7:7], Classification![18:18]` excludes nothing.
+ * stage graph is testable without PDAL installed (the `spawnSync` runner is
+ * a separate concern). Order is load-bearing: reproject to degrees before
+ * crop/colorization, then `filters.projpipeline` — not a second
+ * `filters.reprojection`, see `data/raw/dhm/README.md`'s landmines for why —
+ * to the metre ENU frame `filters.sample` needs. Classification drop is
+ * `filters.expression`, not `filters.range`: PDAL ORs chained range clauses
+ * on one dimension, excluding nothing.
  */
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
@@ -54,6 +40,8 @@ export function lidarPipelineStages(spec: LidarBakeSpec): readonly PdalStage[] {
   const { west, east, south, north } = bounds;
 
   const dropExpression = dropClassifications.map((c) => `Classification != ${c}`).join(' && ');
+  // `unitconvert` first: PROJ pipelines run in radians, unlike `cs2cs`/`cct`'s
+  // CLI convenience wrappers, which convert degree input for you.
   const topocentricCoordOp =
     `+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad ` +
     `+step +proj=cart +ellps=GRS80 ` +
