@@ -44,23 +44,20 @@ describe('lidarPipelineStages', () => {
       'filters.crop',
       'filters.expression',
       'filters.colorization',
-      'filters.reprojection',
+      'filters.projpipeline',
       'filters.sample',
       'writers.text',
     ]);
   });
 
-  it('writes the anchor into the topocentric projection', () => {
+  it('writes the anchor into the topocentric coordinate-operation pipeline', () => {
     const stages = lidarPipelineStages(SPEC);
-    const topocentric = stages.find(
-      (stage) =>
-        stage.type === 'filters.reprojection' &&
-        typeof stage.out_srs === 'string' &&
-        (stage.out_srs as string).includes('topocentric'),
-    );
-    expect(topocentric, 'topocentric reprojection stage').toBeTruthy();
-    expect(topocentric!.out_srs).toBe(
-      '+proj=topocentric +lat_0=55.6761 +lon_0=12.5683 +h_0=5.2 +ellps=GRS80',
+    const topocentric = stages.find((stage) => stage.type === 'filters.projpipeline');
+    expect(topocentric, 'topocentric projpipeline stage').toBeTruthy();
+    expect(topocentric!.coord_op).toBe(
+      '+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad ' +
+        '+step +proj=cart +ellps=GRS80 ' +
+        '+step +proj=topocentric +lat_0=55.6761 +lon_0=12.5683 +h_0=5.2 +ellps=GRS80',
     );
   });
 

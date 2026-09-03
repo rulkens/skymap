@@ -66,6 +66,7 @@
     "mcpm-workbench:probe": "tsx tools/mcpm-workbench/probeGpuErrors.ts",
     "mcpm-workbench:compare": "tsx tools/mcpm-workbench/validate/compareTraceCubes.ts",
     "scene-workbench": "vite --config tools/scene-workbench/vite.config.ts",
+    "bake-lidar": "tsx tools/scene-recon/bakeLidar.ts",
     "curate-famous": "vite --config tools/famous-curator/vite.config.ts",
     "deploy": "git push origin main && echo 'Pushed.  Cloudflare Workers Assets is rebuilding — watch https://dash.cloudflare.com/?to=/:account/workers-and-pages'",
     "desi-cone-census": "tsx tools/catalog/desiConeCensus.ts",
