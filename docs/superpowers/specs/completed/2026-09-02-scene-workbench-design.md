@@ -320,7 +320,8 @@ read-modify-write target for both the bake CLIs and the nudge endpoint (§7.4).
 
 ```
 data/raw/
-  dhm/                       LAZ 1×1 km point-cloud tiles + 0.4 m DSM/DTM GeoTIFFs
+  dhm/                       uncompressed .las 1×1 km point-cloud tiles (0.4 m
+                             DSM/DTM GeoTIFFs exist upstream, not fetched in plan 1)
     README.md                provenance, licence, API terms, tile list  (committed)
   skraafoto/                 STAC item JSON + COG crops, per photo
     README.md                                                           (committed)
@@ -358,7 +359,7 @@ record array, no compression (the dev server is localhost).
 | — per record, stride 16 — |             |                                                |
 | `x, y, z`                 | 3 × f32, 12 | metres, asset frame                            |
 | `r, g, b`                 | 3 × u8, 3   | sampled from the GeoDanmark ortho at bake time |
-| `classification`          | u8, 1       | ASPRS class from the LAZ, carried through PDAL |
+| `classification`          | u8, 1       | ASPRS class from the LAS, carried through PDAL |
 
 **`splats.bin`** — quantized 3DGS. The header selects the stride, so a deg-0 bake and
 a deg-1 bake are the same reader:
@@ -393,10 +394,10 @@ convention (`tools/filaments/buildFilaments.ts`).
 
 ### Fetchers — `tools/fetch/`
 
-| Script              | Source                                    | Notes                                                                                                                                        |
-| ------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fetchDhm.ts`       | Datafordeler **REST/Fildownload**, apikey | LAZ 1×1 km tiles + 0.4 m DSM/DTM GeoTIFF. Resume cache keyed by tile name.                                                                   |
-| `fetchSkraafoto.ts` | Dataforsyningen **STAC API**, 24 h token  | Item search by bbox; COG **range-request crops**, not whole frames. Stores the STAC item JSON beside each crop — `pers:` is the pose source. |
+| Script              | Source                                    | Notes                                                                                                                                                            |
+| ------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fetchDhm.ts`       | Datafordeler **REST/Fildownload**, apikey | Uncompressed `.las` 1×1 km tiles (0.4 m DSM/DTM GeoTIFFs not fetched in plan 1). Resume = file presence + LAS-header completeness check, no separate cache file. |
+| `fetchSkraafoto.ts` | Dataforsyningen **STAC API**, 24 h token  | Item search by bbox; COG **range-request crops**, not whole frames. Stores the STAC item JSON beside each crop — `pers:` is the pose source.                     |
 
 Avoid WCS and WMTS on both platforms: WCS retires end-2026, the legacy WMTS
 2027-01-15 (research doc, "Datafordeler transition"). The apikey REST/STAC endpoints
@@ -422,13 +423,13 @@ Plus the three `*.readme` file rows the `readme:` back-references point at.
 
 ### Bake CLIs — `tools/scene-recon/`
 
-| Script             | Wraps                                                                                                                                          | Produces                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `bakeLidar.ts`     | **PDAL** — crop to the group bounds, classification filter, `colorization` against the GeoDanmark ortho                                        | `points.bin`                                                |
-| `ingestCapture.ts` | **ffmpeg** (video → frames) then **COLMAP** SfM                                                                                                | a sparse model + undistorted frames in a session workdir    |
-| `bakeMesh.ts`      | **COLMAP** (poses _injected_ from skråfoto `pers:` for fetched data; full SfM for captures) → **OpenMVS** densify → reconstruct → texture, CPU | `mesh.glb`                                                  |
-| `bakeSplats.ts`    | **Brush** (Apache-2.0, wgpu/WGSL, trains natively on Mac) → 3DGS `.ply` → pack                                                                 | `splats.bin`                                                |
-| `bakePoses.ts`     | STAC `pers:` or COLMAP output → group frame                                                                                                    | the `cameraPoseSet` asset, written inline into the manifest |
+| Script             | Wraps                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Produces                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `bakeLidar.ts`     | **PDAL** — `readers.las` (`default_srs`, the tiles carry no embedded CRS) → crop to the group bounds → `filters.expression` classification drop (range clauses on one PDAL dimension OR together, so `filters.range` cannot exclude several classes) → `colorization` against the GeoDanmark ortho → `filters.projpipeline` metre reprojection (`unitconvert → cart → topocentric`; a bare `+proj=topocentric` isn't a promotable CRS on PROJ 9.8, so `filters.reprojection` can't take it) → `writers.text` (`quote_header: false`) | `points.bin`                                                |
+| `ingestCapture.ts` | **ffmpeg** (video → frames) then **COLMAP** SfM                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | a sparse model + undistorted frames in a session workdir    |
+| `bakeMesh.ts`      | **COLMAP** (poses _injected_ from skråfoto `pers:` for fetched data; full SfM for captures) → **OpenMVS** densify → reconstruct → texture, CPU                                                                                                                                                                                                                                                                                                                                                                                       | `mesh.glb`                                                  |
+| `bakeSplats.ts`    | **Brush** (Apache-2.0, wgpu/WGSL, trains natively on Mac) → 3DGS `.ply` → pack                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `splats.bin`                                                |
+| `bakePoses.ts`     | STAC `pers:` or COLMAP output → group frame                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | the `cameraPoseSet` asset, written inline into the manifest |
 
 Each writes its asset entry into the group manifest by read-modify-write (§7.4's
 rule applies to CLIs too). **OpenSplat with the Metal backend is the noted fallback
@@ -507,9 +508,15 @@ hand-rolled concurrency guard — `takeLatest` a generation counter, `takeLeadin
 in-flight boolean, saga cancellation a `disposed` flag.
 
 **Imperative resources never enter the store.** `RenderResources` — `{ gpu,
-renderers, gpuAssets, poseTexture, epoch }` — is a mutable bag created by `Viewport`,
+gpuAssets, lidar, depthTexture, epoch }` — is a mutable bag created by `Viewport`,
 handed to the sagas via `sagaMiddleware.setContext`, and read by the frame driver by
-reference. `epoch` increments on every dispose and is the staleness token.
+reference. `epoch` increments on every dispose and is the staleness token. `lidar` is
+the single renderer slot in plan 1 (plans 2–3 add `splat`/`mesh`/`poseOverlay`
+alongside it); `depthTexture` is scene-lifetime, sized to the canvas rather than
+per-asset. `disposeScene` tears `lidar` down and rebuilds it on every group switch
+even though the renderer's pipeline does not depend on which group is loaded — a
+renderer riding the same scene-lifetime bag as the GPU assets is a plan-2 un-braid,
+not a plan-1 concern.
 
 > **Landmine, learned the expensive way in the MCPM rewrite:** an `epoch` check placed
 > _after_ a `yield*` is dead code on cancellation — redux-saga sets `effectSettled`
@@ -553,10 +560,18 @@ would make the splat covariance transport non-orthogonal.
 ### 7.3 Camera
 
 A tool-local metre-native orbit rig — orbit, dolly, pan — composed from the existing
-pure functions in `src/utils/camera/`: `yawPitchToDir`, `updatePosition`,
-`zoomedDistance`, `orbitRadPerPixel`, `frameUp`, `imagePlaneBasis`. All six are
-unit-agnostic; the app's Mpc scale lives in its callers, not in them (Q10, verified at
+pure functions in `src/utils/camera/`: `yawPitchToDir`, `frameUp`, `imagePlaneBasis`,
+plus `orbitDragDelta` from `tools/utils/camera/` for input. `zoomedDistance` and
+`orbitRadPerPixel` are deliberately not used: both degenerate to a constant with no
+pivot surface, this tool's only case, and `zoomedDistance` reaches `clampDistance`'s
+Mpc constants — the exact leak the paragraph below forbids. The rest are
+unit-agnostic; the app's Mpc scale lives in the callers, not in them (Q10, verified at
 the ground checkpoint).
+
+The group frame is ENU (§4) and **Z-up**: yaw rotates about +Z, pitch tilts toward
++Z, `upM = [0, 0, 1]`. The bake's `+proj=topocentric` output (§6) defines this axis
+convention; `yawPitchToDir`/`frameUp` decode a Y-up frame-local direction, so the rig
+rotates that decode into world Z-up before use.
 
 **Do not import `clampDistance`.** `src/utils/camera/clampDistance.ts` bakes Mpc
 constants into the module (`MIN_DISTANCE_MPC = 1e-17`, and a surface-standoff policy
@@ -713,7 +728,11 @@ expensive reconstructions is trusted with anything.
    the DHM point cloud arrives in 1 × 1 km EPSG:25832 tiles that will not align with
    it. Settle at `fetchDhm` time: which tiles, what crop bounds, and the
    `latDeg`/`lonDeg`/`heightMDvr90` of the anchor. Everything downstream is a
-   translation, so a wrong first guess is cheap to correct.
+   translation, so a wrong first guess is cheap to correct. **Settled for plan 1:**
+   the whole-patch extent (task 1), narrowing deferred. Native density over this bbox
+   is ~0.45 pts/m², measured — not the ~4–5 pts/m² first assumed; `filters.sample` at
+   `minPointSpacingM: 1.0` still thins it, and the group bakes to ~1.6 M points ≈
+   26 MB.
 2. **Brush's SH block.** The degree-1 record layout in §5 is left open because it
    depends on the column order, normalization and count Brush actually writes into its
    3DGS `.ply`. Inspect one real output before pinning it; degree 0 is enough for the

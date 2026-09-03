@@ -1,0 +1,28 @@
+/* `position: relative` is what makes `.panel`'s `absolute` anchor to this
+   box instead of the page — Viewport's own canvas fills it at 100vw/100vh
+   underneath. */
+.root {
+  position: relative;
+  height: 100vh;
+  color: var(--color-fg);
+  background: var(--color-bg);
+}
+
+.panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300px;
+  max-width: 90vw;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: var(--space-4, 8px) 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  border-right: 1px solid var(--border-default);
+  color: var(--color-fg-base);
+  font-family: var(--font-family-mono);
+}
