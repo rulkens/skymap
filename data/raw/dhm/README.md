@@ -20,34 +20,66 @@ Taken verbatim from the GeoDanmark ortho harvest this scene sits inside
 covers, not a park-scale crop. Narrowing later is a crop-constant edit plus
 a re-bake, nothing else (spec §11 open question 1).
 
-|                            |                                    |
-| -------------------------- | ---------------------------------- |
-| Bbox (W/S/E/N, EPSG:4326)  | 12.51 / 55.662 / 12.55 / 55.678    |
-| Anchor `latDeg` / `lonDeg` | 55.67 / 12.53 (bbox centre)        |
-| Anchor `headingDeg`        | 0 (group +X = local east)          |
-| Anchor `heightMDvr90`      | **~33 m — PROVISIONAL, see below** |
+|                            |                                  |
+| -------------------------- | -------------------------------- |
+| Bbox (W/S/E/N, EPSG:4326)  | 12.51 / 55.662 / 12.55 / 55.678  |
+| Anchor `latDeg` / `lonDeg` | 55.67 / 12.53 (bbox centre)      |
+| Anchor `headingDeg`        | 0 (group +X = local east)        |
+| Anchor `heightMDvr90`      | **18.5 m** (measured, see below) |
 
-### `heightMDvr90` — provisional, re-read at bake time
+### `heightMDvr90` — read from the anchor tile's own points
 
 The DHM/Terræn WMS (`https://wms.datafordeler.dk/DHMNedboer/dhm/1.0.0/WMS`)
-is reachable with the Fildownload key (`GetCapabilities` returns 200 and
-lists `dhm_kote_0_5_m`/`dhm_kote_2_5_m`/`dhm_kurve_*` layers), but
-`GetFeatureInfo` against `dhm_kote_0_5_m` at the anchor coordinate returned
-"Search returned no results" — it's a contour/spot-height cartographic
-layer, not a point-queryable DTM raster, so it can't hand back a numeric
-elevation this way. Punktsky's own LAS header bounding box is **not**
-trustworthy for this either — see the "LAS header Z bounds are garbage"
-landmine below.
+is reachable with the Fildownload key (`GetCapabilities` returns 200), but
+`GetFeatureInfo` against its `dhm_kote_0_5_m` layer at the anchor
+coordinate returned "Search returned no results" — it's a contour/spot-height
+cartographic layer, not a point-queryable DTM raster. Punktsky's own LAS
+header bounding box is unusable too (see "LAS header Z bounds are garbage"
+below). Both ruled out, the height was read from the anchor tile's actual
+points instead:
 
-Used instead: Frederiksberg's highest point, the Frederiksberg Bakke
-moraine ridge running through Frederiksberg Have and Søndermarken (the
-anchor sits on its Søndermarken flank), is documented at 31 m.o.h. near the
-castle/Zoo tower and up to 35–36 m.o.h. at a knoll on the Søndermarken side
-(da.wikipedia.org "Valby Bakke og Frederiksberg Bakke"; Trap Danmark, which
-gives the municipality's high point as 36 m.o.h.). **33 m DVR90** is used
-as the anchor midpoint estimate. Task 3's bake must re-read the real value
-from the first fetched tile's actual ground-classified points (not its
-header bbox) and overwrite this constant.
+```
+$ pdal info --stats --dimensions Classification punktsky_1km_6175_721.las
+Classification min 1 max 11 count 455159
+```
+
+`punktsky_1km_6175_721.las` (the tile covering the anchor, fetched during
+the entitlement check) carries **zero** `Classification == 2` (ground)
+points anywhere in its 455,159 — its only classes are 1 (unclassified/noise
+catch-all), 5 (high vegetation), 6 (building), 7 (low-point noise), and 11
+(not a class the DHM v1.0.0 product spec uses; likely a pre-2018-vintage
+holdover). A `filters.smrf` ground-reclassification pass over a 60 m
+context around the anchor was also tried and found to degenerate to a
+no-op — with no true bare-earth return anywhere nearby to anchor the
+morphological model, it just reclassified the same ~429 canopy points as
+"ground" (median 19.95 m, identical to the unfiltered vegetation stats
+below), so its output wasn't used either.
+
+Used instead: the minimum Z among all points within 20 m of the anchor —
+a hard lower bound from real returns, not a manufactured estimate:
+
+```
+$ pdal pipeline anchor-crop-pipeline.json   # readers.las → filters.crop(point, distance=20) → writers.text
+$ # 429 points in radius: 418 Classification=5 (high vegetation, Z 18.45–22.45),
+$ #                        11 Classification=1 (unclassified, Z 25.87–29.63)
+$ python3 -c "..."  # min(Z) over the 429-point CSV
+18.45
+```
+
+**18.5 m DVR90** (429 points sampled, tile `punktsky_1km_6175_721.las`).
+Since it's the lowest of 429 real LiDAR returns within 20 m, true bare
+earth is at or below it — high-vegetation points sit ≥2 m above ground by
+DHM's own classification rule (see Point classification, DHM product spec
+§7.3), so this likely still overstates ground height by some margin the
+data here can't resolve (no pulse in this radius reached soil). The
+Frederiksberg Bakke figure (31–36 m.o.h., da.wikipedia.org "Valby Bakke og
+Frederiksberg Bakke"; Trap Danmark) does **not** corroborate this — that's
+a different, higher point (the ridge crest near the castle/Zoo tower),
+not the bbox-centre anchor, which sits lower and further into
+Søndermarken's tree cover. Task 3's bake should run a proper ground filter
+(e.g. `filters.smrf`/`filters.pmf`) over the full multi-tile mosaic, which
+has far more context than one edge-adjacent tile, and overwrite this
+constant with that result.
 
 ## Tile list
 
@@ -109,10 +141,18 @@ separate subscription from the WMS one. No portal action needed.
   a zip. Sniff the magic number, don't trust the header.
 - **LAS header Z bounds are garbage.** The anchor tile's header
   (`punktsky_1km_6175_721.las`) reports `minz=-52.68`, `maxz=895.9` —
-  physically impossible for Denmark (country max ≈ 171 m). The header
-  bbox is noise-contaminated and must not be used for `heightMDvr90` or
-  any other elevation read; use actual ground-classified point statistics
-  instead.
+  physically impossible for Denmark (country max ≈ 171 m), caused by a
+  handful of far-outlier points (Classification 6 and 7) the header
+  bounds don't exclude. Never trust the header bbox for an elevation
+  read; filter by classification and/or a spatial crop first.
+- **This tile has no ground classification at all.** `Classification`
+  ranges 1–11 with zero `2`s across all 455,159 points (see
+  `heightMDvr90` above) — don't assume `filters.range
+Classification[2:2]` returns anything for an arbitrary Punktsky tile;
+  check first, and have a ground-filter fallback (`filters.smrf` /
+  `filters.pmf`) ready. Even that fallback needs real bare-earth returns
+  to anchor itself — under a dense-canopy tile like this one it can
+  degenerate to a no-op that just relabels canopy as "ground".
 - **`cs2cs`'s two-CRS form can't take a bare `+proj=topocentric` string.**
   The brief's literal verification command
   (`cs2cs EPSG:4326 "+proj=topocentric ..."`) fails on the installed PROJ
