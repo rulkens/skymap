@@ -11,11 +11,19 @@ import { describe, it, expect, afterEach } from 'vitest';
 
 import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
 import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
-import { setSurfaceBand } from '../../../src/data/camera/surfaceRegime';
+import { setSurfaceBand, SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
+
+// Restore what module load SAW, not literals — the records are mutable
+// session state and the defaults must never fork between src and tests.
+const TUNING_AT_LOAD = { ...ORIENT_TUNING };
+const BAND_AT_LOAD = {
+  engageHR: SURFACE_REGIME.engageHR,
+  disengageHR: SURFACE_REGIME.disengageHR,
+};
 
 afterEach(() => {
-  ORIENT_TUNING.blendSpace = 'log';
-  setSurfaceBand({ engageHR: 1.7, disengageHR: 3.4 });
+  Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
+  setSurfaceBand(BAND_AT_LOAD);
 });
 
 describe('bodyUpWeight', () => {

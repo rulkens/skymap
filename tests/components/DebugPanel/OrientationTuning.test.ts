@@ -14,10 +14,15 @@ import OrientationTuning from '../../../src/components/DebugPanel/OrientationTun
 import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
 import { setSurfaceBand, SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
 
+const TUNING_AT_LOAD = { ...ORIENT_TUNING };
+const BAND_AT_LOAD = {
+  engageHR: SURFACE_REGIME.engageHR,
+  disengageHR: SURFACE_REGIME.disengageHR,
+};
+
 afterEach(() => {
-  setSurfaceBand({ engageHR: 1.7, disengageHR: 3.4 });
-  ORIENT_TUNING.blendSpace = 'log';
-  ORIENT_TUNING.northUp = true;
+  setSurfaceBand(BAND_AT_LOAD);
+  Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
 });
 
 describe('OrientationTuning', () => {

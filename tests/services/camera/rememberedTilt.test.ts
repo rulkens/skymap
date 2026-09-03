@@ -27,9 +27,10 @@ const POLE: Vec3 = [0, 0, 1];
 /** Columns right | up | forward. Nadir: at +Z looking down, screen-up = +Y. */
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 
+const TUNING_AT_LOAD = { ...ORIENT_TUNING };
+
 afterEach(() => {
-  ORIENT_TUNING.blendSpace = 'log';
-  ORIENT_TUNING.northUp = true;
+  Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
 });
 
 function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {

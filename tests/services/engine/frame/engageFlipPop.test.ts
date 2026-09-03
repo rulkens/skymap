@@ -40,6 +40,7 @@ import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENT_DECAY } from '../../../../src/data/camera/orientDecay';
 import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
+
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -52,6 +53,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
+const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
 const EARTH = deriveBodyStates(SIM).get('earth')! as BodyState;
@@ -149,7 +151,7 @@ function turnBetween(a: FrameSample, b: FrameSample): number {
 
 describe('engage-flip pop (round 8)', () => {
   afterEach(() => {
-    ORIENT_TUNING.blendSpace = 'log';
+    ORIENT_TUNING.blendSpace = TUNING_AT_LOAD.blendSpace;
   });
 
   // Both blend spaces (ruling 11): the seam guard must hold whichever

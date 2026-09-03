@@ -14,8 +14,12 @@
 import { useReducer, type ReactNode } from 'react';
 
 export type OrientationTuningProps = {
-  /** The session's remembered tilt (ruling 12), read-only trial observability. */
-  readonly rememberedTiltRad: number;
+  /**
+   * The session's remembered tilt (ruling 12), read-only trial observability.
+   * Pre-formatted by the caller (CameraStateSection's `num`), the same
+   * contract as DebugSlider's `readout` — one formatting home per panel.
+   */
+  readonly rememberedTiltReadout: string;
 };
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import {
@@ -26,7 +30,7 @@ import {
 import DebugSlider from './DebugSlider';
 import styles from './OrientationTuning.module.css';
 
-function OrientationTuning({ rememberedTiltRad }: OrientationTuningProps): ReactNode {
+function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): ReactNode {
   const [, bump] = useReducer((n: number) => n + 1, 0);
   const limits = SURFACE_BAND_LIMITS;
   return (
@@ -34,7 +38,7 @@ function OrientationTuning({ rememberedTiltRad }: OrientationTuningProps): React
       <div className={styles.title}>orientation tuning</div>
       <div className={styles.readoutRow}>
         <span>remembered_tilt_rad</span>
-        <span>{String(rememberedTiltRad)}</span>
+        <span>{rememberedTiltReadout}</span>
       </div>
       <DebugSlider
         label="engage h/R"

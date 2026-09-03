@@ -9,8 +9,13 @@ import { describe, it, expect, afterEach } from 'vitest';
 
 import { setSurfaceBand, SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
 
+const BAND_AT_LOAD = {
+  engageHR: SURFACE_REGIME.engageHR,
+  disengageHR: SURFACE_REGIME.disengageHR,
+};
+
 afterEach(() => {
-  setSurfaceBand({ engageHR: 1.7, disengageHR: 3.4 });
+  setSurfaceBand(BAND_AT_LOAD);
 });
 
 describe('setSurfaceBand', () => {

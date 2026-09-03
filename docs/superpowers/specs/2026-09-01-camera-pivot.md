@@ -781,10 +781,14 @@ for a roll-free pose, but a dive accumulates roll, and nulling forward's
 azimuth instead drove a measured polar dive through north-up and back out.
 
 **Small-body engage feel — flagged, not built.** Every planet/moon registry row
-can engage (R2's argmin is body-blind); on a ~10 km moon the band engages at
-~17 km altitude, which is correct but may feel abrupt. If the feel gate
-objects, the remedy is a per-row engage floor — a registry parameter, never a
-second regime.
+can engage (R2's argmin over the roster is body-blind); on a ~10 km moon the
+band engages at ~17 km altitude, which is correct but may feel abrupt. If the
+feel gate objects, the remedy is a per-row engage floor — a registry
+parameter, never a second regime. _(Amended 2026-09-03, fix round 10: the
+argmin stays body-blind, but engage is no longer focus-blind — a BODY focus
+must name the nearest body for the arm to be entered, and a differing body
+focus releases an engaged arm; null and non-body focus leave the predicate as
+specified here. See `regimeArmFor`.)_
 
 **Known, out of scope.** A tour that ends on a non-body-centred pose while a
 body is focused snaps when the resting driver's pivot pin resumes. That is an

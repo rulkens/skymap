@@ -156,7 +156,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
           </div>
         </div>
       ))}
-      <OrientationTuning rememberedTiltRad={snap.rememberedTiltRad} />
+      <OrientationTuning rememberedTiltReadout={num(snap.rememberedTiltRad)} />
     </DebugSection>
   );
 }

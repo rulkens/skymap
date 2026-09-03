@@ -1,18 +1,16 @@
 /**
- * regimeArmFor — the regime predicate (spec §4, §12-R2): a pure geometric
- * read, never a stored flag. `camera.base.frame` (a `PoseFrame`) IS the
- * regime, so hysteresis falls out of `current` alone — from `'absolute'` the
- * test is `min(h/R) < engageHR`, from a body arm it is `h/R > disengageHR`
- * for THAT body only, never the roster-wide minimum. The roster rule (every
- * `SCENE_BODIES` row present in `bodyStates`, body-blind) lives in
- * `nearestBodyHR`, shared with the approach alignment.
- *
- * `focusedBodyId` (round 10): a focus on a DIFFERENT body is a disengage
- * condition — and symmetrically blocks engage — because a body arm the fold
- * would release next frame must never be entered (the alternative is an
- * engage/release flip committed every frame until the follow ease escapes
- * the band). Only a BODY focus constrains; null (no focus, or a star/
- * galaxy/structure focus) keeps the predicate body-blind as before.
+ * regimeArmFor — the regime predicate (spec §4, §12-R2, round 10): a pure
+ * read of geometry AND focus, never a stored flag. A body arm needs BOTH
+ * conditions: the focus one — a BODY focus must name the nearest/engaged
+ * body; a differing body focus releases the arm and symmetrically blocks
+ * engage, since an arm the fold would release next frame must never be
+ * entered (the alternative: a flip committed every frame until the follow
+ * ease escapes the band) — and the altitude one, where `camera.base.frame`
+ * IS the regime, so hysteresis falls out of `current` alone: from
+ * `'absolute'` the test is `min(h/R) < engageHR`, from a body arm it is
+ * `h/R > disengageHR` for THAT body only, never the roster-wide minimum.
+ * Only with a null or non-body focus is the predicate body-blind, per
+ * `nearestBodyHR`'s roster rule (shared with the approach alignment).
  */
 
 import type { PoseFrame } from '../../../@types/camera/PoseFrame';
@@ -32,6 +30,14 @@ export function regimeArmFor(
 ): PoseFrame {
   if (current === 'absolute') {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);
+    // Clip/tour reachability (R10-1): guided flight cannot trip the focus
+    // gate — `flyAndFocusOnClip` lands its focus cue at beat start, aligned
+    // with the destination — but a hand-authored `flyToClip`/`flyPath` CAN
+    // park at another body's surface with a stale body focus; no engage
+    // happens there, so the first at-rest frame's pivot pin re-targets the
+    // FOCUSED body and the camera leaves for it (demonstrated in
+    // focusReleaseWhileEngaged.test.ts; pre-round-10 the focus-blind engage
+    // captured the parked-at body mid-approach, shielding it from the pin).
     return nearest !== null &&
       nearest.hr < SURFACE_REGIME.engageHR &&
       (focusedBodyId === null || focusedBodyId === nearest.bodyId)

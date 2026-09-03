@@ -30,8 +30,10 @@ const VIEWPORT: Vec2 = [100, 100];
 const FOV = Math.PI / 2;
 const POLE: Vec3 = [0, 0, 1];
 
+const TUNING_AT_LOAD = { ...ORIENT_TUNING };
+
 afterEach(() => {
-  ORIENT_TUNING.northUp = true;
+  Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
 });
 
 /** Roll-free basis at heading ψ / tilt θ for an eye on +Z (see surfaceController fixtures). */

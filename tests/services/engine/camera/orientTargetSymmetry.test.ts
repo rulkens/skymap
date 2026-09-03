@@ -33,6 +33,7 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
+const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
 const EARTH = BODIES.get('earth')!;
@@ -74,7 +75,7 @@ describe.each(['log', 'lin'] as const)(
       ORIENT_TUNING.blendSpace = space;
     });
     afterEach(() => {
-      ORIENT_TUNING.blendSpace = 'log';
+      ORIENT_TUNING.blendSpace = TUNING_AT_LOAD.blendSpace;
     });
 
     it.each(STANDPOINTS)('world and engaged targets agree at every altitude (yaw %j)', (sp) => {
