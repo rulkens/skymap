@@ -15,10 +15,6 @@ import type { SceneCameraView } from './sceneCameraView';
 import { SCENE_CAMERA_BYTES, writeSceneCamera } from './writeSceneCamera';
 import lidarPointWgsl from './shaders/lidarPoint.wesl?static';
 
-/** Quad edge in pixels — big enough to close the gaps a 5 cm cloud leaves at
- *  building scale, small enough not to fatten the ground into a blob. */
-const POINT_SIZE_PX = 2;
-
 const VERTICES_PER_POINT = 6; // lidarPoint.wesl's two-triangle quad
 
 export type LidarPointRenderer = {
@@ -28,6 +24,7 @@ export type LidarPointRenderer = {
     depth: GPUTextureView,
     view: SceneCameraView,
     assets: readonly LidarGpuAsset[],
+    pointSizePx: number,
   ): void;
   dispose(): void;
 };
@@ -82,8 +79,8 @@ export function createLidarPointRenderer(
   });
 
   return {
-    draw(encoder, target, depth, view, assets): void {
-      writeSceneCamera(cameraF32, view, POINT_SIZE_PX);
+    draw(encoder, target, depth, view, assets, pointSizePx): void {
+      writeSceneCamera(cameraF32, view, pointSizePx);
       device.queue.writeBuffer(cameraBuffer, 0, cameraF32);
 
       const pass = encoder.beginRenderPass({

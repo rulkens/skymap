@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { createSceneStore } from '../../store/createSceneStore';
+import DisplayPanel from '../DisplayPanel/DisplayPanel';
 import EmptyState from '../EmptyState/EmptyState';
 import GroupPicker from '../GroupPicker/GroupPicker';
 import LayerList from '../LayerList/LayerList';
@@ -24,6 +25,7 @@ function App(): ReactNode {
         <div className={styles.panel}>
           <GroupPicker />
           <LayerList />
+          <DisplayPanel />
           <EmptyState />
         </div>
       </div>

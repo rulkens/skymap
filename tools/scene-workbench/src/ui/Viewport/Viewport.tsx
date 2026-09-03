@@ -112,6 +112,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         depthViewFor(gpu.device, resources, canvas.width, canvas.height),
         view,
         visibleAssets(state.view.hiddenAssetIds),
+        state.view.display.pointCloud.pointSizePx,
       );
       gpu.device.queue.submit([encoder.finish()]);
     };

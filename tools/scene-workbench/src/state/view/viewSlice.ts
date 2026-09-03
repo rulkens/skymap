@@ -12,6 +12,8 @@ export type ViewSlice = {
   camera: SceneCamera;
   hiddenAssetIds: readonly string[];
   deviceLost: boolean;
+  /** Per-render-layer display knobs. `pointSizePx` is device pixels (quad edge). */
+  display: { pointCloud: { pointSizePx: number } };
 };
 
 /** Pitch ceiling matching `applyInputToCamera.ts`'s: at exactly ±π/2 forward
@@ -22,6 +24,8 @@ export const defaultViewSlice: ViewSlice = {
   camera: { yaw: 0, pitch: 0.35, distanceM: 200, targetM: [0, 0, 0] },
   hiddenAssetIds: [],
   deviceLost: false,
+  // 2px: closes the gaps a 5cm cloud leaves at building scale without fattening the ground.
+  display: { pointCloud: { pointSizePx: 2 } },
 };
 
 export const viewSlice = createSlice({
@@ -46,7 +50,11 @@ export const viewSlice = createSlice({
     deviceLost: (state) => {
       state.deviceLost = true;
     },
+    setPointCloudPointSize: (state, action: PayloadAction<number>) => {
+      state.display.pointCloud.pointSizePx = action.payload;
+    },
   },
 });
 
-export const { commitCameraPose, toggleAssetVisibility, deviceLost } = viewSlice.actions;
+export const { commitCameraPose, toggleAssetVisibility, deviceLost, setPointCloudPointSize } =
+  viewSlice.actions;
