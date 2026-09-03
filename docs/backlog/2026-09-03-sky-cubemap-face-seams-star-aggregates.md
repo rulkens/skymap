@@ -42,5 +42,6 @@ footprint at 90°.
 
 - `docs/backlog/2026-09-02-lens-crossfade-duplicate-points.md` — different
   symptom (band ramp), same cubemap.
-- Follow-up proposed in PR #657 discussion: freeze the cubemap to a one-shot
-  capture on band entry. Independent of this seam, but the same capture code.
+- The cubemap is now a one-shot static bake on band entry (formerly proposed
+  in PR #657 discussion, now landed). Independent of this seam, but the same
+  capture code.

@@ -105,16 +105,6 @@ export const SGR_A_STAR_LENSING_SLIDER_FIELDS: readonly SgrAStarLensingSliderFie
     title:
       "Overall multiplier on the annulus emission's summed output intensity. 1 = today's brightness.",
   },
-  {
-    key: 'skyCubemapRecaptureCameraMoveFraction',
-    label: 'recaptureMoveFraction',
-    min: 0.005,
-    max: 0.2,
-    step: 0.005,
-    format: (v) => v.toFixed(3),
-    title:
-      'Escape-valve movement threshold, as a fraction of the camera-to-Sgr-A* distance, that forces a full 6-face sky-cubemap resweep.',
-  },
 ];
 
 /**

@@ -139,10 +139,11 @@ export const starPointsLayer: ContentLayer = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
-  // Sky-cubemap capture roster (Task 13b, Ruling 6): the S-star partition
-  // branch is part of the black-hole lens's captured "sky" — NOT
-  // body-glints, whichever branch the S-stars fall into at capture range.
-  skyCapture: true,
+  // Deliberately OFF the sky-cubemap capture roster: the capture face pose
+  // carries a placeholder `distance: 1` Mpc (`skyCubemapFaceContext.ts`)
+  // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew
+  // anything. The S-stars need finite-distance lensing rather than an
+  // at-infinity cubemap — see `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
 
   enabled(state, ctx, _view) {
     // Handle first, distance second, backdrop-band third, partition last —

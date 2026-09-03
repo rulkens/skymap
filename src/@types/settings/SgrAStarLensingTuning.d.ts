@@ -30,8 +30,6 @@ export type SgrAStarLensingTuning = {
   emissionTint: Vec3;
 
   // ── Non-uniform, same settings seam ──────────────────────────────────────
-  /** Was `skyCubemapCaptureSchedule.ts`'s `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`. */
-  skyCubemapRecaptureCameraMoveFraction: number;
   /**
    * The `sky-cubemap` render-target row's per-axis pixel size (256/512/1024/2048).
    * Read by `renderTargets.ts`'s state-driven `fixedSizePx.size` resolver, so

@@ -567,22 +567,19 @@ function makeInput(
           // filamentsLayer.enabled consults the FadeRegistry to keep the
           // layer alive through fade-out tails. A minimal opacityOf stub
           // keeps the gate from crashing.
-          fades: { opacityOf: () => 1 },
+          fades: { opacityOf: () => 1, isAnyAnimating: () => false },
           clipPlayer: { clipOpacityOf: () => 1 },
         },
-        // The sky-cubemap capture bookkeeping — `bandActive`/`gcDistanceMpc`
-        // update every frame, but the schedule fields (`frameIndex`,
-        // `lastCapturedAtMs`) only advance while the lensing band is active.
-        // The fixture camera sits Mpc-scale away from Sgr A*, so the band
-        // stays closed and `facesToCapture` stays empty; see
-        // `skyCubemapCaptureSchedule`'s call site in renderFrame.ts.
+        // The sky-cubemap bake bookkeeping — `bandActive`/`gcDistanceMpc`
+        // update every frame; `bakedSettings` only changes while the lensing
+        // band is active. The fixture camera sits Mpc-scale away from Sgr
+        // A*, so the band stays closed and `facesToCapture` stays empty;
+        // see `renderFrame.ts`'s in-band block.
         cameraRuntime: {
           skyCubemapCapture: {
-            lastCapturedAtMs: new Map(),
-            frameIndex: 0,
             bandActive: false,
             gcDistanceMpc: Number.POSITIVE_INFINITY,
-            pinnedEyeMpc: null,
+            bakedSettings: null,
           },
         },
       } as never,

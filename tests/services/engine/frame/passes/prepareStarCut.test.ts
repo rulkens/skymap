@@ -45,9 +45,13 @@ function camAtPc(distPc: number): Vec3 {
   return [0, 0, distPc * PC_TO_MPC];
 }
 
-/** A FRESH ctx per call — prepareStarCut memoises on the ctx object. */
-function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
-  return { drawCamPos: camPos, nowMs } as unknown as ReadyFrameContext;
+/**
+ * A FRESH ctx per call — prepareStarCut memoises on the ctx object. `viewSlot`
+ * defaults to 0 (main view; a real `ReadyFrameContext.viewSlot` is always a
+ * number, never undefined) — pass 1-6 for a sky-cubemap capture face.
+ */
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): ReadyFrameContext {
+  return { drawCamPos: camPos, nowMs, viewSlot } as unknown as ReadyFrameContext;
 }
 
 function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[]) {
@@ -287,5 +291,83 @@ describe('prepareStarCut per-node LOD fades', () => {
     // shouldKeepTicking keeps the loop ticking to finish the dissolve.
     const f2 = prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50));
     expect(f2!.anyNodeFading).toBe(true);
+  });
+});
+
+describe('prepareStarCut capture views (viewSlot !== 0)', () => {
+  // A sky-cubemap capture face shares the catalog's fade state with the main
+  // view (it's keyed per CATALOG, not per ctx) but must not participate in it —
+  // it has no temporal continuity to protect, and up to six of these run before
+  // the main view each real frame (see the module header).
+
+  it('a capture ctx called right after a main-view ctx yields every cut node at full opacity, not 0', () => {
+    const catalog = makeTwoLevelCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const state = makeState(renderer);
+
+    // Main view snaps the root aggregate full at FAR_PC.
+    prepareStarCut(state, makeCtx(camAtPcVec(FAR_PC), 0));
+
+    // A capture ctx at the SAME nowMs (dtMs would be 0 on the fade-based path,
+    // pinning a NEWCOMER at opacity 0) but a different camera — its cut is just
+    // the leaf. It must draw at full opacity, not fade in from 0.
+    const capture = onlySource(prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 0, 1)));
+    expect(opacityInStream(capture.leaf, LEAF_INDEX)).toBeCloseTo(crossfadeAt(CLOSE_PC), 6);
+    expect(opacityInStream(capture.aggregate, ROOT_INDEX)).toBeUndefined();
+  });
+
+  it("a capture call between two main-view calls does not perturb the main view's fade progression", () => {
+    // Read each frame's opacities out IMMEDIATELY after its call — a
+    // `StarNodeStream` is the SAME reused array object across frames (reset in
+    // place per catalog, see its header), so a `PreparedStarCut` handle held
+    // past the NEXT `prepareStarCut` call for that catalog reads that later
+    // frame's contents instead.
+
+    // Control: the same three main-view frames as the fade-timing test above,
+    // with no capture call interleaved.
+    const controlCatalog = makeTwoLevelCatalog();
+    const controlState = makeState(
+      makeRenderer([{ source: Source.GaiaStars, catalog: controlCatalog }]),
+    );
+    prepareStarCut(controlState, makeCtx(camAtPcVec(FAR_PC), 0));
+    const control2 = onlySource(prepareStarCut(controlState, makeCtx(camAtPcVec(CLOSE_PC), 50)));
+    const controlLeaf2 = opacityInStream(control2.leaf, LEAF_INDEX);
+    const controlAgg2 = opacityInStream(control2.aggregate, ROOT_INDEX);
+    const control3 = onlySource(prepareStarCut(controlState, makeCtx(camAtPcVec(CLOSE_PC), 350)));
+    const controlLeaf3 = opacityInStream(control3.leaf, LEAF_INDEX);
+    const controlAgg3Count = control3.aggregate.count;
+
+    // Test: identical main-view frames, but with capture ctxs (different
+    // viewSlots, as a real sky-cubemap sweep issues) inserted between each pair.
+    const testCatalog = makeTwoLevelCatalog();
+    const testState = makeState(makeRenderer([{ source: Source.GaiaStars, catalog: testCatalog }]));
+    prepareStarCut(testState, makeCtx(camAtPcVec(FAR_PC), 0));
+    prepareStarCut(testState, makeCtx(camAtPcVec(CLOSE_PC), 25, 1));
+    const test2 = onlySource(prepareStarCut(testState, makeCtx(camAtPcVec(CLOSE_PC), 50)));
+    const testLeaf2 = opacityInStream(test2.leaf, LEAF_INDEX);
+    const testAgg2 = opacityInStream(test2.aggregate, ROOT_INDEX);
+    prepareStarCut(testState, makeCtx(camAtPcVec(CLOSE_PC), 200, 6));
+    const test3 = onlySource(prepareStarCut(testState, makeCtx(camAtPcVec(CLOSE_PC), 350)));
+    const testLeaf3 = opacityInStream(test3.leaf, LEAF_INDEX);
+    const testAgg3Count = test3.aggregate.count;
+
+    expect(testLeaf2).toBeCloseTo(controlLeaf2!, 6);
+    expect(testAgg2).toBeCloseTo(controlAgg2!, 6);
+    expect(testLeaf3).toBeCloseTo(controlLeaf3!, 6);
+    expect(testAgg3Count).toBe(controlAgg3Count);
+    expect(controlAgg3Count).toBe(0);
+  });
+
+  it('a capture result reports anyNodeFading === false even while the main view is mid-fade', () => {
+    const catalog = makeTwoLevelCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const state = makeState(renderer);
+
+    prepareStarCut(state, makeCtx(camAtPcVec(FAR_PC), 0));
+    const mainMidFade = prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50));
+    expect(mainMidFade!.anyNodeFading).toBe(true);
+
+    const capture = prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50, 1));
+    expect(capture!.anyNodeFading).toBe(false);
   });
 });

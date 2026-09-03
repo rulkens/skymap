@@ -6,21 +6,20 @@ closed unmerged, branch kept). User ruling: not now.
 
 ## What is wrong on main today
 
-1. **The S-stars never enter the sky cubemap.** `starPointsLayer` carries
-   `skyCapture: true`, but each capture face's synthetic pose uses a placeholder
-   `distance: 1` (Mpc) to land the eye (`skyCubemapFaceContext.ts`), and the
-   layer's `ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC` gate (~0.23 Mpc)
-   rejects it on every face. So the lens pass shows no S-star behind the hole,
-   contradicting the grill ruling that "a star sweeping behind the hole still
-   doubles/rings". No other roster layer reads `cam.distance` (verified), so the
-   placeholder harms only this row.
-2. **Even captured, the cubemap is the wrong model for them.** It is an
-   at-infinity capture from a pinned eye. In the lens band the camera is
-   100–500 AU from Sgr A\* and the S-stars 120–1900 AU, so source and observer
-   distances are comparable. Finite-distance Einstein radius
-   θ_E² = 2 r_s D_ls / (D_l D_s): at 300 AU camera / 300 AU behind, 0.017 rad
-   vs 0.024 at infinity (ring ~40% too big). Parallax before a re-sweep (3% of
-   GC distance) is degrees. Galaxies and the Gaia stream are kpc away, where
+1. **The S-stars never enter the sky cubemap.** `starPointsLayer` no longer
+   carries `skyCapture` at all (removed once it was confirmed dead weight):
+   each capture face's synthetic pose used a placeholder `distance: 1` (Mpc)
+   to land the eye (`skyCubemapFaceContext.ts`), and the layer's
+   `ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC` gate (~0.23 Mpc) rejected
+   it on every face, so the flag never drew anything. The lens pass still
+   shows no S-star behind the hole, contradicting the grill ruling that "a
+   star sweeping behind the hole still doubles/rings".
+2. **Even captured, the cubemap is the wrong model for them.** It is a
+   one-shot at-infinity bake. In the lens band the camera is 100–500 AU from
+   Sgr A\* and the S-stars 120–1900 AU, so source and observer distances are
+   comparable. Finite-distance Einstein radius θ_E² = 2 r_s D_ls / (D_l D_s):
+   at 300 AU camera / 300 AU behind, 0.017 rad vs 0.024 at infinity (ring
+   ~40% too big). Galaxies and the Gaia stream are kpc away, where
    at-infinity holds to texel precision.
 
 ## What the branch built (reusable as-is, all tested)
@@ -86,9 +85,8 @@ closed unmerged, branch kept). User ruling: not now.
 
 ## Follow-on
 
-Freezing the cubemap to a static bake is its own item,
-`2026-09-03-sky-cubemap-static-bake.md`: doable on main today, since the
-S-stars never reach the capture anyway.
+The cubemap is now a one-shot static bake (its own backlog item, landed and
+removed from this file). Independent of the analytic-lensing work here.
 
 ## Cheaper wrong fix, for the record
 

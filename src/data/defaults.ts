@@ -279,18 +279,9 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
  * `cubemapResolutionPx` seeds the `sky-cubemap` render-target row's declared
  * size (`renderTargets.ts`) — 1024, per a live-view judgment; the knob's
  * option set is 256/512/1024/2048.
- *
- * NOT here: `skyCubemapRecaptureCameraMoveFraction`. Its owner is
- * `skyCubemapCaptureSchedule.ts` (a `services/` module `data/` doesn't
- * import from), so `initialState.ts` seeds it straight from there and spreads
- * it in alongside this object — the same "owned by the module it feeds"
- * relationship `DEFAULT_REFINE_THRESHOLD` has to `walkStarOctreeCut`.
  */
 const SGR_A_STAR_BLACK_HOLE_ROW = BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id)!;
-export const DEFAULT_SGR_A_STAR_LENSING_TUNING: Omit<
-  SgrAStarLensingTuning,
-  'skyCubemapRecaptureCameraMoveFraction'
-> = {
+export const DEFAULT_SGR_A_STAR_LENSING_TUNING: SgrAStarLensingTuning = {
   innerRs: SGR_A_STAR_BLACK_HOLE_ROW.emission.innerRs,
   outerRs: SGR_A_STAR_BLACK_HOLE_ROW.emission.outerRs,
   inclinationRad: SGR_A_STAR_BLACK_HOLE_ROW.emission.inclinationRad,

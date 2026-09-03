@@ -59,12 +59,10 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import { skyCubemapCaptureSchedule } from './skyCubemapCaptureSchedule';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
 import { regionById } from '../../../utils/scene/regionById';
 import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
-import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
@@ -73,6 +71,8 @@ import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 // matching the other two consumers of the same lookup — `sgrAStarLensingLayer`
 // and `bodyGlintsLayer`.
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
+
+const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -112,10 +112,10 @@ export function renderFrame(input: RenderFrameInput): void {
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
 
-  // The black-hole lens's amortized sky-cubemap capture schedule. The band
-  // keys on the CAMERA's distance from the galactic-centre anchor, the same
-  // quantity + region every `sgrAStarLensing`-band consumer reads. The
-  // bookkeeping lives on `cameraRuntime` — see `SkyCubemapCaptureRuntime`.
+  // The black-hole lens's sky-cubemap bake. The band keys on the CAMERA's
+  // distance from the galactic-centre anchor, the same quantity + region
+  // every `sgrAStarLensing`-band consumer reads. The bookkeeping lives on
+  // `cameraRuntime` — see `SkyCubemapCaptureRuntime`.
   const captureRuntime = state.cameraRuntime.skyCubemapCapture;
   const gcDistanceMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
@@ -128,25 +128,32 @@ export function renderFrame(input: RenderFrameInput): void {
   captureRuntime.gcDistanceMpc = gcDistanceMpc;
   const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
 
-  const bandJustEngaged = bandActive && !captureRuntime.bandActive;
   // The `sky-cubemap` row's 50 MB exists only while the band does (its
   // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`
   // runs BEFORE this frame's camera pose is produced, so it cannot see the
-  // band open; the edge reconciles here instead, because the entry frame is
-  // also the frame that sweeps all six faces and would otherwise read a row
-  // that does not exist yet.
+  // band open; the edge reconciles here instead. `bakedSettings` is `null`
+  // whenever the band is inactive (seeded null, reset null on close below),
+  // so the band-entry frame always finds nothing baked and sweeps all six
+  // faces — it needs the row to already exist.
   if (bandActive !== captureRuntime.bandActive) {
     captureRuntime.bandActive = bandActive;
     ctx.renderTargets.reconcile(state, ctx.canvasSize);
+    if (!bandActive) captureRuntime.bakedSettings = null;
   }
 
-  // `frameProgram` only knows WHICH faces to capture; each face's own
-  // synthetic camera is resolved here, fresh every frame, since the face LIST
-  // changes frame to frame. `faceSizePx` reads the row's ALLOCATED size, not
-  // `specOf().fixedSizePx.size`: that field is a live setting (a function of
-  // state), so the resolved allocation is the authoritative answer. A face
-  // whose context comes back null (pre-bootstrap) is omitted — `executeFrame`
-  // treats a missing map entry as "skip this step cleanly".
+  // The captured "sky" is kpc away and static: a 1024² face covers 90°, so
+  // one texel is ~1.5 mrad, and shifting content at 8 kpc by a texel needs
+  // ~12 pc of camera travel — the whole lens band is 500 AU. One bake is
+  // texel-exact for the entire band; the lens shader already samples the
+  // cubemap as at-infinity, so there is no pinned-eye tracking to do.
+  //
+  // A settings-reference change re-bakes. Dropped from the key on purpose:
+  // `tier` — a tier swap dissolves through `fades.fadeTo` (`dissolveCatalogBuffer.ts`),
+  // so `rosterSettling` already catches it; `faceSizePx` — the resolution
+  // knob is a settings write, and `reconcile` (above) reallocates the row
+  // earlier in the same `runFrame`, so the settings-ref bake lands in the
+  // new texture; `selection` — a stale selection halo in the lensed sky is
+  // accepted.
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
   let skyCubemapFacesToCapture: readonly CubeFace[] = [];
   // Sgr A*'s own body-m slab row this frame: `frameProgram` emits the
@@ -161,53 +168,35 @@ export function renderFrame(input: RenderFrameInput): void {
     sgrAStarBodySlab =
       ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
         ?.index ?? null;
-    // Measured against the PINNED eye, not the live camera each frame: a
-    // fresh live eye per round-robin face made adjacent faces disagree at
-    // their shared border and the whole cubemap flicker as the camera moved.
-    // Threshold is a FRACTION of `gcDistanceMpc` — see
-    // `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`'s own docblock for why a
-    // fixed AU distance is wrong here. Read off settings (the DebugPanel
-    // knob), not the module constant — which stays this value's real owner
-    // (`initialState.ts` seeds from it).
-    const cameraMovedBeyondThreshold =
-      captureRuntime.pinnedEyeMpc !== null &&
-      distanceMpc(ctx.drawCamPos, captureRuntime.pinnedEyeMpc) >
-        state.settings.sgrAStarLensingTuning.skyCubemapRecaptureCameraMoveFraction * gcDistanceMpc;
-    const fullSweepTriggered = bandJustEngaged || cameraMovedBeyondThreshold;
-    // Re-pin BEFORE scheduling so a triggered full sweep — including this
-    // frame's own faces — samples the eye it was triggered by, not the eye it
-    // just moved past.
-    if (fullSweepTriggered) {
-      captureRuntime.pinnedEyeMpc = ctx.drawCamPos;
-    }
-    skyCubemapFacesToCapture = skyCubemapCaptureSchedule({
-      fullSweepTriggered,
-      frameIndex: captureRuntime.frameIndex,
-      lastCapturedAtMs: captureRuntime.lastCapturedAtMs,
-      nowMs: ctx.nowMs,
-    }).facesToCapture;
-    for (const face of skyCubemapFacesToCapture) {
-      captureRuntime.lastCapturedAtMs.set(face, ctx.nowMs);
-    }
-    captureRuntime.frameIndex += 1;
 
-    const pinnedEyeMpc = captureRuntime.pinnedEyeMpc;
-    if (skyCubemapFacesToCapture.length > 0 && pinnedEyeMpc !== null) {
+    // Two roster inputs move without a settings write: a source-visibility
+    // ramp (settings write fires once, at the ramp's START), and a
+    // famous-galaxy thumbnail's atlas upload + 400 ms load fade (arrives
+    // async, after the ramp has already settled).
+    const rosterSettling =
+      state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
+      (state.subsystems.texturedDisks?.hasInFlightWork() ?? false);
+    if (rosterSettling || captureRuntime.bakedSettings !== state.settings) {
       const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
-      for (const face of skyCubemapFacesToCapture) {
+      for (const face of ALL_CUBE_FACES) {
         const faceCtx = skyCubemapFaceContext({
           state,
-          // The PINNED eye (see `pinnedEyeMpc`'s docblock), not the live
-          // camera: all six faces must share one eye or they disagree at
-          // their shared border. Still camera-relative overall, not the
-          // hole's — a hole-centred eye put the capture's own boundary seam
-          // where the lens magnifies it most.
-          eyeMpc: pinnedEyeMpc,
+          eyeMpc: ctx.drawCamPos,
           face,
           faceSizePx,
           nowMs: ctx.nowMs,
         });
         if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
+      }
+      // Pre-bootstrap: a face's context can come back null before the first
+      // real camera pose exists. Leave `bakedSettings` untouched so the next
+      // frame retries the full sweep rather than caching a partial bake.
+      if (skyCubemapFaceContexts.size === ALL_CUBE_FACES.length) {
+        skyCubemapFacesToCapture = ALL_CUBE_FACES;
+        // Recorded only for a settled bake: while the roster is still moving,
+        // null keeps the next frame baking, and the first settled frame
+        // bakes once more.
+        captureRuntime.bakedSettings = rosterSettling ? null : state.settings;
       }
     }
   }
