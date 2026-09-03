@@ -63,6 +63,7 @@ function makeState(
     },
     cameraRuntime: {
       lastPose: { current: absoluteArm(pose) },
+      displayedPose: { current: absoluteArm(pose) },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
       lastRenderedSimDays: { current: opts.simDays ?? 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },

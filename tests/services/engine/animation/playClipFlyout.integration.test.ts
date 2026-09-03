@@ -119,6 +119,14 @@ function makeEngineState(startDistance: number): {
           distance: startDistance,
         }),
       },
+      displayedPose: {
+        current: absoluteArm({
+          target: [0, 0, 0] as Vec3,
+          yaw: 0,
+          pitch: 0,
+          distance: startDistance,
+        }),
+      },
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },

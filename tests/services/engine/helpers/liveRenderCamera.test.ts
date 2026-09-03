@@ -45,6 +45,7 @@ function makeState(overrides?: { cam?: unknown }): EngineState {
     settings: { orientation: 'galactic' },
     cameraRuntime: {
       lastPose: { current: absoluteArm(LAST_POSE) },
+      displayedPose: { current: absoluteArm(LAST_POSE) },
       projection: PROJECTION,
       upBasis: { current: UP_BASIS },
       lastRenderedSimDays: { current: CONST_J2000 },

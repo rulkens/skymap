@@ -40,9 +40,12 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // slot has never been asked to load, which is exactly what `idle` means.
     slotState: (k: AssetKey): LoadState<unknown>['kind'] =>
       slotFor(state, k)?.state().kind ?? 'idle',
-    // The previous frame's produced world eye position — the one proximity read
-    // surface (see DemandCtx surface 4). `lastPose` is constructed +
-    // placeholder-seeded in `engine.ts`, so it is never null. Derived with the
+    // The previous frame's DISPLAYED world eye position — the one proximity
+    // read surface (see DemandCtx surface 4); the tilt projection preserves
+    // the eye, so displayed vs authored is a distinction without a difference
+    // here, and displayed keeps the rule "off-frame reads see the screen".
+    // The pose boxes are constructed + placeholder-seeded in `engine.ts`, so
+    // this is never null. Derived with the
     // SAME `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` the frame
     // runs for `drawCamPos` (see frameContext.ts), so a proximity demand/release
     // predicate's demand-time read agrees byte-for-byte with the draw-time camera

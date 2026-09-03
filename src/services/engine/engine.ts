@@ -182,6 +182,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     lastPose: {
       current: { ...cb.store.getState().camera.base },
     },
+    // Same seed as the register: before the first frame nothing has been
+    // projected, so authored and displayed coincide (runFrame step 4 splits
+    // them thereafter).
+    displayedPose: {
+      current: { ...cb.store.getState().camera.base },
+    },
     prevActiveId: { current: 'resting' },
     // Seeded at J2000, a plausible epoch before the first frame runs. No frame
     // has run pre-bootstrap, so no pick can fire against it; `runFrame` overwrites
@@ -969,7 +975,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         ) as ReadonlyMap<BodyId, BodyState>;
         return cameraDebugSnapshotOf({
           storedFrame: rootState.camera.base.frame,
-          renderedPose: state.cameraRuntime.lastPose.current,
+          renderedPose: state.cameraRuntime.displayedPose.current,
           worldPose: liveWorldPose(state),
           poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
           upBasis: state.cameraRuntime.upBasis.current,

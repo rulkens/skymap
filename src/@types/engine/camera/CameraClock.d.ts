@@ -50,12 +50,15 @@ export type CameraClock = {
   // its saturated follow rather than snapping back to re-approach.
   followStartMs: number | null;
   lastFollowRef: SelectionRow | null;
-  // The on-screen pose captured at the activation edge — the `from` the approach
-  // eases OUT of. Captured from the live rendered pose (`lastPose`), not `base`,
-  // so switching focus A→B eases from where the camera visibly IS (framing A),
-  // never jumping back to the committed resting pose first. Nulled on the edge by
-  // `followElapsed`; the first `pose()` after fills it (only the driver can see
-  // the live rendered pose, so the capture is split from the timer).
+  // The pose captured at the activation edge — the `from` the approach eases
+  // OUT of. Captured from the live AUTHORED register (`lastPose`), not `base`,
+  // so switching focus A→B eases from where the camera IS (framing A), never
+  // jumping back to the committed resting pose first — and not from the
+  // displayed pose either: see the capture site in cameraDrivers.ts for why
+  // tilted angles through follow's body-centred target walk the eye (R12b-1).
+  // Nulled on the edge by `followElapsed`; the first `pose()` after fills it
+  // (only the driver can see the live register, so the capture is split from
+  // the timer).
   followFrom: CameraPose | null;
   // The distance the approach eases TOWARD. Two distinct sources feed it, and
   // conflating them is the bug this field un-braids:

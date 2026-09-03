@@ -94,6 +94,20 @@ const cameraSlice = createSlice({
     // ── committed resting pose ──────────────────────────────────────────────
     // Called once at bootstrap (after `computeInitialCamera`) and on every
     // orbit-controls pointerup to bake the user's new resting pose.
+    //
+    // INVARIANT (R12b-3): every committed ABSOLUTE pose is centre-looking —
+    // while a moving body is focused, forward passes through the pivot
+    // (body + panOffset). The pivot pin re-reads an absolute `target` as the
+    // pivot and re-derives the eye from yaw/pitch/distance one frame later,
+    // so committing a pose aimed anywhere else teleports the eye by
+    // d·2sin(τ/2) (R12-1, up to ~24,000 km). Held by CONSTRUCTION, not by a
+    // bake: commits take the authored register (`cameraRuntime.lastPose`),
+    // which the render-side tilt projection (`approachTiltedPose` →
+    // `displayedPose`) never touches — the pin stamps it centre-looking each
+    // frame (runFrame step 4), the gesture folds preserve aim-at-pivot
+    // (drainInput), and the fold's disengage retarget rebuilds it
+    // (runFrame's regime fold). Break any of those and this reducer is where
+    // the teleport re-enters.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
     },

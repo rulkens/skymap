@@ -194,6 +194,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   //      returns the correct pose and the first frame does not jump.
   state.cameraRuntime.projection = projectionOf(cam);
   state.cameraRuntime.lastPose.current = absoluteArm(poseOf(cam));
+  // Displayed = authored at boot: nothing has been projected yet.
+  state.cameraRuntime.displayedPose.current = state.cameraRuntime.lastPose.current;
   store.dispatch(commitCameraPose(absoluteArm(poseOf(cam))));
 
   // ── Home selection seed ──────────────────────────────────────────────────

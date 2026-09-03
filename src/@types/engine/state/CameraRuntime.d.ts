@@ -24,17 +24,27 @@
  *                    the store because it is derived from the DOM canvas and the
  *                    FOV setting at bootstrap, not user camera intent.
  *
- *   `lastPose`     — the live pose register, wrapped in a `{ current }` box so
- *                    it can be updated in place without reconstructing the
+ *   `lastPose`     — the AUTHORED pose register, wrapped in a `{ current }` box
+ *                    so it can be updated in place without reconstructing the
  *                    reference that `wireInput` and the focus handlers hold.
  *                    Two writers, disjoint in time: `drainInput` folds gesture
  *                    steps into it at the top of the frame (so a grab
  *                    continues from the live mid-animation pose, never a stale
- *                    `base`), and `runFrame` step 4 stamps the rendered pose.
- *                    The commit-on-edge logic reads it to bake the last
- *                    animated pose into `base` exactly once when a
- *                    tween/auto-rotate driver deactivates; the `orbitDrag`
- *                    driver row holds it while a gesture is live.
+ *                    `base`), and `runFrame` step 4 stamps the post-pin,
+ *                    PRE-projection pose. Holding the authored pose (not the
+ *                    displayed one) is what keeps the register loop dead:
+ *                    orbitDrag re-produces it and the pivot pin re-derives the
+ *                    same eye, where a projected pose would walk ~8,500 km per
+ *                    frame (R12b-1). Commit-on-edge and gestureEnd bake it
+ *                    into `base` verbatim — see `commitCameraPose`'s
+ *                    centre-looking invariant.
+ *
+ *   `displayedPose` — the pose the last frame actually DREW: `lastPose` with
+ *                    the render-side tilt projection (`approachTiltedPose`)
+ *                    applied. Everything that means "what is on screen" —
+ *                    pick, the clip/tween live-pose seams, debug — reads THIS
+ *                    (via `liveWorldPose`); everything that authors motion
+ *                    reads `lastPose`. Single writer: `runFrame` step 4.
  *
  *   `prevActiveId` — the winning driver id from the previous frame, wrapped in a
  *                    `{ current }` box. The commit-on-edge gate compares it to
@@ -83,13 +93,19 @@ export type CameraRuntime = {
   /** Live projection config; aspect patched on each canvas resize. */
   projection: CameraProjection;
   /**
-   * The live pose register, in the arm it was authored in — the AUTHORITATIVE
-   * pose (drain-folded during gestures, produce-stamped every frame). Boxed so
-   * wireInput and the focus handlers share the live reference. Off-frame
-   * readers that need world Mpc go through `liveWorldPose`, the one off-frame
-   * resolution site; nothing else re-resolves it.
+   * The AUTHORED pose register, in the arm it was authored in — pre-projection,
+   * centre-looking while a body is focused (drain-folded during gestures,
+   * produce-stamped every frame). Boxed so wireInput and the focus handlers
+   * share the live reference. Off-frame authored reads go through
+   * `authoredWorldPose`; nothing else re-resolves it.
    */
   lastPose: { current: FramedCameraPose };
+  /**
+   * The pose the last frame DREW — `lastPose` plus the render-side tilt
+   * projection. On-screen reads (pick, live-pose seams, debug) resolve it via
+   * `liveWorldPose`. Single writer: `runFrame` step 4.
+   */
+  displayedPose: { current: FramedCameraPose };
   /** Winning driver id from the previous frame; boxed for the same reason. */
   prevActiveId: { current: string };
   /**

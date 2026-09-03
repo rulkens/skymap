@@ -90,6 +90,7 @@ function makeHarness() {
       clock: createCameraClock(),
       projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: absoluteArm(poseAtHR(10, 0)) },
+      displayedPose: { current: absoluteArm(poseAtHR(10, 0)) },
       prevActiveId: { current: 'resting' },
       lastRenderedSimDays: { current: SIM },
       upBasis: { current: [...B] },
@@ -231,6 +232,7 @@ describe('focus release while engaged (round 10)', () => {
     const parked = makeHarness(); // focus = Earth (the boot seed)
     parked.store.dispatch(commitCameraPose(absoluteArm(marsPose)));
     parked.state.cameraRuntime.lastPose.current = absoluteArm(marsPose);
+    parked.state.cameraRuntime.displayedPose.current = absoluteArm(marsPose);
     const startDist = distTo(eyeMpcOf(liveWorldPose(parked.state), B), MARS);
     for (let t = 16; t <= 480; t += 16) {
       runFrame(parked.state, parked.deps, t);
@@ -257,6 +259,7 @@ describe('focus release while engaged (round 10)', () => {
     );
     aligned.store.dispatch(commitCameraPose(absoluteArm(marsPose)));
     aligned.state.cameraRuntime.lastPose.current = absoluteArm(marsPose);
+    aligned.state.cameraRuntime.displayedPose.current = absoluteArm(marsPose);
     runFrame(aligned.state, aligned.deps, 16);
     const frame = aligned.state.cameraRuntime.lastPose.current.frame;
     expect(frame !== 'absolute' && frame.body).toBe('mars');

@@ -58,7 +58,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
-import { liveWorldPose } from '../helpers/liveWorldPose';
+import { authoredWorldPose } from '../helpers/authoredWorldPose';
 import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
 import { tweenElapsed, autoRotateElapsed, clipElapsed, followElapsed } from './cameraClock';
@@ -261,10 +261,12 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // it at 95 (a gesture never interrupts a clip, either arm).
       pivotsOnFocusedBody: true,
       isActive: (s) => s.camera.dragging,
-      // The live gesture register: `drainInput` folds every step into
-      // `cameraRuntime.lastPose` before produce, in whichever arm the regime
-      // names. The target is only rendered as-is when NO moving body is
-      // focused; otherwise the pivot-pin overwrites it.
+      // The AUTHORED gesture register (pre-projection — R12b-1: producing the
+      // displayed pose here re-pins its tilted angles and walks the eye every
+      // held frame): `drainInput` folds every step into `cameraRuntime.lastPose`
+      // before produce, in whichever arm the regime names. The target is only
+      // rendered as-is when NO moving body is focused; otherwise the pivot-pin
+      // overwrites it.
       pose: () => state.cameraRuntime.lastPose.current,
     },
     {
@@ -320,12 +322,18 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         if (base.frame !== 'absolute') return base;
 
         // Capture the `from` pose ONCE per activation. `followElapsed` nulls it
-        // on the edge; the first produce after fills it from the LIVE rendered
-        // pose (the previous frame's, not yet overwritten this frame) so the ease
-        // starts where the camera visibly is — switching focus A→B eases from
-        // framing-A, never jumping back to the committed base first.
+        // on the edge; the first produce after fills it from the AUTHORED
+        // register (the previous frame's, not yet overwritten this frame) so
+        // switching focus A→B eases from where the camera is — never jumping
+        // back to the committed base first. Authored, NOT the displayed pose,
+        // although this capture is documented "rendered, not base": the ease
+        // decodes these yaw/pitch against a body-CENTRED target, and displayed
+        // (tilted) angles through a centred target walk the eye by d·2sin(τ/2)
+        // on the first eased frame (R12b-1's composition). The projection
+        // re-derives the visible image from the authored capture, so screen
+        // continuity is what this choice preserves, not what it trades away.
         if (clock.followFrom === null) {
-          const cur = liveWorldPose(state);
+          const cur = authoredWorldPose(state);
           clock.followFrom = {
             target: [cur.target[0], cur.target[1], cur.target[2]],
             yaw: cur.yaw,

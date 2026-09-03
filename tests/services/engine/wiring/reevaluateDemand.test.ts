@@ -97,6 +97,9 @@ function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): Engine
     // rows out of the demand set.
     cameraRuntime: {
       lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
+      displayedPose: {
+        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }),
+      },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
       lastRenderedSimDays: { current: CONST_J2000 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
@@ -331,6 +334,9 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
       subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
       cameraRuntime: {
         lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
+        displayedPose: {
+          current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }),
+        },
         projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
         lastRenderedSimDays: { current: CONST_J2000 },
         upBasis: { current: ORIENTATION_FRAMES.ecliptic },

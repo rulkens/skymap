@@ -108,6 +108,7 @@ function makeState(
     data: { bodies: { earth: null, planets: [], stars: [] } },
     cameraRuntime: {
       lastPose: { current: absoluteArm(LAST_POSE) },
+      displayedPose: { current: absoluteArm(LAST_POSE) },
       projection: PROJECTION,
       lastRenderedSimDays: { current: LAST_SIM_DAYS },
       upBasis: { current: ORIENTATION_FRAMES.equatorial },

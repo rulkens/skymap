@@ -1,12 +1,13 @@
 /**
- * liveWorldPose — the world arm of `lastPose`; the one resolution site besides
- * `runFrame`'s own per-frame call, so no reader invents a second.
+ * liveWorldPose — the world arm of the DISPLAYED pose (`displayedPose`, the
+ * pose the last frame drew, tilt projection included); the one on-screen
+ * resolution site, so no reader invents a second. Authored-side reads (the
+ * gesture folds) go through `authoredWorldPose` instead — feeding a projected
+ * pose back into an authoring path re-creates the R12b-1 register walk.
  *
- * It always reads `lastRenderedSimDays`, which means two things by call site.
- * Between frames (pick, demand, `getLivePose`, the gesture seed) that is the
- * epoch the last frame DREW at — what welds those reads to the pixels on screen.
- * Inside the produce step `runFrame` has already advanced it, so `followBody`'s
- * `from` capture gets THIS frame's epoch: the ease starts where the camera is now.
+ * It always reads `lastRenderedSimDays`: between frames (pick, demand,
+ * `getLivePose`) that is the epoch the last frame DREW at — what welds those
+ * reads to the pixels on screen.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
@@ -19,7 +20,7 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 
 export function liveWorldPose(state: EngineState): CameraPose {
   return resolveWorldArm(
-    state.cameraRuntime.lastPose.current,
+    state.cameraRuntime.displayedPose.current,
     // `deriveBodyStates` keys on the raw id string; the body arm's `BodyId` is
     // the same key narrowed (the `id as BodyId` convention `regimeArmFor` and
     // `slabs.ts` already use at this boundary).

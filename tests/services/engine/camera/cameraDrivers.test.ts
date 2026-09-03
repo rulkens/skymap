@@ -85,7 +85,10 @@ const TWEEN_DESC: CameraTweenDescriptor = {
 const REGISTER_POSE = absoluteArm({ target: [5, 5, 5], yaw: 0.7, pitch: -0.1, distance: 200 });
 
 const FAKE_ENGINE_STATE = {
-  cameraRuntime: { lastPose: { current: REGISTER_POSE } },
+  cameraRuntime: {
+    lastPose: { current: REGISTER_POSE },
+    displayedPose: { current: REGISTER_POSE },
+  },
 } as unknown as EngineState;
 
 // Minimal ClipData fixture — no effects, just the required timeline field.
@@ -537,6 +540,7 @@ function makeFollowEngineState(opts: {
       clock,
       projection: { fovYRad: opts.fovYRad, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: absoluteArm(opts.lastPose) },
+      displayedPose: { current: absoluteArm(opts.lastPose) },
       prevActiveId: { current: opts.prevActiveId ?? 'followBody' },
       lastRenderedSimDays: { current: opts.simDays },
       upBasis: { current: ORIENTATION_FRAMES[DEFAULT_ORIENTATION] },

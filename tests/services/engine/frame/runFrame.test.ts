@@ -233,6 +233,7 @@ function makeState(): EngineState {
       clock: createCameraClock(),
       projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
+      displayedPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
       prevActiveId: { current: 'resting' as string },
       // runFrame writes this once per frame (single writer) beside the body
       // snapshot prime — the box must exist for that assignment.

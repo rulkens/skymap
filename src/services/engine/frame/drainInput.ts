@@ -18,11 +18,10 @@
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
-import { centreLookingPose } from '../camera/centreLookingPose';
 import { frameAlignedRoll } from '../camera/frameAlignedRoll';
 import { pivotFraming } from '../camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
-import { liveWorldPose } from '../helpers/liveWorldPose';
+import { authoredWorldPose } from '../helpers/authoredWorldPose';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
@@ -108,7 +107,11 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
     // so the step is swallowed rather than folded invisibly under the clip.
     if (root.camera.clip !== null) return;
     const focus = selectFocusRow(root);
-    const world = liveWorldPose(state);
+    // AUTHORED, not displayed: folding deltas over the projected pose and
+    // re-pinning it is the R12b-1 loop (8,519 km of eye walk per frame). The
+    // projection re-tilts the folded result at render, so the drag's mapping
+    // composes below the tilt — the round-12c disclosed feel change.
+    const world = authoredWorldPose(state);
     const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
     let next = applyInputToCamera(
       world,
@@ -168,25 +171,10 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
             ? root.camera.base.frame === 'absolute'
             : root.camera.base.frame !== 'absolute' &&
               live.frame.body === root.camera.base.frame.body;
-        // R12-1: the world-arm register carries the render-side tilt
-        // projection (`approachTiltedPose`), so bake the PRE-projection
-        // centre-looking pose — committed verbatim, the pivot pin would
-        // re-derive the eye from tilted yaw/pitch (a d·2sin(τ/2) teleport,
-        // accumulating per release). Body-arm and unprojected registers
-        // pass through by reference.
+        // The register is AUTHORED (pre-projection, R12b-1), so it commits
+        // VERBATIM — see `commitCameraPose`'s centre-looking invariant.
         if (root.camera.clip === null && sameArm) {
-          store.dispatch(
-            commitCameraPose(
-              centreLookingPose(
-                live,
-                selectFocusRow(root),
-                deriveSimDays(selectTimeState(root), nowMs),
-                state.cameraRuntime.surface.rememberedTiltRad(),
-                state.cameraRuntime.clock.followPanOffset,
-                ORIENTATION_FRAMES[state.settings.orientation],
-              ),
-            ),
-          );
+          store.dispatch(commitCameraPose(live));
         }
         state.cameraRuntime.surface.onGestureEnd();
         store.dispatch(endDrag());
@@ -259,7 +247,10 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
           // Landed on `base.roll`, which the follow pose lerps toward.
           const basePose = root.camera.base.pose;
           const followTargetAfter = state.cameraRuntime.clock.followDistanceTarget;
-          const live = liveWorldPose(state);
+          // Authored pair (like the branch above): the ride's pre/post poses
+          // must live below the projection, or the roll target chases a
+          // forward the commit path never holds.
+          const live = authoredWorldPose(state);
           const roll = frameAlignedRoll(
             { ...live, distance: followTargetBefore ?? live.distance },
             { ...live, distance: followTargetAfter ?? live.distance },

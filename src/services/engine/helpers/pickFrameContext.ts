@@ -14,11 +14,10 @@
  *
  * `pickFrameContext` is a plain derivation instead: it re-derives a full
  * `ReadyFrameContext` from the pose the last frame actually rendered
- * (`state.cameraRuntime.lastPose.current`) and the live projection
- * (`state.cameraRuntime.projection`). `lastPose.current` is the produced pose
- * of the last frame (see `CameraRuntime.d.ts`), the value `runFrame` fed into
- * that frame's `deriveFrameContext` — so the pick camera matches the frame on
- * screen exactly, yet it is a value the pick path can ask for on demand,
+ * (`state.cameraRuntime.displayedPose.current`, projection included — see
+ * `CameraRuntime.d.ts`) and the live projection config
+ * (`state.cameraRuntime.projection`) — so the pick camera matches the frame
+ * on screen exactly, yet it is a value the pick path can ask for on demand,
  * independent of whether a visual frame just ran.
  *
  * ### Why the pick mask, not the draw mask
@@ -65,9 +64,11 @@ export function pickFrameContext(
     // `deriveFrameContext` received, so the pick camera matches the frame on
     // screen.
     liveWorldPose(state),
-    // The framed pose `liveWorldPose` resolved from — same arm the last frame
-    // rendered, so the pick pass's provider-B routing matches the screen too.
-    state.cameraRuntime.lastPose.current,
+    // The framed pose `liveWorldPose` resolved from — the DISPLAYED box, so
+    // the pick pass's provider-B routing matches the screen. NOT `lastPose`:
+    // the authored register is untilted in-window, and a pick against it
+    // lands on the wrong object.
+    state.cameraRuntime.displayedPose.current,
     state.cameraRuntime.projection,
     // Pick is a demand read at rest (between frames), so the steady
     // `ORIENTATION_FRAMES[orientation]` is the correct basis for BOTH halves —

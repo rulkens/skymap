@@ -87,6 +87,7 @@ function makeHarness() {
       clock: createCameraClock(),
       projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: absoluteArm(poseAtHR(10, 0)) },
+      displayedPose: { current: absoluteArm(poseAtHR(10, 0)) },
       prevActiveId: { current: 'resting' },
       lastRenderedSimDays: { current: SIM },
       upBasis: { current: [...B] },

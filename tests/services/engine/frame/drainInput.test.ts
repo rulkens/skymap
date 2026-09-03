@@ -63,6 +63,7 @@ function makeHarness(distance = 100) {
     cameraRuntime: {
       clock: createCameraClock(),
       lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance }) },
+      displayedPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance }) },
       prevActiveId: { current: 'resting' },
       lastRenderedSimDays: { current: CONST_J2000 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },

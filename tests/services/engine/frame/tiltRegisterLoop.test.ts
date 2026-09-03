@@ -1,12 +1,11 @@
 /**
- * tiltCommitIdempotence — R12-1: `camera.base` stays centre-looking by
- * WIRING. The tilt projection (`approachTiltedPose`) holds the eye by moving
- * `target` off the body centre; the pivot pin SETS target to the centre and
- * derives the eye — composing them on a COMMITTED tilted pose moves the eye
- * by d·2sin(τ/2) (~8,400 km at remembered 1.0, h/R 2.55) and ACCUMULATES
- * over commit→re-derive cycles. The round-12 sim committed once at h/R 10
- * then only read; this fixture commits mid-window, where the two contracts
- * actually compose. Real runFrame loop, real gesture steps.
+ * tiltRegisterLoop — R12b-1: the register holds the AUTHORED centre-looking
+ * pose; the displayed pose is a pure projection derived at read. Pre-fix the
+ * per-frame loop store-projected-pose → pivot pin → re-project walked the eye
+ * 8,519 km per frame during ANY in-window drag — including press-and-hold
+ * with zero pointer motion — while displayed tilt and h/R stayed constant
+ * (invisible on screen, catastrophic in state). Real runFrame loop, real
+ * gesture steps, same regime the round-12b review measured.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -155,11 +154,15 @@ function tiltHrOf(pose: CameraPose, eye: Vec3): { tilt: number; hr: number } {
   return { tilt: Math.acos(Math.max(-1, Math.min(1, -vert))), hr: mag / R_MPC - 1 };
 }
 
+function stepKm(a: Vec3, b: Vec3): number {
+  return Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!) * MPC_TO_KM;
+}
+
 /**
- * Shared approach: dive engaged, set a large remembered tilt through the
- * controller's own handles, zoom out past disengage, then back IN to
- * mid-window (h/R ≈ 2.55) — the world-armed, pivot-pinned, projection-live
- * standpoint where the round-12 review measured the teleport.
+ * Same approach recipe as tiltCommitIdempotence: dive engaged, set a large
+ * remembered tilt through the controller's own handles, zoom out past
+ * disengage, then back IN to mid-window (h/R ≈ 2.55) — world-armed,
+ * pivot-pinned, projection live.
  */
 function toMidWindow(harness: ReturnType<typeof makeHarness>) {
   const { state } = harness;
@@ -175,8 +178,6 @@ function toMidWindow(harness: ReturnType<typeof makeHarness>) {
   for (let i = 0; i < 14; i += 1) notch(-100);
   expect(state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
 
-  // Set the memory via the controller's handles (unit-radius; the memory is
-  // session state — same rationale as tiltLerpRoundTrip's harness).
   const c = state.cameraRuntime.surface;
   let p: BodyFixedPose = {
     bodyId: 'earth',
@@ -208,88 +209,133 @@ function toMidWindow(harness: ReturnType<typeof makeHarness>) {
     }
     c.onGestureEnd();
   }
-  const remembered = c.rememberedTiltRad();
-  expect(remembered).toBeGreaterThan(0.5);
+  expect(c.rememberedTiltRad()).toBeGreaterThan(0.5);
 
-  // Out past disengage (arm flips absolute), back in to mid-window; the
-  // hysteresis keeps the leg world-armed until engage at 1.7.
   while (display(state).hr < 3.6) notch(100);
   expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
   while (display(state).hr > 2.7) notch(-100);
-  const { hr } = display(state);
-  expect(hr).toBeGreaterThan(2.2);
+  expect(display(state).hr).toBeGreaterThan(2.2);
   expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
 
-  // Let the follow ease and the projection settle before measuring.
   for (let i = 0; i < 60; i += 1) frame();
   expect(display(state).tilt).toBeGreaterThan(0.2); // projection live here
-  return { push, frame, remembered };
+  return { push, frame };
 }
 
-describe('commit → re-derive idempotence (R12-1)', () => {
-  it('repeated in-window commits leave the eye fixed', () => {
+describe('the register loop during an active drag (R12b-1)', () => {
+  it('press-and-hold with ZERO pointer motion leaves the eye byte-stable', () => {
     const harness = makeHarness();
     const { push, frame } = toMidWindow(harness);
 
-    // Each cycle: an empty in-window gesture (press + release) — gestureEnd
-    // commits the register — then frames for the pin + projection to
-    // re-derive. Pre-fix each commit bakes the TILTED pose and the pin
-    // moves the eye d·2sin(τ/2) ≈ thousands of km, accumulating per cycle.
-    const eyes: Vec3[] = [];
-    for (let cycle = 0; cycle < 4; cycle += 1) {
-      harness.store.dispatch(beginDrag());
-      push({ kind: 'gestureStart' });
-      push({ kind: 'gestureEnd' });
-      for (let i = 0; i < 60; i += 1) frame();
-      eyes.push(display(harness.state).eye);
-    }
-    // The OTHER reachable commit path (b): a commit-on-edge. Rate 0 so the
-    // spin authors no motion — a start/stop pair is a pure commit cycle
-    // through runFrame's edge bake rather than drainInput's gestureEnd.
-    for (let cycle = 0; cycle < 3; cycle += 1) {
-      harness.store.dispatch(setAutoRotate({ active: true, rate: 0 }));
-      for (let i = 0; i < 10; i += 1) frame();
-      harness.store.dispatch(setAutoRotate({ active: false, rate: 0 }));
-      for (let i = 0; i < 60; i += 1) frame();
-      eyes.push(display(harness.state).eye);
-    }
-    for (let cycle = 1; cycle < eyes.length; cycle += 1) {
-      const [a, b] = [eyes[cycle - 1]!, eyes[cycle]!];
-      const jumpKm = Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!) * MPC_TO_KM;
-      expect(jumpKm).toBeLessThan(1);
+    // Press and hold: dragging=true, an anchor, and no pointer motion at all.
+    // Pre-fix every frame re-read the PROJECTED register, re-pinned it, and
+    // re-projected — 8,519 km of eye walk per frame with tilt and h/R
+    // constant (nothing on screen moves except the ground underneath).
+    harness.store.dispatch(beginDrag());
+    push({ kind: 'gestureStart' });
+    push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+    frame();
+
+    const before = display(harness.state);
+    for (let i = 0; i < 20; i += 1) {
+      frame();
+      const after = display(harness.state);
+      expect(stepKm(before.eye, after.eye)).toBeLessThan(1e-9);
+      expect(Math.abs(after.tilt - before.tilt)).toBeLessThan(1e-9);
     }
   });
 
-  it('an in-window drag release commits a centre-looking base with no visual pop', () => {
+  it('the register holds the AUTHORED centre-looking pose; readers see the projection', () => {
     const harness = makeHarness();
     const { push, frame } = toMidWindow(harness);
-    const before = display(harness.state);
 
     harness.store.dispatch(beginDrag());
     push({ kind: 'gestureStart' });
     push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
     push({ kind: 'dragMove', mode: 'orbit', xPx: 52, yPx: 50 });
-    push({ kind: 'gestureEnd' });
     frame();
 
-    // The committed base is centre-looking — the projection stayed render-side.
-    const base = harness.store.getState().camera.base;
-    expect(base.frame).toBe('absolute');
-    if (base.frame !== 'absolute') return;
-    const baseEye = eyeMpcOf(base.pose, B);
-    expect(tiltHrOf(base.pose, baseEye).tilt).toBeLessThan(1e-6);
+    // Authored register: centre-looking (tilt ~0). Displayed (what pick, the
+    // clip/tween seams, and the draw path read via liveWorldPose): the full
+    // mapped tilt. Same eye — the projection is eye-preserving by contract.
+    const register = harness.state.cameraRuntime.lastPose.current;
+    expect(register.frame).toBe('absolute');
+    if (register.frame !== 'absolute') return;
+    const registerEye = eyeMpcOf(register.pose, B);
+    expect(tiltHrOf(register.pose, registerEye).tilt).toBeLessThan(1e-6);
 
-    // And the DISPLAYED tilt is unchanged across the commit (no pop).
-    for (let i = 0; i < 8; i += 1) frame();
-    const after = display(harness.state);
-    expect(Math.abs(after.tilt - before.tilt)).toBeLessThan(0.02);
-    // The release itself moved the eye by at most the 2 px drag, not a teleport.
-    const shiftKm =
-      Math.hypot(
-        before.eye[0]! - after.eye[0]!,
-        before.eye[1]! - after.eye[1]!,
-        before.eye[2]! - after.eye[2]!,
-      ) * MPC_TO_KM;
-    expect(shiftKm).toBeLessThan(500);
+    const displayed = display(harness.state);
+    expect(displayed.tilt).toBeGreaterThan(0.2);
+    expect(stepKm(registerEye, displayed.eye)).toBeLessThan(1e-9);
+  });
+
+  it('displayed pose is continuous through drag, release, and an edge deactivation', () => {
+    const harness = makeHarness();
+    const { push, frame } = toMidWindow(harness);
+    let prev = display(harness.state);
+
+    // A real 6-px drag across three frames, then release.
+    harness.store.dispatch(beginDrag());
+    push({ kind: 'gestureStart' });
+    push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+    for (const x of [52, 54, 56]) {
+      push({ kind: 'dragMove', mode: 'orbit', xPx: x, yPx: 50 });
+      frame();
+      const cur = display(harness.state);
+      // Each frame moves the eye by the 2-px drag mapping only — never a
+      // teleport (pre-fix: ~8,519 km/frame rides on top of the drag).
+      expect(stepKm(prev.eye, cur.eye)).toBeLessThan(500);
+      prev = cur;
+    }
+    push({ kind: 'gestureEnd' });
+    for (let i = 0; i < 10; i += 1) {
+      frame();
+      const cur = display(harness.state);
+      expect(stepKm(prev.eye, cur.eye)).toBeLessThan(500);
+      expect(Math.abs(cur.tilt - prev.tilt)).toBeLessThan(0.02);
+      prev = cur;
+    }
+
+    // The commit-on-edge render override (autoRotate rate 0 start → stop):
+    // the deactivation frame must render the displayed image, not a one-frame
+    // untilted pop, and must not re-pin the projected pose (no eye step).
+    harness.store.dispatch(setAutoRotate({ active: true, rate: 0 }));
+    for (let i = 0; i < 10; i += 1) frame();
+    prev = display(harness.state);
+    harness.store.dispatch(setAutoRotate({ active: false, rate: 0 }));
+    for (let i = 0; i < 10; i += 1) {
+      frame();
+      const cur = display(harness.state);
+      expect(stepKm(prev.eye, cur.eye)).toBeLessThan(1e-6);
+      expect(Math.abs(cur.tilt - prev.tilt)).toBeLessThan(1e-6);
+      prev = cur;
+    }
+  });
+
+  it('a fresh followBody capture in-window starts from the authored pose (no re-pin walk)', () => {
+    const harness = makeHarness();
+    const { frame } = toMidWindow(harness);
+
+    // Re-select the same body: a fresh focus ROW reference re-arms the follow
+    // ease, whose `from` capture pairs captured yaw/pitch with a body-centred
+    // target. Captured from the DISPLAYED (tilted) pose that decode walks the
+    // eye by d·2sin(τ/2) ≈ 8,519 km on the first eased frame — the capture
+    // must read the authored register instead.
+    const prev = display(harness.state);
+    harness.store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusM: SCENE_EARTH.radiusM,
+        },
+      }),
+    );
+    frame();
+    const cur = display(harness.state);
+    expect(stepKm(prev.eye, cur.eye)).toBeLessThan(1000);
   });
 });

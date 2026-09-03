@@ -45,6 +45,7 @@ function makeState(): EngineState {
     settings: { orientation: 'ecliptic' },
     cameraRuntime: {
       lastPose: { current: EARTH_ARM },
+      displayedPose: { current: EARTH_ARM },
       lastRenderedSimDays: { current: RENDERED_SIM_DAYS },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },

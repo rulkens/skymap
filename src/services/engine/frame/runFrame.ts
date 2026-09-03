@@ -51,8 +51,9 @@
  *      arm the regime predicate names — skipped whole while a gesture is in
  *      flight. `lastPose` stays framed; every world-Mpc reader downstream takes
  *      the resolved value.
- *   4. UPDATE Resources: `prevActiveId.current = activeId`,
- *      `lastPose.current = pose`.
+ *   4. UPDATE Resources: `prevActiveId.current = activeId`; the AUTHORED
+ *      (pre-projection) pose lands in `lastPose`, the projected pose the
+ *      frame draws lands in `displayedPose`.
  *
  * Then `deriveFrameContext` receives the already-produced `pose` and the live
  * `projection` Resource, assembles a full `OrbitCamera`, and computes vp etc.
@@ -72,7 +73,6 @@ import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
-import { centreLookingPose } from '../camera/centreLookingPose';
 import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
 import { regimeArmFor } from '../camera/regimeArmFor';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -374,7 +374,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // tween deactivates on frame N, `lastPose` holds frame N-1's saturated pose
   // (== desc.to exactly), and that is what lands in `base`. Exactly one commit,
   // exactly at the `desc.to` value.
-  const { lastPose, prevActiveId } = state.cameraRuntime;
+  const { lastPose, displayedPose, prevActiveId } = state.cameraRuntime;
   const prev = prevActiveId.current;
   // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
   // resolved against this frame), so the pin and the winner never disagree on
@@ -386,32 +386,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   let renderPose = pose;
   const prevRow = deps.drivers.find((d) => d.id === prev);
   if (prev !== activeId && prevRow?.commitsOnEdge) {
-    // R12-1: a PIVOTING driver's last pose carries the render-side tilt
-    // projection; committed verbatim, the pin would re-derive the eye from
-    // its tilted yaw/pitch — a d·2sin(τ/2) teleport that accumulates. Bake
-    // the pre-projection centre-looking pose instead; the projection
-    // re-tilts the display from it, so the image is unchanged. clip/tween
-    // opt out of the pin, so their pose was never projected — verbatim.
-    deps.cb.store.dispatch(
-      commitCameraPose(
-        prevRow.pivotsOnFocusedBody
-          ? centreLookingPose(
-              lastPose.current,
-              pivotFocus,
-              simDays,
-              state.cameraRuntime.surface.rememberedTiltRad(),
-              state.cameraRuntime.clock.followPanOffset,
-              poseBasis,
-            )
-          : lastPose.current,
-      ),
-    );
+    // The register holds the AUTHORED pre-projection pose (R12b-1), so it is
+    // committed VERBATIM: centre-looking by construction for pivoting
+    // drivers, never-projected for clip/tween — see `commitCameraPose`'s
+    // invariant note.
+    deps.cb.store.dispatch(commitCameraPose(lastPose.current));
     // Commit-on-edge fires AFTER produce, so the produce step above ran the
     // INCOMING driver against the PRE-commit `base`. For a driver that reads
     // `base` (resting / autoRotate) that pose is the stale pre-edge value —
     // rendering it flashes the camera back to where the tween, spin, or clip
-    // started for one frame. `lastPose.current` is the animation's final pose
-    // and the value we just baked into `base`, so render THAT this frame instead.
+    // started for one frame. Override with the AUTHORED register (the value
+    // just baked): the pin + projection below re-derive the same displayed
+    // image from it, so there is no untilted pop. Overriding with
+    // `displayedPose` instead would feed an already-projected pose back into
+    // the pin — one frame of the exact eye walk this register kills.
     renderPose = lastPose.current;
   }
 
@@ -442,6 +430,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     simDays,
     clock.followPanOffset,
   );
+  // The post-pin, PRE-projection pose — what step 4 stamps into the authored
+  // register (`lastPose`). Captured here so the projection below stays
+  // render-side only: it reaches the register on no path (R12b-1).
+  let authoredPose = renderPose;
   // The world arm's tilt expression (ruling 13) sits between the pin (which
   // owns WHERE the view pivots) and the fold (which converts THIS pose at
   // engage): a pure projection of the one display-tilt mapping, so the
@@ -512,6 +504,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
           distance: Math.hypot(toCentre[0], toCentre[1], toCentre[2]),
           roll: worldPose.roll,
         });
+        // The rebuilt pose is centre-looking, and the projection is inert on
+        // this frame's body-arm input — authored and displayed coincide.
+        authoredPose = renderPose;
       }
     } else if (renderPose.frame === 'absolute') {
       // Total: `regimeArmFor` only names a body it resolved out of THIS map.
@@ -520,6 +515,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         frame: arm,
         pose: toBodyArm(worldPose, poseBasis, upBasis, arm.body, bodyState),
       };
+      // Engage converts the DISPLAYED pose (the edge inherits the image,
+      // ruling 13); on the body arm the tilt is real geometry, not a
+      // projection, so the register holds the same converted pose.
+      authoredPose = renderPose;
     }
     // The store write is the REGIME's edge, so it fires once per crossing; both
     // arms render `worldPose` on that frame (the conversion is lossless). The
@@ -533,10 +532,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────
   //
-  // `prevActiveId` and `lastPose` are updated AFTER the commit-on-edge so the
-  // commit correctly reads the PREVIOUS frame's values.
+  // `prevActiveId` and the two pose boxes are updated AFTER the commit-on-edge
+  // so the commit correctly reads the PREVIOUS frame's values. The register
+  // gets the AUTHORED pose; the displayed box gets the projected pose the
+  // frame draws — the split that keeps the produce→pin→project loop dead
+  // during a held drag (R12b-1).
   prevActiveId.current = activeId;
-  lastPose.current = renderPose;
+  lastPose.current = authoredPose;
+  displayedPose.current = renderPose;
 
   // Compute the scale-bar legend engine-side so the store's `engine.scale`
   // slice stays authoritative for every consumer (ScaleBar, tour sagas).
