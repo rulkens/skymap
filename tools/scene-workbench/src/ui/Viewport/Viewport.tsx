@@ -1,17 +1,25 @@
 /**
- * Viewport — owns the <canvas>, the WebGPU device, and the rAF frame driver.
- * The scene itself lives in `resources` (`RenderResources`), created here and
- * handed to the loading sagas via `registerSagaContext`: they own every write
- * to it, this component only reads it each frame. The context is registered
- * only once `initGpu` resolves — that dispatch is what starts the registry →
- * group load, and the group loader uploads into the device it finds here.
- * Nothing is drawn until task 14; the frame clears and submits so a dead
- * device shows up as a WebGPU error rather than a canvas nobody touched.
+ * Viewport — owns the <canvas>, the WebGPU device, the input rig, and the rAF
+ * frame driver. The scene itself lives in `resources` (`RenderResources`),
+ * created here and handed to the loading sagas via `registerSagaContext`: they
+ * own every write to it, this component only reads it each frame. The context
+ * is registered only once `initGpu` resolves — that dispatch is what starts the
+ * registry → group load, and the group loader uploads into the device found
+ * here. The driver reads the store directly, never `useAppSelector`: a frame
+ * must not be a render.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 
 import { initGpu, resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
-import { createRenderResources, disposeScene } from '../../render/renderResources';
+import { createSceneInput } from '../../input/createSceneInput';
+import { createLidarPointRenderer } from '../../render/lidarPointRenderer';
+import {
+  createRenderResources,
+  disposeScene,
+  type LidarGpuAsset,
+  type RenderResources,
+} from '../../render/renderResources';
+import { sceneCameraView } from '../../render/sceneCameraView';
 import { deviceLost } from '../../state/view/viewSlice';
 import type { RegisterSagaContext, SceneStore } from '../../store/types';
 import styles from './Viewport.module.css';
@@ -20,6 +28,29 @@ export type ViewportProps = {
   readonly store: SceneStore;
   readonly registerSagaContext: RegisterSagaContext;
 };
+
+/** The depth buffer follows the drawable size; a stale one would clip the frame
+ *  to the old canvas. Owned by `RenderResources`, so a dispose frees it. */
+function depthViewFor(
+  device: GPUDevice,
+  resources: RenderResources,
+  width: number,
+  height: number,
+): GPUTextureView {
+  const existing = resources.depthTexture;
+  if (existing && existing.width === width && existing.height === height) {
+    return existing.createView();
+  }
+  existing?.destroy();
+  const texture = device.createTexture({
+    label: 'scene-workbench-depth',
+    size: [width, height],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  resources.depthTexture = texture;
+  return texture.createView();
+}
 
 function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,6 +68,22 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     // Starts true so the first frame after the device lands always draws.
     let dirty = true;
 
+    const input = createSceneInput({
+      canvas,
+      store,
+      markDirty: () => {
+        dirty = true;
+      },
+    });
+
+    const visibleAssets = (hiddenAssetIds: readonly string[]): LidarGpuAsset[] => {
+      const drawn: LidarGpuAsset[] = [];
+      for (const [id, asset] of resources.gpuAssets) {
+        if (!hiddenAssetIds.includes(id)) drawn.push(asset);
+      }
+      return drawn;
+    };
+
     const frame = (): void => {
       if (disposed) return;
       const state = store.getState();
@@ -45,25 +92,27 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       const { gpu } = resources;
       if (!gpu) return;
 
+      // Ahead of the dirty gate: draining is what turns a gesture into one.
+      input.drain();
       // The DOM read runs every tick, idle or not: a pure window resize is the
       // one change no store write would ever announce.
       if (resizeCanvasToDisplay(canvas)) dirty = true;
       if (!dirty) return;
       dirty = false;
 
+      // Lazily built (and rebuilt after a `disposeScene`) so the pipeline is
+      // created on the device the sagas uploaded into, never a stale one.
+      const lidar = (resources.lidar ??= createLidarPointRenderer(gpu, gpu.format));
+      const view = sceneCameraView(input.getCameraPose(), [canvas.width, canvas.height]);
+
       const encoder = gpu.device.createCommandEncoder({ label: 'scene-workbench-frame' });
-      encoder
-        .beginRenderPass({
-          colorAttachments: [
-            {
-              view: gpu.context.getCurrentTexture().createView(),
-              clearValue: { r: 0, g: 0, b: 0, a: 1 },
-              loadOp: 'clear',
-              storeOp: 'store',
-            },
-          ],
-        })
-        .end();
+      lidar.draw(
+        encoder,
+        gpu.context.getCurrentTexture().createView(),
+        depthViewFor(gpu.device, resources, canvas.width, canvas.height),
+        view,
+        visibleAssets(state.view.hiddenAssetIds),
+      );
       gpu.device.queue.submit([encoder.finish()]);
     };
 
@@ -95,6 +144,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       disposed = true;
       if (rafHandle) cancelAnimationFrame(rafHandle);
       unsubscribe();
+      input.destroy();
       disposeScene(resources);
     };
   }, [store, registerSagaContext]);
