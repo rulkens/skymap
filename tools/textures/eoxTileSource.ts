@@ -34,12 +34,13 @@ const NATIVE_EDGE_PX = EOX_TILE_PX * 2;
 /** Verbatim from spec §4 — this source's own identity, carried into the
  *  manifest's `builtFrom` for every band `bakeAll` builds from it. */
 const EOX_PROVENANCE = {
-  sourceId: 'eox-s2cloudless-2016',
+  sourceId: 'eox-s2cloudless-2025',
   attribution:
     'EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH ' +
-    '(Contains modified Copernicus Sentinel data 2016) released under ' +
-    'Creative Commons Attribution 4.0 International License.',
-  vintage: '2016',
+    '(Contains modified Copernicus Sentinel data 2025). Published under ' +
+    'CC BY-NC-SA 4.0; used in skymap with written permission from EOX IT ' +
+    'Services GmbH.',
+  vintage: '2025',
 } as const;
 
 /** Degrees spanned by one EOX tile at `z`, in both axes (`180 / rows` —
