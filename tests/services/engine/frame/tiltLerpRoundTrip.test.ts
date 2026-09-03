@@ -182,12 +182,15 @@ describe('tilt lerp round trip (ruling 13)', () => {
       [0, 0, 1],
     );
     c.onGestureEnd();
+    // 2 px look steps: the loop exits on remembered ≥ 0.35, and the engaged
+    // bar below is calibrated for landing NEAR 0.35 — the dive transient
+    // scales with the memory, so a coarse last increment inflates it.
     for (let g = 0; g < 6 && c.rememberedTiltRad() < 0.35; g += 1) {
       c.onGestureStart();
-      for (let px = 5; px < 90 && c.rememberedTiltRad() < 0.35; px += 5) {
+      for (let px = 5; px < 90 && c.rememberedTiltRad() < 0.35; px += 2) {
         p = c.apply(
           p,
-          { kind: 'drag', mode: 'orbit', startPx: [50, px], endPx: [50, px + 5] },
+          { kind: 'drag', mode: 'orbit', startPx: [50, px], endPx: [50, px + 2] },
           [100, 100],
           Math.PI / 2,
           1,

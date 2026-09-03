@@ -172,11 +172,10 @@ describe('remembered tilt (ruling 12)', () => {
 
   it('mid-window tilt-set un-maps through w — the just-set display is a fixed point', () => {
     ORIENT_TUNING.blendSpace = 'lin';
-    // Isolate the tilt authority: the fixture's tilt drag leaves the camera
-    // heading ≈ π (it orbits up the meridian and looks back), so with
-    // north-up on, the heading/level settles would rotate the basis on the
-    // notch and contaminate a 1e-9 tilt readout. The toggle gates exactly
-    // those two (ruling 11) and leaves the tilt mapping live.
+    // Isolate the tilt authority: with north-up on, the heading/level
+    // settles would rotate the basis on the notch and contaminate a 1e-9
+    // tilt readout. The toggle gates exactly those two (ruling 11) and
+    // leaves the tilt mapping live.
     ORIENT_TUNING.northUp = false;
     const c = createSurfaceController();
     const hr = (SURFACE_REGIME.engageHR + SURFACE_REGIME.disengageHR) / 2; // mid-window

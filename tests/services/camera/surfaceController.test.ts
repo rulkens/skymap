@@ -227,11 +227,11 @@ describe('surfaceController', () => {
   it('tilts about the already-yawed east, not a fixed screen axis', () => {
     // Anchor = the screen-centre pick [0,0,1]; the eye orbits it by heading
     // −ψ about the local up (NEGATED per ruling 15 — a deliberate feel
-    // inversion vs the orbit drag), THEN by tilt −α about the yawed east —
-    // negated at the input mapping so drag-down tilts the view UP toward the
-    // horizon (Google Earth's right-drag convention). Closed form:
-    // eye = anchor + R(q1·east, −α)·R(up, −ψ)·(eye − anchor)
-    //     = [sinψ·sinα, cosψ·sinα, 1 + cosα].
+    // inversion vs the orbit drag), THEN by tilt +α about the yawed east —
+    // drag-down tilts the view UP toward the horizon (Google Earth's
+    // right-drag convention, ruling 16). Closed form:
+    // eye = anchor + R(q1·east, +α)·R(up, −ψ)·(eye − anchor)
+    //     = [−sinψ·sinα, −cosψ·sinα, 1 + cosα].
     // The fixed-axis order leaves x at 0 — that is the whole difference.
     const c = createSurfaceController();
     c.onGestureStart();
@@ -240,8 +240,8 @@ describe('surfaceController', () => {
     const pose = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [50, 50], [70, 60]));
 
     const eye = eyeOf(pose);
-    expect(eye[0]).toBeCloseTo(Math.sin(psi) * Math.sin(alpha), 12);
-    expect(eye[1]).toBeCloseTo(Math.cos(psi) * Math.sin(alpha), 12);
+    expect(eye[0]).toBeCloseTo(-Math.sin(psi) * Math.sin(alpha), 12);
+    expect(eye[1]).toBeCloseTo(-Math.cos(psi) * Math.sin(alpha), 12);
     expect(eye[2]).toBeCloseTo(1 + Math.cos(alpha), 12);
     // The basis turned with the eye: right ends on the yawed east.
     expect(pose.basisLocal.slice(0, 3)).toEqual([
@@ -288,11 +288,12 @@ describe('surfaceController', () => {
   });
 
   it('re-picks the zoom anchor after the eye overshoots its tangent plane', () => {
-    // Tilt hard about the picked anchor until the eye is BELOW its tangent
-    // plane — the anchor is now behind the horizon, so zooming toward it would
-    // carry the camera backwards through it (C §6.7). The anchor is the same
-    // ray-sphere pick `latchFor` makes, computed here rather than hand-solved
-    // (this pixel has no clean closed form the way [75,50] does).
+    // Drag DOWN — the tilt-raising direction (ruling 16) — until the eye is
+    // BELOW the picked anchor's tangent plane: the anchor is now behind the
+    // horizon, so zooming toward it would carry the camera backwards through
+    // it (C §6.7). The anchor is the same ray-sphere pick `latchFor` makes,
+    // computed here rather than hand-solved (this pixel has no clean closed
+    // form the way [75,50] does).
     // The off-viewport end is on purpose: the recognizer binds move/up to
     // `window` (the iOS implicit-capture fix), so dragging past the canvas
     // edge is an ordinary case the controller must handle. The pixel count is
@@ -308,9 +309,7 @@ describe('surfaceController', () => {
 
     const c = createSurfaceController();
     c.onGestureStart();
-    // Drag DOWN (the GE tilt-up direction): the pre-ruling-14 fixture dragged
-    // up, unknowingly riding the missing floor through nadir to the far side.
-    const tilted = apply(c, start, drag('pan', [60, 50], [60, 50 + 295 / TILT_GAIN]));
+    const tilted = apply(c, start, drag('pan', [60, 50], [60, 50 + 115 / TILT_GAIN]));
     const eye = eyeOf(tilted);
     expect(eye[0] * anchor[0] + eye[2] * anchor[2]).toBeLessThan(1);
 
@@ -319,7 +318,7 @@ describe('surfaceController', () => {
     // is about an axis through A, so that distance survives it untouched. The
     // fresh screen-centre pick satisfies the law; the latched anchor does not.
     // The gesture is live, so the re-pick goes through the drag's last pixel.
-    const fresh = pickThrough(tilted, [60, 50 + 295 / TILT_GAIN])!;
+    const fresh = pickThrough(tilted, [60, 50 + 115 / TILT_GAIN])!;
     expect(fresh).not.toBeNull();
     const zoomedEye = eyeOf(apply(c, tilted, zoom(0.5, true)));
     const rangeTo = (a: Vec3, e: Vec3): number => Math.hypot(e[0] - a[0], e[1] - a[1], e[2] - a[2]);
@@ -801,27 +800,97 @@ describe('surfaceController', () => {
     expect(bodyAngle(touched)).toBeLessThan(1.0);
   });
 
-  it('the tilt floor is DEAD: a tilt-decreasing drag at tilt 0 moves nothing (ruling 14)', () => {
-    // The floor mirror of the ceiling-wall fixture above. Pre-fix there was
-    // NO floor: the tilt handle rotated the pose about the anchor's east
-    // straight THROUGH nadir — the eye orbited 0.5 rad to the far side (a
-    // 20 px drag × TILT_GAIN), the unsigned tilt readout came back UP to
-    // 0.25 with the heading flipped, and the handle then wrote that into
-    // the remembered-tilt memory. Excess input past the floor must produce
-    // ZERO rotation — full-pose equality, not an epsilon on tilt.
+  it('the tilt floor is DEAD: a lowering drag at tilt 0 moves nothing (rulings 14+16)', () => {
+    // Drag-up is the tilt-LOWERING direction (ruling 16). At tilt exactly 0
+    // the through-zero budget is 0, so the whole gesture — TILT_GAIN, 200 px
+    // of travel — maps to zero rotation and the pose comes back untouched
+    // (full-pose byte bar, not an epsilon on tilt). Round 13's clamp sat on
+    // the raising side instead: this pose was "dead" only as a lock, while
+    // the real lowering drag still orbited through nadir (R13-1).
     const c = createSurfaceController();
     c.onGestureStart();
     const start = poseAt([0, 0, 2], NADIR);
-    const out = apply(c, start, drag('pan', [50, 50], [50, 30]));
+    const out = apply(c, start, drag('pan', [50, 50], [50, -150]));
     expect(out.eyeRelAnchorM).toEqual(start.eyeRelAnchorM);
     expect(out.anchorLocalM).toEqual(start.anchorLocalM);
     expect(out.basisLocal).toEqual(start.basisLocal);
     expect(c.rememberedTiltRad()).toBe(0); // the memory stays clean too
   });
 
+  it('from exactly 0 a horizon-ward drag tilts immediately, on the near side (ruling 16)', () => {
+    // R13-4's vacated coverage: the floor must not lock nadir. Drag-down is
+    // the tilt-UP direction (ruling 16), so from tilt exactly 0 it produces
+    // tilt at once — on the NEAR side. Pre-13b the same drag rotated through
+    // nadir to the far side (eye y POSITIVE here): the wrong-side clamp left
+    // the lowering direction unbounded and locked the raise instead.
+    const c = createSurfaceController();
+    c.onGestureStart();
+    const alpha = (10 / 100) * FOV * TILT_GAIN;
+    const out = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [50, 50], [50, 60]));
+    const eye = eyeOf(out);
+    expect(eye[0]).toBeCloseTo(0, 12);
+    expect(eye[1]).toBeCloseTo(-Math.sin(alpha), 12);
+    expect(eye[2]).toBeCloseTo(1 + Math.cos(alpha), 12);
+    // The anchor pivot drags the local up along: at h = R the displayed tilt
+    // is exactly half the rotation, and the memory follows it (w = 1 here).
+    expect(bodyAngle(out)).toBeCloseTo(alpha / 2, 9);
+    expect(c.rememberedTiltRad()).toBeCloseTo(alpha / 2, 9);
+  });
+
+  it('lowering drags land the floor exactly and never cross nadir (rulings 14+16)', () => {
+    // The R13-1 signature: a one-way lowering drag whose tilt bounced between
+    // 0.5° and 2.2° while the eye kept orbiting 1.29°/event and the memory
+    // followed the bounce (0.47→2.15→1.90→2.16). The toward-zero budget is
+    // the EXACT through-zero rotation — larger than the tilt itself by the
+    // anchor-pivot attenuation; bounding by the unsigned tilt readout is the
+    // mutation this fixture kills — so tilt and memory walk monotonically to
+    // 0 and everything is still once there.
+    const c = createSurfaceController();
+    c.onGestureStart();
+    let pose = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [50, 50], [50, 90]));
+    c.onGestureEnd();
+    expect(eyeOf(pose)[1]).toBeLessThan(0); // near side — the raise never crossed
+    expect(bodyAngle(pose)).toBeCloseTo(((40 / 100) * FOV * TILT_GAIN) / 2, 9);
+
+    let lastTilt = bodyAngle(pose);
+    let lastMem = c.rememberedTiltRad();
+    for (let i = 0; i < 4; i += 1) {
+      c.onGestureStart();
+      pose = apply(c, pose, drag('pan', [50, 50], [50, 20]));
+      c.onGestureEnd();
+      const tilt = bodyAngle(pose);
+      const mem = c.rememberedTiltRad();
+      expect(tilt).toBeLessThanOrEqual(lastTilt + 1e-12);
+      expect(mem).toBeLessThanOrEqual(lastMem + 1e-12);
+      expect(mem).toBeGreaterThanOrEqual(0);
+      // No crossing echo: screen-up never dips below the horizon plane the
+      // way the far-side swing flipped it.
+      const e = eyeOf(pose);
+      const m = Math.hypot(...e);
+      const b = pose.basisLocal;
+      expect((b[3] * e[0] + b[4] * e[1] + b[5] * e[2]) / m).toBeGreaterThan(-1e-9);
+      lastTilt = tilt;
+      lastMem = mem;
+    }
+    expect(lastTilt).toBeLessThan(1e-7);
+    expect(lastMem).toBeLessThan(1e-7);
+
+    // At the floor a further lowering drag spends a budget of exactly 0.
+    const before = eyeOf(pose);
+    c.onGestureStart();
+    const out = apply(c, pose, drag('pan', [50, 50], [50, 20]));
+    c.onGestureEnd();
+    const after = eyeOf(out);
+    expect(
+      Math.hypot(after[0] - before[0], after[1] - before[1], after[2] - before[2]),
+    ).toBeLessThan(1e-9);
+    expect(bodyAngle(out)).toBeLessThan(1e-7);
+  });
+
   it('at the floor a mixed drag keeps its heading component live (ruling 14)', () => {
-    // Only the tilt-DECREASING component dies at the floor; the same
-    // gesture's horizontal delta still orbits heading about the anchor up.
+    // Only the tilt-LOWERING component (drag-up, ruling 16) dies at the
+    // floor; the same gesture's horizontal delta still orbits heading about
+    // the anchor up.
     const c = createSurfaceController();
     c.onGestureStart();
     const start = poseAt([0, 0, 2], NADIR);

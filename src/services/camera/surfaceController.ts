@@ -38,6 +38,8 @@ import { unmappedTiltRad } from '../../utils/camera/unmappedTiltRad';
 import { maxTiltRad } from '../../utils/camera/maxTiltRad';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
 import { surfaceFloorM } from '../../utils/camera/surfaceFloorM';
+import { tiltFloorBudgetRad } from '../../utils/camera/tiltFloorBudgetRad';
+import { tiltFromNadirRad } from '../../utils/camera/tiltFromNadirRad';
 import { cross3 } from '../../utils/math/cross3';
 import { multiplyQuat } from '../../utils/math/multiplyQuat';
 import { normalize3 } from '../../utils/math/normalize3';
@@ -138,8 +140,7 @@ function eyeFrameOf(
   // already put the view (round 7) — stateless, and consistent between the
   // pre-notch and post-notch measures because both read their own pose.
   const { east, north } = blendedEnuAt(localUp, blendW, sceneUpLocal, up);
-  const fwdVert = dot3(forward, localUp);
-  const tiltRad = Math.acos(Math.max(-1, Math.min(1, -fwdVert)));
+  const tiltRad = tiltFromNadirRad(forward, eyeM);
   return {
     localUp,
     tiltRad,
@@ -226,8 +227,7 @@ function walledTiltPose(
   const localUp = normalize3(eyeM);
   const b = pose.basisLocal;
   const forward: Vec3 = [b[6], b[7], b[8]];
-  const vert = dot3(forward, localUp);
-  const tiltRad = Math.acos(Math.max(-1, Math.min(1, -vert)));
+  const tiltRad = tiltFromNadirRad(forward, eyeM);
 
   // The gesture-time cap (ruling 12, reconciliation 1): a drag may not ADD
   // tilt past the altitude ramp, but the band-mapped display — remembered × w,
@@ -522,36 +522,27 @@ function draggedPose(
     right[1] - upLocal[1] * radial,
     right[2] - upLocal[2] * radial,
   ]);
-  // Inverted at this input mapping, not in the rotation math: Google Earth's
-  // right-drag convention is drag-down ⇒ tilt UP toward the horizon, the
-  // opposite sign from `pitchRad`'s screen-space (down-is-positive) origin.
+  // Google-Earth pitch mapping (user ruling 16, 2026-09-03, the pair of
+  // ruling 15's heading negation above): drag down/toward you tilts UP toward
+  // the horizon — `pitchRad`'s screen-space down-is-positive sign carries
+  // straight through. Do not "fix" either sign back.
   // TILT_GAIN breaks the one-FOV-per-screen-height rate law for this handle
   // only: tilting spans ~90° of travel where orbit spans a hemisphere, so the
   // uniform rate reads as sluggish here (user feel ruling, 2026-09-03).
   //
-  // Ruling 14: the tilt FLOOR is dead, clamped at the gesture — the angle's
-  // lowering side (positive here) is bounded by the tilt actually held, so
-  // excess input produces zero rotation instead of orbiting THROUGH nadir to
-  // the far side (no floor existed; the unsigned readout then wrote the
-  // far-side swing into the remembered-tilt memory). The RAISING side stays
-  // owned by the ceiling wall. The heading factor is untouched: a mixed drag
-  // keeps its yaw live while the tilt component dies at the floor.
-  const eyeM = eyeOf(arm);
-  const eyeMag = Math.hypot(...eyeM);
+  // Ruling 14: the tilt FLOOR at 0 is a dead stop, clamped at the gesture.
+  // Only the lowering side (negative request) is bounded — by the exact
+  // through-zero rotation about this axis, not by the tilt readout: an
+  // unsigned acos cannot say which way is down and once bound the wrong side
+  // entirely, leaving the crossing open and the memory following it (R13-1).
+  // The raising side stays owned by the ceiling wall. The heading factor is
+  // untouched: a mixed drag keeps its yaw live while the tilt dies.
+  const tiltRequest = pitchRad * TILT_GAIN;
   const fwdArm: Vec3 = [arm.basisLocal[6], arm.basisLocal[7], arm.basisLocal[8]];
-  const tiltNow =
-    eyeMag === 0
-      ? 0
-      : Math.acos(
-          Math.max(
-            -1,
-            Math.min(
-              1,
-              -(fwdArm[0] * eyeM[0] + fwdArm[1] * eyeM[1] + fwdArm[2] * eyeM[2]) / eyeMag,
-            ),
-          ),
-        );
-  const tiltAngle = Math.min(-pitchRad * TILT_GAIN, tiltNow);
+  const tiltAngle =
+    tiltRequest >= 0
+      ? tiltRequest
+      : Math.max(tiltRequest, -tiltFloorBudgetRad(fwdArm, eyeOf(arm), anchorM, eastM));
   // Excess-only input is identity BY REFERENCE, not by arithmetic — the quat
   // path leaves −0 crumbs that would fail the ruled full-pose byte bar.
   if (tiltAngle === 0 && yawRad === 0) return { pose: arm, mode };
