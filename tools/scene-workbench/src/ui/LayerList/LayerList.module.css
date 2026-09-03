@@ -1,0 +1,53 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 8px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggleLabel {
+  composes: toggleLabel from '../../../../../src/components/common/shared.module.css';
+}
+
+.checkbox {
+  composes: checkbox from '../../../../../src/components/common/shared.module.css';
+}
+
+.assetLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+}
+
+.badge {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--surface-control);
+  border: 1px solid var(--border-control);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.count {
+  font-family: var(--font-family-mono);
+}
+
+.status {
+  margin-left: auto;
+}
