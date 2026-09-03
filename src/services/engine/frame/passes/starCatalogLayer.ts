@@ -105,7 +105,9 @@
  * reads as a lag, the fix is to seed frustum-driven newcomers at opacity 1
  * (distinguishing them from LOD-split newcomers, which must still start at 0) —
  * deliberately left out of this change so the prune lands as a pure, measurable
- * optimisation first.
+ * optimisation first. A sky-cubemap capture face (`ctx.viewSlot !== 0`) sidesteps
+ * this entirely: it shares no temporal state with the main view's fade, so every
+ * one of its cut nodes draws at opacity 1 (see `computeStarCut`'s capture branch).
  *
  * ### When it draws (house rule: gate at `enabled`, opacity 0 ⇒ no render)
  *
@@ -735,24 +737,6 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     const { boxOriginPc, boxEdgePc, firstRecord, recordCount, childMask, subtreeCounts } =
       starOctreeIndex(catalog);
 
-    // ── Advance this catalog's per-node LOD fades ──────────────────────────
-    const fadeState = fadeStateFor(catalog);
-    const dtMs =
-      fadeState.clockMs === null
-        ? Number.POSITIVE_INFINITY
-        : Math.max(0, nowMs - fadeState.clockMs);
-    fadeState.clockMs = nowMs;
-    const step = Math.min(1, dtMs / NODE_FADE_MS);
-    // This frame's stamp (see `StarFadeState`): `inCutFrame[idx] === frame` ⇒ in
-    // the cut (target 1); a monotonic counter starting at 1, so the zero-filled
-    // stamps of a fresh catalog never false-match.
-    const frame = ++fadeState.frame;
-    const { opacity, inCutFrame, activeFrame } = fadeState;
-    const prevActiveList = fadeState.prevActiveList;
-    const prevActiveCount = fadeState.prevActiveCount;
-    const activeList = fadeState.activeList;
-    const nodeCount = catalog.nodes.length;
-
     // Reuse this catalog's persistent stream pair (reset, then refilled) rather
     // than allocating fresh arrays — the allocation fix. Both streams coexist for
     // the whole frame (leaf into HDR, aggregate into the half-res offscreen).
@@ -769,33 +753,13 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     // `resolveStarRecord`.
     const pcToMpc = SCALE_UNITS.PC_TO_MPC;
 
-    // Advance one node's fade toward `target`, then (if still visible) append it
-    // to the active list and PARTITION it into the leaf or aggregate stream by
-    // its `childMask` (0 ⇒ leaf, records are real stars; !== 0 ⇒ aggregate, a
-    // subtree collapsed to its flux mip) — NOT its level: a fat leaf sits at
-    // level > 0 yet is a leaf. A fading-out node draws BEYOND the walk's budget
-    // for a few frames; that overdraw is bounded by cut churn and accepted rather
-    // than capped (capping would reintroduce the box-pop the fade exists to
-    // remove). `activeCount` is a closure-captured cursor into `activeList`.
-    let activeCount = 0;
-    const advanceNode = (idx: number, target: number): void => {
-      let op = opacity[idx]!;
-      if (op < target) op = Math.min(target, op + step);
-      else if (op > target) op = Math.max(target, op - step);
-      opacity[idx] = op;
-      if (op !== target) anyNodeFading = true;
-
-      // Fully faded out: drop it (draws in neither stream, not re-listed).
-      if (target === 0 && op <= 0) return;
-      // A node index outlives its catalog only across a tier swap, which hands a
-      // fresh catalog object (and fade state) — belt-and-braces against a stale
-      // index; the index arrays are parallel to `catalog.nodes`, so this bound is
-      // equivalent to the old `catalog.nodes[idx] === undefined` guard.
-      if (idx >= nodeCount) return;
-
-      activeFrame[idx] = frame;
-      activeList[activeCount++] = idx;
-
+    // Emit one drawn node into its leaf/aggregate stream at draw opacity
+    // `sourceCrossfade × op`, PARTITIONED by `childMask` (0 ⇒ leaf, records are
+    // real stars; !== 0 ⇒ aggregate) — NOT by level: a fat leaf sits at level > 0
+    // yet is a leaf. Shared by the main view's fade-advanced push (`advanceNode`
+    // below) and the capture branch's opacity-1 push, so the two never duplicate
+    // the origin/cell-scale derivation.
+    const emitNode = (idx: number, op: number): void => {
       const isAgg = childMask[idx] !== 0;
       const stream = isAgg ? aggregate : leaf;
       const o3 = idx * 3;
@@ -819,6 +783,64 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
         isAgg ? subtreeCounts[idx]! : 1,
         sourceCrossfade * op,
       );
+    };
+
+    // A capture view (a sky-cubemap face, `viewSlot !== 0`) renders one static
+    // frame with no temporal continuity to protect, so it must not read or write
+    // the main view's per-node fade state — that state is keyed per CATALOG (see
+    // `StarFadeState`), not per ctx, and up to six face contexts run before the
+    // main view each real frame. Every cut node draws at full opacity instead of
+    // entering as a fade-from-0 NEWCOMER; `anyNodeFading` is left untouched (a
+    // capture never votes to keep the loop ticking).
+    if (ctx.viewSlot !== 0) {
+      for (let i = 0; i < cut.count; i++) emitNode(cut.nodeIndex[i]!, 1);
+      sources.push({ source, leaf, aggregate });
+      continue;
+    }
+
+    // ── Advance this catalog's per-node LOD fades ──────────────────────────
+    const fadeState = fadeStateFor(catalog);
+    const dtMs =
+      fadeState.clockMs === null
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, nowMs - fadeState.clockMs);
+    fadeState.clockMs = nowMs;
+    const step = Math.min(1, dtMs / NODE_FADE_MS);
+    // This frame's stamp (see `StarFadeState`): `inCutFrame[idx] === frame` ⇒ in
+    // the cut (target 1); a monotonic counter starting at 1, so the zero-filled
+    // stamps of a fresh catalog never false-match.
+    const frame = ++fadeState.frame;
+    const { opacity, inCutFrame, activeFrame } = fadeState;
+    const prevActiveList = fadeState.prevActiveList;
+    const prevActiveCount = fadeState.prevActiveCount;
+    const activeList = fadeState.activeList;
+    const nodeCount = catalog.nodes.length;
+
+    // Advance one node's fade toward `target`, then (if still visible) append it
+    // to the active list and emit it. A fading-out node draws BEYOND the walk's
+    // budget for a few frames; that overdraw is bounded by cut churn and accepted
+    // rather than capped (capping would reintroduce the box-pop the fade exists
+    // to remove). `activeCount` is a closure-captured cursor into `activeList`.
+    let activeCount = 0;
+    const advanceNode = (idx: number, target: number): void => {
+      let op = opacity[idx]!;
+      if (op < target) op = Math.min(target, op + step);
+      else if (op > target) op = Math.max(target, op - step);
+      opacity[idx] = op;
+      if (op !== target) anyNodeFading = true;
+
+      // Fully faded out: drop it (draws in neither stream, not re-listed).
+      if (target === 0 && op <= 0) return;
+      // A node index outlives its catalog only across a tier swap, which hands a
+      // fresh catalog object (and fade state) — belt-and-braces against a stale
+      // index; the index arrays are parallel to `catalog.nodes`, so this bound is
+      // equivalent to the old `catalog.nodes[idx] === undefined` guard.
+      if (idx >= nodeCount) return;
+
+      activeFrame[idx] = frame;
+      activeList[activeCount++] = idx;
+
+      emitNode(idx, op);
     };
 
     // Pass 1 — stamp this frame's cut and seed newcomers. The cut is a reused
