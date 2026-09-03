@@ -8,6 +8,7 @@
 | Endpoint     | `https://api.datafordeler.dk/FileDownloads/GetPointCloudFile`                                |
 | Tile CRS     | EPSG:25832 (ETRS89 / UTM zone 32N)                                                           |
 | Height datum | DVR90 orthometric                                                                            |
+| Flight date  | 2011-09-20 (derived from point `GpsTime`, see "Flight date" below)                           |
 
 Feeds the scene-workbench LiDAR bake (task 3 onward): raw ALS point clouds
 for the Søndermarken picnic-spot scene, colourized and thinned to a viewable
@@ -20,12 +21,12 @@ Taken verbatim from the GeoDanmark ortho harvest this scene sits inside
 covers, not a park-scale crop. Narrowing later is a crop-constant edit plus
 a re-bake, nothing else (spec §11 open question 1).
 
-|                            |                                  |
-| -------------------------- | -------------------------------- |
-| Bbox (W/S/E/N, EPSG:4326)  | 12.51 / 55.662 / 12.55 / 55.678  |
-| Anchor `latDeg` / `lonDeg` | 55.67 / 12.53 (bbox centre)      |
-| Anchor `headingDeg`        | 0 (group +X = local east)        |
-| Anchor `heightMDvr90`      | **18.5 m** (measured, see below) |
+|                            |                                   |
+| -------------------------- | --------------------------------- |
+| Bbox (W/S/E/N, EPSG:4326)  | 12.51 / 55.662 / 12.55 / 55.678   |
+| Anchor `latDeg` / `lonDeg` | 55.67 / 12.53 (bbox centre)       |
+| Anchor `headingDeg`        | 0 (group +X = local east)         |
+| Anchor `heightMDvr90`      | **18.53 m** (measured, see below) |
 
 ### `heightMDvr90` — read from the anchor tile's own points
 
@@ -81,6 +82,19 @@ Søndermarken's tree cover. Task 3's bake should run a proper ground filter
 has far more context than one edge-adjacent tile, and overwrite this
 constant with that result.
 
+### Task 9 re-derivation — same conclusion, standard method
+
+Task 9 re-ran this per the plan's method: `filters.reprojection` (EPSG:25832
+→ EPSG:4326) → `filters.crop` to a 20 m-radius box around the anchor
+(lon 12.53 / lat 55.67) → `filters.range Classification[2:2]`. Same tile,
+same result — **zero** ground (class 2) points among 508 returns in the box
+(491 class 5 high-vegetation, 17 class 1 unclassified). Per the ruling's
+fallback, took the 5th-percentile Z of all 508 returns: **18.53 m** —
+0.08 m above the earlier min-Z estimate (18.45 m over 429 points in a
+differently-shaped crop), well inside the margin either method already
+flagged as an overstatement of true bare earth (no pulse in this radius hit
+soil). Still true bare earth is at or below this value.
+
 ## Tile list
 
 Computed by converting the bbox corners to EPSG:25832 with `cs2cs` and
@@ -122,6 +136,26 @@ ellipsoidal height — exact enough here because `h_0` (the anchor height)
 comes from the same DVR90 data, so the ~36 m Danish geoid undulation
 cancels out over a 2.5 km patch; it would not for a large-extent or
 absolute-height use.
+
+## Flight date
+
+`bakeLidar`'s `provenance.sourceVintage` needs the source material's date,
+not the bake date. The LAS headers' own `creation_year`/`creation_doy`
+fields are unset (`0` — a TerraScan export quirk, not a real date), so it's
+read from point `GpsTime` instead: PDAL's `readers.las` decodes it as
+Adjusted Standard GPS Time (`GpsTime + 1e9` seconds past the GPS epoch,
+1980-01-06 UTC, minus the 18 s GPS-UTC leap offset). All 8 tiles decode to
+the same day:
+
+```
+$ pdal info --stats --dimensions GpsTime punktsky_1km_6175_721.las
+GpsTime min 567880.7422 max 568340.3804
+$ python3 -c "import datetime; e=datetime.datetime(1980,1,6,tzinfo=datetime.timezone.utc); \
+  print(e+datetime.timedelta(seconds=567880.7422+1e9-18))"
+2011-09-20 15:31:02.742200+00:00
+```
+
+**2011-09-20.**
 
 ## Entitlement check
 
@@ -171,6 +205,24 @@ Classification[2:2]` returns anything for an arbitrary Punktsky tile;
   All three metre values are within tolerance of `0`. Task 6 should build
   its pipeline the same way (`+proj=cart` then `+proj=topocentric`), not
   via `cs2cs`'s CRS-pair form.
+  **Task 9 update:** the same failure hits PDAL's `filters.reprojection`
+  itself — `out_srs` set to the bare `+proj=topocentric ...` string, or to
+  the whole `+proj=pipeline ...` string, both fail the same way
+  (`Object is not a SingleCRS` for the latter). `filters.projpipeline`'s
+  `coord_op` option runs an arbitrary PROJ pipeline directly instead of
+  negotiating a CRS pair — that's what `lidarPipelineStages.ts` uses. Its
+  pipeline also needs an explicit `+proj=unitconvert +xy_in=deg +xy_out=rad`
+  first step: PROJ pipelines run in radians, unlike `cct`'s CLI convenience
+  wrapper (used above) which silently converts degree input.
+- **Punktsky LAS files carry no embedded CRS.** `filters.reprojection`
+  refuses to run with `PROJ: ... source data has no spatial reference and
+none is specified with the 'in_srs' option` unless told one — every
+  `readers.las` stage needs `default_srs: 'EPSG:25832'` (this table's
+  Tile CRS).
+- **`writers.text` quotes its header by default.** `quote_header` defaults
+  to `true`, so a `format: csv` writer's first line reads `"X","Y","Z",...`
+  — `readPdalCsv` checks `PDAL_CSV_COLUMNS` byte-for-byte, so the pipeline
+  must set `quote_header: false` explicitly.
 
 ## Prerequisite versions (verified 2026-09-03)
 

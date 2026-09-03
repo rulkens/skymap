@@ -2,10 +2,10 @@
  * The Søndermarken scene group — anchor, crop bounds, and DHM tile list the
  * fetch/bake CLIs read (`data/raw/dhm/README.md` is their provenance).
  *
- * `minPointSpacingM` exists to cap density: DHM/Punktsky is ~4-5 pts/m², so
- * the README bbox at native density is ~20M points ≈ 320MB at the 16-byte
- * point stride; Poisson-thinning to `filters.sample` at 1m lands ~4.5M
- * points ≈ 72MB, which localhost serves and a browser parses without
+ * `minPointSpacingM` exists to cap density. Native density over this bbox is
+ * ~0.45 pts/m² (measured, not the ~4-5 pts/m² first assumed) — `filters.sample`
+ * at 1m still thins it, landing 1.6M points ≈ 26MB (task 9's real bake), well
+ * past the >1e6 target, which localhost serves and a browser parses without
  * ceremony.
  */
 import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
@@ -32,7 +32,7 @@ export const SOENDERMARKEN: SceneGroupDefinition = {
     kind: 'geodetic',
     latDeg: 55.67,
     lonDeg: 12.53,
-    heightMDvr90: 18.5,
+    heightMDvr90: 18.53,
     headingDeg: 0,
   },
   bounds: {
