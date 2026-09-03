@@ -18,6 +18,7 @@
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
+import { centreLookingPose } from '../camera/centreLookingPose';
 import { frameAlignedRoll } from '../camera/frameAlignedRoll';
 import { pivotFraming } from '../camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -167,7 +168,26 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
             ? root.camera.base.frame === 'absolute'
             : root.camera.base.frame !== 'absolute' &&
               live.frame.body === root.camera.base.frame.body;
-        if (root.camera.clip === null && sameArm) store.dispatch(commitCameraPose(live));
+        // R12-1: the world-arm register carries the render-side tilt
+        // projection (`approachTiltedPose`), so bake the PRE-projection
+        // centre-looking pose — committed verbatim, the pivot pin would
+        // re-derive the eye from tilted yaw/pitch (a d·2sin(τ/2) teleport,
+        // accumulating per release). Body-arm and unprojected registers
+        // pass through by reference.
+        if (root.camera.clip === null && sameArm) {
+          store.dispatch(
+            commitCameraPose(
+              centreLookingPose(
+                live,
+                selectFocusRow(root),
+                deriveSimDays(selectTimeState(root), nowMs),
+                state.cameraRuntime.surface.rememberedTiltRad(),
+                state.cameraRuntime.clock.followPanOffset,
+                ORIENTATION_FRAMES[state.settings.orientation],
+              ),
+            ),
+          );
+        }
         state.cameraRuntime.surface.onGestureEnd();
         store.dispatch(endDrag());
         break;
@@ -213,6 +233,10 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
         const upBasis = state.cameraRuntime.upBasis.current;
         if (zoomed !== null && root.camera.base.frame === 'absolute') {
+          // `base` is centre-looking by wiring (R12-1), so this pre/post pair
+          // is self-consistent under an autoRotate-owned notch too: the
+          // DISPLAYED forward differs only by the render-side tilt projection
+          // — a pure function of altitude, never a committed pose to chase.
           const roll = frameAlignedRoll(
             root.camera.base.pose,
             zoomed,

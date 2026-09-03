@@ -72,6 +72,7 @@ import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
+import { centreLookingPose } from '../camera/centreLookingPose';
 import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
 import { regimeArmFor } from '../camera/regimeArmFor';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -375,11 +376,36 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // exactly at the `desc.to` value.
   const { lastPose, prevActiveId } = state.cameraRuntime;
   const prev = prevActiveId.current;
+  // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
+  // resolved against this frame), so the pin and the winner never disagree on
+  // what is focused. A separate `focusRow` local below reads the EngineState
+  // mirror for the structure-focus / time-report sections.
+  const pivotFocus = rootState.selectionRows.focus;
   // The pose this frame actually renders. Normally the freshly produced pose;
   // on a deactivation edge it is overridden to the just-committed pose (below).
   let renderPose = pose;
-  if (prev !== activeId && deps.drivers.find((d) => d.id === prev)?.commitsOnEdge) {
-    deps.cb.store.dispatch(commitCameraPose(lastPose.current));
+  const prevRow = deps.drivers.find((d) => d.id === prev);
+  if (prev !== activeId && prevRow?.commitsOnEdge) {
+    // R12-1: a PIVOTING driver's last pose carries the render-side tilt
+    // projection; committed verbatim, the pin would re-derive the eye from
+    // its tilted yaw/pitch — a d·2sin(τ/2) teleport that accumulates. Bake
+    // the pre-projection centre-looking pose instead; the projection
+    // re-tilts the display from it, so the image is unchanged. clip/tween
+    // opt out of the pin, so their pose was never projected — verbatim.
+    deps.cb.store.dispatch(
+      commitCameraPose(
+        prevRow.pivotsOnFocusedBody
+          ? centreLookingPose(
+              lastPose.current,
+              pivotFocus,
+              simDays,
+              state.cameraRuntime.surface.rememberedTiltRad(),
+              state.cameraRuntime.clock.followPanOffset,
+              poseBasis,
+            )
+          : lastPose.current,
+      ),
+    );
     // Commit-on-edge fires AFTER produce, so the produce step above ran the
     // INCOMING driver against the PRE-commit `base`. For a driver that reads
     // `base` (resting / autoRotate) that pose is the stale pre-edge value —
@@ -406,11 +432,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // apply time — and the pin resolves the pivot to `bodyPosition +
   // followPanOffset`, so the shifted pivot still translate-follows the body
   // and a fresh focus zeroes it (in `followElapsed`).
-  // Read the pivot focus off `rootState` (the SAME store snapshot the drivers
-  // resolved against this frame), so the pin and the winner never disagree on
-  // what is focused. A separate `focusRow` local below reads the EngineState
-  // mirror for the structure-focus / time-report sections.
-  const pivotFocus = rootState.selectionRows.focus;
   const clock = state.cameraRuntime.clock;
   const pivotsOnFocusedBody =
     deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false;

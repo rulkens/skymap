@@ -5,10 +5,11 @@
  * between the pivot pin and the fold, for the same pivot drivers the pin
  * re-centres: pitch the view off the FOCUSED body's nadir by exactly the
  * mapped amount, rotating about the rolled screen-right with the eye fixed.
- * `camera.base` stays centre-looking — every incumbent writer keeps its
- * semantics — and the fold converts THIS pose, so engage inherits
- * `remembered × 1` exactly. Zero remembered (or zero mapped tilt) returns
- * the input BY REFERENCE — the never-engaged byte-identity control.
+ * `camera.base` stays centre-looking — enforced by the commit sites baking
+ * `centreLookingPose`, this projection's inverse (R12-1) — and the fold
+ * converts THIS pose, so engage inherits `remembered × 1` exactly. Zero
+ * remembered (or zero mapped tilt) returns the input BY REFERENCE — the
+ * never-engaged byte-identity control.
  */
 
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';

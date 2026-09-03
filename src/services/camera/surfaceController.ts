@@ -34,6 +34,7 @@ import { refAzimuthOf } from '../../utils/camera/refAzimuthOf';
 import { riddenOrientStepRad } from '../../utils/camera/riddenOrientStepRad';
 import { cursorRayBodyLocal } from '../../utils/camera/cursorRayBodyLocal';
 import { mappedTiltRad } from '../../utils/camera/mappedTiltRad';
+import { unmappedTiltRad } from '../../utils/camera/unmappedTiltRad';
 import { maxTiltRad } from '../../utils/camera/maxTiltRad';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
 import { surfaceFloorM } from '../../utils/camera/surfaceFloorM';
@@ -692,9 +693,9 @@ export function createSurfaceController(): SurfaceController {
       // the memory untouched (no intent is readable there).
       if (mode === 'tilt' || mode === 'look') {
         const f = eyeFrameOf(final, 1, BODY_POLE);
-        const w = bodyUpWeight(Math.hypot(...eyeOf(final)) / bodyRadiusM - 1);
-        if (f !== null && w > 1e-6) {
-          rememberedTiltRad = Math.min(f.tiltRad / w, SURFACE_REGIME.tiltMaxRad);
+        const hr = Math.hypot(...eyeOf(final)) / bodyRadiusM - 1;
+        if (f !== null && bodyUpWeight(hr) > 1e-6) {
+          rememberedTiltRad = Math.min(unmappedTiltRad(f.tiltRad, hr), SURFACE_REGIME.tiltMaxRad);
         }
       }
       return final;
