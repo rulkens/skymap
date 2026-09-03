@@ -33,6 +33,7 @@ import { orientStepRad } from '../../utils/camera/orientStepRad';
 import { refAzimuthOf } from '../../utils/camera/refAzimuthOf';
 import { riddenOrientStepRad } from '../../utils/camera/riddenOrientStepRad';
 import { cursorRayBodyLocal } from '../../utils/camera/cursorRayBodyLocal';
+import { mappedTiltRad } from '../../utils/camera/mappedTiltRad';
 import { maxTiltRad } from '../../utils/camera/maxTiltRad';
 import { rotateBasisByQuat } from '../../utils/camera/rotateBasisByQuat';
 import { surfaceFloorM } from '../../utils/camera/surfaceFloorM';
@@ -233,7 +234,7 @@ function walledTiltPose(
   // authorities fighting over the same tilt was the divergence class ruling
   // 10 outlawed.
   const hr = eyeMagM / bodyRadiusM - 1;
-  const ceilingRad = Math.max(maxTiltRad(hr), rememberedTiltRad * bodyUpWeight(hr));
+  const ceilingRad = Math.max(maxTiltRad(hr), mappedTiltRad(rememberedTiltRad, hr));
   const allowed = Math.min(tiltRad, Math.max(ceilingRad, Math.min(preTiltRad, tiltRad)));
   const target = allowed - orientStepRad(Math.max(0, allowed - ceilingRad));
   if (target >= tiltRad - 1e-15) return pose;
@@ -347,7 +348,9 @@ function canonicalledPose(
     // decays by the capped share — the 113°-snap protection, measured
     // against the band target now that the old ceiling wall is gone. Both
     // directions alike; the dive still pivots about its anchor (Q4c).
-    const devNew = f1.tiltRad - rememberedTiltRad * blendW;
+    const eyeM1 = eyeOf(out);
+    const devNew =
+      f1.tiltRad - mappedTiltRad(rememberedTiltRad, Math.hypot(...eyeM1) / bodyRadiusM - 1);
     const devPre = preTiltDevRad ?? devNew;
     const dTau = devNew - devPre + orientStepRad(devPre);
     const b = out.basisLocal;
@@ -572,7 +575,7 @@ function zoomStep(
   const preTiltDevRad =
     preInBlendFrame === null
       ? null
-      : preInBlendFrame.tiltRad - rememberedTiltRad * bodyUpWeight(hrPre);
+      : preInBlendFrame.tiltRad - mappedTiltRad(rememberedTiltRad, hrPre);
   return canonicalledPose(
     stepped,
     factor < 1 ? cursorAnchorM : null,

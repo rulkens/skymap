@@ -71,6 +71,7 @@ import { drainInput } from './drainInput';
 import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
 import { regimeArmFor } from '../camera/regimeArmFor';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -411,12 +412,27 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // mirror for the structure-focus / time-report sections.
   const pivotFocus = rootState.selectionRows.focus;
   const clock = state.cameraRuntime.clock;
+  const pivotsOnFocusedBody =
+    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false;
   renderPose = applyFocusedBodyPivot(
     renderPose,
-    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false,
+    pivotsOnFocusedBody,
     pivotFocus,
     simDays,
     clock.followPanOffset,
+  );
+  // The world arm's tilt expression (ruling 13) sits between the pin (which
+  // owns WHERE the view pivots) and the fold (which converts THIS pose at
+  // engage): a pure projection of the one display-tilt mapping, so the
+  // approach lerps and the engage edge inherits the image it already shows.
+  renderPose = approachTiltedPose(
+    renderPose,
+    pivotsOnFocusedBody,
+    pivotFocus,
+    simDays,
+    state.cameraRuntime.surface.rememberedTiltRad(),
+    poseBasis,
+    upBasis,
   );
 
   // ── (3c) THE FOLD: one world-arm resolution, then the regime ─────────────
