@@ -10,13 +10,13 @@
 import { call, cancelled, getContext, put, select, takeLatest } from 'typed-redux-saga';
 
 import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
-import { dataUrl } from '../../../../../src/services/loading/fetchWithProgress';
 import type { SceneAsset } from '../../../@types/SceneAsset';
 import type { SceneManifest } from '../../../@types/SceneManifest';
 import { disposeScene, type RenderResources } from '../../render/renderResources';
 import { uploadPointCloud } from '../../render/uploadPointCloud';
 import { acceptLoadedAsset } from '../../scene/acceptLoadedAsset';
 import { parsePoints } from '../../scene/parsePoints';
+import { resolveAssetUrl } from '../../scene/resolveAssetUrl';
 import type { SceneSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
 import { groupSelected } from '../registry/registrySlice';
@@ -33,7 +33,7 @@ function* loadAssetWorker(
     // Fetch → parse → upload → accept, as ONE promise chain: the staleness
     // check runs in the continuation, never after the `yield*` below.
     const built = yield* call(() =>
-      fetch(dataUrl(asset.artifactUrl))
+      fetch(resolveAssetUrl(asset.artifactUrl))
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status} for ${asset.artifactUrl}`);
           return res.arrayBuffer();
@@ -75,7 +75,7 @@ function* loadGroupWorker(action: ReturnType<typeof groupSelected>) {
     if (!entry) throw new Error(`no registry entry for group "${action.payload}"`);
 
     const manifest = yield* call(() =>
-      fetch(dataUrl(entry.manifestUrl), { cache: 'no-cache' }).then((res) => {
+      fetch(resolveAssetUrl(entry.manifestUrl), { cache: 'no-cache' }).then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status} for ${entry.manifestUrl}`);
         return res.json() as Promise<SceneManifest>;
       }),
