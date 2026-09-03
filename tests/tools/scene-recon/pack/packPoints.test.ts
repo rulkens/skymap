@@ -54,6 +54,10 @@ describe('parsePoints rejects a truncated buffer', () => {
     // Header says 5 records; keep only the header + 2 records worth of bytes.
     const truncated = full.slice(0, POINTS_HEADER_BYTES + 2 * POINTS_RECORD_BYTES);
     expect(() => parsePoints(truncated)).toThrow(/pointCount|length/i);
+
+    // Shorter than the 16-byte header itself — the pointCount field can't
+    // even be read, so this must fail before that check runs.
+    expect(() => parsePoints(new ArrayBuffer(8))).toThrow();
   });
 });
 
