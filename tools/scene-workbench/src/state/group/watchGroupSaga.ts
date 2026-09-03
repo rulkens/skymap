@@ -6,8 +6,6 @@
  * result rather than resuming with it — `acceptLoadedAsset`, called from
  * inside each upload promise's own `.then()`, is what destroys an orphaned
  * buffer instead of leaking it; see its own doc.
- * `manifestUrl`/`artifactUrl` are data-root-relative logical paths (spec §5's
- * tree), so both go through `dataUrl()` like every other `geo3d/` file.
  */
 import { call, cancelled, getContext, put, select, takeLatest } from 'typed-redux-saga';
 
