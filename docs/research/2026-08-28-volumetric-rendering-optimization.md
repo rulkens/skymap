@@ -465,6 +465,50 @@ ordered by value per unit machinery:
 Anti-rung to note: suggestion 5's mips ADD ~14% RAM — a deliberate spend for
 bandwidth, priced against this ladder rather than free.
 
+#### Case study: 0.9 Mpc voxels over the GLADE volume (asked 2026-09-03)
+
+Measured from the deployed `glade-large.bin` (1,665,935 galaxies): radial
+percentiles r50 = 565 Mpc, r90 = 1721, **r95 = 1774**, r99 = 2162, max 8301 —
+the 5% cut removes a long quasar-dominated tail. Mean tracer separation by
+shell: 3.5 Mpc (0–50), 5.5 (50–100), 6.5 (100–200), 7.1 (200–300), 10.1
+(300–500), 19.2 (500–800), 38.0 (800–1200), 31.6 (1200–1774).
+
+**A uniform 0.9 Mpc grid to r95 is dead twice over.** Box 3548 Mpc ⇒ 3942³ ≈
+6.1e10 voxels = 122 GB f16 / 61 GB r8 / 31 GB BC4 — and 3942 exceeds WebGPU's
+`maxTextureDimension3D` (2048 baseline), so the texture cannot even be created.
+A single sparse pool doesn't rescue it (≥ 4 GB at optimistic occupancy). It is
+also unsupported by the data: beyond ~500 Mpc GLADE's tracers sit 19–38 Mpc
+apart, so 0.9 Mpc voxels there would resolve reconstruction artifacts, not
+structure.
+
+**Options, ranked:**
+
+1. **Earth-centered cascade (recommended)** — N nested cubes, voxel doubling per
+   shell, e.g. 4 × 512³ at 0.9/1.8/3.6/7.2 Mpc covering r ≤ 230/461/922/1843.
+   Fits the data (voxel stays ~4–5× below the local tracer separation in every
+   shell) and the eye (at the ⅑-res volume target, a 0.9 Mpc voxel is ~1 px at
+   ~550 Mpc camera distance — finer far cubes are provably sub-pixel for an
+   Earth-region camera). Fits the renderer today: each cascade is one more
+   field in the existing multi-field map with its own model matrix, palette
+   shared. De-overlap by **baking each outer cascade's core to zero** where the
+   finer one covers (no shader change; the hollow core gzips away and the brick
+   grid skips it). RAM: 1.07 GB f16 naive, 537 MB r8, realistically 100–200 MB
+   after clamp + zero cores + suggestion 1's skipping; a 5 × 384³ variant lands
+   ~283 MB r8 before sparsity. Sim side: one workbench run per cascade at 512³
+   (well inside the 1200×752×960 native run it already did).
+2. **Camera-following brick streaming** — the full-res trace lives on R2 as
+   serialized bricks; the runtime streams bricks by camera proximity into a
+   fixed-budget GPU atlas (LRU). The 3D analog of `earthTileSubsystem` +
+   `TextureAtlas`, which is exactly the in-repo precedent. Constant GPU RAM at
+   any dataset size, and the only option that gives 0.9 Mpc detail during deep
+   flybys far from Earth — at the price of real machinery (indirection sampling,
+   fetch scheduling, sim output tiled at full res). The upgrade path if tours
+   leave the inner cascade.
+3. **Log-spherical parameterisation** (single texture in log-r/θ/φ; constant
+   angular resolution by construction) — considered, not proposed: seam and
+   pole handling, r→0 distortion, the sim would need resampling into the warped
+   grid, and it hard-bakes the Earth-centered assumption the cascade keeps soft.
+
 ### 10. Pre-integrated transfer function (parked)
 
 Engel-style 2D pre-integration folding window + palette + opacity into one LUT.
