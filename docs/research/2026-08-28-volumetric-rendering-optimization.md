@@ -423,21 +423,47 @@ supplies suggestion 7's moving-resolution knob. Bilinear softness at divisor 4+ 
 the bound; "the filter does not rescue a too-low divisor — choose the divisor
 first, then the filter" (SpaceEngine's own note, quoted in §11).
 
-### 9. Data-side sparsity: tight crop now, sparse bricks if memory binds (medium–large)
+### 9. Data-side: the wire ladder and the GPU-RAM ladder (medium–large)
 
-Two levels, independent of the shader work:
+Wire (download) and GPU RAM are separate ladders — the `--clamp` result above is a
+pure wire win (zeros still occupy texture bytes), so RAM needs its own rungs,
+ordered by value per unit machinery:
 
-- **Tight-crop the cube AABB at build time** to the occupied bounding box per tier
-  (`buildMcpmVolume`/`packLogTraceVoxels` already walk every voxel). Cheap, and
-  every downstream ray gets a shorter box. Win depends on how much of the 99%
-  emptiness is at the faces vs interleaved with filaments — check with
-  `renderCubeMips` projections before assuming.
-- **Sparse brick storage** (indirection table + brick atlas) if large-tier memory is
-  ever the binding constraint: 155 MB that is ~99% zeros compresses to a few MB of
-  occupied bricks. This is real machinery (a small VDB) and today nothing forces
-  it — large tier is desktop, and the no-release slot leak
-  (`docs/backlog/2026-07-22-asset-loading-audit.md`) is the cheaper memory fix.
-  Recorded as the escape hatch, not proposed now.
+1. **Wire `release` on the volume slots** (the known leak,
+   `docs/backlog/2026-07-22-asset-loading-audit.md`): today a cube stays
+   GPU-resident for the whole session after one toggle — 216 MB for one look at
+   polyphorm-large. Unloading on disable frees 100% of an off field;
+   `volumeFieldRenderer.unload()` already exists, only the slot wiring is missing.
+   Cheapest real rung by far.
+2. **`r16float` → `r8unorm`: an unconditional 2×** on RAM, wire, _and_ texture-cache
+   pressure. The data is already log-normalised into [0,1]; the worst case for
+   8-bit is the contrast stretch (slider max 4.0 ⇒ ~64 levels across the surviving
+   band), mitigated by triangular dither at quantisation + the existing per-fragment
+   jitter. Needs an SCFD dtype value + the upload/format switch. Verify by eye at
+   max contrast before committing.
+3. **Tight-crop the cube AABB at build time** (MEASURED, 2026-09-03, bbox of
+   default-knobs-visible voxels): crop keeps **66.5%** of mcpm-large (155.5 → 103
+   MB), **59.8%** of polyphorm-large (216 → 129 MB), **22.3%** of CF-4 (4.2 → 0.94
+   MB — the visible divergent structure is a compact central blob). Same caveat
+   family as `--clamp`: a crop keyed to default knobs discards what lower
+   contrast/trim would reveal at the faces — CF-4 is the extreme case (every voxel
+   nonzero, so a value-conservative crop saves nothing there). Composes with rung
+   2: mcpm-large ≈ 52 MB for the r8 + crop stack.
+4. **BC4 (desktop) / ASTC (mobile) sliced-3D compression: 4× vs f16** (0.5
+   byte/voxel) behind the optional `texture-compression-bc-sliced-3d` /
+   `-astc-sliced-3d` features, falling back to rung 2's r8. Build-time encoding +
+   dual-format shipping is real machinery; the rung to take only if 2+3 aren't
+   enough.
+5. **Sparse brick pool** (indirection texture + brick atlas) — transformative
+   exactly where zero-brick fractions are extreme, marginal elsewhere. With a
+   1-voxel filtering apron, an 8³ brick stores as 10³ (1.95× overhead; 16³ → 18³
+   is 1.42×): polyphorm-large at 95.6% zero bricks lands ≈ 19 MB from 216; but
+   mcpm-large at 67% zero bricks barely breaks even at 8³ (0.33 × 1.95 ≈ 0.64).
+   Pairs naturally with suggestion 1 (same occupancy data); costs one indirection
+   fetch per sample. The escape hatch, not the default.
+
+Anti-rung to note: suggestion 5's mips ADD ~14% RAM — a deliberate spend for
+bandwidth, priced against this ladder rather than free.
 
 ### 10. Pre-integrated transfer function (parked)
 
