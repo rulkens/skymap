@@ -522,10 +522,11 @@ function draggedPose(
     right[1] - upLocal[1] * radial,
     right[2] - upLocal[2] * radial,
   ]);
-  // Google-Earth pitch mapping (user ruling 16, 2026-09-03, the pair of
-  // ruling 15's heading negation above): drag down/toward you tilts UP toward
-  // the horizon — `pitchRad`'s screen-space down-is-positive sign carries
-  // straight through. Do not "fix" either sign back.
+  // Google-MAPS pitch mapping (user ruling 17, 2026-09-03, supersedes ruling
+  // 16's Google-Earth sign): drag UP/away tilts up toward the horizon, so
+  // `pitchRad`'s screen-space down-is-positive sign is NEGATED here. Ruling 16
+  // briefly shipped the opposite (down-drag = tilt up); the user reversed it
+  // same day. Do not "fix" this sign either way without a new ruling.
   // TILT_GAIN breaks the one-FOV-per-screen-height rate law for this handle
   // only: tilting spans ~90° of travel where orbit spans a hemisphere, so the
   // uniform rate reads as sluggish here (user feel ruling, 2026-09-03).
@@ -537,7 +538,7 @@ function draggedPose(
   // entirely, leaving the crossing open and the memory following it (R13-1).
   // The raising side stays owned by the ceiling wall. The heading factor is
   // untouched: a mixed drag keeps its yaw live while the tilt dies.
-  const tiltRequest = pitchRad * TILT_GAIN;
+  const tiltRequest = -pitchRad * TILT_GAIN;
   const fwdArm: Vec3 = [arm.basisLocal[6], arm.basisLocal[7], arm.basisLocal[8]];
   const tiltAngle =
     tiltRequest >= 0

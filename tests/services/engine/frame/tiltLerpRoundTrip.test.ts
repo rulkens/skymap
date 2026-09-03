@@ -176,7 +176,7 @@ describe('tilt lerp round trip (ruling 13)', () => {
     c.onGestureStart();
     p = c.apply(
       p,
-      { kind: 'drag', mode: 'pan', startPx: [50, 50], endPx: [50, 70] },
+      { kind: 'drag', mode: 'pan', startPx: [50, 50], endPx: [50, 30] },
       [100, 100],
       Math.PI / 2,
       1,

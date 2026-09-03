@@ -19,9 +19,9 @@ export const SURFACE_REGIME = {
 
 /** Slider ranges + the hysteresis floor (disengage ≥ engage × minRatio). */
 export const SURFACE_BAND_LIMITS = {
-  engageMin: 1.05,
+  engageMin: 0.1,
   engageMax: 3.0,
-  disengageMin: 1.5,
+  disengageMin: 0.2,
   disengageMax: 6.0,
   minRatio: 1.1,
 } as const;

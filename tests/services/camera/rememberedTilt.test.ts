@@ -42,9 +42,9 @@ function zoom(factor: number): InputStep {
 }
 
 function tiltDrag(px: number): InputStep {
-  // The secondary drag ('pan' step mode) is the tilt handle; drag DOWN tilts
-  // the view up toward the horizon (GE convention).
-  return { kind: 'drag', mode: 'pan', startPx: [50, 50], endPx: [50, 50 + px] };
+  // The secondary drag ('pan' step mode) is the tilt handle; drag UP tilts
+  // the view up toward the horizon (Google Maps convention, ruling 17).
+  return { kind: 'drag', mode: 'pan', startPx: [50, 50], endPx: [50, 50 - px] };
 }
 
 function eyeOf(p: BodyFixedPose): Vec3 {

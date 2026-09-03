@@ -36,8 +36,8 @@ describe('setSurfaceBand', () => {
   });
 
   it('clamps both knobs to their slider ranges', () => {
-    setSurfaceBand({ engageHR: 0.2, disengageHR: 99 });
-    expect(SURFACE_REGIME.engageHR).toBe(1.05);
+    setSurfaceBand({ engageHR: 0.01, disengageHR: 99 });
+    expect(SURFACE_REGIME.engageHR).toBe(0.1);
     expect(SURFACE_REGIME.disengageHR).toBe(6.0);
   });
 });
