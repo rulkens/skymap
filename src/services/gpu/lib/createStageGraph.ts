@@ -5,17 +5,18 @@
  *
  * No topological sort: table order IS the schedule, and `after` only proves it
  * — a stage naming a dependency that appears later in the array is a bug caught
- * at construction, not tie-broken silently. `token(name)` gives a downstream
- * stage a key element that changes exactly when an upstream stage last ran.
+ * at construction, not tie-broken silently. `after` also IS the re-run edge:
+ * each stage's effective key is its after-edges' tokens (opaque identities that
+ * change exactly when the upstream stage last ran) followed by its own `key(ctx)`.
  */
 
 import type { Stage } from '../../../@types/gpu/Stage';
 import type { StageGraph } from '../../../@types/gpu/StageGraph';
 import type { StagePhase } from '../../../@types/gpu/StagePhase';
 
-export function createStageGraph<Name extends string>(
-  stages: readonly Stage<Name>[],
-): StageGraph<Name> {
+export function createStageGraph<Name extends string, Ctx = void>(
+  stages: readonly Stage<Name, Ctx>[],
+): StageGraph<Name, Ctx> {
   const declared = new Map<Name, { readonly index: number; readonly phase: StagePhase }>(
     stages.map((stage, index) => [stage.name, { index, phase: stage.phase }]),
   );
@@ -46,13 +47,22 @@ export function createStageGraph<Name extends string>(
   const lastKeys = new Map<Name, readonly unknown[]>();
   const tokens = new Map<Name, object>();
 
+  function token(name: Name): object {
+    let t = tokens.get(name);
+    if (t === undefined) {
+      t = {};
+      tokens.set(name, t);
+    }
+    return t;
+  }
+
   return {
-    run(phase: StagePhase): void {
+    run(phase: StagePhase, ctx: Ctx): void {
       for (const stage of stages) {
         if (stage.phase !== phase) continue;
-        if (stage.wanted?.() === false) continue;
+        if (stage.wanted?.(ctx) === false) continue;
 
-        const key = stage.key();
+        const key = [...stage.after.map(token), ...stage.key(ctx)];
         const lastKey = lastKeys.get(stage.name);
         if (lastKey !== undefined && sameKey(lastKey, key)) continue;
 
@@ -60,18 +70,10 @@ export function createStageGraph<Name extends string>(
         // its work, and must not bump a token downstream stages would read as
         // "the effect landed". Still before the next row's `key()`, so a
         // same-cycle transitive edge sees the bump.
-        stage.run();
+        stage.run(ctx);
         lastKeys.set(stage.name, key);
         tokens.set(stage.name, {});
       }
-    },
-    token(name: Name): object {
-      let token = tokens.get(name);
-      if (token === undefined) {
-        token = {};
-        tokens.set(name, token);
-      }
-      return token;
     },
   };
 }
