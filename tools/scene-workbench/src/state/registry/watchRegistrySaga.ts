@@ -1,6 +1,6 @@
 /**
- * watchRegistrySaga — loads `scenes.json` (the group picker's list) at boot
- * and on an explicit reload. A 404 is the EMPTY STATE, not an error: a
+ * watchRegistrySaga — loads `scenes.json` (the group picker's list) at boot.
+ * A 404 is the EMPTY STATE, not an error: a
  * checkout that has never run `npm run bake-lidar` has no `geo3d/` tree at
  * all, and the UI's empty state names the commands that create one.
  * `loadDataManifest()` first, because `dataUrl` resolves through the
@@ -14,7 +14,6 @@ import { dataUrl } from '../../../../../src/services/loading/fetchWithProgress';
 import { loadDataManifest } from '../../../../../src/services/loading/dataManifest';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import type { GroupRegistry } from '../../../@types/GroupRegistry';
-import { reloadRegistryRequested } from '../commands';
 import { sagaContextRegistered } from '../../store/sagaContextRegistered';
 import { syntheticProbeScene } from '../../scene/syntheticProbeScene';
 import { groupSelected, registryFailed, registryLoaded, registryLoading } from './registrySlice';
@@ -50,5 +49,5 @@ function* loadRegistryWorker() {
 }
 
 export function* watchRegistrySaga() {
-  yield* takeLatest([sagaContextRegistered, reloadRegistryRequested], loadRegistryWorker);
+  yield* takeLatest(sagaContextRegistered, loadRegistryWorker);
 }

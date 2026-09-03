@@ -3,15 +3,14 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 export type SceneCamera = { yaw: number; pitch: number; distanceM: number; targetM: Vec3 };
 
-/** ViewSlice — camera pose, per-asset visibility overrides, and the HUD's
- *  live readouts (fps, device-lost). Visibility is an exclusion list
- *  (`hiddenAssetIds`), not a `Record<string, boolean>`: an asset appears in
- *  the manifest before any toggle has touched it, and "absent means
- *  visible" needs no initialization step on every manifest load. */
+/** ViewSlice — camera pose, per-asset visibility overrides, and the
+ *  device-lost flag. Visibility is an exclusion list (`hiddenAssetIds`), not
+ *  a `Record<string, boolean>`: an asset appears in the manifest before any
+ *  toggle has touched it, and "absent means visible" needs no initialization
+ *  step on every manifest load. */
 export type ViewSlice = {
   camera: SceneCamera;
   hiddenAssetIds: readonly string[];
-  fps: number;
   deviceLost: boolean;
 };
 
@@ -22,7 +21,6 @@ export const PITCH_LIMIT = Math.PI / 2 - 0.01;
 export const defaultViewSlice: ViewSlice = {
   camera: { yaw: 0, pitch: 0.35, distanceM: 200, targetM: [0, 0, 0] },
   hiddenAssetIds: [],
-  fps: 0,
   deviceLost: false,
 };
 
@@ -44,9 +42,6 @@ export const viewSlice = createSlice({
       else hidden.add(action.payload);
       state.hiddenAssetIds = Array.from(hidden);
     },
-    setFps: (state, action: PayloadAction<number>) => {
-      state.fps = action.payload;
-    },
     /** Device-lost watcher only — never dispatched by the UI. */
     deviceLost: (state) => {
       state.deviceLost = true;
@@ -54,4 +49,4 @@ export const viewSlice = createSlice({
   },
 });
 
-export const { commitCameraPose, toggleAssetVisibility, setFps, deviceLost } = viewSlice.actions;
+export const { commitCameraPose, toggleAssetVisibility, deviceLost } = viewSlice.actions;
