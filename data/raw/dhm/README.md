@@ -10,7 +10,8 @@
 | Height datum | DVR90 orthometric                                                                            |
 | Flight date  | 2011-09-20 (derived from point `GpsTime`, see "Flight date" below)                           |
 
-Feeds the scene-workbench LiDAR bake (task 3 onward): raw ALS point clouds
+Feeds the scene-workbench LiDAR bake (`tools/fetch/fetchDhm.ts` →
+`tools/scene-recon/bakeLidar.ts`): raw ALS point clouds
 for the Søndermarken picnic-spot scene, colourized and thinned to a viewable
 point cloud in a local topocentric frame.
 
@@ -77,14 +78,11 @@ Frederiksberg Bakke figure (31–36 m.o.h., da.wikipedia.org "Valby Bakke og
 Frederiksberg Bakke"; Trap Danmark) does **not** corroborate this — that's
 a different, higher point (the ridge crest near the castle/Zoo tower),
 not the bbox-centre anchor, which sits lower and further into
-Søndermarken's tree cover. Task 3's bake should run a proper ground filter
-(e.g. `filters.smrf`/`filters.pmf`) over the full multi-tile mosaic, which
-has far more context than one edge-adjacent tile, and overwrite this
-constant with that result.
+Søndermarken's tree cover.
 
-### Task 9 re-derivation — same conclusion, standard method
+### Re-derivation — same conclusion, standard method
 
-Task 9 re-ran this per the plan's method: `filters.reprojection` (EPSG:25832
+Re-run by the standard method: `filters.reprojection` (EPSG:25832
 → EPSG:4326) → `filters.crop` to a 20 m-radius box around the anchor
 (lon 12.53 / lat 55.67) → `filters.range Classification[2:2]`. Same tile,
 same result — **zero** ground (class 2) points among 508 returns in the box
@@ -130,8 +128,8 @@ a URL that gets logged.
 
 ## Vertical-datum note
 
-Punktsky heights are DVR90 orthometric, not ellipsoidal. Task 6's bake
-pipeline feeds them to PROJ's `+proj=topocentric` as if they were
+Punktsky heights are DVR90 orthometric, not ellipsoidal.
+`lidarPipelineStages.ts` feeds them to PROJ's `+proj=topocentric` as if they were
 ellipsoidal height — exact enough here because `h_0` (the anchor height)
 comes from the same DVR90 data, so the ~36 m Danish geoid undulation
 cancels out over a 2.5 km patch; it would not for a large-extent or
@@ -164,11 +162,11 @@ with an `LASF` magic-number body (verified against the raw bytes, not just
 the status code) — the key is entitled to DHM/Punktsky Fildownload, a
 separate subscription from the WMS one. No portal action needed.
 
-## Landmines for later tasks
+## Landmines
 
 - **Range requests are ignored.** `curl -r 0-255 ...` and `-r 0-239 ...`
   both came back `200` (not `206`) with the _full_ ~13 MB file — the
-  endpoint doesn't support partial GET. Task 3's fetcher must plan for
+  endpoint doesn't support partial GET. `fetchDhm.ts` therefore does
   whole-file downloads, not resumable ranges.
 - **`Content-Type` lies.** The response header says `application/zip`; the
   body is a raw uncompressed `.las` file (`LASF` signature at byte 0), not
@@ -202,10 +200,10 @@ Classification[2:2]` returns anything for an arbitrary Punktsky tile;
       +step +proj=topocentric +lat_0=55.67 +lon_0=12.53 +h_0=40 +ellps=GRS80
          0.0000       0.0000       0.0000           inf
   ```
-  All three metre values are within tolerance of `0`. Task 6 should build
-  its pipeline the same way (`+proj=cart` then `+proj=topocentric`), not
-  via `cs2cs`'s CRS-pair form.
-  **Task 9 update:** the same failure hits PDAL's `filters.reprojection`
+  All three metre values are within tolerance of `0`, and
+  `lidarPipelineStages.ts` builds its pipeline the same way (`+proj=cart`
+  then `+proj=topocentric`), not via `cs2cs`'s CRS-pair form.
+  The same failure hits PDAL's `filters.reprojection`
   itself — `out_srs` set to the bare `+proj=topocentric ...` string, or to
   the whole `+proj=pipeline ...` string, both fail the same way
   (`Object is not a SingleCRS` for the latter). `filters.projpipeline`'s
