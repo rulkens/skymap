@@ -511,7 +511,10 @@ function draggedPose(
   // anchor's local up, THEN tilt about the ALREADY-YAWED east. Tilting about a
   // fixed screen axis instead drags ~10° of unwanted heading per 60 px (probe).
   const upLocal = normalize3(anchorM);
-  const heading = quatFromAxisAngle(upLocal, yawRad);
+  // NEGATED heading on this handle (user feel ruling 15, 2026-09-03): a
+  // right-drag rightward turns the view the OTHER way from the orbit drag —
+  // deliberate, do not "fix" the sign back to match the pan convention.
+  const heading = quatFromAxisAngle(upLocal, -yawRad);
   const radial = dot3(right, upLocal);
   const eastM = normalize3([
     right[0] - upLocal[0] * radial,
@@ -524,10 +527,34 @@ function draggedPose(
   // TILT_GAIN breaks the one-FOV-per-screen-height rate law for this handle
   // only: tilting spans ~90° of travel where orbit spans a hemisphere, so the
   // uniform rate reads as sluggish here (user feel ruling, 2026-09-03).
-  const q = multiplyQuat(
-    quatFromAxisAngle(rotateVec3ByQuat(heading, eastM), -pitchRad * TILT_GAIN),
-    heading,
-  );
+  //
+  // Ruling 14: the tilt FLOOR is dead, clamped at the gesture — the angle's
+  // lowering side (positive here) is bounded by the tilt actually held, so
+  // excess input produces zero rotation instead of orbiting THROUGH nadir to
+  // the far side (no floor existed; the unsigned readout then wrote the
+  // far-side swing into the remembered-tilt memory). The RAISING side stays
+  // owned by the ceiling wall. The heading factor is untouched: a mixed drag
+  // keeps its yaw live while the tilt component dies at the floor.
+  const eyeM = eyeOf(arm);
+  const eyeMag = Math.hypot(...eyeM);
+  const fwdArm: Vec3 = [arm.basisLocal[6], arm.basisLocal[7], arm.basisLocal[8]];
+  const tiltNow =
+    eyeMag === 0
+      ? 0
+      : Math.acos(
+          Math.max(
+            -1,
+            Math.min(
+              1,
+              -(fwdArm[0] * eyeM[0] + fwdArm[1] * eyeM[1] + fwdArm[2] * eyeM[2]) / eyeMag,
+            ),
+          ),
+        );
+  const tiltAngle = Math.min(-pitchRad * TILT_GAIN, tiltNow);
+  // Excess-only input is identity BY REFERENCE, not by arithmetic — the quat
+  // path leaves −0 crumbs that would fail the ruled full-pose byte bar.
+  if (tiltAngle === 0 && yawRad === 0) return { pose: arm, mode };
+  const q = multiplyQuat(quatFromAxisAngle(rotateVec3ByQuat(heading, eastM), tiltAngle), heading);
   return { pose: rotatedAbout(arm, q, anchorM), mode };
 }
 

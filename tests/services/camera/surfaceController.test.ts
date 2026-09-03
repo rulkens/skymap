@@ -225,12 +225,13 @@ describe('surfaceController', () => {
   });
 
   it('tilts about the already-yawed east, not a fixed screen axis', () => {
-    // Anchor = the screen-centre pick [0,0,1]; the eye orbits it by heading ψ
-    // about the local up, THEN by tilt −α about the yawed east — negated at
-    // the input mapping so drag-down tilts the view UP toward the horizon
-    // (Google Earth's right-drag convention). Closed form:
-    // eye = anchor + R(q1·east, −α)·R(up, ψ)·(eye − anchor)
-    //     = [−sinψ·sinα, cosψ·sinα, 1 + cosα].
+    // Anchor = the screen-centre pick [0,0,1]; the eye orbits it by heading
+    // −ψ about the local up (NEGATED per ruling 15 — a deliberate feel
+    // inversion vs the orbit drag), THEN by tilt −α about the yawed east —
+    // negated at the input mapping so drag-down tilts the view UP toward the
+    // horizon (Google Earth's right-drag convention). Closed form:
+    // eye = anchor + R(q1·east, −α)·R(up, −ψ)·(eye − anchor)
+    //     = [sinψ·sinα, cosψ·sinα, 1 + cosα].
     // The fixed-axis order leaves x at 0 — that is the whole difference.
     const c = createSurfaceController();
     c.onGestureStart();
@@ -239,13 +240,13 @@ describe('surfaceController', () => {
     const pose = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [50, 50], [70, 60]));
 
     const eye = eyeOf(pose);
-    expect(eye[0]).toBeCloseTo(-Math.sin(psi) * Math.sin(alpha), 12);
+    expect(eye[0]).toBeCloseTo(Math.sin(psi) * Math.sin(alpha), 12);
     expect(eye[1]).toBeCloseTo(Math.cos(psi) * Math.sin(alpha), 12);
     expect(eye[2]).toBeCloseTo(1 + Math.cos(alpha), 12);
     // The basis turned with the eye: right ends on the yawed east.
     expect(pose.basisLocal.slice(0, 3)).toEqual([
       expect.closeTo(Math.cos(psi), 12),
-      expect.closeTo(Math.sin(psi), 12),
+      expect.closeTo(-Math.sin(psi), 12),
       expect.closeTo(0, 12),
     ]);
   });
@@ -307,7 +308,9 @@ describe('surfaceController', () => {
 
     const c = createSurfaceController();
     c.onGestureStart();
-    const tilted = apply(c, start, drag('pan', [60, 50], [60, 50 - 295 / TILT_GAIN]));
+    // Drag DOWN (the GE tilt-up direction): the pre-ruling-14 fixture dragged
+    // up, unknowingly riding the missing floor through nadir to the far side.
+    const tilted = apply(c, start, drag('pan', [60, 50], [60, 50 + 295 / TILT_GAIN]));
     const eye = eyeOf(tilted);
     expect(eye[0] * anchor[0] + eye[2] * anchor[2]).toBeLessThan(1);
 
@@ -316,7 +319,7 @@ describe('surfaceController', () => {
     // is about an axis through A, so that distance survives it untouched. The
     // fresh screen-centre pick satisfies the law; the latched anchor does not.
     // The gesture is live, so the re-pick goes through the drag's last pixel.
-    const fresh = pickThrough(tilted, [60, 50 - 295 / TILT_GAIN])!;
+    const fresh = pickThrough(tilted, [60, 50 + 295 / TILT_GAIN])!;
     expect(fresh).not.toBeNull();
     const zoomedEye = eyeOf(apply(c, tilted, zoom(0.5, true)));
     const rangeTo = (a: Vec3, e: Vec3): number => Math.hypot(e[0] - a[0], e[1] - a[1], e[2] - a[2]);
@@ -796,6 +799,41 @@ describe('surfaceController', () => {
     const touched = apply(eased, arrived, drag('orbit', [50, 10], [51, 10]));
     expect(bodyAngle(touched)).toBeGreaterThan(1.0 - 0.1 - 0.02);
     expect(bodyAngle(touched)).toBeLessThan(1.0);
+  });
+
+  it('the tilt floor is DEAD: a tilt-decreasing drag at tilt 0 moves nothing (ruling 14)', () => {
+    // The floor mirror of the ceiling-wall fixture above. Pre-fix there was
+    // NO floor: the tilt handle rotated the pose about the anchor's east
+    // straight THROUGH nadir — the eye orbited 0.5 rad to the far side (a
+    // 20 px drag × TILT_GAIN), the unsigned tilt readout came back UP to
+    // 0.25 with the heading flipped, and the handle then wrote that into
+    // the remembered-tilt memory. Excess input past the floor must produce
+    // ZERO rotation — full-pose equality, not an epsilon on tilt.
+    const c = createSurfaceController();
+    c.onGestureStart();
+    const start = poseAt([0, 0, 2], NADIR);
+    const out = apply(c, start, drag('pan', [50, 50], [50, 30]));
+    expect(out.eyeRelAnchorM).toEqual(start.eyeRelAnchorM);
+    expect(out.anchorLocalM).toEqual(start.anchorLocalM);
+    expect(out.basisLocal).toEqual(start.basisLocal);
+    expect(c.rememberedTiltRad()).toBe(0); // the memory stays clean too
+  });
+
+  it('at the floor a mixed drag keeps its heading component live (ruling 14)', () => {
+    // Only the tilt-DECREASING component dies at the floor; the same
+    // gesture's horizontal delta still orbits heading about the anchor up.
+    const c = createSurfaceController();
+    c.onGestureStart();
+    const start = poseAt([0, 0, 2], NADIR);
+    const out = apply(c, start, drag('pan', [50, 50], [70, 30]));
+    const psi = (20 / 100) * FOV; // the heading half of the drag, unscaled
+    // Heading applied: the eye orbited about the anchor's vertical…
+    // (+psi: the handle's heading is NEGATED per ruling 15.)
+    expect(Math.hypot(...eyeOf(out))).toBeCloseTo(2, 12);
+    const b = out.basisLocal;
+    expect(Math.atan2(b[3], b[4])).toBeCloseTo(psi, 9);
+    // …while the tilt component died: still exactly nadir.
+    expect(bodyAngle(out)).toBeLessThan(1e-12);
   });
 
   it('a receding notch corrects a huge drag-authored heading by the cap, no more', () => {
