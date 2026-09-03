@@ -17,6 +17,44 @@
 
 If either is not on `main` when execution starts, stop and land it first.
 
+## As built (2026-09-03)
+
+Deviations from the tasks below, settled during execution; the tasks themselves are
+left as written. Rulings and task-by-task detail:
+`.superpowers/sdd/2026-09-03-scene-workbench-1-lidar-end-to-end/progress.md`.
+
+- **Z-up rig, not the plan's implicit Y-up.** `sceneCameraView` decodes
+  `yawPitchToDir`/`frameUp` (Y-up) into world Z-up via an `ENU_UP_BASIS` axis cycle
+  before use (spec §7.3). Task 13's test expectations are corrected accordingly:
+  `eyeM [10, 100, 0]`, `rightM [-1, 0, 0]`, `upM [0, 0, 1]`.
+- **PDAL stage set differs from task 6's list.** Classification drop is
+  `filters.expression`, not `filters.range` (range clauses OR together on one
+  dimension, excluding nothing useful with several classes). The metre reprojection
+  is `filters.projpipeline` with a `unitconvert → cart → topocentric` pipeline, not a
+  second `filters.reprojection` — a bare `+proj=topocentric` isn't a promotable CRS
+  on PROJ 9.8. `writers.text` sets `quote_header: false`. Every `readers.las` stage
+  carries `default_srs` (`LidarBakeSpec.defaultSrs`, moved in from `bakeLidar.ts`),
+  since the Punktsky tiles carry no embedded CRS.
+- **Density.** Measured native density over the group bbox is ~0.45 pts/m², not the
+  ~4–5 pts/m² task 3 assumed. The whole-patch group bakes to ~1.6 M points ≈ 26 MB at
+  `minPointSpacingM: 1.0`.
+- **`.las`, not LAZ; no separate resume cache.** Datafordeler's Fildownload serves
+  uncompressed `.las` (`Content-Type` claims `application/zip`, the body is raw LAS).
+  Resume is file presence plus a LAS-header completeness check; the tiles on disk are
+  their own cache. `LidarBakeSpec.lazFiles` is renamed `lasFiles`.
+- **Anchor height: 18.53 m DVR90, 5th-percentile Z, not a DTM-viewer/header read.**
+  Task 1's two candidate sources (Datafordeler's DHM/Terræn WMS, the LAS header
+  bbox) were both unusable; this DHM product has no ground-class points at the
+  anchor. Derivation and both re-derivations are in `data/raw/dhm/README.md`.
+- **`DEV_PORTS`, not `devPorts`** — `tools/utils/io/devPorts.ts`'s exported constant
+  is uppercase; spec §3/§8 (P2) name it lowercase.
+- **`fps`/`setFps` and `reloadRegistryRequested` removed as unused.** Nothing in
+  plan 1 reads or dispatches them; task 11's `ViewSlice` and `commands.ts` contracts
+  are narrower than written.
+- **`RenderResources` final shape** (task 12's type plus task 14's `lidar` addition):
+  `{ gpu, gpuAssets, lidar, depthTexture, epoch }` — matches the corrected spec §7.1,
+  not that section's stale `{ gpu, renderers, gpuAssets, poseTexture, epoch }`.
+
 ## Series map
 
 The spec spans three subsystems; it ships as four plans, each leaving working software.
