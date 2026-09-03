@@ -4,12 +4,9 @@
  * `<Provider>`'s construction site) — every component reaches the store
  * through these wrappers.
  */
-import { useDispatch, useSelector, useStore, type TypedUseSelectorHook } from 'react-redux';
+import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux';
 
-import type { AppDispatch, RootState, SceneStore } from './types';
+import type { AppDispatch, RootState } from './types';
 
 export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
-
-/** Typed `useStore` — returns the scene workbench's concrete store (dispatch + getState typed). */
-export const useAppStore: () => SceneStore = useStore;

@@ -11,10 +11,6 @@ const LAS_HEADER_BYTES = 227;
 
 export type LasHeaderInfo = {
   readonly pointCount: number;
-  readonly pointDataRecordLength: number;
-  readonly offsetToPointData: number;
-  readonly minZ: number;
-  readonly maxZ: number;
 };
 
 export type LasValidationResult =
@@ -60,8 +56,5 @@ export function validateLasHeader(buffer: Buffer, fileSizeBytes: number): LasVal
     };
   }
 
-  return {
-    ok: true,
-    header: { pointCount, pointDataRecordLength, offsetToPointData, minZ, maxZ },
-  };
+  return { ok: true, header: { pointCount } };
 }

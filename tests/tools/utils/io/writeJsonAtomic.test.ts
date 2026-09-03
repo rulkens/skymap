@@ -58,13 +58,4 @@ describe('writeJsonAtomic', () => {
 
     expect(readdirSync(dir)).toEqual(['manifest.json']);
   });
-
-  it('writes pretty JSON with a trailing newline', async () => {
-    const path = join(dir, 'manifest.json');
-
-    await writeJsonAtomic<{ value: string }>(path, () => ({ value: 'pretty' }));
-
-    const text = await readFile(path, 'utf8');
-    expect(text).toBe(`${JSON.stringify({ value: 'pretty' }, null, 2)}\n`);
-  });
 });

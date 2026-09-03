@@ -133,7 +133,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
           console.error(`scene-workbench: GPU device lost (${info.reason}) — reload the page`);
           store.dispatch(deviceLost());
         });
-        registerSagaContext({ canvas, resources });
+        registerSagaContext({ resources });
         rafHandle = requestAnimationFrame(frame);
       })
       .catch((err: unknown) => {

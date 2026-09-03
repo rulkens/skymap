@@ -19,14 +19,10 @@ function parseField(raw: string | undefined, lineNumber: number, fieldName: stri
   const value = Number(raw);
   if (raw === undefined || raw.length === 0 || !Number.isFinite(value)) {
     throw new Error(
-      `${csvContext(lineNumber)}: field "${fieldName}" is not a finite number (got ${JSON.stringify(raw)})`,
+      `readPdalCsv: line ${lineNumber}: field "${fieldName}" is not a finite number (got ${JSON.stringify(raw)})`,
     );
   }
   return value;
-}
-
-function csvContext(lineNumber: number): string {
-  return `readPdalCsv: line ${lineNumber}`;
 }
 
 export async function* readPdalCsv(csvPath: string): AsyncIterable<ScenePoint> {
@@ -43,7 +39,7 @@ export async function* readPdalCsv(csvPath: string): AsyncIterable<ScenePoint> {
       sawHeader = true;
       if (line !== PDAL_CSV_COLUMNS) {
         throw new Error(
-          `${csvContext(lineNumber)}: expected header "${PDAL_CSV_COLUMNS}", got ${JSON.stringify(line)}`,
+          `readPdalCsv: line ${lineNumber}: expected header "${PDAL_CSV_COLUMNS}", got ${JSON.stringify(line)}`,
         );
       }
       continue;

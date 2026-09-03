@@ -1,6 +1,6 @@
 /**
  * Decodes `points.bin` (spec §5) in the browser. Returns the record array
- * as a **view** onto the downloaded buffer — task 14's GPU upload uses this
+ * as a **view** onto the downloaded buffer — the GPU upload uses this
  * layout verbatim as an instance buffer, so a copy here would exist only
  * to be identical. No Node imports: this runs in the viewer, not the bake.
  */

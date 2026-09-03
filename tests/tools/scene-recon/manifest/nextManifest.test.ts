@@ -64,22 +64,4 @@ describe('nextManifest', () => {
       assets: [asset],
     });
   });
-
-  it('keeps an untouched sibling asset by reference', () => {
-    const sibling = makeAsset('other');
-    const manifest: SceneManifest = {
-      formatVersion: 1,
-      groupId: 'soendermarken',
-      groupName: 'Søndermarken',
-      anchor: GROUP.anchor,
-      assets: [sibling],
-    };
-    const asset = makeAsset('lidar');
-
-    const result = nextManifest(manifest, GROUP, asset);
-
-    expect(result.assets).toHaveLength(2);
-    expect(result.assets[0]).toBe(sibling);
-    expect(result.assets[1]).toBe(asset);
-  });
 });

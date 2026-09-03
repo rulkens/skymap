@@ -3,9 +3,8 @@ import type { LidarPointRenderer } from './lidarPointRenderer';
 
 /**
  * RenderResources — the engine-side objects a scene rebuild owns, held in
- * saga context. `epoch` bumps on every dispose so an awaited upload/build
- * can tell its result is stale; `gpu` outlives a dispose. `gpuAssets` is
- * keyed by `SceneAsset.id`.
+ * saga context. `gpu` outlives a dispose; `gpuAssets` is keyed by
+ * `SceneAsset.id` (see `disposeScene` for the `epoch` contract).
  */
 export type LidarGpuAsset = { vertexBuffer: GPUBuffer; pointCount: number };
 

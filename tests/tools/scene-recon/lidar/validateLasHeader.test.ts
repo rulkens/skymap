@@ -41,8 +41,6 @@ describe('validateLasHeader', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.header.pointCount).toBe(1000);
-      expect(result.header.minZ).toBe(10);
-      expect(result.header.maxZ).toBe(40);
     }
   });
 

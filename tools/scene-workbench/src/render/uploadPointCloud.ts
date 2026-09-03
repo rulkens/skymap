@@ -3,7 +3,7 @@ import type { LidarGpuAsset } from './renderResources';
 
 /**
  * Uploads a parsed `points.bin` record array as one instance buffer, stride
- * 16 (spec §5) — the renderer (task 14) owns the pipeline that draws it.
+ * 16 (spec §5) — the renderer owns the pipeline that draws it.
  * `records` is a view onto the downloaded buffer, so `writeBuffer` gets the
  * view (not its backing `ArrayBuffer`): the header bytes sit in front of it.
  */

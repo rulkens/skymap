@@ -1,6 +1,6 @@
 /**
  * upsertGroup mirrors upsertAsset's identity-preserving replace-or-append
- * for scenes.json's rows; task 9 writes through it directly, so a
+ * for scenes.json's rows; bakeLidar writes through it directly, so a
  * same-type bug (e.g. comparing the wrong field) needs its own catch here
  * rather than riding on upsertAsset's coverage.
  */
