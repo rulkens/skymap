@@ -28,7 +28,7 @@ import { createReportThrottle } from './timing/createReportThrottle';
 import { TIMING_SLOTS } from './timing/timingSlots';
 import { createRafLoop } from './createRafLoop';
 import { createGalaxyFieldRenderer } from '../../../../src/services/gpu/renderers/galaxyField/createGalaxyFieldRenderer';
-import type { GalaxyFieldRenderTargets } from '../../../../src/services/gpu/renderers/galaxyField/createGalaxyFieldRenderer';
+import type { GalaxyFieldRenderTargets } from '../../../../src/@types/galaxy/GalaxyFieldRenderTargets';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { readTextureChannelSum } from './gpu/readTextureChannelSum';

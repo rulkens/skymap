@@ -13,18 +13,19 @@ import type { ExtraGalaxySpec } from '../../../../@types/galaxy/ExtraGalaxySpec'
 import type { FieldSliceCounts } from '../../../../@types/galaxy/FieldSliceCounts';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldComponent } from '../../../../@types/galaxy/GalaxyFieldComponent';
+import type { GalaxyFieldExtra } from '../../../../@types/galaxy/GalaxyFieldExtra';
+import type { GalaxyFieldFrame } from '../../../../@types/galaxy/GalaxyFieldFrame';
+import type { GalaxyFieldMixtureInput } from '../../../../@types/galaxy/GalaxyFieldMixtureInput';
 import type { GalaxyFieldMixtureResult } from '../../../../@types/galaxy/GalaxyFieldMixtureResult';
-import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyFieldOverlays } from '../../../../@types/galaxy/GalaxyFieldOverlays';
+import type { GalaxyFieldRenderer } from '../../../../@types/galaxy/GalaxyFieldRenderer';
+import type { GalaxyFieldRendererDeps } from '../../../../@types/galaxy/GalaxyFieldRendererDeps';
+import type { GalaxyFieldRenderTargets } from '../../../../@types/galaxy/GalaxyFieldRenderTargets';
 import type { HiiSegment } from '../../../../@types/galaxy/HiiSegment';
 import type { HiiTextureLanes } from '../../../../@types/galaxy/HiiTextureLanes';
 import type { HiiTier } from '../../../../@types/galaxy/HiiTier';
-import type { IsmMapSeedingLanes } from '../../../../@types/galaxy/IsmMapSeedingLanes';
-import type { YoungStarsLanes } from '../../../../@types/galaxy/YoungStarsLanes';
 import type { StageGraph } from '../../../../@types/gpu/StageGraph';
-import type { TimingSlotName } from '../../../../@types/gpu/timing/TimingSlotName';
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-
 import {
   buildGalaxyFieldMixture,
   DEFAULT_GALAXY_FIELD_TUNING,
@@ -35,7 +36,6 @@ import {
   ISM_MAP_RINGS,
   ismMapGridRadiusOrDefault,
 } from '../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from '../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import {
   buildHiiRegions,
   buildHiiShellsAndYoungWithSegments,
@@ -56,7 +56,6 @@ import { createDerived } from '../../lib/createDerived';
 import { createStageGraph } from '../../lib/createStageGraph';
 
 import { buildFieldHeaderInputs } from './field/buildFieldHeaderInputs';
-import type { FieldHeaderFrameLanes, FieldHeaderRenderLanes } from './field/buildFieldHeaderInputs';
 import { createFieldPipelines } from './field/createFieldPipelines';
 import type { FieldBindGroups } from './field/createFieldPipelines';
 import { deriveDustHeaderLanes } from './field/deriveDustHeaderLanes';
@@ -73,6 +72,7 @@ import {
   packFieldHeaderUniforms,
 } from './field/packFieldUniforms';
 import { bakeVolumeTexture } from './gpu/bakeVolumeTexture';
+import type { BakeVolumeTextureSpec } from './gpu/bakeVolumeTexture';
 import { createGrowOnlyRecordBuffer } from './gpu/createGrowOnlyRecordBuffer';
 import { buildDigArmEnvelopeTable } from './ismMap/buildDigArmEnvelopeTable';
 import { computeDigVeilBudget } from './ismMap/computeDigVeilBudget';
@@ -81,9 +81,7 @@ import { computePlaceDustBudget } from './ismMap/computePlaceDustBudget';
 import type { PlaceDustBudget } from './ismMap/computePlaceDustBudget';
 import { createIsmMapDustCdfScan } from './ismMap/createIsmMapDustCdfScan';
 import { createIsmMapGenerator } from './ismMap/createIsmMapGenerator';
-import type { IsmMapGenerator } from './ismMap/createIsmMapGenerator';
 import { createIsmMapOrientation } from './ismMap/createIsmMapOrientation';
-import type { IsmMapOrientation } from './ismMap/createIsmMapOrientation';
 import { createIsmMapPlaceArmCloud } from './ismMap/createIsmMapPlaceArmCloud';
 import type { PlaceArmCloudDispatchInput } from './ismMap/createIsmMapPlaceArmCloud';
 import { createIsmMapPlaceArmSpurCloud } from './ismMap/createIsmMapPlaceArmSpurCloud';
@@ -100,74 +98,13 @@ import starGrainBakeWgsl from '../../shaders/milkyWay/field/starGrainBake.wesl?s
 import bubblePresentVsWgsl from '../../shaders/milkyWay/field/bubblePresent/vertex.wesl?static';
 import bubblePresentFsWgsl from '../../shaders/milkyWay/field/bubblePresent/fragment.wesl?static';
 
-/**
- * Edge length of the baked ridged-noise volume (dustNoiseBake.wesl) —
- * 128^3 rgba8unorm, one ridged band per channel. Baked ONCE at construction
- * (view- and param-independent: four fixed octave bands, no camera/galaxy
- * input), never inside the per-frame encoder.
- */
-const DUST_NOISE_TEX_SIZE = 128;
-
-/** Matches dustNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
-const DUST_NOISE_WORKGROUP_SIZE = 4;
-
-/**
- * Edge length of the baked warp volume (warpNoiseBake.wesl) — 64^3
- * rgba8unorm, VALUE noise (not dustNoiseTex's gradient noise) for
- * starGrain.wesl's domain-warp displacement only. Low-frequency by design
- * (three octaves at 1x/2x/4x an 8-cell base lattice), so 64^3 resolves it
- * with headroom; baked ONCE at construction like dustNoiseTex.
- */
-const WARP_NOISE_TEX_SIZE = 64;
-
-/** Matches warpNoiseBake.wesl's `@workgroup_size(4, 4, 4)`. */
-const WARP_NOISE_WORKGROUP_SIZE = 4;
-
-/**
- * Edge length of the baked star-grain volume (starGrainBake.wesl) — 128^3
- * rgba8unorm, scattered log-normal point grains rather than dust's ridged
- * bands (see that file's own header). Baked ONCE at construction, same
- * discipline as `dustNoiseTex`.
- */
-const STAR_GRAIN_TEX_SIZE = 128;
-
-/** Matches starGrainBake.wesl's `@workgroup_size(4, 4, 4)`. */
-const STAR_GRAIN_WORKGROUP_SIZE = 4;
-
-/** A background galaxy's contribution: its own geometry, plus the rigid transform placing it in the scene. */
-export type GalaxyFieldExtra = {
-  readonly geometry: GalaxyDescription;
-  readonly transform: Pick<ExtraGalaxySpec, 'pos' | 'scale' | 'rotY' | 'tiltX'>;
-};
-
-export type GalaxyFieldRendererDeps = {
-  readonly makeShader: (code: string, label: string) => GPUShaderModule;
-  readonly hdrFormat: GPUTextureFormat;
-  readonly dustMapFormat: GPUTextureFormat;
-  /**
-   * The two hooks the CPU readback path keeps on the host side (its queue and
-   * decoders are host-owned — see the spec's tool-only table). Each fires from
-   * the one place inside this module that knows the copy just went stale.
-   */
-  readonly onIsmMapRebuilt?: (grid: GalaxyIsmMapGridRadius) => void;
-  readonly onOrientationRebuilt?: (grid: GalaxyIsmMapGridRadius) => void;
-};
-
-/**
- * Everything the mixture/ISM rebuild is a function of. The first three are
- * the galaxy itself; `extras` is the rest of the scene (the component buffers
- * are scene-wide, not per-galaxy — see `fieldPack`); the last three are host
- * render knobs the orientation chain consumes.
- */
-export type GalaxyFieldMixtureInput = {
-  readonly geometry: GalaxyDescription | null;
-  readonly fieldTuning: GalaxyFieldTuning;
-  readonly seed: number;
-  readonly extras: readonly GalaxyFieldExtra[];
-  readonly sigmaDerivTexels: number;
-  readonly sigmaIntegTexels: number;
-  readonly orientationViewWanted: boolean;
-};
+/** Baked ONCE at construction — fixed octave bands, no camera/galaxy input, never re-baked per frame. Each `workgroupSize` matches its shader's own `@workgroup_size`. */
+const BAKED_VOLUMES = {
+  dustNoise: { code: dustNoiseBakeWgsl, size: 128, workgroupSize: 4 },
+  // 64, not 128: low-frequency value noise (three octaves over an 8-cell base lattice) resolves fine at this size.
+  warpNoise: { code: warpNoiseBakeWgsl, size: 64, workgroupSize: 4 },
+  starGrain: { code: starGrainBakeWgsl, size: 128, workgroupSize: 4 },
+} as const satisfies Record<string, Omit<BakeVolumeTextureSpec, 'label' | 'makeShader'>>;
 
 const EMPTY_INPUT: GalaxyFieldMixtureInput = {
   geometry: null,
@@ -177,136 +114,6 @@ const EMPTY_INPUT: GalaxyFieldMixtureInput = {
   sigmaDerivTexels: 0,
   sigmaIntegTexels: 0,
   orientationViewWanted: false,
-};
-
-/**
- * Render targets the HOST allocates and owns. `GPUTexture` rather than
- * `GPUTextureView`: every field/HII/tier header packs `targetSizePx` off the
- * target's own pixel size, and a view exposes no dimensions.
- */
-export type GalaxyFieldRenderTargets = {
-  readonly fieldTex: GPUTexture;
-  readonly dustMapTex: GPUTexture;
-  readonly dustViewTex: GPUTexture;
-  readonly hiiTex: GPUTexture;
-  readonly hiiTiers: Readonly<Record<HiiTier, GPUTexture>>;
-};
-
-/**
- * The per-frame camera/settings lanes the five field headers are packed from
- * — the half of the encode inputs no `GPUTexture` can supply.
- */
-export type GalaxyFieldFrame = {
-  readonly eye: Vec3;
-  readonly fov: number;
-  readonly shiftX: number;
-  readonly view: FieldHeaderFrameLanes;
-  /** `analyticField` gates every pass below, never the header writes. */
-  readonly render: FieldHeaderRenderLanes & { readonly analyticField: boolean };
-  /** Host-owned because both are derived from the CPU ISM-map readback. */
-  readonly ismMapSeeding: IsmMapSeedingLanes;
-  readonly youngStars: YoungStarsLanes;
-  /**
-   * `gpuTimingService.descriptorFor`. Called ONLY where a pass is actually
-   * encoded: asking for a descriptor marks its slot consumed, which is what
-   * makes a skipped pass's HUD row vanish rather than freeze.
-   */
-  readonly timestampWrites?: (slot: TimingSlotName) => GPURenderPassTimestampWrites | undefined;
-};
-
-/** The three additive diagnostic overlays drawn straight into the host's open scene pass. */
-export type GalaxyFieldOverlays = {
-  readonly ismMap: boolean;
-  readonly orientation: boolean;
-  /** The SF-event catalog's own placements — host-owned data, module-owned pipeline. */
-  readonly bubbles: { readonly buf: GPUBuffer; readonly count: number } | null;
-};
-
-/** Debug-only surface, driven by the host's GPU-error probe. No production caller. */
-export type GalaxyFieldProbe = {
-  peekRecords(buffer: 'field' | 'hii', offset: number, count: number): Promise<Float32Array>;
-  requestDustPlacementReadback(opts?: { readonly forceGeneratorIsFluid?: boolean }): Promise<{
-    readonly count: number;
-    readonly records: Float32Array;
-    readonly mass: Float32Array;
-    readonly renormScale: number;
-  } | null>;
-  requestArmSpurCloudPlacementReadback(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly flux: number;
-    readonly records: Float32Array;
-    readonly fluxWeight: Float32Array;
-    readonly renormScale: number;
-  } | null>;
-  requestArmCloudPlacementReadback(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly flux: number;
-    readonly records: Float32Array;
-    readonly fluxWeight: Float32Array;
-    readonly renormScale: number;
-  } | null>;
-  requestDigVeilPlacementReadback(): Promise<{
-    readonly count: number;
-    readonly offset: number;
-    readonly amplitudeBase: number;
-    readonly records: Float32Array;
-  } | null>;
-  /** The REAL production pair, so a host-side isolated-range draw exercises the real fragment shader. */
-  readonly fieldSplatPipe: GPURenderPipeline;
-  /**
-   * `null` until the first `encode` has synced; afterwards it reflects the LAST
-   * `encode`'s resources — a `setMixture` that regrew `fieldComps` leaves this
-   * bound to the destroyed buffer until the next `encode`. Probe callers must
-   * render a frame between mutation and readback (`settleFrames` already does).
-   */
-  readonly fieldSplatBG: GPUBindGroup | null;
-};
-
-export type GalaxyFieldRenderer = {
-  /**
-   * Rebuild whatever the moved half of `input` feeds. Idempotent: a call in
-   * which nothing moved (the host re-pushes its whole render bag on any knob)
-   * does no work.
-   */
-  setMixture(input: GalaxyFieldMixtureInput): void;
-  /**
-   * Run the deferred GPU rebuilds in their own dependency order. The host
-   * must call this BEFORE the frame's encoder exists — the orientation chain
-   * submits an encoder of its own that has to precede the frame's. `done` is
-   * always true today; the seam exists so a future per-galaxy scheduler can
-   * spread the same calls across frames with no API change.
-   */
-  stepIsmMap(): { readonly done: boolean };
-  /**
-   * Pack this frame's five headers, then encode the dust-map, dust-present,
-   * field-splat and HII-tier passes into the caller's encoder. The only
-   * ordering owned here is what is intrinsic to one galaxy's own passes
-   * (dustMap before field); where they sit in the frame is the host's call.
-   */
-  encode(
-    encoder: GPUCommandEncoder,
-    targets: GalaxyFieldRenderTargets,
-    frame: GalaxyFieldFrame,
-  ): void;
-  /** The three present overlays, into the host's already-open scene pass. */
-  encodeOverlays(pass: GPURenderPassEncoder, overlays: GalaxyFieldOverlays): void;
-
-  readonly fieldCounts: FieldSliceCounts;
-  readonly dustHeaderLanes: DustHeaderLanes;
-  /** `hiiComps`' buffer-wide segmentation — the host's composite gates read it. */
-  readonly hiiSegments: readonly HiiSegment[];
-  readonly armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'];
-  readonly spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'];
-  /**
-   * Exposed for the host's CPU readback path alone (`createIsmMapReadbacks`
-   * and the ISM-map debug view), which stays host-side per the spec.
-   */
-  readonly ismMapGenerator: IsmMapGenerator;
-  readonly ismMapOrientation: IsmMapOrientation;
-  readonly probe: GalaxyFieldProbe;
-  dispose(): void;
 };
 
 export function createGalaxyFieldRenderer(
@@ -369,36 +176,19 @@ export function createGalaxyFieldRenderer(
   );
 
   // ---- three baked volumes, each baked ONCE via bakeVolumeTexture ----
-  // All three are view- and param-independent (fixed octave bands, no
-  // camera/galaxy input), which is what lets them bake here rather than
-  // inside the per-frame encoder.
-  const dustNoiseBaked = bakeVolumeTexture(device, {
-    label: 'galaxy:dustNoise',
-    code: dustNoiseBakeWgsl,
-    makeShader,
-    size: DUST_NOISE_TEX_SIZE,
-    workgroupSize: DUST_NOISE_WORKGROUP_SIZE,
-  });
-  const dustNoiseTex = own(dustNoiseBaked.texture);
-  const dustNoiseSampler = dustNoiseBaked.sampler;
-  const warpNoiseBaked = bakeVolumeTexture(device, {
-    label: 'galaxy:warpNoise',
-    code: warpNoiseBakeWgsl,
-    makeShader,
-    size: WARP_NOISE_TEX_SIZE,
-    workgroupSize: WARP_NOISE_WORKGROUP_SIZE,
-  });
-  const warpNoiseTex = own(warpNoiseBaked.texture);
-  const warpNoiseSampler = warpNoiseBaked.sampler;
-  const starGrainBaked = bakeVolumeTexture(device, {
-    label: 'galaxy:starGrain',
-    code: starGrainBakeWgsl,
-    makeShader,
-    size: STAR_GRAIN_TEX_SIZE,
-    workgroupSize: STAR_GRAIN_WORKGROUP_SIZE,
-  });
-  const starGrainTex = own(starGrainBaked.texture);
-  const starGrainSampler = starGrainBaked.sampler;
+  const bake = (name: keyof typeof BAKED_VOLUMES) => {
+    const { texture, sampler } = bakeVolumeTexture(device, {
+      ...BAKED_VOLUMES[name],
+      label: `galaxy:${name}`,
+      makeShader,
+    });
+    return { texture: own(texture), sampler };
+  };
+  const baked = {
+    dustNoise: bake('dustNoise'),
+    warpNoise: bake('warpNoise'),
+    starGrain: bake('starGrain'),
+  };
 
   // dustAttenuation.wesl's own sampler for `dustMapTex` (io.wesl binding 6) —
   // a plain filtering sampler, no address-mode wrap needed since the UV it is
@@ -482,12 +272,12 @@ export function createGalaxyFieldRenderer(
     hiiUbo,
     tierUbo,
     ismMapGenerator,
-    dustNoiseTex,
-    dustNoiseSampler,
-    warpNoiseTex,
-    warpNoiseSampler,
-    starGrainTex,
-    starGrainSampler,
+    dustNoiseTex: baked.dustNoise.texture,
+    dustNoiseSampler: baked.dustNoise.sampler,
+    warpNoiseTex: baked.warpNoise.texture,
+    warpNoiseSampler: baked.warpNoise.sampler,
+    starGrainTex: baked.starGrain.texture,
+    starGrainSampler: baked.starGrain.sampler,
     dustMapSampler,
     dustRenormBuffer: ringReduce.dustRenormBuffer,
     armRenormBuffer: ringReduce.armCloudRenormBuffer,
