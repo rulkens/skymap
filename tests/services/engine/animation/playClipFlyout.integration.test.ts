@@ -121,7 +121,7 @@ function makeEngineState(startDistance: number): {
       skyCubemapCapture: {
         bandActive: false,
         gcDistanceMpc: Number.POSITIVE_INFINITY,
-        bakedFrom: null,
+        bakedSettings: null,
       },
     },
   };

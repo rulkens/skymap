@@ -571,7 +571,7 @@ function makeInput(
           clipPlayer: { clipOpacityOf: () => 1 },
         },
         // The sky-cubemap bake bookkeeping — `bandActive`/`gcDistanceMpc`
-        // update every frame; `bakedFrom` only changes while the lensing
+        // update every frame; `bakedSettings` only changes while the lensing
         // band is active. The fixture camera sits Mpc-scale away from Sgr
         // A*, so the band stays closed and `facesToCapture` stays empty;
         // see `renderFrame.ts`'s in-band block.
@@ -579,7 +579,7 @@ function makeInput(
           skyCubemapCapture: {
             bandActive: false,
             gcDistanceMpc: Number.POSITIVE_INFINITY,
-            bakedFrom: null,
+            bakedSettings: null,
           },
         },
       } as never,

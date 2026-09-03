@@ -111,18 +111,19 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * entry, each `depthLoad: 'clear'` so a nearer body row doesn't test against
  * a farther row's depth — see the push loop below.
  *
- * `skyCubemapFacesToCapture` (computed by `renderFrame` from
- * `skyCubemapNeedsBake` — empty outside the band, and empty in-band on every
- * frame except the one that (re)bakes) is the black-hole lens's sky-cubemap
- * bake list: empty most frames, so NO capture steps are emitted at all (Q6's
- * zero-dispatch guarantee — this is the capture side of that contract, not
- * just the lensing draw itself). Placed in the compute prelude's wake, ahead
- * of every other render step, so a same-frame lensing draw can sample a
+ * `skyCubemapFacesToCapture` (computed by `renderFrame`, gated on the
+ * band plus a settings-reference change or a settling roster — empty
+ * outside the band, and empty in-band on every frame except the one that
+ * (re)bakes) is the black-hole lens's sky-cubemap bake list: empty most
+ * frames, so NO capture steps are emitted at all (Q6's zero-dispatch
+ * guarantee — this is the capture side of that contract, not just the
+ * lensing draw itself). Placed in the compute prelude's wake, ahead of
+ * every other render step, so a same-frame lensing draw can sample a
  * cubemap this frame actually wrote. TWO steps per requested face — COSMO
  * then NEAR0 — because
  * the fixed opt-in roster (`ContentLayer.skyCapture`) spans both
  * slabs: `point-sprites` / `textured-disks` project through COSMO;
- * `star-catalog` / `star-aggregates` / `star-points` through NEAR0. A
+ * `star-catalog` / `star-aggregates` through NEAR0. A
  * capture step selects its group by the flag rather than by `target`
  * (`executeFrame`'s capture-step branch), but `slab` still gates normally —
  * one step per slab is what makes BOTH halves of the roster reachable (a

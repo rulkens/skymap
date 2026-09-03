@@ -59,7 +59,6 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import { skyCubemapNeedsBake } from './skyCubemapNeedsBake';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
 import { regionById } from '../../../utils/scene/regionById';
@@ -132,24 +131,29 @@ export function renderFrame(input: RenderFrameInput): void {
   // The `sky-cubemap` row's 50 MB exists only while the band does (its
   // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`
   // runs BEFORE this frame's camera pose is produced, so it cannot see the
-  // band open; the edge reconciles here instead. `bakedFrom` is `null`
+  // band open; the edge reconciles here instead. `bakedSettings` is `null`
   // whenever the band is inactive (seeded null, reset null on close below),
-  // so the band-entry frame is always the frame `skyCubemapNeedsBake` finds
-  // nothing baked and sweeps all six faces — it needs the row to already
-  // exist.
+  // so the band-entry frame always finds nothing baked and sweeps all six
+  // faces — it needs the row to already exist.
   if (bandActive !== captureRuntime.bandActive) {
     captureRuntime.bandActive = bandActive;
     ctx.renderTargets.reconcile(state, ctx.canvasSize);
-    if (!bandActive) captureRuntime.bakedFrom = null;
+    if (!bandActive) captureRuntime.bakedSettings = null;
   }
 
   // The captured "sky" is kpc away and static: a 1024² face covers 90°, so
   // one texel is ~1.5 mrad, and shifting content at 8 kpc by a texel needs
   // ~12 pc of camera travel — the whole lens band is 500 AU. One bake is
   // texel-exact for the entire band; the lens shader already samples the
-  // cubemap as at-infinity, so there is no pinned-eye tracking to do. A
-  // re-bake fires only when the roster's inputs actually change (settings,
-  // selection, tier, the row's allocated size, or a fade ramp in flight).
+  // cubemap as at-infinity, so there is no pinned-eye tracking to do.
+  //
+  // A settings-reference change re-bakes. Dropped from the key on purpose:
+  // `tier` — a tier swap dissolves through `fades.fadeTo` (`dissolveCatalogBuffer.ts`),
+  // so `rosterSettling` already catches it; `faceSizePx` — the resolution
+  // knob is a settings write, and `reconcile` (above) reallocates the row
+  // earlier in the same `runFrame`, so the settings-ref bake lands in the
+  // new texture; `selection` — a stale selection halo in the lensed sky is
+  // accepted.
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
   let skyCubemapFacesToCapture: readonly CubeFace[] = [];
   // Sgr A*'s own body-m slab row this frame: `frameProgram` emits the
@@ -165,22 +169,15 @@ export function renderFrame(input: RenderFrameInput): void {
       ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
         ?.index ?? null;
 
-    const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
-    const bakeKey = {
-      settings: state.settings,
-      selection: state.selection,
-      tier: state.tier,
-      faceSizePx,
-      // Two roster inputs move without a settings write: a source-visibility
-      // ramp (settings write fires once, at the ramp's START), and a
-      // famous-galaxy thumbnail's atlas upload + 400 ms load fade (arrives
-      // async, after the ramp has already settled). Either forces a re-bake
-      // every frame it runs, plus one final settled bake.
-      rosterSettling:
-        state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
-        (state.subsystems.texturedDisks?.hasInFlightWork() ?? false),
-    };
-    if (skyCubemapNeedsBake(captureRuntime.bakedFrom, bakeKey)) {
+    // Two roster inputs move without a settings write: a source-visibility
+    // ramp (settings write fires once, at the ramp's START), and a
+    // famous-galaxy thumbnail's atlas upload + 400 ms load fade (arrives
+    // async, after the ramp has already settled).
+    const rosterSettling =
+      state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
+      (state.subsystems.texturedDisks?.hasInFlightWork() ?? false);
+    if (rosterSettling || captureRuntime.bakedSettings !== state.settings) {
+      const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
       for (const face of ALL_CUBE_FACES) {
         const faceCtx = skyCubemapFaceContext({
           state,
@@ -192,11 +189,14 @@ export function renderFrame(input: RenderFrameInput): void {
         if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
       }
       // Pre-bootstrap: a face's context can come back null before the first
-      // real camera pose exists. Leave `bakedFrom` untouched so the next
+      // real camera pose exists. Leave `bakedSettings` untouched so the next
       // frame retries the full sweep rather than caching a partial bake.
       if (skyCubemapFaceContexts.size === ALL_CUBE_FACES.length) {
         skyCubemapFacesToCapture = ALL_CUBE_FACES;
-        captureRuntime.bakedFrom = bakeKey;
+        // Recorded only for a settled bake: while the roster is still moving,
+        // null keeps the next frame baking, and the first settled frame
+        // bakes once more.
+        captureRuntime.bakedSettings = rosterSettling ? null : state.settings;
       }
     }
   }

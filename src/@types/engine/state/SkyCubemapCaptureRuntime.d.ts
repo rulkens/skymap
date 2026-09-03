@@ -2,10 +2,10 @@
  * SkyCubemapCaptureRuntime — cross-frame memory for the black-hole lens's
  * one-shot sky-cubemap bake. Lives on `cameraRuntime` alongside its sibling
  * amortized-Resources fields; single-writer: only `renderFrame` reads or
- * writes it. See `SkyCubemapBakeKey` for what triggers a re-bake.
+ * writes it.
  */
 
-import type { SkyCubemapBakeKey } from './SkyCubemapBakeKey';
+import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 
 export type SkyCubemapCaptureRuntime = {
   /**
@@ -23,6 +23,10 @@ export type SkyCubemapCaptureRuntime = {
    * margin — see `renderTargets.ts`).
    */
   gcDistanceMpc: number;
-  /** The inputs the cubemap's current contents were baked from; `null` = nothing baked (also reset on band close). */
-  bakedFrom: SkyCubemapBakeKey | null;
+  /**
+   * The settings slice reference the cubemap's contents were baked under.
+   * `null` = nothing usable baked: never baked, the band just closed, or the
+   * last bake ran while the roster was still settling.
+   */
+  bakedSettings: EngineSettingsState | null;
 };

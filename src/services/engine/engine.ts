@@ -189,7 +189,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Far outside the band pre-boot, so the row's hysteresis margin can't
       // mistake "never measured" for "just closed".
       gcDistanceMpc: Number.POSITIVE_INFINITY,
-      bakedFrom: null,
+      bakedSettings: null,
     },
   };
 

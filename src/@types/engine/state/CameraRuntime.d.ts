@@ -63,10 +63,11 @@
  *                    way is up this frame' for every reader.
  *
  *   `skyCubemapCapture` — the black-hole lens's sky-cubemap bake bookkeeping
- *                    (the band-active edge, GC distance, and what the current
- *                    bake was keyed on). Not boxed — `renderFrame` is its only
- *                    reader/writer, so no other module needs a shared live
- *                    reference. See `SkyCubemapCaptureRuntime.d.ts`.
+ *                    (the band-active edge, GC distance, and the settings
+ *                    reference the current bake was taken under). Not boxed —
+ *                    `renderFrame` is its only reader/writer, so no other
+ *                    module needs a shared live reference. See
+ *                    `SkyCubemapCaptureRuntime.d.ts`.
  *
  * Constructed in `engine.ts` alongside `frameRef`, this bag is the single source
  * of truth for all four Resources: `wireInput`, `startLoop`, `runFrame`, and the
