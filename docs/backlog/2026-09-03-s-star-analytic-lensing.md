@@ -56,6 +56,12 @@ closed unmerged, branch kept). User ruling: not now.
   √(peak/white) pins all 40 stars to `STAR_GLOW_MAX_PX` and also grows Sirius
   to ~40 px from Earth, since the field already sits ~10³ over white and only
   the knee hides it.
+- **Zooming out is a point mess.** The images stay at full brightness while the
+  camera pulls back from the hole, so the whole Sgr A\* area reads as a clutter
+  of white points until the band alpha finally fades the layer out at 500 AU.
+  Same over-exposure root cause: with real inverse-square dimming and an
+  exposure anchored to the scene, the cluster would dim and tighten on the way
+  out instead of holding as saturated dots.
 - Glare must stay ROUND: it is the observer's PSF applied after deflection.
   Tangential stretch applies to the stellar disc (~2×10⁻⁵ rad), visible only
   within ~0.01 θ_E of the axis.
