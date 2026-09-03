@@ -1,15 +1,10 @@
 /**
- * Scene Workbench — Vite dev server config.
+ * Scene Workbench — Vite dev server config. A sibling dev tool: own port
+ * (`../utils/io/devPorts.ts`), own `root`, own `publicDir` → the repo's
+ * shared `public/`.
  *
- * A sibling dev tool (like tools/flow-workbench, tools/mcpm-workbench): its
- * own port (`../utils/io/devPorts.ts`), own `root`, own `publicDir` pointing
- * at the repo's shared `public/`. Local-only — no deploy target, so unlike
- * those tools there is no build mode to switch on.
- *
- * `weslToml` is passed EXPLICITLY: the plugin otherwise reads
- * `<process.cwd()>/wesl.toml`, and `npm run scene-workbench` keeps cwd at the
- * repo root, where the RUNTIME's toml lives — omit the path and it silently
- * links against the wrong shader set and never finds this tool's `.wesl` files.
+ * `weslToml` is EXPLICIT: cwd stays at the repo root (the RUNTIME's own
+ * toml) under `npm run scene-workbench` — omit it and it links there instead.
  */
 
 import { defineConfig } from 'vite';
@@ -22,9 +17,7 @@ import { DEV_PORTS } from '../utils/io/devPorts.ts';
 
 export default defineConfig({
   root: resolve(import.meta.dirname),
-  // envDir at the repo root is load-bearing: with `root:` here Vite looks
-  // for env files locally and dataUrl() silently falls back to same-origin
-  // /data/.
+  // envDir at repo root is load-bearing — without it dataUrl() falls back to same-origin /data/.
   publicDir: resolve(import.meta.dirname, '../../public'),
   envDir: resolve(import.meta.dirname, '../../'),
   server: { port: DEV_PORTS.sceneWorkbench },
