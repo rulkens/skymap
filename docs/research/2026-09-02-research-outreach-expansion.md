@@ -163,3 +163,32 @@ Every approach so far has converged on the same four deliverables. Naming them m
 ## 6. Funding note (NL)
 
 NWO's WECOM science-communication call has **no 2026 round**; the programme is being restructured and the 2027 call was to be announced mid-2026 ([WECOM](https://www.nwo.nl/en/researchprogrammes/dutch-research-agenda-nwa/science-communication-and-outreach/wecom-science-communication)). [NWA Citizen Science 2026](https://www.nwo.nl/en/calls/nwa-citizen-science-2026) (up to €100k per project) is open and a university partner (Leiden/Kapteyn via NOVA) would be the applicant. Any of the Dutch contacts above can carry that; it is a reason to open with them even if the science payoff is elsewhere.
+
+## 7. First approach: GRAVITY / S301 (shipped 2026-09-03, [#661](https://github.com/rulkens/skymap/pull/661))
+
+The facts that shape the email: the paper is [Abd El Dayem et al. 2026, Nature](https://www.nature.com/articles/s41586-026-10894-w), published 19 August with releases from [MPE](https://www.mpe.mpg.de/8219735/news20260819) and [ESO (eso2612)](https://www.eso.org/public/news/eso2612/). First author Karim Abd El Dayem is at Paris Observatory (LIRA), not MPE; the MPE names are Gillessen, Eisenhauer, Genzel. Skymap already uses Gillessen's 2017 table for the other 39 orbits, which is the credibility line. The transcribed row is Solution A of two degenerate fits (Extended Data Table 2), and the orbit is Keplerian: no Schwarzschild precession, no Lense-Thirring. Both facts go in the email as disclosures, because the second one is also the follow-up tool.
+
+**Sequence**
+
+1. Before sending: confirm the `#focus=body-s301&t=…` link opens on the star with the clock at pericentre (Tp 2023.126, mid-February 2023; next pericentre 2031.8), record a 15 s clip of the pericentre pass, and take one still. Check the InfoCard cites the Nature DOI and says "Solution A".
+2. Email 1, this week, to **Stefan Gillessen** with **Abd El Dayem** in CC. Not Genzel, not the press office. Under 200 words, one link, one inline still, one specific question they can answer in a minute.
+3. If no reply in ten days, one nudge. Then the press offices, in this order: ESO (eso2612 is theirs and ESO's outreach department embeds third-party visuals), then MPE (Isabelle Kessler, press officer). Press offices act on a scientist's nod, so the nudge to Gillessen mentions the intention.
+4. Email 2, only after a reply: the workbench offer. A relativistic orbit integrator in the browser with the spin parameter as a slider, showing what two orbits of S301 look like for spin 0 versus 0.9 (Lense-Thirring nodal precession), with S2's measured Schwarzschild precession as the validation target. That is the "contested knob" for this group and the reason it can feed back.
+
+**Draft, email 1**
+
+> Subject: S301 now orbits Sgr A\* in skymap (your 2017 table plus one row)
+>
+> Dear Dr Gillessen, dear Mr Abd El Dayem,
+>
+> I build skymap, an open-source WebGPU zoom from Earth's surface to the cosmic web built from published catalogues. The Galactic centre beat has rendered the 39 bound S-star orbits from Gillessen et al. 2017 since July. Last week I added S301 from your Nature paper, and it is live: <link>. The clock is set to the 2023 pericentre; the still below is that pass.
+>
+> Two things I would like you to know before anyone else sees it. I transcribed Solution A from Extended Data Table 2 and note the degeneracy with Solution B in the object card. The orbits are Keplerian, so there is no precession of any kind; I say so on the card.
+>
+> One question: is Solution A the one you would want shown, and is "GRAVITY Collaboration, Abd El Dayem et al. 2026" the credit line you prefer?
+>
+> The link and a short clip of the pericentre pass are yours to use in any press material, no conditions. A group at UC Santa Cruz is using a sibling tool of skymap in their own research, so if a browser view of these orbits is ever useful to you beyond outreach, I would be glad to talk.
+>
+> Best regards,
+> <name>, <city>
+> skymap.rulkens.com · github.com/rulkens/skymap
