@@ -363,5 +363,14 @@ describe('the register loop during an active drag (R12b-1)', () => {
     frame(); // the edge frame: followBody commits, the override renders
     const edge = display(harness.state);
     expect(Math.abs(edge.tilt - before.tilt)).toBeLessThan(0.01);
+
+    // And the register stayed AUTHORED (R12c-4a): the displayed override must
+    // not be stamped back into it — a drag folding from a projected register
+    // on the next drain re-opens the walk.
+    const register = harness.state.cameraRuntime.lastPose.current;
+    expect(register.frame).toBe('absolute');
+    if (register.frame !== 'absolute') return;
+    const registerEye = eyeMpcOf(register.pose, B);
+    expect(tiltHrOf(register.pose, registerEye).tilt).toBeLessThan(1e-6);
   });
 });
