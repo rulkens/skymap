@@ -21,7 +21,7 @@ If either is not on `main` when execution starts, stop and land it first.
 
 Deviations from the tasks below, settled during execution; the tasks themselves are
 left as written. Rulings and task-by-task detail:
-`.superpowers/sdd/2026-09-03-scene-workbench-1-lidar-end-to-end/progress.md`.
+`docs/superpowers/plans/completed/2026-09-03-scene-workbench-1-lidar-end-to-end.ledger.md`.
 
 - **Z-up rig, not the plan's implicit Y-up.** `sceneCameraView` decodes
   `yawPitchToDir`/`frameUp` (Y-up) into world Z-up via an `ENU_UP_BASIS` axis cycle

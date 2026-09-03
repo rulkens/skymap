@@ -4,7 +4,7 @@
  *
  * `minPointSpacingM` exists to cap density. Native density over this bbox is
  * ~0.45 pts/m² (measured, not the ~4-5 pts/m² first assumed) — `filters.sample`
- * at 1m still thins it, landing 1.6M points ≈ 26MB (task 9's real bake), well
+ * at 1m still thins it, landing 1.6M points ≈ 26MB (measured on the first bake), well
  * past the >1e6 target, which localhost serves and a browser parses without
  * ceremony.
  */
@@ -17,7 +17,7 @@ export type SceneGroupDefinition = {
   readonly anchor: GroupAnchor;
   /** Crop bounds, WGS84 degrees — applied before colorization, in the ortho's own frame. */
   readonly bounds: LonLatBounds;
-  /** DHM 1 km tile names to fetch (task 1's list). */
+  /** DHM 1 km tile names to fetch (listed in data/raw/dhm/README.md). */
   readonly dhmTiles: readonly string[];
   /** The tiles' CRS. Punktsky LAS files embed none, so the pipeline's
    *  `readers.las` stages must state it or `filters.reprojection` refuses. */

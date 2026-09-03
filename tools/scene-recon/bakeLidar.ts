@@ -5,8 +5,8 @@
  * `manifest.json` + the `scenes.json` registry (spec §§4-6).
  *
  * `runPdal` is injected so `bakeLidar()` is exercisable without PDAL
- * installed (tasks 4-7 already cover the stage graph, the CSV reader and
- * the packer in isolation); `main()` wires up the real subprocess.
+ * installed (the stage graph, the CSV reader and the packer are tested in
+ * isolation); `main()` wires up the real subprocess.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
