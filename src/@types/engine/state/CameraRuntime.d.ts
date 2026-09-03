@@ -53,8 +53,8 @@
  *
  *   `lastRenderedSimDays` — the sim instant (Julian days) the last frame derived
  *                    its bodies at, boxed for the same in-place-update reason as
- *                    `lastPose`. The pick path pairs it with `lastPose.current` to
- *                    re-derive the pickable bodies at the exact epoch the frame
+ *                    `lastPose`. The pick path pairs it with `displayedPose.current`
+ *                    to re-derive the pickable bodies at the exact epoch the frame
  *                    drew them, keeping a pick target welded to its on-screen
  *                    sprite. `runFrame` is the SINGLE writer — it writes this once
  *                    per frame beside the body-snapshot prime; no other caller may

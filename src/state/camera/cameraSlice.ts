@@ -106,8 +106,11 @@ const cameraSlice = createSlice({
     // `displayedPose`) never touches — the pin stamps it centre-looking each
     // frame (runFrame step 4), the gesture folds preserve aim-at-pivot
     // (drainInput), and the fold's disengage retarget rebuilds it
-    // (runFrame's regime fold). Break any of those and this reducer is where
-    // the teleport re-enters.
+    // (runFrame's regime fold). KNOWN RESIDUAL: the commit-on-edge with a
+    // clip/tween prevRow bakes whatever target the descriptor authored — the
+    // pre-existing authored-target/pin item (spec §790); the real focus path
+    // builds body-centred `to`s. Break any of the three construction sites
+    // and this reducer is where the teleport re-enters.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
     },

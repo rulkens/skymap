@@ -33,6 +33,7 @@ import {
   beginDrag,
   commitCameraPose,
   setAutoRotate,
+  startCameraTween,
 } from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../../src/state/time/timeSlice';
@@ -337,5 +338,30 @@ describe('the register loop during an active drag (R12b-1)', () => {
     frame();
     const cur = display(harness.state);
     expect(stepKm(prev.eye, cur.eye)).toBeLessThan(1000);
+  });
+
+  it('a tween start in-window (NON-pivoting incoming driver) draws the displayed image on the edge frame', () => {
+    const harness = makeHarness();
+    const { frame } = toMidWindow(harness);
+    const before = display(harness.state);
+
+    // Seed the tween the way watchFocusTweenSaga does: `from` = the DISPLAYED
+    // live pose. The followBody→tween deactivation edge fires with an incoming
+    // driver that neither pins nor projects, so an authored (untilted) render
+    // override flashes 0.40 rad ≈ 453 px to nadir for exactly one frame
+    // (R12c-1) — the override must fall back to the displayed box there.
+    const from = liveWorldPose(harness.state);
+    harness.store.dispatch(
+      startCameraTween({
+        from,
+        to: { ...from, target: [...from.target] as Vec3, distance: from.distance * 1.5 },
+        durationMs: 400,
+        easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+    frame(); // the edge frame: followBody commits, the override renders
+    const edge = display(harness.state);
+    expect(Math.abs(edge.tilt - before.tilt)).toBeLessThan(0.01);
   });
 });

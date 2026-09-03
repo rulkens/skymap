@@ -65,6 +65,7 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
@@ -271,7 +272,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
 
   // Record the frame's instant as single-writer state, the exact analogue of
-  // `lastPose.current` for the pose (updated in step 4 below). The pick path
+  // `displayedPose.current` for the pose (updated in step 4 below). The pick path
   // reads THIS — not the derive memo's cached key — so a between-frames
   // `deriveBodyStates(CONST_J2000)` (extractSelectionRow, construction-time
   // consts) cannot repoint the epoch the pick sees. runFrame is the only writer.
@@ -384,6 +385,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The pose this frame actually renders. Normally the freshly produced pose;
   // on a deactivation edge it is overridden to the just-committed pose (below).
   let renderPose = pose;
+  // Non-null only on a non-pivoting deactivation edge: the register value for
+  // step 4 when `renderPose` had to be the displayed box (see the override).
+  let authoredOverride: FramedCameraPose | null = null;
+  // The INCOMING winner's pivot flag — read once here because it gates three
+  // steps below: the override's box choice, the pin, and the projection.
+  const pivotsOnFocusedBody =
+    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false;
   const prevRow = deps.drivers.find((d) => d.id === prev);
   if (prev !== activeId && prevRow?.commitsOnEdge) {
     // The register holds the AUTHORED pre-projection pose (R12b-1), so it is
@@ -395,12 +403,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // INCOMING driver against the PRE-commit `base`. For a driver that reads
     // `base` (resting / autoRotate) that pose is the stale pre-edge value —
     // rendering it flashes the camera back to where the tween, spin, or clip
-    // started for one frame. Override with the AUTHORED register (the value
-    // just baked): the pin + projection below re-derive the same displayed
-    // image from it, so there is no untilted pop. Overriding with
-    // `displayedPose` instead would feed an already-projected pose back into
-    // the pin — one frame of the exact eye walk this register kills.
-    renderPose = lastPose.current;
+    // started for one frame. Which box overrides depends on the INCOMING
+    // driver (R12c-1): when it pivots, the pin + projection below re-derive
+    // the displayed image, so hand them the AUTHORED register — the displayed
+    // box would be re-pinned, one frame of the eye walk this register kills.
+    // When it does not pivot (clip/tween), nothing downstream re-projects, so
+    // the authored (untilted) register would flash ~0.4 rad to nadir for one
+    // frame — render the DISPLAYED box directly, and pin the register to its
+    // authored value below so the projected pose still never reaches it.
+    renderPose = pivotsOnFocusedBody ? lastPose.current : displayedPose.current;
+    if (!pivotsOnFocusedBody) authoredOverride = lastPose.current;
   }
 
   // ── (3b) PIVOT-PIN: re-centre the pose on a focused body ──────────────────
@@ -421,8 +433,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // followPanOffset`, so the shifted pivot still translate-follows the body
   // and a fresh focus zeroes it (in `followElapsed`).
   const clock = state.cameraRuntime.clock;
-  const pivotsOnFocusedBody =
-    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false;
   renderPose = applyFocusedBodyPivot(
     renderPose,
     pivotsOnFocusedBody,
@@ -432,8 +442,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   );
   // The post-pin, PRE-projection pose — what step 4 stamps into the authored
   // register (`lastPose`). Captured here so the projection below stays
-  // render-side only: it reaches the register on no path (R12b-1).
-  let authoredPose = renderPose;
+  // render-side only: it reaches the register on no path (R12b-1) — including
+  // the non-pivoting edge override, whose displayed render is compensated by
+  // `authoredOverride`.
+  let authoredPose = authoredOverride ?? renderPose;
   // The world arm's tilt expression (ruling 13) sits between the pin (which
   // owns WHERE the view pivots) and the fold (which converts THIS pose at
   // engage): a pure projection of the one display-tilt mapping, so the

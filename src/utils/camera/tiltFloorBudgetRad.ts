@@ -29,6 +29,8 @@ export function tiltFloorBudgetRad(
   const q = dotWith(forward, anchorM);
   const m = Math.hypot(p, q);
   const c = -k / m;
+  // No rotation about this axis reaches nadir (|K| > √(P²+Q²)): the lowering
+  // drag is deliberately uncapped — no crossing exists to guard (R13b-1).
   if (Math.abs(c) > 1) return Infinity;
   const a = Math.acos(c);
   const phi = Math.atan2(q, p);
