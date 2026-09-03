@@ -917,14 +917,14 @@ export const RAW_DATA = {
       'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
   },
 
-  // ─── EOX s2cloudless (2016) — deep tile bands over regional patches ───
+  // ─── EOX s2cloudless (2025) — deep tile bands over regional patches ───
 
   'eox.dir': {
     path: 'data/raw/eox',
     kind: 'directory',
     source: 'gitignored',
     description:
-      'EOX s2cloudless 2016 WMTS z13 tile harvest, one subdir per registry region (`tools/fetch/eoxRegions.ts`) — holds `<region>/<z>/<row>/<col>.jpg` under the WGS84 TMS grid. CC BY 4.0; the 2016 layer only (see README).',
+      'EOX s2cloudless 2025 WMTS z13 tile harvest, one subdir per registry region (`tools/fetch/eoxRegions.ts`) — holds `<region>/<z>/<row>/<col>.jpg` under the WGS84 TMS grid. CC BY-NC-SA 4.0 upstream, used with written permission from EOX (see README).',
     fetcher: 'tools/fetch/fetchEoxTiles.ts',
     readme: 'eox.readme',
   },
