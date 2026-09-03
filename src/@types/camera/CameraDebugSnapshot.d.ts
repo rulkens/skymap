@@ -30,6 +30,8 @@ export type CameraDebugSnapshot = {
   readonly ceilingRad: number | null;
   /** `bodyUpWeight(hOverR)` — BOTH arms' pole↔scene-up blend weight (ruling 10). */
   readonly bandUpWeight: number | null;
+  /** The session's Cesium-style remembered tilt (ruling 12), radians. */
+  readonly rememberedTiltRad: number;
   /** Body-local heading/tilt of the rendered view (`headingTiltAt`); null off-roster. */
   readonly headingRad: number | null;
   readonly tiltRad: number | null;

@@ -12,6 +12,11 @@
  */
 
 import { useReducer, type ReactNode } from 'react';
+
+export type OrientationTuningProps = {
+  /** The session's remembered tilt (ruling 12), read-only trial observability. */
+  readonly rememberedTiltRad: number;
+};
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import {
   setSurfaceBand,
@@ -21,12 +26,16 @@ import {
 import DebugSlider from './DebugSlider';
 import styles from './OrientationTuning.module.css';
 
-function OrientationTuning(): ReactNode {
+function OrientationTuning({ rememberedTiltRad }: OrientationTuningProps): ReactNode {
   const [, bump] = useReducer((n: number) => n + 1, 0);
   const limits = SURFACE_BAND_LIMITS;
   return (
     <div className={styles.root}>
       <div className={styles.title}>orientation tuning</div>
+      <div className={styles.readoutRow}>
+        <span>remembered_tilt_rad</span>
+        <span>{String(rememberedTiltRad)}</span>
+      </div>
       <DebugSlider
         label="engage h/R"
         value={SURFACE_REGIME.engageHR}

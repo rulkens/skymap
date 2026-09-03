@@ -981,6 +981,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           activeDriverId: state.cameraRuntime.prevActiveId.current,
           gesture: state.cameraRuntime.surface.debugGesture(),
           lastZoomFactor: state.cameraRuntime.lastZoomFactor.current,
+          rememberedTiltRad: state.cameraRuntime.surface.rememberedTiltRad(),
         });
       },
     },

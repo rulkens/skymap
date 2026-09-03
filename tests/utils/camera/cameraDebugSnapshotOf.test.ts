@@ -49,6 +49,7 @@ const SNAP_COMMON = {
   orientationFrame: 'ecliptic',
   gesture: null,
   lastZoomFactor: null,
+  rememberedTiltRad: 0,
 } as const;
 
 function bodyState(positionMpc: Vec3): BodyState {

@@ -7,10 +7,11 @@
  * reference at every altitude (the engage-flip pop is unrepresentable).
  * One home; no consumer restates the edges.
  *
- * Load-bearing partner: the recession tilt wall (`canonicalledPose`) lands
- * tilt 0 at disengage, which makes the image plane the horizontal plane there
- * — without it the scene-aligned "north" would not be the screen-up the fold
- * bakes.
+ * Load-bearing double duty (ruling 12): display tilt is `remembered × THIS
+ * weight`, so tilt landing at exactly 0 at disengage — the image plane
+ * coinciding with the horizontal plane, which makes the blended "north" the
+ * screen-up the fold bakes — is the same fact as the blend reaching the
+ * scene up. One curve carries both invariants.
  */
 
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';

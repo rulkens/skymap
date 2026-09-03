@@ -68,6 +68,7 @@ export function cameraDebugSnapshotOf(input: {
   readonly activeDriverId: string;
   readonly gesture: { readonly gesture: SurfaceGesture | null } | null;
   readonly lastZoomFactor: number | null;
+  readonly rememberedTiltRad: number;
 }): CameraDebugSnapshot {
   const {
     storedFrame,
@@ -83,6 +84,7 @@ export function cameraDebugSnapshotOf(input: {
     activeDriverId,
     gesture,
     lastZoomFactor,
+    rememberedTiltRad,
   } = input;
   const renderedFrame = renderedPose.frame;
   const eyeMpc = eyeMpcOf(worldPose, poseBasis);
@@ -187,6 +189,7 @@ export function cameraDebugSnapshotOf(input: {
     orientationFrame,
     ceilingRad,
     bandUpWeight: hr !== null ? bodyUpWeight(hr) : null,
+    rememberedTiltRad,
     headingRad,
     tiltRad,
     rollRad,

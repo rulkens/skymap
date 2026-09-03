@@ -7,8 +7,10 @@
  * so the grabbed content follows the cursor, which fixes each sign below.
  * One orientation authority (R1): gestures never create roll, and every zoom
  * notch — both directions — walks heading north and roll level by one bounded
- * decay; a dive walks tilt to nadir, a recession only back inside the
- * altitude-keyed band, whose ceiling reaches 0 at the disengage boundary.
+ * decay. Tilt is Cesium-style (ruling 12): the display is the pure function
+ * `remembered × bodyUpWeight(h/R)` — zoom never authors it, the tilt/look
+ * handles write the memory, and the band weight reaching 0 at disengage is
+ * what lands the crossing at tilt 0.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -21,6 +23,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import type { Vec4 } from '../../@types/math/Vec4';
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
+import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from '../../utils/camera/anchoredDragRotation';
 import { anchoredZoomStep } from '../../utils/camera/anchoredZoomStep';
 import { blendedEnuAt } from '../../utils/camera/blendedEnuAt';
@@ -213,6 +216,7 @@ function walledTiltPose(
   pose: BodyFixedPose,
   preTiltRad: number,
   bodyRadiusM: number,
+  rememberedTiltRad: number,
 ): BodyFixedPose {
   const eyeM = eyeOf(pose);
   const eyeMagM = Math.hypot(...eyeM);
@@ -223,7 +227,13 @@ function walledTiltPose(
   const vert = dot3(forward, localUp);
   const tiltRad = Math.acos(Math.max(-1, Math.min(1, -vert)));
 
-  const ceilingRad = maxTiltRad(eyeMagM / bodyRadiusM - 1);
+  // The gesture-time cap (ruling 12, reconciliation 1): a drag may not ADD
+  // tilt past the altitude ramp, but the band-mapped display — remembered × w,
+  // the zoom-time authority — is never treated as excess to erode; two
+  // authorities fighting over the same tilt was the divergence class ruling
+  // 10 outlawed.
+  const hr = eyeMagM / bodyRadiusM - 1;
+  const ceilingRad = Math.max(maxTiltRad(hr), rememberedTiltRad * bodyUpWeight(hr));
   const allowed = Math.min(tiltRad, Math.max(ceilingRad, Math.min(preTiltRad, tiltRad)));
   const target = allowed - orientStepRad(Math.max(0, allowed - ceilingRad));
   if (target >= tiltRad - 1e-15) return pose;
@@ -256,16 +266,12 @@ function levelledPose(pose: BodyFixedPose, heldAzimuthRad: number | null): BodyF
 }
 
 /**
- * The zoom path's orientation settle (R1 + rulings 5-7): every notch, both
+ * The zoom path's orientation settle (R1 + rulings 5-12): every notch, both
  * directions, walks heading → north and roll → level by the one bounded
- * decay; the tilt target is the ruled asymmetry — a dive converges to NADIR
- * (ruling 5); a recession RIDES the altitude-keyed ceiling as a wall
- * (rulings 6 + C1): below `maxTiltRad` a notch out leaves tilt alone, and
- * each notch may squeeze by its own ceiling delta — proportionate to the
- * user's zoom, distributed strictly with progress, and structurally 0 at the
- * disengage boundary, which is what keeps the fold's retarget view-exact.
- * Only `inheritedTiltRad` — excess the zoom did NOT author (a clip/tour
- * arrival, a drag parked above the band) — eases by the capped decay instead.
+ * decay; tilt tracks the pure function `remembered × w(h/R)` (ruling 12 —
+ * the tilt-block comment below carries the discipline), direction-blind and
+ * structurally 0 at the disengage boundary, which is what keeps the fold's
+ * retarget view-exact.
  *
  * `diveAnchorM !== null` IS the dive: its corrections are rigid rotations
  * about axes THROUGH the anchor — camera-space coordinates invariant (Q4c),
@@ -284,9 +290,10 @@ function canonicalledPose(
   pose: BodyFixedPose,
   diveAnchorM: Readonly<Vec3> | null,
   bodyRadiusM: number,
-  inheritedTiltRad: number,
+  preTiltDevRad: number | null,
   sceneUpLocal: Readonly<Vec3>,
   preBlendAzimuthRad: number | null,
+  rememberedTiltRad: number,
 ): BodyFixedPose {
   let out = pose;
   // The reference up this settle norths toward is the BAND BLEND (round 5):
@@ -330,24 +337,33 @@ function canonicalledPose(
 
   const f1 = eyeFrameOf(out, blendW, sceneUpLocal);
   if (f1 !== null) {
-    let dTau: number;
-    if (diveAnchorM) {
-      dTau = orientStepRad(f1.tiltRad);
-    } else {
-      const eyeM = eyeOf(out);
-      const ceilingRad = maxTiltRad(Math.hypot(...eyeM) / bodyRadiusM - 1);
-      // The wall carries the inherited excess; the decay eats it, capped.
-      // Load-bearing for `bodyUpWeight`'s scene-aligned bake: tilt 0 at
-      // disengage is what makes the image plane the horizontal plane there,
-      // so the blended "north" IS the world arm's screen-up at the handoff.
-      const allowed = Math.min(f1.tiltRad, ceilingRad + inheritedTiltRad);
-      const target = allowed - orientStepRad(Math.max(0, allowed - ceilingRad));
-      dTau = f1.tiltRad - target;
-    }
+    // Ruling 12 (Cesium-style remembered tilt): display tilt is the PURE
+    // FUNCTION `remembered × w(h/R)` — a zoom notch never authors tilt, it
+    // only moves h/R along a continuous, degeneracy-free curve, so the
+    // target's own move rides IN FULL (no continuity bound: bounding it
+    // would let a fast recession cross disengage with tilt and break the
+    // scene-aligned bake — w = 0 there keeps the fold retarget view-exact
+    // by construction). Deviation the zoom did not author (an arrival pose)
+    // decays by the capped share — the 113°-snap protection, measured
+    // against the band target now that the old ceiling wall is gone. Both
+    // directions alike; the dive still pivots about its anchor (Q4c).
+    const devNew = f1.tiltRad - rememberedTiltRad * blendW;
+    const devPre = preTiltDevRad ?? devNew;
+    const dTau = devNew - devPre + orientStepRad(devPre);
     const b = out.basisLocal;
     const axisRaw = cross3([b[6], b[7], b[8]], f1.localUp);
-    if (dTau !== 0 && Math.hypot(...axisRaw) > 1e-12) {
-      const q = quatFromAxisAngle(normalize3(axisRaw), -dTau);
+    const axisLen = Math.hypot(...axisRaw);
+    // At exact nadir the east-of-forward axis vanishes; a RAISING correction
+    // (the lerp-in toward a remembered tilt) tips about the screen-right —
+    // the axis the tilt handle itself drags about at that pose.
+    const axis: Vec3 | null =
+      axisLen > 1e-12
+        ? [axisRaw[0] / axisLen, axisRaw[1] / axisLen, axisRaw[2] / axisLen]
+        : dTau < 0
+          ? [b[0], b[1], b[2]]
+          : null;
+    if (dTau !== 0 && axis !== null) {
+      const q = quatFromAxisAngle(axis, -dTau);
       out = diveAnchorM ? rotatedAbout(out, q, diveAnchorM) : withBasis(out, q);
     }
   }
@@ -521,6 +537,7 @@ function zoomStep(
   fovYRad: number,
   bodyRadiusM: number,
   sceneUpLocal: Readonly<Vec3>,
+  rememberedTiltRad: number,
 ): BodyFixedPose {
   const latched = gesture?.anchorLocalM ?? null;
   // Past the anchor's own tangent plane the anchor is behind the horizon and
@@ -546,22 +563,24 @@ function zoomStep(
   // framing; a dive with one settles about it (pixel-locked). A recession
   // settles about the eye and needs no anchor at all.
   if (factor < 1 && cursorAnchorM === null) return stepped;
-  // The pre-notch readout, against the pre-notch reference: excess the zoom
-  // did NOT author (tilt above the ceiling from a clip/tour arrival or a
-  // drag parked above the band — the wall carries it, only the capped decay
-  // may spend it) and the azimuth deviation the recession ride preserves
-  // rather than re-authoring.
+  // The pre-notch readout, against the pre-notch reference: the azimuth
+  // deviation the recession ride preserves rather than re-authoring, and the
+  // tilt deviation from the band mapping (ruling 12) — what the zoom did NOT
+  // author, for the capped decay to spend.
   const hrPre = Math.hypot(...eyeOf(arm)) / bodyRadiusM - 1;
   const preInBlendFrame = eyeFrameOf(arm, bodyUpWeight(hrPre), sceneUpLocal);
-  const inheritedRad =
-    preInBlendFrame === null ? 0 : Math.max(0, preInBlendFrame.tiltRad - maxTiltRad(hrPre));
+  const preTiltDevRad =
+    preInBlendFrame === null
+      ? null
+      : preInBlendFrame.tiltRad - rememberedTiltRad * bodyUpWeight(hrPre);
   return canonicalledPose(
     stepped,
     factor < 1 ? cursorAnchorM : null,
     bodyRadiusM,
-    inheritedRad,
+    preTiltDevRad,
     sceneUpLocal,
     preInBlendFrame?.azimuthRad ?? null,
+    rememberedTiltRad,
   );
 }
 
@@ -571,6 +590,10 @@ export function createSurfaceController(): SurfaceController {
   // them makes "latched with the pointer up" — FW-C's trackpad burst —
   // unrepresentable rather than guarded.
   let live: { gesture: SurfaceGesture | null } | null = null;
+  // Ruling 12: the session's remembered tilt — ONE home, default 0 (looking
+  // from above). Survives gestures, disengage/re-engage and engaged-body
+  // switches by design (per-session global, not per-body).
+  let rememberedTiltRad = 0;
 
   return {
     onGestureStart: () => {
@@ -580,6 +603,7 @@ export function createSurfaceController(): SurfaceController {
       live = null;
     },
     debugGesture: () => live,
+    rememberedTiltRad: () => rememberedTiltRad,
     apply: (arm, step, viewportPx, fovYRad, bodyRadiusM, sceneUpLocal) => {
       if (step.kind === 'zoom') {
         return zoomStep(
@@ -591,6 +615,7 @@ export function createSurfaceController(): SurfaceController {
           fovYRad,
           bodyRadiusM,
           sceneUpLocal,
+          rememberedTiltRad,
         );
       }
       // The gesture boundaries reach the controller through the two callbacks;
@@ -612,6 +637,7 @@ export function createSurfaceController(): SurfaceController {
         flooredPose(pose, bodyRadiusM),
         preInPoleFrame?.tiltRad ?? 0,
         bodyRadiusM,
+        rememberedTiltRad,
       );
       // Drags stay heading-free (ruled) — only zoom writes walk north up — but
       // no drag may ROLL: pan and orbit hold the heading they entered with
@@ -621,11 +647,27 @@ export function createSurfaceController(): SurfaceController {
       // a few-pixel grazing-incidence latch window at the limb, where a
       // standpoint translation does turn the ENU (~0.03 rad over 30 steps at
       // the boundary, measured); the next pan or notch settles the residual.
-      if (mode === 'strafe' || preInPoleFrame === null) return walled;
-      return levelledPose(
-        walled,
-        mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
-      );
+      const final =
+        mode === 'strafe' || preInPoleFrame === null
+          ? walled
+          : levelledPose(
+              walled,
+              mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
+            );
+      // Ruling 12: tilt-authoring handles update the memory. Un-mapping
+      // through the band weight keeps the just-set display a FIXED POINT of
+      // the zoom mapping — a notch at the set altitude must not move it
+      // (zoom never authors tilt). Near w → 0 the ratio diverges: the
+      // tiltMaxRad clamp is the sane ceiling, and a degenerate weight leaves
+      // the memory untouched (no intent is readable there).
+      if (mode === 'tilt' || mode === 'look') {
+        const f = eyeFrameOf(final, 1, BODY_POLE);
+        const w = bodyUpWeight(Math.hypot(...eyeOf(final)) / bodyRadiusM - 1);
+        if (f !== null && w > 1e-6) {
+          rememberedTiltRad = Math.min(f.tiltRad / w, SURFACE_REGIME.tiltMaxRad);
+        }
+      }
+      return final;
     },
   };
 }
