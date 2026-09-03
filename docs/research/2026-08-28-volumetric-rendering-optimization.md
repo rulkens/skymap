@@ -1,6 +1,6 @@
 # Volumetric rendering optimization — research corpus
 
-**Date:** 2026-08-28 (rev 2) · **Scope:** the in-engine scalar-volume raymarch (MCPM
+**Date:** 2026-08-28 (rev 3, 2026-09-03) · **Scope:** the in-engine scalar-volume raymarch (MCPM
 cloud, CF-4 density, polyphorm-2mrs, mcpm-workbench cubes) and, secondarily, the
 mcpm-workbench `volpath` path tracer. Survey of leading techniques + a ranked set of
 concrete suggestions. No code changes here; every suggestion carries a measurement
@@ -14,7 +14,8 @@ shipped cubes, now **measured over the deployed `.scfd` files** (see the sparsit
 table in §1: 92–99.7% render-empty at default knobs across the three wired fields).
 Rev 1's temporal-reprojection framing conflicted with a standing verdict
 and is corrected below; rev 1 also missed the survey's analytic-integration result,
-now suggestion 2.
+now suggestion 2. **Rev 3 adds §6**, the stochastic-temporal
+estimator + accumulator frame the ranked items compose into.
 
 ---
 
@@ -37,8 +38,10 @@ now suggestion 2.
 
 Items 1+2 together are the play: skip the empty 99%, then integrate the occupied 1%
 analytically so few steps suffice. Items 3, 4, 6 are near-free companions. Item 7 is
-the quality-per-cost lever for tours vs stills. The current measured baseline says
-the volume layer is _not_ a hotspot in any existing pose — item 0 gates everything.
+the quality-per-cost lever for tours vs stills. §6 records the umbrella these
+compose into — a stochastic-temporal estimator + accumulator architecture. The
+current measured baseline says the volume layer is _not_ a hotspot in any existing
+pose — item 0 gates everything.
 
 ---
 
@@ -434,7 +437,79 @@ truncating real transport in dense views (currently a documented, accepted bias)
 Low-discrepancy sample decorrelation (Sobol/PMJ or the blue-noise texture) is the
 cheap second step for accumulator convergence.
 
-## 6. Considered and rejected
+## 6. The stochastic-temporal frame: estimator + accumulator
+
+Proposed 2026-09-03 (user) as "stochastic, temporal sampling for the fields";
+recorded here as the umbrella architecture the ranked suggestions compose into,
+not an extra suggestion.
+
+**The reframing.** The shipping shader is already a stochastic estimator — the
+jittered start offset makes each frame one stratified sample per step, temporally
+decorrelated by the frame seed — that throws every estimate away. The architecture
+completes the thought: make the per-frame estimate _cheap and noisy_, and let an
+accumulator turn frames into quality. That decouples per-frame cost from converged
+quality, which is exactly the knob a tour fly-through vs. a screenshot wants. The
+raymarch layer and the workbench volpath are the two ends of one continuum
+(all-strata/no-memory vs. one-collision-walk/full-accumulation); this frame slides
+the interactive renderer along it.
+
+**Why this stack suits it unusually well:**
+
+- **Emission-only medium** — no light march, so every estimator technique from the
+  volpath world (delta tracking, ratio tracking, local majorants) transfers
+  directly.
+- **The whole chain is linear pre-tonemap** — ⅑-res target, additive upsample, HDR
+  accumulation. Averaging frames in the volume target (or a ping-pong accumulation
+  texture beside it) is mathematically clean; no tonemapped-history hacks.
+- **Render-on-demand is the invalidation for free** — the scheduler already knows
+  "something changed this frame"; that bit resets the accumulator. No disocclusion
+  heuristics, no history confidence, and therefore no collision with the TRAP
+  verdict (§2), which bans history _reuse across camera motion_, not accumulation
+  under a frozen view.
+
+**The regime split the TRAP verdict forces:**
+
+1. **Camera at rest** — unambiguous win; this is suggestion 7. Burst a few cheap
+   stochastic frames, converge, stop. Fixes the documented stationary shimmer
+   rather than tolerating it.
+2. **Camera moving** — no history, the per-frame estimate stands alone. Stochastic
+   _coverage_ (Monte Carlo sample placement) risks fireflies: an HDR peak hit by
+   1-in-8 rays flickers hard, and the exposure highlight boost amplifies exactly
+   those samples. The safer moving-regime estimator is the jittered
+   _deterministic_ march at reduced step count — stochastic in phase, not in
+   coverage, so no fireflies. How far the moving estimator can be pushed toward
+   Monte Carlo is a perceptual call: settle it with eyes on the dev server, not by
+   argument.
+
+**Two convergence caveats (the technical content of the frame):**
+
+- Transmittance is nonlinear, so frame-averaging converges to the mean of the
+  _estimator_, not automatically to the true integral. Averaged jittered marches
+  converge to the step-blurred integral (what we render today); coarse-strata
+  estimators inherit the usual step-size bias. Suggestion 2 (analytic per-step
+  integration) shrinks per-frame bias _and_ variance, so the accumulator converges
+  to something better from noisier inputs.
+- Stochastic sampling in a 92–99.7%-render-empty medium (§1 table) is efficient
+  only with local majorants — a global-majorant walk wastes nearly every sample on
+  null collisions, the exact volpath pathology under its 512-step cap. Suggestion
+  1's brick grid supplies the majorants.
+
+**How the ranked items compose under this umbrella:** 1 = the majorant/skipping
+structure; 2 = per-sample bias+variance reduction; 6 = sample decorrelation the
+accumulator converges fastest under; 7 = the accumulator itself; 8 = the
+moving-regime resolution knob (SpaceEngine's two-slider precedent).
+
+**Bonus consumer, possibly the highest-value one: the offline tour recorder**
+(`npm run record-tour`). It has no real-time constraint, so an estimator +
+accumulator lets it run N passes per output frame and emit converged,
+shimmer-free 4K footage regardless of how noisy the interactive path is — the
+quality dial exists once, and offline turns it to the end.
+
+**Sequencing:** 1 + 2 first (they make any estimator cheap and low-variance),
+then 7 (stationary bursts), and only then experiment with pushing the moving
+estimator toward Monte Carlo, gated on the eyes-on noise check.
+
+## 7. Considered and rejected
 
 - **Temporal reprojection under camera motion** (Nubis 1-of-16 amortization,
   froxel history blending): standing in-repo TRAP verdict — a volume has no surface
@@ -458,7 +533,7 @@ cheap second step for accumulator convergence.
 - **GPU work graphs, hardware RT, neural volume representations**: already ruled
   dead ends in the in-repo survey (§12); not re-litigated.
 
-## 7. Incidental findings (worth fixing regardless)
+## 8. Incidental findings (worth fixing regardless)
 
 - "Half-res" comments describe a divisor-3 target: `scalarVolumeLayer.ts:2`,
   `renderTargets.ts:189`, `frameProgram.ts:108`; also the 4.1 MB offscreen figure in
