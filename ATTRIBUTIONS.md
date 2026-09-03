@@ -131,6 +131,19 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
   MNRAS 453, 3234** — the floor on the fixture's residuals, and the reason
   the acceptance test allows a few sigma rather than exact closure.
 
+### Abd El Dayem et al. 2026 — S301
+
+- **Use:** One additional row in `src/data/bodies/sStarElements.ts`, the
+  40th bound orbit rendered around Sagittarius A\*. The paper's Extended
+  Data Table 2 gives two degenerate orbital solutions for this star; the
+  transcribed row uses Solution A (the headline values quoted in the
+  paper's abstract), with Solution B recorded in the row's comment.
+- **Reference:** Abd El Dayem, K., Abuter, R., Aimar, N., et al. (GRAVITY
+  Collaboration) 2026, "Discovery of a star sensitive to the spin of
+  Sgr A\*", Nature, doi:10.1038/s41586-026-10894-w
+  ([arXiv:2607.12664](https://arxiv.org/abs/2607.12664)).
+- **Licence:** Published paper; cite it above.
+
 ### GRAVITY Collaboration — the Galactic-Centre distance and black-hole mass
 
 - **Use:** R₀ = 8178 pc, which sets the angular-to-linear scale for every

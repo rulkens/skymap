@@ -1,32 +1,22 @@
 /**
- * sStarElements — the 39 BOUND S-stars of the Galactic Centre, transcribed from
- * Gillessen+ 2017 (ApJ 837, 30), VizieR `J/ApJ/837/30/table3`. Each row carries
- * its raw table line verbatim so the transcription stays checkable, the same
- * discipline `orbitalElements.ts` observes for JPL's planet and satellite lines.
- * Its own file rather than 39 more rows there: that table is already ~700 lines
- * for 23 rows, and these come from a different publication in different units.
+ * sStarElements — 39 bound S-stars from Gillessen+ 2017 (ApJ 837, 30, VizieR
+ * `J/ApJ/837/30/table3`), plus S301 from Abd El Dayem+ 2026 (Nature; GRAVITY
+ * Collaboration; arXiv:2607.12664). Each row carries its raw source line
+ * verbatim so the transcription stays checkable — one file since these come
+ * from different publications in different units.
  *
- * Units and reference frame are the PUBLISHED ones — a is the TRUE semi-major
- * axis expressed as an angle at R₀ (1″ = 8178 AU, so S2's 0.1255″ is 1026 AU),
- * sky angles are degrees, and Tp and P are Julian years of 365.25 days measured
- * from J2000.0 per the ReadMe's note G1. Nothing is converted here.
- * That matters most for the angles: Gillessen's Ω is a position angle running
- * North through East and his i is measured against a LEFT-handed (North, East,
- * away) basis, so both need a frame conversion — which lives once, in
- * `makers/sStar.ts`. Converting here as well would mirror every orbit twice.
- *
- * The 40th catalogue row, S111, is deliberately absent: a = −12.3″, e = 1.092
- * and no tabulated period — a genuinely unbound star, flagged `a` in the source
- * table. `propagateElements` is elliptical-only, so it would yield garbage.
- *
- * R34 and R44 are Gillessen's own names for two of the 40 fitted orbits; they
- * are bound stars in the same table and belong here despite the letter.
+ * Units and frame are PUBLISHED: a is the TRUE semi-major axis as an angle at
+ * R₀, sky angles in degrees, Tp/P in Julian years from J2000.0 — nothing is
+ * converted here. Ω/i's frame flip (position angle → left-handed basis) lives
+ * once, in `makers/sStar.ts`. S111 (unbound, e = 1.092) is excluded; R34/R44
+ * are Gillessen's own names for two bound rows in the same table.
  */
 
 import type { SStarSeed } from '../../@types/scene/SStarSeed';
 
 /**
- * The bound rows of table3, in catalogue order. Each comment is that star's
+ * The bound rows of table3, in catalogue order, with S301 appended last (its
+ * own comment format — see below). Each table3 comment is that star's
  * fixed-width source line, whose columns are, in order:
  *
  *     Star  a e_a  e e_e  i e_i  Ω e_Ω  ω e_ω  Tp e_Tp  P e_P  SpT  Kmag  r
@@ -588,5 +578,26 @@ export const S_STAR_SEEDS: readonly SStarSeed[] = [
     periodYr: 2730.0,
     kMag: 14.0,
     spectralClass: 'early',
+  },
+  {
+    // Abd El Dayem+ 2026 (Nature; GRAVITY Collaboration), Extended Data Table 2,
+    // Solution A: a 83.0±0.7 mas  e 0.9832±0.0010  i 124.09±1.10  Ω 73.8±3.5
+    //   ω 293.4±2.2  Tp 2023.126±0.010  P 8.68±0.11 yr  χ²=25.86  mK 19.3±0.3
+    // Solution B (degenerate, unused): e 0.9824  i 122.84  Ω 256.9  ω 115.1
+    //   Tp 2023.125  P 8.68 yr  χ²=25.53 — same a. R₀ here assumed 8277 pc vs.
+    //   this repo's 8178 pc; stored in arcsec, so converted like every row.
+    // Late-A/early-F (~F1.5V) dwarf: `unknown` (~5800 K, 1.5 R☉) reads closer
+    // to that than the hot-dwarf `early` or cool-giant `late` bins.
+    id: 's301',
+    label: 'S301',
+    semiMajorArcsec: 0.083,
+    eccentricity: 0.9832,
+    inclinationDeg: 124.09,
+    ascendingNodeDeg: 73.8,
+    argPeriapsisDeg: 293.4,
+    periapsisEpochYr: 2023.126,
+    periodYr: 8.68,
+    kMag: 19.3,
+    spectralClass: 'unknown',
   },
 ];
