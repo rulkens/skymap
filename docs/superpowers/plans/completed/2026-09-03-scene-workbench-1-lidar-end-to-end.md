@@ -89,23 +89,23 @@ No application code. This task ends with a machine that can run the bake and a c
 
 **Prerequisites to install and verify:**
 
-- [ ] `brew install pdal` (pulls GDAL + PROJ). Verify: `pdal --version` prints ≥ 2.6, and `pdal --drivers | grep -E 'readers.las|filters.colorization|filters.sample|writers.text'` lists all four.
-- [ ] Verify GDAL's VRT path: `gdalinfo --version` prints ≥ 3.8.
-- [ ] Verify PROJ's topocentric projection (task 6's pipeline depends on it):
+- [x] `brew install pdal` (pulls GDAL + PROJ). Verify: `pdal --version` prints ≥ 2.6, and `pdal --drivers | grep -E 'readers.las|filters.colorization|filters.sample|writers.text'` lists all four.
+- [x] Verify GDAL's VRT path: `gdalinfo --version` prints ≥ 3.8.
+- [x] Verify PROJ's topocentric projection (task 6's pipeline depends on it):
       `echo "55.67 12.53 40" | cs2cs EPSG:4326 "+proj=topocentric +lat_0=55.67 +lon_0=12.53 +h_0=40 +ellps=GRS80"`
       → three metre values, all within 0.01 of `0`.
-- [ ] Verify the Datafordeler key is in the login keychain without printing it:
+- [x] Verify the Datafordeler key is in the login keychain without printing it:
       `security find-generic-password -a "$USER" -s skymap-datafordeler-apikey -w | wc -c` → a non-zero count.
       The key is the same one the GeoDanmark ortho harvest used (`data/raw/geodanmark/README.md:65-69`); a Datafordeler account is a user-side prerequisite (spec §6) and cannot be scripted.
-- [ ] Confirm the key is entitled to the **DHM/Punktsky Fildownload** service in the Datafordeler self-service portal (a separate subscription from the WMS one). If it is not, subscribe before continuing — this is the one step that can block a fresh checkout.
+- [x] Confirm the key is entitled to the **DHM/Punktsky Fildownload** service in the Datafordeler self-service portal (a separate subscription from the WMS one). If it is not, subscribe before continuing — this is the one step that can block a fresh checkout.
 
 **Extent to settle (spec §11 open question 1):**
 
-- [ ] Take the Søndermarken bbox verbatim from `data/raw/geodanmark/README.md:36` — W 12.51 / S 55.662 / E 12.55 / N 55.678 — as v1's group extent. **Flagged:** the spec wants a park-scale subset centred on the picnic spot; this whole-patch extent is the v1 answer because it is the bound the ortho actually covers, and narrowing it later is a crop-constant edit plus a re-bake, nothing else.
-- [ ] Record the anchor: the bbox centre, `latDeg: 55.67`, `lonDeg: 12.53`, `headingDeg: 0` (group +X = local east). `heightMDvr90` = the DHM DTM value at that point, read once from the Datafordeler DHM/Terræn viewer or from the first fetched tile's header; write the number you read into the README with its source.
-- [ ] Identify the DHM 1 km tile names covering the bbox from Datafordeler's Punktsky tile index (EPSG:25832 km-grid names, e.g. `PUNKTSKY_1km_6172_722`) and list them in the README. These become task 3's constant — settling them here is what spec §11's "settle at `fetchDhm` time" asks for.
-- [ ] Write `data/raw/dhm/README.md`: service + endpoint, licence and attribution, the tile list, the apikey/keychain rule, the bbox and anchor above, and the vertical-datum note (heights are DVR90 orthometric; the bake feeds them to PROJ as if ellipsoidal, which is exact enough here because `h_0` comes from the same data and the ~36 m Danish geoid undulation cancels over a 2.5 km patch).
-- [ ] Commit.
+- [x] Take the Søndermarken bbox verbatim from `data/raw/geodanmark/README.md:36` — W 12.51 / S 55.662 / E 12.55 / N 55.678 — as v1's group extent. **Flagged:** the spec wants a park-scale subset centred on the picnic spot; this whole-patch extent is the v1 answer because it is the bound the ortho actually covers, and narrowing it later is a crop-constant edit plus a re-bake, nothing else.
+- [x] Record the anchor: the bbox centre, `latDeg: 55.67`, `lonDeg: 12.53`, `headingDeg: 0` (group +X = local east). `heightMDvr90` = the DHM DTM value at that point, read once from the Datafordeler DHM/Terræn viewer or from the first fetched tile's header; write the number you read into the README with its source.
+- [x] Identify the DHM 1 km tile names covering the bbox from Datafordeler's Punktsky tile index (EPSG:25832 km-grid names, e.g. `PUNKTSKY_1km_6172_722`) and list them in the README. These become task 3's constant — settling them here is what spec §11's "settle at `fetchDhm` time" asks for.
+- [x] Write `data/raw/dhm/README.md`: service + endpoint, licence and attribution, the tile list, the apikey/keychain rule, the bbox and anchor above, and the vertical-datum note (heights are DVR90 orthometric; the bake feeds them to PROJ as if ellipsoidal, which is exact enough here because `h_0` comes from the same data and the ~36 m Danish geoid undulation cancels over a 2.5 km patch).
+- [x] Commit.
 
 ### Task 2: Tool-local types
 
@@ -118,8 +118,8 @@ No application code. This task ends with a machine that can run the bake and a c
 - `SceneAsset = PointCloudAsset` — a one-member union in plan 1, for the same reason `GroupAnchor` is one: plans 2–4 add `GaussianSplatAsset` / `MeshAsset` / `CameraPoseSetAsset` as union cases, not as a rewrite. `PhotoPose` arrives with plan 3's overlay; minting it now would be a type nothing constructs.
 - `GroupAnchor` keeps its full `kind: 'geodetic'` shape from the spec, including `headingDeg`.
 
-- [ ] Write the ten files. No tests: `tsc` proves every fact a runtime test could here (`docs/superpowers/conventions/testing.md`, "no runtime tests of type declarations").
-- [ ] `npm run typecheck`; commit.
+- [x] Write the ten files. No tests: `tsc` proves every fact a runtime test could here (`docs/superpowers/conventions/testing.md`, "no runtime tests of type declarations").
+- [x] `npm run typecheck`; commit.
 
 ### Task 3: Raw-data registry row and the Søndermarken group definition
 
@@ -157,9 +157,9 @@ export const SOENDERMARKEN: SceneGroupDefinition;
 
 `LonLatBounds` comes from `src/@types/scene/LonLatBounds`. `minPointSpacingM: 1.0` — DHM/Punktsky is ~4–5 pts/m², so the README bbox at native density is ~20 M points ≈ 320 MB at the 16-byte stride; Poisson-thinning to ~1 pt/m² lands ~4.5 M points ≈ 72 MB, which localhost serves and a browser parses without ceremony. That arithmetic belongs in the file's docblock — it is the reason the constant exists.
 
-- [ ] Add both registry rows and the group definition (`anchor`, `bounds`, `dhmTiles` from task 1).
-- [ ] No test: the rows and the constant are registry/constant restatements (`testing.md`).
-- [ ] `npm run typecheck`; commit.
+- [x] Add both registry rows and the group definition (`anchor`, `bounds`, `dhmTiles` from task 1).
+- [x] No test: the rows and the constant are registry/constant restatements (`testing.md`).
+- [x] `npm run typecheck`; commit.
 
 ### Task 4: `points.bin` — format, packer, parser
 
@@ -214,9 +214,9 @@ export function parsePoints(buffer: ArrayBuffer): ParsedPointCloud;
 
 `parsePoints` returns a **view** onto the record array (byteOffset 16), never a re-packed copy: the GPU layout in task 14 is this layout, so a copy would exist only to be identical. It throws on a wrong magic or an unsupported `formatVersion`, and on a `pointCount` that disagrees with the buffer length — a truncated download otherwise renders as silent garbage.
 
-- [ ] Test `packPoints → parsePoints round-trips positions, colours and classification` — 5 points (not a power of two), every field varying per record (so a stride or field-order slip shows), decoded in the test with a `DataView` written by hand, never by re-calling the packer.
-- [ ] Test `parsePoints rejects a truncated buffer` and `parsePoints rejects a wrong magic`.
-- [ ] Implement both; `npx vitest run tests/tools/scene-recon`; commit.
+- [x] Test `packPoints → parsePoints round-trips positions, colours and classification` — 5 points (not a power of two), every field varying per record (so a stride or field-order slip shows), decoded in the test with a `DataView` written by hand, never by re-calling the packer.
+- [x] Test `parsePoints rejects a truncated buffer` and `parsePoints rejects a wrong magic`.
+- [x] Implement both; `npx vitest run tests/tools/scene-recon`; commit.
 
 ### Task 5: Ortho VRT builder
 
@@ -243,9 +243,9 @@ export function orthoVrtXml(spec: OrthoVrtSpec): string;
 
 Geometry, from `tools/textures/geodanmarkTileSource.ts:37-41`: `deg = 360 / earthTileColumns(level, tilePx)`; the mosaic's origin is `(xMin*deg - 180, 90 - yMin*deg)`, pixel size `deg / tilePx` with a **negative** y step, raster size `(xMax-xMin+1)*tilePx × (yMax-yMin+1)*tilePx`. Each tile contributes one `<SimpleSource>` per band with `<DstRect>` at `((x-xMin)*tilePx, (y-yMin)*tilePx)`. A missing tile file is skipped, not faked — the crop simply has no colour there, and the count in the layer list is how the operator sees it.
 
-- [ ] Test `orthoVrtXml places the mosaic origin and pixel size from the tile rect` — a 2×2 rect at level 19, `tilePx` 512, asserting the six geotransform numbers hand-computed from `deg = 360/524288` and the raster size. The north-up y-flip is exactly the axis error that produces a plausible-looking, upside-down colorization.
-- [ ] Test `orthoVrtXml emits one SimpleSource per band per existing tile, at its DstRect` — fixture directory with three of the four tiles present; assert the missing one contributes nothing and one present tile's `DstRect` offsets.
-- [ ] Implement; commit.
+- [x] Test `orthoVrtXml places the mosaic origin and pixel size from the tile rect` — a 2×2 rect at level 19, `tilePx` 512, asserting the six geotransform numbers hand-computed from `deg = 360/524288` and the raster size. The north-up y-flip is exactly the axis error that produces a plausible-looking, upside-down colorization.
+- [x] Test `orthoVrtXml emits one SimpleSource per band per existing tile, at its DstRect` — fixture directory with three of the four tiles present; assert the missing one contributes nothing and one present tile's `DstRect` offsets.
+- [x] Implement; commit.
 
 ### Task 6: PDAL pipeline stages and the CSV point reader
 
@@ -287,12 +287,12 @@ Stage order, and why each sits where it does:
 7. `filters.sample`, `radius: spec.minPointSpacingM` — **after** the metre reprojection; run in degrees the radius would be meaningless.
 8. `writers.text`, `format: "csv"`, `order: "X,Y,Z,Red,Green,Blue,Classification"`, `keep_unspecified: false`, `filename: spec.outCsvPath`.
 
-- [ ] Test `lidarPipelineStages orders crop and colorization before the metre reprojection` — assert the stage `type` sequence for a two-file spec.
-- [ ] Test `lidarPipelineStages writes the anchor into the topocentric projection` — assert the `out_srs` string contains the spec's lat/lon/height.
-- [ ] Test `lidarPipelineStages crops in the ortho's degree frame` — assert the `bounds` string against hand-written bounds.
-- [ ] Test `lidarPipelineStages colorizes with scale 1` — assert the `dimensions` string. (The three above are the stage-graph contract with an external tool, the same class as a parser-vs-ReadMe test; they are not constant restatements.)
-- [ ] Test `readPdalCsv yields one record per data row, skipping the header` against a five-row fixture with a non-integer Z and a 255 colour value.
-- [ ] Implement; commit.
+- [x] Test `lidarPipelineStages orders crop and colorization before the metre reprojection` — assert the stage `type` sequence for a two-file spec.
+- [x] Test `lidarPipelineStages writes the anchor into the topocentric projection` — assert the `out_srs` string contains the spec's lat/lon/height.
+- [x] Test `lidarPipelineStages crops in the ortho's degree frame` — assert the `bounds` string against hand-written bounds.
+- [x] Test `lidarPipelineStages colorizes with scale 1` — assert the `dimensions` string. (The three above are the stage-graph contract with an external tool, the same class as a parser-vs-ReadMe test; they are not constant restatements.)
+- [x] Test `readPdalCsv yields one record per data row, skipping the header` against a five-row fixture with a non-integer Z and a 255 colour value.
+- [x] Implement; commit.
 
 ### Task 7: Atomic JSON writes — manifest and scenes.json
 
@@ -322,11 +322,11 @@ export function upsertGroup(registry: GroupRegistry, entry: GroupRegistryEntry):
 
 `upsertAsset` replaces the entry with a matching `id` in place (order preserved) or appends; `anchor`, `groupId`, `groupName` and `formatVersion` pass through untouched; siblings are returned by reference, not rebuilt.
 
-- [ ] Test `writeJsonAtomic passes the on-disk contents to update at call time` — write a file, call with an `update` that captures its argument, assert it saw the current contents (this is the rule's teeth: an implementation that cached a parsed manifest passes nothing and fails here).
-- [ ] Test `writeJsonAtomic leaves no temp file behind` — tmpdir listing after the call.
-- [ ] Test `upsertAsset replaces the named asset and leaves siblings identical` — three assets, replace the middle one, assert the other two are the same object references and `anchor`/`formatVersion` survive.
-- [ ] Test `upsertAsset appends an unknown asset id`.
-- [ ] Implement; commit.
+- [x] Test `writeJsonAtomic passes the on-disk contents to update at call time` — write a file, call with an `update` that captures its argument, assert it saw the current contents (this is the rule's teeth: an implementation that cached a parsed manifest passes nothing and fails here).
+- [x] Test `writeJsonAtomic leaves no temp file behind` — tmpdir listing after the call.
+- [x] Test `upsertAsset replaces the named asset and leaves siblings identical` — three assets, replace the middle one, assert the other two are the same object references and `anchor`/`formatVersion` survive.
+- [x] Test `upsertAsset appends an unknown asset id`.
+- [x] Implement; commit.
 
 ### Task 8: `fetchDhm` CLI
 
@@ -350,9 +350,9 @@ export function redactSecret(text: string, secret: string): string;
 
 `fetchDhm.ts` reads `readKeychainSecret('skymap-datafordeler-apikey')`, downloads each tile in `SOENDERMARKEN.dhmTiles` from the Datafordeler DHM/Punktsky Fildownload REST endpoint with `apikey=<key>` as a query parameter, and writes into `rawDataPath('dhm.dir')`. A tile already on disk with a non-zero size is skipped (the resume convention of `tools/fetch/*` — no separate cache file is needed, the LAZ files themselves are the cache). A 401 is retried for up to 20 minutes with backoff before failing, because a freshly registered key propagates per gateway node (`data/raw/geodanmark/README.md:70-72`). **Every** thrown message and every progress line passes through `redactSecret` first. The exact endpoint path and query parameters come from the live Datafordeler Fildownload documentation at implementation time — they are not stable enough to pin in a plan; the key handling above is.
 
-- [ ] Test `redactSecret removes the key from a URL and from a wrapped error message`.
-- [ ] Implement the CLI; no test on the download plumbing (`spawn`/`fetch` and an exit code — a mock would assert the mock, `testing.md` / spec §9).
-- [ ] Run `npm run fetch-dhm`; verify the LAZ tiles land in `data/raw/dhm/` and that re-running skips them. Commit (code only — the data is gitignored).
+- [x] Test `redactSecret removes the key from a URL and from a wrapped error message`.
+- [x] Implement the CLI; no test on the download plumbing (`spawn`/`fetch` and an exit code — a mock would assert the mock, `testing.md` / spec §9).
+- [x] Run `npm run fetch-dhm`; verify the LAZ tiles land in `data/raw/dhm/` and that re-running skips them. Commit (code only — the data is gitignored).
 
 ### Task 9: `bakeLidar` CLI
 
@@ -374,9 +374,9 @@ export async function bakeLidar(
 
 Sequence: resolve the LAZ inputs from `rawDataPath('dhm.dir')` (fail with the `npm run fetch-dhm` hint if empty, the DisPerSE-wrapper convention at `tools/filaments/buildFilaments.ts:256-280`) → `orthoVrtXml` over `earthTileIndicesForBounds(group.bounds, 19, EARTH_TILE_PX)` into a workdir → `lidarPipelineStages` → write the pipeline JSON → `runPdal` → stream `readPdalCsv` through `packPoints` → write `public/data/geo3d/groups/<id>/assets/<assetId>/points.bin` → `writeJsonAtomic` the manifest through `upsertAsset` → `writeJsonAtomic` `public/data/geo3d/scenes.json` through `upsertGroup`. `provenance.pipeline` records `{ step: 'pdal', version: deps.pdalVersion() }` and `sourceVintage` is the DHM flight date from the group definition's README, not the bake date (spec §4).
 
-- [ ] Implement. No new unit test: every decision it makes is already covered (tasks 4–7); what remains is orchestration plus a subprocess.
-- [ ] Run `npm run bake-lidar`. Verify: `points.bin` exists with `pointCount > 1e6`, `manifest.json` and `scenes.json` parse, and re-running replaces the asset entry rather than appending a duplicate.
-- [ ] Commit.
+- [x] Implement. No new unit test: every decision it makes is already covered (tasks 4–7); what remains is orchestration plus a subprocess.
+- [x] Run `npm run bake-lidar`. Verify: `points.bin` exists with `pointCount > 1e6`, `manifest.json` and `scenes.json` parse, and re-running replaces the asset entry rather than appending a duplicate.
+- [x] Commit.
 
 ### Task 10: Tool scaffold
 
@@ -395,9 +395,9 @@ Sequence: resolve the LAZ inputs from `rawDataPath('dhm.dir')` (fail with the `n
 - `main.tsx` imports `../../../src/styles/global.css` **once** and mounts `<App />` (mcpm's `main.tsx` verbatim in shape).
 - `README.md`: what the tool is, the prerequisite chain (Datafordeler key → `npm run fetch-dhm` → `npm run bake-lidar` → `npm run scene-workbench`), and that it is local-only with no deploy.
 
-- [ ] Add the smoke test `exports a config with port 5600 and react + wesl plugins`, mirroring `tests/tools/mcpm-workbench/viteConfig.smoke.test.ts` (it guards an import-time typo that would make the npm script fail; the wesl assertion is load-bearing because `?static` imports do not resolve without it).
-- [ ] Scaffold; `npm run scene-workbench` serves a page that mounts (an empty shell is expected at this task).
-- [ ] Commit.
+- [x] Add the smoke test `exports a config with port 5600 and react + wesl plugins`, mirroring `tests/tools/mcpm-workbench/viteConfig.smoke.test.ts` (it guards an import-time typo that would make the npm script fail; the wesl assertion is load-bearing because `?static` imports do not resolve without it).
+- [x] Scaffold; `npm run scene-workbench` serves a page that mounts (an empty shell is expected at this task).
+- [x] Commit.
 
 ### Task 11: Store scaffold — three slices, commands, seven store files
 
@@ -444,8 +444,8 @@ Reducers: `registrySlice` — `registryLoading`, `registryLoaded`, `registryFail
 
 Visibility is stored as `hiddenAssetIds`, not a `Record<string, boolean>`: an asset appears in the manifest before any toggle has been touched, and "absent means visible" removes the initialization step that a boolean map needs on every manifest load.
 
-- [ ] Slice tests only where a reducer decides something: `toggleAssetVisibility adds then removes an id`, `commitCameraPose clamps pitch to the pole limit`, `groupSelected clears the previous manifest and its asset statuses`. No spread restatements.
-- [ ] Wire `<Provider>`; typecheck; commit.
+- [x] Slice tests only where a reducer decides something: `toggleAssetVisibility adds then removes an id`, `commitCameraPose clamps pitch to the pole limit`, `groupSelected clears the previous manifest and its asset statuses`. No spread restatements.
+- [x] Wire `<Provider>`; typecheck; commit.
 
 ### Task 12: Viewport, RenderResources, and the two loading sagas
 
@@ -499,10 +499,10 @@ Sagas:
 
 `Viewport.tsx` owns: the canvas ref, `initGpu` (from `src/services/gpu/device`, no options — spec §3), `createRenderResources`, `registerSagaContext({ canvas, resources })` on mount, `disposeScene` on unmount, and the rAF driver. The driver reads `store.getState()` **once per tick** and takes one `store.subscribe` for epoch/dirty bookkeeping; it never calls `useAppSelector`.
 
-- [ ] Test `acceptLoadedAsset destroys and rejects a build whose epoch moved`, `… rejects an aborted build`, `… accepts a live build` (three lines, one real bug each: a leaked buffer or a resurrected dead scene).
-- [ ] Test `disposeScene destroys every asset, clears the map and bumps epoch` + `disposeScene is idempotent` with stub GPU objects.
-- [ ] Implement; `npm run scene-workbench` shows the layer statuses reaching `ready` (nothing is drawn until task 14).
-- [ ] Commit.
+- [x] Test `acceptLoadedAsset destroys and rejects a build whose epoch moved`, `… rejects an aborted build`, `… accepts a live build` (three lines, one real bug each: a leaked buffer or a resurrected dead scene).
+- [x] Test `disposeScene destroys every asset, clears the map and bumps epoch` + `disposeScene is idempotent` with stub GPU objects.
+- [x] Implement; `npm run scene-workbench` shows the layer statuses reaching `ready` (nothing is drawn until task 14).
+- [x] Commit.
 
 ### Task 13: Metre-native camera rig and input
 
@@ -550,9 +550,9 @@ export function createSceneInput(deps: {
 
 `createSceneInput` follows `tools/mcpm-workbench/src/input/createViewportInput.ts` minus the gizmo half: `attachOrbitControls` + `createInputAggregator` from `src/`, `orbitDragDelta` from `tools/utils/camera/`, a live register committed to the store at `gestureEnd` / rest-wheel (never per move), zoom as `clampSceneDistanceM(register.distanceM * step.factor)`, pan along `rightM`/`upM` scaled by distance.
 
-- [ ] Test `sceneCameraView places the eye and screen axes for a quarter-turn yaw` — `{ yaw: π/2, pitch: 0, distanceM: 100, targetM: [10, 0, 0] }` → `eyeM = [110, 0, 0]`, `rightM = [0, 0, -1]`, `upM = [0, 1, 0]` (hand-computed; the sign of `rightM` is the classic mirrored-pan bug).
-- [ ] Test `sceneCameraView keeps the basis finite looking straight down` — pitch = +π/2 − 1e-9, assert every component is finite.
-- [ ] Implement; commit.
+- [x] Test `sceneCameraView places the eye and screen axes for a quarter-turn yaw` — `{ yaw: π/2, pitch: 0, distanceM: 100, targetM: [10, 0, 0] }` → `eyeM = [110, 0, 0]`, `rightM = [0, 0, -1]`, `upM = [0, 1, 0]` (hand-computed; the sign of `rightM` is the classic mirrored-pan bug).
+- [x] Test `sceneCameraView keeps the basis finite looking straight down` — pitch = +π/2 − 1e-9, assert every component is finite.
+- [x] Implement; commit.
 
 ### Task 14: LiDAR point renderer — first pixels
 
@@ -611,10 +611,10 @@ export function createLidarPointRenderer(
 
 The shader expands each instance into a screen-facing quad from `rightM`/`upM` at a constant pixel size, depth-tested (`depth24plus`, `less`), opaque — no blending, so no sort is needed (that is plan 2's problem, spec §7.2). Bind-group layouts are **explicit, never `'auto'`** (`feedback_shaders`). `viewProj` is composed on the CPU with `wgpu-matrix` from `SceneCameraView`.
 
-- [ ] Test `SceneCamera TS↔WESL parity` mirroring `tests/tools/mcpm-workbench/render/mcpmCamera.parity.test.ts`: parse the struct out of `lidarPoint.wesl` and assert every field's float offset against the offsets `writeSceneCamera` writes, plus `SCENE_CAMERA_BYTES`. (A keep-rule test per `testing.md` — a silent offset drift is invisible until the frame stops presenting.)
-- [ ] Implement the renderer, the shader, and the draw call; wire the depth texture into `RenderResources` and resize it with the canvas.
-- [ ] Visual check with the operator: Søndermarken's cloud is on screen, coloured, orbit/dolly/pan respond, and the ground reads as ground rather than a plane at the wrong scale.
-- [ ] Commit.
+- [x] Test `SceneCamera TS↔WESL parity` mirroring `tests/tools/mcpm-workbench/render/mcpmCamera.parity.test.ts`: parse the struct out of `lidarPoint.wesl` and assert every field's float offset against the offsets `writeSceneCamera` writes, plus `SCENE_CAMERA_BYTES`. (A keep-rule test per `testing.md` — a silent offset drift is invisible until the frame stops presenting.)
+- [x] Implement the renderer, the shader, and the draw call; wire the depth texture into `RenderResources` and resize it with the canvas.
+- [x] Visual check with the operator: Søndermarken's cloud is on screen, coloured, orbit/dolly/pan respond, and the ground reads as ground rather than a plane at the wrong scale.
+- [x] Commit.
 
 ### Task 15: UI — group picker, layer list, empty state
 
@@ -629,9 +629,9 @@ The shader expands each instance into a screen-facing quad from `rightM`/`upM` a
 - **LayerList** — one row per asset: visibility checkbox (dispatching `toggleAssetVisibility`), a kind badge, and the asset's count (`pointCount`). The count is the point of the row: a bake that produced a tenth of what it should have is visible at a glance.
 - **EmptyState** — shown when `registry.status === 'ready'` with no groups, or the fetch 404'd. Names the Datafordeler API-key prerequisite and the exact command sequence (`npm run fetch-dhm` → `npm run bake-lidar`).
 
-- [ ] Test `LayerList toggles an asset's visibility` with `@testing-library/react` over a real store — `fireEvent.click` on the checkbox, never `fireEvent.change` (`testing.md`'s controlled-checkbox trap), asserting the store's `hiddenAssetIds`.
-- [ ] Implement; verify the toggle actually removes the cloud from the frame.
-- [ ] Commit.
+- [x] Test `LayerList toggles an asset's visibility` with `@testing-library/react` over a real store — `fireEvent.click` on the checkbox, never `fireEvent.change` (`testing.md`'s controlled-checkbox trap), asserting the store's `hiddenAssetIds`.
+- [x] Implement; verify the toggle actually removes the cloud from the frame.
+- [x] Commit.
 
 ### Task 16: GPU probe and close-out
 
@@ -644,10 +644,10 @@ The shader expands each instance into a screen-facing quad from `rightM`/`upM` a
 
 Steps: boot → orbit drag → dolly to the near clamp → toggle the layer off → toggle it on → resize.
 
-- [ ] Implement the probe; `npm run scene-workbench:probe` exits 0 with no GPU errors.
-- [ ] README: architecture paragraph (store shape, saga inventory, where the offline CLIs write), and the local-only note.
-- [ ] Run the comment budget over every file this plan created (module header ≤ 10 lines, comment lines ≤ half the code lines).
-- [ ] Full `npx vitest run tests/tools/scene-workbench tests/tools/scene-recon tests/tools/utils`, `npm run typecheck`; commit.
+- [x] Implement the probe; `npm run scene-workbench:probe` exits 0 with no GPU errors.
+- [x] README: architecture paragraph (store shape, saga inventory, where the offline CLIs write), and the local-only note.
+- [x] Run the comment budget over every file this plan created (module header ≤ 10 lines, comment lines ≤ half the code lines).
+- [x] Full `npx vitest run tests/tools/scene-workbench tests/tools/scene-recon tests/tools/utils`, `npm run typecheck`; commit.
 
 ## Definition of Done
 
