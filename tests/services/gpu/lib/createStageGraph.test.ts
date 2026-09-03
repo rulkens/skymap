@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { createStageGraph } from '../../../../src/services/gpu/lib/createStageGraph';
 import type { Stage } from '../../../../src/@types/gpu/Stage';
-import type { StageGraph } from '../../../../src/@types/gpu/StageGraph';
 
 describe('createStageGraph', () => {
   it('runs a stage once per key move, not once per run', () => {
@@ -57,49 +56,16 @@ describe('createStageGraph', () => {
     expect(runs).toBe(1);
   });
 
-  it('token(name) changes only when that stage runs', () => {
-    let key = 1;
-    let otherWanted = false;
-    const graph = createStageGraph<'a' | 'b'>([
-      { name: 'a', phase: 'sync', after: [], key: () => [key], run: () => {} },
-      {
-        name: 'b',
-        phase: 'sync',
-        after: [],
-        wanted: () => otherWanted,
-        key: () => [1],
-        run: () => {},
-      },
-    ]);
-
-    // `a` runs once, establishing its first token.
-    graph.run('sync');
-    const afterFirstRun = graph.token('a');
-
-    // Another stage running (or not, because unwanted) leaves `a`'s token untouched.
-    graph.run('sync');
-    expect(graph.token('a')).toBe(afterFirstRun);
-    otherWanted = true;
-    graph.run('sync');
-    expect(graph.token('a')).toBe(afterFirstRun);
-
-    // `a`'s own key moving and re-running bumps its token.
-    key = 2;
-    graph.run('sync');
-    expect(graph.token('a')).not.toBe(afterFirstRun);
-  });
-
-  it('a stage keyed on an upstream token re-runs after the upstream runs', () => {
+  it('re-runs a stage after its after-edge upstream runs, and not when the upstream is skipped by an unmoved key', () => {
     let upstreamKey = 1;
     let downstreamRuns = 0;
-    let graph: StageGraph<'up' | 'down'>;
-    graph = createStageGraph<'up' | 'down'>([
+    const graph = createStageGraph<'up' | 'down'>([
       { name: 'up', phase: 'sync', after: [], key: () => [upstreamKey], run: () => {} },
       {
         name: 'down',
         phase: 'sync',
         after: ['up'],
-        key: () => [graph.token('up')],
+        key: () => [],
         run: () => downstreamRuns++,
       },
     ]);
@@ -107,41 +73,69 @@ describe('createStageGraph', () => {
     graph.run('sync');
     expect(downstreamRuns).toBe(1);
 
-    // Downstream's key is unmoved: no re-run.
+    // Upstream's key is unmoved, so it's skipped — downstream's effective key
+    // (upstream's token) is untouched too.
     graph.run('sync');
     expect(downstreamRuns).toBe(1);
 
-    // Upstream re-runs, bumping its token; downstream's key now moves.
+    // Upstream re-runs, bumping its token; downstream's effective key now moves.
     upstreamKey = 2;
     graph.run('sync');
     expect(downstreamRuns).toBe(2);
   });
 
-  it('retries a throwing stage, and leaves its token unmoved by the failed attempt', () => {
-    let shouldThrow = true;
-    let runs = 0;
-    const graph = createStageGraph<'a'>([
+  it('does not re-run a stage on account of an after-edge upstream that was unwanted this cycle', () => {
+    let upstreamWanted = true;
+    let downstreamRuns = 0;
+    const graph = createStageGraph<'up' | 'down'>([
       {
-        name: 'a',
+        name: 'up',
+        phase: 'sync',
+        after: [],
+        wanted: () => upstreamWanted,
+        key: () => [1],
+        run: () => {},
+      },
+      { name: 'down', phase: 'sync', after: ['up'], key: () => [], run: () => downstreamRuns++ },
+    ]);
+
+    graph.run('sync');
+    expect(downstreamRuns).toBe(1);
+
+    // Upstream skipped this cycle (unwanted): its token is untouched, so
+    // downstream's effective key is untouched too.
+    upstreamWanted = false;
+    graph.run('sync');
+    expect(downstreamRuns).toBe(1);
+  });
+
+  it('retries a throwing stage, and leaves its downstream unmoved by the failed attempt', () => {
+    let shouldThrow = true;
+    let upRuns = 0;
+    let downRuns = 0;
+    const graph = createStageGraph<'up' | 'down'>([
+      {
+        name: 'up',
         phase: 'sync',
         after: [],
         key: () => [1],
         run: () => {
-          runs++;
+          upRuns++;
           if (shouldThrow) throw new Error('boom');
         },
       },
+      { name: 'down', phase: 'sync', after: ['up'], key: () => [], run: () => downRuns++ },
     ]);
 
-    const beforeAnyRun = graph.token('a');
     expect(() => graph.run('sync')).toThrow('boom');
-    expect(graph.token('a')).toBe(beforeAnyRun);
+    expect(downRuns).toBe(0);
 
-    // Same key, so only a stage that recorded nothing on the failure re-runs.
+    // Same key, so only a stage that recorded nothing on the failure re-runs;
+    // `down` only now sees the upstream's first successful run.
     shouldThrow = false;
     graph.run('sync');
-    expect(runs).toBe(2);
-    expect(graph.token('a')).not.toBe(beforeAnyRun);
+    expect(upRuns).toBe(2);
+    expect(downRuns).toBe(1);
   });
 
   it('throws when an after-edge points forward in the table', () => {
@@ -165,5 +159,35 @@ describe('createStageGraph', () => {
       { name: 'a', phase: 'sync', after: ['ghost' as 'a'], key: () => [], run: () => {} },
     ];
     expect(() => createStageGraph(stages)).toThrow();
+  });
+
+  it('passes the context through to wanted, key and run', () => {
+    type Ctx = { readonly multiplier: number };
+    const seen: { wanted?: Ctx; key?: Ctx; run?: Ctx } = {};
+    const graph = createStageGraph<'a', Ctx>([
+      {
+        name: 'a',
+        phase: 'sync',
+        after: [],
+        wanted: (ctx) => {
+          seen.wanted = ctx;
+          return true;
+        },
+        key: (ctx) => {
+          seen.key = ctx;
+          return [ctx.multiplier];
+        },
+        run: (ctx) => {
+          seen.run = ctx;
+        },
+      },
+    ]);
+
+    const ctx: Ctx = { multiplier: 3 };
+    graph.run('sync', ctx);
+
+    expect(seen.wanted).toBe(ctx);
+    expect(seen.key).toBe(ctx);
+    expect(seen.run).toBe(ctx);
   });
 });

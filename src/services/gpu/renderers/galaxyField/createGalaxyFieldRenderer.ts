@@ -714,7 +714,8 @@ export function createGalaxyFieldRenderer(
 
   /**
    * The effect half of this module's dependency graph, as data: table order IS
-   * the schedule and `after` only proves it. `ismMap` leads the two scans, so a
+   * the schedule; `after` proves it and supplies the re-run edge, prepended to
+   * each row's own key. `ismMap` leads the two scans, so a
    * new galaxy scans once from the final map instead of once per trigger. The
    * `sync` rows run inside `setMixture`; the `step` rows are deferred to
    * `stepIsmMap`, which the host must call before the frame's own encoder
@@ -762,11 +763,7 @@ export function createGalaxyFieldRenderer(
       after: ['ismMap'],
       // No `geometry` of its own — the map token already moves on one — and
       // `dustPlacementCap` is the only `dust` lane the scan reads.
-      key: () => [
-        graph.token('ismMap'),
-        current.fieldTuning.dust.cloud.dustPlacementCap,
-        current.fieldTuning.ismMap,
-      ],
+      key: () => [current.fieldTuning.dust.cloud.dustPlacementCap, current.fieldTuning.ismMap],
       run: () => {
         if (!current.geometry || current.fieldTuning.ismMap.generator !== 'fluid') return;
         const grid = ismMapGridRadiusOrDefault(current.geometry);
@@ -794,7 +791,6 @@ export function createGalaxyFieldRenderer(
       // cross-arm sigma from it (`armCrossSigma`) — the same single lane
       // `centralHii` keys on, and the only part of `arms` this row reads.
       key: () => [
-        graph.token('ismMap'),
         current.fieldTuning.hii.dig,
         current.fieldTuning.arms.widthScale,
         current.fieldTuning.ismMap,
@@ -854,12 +850,7 @@ export function createGalaxyFieldRenderer(
       // populated it is safe.
       wanted: () =>
         current.orientationViewWanted || current.fieldTuning.ismMap.generator !== 'none',
-      key: () => [
-        graph.token('ismMap'),
-        current.sigmaDerivTexels,
-        current.sigmaIntegTexels,
-        current.geometry,
-      ],
+      key: () => [current.sigmaDerivTexels, current.sigmaIntegTexels, current.geometry],
       run: () => {
         // gasFloor=1 when the generator is off: the map texture is a cleared
         // (all-zero) blank then, and ismMapOrientationField.wesl's
@@ -890,7 +881,7 @@ export function createGalaxyFieldRenderer(
       // coherence-stat report); a disabled generator has nothing coherent to
       // report either.
       wanted: () => current.fieldTuning.ismMap.generator !== 'none',
-      key: () => [graph.token('orientation:tex')],
+      key: () => [],
       run: () => deps.onOrientationRebuilt?.(ismMapGridRadiusOrDefault(current.geometry)),
     },
     {
@@ -898,14 +889,7 @@ export function createGalaxyFieldRenderer(
       phase: 'step',
       after: ['orientation:tex', 'scan:dust', 'upload:field'],
       wanted: () => dustBudget.get() !== null,
-      key: () => [
-        graph.token('upload:field'),
-        graph.token('scan:dust'),
-        graph.token('orientation:tex'),
-        dustBudget.get(),
-        current.seed,
-        current.fieldTuning.ismMap.generator,
-      ],
+      key: () => [dustBudget.get(), current.seed, current.fieldTuning.ismMap.generator],
       run: () => {
         const geo = current.geometry;
         const budget = dustBudget.get();
@@ -929,12 +913,7 @@ export function createGalaxyFieldRenderer(
       phase: 'step',
       after: ['upload:field'],
       wanted: () => centralField.get().spurCloudReservation !== null,
-      key: () => [
-        graph.token('upload:field'),
-        centralField.get(),
-        current.seed,
-        current.fieldTuning.arms,
-      ],
+      key: () => [centralField.get(), current.seed, current.fieldTuning.arms],
       run: () => {
         const geo = current.geometry;
         const reservation = centralField.get().spurCloudReservation;
@@ -953,12 +932,7 @@ export function createGalaxyFieldRenderer(
       phase: 'step',
       after: ['upload:field'],
       wanted: () => centralField.get().armCloudReservation !== null,
-      key: () => [
-        graph.token('upload:field'),
-        centralField.get(),
-        current.seed,
-        current.fieldTuning.arms,
-      ],
+      key: () => [centralField.get(), current.seed, current.fieldTuning.arms],
       run: () => {
         const geo = current.geometry;
         const reservation = centralField.get().armCloudReservation;
@@ -977,14 +951,12 @@ export function createGalaxyFieldRenderer(
       phase: 'step',
       after: ['scan:dig', 'upload:hii'],
       wanted: () => digBudget.get() !== null,
-      // `hiiPack` is redundant with `token('upload:hii')` as the table stands
+      // `hiiPack` is redundant with the `upload:hii` edge as the table stands
       // (that row keys on exactly this node and has no `wanted`). Declared
       // anyway: this dispatch writes at the segment table's `hii:dig` offset,
       // so a `wanted` added to `upload:hii` later must not be able to leave
       // the DIG span silently misaddressed.
       key: () => [
-        graph.token('upload:hii'),
-        graph.token('scan:dig'),
         digBudget.get(),
         hiiPack.get(),
         current.seed,
