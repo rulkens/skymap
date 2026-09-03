@@ -1,6 +1,10 @@
 import { all } from 'typed-redux-saga';
 
-/** Composes every feature watcher saga — empty until task 12 adds them. */
+import { watchGroupSaga } from '../state/group/watchGroupSaga';
+import { watchRegistrySaga } from '../state/registry/watchRegistrySaga';
+
+/** Composes every feature watcher saga — the pose/splat-sort/transform
+ *  watchers arrive with plans 2–4. */
 export function* mainSaga() {
-  yield* all([]);
+  yield* all([watchRegistrySaga(), watchGroupSaga()]);
 }
