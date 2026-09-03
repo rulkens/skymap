@@ -19,7 +19,7 @@ import { lidarPipelineStages } from './lidar/lidarPipelineStages';
 import { readPdalCsv } from './lidar/readPdalCsv';
 import { orthoVrtXml } from './ortho/orthoVrtXml';
 import { packPoints, type ScenePoint } from './pack/packPoints';
-import { upsertAsset } from './manifest/upsertAsset';
+import { nextManifest } from './manifest/nextManifest';
 import { upsertGroup } from './manifest/upsertGroup';
 import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -93,11 +93,18 @@ export async function bakeLidar(
   process.stderr.write(`bakeLidar: running pdal pipeline for "${group.id}"…\n`);
   await deps.runPdal(pipelineJsonPath);
 
+  // readPdalCsv streams the CSV off disk one line at a time; the points array
+  // below still buffers the full run in memory — packPoints' contract needs
+  // the count up front to size points.bin's header, so there is no further
+  // streaming past this point.
   const points: ScenePoint[] = [];
-  for await (const point of readPdalCsv(csvPath)) {
-    points.push(point);
+  try {
+    for await (const point of readPdalCsv(csvPath)) {
+      points.push(point);
+    }
+  } finally {
+    await rm(csvPath, { force: true });
   }
-  await rm(csvPath, { force: true });
 
   if (points.length === 0) {
     throw new Error(`bakeLidar: pdal pipeline produced zero points for group "${group.id}"`);
@@ -123,16 +130,7 @@ export async function bakeLidar(
 
   const manifestPath = join(GEO3D_DIR, 'groups', group.id, 'manifest.json');
   await writeJsonAtomic<SceneManifest>(manifestPath, (current) =>
-    upsertAsset(
-      current ?? {
-        formatVersion: 1,
-        groupId: group.id,
-        groupName: group.name,
-        anchor: group.anchor,
-        assets: [],
-      },
-      asset,
-    ),
+    nextManifest(current, group, asset),
   );
 
   const registryPath = join(GEO3D_DIR, 'scenes.json');
