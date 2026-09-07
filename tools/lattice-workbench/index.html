@@ -47,7 +47,7 @@
     font: inherit; font-size: 12.5px; color: var(--text); background: var(--panel-2);
     border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; cursor: pointer;
   }
-  .seg button[aria-pressed="true"] { background: var(--ember); color: #1a0d04; border-color: var(--ember); font-weight: 600; }
+  .seg button[aria-pressed="true"], .row button[aria-pressed="true"] { background: var(--ember); color: #1a0d04; border-color: var(--ember); font-weight: 600; }
   .row { display: flex; gap: 6px; }
   .row button { flex: 1; }
   button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
@@ -92,7 +92,7 @@
   <button id="toggle" aria-expanded="true">hide controls</button>
   <div>
     <h1>Gluon Field Workbench</h1>
-    <p class="sub">A live SU(2) lattice gauge simulation, running as compute shaders. Drag to orbit, pinch or scroll to zoom. Every frame the vacuum is re-sampled, smoothed, and drawn as a volume.</p>
+    <p class="sub">A live SU(2) lattice gauge simulation, running as compute shaders. Drag to orbit, pinch or scroll to zoom. The vacuum keeps evolving underneath; smoothing reveals the lumps that persist.</p>
   </div>
 
   <div class="stats">
@@ -133,6 +133,8 @@
     <div class="ctl">
       <label for="tslice">Time slice</label><span class="val" id="tslice-v"></span>
       <input id="tslice" type="range" min="0" max="7" step="1" value="0">
+      <div class="hint">The box is one 3-D slice of a 4-D lattice. Stepping through slices is the classic "boiling vacuum" animation.</div>
+      <div class="row"><button id="play" aria-pressed="false">Play through time</button></div>
     </div>
     <div class="ctl">
       <label for="floor">Threshold</label><span class="val" id="floor-v"></span>
@@ -151,9 +153,9 @@
       <input id="ls" type="range" min="8" max="24" step="4" value="16">
     </div>
     <div class="ctl">
-      <label for="sweeps">Updates per frame</label><span class="val" id="sweeps-v"></span>
-      <input id="sweeps" type="range" min="0" max="4" step="1" value="1">
-      <div class="hint">0 freezes the vacuum so you can inspect one configuration.</div>
+      <label for="sweeps">Evolution speed</label><span class="val" id="sweeps-v"></span>
+      <input id="sweeps" type="range" min="0" max="1" step="0.01" value="0.25">
+      <div class="hint">How much of the field is re-sampled each frame. 0 freezes one configuration; 1 redraws the whole vacuum every frame, so consecutive frames are unrelated.</div>
     </div>
     <div class="ctl">
       <label for="steps">Ray steps</label><span class="val" id="steps-v"></span>
@@ -244,6 +246,9 @@ fn heatbath(@builtin(global_invocation_id) g: vec3u) {
   if (g.x >= n) { return; }
   let c = decode(g.x);
   if (u32(c.x + c.y + c.z + c.w) % 2u != P.parity) { return; }
+  // P.mode = fraction of links touched this frame (u32 threshold); random-site
+  // selection keeps detailed balance, so partial sweeps are still a valid chain.
+  if (pcg((g.x * 7919u) ^ P.seed ^ 2654435769u) > P.mode) { return; }
   let S = staple(c, P.mu);
   let k = length(S);
   let V = S / k;
@@ -273,6 +278,7 @@ fn overrelax(@builtin(global_invocation_id) g: vec3u) {
   if (g.x >= n) { return; }
   let c = decode(g.x);
   if (u32(c.x + c.y + c.z + c.w) % 2u != P.parity) { return; }
+  if (pcg((g.x * 7919u) ^ P.seed ^ 2654435769u) > P.mode) { return; }
   let S = staple(c, P.mu);
   let V = S / length(S);
   let i = g.x * 4u + P.mu;
@@ -304,11 +310,11 @@ fn clover(c: vec4i, mu: u32, nu: u32) -> vec3f {
   return (l1 + l2 + l3 + l4).yzw * 0.25;
 }
 
-struct Stats { plaq: atomic<i32>, q: atomic<i32>, poly: atomic<i32>, maxA: atomic<u32>, maxQ: atomic<u32>, maxP: atomic<u32> }
+struct Stats { plaq: atomic<i32>, q: atomic<i32>, poly: atomic<i32> }
 @group(1) @binding(0) var field: texture_storage_3d<rgba16float, write>;
 @group(1) @binding(1) var<storage, read_write> ST: Stats;
 
-// Average plaquette of the UNSMOOTHED field: the thermalisation readout.
+// Plaquette and Polyakov-loop readouts come from the UNSMOOTHED field.
 @compute @workgroup_size(64)
 fn plaqstat(@builtin(global_invocation_id) g: vec3u) {
   let n = P.ls * P.ls * P.ls * P.nt;
@@ -319,6 +325,11 @@ fn plaqstat(@builtin(global_invocation_id) g: vec3u) {
     for (var nu = mu + 1u; nu < 4u; nu++) { s += plaq(c, mu, nu).x; }
   }
   atomicAdd(&ST.plaq, i32(round(s / 6.0 * 256.0)));
+  if (c.w == 0) {
+    var pl = vec4f(1.0, 0.0, 0.0, 0.0);
+    for (var t = 0; t < i32(P.nt); t++) { pl = qmul(pl, L(vec4i(c.xyz, t), 3u)); }
+    atomicAdd(&ST.poly, i32(round(pl.x * 65536.0)));
+  }
 }
 
 @compute @workgroup_size(64)
@@ -339,10 +350,6 @@ fn density(@builtin(global_invocation_id) g: vec3u) {
     var pl = vec4f(1.0, 0.0, 0.0, 0.0);
     for (var t = 0; t < i32(P.nt); t++) { pl = qmul(pl, L(vec4i(c.xyz, t), 3u)); }
     textureStore(field, vec3u(c.xyz), vec4f(action, q, pl.x, 0.0));
-    atomicAdd(&ST.poly, i32(round(pl.x * 65536.0)));
-    atomicMax(&ST.maxA, bitcast<u32>(action));
-    atomicMax(&ST.maxQ, bitcast<u32>(abs(q)));
-    atomicMax(&ST.maxP, bitcast<u32>(abs(pl.x)));
   }
 }
 `;
@@ -446,7 +453,7 @@ const tOverTc = (beta, nt) => Math.exp(3 * Math.PI * Math.PI * (beta - betaCrit(
 const ui = {};
 for (const id of ['nt', 'beta', 'cool', 'tslice', 'floor', 'gain', 'ls', 'sweeps', 'steps']) ui[id] = document.getElementById(id);
 const $ = (id) => document.getElementById(id);
-const state = { mode: 0, seed: 1234, frame: 0, yaw: 0.75, pitch: 0.42, dist: 3.4 };
+const state = { mode: 0, seed: 1234, frame: 0, yaw: 0.75, pitch: 0.42, dist: 3.4, playing: false };
 const isCoarse = matchMedia('(pointer: coarse)').matches;
 const sheetLayout = matchMedia('(max-width: 760px), (pointer: coarse) and (max-width: 1000px)');
 const sheetOpen = () => sheetLayout.matches && !$('rail').classList.contains('collapsed');
@@ -460,7 +467,7 @@ function fmtVals() {
   $('floor-v').textContent = Number(ui.floor.value).toFixed(2);
   $('gain-v').textContent = Number(ui.gain.value).toFixed(1);
   $('ls-v').textContent = `${ui.ls.value}³ × ${ui.nt.value}`;
-  $('sweeps-v').textContent = ui.sweeps.value;
+  $('sweeps-v').textContent = Number(ui.sweeps.value).toFixed(2);
   $('steps-v').textContent = ui.steps.value;
   const t = tOverTc(+ui.beta.value, +ui.nt.value);
   $('s-t').textContent = t.toFixed(2);
@@ -539,10 +546,12 @@ async function main() {
     const bytes = nSites * 4 * 16;
     const hotBuf = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
     const cooledBuf = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
-    const tex = device.createTexture({ size: [ls, ls, ls], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING });
+    const tex = device.createTexture({ size: [ls, ls, ls], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC });
+    if (lat) lat.readBuf.destroy();
+    const readBuf = device.createBuffer({ size: 256 * ls * ls, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     const mkBg = (buf) => device.createBindGroup({ layout: bgl0, entries: [
       { binding: 0, resource: { buffer: paramBuf, offset: 0, size: 32 } }, { binding: 1, resource: { buffer: buf } } ] });
-    lat = { ls, nt, nSites, hot: hotBuf, cooled: cooledBuf, tex,
+    lat = { ls, nt, nSites, hot: hotBuf, cooled: cooledBuf, tex, readBuf,
       bgHot: mkBg(hotBuf), bgCooled: mkBg(cooledBuf),
       bg1: device.createBindGroup({ layout: bgl1, entries: [{ binding: 0, resource: tex.createView({ dimension: '3d' }) }, { binding: 1, resource: { buffer: statsBuf } }] }),
       bgDraw: device.createBindGroup({ layout: drawBgl, entries: [{ binding: 0, resource: { buffer: viewBuf } }, { binding: 1, resource: tex.createView({ dimension: '3d' }) }, { binding: 2, resource: sampler }] }),
@@ -561,14 +570,30 @@ async function main() {
     return (slot++) * SLOT;
   }
   const wg = () => Math.ceil(lat.nSites / 64);
-  function sweep(pass, pipe, bg, seed) {
+  const FULL = 0xffffffff;
+  function sweep(pass, pipe, bg, seed, threshold = FULL) {
     for (let mu = 0; mu < 4; mu++) for (let par = 0; par < 2; par++) {
-      const off = setSlot(mu, par, seed + mu * 2 + par, 0);
+      const off = setSlot(mu, par, seed + mu * 2 + par, threshold);
       pass.setPipeline(pipe); pass.setBindGroup(0, bg, [off]); pass.dispatchWorkgroups(wg());
     }
   }
 
-  let mapping = false, stats = { plaq: 0, q: 0, poly: 0, maxA: 1, maxQ: 1e-3, maxP: 1 };
+  let mapping = false, stats = { plaq: 0, q: 0, poly: 0, maxA: 0, maxQ: 0, maxP: 0 };
+  // Display scale = 98th percentile of |value| over the slice: stable frame to
+  // frame, and immune to the single sharp spike that a max-based scale locks onto.
+  function percentiles(buf, ls) {
+    const u16 = new Uint16Array(buf);
+    const n = ls * ls * ls, a = new Float32Array(n), q = new Float32Array(n), pl = new Float32Array(n);
+    let i = 0;
+    for (let z = 0; z < ls; z++) for (let y = 0; y < ls; y++) {
+      const row = (z * ls + y) * 128;   // 256 bytes per row = 128 halfs
+      for (let x = 0; x < ls; x++, i++) {
+        a[i] = Math.abs(f16(u16[row + x * 4])); q[i] = Math.abs(f16(u16[row + x * 4 + 1])); pl[i] = Math.abs(f16(u16[row + x * 4 + 2]));
+      }
+    }
+    const p98 = (arr) => { arr.sort(); return arr[Math.floor(0.98 * (n - 1))]; };
+    return [p98(a), p98(q), p98(pl)];
+  }
   let lastT = performance.now(), fps = 0;
   function frame(now) {
     fps = 0.9 * fps + 0.1 * (1000 / Math.max(1, now - lastT)); lastT = now;
@@ -582,13 +607,19 @@ async function main() {
       pass.dispatchWorkgroups(Math.ceil(lat.nSites * 4 / 64));
       lat.needInit = 0; lat.thermalised = 0;
     }
-    const nSweeps = lat.thermalised < 60 ? 4 : +ui.sweeps.value;   // burst after a restart
+    // Full sweeps in a burst after a restart (thermalise fast), then only a
+    // fraction of links per frame so the vacuum drifts instead of being redrawn.
+    const speed = +ui.sweeps.value;
+    const burst = lat.thermalised < 60;
+    const nSweeps = burst ? 4 : (speed > 0 ? 1 : 0);
+    const threshold = burst ? FULL : Math.floor(speed * speed * FULL);
     for (let s = 0; s < nSweeps; s++) {
       const seed = (state.seed + state.frame * 97 + s * 13) >>> 0;
-      sweep(pass, pipes.heatbath, lat.bgHot, seed);
-      sweep(pass, pipes.overrelax, lat.bgHot, seed + 5);
-      lat.thermalised++;
+      sweep(pass, pipes.heatbath, lat.bgHot, seed, threshold);
+      sweep(pass, pipes.overrelax, lat.bgHot, seed + 5, threshold);
+      if (burst) lat.thermalised++;
     }
+    if (state.playing && state.frame % 8 === 0) { ui.tslice.value = (+ui.tslice.value + 1) % lat.nt; fmtVals(); }
     pass.end();
     enc.copyBufferToBuffer(lat.hot, 0, lat.cooled, 0, lat.nSites * 64);
     const pass2 = enc.beginComputePass();
@@ -624,21 +655,26 @@ async function main() {
     rp.setPipeline(volumePipe); rp.setBindGroup(0, lat.bgDraw); rp.draw(3);
     rp.setPipeline(linePipe); rp.setBindGroup(0, lat.bgDraw); rp.draw(24);
     rp.end();
-    if (!mapping) enc.copyBufferToBuffer(statsBuf, 0, statsRead, 0, 32);
+    if (!mapping) {
+      enc.copyBufferToBuffer(statsBuf, 0, statsRead, 0, 32);
+      enc.copyTextureToBuffer({ texture: lat.tex }, { buffer: lat.readBuf, bytesPerRow: 256, rowsPerImage: lat.ls }, [lat.ls, lat.ls, lat.ls]);
+    }
     device.queue.submit([enc.finish()]);
 
     if (!mapping) {
       mapping = true;
-      const nSpatial = lat.ls ** 3, nSites = lat.nSites;
-      statsRead.mapAsync(GPUMapMode.READ).then(() => {
+      const nSpatial = lat.ls ** 3, nSites = lat.nSites, ls = lat.ls, rb = lat.readBuf;
+      Promise.all([statsRead.mapAsync(GPUMapMode.READ), rb.mapAsync(GPUMapMode.READ)]).then(() => {
         const i32 = new Int32Array(statsRead.getMappedRange().slice(0));
-        const u32 = new Uint32Array(i32.buffer), f32 = new Float32Array(i32.buffer);
-        statsRead.unmap(); mapping = false;
-        stats = { plaq: i32[0] / 256 / nSites, q: i32[1] / 65536, poly: i32[2] / 65536 / nSpatial, maxA: f32[3], maxQ: f32[4], maxP: f32[5] };
+        const [pA, pQ, pP] = percentiles(rb.getMappedRange().slice(0), ls);
+        statsRead.unmap(); rb.unmap(); mapping = false;
+        const ema = (o, n) => (o === 0 ? n : o + 0.15 * (n - o));   // snap once, then drift, never jump
+        stats = { plaq: i32[0] / 256 / nSites, q: i32[1] / 65536, poly: i32[2] / 65536 / nSpatial,
+          maxA: ema(stats.maxA, pA), maxQ: ema(stats.maxQ, pQ), maxP: ema(stats.maxP, pP) };
         $('s-plaq').textContent = stats.plaq.toFixed(3);
         $('s-poly').textContent = Math.abs(stats.poly).toFixed(2);
         $('s-q').textContent = (stats.q >= 0 ? '+' : '') + stats.q.toFixed(1);
-      }).catch(() => { mapping = false; });
+      }).catch(() => { try { statsRead.unmap(); rb.unmap(); } catch (_) {} mapping = false; });
     }
     $('hud').textContent = `${fps.toFixed(0)} fps · ${lat.ls}³×${lat.nt} lattice · ${(lat.nSites * 4).toLocaleString()} links · sweep ${lat.thermalised}`;
     requestAnimationFrame(frame);
@@ -654,6 +690,13 @@ async function main() {
   for (const b of document.querySelectorAll('#mode button')) b.onclick = () => {
     state.mode = +b.dataset.mode;
     for (const o of document.querySelectorAll('#mode button')) o.setAttribute('aria-pressed', o === b);
+    fmtVals();
+  };
+  $('play').onclick = () => {
+    state.playing = !state.playing;
+    if (state.playing) ui.sweeps.value = 0;   // freeze the vacuum so only time moves
+    $('play').setAttribute('aria-pressed', state.playing);
+    $('play').textContent = state.playing ? 'Stop' : 'Play through time';
     fmtVals();
   };
   $('toggle').onclick = () => {
@@ -678,6 +721,12 @@ async function main() {
   fmtVals();
 }
 
+function f16(h) {
+  const s = (h & 0x8000) ? -1 : 1, e = (h >> 10) & 0x1f, m = h & 0x3ff;
+  if (e === 0) return s * m * 2 ** -24;
+  if (e === 31) return m ? NaN : s * Infinity;
+  return s * (1 + m / 1024) * 2 ** (e - 15);
+}
 function cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
 function norm(a) { const l = Math.hypot(...a); return a.map((v) => v / l); }
 function fail(why) { $('nogpu').style.display = 'grid'; $('nogpu-why').textContent = why; }
