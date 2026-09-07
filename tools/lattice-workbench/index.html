@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gluon Field Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #0b0d12;
+    --panel: #141821;
+    --panel-2: #1b2029;
+    --line: #262c38;
+    --text: #d8dce6;
+    --muted: #7d8494;
+    --ember: #ff8a3d;
+    --cobalt: #4a90ff;
+    --good: #62c48a;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ground); color: var(--text); font-family: var(--sans); font-size: 14px; }
+  body { overflow: hidden; }
+  #gpu { position: fixed; top: 0; left: 0; width: calc(100% - 330px); height: 100%; touch-action: none; display: block; }
+  #rail {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 330px;
+    background: color-mix(in srgb, var(--panel) 92%, transparent);
+    border-left: 1px solid var(--line);
+    overflow-y: auto; padding: 18px 18px 28px;
+    display: flex; flex-direction: column; gap: 16px;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: 0.01em; }
+  .sub { color: var(--muted); font-size: 12px; margin: 4px 0 0; line-height: 1.4; }
+  .group { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .group-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .ctl { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; }
+  .ctl label { font-size: 13px; }
+  .ctl .val { font-family: var(--mono); font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; min-width: 5ch; }
+  .ctl input[type=range] { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--ember); height: 22px; }
+  .hint { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.4; margin-top: -4px; }
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
+  .seg button, .row button, select {
+    font: inherit; font-size: 12.5px; color: var(--text); background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--ember); color: #1a0d04; border-color: var(--ember); font-weight: 600; }
+  .row { display: flex; gap: 6px; }
+  .row button { flex: 1; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { background: var(--panel-2); border-radius: 6px; padding: 8px 10px; }
+  .stat .k { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font-family: var(--mono); font-size: 16px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .stat .v.hot { color: var(--ember); }
+  .stat .v.cold { color: var(--cobalt); }
+  .phase { font-family: var(--mono); font-size: 12px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); display: flex; justify-content: space-between; }
+  .phase b { font-weight: 500; }
+  .phase.confined b { color: var(--cobalt); } .phase.deconfined b { color: var(--ember); } .phase.near b { color: var(--good); }
+  .legend { display: flex; gap: 10px; align-items: center; font-size: 12px; color: var(--muted); }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; vertical-align: -2px; margin-right: 4px; }
+  #nogpu { position: fixed; inset: 0; display: none; place-items: center; padding: 24px; background: var(--ground); z-index: 5; }
+  #nogpu .box { max-width: 460px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; line-height: 1.5; }
+  #nogpu code { font-family: var(--mono); font-size: 12px; }
+  #hud { position: fixed; left: 12px; top: 10px; font-family: var(--mono); font-size: 11px; color: var(--muted); pointer-events: none; line-height: 1.5; }
+  #toggle { display: none; }
+  @media (max-width: 760px), (pointer: coarse) and (max-width: 1000px) {
+    #gpu { width: 100%; }
+    #rail { top: auto; left: 0; right: 0; width: auto; max-height: 52vh; border-left: 0; border-top: 1px solid var(--line); border-radius: 14px 14px 0 0; padding: 12px 16px calc(20px + env(safe-area-inset-bottom)); gap: 12px; }
+    #rail.collapsed { max-height: 56px; overflow: hidden; }
+    #toggle { display: block; width: 100%; font: inherit; color: var(--muted); background: none; border: 0; padding: 4px 0 8px; text-align: center; }
+    #toggle::before { content: ''; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 6px; }
+    .stats { grid-template-columns: repeat(4, 1fr); }
+    .stat .v { font-size: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<canvas id="gpu"></canvas>
+<div id="hud"></div>
+<div id="nogpu"><div class="box">
+  <h1>WebGPU is not available here</h1>
+  <p class="sub" style="font-size:13px">This tool runs the lattice simulation on your GPU through WebGPU. It works in Chrome and Edge (desktop and Android), and in Safari 26 or later on iPhone, iPad and Mac. Firefox support is partial.</p>
+  <p class="sub" id="nogpu-why"></p>
+</div></div>
+
+<aside id="rail">
+  <button id="toggle" aria-expanded="true">hide controls</button>
+  <div>
+    <h1>Gluon Field Workbench</h1>
+    <p class="sub">A live SU(2) lattice gauge simulation, running as compute shaders. Drag to orbit, pinch or scroll to zoom. Every frame the vacuum is re-sampled, smoothed, and drawn as a volume.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">T / T<sub>c</sub></div><div class="v" id="s-t">–</div></div>
+    <div class="stat"><div class="k">plaquette</div><div class="v" id="s-plaq">–</div></div>
+    <div class="stat"><div class="k">|Polyakov|</div><div class="v" id="s-poly">–</div></div>
+    <div class="stat"><div class="k">Q (twist)</div><div class="v" id="s-q">–</div></div>
+  </div>
+  <div class="phase" id="phase"><span>phase</span><b id="phase-name">–</b></div>
+
+  <div class="group">
+    <div class="group-title">Temperature</div>
+    <div class="ctl">
+      <label for="nt">Time extent N<sub>t</sub></label><span class="val" id="nt-v"></span>
+      <input id="nt" type="range" min="4" max="16" step="2" value="8">
+      <div class="hint">Shorter time direction = hotter. Temperature is 1 / (N<sub>t</sub> · a).</div>
+    </div>
+    <div class="ctl">
+      <label for="beta">Coupling β</label><span class="val" id="beta-v"></span>
+      <input id="beta" type="range" min="1.9" max="2.9" step="0.01" value="2.4">
+      <div class="hint">Larger β = finer lattice spacing a, so also hotter at fixed N<sub>t</sub>.</div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-title">View</div>
+    <div class="seg" id="mode">
+      <button data-mode="0" aria-pressed="true">Energy</button>
+      <button data-mode="1" aria-pressed="false">Twist ±</button>
+      <button data-mode="2" aria-pressed="false">Polyakov</button>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="ctl">
+      <label for="cool">Smoothing sweeps</label><span class="val" id="cool-v"></span>
+      <input id="cool" type="range" min="0" max="40" step="1" value="12">
+      <div class="hint">0 shows the raw field: pure noise. Smoothing strips short-range fluctuations so the persistent lumps show.</div>
+    </div>
+    <div class="ctl">
+      <label for="tslice">Time slice</label><span class="val" id="tslice-v"></span>
+      <input id="tslice" type="range" min="0" max="7" step="1" value="0">
+    </div>
+    <div class="ctl">
+      <label for="floor">Threshold</label><span class="val" id="floor-v"></span>
+      <input id="floor" type="range" min="0" max="0.9" step="0.01" value="0.3">
+    </div>
+    <div class="ctl">
+      <label for="gain">Opacity</label><span class="val" id="gain-v"></span>
+      <input id="gain" type="range" min="1" max="30" step="0.5" value="10">
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-title">Simulation</div>
+    <div class="ctl">
+      <label for="ls">Spatial size L<sup>3</sup></label><span class="val" id="ls-v"></span>
+      <input id="ls" type="range" min="8" max="24" step="4" value="16">
+    </div>
+    <div class="ctl">
+      <label for="sweeps">Updates per frame</label><span class="val" id="sweeps-v"></span>
+      <input id="sweeps" type="range" min="0" max="4" step="1" value="1">
+      <div class="hint">0 freezes the vacuum so you can inspect one configuration.</div>
+    </div>
+    <div class="ctl">
+      <label for="steps">Ray steps</label><span class="val" id="steps-v"></span>
+      <input id="steps" type="range" min="48" max="256" step="8" value="128">
+    </div>
+    <div class="row">
+      <button id="reset-hot">Restart hot</button>
+      <button id="reset-cold">Restart cold</button>
+    </div>
+  </div>
+</aside>
+
+<script>
+'use strict';
+
+// ---------------------------------------------------------------- shaders
+const SIM_WGSL = /* wgsl */`
+struct Params { ls: u32, nt: u32, mu: u32, parity: u32, beta: f32, seed: u32, tslice: u32, mode: u32 }
+@group(0) @binding(0) var<uniform> P: Params;
+@group(0) @binding(1) var<storage, read_write> U: array<vec4f>;
+
+fn qmul(a: vec4f, b: vec4f) -> vec4f {
+  return vec4f(a.x * b.x - dot(a.yzw, b.yzw), a.x * b.yzw + b.x * a.yzw - cross(a.yzw, b.yzw));
+}
+fn qconj(a: vec4f) -> vec4f { return vec4f(a.x, -a.yzw); }
+
+fn dims() -> vec4i { return vec4i(i32(P.ls), i32(P.ls), i32(P.ls), i32(P.nt)); }
+fn siteIndex(c: vec4i) -> u32 {
+  let d = dims();
+  let w = ((c % d) + d) % d;
+  return u32(w.x + d.x * (w.y + d.y * (w.z + d.z * w.w)));
+}
+fn decode(i: u32) -> vec4i {
+  let l = P.ls;
+  return vec4i(i32(i % l), i32((i / l) % l), i32((i / (l * l)) % l), i32(i / (l * l * l)));
+}
+fn e(mu: u32) -> vec4i {
+  switch mu {
+    case 0u: { return vec4i(1, 0, 0, 0); }
+    case 1u: { return vec4i(0, 1, 0, 0); }
+    case 2u: { return vec4i(0, 0, 1, 0); }
+    default: { return vec4i(0, 0, 0, 1); }
+  }
+}
+fn L(c: vec4i, mu: u32) -> vec4f { return U[siteIndex(c) * 4u + mu]; }
+
+// Sum of the six staples closing the plaquettes that start with U_mu(x).
+fn staple(c: vec4i, mu: u32) -> vec4f {
+  var S = vec4f(0.0);
+  let em = e(mu);
+  for (var nu = 0u; nu < 4u; nu++) {
+    if (nu == mu) { continue; }
+    let en = e(nu);
+    S += qmul(qmul(L(c + em, nu), qconj(L(c + en, mu))), qconj(L(c, nu)));
+    S += qmul(qmul(qconj(L(c + em - en, nu)), qconj(L(c - en, mu))), L(c - en, nu));
+  }
+  return S;
+}
+
+fn pcg(v: u32) -> u32 {
+  let s = v * 747796405u + 2891336453u;
+  let w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u;
+  return (w >> 22u) ^ w;
+}
+fn rnd(st: ptr<function, u32>) -> f32 {
+  *st = pcg(*st);
+  return (f32(*st >> 8u) + 0.5) / 16777216.0;
+}
+fn randomSU2(st: ptr<function, u32>) -> vec4f {
+  let u1 = rnd(st); let u2 = rnd(st); let u3 = rnd(st);
+  let a = sqrt(1.0 - u1); let b = sqrt(u1);
+  return vec4f(a * sin(6.2831853 * u2), a * cos(6.2831853 * u2), b * sin(6.2831853 * u3), b * cos(6.2831853 * u3));
+}
+
+@compute @workgroup_size(64)
+fn init(@builtin(global_invocation_id) g: vec3u) {
+  let n = P.ls * P.ls * P.ls * P.nt * 4u;
+  if (g.x >= n) { return; }
+  if (P.mode == 0u) { U[g.x] = vec4f(1.0, 0.0, 0.0, 0.0); return; }
+  var st = pcg(g.x ^ pcg(P.seed));
+  U[g.x] = randomSU2(&st);
+}
+
+// Kennedy-Pendleton heatbath on one checkerboard colour of one link direction.
+@compute @workgroup_size(64)
+fn heatbath(@builtin(global_invocation_id) g: vec3u) {
+  let n = P.ls * P.ls * P.ls * P.nt;
+  if (g.x >= n) { return; }
+  let c = decode(g.x);
+  if (u32(c.x + c.y + c.z + c.w) % 2u != P.parity) { return; }
+  let S = staple(c, P.mu);
+  let k = length(S);
+  let V = S / k;
+  let alpha = P.beta * k;
+  var st = pcg(g.x ^ pcg(P.seed ^ pcg(P.mu * 2u + P.parity + 17u)));
+  var a0 = 1.0;
+  var ok = false;
+  for (var i = 0; i < 40; i++) {
+    let r1 = rnd(&st); let r2 = rnd(&st); let r3 = rnd(&st); let r4 = rnd(&st);
+    let cs = cos(6.2831853 * r2);
+    let lam2 = -(log(r1) + cs * cs * log(r3)) / (2.0 * alpha);
+    if (r4 * r4 <= 1.0 - lam2) { a0 = 1.0 - 2.0 * lam2; ok = true; break; }
+  }
+  if (!ok) { return; }
+  let r = sqrt(max(0.0, 1.0 - a0 * a0));
+  let ct = 2.0 * rnd(&st) - 1.0;
+  let sn = sqrt(1.0 - ct * ct);
+  let ph = 6.2831853 * rnd(&st);
+  let X = vec4f(a0, r * sn * cos(ph), r * sn * sin(ph), r * ct);
+  U[g.x * 4u + P.mu] = qmul(X, qconj(V));
+}
+
+// Overrelaxation: reflect the link through the staple, action unchanged.
+@compute @workgroup_size(64)
+fn overrelax(@builtin(global_invocation_id) g: vec3u) {
+  let n = P.ls * P.ls * P.ls * P.nt;
+  if (g.x >= n) { return; }
+  let c = decode(g.x);
+  if (u32(c.x + c.y + c.z + c.w) % 2u != P.parity) { return; }
+  let S = staple(c, P.mu);
+  let V = S / length(S);
+  let i = g.x * 4u + P.mu;
+  U[i] = qmul(qmul(qconj(V), qconj(U[i])), qconj(V));
+}
+
+// Cooling: replace the link by the action-minimising one.
+@compute @workgroup_size(64)
+fn cool(@builtin(global_invocation_id) g: vec3u) {
+  let n = P.ls * P.ls * P.ls * P.nt;
+  if (g.x >= n) { return; }
+  let c = decode(g.x);
+  if (u32(c.x + c.y + c.z + c.w) % 2u != P.parity) { return; }
+  let S = staple(c, P.mu);
+  U[g.x * 4u + P.mu] = qconj(S / length(S));
+}
+
+fn plaq(c: vec4i, mu: u32, nu: u32) -> vec4f {
+  let em = e(mu); let en = e(nu);
+  return qmul(qmul(L(c, mu), L(c + em, nu)), qmul(qconj(L(c + en, mu)), qconj(L(c, nu))));
+}
+// Clover field strength: four leaves based at x, same orientation -> su(2) vector part.
+fn clover(c: vec4i, mu: u32, nu: u32) -> vec3f {
+  let em = e(mu); let en = e(nu);
+  let l1 = qmul(qmul(L(c, mu), L(c + em, nu)), qmul(qconj(L(c + en, mu)), qconj(L(c, nu))));
+  let l2 = qmul(qmul(L(c, nu), qconj(L(c - em + en, mu))), qmul(qconj(L(c - em, nu)), L(c - em, mu)));
+  let l3 = qmul(qmul(qconj(L(c - em, mu)), qconj(L(c - em - en, nu))), qmul(L(c - em - en, mu), L(c - en, nu)));
+  let l4 = qmul(qmul(qconj(L(c - en, nu)), L(c - en, mu)), qmul(L(c + em - en, nu), qconj(L(c, mu))));
+  return (l1 + l2 + l3 + l4).yzw * 0.25;
+}
+
+struct Stats { plaq: atomic<i32>, q: atomic<i32>, poly: atomic<i32>, maxA: atomic<u32>, maxQ: atomic<u32>, maxP: atomic<u32> }
+@group(1) @binding(0) var field: texture_storage_3d<rgba16float, write>;
+@group(1) @binding(1) var<storage, read_write> ST: Stats;
+
+// Average plaquette of the UNSMOOTHED field: the thermalisation readout.
+@compute @workgroup_size(64)
+fn plaqstat(@builtin(global_invocation_id) g: vec3u) {
+  let n = P.ls * P.ls * P.ls * P.nt;
+  if (g.x >= n) { return; }
+  let c = decode(g.x);
+  var s = 0.0;
+  for (var mu = 0u; mu < 4u; mu++) {
+    for (var nu = mu + 1u; nu < 4u; nu++) { s += plaq(c, mu, nu).x; }
+  }
+  atomicAdd(&ST.plaq, i32(round(s / 6.0 * 256.0)));
+}
+
+@compute @workgroup_size(64)
+fn density(@builtin(global_invocation_id) g: vec3u) {
+  let n = P.ls * P.ls * P.ls * P.nt;
+  if (g.x >= n) { return; }
+  let c = decode(g.x);
+  var action = 0.0;
+  for (var mu = 0u; mu < 4u; mu++) {
+    for (var nu = mu + 1u; nu < 4u; nu++) { action += 1.0 - plaq(c, mu, nu).x; }
+  }
+  let f01 = clover(c, 0u, 1u); let f23 = clover(c, 2u, 3u);
+  let f02 = clover(c, 0u, 2u); let f13 = clover(c, 1u, 3u);
+  let f03 = clover(c, 0u, 3u); let f12 = clover(c, 1u, 2u);
+  let q = -(dot(f01, f23) - dot(f02, f13) + dot(f03, f12)) / (2.0 * 3.14159265 * 3.14159265);
+  atomicAdd(&ST.q, i32(round(q * 65536.0)));
+  if (c.w == i32(P.tslice)) {
+    var pl = vec4f(1.0, 0.0, 0.0, 0.0);
+    for (var t = 0; t < i32(P.nt); t++) { pl = qmul(pl, L(vec4i(c.xyz, t), 3u)); }
+    textureStore(field, vec3u(c.xyz), vec4f(action, q, pl.x, 0.0));
+    atomicAdd(&ST.poly, i32(round(pl.x * 65536.0)));
+    atomicMax(&ST.maxA, bitcast<u32>(action));
+    atomicMax(&ST.maxQ, bitcast<u32>(abs(q)));
+    atomicMax(&ST.maxP, bitcast<u32>(abs(pl.x)));
+  }
+}
+`;
+
+const DRAW_WGSL = /* wgsl */`
+struct View { eye: vec4f, right: vec4f, up: vec4f, fwd: vec4f, p0: vec4f, p1: vec4f, p2: vec4f }
+@group(0) @binding(0) var<uniform> V: View;
+@group(0) @binding(1) var field: texture_3d<f32>;
+@group(0) @binding(2) var samp: sampler;
+
+struct VOut { @builtin(position) pos: vec4f, @location(0) uv: vec2f }
+@vertex fn vsFull(@builtin(vertex_index) i: u32) -> VOut {
+  var p = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
+  var o: VOut; o.pos = vec4f(p[i], 0.0, 1.0); o.uv = p[i]; return o;
+}
+
+fn transfer(s: vec4f, mode: u32, floorv: f32) -> vec4f {
+  var x = 0.0; var signed = false;
+  if (mode == 0u) { x = s.r / V.p1.x; }
+  else if (mode == 1u) { x = s.g / V.p1.y; signed = true; }
+  else { x = s.b / V.p1.z; signed = true; }
+  let m = clamp((abs(x) - floorv) / (1.0 - floorv), 0.0, 1.0);
+  let a = pow(m, 1.6);
+  var col: vec3f;
+  if (!signed) {
+    col = vec3f(0.3 + 0.7 * m, 0.08 + 0.6 * pow(m, 1.5), 0.02 + 0.9 * pow(m, 4.0));
+  } else {
+    let warm = vec3f(1.0, 0.45, 0.14); let cold = vec3f(0.24, 0.52, 1.0);
+    col = select(cold, warm, x > 0.0) * (0.5 + 0.5 * m);
+  }
+  return vec4f(col, a);
+}
+
+@fragment fn fsVolume(i: VOut) -> @location(0) vec4f {
+  let aspect = V.p0.x; let tanF = V.p0.y; let floorv = V.p0.z; let gain = V.p0.w;
+  let mode = u32(V.p1.w); let steps = i32(V.p2.x);
+  // p2.y lifts the cube above a bottom-sheet control panel on phones
+  let dir = normalize(V.fwd.xyz + i.uv.x * aspect * tanF * V.right.xyz + (i.uv.y - V.p2.y) * tanF * V.up.xyz);
+  let eye = V.eye.xyz;
+  let inv = 1.0 / dir;
+  let t0 = (vec3f(-1.0) - eye) * inv; let t1 = (vec3f(1.0) - eye) * inv;
+  let tn = max(max(min(t0.x, t1.x), min(t0.y, t1.y)), max(min(t0.z, t1.z), 0.0));
+  let tf = min(min(max(t0.x, t1.x), max(t0.y, t1.y)), max(t0.z, t1.z));
+  let bg = vec3f(0.043, 0.051, 0.071);
+  if (tf <= tn) { return vec4f(bg, 1.0); }
+  let dt = (tf - tn) / f32(steps);
+  var T = 1.0; var acc = vec3f(0.0);
+  // dithered start hides banding at low step counts
+  let jitter = fract(sin(dot(i.pos.xy, vec2f(12.9898, 78.233))) * 43758.5453);
+  var t = tn + dt * jitter;
+  for (var k = 0; k < steps; k++) {
+    let p = eye + dir * t;
+    let s = textureSampleLevel(field, samp, (p + 1.0) * 0.5, 0.0);
+    let c = transfer(s, mode, floorv);
+    // Polyakov domains fill the whole box, so they are drawn as translucent clouds
+    let g = select(gain, gain * 0.02, mode == 2u);
+    let a = 1.0 - exp(-g * c.a * dt * 3.0);
+    acc += T * a * c.rgb;
+    T *= 1.0 - a;
+    t += dt;
+    if (T < 0.01) { break; }
+  }
+  return vec4f(pow(acc, vec3f(1.0 / 1.8)) + T * bg, 1.0);
+}
+
+@vertex fn vsLine(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
+  // 12 edges of the [-1,1] cube: 4 per axis, one per corner of the other two axes
+  let e = i / 2u; let end = f32(i % 2u);
+  let ax = e / 4u; let corner = e % 4u;
+  let s0 = select(-1.0, 1.0, (corner & 1u) == 1u);
+  let s1 = select(-1.0, 1.0, (corner & 2u) == 2u);
+  var a: vec3f; var d: vec3f;
+  if (ax == 0u) { a = vec3f(-1.0, s0, s1); d = vec3f(2.0, 0.0, 0.0); }
+  else if (ax == 1u) { a = vec3f(s0, -1.0, s1); d = vec3f(0.0, 2.0, 0.0); }
+  else { a = vec3f(s0, s1, -1.0); d = vec3f(0.0, 0.0, 2.0); }
+  let p = a + d * end;
+  let rel = p - V.eye.xyz;
+  let z = dot(rel, V.fwd.xyz);
+  let x = dot(rel, V.right.xyz) / (z * V.p0.y * V.p0.x);
+  let y = dot(rel, V.up.xyz) / (z * V.p0.y) + V.p2.y;
+  return vec4f(x, y, 0.5, 1.0);
+}
+@fragment fn fsLine() -> @location(0) vec4f { return vec4f(0.45, 0.48, 0.56, 0.55); }
+`;
+
+// ---------------------------------------------------------------- physics helpers
+// SU(2) Wilson-action critical couplings beta_c(Nt); interpolated in ln Nt.
+const BETA_C = [[2, 1.880], [3, 2.177], [4, 2.299], [5, 2.373], [6, 2.427], [8, 2.510], [12, 2.635], [16, 2.740]];
+function betaCrit(nt) {
+  const x = Math.log(nt);
+  for (let i = 0; i < BETA_C.length - 1; i++) {
+    const [n0, b0] = BETA_C[i], [n1, b1] = BETA_C[i + 1];
+    if (nt <= n1) { const u = (x - Math.log(n0)) / (Math.log(n1) - Math.log(n0)); return b0 + u * (b1 - b0); }
+  }
+  return BETA_C[BETA_C.length - 1][1];
+}
+// one-loop scaling: a ~ exp(-3 pi^2 beta / 11) for SU(2), so T/Tc = a(beta_c)/a(beta)
+const tOverTc = (beta, nt) => Math.exp(3 * Math.PI * Math.PI * (beta - betaCrit(nt)) / 11);
+
+// ---------------------------------------------------------------- app
+const ui = {};
+for (const id of ['nt', 'beta', 'cool', 'tslice', 'floor', 'gain', 'ls', 'sweeps', 'steps']) ui[id] = document.getElementById(id);
+const $ = (id) => document.getElementById(id);
+const state = { mode: 0, seed: 1234, frame: 0, yaw: 0.75, pitch: 0.42, dist: 3.4 };
+const isCoarse = matchMedia('(pointer: coarse)').matches;
+const sheetLayout = matchMedia('(max-width: 760px), (pointer: coarse) and (max-width: 1000px)');
+const sheetOpen = () => sheetLayout.matches && !$('rail').classList.contains('collapsed');
+if (isCoarse) { ui.ls.value = 12; ui.steps.value = 80; ui.cool.value = 8; }
+
+function fmtVals() {
+  $('nt-v').textContent = ui.nt.value;
+  $('beta-v').textContent = Number(ui.beta.value).toFixed(2);
+  $('cool-v').textContent = ui.cool.value;
+  $('tslice-v').textContent = `${ui.tslice.value} / ${ui.nt.value}`;
+  $('floor-v').textContent = Number(ui.floor.value).toFixed(2);
+  $('gain-v').textContent = Number(ui.gain.value).toFixed(1);
+  $('ls-v').textContent = `${ui.ls.value}³ × ${ui.nt.value}`;
+  $('sweeps-v').textContent = ui.sweeps.value;
+  $('steps-v').textContent = ui.steps.value;
+  const t = tOverTc(+ui.beta.value, +ui.nt.value);
+  $('s-t').textContent = t.toFixed(2);
+  $('s-t').className = 'v ' + (t > 1.15 ? 'hot' : t < 0.87 ? 'cold' : '');
+  const ph = $('phase'), nm = $('phase-name');
+  if (t > 1.15) { ph.className = 'phase deconfined'; nm.textContent = 'deconfined · quark-gluon plasma'; }
+  else if (t < 0.87) { ph.className = 'phase confined'; nm.textContent = 'confined · hadrons'; }
+  else { ph.className = 'phase near'; nm.textContent = 'near the transition'; }
+  const legends = [
+    `<span class="sw" style="background:linear-gradient(90deg,#4d1a05,#ff8a3d,#fff2d0)"></span>gluon energy density, dim → bright`,
+    `<span class="sw" style="background:#ff7324"></span>right-handed twist &nbsp; <span class="sw" style="background:#3d85ff"></span>left-handed`,
+    `<span class="sw" style="background:#ff7324"></span>Polyakov loop + &nbsp; <span class="sw" style="background:#3d85ff"></span>− &nbsp; (one colour wins when deconfined)`,
+  ];
+  $('legend').innerHTML = legends[state.mode];
+}
+
+async function main() {
+  const canvas = $('gpu');
+  if (!navigator.gpu) return fail('navigator.gpu is missing in this browser.');
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) return fail('No WebGPU adapter was offered by the browser.');
+  const device = await adapter.requestDevice();
+  device.lost.then((info) => fail('The GPU device was lost: ' + info.message));
+  const ctx = canvas.getContext('webgpu');
+  const format = navigator.gpu.getPreferredCanvasFormat();
+  ctx.configure({ device, format, alphaMode: 'opaque' });
+
+  const simModule = device.createShaderModule({ code: SIM_WGSL });
+  const drawModule = device.createShaderModule({ code: DRAW_WGSL });
+
+  const SLOT = 256, MAX_SLOTS = 1024;
+  const paramBuf = device.createBuffer({ size: SLOT * MAX_SLOTS, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const paramArr = new ArrayBuffer(SLOT * MAX_SLOTS);
+  const pU32 = new Uint32Array(paramArr), pF32 = new Float32Array(paramArr);
+
+  const bgl0 = device.createBindGroupLayout({ entries: [
+    { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', hasDynamicOffset: true } },
+    { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+  ]});
+  const bgl1 = device.createBindGroupLayout({ entries: [
+    { binding: 0, visibility: GPUShaderStage.COMPUTE, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '3d' } },
+    { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+  ]});
+  const simLayout = device.createPipelineLayout({ bindGroupLayouts: [bgl0] });
+  const densLayout = device.createPipelineLayout({ bindGroupLayouts: [bgl0, bgl1] });
+  const mk = (entryPoint, layout) => device.createComputePipeline({ layout, compute: { module: simModule, entryPoint } });
+  const pipes = { init: mk('init', simLayout), heatbath: mk('heatbath', simLayout), overrelax: mk('overrelax', simLayout), cool: mk('cool', simLayout), plaqstat: mk('plaqstat', densLayout), density: mk('density', densLayout) };
+
+  const viewBuf = device.createBuffer({ size: 7 * 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const sampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'repeat', addressModeV: 'repeat', addressModeW: 'repeat' });
+  const drawBgl = device.createBindGroupLayout({ entries: [
+    { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+    { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '3d' } },
+    { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+  ]});
+  const drawLayout = device.createPipelineLayout({ bindGroupLayouts: [drawBgl] });
+  const volumePipe = device.createRenderPipeline({ layout: drawLayout,
+    vertex: { module: drawModule, entryPoint: 'vsFull' },
+    fragment: { module: drawModule, entryPoint: 'fsVolume', targets: [{ format }] },
+    primitive: { topology: 'triangle-list' } });
+  const linePipe = device.createRenderPipeline({ layout: drawLayout,
+    vertex: { module: drawModule, entryPoint: 'vsLine' },
+    fragment: { module: drawModule, entryPoint: 'fsLine', targets: [{ format, blend: { color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'zero' } } }] },
+    primitive: { topology: 'line-list' } });
+
+  const statsBuf = device.createBuffer({ size: 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+  const statsRead = device.createBuffer({ size: 32, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+  const zeros = new Uint32Array(8);
+
+  // lattice resources, rebuilt when L or Nt change
+  let lat = null;
+  function buildLattice(hot) {
+    const ls = +ui.ls.value, nt = +ui.nt.value;
+    const nSites = ls * ls * ls * nt;
+    if (lat) { lat.hot.destroy(); lat.cooled.destroy(); lat.tex.destroy(); }
+    const bytes = nSites * 4 * 16;
+    const hotBuf = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const cooledBuf = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const tex = device.createTexture({ size: [ls, ls, ls], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING });
+    const mkBg = (buf) => device.createBindGroup({ layout: bgl0, entries: [
+      { binding: 0, resource: { buffer: paramBuf, offset: 0, size: 32 } }, { binding: 1, resource: { buffer: buf } } ] });
+    lat = { ls, nt, nSites, hot: hotBuf, cooled: cooledBuf, tex,
+      bgHot: mkBg(hotBuf), bgCooled: mkBg(cooledBuf),
+      bg1: device.createBindGroup({ layout: bgl1, entries: [{ binding: 0, resource: tex.createView({ dimension: '3d' }) }, { binding: 1, resource: { buffer: statsBuf } }] }),
+      bgDraw: device.createBindGroup({ layout: drawBgl, entries: [{ binding: 0, resource: { buffer: viewBuf } }, { binding: 1, resource: tex.createView({ dimension: '3d' }) }, { binding: 2, resource: sampler }] }),
+      needInit: hot ? 1 : 0, thermalised: 0 };
+    ui.tslice.max = nt - 1; if (+ui.tslice.value > nt - 1) ui.tslice.value = nt - 1;
+    fmtVals();
+  }
+  buildLattice(true);
+
+  // ---- per-frame
+  let slot = 0;
+  function setSlot(mu, parity, seed, mode) {
+    const o = slot * (SLOT / 4);
+    pU32[o] = lat.ls; pU32[o + 1] = lat.nt; pU32[o + 2] = mu; pU32[o + 3] = parity;
+    pF32[o + 4] = +ui.beta.value; pU32[o + 5] = seed >>> 0; pU32[o + 6] = +ui.tslice.value; pU32[o + 7] = mode;
+    return (slot++) * SLOT;
+  }
+  const wg = () => Math.ceil(lat.nSites / 64);
+  function sweep(pass, pipe, bg, seed) {
+    for (let mu = 0; mu < 4; mu++) for (let par = 0; par < 2; par++) {
+      const off = setSlot(mu, par, seed + mu * 2 + par, 0);
+      pass.setPipeline(pipe); pass.setBindGroup(0, bg, [off]); pass.dispatchWorkgroups(wg());
+    }
+  }
+
+  let mapping = false, stats = { plaq: 0, q: 0, poly: 0, maxA: 1, maxQ: 1e-3, maxP: 1 };
+  let lastT = performance.now(), fps = 0;
+  function frame(now) {
+    fps = 0.9 * fps + 0.1 * (1000 / Math.max(1, now - lastT)); lastT = now;
+    state.frame++;
+    slot = 0;
+    const enc = device.createCommandEncoder();
+    const pass = enc.beginComputePass();
+    if (lat.needInit) {
+      const off = setSlot(0, 0, state.seed + state.frame, lat.needInit === 1 ? 1 : 0);
+      pass.setPipeline(pipes.init); pass.setBindGroup(0, lat.bgHot, [off]);
+      pass.dispatchWorkgroups(Math.ceil(lat.nSites * 4 / 64));
+      lat.needInit = 0; lat.thermalised = 0;
+    }
+    const nSweeps = lat.thermalised < 60 ? 4 : +ui.sweeps.value;   // burst after a restart
+    for (let s = 0; s < nSweeps; s++) {
+      const seed = (state.seed + state.frame * 97 + s * 13) >>> 0;
+      sweep(pass, pipes.heatbath, lat.bgHot, seed);
+      sweep(pass, pipes.overrelax, lat.bgHot, seed + 5);
+      lat.thermalised++;
+    }
+    pass.end();
+    enc.copyBufferToBuffer(lat.hot, 0, lat.cooled, 0, lat.nSites * 64);
+    const pass2 = enc.beginComputePass();
+    const nCool = Math.min(+ui.cool.value, Math.floor((MAX_SLOTS - slot - 2) / 8));
+    for (let s = 0; s < nCool; s++) sweep(pass2, pipes.cool, lat.bgCooled, 0);
+    const off = setSlot(0, 0, 0, 0);
+    pass2.setPipeline(pipes.plaqstat); pass2.setBindGroup(0, lat.bgHot, [off]); pass2.setBindGroup(1, lat.bg1);
+    pass2.dispatchWorkgroups(wg());
+    pass2.setPipeline(pipes.density); pass2.setBindGroup(0, lat.bgCooled, [off]); pass2.setBindGroup(1, lat.bg1);
+    pass2.dispatchWorkgroups(wg());
+    pass2.end();
+    device.queue.writeBuffer(paramBuf, 0, paramArr, 0, slot * SLOT);
+    device.queue.writeBuffer(statsBuf, 0, zeros);
+
+    // camera + view uniform
+    const dpr = Math.min(devicePixelRatio || 1, isCoarse ? 1.5 : 2);
+    const w = Math.max(1, Math.floor(canvas.clientWidth * dpr)), h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    const cy = Math.cos(state.yaw), sy = Math.sin(state.yaw), cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+    const fwd = [-cp * cy, -cp * sy, -sp];
+    const right = norm(cross(fwd, [0, 0, 1])), up = cross(right, fwd);
+    const eye = fwd.map((v) => -v * state.dist);
+    const tanF = Math.tan(0.95 / 2) / Math.min(1, w / h);   // portrait: widen so the box fits
+    const scaleA = Math.max(stats.maxA, 1e-4), scaleQ = Math.max(stats.maxQ, 1e-5), scaleP = Math.max(stats.maxP, 1e-3);
+    const view = new Float32Array([
+      ...eye, 0, ...right, 0, ...up, 0, ...fwd, 0,
+      w / h, tanF, +ui.floor.value, +ui.gain.value,
+      scaleA, scaleQ, scaleP, state.mode,
+      +ui.steps.value, sheetOpen() ? 0.45 : 0, 0, 0]);
+    device.queue.writeBuffer(viewBuf, 0, view);
+
+    const rp = enc.beginRenderPass({ colorAttachments: [{ view: ctx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0.043, g: 0.051, b: 0.071, a: 1 }, storeOp: 'store' }] });
+    rp.setPipeline(volumePipe); rp.setBindGroup(0, lat.bgDraw); rp.draw(3);
+    rp.setPipeline(linePipe); rp.setBindGroup(0, lat.bgDraw); rp.draw(24);
+    rp.end();
+    if (!mapping) enc.copyBufferToBuffer(statsBuf, 0, statsRead, 0, 32);
+    device.queue.submit([enc.finish()]);
+
+    if (!mapping) {
+      mapping = true;
+      const nSpatial = lat.ls ** 3, nSites = lat.nSites;
+      statsRead.mapAsync(GPUMapMode.READ).then(() => {
+        const i32 = new Int32Array(statsRead.getMappedRange().slice(0));
+        const u32 = new Uint32Array(i32.buffer), f32 = new Float32Array(i32.buffer);
+        statsRead.unmap(); mapping = false;
+        stats = { plaq: i32[0] / 256 / nSites, q: i32[1] / 65536, poly: i32[2] / 65536 / nSpatial, maxA: f32[3], maxQ: f32[4], maxP: f32[5] };
+        $('s-plaq').textContent = stats.plaq.toFixed(3);
+        $('s-poly').textContent = Math.abs(stats.poly).toFixed(2);
+        $('s-q').textContent = (stats.q >= 0 ? '+' : '') + stats.q.toFixed(1);
+      }).catch(() => { mapping = false; });
+    }
+    $('hud').textContent = `${fps.toFixed(0)} fps · ${lat.ls}³×${lat.nt} lattice · ${(lat.nSites * 4).toLocaleString()} links · sweep ${lat.thermalised}`;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---- controls
+  ui.ls.addEventListener('change', () => buildLattice(true));
+  ui.nt.addEventListener('change', () => buildLattice(true));
+  for (const el of Object.values(ui)) el.addEventListener('input', fmtVals);
+  $('reset-hot').onclick = () => { lat.needInit = 1; state.seed = (Math.random() * 1e9) >>> 0; };
+  $('reset-cold').onclick = () => { lat.needInit = 2; state.seed = (Math.random() * 1e9) >>> 0; };
+  for (const b of document.querySelectorAll('#mode button')) b.onclick = () => {
+    state.mode = +b.dataset.mode;
+    for (const o of document.querySelectorAll('#mode button')) o.setAttribute('aria-pressed', o === b);
+    fmtVals();
+  };
+  $('toggle').onclick = () => {
+    const r = $('rail'); r.classList.toggle('collapsed');
+    const open = !r.classList.contains('collapsed');
+    $('toggle').textContent = open ? 'hide controls' : 'show controls'; $('toggle').setAttribute('aria-expanded', open);
+  };
+
+  // ---- orbit: pointer events cover mouse + touch; pinch via two pointers
+  const ptrs = new Map(); let pinch0 = 0, dist0 = 0;
+  canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); dist0 = state.dist; } });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!ptrs.has(e.pointerId)) return;
+    const prev = ptrs.get(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    if (ptrs.size === 1) { state.yaw -= (e.clientX - prev[0]) * 0.006; state.pitch = Math.max(-1.4, Math.min(1.4, state.pitch + (e.clientY - prev[1]) * 0.006)); }
+    else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); state.dist = Math.max(1.9, Math.min(7, dist0 * pinch0 / Math.max(1, d))); }
+  });
+  const lift = (e) => ptrs.delete(e.pointerId);
+  canvas.addEventListener('pointerup', lift); canvas.addEventListener('pointercancel', lift);
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); state.dist = Math.max(1.9, Math.min(7, state.dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
+  fmtVals();
+}
+
+function cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+function norm(a) { const l = Math.hypot(...a); return a.map((v) => v / l); }
+function fail(why) { $('nogpu').style.display = 'grid'; $('nogpu-why').textContent = why; }
+
+main().catch((e) => fail(String(e && e.message || e)));
+</script>
+</body>
+</html>
