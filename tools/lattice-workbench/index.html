@@ -113,6 +113,19 @@
   </div>
 
   <div class="group">
+    <div class="group-title">Quarks</div>
+    <div class="seg" id="qrk">
+      <button data-quarks="0" aria-pressed="true">Gluons only</button>
+      <button data-quarks="1" aria-pressed="false">With quarks</button>
+    </div>
+    <div class="ctl">
+      <label for="mass">Quark mass m·a</label><span class="val" id="mass-v"></span>
+      <input id="mass" type="range" min="0.05" max="1.5" step="0.01" value="0.3">
+      <div class="hint">Four degenerate staggered flavours, updated by Hybrid Monte Carlo. Lighter quarks cost more solver iterations per step and lower acceptance. Heavy quarks decouple: at m·a ≳ 1 the vacuum is back to gluons only. The T/T<sub>c</sub> estimate is for gluons only.</div>
+    </div>
+  </div>
+
+  <div class="group">
     <div class="group-title">Temperature</div>
     <div class="ctl">
       <label for="nt">Time extent N<sub>t</sub></label><span class="val" id="nt-v"></span>
@@ -164,7 +177,7 @@
     <div class="ctl">
       <label for="sweeps">Evolution speed</label><span class="val" id="sweeps-v"></span>
       <input id="sweeps" type="range" min="0" max="1" step="0.01" value="0.25">
-      <div class="hint">How much of the field is re-sampled each frame. 0 freezes one configuration; 1 redraws the whole vacuum every frame, so consecutive frames are unrelated.</div>
+      <div class="hint">How much of the field is re-sampled each frame. 0 freezes one configuration; 1 redraws the whole vacuum every frame, so consecutive frames are unrelated. With quarks it sets molecular-dynamics steps per frame instead.</div>
     </div>
     <div class="ctl">
       <label for="steps">Ray steps</label><span class="val" id="steps-v"></span>
@@ -186,7 +199,7 @@
 // against an abstract link type T; only the algebra block and the update
 // kernels differ between SU(2) (unit quaternions) and SU(3) (3x3 complex).
 const SIM_HEAD = /* wgsl */`
-struct Params { ls: u32, nt: u32, mu: u32, parity: u32, beta: f32, seed: u32, tslice: u32, mode: u32 }
+struct Params { ls: u32, nt: u32, mu: u32, parity: u32, beta: f32, seed: u32, tslice: u32, mode: u32, mass: f32, eps: f32, pad0: u32, pad1: u32 }
 @group(0) @binding(0) var<uniform> P: Params;
 
 fn qmul(a: vec4f, b: vec4f) -> vec4f {
@@ -202,6 +215,11 @@ fn pcg(v: u32) -> u32 {
 fn rnd(st: ptr<function, u32>) -> f32 {
   *st = pcg(*st);
   return (f32(*st >> 8u) + 0.5) / 16777216.0;
+}
+fn gauss2(st: ptr<function, u32>) -> vec2f {
+  let u1 = rnd(st); let u2 = rnd(st);
+  let r = sqrt(-2.0 * log(u1));
+  return vec2f(r * cos(6.2831853 * u2), r * sin(6.2831853 * u2));
 }
 fn randomSU2(st: ptr<function, u32>) -> vec4f {
   let u1 = rnd(st); let u2 = rnd(st); let u3 = rnd(st);
@@ -525,7 +543,283 @@ fn cool(@builtin(global_invocation_id) g: vec3u) {
 }
 `;
 
-const simShader = (group) => SIM_HEAD + (group === 2 ? SU2_ALGEBRA : SU3_ALGEBRA) + SIM_LATTICE + (group === 2 ? SU2_KERNELS : SU3_KERNELS);
+// --- appended to SU2_ALGEBRA: Lie-algebra (Alg) and colour-vector (Vc) types
+const SU2_FERMION_ALGEBRA = /* wgsl */`
+const NCOL = 2.0;
+alias Alg = vec4f;   // (0, a): pi = i a.sigma, traceless anti-Hermitian
+alias Vc = vec4f;    // two complex colours: (c1.re, c1.im, c2.re, c2.im)
+fn cm(a: vec2f, b: vec2f) -> vec2f { return vec2f(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
+fn azero() -> Alg { return vec4f(0.0); }
+fn aadd(a: Alg, b: Alg) -> Alg { return a + b; }
+fn ascale(a: Alg, s: f32) -> Alg { return a * s; }
+fn kin(p: Alg) -> f32 { return dot(p.yzw, p.yzw); }               // Tr(p p^+)/2
+fn randAlg(st: ptr<function, u32>) -> Alg { let g = gauss2(st); let h = gauss2(st); return vec4f(0.0, g.x, g.y, h.x) * 0.70710678; }
+// Hardware sin/cos can be ~1e-4 off on some GPUs, which wrecks energy conservation;
+// series to n^12 is exact to f32 for the small |eps pi| the integrator produces.
+fn expAlg(p: Alg) -> T {
+  let n2 = dot(p.yzw, p.yzw);
+  if (n2 > 1.0) { let n = sqrt(n2); return vec4f(cos(n), p.yzw * (sin(n) / n)); }
+  let c = 1.0 - n2 * (1.0 / 2.0 - n2 * (1.0 / 24.0 - n2 * (1.0 / 720.0 - n2 * (1.0 / 40320.0 - n2 * (1.0 / 3628800.0 - n2 / 479001600.0)))));
+  let sn = 1.0 - n2 * (1.0 / 6.0 - n2 * (1.0 / 120.0 - n2 * (1.0 / 5040.0 - n2 * (1.0 / 362880.0 - n2 * (1.0 / 39916800.0 - n2 / 6227020800.0)))));
+  return vec4f(c, p.yzw * sn);
+}
+fn taW(w: T) -> Alg { return vec4f(0.0, w.yzw); }                  // (W - W^+)/2
+fn vzero() -> Vc { return vec4f(0.0); }
+fn vadd(a: Vc, b: Vc) -> Vc { return a + b; }
+fn vsub(a: Vc, b: Vc) -> Vc { return a - b; }
+fn vscale(a: Vc, s: f32) -> Vc { return a * s; }
+fn vdot(a: Vc, b: Vc) -> f32 { return dot(a, b); }                // Re <a, b>
+fn randVc(st: ptr<function, u32>) -> Vc { return vec4f(gauss2(st), gauss2(st)) * 0.70710678; }
+fn mulTV(u: T, v: Vc) -> Vc {
+  let u11 = vec2f(u.x, u.w); let u12 = vec2f(u.z, u.y); let u21 = vec2f(-u.z, u.y); let u22 = vec2f(u.x, -u.w);
+  return vec4f(cm(u11, v.xy) + cm(u12, v.zw), cm(u21, v.xy) + cm(u22, v.zw));
+}
+fn mulTdV(u: T, v: Vc) -> Vc { return mulTV(qconj(u), v); }
+// Traceless anti-Hermitian part of the outer product b a^+, as i(Im m).sigma.
+fn taOuter(b: Vc, a: Vc) -> Alg {
+  let a1c = vec2f(a.x, -a.y); let a2c = vec2f(a.z, -a.w);
+  let m11 = cm(b.xy, a1c); let m12 = cm(b.xy, a2c); let m21 = cm(b.zw, a1c); let m22 = cm(b.zw, a2c);
+  return vec4f(0.0, (m12.y + m21.y) * 0.5, (m12.x - m21.x) * 0.5, (m11.y - m22.y) * 0.5);
+}
+`;
+
+const SU3_FERMION_ALGEBRA = /* wgsl */`
+const NCOL = 3.0;
+alias Alg = M3;
+struct V3 { re: vec3f, im: vec3f }
+alias Vc = V3;
+fn m3rows(r0: vec3f, r1: vec3f, r2: vec3f) -> mat3x3f { return transpose(mat3x3f(r0, r1, r2)); }
+fn azero() -> Alg { return zero(); }
+fn aadd(a: Alg, b: Alg) -> Alg { return add(a, b); }
+fn ascale(a: Alg, s: f32) -> Alg { return M3(a.re * s, a.im * s); }
+fn kin(p: Alg) -> f32 {
+  return 0.5 * (dot(p.re[0], p.re[0]) + dot(p.re[1], p.re[1]) + dot(p.re[2], p.re[2])
+              + dot(p.im[0], p.im[0]) + dot(p.im[1], p.im[1]) + dot(p.im[2], p.im[2]));
+}
+// pi = i h with h = sum_a p_a lambda_a / sqrt2, so that Tr(pi pi^+)/2 = sum p_a^2 / 2.
+fn randAlg(st: ptr<function, u32>) -> Alg {
+  let g1 = gauss2(st); let g2 = gauss2(st); let g3 = gauss2(st); let g4 = gauss2(st);
+  let d8 = g4.y * 0.57735027;
+  let hre = m3rows(vec3f(g2.x + d8, g1.x, g2.y), vec3f(g1.x, -g2.x + d8, g3.y), vec3f(g2.y, g3.y, -2.0 * d8)) * 0.70710678;
+  let him = m3rows(vec3f(0.0, -g1.y, -g3.x), vec3f(g1.y, 0.0, -g4.x), vec3f(g3.x, g4.x, 0.0)) * 0.70710678;
+  return M3(him * -1.0, hre);
+}
+// exp by scaling (1/16), a 6-term Taylor series and four squarings.
+fn expAlg(x: Alg) -> T {
+  let y = M3(x.re * 0.0625, x.im * 0.0625);
+  var term = ident(); var sum = ident();
+  for (var k = 1; k <= 6; k++) { term = mul(term, y); term = M3(term.re * (1.0 / f32(k)), term.im * (1.0 / f32(k))); sum = add(sum, term); }
+  for (var s = 0; s < 4; s++) { sum = mul(sum, sum); }
+  return reunit(sum);
+}
+fn taW(w: T) -> Alg { let f = fstr(w); return M3(f.re * 4.0, f.im * 4.0); }
+fn vzero() -> Vc { return V3(vec3f(0.0), vec3f(0.0)); }
+fn vadd(a: Vc, b: Vc) -> Vc { return V3(a.re + b.re, a.im + b.im); }
+fn vsub(a: Vc, b: Vc) -> Vc { return V3(a.re - b.re, a.im - b.im); }
+fn vscale(a: Vc, s: f32) -> Vc { return V3(a.re * s, a.im * s); }
+fn vdot(a: Vc, b: Vc) -> f32 { return dot(a.re, b.re) + dot(a.im, b.im); }
+fn randVc(st: ptr<function, u32>) -> Vc {
+  let g1 = gauss2(st); let g2 = gauss2(st); let g3 = gauss2(st);
+  return V3(vec3f(g1.x, g2.x, g3.x) * 0.70710678, vec3f(g1.y, g2.y, g3.y) * 0.70710678);
+}
+fn mulTV(u: T, v: Vc) -> Vc { return V3(u.re * v.re - u.im * v.im, u.re * v.im + u.im * v.re); }
+fn mulTdV(u: T, v: Vc) -> Vc { return mulTV(adj(u), v); }
+fn taOuter(b: Vc, a: Vc) -> Alg {
+  // M_ij = b_i conj(a_j), stored column-major
+  let re = mat3x3f(b.re * a.re.x + b.im * a.im.x, b.re * a.re.y + b.im * a.im.y, b.re * a.re.z + b.im * a.im.z);
+  let im = mat3x3f(b.im * a.re.x - b.re * a.im.x, b.im * a.re.y - b.re * a.im.y, b.im * a.re.z - b.re * a.im.z);
+  return taW(M3(re, im));
+}
+`;
+
+// --- group-generic HMC with Nf=4 staggered quarks (even-site pseudofermion)
+const FERMION_WGSL = /* wgsl */`
+// One buffer holds six colour-vector fields: 0 phi, 1 chi, 2 r, 3 p, 4 Ap, 5 t.
+@group(1) @binding(0) var<storage, read_write> VEC: array<Vc>;
+@group(1) @binding(1) var<storage, read_write> MOM: array<Alg>;
+@group(1) @binding(2) var<storage, read_write> UOLD: array<T>;
+// SCP[0..16) scalars: 0 rr, 1 pAp, 2 alpha, 3 beta, 4 kin, 5 Sg, 6 pf, 7 Hold, 8 Hnew,
+// 9 accept, 10 dH, 11 accepted, 12 trajectories; SCP[16..80) reduction partials.
+@group(1) @binding(3) var<storage, read_write> SCP: array<f32>;
+
+fn nsites() -> u32 { return P.ls * P.ls * P.ls * P.nt; }
+fn parityOf(c: vec4i) -> u32 { return u32(c.x + c.y + c.z + c.w) % 2u; }
+fn vget(slot: u32, i: u32) -> Vc { return VEC[slot * nsites() + i]; }
+fn vset(slot: u32, i: u32, v: Vc) { VEC[slot * nsites() + i] = v; }
+// Staggered phase eta_mu(x) = (-1)^(x_0 + ... + x_{mu-1}); time is antiperiodic.
+fn eta(c: vec4i, mu: u32) -> f32 {
+  var s = 0;
+  if (mu > 0u) { s += c.x; } if (mu > 1u) { s += c.y; } if (mu > 2u) { s += c.z; }
+  return select(1.0, -1.0, (s & 1) == 1);
+}
+fn vin(i: u32) -> Vc {
+  switch P.mode { case 0u: { return vget(3u, i); } case 1u: { return vget(5u, i); } case 2u: { return vget(1u, i); } default: { return vget(2u, i); } }
+}
+fn vout(i: u32, v: Vc) { if (P.mode == 1u) { vset(4u, i, v); } else { vset(5u, i, v); } }
+// CG has converged when |r|^2 fell below 1e-14 of its start; later dispatches no-op.
+fn cgDone() -> bool { return SCP[0] <= 1e-14 * SCP[13]; }
+
+// K v on one parity: 1/2 sum_mu eta_mu(x) [U_mu(x) v(x+mu) - U_mu^+(x-mu) v(x-mu)].
+// P.mode picks the in/out pair: 0 p->t, 1 t->Ap, 2 chi->t, 3 r->t.
+@compute @workgroup_size(64)
+fn kapply(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites()) { return; }
+  if (P.mode < 2u && cgDone()) { return; }
+  let c = decode(g.x);
+  if (parityOf(c) != P.parity) { return; }
+  var acc = vzero();
+  let nt = i32(P.nt);
+  for (var mu = 0u; mu < 4u; mu++) {
+    let em = e(mu);
+    var sf = eta(c, mu); var sb = sf;
+    if (mu == 3u) { if (c.w == nt - 1) { sf = -sf; } if (c.w == 0) { sb = -sb; } }
+    acc = vadd(acc, vscale(mulTV(L(c, mu), vin(siteIndex(c + em))), sf));
+    acc = vsub(acc, vscale(mulTdV(L(c - em, mu), vin(siteIndex(c - em))), sb));
+  }
+  vout(g.x, vscale(acc, 0.5));
+}
+
+@compute @workgroup_size(64)
+fn momInit(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites() * 4u) { return; }
+  var st = pcg(g.x ^ pcg(P.seed ^ 77u));
+  MOM[g.x] = randAlg(&st);
+}
+@compute @workgroup_size(64)
+fn xiInit(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites()) { return; }
+  var st = pcg(g.x ^ pcg(P.seed ^ 99u));
+  vset(2u, g.x, randVc(&st));
+}
+// phi = m xi - (K xi) on even sites, so that <phi phi^+> = m^2 - K_eo K_oe.
+@compute @workgroup_size(64)
+fn phiMake(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites()) { return; }
+  if (parityOf(decode(g.x)) == 0u) { vset(0u, g.x, vsub(vscale(vget(2u, g.x), P.mass), vget(5u, g.x))); }
+  else { vset(0u, g.x, vzero()); }
+}
+// P.mode 0: cold start chi = 0. P.mode 1: warm start from the previous chi,
+// with Ap already holding M chi, so r = phi - M chi.
+@compute @workgroup_size(64)
+fn cgInit(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites()) { return; }
+  let phi = vget(0u, g.x);
+  var r = phi;
+  if (P.mode == 1u) { r = vsub(phi, vget(4u, g.x)); } else { vset(1u, g.x, vzero()); }
+  vset(2u, g.x, r); vset(3u, g.x, r); vset(4u, g.x, vzero());
+}
+// Ap = m^2 v - K(K v) on even sites, v = p (mode 0) or chi (mode 1); Ap holds K K v.
+@compute @workgroup_size(64)
+fn mfin(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites()) { return; }
+  if (P.mode == 0u && cgDone()) { return; }
+  if (parityOf(decode(g.x)) != 0u) { return; }
+  var v = vget(3u, g.x);
+  if (P.mode == 1u) { v = vget(1u, g.x); }
+  vset(4u, g.x, vsub(vscale(v, P.mass * P.mass), vget(4u, g.x)));
+}
+@compute @workgroup_size(64)
+fn cgUpd1(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites()) { return; }
+  if (cgDone()) { return; }
+  if (parityOf(decode(g.x)) != 0u) { return; }
+  let a = SCP[2];
+  vset(1u, g.x, vadd(vget(1u, g.x), vscale(vget(3u, g.x), a)));
+  vset(2u, g.x, vsub(vget(2u, g.x), vscale(vget(4u, g.x), a)));
+}
+@compute @workgroup_size(64)
+fn cgUpd2(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites()) { return; }
+  if (cgDone()) { return; }
+  if (parityOf(decode(g.x)) != 0u) { return; }
+  vset(3u, g.x, vadd(vget(2u, g.x), vscale(vget(3u, g.x), SCP[3])));
+}
+
+var<workgroup> sh: array<f32, 256>;
+// Block sums over 64 workgroups. P.mode: 0/5 <r,r>, 1 <p,Ap>, 2 kinetic, 3 gauge action, 4/6 <phi,chi>.
+@compute @workgroup_size(256)
+fn reduce(@builtin(global_invocation_id) g: vec3u, @builtin(local_invocation_id) l: vec3u, @builtin(workgroup_id) w: vec3u) {
+  var n = nsites();
+  if (P.mode == 2u) { n = n * 4u; }
+  if ((P.mode == 1u || P.mode == 5u) && cgDone()) { n = 0u; }
+  var s = 0.0;
+  for (var i = g.x; i < n; i += 16384u) {
+    switch P.mode {
+      case 0u, 5u: { let r = vget(2u, i); s += vdot(r, r); }
+      case 1u: { s += vdot(vget(3u, i), vget(4u, i)); }
+      case 2u: { s += kin(MOM[i]); }
+      case 3u: {
+        let c = decode(i);
+        for (var mu = 0u; mu < 4u; mu++) { for (var nu = mu + 1u; nu < 4u; nu++) { s += 1.0 - retr(plaq(c, mu, nu)); } }
+      }
+      default: { s += vdot(vget(0u, i), vget(1u, i)); }
+    }
+  }
+  sh[l.x] = s;
+  workgroupBarrier();
+  for (var o = 128u; o > 0u; o = o >> 1u) {
+    if (l.x < o) { sh[l.x] += sh[l.x + o]; }
+    workgroupBarrier();
+  }
+  if (l.x == 0u) { SCP[16u + w.x] = sh[0]; }
+}
+@compute @workgroup_size(1)
+fn finalize(@builtin(global_invocation_id) g: vec3u) {
+  var s = 0.0;
+  for (var i = 0u; i < 64u; i++) { s += SCP[16u + i]; }
+  if ((P.mode == 1u || P.mode == 5u) && cgDone()) { return; }
+  switch P.mode {
+    case 0u: { SCP[0] = s; SCP[13] = s; }
+    case 1u: { SCP[1] = s; SCP[2] = SCP[0] / max(s, 1e-30); }
+    case 5u: { SCP[3] = s / max(SCP[0], 1e-30); SCP[0] = s; }
+    case 2u: { SCP[4] = s; }
+    case 3u: { SCP[5] = P.beta * s; }
+    case 4u: { SCP[6] = s; SCP[7] = SCP[4] + SCP[5] + s; }
+    case 7u: { SCP[0] = 1.0; SCP[13] = 0.0; }   // re-arm: the previous solve's "done" must not gate the next
+    default: {
+      SCP[6] = s; SCP[8] = SCP[4] + SCP[5] + s;
+      let dH = SCP[8] - SCP[7];
+      var st = pcg(P.seed ^ 31337u);
+      let acc = select(0.0, 1.0, dH <= 0.0 || rnd(&st) < exp(-dH));
+      SCP[9] = acc; SCP[10] = dH; SCP[11] += acc; SCP[12] += 1.0;
+    }
+  }
+}
+
+@compute @workgroup_size(64)
+fn ustep(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites() * 4u) { return; }
+  U[g.x] = mul(expAlg(ascale(MOM[g.x], P.eps)), U[g.x]);
+}
+// Momentum kick: mom += eps X with dS = Tr(omega X): gauge part -(beta/N) ta(U Sigma),
+// fermion part eta ta(G), G = U psi(x+mu) chi^+(x) on even x, psi(x) (U chi(x+mu))^+ on odd,
+// where chi = M^-1 phi (even) and psi = K chi (odd, held in slot 5). P.mode = 1 enables it.
+@compute @workgroup_size(64)
+fn force(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites() * 4u) { return; }
+  let site = g.x / 4u; let mu = g.x % 4u;
+  let c = decode(site);
+  let u = U[g.x];
+  var X = ascale(taW(mul(u, staple(c, mu))), -P.beta / NCOL);
+  if (P.mode == 1u) {
+    let em = e(mu);
+    var s = eta(c, mu);
+    if (mu == 3u && c.w == i32(P.nt) - 1) { s = -s; }
+    var G: Alg;
+    if (parityOf(c) == 0u) { G = taOuter(mulTV(u, vget(5u, siteIndex(c + em))), vget(1u, site)); }
+    else { G = taOuter(vget(5u, site), mulTV(u, vget(1u, siteIndex(c + em)))); }
+    X = aadd(X, ascale(G, s));
+  }
+  MOM[g.x] = aadd(MOM[g.x], ascale(X, P.eps));
+}
+@compute @workgroup_size(64)
+fn acceptApply(@builtin(global_invocation_id) g: vec3u) {
+  if (g.x >= nsites() * 4u) { return; }
+  if (SCP[9] < 0.5) { U[g.x] = UOLD[g.x]; }
+}
+`;
+
+const simShader = (group) => SIM_HEAD + (group === 2 ? SU2_ALGEBRA + SU2_FERMION_ALGEBRA : SU3_ALGEBRA + SU3_FERMION_ALGEBRA) + SIM_LATTICE + (group === 2 ? SU2_KERNELS : SU3_KERNELS) + FERMION_WGSL;
 
 const DRAW_WGSL = /* wgsl */`
 struct View { eye: vec4f, right: vec4f, up: vec4f, fwd: vec4f, p0: vec4f, p1: vec4f, p2: vec4f }
@@ -637,9 +931,9 @@ const tOverTc = (group, beta, nt) => Math.exp(GROUPS[group].slope * (beta - beta
 
 // ---------------------------------------------------------------- app
 const ui = {};
-for (const id of ['nt', 'beta', 'cool', 'tslice', 'floor', 'gain', 'ls', 'sweeps', 'steps']) ui[id] = document.getElementById(id);
+for (const id of ['nt', 'beta', 'cool', 'tslice', 'floor', 'gain', 'ls', 'sweeps', 'steps', 'mass']) ui[id] = document.getElementById(id);
 const $ = (id) => document.getElementById(id);
-const state = { group: 2, mode: 0, seed: 1234, frame: 0, yaw: 0.75, pitch: 0.42, dist: 3.4, playing: false };
+const state = { group: 2, quarks: false, mode: 0, seed: 1234, frame: 0, yaw: 0.75, pitch: 0.42, dist: 3.4, playing: false };
 const isCoarse = matchMedia('(pointer: coarse)').matches;
 const sheetLayout = matchMedia('(max-width: 760px), (pointer: coarse) and (max-width: 1000px)');
 const sheetOpen = () => sheetLayout.matches && !$('rail').classList.contains('collapsed');
@@ -655,6 +949,7 @@ function fmtVals() {
   $('ls-v').textContent = `${ui.ls.value}³ × ${ui.nt.value}`;
   $('sweeps-v').textContent = Number(ui.sweeps.value).toFixed(2);
   $('steps-v').textContent = ui.steps.value;
+  $('mass-v').textContent = Number(ui.mass.value).toFixed(2);
   const t = tOverTc(state.group, +ui.beta.value, +ui.nt.value);
   $('s-t').textContent = t.toFixed(2);
   $('s-t').className = 'v ' + (t > 1.15 ? 'hot' : t < 0.87 ? 'cold' : '');
@@ -698,15 +993,19 @@ async function main() {
     { binding: 0, visibility: GPUShaderStage.COMPUTE, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '3d' } },
     { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
   ]});
+  const bglF = device.createBindGroupLayout({ entries: [0, 1, 2, 3].map((binding) => ({ binding, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } })) });
   const simLayout = device.createPipelineLayout({ bindGroupLayouts: [bgl0] });
+  const fermLayout = device.createPipelineLayout({ bindGroupLayouts: [bgl0, bglF] });
   const densLayout = device.createPipelineLayout({ bindGroupLayouts: [bgl0, bgl1] });
   const pipeCache = {};
   function pipesFor(group) {
     if (pipeCache[group]) return pipeCache[group];
     const module = device.createShaderModule({ code: simShader(group) });
     const mk = (entryPoint, layout) => device.createComputePipeline({ layout, compute: { module, entryPoint } });
-    return (pipeCache[group] = { init: mk('init', simLayout), heatbath: mk('heatbath', simLayout), overrelax: mk('overrelax', simLayout),
-      cool: mk('cool', simLayout), reunitarise: mk('reunitarise', simLayout), plaqstat: mk('plaqstat', densLayout), density: mk('density', densLayout) });
+    const p = { init: mk('init', simLayout), heatbath: mk('heatbath', simLayout), overrelax: mk('overrelax', simLayout),
+      cool: mk('cool', simLayout), reunitarise: mk('reunitarise', simLayout), plaqstat: mk('plaqstat', densLayout), density: mk('density', densLayout) };
+    for (const k of ['kapply', 'momInit', 'xiInit', 'phiMake', 'cgInit', 'mfin', 'cgUpd1', 'cgUpd2', 'reduce', 'finalize', 'ustep', 'force', 'acceptApply']) p[k] = mk(k, fermLayout);
+    return (pipeCache[group] = p);
   }
   let pipes = pipesFor(state.group);
 
@@ -728,6 +1027,24 @@ async function main() {
     primitive: { topology: 'line-list' } });
 
   const statsBuf = device.createBuffer({ size: 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+  const scpBuf = device.createBuffer({ size: 80 * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+  const scpRead = device.createBuffer({ size: 64, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+  // Leapfrog error grows with volume (dH ~ V eps^4), so eps is tuned online:
+  // shrink while acceptance is poor, grow while it is wasteful. tau ~ 0.6.
+  const hmc = { phase: 'start', step: 0, n: 10, eps: 0.05, accEma: 0.7, seenTraj: 0, acc: 0, traj: 0, dH: 0 };
+  // Only ever applied between trajectories: changing eps mid-flight breaks the leapfrog.
+  function retuneStep() {
+    let eps = hmc.eps;
+    if (hmc.accEma < 0.6) eps *= 0.85; else if (hmc.accEma > 0.9) eps *= 1.08;
+    hmc.pendingEps = Math.min(0.15, Math.max(0.004, eps));
+  }
+  function applyPendingStep() {
+    if (hmc.pendingEps !== undefined) { hmc.eps = hmc.pendingEps; hmc.pendingEps = undefined; }
+    hmc.n = Math.min(60, Math.max(6, Math.round(0.6 / hmc.eps)));
+  }
+  // Iterations for a 1e-9 residual from the CG rate (sqrt(k)-1)/(sqrt(k)+1), k = (m^2+16)/m^2;
+  // converged solves no-op early on the GPU, so this is only a ceiling.
+  const cgIters = (m) => { const sk = Math.sqrt((m * m + 16) / (m * m)); return Math.min(400, Math.ceil(Math.log(1e-9) / Math.log((sk - 1) / (sk + 1)))); };
   const statsRead = device.createBuffer({ size: 32, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
   const zeros = new Uint32Array(8);
 
@@ -742,11 +1059,16 @@ async function main() {
     const hotBuf = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
     const cooledBuf = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
     const tex = device.createTexture({ size: [ls, ls, ls], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC });
-    if (lat) lat.readBuf.destroy();
+    if (lat) { lat.readBuf.destroy(); lat.vec.destroy(); lat.mom.destroy(); lat.uold.destroy(); }
     const readBuf = device.createBuffer({ size: 256 * ls * ls, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const st = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+    const vec = device.createBuffer({ size: 6 * nSites * (state.group === 2 ? 16 : 32), usage: st });
+    const mom = device.createBuffer({ size: nSites * 4 * linkBytes, usage: st });
+    const uold = device.createBuffer({ size: bytes, usage: st });
     const mkBg = (buf) => device.createBindGroup({ layout: bgl0, entries: [
-      { binding: 0, resource: { buffer: paramBuf, offset: 0, size: 32 } }, { binding: 1, resource: { buffer: buf } } ] });
-    lat = { ls, nt, nSites, bytes, hot: hotBuf, cooled: cooledBuf, tex, readBuf,
+      { binding: 0, resource: { buffer: paramBuf, offset: 0, size: 48 } }, { binding: 1, resource: { buffer: buf } } ] });
+    lat = { ls, nt, nSites, bytes, hot: hotBuf, cooled: cooledBuf, tex, readBuf, vec, mom, uold,
+      bgF: device.createBindGroup({ layout: bglF, entries: [{ binding: 0, resource: { buffer: vec } }, { binding: 1, resource: { buffer: mom } }, { binding: 2, resource: { buffer: uold } }, { binding: 3, resource: { buffer: scpBuf } }] }),
       bgHot: mkBg(hotBuf), bgCooled: mkBg(cooledBuf),
       bg1: device.createBindGroup({ layout: bgl1, entries: [{ binding: 0, resource: tex.createView({ dimension: '3d' }) }, { binding: 1, resource: { buffer: statsBuf } }] }),
       bgDraw: device.createBindGroup({ layout: drawBgl, entries: [{ binding: 0, resource: { buffer: viewBuf } }, { binding: 1, resource: tex.createView({ dimension: '3d' }) }, { binding: 2, resource: sampler }] }),
@@ -757,12 +1079,15 @@ async function main() {
   buildLattice(true);
 
   // ---- per-frame
-  let slot = 0;
-  function setSlot(mu, parity, seed, mode) {
+  let slot = 0; const slotKeys = new Map();
+  function setSlot(mu, parity, seed, mode, mass = 0, eps = 0) {
+    const key = `${mu},${parity},${seed >>> 0},${mode},${mass},${eps}`;
+    const hit = slotKeys.get(key); if (hit !== undefined) return hit;
     const o = slot * (SLOT / 4);
     pU32[o] = lat.ls; pU32[o + 1] = lat.nt; pU32[o + 2] = mu; pU32[o + 3] = parity;
     pF32[o + 4] = +ui.beta.value; pU32[o + 5] = seed >>> 0; pU32[o + 6] = +ui.tslice.value; pU32[o + 7] = mode;
-    return (slot++) * SLOT;
+    pF32[o + 8] = mass; pF32[o + 9] = eps;
+    const off = (slot++) * SLOT; slotKeys.set(key, off); return off;
   }
   const wg = () => Math.ceil(lat.nSites / 64);
   const FULL = 0xffffffff;
@@ -770,6 +1095,49 @@ async function main() {
     for (let mu = 0; mu < 4; mu++) for (let par = 0; par < 2; par++) {
       const off = setSlot(mu, par, seed + mu * 2 + par, threshold);
       pass.setPipeline(pipe); pass.setBindGroup(0, bg, [off]); pass.dispatchWorkgroups(wg());
+    }
+  }
+
+  // Hybrid Monte Carlo with Nf=4 staggered quarks: one trajectory = momenta +
+  // pseudofermion refresh, n leapfrog steps each needing a CG solve, Metropolis.
+  // Spread over frames; every scalar stays on the GPU (no CPU sync).
+  function hmcFrame(pass, stepsPerFrame) {
+    const m = +ui.mass.value, eps = hmc.eps, iters = cgIters(m);
+    const sitesWg = wg(), linksWg = Math.ceil(lat.nSites * 4 / 64);
+    const run = (name, count, mode = 0, parity = 0, seed = 0, epsK = 0) => {
+      const off = setSlot(0, parity, seed, mode, m, epsK);
+      pass.setPipeline(pipes[name]); pass.setBindGroup(0, lat.bgHot, [off]); pass.setBindGroup(1, lat.bgF); pass.dispatchWorkgroups(count);
+    };
+    const reduceTo = (mode, seed = 0) => { run('reduce', 64, mode, 0, seed); run('finalize', 1, mode, 0, seed); };
+    const cg = (warm) => {
+      run('finalize', 1, 7);
+      if (warm) { run('kapply', sitesWg, 2, 1); run('kapply', sitesWg, 1, 0); run('mfin', sitesWg, 1); }
+      run('cgInit', sitesWg, warm ? 1 : 0); reduceTo(0);
+      for (let i = 0; i < iters; i++) {
+        run('kapply', sitesWg, 0, 1); run('kapply', sitesWg, 1, 0); run('mfin', sitesWg);
+        reduceTo(1); run('cgUpd1', sitesWg); reduceTo(5); run('cgUpd2', sitesWg);
+      }
+    };
+    const kick = (epsK) => { run('kapply', sitesWg, 2, 1); run('force', linksWg, 1, 0, 0, epsK); };
+    for (let k = 0; k < stepsPerFrame; k++) {
+      const seed = (state.seed + state.frame * 131 + k * 17) >>> 0;
+      if (hmc.phase === 'start') {
+        applyPendingStep();
+        run('momInit', linksWg, 0, 0, seed); run('xiInit', sitesWg, 0, 0, seed + 1);
+        run('kapply', sitesWg, 3, 0); run('phiMake', sitesWg);
+        cg(false); reduceTo(2); reduceTo(3); reduceTo(4);
+        kick(eps / 2); hmc.phase = 'md'; hmc.step = 0;
+      } else if (hmc.phase === 'md') {
+        run('ustep', linksWg, 0, 0, 0, eps); cg(true);
+        hmc.step++; kick(hmc.step === hmc.n ? eps / 2 : eps);
+        if (hmc.step === hmc.n) hmc.phase = 'end';
+      } else {
+        const off = setSlot(0, 0, 0, 0);
+        pass.setPipeline(pipes.reunitarise); pass.setBindGroup(0, lat.bgHot, [off]); pass.dispatchWorkgroups(linksWg);
+        reduceTo(2); reduceTo(3); reduceTo(6, seed + 2); run('acceptApply', linksWg);
+        hmc.phase = 'start';
+        break;   // the next trajectory copies U -> UOLD outside the pass, so it starts next frame
+      }
     }
   }
 
@@ -794,8 +1162,12 @@ async function main() {
   function frame(now) {
     fps = 0.9 * fps + 0.1 * (1000 / Math.max(1, now - lastT)); lastT = now;
     state.frame++;
-    slot = 0;
+    slot = 0; slotKeys.clear();
     const enc = device.createCommandEncoder();
+    const speed = +ui.sweeps.value;
+    const burst = lat.thermalised < 60;
+    const quarks = state.quarks && !burst && speed > 0 && !lat.needInit;
+    if (quarks && hmc.phase === 'start') enc.copyBufferToBuffer(lat.hot, 0, lat.uold, 0, lat.bytes);
     const pass = enc.beginComputePass();
     if (lat.needInit) {
       const off = setSlot(0, 0, state.seed + state.frame, lat.needInit === 1 ? 1 : 0);
@@ -805,9 +1177,7 @@ async function main() {
     }
     // Full sweeps in a burst after a restart (thermalise fast), then only a
     // fraction of links per frame so the vacuum drifts instead of being redrawn.
-    const speed = +ui.sweeps.value;
-    const burst = lat.thermalised < 60;
-    const nSweeps = burst ? 4 : (speed > 0 ? 1 : 0);
+    const nSweeps = burst ? 4 : (speed > 0 && !state.quarks ? 1 : 0);
     const threshold = burst ? FULL : Math.floor(speed * speed * FULL);
     for (let s = 0; s < nSweeps; s++) {
       const seed = (state.seed + state.frame * 97 + s * 13) >>> 0;
@@ -815,6 +1185,7 @@ async function main() {
       sweep(pass, pipes.overrelax, lat.bgHot, seed + 5, threshold);
       if (burst) lat.thermalised++;
     }
+    if (quarks) hmcFrame(pass, Math.max(1, Math.round(speed * 3)));
     if (state.playing && state.frame % 8 === 0) { ui.tslice.value = (+ui.tslice.value + 1) % lat.nt; fmtVals(); }
     if (state.frame % 32 === 0) {   // float drift off the group manifold, corrected periodically
       const off = setSlot(0, 0, 0, 0);
@@ -857,6 +1228,7 @@ async function main() {
     rp.end();
     if (!mapping) {
       enc.copyBufferToBuffer(statsBuf, 0, statsRead, 0, 32);
+      enc.copyBufferToBuffer(scpBuf, 0, scpRead, 0, 64);
       enc.copyTextureToBuffer({ texture: lat.tex }, { buffer: lat.readBuf, bytesPerRow: 256, rowsPerImage: lat.ls }, [lat.ls, lat.ls, lat.ls]);
     }
     device.queue.submit([enc.finish()]);
@@ -864,19 +1236,23 @@ async function main() {
     if (!mapping) {
       mapping = true;
       const nSpatial = lat.ls ** 3, nSites = lat.nSites, ls = lat.ls, rb = lat.readBuf;
-      Promise.all([statsRead.mapAsync(GPUMapMode.READ), rb.mapAsync(GPUMapMode.READ)]).then(() => {
+      Promise.all([statsRead.mapAsync(GPUMapMode.READ), rb.mapAsync(GPUMapMode.READ), scpRead.mapAsync(GPUMapMode.READ)]).then(() => {
         const i32 = new Int32Array(statsRead.getMappedRange().slice(0));
+        const sc = new Float32Array(scpRead.getMappedRange().slice(0));
+        hmc.acc = sc[11]; hmc.traj = sc[12]; hmc.dH = sc[10];
+        if (sc[12] > hmc.seenTraj) { hmc.seenTraj = sc[12]; hmc.accEma += 0.25 * (sc[9] - hmc.accEma); retuneStep(); }
         const [pA, pQ, pP] = percentiles(rb.getMappedRange().slice(0), ls);
-        statsRead.unmap(); rb.unmap(); mapping = false;
+        statsRead.unmap(); rb.unmap(); scpRead.unmap(); mapping = false;
         const ema = (o, n) => (o === 0 ? n : o + 0.15 * (n - o));   // snap once, then drift, never jump
         stats = { plaq: i32[0] / 256 / nSites, q: i32[1] / 65536, poly: Math.hypot(i32[2], i32[3]) / 65536 / nSpatial,
           maxA: ema(stats.maxA, pA), maxQ: ema(stats.maxQ, pQ), maxP: ema(stats.maxP, pP) };
         $('s-plaq').textContent = stats.plaq.toFixed(3);
         $('s-poly').textContent = stats.poly.toFixed(2);
         $('s-q').textContent = (stats.q >= 0 ? '+' : '') + stats.q.toFixed(1);
-      }).catch(() => { try { statsRead.unmap(); rb.unmap(); } catch (_) {} mapping = false; });
+      }).catch(() => { try { statsRead.unmap(); rb.unmap(); scpRead.unmap(); } catch (_) {} mapping = false; });
     }
-    $('hud').textContent = `${fps.toFixed(0)} fps · ${lat.ls}³×${lat.nt} lattice · ${(lat.nSites * 4).toLocaleString()} links · sweep ${lat.thermalised}`;
+    const hq = state.quarks ? ` · HMC ${hmc.traj ? (100 * hmc.acc / hmc.traj).toFixed(0) : '–'}% accepted · ΔH ${hmc.dH.toFixed(2)} · ${hmc.n} steps of ${hmc.eps.toFixed(3)} · CG ${cgIters(+ui.mass.value)} it` : '';
+    $('hud').textContent = `${fps.toFixed(0)} fps · ${lat.ls}³×${lat.nt} lattice · ${(lat.nSites * 4).toLocaleString()} links · sweep ${lat.thermalised}${hq}`;
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -897,6 +1273,12 @@ async function main() {
     buildLattice(true);
   }
   for (const b of document.querySelectorAll('#grp button')) b.onclick = () => setGroup(+b.dataset.group);
+  for (const b of document.querySelectorAll('#qrk button')) b.onclick = () => {
+    state.quarks = b.dataset.quarks === '1';
+    for (const o of document.querySelectorAll('#qrk button')) o.setAttribute('aria-pressed', o === b);
+    hmc.phase = 'start'; hmc.step = 0; hmc.seenTraj = 0; hmc.accEma = 0.7; hmc.eps = 0.05; hmc.pendingEps = undefined; applyPendingStep();
+    device.queue.writeBuffer(scpBuf, 0, new Float32Array(80));
+  };
   for (const b of document.querySelectorAll('#mode button')) b.onclick = () => {
     state.mode = +b.dataset.mode;
     for (const o of document.querySelectorAll('#mode button')) o.setAttribute('aria-pressed', o === b);

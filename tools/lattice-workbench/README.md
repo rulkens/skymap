@@ -1,8 +1,9 @@
 # Gluon Field Workbench
 
-A single-file WebGPU tool that runs a pure-gauge lattice simulation in compute
-shaders and volume-renders the result live. A toggle switches between the
-two-colour SU(2) toy and real three-colour SU(3). It is the interactive
+A single-file WebGPU tool that runs a lattice gauge simulation in compute
+shaders and volume-renders the result live. Toggles switch between the
+two-colour SU(2) toy and real three-colour SU(3), and between gluons only and
+four flavours of dynamical staggered quarks. It is the interactive
 counterpart to the "boiling vacuum" lattice-QCD animations (Leinweber / CSSM):
 gluon energy density, topological charge density, and the Polyakov loop, with
 temperature under the user's control.
@@ -29,6 +30,17 @@ and macOS.
   Random numbers come from a PCG hash of (site, sweep, direction), so the
   kernel is stateless. Links are re-unitarised every 32 frames against float
   drift.
+- **Quarks** (optional): Hybrid Monte Carlo with an even-site pseudofermion
+  for Nf=4 staggered fermions (antiperiodic in time). Each trajectory draws
+  Gaussian momenta and a pseudofermion, runs a leapfrog whose every step
+  solves `(m² − K_eo K_oe) χ = φ` by conjugate gradient (warm-started, with a
+  GPU-side convergence flag so converged iterations no-op), applies the gauge
+  plus fermion force, and ends with a Metropolis test — all on the GPU, no
+  CPU sync. The step size is retuned between trajectories from the running
+  acceptance. The SU(2) exponential map uses a series rather than hardware
+  `sin`/`cos`, whose ~1e-4 error otherwise destroys energy conservation.
+  The force was checked against a finite-difference derivative and a full
+  numpy trajectory reproduces the GPU's ΔH to 4 digits.
 - **Smoothing**: the hot configuration is copied each frame and cooled
   (link ← normalised staple) for the requested number of sweeps. The hot
   ensemble keeps evolving underneath; only the copy is smoothed.
