@@ -180,8 +180,9 @@
       <div class="hint">How much of the field is re-sampled each frame. 0 freezes one configuration; 1 redraws the whole vacuum every frame, so consecutive frames are unrelated. With quarks it sets molecular-dynamics steps per frame instead.</div>
     </div>
     <div class="ctl">
-      <label for="steps">Ray steps</label><span class="val" id="steps-v"></span>
-      <input id="steps" type="range" min="48" max="256" step="8" value="128">
+      <label for="steps">Ray steps per frame</label><span class="val" id="steps-v"></span>
+      <input id="steps" type="range" min="16" max="192" step="8" value="64">
+      <div class="hint">Each frame casts one randomly jittered ray per pixel and blends it into the running image, so a still view sharpens over a second or so. Dragging renders at a third of the resolution.</div>
     </div>
     <div class="row">
       <button id="reset-hot">Restart hot</button>
@@ -822,10 +823,21 @@ fn acceptApply(@builtin(global_invocation_id) g: vec3u) {
 const simShader = (group) => SIM_HEAD + (group === 2 ? SU2_ALGEBRA + SU2_FERMION_ALGEBRA : SU3_ALGEBRA + SU3_FERMION_ALGEBRA) + SIM_LATTICE + (group === 2 ? SU2_KERNELS : SU3_KERNELS) + FERMION_WGSL;
 
 const DRAW_WGSL = /* wgsl */`
-struct View { eye: vec4f, right: vec4f, up: vec4f, fwd: vec4f, p0: vec4f, p1: vec4f, p2: vec4f }
+// p0 = (aspect, tanFov, floor, gain); p1 = (scaleA, scaleQ, scaleP, mode);
+// p2 = (steps, yShift, group, alpha); p3 = (frame, renderW, renderH, 0).
+struct View { eye: vec4f, right: vec4f, up: vec4f, fwd: vec4f, p0: vec4f, p1: vec4f, p2: vec4f, p3: vec4f }
 @group(0) @binding(0) var<uniform> V: View;
 @group(0) @binding(1) var field: texture_3d<f32>;
 @group(0) @binding(2) var samp: sampler;
+@group(0) @binding(3) var history: texture_2d<f32>;   // last frame's accumulation (volume pass) or the image to blit
+
+fn pcg2(v: vec2u, f: u32) -> vec2f {
+  var a = v.x * 1664525u + v.y * 1013904223u + f * 2654435769u;
+  a = (a ^ (a >> 16u)) * 2246822519u; a = (a ^ (a >> 13u)) * 3266489917u; a = a ^ (a >> 16u);
+  var b = a * 747796405u + 2891336453u;
+  b = (b ^ (b >> 16u)) * 2246822519u; b = b ^ (b >> 16u);
+  return vec2f(f32(a >> 8u), f32(b >> 8u)) / 16777216.0;
+}
 
 struct VOut { @builtin(position) pos: vec4f, @location(0) uv: vec2f }
 @vertex fn vsFull(@builtin(vertex_index) i: u32) -> VOut {
@@ -856,36 +868,55 @@ fn transfer(s: vec4f, mode: u32, floorv: f32) -> vec4f {
   return vec4f(col, a);
 }
 
+// One stochastic sample per pixel per frame: the ray gets a random sub-pixel
+// offset (spatial) and a random start along its length (spatial + temporal),
+// then is blended into last frame's accumulation with weight p2.w. Static
+// views converge to the full integral; moving fields get a short temporal filter.
 @fragment fn fsVolume(i: VOut) -> @location(0) vec4f {
   let aspect = V.p0.x; let tanF = V.p0.y; let floorv = V.p0.z; let gain = V.p0.w;
-  let mode = u32(V.p1.w); let steps = i32(V.p2.x);
+  let mode = u32(V.p1.w); let steps = i32(V.p2.x); let alpha = V.p2.w;
+  let px = vec2u(i.pos.xy);
+  let rnd = pcg2(px, u32(V.p3.x));
+  let size = V.p3.yz;
+  let ndc = ((i.pos.xy + rnd) / size) * 2.0 - 1.0;
+  let uv = vec2f(ndc.x, -ndc.y);
   // p2.y lifts the cube above a bottom-sheet control panel on phones
-  let dir = normalize(V.fwd.xyz + i.uv.x * aspect * tanF * V.right.xyz + (i.uv.y - V.p2.y) * tanF * V.up.xyz);
+  let dir = normalize(V.fwd.xyz + uv.x * aspect * tanF * V.right.xyz + (uv.y - V.p2.y) * tanF * V.up.xyz);
   let eye = V.eye.xyz;
   let inv = 1.0 / dir;
   let t0 = (vec3f(-1.0) - eye) * inv; let t1 = (vec3f(1.0) - eye) * inv;
   let tn = max(max(min(t0.x, t1.x), min(t0.y, t1.y)), max(min(t0.z, t1.z), 0.0));
   let tf = min(min(max(t0.x, t1.x), max(t0.y, t1.y)), max(t0.z, t1.z));
   let bg = vec3f(0.043, 0.051, 0.071);
-  if (tf <= tn) { return vec4f(bg, 1.0); }
-  let dt = (tf - tn) / f32(steps);
-  var T = 1.0; var acc = vec3f(0.0);
-  // dithered start hides banding at low step counts
-  let jitter = fract(sin(dot(i.pos.xy, vec2f(12.9898, 78.233))) * 43758.5453);
-  var t = tn + dt * jitter;
-  for (var k = 0; k < steps; k++) {
-    let p = eye + dir * t;
-    let s = textureSampleLevel(field, samp, (p + 1.0) * 0.5, 0.0);
-    let c = transfer(s, mode, floorv);
-    // Polyakov domains fill the whole box, so they are drawn as translucent clouds
-    let g = select(gain, gain * 0.02, mode == 2u);
-    let a = 1.0 - exp(-g * c.a * dt * 3.0);
-    acc += T * a * c.rgb;
-    T *= 1.0 - a;
-    t += dt;
-    if (T < 0.01) { break; }
+  var col = bg;
+  if (tf > tn) {
+    let dt = (tf - tn) / f32(steps);
+    var T = 1.0; var acc = vec3f(0.0);
+    var t = tn + dt * pcg2(px + 7919u, u32(V.p3.x) ^ 0x5bd1e995u).x;
+    let g = select(gain, gain * 0.02, mode == 2u);   // Polyakov domains fill the box: translucent
+    for (var k = 0; k < steps; k++) {
+      let p = eye + dir * t;
+      let s = textureSampleLevel(field, samp, (p + 1.0) * 0.5, 0.0);
+      let c = transfer(s, mode, floorv);
+      let a = 1.0 - exp(-g * c.a * dt * 3.0);
+      acc += T * a * c.rgb;
+      T *= 1.0 - a;
+      t += dt;
+      if (T < 0.01) { break; }
+    }
+    col = acc + T * bg;
   }
-  return vec4f(pow(acc, vec3f(1.0 / 1.8)) + T * bg, 1.0);
+  let prev = textureLoad(history, vec2i(px), 0).rgb;
+  return vec4f(mix(prev, col, alpha), 1.0);
+}
+// Accumulation buffer -> canvas, with the display gamma; may upscale from a
+// reduced-resolution buffer while the user is dragging.
+@fragment fn fsBlit(i: VOut) -> @location(0) vec4f {
+  let uv = vec2f(i.uv.x, -i.uv.y) * 0.5 + 0.5;
+  let c = textureSampleLevel(history, samp, uv, 0.0).rgb;
+  let bg = vec3f(0.043, 0.051, 0.071);
+  // gamma on the emitted light only, so the background stays the panel colour
+  return vec4f(pow(max(c - bg, vec3f(0.0)), vec3f(1.0 / 1.8)) + bg, 1.0);
 }
 
 @vertex fn vsLine(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
@@ -937,7 +968,7 @@ const state = { group: 2, quarks: false, mode: 0, seed: 1234, frame: 0, yaw: 0.7
 const isCoarse = matchMedia('(pointer: coarse)').matches;
 const sheetLayout = matchMedia('(max-width: 760px), (pointer: coarse) and (max-width: 1000px)');
 const sheetOpen = () => sheetLayout.matches && !$('rail').classList.contains('collapsed');
-if (isCoarse) { ui.ls.value = 12; ui.steps.value = 80; ui.cool.value = 8; }
+if (isCoarse) { ui.ls.value = 12; ui.steps.value = 40; ui.cool.value = 8; }
 
 function fmtVals() {
   $('nt-v').textContent = ui.nt.value;
@@ -1009,18 +1040,34 @@ async function main() {
   }
   let pipes = pipesFor(state.group);
 
-  const viewBuf = device.createBuffer({ size: 7 * 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const viewBuf = device.createBuffer({ size: 8 * 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const sampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'repeat', addressModeV: 'repeat', addressModeW: 'repeat' });
   const drawBgl = device.createBindGroupLayout({ entries: [
     { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '3d' } },
     { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },
   ]});
   const drawLayout = device.createPipelineLayout({ bindGroupLayouts: [drawBgl] });
   const volumePipe = device.createRenderPipeline({ layout: drawLayout,
     vertex: { module: drawModule, entryPoint: 'vsFull' },
-    fragment: { module: drawModule, entryPoint: 'fsVolume', targets: [{ format }] },
+    fragment: { module: drawModule, entryPoint: 'fsVolume', targets: [{ format: 'rgba16float' }] },
     primitive: { topology: 'triangle-list' } });
+  const blitPipe = device.createRenderPipeline({ layout: drawLayout,
+    vertex: { module: drawModule, entryPoint: 'vsFull' },
+    fragment: { module: drawModule, entryPoint: 'fsBlit', targets: [{ format }] },
+    primitive: { topology: 'triangle-list' } });
+  // Ping-pong accumulation targets at the current render resolution.
+  let accum = null;
+  function ensureAccum(w, h) {
+    if (accum && accum.w === w && accum.h === h && accum.field === lat.tex) return;
+    if (accum) for (const t of accum.tex) t.destroy();
+    const tex = [0, 1].map(() => device.createTexture({ size: [w, h], format: 'rgba16float', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING }));
+    const mk = (hist) => device.createBindGroup({ layout: drawBgl, entries: [
+      { binding: 0, resource: { buffer: viewBuf } }, { binding: 1, resource: lat.tex.createView({ dimension: '3d' }) },
+      { binding: 2, resource: sampler }, { binding: 3, resource: hist.createView() }] });
+    accum = { w, h, field: lat.tex, tex, views: tex.map((t) => t.createView()), bgHist: [mk(tex[1]), mk(tex[0])], bgSelf: [mk(tex[0]), mk(tex[1])], idx: 0, n: 0, key: '' };
+  }
   const linePipe = device.createRenderPipeline({ layout: drawLayout,
     vertex: { module: drawModule, entryPoint: 'vsLine' },
     fragment: { module: drawModule, entryPoint: 'fsLine', targets: [{ format, blend: { color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'zero' } } }] },
@@ -1071,8 +1118,7 @@ async function main() {
       bgF: device.createBindGroup({ layout: bglF, entries: [{ binding: 0, resource: { buffer: vec } }, { binding: 1, resource: { buffer: mom } }, { binding: 2, resource: { buffer: uold } }, { binding: 3, resource: { buffer: scpBuf } }] }),
       bgHot: mkBg(hotBuf), bgCooled: mkBg(cooledBuf),
       bg1: device.createBindGroup({ layout: bgl1, entries: [{ binding: 0, resource: tex.createView({ dimension: '3d' }) }, { binding: 1, resource: { buffer: statsBuf } }] }),
-      bgDraw: device.createBindGroup({ layout: drawBgl, entries: [{ binding: 0, resource: { buffer: viewBuf } }, { binding: 1, resource: tex.createView({ dimension: '3d' }) }, { binding: 2, resource: sampler }] }),
-      needInit: hot ? 1 : 0, thermalised: 0 };
+      needInit: hot ? 1 : 0, thermalised: 0, dirty: true };
     ui.tslice.max = nt - 1; if (+ui.tslice.value > nt - 1) ui.tslice.value = nt - 1;
     fmtVals();
   }
@@ -1158,6 +1204,7 @@ async function main() {
     const p98 = (arr) => { arr.sort(); return arr[Math.floor(0.98 * (n - 1))]; };
     return [p98(a), p98(q), p98(pl)];
   }
+  const ptrs = new Map(); let lastWheel = -1e9;
   let lastT = performance.now(), fps = 0;
   function frame(now) {
     fps = 0.9 * fps + 0.1 * (1000 / Math.max(1, now - lastT)); lastT = now;
@@ -1187,23 +1234,31 @@ async function main() {
     }
     if (quarks) hmcFrame(pass, Math.max(1, Math.round(speed * 3)));
     if (state.playing && state.frame % 8 === 0) { ui.tslice.value = (+ui.tslice.value + 1) % lat.nt; fmtVals(); }
-    if (state.frame % 32 === 0) {   // float drift off the group manifold, corrected periodically
+    const evolved = nSweeps > 0 || quarks || lat.needInit;
+    if (evolved && state.frame % 32 === 0) {   // float drift off the group manifold, corrected periodically
       const off = setSlot(0, 0, 0, 0);
       pass.setPipeline(pipes.reunitarise); pass.setBindGroup(0, lat.bgHot, [off]); pass.dispatchWorkgroups(Math.ceil(lat.nSites * 4 / 64));
     }
     pass.end();
-    enc.copyBufferToBuffer(lat.hot, 0, lat.cooled, 0, lat.bytes);
-    const pass2 = enc.beginComputePass();
-    const nCool = Math.min(+ui.cool.value, Math.floor((MAX_SLOTS - slot - 2) / 8));
-    for (let s = 0; s < nCool; s++) sweep(pass2, pipes.cool, lat.bgCooled, 0);
-    const off = setSlot(0, 0, 0, 0);
-    pass2.setPipeline(pipes.plaqstat); pass2.setBindGroup(0, lat.bgHot, [off]); pass2.setBindGroup(1, lat.bg1);
-    pass2.dispatchWorkgroups(wg());
-    pass2.setPipeline(pipes.density); pass2.setBindGroup(0, lat.bgCooled, [off]); pass2.setBindGroup(1, lat.bg1);
-    pass2.dispatchWorkgroups(wg());
-    pass2.end();
+    // Smoothing + densities only when something they depend on changed: a frozen
+    // vacuum costs nothing but the ray march.
+    const fieldKey = `${ui.cool.value},${ui.tslice.value}`;
+    const fieldDirty = evolved || lat.dirty || fieldKey !== lat.fieldKey;
+    lat.dirty = false; lat.fieldKey = fieldKey;
+    if (fieldDirty) {
+      enc.copyBufferToBuffer(lat.hot, 0, lat.cooled, 0, lat.bytes);
+      const pass2 = enc.beginComputePass();
+      const nCool = Math.min(+ui.cool.value, Math.floor((MAX_SLOTS - slot - 2) / 8));
+      for (let s = 0; s < nCool; s++) sweep(pass2, pipes.cool, lat.bgCooled, 0);
+      const off = setSlot(0, 0, 0, 0);
+      pass2.setPipeline(pipes.plaqstat); pass2.setBindGroup(0, lat.bgHot, [off]); pass2.setBindGroup(1, lat.bg1);
+      pass2.dispatchWorkgroups(wg());
+      pass2.setPipeline(pipes.density); pass2.setBindGroup(0, lat.bgCooled, [off]); pass2.setBindGroup(1, lat.bg1);
+      pass2.dispatchWorkgroups(wg());
+      pass2.end();
+      device.queue.writeBuffer(statsBuf, 0, zeros);
+    }
     device.queue.writeBuffer(paramBuf, 0, paramArr, 0, slot * SLOT);
-    device.queue.writeBuffer(statsBuf, 0, zeros);
 
     // camera + view uniform
     const dpr = Math.min(devicePixelRatio || 1, isCoarse ? 1.5 : 2);
@@ -1215,25 +1270,42 @@ async function main() {
     const eye = fwd.map((v) => -v * state.dist);
     const tanF = Math.tan(0.95 / 2) / Math.min(1, w / h);   // portrait: widen so the box fits
     const scaleA = Math.max(stats.maxA, 1e-4), scaleQ = Math.max(stats.maxQ, 1e-5), scaleP = Math.max(stats.maxP, 1e-3);
+    // Third-resolution ray march while the pointer is dragging or the wheel/pinch is live.
+    const interacting = ptrs.size > 0 || now - lastWheel < 150;
+    const rs = interacting ? 1 / 3 : 1;
+    const rw = Math.max(1, Math.round(w * rs)), rh = Math.max(1, Math.round(h * rs));
+    ensureAccum(rw, rh);
+    // Any change to what the image depends on restarts accumulation; an evolving
+    // field keeps a short temporal filter instead of a full restart.
+    const viewKey = [state.yaw.toFixed(4), state.pitch.toFixed(4), state.dist.toFixed(3), state.mode, ui.floor.value, ui.gain.value, ui.steps.value, sheetOpen(), rw, rh].join(',');
+    if (viewKey !== accum.key) { accum.n = 0; accum.key = viewKey; }
+    else if (fieldDirty) accum.n = Math.min(accum.n + 1, 2);   // ~3-frame temporal filter while evolving
+    else accum.n = Math.min(accum.n + 1, 1023);
+    const alpha = 1 / (accum.n + 1);
     const view = new Float32Array([
       ...eye, 0, ...right, 0, ...up, 0, ...fwd, 0,
       w / h, tanF, +ui.floor.value, +ui.gain.value,
       scaleA, scaleQ, scaleP, state.mode,
-      +ui.steps.value, sheetOpen() ? 0.45 : 0, state.group, 0]);
+      +ui.steps.value, sheetOpen() ? 0.45 : 0, state.group, alpha,
+      state.frame & 0xffff, rw, rh, 0]);
     device.queue.writeBuffer(viewBuf, 0, view);
 
+    const cur = accum.idx; accum.idx ^= 1;
+    const rpA = enc.beginRenderPass({ colorAttachments: [{ view: accum.views[cur], loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 1 }, storeOp: 'store' }] });
+    rpA.setPipeline(volumePipe); rpA.setBindGroup(0, accum.bgHist[cur]); rpA.draw(3);
+    rpA.end();
     const rp = enc.beginRenderPass({ colorAttachments: [{ view: ctx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0.043, g: 0.051, b: 0.071, a: 1 }, storeOp: 'store' }] });
-    rp.setPipeline(volumePipe); rp.setBindGroup(0, lat.bgDraw); rp.draw(3);
-    rp.setPipeline(linePipe); rp.setBindGroup(0, lat.bgDraw); rp.draw(24);
+    rp.setPipeline(blitPipe); rp.setBindGroup(0, accum.bgSelf[cur]); rp.draw(3);
+    rp.setPipeline(linePipe); rp.setBindGroup(0, accum.bgSelf[cur]); rp.draw(24);
     rp.end();
-    if (!mapping) {
+    if (!mapping && fieldDirty) {
       enc.copyBufferToBuffer(statsBuf, 0, statsRead, 0, 32);
       enc.copyBufferToBuffer(scpBuf, 0, scpRead, 0, 64);
       enc.copyTextureToBuffer({ texture: lat.tex }, { buffer: lat.readBuf, bytesPerRow: 256, rowsPerImage: lat.ls }, [lat.ls, lat.ls, lat.ls]);
     }
     device.queue.submit([enc.finish()]);
 
-    if (!mapping) {
+    if (!mapping && fieldDirty) {
       mapping = true;
       const nSpatial = lat.ls ** 3, nSites = lat.nSites, ls = lat.ls, rb = lat.readBuf;
       Promise.all([statsRead.mapAsync(GPUMapMode.READ), rb.mapAsync(GPUMapMode.READ), scpRead.mapAsync(GPUMapMode.READ)]).then(() => {
@@ -1252,7 +1324,7 @@ async function main() {
       }).catch(() => { try { statsRead.unmap(); rb.unmap(); scpRead.unmap(); } catch (_) {} mapping = false; });
     }
     const hq = state.quarks ? ` · HMC ${hmc.traj ? (100 * hmc.acc / hmc.traj).toFixed(0) : '–'}% accepted · ΔH ${hmc.dH.toFixed(2)} · ${hmc.n} steps of ${hmc.eps.toFixed(3)} · CG ${cgIters(+ui.mass.value)} it` : '';
-    $('hud').textContent = `${fps.toFixed(0)} fps · ${lat.ls}³×${lat.nt} lattice · ${(lat.nSites * 4).toLocaleString()} links · sweep ${lat.thermalised}${hq}`;
+    $('hud').textContent = `${fps.toFixed(0)} fps · ${lat.ls}³×${lat.nt} lattice · ${(lat.nSites * 4).toLocaleString()} links · sweep ${lat.thermalised} · ${rw}×${rh} · ${accum.n + 1} samples${hq}`;
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -1261,8 +1333,8 @@ async function main() {
   ui.ls.addEventListener('change', () => buildLattice(true));
   ui.nt.addEventListener('change', () => buildLattice(true));
   for (const el of Object.values(ui)) el.addEventListener('input', fmtVals);
-  $('reset-hot').onclick = () => { lat.needInit = 1; state.seed = (Math.random() * 1e9) >>> 0; };
-  $('reset-cold').onclick = () => { lat.needInit = 2; state.seed = (Math.random() * 1e9) >>> 0; };
+  $('reset-hot').onclick = () => { lat.needInit = 1; lat.dirty = true; state.seed = (Math.random() * 1e9) >>> 0; };
+  $('reset-cold').onclick = () => { lat.needInit = 2; lat.dirty = true; state.seed = (Math.random() * 1e9) >>> 0; };
   function setGroup(g) {
     state.group = g;
     for (const o of document.querySelectorAll('#grp button')) o.setAttribute('aria-pressed', +o.dataset.group === g);
@@ -1298,7 +1370,7 @@ async function main() {
   };
 
   // ---- orbit: pointer events cover mouse + touch; pinch via two pointers
-  const ptrs = new Map(); let pinch0 = 0, dist0 = 0;
+  let pinch0 = 0, dist0 = 0;
   canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
     if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); dist0 = state.dist; } });
   canvas.addEventListener('pointermove', (e) => {
@@ -1309,7 +1381,7 @@ async function main() {
   });
   const lift = (e) => ptrs.delete(e.pointerId);
   canvas.addEventListener('pointerup', lift); canvas.addEventListener('pointercancel', lift);
-  canvas.addEventListener('wheel', (e) => { e.preventDefault(); state.dist = Math.max(1.9, Math.min(7, state.dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); lastWheel = performance.now(); state.dist = Math.max(1.9, Math.min(7, state.dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
   fmtVals();
 }
 

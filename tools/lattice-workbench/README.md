@@ -62,13 +62,17 @@ critical couplings `βc(Nt)` with one-loop scaling and is indicative only.
 
 ## Rendering
 
-A fullscreen fragment shader ray-marches the unit cube against the 3-D
-texture with a repeat sampler (the lattice is periodic, so trilinear wrap is
-exact). Transfer functions per view mode; a threshold floor hides the
-low-level noise so the lumps stand out. Cube edges are a 24-vertex line list.
+Progressive, stochastic volume rendering. Each frame casts one ray per pixel
+with a random sub-pixel offset and a random start along the ray (Monte Carlo
+in space; with the per-frame jitter also in time), samples the periodic 3-D
+texture with a repeat sampler, and blends the result into an `rgba16float`
+accumulation buffer: weight 1/(n+1) while the view is static (it converges
+to the full integral), a 3-frame filter while the field evolves, a restart
+whenever camera, mode, threshold or resolution change. A blit pass applies
+gamma and draws the cube edges. During pointer drags, wheel and pinch the
+ray march runs at one third of the resolution and is upscaled, so the
+controls stay responsive; full resolution resumes on release.
 
-## Provenance
-
-The numpy prototype (heatbath, cooling, clover charge, offline ray-marcher)
-that this port was validated against lives in the session scratchpad and is
-not in the repo; the plaquette and integer-Q checks are what carried over.
+Smoothing, densities, readouts and the percentile scale are skipped on any
+frame where the field did not change, so a frozen vacuum costs only the ray
+march.
