@@ -18,6 +18,7 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import { ORIENT_DECAY } from '../../../data/camera/orientDecay';
 import { ORIENT_TUNING } from '../../../data/camera/orientTuning';
 import { blendedUpDir } from '../../../utils/camera/blendedUpDir';
 import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
@@ -28,11 +29,8 @@ import { riddenOrientStepRad } from '../../../utils/camera/riddenOrientStepRad';
 import { rollFromScreenUp } from '../../../utils/camera/rollFromScreenUp';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
+import { wrapRad } from '../../../utils/math/wrapRad';
 import { nearestBodyHR } from './nearestBodyHR';
-
-function wrapRad(rad: number): number {
-  return Math.atan2(Math.sin(rad), Math.cos(rad));
-}
 
 /**
  * The field-defined roll target at this pose; `null` when no target exists
@@ -87,5 +85,7 @@ export function frameAlignedRoll(
   // (the notch's authored target swing) rides — one shared discipline.
   const dPre = wrapRad(currentRoll - tPre);
   const dNewRaw = wrapRad(currentRoll - tNew);
-  return currentRoll - riddenOrientStepRad(dPre, wrapRad(dNewRaw - dPre));
+  return (
+    currentRoll - riddenOrientStepRad(dPre, wrapRad(dNewRaw - dPre), ORIENT_DECAY.rideBoundRad)
+  );
 }

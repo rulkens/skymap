@@ -96,10 +96,12 @@ export function createSurfaceController(): SurfaceController {
       const final =
         mode === 'strafe' || preInPoleFrame === null
           ? walled
-          : levelledPose(
-              walled,
-              mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
-            );
+          : levelledPose(walled, {
+              blendW: 1,
+              sceneUpLocal: BODY_LOCAL_FRAME.pole,
+              heldAzimuthRad: mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
+              pivotM: null,
+            });
       // Ruling 12: tilt-authoring handles update the memory. Un-mapping
       // through the band weight keeps the just-set display a FIXED POINT of
       // the zoom mapping — a notch at the set altitude must not move it

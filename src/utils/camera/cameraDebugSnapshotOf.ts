@@ -39,19 +39,17 @@ import { rotateVec3ByTightMat3T } from '../math/rotateVec3ByTightMat3T';
 import { imagePlaneBasis } from './imagePlaneBasis';
 import { maxTiltRad } from './maxTiltRad';
 import { rollFromScreenUp } from './rollFromScreenUp';
+import { tiltFromNadirRad } from './tiltFromNadirRad';
 import { mat3FromColumns } from '../math/mat3FromColumns';
 import { normalize3 } from '../math/normalize3';
 import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
+import { wrapRad } from '../math/wrapRad';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
 
 function sameFrame(a: PoseFrame, b: PoseFrame): boolean {
   if (a === 'absolute' || b === 'absolute') return a === b;
   return a.body === b.body;
-}
-
-function wrapRad(rad: number): number {
-  return Math.atan2(Math.sin(rad), Math.cos(rad));
 }
 
 export function cameraDebugSnapshotOf(input: {
@@ -154,9 +152,7 @@ export function cameraDebugSnapshotOf(input: {
       sceneUpLocalBody,
       upLocal,
     );
-    const fwdVert =
-      forwardLocal[0] * localUp[0] + forwardLocal[1] * localUp[1] + forwardLocal[2] * localUp[2];
-    tiltRad = Math.acos(Math.max(-1, Math.min(1, -fwdVert)));
+    tiltRad = tiltFromNadirRad(forwardLocal, eyeRelBodyM);
     headingRad = refAzimuthOf(localUp, forwardLocal, upLocal, east, north);
 
     const pole = rotateVec3ByTightMat3([0, 0, 1], bodyState.orientation);

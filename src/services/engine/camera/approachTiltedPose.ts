@@ -61,6 +61,9 @@ export function approachTiltedPose(
     pose.target[1] - eye[1],
     pose.target[2] - eye[2],
   ]);
+  // Inlined rather than `tiltFromNadirRad`: the two round differently by an
+  // ulp, and at heliocentric magnitudes the yaw/pitch decode amplifies that
+  // to ~1e-9 — the golden trace holds this world-arm readout bit-for-bit.
   const vert = forward[0] * n[0] + forward[1] * n[1] + forward[2] * n[2];
   const currentTilt = Math.acos(Math.max(-1, Math.min(1, -vert)));
   const delta = tau - currentTilt;
