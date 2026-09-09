@@ -10,7 +10,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -182,7 +182,8 @@ function makeState(): EngineState {
     } as never,
     cam: null,
     cameraRuntime: {
-      clock: createCameraClock(),
+      epochs: UNSTARTED_EPOCHS,
+      follow: null,
       projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
       displayedPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },

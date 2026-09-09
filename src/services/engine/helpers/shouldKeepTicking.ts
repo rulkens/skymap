@@ -88,7 +88,7 @@ import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
 
 /**
  * The `followBody` driver's approach ease is a TIME-based animation (easeOutCubic
- * over FOCUS_TWEEN_MS since `clock.followStartMs`) with NO camera-slice flag
+ * over FOCUS_TWEEN_MS since the follow epoch started) with NO camera-slice flag
  * behind it — unlike a tween, which `selectCameraActive` already covers. It
  * replaced the old body-focus tween, but the tween contributed a `currentTween`
  * wake term and the ease contributed none. Without a wake term the loop renders
@@ -98,7 +98,7 @@ import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
  * saturation so a steady follow does not pin 60 fps.
  *
  * `prevActiveId.current` holds THIS frame's winner (runFrame writes it before the
- * keep-tick check), and `followStartMs` is maintained by `followElapsed` on every
+ * keep-tick check), and the follow epoch is advanced by the same frame on every
  * frame followBody wins — so both are current here.
  *
  * DELIBERATELY NOT a wake term: STEADY follow of a MOVING body after saturation.
@@ -112,7 +112,7 @@ import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
  */
 function followApproachEaseActive(state: EngineState, nowMs: number): boolean {
   if (state.cameraRuntime.prevActiveId.current !== 'followBody') return false;
-  const start = state.cameraRuntime.clock.followStartMs;
+  const start = state.cameraRuntime.epochs.follow.startMs;
   return start !== null && nowMs - start < FOCUS_TWEEN_MS;
 }
 

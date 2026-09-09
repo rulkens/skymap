@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
 import { runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
+import { advanceEpochs } from '../../../../src/services/engine/camera/cameraEpochs';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import { flyout } from '../../../../src/data/animation/clips/flyout';
@@ -45,15 +46,25 @@ function simulateFrame(
   clipPlayer: ReturnType<typeof createClipPlayer>,
   nowMs: number,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
-  const { clock, lastPose, prevActiveId } = engineState.cameraRuntime;
+  const { lastPose, prevActiveId } = engineState.cameraRuntime;
 
-  // Step 1 — clipPlayer fires FIRST, before the produce step.
-  clipPlayer.tick(nowMs);
+  // Step 1 — clipPlayer fires FIRST, before the produce step; the clip epoch it
+  // hands back feeds this frame's advance.
+  const { clipEpoch } = clipPlayer.tick(engineState.cameraRuntime.epochs.clip, nowMs);
 
-  // Step 2 — produce pose from the driver table (reads fresh store state after tick).
+  // Step 2 — advance at the winner, then produce off the advanced rows (reads
+  // fresh store state after tick).
   const freshState = store.getState();
-  const pose = runCameraDrivers(drivers, freshState, clock, nowMs);
   const currActiveId = activeDriverId(drivers, freshState);
+  const epochs = advanceEpochs(engineState.cameraRuntime.epochs, {
+    intent: freshState.camera,
+    focus: freshState.selectionRows.focus,
+    clip: clipEpoch,
+    winnerId: currActiveId,
+    nowMs,
+  });
+  engineState.cameraRuntime.epochs = epochs;
+  const pose = runCameraDrivers(drivers, freshState, epochs, nowMs);
 
   // Step 3 — commit-on-edge. Mirror the production property-based guard in
   // runFrame.ts: fire commitCameraPose when the prev driver had commitsOnEdge.
@@ -111,13 +122,11 @@ describe('playClip — flyout seam', () => {
     // cameraDrivers.ts).
     const drivers = deps.drivers;
 
-    // Build the real clipPlayer with the SAME clock that runCameraDrivers uses.
-    // Sharing one CameraClock instance ensures clipElapsed's reference-identity
-    // start-stamp is consistent between the cue-firer and the driver.
+    // The real clipPlayer; `simulateFrame` threads the clip epoch it returns
+    // into the frame's advance, as `runFrame` does.
     const clipPlayer = createClipPlayer({
       store,
       requestRender: () => {},
-      clock: state.cameraRuntime.clock,
       // flyout has no scene cues (dollyTo/spin compile to camera base tracks,
       // not show/hide/fade/scene/focus cues), so getEngineState will never be
       // invoked. A minimal stub satisfies the type.
@@ -153,7 +162,7 @@ describe('playClip — flyout seam', () => {
     const T0 = 0;
     const STEP_MS = 1_000; // 1-second coarse steps — evaluateClip is pure in t
 
-    // Arrival frame: clip clock is primed; elapsed = 0; pose == start.
+    // Arrival frame: the clip epoch starts; elapsed = 0; pose == start.
     simulateFrame(state, store, drivers, clipPlayer, T0);
 
     // Early frame (2 s): distance has started moving toward the target.

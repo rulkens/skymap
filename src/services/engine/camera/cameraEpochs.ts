@@ -1,9 +1,23 @@
-/** cameraEpochs — pure Epoch primitives beside the mutable `cameraClock.ts`. */
+/**
+ * cameraEpochs — pure Epoch primitives: an epoch resets when its reference
+ * changes and measures since; nothing here mutates. `advanceEpoch` is
+ * idempotent for an unchanged ref, so a second advance in one frame (the wheel
+ * fold reads autoRotate before the frame's advance) can never be a second reset.
+ */
 
 import type { Epoch } from '../../../@types/engine/camera/Epoch';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { CameraState } from '../../../@types/camera/CameraState';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
+
+/** Every row unstarted — the engine's boot value; immutable, so one shared object is fine. */
+export const UNSTARTED_EPOCHS: CameraEpochs = {
+  tween: { ref: null, startMs: null },
+  frameTween: { ref: null, startMs: null },
+  autoRotate: { ref: null, startMs: null },
+  follow: { ref: null, startMs: null },
+  clip: { ref: null, startMs: null },
+};
 
 /** Same `ref` ⇒ `prev` back BY IDENTITY — the no-op guard callers key on. */
 export function advanceEpoch<Ref>(prev: Epoch<Ref>, ref: Ref | null, nowMs: number): Epoch<Ref> {

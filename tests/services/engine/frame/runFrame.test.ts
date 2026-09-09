@@ -91,7 +91,7 @@ import { buildCameraDrivers } from '../../../../src/services/engine/camera/camer
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import {
   startCameraTween,
   setAutoRotate,
@@ -115,6 +115,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
+import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
@@ -122,6 +123,8 @@ import { createInputAggregator } from '../../../../src/services/engine/subsystem
 import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
+import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -206,7 +209,7 @@ function makeState(): EngineState {
       // clipPlayer is non-nullable from t=0 (no GPU dep). The tick spy must be
       // a typed vi.fn — bare vi.fn() fails tsc against the typed ClipPlayer interface.
       clipPlayer: {
-        tick: vi.fn<(nowMs: number) => void>(),
+        tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
         stop: vi.fn<() => void>(),
         clipOpacityOf: vi.fn<(layer: string, nowMs: number) => number>(() => 1),
         destroy: vi.fn<() => void>(),
@@ -230,7 +233,8 @@ function makeState(): EngineState {
     // cameraRuntime Resource bag — required for the camera-driver block
     // that runs BEFORE the renderer-null bail-out.
     cameraRuntime: {
-      clock: createCameraClock(),
+      epochs: UNSTARTED_EPOCHS,
+      follow: null,
       projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
       displayedPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
@@ -429,12 +433,27 @@ describe('runFrame — camera drivers (regression)', () => {
     // Enable auto-rotate on the camera slice — the only home now.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
 
-    runFrame(state, deps, 0); // arrival: autoRotate activates, autoRotateElapsed primes → yaw 0
+    runFrame(state, deps, 0); // arrival: autoRotate wins, its epoch starts → yaw 0
     runFrame(state, deps, 1000); // elapsed 1000 → yaw advances
 
     // After 1000 ms the yaw must have advanced from the base (0).
     const yaw = worldArmOf(state.cameraRuntime.lastPose.current).yaw;
     expect(yaw).toBeGreaterThan(0);
+  });
+});
+
+describe('runFrame — follow memory', () => {
+  it('drops the follow memory when the focus row changes', () => {
+    // The strafe offset belongs to ONE focus row: a new row is a fresh target
+    // and must not inherit the old body's pan.
+    const h = makeCameraSimHarness({ focusBody: 'earth' });
+    h.frame(2);
+    h.state.cameraRuntime.follow = { ...readFollowMemory(h.state), panOffset: [1, 2, 3] };
+
+    h.focus('mars');
+    h.frame();
+
+    expect(readFollowMemory(h.state).panOffset).toEqual([0, 0, 0]);
   });
 });
 
@@ -687,8 +706,9 @@ describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
     const state = makeState();
 
     // Replace the clipPlayer tick stub so it records its position in callOrder.
-    state.subsystems.clipPlayer.tick = vi.fn<() => void>(() => {
+    state.subsystems.clipPlayer.tick = vi.fn<ClipPlayer['tick']>((clipEpoch) => {
       callOrder.push('tick');
+      return { clipEpoch };
     });
 
     // Replace the deriveSourceMasks mock's implementation for this test.
@@ -718,7 +738,7 @@ describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
 
     runFrame(state, deps, 12345);
 
-    expect(state.subsystems.clipPlayer.tick).toHaveBeenCalledWith(12345);
+    expect(state.subsystems.clipPlayer.tick).toHaveBeenCalledWith(expect.anything(), 12345);
   });
 });
 

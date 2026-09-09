@@ -13,7 +13,8 @@ import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
-import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
+import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
+import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
@@ -21,7 +22,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 import { authoredWorldPose } from '../helpers/authoredWorldPose';
 import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
-import { tweenElapsed, autoRotateElapsed, clipElapsed, followElapsed } from './cameraClock';
+import { elapsedMs } from './cameraEpochs';
 import { evaluateClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
 import { bodyFocusDistance } from './bodyFocusDistance';
@@ -49,38 +50,30 @@ export function pickWinner(drivers: readonly CameraDriver[], s: RootState): Came
  * SECONDS (`evaluateClip`'s `elapsedSec`), the easing drivers ms. Do not
  * "fix" the clip arm to multiply by 1000.
  */
-function elapsedForWinner(
-  winner: CameraDriver,
-  s: RootState,
-  clock: CameraClock,
-  nowMs: number,
-): number {
-  if (winner.id === 'clip') return clipElapsed(clock, s.camera.clip, nowMs); // returns SECONDS
-  if (winner.id === 'tween') return tweenElapsed(clock, s.camera.tween, nowMs);
-  if (winner.id === 'autoRotate')
-    return autoRotateElapsed(clock, s.camera.autoRotate.active, s.camera.base, nowMs);
-  if (winner.id === 'followBody') return followElapsed(clock, s.selectionRows.focus, nowMs);
+function elapsedForWinner(winner: CameraDriver, epochs: CameraEpochs, nowMs: number): number {
+  if (winner.id === 'clip') return elapsedMs(epochs.clip, nowMs) / 1000;
+  if (winner.id === 'tween') return elapsedMs(epochs.tween, nowMs);
+  if (winner.id === 'autoRotate') return elapsedMs(epochs.autoRotate, nowMs);
+  if (winner.id === 'followBody') return elapsedMs(epochs.follow, nowMs);
   return 0;
 }
 
-/**
- * The elapsed helpers mutate `clock` (identity-reset), so this must be the
- * sole per-frame caller of them.
- */
+/** `epochs` must already be advanced for this frame (`runFrame` does it once, at the winner). */
 export function runCameraDrivers(
   drivers: readonly CameraDriver[],
   s: RootState,
-  clock: CameraClock,
+  epochs: CameraEpochs,
   nowMs: number,
 ): FramedCameraPose {
   const winner = pickWinner(drivers, s);
-  const elapsed = elapsedForWinner(winner, s, clock, nowMs);
-  return winner.pose(s, elapsed);
+  return winner.pose(s, elapsedForWinner(winner, epochs, nowMs));
 }
+
+const NO_FOLLOW_MEMORY: FollowMemory = { from: null, distanceTarget: null, panOffset: [0, 0, 0] };
 
 /**
  * The six-row table. `state` is closed over by `orbitDrag` (the live gesture
- * register) and `followBody` (the body snapshot, lens FOV and follow clock);
+ * register) and `followBody` (the body snapshot, lens FOV and follow memory);
  * the other rows read only `RootState`.
  */
 export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] {
@@ -138,15 +131,14 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         s.camera.base.frame === 'absolute' && bodyMovesThisFrame(s.selectionRows.focus),
       pose: (s, elapsed) => {
         const focus = s.selectionRows.focus;
-        const clock = state.cameraRuntime.clock;
         const base = s.camera.base;
         const livePos = liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current);
         // Null-guard keeps the arm total; isActive already proved a moving body.
         if (focus === null || focus.type !== 'body' || livePos === null) return base;
         if (base.frame !== 'absolute') return base;
 
-        // Captured ONCE per activation (`followElapsed` nulls it on the edge)
-        // through the EYE, not the angles: `approachTiltedPose` is eye-preserving
+        // Captured ONCE per activation (`runFrame` nulls the memory on the focus
+        // edge) through the EYE, not the angles: `approachTiltedPose` is eye-preserving
         // by construction, so authored and displayed registers now yield an
         // identical capture (why eye, not angle, is carried across — R12b-1).
         // Eye-preserving against the NEW target: `from` is read against
@@ -154,13 +146,15 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         // changes meaning on a body switch — an Earth-orbit distance read from
         // Saturn's centre is INSIDE Saturn, where the fold engages and the
         // absolute-arm gate strands the camera.
-        if (clock.followFrom === null) {
+        const memory = state.cameraRuntime.follow ?? NO_FOLLOW_MEMORY;
+        let from = memory.from;
+        if (from === null) {
           const cur = authoredWorldPose(state);
           const pb = ORIENTATION_FRAMES[state.settings.orientation];
           const eye = eyeMpcOf(cur, pb);
           const rel: Vec3 = [livePos[0] - eye[0], livePos[1] - eye[1], livePos[2] - eye[2]];
           const ang = orbitAnglesLookingAlong(rel, pb);
-          clock.followFrom = {
+          from = {
             target: [livePos[0], livePos[1], livePos[2]],
             yaw: ang.yaw,
             pitch: ang.pitch,
@@ -168,23 +162,20 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
             roll: cur.roll,
           };
         }
-        const from = clock.followFrom;
 
-        // Distance target, two sources (see CameraClock): a fresh focus seeds
+        // Distance target, two sources (see FollowMemory): a fresh focus seeds
         // the framing distance — `bodyFocusDistance` directly, allocation-free,
         // only on this branch; follow re-winning after a drag committed a zoom
         // (`prevActiveId !== 'followBody'`, same focus ref) re-captures
         // `base.distance` so the zoom sticks.
-        if (clock.followDistanceTarget === null) {
+        let distanceTarget = memory.distanceTarget;
+        if (distanceTarget === null) {
           const radiusMpc = focus.radiusM * SCALE_UNITS.M_TO_MPC;
-          clock.followDistanceTarget = bodyFocusDistance(
-            radiusMpc,
-            state.cameraRuntime.projection.fovYRad,
-          );
+          distanceTarget = bodyFocusDistance(radiusMpc, state.cameraRuntime.projection.fovYRad);
         } else if (state.cameraRuntime.prevActiveId.current !== 'followBody') {
-          clock.followDistanceTarget = base.pose.distance;
+          distanceTarget = base.pose.distance;
         }
-        const distanceTarget = clock.followDistanceTarget;
+        state.cameraRuntime.follow = { from, distanceTarget, panOffset: memory.panOffset };
 
         const t = easeOutCubic(elapsed / FOCUS_TWEEN_MS);
         return absoluteArm({

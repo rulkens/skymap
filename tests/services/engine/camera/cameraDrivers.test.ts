@@ -26,7 +26,11 @@ import { activeDriverId } from '../../../../src/services/engine/camera/activeDri
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
 import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
 import { spinAutoRotate } from '../../../../src/services/engine/camera/spinAutoRotate';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import {
+  UNSTARTED_EPOCHS,
+  advanceEpoch,
+  advanceEpochs,
+} from '../../../../src/services/engine/camera/cameraEpochs';
 import { bodyLikeFraming } from '../../../../src/services/engine/camera/bodyLikeFraming';
 import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -74,6 +78,17 @@ const TWEEN_DESC: CameraTweenDescriptor = {
 
 /** The live gesture register `orbitDrag` holds — drainInput's fold output. */
 const REGISTER_POSE = absoluteArm({ target: [5, 5, 5], yaw: 0.7, pitch: -0.1, distance: 200 });
+
+/** Every row `winnerId` owns started at `nowMs`, as `runFrame`'s advance leaves them. */
+function epochsAt(s: RootState, winnerId: string, nowMs: number) {
+  return advanceEpochs(UNSTARTED_EPOCHS, {
+    intent: s.camera,
+    focus: s.selectionRows.focus,
+    clip: advanceEpoch(UNSTARTED_EPOCHS.clip, s.camera.clip, nowMs),
+    winnerId,
+    nowMs,
+  });
+}
 
 const FAKE_ENGINE_STATE = {
   cameraRuntime: {
@@ -403,16 +418,15 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     store.dispatch(startCameraTween(TWEEN_DESC));
     const s = store.getState() as unknown as RootState;
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
-    const clock = createCameraClock();
     const nowMs = 500;
+    const epochs = epochsAt(s, 'tween', nowMs);
 
-    // First call — tween starts here, elapsed = 0 on first frame.
-    const pose0 = runCameraDrivers(drivers, s, clock, nowMs);
-    // tween wins; elapsedMs == 0 on first-ever call for a fresh descriptor.
+    // The tween's arrival frame: elapsed 0.
+    const pose0 = runCameraDrivers(drivers, s, epochs, nowMs);
     expect(pose0).toEqual(absoluteArm(evaluateClip(tweenToClip(TWEEN_DESC), 0)));
 
-    // Second call at nowMs + 200 — same descriptor reference, elapsedMs = 200.
-    const pose200 = runCameraDrivers(drivers, s, clock, nowMs + 200);
+    // 200 ms later on the same epoch: elapsedMs = 200.
+    const pose200 = runCameraDrivers(drivers, s, epochs, nowMs + 200);
     expect(pose200).toEqual(absoluteArm(evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000)));
   });
 
@@ -421,13 +435,12 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     store.dispatch(beginDrag());
     const s = store.getState() as unknown as RootState;
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
-    const clock = createCameraClock();
 
     const poseSpy = vi.fn<(s: RootState, e: number) => FramedCameraPose>(() => REGISTER_POSE);
     // Replace just the orbitDrag driver's pose fn to capture elapsed.
     const patchedDrivers = drivers.map((d) => (d.id === 'orbitDrag' ? { ...d, pose: poseSpy } : d));
 
-    runCameraDrivers(patchedDrivers, s, clock, 9999);
+    runCameraDrivers(patchedDrivers, s, UNSTARTED_EPOCHS, 9999);
     expect(poseSpy).toHaveBeenCalledWith(s, 0);
   });
 
@@ -435,14 +448,13 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     const store = makeStore();
     const s = store.getState() as unknown as RootState; // default: not dragging, no tween, autoRotate default
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
-    const clock = createCameraClock();
 
     // Force resting to win by ensuring default state has autoRotate inactive.
     // (DEFAULT_AUTO_ROTATE is false, so resting wins by default.)
     const poseSpy = vi.fn<(s: RootState, e: number) => FramedCameraPose>(() => s.camera.base);
     const patchedDrivers = drivers.map((d) => (d.id === 'resting' ? { ...d, pose: poseSpy } : d));
 
-    runCameraDrivers(patchedDrivers, s, clock, 9999);
+    runCameraDrivers(patchedDrivers, s, UNSTARTED_EPOCHS, 9999);
     // resting wins when nothing else is active; elapsed must be 0.
     if (poseSpy.mock.calls.length > 0) {
       expect(poseSpy.mock.calls[0]![1]).toBe(0);
@@ -458,19 +470,15 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
     const s = store.getState() as unknown as RootState;
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
-    const clock = createCameraClock();
     const installMs = 1000;
-
-    // First call — clip installs at installMs, elapsed = 0 s on the first frame.
-    runCameraDrivers(drivers, s, clock, installMs);
+    const epochs = epochsAt(s, 'clip', installMs);
 
     // Spy-patch the clip pose to capture the elapsed value passed in.
     const poseSpy = vi.fn<(s: RootState, e: number) => FramedCameraPose>(() => s.camera.base);
     const patchedDrivers = drivers.map((d) => (d.id === 'clip' ? { ...d, pose: poseSpy } : d));
 
-    // Second call 1500 ms later — clip still active (same reference).
-    // clipElapsed returns (nowMs - clipStartMs) / 1000 = 1500 / 1000 = 1.5 s.
-    runCameraDrivers(patchedDrivers, s, clock, installMs + 1500);
+    // 1500 ms after the clip epoch started: 1500 / 1000 = 1.5 s.
+    runCameraDrivers(patchedDrivers, s, epochs, installMs + 1500);
     expect(poseSpy).toHaveBeenCalledTimes(1);
     expect(poseSpy.mock.calls[0]![1]).toBeCloseTo(1.5, 5);
   });
@@ -510,15 +518,16 @@ function makeFollowEngineState(opts: {
   followDistanceTarget?: number | null;
   prevActiveId?: string;
 }): EngineState {
-  const clock = createCameraClock();
-  clock.followFrom = opts.followFrom ?? null;
-  clock.followDistanceTarget = opts.followDistanceTarget ?? null;
   return {
     // The follow driver's `from` capture resolves the live pose's arm, which
     // reads the orientation + up-basis; the harness carries both.
     settings: { orientation: DEFAULT_ORIENTATION },
     cameraRuntime: {
-      clock,
+      follow: {
+        from: opts.followFrom ?? null,
+        distanceTarget: opts.followDistanceTarget ?? null,
+        panOffset: [0, 0, 0],
+      },
       projection: { fovYRad: opts.fovYRad, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: absoluteArm(opts.lastPose) },
       displayedPose: { current: absoluteArm(opts.lastPose) },
@@ -744,10 +753,10 @@ describe('buildCameraDrivers — followBody priority under body focus', () => {
       lastPose: BASE_POSE,
     });
     const drivers = buildCameraDrivers(engineState);
-    const clock = createCameraClock();
+    const epochs = epochsAt(s, 'autoRotate', 1000);
 
-    const p0 = worldArmOf(runCameraDrivers(drivers, s, clock, 1000));
-    const p1 = worldArmOf(runCameraDrivers(drivers, s, clock, 1500));
+    const p0 = worldArmOf(runCameraDrivers(drivers, s, epochs, 1000));
+    const p1 = worldArmOf(runCameraDrivers(drivers, s, epochs, 1500));
     // autoRotate is authoring (not blocked by follow) → yaw advances with elapsed.
     expect(p0.yaw).toBeCloseTo(BASE_POSE.yaw, 9); // elapsed 0 on the arrival frame
     expect(p1.yaw).not.toBe(p0.yaw);

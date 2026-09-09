@@ -1,22 +1,11 @@
 /**
- * readFollowMemory — the follow driver's memory (approach `from`, distance
- * target, world-frame pan offset) as one value, so fixtures that pin it do not
- * couple to where the runtime keeps the three fields.
+ * readFollowMemory — the follow driver's memory as one value with the
+ * no-memory default filled in, so fixtures that pin it never branch on null.
  */
 
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { FollowMemory } from '../../../src/@types/engine/camera/FollowMemory';
 
-export function readFollowMemory(state: EngineState): {
-  readonly from: CameraPose | null;
-  readonly distanceTarget: number | null;
-  readonly panOffset: Vec3;
-} {
-  const clock = state.cameraRuntime.clock;
-  return {
-    from: clock.followFrom,
-    distanceTarget: clock.followDistanceTarget,
-    panOffset: clock.followPanOffset,
-  };
+export function readFollowMemory(state: EngineState): FollowMemory {
+  return state.cameraRuntime.follow ?? { from: null, distanceTarget: null, panOffset: [0, 0, 0] };
 }

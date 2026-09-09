@@ -24,7 +24,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -48,6 +48,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
+import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
@@ -87,7 +88,7 @@ function makeHarness() {
     gpu: { galaxyPointRenderer: null, renderTargets: null, milkyWayCloud: null },
     subsystems: {
       scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
-      clipPlayer: { tick: () => {} },
+      clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },
       inputAggregator: createInputAggregator(),
     },
     cam: {
@@ -102,7 +103,8 @@ function makeHarness() {
       far: 1000,
     } as unknown as OrbitCamera,
     cameraRuntime: {
-      clock: createCameraClock(),
+      epochs: UNSTARTED_EPOCHS,
+      follow: null,
       projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: absoluteArm(poseAtHR(5)) },
       displayedPose: { current: absoluteArm(poseAtHR(5)) },
@@ -144,7 +146,10 @@ const sig = (x: number): number => Number(x.toPrecision(DIGITS));
 // at the next kept one, since register/memory carry forward frame-to-frame.
 const STRIDE = 40;
 const legOf = (label: string): string =>
-  label.replace(/ move \d+$/, '').replace(/ end$/, '').replace(/ \d+$/, '');
+  label
+    .replace(/ move \d+$/, '')
+    .replace(/ end$/, '')
+    .replace(/ \d+$/, '');
 function thin(trace: Trace): Trace {
   const keep = new Set<number>();
   trace.forEach((step, i) => {

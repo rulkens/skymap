@@ -2,8 +2,8 @@
  * resolveFrameBasis — the single authority for the camera's resolved
  * orientation basis B(t), evaluated once per frame.
  *
- *   (orientation, frameTween, clock, nowMs)  →  (this module)  →  Mat3 basis
- *   Mat3 basis                               →  camera up      →  view matrix
+ *   (orientation, frameTween, elapsedMs)  →  (this module)  →  Mat3 basis
+ *   Mat3 basis                            →  camera up      →  view matrix
  *
  * There is exactly one place that answers 'which way is up this frame', so no
  * two call sites can drift on how a frame roll is interpolated. When no roll is
@@ -45,13 +45,11 @@ import { quat, mat3 } from 'wgpu-matrix';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
 import type { FrameTween } from '../../../@types/camera/FrameTween';
-import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import {
   ORIENTATION_FRAMES,
   ORIENTATION_FRAME_QUATERNIONS,
 } from '../../../data/orientation/orientationFrames';
 import { EASE } from '../animation/ease';
-import { frameTweenElapsed } from './cameraClock';
 
 /** Strip wgpu-matrix's vec4 column padding (indices 3, 7, 11) to a tight Mat3. */
 function toRegistryMat3(padded: Float32Array | number[]): Mat3 {
@@ -79,16 +77,14 @@ function toRegistryMat3(padded: Float32Array | number[]): Mat3 {
 export function resolveFrameBasis(
   orientation: OrientationFrameId,
   frameTween: FrameTween | null,
-  clock: CameraClock,
-  nowMs: number,
+  frameTweenElapsedMs: number,
 ): Mat3 {
   if (frameTween === null) {
     // Copy so callers never mutate the shared registry entry (see module header).
     return [...ORIENTATION_FRAMES[orientation]];
   }
 
-  const elapsed = frameTweenElapsed(clock, frameTween, nowMs);
-  const t = EASE[frameTween.easing](elapsed / frameTween.durationMs);
+  const t = EASE[frameTween.easing](frameTweenElapsedMs / frameTween.durationMs);
   const q = quat.slerp(frameTween.fromQuat, ORIENTATION_FRAME_QUATERNIONS[frameTween.to], t);
   return toRegistryMat3(mat3.fromQuat(q));
 }

@@ -40,8 +40,8 @@
  * ### Why the distance is `bodyLikeFraming`'s, not a bespoke home distance
  *
  * This is forced by the follow mechanics, not taste. When home focus lands on
- * Earth the follow driver takes over, and `followElapsed` (`cameraClock.ts`)
- * nulls `followDistanceTarget` on every focus-row change; the driver then
+ * Earth the follow driver takes over, and `runFrame` drops the follow memory
+ * on every focus-row change; the driver then
  * re-seeds it to the body's framing distance (`bodyFocusDistance`, via
  * `bodyLikeFraming`). Any other landing distance would be glided away from the
  * instant the tween ends — a visible lurch. Ending the pose at the framing

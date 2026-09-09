@@ -1,18 +1,18 @@
 /**
  * cameraEpochs — unit tests for the pure epoch primitives and `advanceEpochs`.
  *
- * All tests drive `nowMs` explicitly — no real wall-clock — validating the
- * purity-of-source contract the mutable `CameraClock` will be replaced by.
+ * All tests drive `nowMs` explicitly — no real wall-clock — the same
+ * (epoch, args) sequence always yields the same numbers.
  */
 
 import { describe, it, expect } from 'vitest';
 import {
+  UNSTARTED_EPOCHS,
   advanceEpoch,
   advanceEpochs,
   elapsedMs,
 } from '../../../../src/services/engine/camera/cameraEpochs';
 import type { Epoch } from '../../../../src/@types/engine/camera/Epoch';
-import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
 import type { CameraState } from '../../../../src/@types/camera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
@@ -64,14 +64,6 @@ describe('elapsedMs', () => {
     expect(elapsedMs(UNSTARTED, 5000)).toBe(0);
   });
 });
-
-const UNSTARTED_EPOCHS: CameraEpochs = {
-  tween: { ref: null, startMs: null },
-  frameTween: { ref: null, startMs: null },
-  autoRotate: { ref: null, startMs: null },
-  follow: { ref: null, startMs: null },
-  clip: { ref: null, startMs: null },
-};
 
 function makeCameraState(overrides?: Partial<CameraState>): CameraState {
   return {
@@ -146,6 +138,25 @@ describe('advanceEpochs', () => {
       nowMs: 1016,
     });
     expect(second).toBe(first);
+  });
+
+  it('the autoRotate row restarts when a commit installs a new base while active', () => {
+    // A drag-release commits a NEW base object under a live spin; the spin
+    // must restart from 0 against it, not carry the accumulated time forward
+    // (which would jump the camera).
+    const spinning = makeCameraState({ autoRotate: { active: true, rate: 0.01 } });
+    const inputs = { focus: null, clip: UNSTARTED_EPOCHS.clip, winnerId: 'autoRotate' };
+    const first = advanceEpochs(UNSTARTED_EPOCHS, { ...inputs, intent: spinning, nowMs: 2000 });
+    expect(
+      elapsedMs(
+        advanceEpochs(first, { ...inputs, intent: spinning, nowMs: 2050 }).autoRotate,
+        2050,
+      ),
+    ).toBe(50);
+
+    const recommitted = { ...spinning, base: { ...spinning.base } };
+    const next = advanceEpochs(first, { ...inputs, intent: recommitted, nowMs: 2060 });
+    expect(next.autoRotate).toEqual({ ref: recommitted.base, startMs: 2060 });
   });
 
   it('the clip row is passed through untouched', () => {

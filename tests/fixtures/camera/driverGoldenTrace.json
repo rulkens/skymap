@@ -1537,8 +1537,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
@@ -1577,8 +1577,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["engine/engineScaleChanged"]
@@ -1617,8 +1617,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["engine/engineScaleChanged"]
@@ -1657,8 +1657,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["engine/engineScaleChanged"]
@@ -1697,8 +1697,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["engine/engineScaleChanged"]
@@ -1737,8 +1737,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
@@ -1777,8 +1777,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["engine/engineScaleChanged"]
@@ -1817,8 +1817,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["camera/commitCameraPose", "camera/endDrag", "engine/engineScaleChanged"]
@@ -1857,8 +1857,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["engine/engineScaleChanged"]
@@ -1897,8 +1897,8 @@
         "refNull": false
       },
       "clip": {
-        "startMs": 1648,
-        "refNull": false
+        "startMs": null,
+        "refNull": true
       }
     },
     "actions": ["engine/engineScaleChanged"]

@@ -1,7 +1,7 @@
 /**
- * CameraEpochs — the immutable replacement for `CameraClock`: one `Epoch`
- * per channel. `autoRotate`'s ref folds the clock's `lastAutoRotateActive` +
- * `lastBaseRef` into one value (`active ? base : null`).
+ * CameraEpochs — one immutable `Epoch` per timed camera channel; replaced
+ * wholesale once per frame. `autoRotate`'s ref is `active ? base : null`, so
+ * a deactivation and a base re-commit are both ref changes.
  */
 import type { Epoch } from './Epoch';
 import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';

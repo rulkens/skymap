@@ -17,7 +17,7 @@ import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
-import { createCameraClock } from './camera/cameraClock';
+import { UNSTARTED_EPOCHS } from './camera/cameraEpochs';
 import { createSurfaceController } from '../camera/surfaceController';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
@@ -111,7 +111,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // `base` — the single home for the pre-bootstrap placeholder pose, arm tag
   // included — copied, so the engine's Resource never aliases the store's object.
   const cameraRuntime: CameraRuntime = {
-    clock: createCameraClock(),
+    epochs: UNSTARTED_EPOCHS,
+    follow: null,
     projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
     lastPose: {
       current: { ...cb.store.getState().camera.base },
@@ -277,7 +278,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       clipPlayer: createClipPlayer({
         store: cb.store,
         requestRender: () => state.subsystems.scheduler.requestRender(),
-        clock: cameraRuntime.clock,
         getEngineState: () => state,
       }),
 

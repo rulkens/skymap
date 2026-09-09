@@ -5,6 +5,7 @@
  */
 
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import type { Epoch } from '../../../src/@types/engine/camera/Epoch';
 
 export type EpochCell = { readonly startMs: number | null; readonly refNull: boolean };
 
@@ -13,14 +14,16 @@ export type EpochCells = Readonly<
 >;
 
 export function readCameraEpochs(state: EngineState): EpochCells {
-  const clock = state.cameraRuntime.clock;
+  const cell = (epoch: Epoch<unknown>): EpochCell => ({
+    startMs: epoch.startMs,
+    refNull: epoch.ref === null,
+  });
+  const { tween, frameTween, autoRotate, follow, clip } = state.cameraRuntime.epochs;
   return {
-    tween: { startMs: clock.tweenStartMs, refNull: clock.lastTweenRef === null },
-    frameTween: { startMs: clock.frameTweenStartMs, refNull: clock.lastFrameTweenRef === null },
-    // The autoRotate row's reset reference is `active ? base : null`: the active
-    // bit carries the nullness, `lastBaseRef` only the identity inside it.
-    autoRotate: { startMs: clock.autoRotateStartMs, refNull: !clock.lastAutoRotateActive },
-    follow: { startMs: clock.followStartMs, refNull: clock.lastFollowRef === null },
-    clip: { startMs: clock.clipStartMs, refNull: clock.lastClipRef === null },
+    tween: cell(tween),
+    frameTween: cell(frameTween),
+    autoRotate: cell(autoRotate),
+    follow: cell(follow),
+    clip: cell(clip),
   };
 }

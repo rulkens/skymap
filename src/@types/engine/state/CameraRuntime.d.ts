@@ -9,15 +9,20 @@
  * holders share the live reference across in-place updates.
  */
 
-import type { CameraClock } from '../camera/CameraClock';
+import type { CameraEpochs } from '../camera/CameraEpochs';
+import type { FollowMemory } from '../camera/FollowMemory';
 import type { CameraProjection } from '../../camera/CameraProjection';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { SurfaceController } from '../../camera/SurfaceController';
 import type { Mat3 } from '../../math/Mat3';
 
 export type CameraRuntime = {
-  /** Mutated by tweenElapsed / autoRotateElapsed once per frame. */
-  clock: CameraClock;
+  /** Replaced once per frame by `runFrame`'s `advanceEpochs`; the clip row
+   * arrives from the clip player's tick. */
+  epochs: CameraEpochs;
+  /** Written by the follow driver, `applyWheelZoom` and the pan fold; nulled by
+   * `runFrame` when the follow epoch's ref changes. */
+  follow: FollowMemory | null;
   /** Live projection config; aspect patched on each canvas resize. */
   projection: CameraProjection;
   /**

@@ -12,12 +12,14 @@ import { describe, it, expect } from 'vitest';
 
 import { drainInput } from '../../../../src/services/engine/frame/drainInput';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import {
   startCameraTween,
   beginDrag,
   clipStarted,
   commitCameraPose,
+  setAutoRotate,
 } from '../../../../src/state/camera/cameraSlice';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
@@ -282,10 +284,30 @@ describe('drainInput', () => {
     expect(worldArmOf(store.getState().camera.base).distance).toBeGreaterThan(baseBefore);
   });
 
-  it('folds a followed-body pan into the clock strafe offset, not double-counted', () => {
+  it('a notch after auto-rotate switched off between frames folds no stale spin', () => {
+    // `prevActiveId` still reads 'autoRotate' from last frame and its epoch
+    // still holds last frame's start, but the spin is OFF: the wheel must fold
+    // the spin as THIS frame's advance will see it (elapsed 0), not the stale
+    // row, or the committed yaw jumps by a spin nobody renders.
+    const { agg, state, deps, store } = makeHarness();
+    const yawBefore = worldArmOf(store.getState().camera.base).yaw;
+    state.cameraRuntime.prevActiveId.current = 'autoRotate';
+    state.cameraRuntime.epochs = {
+      ...state.cameraRuntime.epochs,
+      autoRotate: { ref: store.getState().camera.base, startMs: 0 },
+    };
+    store.dispatch(setAutoRotate({ active: false, rate: 0.01 }));
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+
+    drainInput(state, deps, 500);
+
+    expect(worldArmOf(store.getState().camera.base).yaw).toBe(yawBefore);
+  });
+
+  it('folds a followed-body pan into the follow strafe offset, not double-counted', () => {
     // While a MOVING body is followed the pivot-pin owns the pose target
-    // (`bodyPosition + followPanOffset`), so a pan step's own delta must land
-    // on the clock offset — and an orbit step must leave it alone (its delta
+    // (`bodyPosition + panOffset`), so a pan step's own delta must land on the
+    // follow memory's offset — and an orbit step must leave it alone (its delta
     // is angular, not a strafe). The offset carries exactly the image-plane
     // translation of the drag, no body motion mixed in.
     const { agg, state, deps, store } = makeHarness();
@@ -306,7 +328,7 @@ describe('drainInput', () => {
     agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
     agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
     drainInput(state, deps, 0);
-    expect(state.cameraRuntime.clock.followPanOffset).toEqual([0, 0, 0]);
+    expect(readFollowMemory(state).panOffset).toEqual([0, 0, 0]);
 
     agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
     agg.push({ kind: 'dragMove', mode: 'pan', xPx: 150, yPx: 100 });
@@ -314,7 +336,7 @@ describe('drainInput', () => {
 
     // 50 px at the image plane: 2 · distance · tan(fov/2) / cssHeight per px.
     const pxToWorld = (2 * 100 * Math.tan(Math.PI / 6)) / 1000;
-    expect(Math.hypot(...state.cameraRuntime.clock.followPanOffset)).toBeCloseTo(50 * pxToWorld, 9);
+    expect(Math.hypot(...readFollowMemory(state).panOffset)).toBeCloseTo(50 * pxToWorld, 9);
   });
 
   it('a drag in the same drain as an at-rest body-arm notch chains from the notch, not before it', () => {
@@ -416,14 +438,14 @@ describe('drainInput', () => {
       }),
     );
     state.cameraRuntime.prevActiveId.current = 'followBody';
-    state.cameraRuntime.clock.followDistanceTarget = 2.5 * EARTH_RADIUS_MPC;
-    const targetBefore = state.cameraRuntime.clock.followDistanceTarget;
+    const targetBefore = 2.5 * EARTH_RADIUS_MPC;
+    state.cameraRuntime.follow = { from: null, distanceTarget: targetBefore, panOffset: [0, 0, 0] };
 
     agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
     drainInput(state, deps, 0);
 
     // The distance went to the follow's own slot, the roll to the base.
-    expect(state.cameraRuntime.clock.followDistanceTarget).toBeGreaterThan(targetBefore);
+    expect(readFollowMemory(state).distanceTarget).toBeGreaterThan(targetBefore);
     const committed = worldArmOf(store.getState().camera.base);
     expect(committed.distance).toBeCloseTo(2.5 * 6371000 * SCALE_UNITS.M_TO_MPC, 12);
     const moved = Math.abs((committed.roll ?? 0) - 1.4);
@@ -433,8 +455,8 @@ describe('drainInput', () => {
 
   it('a FOCUSED zoom-out rides the roll back to the scene up (the default path)', () => {
     // The user's real configuration: Earth focused, followBody owns the wheel
-    // (`applyWheelZoom` scales `followDistanceTarget`; the driver eases to
-    // it). The notch's authored altitude change IS the followDistanceTarget
+    // (`applyWheelZoom` scales the follow `distanceTarget`; the driver eases
+    // to it). The notch's authored altitude change IS the `distanceTarget`
     // change, so the ride must run across it — feeding it identical pre/post
     // poses would zero the target delta and leave the in-band roll frozen
     // once the eased altitude left the band. Ease simulated as saturated
@@ -468,7 +490,7 @@ describe('drainInput', () => {
     store.dispatch(commitCameraPose(absoluteArm(poseAt(startDist, -0.26))));
     state.cameraRuntime.lastPose.current = absoluteArm(poseAt(startDist, -0.26));
     state.cameraRuntime.prevActiveId.current = 'followBody';
-    state.cameraRuntime.clock.followDistanceTarget = startDist;
+    state.cameraRuntime.follow = { from: null, distanceTarget: startDist, panOffset: [0, 0, 0] };
     const rollOfBase = (): number => {
       const base = store.getState().camera.base;
       if (base.frame !== 'absolute') throw new Error('expected absolute base');
@@ -478,7 +500,7 @@ describe('drainInput', () => {
       // The saturated follow ease: register renders at the target distance
       // carrying base.roll (the follow pose lerps roll toward base).
       state.cameraRuntime.lastPose.current = absoluteArm(
-        poseAt(state.cameraRuntime.clock.followDistanceTarget!, rollOfBase()),
+        poseAt(readFollowMemory(state).distanceTarget!, rollOfBase()),
       );
       void nowMs;
     };
@@ -490,10 +512,7 @@ describe('drainInput', () => {
     expect(Math.abs(rollOfBase())).toBeGreaterThan(0.05); // in-band target held
 
     let guard = 0;
-    while (
-      state.cameraRuntime.clock.followDistanceTarget! / EARTH_RADIUS_MPC - 1 < 0.5 &&
-      guard < 30
-    ) {
+    while (readFollowMemory(state).distanceTarget! / EARTH_RADIUS_MPC - 1 < 0.5 && guard < 30) {
       agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
       drainInput(state, deps, 1000 + guard);
       settle(1000 + guard);

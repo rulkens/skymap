@@ -5,39 +5,44 @@
  *
  *   - followBody re-asserts its own distance target every frame and would swallow
  *     a committed base, so the wheel edits that target in place.
- *   - autoRotate: `autoRotateElapsed` restarts on any base-identity change, so
+ *   - autoRotate: the spin epoch restarts on any base-identity change, so
  *     committing an un-spun base pops the yaw — zoom the already-spun pose.
  */
 
-import { autoRotateElapsed } from './cameraClock';
 import { spinAutoRotate } from './spinAutoRotate';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
-import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
+import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { PivotFraming } from '../../../@types/camera/PivotFraming';
 
+/** `autoRotateElapsedMs` is the caller's read of the spin epoch at this instant. */
 export function applyWheelZoom(
-  clock: CameraClock,
+  runtime: Pick<CameraRuntime, 'follow'>,
   prevActiveId: string,
   base: FramedCameraPose,
   factor: number,
-  autoRotate: { active: boolean; rate: number },
-  nowMs: number,
+  autoRotateRate: number,
+  autoRotateElapsedMs: number,
   pivot: PivotFraming,
 ): CameraPose | null {
   // World arm only (spec §7): in a body arm the wheel routes to the surface gesture.
   if (base.frame !== 'absolute') return null;
-  if (prevActiveId === 'followBody' && clock.followDistanceTarget !== null) {
-    clock.followDistanceTarget = zoomedDistance(clock.followDistanceTarget, factor, pivot);
+  const follow = runtime.follow;
+  if (prevActiveId === 'followBody' && follow !== null && follow.distanceTarget !== null) {
+    runtime.follow = {
+      ...follow,
+      distanceTarget: zoomedDistance(follow.distanceTarget, factor, pivot),
+    };
     return null;
   }
   if (prevActiveId === 'autoRotate') {
-    // The REAL active bit, not a constant: with auto-rotate switched off between
-    // frames the elapsed reads 0 and this degrades to the plain zoomed base.
-    const elapsed = autoRotateElapsed(clock, autoRotate.active, base, nowMs);
-    return zoomedPose(spinAutoRotate(base.pose, autoRotate.rate, elapsed), factor, pivot);
+    return zoomedPose(
+      spinAutoRotate(base.pose, autoRotateRate, autoRotateElapsedMs),
+      factor,
+      pivot,
+    );
   }
   return zoomedPose(base.pose, factor, pivot);
 }

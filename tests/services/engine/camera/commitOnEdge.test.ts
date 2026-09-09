@@ -24,7 +24,11 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import { runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
-import { tweenElapsed } from '../../../../src/services/engine/camera/cameraClock';
+import {
+  advanceEpoch,
+  advanceEpochs,
+  elapsedMs,
+} from '../../../../src/services/engine/camera/cameraEpochs';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -51,18 +55,30 @@ function simulateFrame(
   nowMs: number,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
   const rootState = store.getState();
-  const { clock, lastPose, prevActiveId } = engineState.cameraRuntime;
+  const { lastPose, prevActiveId } = engineState.cameraRuntime;
 
-  const pose = runCameraDrivers(drivers, rootState, clock, nowMs);
+  // Step 1: the epoch advance at the winner (the clip row as the player would
+  // hand it over), then produce off the advanced rows.
   const currActiveId = activeDriverId(drivers, rootState);
+  const prevEpochs = engineState.cameraRuntime.epochs;
+  const epochs = advanceEpochs(prevEpochs, {
+    intent: rootState.camera,
+    focus: rootState.selectionRows.focus,
+    clip: advanceEpoch(prevEpochs.clip, rootState.camera.clip, nowMs),
+    winnerId: currActiveId,
+    nowMs,
+  });
+  engineState.cameraRuntime.epochs = epochs;
+  const pose = runCameraDrivers(drivers, rootState, epochs, nowMs);
 
   // Step 2: Tween completion.
   let committed = false;
-  if (currActiveId === 'tween' && rootState.camera.tween !== null) {
-    const elapsed = tweenElapsed(clock, rootState.camera.tween, nowMs);
-    if (elapsed >= rootState.camera.tween.durationMs) {
-      store.dispatch(cancelCameraTween());
-    }
+  if (
+    currActiveId === 'tween' &&
+    rootState.camera.tween !== null &&
+    elapsedMs(epochs.tween, nowMs) >= rootState.camera.tween.durationMs
+  ) {
+    store.dispatch(cancelCameraTween());
   }
 
   // Step 3: Commit-on-edge. On a deactivation edge the frame renders the
@@ -130,8 +146,8 @@ describe('commitOnEdge — tween settles', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    // Arrival frame primes the clock (elapsed 0); subsequent frames advance it.
-    simulateFrame(state, store, drivers, 0); // arrival: primes clock
+    // Arrival frame starts the epoch (elapsed 0); subsequent frames read off it.
+    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
     simulateFrame(state, store, drivers, 100); // elapsed 100, mid-tween
     simulateFrame(state, store, drivers, 200); // elapsed 200 >= durationMs → cancel
 
@@ -161,7 +177,7 @@ describe('commitOnEdge — tween settles', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0); // arrival: primes clock
+    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
     // Cancel frame: elapsed 200 >= durationMs, cancelCameraTween dispatched,
     // driver STILL shows as 'tween' this frame (cancel takes effect next frame).
     const frame1 = simulateFrame(state, store, drivers, 200); // cancel frame
@@ -189,7 +205,7 @@ describe('commitOnEdge — tween settles', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0); // arrival: primes clock
+    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
     simulateFrame(state, store, drivers, 200); // cancel frame: elapsed 200 >= durationMs, lastPose := saturated TO
     simulateFrame(state, store, drivers, 220); // commit frame: base := lastPose == TO
 
@@ -222,7 +238,7 @@ describe('commitOnEdge — tween settles', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0); // arrival: primes clock
+    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
     simulateFrame(state, store, drivers, 200); // cancel frame: lastPose := saturated TO
     const edge = simulateFrame(state, store, drivers, 220); // deactivation edge
 
@@ -283,7 +299,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0); // arrival: primes clock, elapsed 0, lastPose == from == base
+    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch, elapsed 0, lastPose == from == base
     simulateFrame(state, store, drivers, 500); // elapsed 500/1000 → yaw interpolated between 0 and 1
 
     // `lastPose.current` must NOT equal the stale `base` (which is still
@@ -314,7 +330,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0); // arrival: primes clock
+    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
     // Mid-tween frame.
     simulateFrame(state, store, drivers, 300);
 

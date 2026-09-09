@@ -11,6 +11,7 @@
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
+import { advanceEpoch, elapsedMs } from '../camera/cameraEpochs';
 import { frameAlignedRoll } from '../camera/frameAlignedRoll';
 import { pivotFraming } from '../camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -130,15 +131,20 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
     }
     if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
       // Followed-body strafe: the pivot-pin owns the target
-      // (`bodyPosition + followPanOffset`), so the pan step's own delta goes
-      // to the clock offset the pin reads. Folding it here — where the delta
+      // (`bodyPosition + panOffset`), so the pan step's own delta goes to the
+      // follow memory's offset the pin reads. Folding it here — where the delta
       // is in hand — is what lets the offset stay clean while the body moves.
-      const off = state.cameraRuntime.clock.followPanOffset;
-      state.cameraRuntime.clock.followPanOffset = [
-        off[0] + next.target[0] - world.target[0],
-        off[1] + next.target[1] - world.target[1],
-        off[2] + next.target[2] - world.target[2],
-      ];
+      const follow = state.cameraRuntime.follow;
+      const off = follow?.panOffset ?? [0, 0, 0];
+      state.cameraRuntime.follow = {
+        from: follow?.from ?? null,
+        distanceTarget: follow?.distanceTarget ?? null,
+        panOffset: [
+          off[0] + next.target[0] - world.target[0],
+          off[1] + next.target[1] - world.target[1],
+          off[2] + next.target[2] - world.target[2],
+        ],
+      };
     }
     register.current = absoluteArm(next);
   };
@@ -190,14 +196,24 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         const root = store.getState();
         // Captured BEFORE the call: the followBody branch scales this in
         // place, and the roll ride below needs the notch's pre/post pair.
-        const followTargetBefore = state.cameraRuntime.clock.followDistanceTarget;
+        const followTargetBefore = state.cameraRuntime.follow?.distanceTarget ?? null;
+        // The spin epoch as THIS frame's advance will see it (same `nowMs`,
+        // same `active ? base : null` ref), read without storing: with
+        // auto-rotate switched off between frames the elapsed is 0 and the
+        // notch degrades to the plain zoomed base.
+        const { active, rate } = root.camera.autoRotate;
+        const spinEpoch = advanceEpoch(
+          state.cameraRuntime.epochs.autoRotate,
+          active ? root.camera.base : null,
+          nowMs,
+        );
         const zoomed = applyWheelZoom(
-          state.cameraRuntime.clock,
+          state.cameraRuntime,
           state.cameraRuntime.prevActiveId.current,
           root.camera.base,
           step.factor,
-          root.camera.autoRotate,
-          nowMs,
+          rate,
+          elapsedMs(spinEpoch, nowMs),
           pivotFraming(selectFocusRow(root)),
         );
         // Ruling 8: the world-arm notch also rides the roll target toward the
@@ -230,14 +246,14 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
         } else if (zoomed === null && root.camera.base.frame === 'absolute') {
           // The followBody owner swallowed the distance into its own target;
           // the roll ride must still see the notch's authored altitude move,
-          // which HERE is the followDistanceTarget change — feeding the live
+          // which HERE is the follow `distanceTarget` change — feeding the live
           // pose twice gave the ride a zero target delta and left the band
           // roll frozen on the default (focused) path. Pre/post = the live
           // rendered pose at the OLD and NEW target distances (the ease
           // arrives there; the roll may lead it by the sub-second ease lag).
           // Landed on `base.roll`, which the follow pose lerps toward.
           const basePose = root.camera.base.pose;
-          const followTargetAfter = state.cameraRuntime.clock.followDistanceTarget;
+          const followTargetAfter = state.cameraRuntime.follow?.distanceTarget ?? null;
           // Authored pair (like the branch above): the ride's pre/post poses
           // must live below the projection, or the roll target chases a
           // forward the commit path never holds.

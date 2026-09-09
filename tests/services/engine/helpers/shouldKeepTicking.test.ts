@@ -92,10 +92,10 @@ function makeState(over: {
     },
     cam: null,
     // The follow-approach-ease term reads these two: the frame's winner id and
-    // the follow clock's start. Default is at-rest (resting won, no ease running).
+    // the follow epoch's start. Default is at-rest (resting won, no ease running).
     cameraRuntime: {
       prevActiveId: { current: over.followWinner === true ? 'followBody' : 'resting' },
-      clock: { followStartMs: over.followStartMs ?? null },
+      epochs: { follow: { ref: null, startMs: over.followStartMs ?? null } },
     },
     subsystems: {
       texturedDisks: null,
@@ -251,7 +251,7 @@ describe('shouldKeepTicking', () => {
       cam: null,
       cameraRuntime: {
         prevActiveId: { current: 'resting' },
-        clock: { followStartMs: null },
+        epochs: { follow: { ref: null, startMs: null } },
       },
       subsystems: {
         texturedDisks: null,

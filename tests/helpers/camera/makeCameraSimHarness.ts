@@ -12,7 +12,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { buildCameraDrivers } from '../../../src/services/engine/camera/cameraDrivers';
-import { createCameraClock } from '../../../src/services/engine/camera/cameraClock';
+import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
 import { createInputAggregator } from '../../../src/services/engine/subsystems/inputAggregator';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { createSurfaceController } from '../../../src/services/camera/surfaceController';
@@ -30,6 +30,7 @@ import { poseAtHR } from './poseAtHR';
 import type { SimBodyId } from './SimBodyId';
 import type { CameraSimHarnessOptions } from './CameraSimHarnessOptions';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
+import type { CameraEpochs } from '../../../src/@types/engine/camera/CameraEpochs';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
@@ -69,7 +70,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     gpu: { galaxyPointRenderer: null, renderTargets: null, milkyWayCloud: null },
     subsystems: {
       scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
-      clipPlayer: { tick: () => {} },
+      clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },
       inputAggregator: createInputAggregator(),
     },
     cam: {
@@ -84,7 +85,8 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       far: 1000,
     } as unknown as OrbitCamera,
     cameraRuntime: {
-      clock: createCameraClock(),
+      epochs: UNSTARTED_EPOCHS,
+      follow: null,
       projection: { fovYRad, aspect: 1, near: 0.01, far: 50000 },
       lastPose: { current: absoluteArm(neutralPose) },
       displayedPose: { current: absoluteArm(neutralPose) },
@@ -104,7 +106,6 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     state.subsystems.clipPlayer = createClipPlayer({
       store,
       requestRender: () => {},
-      clock: state.cameraRuntime.clock,
       getEngineState: () => state,
     });
   }

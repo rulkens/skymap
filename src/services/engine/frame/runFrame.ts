@@ -4,9 +4,9 @@
  * this exact order: (0) drain input, (1) produce from the driver table, (2)
  * tween completion, (3) commit-on-edge, (3b) pivot-pin, (3c) THE FOLD (world
  * arm resolved once, regime normalised), (4) update the pose Resources —
- * AUTHORED pose to `lastPose`, projected pose to `displayedPose`. The clock is
- * advanced exactly once per frame, by step 1. Then the frame context, the
- * planners, the GPU dispatch and the keep-ticking vote.
+ * AUTHORED pose to `lastPose`, projected pose to `displayedPose`. The epochs
+ * advance exactly once per frame, in step 1 once the winner is known. Then the
+ * frame context, the planners, the GPU dispatch and the keep-ticking vote.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -30,7 +30,7 @@ import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
-import { tweenElapsed, frameTweenElapsed } from '../camera/cameraClock';
+import { advanceEpochs, elapsedMs } from '../camera/cameraEpochs';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
@@ -82,11 +82,15 @@ const publishBodyDistanceGate = throttleByTime(250);
  */
 const LIVE_IDLE_TICK_MS = 500;
 
+/** The pin's strafe while no follow memory exists. */
+const NO_PAN: Vec3 = [0, 0, 0];
+
 /** `nowMs` is `performance.now()`-shaped, passed in so tests drive the timing. */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   // First statement, by contract: scene cues fired here (fade / show / hide /
-  // focus) are in the store before this frame derives masks, demand or the pose.
-  state.subsystems.clipPlayer.tick(nowMs);
+  // focus) are in the store before this frame derives masks, demand or the pose,
+  // and a frameTween a cue dispatches is seen by this frame's basis.
+  const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
   // The masks are a per-frame projection of settings + fade opacity, never a
   // hand-maintained mirror; demand itself reads settings directly.
@@ -128,9 +132,23 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // repoint.
   state.cameraRuntime.lastRenderedSimDays.current = simDays;
 
-  // (1) The one clock advance per frame.
-  const pose = runCameraDrivers(deps.drivers, rootState, state.cameraRuntime.clock, nowMs);
+  // (1) The one epoch advance per frame, keyed on the winner; every elapsed
+  // read below is off these rows at this `nowMs`.
   const activeId = activeDriverId(deps.drivers, rootState);
+  const prevEpochs = state.cameraRuntime.epochs;
+  const epochs = advanceEpochs(prevEpochs, {
+    intent: rootState.camera,
+    focus: rootState.selectionRows.focus,
+    clip: clipEpoch,
+    winnerId: activeId,
+    nowMs,
+  });
+  state.cameraRuntime.epochs = epochs;
+  // The follow memory belongs to one focus row: a fresh row (a same-body
+  // re-select included) drops it, and the driver re-captures against the new
+  // target on its next produce.
+  if (epochs.follow.ref !== prevEpochs.follow.ref) state.cameraRuntime.follow = null;
+  const pose = runCameraDrivers(deps.drivers, rootState, epochs, nowMs);
 
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
   // `settings.orientation` when a switch starts, so the eye holds still through
@@ -138,37 +156,32 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // `upBasis`, NOT `poseBasis`: it seeds the next switch's `fromQuat`, and a
   // re-switch mid-roll must compose from the live pole.
   const poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation];
+  const rollElapsed = elapsedMs(epochs.frameTween, nowMs);
   const upBasis = resolveFrameBasis(
     rootState.settings.orientation,
     rootState.camera.frameTween,
-    state.cameraRuntime.clock,
-    nowMs,
+    rollElapsed,
   );
   state.cameraRuntime.upBasis.current = upBasis;
 
-  // Re-calling `frameTweenElapsed` is safe: the ref is unchanged, so the reset
-  // branch does not fire. `EASE` clamps, so this frame's basis is already the
-  // destination; clearing only affects the next frame's getState.
-  if (rootState.camera.frameTween !== null) {
-    const rollElapsed = frameTweenElapsed(
-      state.cameraRuntime.clock,
-      rootState.camera.frameTween,
-      nowMs,
-    );
-    if (rollElapsed >= rootState.camera.frameTween.durationMs) {
-      deps.cb.store.dispatch(clearFrameTween());
-    }
+  // `EASE` clamps, so this frame's basis is already the destination; clearing
+  // only affects the next frame's getState.
+  if (
+    rootState.camera.frameTween !== null &&
+    rollElapsed >= rootState.camera.frameTween.durationMs
+  ) {
+    deps.cb.store.dispatch(clearFrameTween());
   }
 
   // (2) After produce (the pose is already saturated at `to`) and before
   // commit-on-edge: the cancel lands next frame, when the tween deactivates and
   // the edge commits `lastPose` — exactly one commit, exactly at `to`.
-  // Re-calling `tweenElapsed` is safe: same ref, so no clock reset.
-  if (activeId === 'tween' && rootState.camera.tween !== null) {
-    const elapsed = tweenElapsed(state.cameraRuntime.clock, rootState.camera.tween, nowMs);
-    if (elapsed >= rootState.camera.tween.durationMs) {
-      deps.cb.store.dispatch(cancelCameraTween());
-    }
+  if (
+    activeId === 'tween' &&
+    rootState.camera.tween !== null &&
+    elapsedMs(epochs.tween, nowMs) >= rootState.camera.tween.durationMs
+  ) {
+    deps.cb.store.dispatch(cancelCameraTween());
   }
 
   // (3) `lastPose.current` still holds the PREVIOUS frame's pose here (step 4
@@ -204,15 +217,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // (3b) The pin SETS the target (never adds), so baking `renderPose` into
   // `base` on the next edge cannot double-apply the body translation. A pan
-  // strafe rides `followPanOffset` (world frame) so the shifted pivot still
-  // translate-follows the body.
-  const clock = state.cameraRuntime.clock;
+  // strafe rides the follow memory's `panOffset` (world frame) so the shifted
+  // pivot still translate-follows the body.
   renderPose = applyFocusedBodyPivot(
     renderPose,
     pivotsOnFocusedBody,
     pivotFocus,
     simDays,
-    clock.followPanOffset,
+    state.cameraRuntime.follow?.panOffset ?? NO_PAN,
   );
   // Post-pin, PRE-projection: the projection below reaches the register on no
   // path (R12b-1).
