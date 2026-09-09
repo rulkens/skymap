@@ -291,10 +291,14 @@ toward the rule.
 |                                      | which frame is held fixed (H1 hard flip) |
 
 Only the last is observable: outside, the ground drifts under an inertially
-placed camera; inside, the ground is nailed and the sky sweeps. At the flip
-(0.4 R) and real-time rate the ground-drift rate is `ω⊕·R/h` = 1.8e-4 rad/s
-(0.0105°/s) — 8.5× the rate at Q6's old 3.4 R edge, and still far below
-perception. **H1 ships; the measurement is an acceptance item under an
+placed camera; inside, the ground is nailed and the sky sweeps. The band has
+two edges and they differ by 2×: at the RELEASE edge (0.4 R) the real-time
+ground-drift rate `ω⊕·R/h` is 1.8e-4 rad/s (0.010°/s), 8.5× the rate at Q6's
+old 3.4 R edge; at the ENGAGE edge (0.2 R) it is 3.6e-4 rad/s (0.021°/s), 17×
+Q6's figure and at the classical minimum-perceptible-velocity threshold. So
+the inbound flip is the one that has to be looked at, not argued away — it
+needs the T22 feel gate to attest it. **H1 ships; the measurement is an
+acceptance item under an
 accelerated clock (§11); H2 — smoothstepping the co-rotation rate over ~1 s —
 is the bounded escalation path and is spent only on adverse evidence**
 (ruled, Q7).
@@ -608,10 +612,13 @@ Each is a requirement on the engaged arm, and each is one test:
   slides the view at rest.
 - **FW-D** a gesture's rate currency does not alternate frame-to-frame across
   the limb; per-event step magnitude is bounded on both signs.
-- **FW-E** sanity only: ground drift at the flip is imperceptible at real-time
-  rate — at 0.4 R, `ω⊕·R/h` = 1.8e-4 rad/s (0.0105°/s), 8.5× the rate at Q6's
-  3.4 R edge and still far below perception. The perceptual derivation no
-  longer sets the band (ruled Q6).
+- **FW-E** ground drift at the flip, real-time rate, stated per edge: at the
+  release edge 0.4 R `ω⊕·R/h` = 1.8e-4 rad/s (0.010°/s), 8.5× the rate at Q6's
+  3.4 R edge and below perception; at the engage edge 0.2 R it is 3.6e-4 rad/s
+  (0.021°/s), 17× Q6's figure and at the classical minimum-perceptible-velocity
+  threshold. "Trivially true" therefore no longer holds on the inbound flip:
+  that one is attested by the T22 feel gate, not by this arithmetic. The
+  perceptual derivation no longer sets the band (ruled Q6).
 - **FW-F** while engaged the tracked ground point does not slide under an
   accelerated clock: `ω × r` residual is exactly zero, not small.
 - **FW-G** the rendered sightline and the interaction register are the same
