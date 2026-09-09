@@ -57,10 +57,19 @@ export type CameraSimHarnessOptions = {
   /** h/R over `focusBody` (or Earth) the boot pose starts at; `null` skips
    * seeding a pose — the fixture seeds its own via `seedPose`. */
   readonly bootHR?: number | null;
+  /** Distance (Mpc) of the neutral origin-centred pose used when `bootHR` is
+   * `null` — no store commit, just what `cameraRuntime` starts holding. */
+  readonly neutralDistance?: number;
 };
 
 export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
-  const { fovDeg = 60, canvasSize = 100, focusBody = 'earth', bootHR = 10 } = options;
+  const {
+    fovDeg = 60,
+    canvasSize = 100,
+    focusBody = 'earth',
+    bootHR = 10,
+    neutralDistance = 100,
+  } = options;
   const fovYRad = (fovDeg * Math.PI) / 180;
 
   const store = configureStore({ reducer: rootReducer });
@@ -71,7 +80,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const radiusM = (id: SimBodyId): number => SCENE_BODIES.find((b) => b.id === id)!.radiusM;
 
   const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-  const neutralPose: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+  const neutralPose: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: neutralDistance };
 
   const state = {
     settings: { camera: { fovDeg }, orientation: DEFAULT_ORIENTATION },
