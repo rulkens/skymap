@@ -1,10 +1,10 @@
 /**
  * cameraDrivers — unit tests for the store-reading driver table and resolver.
  * `pickWinner` and `activeDriverId` must always agree (invariant 1).
- * `runCameraDrivers` passes elapsed in different units per winner: ms for
- * tween/autoRotate, seconds for clip, 0 for orbitDrag/resting. Fixtures use a
- * real `RootState` via `configureStore({ reducer: rootReducer })` so the
- * shape stays in sync with the actual slices.
+ * `runCameraDrivers` passes elapsed milliseconds to the winner (0 for the rows
+ * whose pose ignores it). Fixtures use a real `RootState` via
+ * `configureStore({ reducer: rootReducer })` so the shape stays in sync with
+ * the actual slices.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -461,26 +461,24 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     }
   });
 
-  it('passes elapsed in SECONDS to the clip driver via runCameraDrivers', () => {
-    // elapsedForWinner is module-private; drive the assertion through
-    // runCameraDrivers + a spy on the clip row's pose, mirroring how the
-    // orbitDrag-elapsed test is done above.
+  it("the clip driver's pose at 1500 ms matches the pose at 1.5 s of clip time", () => {
+    // Guards the whole epoch→pose unit chain end to end: yaw ramps 0 → 2 rad
+    // linearly over 3 s, so 1.5 s in it reads exactly 1. Asserting the authored
+    // keyframe rather than re-running evaluateClip is what makes a dropped or
+    // doubled ms→s conversion visible here.
+    const clipData: ClipData = {
+      start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
+      timeline: [{ kind: 'set', ch: 'yaw', to: 2, over: 3, ease: 'linear', space: 'lin' }],
+    };
     const store = makeStore();
-    store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
-    store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION }));
     const s = store.getState() as unknown as RootState;
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
     const installMs = 1000;
     const epochs = epochsAt(s, 'clip', installMs);
 
-    // Spy-patch the clip pose to capture the elapsed value passed in.
-    const poseSpy = vi.fn<(s: RootState, e: number) => FramedCameraPose>(() => s.camera.base);
-    const patchedDrivers = drivers.map((d) => (d.id === 'clip' ? { ...d, pose: poseSpy } : d));
-
-    // 1500 ms after the clip epoch started: 1500 / 1000 = 1.5 s.
-    runCameraDrivers(patchedDrivers, s, epochs, installMs + 1500);
-    expect(poseSpy).toHaveBeenCalledTimes(1);
-    expect(poseSpy.mock.calls[0]![1]).toBeCloseTo(1.5, 5);
+    const pose = worldArmOf(runCameraDrivers(drivers, s, epochs, installMs + 1500));
+    expect(pose.yaw).toBeCloseTo(1, 6);
   });
 });
 

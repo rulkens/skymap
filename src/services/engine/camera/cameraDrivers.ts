@@ -45,13 +45,8 @@ export function pickWinner(drivers: readonly CameraDriver[], s: RootState): Came
   return winner ?? drivers[0]!;
 }
 
-/**
- * UNIT NOTE: each driver reads the value in its own unit — `clip` expects
- * SECONDS (`evaluateClip`'s `elapsedSec`), the easing drivers ms. Do not
- * "fix" the clip arm to multiply by 1000.
- */
 function elapsedForWinner(winner: CameraDriver, epochs: CameraEpochs, nowMs: number): number {
-  if (winner.id === 'clip') return elapsedMs(epochs.clip, nowMs) / 1000;
+  if (winner.id === 'clip') return elapsedMs(epochs.clip, nowMs);
   if (winner.id === 'tween') return elapsedMs(epochs.tween, nowMs);
   if (winner.id === 'autoRotate') return elapsedMs(epochs.autoRotate, nowMs);
   if (winner.id === 'followBody') return elapsedMs(epochs.follow, nowMs);
@@ -86,14 +81,13 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
       // discarded at pointerup (`drainInput` swallows the steps too).
       commitsOnEdge: true,
       isActive: (s) => s.camera.clip !== null,
-      // `elapsed` is SECONDS. `clip.frame` (pinned at dispatch) is the STEADY
-      // basis the path's tangents encode through — a fixed reference keeps
-      // `evaluateClip`'s compile cache stable across an orientation switch;
-      // the result is re-encoded into the CURRENT frame (by reference when
-      // the bases match).
-      pose: (s, elapsed) => {
+      // `clip.frame` (pinned at dispatch) is the STEADY basis the path's
+      // tangents encode through — a fixed reference keeps `evaluateClip`'s
+      // compile cache stable across an orientation switch; the result is
+      // re-encoded into the CURRENT frame (by reference when the bases match).
+      pose: (s, elapsedMs) => {
         const clip = s.camera.clip!;
-        const evaluated = evaluateClip(clip.data, elapsed, ORIENTATION_FRAMES[clip.frame]);
+        const evaluated = evaluateClip(clip.data, elapsedMs / 1000, ORIENTATION_FRAMES[clip.frame]);
         return absoluteArm(
           reencodePose(
             evaluated,

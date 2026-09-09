@@ -1,7 +1,7 @@
 /**
  * clipPlayer — the impure complement of the pure clip driver: per tick it fires
- * the scene cues whose `atSec` falls in `(prevElapsed, elapsed]`, advances the
- * `clipOpacity` channel, and runs clip-completion lifecycle. It holds no
+ * the scene cues whose `atSec` falls in `(prevElapsedSec, elapsedSec]`, advances
+ * the `clipOpacity` channel, and runs clip-completion lifecycle. It holds no
  * reference to the camera runtime: the clip epoch comes in through `tick` and
  * goes back out, rebased on a loop wrap.
  */
@@ -42,8 +42,8 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
 
   const clipOpacity = createClipOpacityChannel();
 
-  // Cue cursor, SECONDS. -Infinity so a cue at atSec=0 fires on the arrival frame.
-  let prevElapsed = -Infinity;
+  // -Infinity so a cue at atSec=0 fires on the arrival frame.
+  let prevElapsedSec = -Infinity;
 
   // Two-frame deferred completion: `tick` runs BEFORE the produce step, so a
   // `clipEnded` on the frame elapsed first reaches `durationSec` would leave the
@@ -67,7 +67,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
 
   function resetState(): void {
     pendingEnd = false;
-    prevElapsed = -Infinity;
+    prevElapsedSec = -Infinity;
     clipOpacity.reset();
     compileCache = null;
   }
@@ -110,27 +110,26 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     if (clip === null) return { clipEpoch: advanced };
 
     const compiled = getCompiled(clip.data);
-    // SECONDS: the timeline's `atSec` / `durationSec` unit.
-    const elapsed = elapsedMs(advanced, nowMs) / 1000;
+    const elapsedSec = elapsedMs(advanced, nowMs) / 1000;
 
     clipOpacity.tick(nowMs);
 
     // `compiled.cues` is sorted ascending by atSec.
     for (const cue of compiled.cues) {
-      if (cue.atSec > prevElapsed && cue.atSec <= elapsed) {
+      if (cue.atSec > prevElapsedSec && cue.atSec <= elapsedSec) {
         fireCue(cue, nowMs);
       }
     }
-    prevElapsed = elapsed;
+    prevElapsedSec = elapsedSec;
 
-    if (elapsed >= compiled.durationSec) {
+    if (elapsedSec >= compiled.durationSec) {
       if (clip.data.loop) {
         // Rebased, not snapped: the overshoot carries into the next lap so a
         // slow frame costs no drift per cycle. The cursor rewinds with it so a
         // top-of-timeline cue re-fires. A looping clip ends only via `stop()`.
-        const overshoot = elapsed - compiled.durationSec;
-        prevElapsed = -Infinity;
-        return { clipEpoch: { ...advanced, startMs: nowMs - overshoot * 1000 } };
+        const overshootSec = elapsedSec - compiled.durationSec;
+        prevElapsedSec = -Infinity;
+        return { clipEpoch: { ...advanced, startMs: nowMs - overshootSec * 1000 } };
       }
       pendingEnd = true;
     }
@@ -152,7 +151,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     clipOpacity.reset();
     compileCache = null;
     pendingEnd = false;
-    prevElapsed = -Infinity;
+    prevElapsedSec = -Infinity;
     // Settles an in-flight `playClip` so the awaiter unwinds; the store is
     // deliberately left untouched.
     fireEndResolver();

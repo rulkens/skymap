@@ -5,8 +5,6 @@
  * resting 0; the gaps are renumber-free headroom, `resting` is always active so
  * a winner always exists, and followBody sits BELOW autoRotate on purpose — a
  * body focus pins the pivot, but autoRotate or a drag still own the orbit terms.
- * `elapsedMs` is a generic name: each driver owns its unit, and the clip driver
- * reads it as SECONDS (`evaluateClip` takes `elapsedSec`).
  */
 
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
