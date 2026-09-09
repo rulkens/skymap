@@ -21,6 +21,7 @@ export type OrientationTuningProps = {
    */
   readonly rememberedTiltReadout: string;
 };
+import type { SurfaceBandKnob } from '../../@types/camera/SurfaceBandKnob';
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import {
   setSurfaceBand,
@@ -30,8 +31,31 @@ import {
 import DebugSlider from './DebugSlider';
 import styles from './OrientationTuning.module.css';
 
+type TuningState = { readonly tick: number; readonly lastClamped: SurfaceBandKnob };
+/** `clamped` omitted: a re-render bump unrelated to the band knobs. */
+type TuningAction = { readonly clamped?: SurfaceBandKnob };
+
+function tuningReducer(state: TuningState, action: TuningAction): TuningState {
+  return {
+    tick: state.tick + 1,
+    lastClamped: action.clamped === undefined ? state.lastClamped : action.clamped,
+  };
+}
+
+/** Ruling 19's ×1.10 clamp, surfaced live rather than left to the tooltip. */
+function hysteresisReadoutOf(
+  limits: typeof SURFACE_BAND_LIMITS,
+  lastClamped: SurfaceBandKnob,
+): string {
+  const ratio = SURFACE_REGIME.disengageHR / SURFACE_REGIME.engageHR;
+  if (Math.abs(ratio - limits.minRatio) < 1e-9) {
+    return `AT FLOOR (${lastClamped ?? '?'} yielded)`;
+  }
+  return `${ratio.toFixed(2)} (floor ${limits.minRatio.toFixed(2)})`;
+}
+
 function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): ReactNode {
-  const [, bump] = useReducer((n: number) => n + 1, 0);
+  const [{ lastClamped }, dispatch] = useReducer(tuningReducer, { tick: 0, lastClamped: null });
   const limits = SURFACE_BAND_LIMITS;
   return (
     <div className={styles.root}>
@@ -40,6 +64,10 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         <span>remembered_tilt_rad</span>
         <span>{rememberedTiltReadout}</span>
       </div>
+      <div className={styles.readoutRow}>
+        <span>hysteresis (dis/eng)</span>
+        <span>{hysteresisReadoutOf(limits, lastClamped)}</span>
+      </div>
       <DebugSlider
         label="engage h/R"
         value={SURFACE_REGIME.engageHR}
@@ -47,10 +75,10 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         max={limits.engageMax}
         step={0.05}
         readout={SURFACE_REGIME.engageHR.toFixed(2)}
-        title="h/R at which the body arm takes over (default 0.2)"
+        title="h/R at which the body arm takes over (default 0.2; disengage kept > this × 1.1)"
         onChange={(v) => {
-          setSurfaceBand({ engageHR: v });
-          bump();
+          const clamped = setSurfaceBand({ engageHR: v });
+          dispatch({ clamped });
         }}
       />
       <DebugSlider
@@ -62,8 +90,8 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         readout={SURFACE_REGIME.disengageHR.toFixed(2)}
         title="h/R at which it hands back (default 0.4; kept > engage × 1.1)"
         onChange={(v) => {
-          setSurfaceBand({ disengageHR: v });
-          bump();
+          const clamped = setSurfaceBand({ disengageHR: v });
+          dispatch({ clamped });
         }}
       />
       <label className={styles.toggle}>
@@ -72,7 +100,7 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
           checked={ORIENT_TUNING.blendSpace === 'log'}
           onChange={(e) => {
             ORIENT_TUNING.blendSpace = e.target.checked ? 'log' : 'lin';
-            bump();
+            dispatch({});
           }}
         />
         log(h/R) blend-space
@@ -83,7 +111,7 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
           checked={ORIENT_TUNING.northUp}
           onChange={(e) => {
             ORIENT_TUNING.northUp = e.target.checked;
-            bump();
+            dispatch({});
           }}
         />
         north-up framing

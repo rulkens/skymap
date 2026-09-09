@@ -6,6 +6,8 @@
  * regime and orientation band together: ruling 10 forbids them diverging.
  * Writes go through `setSurfaceBand`, which owns the clamps. Session-only.
  */
+import type { SurfaceBandKnob } from '../../@types/camera/SurfaceBandKnob';
+
 export const SURFACE_REGIME = {
   /**
    * h/R at which the body arm takes over. Q6 ruled ~1.7 R ≈ 11,000 km;
@@ -33,12 +35,15 @@ export const SURFACE_BAND_LIMITS = {
  * The one write path for the band edges: clamps each knob to its range,
  * then keeps the hysteresis open — the knob the caller moved wins, the
  * other yields (moving disengage below the floor pulls engage down;
- * moving engage above it pushes disengage up).
+ * moving engage above it pushes disengage up). Returns which knob the
+ * hysteresis floor moved (never the one the caller patched), or `null`
+ * when the floor needed no correction — the debug readout's "AT FLOOR"
+ * state names the moved knob from this, rather than re-deriving it.
  */
 export function setSurfaceBand(patch: {
   readonly engageHR?: number;
   readonly disengageHR?: number;
-}): void {
+}): SurfaceBandKnob {
   const L = SURFACE_BAND_LIMITS;
   if (patch.engageHR !== undefined) {
     SURFACE_REGIME.engageHR = Math.min(L.engageMax, Math.max(L.engageMin, patch.engageHR));
@@ -52,8 +57,10 @@ export function setSurfaceBand(patch: {
   if (SURFACE_REGIME.disengageHR < SURFACE_REGIME.engageHR * L.minRatio) {
     if (patch.disengageHR !== undefined && patch.engageHR === undefined) {
       SURFACE_REGIME.engageHR = Math.max(L.engageMin, SURFACE_REGIME.disengageHR / L.minRatio);
-    } else {
-      SURFACE_REGIME.disengageHR = Math.min(L.disengageMax, SURFACE_REGIME.engageHR * L.minRatio);
+      return 'engage';
     }
+    SURFACE_REGIME.disengageHR = Math.min(L.disengageMax, SURFACE_REGIME.engageHR * L.minRatio);
+    return 'disengage';
   }
+  return null;
 }
