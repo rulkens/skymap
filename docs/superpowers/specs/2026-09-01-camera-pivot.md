@@ -253,7 +253,10 @@ export const SURFACE_REGIME = {
 the body arm too far out. Every place below that cites "3.4 R", "1.71 R", or
 the Q6 figures is describing the band shape at the values in force at the
 time of writing; the live numbers are always `SURFACE_REGIME.engageHR` /
-`.disengageHR`, never restated.
+`.disengageHR`, never restated. The retune also moved the engage edge to where
+the notch grid already puts `bodyUpWeight` at 1 to rounding, so the Δtilt
+across the abs→body flip measures 0.00042 rad at the default cadence (0.0134
+on the Q6 edges).
 
 No change to `BodyRelativePose`, `BodyPoseProvider`, `Slab`, `SlabFrame`, or
 any layer type. The seam type does not move.
@@ -288,11 +291,13 @@ toward the rule.
 |                                      | which frame is held fixed (H1 hard flip) |
 
 Only the last is observable: outside, the ground drifts under an inertially
-placed camera; inside, the ground is nailed and the sky sweeps. At 3.4 R and
-real-time rate the onset is far below perception. **H1 ships; the measurement
-is an acceptance item under an accelerated clock (§11); H2 — smoothstepping the
-co-rotation rate over ~1 s — is the bounded escalation path and is spent only
-on adverse evidence** (ruled, Q7).
+placed camera; inside, the ground is nailed and the sky sweeps. At the flip
+(0.4 R) and real-time rate the ground-drift rate is `ω⊕·R/h` = 1.8e-4 rad/s
+(0.0105°/s) — 8.5× the rate at Q6's old 3.4 R edge, and still far below
+perception. **H1 ships; the measurement is an acceptance item under an
+accelerated clock (§11); H2 — smoothstepping the co-rotation rate over ~1 s —
+is the bounded escalation path and is spent only on adverse evidence**
+(ruled, Q7).
 
 **The trade, stated for the record:** engaging this high means Earth stops
 visibly rotating once engaged — geostationary hover, sun and stars sweep under
@@ -447,8 +452,8 @@ export function maxTiltRad(hOverR: number): number; // = tiltMaxRad · smoothste
 180° at ground level closing smoothly to **exactly 0° at
 `SURFACE_REGIME.disengageHR`** — the Q4 identity, one shared constant, one
 assertion (`maxTiltRad(disengageHR) === 0`). With the shipped values the curve
-crosses 90° at `(disengage + full)/2 ≈ 1.71 R`, i.e. the horizon is reachable
-right where the regime engages and the sky opens below that; both are
+crosses 90° at `(disengage + full)/2 = 0.21 R ≈ 1,338 km`, i.e. the horizon is
+reachable right where the regime engages and the sky opens below that; both are
 feel-tunable, no published reference exists for either (M §3).
 
 **Enforcement is orientation-only, applied after every write to the body arm**:
@@ -604,8 +609,9 @@ Each is a requirement on the engaged arm, and each is one test:
 - **FW-D** a gesture's rate currency does not alternate frame-to-frame across
   the limb; per-event step magnitude is bounded on both signs.
 - **FW-E** sanity only: ground drift at the flip is imperceptible at real-time
-  rate (trivially true at 3.4 R — the perceptual derivation no longer sets the
-  band, ruled Q6).
+  rate — at 0.4 R, `ω⊕·R/h` = 1.8e-4 rad/s (0.0105°/s), 8.5× the rate at Q6's
+  3.4 R edge and still far below perception. The perceptual derivation no
+  longer sets the band (ruled Q6).
 - **FW-F** while engaged the tracked ground point does not slide under an
   accelerated clock: `ω × r` residual is exactly zero, not small.
 - **FW-G** the rendered sightline and the interaction register are the same
@@ -787,8 +793,8 @@ coordinates exactly (prior art Q4c): the picked point keeps its pixel to the
 bit, and altitude is untouched. Moving the eye is not the thing §12-R3 forbids —
 that rule is about enforcement correcting a pose the user drove; this is a
 gesture-authored write, the form the tilt drag already uses. Its residual is
-**screen-up's** azimuth rather than `headingTiltAt`'s heading: the two agree
-for a roll-free pose, but a dive accumulates roll, and nulling forward's
+**screen-up's** azimuth (`refAzimuthOf`) rather than forward's heading: the two
+agree for a roll-free pose, but a dive accumulates roll, and nulling forward's
 azimuth instead drove a measured polar dive through north-up and back out.
 
 **Small-body engage feel — flagged, not built.** Every planet/moon registry row
@@ -869,7 +875,8 @@ drag rotation against hand-computed two-ray fixtures at the equator, at 80°
 latitude, and across the pole; the zoom round trip (260 out, 260 in, cursor
 parked) asserting return-to-start; `maxTiltRad` against the invariant and the
 90°-crossing; the nadir escape (heading from the up vector inside ~0.08° of
-vertical) and its pole escape, now pinned via `headingTiltAt`.
+vertical) and its pole escape, now pinned via `refAzimuthOf` /
+`tiltFromNadirRad`.
 
 **Frame-loop.** The fold runs after every pose writer, at one site (assert the
 call order, the FW-G finding); a gesture in flight blocks the arm change; the
