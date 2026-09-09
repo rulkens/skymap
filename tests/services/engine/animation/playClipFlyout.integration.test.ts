@@ -9,7 +9,11 @@
 import { describe, it, expect } from 'vitest';
 
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
-import { runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
+import {
+  elapsedForWinner,
+  runCameraDrivers,
+} from '../../../../src/services/engine/camera/cameraDrivers';
+import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
 import { advanceEpochs } from '../../../../src/services/engine/camera/cameraEpochs';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
@@ -64,7 +68,16 @@ function simulateFrame(
     nowMs,
   });
   engineState.cameraRuntime.epochs = epochs;
-  const pose = runCameraDrivers(drivers, freshState, epochs, nowMs);
+  const { pose } = runCameraDrivers(
+    drivers,
+    makeDriverCtx({
+      state: freshState,
+      elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),
+      register: lastPose.current,
+      winnerLastFrame: prevActiveId.current,
+    }),
+    engineState.cameraRuntime.follow,
+  );
 
   // Step 3 — commit-on-edge. Mirror the production property-based guard in
   // runFrame.ts: fire commitCameraPose when the prev driver had commitsOnEdge.
@@ -116,10 +129,6 @@ describe('playClip — flyout seam', () => {
       distance: LIVE_START_DISTANCE,
     });
 
-    // The real driver table, built by the harness. `buildCameraDrivers` takes
-    // an EngineState but the driver closures only read the Redux RootState at
-    // call time — the EngineState parameter is structurally unused (see
-    // cameraDrivers.ts).
     const drivers = deps.drivers;
 
     // The real clipPlayer; `simulateFrame` threads the clip epoch it returns

@@ -23,7 +23,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
-import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
@@ -121,7 +121,7 @@ function makeHarness() {
     device: {},
     context: {},
     timingService: {},
-    drivers: buildCameraDrivers(state),
+    drivers: CAMERA_DRIVERS,
   } as unknown as RunFrameDeps;
   store.dispatch(commitCameraPose(absoluteArm(poseAtHR(5))));
   store.dispatch(

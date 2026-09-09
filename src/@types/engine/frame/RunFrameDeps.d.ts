@@ -37,7 +37,7 @@ export type RunFrameDeps = {
    */
   timingService: GpuTimingService;
   /**
-   * Camera-control drivers, built once at loop start. The resolver
+   * Camera-control drivers (`CAMERA_DRIVERS`, overridable by a fixture). The resolver
    * (`runCameraDrivers`) picks the single highest-priority active winner
    * each frame and is also the source of truth for "is the camera
    * animating" (render-on-demand gate). Order in this array is not

@@ -22,7 +22,11 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
-import { runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
+import {
+  elapsedForWinner,
+  runCameraDrivers,
+} from '../../../../src/services/engine/camera/cameraDrivers';
+import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
 import {
   advanceEpoch,
@@ -69,7 +73,16 @@ function simulateFrame(
     nowMs,
   });
   engineState.cameraRuntime.epochs = epochs;
-  const pose = runCameraDrivers(drivers, rootState, epochs, nowMs);
+  const { pose } = runCameraDrivers(
+    drivers,
+    makeDriverCtx({
+      state: rootState,
+      elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),
+      register: lastPose.current,
+      winnerLastFrame: prevActiveId.current,
+    }),
+    engineState.cameraRuntime.follow,
+  );
 
   // Step 2: Tween completion.
   let committed = false;

@@ -1,12 +1,11 @@
 /**
- * CameraDriver — camera precedence as DATA: the resolver calls only the
- * highest-priority active driver's `pose` (single writer, no blending).
- * Ranking clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 > followBody 10 >
- * resting 0; the gaps are renumber-free headroom, `resting` is always active so
- * a winner always exists, and followBody sits BELOW autoRotate on purpose — a
- * body focus pins the pivot, but autoRotate or a drag still own the orbit terms.
+ * CameraDriver — one row of the camera precedence table, which is DATA: the
+ * resolver calls only the highest-priority active row's `pose` (single writer,
+ * no blending). The ranking and its rationale live with the table itself.
  */
 
+import type { DriverCtx } from './DriverCtx';
+import type { FollowMemory } from './FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { RootState } from '../../../store/types';
 
@@ -23,5 +22,10 @@ export type CameraDriver = {
   // included, and leave this unset so their own target is honoured.
   readonly pivotsOnFocusedBody?: boolean;
   isActive(s: RootState): boolean;
-  pose(s: RootState, elapsedMs: number): FramedCameraPose;
+  // Takes the frame as values and RETURNS its memory: a row that owns none
+  // hands `mem` straight back, so the winner's adoption needs no branch.
+  pose(
+    ctx: DriverCtx,
+    mem: FollowMemory | null,
+  ): { readonly pose: FramedCameraPose; readonly memory: FollowMemory | null };
 };

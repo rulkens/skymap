@@ -10,8 +10,8 @@
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
+import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
@@ -19,7 +19,6 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { authoredWorldPose } from '../helpers/authoredWorldPose';
 import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
@@ -45,134 +44,147 @@ export function pickWinner(drivers: readonly CameraDriver[], s: RootState): Came
   return winner ?? drivers[0]!;
 }
 
-function elapsedForWinner(winner: CameraDriver, epochs: CameraEpochs, nowMs: number): number {
-  if (winner.id === 'clip') return elapsedMs(epochs.clip, nowMs);
-  if (winner.id === 'tween') return elapsedMs(epochs.tween, nowMs);
-  if (winner.id === 'autoRotate') return elapsedMs(epochs.autoRotate, nowMs);
-  if (winner.id === 'followBody') return elapsedMs(epochs.follow, nowMs);
+/**
+ * The winner → epoch-row mapping, in one place. `epochs` must already be
+ * advanced for this frame (`runFrame` does it once, at the winner).
+ */
+export function elapsedForWinner(winnerId: string, epochs: CameraEpochs, nowMs: number): number {
+  if (winnerId === 'clip') return elapsedMs(epochs.clip, nowMs);
+  if (winnerId === 'tween') return elapsedMs(epochs.tween, nowMs);
+  if (winnerId === 'autoRotate') return elapsedMs(epochs.autoRotate, nowMs);
+  if (winnerId === 'followBody') return elapsedMs(epochs.follow, nowMs);
   return 0;
 }
 
-/** `epochs` must already be advanced for this frame (`runFrame` does it once, at the winner). */
 export function runCameraDrivers(
   drivers: readonly CameraDriver[],
-  s: RootState,
-  epochs: CameraEpochs,
-  nowMs: number,
-): FramedCameraPose {
-  const winner = pickWinner(drivers, s);
-  return winner.pose(s, elapsedForWinner(winner, epochs, nowMs));
+  ctx: DriverCtx,
+  mem: FollowMemory | null,
+): {
+  readonly pose: FramedCameraPose;
+  readonly winner: CameraDriver;
+  readonly memory: FollowMemory | null;
+} {
+  const winner = pickWinner(drivers, ctx.state);
+  const { pose, memory } = winner.pose(ctx, mem);
+  return { pose, winner, memory };
 }
 
 const NO_FOLLOW_MEMORY: FollowMemory = { from: null, distanceTarget: null, panOffset: [0, 0, 0] };
 
-/**
- * The six-row table. `state` is closed over by `orbitDrag` (the live gesture
- * register) and `followBody` (the body snapshot, lens FOV and follow memory);
- * the other rows read only `RootState`.
- */
-export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] {
-  return [
-    {
-      id: 'clip',
-      priority: 95,
-      // Holds the camera above orbitDrag in EITHER arm: a gesture handed back
-      // to a clip whose commit-on-edge bakes its own final pose would be
-      // discarded at pointerup (`drainInput` swallows the steps too).
-      commitsOnEdge: true,
-      isActive: (s) => s.camera.clip !== null,
-      // `clip.frame` (pinned at dispatch) is the STEADY basis the path's
-      // tangents encode through — a fixed reference keeps `evaluateClip`'s
-      // compile cache stable across an orientation switch; the result is
-      // re-encoded into the CURRENT frame (by reference when the bases match).
-      pose: (s, elapsedMs) => {
-        const clip = s.camera.clip!;
-        const evaluated = evaluateClip(clip.data, elapsedMs / 1000, ORIENTATION_FRAMES[clip.frame]);
-        return absoluteArm(
+/** The six rows. Constant data: a driver sees the frame only through its `ctx`. */
+export const CAMERA_DRIVERS: readonly CameraDriver[] = [
+  {
+    id: 'clip',
+    priority: 95,
+    // Holds the camera above orbitDrag in EITHER arm: a gesture handed back
+    // to a clip whose commit-on-edge bakes its own final pose would be
+    // discarded at pointerup (`drainInput` swallows the steps too).
+    commitsOnEdge: true,
+    isActive: (s) => s.camera.clip !== null,
+    // `clip.frame` (pinned at dispatch) is the STEADY basis the path's
+    // tangents encode through — a fixed reference keeps `evaluateClip`'s
+    // compile cache stable across an orientation switch; the result is
+    // re-encoded into the CURRENT frame (by reference when the bases match).
+    pose: (ctx, mem) => {
+      const s = ctx.state;
+      const clip = s.camera.clip!;
+      const evaluated = evaluateClip(
+        clip.data,
+        ctx.elapsedMs / 1000,
+        ORIENTATION_FRAMES[clip.frame],
+      );
+      return {
+        pose: absoluteArm(
           reencodePose(
             evaluated,
             ORIENTATION_FRAMES[clip.frame],
             ORIENTATION_FRAMES[s.settings.orientation],
           ),
-        );
-      },
+        ),
+        memory: mem,
+      };
     },
-    {
-      id: 'orbitDrag',
-      priority: 80,
-      // The pin overwrites the dragged target with the live body, so a drag
-      // orbits AROUND a moving body; a no-op on a body arm, so one row serves
-      // both arms.
-      pivotsOnFocusedBody: true,
-      isActive: (s) => s.camera.dragging,
-      // The AUTHORED register, pre-projection (R12b-1): producing the displayed
-      // pose here re-pins its tilted angles and walks the eye every held frame.
-      pose: () => state.cameraRuntime.lastPose.current,
-    },
-    {
-      id: 'followBody',
-      priority: 10,
-      // Bakes the last follow pose into `base` on focus loss, so lower drivers
-      // resume from where the camera is.
-      commitsOnEdge: true,
-      // Idempotent (the pose already targets the body); keeps the pin's rule uniform.
-      pivotsOnFocusedBody: true,
-      // Active only for a body the sim clock MOVES: a static focus (a famous
-      // star, the Sun) carries a position but is not followed. Gated on the
-      // absolute arm (spec §7): the ease has no meaning once the state
-      // co-rotates with the body.
-      isActive: (s) =>
-        s.camera.base.frame === 'absolute' && bodyMovesThisFrame(s.selectionRows.focus),
-      pose: (s, elapsed) => {
-        const focus = s.selectionRows.focus;
-        const base = s.camera.base;
-        const livePos = liveBodyPosition(focus, state.cameraRuntime.lastRenderedSimDays.current);
-        // Null-guard keeps the arm total; isActive already proved a moving body.
-        if (focus === null || focus.type !== 'body' || livePos === null) return base;
-        if (base.frame !== 'absolute') return base;
+  },
+  {
+    id: 'orbitDrag',
+    priority: 80,
+    // The pin overwrites the dragged target with the live body, so a drag
+    // orbits AROUND a moving body; a no-op on a body arm, so one row serves
+    // both arms.
+    pivotsOnFocusedBody: true,
+    isActive: (s) => s.camera.dragging,
+    // The AUTHORED register, pre-projection (R12b-1): producing the displayed
+    // pose here re-pins its tilted angles and walks the eye every held frame.
+    pose: (ctx, mem) => ({ pose: ctx.register, memory: mem }),
+  },
+  {
+    id: 'followBody',
+    priority: 10,
+    // Bakes the last follow pose into `base` on focus loss, so lower drivers
+    // resume from where the camera is.
+    commitsOnEdge: true,
+    // Idempotent (the pose already targets the body); keeps the pin's rule uniform.
+    pivotsOnFocusedBody: true,
+    // Active only for a body the sim clock MOVES: a static focus (a famous
+    // star, the Sun) carries a position but is not followed. Gated on the
+    // absolute arm (spec §7): the ease has no meaning once the state
+    // co-rotates with the body.
+    isActive: (s) =>
+      s.camera.base.frame === 'absolute' && bodyMovesThisFrame(s.selectionRows.focus),
+    pose: (ctx, mem) => {
+      const s = ctx.state;
+      const focus = s.selectionRows.focus;
+      const base = s.camera.base;
+      const livePos = liveBodyPosition(focus, ctx.simDays);
+      // Null-guard keeps the arm total; isActive already proved a moving body.
+      if (focus === null || focus.type !== 'body' || livePos === null) {
+        return { pose: base, memory: mem };
+      }
+      if (base.frame !== 'absolute') return { pose: base, memory: mem };
 
-        // Captured ONCE per activation (`runFrame` nulls the memory on the focus
-        // edge) through the EYE, not the angles: `approachTiltedPose` is eye-preserving
-        // by construction, so authored and displayed registers now yield an
-        // identical capture (why eye, not angle, is carried across — R12b-1).
-        // Eye-preserving against the NEW target: `from` is read against
-        // `livePos` below, so a capture relative to the OLD target silently
-        // changes meaning on a body switch — an Earth-orbit distance read from
-        // Saturn's centre is INSIDE Saturn, where the fold engages and the
-        // absolute-arm gate strands the camera.
-        const memory = state.cameraRuntime.follow ?? NO_FOLLOW_MEMORY;
-        let from = memory.from;
-        if (from === null) {
-          const cur = authoredWorldPose(state);
-          const pb = ORIENTATION_FRAMES[state.settings.orientation];
-          const eye = eyeMpcOf(cur, pb);
-          const rel: Vec3 = [livePos[0] - eye[0], livePos[1] - eye[1], livePos[2] - eye[2]];
-          const ang = orbitAnglesLookingAlong(rel, pb);
-          from = {
-            target: [livePos[0], livePos[1], livePos[2]],
-            yaw: ang.yaw,
-            pitch: ang.pitch,
-            distance: Math.hypot(rel[0], rel[1], rel[2]),
-            roll: cur.roll,
-          };
-        }
+      // Captured ONCE per activation (`runFrame` nulls the memory on the focus
+      // edge) through the EYE, not the angles: `approachTiltedPose` is eye-preserving
+      // by construction, so authored and displayed registers now yield an
+      // identical capture (why eye, not angle, is carried across — R12b-1).
+      // Eye-preserving against the NEW target: `from` is read against
+      // `livePos` below, so a capture relative to the OLD target silently
+      // changes meaning on a body switch — an Earth-orbit distance read from
+      // Saturn's centre is INSIDE Saturn, where the fold engages and the
+      // absolute-arm gate strands the camera.
+      const memory = mem ?? NO_FOLLOW_MEMORY;
+      let from = memory.from;
+      if (from === null) {
+        const cur = ctx.authoredWorld;
+        const pb = ORIENTATION_FRAMES[s.settings.orientation];
+        const eye = eyeMpcOf(cur, pb);
+        const rel: Vec3 = [livePos[0] - eye[0], livePos[1] - eye[1], livePos[2] - eye[2]];
+        const ang = orbitAnglesLookingAlong(rel, pb);
+        from = {
+          target: [livePos[0], livePos[1], livePos[2]],
+          yaw: ang.yaw,
+          pitch: ang.pitch,
+          distance: Math.hypot(rel[0], rel[1], rel[2]),
+          roll: cur.roll,
+        };
+      }
 
-        // Distance target, two sources (see FollowMemory): a fresh focus seeds
-        // the framing distance — `bodyFocusDistance` directly, allocation-free,
-        // only on this branch; follow re-winning after a drag committed a zoom
-        // (`prevActiveId !== 'followBody'`, same focus ref) re-captures
-        // `base.distance` so the zoom sticks.
-        let distanceTarget = memory.distanceTarget;
-        if (distanceTarget === null) {
-          const radiusMpc = focus.radiusM * SCALE_UNITS.M_TO_MPC;
-          distanceTarget = bodyFocusDistance(radiusMpc, state.cameraRuntime.projection.fovYRad);
-        } else if (state.cameraRuntime.prevActiveId.current !== 'followBody') {
-          distanceTarget = base.pose.distance;
-        }
-        state.cameraRuntime.follow = { from, distanceTarget, panOffset: memory.panOffset };
+      // Distance target, two sources (see FollowMemory): a fresh focus seeds
+      // the framing distance — `bodyFocusDistance` directly, allocation-free,
+      // only on this branch; follow re-winning after a drag committed a zoom
+      // (`winnerLastFrame !== 'followBody'`, same focus ref) re-captures
+      // `base.distance` so the zoom sticks.
+      let distanceTarget = memory.distanceTarget;
+      if (distanceTarget === null) {
+        const radiusMpc = focus.radiusM * SCALE_UNITS.M_TO_MPC;
+        distanceTarget = bodyFocusDistance(radiusMpc, ctx.projection.fovYRad);
+      } else if (ctx.winnerLastFrame !== 'followBody') {
+        distanceTarget = base.pose.distance;
+      }
 
-        const t = easeOutCubic(elapsed / FOCUS_TWEEN_MS);
-        return absoluteArm({
+      const t = easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);
+      return {
+        pose: absoluteArm({
           target: livePos,
           // Eases toward the committed `base`: honours a post-follow drag, keeps heading when un-dragged.
           yaw: lerp(from.yaw, base.pose.yaw, t),
@@ -182,59 +194,69 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           // lands per wheel notch, and dropping it pinned a followed approach
           // to scene-frame up until the engage edge.
           roll: lerp(from.roll ?? 0, base.pose.roll ?? 0, t),
-        });
-      },
+        }),
+        memory: { from, distanceTarget, panOffset: memory.panOffset },
+      };
     },
-    {
-      id: 'tween',
-      priority: 60,
-      // Bakes the final pose on deactivation; it is already in the CURRENT
-      // frame, so the commit never bakes a stale pinned-frame reading.
-      commitsOnEdge: true,
-      isActive: (s) => s.camera.tween !== null,
-      // `tween.frame` (pinned at dispatch) is the STEADY basis `from`/`to` were
-      // captured through; `tweenToClip` memoises by reference so
-      // `evaluateClip`'s compile cache reuses tracks across frames.
-      pose: (s, elapsedMs) => {
-        const tween = s.camera.tween!;
-        const evaluated = evaluateClip(
-          tweenToClip(tween),
-          elapsedMs / 1000,
-          ORIENTATION_FRAMES[tween.frame],
-        );
-        return absoluteArm(
+  },
+  {
+    id: 'tween',
+    priority: 60,
+    // Bakes the final pose on deactivation; it is already in the CURRENT
+    // frame, so the commit never bakes a stale pinned-frame reading.
+    commitsOnEdge: true,
+    isActive: (s) => s.camera.tween !== null,
+    // `tween.frame` (pinned at dispatch) is the STEADY basis `from`/`to` were
+    // captured through; `tweenToClip` memoises by reference so
+    // `evaluateClip`'s compile cache reuses tracks across frames.
+    pose: (ctx, mem) => {
+      const s = ctx.state;
+      const tween = s.camera.tween!;
+      const evaluated = evaluateClip(
+        tweenToClip(tween),
+        ctx.elapsedMs / 1000,
+        ORIENTATION_FRAMES[tween.frame],
+      );
+      return {
+        pose: absoluteArm(
           reencodePose(
             evaluated,
             ORIENTATION_FRAMES[tween.frame],
             ORIENTATION_FRAMES[s.settings.orientation],
           ),
-        );
-      },
+        ),
+        memory: mem,
+      };
     },
-    {
-      id: 'autoRotate',
-      priority: 20,
-      commitsOnEdge: true,
-      pivotsOnFocusedBody: true,
-      // Absolute arm only (spec §7): a yaw spin about the frame pole is not a
-      // thing a body-fixed arm expresses.
-      isActive: (s) => s.camera.autoRotate.active && s.camera.base.frame === 'absolute',
-      // Spins from the FROZEN base (it only changes on a commit edge), so yaw
-      // advances at the cumulative rate, not a per-frame delta off a moving base.
-      pose: (s, elapsedMs) => {
-        const base = s.camera.base;
-        // The isActive gate restated as the narrowing TS needs.
-        if (base.frame !== 'absolute') return base;
-        return absoluteArm(spinAutoRotate(base.pose, s.camera.autoRotate.rate, elapsedMs));
-      },
+  },
+  {
+    id: 'autoRotate',
+    priority: 20,
+    commitsOnEdge: true,
+    pivotsOnFocusedBody: true,
+    // Absolute arm only (spec §7): a yaw spin about the frame pole is not a
+    // thing a body-fixed arm expresses.
+    isActive: (s) => s.camera.autoRotate.active && s.camera.base.frame === 'absolute',
+    // Spins from the FROZEN base (it only changes on a commit edge), so yaw
+    // advances at the cumulative rate, not a per-frame delta off a moving base.
+    pose: (ctx, mem) => {
+      const base = ctx.state.camera.base;
+      // The isActive gate restated as the narrowing TS needs.
+      if (base.frame !== 'absolute') return { pose: base, memory: mem };
+      return {
+        pose: absoluteArm(
+          spinAutoRotate(base.pose, ctx.state.camera.autoRotate.rate, ctx.elapsedMs),
+        ),
+        memory: mem,
+      };
     },
-    {
-      id: 'resting',
-      priority: 0,
-      // Pivots too, so 'every orbit driver pivots on the focused body' holds without exception.
-      pivotsOnFocusedBody: true,
-      isActive: () => true,
-      pose: (s) => s.camera.base,
-    },
-  ];
-}
+  },
+  {
+    id: 'resting',
+    priority: 0,
+    // Pivots too, so 'every orbit driver pivots on the focused body' holds without exception.
+    pivotsOnFocusedBody: true,
+    isActive: () => true,
+    pose: (ctx, mem) => ({ pose: ctx.state.camera.base, memory: mem }),
+  },
+];

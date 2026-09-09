@@ -19,7 +19,7 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { drainInput } from './drainInput';
-import { runCameraDrivers } from '../camera/cameraDrivers';
+import { runCameraDrivers, elapsedForWinner } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
@@ -29,7 +29,7 @@ import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotRadiusMpc, pivotFraming } from '../camera/pivotRadiusMpc';
 import { advanceEpochs, elapsedMs } from '../camera/cameraEpochs';
 import { resolveFrameBasis } from '../camera/resolveFrameBasis';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
@@ -148,14 +148,40 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // re-select included) drops it, and the driver re-captures against the new
   // target on its next produce.
   if (epochs.follow.ref !== prevEpochs.follow.ref) state.cameraRuntime.follow = null;
-  const pose = runCameraDrivers(deps.drivers, rootState, epochs, nowMs);
-
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
   // `settings.orientation` when a switch starts, so the eye holds still through
-  // a roll and only up rotates (`upBasis`, the live B(t)). The Resource gets
-  // `upBasis`, NOT `poseBasis`: it seeds the next switch's `fromQuat`, and a
-  // re-switch mid-roll must compose from the live pole.
+  // a roll and only up rotates (`upBasis`, the live B(t)).
   const poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation];
+
+  // The drivers read the frame only through this bag; the winner's memory is
+  // adopted, the losers' discarded. `authoredWorld` is `authoredWorldPose`
+  // spelled against values this frame already holds, and takes the PREVIOUS
+  // frame's `upBasis` — the write below is the produce step's successor.
+  const { pose, memory } = runCameraDrivers(
+    deps.drivers,
+    {
+      state: rootState,
+      elapsedMs: elapsedForWinner(activeId, epochs, nowMs),
+      register: state.cameraRuntime.lastPose.current,
+      authoredWorld: resolveWorldArm(
+        state.cameraRuntime.lastPose.current,
+        bodyStates,
+        poseBasis,
+        state.cameraRuntime.upBasis.current,
+      ),
+      winnerLastFrame: state.cameraRuntime.prevActiveId.current,
+      simDays,
+      projection: state.cameraRuntime.projection,
+      pivot: pivotFraming(rootState.selectionRows.focus),
+      // Task 8 routes the swallowed wheel notch here.
+      zoomToFollow: null,
+    },
+    state.cameraRuntime.follow,
+  );
+  state.cameraRuntime.follow = memory;
+
+  // The Resource gets `upBasis`, NOT `poseBasis`: it seeds the next switch's
+  // `fromQuat`, and a re-switch mid-roll must compose from the live pole.
   const rollElapsed = elapsedMs(epochs.frameTween, nowMs);
   const upBasis = resolveFrameBasis(
     rootState.settings.orientation,

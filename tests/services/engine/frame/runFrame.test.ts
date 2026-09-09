@@ -87,7 +87,7 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 });
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
-import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -236,8 +236,10 @@ function makeState(): EngineState {
       epochs: UNSTARTED_EPOCHS,
       follow: null,
       projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
-      displayedPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
+      lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }) },
+      displayedPose: {
+        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
+      },
       prevActiveId: { current: 'resting' as string },
       // runFrame writes this once per frame (single writer) beside the body
       // snapshot prime — the box must exist for that assignment.
@@ -270,7 +272,7 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     context: {} as unknown as GPUCanvasContext,
     // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
-    drivers: buildCameraDrivers({} as unknown as EngineState),
+    drivers: CAMERA_DRIVERS,
   };
 }
 
@@ -321,7 +323,7 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
       clientWidth: 100,
       clientHeight: 100,
     } as unknown as HTMLCanvasElement,
-    drivers: buildCameraDrivers(state),
+    drivers: CAMERA_DRIVERS,
   };
 }
 
@@ -765,9 +767,12 @@ describe('runFrame — sim clock (Task 8)', () => {
       id: 'stub',
       priority: 1000,
       isActive: () => true,
-      pose: () => {
+      pose: (_ctx, mem) => {
         timeOrder.log.push('produce');
-        return absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 });
+        return {
+          pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
+          memory: mem,
+        };
       },
     };
     const deps: RunFrameDeps = { ...makeCamDeps(state, store), drivers: [stub] };

@@ -11,7 +11,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { buildCameraDrivers } from '../../../src/services/engine/camera/cameraDrivers';
+import { CAMERA_DRIVERS } from '../../../src/services/engine/camera/cameraDrivers';
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
 import { createInputAggregator } from '../../../src/services/engine/subsystems/inputAggregator';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
@@ -121,7 +121,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     device: {},
     context: {},
     timingService: {},
-    drivers: buildCameraDrivers(state),
+    drivers: CAMERA_DRIVERS,
   } as unknown as RunFrameDeps;
 
   /** Commit `framed` to the store and seed both pose Resources with it. */
