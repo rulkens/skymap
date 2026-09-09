@@ -17,6 +17,7 @@ import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
 import type { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';
+import type { SkyCubemapCaptureRuntime } from './SkyCubemapCaptureRuntime';
 import type { SelectionState } from '../../store/SelectionState';
 import type { SelectionRowsState } from '../../store/SelectionRowsState';
 import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
@@ -43,6 +44,12 @@ export type EngineState = {
    * by `wireInput`'s bootstrap seed once the initial camera exists.
    */
   cameraRuntime: CameraRuntime;
+  /**
+   * The black-hole lens's sky-cubemap bake bookkeeping — render state, not
+   * camera state; written by `renderFrame`, read by the `sky-cubemap`
+   * render-target row's `allocateWhen`.
+   */
+  skyCubemapCapture: SkyCubemapCaptureRuntime;
   assetSlots: EngineAssetSlots;
   /**
    * One-shot transient request flags read by demand predicates via

@@ -21,6 +21,7 @@ import { createCameraClock } from './camera/cameraClock';
 import { createSurfaceController } from '../camera/surfaceController';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
+import type { SkyCubemapCaptureRuntime } from '../../@types/engine/state/SkyCubemapCaptureRuntime';
 import { CONST_J2000 } from '../../data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
@@ -126,14 +127,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
     surface: createSurfaceController(),
     lastZoomFactor: { current: null },
-    // `renderFrame` is the sole writer once the lensing band first goes active.
-    skyCubemapCapture: {
-      bandActive: false,
-      // Far outside the band pre-boot, so the row's hysteresis margin can't
-      // mistake "never measured" for "just closed".
-      gcDistanceMpc: Number.POSITIVE_INFINITY,
-      bakedSettings: null,
-    },
+  };
+
+  // Sky-cubemap bake bookkeeping — false/infinity/null until the first frame
+  // the lensing band goes active; `renderFrame` is the sole writer thereafter.
+  const skyCubemapCapture: SkyCubemapCaptureRuntime = {
+    lastBandActive: false,
+    // Far outside the band pre-boot, so the row's hysteresis margin can't
+    // mistake "never measured" for "just closed".
+    lastGcDistanceMpc: Number.POSITIVE_INFINITY,
+    bakedSettings: null,
   };
 
   const store = cb.store;
@@ -318,6 +321,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     cam: null,
     cameraRuntime,
+    skyCubemapCapture,
     // The Maps are declared up-front so consumers can reach a slot without a null
     // check, but the slots themselves are minted in `wireSlots`: their commit
     // closures re-read GPU handles at call time and null-guard, rather than assuming

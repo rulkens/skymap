@@ -55,7 +55,12 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const radiusM = (id: SimBodyId): number => SCENE_BODIES.find((b) => b.id === id)!.radiusM;
 
   const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-  const neutralPose: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: neutralDistance };
+  const neutralPose: CameraPose = {
+    target: [0, 0, 0],
+    yaw: 0,
+    pitch: 0,
+    distance: neutralDistance,
+  };
 
   const state = {
     settings: { camera: { fovDeg }, orientation: DEFAULT_ORIENTATION },
@@ -86,11 +91,11 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       upBasis: { current: [...B] },
       surface: createSurfaceController(),
       lastZoomFactor: { current: null },
-      skyCubemapCapture: {
-        bandActive: false,
-        gcDistanceMpc: Number.POSITIVE_INFINITY,
-        bakedSettings: null,
-      },
+    },
+    skyCubemapCapture: {
+      lastBandActive: false,
+      lastGcDistanceMpc: Number.POSITIVE_INFINITY,
+      bakedSettings: null,
     },
   } as unknown as EngineState;
 

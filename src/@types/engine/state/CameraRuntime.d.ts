@@ -14,7 +14,6 @@ import type { CameraProjection } from '../../camera/CameraProjection';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { SurfaceController } from '../../camera/SurfaceController';
 import type { Mat3 } from '../../math/Mat3';
-import type { SkyCubemapCaptureRuntime } from './SkyCubemapCaptureRuntime';
 
 export type CameraRuntime = {
   /** Mutated by tweenElapsed / autoRotateElapsed once per frame. */
@@ -65,6 +64,4 @@ export type CameraRuntime = {
    * line; null until the first notch. `drainInput` is the writer.
    */
   lastZoomFactor: { current: number | null };
-  /** The black-hole lens's sky-cubemap bake bookkeeping; single-writer `renderFrame`. */
-  skyCubemapCapture: SkyCubemapCaptureRuntime;
 };
