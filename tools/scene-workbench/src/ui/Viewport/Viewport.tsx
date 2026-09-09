@@ -2,23 +2,24 @@
  * Viewport — owns the <canvas>, the WebGPU device, the input rig, and the rAF
  * frame driver. The scene itself lives in `resources` (`RenderResources`),
  * created here and handed to the loading sagas via `registerSagaContext`: they
- * own every write to it, this component only reads it each frame. The context
- * is registered only once `initGpu` resolves — that dispatch is what starts the
- * registry → group load, and the group loader uploads into the device found
- * here. The driver reads the store directly, never `useAppSelector`: a frame
- * must not be a render.
+ * own every write to it, this component only reads it each frame. The camera
+ * uniform and renderer set are device-lifetime — built once after `initGpu`
+ * resolves, disposed only on unmount, never rebuilt on a group switch. The
+ * driver reads the store directly, never `useAppSelector`: a frame must not
+ * be a render.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 
 import { initGpu, resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
 import { createSceneInput } from '../../input/createSceneInput';
-import { createLidarPointRenderer } from '../../render/lidarPointRenderer';
+import { createLidarPointRenderer, type LidarPointRenderer } from '../../render/lidarPointRenderer';
 import {
   createRenderResources,
   disposeScene,
   type LidarGpuAsset,
   type RenderResources,
 } from '../../render/renderResources';
+import { createSceneCameraUniform, type SceneCameraUniform } from '../../render/sceneCameraUniform';
 import { sceneCameraView } from '../../render/sceneCameraView';
 import { deviceLost } from '../../state/view/viewSlice';
 import type { RegisterSagaContext, SceneStore } from '../../store/types';
@@ -63,6 +64,8 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     const canvas: HTMLCanvasElement = canvasEl;
 
     const resources = createRenderResources();
+    let cameraUniform: SceneCameraUniform | null = null;
+    let lidar: LidarPointRenderer | null = null;
     let disposed = false;
     let rafHandle = 0;
     // Starts true so the first frame after the device lands always draws.
@@ -90,7 +93,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       if (state.view.deviceLost) return; // stop for good — the device is gone
       rafHandle = requestAnimationFrame(frame);
       const { gpu } = resources;
-      if (!gpu) return;
+      if (!gpu || !cameraUniform || !lidar) return;
 
       // Ahead of the dirty gate: draining is what turns a gesture into one.
       input.drain();
@@ -100,20 +103,30 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       if (!dirty) return;
       dirty = false;
 
-      // Lazily built (and rebuilt after a `disposeScene`) so the pipeline is
-      // created on the device the sagas uploaded into, never a stale one.
-      const lidar = (resources.lidar ??= createLidarPointRenderer(gpu, gpu.format));
       const view = sceneCameraView(input.getCameraPose(), [canvas.width, canvas.height]);
+      cameraUniform.write(view, state.view.display.pointCloud.pointSizePx);
 
       const encoder = gpu.device.createCommandEncoder({ label: 'scene-workbench-frame' });
-      lidar.draw(
-        encoder,
-        gpu.context.getCurrentTexture().createView(),
-        depthViewFor(gpu.device, resources, canvas.width, canvas.height),
-        view,
-        visibleAssets(state.view.hiddenAssetIds),
-        state.view.display.pointCloud.pointSizePx,
-      );
+      const pass = encoder.beginRenderPass({
+        label: 'scene-workbench-pass',
+        colorAttachments: [
+          {
+            view: gpu.context.getCurrentTexture().createView(),
+            clearValue: { r: 0, g: 0, b: 0, a: 1 },
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ],
+        depthStencilAttachment: {
+          view: depthViewFor(gpu.device, resources, canvas.width, canvas.height),
+          depthClearValue: 1,
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store',
+        },
+      });
+      pass.setBindGroup(0, cameraUniform.bindGroup);
+      lidar.draw(pass, visibleAssets(state.view.hiddenAssetIds));
+      pass.end();
       gpu.device.queue.submit([encoder.finish()]);
     };
 
@@ -128,6 +141,8 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       .then((gpu) => {
         if (disposed) return;
         resources.gpu = gpu;
+        cameraUniform = createSceneCameraUniform(gpu.device);
+        lidar = createLidarPointRenderer(gpu, gpu.format, cameraUniform.layout);
         void gpu.device.lost.then((info) => {
           // 'destroyed' is our own teardown, not a failure.
           if (disposed || info.reason === 'destroyed') return;
@@ -146,6 +161,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       if (rafHandle) cancelAnimationFrame(rafHandle);
       unsubscribe();
       input.destroy();
+      cameraUniform?.dispose();
       disposeScene(resources);
     };
   }, [store, registerSagaContext]);
