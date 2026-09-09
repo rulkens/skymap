@@ -12,7 +12,7 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { BodyLocalRay } from '../../@types/camera/BodyLocalRay';
 import type { Vec2 } from '../../@types/math/Vec2';
-import type { Vec3 } from '../../@types/math/Vec3';
+import { bodyFixedEyeM } from './bodyFixedEyeM';
 
 export function cursorRayBodyLocal(
   pose: BodyFixedPose,
@@ -20,12 +20,8 @@ export function cursorRayBodyLocal(
   viewportPx: Readonly<Vec2>,
   fovYRad: number,
 ): BodyLocalRay {
-  const { anchorLocalM, eyeRelAnchorM, basisLocal } = pose;
-  const originM: Vec3 = [
-    anchorLocalM[0] + eyeRelAnchorM[0],
-    anchorLocalM[1] + eyeRelAnchorM[1],
-    anchorLocalM[2] + eyeRelAnchorM[2],
-  ];
+  const originM = bodyFixedEyeM(pose);
+  const { basisLocal } = pose;
 
   const ndcX = (pixel[0] / viewportPx[0]) * 2 - 1;
   const ndcY = -((pixel[1] / viewportPx[1]) * 2 - 1);

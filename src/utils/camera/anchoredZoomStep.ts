@@ -15,6 +15,7 @@
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { Vec3 } from '../../@types/math/Vec3';
+import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { surfaceFloorM } from './surfaceFloorM';
 
 // Per-notch factor bounds — feel-open until Task 22 (input-mapping tuning).
@@ -28,12 +29,8 @@ export function anchoredZoomStep(
   bodyRadiusM: number,
 ): BodyFixedPose {
   const clampedFactor = Math.min(MAX_FACTOR, Math.max(MIN_FACTOR, factor));
-  const { anchorLocalM, eyeRelAnchorM } = pose;
-  const eyeM: Vec3 = [
-    anchorLocalM[0] + eyeRelAnchorM[0],
-    anchorLocalM[1] + eyeRelAnchorM[1],
-    anchorLocalM[2] + eyeRelAnchorM[2],
-  ];
+  const { anchorLocalM } = pose;
+  const eyeM = bodyFixedEyeM(pose);
 
   // The miss fallback is the eye's own nadir footprint, not the body centre
   // (user ruling, §12-R4): it lies on the eye's radial, so the step scales

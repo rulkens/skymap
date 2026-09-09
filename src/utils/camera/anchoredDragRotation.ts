@@ -14,7 +14,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { raySphereRoots } from '../math/raySphereRoots';
 import { quatFromAxisAngle } from '../math/quatFromAxisAngle';
 import { rotateVec3ByQuat } from '../math/rotateVec3ByQuat';
-import { rotateBasisByQuat } from './rotateBasisByQuat';
+import { poseWithBasisTurn } from './poseWithBasisTurn';
 import { cross3 } from '../math/cross3';
 
 const BODY_CENTRE: Vec3 = [0, 0, 0];
@@ -66,9 +66,8 @@ export function anchoredDragRotation(
   const q = quatFromAxisAngle([axis[0] / sin, axis[1] / sin, axis[2] / sin], Math.atan2(sin, cos));
 
   return {
-    ...pose,
+    ...poseWithBasisTurn(pose, q),
     anchorLocalM: rotateVec3ByQuat(q, pose.anchorLocalM),
     eyeRelAnchorM: rotateVec3ByQuat(q, pose.eyeRelAnchorM),
-    basisLocal: rotateBasisByQuat(q, pose.basisLocal),
   };
 }

@@ -9,16 +9,10 @@
  * render pass already reads (`BodyRelativePose`).
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { BodyRelativePose } from '../../@types/engine/camera/BodyRelativePose';
+import { bodyFixedEyeM } from './bodyFixedEyeM';
 
 export function poseFromBodyArm(pose: BodyFixedPose): BodyRelativePose {
-  const { anchorLocalM, eyeRelAnchorM, basisLocal } = pose;
-  const eyeRelBodyM: Vec3 = [
-    anchorLocalM[0] + eyeRelAnchorM[0],
-    anchorLocalM[1] + eyeRelAnchorM[1],
-    anchorLocalM[2] + eyeRelAnchorM[2],
-  ];
-  return { eyeRelBodyM, basisM: basisLocal };
+  return { eyeRelBodyM: bodyFixedEyeM(pose), basisM: pose.basisLocal };
 }

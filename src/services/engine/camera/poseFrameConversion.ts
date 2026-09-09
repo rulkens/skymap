@@ -28,6 +28,7 @@ import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { raySphereRoots } from '../../../utils/math/raySphereRoots';
 import { surfaceFloorM } from '../../../utils/camera/surfaceFloorM';
+import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { dot3 } from '../../../utils/math/dot3';
 import { bodyRelativePose } from './bodyRelativePose';
 
@@ -79,12 +80,8 @@ export function toWorldArm(
   upBasis: Readonly<Mat3>,
   bodyRadiusM: number,
 ): CameraPose {
-  const { anchorLocalM, eyeRelAnchorM, basisLocal } = pose;
-  const eyeLocalM: Vec3 = [
-    anchorLocalM[0] + eyeRelAnchorM[0],
-    anchorLocalM[1] + eyeRelAnchorM[1],
-    anchorLocalM[2] + eyeRelAnchorM[2],
-  ];
+  const { basisLocal } = pose;
+  const eyeLocalM = bodyFixedEyeM(pose);
   const forwardLocal: Vec3 = [basisLocal[6], basisLocal[7], basisLocal[8]];
   const eyeMagM = Math.hypot(eyeLocalM[0], eyeLocalM[1], eyeLocalM[2]);
 
