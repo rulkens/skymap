@@ -31,8 +31,7 @@ import { surfaceFloorM } from '../../../utils/camera/surfaceFloorM';
 import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { dot3 } from '../../../utils/math/dot3';
 import { bodyRelativePose } from './bodyRelativePose';
-
-const BODY_CENTRE: Vec3 = [0, 0, 0];
+import { BODY_LOCAL_FRAME } from '../../../data/camera/bodyLocalFrame';
 
 export function toBodyArm(
   pose: CameraPose,
@@ -91,7 +90,7 @@ export function toWorldArm(
   // continuously the same number, since `t* − √disc → t*` at tangency (Cesium's
   // `grazingAltitudeLocation`, prior-art Q1). Re-aiming at the body centre on a
   // miss is what popped the scene by `asin(R/d)`.
-  const roots = raySphereRoots(eyeLocalM, forwardLocal, BODY_CENTRE, bodyRadiusM);
+  const roots = raySphereRoots(eyeLocalM, forwardLocal, BODY_LOCAL_FRAME.centreM, bodyRadiusM);
   const grazingM = -dot3(eyeLocalM, forwardLocal);
   // Floored at the eye's altitude — the scale `cam.distance` consumers want
   // when the ray points at sky, and positive, which the encoding needs to carry

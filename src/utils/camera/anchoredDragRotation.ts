@@ -16,8 +16,7 @@ import { quatFromAxisAngle } from '../math/quatFromAxisAngle';
 import { rotateVec3ByQuat } from '../math/rotateVec3ByQuat';
 import { poseWithBasisTurn } from './poseWithBasisTurn';
 import { cross3 } from '../math/cross3';
-
-const BODY_CENTRE: Vec3 = [0, 0, 0];
+import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 
 /**
  * |ray·normal| below this is edge-on enough that the rotation satisfying the
@@ -31,7 +30,7 @@ type PickRay = { readonly originM: Readonly<Vec3>; readonly dir: Readonly<Vec3> 
 
 /** Unit direction of the near pick; `null` on a miss, a hit behind the eye, or grazing. */
 function pickDir(ray: PickRay, radiusM: number): Vec3 | null {
-  const roots = raySphereRoots(ray.originM, ray.dir, BODY_CENTRE, radiusM);
+  const roots = raySphereRoots(ray.originM, ray.dir, BODY_LOCAL_FRAME.centreM, radiusM);
   // Both roots behind the eye is a hit for the quadratic but a miss for a
   // gesture — taking it would grab the far side of the body.
   if (roots === null || roots[0] <= 0) return null;

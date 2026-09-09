@@ -5,7 +5,10 @@ import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { rotateBasisByQuat } from './rotateBasisByQuat';
 import { rotateVec3ByQuat } from '../math/rotateVec3ByQuat';
 
-/** Turn the whole pose — eye and basis — about a body-fixed point. */
+/**
+ * Turn the eye and the basis about a body-fixed point. The anchor stays where
+ * it is, so `eyeRelAnchorM` absorbs the eye's move.
+ */
 export function rotatedAboutPoint(
   pose: BodyFixedPose,
   q: Readonly<Vec4>,

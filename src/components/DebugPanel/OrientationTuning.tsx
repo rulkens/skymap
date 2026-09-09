@@ -10,14 +10,6 @@
 
 import { useReducer, type ReactNode } from 'react';
 
-export type OrientationTuningProps = {
-  /**
-   * The session's remembered tilt (ruling 12), read-only trial observability.
-   * Pre-formatted by the caller (CameraStateSection's `num`), the same
-   * contract as DebugSlider's `readout` — one formatting home per panel.
-   */
-  readonly rememberedTiltReadout: string;
-};
 import type { SurfaceBandKnob } from '../../@types/camera/SurfaceBandKnob';
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import {
@@ -28,31 +20,36 @@ import {
 import DebugSlider from './DebugSlider';
 import styles from './OrientationTuning.module.css';
 
-type TuningState = { readonly tick: number; readonly lastClamped: SurfaceBandKnob };
+export type OrientationTuningProps = {
+  /**
+   * The session's remembered tilt (ruling 12), read-only trial observability.
+   * Pre-formatted by the caller (CameraStateSection's `num`), the same
+   * contract as DebugSlider's `readout` — one formatting home per panel.
+   */
+  readonly rememberedTiltReadout: string;
+};
+
+type TuningState = { readonly lastClamped: SurfaceBandKnob };
 /** `clamped` omitted: a re-render bump unrelated to the band knobs. */
 type TuningAction = { readonly clamped?: SurfaceBandKnob };
 
+// A fresh object every time, so an omitted `clamped` still re-reads the records.
 function tuningReducer(state: TuningState, action: TuningAction): TuningState {
-  return {
-    tick: state.tick + 1,
-    lastClamped: action.clamped === undefined ? state.lastClamped : action.clamped,
-  };
+  return { lastClamped: action.clamped === undefined ? state.lastClamped : action.clamped };
 }
 
 /** Ruling 19's ×1.10 clamp, surfaced live rather than left to the tooltip. */
-function hysteresisReadoutOf(
-  limits: typeof SURFACE_BAND_LIMITS,
-  lastClamped: SurfaceBandKnob,
-): string {
+function hysteresisReadoutOf(lastClamped: SurfaceBandKnob): string {
+  const { minRatio } = SURFACE_BAND_LIMITS;
   const ratio = SURFACE_REGIME.disengageHR / SURFACE_REGIME.engageHR;
-  if (Math.abs(ratio - limits.minRatio) < 1e-9) {
+  if (Math.abs(ratio - minRatio) < 1e-9) {
     return `AT FLOOR (${lastClamped ?? '?'} yielded)`;
   }
-  return `${ratio.toFixed(2)} (floor ${limits.minRatio.toFixed(2)})`;
+  return `${ratio.toFixed(2)} (floor ${minRatio.toFixed(2)})`;
 }
 
 function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): ReactNode {
-  const [{ lastClamped }, dispatch] = useReducer(tuningReducer, { tick: 0, lastClamped: null });
+  const [{ lastClamped }, dispatch] = useReducer(tuningReducer, { lastClamped: null });
   const limits = SURFACE_BAND_LIMITS;
   return (
     <div className={styles.root}>
@@ -63,7 +60,7 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
       </div>
       <div className={styles.readoutRow}>
         <span>hysteresis (dis/eng)</span>
-        <span>{hysteresisReadoutOf(limits, lastClamped)}</span>
+        <span>{hysteresisReadoutOf(lastClamped)}</span>
       </div>
       <DebugSlider
         label="engage h/R"
