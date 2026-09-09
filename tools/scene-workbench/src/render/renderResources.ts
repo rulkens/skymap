@@ -6,11 +6,19 @@ import type { LidarPointRenderer } from './lidarPointRenderer';
  * saga context. `gpu` outlives a dispose; `gpuAssets` is keyed by
  * `SceneAsset.id` (see `disposeScene` for the `epoch` contract).
  */
-export type LidarGpuAsset = { vertexBuffer: GPUBuffer; pointCount: number };
+export type LidarGpuAsset = {
+  readonly kind: 'pointCloud';
+  readonly vertexBuffer: GPUBuffer;
+  readonly pointCount: number;
+  dispose(): void;
+};
+
+/** One member today — a Gaussian-splat asset is the next addition. */
+export type GpuAsset = LidarGpuAsset;
 
 export type RenderResources = {
   gpu: GpuContext | null;
-  gpuAssets: Map<string, LidarGpuAsset>;
+  gpuAssets: Map<string, GpuAsset>;
   lidar: LidarPointRenderer | null;
   depthTexture: GPUTexture | null;
   epoch: number;
@@ -27,7 +35,7 @@ export function createRenderResources(): RenderResources {
  * compares against — see `acceptLoadedAsset`.
  */
 export function disposeScene(resources: RenderResources): void {
-  for (const asset of resources.gpuAssets.values()) asset.vertexBuffer.destroy();
+  for (const asset of resources.gpuAssets.values()) asset.dispose();
   resources.gpuAssets.clear();
   resources.lidar?.dispose();
   resources.lidar = null;
