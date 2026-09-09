@@ -40,6 +40,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -135,10 +136,11 @@ describe('focus release while engaged (round 10)', () => {
   it('focusing Mars from an engaged Earth camera releases, converts sanely, and follows', () => {
     const { store, state, deps } = makeHarness();
 
-    // Dive through engage to h/R ≈ 1.1 (the brief's low-altitude case).
+    // Dive through engage to h/R ≈ 0.1 (the brief's low-altitude case, deep
+    // in the band).
     const events: { t: number; deltaY: number }[] = [];
     let t = 1000;
-    for (let i = 0; i < 12; i += 1, t += 33) events.push({ t, deltaY: -100 });
+    for (let i = 0; i < 35; i += 1, t += 33) events.push({ t, deltaY: -100 });
     let evIdx = 0;
     let now = 0;
     for (; now <= t + 500; now += 16) {
@@ -157,6 +159,8 @@ describe('focus release while engaged (round 10)', () => {
     expect(state.cameraRuntime.lastPose.current.frame).not.toBe('absolute'); // engaged
     const eyeBefore = eyeMpcOf(liveWorldPose(state), B);
     const marsBefore = distTo(eyeBefore, MARS);
+    const hrBefore = distTo(eyeBefore, EARTH) / R_MPC - 1;
+    expect(hrBefore).toBeLessThan(SURFACE_REGIME.engageHR); // deep in the band
 
     // The user's action: search-focus Mars. Without the fix nothing happens
     // until a manual zoom-out past disengage.
@@ -195,8 +199,7 @@ describe('focus release while engaged (round 10)', () => {
     expect(released.target[0]).toBeCloseTo(EARTH.positionMpc[0]!, 12);
     expect(released.target[1]).toBeCloseTo(EARTH.positionMpc[1]!, 12);
     expect(released.target[2]).toBeCloseTo(EARTH.positionMpc[2]!, 12);
-    expect(released.distance / R_MPC).toBeGreaterThan(1.9); // ≈ 1 + h/R, eye preserved
-    expect(released.distance / R_MPC).toBeLessThan(2.4);
+    expect(released.distance / R_MPC).toBeCloseTo(1 + hrBefore, 6); // eye preserved
 
     // Follow-through: the arm stays absolute EVERY frame (no engage/release
     // flap while the eye is still inside Earth's engage range), followBody
@@ -214,7 +217,7 @@ describe('focus release while engaged (round 10)', () => {
     target: [MARS.positionMpc[0]!, MARS.positionMpc[1]!, MARS.positionMpc[2]!],
     yaw: 0.7,
     pitch: 0.3,
-    distance: 3390000 * 1.5 * SCALE_UNITS.M_TO_MPC, // h/R 0.5 over Mars
+    distance: 3390000 * 1.1 * SCALE_UNITS.M_TO_MPC, // h/R 0.1 over Mars, inside engage
     roll: 0,
   };
 

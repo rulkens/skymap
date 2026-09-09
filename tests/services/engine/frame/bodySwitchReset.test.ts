@@ -41,6 +41,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
 import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -149,6 +150,11 @@ function distTo(eye: Readonly<Vec3>, body: BodyState): number {
   );
 }
 
+/** Displayed h/R over Earth. */
+function hrOverEarth(state: EngineState): number {
+  return distTo(eyeMpcOf(liveWorldPose(state), B), EARTH) / R_EARTH_MPC - 1;
+}
+
 /** Displayed tilt from the body's nadir, off the DISPLAYED (on-screen) pose. */
 function displayedTiltAt(state: EngineState, body: BodyState): number {
   const live = liveWorldPose(state);
@@ -167,13 +173,17 @@ function displayedTiltAt(state: EngineState, body: BodyState): number {
   return Math.acos(Math.max(-1, Math.min(1, -vert)));
 }
 
-/** Seed the remembered tilt through the controller's own handles (~0.35). */
+/**
+ * Seed the remembered tilt through the controller's own handles (~0.35).
+ * h/R 0.15: inside the band, where the handles write the memory (w = 1)
+ * and the tilt ceiling is open.
+ */
 function seedRememberedTilt(state: EngineState): void {
   const c = state.cameraRuntime.surface;
   let p: BodyFixedPose = {
     bodyId: 'earth',
     anchorLocalM: [0, 0, 0],
-    eyeRelAnchorM: [0, 0, 2.2],
+    eyeRelAnchorM: [0, 0, 1.15],
     basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1] as Mat3,
   };
   c.onGestureStart();
@@ -211,7 +221,7 @@ describe('body switch reset (ruling 18)', () => {
     const frame = () => runFrame(state, deps, (now += 16));
 
     // Dive into the Earth surface regime and author a tilt there.
-    for (let i = 0; i < 14; i += 1) {
+    for (let i = 0; i < 32; i += 1) {
       push({ kind: 'wheel', deltaY: -100, duringGesture: false, xPx: 50, yPx: 50 });
       frame();
       frame();
@@ -294,7 +304,7 @@ describe('body switch reset (ruling 18)', () => {
     let now = 0;
     const frame = () => runFrame(state, deps, (now += 16));
 
-    for (let i = 0; i < 14; i += 1) {
+    for (let i = 0; i < 32; i += 1) {
       push({ kind: 'wheel', deltaY: -100, duringGesture: false, xPx: 50, yPx: 50 });
       frame();
       frame();
@@ -307,7 +317,7 @@ describe('body switch reset (ruling 18)', () => {
     // Recede past disengage, clear the focus for a stint, re-focus Earth,
     // and dive back into the band — never a DIFFERENT body, so the memory
     // must survive the whole trip (round 11 standing for the same body).
-    for (let i = 0; i < 22; i += 1) {
+    for (let g = 0; g < 40 && hrOverEarth(state) < SURFACE_REGIME.disengageHR * 1.25; g += 1) {
       push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 50, yPx: 50 });
       frame();
       frame();
@@ -317,7 +327,7 @@ describe('body switch reset (ruling 18)', () => {
     for (let i = 0; i < 10; i += 1) frame();
     focusBody(store, 'earth', 'Earth', EARTH.positionMpc, SCENE_EARTH.radiusM);
     for (let i = 0; i < 10; i += 1) frame();
-    for (let i = 0; i < 22; i += 1) {
+    for (let g = 0; g < 40 && hrOverEarth(state) > SURFACE_REGIME.engageHR * 0.75; g += 1) {
       push({ kind: 'wheel', deltaY: -100, duringGesture: false, xPx: 50, yPx: 50 });
       frame();
       frame();

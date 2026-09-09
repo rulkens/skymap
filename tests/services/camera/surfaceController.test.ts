@@ -168,19 +168,21 @@ function apply(
 
 describe('surfaceController', () => {
   it('latches the mode at gesture start and keeps it for the gesture', () => {
-    // The press grazes the limb (|ray·normal| = 0.03 at x = 78.85 px), so the
-    // gesture strafes. Dragging back toward the middle of the disc, where the
-    // incidence is steep, must NOT promote it to an anchored pan: strafe only
-    // ever translates, so a re-decided mode shows up as a rotated basis.
+    // From h/R 0.1 the disc fills a nadir view, so the limb is on-screen only
+    // from a tilted pose: at tilt 0.8 the press at y = 32.31 px grazes it
+    // (|ray·normal| = 0.03), so the gesture strafes. Dragging down toward the
+    // disc's interior, where the incidence is steep (0.39 at y = 40), must
+    // NOT promote it to an anchored pan: strafe only ever translates, so a
+    // re-decided mode shows up as a rotated basis.
     const c = createSurfaceController();
     c.onGestureStart();
-    let pose = poseAt([0, 0, 2], NADIR);
-    pose = apply(c, pose, drag('orbit', [78.85, 50], [70, 50]));
-    pose = apply(c, pose, drag('orbit', [70, 50], [65, 50]));
+    const start = poseAt([0, 0, 1.1], basisAtTilt(0.8));
+    let pose = apply(c, start, drag('orbit', [50, 32.31], [50, 40]));
+    pose = apply(c, pose, drag('orbit', [50, 40], [50, 45]));
 
-    expect(pose.basisLocal).toEqual(NADIR);
+    expect(pose.basisLocal).toEqual(start.basisLocal);
     // Not vacuous: the strafe did move the camera.
-    expect(eyeOf(pose)[0]).not.toBe(0);
+    expect(eyeOf(pose)[1]).not.toBe(0);
   });
 
   it('ignores a trackpad inertial burst after pointerup (FW-C)', () => {
@@ -252,11 +254,12 @@ describe('surfaceController', () => {
   });
 
   it('leaves the eye bit-identical under free-look while the heading turns', () => {
-    // Pitched 30° up at 0.2 R, so the camera's own up is NOT the local
-    // vertical: yawing about the wrong one of the two rolls the horizon.
+    // Pitched 30° up at 0.1 R (the ceiling is open there), so the camera's
+    // own up is NOT the local vertical: yawing about the wrong one of the two
+    // rolls the horizon.
     const c = createSurfaceController();
     const cos30 = Math.cos(Math.PI / 6);
-    const start = poseAt([0, 0, 1.2], [1, 0, 0, 0, -0.5, cos30, 0, cos30, 0.5]);
+    const start = poseAt([0, 0, 1.1], [1, 0, 0, 0, -0.5, cos30, 0, cos30, 0.5]);
     c.onGestureStart();
     const pose = apply(c, start, drag('orbit', [50, 25], [70, 25]));
 
@@ -445,11 +448,12 @@ describe('surfaceController', () => {
     // Both cadences of the round-7 protocol: default e^0.10 and brisk e^0.24
     // (folded notches). Off the singular neighbourhood the ride is exact and
     // the bake lands under the amended 1e-2 bar at either pacing.
+    // Start at h/R 0.1, below engage, so the recession rides the whole band.
     for (const lnf of [0.1, 0.24]) {
       const c = createSurfaceController();
-      let pose = poseAt([lu[0] * 2, lu[1] * 2, lu[2] * 2], basis);
+      let pose = poseAt([lu[0] * 1.1, lu[1] * 1.1, lu[2] * 1.1], basis);
       expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeLessThan(1e-12); // converged deep
-      let hr = 1;
+      let hr = 0.1;
       let guard = 0;
       while (hr <= SURFACE_REGIME.disengageHR && guard < 30) {
         pose = apply(c, pose, zoom(Math.exp(lnf), false), sceneUp);
@@ -556,8 +560,8 @@ describe('surfaceController', () => {
     const basis: Mat3 = [...right, ...north, ...forward] as Mat3;
 
     const c = createSurfaceController();
-    let pose = poseAt([lun[0] * 2, lun[1] * 2, lun[2] * 2], basis);
-    let hr = 1;
+    let pose = poseAt([lun[0] * 1.1, lun[1] * 1.1, lun[2] * 1.1], basis); // h/R 0.1
+    let hr = 0.1;
     let guard = 0;
     while (hr <= SURFACE_REGIME.disengageHR && guard < 20) {
       pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
@@ -789,8 +793,10 @@ describe('surfaceController', () => {
     const walled = createSurfaceController();
     walled.onGestureStart();
     const fromNadir = poseAt([0, 0, boundary], NADIR);
-    // [50, 10] misses the disc from up here, so the press latches free look.
-    const pitched = apply(walled, fromNadir, drag('orbit', [50, 10], [50, -40]));
+    // From the boundary the disc fills the 90° view (limb at 1.02 tan units),
+    // so the sky press sits just past the top edge — pixels are only ray
+    // coordinates here — and latches free look.
+    const pitched = apply(walled, fromNadir, drag('orbit', [50, -10], [50, -60]));
     expect(pitched.eyeRelAnchorM).toEqual(fromNadir.eyeRelAnchorM);
     expect(bodyAngle(pitched)).toBeLessThan(1e-9);
 
@@ -827,16 +833,19 @@ describe('surfaceController', () => {
     // clamp left the lowering direction unbounded and locked the raise.
     const c = createSurfaceController();
     c.onGestureStart();
+    const h = 0.1; // h/R 0.1: in-band, so w = 1 and the ceiling is open
     const alpha = (10 / 100) * FOV * TILT_GAIN;
-    const out = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [50, 50], [50, 40]));
+    const out = apply(c, poseAt([0, 0, 1 + h], NADIR), drag('pan', [50, 50], [50, 40]));
     const eye = eyeOf(out);
     expect(eye[0]).toBeCloseTo(0, 12);
-    expect(eye[1]).toBeCloseTo(-Math.sin(alpha), 12);
-    expect(eye[2]).toBeCloseTo(1 + Math.cos(alpha), 12);
-    // The anchor pivot drags the local up along: at h = R the displayed tilt
-    // is exactly half the rotation, and the memory follows it (w = 1 here).
-    expect(bodyAngle(out)).toBeCloseTo(alpha / 2, 9);
-    expect(c.rememberedTiltRad()).toBeCloseTo(alpha / 2, 9);
+    expect(eye[1]).toBeCloseTo(-h * Math.sin(alpha), 12);
+    expect(eye[2]).toBeCloseTo(1 + h * Math.cos(alpha), 12);
+    // The anchor pivot drags the local up along: the displayed tilt is the
+    // eye's angle of the centre–anchor–eye triangle, atan2(sin α, h/R + cos α)
+    // (exactly α/2 at h = R), and the memory follows it (w = 1 here).
+    const displayed = Math.atan2(Math.sin(alpha), h + Math.cos(alpha));
+    expect(bodyAngle(out)).toBeCloseTo(displayed, 9);
+    expect(c.rememberedTiltRad()).toBeCloseTo(displayed, 9);
   });
 
   it('lowering drags land the floor exactly and never cross nadir (rulings 14+17)', () => {
@@ -849,10 +858,12 @@ describe('surfaceController', () => {
     // 0 and everything is still once there.
     const c = createSurfaceController();
     c.onGestureStart();
-    let pose = apply(c, poseAt([0, 0, 2], NADIR), drag('pan', [50, 50], [50, 10]));
+    const h = 0.1; // h/R 0.1: in-band, the ceiling is open for the raise
+    let pose = apply(c, poseAt([0, 0, 1 + h], NADIR), drag('pan', [50, 50], [50, 10]));
     c.onGestureEnd();
     expect(eyeOf(pose)[1]).toBeLessThan(0); // near side — the raise never crossed
-    expect(bodyAngle(pose)).toBeCloseTo(((40 / 100) * FOV * TILT_GAIN) / 2, 9);
+    const raised = (40 / 100) * FOV * TILT_GAIN;
+    expect(bodyAngle(pose)).toBeCloseTo(Math.atan2(Math.sin(raised), h + Math.cos(raised)), 9);
 
     let lastTilt = bodyAngle(pose);
     let lastMem = c.rememberedTiltRad();
