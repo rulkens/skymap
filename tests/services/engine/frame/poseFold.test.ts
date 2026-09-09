@@ -75,13 +75,10 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
 });
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
-import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
-import { rootReducer } from '../../../../src/store/rootReducer';
+import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import {
   beginDrag,
   endDrag,
@@ -89,7 +86,6 @@ import {
   startCameraTween,
 } from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { setSimDays, pause } from '../../../../src/state/time/timeSlice';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
@@ -105,28 +101,12 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
 const EARTH: BodyState = deriveBodyStates(SIM).get('earth')!;
 const EARTH_ARM = { body: 'earth' as BodyId };
-
-/**
- * A pose whose eye sits at `hr = h/R` over `body`, looking at its centre: the
- * eye is `target + dir · distance` and the target IS the centre, so the range
- * is the altitude term exactly and no inverse is needed to hit a given h/R.
- */
-function poseAtHR(body: BodyState, radiusM: number, hr: number): CameraPose {
-  return {
-    target: [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!],
-    yaw: 0.7,
-    pitch: 0.3,
-    distance: radiusM * (1 + hr) * SCALE_UNITS.M_TO_MPC,
-  };
-}
 
 /** Eye, sightline and screen-up — the three quantities §4 rules continuous. */
 function renderedCamera(pose: CameraPose) {
@@ -140,69 +120,17 @@ function renderedCamera(pose: CameraPose) {
   return { eye, forward, up };
 }
 
-function makeStore() {
-  const store = configureStore({ reducer: rootReducer });
-  // A paused clock returns its anchor verbatim, so every frame in a test shares
-  // one epoch and the body snapshot cannot move between them.
-  store.dispatch(setSimDays({ simDays: SIM, nowMs: 0 }));
-  store.dispatch(pause({ nowMs: 0 }));
-  return store;
-}
-
-function makeState(): EngineState {
-  return {
-    settings: { camera: { fovDeg: 60 } },
-    gpu: { galaxyPointRenderer: null, renderTargets: null, milkyWayCloud: null },
-    subsystems: {
-      scheduler: { requestRender: vi.fn() },
-      clipPlayer: { tick: vi.fn() },
-      inputAggregator: createInputAggregator(),
-    },
-    cam: {
-      yaw: 0,
-      pitch: 0,
-      distance: 1,
-      target: new Float32Array(3),
-      position: new Float32Array(3),
-      fovYRad: 0.8,
-      aspect: 1,
-      near: 0.01,
-      far: 1000,
-    } as unknown as OrbitCamera,
-    cameraRuntime: {
-      clock: createCameraClock(),
-      projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
-      lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }) },
-      displayedPose: {
-        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-      },
-      prevActiveId: { current: 'resting' },
-      lastRenderedSimDays: { current: SIM },
-      upBasis: { current: [...B] },
-      surface: createSurfaceController(),
-      lastZoomFactor: { current: null },
-    },
-  } as unknown as EngineState;
-}
-
-function makeDeps(state: EngineState, store: ReturnType<typeof makeStore>): RunFrameDeps {
-  return {
-    canvas: {
-      width: 100,
-      height: 100,
-      clientWidth: 100,
-      clientHeight: 100,
-    } as unknown as HTMLCanvasElement,
-    cb: { store } as unknown as RunFrameDeps['cb'],
-    device: {} as unknown as GPUDevice,
-    context: {} as unknown as GPUCanvasContext,
-    timingService: {} as unknown as RunFrameDeps['timingService'],
-    drivers: buildCameraDrivers(state),
-  };
+/**
+ * Build the fixture bag fresh per test — Earth unfocused, no boot pose (each
+ * test seeds its own via `seedPose`), matching the union of what every test
+ * below needs from `runFrame`'s ready-gated slice.
+ */
+function makeHarness() {
+  return makeCameraSimHarness({ focusBody: null, bootHR: null });
 }
 
 /** Seed both pose homes with the same world-arm pose, the bootstrap posture. */
-function seedPose(store: ReturnType<typeof makeStore>, state: EngineState, pose: CameraPose): void {
+function seedPose(store: ReturnType<typeof makeHarness>['store'], state: EngineState, pose: CameraPose): void {
   store.dispatch(commitCameraPose(absoluteArm(pose)));
   state.cameraRuntime.lastPose.current = absoluteArm(pose);
 }
@@ -232,10 +160,8 @@ describe('runFrame — the regime fold', () => {
     // pose after it. Its two neighbours pin it exactly — below the pivot pin
     // (the last pose writer) and above the `lastPose.current` update, which is
     // why the pose the fold sees in `lastPose` is still the PREVIOUS frame's.
-    const store = makeStore();
-    const state = makeState();
+    const { store, state, deps } = makeHarness();
     probe.state = state;
-    const deps = makeDeps(state, store);
     const PREVIOUS = absoluteArm({ target: [1, 2, 3], yaw: 0.1, pitch: 0.2, distance: 5 });
     const PRODUCED = poseAtHR(EARTH, SCENE_EARTH.radiusM, 12);
     state.cameraRuntime.lastPose.current = PREVIOUS;
@@ -253,9 +179,7 @@ describe('runFrame — the regime fold', () => {
     // new arm there — that is what makes the arm-gated drivers, the wheel and
     // the pin see it on the next frame. Once only: re-committing every frame
     // would churn the store and reset every base-identity-keyed clock.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(state, store);
+    const { store, state, deps } = makeHarness();
     seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
     const spy = vi.spyOn(store, 'dispatch');
 
@@ -278,9 +202,7 @@ describe('runFrame — the regime fold', () => {
     // re-dispatch on every frame of an animation that ends inside the band —
     // a 60 Hz store write through every saga channel — and would feed the
     // predicate `'absolute'`, swapping §4's disengage test for the engage one.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(state, store);
+    const { store, state, deps } = makeHarness();
     const FROM = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1);
     // Yaw-only, so every frame of the tween sits at the same h/R: the arm must
     // hold across all four, not re-engage on each.
@@ -307,9 +229,7 @@ describe('runFrame — the regime fold', () => {
     // The other half of the hysteresis: an engaged arm carried out past
     // `disengageHR` converts back and re-commits, or the camera is stuck in a
     // body frame forever.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(state, store);
+    const { store, state, deps } = makeHarness();
     const FAR = poseAtHR(EARTH, SCENE_EARTH.radiusM, 5);
     const arm = {
       frame: EARTH_ARM,
@@ -331,10 +251,8 @@ describe('runFrame — the regime fold', () => {
     // render continuously while the NEXT frame's pin re-read `target` as the
     // centre and rebuilt the eye from `target + dir·distance`: a one-body-
     // radius (6,371 km) eye teleport on the first at-rest frame after the flip.
-    const store = makeStore();
-    const state = makeState();
+    const { store, state, deps } = makeHarness();
     probe.state = state;
-    const deps = makeDeps(state, store);
     // Body arm just inside the band, tilt 0 (looking at the centre) — the pose
     // every driven recession reaches the boundary with. 0.39: just below
     // ruling 19's disengageHR (0.4), the same relative placement the old
@@ -388,9 +306,7 @@ describe('runFrame — the regime fold', () => {
     // Ruled Q6 / spec §4: the predicate is SKIPPED while a gesture is live and
     // re-evaluated at gesture end — which subsumes the mid-drag wheel guard and
     // the gesture-scoped latch two earlier fix waves reached for.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(state, store);
+    const { store, state, deps } = makeHarness();
     const ENGAGING = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1);
     seedPose(store, state, ENGAGING);
     // The drag register is what `orbitDrag` renders, so it carries the same
@@ -424,9 +340,7 @@ describe('runFrame — the regime fold', () => {
     // this fixture sits. Measured residual is 0 m on the eye and ~2e-13 on the
     // unit sightline; a real snap (a dropped roll, the wrong basis, a missed
     // anchor fold) is metres to megametres, decades above either bound.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(state, store);
+    const { store, state, deps } = makeHarness();
     seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
 
     runFrame(state, deps, 0);
@@ -447,9 +361,7 @@ describe('runFrame — the regime fold', () => {
     // Spec §7 step 4: a body arm co-rotates, so "keep the moving body centred"
     // is structurally satisfied — the pin has nothing to do and the follow
     // driver's approach ease and idle hold have no meaning.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(state, store);
+    const { store, state, deps } = makeHarness();
     seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
     store.dispatch(
       setSelectionRow({
@@ -482,9 +394,7 @@ describe('runFrame — the regime fold', () => {
     // in a body arm the range belongs to the anchored zoom gesture, which keeps
     // the pose in body-fixed metres. `applyWheelZoom`'s answer would arrive as
     // an ABSOLUTE arm, which is what the frame assertion below rules out.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(state, store);
+    const { store, state, deps } = makeHarness();
     seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
 
     runFrame(state, deps, 0);
