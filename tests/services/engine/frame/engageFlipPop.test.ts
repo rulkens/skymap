@@ -10,7 +10,6 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
@@ -22,121 +21,32 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { runFrame } from '../../../../src/services/engine/frame/runFrame';
-import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
-import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { driveWheelEvents } from '../../../helpers/camera/driveWheelEvents';
+import { displayedEye } from '../../../helpers/camera/displayedEye';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { rootReducer } from '../../../../src/store/rootReducer';
-import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
-import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { setSimDays, pause } from '../../../../src/state/time/timeSlice';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENT_DECAY } from '../../../../src/data/camera/orientDecay';
 import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
-
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const SIM = CONST_J2000;
-const EARTH = deriveBodyStates(SIM).get('earth')! as BodyState;
-const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
-
-function poseAtHR(hr: number, roll: number): CameraPose {
-  return {
-    target: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
-    yaw: 0.7,
-    pitch: 0.3,
-    distance: R_MPC * (1 + hr),
-    roll,
-  };
-}
-
-function makeHarness() {
-  const store = configureStore({ reducer: rootReducer });
-  store.dispatch(setSimDays({ simDays: SIM, nowMs: 0 }));
-  store.dispatch(pause({ nowMs: 0 }));
-  const state = {
-    settings: { camera: { fovDeg: 60 }, orientation: DEFAULT_ORIENTATION },
-    gpu: { galaxyPointRenderer: null, renderTargets: null, milkyWayCloud: null },
-    subsystems: {
-      scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
-      clipPlayer: { tick: () => {} },
-      inputAggregator: createInputAggregator(),
-    },
-    cam: {
-      yaw: 0,
-      pitch: 0,
-      distance: 1,
-      target: new Float32Array(3),
-      position: new Float32Array(3),
-      fovYRad: 0.8,
-      aspect: 1,
-      near: 0.01,
-      far: 1000,
-    } as unknown as OrbitCamera,
-    cameraRuntime: {
-      clock: createCameraClock(),
-      projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 50000 },
-      lastPose: { current: absoluteArm(poseAtHR(10, 0)) },
-      displayedPose: { current: absoluteArm(poseAtHR(10, 0)) },
-      prevActiveId: { current: 'resting' },
-      lastRenderedSimDays: { current: SIM },
-      upBasis: { current: [...B] },
-      surface: createSurfaceController(),
-      lastZoomFactor: { current: null },
-    },
-  } as unknown as EngineState;
-  const deps = {
-    canvas: { width: 100, height: 100, clientWidth: 100, clientHeight: 100 },
-    cb: { store },
-    device: {},
-    context: {},
-    timingService: {},
-    drivers: buildCameraDrivers(state),
-  } as unknown as RunFrameDeps;
-  store.dispatch(commitCameraPose(absoluteArm(poseAtHR(10, 0))));
-  store.dispatch(
-    setSelectionRow({
-      slot: 'focus',
-      row: {
-        type: 'body',
-        id: 'earth',
-        label: 'Earth',
-        positionMpc: [0, 0, 0],
-        radiusM: SCENE_EARTH.radiusM,
-      },
-    }),
-  );
-  return { store, state, deps };
-}
 
 type FrameSample = { readonly arm: string; readonly up: Vec3 };
 
 function sampleOf(state: EngineState): FrameSample {
   const live = liveWorldPose(state);
-  const eye = eyeMpcOf(live, B);
+  const eye = displayedEye(state);
   const forward = normalize3([
-    live.target[0]! - eye[0]!,
-    live.target[1]! - eye[1]!,
-    live.target[2]! - eye[2]!,
+    live.target[0]! - eye[0],
+    live.target[1]! - eye[1],
+    live.target[2]! - eye[2],
   ] as Vec3);
   const { up } = imagePlaneBasis(forward, live.roll ?? 0, frameUp(B));
   return {
@@ -161,28 +71,14 @@ describe('engage-flip pop (round 8)', () => {
     'a focused dive through engage settles monotonically — no post-flip burst (%s space)',
     (space) => {
       ORIENT_TUNING.blendSpace = space;
-      const { state, deps } = makeHarness();
+      const h = makeCameraSimHarness();
       const events: { t: number; deltaY: number }[] = [];
       let t = 1000; // the follow approach settles at the framing distance first
       for (let i = 0; i < 60; i += 1, t += 33) events.push({ t, deltaY: -100 });
       const endT = t + 2000;
 
       const samples: FrameSample[] = [];
-      let evIdx = 0;
-      for (let tt = 0; tt <= endT; tt += 16) {
-        while (evIdx < events.length && events[evIdx]!.t <= tt) {
-          (state.subsystems.inputAggregator as { push: (x: unknown) => void }).push({
-            kind: 'wheel',
-            deltaY: events[evIdx]!.deltaY,
-            duringGesture: false,
-            xPx: 50,
-            yPx: 50,
-          });
-          evIdx += 1;
-        }
-        runFrame(state, deps, tt);
-        samples.push(sampleOf(state));
-      }
+      driveWheelEvents(h, events, endT, { onFrame: () => samples.push(sampleOf(h.state)) });
 
       const flipIdx = samples.findIndex(
         (s, i) => i > 0 && s.arm === 'body' && samples[i - 1]!.arm === 'abs',
