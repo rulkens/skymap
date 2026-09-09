@@ -9,7 +9,6 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
@@ -21,197 +20,45 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { runFrame } from '../../../../src/services/engine/frame/runFrame';
-import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
+import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
+import { seedRememberedTilt } from '../../../helpers/camera/seedRememberedTilt';
+import { hrOverBody } from '../../../helpers/camera/hrOverBody';
+import { tiltOverBody } from '../../../helpers/camera/tiltOverBody';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { rootReducer } from '../../../../src/store/rootReducer';
-import { beginDrag, commitCameraPose } from '../../../../src/state/camera/cameraSlice';
-import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { setSimDays, pause } from '../../../../src/state/time/timeSlice';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { mappedTiltRad } from '../../../../src/utils/camera/mappedTiltRad';
 import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
-import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const SIM = CONST_J2000;
-const EARTH = deriveBodyStates(SIM).get('earth')! as BodyState;
-const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
-
-function poseAtHR(hr: number, roll: number): CameraPose {
-  return {
-    target: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
-    yaw: 0.7,
-    pitch: 0.3,
-    distance: R_MPC * (1 + hr),
-    roll,
-  };
-}
-
-function makeHarness() {
-  const store = configureStore({ reducer: rootReducer });
-  store.dispatch(setSimDays({ simDays: SIM, nowMs: 0 }));
-  store.dispatch(pause({ nowMs: 0 }));
-  const state = {
-    settings: { camera: { fovDeg: 60 }, orientation: DEFAULT_ORIENTATION },
-    gpu: { galaxyPointRenderer: null, renderTargets: null, milkyWayCloud: null },
-    subsystems: {
-      scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
-      clipPlayer: { tick: () => {} },
-      inputAggregator: createInputAggregator(),
-    },
-    cam: {
-      yaw: 0,
-      pitch: 0,
-      distance: 1,
-      target: new Float32Array(3),
-      position: new Float32Array(3),
-      fovYRad: 0.8,
-      aspect: 1,
-      near: 0.01,
-      far: 1000,
-    } as unknown as OrbitCamera,
-    cameraRuntime: {
-      clock: createCameraClock(),
-      projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 50000 },
-      lastPose: { current: absoluteArm(poseAtHR(10, 0)) },
-      displayedPose: { current: absoluteArm(poseAtHR(10, 0)) },
-      prevActiveId: { current: 'resting' },
-      lastRenderedSimDays: { current: SIM },
-      upBasis: { current: [...B] },
-      surface: createSurfaceController(),
-      lastZoomFactor: { current: null },
-    },
-  } as unknown as EngineState;
-  const deps = {
-    canvas: { width: 100, height: 100, clientWidth: 100, clientHeight: 100 },
-    cb: { store },
-    device: {},
-    context: {},
-    timingService: {},
-    drivers: buildCameraDrivers(state),
-  } as unknown as RunFrameDeps;
-  store.dispatch(commitCameraPose(absoluteArm(poseAtHR(10, 0))));
-  store.dispatch(
-    setSelectionRow({
-      slot: 'focus',
-      row: {
-        type: 'body',
-        id: 'earth',
-        label: 'Earth',
-        positionMpc: [0, 0, 0],
-        radiusM: SCENE_EARTH.radiusM,
-      },
-    }),
-  );
-  return { store, state, deps };
-}
-
-type Push = (x: unknown) => void;
-
-/** Display tilt of the RENDERED pose vs Earth: angle(view axis, nadir). */
-function displayTilt(state: EngineState): { tilt: number; hr: number } {
-  const live = liveWorldPose(state);
-  const eye = eyeMpcOf(live, B);
-  const rel: Vec3 = [
-    eye[0]! - EARTH.positionMpc[0]!,
-    eye[1]! - EARTH.positionMpc[1]!,
-    eye[2]! - EARTH.positionMpc[2]!,
-  ];
-  const mag = Math.hypot(...rel);
-  const n = normalize3(rel);
-  const forward = normalize3([
-    live.target[0]! - eye[0]!,
-    live.target[1]! - eye[1]!,
-    live.target[2]! - eye[2]!,
-  ] as Vec3);
-  const vert = forward[0]! * n[0]! + forward[1]! * n[1]! + forward[2]! * n[2]!;
-  return { tilt: Math.acos(Math.max(-1, Math.min(1, -vert))), hr: mag / R_MPC - 1 };
-}
+const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
+const EARTH_RADIUS_M = SCENE_EARTH.radiusM;
 
 describe('tilt lerp round trip (ruling 13)', () => {
   it('display tilt tracks remembered × w through the window in BOTH directions', () => {
-    const { store, state, deps } = makeHarness();
-    const push = (state.subsystems.inputAggregator as { push: Push }).push;
-    let now = 0;
-    const frame = () => runFrame(state, deps, (now += 16));
+    const h = makeCameraSimHarness();
 
     // Dive to the surface regime.
-    for (let i = 0; i < 32; i += 1) {
-      push({ kind: 'wheel', deltaY: -100, duringGesture: false, xPx: 50, yPx: 50 });
-      frame();
-      frame();
-    }
-    expect(state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+    diveUntilEngaged(h);
+    expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
 
     // Set the memory through the controller's own tilt/look handles. The
     // memory is session state and body-agnostic, so a unit-radius drag is
     // the same write path an engaged Earth drag takes — without hand-tuning
     // a metre-scale gesture through the whole input stack (the drag path
     // itself is pinned in rememberedTilt.test.ts). h/R 0.15 keeps the tilt
-    // ceiling open under ruling 19's tighter band.
-    const c = state.cameraRuntime.surface;
-    let p: BodyFixedPose = {
-      bodyId: 'earth',
-      anchorLocalM: [0, 0, 0],
-      eyeRelAnchorM: [0, 0, 1.15],
-      basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1] as Mat3,
-    };
-    c.onGestureStart();
-    p = c.apply(
-      p,
-      { kind: 'drag', mode: 'pan', startPx: [50, 50], endPx: [50, 30] },
-      [100, 100],
-      Math.PI / 2,
-      1,
-      [0, 0, 1],
-    );
-    c.onGestureEnd();
-    // 2 px look steps: the loop exits on remembered ≥ 0.35, and the engaged
-    // bar below is calibrated for landing NEAR 0.35 — the dive transient
-    // scales with the memory, so a coarse last increment inflates it.
-    for (let g = 0; g < 6 && c.rememberedTiltRad() < 0.35; g += 1) {
-      c.onGestureStart();
-      for (let px = 5; px < 90 && c.rememberedTiltRad() < 0.35; px += 2) {
-        p = c.apply(
-          p,
-          { kind: 'drag', mode: 'orbit', startPx: [50, px], endPx: [50, px + 2] },
-          [100, 100],
-          Math.PI / 2,
-          1,
-          [0, 0, 1],
-        );
-      }
-      c.onGestureEnd();
-    }
+    // ceiling open under ruling 19's tighter band. 2 px look steps: the loop
+    // exits on remembered ≥ 0.35, and the engaged bar below is calibrated
+    // for landing NEAR 0.35 — the dive transient scales with the memory, so
+    // a coarse last increment inflates it.
+    seedRememberedTilt(h, { targetRad: 0.35, guard: 6, pxStep: 2 });
 
     // Converge the engaged display onto the memory before tracing.
-    for (let i = 0; i < 12; i += 1) {
-      push({ kind: 'wheel', deltaY: 0.0001, duringGesture: false, xPx: 50, yPx: 50 });
-      frame();
-      frame();
-    }
-    const remembered = state.cameraRuntime.surface.rememberedTiltRad();
+    for (let i = 0; i < 12; i += 1) h.wheel(0.0001);
+    const remembered = h.state.cameraRuntime.surface.rememberedTiltRad();
     expect(remembered).toBeGreaterThan(0.3);
-    expect(Math.abs(displayTilt(state).tilt - remembered)).toBeLessThan(0.03); // converged
+    expect(Math.abs(tiltOverBody(h.state, EARTH) - remembered)).toBeLessThan(0.03); // converged
 
     // Round trip: out past disengage, then back in below engage. At every
     // notch the display must sit on the ONE mapping — pre-fix the zoom-in
@@ -219,12 +66,11 @@ describe('tilt lerp round trip (ruling 13)', () => {
     // then walked 0.1/notch after the engage flip.
     const trace: { tilt: number; hr: number; arm: string }[] = [];
     const notch = (deltaY: number) => {
-      push({ kind: 'wheel', deltaY, duringGesture: false, xPx: 50, yPx: 50 });
-      frame();
-      frame();
+      h.wheel(deltaY);
       trace.push({
-        ...displayTilt(state),
-        arm: state.cameraRuntime.lastPose.current.frame === 'absolute' ? 'abs' : 'body',
+        tilt: tiltOverBody(h.state, EARTH),
+        hr: hrOverBody(h.state, EARTH, EARTH_RADIUS_M),
+        arm: h.state.cameraRuntime.lastPose.current.frame === 'absolute' ? 'abs' : 'body',
       });
     };
     for (let i = 0; i < 22; i += 1) notch(100);
