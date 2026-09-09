@@ -256,7 +256,7 @@ describe('runFrame — the regime fold', () => {
     const store = makeStore();
     const state = makeState();
     const deps = makeDeps(state, store);
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 1));
+    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
     const spy = vi.spyOn(store, 'dispatch');
 
     runFrame(state, deps, 0);
@@ -281,7 +281,7 @@ describe('runFrame — the regime fold', () => {
     const store = makeStore();
     const state = makeState();
     const deps = makeDeps(state, store);
-    const FROM = poseAtHR(EARTH, SCENE_EARTH.radiusM, 1);
+    const FROM = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1);
     // Yaw-only, so every frame of the tween sits at the same h/R: the arm must
     // hold across all four, not re-engage on each.
     const TO: CameraPose = { ...FROM, yaw: FROM.yaw + 0.4 };
@@ -336,8 +336,10 @@ describe('runFrame — the regime fold', () => {
     probe.state = state;
     const deps = makeDeps(state, store);
     // Body arm just inside the band, tilt 0 (looking at the centre) — the pose
-    // every driven recession reaches the boundary with.
-    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, 3.39);
+    // every driven recession reaches the boundary with. 0.39: just below
+    // ruling 19's disengageHR (0.4), the same relative placement the old
+    // fixture (3.39, just below the old 3.4) held.
+    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.39);
     const arm = {
       frame: EARTH_ARM,
       pose: toBodyArm(NEAR_EDGE, B, B, EARTH_ARM.body, EARTH),
@@ -358,7 +360,7 @@ describe('runFrame — the regime fold', () => {
       }),
     );
 
-    // One wheel notch out (factor e^0.24 ≈ 1.27 on altitude ⇒ crosses 3.4).
+    // One wheel notch out (factor e^0.24 ≈ 1.27 on altitude ⇒ crosses 0.4).
     state.subsystems.inputAggregator.push({
       kind: 'wheel',
       deltaY: 240,
@@ -389,7 +391,7 @@ describe('runFrame — the regime fold', () => {
     const store = makeStore();
     const state = makeState();
     const deps = makeDeps(state, store);
-    const ENGAGING = poseAtHR(EARTH, SCENE_EARTH.radiusM, 1);
+    const ENGAGING = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1);
     seedPose(store, state, ENGAGING);
     // The drag register is what `orbitDrag` renders, so it carries the same
     // engaging pose — otherwise the arm would hold for want of altitude, not
@@ -425,7 +427,7 @@ describe('runFrame — the regime fold', () => {
     const store = makeStore();
     const state = makeState();
     const deps = makeDeps(state, store);
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 1));
+    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
 
     runFrame(state, deps, 0);
     runFrame(state, deps, 16);
@@ -448,7 +450,7 @@ describe('runFrame — the regime fold', () => {
     const store = makeStore();
     const state = makeState();
     const deps = makeDeps(state, store);
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 1));
+    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
     store.dispatch(
       setSelectionRow({
         slot: 'focus',
@@ -483,7 +485,7 @@ describe('runFrame — the regime fold', () => {
     const store = makeStore();
     const state = makeState();
     const deps = makeDeps(state, store);
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 1));
+    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
 
     runFrame(state, deps, 0);
     const engaged = state.cameraRuntime.lastPose.current;

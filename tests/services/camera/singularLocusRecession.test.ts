@@ -101,13 +101,17 @@ describe('singular-locus recession (round 7)', () => {
     'no-park recession at lnf %f: whip-free through the band, drained in the same gesture',
     (lnf) => {
       const c = createSurfaceController();
+      // Start below ruling 19's engage threshold (was h/R 1, comfortably
+      // below the old engage of 1.7; 0.05 is the analogous start under the
+      // new 0.2/0.4 band).
+      const startHR = 0.05;
       let pose: BodyFixedPose = {
         bodyId: 'earth',
         anchorLocalM: [0, 0, 0],
-        eyeRelAnchorM: [LU[0] * 2, LU[1] * 2, LU[2] * 2],
+        eyeRelAnchorM: [LU[0] * (1 + startHR), LU[1] * (1 + startHR), LU[2] * (1 + startHR)],
         basisLocal: arcBasis(LU),
       };
-      let hr = 1;
+      let hr = startHR;
       let maxTurn = 0;
       let guard = 0;
       while (hr <= SURFACE_REGIME.disengageHR && guard < 60) {
@@ -132,7 +136,7 @@ describe('singular-locus recession (round 7)', () => {
       expect(bake).toBeLessThan(2.9);
 
       let roll = bake;
-      let whr = 3.6;
+      let whr = SURFACE_REGIME.disengageHR * 1.05; // just past disengage, where the fold hands off
       let drain = 0;
       while (Math.abs(roll) >= 1e-2 && drain < 60) {
         const nextHR = whr * Math.exp(lnf);

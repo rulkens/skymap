@@ -3,7 +3,7 @@
  * WIRING. The tilt projection (`approachTiltedPose`) holds the eye by moving
  * `target` off the body centre; the pivot pin SETS target to the centre and
  * derives the eye — composing them on a COMMITTED tilted pose moves the eye
- * by d·2sin(τ/2) (~8,400 km at remembered 1.0, h/R 2.55) and ACCUMULATES
+ * by d·2sin(τ/2) and ACCUMULATES
  * over commit→re-derive cycles. The round-12 sim committed once at h/R 10
  * then only read; this fixture commits mid-window, where the two contracts
  * actually compose. Real runFrame loop, real gesture steps.
@@ -158,8 +158,8 @@ function tiltHrOf(pose: CameraPose, eye: Vec3): { tilt: number; hr: number } {
 /**
  * Shared approach: dive engaged, set a large remembered tilt through the
  * controller's own handles, zoom out past disengage, then back IN to
- * mid-window (h/R ≈ 2.55) — the world-armed, pivot-pinned, projection-live
- * standpoint where the round-12 review measured the teleport.
+ * mid-window — the world-armed, pivot-pinned, projection-live standpoint
+ * where the round-12 review measured the teleport.
  */
 function toMidWindow(harness: ReturnType<typeof makeHarness>) {
   const { state } = harness;
@@ -172,16 +172,17 @@ function toMidWindow(harness: ReturnType<typeof makeHarness>) {
     frame();
   };
 
-  for (let i = 0; i < 14; i += 1) notch(-100);
+  for (let i = 0; i < 32; i += 1) notch(-100);
   expect(state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
 
-  // Set the memory via the controller's handles (unit-radius; the memory is
-  // session state — same rationale as tiltLerpRoundTrip's harness).
+  // Set the memory via the controller's handles (unit-radius, h/R 0.15 so the
+  // tilt ceiling is open under ruling 19's tighter band — the memory itself
+  // is session state, same rationale as tiltLerpRoundTrip's harness).
   const c = state.cameraRuntime.surface;
   let p: BodyFixedPose = {
     bodyId: 'earth',
     anchorLocalM: [0, 0, 0],
-    eyeRelAnchorM: [0, 0, 2.2],
+    eyeRelAnchorM: [0, 0, 1.15],
     basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1] as Mat3,
   };
   c.onGestureStart();
@@ -212,12 +213,13 @@ function toMidWindow(harness: ReturnType<typeof makeHarness>) {
   expect(remembered).toBeGreaterThan(0.5);
 
   // Out past disengage (arm flips absolute), back in to mid-window; the
-  // hysteresis keeps the leg world-armed until engage at 1.7.
-  while (display(state).hr < 3.6) notch(100);
+  // hysteresis keeps the leg world-armed until engage. Thresholds rescaled
+  // for ruling 19's tighter band (engage 0.2 / disengage 0.4, was 1.7/3.4).
+  while (display(state).hr < 0.45) notch(100);
   expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
-  while (display(state).hr > 2.7) notch(-100);
+  while (display(state).hr > 0.32) notch(-100);
   const { hr } = display(state);
-  expect(hr).toBeGreaterThan(2.2);
+  expect(hr).toBeGreaterThan(0.26);
   expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
 
   // Let the follow ease and the projection settle before measuring.

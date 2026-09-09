@@ -116,7 +116,7 @@ describe('frameAlignedRoll', () => {
     // band (measured: −0.259 rad at h/R 4.9, zero return). Riding from an
     // aligned start, no notch moves more than that notch's own target delta,
     // and the first above-band pose is at roll 0 — the configured up.
-    let hr = 1.0;
+    let hr = 0.1;
     let roll = convergedRoll(poseAtHR(hr, 0), B, 300);
     expect(Math.abs(roll)).toBeGreaterThan(0.1); // the band really bent it
     while (hr <= SURFACE_REGIME.disengageHR) {
@@ -147,7 +147,7 @@ describe('frameAlignedRoll', () => {
     const deepAlt = convergedRoll(poseAtHR(0.1, 0), alt);
     expect(Math.abs(deepB - deepAlt)).toBeGreaterThan(0.05);
 
-    let hr = 1.0;
+    let hr = 0.1;
     let roll = convergedRoll(poseAtHR(hr, 0), alt, 300);
     while (hr <= SURFACE_REGIME.disengageHR) {
       const nextHR = hr * 1.15;
@@ -167,10 +167,10 @@ describe('frameAlignedRoll', () => {
     // pre-round-6 ride applied the π flip in one notch (measured 3.1416 rad).
     // The continuity bound treats the excess as unauthored; parking at a
     // stable altitude afterwards converges fully by the capped decay.
-    let roll = convergedRoll(poseAtHR(1.2, 0, 0, -1.4), B, 300);
-    let hr = 1.2;
+    let roll = convergedRoll(poseAtHR(0.12, 0, 0, -1.4), B, 300);
+    let hr = 0.12;
     let maxStep = 0;
-    while (hr < SURFACE_REGIME.disengageHR - 0.2) {
+    while (hr < SURFACE_REGIME.disengageHR * 0.9) {
       const nextHR = hr * 1.1;
       const next = frameAlignedRoll(
         poseAtHR(hr, roll, 0, -1.4),
@@ -198,10 +198,10 @@ describe('frameAlignedRoll', () => {
     // NORMALIZED, a view 2° off the spin axis chased the near-degenerate
     // direction to −1.49 rad of roll (measured at the previous HEAD). The
     // raw-projection blend hands the target to the scene up there instead.
-    // Fixture sits MID-WINDOW (h/R 2.55, w = 0.5): ruling 10 re-keyed the
-    // band to `bodyUpWeight`, so below engage the field is the pure body
-    // ENU by construction — identical to the engaged arm — and the blend
-    // (where the hand-off property lives) spans the hysteresis window.
+    // Fixture sits MID-WINDOW (w = 0.5): ruling 10 re-keyed the band to
+    // `bodyUpWeight`, so below engage the field is the pure body ENU by
+    // construction — identical to the engaged arm — and the blend (where
+    // the hand-off property lives) spans the hysteresis window.
     const tiltRad = (2 * Math.PI) / 180;
     const perp: Vec3 = Math.abs(EARTH_POLE[0]!) < 0.9 ? [1, 0, 0] : [0, 1, 0];
     const dir = normalize3([
@@ -216,7 +216,8 @@ describe('frameAlignedRoll', () => {
 
     // In-band settle: bounded and near the scene up (the raw-weighted pole
     // term is only sin 2° strong; the old chase converged 1.4 rad off).
-    let pose = poseAtHR(2.55, 0, yaw, pitch);
+    const midHR = (SURFACE_REGIME.engageHR + SURFACE_REGIME.disengageHR) / 2;
+    let pose = poseAtHR(midHR, 0, yaw, pitch);
     let maxStep = 0;
     for (let i = 0; i < 60; i += 1) {
       const next = frameAlignedRoll(pose, pose, BODIES, B, B);
@@ -228,7 +229,7 @@ describe('frameAlignedRoll', () => {
 
     // Recede past the band top: the ride lands screen-up on the configured
     // global up — not its negation, not a perpendicular.
-    let hr = 2.55;
+    let hr = midHR;
     while (hr <= SURFACE_REGIME.disengageHR) {
       const nextHR = hr * 1.15;
       const next = frameAlignedRoll(

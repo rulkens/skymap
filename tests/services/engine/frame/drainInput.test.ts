@@ -491,7 +491,7 @@ describe('drainInput', () => {
     // In-band start with the band's pole-aligned roll held (the user's state
     // after an approach). Converge the roll onto the ride's own fixed point
     // first with factor-1 notches, so the recession isolates the RIDE.
-    const startDist = EARTH_RADIUS_MPC * 2.5;
+    const startDist = EARTH_RADIUS_MPC * 1.1; // h/R 0.1, below ruling 19's engage (0.2)
     store.dispatch(commitCameraPose(absoluteArm(poseAt(startDist, -0.26))));
     state.cameraRuntime.lastPose.current = absoluteArm(poseAt(startDist, -0.26));
     state.cameraRuntime.prevActiveId.current = 'followBody';
@@ -518,7 +518,7 @@ describe('drainInput', () => {
 
     let guard = 0;
     while (
-      state.cameraRuntime.clock.followDistanceTarget! / EARTH_RADIUS_MPC - 1 < 4.5 &&
+      state.cameraRuntime.clock.followDistanceTarget! / EARTH_RADIUS_MPC - 1 < 0.5 &&
       guard < 30
     ) {
       agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });

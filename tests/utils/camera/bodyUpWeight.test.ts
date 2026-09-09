@@ -28,14 +28,21 @@ afterEach(() => {
 
 describe('bodyUpWeight', () => {
   it('log space: 0.5 at the geometric midpoint, exact 1/0 at the edges, monotone', () => {
-    expect(bodyUpWeight(Math.sqrt(1.7 * 3.4))).toBeCloseTo(0.5, 12);
-    expect(bodyUpWeight(1.7)).toBe(1);
-    expect(bodyUpWeight(3.4)).toBe(0);
+    const { engageHR, disengageHR } = SURFACE_REGIME;
+    expect(bodyUpWeight(Math.sqrt(engageHR * disengageHR))).toBeCloseTo(0.5, 12);
+    expect(bodyUpWeight(engageHR)).toBe(1);
+    expect(bodyUpWeight(disengageHR)).toBe(0);
     // An at-surface pose (h/R → 0) must not NaN through the log.
     expect(bodyUpWeight(0)).toBe(1);
+    // Sweep a window derived from the band itself (never a literal range) so
+    // it still spans below-engage to above-disengage after ruling 19 moved
+    // the edges close together.
     let prev = Infinity;
-    for (let hr = 0.5; hr <= 5; hr += 0.01) {
-      const w = bodyUpWeight(hr);
+    const lo = engageHR * 0.1;
+    const hi = disengageHR * 3;
+    const steps = 500;
+    for (let i = 0; i <= steps; i += 1) {
+      const w = bodyUpWeight(lo + ((hi - lo) * i) / steps);
       expect(w).toBeLessThanOrEqual(prev + 1e-15);
       prev = w;
     }
@@ -43,11 +50,12 @@ describe('bodyUpWeight', () => {
 
   it('lin space: 0.5 at the arithmetic midpoint — the spaces genuinely differ', () => {
     ORIENT_TUNING.blendSpace = 'lin';
-    expect(bodyUpWeight((1.7 + 3.4) / 2)).toBeCloseTo(0.5, 12);
-    // The geometric mean (≈2.40) sits below the arithmetic one (2.55), so the
-    // linear curve reads > 0.5 there — a space toggle that did nothing would
-    // fail this.
-    expect(bodyUpWeight(Math.sqrt(1.7 * 3.4))).toBeGreaterThan(0.55);
+    const { engageHR, disengageHR } = SURFACE_REGIME;
+    expect(bodyUpWeight((engageHR + disengageHR) / 2)).toBeCloseTo(0.5, 12);
+    // The geometric mean sits below the arithmetic one (AM-GM), so the linear
+    // curve reads > 0.5 there — a space toggle that did nothing would fail
+    // this. Holds regardless of the band's absolute scale.
+    expect(bodyUpWeight(Math.sqrt(engageHR * disengageHR))).toBeGreaterThan(0.55);
   });
 
   it('the sliders retune the SAME curve (one home, ruling 10)', () => {

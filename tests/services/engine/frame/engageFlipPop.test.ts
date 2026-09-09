@@ -1,6 +1,6 @@
 /**
- * engageFlipPop — round-8 regression at the user's altitude (h/R ≈ 1.8, the
- * engage neighbourhood): a focused zoom-IN through the flip must hand the
+ * engageFlipPop — round-8 regression at the user's altitude (the engage
+ * neighbourhood): a focused zoom-IN through the flip must hand the
  * orientation settle over seamlessly. The pre-fix two-curve seam (world roll
  * target keyed to `maxTiltRad`, engaged reference to `bodyUpWeight`) made the
  * target jump ~0.12 rad AT the flip, which the capped decay then walked out
@@ -164,7 +164,7 @@ describe('engage-flip pop (round 8)', () => {
       const { state, deps } = makeHarness();
       const events: { t: number; deltaY: number }[] = [];
       let t = 1000; // the follow approach settles at the framing distance first
-      for (let i = 0; i < 25; i += 1, t += 33) events.push({ t, deltaY: -100 });
+      for (let i = 0; i < 60; i += 1, t += 33) events.push({ t, deltaY: -100 });
       const endT = t + 2000;
 
       const samples: FrameSample[] = [];

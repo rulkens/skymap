@@ -40,9 +40,12 @@ describe('OrientationTuning', () => {
 
   it('a clamp that moves the other knob is re-read into the UI', () => {
     const { getByLabelText } = render(createElement(OrientationTuning));
-    fireEvent.change(getByLabelText('disengage h/R'), { target: { value: '1.5' } });
-    expect(SURFACE_REGIME.engageHR).toBeCloseTo(1.5 / 1.1, 12);
+    // Ruling 19's engage default (0.2) sits flush against disengageMin
+    // (0.2), so the window that clears the floor while still tripping the
+    // engage × minRatio clamp (0.22) is narrow — 0.21, not the old 1.5.
+    fireEvent.change(getByLabelText('disengage h/R'), { target: { value: '0.21' } });
+    expect(SURFACE_REGIME.engageHR).toBeCloseTo(0.21 / 1.1, 12);
     const engage = getByLabelText('engage h/R') as HTMLInputElement;
-    expect(Number(engage.value)).toBeCloseTo(1.5 / 1.1, 12);
+    expect(Number(engage.value)).toBeCloseTo(0.21 / 1.1, 12);
   });
 });

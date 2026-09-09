@@ -162,8 +162,8 @@ function stepKm(a: Vec3, b: Vec3): number {
 /**
  * Same approach recipe as tiltCommitIdempotence: dive engaged, set a large
  * remembered tilt through the controller's own handles, zoom out past
- * disengage, then back IN to mid-window (h/R ≈ 2.55) — world-armed,
- * pivot-pinned, projection live.
+ * disengage, then back IN to mid-window — world-armed, pivot-pinned,
+ * projection live.
  */
 function toMidWindow(harness: ReturnType<typeof makeHarness>) {
   const { state } = harness;
@@ -176,14 +176,16 @@ function toMidWindow(harness: ReturnType<typeof makeHarness>) {
     frame();
   };
 
-  for (let i = 0; i < 14; i += 1) notch(-100);
+  for (let i = 0; i < 32; i += 1) notch(-100);
   expect(state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
 
+  // Set the memory via the controller's handles (unit-radius, h/R 0.15 so the
+  // tilt ceiling is open under ruling 19's tighter band).
   const c = state.cameraRuntime.surface;
   let p: BodyFixedPose = {
     bodyId: 'earth',
     anchorLocalM: [0, 0, 0],
-    eyeRelAnchorM: [0, 0, 2.2],
+    eyeRelAnchorM: [0, 0, 1.15],
     basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1] as Mat3,
   };
   c.onGestureStart();
@@ -212,10 +214,12 @@ function toMidWindow(harness: ReturnType<typeof makeHarness>) {
   }
   expect(c.rememberedTiltRad()).toBeGreaterThan(0.5);
 
-  while (display(state).hr < 3.6) notch(100);
+  // Out past disengage, back in to mid-window; thresholds rescaled for
+  // ruling 19's tighter band (engage 0.2 / disengage 0.4, was 1.7/3.4).
+  while (display(state).hr < 0.45) notch(100);
   expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
-  while (display(state).hr > 2.7) notch(-100);
-  expect(display(state).hr).toBeGreaterThan(2.2);
+  while (display(state).hr > 0.32) notch(-100);
+  expect(display(state).hr).toBeGreaterThan(0.26);
   expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
 
   for (let i = 0; i < 60; i += 1) frame();

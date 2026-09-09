@@ -47,7 +47,7 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         max={limits.engageMax}
         step={0.05}
         readout={SURFACE_REGIME.engageHR.toFixed(2)}
-        title="h/R at which the body arm takes over (default 1.7)"
+        title="h/R at which the body arm takes over (default 0.2)"
         onChange={(v) => {
           setSurfaceBand({ engageHR: v });
           bump();
@@ -60,7 +60,7 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         max={limits.disengageMax}
         step={0.05}
         readout={SURFACE_REGIME.disengageHR.toFixed(2)}
-        title="h/R at which it hands back (default 3.4; kept > engage × 1.1)"
+        title="h/R at which it hands back (default 0.4; kept > engage × 1.1)"
         onChange={(v) => {
           setSurfaceBand({ disengageHR: v });
           bump();

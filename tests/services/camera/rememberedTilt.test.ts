@@ -114,7 +114,7 @@ function raiseTiltTo(
 describe('remembered tilt (ruling 12)', () => {
   it('zoom-in never authors tilt: a user-set tilt survives a dive unchanged', () => {
     const c = createSurfaceController();
-    let pose = raiseTiltTo(c, poseAt([0, 0, 2.2], NADIR), 0.35);
+    let pose = raiseTiltTo(c, poseAt([0, 0, 1.15], NADIR), 0.35);
     const set = tiltOf(pose);
     expect(set).toBeGreaterThan(0.35); // the handles really tilted the view
     expect(set).toBeLessThan(0.45); // …but the centre ray still hits ground
@@ -144,7 +144,7 @@ describe('remembered tilt (ruling 12)', () => {
     it('display tilt converges to remembered × w mid-window and crosses disengage at 0', () => {
       ORIENT_TUNING.blendSpace = space;
       const c = createSurfaceController();
-      const set = tiltOf(setTiltByDrag(c, poseAt([0, 0, 2.2], NADIR), 20));
+      const set = tiltOf(setTiltByDrag(c, poseAt([0, 0, 1.15], NADIR), 20));
       expect(set).toBeGreaterThan(0.1);
 
       // Park at the window's geometric midpoint: the settle converges onto
@@ -179,7 +179,7 @@ describe('remembered tilt (ruling 12)', () => {
     ORIENT_TUNING.northUp = false;
     const c = createSurfaceController();
     const hr = (SURFACE_REGIME.engageHR + SURFACE_REGIME.disengageHR) / 2; // mid-window
-    let pose = setTiltByDrag(c, poseAt([0, 0, 1 + hr], NADIR), 30);
+    let pose = setTiltByDrag(c, poseAt([0, 0, 1 + hr], NADIR), 10);
     const display = tiltOf(pose);
     expect(display).toBeGreaterThan(0.1);
     // Un-mapped through w at the POST-drag standpoint (the drag orbits the
@@ -199,13 +199,17 @@ describe('remembered tilt (ruling 12)', () => {
   it('the drag wall never erodes the band-mapped display (reconciliation 1)', () => {
     ORIENT_TUNING.blendSpace = 'lin';
     const c = createSurfaceController();
-    let pose = raiseTiltTo(c, poseAt([0, 0, 2.2], NADIR), 1.5); // deep, ceiling slack
+    let pose = raiseTiltTo(c, poseAt([0, 0, 1.1], NADIR), 2.8); // deep, ceiling slack
     const remembered = c.rememberedTiltRad();
-    expect(remembered).toBeGreaterThan(1.5);
+    expect(remembered).toBeGreaterThan(2.8);
 
     // Recede into the window until the mapped display exceeds the drag ramp.
-    let hr = 1.2;
-    while (hr < 2.2) {
+    // Ruling 19's ceiling ramp (ties to disengageHR/tiltFullHR) is wider than
+    // the up-weight ramp (ties to disengageHR/engageHR), so the premise below
+    // only holds close to engage, not mid-band as under the old wide band.
+    let hr = 0;
+    const target = SURFACE_REGIME.engageHR * 1.1;
+    while (hr < target) {
       pose = apply(c, pose, zoom(Math.exp(0.1)));
       hr = hrOf(pose);
     }

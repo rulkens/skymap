@@ -20,19 +20,24 @@ describe('maxTiltRad', () => {
     expect(maxTiltRad(0)).toBeCloseTo(Math.PI, 12);
   });
 
-  it('crosses 90 degrees near the midpoint of the two edges (~1.71 R)', () => {
-    const atMidpoint = maxTiltRad((SURFACE_REGIME.disengageHR + SURFACE_REGIME.tiltFullHR) / 2);
+  it('crosses 90 degrees near the midpoint of the two edges', () => {
+    const { disengageHR, tiltFullHR } = SURFACE_REGIME;
+    const mid = (disengageHR + tiltFullHR) / 2;
+    const atMidpoint = maxTiltRad(mid);
     expect(atMidpoint).toBeCloseTo(Math.PI / 2, 12);
 
     // Loosely locate the 90 degree crossing itself, without pinning an exact
-    // h/R — a feel-gate tweak to tiltFullHR must not turn this into a tollbooth.
+    // h/R — a feel-gate tweak to tiltFullHR (or ruling 19's band move) must
+    // not turn this into a tollbooth. Search window derived from the band
+    // itself rather than a literal, so it rides any future band change.
+    const margin = (disengageHR - tiltFullHR) * 0.1;
     const samples: number[] = [];
-    for (let hOverR = 1.6; hOverR <= 1.8; hOverR += 0.01) {
+    for (let hOverR = mid - margin; hOverR <= mid + margin; hOverR += margin / 20) {
       samples.push(hOverR);
     }
     const crossing = samples.find((hOverR) => maxTiltRad(hOverR) <= Math.PI / 2);
-    expect(crossing).toBeGreaterThan(1.6);
-    expect(crossing).toBeLessThan(1.8);
+    expect(crossing).toBeGreaterThan(mid - margin);
+    expect(crossing).toBeLessThan(mid + margin);
   });
 
   it('is monotonically non-increasing in h/R', () => {
