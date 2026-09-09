@@ -32,9 +32,8 @@ export function latchSurfaceGesture(
     return { mode: 'tilt', anchorLocalM, anchorRadiusM: Math.hypot(...anchorLocalM), prevPixel };
   }
 
-  // A miss is sky: free look. (R1 deleted the trackball's free rotation, and
-  // with it the altitude tiebreak a miss used to consult — a pan that LEAVES
-  // the disc mid-gesture degrades to the north-locked orbit instead.)
+  // A miss is sky: free look (R1). A pan that LEAVES the disc mid-gesture
+  // degrades to the north-locked orbit instead, not to look.
   if (pick === null) return { mode: 'look', anchorLocalM: null, anchorRadiusM: 0, prevPixel };
 
   return {

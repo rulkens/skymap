@@ -2,8 +2,8 @@
  * ONE settle discipline (ruling 10), both arms: the deviation's notch-authored
  * move rides in full up to `rideBoundRad`; the pre-notch deviation decays by
  * the capped share. The bound is per-DOF policy — heading/roll pass
- * `ORIENT_DECAY.rideBoundRad` (a bigger move is a blend flip, unauthored: round
- * 6); tilt passes `Infinity` (ruling 12: bounding it would cross disengage with tilt).
+ * `ORIENT_DECAY.rideBoundRad` (a bigger move is an unauthored blend flip);
+ * tilt passes `Infinity`, or it would cross disengage with tilt (ruling 12).
  */
 
 import { orientStepRad } from './orientStepRad';

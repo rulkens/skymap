@@ -1,9 +1,8 @@
 /**
- * tiltFromNadirRad — the view's polar angle off straight-down, in [0, π].
- * Deliberately UNSIGNED: a pose holds a tilt magnitude plus an azimuth, and
- * "which way is down" is only defined relative to a rotation axis — that
- * signed question belongs to `tiltFloorBudgetRad`, whose wrong-side history
- * is R13-1. One home for the readout `eyeFrameOf` and the tilt wall share.
+ * The view's polar angle off straight-down, in [0, π]. Deliberately UNSIGNED:
+ * a pose holds a tilt magnitude plus an azimuth, and "which way is down" is
+ * only defined relative to a rotation axis — that signed question belongs to
+ * `tiltFloorBudgetRad` (R13-1). One home for `eyeFrameOf` and the tilt wall.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

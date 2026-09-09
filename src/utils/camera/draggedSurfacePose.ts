@@ -34,10 +34,10 @@ export function draggedSurfacePose(
     const rotated = anchoredDragRotation(arm, prevRay, currRay, gesture.anchorRadiusM);
     if (rotated !== null) return { pose: rotated, mode };
     // A null answer covers a miss AND a grazing hit, and the two degrade
-    // differently (C §2.6 / §6.4), so the incidence is re-measured here —
-    // against the frozen sphere, never the display readout. Sticky either way.
-    // The CURRENT ray decides alone: when it was the previous one that grazed,
-    // the orbit is the honest answer for a gesture already at the limb.
+    // differently (C §2.6 / §6.4), so the incidence is re-measured here against
+    // the frozen sphere, never the display readout. Sticky either way. The
+    // CURRENT ray decides alone: when it was the previous one that grazed, the
+    // orbit is the honest answer for a gesture already at the limb.
     const graze = pickOnBody(currRay, gesture.anchorRadiusM);
     mode = graze !== null && Math.abs(graze.incidence) < MIN_INCIDENCE_COS ? 'strafe' : 'orbit';
   }
@@ -102,9 +102,9 @@ export function draggedSurfacePose(
   // anchor's local up, THEN tilt about the ALREADY-YAWED east. Tilting about a
   // fixed screen axis instead drags ~10° of unwanted heading per 60 px (probe).
   const upLocal = normalize3(anchorM);
-  // NEGATED heading on this handle (user feel ruling 15, 2026-09-03): a
-  // right-drag rightward turns the view the OTHER way from the orbit drag —
-  // deliberate, do not "fix" the sign back to match the pan convention.
+  // NEGATED heading on this handle (user feel ruling 15): a right-drag turns
+  // the view the OTHER way from the orbit drag — deliberate, do not "fix" the
+  // sign back to match the pan convention.
   const heading = quatFromAxisAngle(upLocal, -yawRad);
   const radial = dot3(right, upLocal);
   const eastM = normalize3([
@@ -112,22 +112,16 @@ export function draggedSurfacePose(
     right[1] - upLocal[1] * radial,
     right[2] - upLocal[2] * radial,
   ]);
-  // Google-MAPS pitch mapping (user ruling 17, 2026-09-03, supersedes ruling
-  // 16's Google-Earth sign): drag UP/away tilts up toward the horizon, so
-  // `pitchRad`'s screen-space down-is-positive sign is NEGATED here. Ruling 16
-  // briefly shipped the opposite (down-drag = tilt up); the user reversed it
-  // same day. Do not "fix" this sign either way without a new ruling.
-  // TILT_GAIN breaks the one-FOV-per-screen-height rate law for this handle
-  // only: tilting spans ~90° of travel where orbit spans a hemisphere, so the
-  // uniform rate reads as sluggish here (user feel ruling, 2026-09-03).
+  // Google-MAPS pitch mapping (user ruling 17): drag UP/away tilts up toward
+  // the horizon, so `pitchRad`'s screen-space down-is-positive sign is NEGATED
+  // here. Do not "fix" this sign either way without a new ruling.
   //
-  // Ruling 14: the tilt FLOOR at 0 is a dead stop, clamped at the gesture.
-  // Only the lowering side (negative request) is bounded — by the exact
-  // through-zero rotation about this axis, not by the tilt readout: an
+  // Ruling 14: the tilt FLOOR at 0 is a dead stop, clamped at the gesture. Only
+  // the lowering side (negative request) is bounded, and by the exact
+  // through-zero rotation about this axis rather than by the tilt readout — an
   // unsigned acos cannot say which way is down and once bound the wrong side
-  // entirely, leaving the crossing open and the memory following it (R13-1).
-  // The raising side stays owned by the ceiling wall. The heading factor is
-  // untouched: a mixed drag keeps its yaw live while the tilt dies.
+  // entirely (R13-1). The raising side stays owned by the ceiling wall; the
+  // heading factor is untouched, so a mixed drag keeps its yaw live.
   const tiltRequest = -pitchRad * TILT_GAIN;
   const fwdArm: Vec3 = [arm.basisLocal[6], arm.basisLocal[7], arm.basisLocal[8]];
   const tiltAngle =

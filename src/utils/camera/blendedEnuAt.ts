@@ -1,9 +1,8 @@
 /**
  * blendedEnuAt — east/north at `localUp` for the band-blended reference up:
  * the horizontal-plane reading of `blendedUpDir` (ruling 10's ONE field —
- * weight, blend, and hold-and-transport all live there). At `w = 1` this IS
- * `headingTiltAt`'s construction, fallback included. The engaged settle and
- * the camera debug readout both read THIS.
+ * weight, blend, and hold-and-transport all live there). At `w = 1` it is the
+ * pure body ENU. The engaged settle and the camera debug readout both read THIS.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -21,8 +20,8 @@ export function blendedEnuAt(
   const north = blendedUpDir(localUp, BODY_POLE, blendW, sceneUpLocal, carryUp);
   if (north !== null) return { east: cross3(north, localUp), north };
   // Degenerate with nothing to carry (a polar standpoint's vanished
-  // horizontals): the classic pole-ENU fallback, byte-for-byte
-  // `headingTiltAt`'s — load-bearing for every polar fixture.
+  // horizontals): the classic pole-ENU fallback, load-bearing for every polar
+  // fixture.
   const eastRaw = cross3(BODY_POLE, localUp);
   const eastLen = Math.hypot(...eastRaw);
   const east: Vec3 =

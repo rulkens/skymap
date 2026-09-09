@@ -4,9 +4,7 @@ import { surfaceFloorM } from './surfaceFloorM';
 
 /**
  * The descent floor, unconditional and resampled after the last position write
- * (spec §6, O §4). The push is radial, so it moves the eye without turning it —
- * the same reason `anchoredZoomStep` rescales rather than rotating (C §6.6's
- * "rotate the basis by the angle collision moved the eye" has zero angle here).
+ * (spec §6, O §4). The push is radial, so it moves the eye without turning it.
  * A tilt about a surface anchor holds `|eye − anchor|`, not `|eye|`, so without
  * this a long tilt drag walks the eye straight through the ground.
  */

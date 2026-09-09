@@ -1,9 +1,7 @@
 /**
- * rotateVec3ByTightMat3T — `Mᵀ·v` for a TIGHT column-major 3×3 rotation:
- * the world→local inverse of `rotateVec3ByTightMat3` (orthonormal, so the
- * transpose is the inverse). Each output component is the dot of a COLUMN
- * with `v` — the same three-multiply-add form `orbitAnglesLookingAlong` and
- * `bodyRelativePose` hand-roll.
+ * `Mᵀ·v` for a TIGHT column-major 3×3 rotation — the world→local inverse of
+ * `rotateVec3ByTightMat3` (orthonormal, so the transpose is the inverse). Each
+ * output component is the dot of a COLUMN with `v`.
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';

@@ -3,10 +3,9 @@ import type { BodyFixedPose } from './BodyFixedPose';
 import type { CameraPose } from './CameraPose';
 
 /**
- * The authoritative camera pose and the frame it lives in. The `absolute` arm
- * is today's orbit currency unchanged; the `body` arm is provider B's state.
- * This is the tag-beside-channels form T4 ruled for — NOT the declined
- * FramedPose rewrite of the animation system, which keeps its four channels.
+ * The authoritative camera pose and the frame it lives in, in the
+ * tag-beside-channels form ruled for by T4 — the animation system is NOT
+ * framed this way and keeps its own four channels.
  */
 export type FramedCameraPose =
   | { readonly frame: 'absolute'; readonly pose: CameraPose }

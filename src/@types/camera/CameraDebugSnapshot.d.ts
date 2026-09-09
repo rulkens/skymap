@@ -2,19 +2,12 @@ import type { BodyId } from '../data/body/BodyId';
 import type { PoseFrame } from './PoseFrame';
 import type { Vec3 } from '../math/Vec3';
 
-/**
- * CameraDebugSnapshot — the DebugPanel's "Camera" section readout (spec
- * 2026-09-01-camera-pivot §4/§6). Surfaces the branch's two known bug classes
- * (`armMismatch`, `epochMismatch`) plus the full orientation pipeline: the
- * roll's two references (configured scene up, body spin axis), the band's
- * blended target, and the input/gesture state driving them.
- */
+/** The DebugPanel's "Camera" section readout (spec 2026-09-01-camera-pivot §4/§6). */
 export type CameraDebugSnapshot = {
-  /** `camera.base.frame` — the regime itself, per the store's own doc comment. */
+  /** `camera.base.frame` — the regime itself. */
   readonly storedFrame: PoseFrame;
   /** `cameraRuntime.lastPose.current.frame` — the arm actually drawn last frame. */
   readonly renderedFrame: PoseFrame;
-  /** True when `storedFrame` and `renderedFrame` name different arms/bodies. */
   readonly armMismatch: boolean;
   /** The engaged body when `storedFrame` is a body arm, else the nearest roster body. */
   readonly engagedBodyId: BodyId | null;
@@ -22,7 +15,6 @@ export type CameraDebugSnapshot = {
   readonly hOverR: number | null;
   /** Altitude above `engagedBodyId`'s surface, metres; null alongside `hOverR`. */
   readonly altitudeM: number | null;
-  /** The rendered world pose's orbit distance, Mpc. */
   readonly distanceMpc: number;
   /** `settings.orientation` — the configured scene frame. */
   readonly orientationFrame: string;
@@ -32,7 +24,7 @@ export type CameraDebugSnapshot = {
   readonly bandUpWeight: number | null;
   /** The session's Cesium-style remembered tilt (ruling 12), radians. */
   readonly rememberedTiltRad: number;
-  /** Body-local heading/tilt of the rendered view (`headingTiltAt`); null off-roster. */
+  /** Body-local heading/tilt of the rendered view; null off-roster. */
   readonly headingRad: number | null;
   readonly tiltRad: number | null;
   /** The pose's roll — 0 IS the configured scene up, by the roll convention. */
@@ -49,7 +41,6 @@ export type CameraDebugSnapshot = {
   readonly lastRenderedSimDays: number;
   /** The live clock's instant, resolved at read time (not what any frame drew). */
   readonly liveSimDays: number;
-  /** `liveSimDays - lastRenderedSimDays`. */
   readonly epochDeltaDays: number;
   /** True when `epochDeltaDays` exceeds normal render-loop/poll drift. */
   readonly epochMismatch: boolean;
@@ -63,6 +54,6 @@ export type CameraDebugSnapshot = {
   readonly gestureMode: string | null;
   /** Whether the latched gesture holds a cursor ground hit; null without a latch. */
   readonly gestureCursorHit: boolean | null;
-  /** 'in' | 'out' from the last zoom step's factor; null before the first notch. */
+  /** From the last zoom step's factor; null before the first notch. */
   readonly lastZoomDirection: 'in' | 'out' | null;
 };

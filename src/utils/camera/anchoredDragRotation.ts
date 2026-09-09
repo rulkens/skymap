@@ -22,8 +22,7 @@ const BODY_CENTRE: Vec3 = [0, 0, 0];
 /**
  * |ray·normal| below this is edge-on enough that the rotation satisfying the
  * drag is a teleport. A hard test, never a blend — a blend would be a second
- * path hiding drift. Feel-open until Task 22. Single home: the surface
- * controller imports this, never restates it.
+ * path hiding drift. Single home; the surface controller imports it.
  */
 export const MIN_INCIDENCE_COS = 0.05;
 

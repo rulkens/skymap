@@ -14,16 +14,13 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { yawPitchToDir } from './yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
 
-// Module scratch reused every call so the per-frame path never allocates.
-// Two buffers: the matrix–vector product reads all three input components
-// while writing its output, so the decode and the rotation cannot share one.
+// Module scratch reused every call so the per-frame path never allocates. Two
+// buffers, not one: the matrix–vector product reads all three input components
+// while writing its output, so the decode and the rotation cannot share.
 const scratchDir: Vec3 = [0, 0, 0];
 const scratchWorld: Vec3 = [0, 0, 0];
 
-/**
- * @param out Optional destination written in place and returned; a fresh `Vec3`
- *            is allocated when omitted (same convention as `yawPitchToDir`).
- */
+/** `out` is written in place and returned; omitted ⇒ a fresh `Vec3`. */
 export function eyeMpcOf(
   pose: CameraPose,
   poseBasis: Readonly<Mat3> | undefined,

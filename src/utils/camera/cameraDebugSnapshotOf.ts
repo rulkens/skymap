@@ -1,18 +1,15 @@
 /**
  * cameraDebugSnapshotOf — pure projection for the DebugPanel's "Camera"
- * section. Takes the primitives `runFrame`'s fold already resolves (never
- * recomputes the regime itself) and derives the full orientation pipeline —
- * roll against BOTH references (configured scene up, body spin axis), the
- * band's blended ride target, body-local heading/tilt — through the same
+ * section. Takes the primitives `runFrame`'s fold already resolved (never
+ * recomputes the regime) and derives the orientation pipeline through the same
  * helpers the live path uses (`bandRollTarget`, `blendedEnuAt`,
- * `bodyRelativePose`), so the readout can never drift from the mechanism —
- * the heading is measured in the band-blended reference frame the engaged
- * settle actually converges against, never the raw pole frame.
+ * `bodyRelativePose`), so the readout cannot drift from the mechanism — the
+ * heading is measured in the band-blended reference the engaged settle
+ * converges against, never the raw pole frame.
  *
- * The epoch-mismatch floor is `liveSimDays`'s own currency (sim-days), so it
- * scales with the CURRENT time-ladder rate: `deriveSimDays` is affine in
- * `nowMs` for a fixed `time`, so its slope over two wall-clock seconds of
- * healthy poll jitter is the floor at any sampled instant (I4).
+ * The epoch-mismatch floor is in `liveSimDays`'s own currency, so it scales
+ * with the time-ladder rate: `deriveSimDays` is affine in `nowMs` for a fixed
+ * `time`, so its slope over two seconds of poll jitter is the floor (I4).
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';
@@ -115,7 +112,6 @@ export function cameraDebugSnapshotOf(input: {
   const altitudeM = hr !== null && radiusM !== undefined ? hr * radiusM : null;
   const ceilingRad = hr !== null ? maxTiltRad(hr) : null;
 
-  // ── The orientation pipeline, derived exactly as the live paths derive it ──
   const rollRad = worldPose.roll ?? 0;
   const forwardRaw: Vec3 = [
     worldPose.target[0] - eyeMpc[0],
@@ -138,11 +134,10 @@ export function cameraDebugSnapshotOf(input: {
       bodyState,
     });
     const localUp = normalize3(eyeRelBodyM);
-    // The SAME band-blended reference the engaged settle converges against
-    // (`blendedEnuAt` + `refAzimuthOf` — one home each for the frame and the
-    // azimuth source rule) — a pole-frame heading here showed non-zero for a
-    // converged camera inside the window, misleading the capture. The
-    // pose's own up is the carry, exactly as `eyeFrameOf` passes it.
+    // A pole-frame heading here showed non-zero for a camera converged inside
+    // the window, misleading the capture: measure in the SAME band-blended
+    // reference the engaged settle converges against, with the pose's own up as
+    // the carry, exactly as `eyeFrameOf` passes it.
     const sceneUpLocalBody = rotateVec3ByTightMat3T(upRef, bodyState.orientation);
     const forwardLocal: Vec3 = [basisM[6], basisM[7], basisM[8]];
     const upLocal: Vec3 = [basisM[3], basisM[4], basisM[5]];
