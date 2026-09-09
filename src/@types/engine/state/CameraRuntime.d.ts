@@ -6,8 +6,8 @@
  * pose, an optional tween descriptor, an auto-rotate config, and a drag flag. It
  * is deliberately timeless — no wall-clock values live there.
  *
- * The per-frame produce step needs four transient Resources that DO depend on
- * the passage of real time and on the precise sequence of frame-produced poses:
+ * The per-frame produce step needs transient Resources that DO depend on the
+ * passage of real time and on the precise sequence of frame-produced poses:
  *
  *   `clock`        — the `CameraClock` that converts 'this tween descriptor was
  *                    seen before' / 'auto-rotate is active' into elapsed-ms for
@@ -62,15 +62,8 @@
  *                    and is its SINGLE writer — the one place that answers 'which
  *                    way is up this frame' for every reader.
  *
- *   `skyCubemapCapture` — the black-hole lens's sky-cubemap bake bookkeeping
- *                    (the band-active edge, GC distance, and the settings
- *                    reference the current bake was taken under). Not boxed —
- *                    `renderFrame` is its only reader/writer, so no other
- *                    module needs a shared live reference. See
- *                    `SkyCubemapCaptureRuntime.d.ts`.
- *
  * Constructed in `engine.ts` alongside `frameRef`, this bag is the single source
- * of truth for all four Resources: `wireInput`, `startLoop`, `runFrame`, and the
+ * of truth for every one of them: `wireInput`, `startLoop`, `runFrame`, and the
  * focus handlers all read from `state.cameraRuntime`, so there is no duplication
  * and no 'which copy is live?' ambiguity.
  */
@@ -79,7 +72,6 @@ import type { CameraClock } from '../camera/CameraClock';
 import type { CameraProjection } from '../../camera/CameraProjection';
 import type { CameraPose } from '../../camera/CameraPose';
 import type { Mat3 } from '../../math/Mat3';
-import type { SkyCubemapCaptureRuntime } from './SkyCubemapCaptureRuntime';
 
 export type CameraRuntime = {
   /** The animation clock — mutated by tweenElapsed / autoRotateElapsed once per frame. */
@@ -101,6 +93,4 @@ export type CameraRuntime = {
    * `runFrame` writes it, once per frame from `resolveFrameBasis`.
    */
   upBasis: { current: Mat3 };
-  /** The black-hole lens's sky-cubemap bake bookkeeping; single-writer `renderFrame`. */
-  skyCubemapCapture: SkyCubemapCaptureRuntime;
 };
