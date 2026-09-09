@@ -16,24 +16,24 @@ import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import {
   CONTENT_PASSES,
-  scalarVolumeLayer,
-  galaxyPointSpritesLayer,
-  filamentsLayer,
-  earthLayer,
-  planetsLayer,
-  texturedBodiesLayer,
-  milkyWayLayer,
-  horizonShellLayer,
-  starPointsLayer,
-  orbitTrailsLayer,
-  starCatalogLayer,
-  starAggregatesLayer,
-  starAggregateUpsampleLayer,
-  sgrAStarLensingLayer,
-  foregroundLabelsLayer,
-  near0SelectionRingLayer,
-  clipPathDebugLayer,
-  structureMarkersLayer,
+  scalarVolumePass,
+  galaxyPointSpritesPass,
+  filamentsPass,
+  earthPass,
+  planetsPass,
+  texturedBodiesPass,
+  milkyWayPass,
+  horizonShellPass,
+  starPointsPass,
+  orbitTrailsPass,
+  starCatalogPass,
+  starAggregatesPass,
+  starAggregateUpsamplePass,
+  sgrAStarLensingPass,
+  foregroundLabelsPass,
+  near0SelectionRingPass,
+  clipPathDebugPass,
+  structureMarkersPass,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
@@ -301,15 +301,15 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
       (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
     );
     expect(nearHdr.map((layer) => layer.name)).toEqual(NEAR_HDR_NAMES);
-    expect(nearHdr).toContain(milkyWayLayer);
-    expect(nearHdr).toContain(starPointsLayer);
-    expect(nearHdr).toContain(orbitTrailsLayer);
-    expect(nearHdr).toContain(starCatalogLayer);
-    expect(nearHdr).toContain(starAggregateUpsampleLayer);
+    expect(nearHdr).toContain(milkyWayPass);
+    expect(nearHdr).toContain(starPointsPass);
+    expect(nearHdr).toContain(orbitTrailsPass);
+    expect(nearHdr).toContain(starCatalogPass);
+    expect(nearHdr).toContain(starAggregateUpsamplePass);
     for (const layer of nearHdr) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('hdr');
-      expect(layer.blend).toBe(layer === milkyWayLayer ? 'multiply' : 'additive');
+      expect(layer.blend).toBe(layer === milkyWayPass ? 'multiply' : 'additive');
     }
   });
 });
@@ -349,7 +349,7 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
     // Task 9 (earth) / Task 11 (planets, textured-bodies): each expands into
     // one render step per body-m row instead of a fixed NEAR0 index — see
     // frameProgram.ts's 'body' expansion.
-    for (const layer of [earthLayer, planetsLayer, texturedBodiesLayer]) {
+    for (const layer of [earthPass, planetsPass, texturedBodiesPass]) {
       expect(layer.slab).toBe('body');
       expect(layer.target).toBe('foreground:0');
       expect(layer.blend).toBe('opaque');
@@ -370,9 +370,9 @@ describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
       (layer) => layer.target === 'swap' && layer.slab === NEAR0,
     );
     expect(nearSwap.map((layer) => layer.name)).toEqual(NEAR_SWAP_NAMES);
-    expect(nearSwap).toContain(near0SelectionRingLayer);
-    expect(nearSwap).toContain(foregroundLabelsLayer);
-    expect(nearSwap).toContain(clipPathDebugLayer);
+    expect(nearSwap).toContain(near0SelectionRingPass);
+    expect(nearSwap).toContain(foregroundLabelsPass);
+    expect(nearSwap).toContain(clipPathDebugPass);
     for (const layer of nearSwap) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('swap');
@@ -413,9 +413,9 @@ describe('CONTENT_LAYERS blend legality', () => {
         // the swap-chain rows). A third non-additive hdr row should fail
         // this test and be a deliberate decision.
         const expected =
-          layer === milkyWayLayer
+          layer === milkyWayPass
             ? 'multiply'
-            : layer === sgrAStarLensingLayer
+            : layer === sgrAStarLensingPass
               ? 'over'
               : 'additive';
         expect(layer.blend).toBe(expected);
@@ -547,13 +547,13 @@ describe('scalarVolumeLayer registry row', () => {
     // The half-res raymarch draws into its own 'volume' offscreen before the
     // hdr group upsamples it, so it sits first in the registry — and its
     // 'volume' target keeps it out of both the hdr and swap groups.
-    expect(CONTENT_PASSES[0]).toBe(scalarVolumeLayer);
-    expect(scalarVolumeLayer.name).toBe('scalar-volume');
-    expect(scalarVolumeLayer.target).toBe('volume');
-    expect(scalarVolumeLayer.slab).toBe(COSMO);
-    expect(scalarVolumeLayer.blend).toBe('additive');
-    expect(CONTENT_PASSES.filter((l) => l.target === 'hdr')).not.toContain(scalarVolumeLayer);
-    expect(CONTENT_PASSES.filter((l) => l.target === 'swap')).not.toContain(scalarVolumeLayer);
+    expect(CONTENT_PASSES[0]).toBe(scalarVolumePass);
+    expect(scalarVolumePass.name).toBe('scalar-volume');
+    expect(scalarVolumePass.target).toBe('volume');
+    expect(scalarVolumePass.slab).toBe(COSMO);
+    expect(scalarVolumePass.blend).toBe('additive');
+    expect(CONTENT_PASSES.filter((l) => l.target === 'hdr')).not.toContain(scalarVolumePass);
+    expect(CONTENT_PASSES.filter((l) => l.target === 'swap')).not.toContain(scalarVolumePass);
   });
 });
 
@@ -563,16 +563,16 @@ describe('starAggregatesLayer registry row', () => {
     // offscreen via a dedicated (star-aggregates, NEAR0) render step, so its
     // 'star-aggregates' target keeps it out of both the hdr and swap groups —
     // the same isolation `scalar-volume` gets from its 'volume' target.
-    expect(starAggregatesLayer.name).toBe('star-aggregates');
-    expect(starAggregatesLayer.target).toBe('star-aggregates');
-    expect(starAggregatesLayer.slab).toBe(NEAR0);
-    expect(starAggregatesLayer.blend).toBe('additive');
-    expect(CONTENT_PASSES.filter((l) => l.target === 'hdr')).not.toContain(starAggregatesLayer);
-    expect(CONTENT_PASSES.filter((l) => l.target === 'swap')).not.toContain(starAggregatesLayer);
+    expect(starAggregatesPass.name).toBe('star-aggregates');
+    expect(starAggregatesPass.target).toBe('star-aggregates');
+    expect(starAggregatesPass.slab).toBe(NEAR0);
+    expect(starAggregatesPass.blend).toBe('additive');
+    expect(CONTENT_PASSES.filter((l) => l.target === 'hdr')).not.toContain(starAggregatesPass);
+    expect(CONTENT_PASSES.filter((l) => l.target === 'swap')).not.toContain(starAggregatesPass);
     // The upsample consumer and the aggregate producer share ONE visibility
     // gate, so a frame can never composite a stale offscreen the producer
     // skipped clearing.
-    expect(starAggregateUpsampleLayer.enabled).toBe(starAggregatesLayer.enabled);
+    expect(starAggregateUpsamplePass.enabled).toBe(starAggregatesPass.enabled);
   });
 });
 
@@ -580,9 +580,9 @@ describe('galaxyPointSpritesLayer.enabled', () => {
   it('always returns true (no user-facing toggle for point-sprites)', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, ctx, view)).toBe(true);
+    expect(galaxyPointSpritesPass.enabled(STATE_STUB, ctx, view)).toBe(true);
     // Even when every other toggle is off, point-sprites still runs.
-    expect(galaxyPointSpritesLayer.enabled(STATE_STUB, ctx, view)).toBe(true);
+    expect(galaxyPointSpritesPass.enabled(STATE_STUB, ctx, view)).toBe(true);
   });
 });
 
@@ -598,7 +598,7 @@ describe('filamentsLayer.enabled', () => {
       settings: { filaments: { enabled: true, intensity: 1 } },
     } as unknown as EngineState;
     const ctx = makeCtx();
-    expect(filamentsLayer.enabled(stateOn, ctx, slabViewOf(ctx, COSMO))).toBe(true);
+    expect(filamentsPass.enabled(stateOn, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
   it('returns false when filaments.enabled is false AND fade opacity is 0', () => {
@@ -609,7 +609,7 @@ describe('filamentsLayer.enabled', () => {
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
     const ctx = makeCtx();
-    expect(filamentsLayer.enabled(stateZeroFade, ctx, slabViewOf(ctx, COSMO))).toBe(false);
+    expect(filamentsPass.enabled(stateZeroFade, ctx, slabViewOf(ctx, COSMO))).toBe(false);
   });
 
   it('returns true when filaments.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
@@ -621,7 +621,7 @@ describe('filamentsLayer.enabled', () => {
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
     const ctx = makeCtx();
-    expect(filamentsLayer.enabled(stateOffFading, ctx, slabViewOf(ctx, COSMO))).toBe(true);
+    expect(filamentsPass.enabled(stateOffFading, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 });
 
@@ -639,7 +639,7 @@ describe('filamentsLayer.draw', () => {
       settings: { filaments: { enabled: true, intensity: 0.7 } },
       gpu: { ...STATE_STUB.gpu, filamentRenderer: { draw: drawSpy } },
     } as unknown as EngineState;
-    filamentsLayer.draw(PASS_STUB, view, ctx, stateWith07);
+    filamentsPass.draw(PASS_STUB, view, ctx, stateWith07);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -661,7 +661,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
+    expect(milkyWayPass.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
   });
 
   it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
@@ -672,7 +672,7 @@ describe('milkyWayLayer.enabled', () => {
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
     const ctx = makeCtx();
-    expect(milkyWayLayer.enabled(stateOffZeroFade, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
+    expect(milkyWayPass.enabled(stateOffZeroFade, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 
   it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
@@ -687,7 +687,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOffFading, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
+    expect(milkyWayPass.enabled(stateOffFading, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
   });
 
   it('returns false once the disc shrinks past the GONE apparent size (no empty render pass)', () => {
@@ -702,7 +702,7 @@ describe('milkyWayLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [MW_GONE_DIST_MPC * 2, 0, 0] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayLayer.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
+    expect(milkyWayPass.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
   });
 });
 
@@ -722,7 +722,7 @@ describe('milkyWayLayer.draw', () => {
       ...STATE_STUB,
       gpu: { ...STATE_STUB.gpu, milkyWayCloudRenderer: { drawDust: drawSpy } },
     } as unknown as EngineState;
-    milkyWayLayer.draw(PASS_STUB, view, ctx, state);
+    milkyWayPass.draw(PASS_STUB, view, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // This row draws ONLY the dust pass now — the additive star pass moved to
     // milkyWayAggregateLayer, which renders it into the reduced-resolution
@@ -747,7 +747,7 @@ describe('milkyWayLayer.draw', () => {
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
     expect(() =>
-      milkyWayLayer.draw(PASS_STUB, slabViewOf(ctx, NEAR0), ctx, STATE_STUB),
+      milkyWayPass.draw(PASS_STUB, slabViewOf(ctx, NEAR0), ctx, STATE_STUB),
     ).not.toThrow();
   });
 });
@@ -758,7 +758,7 @@ describe('horizonShellLayer.enabled', () => {
     // 14.3 Gpc ≈ 0.7 Gpc), so the layer is skipped — no empty
     // full-screen ray-march pass at galaxy-scale zoom.
     const ctx0 = makeCtx();
-    expect(horizonShellLayer.enabled(STATE_STUB, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
+    expect(horizonShellPass.enabled(STATE_STUB, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
   });
 
   it('returns true once the camera pulls back to cosmological scale', () => {
@@ -766,7 +766,7 @@ describe('horizonShellLayer.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
-    expect(horizonShellLayer.enabled(STATE_STUB, ctx, slabViewOf(ctx, COSMO))).toBe(true);
+    expect(horizonShellPass.enabled(STATE_STUB, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 });
 
@@ -781,7 +781,7 @@ describe('horizonShellLayer.draw', () => {
       ...STATE_STUB,
       gpu: { ...STATE_STUB.gpu, horizonShellRenderer: { draw: drawSpy } },
     } as unknown as EngineState;
-    horizonShellLayer.draw(PASS_STUB, view, ctx, state);
+    horizonShellPass.draw(PASS_STUB, view, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -796,7 +796,7 @@ describe('horizonShellLayer.draw', () => {
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
     expect(() =>
-      horizonShellLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, STATE_STUB),
+      horizonShellPass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, STATE_STUB),
     ).not.toThrow();
   });
 });
@@ -834,7 +834,7 @@ describe('galaxyPointSpritesLayer.draw', () => {
       },
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
-    galaxyPointSpritesLayer.draw(PASS_STUB, view, ctx, stateWithSelection);
+    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, stateWithSelection);
     const drawSpy = ctx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the GalaxyPointDrawSettings
@@ -854,7 +854,7 @@ describe('galaxyPointSpritesLayer.draw', () => {
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
-    galaxyPointSpritesLayer.draw(PASS_STUB, view, ctx, stateNullSelection);
+    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, stateNullSelection);
     const drawSpy = ctx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
@@ -874,7 +874,7 @@ describe('galaxyPointSpritesLayer.draw', () => {
     } as unknown as EngineState;
 
     const farCtx = makeCtx();
-    galaxyPointSpritesLayer.draw(PASS_STUB, slabViewOf(farCtx, COSMO), farCtx, state);
+    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(farCtx, COSMO), farCtx, state);
     const farSettings = (farCtx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
@@ -887,7 +887,7 @@ describe('galaxyPointSpritesLayer.draw', () => {
     const midCtx = makeCtx({
       drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]>,
     });
-    galaxyPointSpritesLayer.draw(PASS_STUB, slabViewOf(midCtx, COSMO), midCtx, state);
+    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(midCtx, COSMO), midCtx, state);
     const midSettings = (midCtx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const midFadeOf = midSettings.fadeOpacityOf as (source: number) => number;
@@ -911,7 +911,7 @@ describe('galaxyPointSpritesLayer.draw', () => {
     const deepCtx = makeCtx({
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
-    galaxyPointSpritesLayer.draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
+    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
     const deepSettings = (deepCtx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>).mock
       .calls[0]![3] as Record<string, unknown>;
     const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
@@ -930,7 +930,7 @@ describe('galaxyPointSpritesLayer.draw', () => {
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
-    galaxyPointSpritesLayer.draw(PASS_STUB, view, ctx, stateNullSelection);
+    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, stateNullSelection);
     const drawSpy = ctx.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
     const call = drawSpy.mock.calls[0]!;
     expect(call[0]).toBe(PASS_STUB);
@@ -1002,10 +1002,10 @@ describe('structureMarkersLayer.enabled', () => {
     } as unknown as EngineState;
     // Default fixture camera: 5 Mpc from origin, far outside the band.
     const farCtx = makeCtx();
-    expect(structureMarkersLayer.enabled(state, farCtx, slabViewOf(farCtx, COSMO))).toBe(true);
+    expect(structureMarkersPass.enabled(state, farCtx, slabViewOf(farCtx, COSMO))).toBe(true);
     // Inside goneAt (0.002 Mpc) → disabled despite queued markers.
     const nearCtx = makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> });
-    expect(structureMarkersLayer.enabled(state, nearCtx, slabViewOf(nearCtx, COSMO))).toBe(false);
+    expect(structureMarkersPass.enabled(state, nearCtx, slabViewOf(nearCtx, COSMO))).toBe(false);
   });
 });
 
@@ -1035,7 +1035,7 @@ describe('galaxyPointSpritesLayer.drawPick', () => {
       gpu: { ...STATE_STUB.gpu, galaxyPickRenderer: { drawPoints: drawPointsSpy } },
     } as unknown as EngineState;
 
-    galaxyPointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass.drawPick!(PASS_STUB, view, ctx, state);
 
     expect(drawPointsSpy).toHaveBeenCalledTimes(1);
     // arg[1] is the filtered `sources` list handed to drawPoints.
@@ -1069,7 +1069,7 @@ describe('galaxyPointSpritesLayer.drawPick', () => {
       gpu: { ...STATE_STUB.gpu, galaxyPickRenderer: { drawPoints: drawPointsSpy } },
     } as unknown as EngineState;
 
-    galaxyPointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass.drawPick!(PASS_STUB, view, ctx, state);
 
     expect(drawPointsSpy).toHaveBeenCalledTimes(1);
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;

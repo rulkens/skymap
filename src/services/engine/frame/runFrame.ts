@@ -75,8 +75,8 @@ import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { earthSurfaceTier } from './earthSurfaceTier';
-import { prepareStarCut } from './passes/starCatalogLayer';
-import { prepareBodySurfaceFrame, earthLayer } from './passes/earthLayer';
+import { prepareStarCut } from './passes/starCatalogPass';
+import { prepareBodySurfaceFrame, earthPass } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
@@ -605,7 +605,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // below so the tiles the planner asks for never drift from the pixels
     // the fragment samples them into.
     const earthTilesView = slabViewOf(ctx, earthSlab.index);
-    if (earthLayer.enabled(state, ctx, earthTilesView)) {
+    if (earthPass.enabled(state, ctx, earthTilesView)) {
       // `earthSurfaceTier` reads the tier off the committed texture slot, not the
       // app-wide request, so a tier swap in flight can't make the planner believe
       // in detail that isn't on the GPU yet. Null until the manifest lands.

@@ -16,7 +16,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
+import { foregroundLabelsPass } from '../../../../../src/services/engine/frame/passes/foregroundLabelsPass';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -86,7 +86,7 @@ describe('foregroundLabelsLayer.draw — coverage occlusion thread-through', () 
     // so the colour is valid to sample.
     const ctx = makeCtx(new Set(['foreground:0']), viewOf);
 
-    foregroundLabelsLayer.draw(PASS_STUB, VIEW_STUB, ctx, state);
+    foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
     expect(viewOf).toHaveBeenCalledWith('foreground:0');
     const labelDraw = renderer.draw as unknown as ReturnType<typeof vi.fn>;
@@ -107,7 +107,7 @@ describe('foregroundLabelsLayer.draw — coverage occlusion thread-through', () 
     const viewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = makeCtx(new Set<string>(), viewOf);
 
-    foregroundLabelsLayer.draw(PASS_STUB, VIEW_STUB, ctx, state);
+    foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
     // The stale colour is never even read.
     expect(viewOf).not.toHaveBeenCalled();

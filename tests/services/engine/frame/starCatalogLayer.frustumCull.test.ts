@@ -14,7 +14,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { starCatalogLayer } from '../../../../src/services/engine/frame/passes/starCatalogLayer';
+import { starCatalogPass } from '../../../../src/services/engine/frame/passes/starCatalogPass';
 import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/cameraFraming';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { Source } from '../../../../src/data/source';
@@ -110,7 +110,7 @@ describe('starCatalogLayer frustum cull wiring', () => {
     const camPos = camAtPc(MID_BAND_PC);
     const view = makeNear0View(camPos);
 
-    starCatalogLayer.draw(
+    starCatalogPass.draw(
       PASS_STUB,
       view,
       makeCtx(camPos),
@@ -130,7 +130,7 @@ describe('starCatalogLayer frustum cull wiring', () => {
     const camPos = camAtPc(MID_BAND_PC);
     const view = makeNear0View(camPos);
 
-    starCatalogLayer.drawPick!(PASS_STUB, view, makeCtx(camPos), makeState(renderer, pickRenderer));
+    starCatalogPass.drawPick!(PASS_STUB, view, makeCtx(camPos), makeState(renderer, pickRenderer));
 
     expect(pickRenderer.draw).toHaveBeenCalledTimes(1);
     const args = pickRenderer.draw.mock.calls[0]![1];

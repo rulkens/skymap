@@ -39,7 +39,7 @@
  */
 
 import type { SourceType } from '../../../../@types/data/SourceType';
-import type { PreparedStarCut } from '../../../engine/frame/passes/starCatalogLayer';
+import type { PreparedStarCut } from '../../../engine/frame/passes/starCatalogPass';
 
 /**
  * One source's pick draw: the compacted flat leaf arrays the pick renderer packs
