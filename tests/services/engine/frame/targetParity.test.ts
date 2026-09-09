@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
-import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
+import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { frameProgram } from '../../../../src/services/engine/frame/frameProgram';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 
@@ -22,7 +22,7 @@ const ROW_IDS = new Set(ROWS.map((row) => row.id));
 
 describe('render-target parity', () => {
   it('every CONTENT_LAYERS target names a declared render-target row', () => {
-    for (const layer of CONTENT_LAYERS) {
+    for (const layer of CONTENT_PASSES) {
       expect(ROW_IDS.has(layer.target)).toBe(true);
     }
   });

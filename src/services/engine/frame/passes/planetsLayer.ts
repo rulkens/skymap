@@ -39,7 +39,7 @@
  * this row's `bodyId` appearing in the partition's `flat` branch.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
@@ -60,7 +60,7 @@ import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 // staging array).
 const staging = new Float32Array(INSTANCE_FLOATS);
 
-export const planetsLayer: ContentLayer = {
+export const planetsLayer: ContentPass = {
   name: 'planets',
   slab: 'body',
   target: 'foreground:0',

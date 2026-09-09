@@ -12,11 +12,11 @@
  * can never disagree about whether the offscreen was written this frame.
  */
 
-import { createUpsampleLayer } from './createUpsampleLayer';
+import { createUpsamplePass } from './createUpsamplePass';
 import { NEAR0 } from '../slabs';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 
-export const milkyWayUpsampleLayer = createUpsampleLayer({
+export const milkyWayUpsampleLayer = createUpsamplePass({
   name: 'milky-way-upsample',
   slab: NEAR0,
   sourceTargetId: 'mw-aggregate',

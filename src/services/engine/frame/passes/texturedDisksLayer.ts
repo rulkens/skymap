@@ -32,10 +32,10 @@
  * call this frame re-uploads the same byte-identical `disks` list.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 
-export const texturedDisksLayer: ContentLayer = {
+export const texturedDisksLayer: ContentPass = {
   name: 'textured-disks',
   slab: COSMO,
   target: 'hdr',

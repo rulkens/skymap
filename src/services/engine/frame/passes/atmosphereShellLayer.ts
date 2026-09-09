@@ -62,7 +62,7 @@
  * `sunDirLocal` cannot drift from the sky-view LUT's own sun direction.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
@@ -75,7 +75,7 @@ import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUnif
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { atmosphereDrawList } from '../atmosphereDrawList';
 
-export const atmosphereShellLayer: ContentLayer = {
+export const atmosphereShellLayer: ContentPass = {
   name: 'atmosphere-shell',
   slab: 'body',
   target: 'foreground:0',

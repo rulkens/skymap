@@ -36,12 +36,12 @@
  * the full race argument.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
 import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 
-export const selectionRingLayer: ContentLayer = {
+export const selectionRingLayer: ContentPass = {
   name: 'selection-ring',
   slab: COSMO,
   target: 'swap',

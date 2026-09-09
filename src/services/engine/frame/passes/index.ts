@@ -223,7 +223,7 @@
  * single responsibility explicit at one site.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { scalarVolumeLayer } from './scalarVolumeLayer';
 import { galaxyPointSpritesLayer } from './galaxyPointSpritesLayer';
 import { proceduralDisksLayer } from './proceduralDisksLayer';
@@ -269,7 +269,7 @@ import { sgrAStarLensingLayer } from './sgrAStarLensingLayer';
  * chain) follow.  Grouping by target is a `.filter()` at the call site —
  * see the module header.
  */
-export const CONTENT_LAYERS: readonly ContentLayer[] = [
+export const CONTENT_PASSES: readonly ContentPass[] = [
   // Half-res scalar-volume raymarch into the volume offscreen — drawn first
   // (its own target), before the hdr group upsamples it in. Not an hdr-group
   // member: it targets 'volume', so the hdr render step excludes it.

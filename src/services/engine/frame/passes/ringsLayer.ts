@@ -57,7 +57,7 @@
  * derivation, so the two sites cannot disagree.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
@@ -122,7 +122,7 @@ function ringDrawForBody(
   return { ring, body, pose };
 }
 
-export const ringsLayer: ContentLayer = {
+export const ringsLayer: ContentPass = {
   name: 'rings',
   slab: 'body',
   target: 'foreground:0',

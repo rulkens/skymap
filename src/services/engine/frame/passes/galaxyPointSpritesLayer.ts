@@ -8,7 +8,7 @@
  * deep-zoom fade from rasterizing millions of alpha-0 instances.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { Source } from '../../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
@@ -22,7 +22,7 @@ import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
-export const galaxyPointSpritesLayer: ContentLayer = {
+export const galaxyPointSpritesLayer: ContentPass = {
   name: 'point-sprites',
   slab: COSMO,
   target: 'hdr',

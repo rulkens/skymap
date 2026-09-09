@@ -56,7 +56,7 @@ import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
-import { CONTENT_LAYERS } from './passes';
+import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -220,7 +220,7 @@ export function renderFrame(input: RenderFrameInput): void {
       skyCubemapFacesToCapture,
       sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
     ),
-    layers: CONTENT_LAYERS,
+    layers: CONTENT_PASSES,
     strategy,
     timing: timingService,
     swapView,

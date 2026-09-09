@@ -32,7 +32,7 @@ import {
   SELECTION_SOURCE_SHIFT,
 } from '../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../fixtures/makeSlab';
-import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
@@ -85,8 +85,8 @@ function makeLayer(opts: {
   slab: number | 'body';
   enabled: boolean;
   pickEnabled?: boolean;
-  drawPick?: ContentLayer['drawPick'];
-}): ContentLayer {
+  drawPick?: ContentPass['drawPick'];
+}): ContentPass {
   return {
     name: opts.name,
     slab: opts.slab,
@@ -96,7 +96,7 @@ function makeLayer(opts: {
     draw: vi.fn(),
     ...(opts.pickEnabled !== undefined ? { pickEnabled: () => opts.pickEnabled } : {}),
     ...(opts.drawPick ? { drawPick: opts.drawPick } : {}),
-  } as ContentLayer;
+  } as ContentPass;
 }
 
 // A fake device: records texture allocations + pass descriptors, and drives

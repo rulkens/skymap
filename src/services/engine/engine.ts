@@ -42,7 +42,7 @@ import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsys
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
-import { CONTENT_LAYERS } from './frame/passes';
+import { CONTENT_PASSES } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveFocusRow } from './helpers/liveFocusRow';
@@ -950,7 +950,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
       passOverrides: {
-        allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
+        allNames: CONTENT_PASSES.filter((l) => l.target !== 'volume').map((p) => p.name),
       },
       // Re-derived per call off the live state rather than snapshotted: the
       // slots this joins against are minted by the async IIFE below.

@@ -8,7 +8,7 @@
  * riding the same tone-map as the stars it connects.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -22,7 +22,7 @@ const CONSTELLATION_LINE_HALFWIDTH_PX = 1.3;
 // One dim steel-blue tone (RGB) for all 88 figures, emitted additively into HDR.
 const CONSTELLATION_LINE_COLOR: Vec3 = [0.42, 0.58, 0.9];
 
-export const constellationsLayer: ContentLayer = {
+export const constellationsLayer: ContentPass = {
   name: 'constellations',
   slab: NEAR0,
   target: 'hdr',

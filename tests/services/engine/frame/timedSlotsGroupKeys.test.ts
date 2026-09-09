@@ -17,7 +17,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { frameProgram, timedSlotsOf } from '../../../../src/services/engine/frame/frameProgram';
-import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
+import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 
 describe('timedSlotsOf — per-render-step group keys', () => {
@@ -25,7 +25,7 @@ describe('timedSlotsOf — per-render-step group keys', () => {
   // adds alongside the per-render-step group keys.
   const slots = timedSlotsOf(
     frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true, [NEAR0], []),
-    CONTENT_LAYERS,
+    CONTENT_PASSES,
   );
 
   it('includes the render steps’ group keys — the slots the merged pass bills against', () => {

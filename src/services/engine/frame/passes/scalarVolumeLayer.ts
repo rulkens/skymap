@@ -29,11 +29,11 @@
  * can't make this draw read a stale offscreen.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { deriveVolumeLiveness } from '../volumeLiveness';
 
-export const scalarVolumeLayer: ContentLayer = {
+export const scalarVolumeLayer: ContentPass = {
   name: 'scalar-volume',
   slab: COSMO,
   target: 'volume',

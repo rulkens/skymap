@@ -29,11 +29,11 @@
  * enforces between the raymarch and its upsample.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { starCatalogVisible, prepareStarCut, drawStream } from './starCatalogLayer';
 
-export const starAggregatesLayer: ContentLayer = {
+export const starAggregatesLayer: ContentPass = {
   name: 'star-aggregates',
   slab: NEAR0,
   target: 'star-aggregates',

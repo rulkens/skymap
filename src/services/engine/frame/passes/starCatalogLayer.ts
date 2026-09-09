@@ -136,7 +136,7 @@
  * the octree carries no record at [0,0,0] to double the local starfield.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
@@ -938,7 +938,7 @@ function drawStream(
 
 export { drawStream };
 
-export const starCatalogLayer: ContentLayer = {
+export const starCatalogLayer: ContentPass = {
   name: 'star-catalog',
   slab: NEAR0,
   target: 'hdr',

@@ -46,7 +46,7 @@
  * the cloud's own starlight into HDR, which the dust then has to multiply too.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
@@ -72,7 +72,7 @@ import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCache
  */
 const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
 
-export const milkyWayLayer: ContentLayer = {
+export const milkyWayLayer: ContentPass = {
   name: 'milky-way',
   // NEAR0, not COSMO: the fixed 10 kpc cosmological near plane clips the disc
   // mid-descent before the approach fade completes — see the module header.

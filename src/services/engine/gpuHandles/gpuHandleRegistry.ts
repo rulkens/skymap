@@ -63,7 +63,7 @@ import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
-import { CONTENT_LAYERS } from '../frame/passes';
+import { CONTENT_PASSES } from '../frame/passes';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
 
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
@@ -502,7 +502,7 @@ export const GPU_HANDLE_ROWS = [
         device: deps.ctx.device,
         canvas: deps.ctx.canvas,
         state,
-        layers: CONTENT_LAYERS,
+        layers: CONTENT_PASSES,
       }),
   },
 ] as const satisfies readonly GpuHandleRow[];

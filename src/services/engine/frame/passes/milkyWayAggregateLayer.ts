@@ -28,13 +28,13 @@
  * both shaders clamp clip-z.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
 
-export const milkyWayAggregateLayer: ContentLayer = {
+export const milkyWayAggregateLayer: ContentPass = {
   name: 'milky-way-aggregate',
   slab: NEAR0,
   target: 'mw-aggregate',

@@ -25,10 +25,10 @@
  * pattern as `filamentsLayer.draw`.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 
-export const proceduralDisksLayer: ContentLayer = {
+export const proceduralDisksLayer: ContentPass = {
   name: 'procedural-disks',
   slab: COSMO,
   target: 'hdr',

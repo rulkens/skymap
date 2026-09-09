@@ -4,12 +4,12 @@
  * integrated this frame; it owns no compute work itself.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { slotReady } from '../../../loading/slotReady';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
-export const flowFieldLayer: ContentLayer = {
+export const flowFieldLayer: ContentPass = {
   name: 'flow',
   slab: COSMO,
   target: 'hdr',

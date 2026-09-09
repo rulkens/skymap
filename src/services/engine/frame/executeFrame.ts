@@ -73,7 +73,7 @@
 import type { ExecuteFrameArgs } from '../../../@types/engine/frame/ExecuteFrameArgs';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
@@ -381,7 +381,7 @@ function renderGroup(
     swapView: GPUTextureView;
     target: string;
     face?: CubeFace;
-    group: readonly ContentLayer[];
+    group: readonly ContentPass[];
     view: SlabView;
     groupKey: string;
     alreadyTouched: boolean;

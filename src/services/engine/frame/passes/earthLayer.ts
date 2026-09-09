@@ -19,7 +19,7 @@
  * alpha is pinned to 1, the failure floor for every disengaged case.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
@@ -152,7 +152,7 @@ function computeBodySurfaceFrame(
   return { body, bodyState, pose, radiusM, mvpLocal, camLocal };
 }
 
-export const earthLayer: ContentLayer = {
+export const earthLayer: ContentPass = {
   name: 'earth',
   slab: 'body',
   target: 'foreground:0',

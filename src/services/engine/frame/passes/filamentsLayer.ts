@@ -6,7 +6,7 @@
  * layer reads as disabled, so its toggle is a no-op rather than an error path.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { COSMO } from '../slabs';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
@@ -19,7 +19,7 @@ const FILAMENT_LINE_HALFWIDTH_PX = 1.5;
 const FILAMENT_BASE_TINT: Vec3 = [0.55, 0.45, 0.85];
 const FILAMENT_HOT_TINT: Vec3 = [0.85, 0.75, 1.0];
 
-export const filamentsLayer: ContentLayer = {
+export const filamentsLayer: ContentPass = {
   name: 'filaments',
   slab: COSMO,
   target: 'hdr',

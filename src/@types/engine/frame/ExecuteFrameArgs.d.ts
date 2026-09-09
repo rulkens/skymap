@@ -30,7 +30,7 @@
 
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { FrameStep } from './FrameStep';
-import type { ContentLayer } from './ContentLayer';
+import type { ContentPass } from './ContentPass';
 import type { RenderStrategy } from './RenderStrategy';
 import type { EngineState } from '../state/EngineState';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
@@ -46,7 +46,7 @@ export type ExecuteFrameArgs = {
   /** The ordered step program to walk (`frameProgram(tone)`). */
   program: readonly FrameStep[];
   /** The content-layer registry each render step selects its group from. */
-  layers: readonly ContentLayer[];
+  layers: readonly ContentPass[];
   /** How each render step's layer group becomes GPU passes. */
   strategy: RenderStrategy;
   /** Per-pass GPU-timing descriptor source (no-op when timing is disabled). */

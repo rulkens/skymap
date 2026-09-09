@@ -37,10 +37,10 @@
  * line where they overlap, preserving readability.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 
-export const markerLinesLayer: ContentLayer = {
+export const markerLinesLayer: ContentPass = {
   name: 'marker-lines',
   slab: COSMO,
   target: 'swap',

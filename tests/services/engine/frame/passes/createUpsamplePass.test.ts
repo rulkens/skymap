@@ -7,8 +7,8 @@
  * guards independently of the blit — a missing handle must never suppress it.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createUpsampleLayer } from '../../../../../src/services/engine/frame/passes/createUpsampleLayer';
-import type { UpsampleLayerRow } from '../../../../../src/@types/engine/frame/UpsampleLayerRow';
+import { createUpsamplePass } from '../../../../../src/services/engine/frame/passes/createUpsamplePass';
+import type { UpsamplePassRow } from '../../../../../src/@types/engine/frame/UpsamplePassRow';
 import type { Upsample } from '../../../../../src/@types/rendering/Upsample';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -93,7 +93,7 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-function makeRow(overrides: Partial<UpsampleLayerRow> = {}): UpsampleLayerRow {
+function makeRow(overrides: Partial<UpsamplePassRow> = {}): UpsamplePassRow {
   return {
     name: 'test-upsample',
     slab: 0,
@@ -109,7 +109,7 @@ describe('createUpsampleLayer', () => {
     const offscreenView = {} as GPUTextureView;
     const drawSpy = vi.fn();
     const handle: Upsample = { draw: drawSpy };
-    const layer = createUpsampleLayer(makeRow({ handleOf: () => handle }));
+    const layer = createUpsamplePass(makeRow({ handleOf: () => handle }));
 
     layer.draw(PASS_STUB, VIEW_STUB, makeCtx(offscreenView), STATE_STUB);
 
@@ -119,7 +119,7 @@ describe('createUpsampleLayer', () => {
   });
 
   it('skips the blit when the handle is null', () => {
-    const layer = createUpsampleLayer(makeRow({ handleOf: () => null }));
+    const layer = createUpsamplePass(makeRow({ handleOf: () => null }));
 
     expect(() => layer.draw(PASS_STUB, VIEW_STUB, makeCtx(), STATE_STUB)).not.toThrow();
   });
@@ -137,7 +137,7 @@ describe('createUpsampleLayer', () => {
       order.push('postBlit');
       seenPasses.push(pass);
     });
-    const layer = createUpsampleLayer(makeRow({ handleOf: () => handle, postBlit }));
+    const layer = createUpsamplePass(makeRow({ handleOf: () => handle, postBlit }));
 
     layer.draw(PASS_STUB, VIEW_STUB, makeCtx(), STATE_STUB);
 
@@ -147,7 +147,7 @@ describe('createUpsampleLayer', () => {
 
   it('still runs postBlit when the blit handle is null', () => {
     const postBlit = vi.fn();
-    const layer = createUpsampleLayer(makeRow({ handleOf: () => null, postBlit }));
+    const layer = createUpsamplePass(makeRow({ handleOf: () => null, postBlit }));
 
     layer.draw(PASS_STUB, VIEW_STUB, makeCtx(), STATE_STUB);
 

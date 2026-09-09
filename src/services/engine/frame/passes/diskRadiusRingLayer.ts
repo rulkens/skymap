@@ -30,11 +30,11 @@
 import { Source } from '../../../../data/sources';
 import { paddedRadiusMpc } from '../../../../utils/paddedRadiusMpc';
 import { effectiveTilt } from '../../../../utils/render/disk/effectiveTilt';
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { COSMO } from '../slabs';
 
-export const diskRadiusRingLayer: ContentLayer = {
+export const diskRadiusRingLayer: ContentPass = {
   name: 'disk-radius-ring',
   slab: COSMO,
   target: 'swap',

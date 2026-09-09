@@ -83,7 +83,7 @@
  * the live re-read at all.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
@@ -94,7 +94,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
 
-export const near0SelectionRingLayer: ContentLayer = {
+export const near0SelectionRingLayer: ContentPass = {
   name: 'near0-selection-ring',
   slab: NEAR0,
   target: 'swap',

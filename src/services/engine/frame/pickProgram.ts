@@ -59,7 +59,7 @@
  */
 
 import type { PickProgram } from '../../../@types/engine/frame/PickProgram';
-import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
@@ -113,7 +113,7 @@ export function createPickProgram(deps: {
   device: GPUDevice;
   canvas: HTMLCanvasElement;
   state: EngineState;
-  layers: readonly ContentLayer[];
+  layers: readonly ContentPass[];
 }): PickProgram {
   const { device, canvas, state, layers } = deps;
 
@@ -265,7 +265,7 @@ export function createPickProgram(deps: {
     target: PickSlabTarget,
     view: SlabView,
     ctx: ReadyFrameContext,
-    slabPickables: readonly ContentLayer[],
+    slabPickables: readonly ContentPass[],
     timing: GPURenderPassTimestampWrites | undefined,
   ): void {
     const pass = encoder.beginRenderPass({
@@ -319,7 +319,7 @@ export function createPickProgram(deps: {
   // carries no @group(0) dependence.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
-  ): { slabIndex: number; view: SlabView; layers: ContentLayer[] }[] {
+  ): { slabIndex: number; view: SlabView; layers: ContentPass[] }[] {
     const candidates = layers.filter((l) => l.drawPick);
     // Every body-row slab index present this frame — a 'body' layer's
     // `drawPick` (`earthLayer`, `planetsLayer`) contributes to each one, the

@@ -23,12 +23,12 @@
  * `enabled`, so band-faded rings also stop claiming hits via the gate.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 
-export const structureMarkersLayer: ContentLayer = {
+export const structureMarkersLayer: ContentPass = {
   name: 'structure-markers',
   slab: COSMO,
   target: 'hdr',

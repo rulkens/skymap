@@ -15,7 +15,7 @@ import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import {
-  CONTENT_LAYERS,
+  CONTENT_PASSES,
   scalarVolumeLayer,
   galaxyPointSpritesLayer,
   filamentsLayer,
@@ -270,7 +270,7 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
     // target, blend}` here means a future layer with a different profile
     // (e.g. the near-field debug bodies) fails loudly instead of silently
     // drawing through the wrong slab/target.
-    const hdrLayers = CONTENT_LAYERS.filter((layer) => HDR_NAMES.includes(layer.name));
+    const hdrLayers = CONTENT_PASSES.filter((layer) => HDR_NAMES.includes(layer.name));
     expect(hdrLayers.map((layer) => layer.name)).toEqual(HDR_NAMES);
     for (const layer of hdrLayers) {
       expect(layer.slab).toBe(COSMO);
@@ -297,7 +297,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
     // `body-glints` moved LAST here (Task 14, spec "Draw order") so they draw
     // over the Sgr A* lens pass's OWN (hdr, BODY[k]) step rather than being
     // sampled by it.
-    const nearHdr = CONTENT_LAYERS.filter(
+    const nearHdr = CONTENT_PASSES.filter(
       (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
     );
     expect(nearHdr.map((layer) => layer.name)).toEqual(NEAR_HDR_NAMES);
@@ -320,7 +320,7 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
     // cosmological slab as the HDR group but target the swap chain with
     // premultiplied-OVER blending — see the renderer-unification design's
     // migration table (spec lines 208-212).
-    const swapLayers = CONTENT_LAYERS.filter((layer) => SWAP_NAMES.includes(layer.name));
+    const swapLayers = CONTENT_PASSES.filter((layer) => SWAP_NAMES.includes(layer.name));
     expect(swapLayers.map((layer) => layer.name)).toEqual(SWAP_NAMES);
     for (const layer of swapLayers) {
       expect(layer.slab).toBe(COSMO);
@@ -336,7 +336,7 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
     // focused field star): project through NEAR0 into the depth-bearing
     // `foreground:0` target and are opaque (depth-tested), not additive. See
     // the renderer-unification design's migration table (spec line 215).
-    const fgLayers = CONTENT_LAYERS.filter((layer) => FOREGROUND_NAMES.includes(layer.name));
+    const fgLayers = CONTENT_PASSES.filter((layer) => FOREGROUND_NAMES.includes(layer.name));
     expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
     for (const layer of fgLayers) {
       expect(layer.slab).toBe(NEAR0);
@@ -366,7 +366,7 @@ describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
     // cosmological near plane. Drawn by the program's (swap, NEAR0) render step,
     // filtered here by (target, slab) so a mis-registered member surfaces — the
     // ring leads the caption, the clip-path overlay trails.
-    const nearSwap = CONTENT_LAYERS.filter(
+    const nearSwap = CONTENT_PASSES.filter(
       (layer) => layer.target === 'swap' && layer.slab === NEAR0,
     );
     expect(nearSwap.map((layer) => layer.name)).toEqual(NEAR_SWAP_NAMES);
@@ -387,7 +387,7 @@ describe('CONTENT_LAYERS blend legality', () => {
     // that the WebGPU pipeline's actual blend state matches, is covered
     // elsewhere. A layer whose target/blend pair falls outside this table is
     // a data-entry bug in its own file, not a new legal combination.
-    for (const layer of CONTENT_LAYERS) {
+    for (const layer of CONTENT_PASSES) {
       if (
         layer.target === 'volume' ||
         layer.target === 'zoa' ||
@@ -467,7 +467,7 @@ describe('CONTENT_LAYERS blend legality', () => {
     // members of the otherwise-opaque foreground group) — and the Sgr A* lens
     // pass, the one 'body'-slab, 'hdr'-target OVER row (see the hdr branch
     // above).
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(11);
+    expect(CONTENT_PASSES.filter((layer) => layer.blend === 'over')).toHaveLength(11);
   });
 });
 
@@ -480,14 +480,14 @@ describe('ringsLayer registry row', () => {
     // 'body' expansion earth/planets/textured-bodies use. It is deliberately
     // NOT in FOREGROUND_NAMES (that group's opaque assertion), it is the
     // exception.
-    const rings = CONTENT_LAYERS.find((layer) => layer.name === 'rings')!;
+    const rings = CONTENT_PASSES.find((layer) => layer.name === 'rings')!;
     expect(rings).toBeDefined();
     expect(rings.slab).toBe('body');
     expect(rings.target).toBe('foreground:0');
     expect(rings.blend).toBe('over');
 
-    const idxTextured = CONTENT_LAYERS.findIndex((layer) => layer.name === 'textured-bodies');
-    const idxRings = CONTENT_LAYERS.findIndex((layer) => layer.name === 'rings');
+    const idxTextured = CONTENT_PASSES.findIndex((layer) => layer.name === 'textured-bodies');
+    const idxRings = CONTENT_PASSES.findIndex((layer) => layer.name === 'rings');
     expect(idxRings).toBeGreaterThan(idxTextured);
   });
 });
@@ -501,14 +501,14 @@ describe('cloudShellLayer registry row', () => {
     // onto the same 'body' expansion earthLayer uses — see frameProgram.ts. It
     // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) —
     // it is the exception, alongside the ring.
-    const cloud = CONTENT_LAYERS.find((layer) => layer.name === 'cloud-shell')!;
+    const cloud = CONTENT_PASSES.find((layer) => layer.name === 'cloud-shell')!;
     expect(cloud).toBeDefined();
     expect(cloud.slab).toBe('body');
     expect(cloud.target).toBe('foreground:0');
     expect(cloud.blend).toBe('over');
 
-    const idxEarth = CONTENT_LAYERS.findIndex((layer) => layer.name === 'earth');
-    const idxCloud = CONTENT_LAYERS.findIndex((layer) => layer.name === 'cloud-shell');
+    const idxEarth = CONTENT_PASSES.findIndex((layer) => layer.name === 'earth');
+    const idxCloud = CONTENT_PASSES.findIndex((layer) => layer.name === 'cloud-shell');
     expect(idxCloud).toBeGreaterThan(idxEarth);
   });
 });
@@ -523,7 +523,7 @@ describe('atmosphereShellLayer registry row', () => {
     // earthLayer uses. It is deliberately NOT in FOREGROUND_NAMES (that group's
     // opaque assertion) — it is the third exception, alongside the ring and
     // cloud shell. Non-pickable.
-    const atmosphere = CONTENT_LAYERS.find((layer) => layer.name === 'atmosphere-shell')!;
+    const atmosphere = CONTENT_PASSES.find((layer) => layer.name === 'atmosphere-shell')!;
     expect(atmosphere).toBeDefined();
     expect(atmosphere.slab).toBe('body');
     expect(atmosphere.target).toBe('foreground:0');
@@ -532,10 +532,10 @@ describe('atmosphereShellLayer registry row', () => {
 
     // It is the LAST foreground:0 layer in registry order (after the ring), so
     // its draw trails every opaque + translucent sibling in the group.
-    const idxRings = CONTENT_LAYERS.findIndex((layer) => layer.name === 'rings');
-    const idxAtmosphere = CONTENT_LAYERS.findIndex((layer) => layer.name === 'atmosphere-shell');
+    const idxRings = CONTENT_PASSES.findIndex((layer) => layer.name === 'rings');
+    const idxAtmosphere = CONTENT_PASSES.findIndex((layer) => layer.name === 'atmosphere-shell');
     expect(idxAtmosphere).toBeGreaterThan(idxRings);
-    const fgIndices = CONTENT_LAYERS.map((layer, i) => ({ layer, i })).filter(
+    const fgIndices = CONTENT_PASSES.map((layer, i) => ({ layer, i })).filter(
       ({ layer }) => layer.target === 'foreground:0',
     );
     expect(fgIndices[fgIndices.length - 1]!.layer).toBe(atmosphere);
@@ -547,13 +547,13 @@ describe('scalarVolumeLayer registry row', () => {
     // The half-res raymarch draws into its own 'volume' offscreen before the
     // hdr group upsamples it, so it sits first in the registry — and its
     // 'volume' target keeps it out of both the hdr and swap groups.
-    expect(CONTENT_LAYERS[0]).toBe(scalarVolumeLayer);
+    expect(CONTENT_PASSES[0]).toBe(scalarVolumeLayer);
     expect(scalarVolumeLayer.name).toBe('scalar-volume');
     expect(scalarVolumeLayer.target).toBe('volume');
     expect(scalarVolumeLayer.slab).toBe(COSMO);
     expect(scalarVolumeLayer.blend).toBe('additive');
-    expect(CONTENT_LAYERS.filter((l) => l.target === 'hdr')).not.toContain(scalarVolumeLayer);
-    expect(CONTENT_LAYERS.filter((l) => l.target === 'swap')).not.toContain(scalarVolumeLayer);
+    expect(CONTENT_PASSES.filter((l) => l.target === 'hdr')).not.toContain(scalarVolumeLayer);
+    expect(CONTENT_PASSES.filter((l) => l.target === 'swap')).not.toContain(scalarVolumeLayer);
   });
 });
 
@@ -567,8 +567,8 @@ describe('starAggregatesLayer registry row', () => {
     expect(starAggregatesLayer.target).toBe('star-aggregates');
     expect(starAggregatesLayer.slab).toBe(NEAR0);
     expect(starAggregatesLayer.blend).toBe('additive');
-    expect(CONTENT_LAYERS.filter((l) => l.target === 'hdr')).not.toContain(starAggregatesLayer);
-    expect(CONTENT_LAYERS.filter((l) => l.target === 'swap')).not.toContain(starAggregatesLayer);
+    expect(CONTENT_PASSES.filter((l) => l.target === 'hdr')).not.toContain(starAggregatesLayer);
+    expect(CONTENT_PASSES.filter((l) => l.target === 'swap')).not.toContain(starAggregatesLayer);
     // The upsample consumer and the aggregate producer share ONE visibility
     // gate, so a frame can never composite a stale offscreen the producer
     // skipped clearing.
@@ -971,7 +971,7 @@ describe('drawPick migration-table rows', () => {
     // sit last among the swap-target layers so its text composites over the
     // marker-line stroke it sits over (`passes/index.ts`). The pick filter
     // inherits that position for free rather than keeping a second order.
-    expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
+    expect(CONTENT_PASSES.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'zone-of-avoidance',
       'procedural-disks',

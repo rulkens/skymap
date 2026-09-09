@@ -22,7 +22,7 @@ import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/ExecuteFrameArgs';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
-import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { RenderStrategy } from '../../../../src/@types/engine/frame/RenderStrategy';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -106,9 +106,9 @@ function makeNoTiming(): GpuTimingService {
 
 // ── Fake content layer ───────────────────────────────────────────────────────
 
-type SpyLayer = ContentLayer & {
-  enabled: ReturnType<typeof vi.fn<ContentLayer['enabled']>>;
-  draw: ReturnType<typeof vi.fn<ContentLayer['draw']>>;
+type SpyLayer = ContentPass & {
+  enabled: ReturnType<typeof vi.fn<ContentPass['enabled']>>;
+  draw: ReturnType<typeof vi.fn<ContentPass['draw']>>;
 };
 
 function makeLayer(init: {
@@ -134,10 +134,10 @@ function makeLayer(init: {
     blend: 'additive',
     ...(init.skyCapture ? { skyCapture: true as const } : {}),
     ...(init.hdrPostLensing ? { hdrPostLensing: true as const } : {}),
-    enabled: vi.fn<ContentLayer['enabled']>((_state, _ctx, view) =>
+    enabled: vi.fn<ContentPass['enabled']>((_state, _ctx, view) =>
       init.enabledFor ? init.enabledFor(view) : (init.enabled ?? true),
     ),
-    draw: vi.fn<ContentLayer['draw']>(() => {
+    draw: vi.fn<ContentPass['draw']>(() => {
       init.log?.push(`draw:${init.name}`);
     }),
   };
@@ -282,7 +282,7 @@ function makeState(init: StateInit = {}): EngineState {
 
 function makeArgs(over: {
   program: readonly FrameStep[];
-  layers: readonly ContentLayer[];
+  layers: readonly ContentPass[];
   strategy?: RenderStrategy;
   timing?: GpuTimingService;
   state?: EngineState;

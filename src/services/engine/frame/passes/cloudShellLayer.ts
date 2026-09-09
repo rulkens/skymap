@@ -59,7 +59,7 @@
  * `earthLayer` stamps into the pick pass. So this row declares no `drawPick`.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EarthBody } from '../../../../@types/scene/EarthBody';
@@ -141,7 +141,7 @@ function cloudShellDraw(
   return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { earth, deckFade, insideShell } : null;
 }
 
-export const cloudShellLayer: ContentLayer = {
+export const cloudShellLayer: ContentPass = {
   name: 'cloud-shell',
   slab: 'body',
   target: 'foreground:0',

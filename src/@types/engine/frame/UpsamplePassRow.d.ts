@@ -13,7 +13,7 @@ import type { EngineState } from '../state/EngineState';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { SlabView } from './SlabView';
 
-export type UpsampleLayerRow = {
+export type UpsamplePassRow = {
   /** Stable identifier, forwarded verbatim to the produced `ContentLayer.name`. */
   readonly name: string;
   /** Index into the per-frame slab list, forwarded to `ContentLayer.slab`. */

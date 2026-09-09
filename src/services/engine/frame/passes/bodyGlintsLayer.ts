@@ -69,7 +69,7 @@
  * harmless no-op.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -157,7 +157,7 @@ function sgrAStarGlintBrightness(
   );
 }
 
-export const bodyGlintsLayer: ContentLayer = {
+export const bodyGlintsLayer: ContentPass = {
   name: 'body-glints',
   slab: NEAR0,
   target: 'hdr',

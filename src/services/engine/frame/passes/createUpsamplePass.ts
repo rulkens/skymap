@@ -8,10 +8,10 @@
  * handle must never suppress it.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
-import type { UpsampleLayerRow } from '../../../../@types/engine/frame/UpsampleLayerRow';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { UpsamplePassRow } from '../../../../@types/engine/frame/UpsamplePassRow';
 
-export function createUpsampleLayer(row: UpsampleLayerRow): ContentLayer {
+export function createUpsamplePass(row: UpsamplePassRow): ContentPass {
   return {
     name: row.name,
     slab: row.slab,

@@ -7,12 +7,12 @@
  * AU-to-parsec away, inside COSMO's fixed 10-kpc near plane.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { near0LabelProjection } from '../near0LabelProjection';
 import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
 
-export const foregroundLabelsLayer: ContentLayer = {
+export const foregroundLabelsLayer: ContentPass = {
   name: 'foreground-labels',
   slab: NEAR0,
   target: 'swap',

@@ -42,7 +42,7 @@
  * own — `planetsLayer` is the sole pick site for `flat ∪ textured`.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -84,7 +84,7 @@ function limbParams(body: PlanetBody): { strength: number; exponent: number } {
   return LIMB_DARKENING_PARAMS[body.id] ?? { strength: 0, exponent: 1 };
 }
 
-export const texturedBodiesLayer: ContentLayer = {
+export const texturedBodiesLayer: ContentPass = {
   name: 'textured-bodies',
   slab: 'body',
   target: 'foreground:0',

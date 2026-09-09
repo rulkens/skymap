@@ -30,7 +30,7 @@ import {
   earthLayer,
   prepareBodySurfaceFrame,
 } from '../../../../../src/services/engine/frame/passes/earthLayer';
-import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
+import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
@@ -365,7 +365,7 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
       data: { bodies: { earth: SEEDED_EARTH, planets: [], stars: [] } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
-      CONTENT_LAYERS.filter(
+      CONTENT_PASSES.filter(
         (l) =>
           l.target === 'foreground:0' &&
           (l.slab === 'body' || l.slab === VIEW_STUB.slab.index) &&

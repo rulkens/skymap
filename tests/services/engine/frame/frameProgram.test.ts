@@ -27,11 +27,11 @@ import {
   TIMED_SLOT_GROUPS,
   BODY_SLAB_CAPACITY,
 } from '../../../../src/services/engine/frame/frameProgram';
-import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
+import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { buildTimingSlotMap } from '../../../../src/services/gpu/timing/buildTimingSlotMap';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
-import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
@@ -56,14 +56,14 @@ function makeCam(): OrbitCamera {
  * (`name`, `target`, `slab`) carry meaning; `enabled`/`draw` are typed
  * stubs so the row satisfies the contract without a renderer.
  */
-function fakeLayer(name: string, target: string, slab: number): ContentLayer {
+function fakeLayer(name: string, target: string, slab: number): ContentPass {
   return {
     name,
     slab,
     target,
     blend: 'additive',
-    enabled: vi.fn<ContentLayer['enabled']>(() => true),
-    draw: vi.fn<ContentLayer['draw']>(),
+    enabled: vi.fn<ContentPass['enabled']>(() => true),
+    draw: vi.fn<ContentPass['draw']>(),
   };
 }
 
@@ -311,7 +311,7 @@ describe('frameProgram', () => {
     // after the lens's own (hdr, BODY[k]) step instead — checked here
     // against the REAL registry, so a missing flag on either layer (they'd
     // stay in 'pre', ahead of the lens) fails this.
-    const slots = timedSlotsOf(frameProgram(TONE, false, [NEAR0], [], [4]), CONTENT_LAYERS);
+    const slots = timedSlotsOf(frameProgram(TONE, false, [NEAR0], [], [4]), CONTENT_PASSES);
     const lensLayerIdx = slots.indexOf('sgr-a-star-lensing·BODY[2]');
     expect(lensLayerIdx).toBeGreaterThanOrEqual(0);
     expect(slots.indexOf('orbit-trails')).toBeGreaterThan(lensLayerIdx);
@@ -341,7 +341,7 @@ describe('timedSlotsOf', () => {
     // Two hdr layers, two swap layers — same (target, slab) grouping the
     // real registry uses. The volume render step matches no fake layer, so
     // it contributes nothing (the real scalar-volume layer lands in task 7).
-    const layers: readonly ContentLayer[] = [
+    const layers: readonly ContentPass[] = [
       fakeLayer('point-sprites', 'hdr', COSMO),
       fakeLayer('milky-way', 'hdr', COSMO),
       fakeLayer('selection-ring', 'swap', COSMO),
@@ -382,7 +382,7 @@ describe('timedSlotsOf', () => {
   });
 
   it('yields unique names', () => {
-    const layers: readonly ContentLayer[] = [
+    const layers: readonly ContentPass[] = [
       fakeLayer('point-sprites', 'hdr', COSMO),
       fakeLayer('selection-ring', 'swap', COSMO),
     ];
@@ -426,7 +426,7 @@ describe('timedSlotsOf', () => {
     // group-key slot (the merged-pass timing slot Joint 2 adds), so
     // 'volume·COSMO' follows scalar-volume, 'hdr·COSMO' follows the eight COSMO
     // hdr layers, and so on down to 'swap·NEAR0' after the near-field captions.
-    expect(timedSlotsOf(frameProgram(TONE, true, [2, NEAR0], []), CONTENT_LAYERS)).toEqual([
+    expect(timedSlotsOf(frameProgram(TONE, true, [2, NEAR0], []), CONTENT_PASSES)).toEqual([
       'scalar-volume',
       'volume·COSMO',
       'zone-of-avoidance',
@@ -499,7 +499,7 @@ describe('timedSlotsOf', () => {
     // slab index (4, arbitrary — any body-slab index widens the same way)
     // must now surface its row, positioned right after the (hdr, NEAR0)
     // group's own slot.
-    const slots = timedSlotsOf(frameProgram(TONE, false, [NEAR0], [], [4]), CONTENT_LAYERS);
+    const slots = timedSlotsOf(frameProgram(TONE, false, [NEAR0], [], [4]), CONTENT_PASSES);
     const hdrNear0Idx = slots.indexOf('hdr·NEAR0');
     expect(hdrNear0Idx).toBeGreaterThanOrEqual(0);
     expect(slots[hdrNear0Idx + 1]).toBe('sgr-a-star-lensing·BODY[2]');
@@ -565,7 +565,7 @@ describe('timedSlotGroupsOf', () => {
     // contribute their group key and their titles appear. All six groups
     // therefore show, and each row's group key buckets it under its step's
     // title.
-    const layers: readonly ContentLayer[] = [
+    const layers: readonly ContentPass[] = [
       fakeLayer('point-sprites', 'hdr', COSMO),
       fakeLayer('milky-way', 'hdr', COSMO),
       fakeLayer('labels', 'swap', COSMO),
@@ -680,13 +680,13 @@ describe('timedSlotGroupsOf', () => {
     // both write the SAME two query indices and the reported figure would be
     // whichever pass resolved last — under-reporting a multi-body scene by a
     // factor of N. See `layerTimingSlotName` (slabs.ts).
-    const bodyLayer: ContentLayer = {
+    const bodyLayer: ContentPass = {
       name: 'planets',
       slab: 'body',
       target: 'foreground:0',
       blend: 'over',
-      enabled: vi.fn<ContentLayer['enabled']>(() => true),
-      draw: vi.fn<ContentLayer['draw']>(),
+      enabled: vi.fn<ContentPass['enabled']>(() => true),
+      draw: vi.fn<ContentPass['draw']>(),
     };
     const groups = timedSlotGroupsOf(frameProgram(TONE, false, [NEAR0, 2, 3], []), [bodyLayer]);
     const foreground = groups.find((g) => g.title === 'Foreground bodies · depth')!;

@@ -8,11 +8,11 @@
  * the caption must never suppress each other.
  */
 
-import { createUpsampleLayer } from './createUpsampleLayer';
+import { createUpsamplePass } from './createUpsamplePass';
 import { COSMO } from '../slabs';
 import { deriveZoneOfAvoidanceLiveness } from '../zoneOfAvoidanceLiveness';
 
-export const zoneOfAvoidanceUpsampleLayer = createUpsampleLayer({
+export const zoneOfAvoidanceUpsampleLayer = createUpsamplePass({
   name: 'zone-of-avoidance-upsample',
   slab: COSMO,
   sourceTargetId: 'zoa',

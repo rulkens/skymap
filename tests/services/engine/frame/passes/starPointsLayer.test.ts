@@ -24,7 +24,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
 import { starPointsLayer } from '../../../../../src/services/engine/frame/passes/starPointsLayer';
-import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
+import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
@@ -291,7 +291,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
-      CONTENT_LAYERS.filter(
+      CONTENT_PASSES.filter(
         (l) => l.target === 'hdr' && l.slab === NEAR0 && l.enabled(state, ctx, VIEW_STUB),
       );
 

@@ -61,7 +61,7 @@
  * zoom-to-earth fold.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -74,7 +74,7 @@ import { starPickId } from './starPickId';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
-export const starSpheresLayer: ContentLayer = {
+export const starSpheresLayer: ContentPass = {
   name: 'star-spheres',
   slab: NEAR0,
   target: 'foreground:0',

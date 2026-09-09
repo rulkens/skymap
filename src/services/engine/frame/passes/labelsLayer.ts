@@ -38,12 +38,12 @@
  * the line where they overlap, preserving readability.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { cosmoLabelProjection } from '../cosmoLabelProjection';
 import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
 
-export const labelsLayer: ContentLayer = {
+export const labelsLayer: ContentPass = {
   name: 'labels',
   slab: COSMO,
   target: 'swap',

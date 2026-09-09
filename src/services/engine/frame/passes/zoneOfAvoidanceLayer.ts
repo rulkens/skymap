@@ -9,7 +9,7 @@
  * and no empty pass opens pre-bootstrap.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { deriveZoneOfAvoidanceLiveness } from '../zoneOfAvoidanceLiveness';
 
@@ -19,7 +19,7 @@ const OUTER_RADIUS_MPC = 380;
 const BULGE_DEG = 10;
 const ANTICENTER_DEG = 3;
 
-export const zoneOfAvoidanceLayer: ContentLayer = {
+export const zoneOfAvoidanceLayer: ContentPass = {
   name: 'zone-of-avoidance',
   slab: COSMO,
   target: 'zoa',

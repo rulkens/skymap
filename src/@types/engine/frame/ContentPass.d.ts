@@ -31,7 +31,7 @@ import type { SlabView } from './SlabView';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { EngineState } from '../state/EngineState';
 
-export type ContentLayer = {
+export type ContentPass = {
   /** Stable identifier for debugging, test assertions, and the derived timing-slot list. */
   readonly name: string;
   /**

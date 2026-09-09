@@ -9,7 +9,7 @@
  * `view.vp` it misplaces a trail by far more than its stroke width.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { ORBITAL_ELEMENTS } from '../../../../data/bodies/orbitalElements';
@@ -86,7 +86,7 @@ export function orbitReachByRegion(
 // table walk per frame. Conservative: it never drops a visible orbit.
 const ORBIT_REACH_BY_REGION = orbitReachByRegion(SCENE_ANCHORS, ORBITAL_ELEMENTS, regionOfBody);
 
-export const orbitTrailsLayer: ContentLayer = {
+export const orbitTrailsLayer: ContentPass = {
   name: 'orbit-trails',
   slab: NEAR0,
   target: 'hdr',

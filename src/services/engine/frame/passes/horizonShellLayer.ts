@@ -42,7 +42,7 @@
  * `ctx.canvasSize`.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { horizonShellFadeAlpha } from '../../../../utils/math/horizonShellFadeAlpha';
 import { HORIZON_RADIUS_GPC } from '../../../gpu/renderers/horizonShell/horizonShellRenderer';
@@ -50,7 +50,7 @@ import { HORIZON_RADIUS_GPC } from '../../../gpu/renderers/horizonShell/horizonS
 /** Shell radius in Mpc — the fade band is a fraction of this. */
 const HORIZON_RADIUS_MPC = HORIZON_RADIUS_GPC * 1000;
 
-export const horizonShellLayer: ContentLayer = {
+export const horizonShellLayer: ContentPass = {
   name: 'horizon-shell',
   slab: COSMO,
   target: 'hdr',

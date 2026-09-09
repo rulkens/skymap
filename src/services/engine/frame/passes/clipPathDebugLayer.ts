@@ -47,7 +47,7 @@
  *      layer goes quiet.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { DebugLine } from '../../../../@types/rendering/DebugLine';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
@@ -55,7 +55,7 @@ import { buildClipPathLines } from '../../presentation/buildClipPathLines';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 
-export const clipPathDebugLayer: ContentLayer = {
+export const clipPathDebugLayer: ContentPass = {
   name: 'clip-path-debug',
   slab: NEAR0,
   target: 'swap',

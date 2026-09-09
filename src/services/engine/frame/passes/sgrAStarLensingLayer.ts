@@ -9,7 +9,7 @@
  * No `drawPick` — Sgr A*'s pick stamp lives in `starPointsLayer`.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -50,7 +50,7 @@ function bandAlphaFor(state: EngineState, ctx: ReadyFrameContext): number {
   return fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, distMpc);
 }
 
-export const sgrAStarLensingLayer: ContentLayer = {
+export const sgrAStarLensingLayer: ContentPass = {
   name: 'sgr-a-star-lensing',
   slab: 'body',
   target: 'hdr',

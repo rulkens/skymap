@@ -10,11 +10,11 @@
  * never composite a stale offscreen the aggregate render skipped clearing.
  */
 
-import { createUpsampleLayer } from './createUpsampleLayer';
+import { createUpsamplePass } from './createUpsamplePass';
 import { NEAR0 } from '../slabs';
 import { starCatalogVisible } from './starCatalogLayer';
 
-export const starAggregateUpsampleLayer = createUpsampleLayer({
+export const starAggregateUpsampleLayer = createUpsamplePass({
   name: 'star-upsample',
   slab: NEAR0,
   sourceTargetId: 'star-aggregates',

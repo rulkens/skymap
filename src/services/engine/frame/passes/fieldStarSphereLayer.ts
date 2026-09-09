@@ -112,7 +112,7 @@
  * the render origin is fixed at the Sun for the zoom-to-earth fold.
  */
 
-import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -212,7 +212,7 @@ function nextPresent(
   return null;
 }
 
-export const fieldStarSphereLayer: ContentLayer = {
+export const fieldStarSphereLayer: ContentPass = {
   name: 'field-star-sphere',
   slab: NEAR0,
   target: 'foreground:0',

@@ -9,11 +9,11 @@
  * can never disagree about whether the offscreen was written this frame.
  */
 
-import { createUpsampleLayer } from './createUpsampleLayer';
+import { createUpsamplePass } from './createUpsamplePass';
 import { COSMO } from '../slabs';
 import { deriveVolumeLiveness } from '../volumeLiveness';
 
-export const volumeUpsampleLayer = createUpsampleLayer({
+export const volumeUpsampleLayer = createUpsamplePass({
   name: 'volume-upsample',
   slab: COSMO,
   sourceTargetId: 'volume',

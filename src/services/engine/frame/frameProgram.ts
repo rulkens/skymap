@@ -61,7 +61,7 @@
  */
 
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
-import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import {
@@ -74,7 +74,7 @@ import {
   renderStepTimingSlotName,
   slabName,
 } from './slabs';
-import { CONTENT_LAYERS } from './passes';
+import { CONTENT_PASSES } from './passes';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
 
@@ -291,7 +291,7 @@ export function frameProgram(
  */
 export function timedSlotsOf(
   program: readonly FrameStep[],
-  layers: readonly ContentLayer[],
+  layers: readonly ContentPass[],
 ): readonly string[] {
   return timedSlotRowsOf(program, layers).map((row) => row.name);
 }
@@ -378,7 +378,7 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
  */
 function timedSlotRowsOf(
   program: readonly FrameStep[],
-  layers: readonly ContentLayer[],
+  layers: readonly ContentPass[],
 ): readonly TimedSlotRow[] {
   const rows: TimedSlotRow[] = [];
   for (const step of program) {
@@ -516,7 +516,7 @@ function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
  */
 export function timedSlotGroupsOf(
   program: readonly FrameStep[],
-  layers: readonly ContentLayer[],
+  layers: readonly ContentPass[],
 ): readonly TimedSlotGroup[] {
   return groupRows(timedSlotRowsOf(program, layers));
 }
@@ -581,7 +581,7 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
     ALL_CUBE_FACES,
     MAX_SGR_A_STAR_LENSING_BODY_SLABS,
   ),
-  CONTENT_LAYERS,
+  CONTENT_PASSES,
 );
 
 /**
@@ -597,7 +597,7 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
     ALL_CUBE_FACES,
     MAX_SGR_A_STAR_LENSING_BODY_SLABS,
   ),
-  CONTENT_LAYERS,
+  CONTENT_PASSES,
 );
 
 /**
@@ -614,7 +614,7 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  */
 function plainLayerGroupKeys(
   program: readonly FrameStep[],
-  layers: readonly ContentLayer[],
+  layers: readonly ContentPass[],
 ): ReadonlyMap<string, string> {
   const map = new Map<string, string>();
   for (const step of program) {
@@ -642,7 +642,7 @@ const PASS_GROUP_KEYS: ReadonlyMap<string, string> = plainLayerGroupKeys(
     ALL_CUBE_FACES,
     MAX_SGR_A_STAR_LENSING_BODY_SLABS,
   ),
-  CONTENT_LAYERS,
+  CONTENT_PASSES,
 );
 
 /**
