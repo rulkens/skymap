@@ -6,9 +6,16 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { advanceEpoch, elapsedMs } from '../../../../src/services/engine/camera/cameraEpochs';
+import {
+  advanceEpoch,
+  advanceEpochs,
+  elapsedMs,
+} from '../../../../src/services/engine/camera/cameraEpochs';
 import type { Epoch } from '../../../../src/@types/engine/camera/Epoch';
+import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
+import type { CameraState } from '../../../../src/@types/camera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
+import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
 
 function makeDescriptor(): CameraTweenDescriptor {
   return {
@@ -55,5 +62,92 @@ describe('advanceEpoch', () => {
 describe('elapsedMs', () => {
   it('of an unstarted epoch is 0', () => {
     expect(elapsedMs(UNSTARTED, 5000)).toBe(0);
+  });
+});
+
+const UNSTARTED_EPOCHS: CameraEpochs = {
+  tween: { ref: null, startMs: null },
+  frameTween: { ref: null, startMs: null },
+  autoRotate: { ref: null, startMs: null },
+  follow: { ref: null, startMs: null },
+  clip: { ref: null, startMs: null },
+};
+
+function makeCameraState(overrides?: Partial<CameraState>): CameraState {
+  return {
+    base: { frame: 'absolute', pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
+    tween: null,
+    autoRotate: { active: false, rate: 0 },
+    dragging: false,
+    clip: null,
+    frameTween: null,
+    ...overrides,
+  };
+}
+
+function makeFrameTween(): FrameTween {
+  return { fromQuat: [0, 0, 0, 1], to: 'ecliptic', durationMs: 800, easing: 'easeOutCubic' };
+}
+
+describe('advanceEpochs', () => {
+  it('a tween that is not winning does not start its epoch', () => {
+    const intent = makeCameraState({ tween: makeDescriptor() });
+    // A drag holds the frame; the dispatched tween must wait for its own win.
+    const result = advanceEpochs(UNSTARTED_EPOCHS, {
+      intent,
+      focus: null,
+      clip: UNSTARTED_EPOCHS.clip,
+      winnerId: 'orbitDrag',
+      nowMs: 1000,
+    });
+    expect(result.tween).toBe(UNSTARTED_EPOCHS.tween);
+  });
+
+  it('the frameTween epoch advances on a frame no driver owns it', () => {
+    const frameTween = makeFrameTween();
+    const intent = makeCameraState({ frameTween });
+    const result = advanceEpochs(UNSTARTED_EPOCHS, {
+      intent,
+      focus: null,
+      clip: UNSTARTED_EPOCHS.clip,
+      winnerId: 'resting',
+      nowMs: 2000,
+    });
+    expect(result.frameTween).toEqual({ ref: frameTween, startMs: 2000 });
+  });
+
+  it('an unchanged frame returns the same epochs object', () => {
+    const intent = makeCameraState();
+    const first = advanceEpochs(UNSTARTED_EPOCHS, {
+      intent,
+      focus: null,
+      clip: UNSTARTED_EPOCHS.clip,
+      winnerId: 'resting',
+      nowMs: 1000,
+    });
+    const second = advanceEpochs(first, {
+      intent,
+      focus: null,
+      clip: UNSTARTED_EPOCHS.clip,
+      winnerId: 'resting',
+      nowMs: 1016,
+    });
+    expect(second).toBe(first);
+  });
+
+  it('the clip row is passed through untouched', () => {
+    const clipEpoch: Epoch<NonNullable<CameraState['clip']>> = {
+      ref: { data: { timeline: [] }, frame: 'equatorial' },
+      startMs: 5000,
+    };
+    const intent = makeCameraState();
+    const result = advanceEpochs(UNSTARTED_EPOCHS, {
+      intent,
+      focus: null,
+      clip: clipEpoch,
+      winnerId: 'clip',
+      nowMs: 5000,
+    });
+    expect(result.clip).toBe(clipEpoch);
   });
 });
