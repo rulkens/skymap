@@ -28,13 +28,10 @@ import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { raySphereRoots } from '../../../utils/math/raySphereRoots';
 import { surfaceFloorM } from '../../../utils/camera/surfaceFloorM';
+import { dot3 } from '../../../utils/math/dot3';
 import { bodyRelativePose } from './bodyRelativePose';
 
 const BODY_CENTRE: Vec3 = [0, 0, 0];
-
-function dot3(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
 
 export function toBodyArm(
   pose: CameraPose,

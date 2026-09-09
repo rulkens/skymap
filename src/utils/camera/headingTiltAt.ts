@@ -14,15 +14,12 @@
 import type { HeadingTiltAt } from '../../@types/camera/HeadingTiltAt';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { cross3 } from '../math/cross3';
+import { dot3 } from '../math/dot3';
 
 const POLAR_AXIS: Vec3 = [0, 0, 1];
 // sin(0.08°) — the horizontal-projection magnitude below which forward's
 // azimuth is unstable (spec §14's nadir escape).
 const NADIR_ESCAPE_SIN = Math.sin((0.08 * Math.PI) / 180);
-
-function dot3(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
 
 export function headingTiltAt(
   localUp: Readonly<Vec3>,
