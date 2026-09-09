@@ -35,9 +35,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 
-import { rootReducer } from '../../../../src/store/rootReducer';
 import {
   commitCameraPose,
   startCameraTween,
@@ -50,73 +48,22 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
-import {
-  buildCameraDrivers,
-  runCameraDrivers,
-} from '../../../../src/services/engine/camera/cameraDrivers';
+import { runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
-import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
-import {
-  createCameraClock,
-  tweenElapsed,
-} from '../../../../src/services/engine/camera/cameraClock';
+import { tweenElapsed } from '../../../../src/services/engine/camera/cameraClock';
+import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 
 /**
- * Minimal EngineState fixture with a live cameraRuntime Resource bag. Used by
- * helpers that simulate the frame loop's commit-on-edge logic without spinning
- * up the full GPU engine.
+ * The commit-on-edge contract drives the driver table + Redux store directly
+ * (no GPU, no `runFrame` body), so the shared sim harness's boot focus/pose
+ * are noise — every test seeds exactly the state it needs.
  */
-function makeEngineState(): {
-  state: Pick<EngineState, 'cam' | 'cameraRuntime'>;
-  cam: OrbitCamera;
-} {
-  const cam: OrbitCamera = {
-    yaw: 0,
-    pitch: 0,
-    distance: 100,
-    target: new Float32Array([0, 0, 0]),
-    position: new Float32Array([0, 0, 0]),
-    fovYRad: 0.8,
-    aspect: 1,
-    near: 0.01,
-    far: 1000,
-  } as unknown as OrbitCamera;
-
-  const state = {
-    cam,
-    cameraRuntime: {
-      clock: createCameraClock(),
-      projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
-      lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }) },
-      displayedPose: {
-        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-      },
-      prevActiveId: { current: 'resting' as string },
-      lastRenderedSimDays: { current: 0 },
-      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
-      lastZoomFactor: { current: null },
-      surface: createSurfaceController(),
-      skyCubemapCapture: {
-        bandActive: false,
-        gcDistanceMpc: Number.POSITIVE_INFINITY,
-        bakedSettings: null,
-      },
-    },
-  };
-
-  return { state, cam };
-}
-
-/** Build a real Redux store from the production root reducer. */
-function makeStore() {
-  return configureStore({ reducer: rootReducer });
+function makeHarness() {
+  return makeCameraSimHarness({ focusBody: null, bootHR: null });
 }
 
 /**
@@ -130,9 +77,9 @@ function makeStore() {
  * Returns { pose, activeId, committed } so tests can inspect per-frame output.
  */
 function simulateFrame(
-  engineState: ReturnType<typeof makeEngineState>['state'],
-  store: ReturnType<typeof makeStore>,
-  drivers: ReturnType<typeof buildCameraDrivers>,
+  engineState: ReturnType<typeof makeHarness>['state'],
+  store: ReturnType<typeof makeHarness>['store'],
+  drivers: ReturnType<typeof makeHarness>['deps']['drivers'],
   nowMs: number,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
   const rootState = store.getState();
@@ -172,9 +119,8 @@ function simulateFrame(
 
 describe('commitOnEdge — tween settles', () => {
   it('tween active: no commit fires while the tween is still the winner', () => {
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
 
     // Install a long-running tween (1000 ms).
     store.dispatch(
@@ -201,9 +147,8 @@ describe('commitOnEdge — tween settles', () => {
   });
 
   it('cancelCameraTween is dispatched exactly once when elapsed >= durationMs', () => {
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
     const dispatch = vi.spyOn(store, 'dispatch');
 
     store.dispatch(
@@ -234,9 +179,8 @@ describe('commitOnEdge — tween settles', () => {
   });
 
   it('commitCameraPose fires on the frame AFTER cancelCameraTween (deactivation edge)', () => {
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
 
     store.dispatch(
       startCameraTween({
@@ -262,9 +206,8 @@ describe('commitOnEdge — tween settles', () => {
   });
 
   it('commit bakes the saturated `to` pose into base (lastPose on the cancel frame == to)', () => {
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
     const TO: CameraPose = { target: [5, 10, 15], yaw: 2.5, pitch: -0.3, distance: 40 };
 
     store.dispatch(
@@ -294,9 +237,8 @@ describe('commitOnEdge — tween settles', () => {
     // frame the resting driver reads the pre-commit base. Without the renderPose
     // override the frame would flash the pre-tween pose (PRE) for one frame
     // before the next frame snaps to the target.
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
     const PRE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
     const TO: CameraPose = { target: [5, 10, 15], yaw: 2.5, pitch: -0.3, distance: 40 };
 
@@ -326,9 +268,8 @@ describe('commitOnEdge — tween settles', () => {
 
 describe('commitOnEdge — auto-rotate deactivation', () => {
   it('commitCameraPose fires exactly once when auto-rotate turns off', () => {
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
 
     // Activate auto-rotate.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
@@ -358,9 +299,8 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     // If drag seeding reads `lastPose.current` (as it should), grabbing during
     // a tween never snaps to the stale `base`. This test verifies that after a
     // tween runs for a few frames, `lastPose.current` differs from `base`.
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
 
     const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
     store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
@@ -392,9 +332,8 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     // `base` so the drag seeds from `lastPose` and the final pose is jump-free.
     // orbitDrag is excluded from triggering a commit only as the PREV driver, not
     // as the incoming one — design §6 no-jump guarantee.
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
 
     store.dispatch(
       startCameraTween({
@@ -431,9 +370,8 @@ describe('commitOnEdge — clip deactivation', () => {
   it('commit fires when a clip deactivates (clip → null edge)', () => {
     // clip declares commitsOnEdge: true, so the frame after clipEnded() must
     // dispatch commitCameraPose exactly once.
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
 
     const START_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 80 };
     const clip: ClipData = { start: START_POSE, timeline: [] };
@@ -461,9 +399,8 @@ describe('commitOnEdge — clip deactivation', () => {
 
   it('commit does NOT fire on an orbitDrag deactivation edge', () => {
     // orbitDrag has no commitsOnEdge; endDrag() commits via onGestureEnd instead.
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
 
     store.dispatch(beginDrag());
     state.cameraRuntime.prevActiveId.current = 'orbitDrag';
@@ -488,9 +425,8 @@ describe('commitOnEdge — clip deactivation', () => {
     // commit-on-edge bakes its OWN final pose would discard the gesture whole
     // at pointerup. The gesture row serves both arms at 80; the clip's 95
     // outranks it either way: a clip is not drag-interruptible.
-    const store = makeStore();
-    const { state } = makeEngineState();
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const { store, state, deps } = makeHarness();
+    const drivers = deps.drivers;
 
     // The rows read `base.frame` only, so the pose value is irrelevant here.
     store.dispatch(
