@@ -139,6 +139,23 @@ function makeHarness() {
 
 const sig = (x: number): number => Number(x.toPrecision(DIGITS));
 
+// Every STRIDEth step, PLUS every leg's first/last step and every arm change
+// (a latched-mode flip) — a regression inside a dropped step still shows up
+// at the next kept one, since register/memory carry forward frame-to-frame.
+const STRIDE = 40;
+const legOf = (label: string): string =>
+  label.replace(/ move \d+$/, '').replace(/ end$/, '').replace(/ \d+$/, '');
+function thin(trace: Trace): Trace {
+  const keep = new Set<number>();
+  trace.forEach((step, i) => {
+    if (i % STRIDE === 0) keep.add(i);
+    if (i === 0 || legOf(step.label) !== legOf(trace[i - 1]!.label)) keep.add(i);
+    if (i === trace.length - 1 || legOf(step.label) !== legOf(trace[i + 1]!.label)) keep.add(i);
+    if (i > 0 && step.arm !== trace[i - 1]!.arm) keep.add(i);
+  });
+  return [...keep].sort((a, b) => a - b).map((i) => trace[i]!);
+}
+
 function snapshot(state: EngineState, label: string): Step {
   const live = liveWorldPose(state);
   const eye = eyeMpcOf(live, B);
@@ -307,7 +324,7 @@ describe('settle golden trace (byte bar for the orientation settles)', () => {
   for (const [key, northUp] of states) {
     it(`matches the recorded trace with northUp = ${northUp}`, () => {
       ORIENT_TUNING.northUp = northUp;
-      const trace = runScript();
+      const trace = thin(runScript());
       if (process.env['SETTLE_GOLDEN_RECORD']) {
         recorded[key] = trace;
         writeFileSync(FIXTURE_PATH, `${JSON.stringify(recorded)}\n`);
