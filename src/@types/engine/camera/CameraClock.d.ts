@@ -28,7 +28,7 @@ export type CameraClock = {
   // Null = fresh focus (the driver seeds the framing distance); re-seeded to
   // `base.distance` when follow re-wins after a drag's zoom, so the zoom sticks.
   followDistanceTarget: number | null;
-  // WORLD-frame strafe the pin adds to the body position; zeroed on the focus edge only when follow wins.
+  // WORLD frame, not camera frame: reads as a stable screen strafe at follow scales with no camera-basis re-projection needed; zeroed on the focus edge only when follow wins.
   followPanOffset: Vec3;
   lastBaseRef: FramedCameraPose | null;
   clipStartMs: number | null;

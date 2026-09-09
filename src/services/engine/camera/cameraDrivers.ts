@@ -146,9 +146,9 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         if (base.frame !== 'absolute') return base;
 
         // Captured ONCE per activation (`followElapsed` nulls it on the edge)
-        // from the AUTHORED register, not the displayed one: the ease decodes
-        // these angles through a body-CENTRED target, and displayed (tilted)
-        // angles would walk the eye by d·2sin(τ/2) on the first frame (R12b-1).
+        // through the EYE, not the angles: `approachTiltedPose` is eye-preserving
+        // by construction, so authored and displayed registers now yield an
+        // identical capture (why eye, not angle, is carried across — R12b-1).
         // Eye-preserving against the NEW target: `from` is read against
         // `livePos` below, so a capture relative to the OLD target silently
         // changes meaning on a body switch — an Earth-orbit distance read from
@@ -161,7 +161,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
           const rel: Vec3 = [livePos[0] - eye[0], livePos[1] - eye[1], livePos[2] - eye[2]];
           const ang = orbitAnglesLookingAlong(rel, pb);
           clock.followFrom = {
-            target: livePos,
+            target: [livePos[0], livePos[1], livePos[2]],
             yaw: ang.yaw,
             pitch: ang.pitch,
             distance: Math.hypot(rel[0], rel[1], rel[2]),
@@ -189,6 +189,7 @@ export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] 
         const t = easeOutCubic(elapsed / FOCUS_TWEEN_MS);
         return absoluteArm({
           target: livePos,
+          // Eases toward the committed `base`: honours a post-follow drag, keeps heading when un-dragged.
           yaw: lerp(from.yaw, base.pose.yaw, t),
           pitch: lerp(from.pitch, base.pose.pitch, t),
           distance: lerp(from.distance, distanceTarget, t),
