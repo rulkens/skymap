@@ -97,9 +97,9 @@ function rolledAber(basis: Mat3, rho: number): Mat3 {
 /**
  * Heading of a pose whose eye is still ON +Z — a radial zoom keeps it there,
  * a dive at an off-centre cursor does not (use `northUpOffset` for those).
- * Escapes to the up column at nadir for the same reason `headingTiltAt` does:
- * forward's horizontal part is `sin(tilt)`, so at tilt 0 only `up` carries an
- * azimuth at all and `atan2` on forward would read pure rounding noise.
+ * Escapes to the up column at nadir, as `refAzimuthOf` does: forward's
+ * horizontal part is `sin(tilt)`, so at tilt 0 only `up` carries an azimuth
+ * at all and `atan2` on forward would read pure rounding noise.
  */
 function headingOnAxis(pose: BodyFixedPose): number {
   const b = pose.basisLocal;
