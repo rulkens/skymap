@@ -1,0 +1,995 @@
+[
+  {
+    "label": "boot 0",
+    "winner": "resting",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
+    ],
+    "follow": { "fromDistance": null, "distanceTarget": null, "panOffset": [0, 0, 0] },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": null, "refNull": true },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "boot 3",
+    "winner": "resting",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
+    ],
+    "follow": { "fromDistance": null, "distanceTarget": null, "panOffset": [0, 0, 0] },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": null, "refNull": true },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "drag 0",
+    "winner": "orbitDrag",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
+    ],
+    "follow": { "fromDistance": null, "distanceTarget": null, "panOffset": [0, 0, 0] },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": null, "refNull": true },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "drag end",
+    "winner": "resting",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.23882029118e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.23882029118e-15, 0
+    ],
+    "follow": { "fromDistance": null, "distanceTarget": null, "panOffset": [0, 0, 0] },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": null, "refNull": true },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["camera/commitCameraPose", "camera/endDrag", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "follow 0",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.23882029118e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.23882029118e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.9404153574e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "follow 7",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.07954251752e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.07954251752e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.9404153574e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "follow 9",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.04539113469e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.04539113469e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.9404153574e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "notch under follow a",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 9.9038506168e-16,
+      -2.10119987253e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 9.9038506168e-16,
+      -2.10119987253e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "notch under follow b",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 9.73370894768e-16,
+      -2.24510122427e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 9.73370894768e-16,
+      -2.24510122427e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "follow settle 0",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 9.57593556084e-16,
+      -2.37854180796e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 9.57593556084e-16,
+      -2.37854180796e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "follow settle 3",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 9.17215781758e-16,
+      -2.72004641033e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 9.17215781758e-16,
+      -2.72004641033e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "follow settle 11",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.52325083221e-16,
+      -3.26887488271e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.52325083221e-16,
+      -3.26887488271e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "follow settle 19",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.30746709001e-16,
+      -3.45137910021e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.30746709001e-16,
+      -3.45137910021e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "follow settle 23",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.28732001387e-16,
+      -3.46841896767e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.28732001387e-16,
+      -3.46841896767e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": null, "refNull": true },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "autoRotate 0",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.28732001387e-16,
+      -3.46841896767e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.28732001387e-16,
+      -3.46841896767e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 736, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "autoRotate 1",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.28732001387e-16,
+      -3.46841896767e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 8.28732001387e-16,
+      -3.46841896767e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 752, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "autoRotate 2",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61083808, 0.3, 8.28732001387e-16,
+      -3.46841896767e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61083808, 0.3, 8.28732001387e-16,
+      -3.46841896767e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 752, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "notch under autoRotate a",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61167616, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61167616, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "notch under autoRotate b",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61251424, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61251424, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "autoRotate settle 0",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61335232, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61335232, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "autoRotate settle 2",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61502848, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61502848, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": null, "refNull": true },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 0",
+    "winner": "tween",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61502848, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61502848, 0.3, 7.69515947295e-16,
+      -1.90742483536e-17
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 1",
+    "winner": "tween",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.67207848, 0.3, 8.24392053286e-16,
+      0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.67207848, 0.3, 8.24392053286e-16,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 3",
+    "winner": "tween",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.76937848, 0.3, 9.17984430376e-16,
+      0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.76937848, 0.3, 9.17984430376e-16,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 11",
+    "winner": "tween",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.97857848, 0.3, 1.11921285059e-15,
+      0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.97857848, 0.3, 1.11921285059e-15,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 19",
+    "winner": "tween",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01497848, 0.3, 1.1542258262e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01497848, 0.3, 1.1542258262e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 20",
+    "winner": "tween",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01502848, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01502848, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 784, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["camera/cancelCameraTween", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 21",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01502848, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01502848, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1200, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 22",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01502848, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01502848, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "tween 23",
+    "winner": "autoRotate",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01586656, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01586656, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": null, "refNull": true }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "clip 0",
+    "winner": "clip",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01586656, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01586656, 0.3, 1.15427392094e-15,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1248, "refNull": false }
+    },
+    "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "clip 1",
+    "winner": "clip",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01626868386, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01626868386, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1248, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "clip 3",
+    "winner": "clip",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.02672390421, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.02672390421, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1248, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "clip 11",
+    "winner": "clip",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.55109341721, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.55109341721, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1248, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "clip 19",
+    "winner": "clip",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 2.49980413311, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 2.49980413311, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1248, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "clip 27",
+    "winner": "clip",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01908355088, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.01908355088, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1648, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "clip 35",
+    "winner": "clip",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.41799041966, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.41799041966, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1648, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "clip 37",
+    "winner": "clip",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1648, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "teardown 0",
+    "winner": "resting",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1648, "refNull": false }
+    },
+    "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "teardown 1",
+    "winner": "resting",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1648, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "teardown 5",
+    "winner": "resting",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.23882029118e-15,
+      "distanceTarget": 8.28610457732e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": { "startMs": 864, "refNull": false },
+      "frameTween": { "startMs": null, "refNull": true },
+      "autoRotate": { "startMs": 1216, "refNull": false },
+      "follow": { "startMs": 160, "refNull": false },
+      "clip": { "startMs": 1648, "refNull": false }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  }
+]
