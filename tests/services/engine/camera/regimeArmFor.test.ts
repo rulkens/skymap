@@ -50,7 +50,7 @@ describe('regimeArmFor', () => {
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('earth'), bodyStateAtOrigin()]]);
     const next = regimeArmFor(
       'absolute',
-      eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 0.5),
+      eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 0.95),
       bodyStates,
       null,
     );
@@ -61,7 +61,7 @@ describe('regimeArmFor', () => {
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('earth'), bodyStateAtOrigin()]]);
     const next = regimeArmFor(
       'absolute',
-      eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.disengageHR * 2),
+      eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 1.05),
       bodyStates,
       null,
     );

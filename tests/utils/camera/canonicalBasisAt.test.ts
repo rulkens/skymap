@@ -37,21 +37,20 @@ function handednessSign(basis: Readonly<Mat3>): number {
 }
 
 describe('canonicalBasisAt', () => {
-  it('is orthonormal, and its handedness holds across azimuth and tilt', () => {
-    // Every sample must land the same triad orientation as the first — a
-    // sign slip in just one of the four trig terms would flip it only in
-    // some quadrant, which a single fixed-angle sample would miss.
+  it('is orthonormal with the view convention’s handedness across azimuth and tilt', () => {
+    // `right = forward × up`, so `forward · (right × up)` is −1: forward is
+    // the look direction, into the screen. A sign slip in any one of the four
+    // trig terms flips the triad, and does so only over part of the range —
+    // hence samples spread over the azimuth/tilt sign combinations rather
+    // than one fixed angle.
     const samples: ReadonlyArray<readonly [number, number]> = [
       [0.9, 1.0],
       [-2.4, 0.3],
       [3.0, 2.6],
       [0.1, Math.PI - 0.1],
     ];
-    let firstSign: number | null = null;
     for (const [az, tilt] of samples) {
-      const sign = handednessSign(canonicalBasisAt(FRAME, az, tilt));
-      firstSign ??= sign;
-      expect(sign).toBe(firstSign);
+      expect(handednessSign(canonicalBasisAt(FRAME, az, tilt))).toBe(-1);
     }
   });
 

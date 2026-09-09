@@ -368,7 +368,7 @@ describe('drainInput', () => {
       target: [...earth.positionMpc] as Vec3,
       yaw: 0.7,
       pitch: 0.3,
-      distance: 2.5 * 6371000 * SCALE_UNITS.M_TO_MPC, // h/R 1.5, mid-band
+      distance: 1.35 * 6371000 * SCALE_UNITS.M_TO_MPC, // h/R 0.35, inside the band
       roll: 1.4,
     });
     store.dispatch(commitCameraPose(nearEarth));
@@ -380,7 +380,11 @@ describe('drainInput', () => {
     const committed = worldArmOf(store.getState().camera.base);
     const moved = Math.abs((committed.roll ?? 0) - 1.4);
     expect(moved).toBeGreaterThan(0.01);
-    expect(moved).toBeLessThanOrEqual(0.1 + 1e-12);
+    // Strictly UNDER the 0.1 cap: mid-band the notch's demand is a fraction of
+    // the full scene-up → body-pole correction. Pinning either weight extreme
+    // (w ≡ 0 or w ≡ 1) saturates the cap instead, so this bar is what makes the
+    // blend — not merely "some step happened" — the thing under test.
+    expect(moved).toBeLessThan(0.09);
   });
 
   it('a followed-body notch lands the frame alignment on base.roll', () => {

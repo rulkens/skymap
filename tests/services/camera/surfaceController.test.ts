@@ -499,14 +499,24 @@ describe('surfaceController', () => {
     const upOf = (p: BodyFixedPose): Vec3 => [p.basisLocal[3], p.basisLocal[4], p.basisLocal[5]];
 
     const c = createSurfaceController();
-    let pose = poseAt([lu[0] * 2.2, lu[1] * 2.2, lu[2] * 2.2], basis); // h/R 1.2
+    let pose = poseAt([lu[0] * 1.12, lu[1] * 1.12, lu[2] * 1.12], basis); // h/R 0.12
     let maxTurn = 0;
-    // Altitude scales by e^0.03 per sub-eye notch: 33 notches ⇒ h/R 3.23,
-    // through the w = 0.5 flip at h/R ≈ 2.55, stopping in-band for the park.
+    // Altitude scales by e^0.03 per sub-eye notch: 33 notches ⇒ h/R 0.323,
+    // through the w = 0.5 flip at the band's geometric midpoint √(0.2·0.4) ≈
+    // 0.283, stopping in-band (below disengage 0.4) for the park.
+    // The pole's horizontal at this standpoint — anti-parallel to the scene
+    // up's, which is what makes the locus a flip rather than a sweep.
+    const poleVert = lu[2];
+    const poleHoriz: Vec3 = [-lu[0] * poleVert, -lu[1] * poleVert, 1 - lu[2] * poleVert];
     for (let i = 0; i < 33; i += 1) {
       const before = upOf(pose);
       pose = apply(c, pose, zoom(Math.exp(0.03), false), sceneUp);
       maxTurn = Math.max(maxTurn, angleBetween(before, upOf(pose)));
+      // The first notches are still below engage, where the weight is 1: the
+      // ride holds the BODY pole's north, and only swings off it inside the
+      // band. Pinning the weight to the scene up instead walks away from the
+      // pole at a full decay cap per notch from the first one.
+      if (i === 3) expect(angleBetween(upOf(pose), poleHoriz)).toBeLessThan(0.01);
     }
     // rideBound (0.3) + azimuth decay cap (0.1) + level cap (0.1) + slack.
     expect(maxTurn).toBeGreaterThan(0.05); // the flip really was crossed

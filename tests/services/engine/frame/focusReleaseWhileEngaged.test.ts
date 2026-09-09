@@ -72,7 +72,7 @@ describe('focus release while engaged (round 10)', () => {
 
     // Release frame: the fold flipped the regime through its own conversion +
     // commit site — target at the RELEASED body's centre, eye preserved,
-    // everything finite at h/R ≈ 1.1.
+    // everything finite at h/R ≈ 0.1.
     const base = h.store.getState().camera.base;
     expect(base.frame).toBe('absolute');
     expect(base.frame === 'absolute' && base.pose).toBeTruthy();

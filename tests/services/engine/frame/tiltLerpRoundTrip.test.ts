@@ -88,11 +88,11 @@ describe('tilt lerp round trip (ruling 13)', () => {
       // would deviate by up to 0.355 — remembered × w with nothing expressed.
       const bar = s.arm === 'abs' ? 0.01 : 0.09;
       expect(Math.abs(s.tilt - mappedTiltRad(remembered, s.hr))).toBeLessThan(bar);
-      // No threshold step: a notch may move tilt by ~the map's own delta.
-      // Ruling 19's band is 8.5x narrower, so the same wheel notch crosses a
-      // proportionally larger slice of it per step (~0.094) — still nowhere
-      // near a real snap (a broken mapping would run 0.1-0.355+).
-      expect(Math.abs(s.tilt - prevTilt)).toBeLessThan(0.12);
+      // No threshold step: a notch may move tilt by ~the map's own delta. A
+      // wheel notch crosses ~14% of the band in log blend space whatever the
+      // edges are, i.e. ~0.094 rad here — nowhere near a real snap (a broken
+      // mapping would run 0.1-0.355+).
+      expect(Math.abs(s.tilt - prevTilt)).toBeLessThan(0.1);
       prevTilt = s.tilt;
     }
     // The mapping really lerped back in (not "stayed 0 and never returned").

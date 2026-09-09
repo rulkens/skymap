@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { flooredBodyPose } from '../../../src/utils/camera/flooredBodyPose';
+import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 
@@ -29,6 +30,8 @@ describe('flooredBodyPose', () => {
       basisLocal: IDENTITY,
     };
     const out = flooredBodyPose(pose, 1);
-    expect(Math.hypot(...out.eyeRelAnchorM)).toBeGreaterThan(0.1);
+    // Exactly the floor radius, not merely "further out": a push that
+    // overshoots or undershoots is the bug this guards.
+    expect(Math.hypot(...out.eyeRelAnchorM)).toBeCloseTo(surfaceFloorM(1), 12);
   });
 });
