@@ -12,4 +12,7 @@ export type CameraSimHarnessOptions = {
   /** Distance (Mpc) of the neutral origin-centred pose used when `bootHR` is
    * `null` — no store commit, just what `cameraRuntime` starts holding. */
   readonly neutralDistance?: number;
+  /** Wire the real `createClipPlayer` over the harness store instead of the
+   * inert tick stub — for scripts whose legs include a clip. */
+  readonly realClipPlayer?: boolean;
 };

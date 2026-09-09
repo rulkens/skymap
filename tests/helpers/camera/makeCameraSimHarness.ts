@@ -14,6 +14,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { buildCameraDrivers } from '../../../src/services/engine/camera/cameraDrivers';
 import { createCameraClock } from '../../../src/services/engine/camera/cameraClock';
 import { createInputAggregator } from '../../../src/services/engine/subsystems/inputAggregator';
+import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { createSurfaceController } from '../../../src/services/camera/surfaceController';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { runFrame } from '../../../src/services/engine/frame/runFrame';
@@ -44,6 +45,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     focusBody = 'earth',
     bootHR = 10,
     neutralDistance = 100,
+    realClipPlayer = false,
   } = options;
   const fovYRad = (fovDeg * Math.PI) / 180;
 
@@ -98,6 +100,14 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       bakedSettings: null,
     },
   } as unknown as EngineState;
+  if (realClipPlayer) {
+    state.subsystems.clipPlayer = createClipPlayer({
+      store,
+      requestRender: () => {},
+      clock: state.cameraRuntime.clock,
+      getEngineState: () => state,
+    });
+  }
 
   const deps = {
     canvas: {

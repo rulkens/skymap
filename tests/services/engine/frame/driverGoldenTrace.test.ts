@@ -24,7 +24,9 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
-import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
+import { readCameraEpochs } from '../../../helpers/camera/readCameraEpochs';
+import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
+import { readRegister } from '../../../helpers/camera/readRegister';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
 import { spin } from '../../../../src/services/engine/animation/effectHelpers';
@@ -38,6 +40,7 @@ import {
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { EpochCell } from '../../../helpers/camera/readCameraEpochs';
 
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../fixtures/camera/driverGoldenTrace.json', import.meta.url),
@@ -53,7 +56,6 @@ const CLIP_LAPS = 1.5;
 const EPOCH_NAMES = ['tween', 'frameTween', 'autoRotate', 'follow', 'clip'] as const;
 type EpochName = (typeof EPOCH_NAMES)[number];
 
-type EpochCell = { readonly startMs: number | null; readonly refNull: boolean };
 type FollowCell = {
   readonly fromDistance: number | null;
   readonly distanceTarget: number | null;
@@ -72,41 +74,43 @@ type Trace = readonly Step[];
 
 const sig = (x: number): number => Number(x.toPrecision(DIGITS));
 const sigOrNull = (x: number | null): number | null => (x === null ? null : sig(x));
+const sigCell = (c: EpochCell): EpochCell => ({
+  startMs: sigOrNull(c.startMs),
+  refNull: c.refNull,
+});
 
+/**
+ * `displayed` and `register` agree on every step of this script (the world arm
+ * is never left, so no tilt projection splits them): the pair pins that
+ * invariant rather than recording independent data.
+ */
 function snapshot(state: EngineState, label: string, actions: readonly string[]): Step {
   const live = liveWorldPose(state);
-  const reg = state.cameraRuntime.lastPose.current;
+  // Step 4 of `runFrame` stamps the winner it produced from, so this is the
+  // arbitration result itself, not a re-resolution against a moved store.
+  const { pose: reg, winner } = readRegister(state);
   const register =
     reg.frame === 'absolute'
       ? [...reg.pose.target, reg.pose.yaw, reg.pose.pitch, reg.pose.distance, reg.pose.roll ?? 0]
       : [...reg.pose.anchorLocalM, ...reg.pose.eyeRelAnchorM, ...reg.pose.basisLocal];
-  const clock = state.cameraRuntime.clock;
+  const follow = readFollowMemory(state);
+  const epochs = readCameraEpochs(state);
   return {
     label,
-    // Step 4 of `runFrame` stamps the winner it produced from, so this is the
-    // arbitration result itself, not a re-resolution against a moved store.
-    winner: state.cameraRuntime.prevActiveId.current,
+    winner,
     displayed: [...live.target, live.yaw, live.pitch, live.distance, live.roll ?? 0].map(sig),
     register: register.map(sig),
     follow: {
-      fromDistance: clock.followFrom === null ? null : sig(clock.followFrom.distance),
-      distanceTarget: sigOrNull(clock.followDistanceTarget),
-      panOffset: [...clock.followPanOffset].map(sig),
+      fromDistance: follow.from === null ? null : sig(follow.from.distance),
+      distanceTarget: sigOrNull(follow.distanceTarget),
+      panOffset: [...follow.panOffset].map(sig),
     },
     epochs: {
-      tween: { startMs: sigOrNull(clock.tweenStartMs), refNull: clock.lastTweenRef === null },
-      frameTween: {
-        startMs: sigOrNull(clock.frameTweenStartMs),
-        refNull: clock.lastFrameTweenRef === null,
-      },
-      // The autoRotate row's reset reference is `active ? base : null`: the
-      // active bit carries the nullness, `lastBaseRef` only the identity inside it.
-      autoRotate: {
-        startMs: sigOrNull(clock.autoRotateStartMs),
-        refNull: !clock.lastAutoRotateActive,
-      },
-      follow: { startMs: sigOrNull(clock.followStartMs), refNull: clock.lastFollowRef === null },
-      clip: { startMs: sigOrNull(clock.clipStartMs), refNull: clock.lastClipRef === null },
+      tween: sigCell(epochs.tween),
+      frameTween: sigCell(epochs.frameTween),
+      autoRotate: sigCell(epochs.autoRotate),
+      follow: sigCell(epochs.follow),
+      clip: sigCell(epochs.clip),
     },
     actions,
   };
@@ -117,10 +121,12 @@ function snapshot(state: EngineState, label: string, actions: readonly string[])
  * `orbitDrag` and the gesture-end action pair), focus Earth for the follow
  * approach, a notch mid-approach the follow swallows, autoRotate and a notch
  * under it, a tween run to its cancel edge, a looping clip run past its
- * duration, then clip stop / autoRotate off / focus cleared.
+ * duration, clip stop / autoRotate off / focus cleared, then a refocus and a
+ * pan drag under the follow — the one leg that writes the follow's pan offset.
  */
 function runScript(): Trace {
-  const harness = makeCameraSimHarness({ focusBody: null, bootHR: BOOT_HR });
+  // The real player, not the harness stub: the loop rewind is a leg of this script.
+  const harness = makeCameraSimHarness({ focusBody: null, bootHR: BOOT_HR, realClipPlayer: true });
   const { store, state } = harness;
 
   const actions: string[] = [];
@@ -129,15 +135,6 @@ function runScript(): Trace {
     actions.push(action.type);
     return inner(action as never);
   }) as typeof store.dispatch;
-
-  // The harness stubs the player out; the loop rewind is a leg of this script,
-  // and it rides the same clock the driver table reads.
-  state.subsystems.clipPlayer = createClipPlayer({
-    store,
-    requestRender: () => {},
-    clock: state.cameraRuntime.clock,
-    getEngineState: () => state,
-  });
 
   const trace: Step[] = [];
   // One step per frame from a zero start, so the length IS the script clock.
@@ -176,12 +173,12 @@ function runScript(): Trace {
   const followStart = nowMs();
   expect(steps(10, 'follow').winner).toBe('followBody');
 
-  const targetBeforeNotch = state.cameraRuntime.clock.followDistanceTarget;
+  const targetBeforeNotch = readFollowMemory(state).distanceTarget;
   notch('notch under follow');
   // The leg is the notch the follow driver SWALLOWS: it must land while the
   // ease is still running, and it must move the driver's own target.
   expect(nowMs() - followStart).toBeLessThan(FOCUS_TWEEN_MS);
-  expect(state.cameraRuntime.clock.followDistanceTarget).not.toBe(targetBeforeNotch);
+  expect(readFollowMemory(state).distanceTarget).not.toBe(targetBeforeNotch);
   steps(24, 'follow settle');
 
   const { rate } = store.getState().camera.autoRotate;
@@ -226,6 +223,23 @@ function runScript(): Trace {
   store.dispatch(setAutoRotate({ active: false, rate }));
   harness.focus(null);
   expect(steps(6, 'teardown').winner).toBe('resting');
+
+  // The pan lands on the follow's own offset and survives the gesture (same
+  // focus row, so no reset): the pin re-centres off the body from then on.
+  harness.focus('earth');
+  expect(steps(4, 'refocus').winner).toBe('followBody');
+  store.dispatch(beginDrag());
+  harness.push({ kind: 'gestureStart' });
+  harness.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+  for (let i = 0; i < 3; i += 1) {
+    harness.push({ kind: 'dragMove', mode: 'pan', xPx: 55 + 5 * i, yPx: 53 + 3 * i });
+    expect(step(`pan ${i}`).winner).toBe('orbitDrag');
+  }
+  harness.push({ kind: 'gestureEnd' });
+  step('pan end');
+  const settled = steps(4, 'pan settle');
+  expect(settled.winner).toBe('followBody');
+  expect(settled.follow.panOffset).not.toEqual([0, 0, 0]);
 
   return trace;
 }
@@ -283,7 +297,8 @@ describe('driver golden trace (byte bar for arbitration, epochs and actions)', (
   it('matches the recorded trace', () => {
     const trace = thin(runScript());
     if (process.env['DRIVER_GOLDEN_RECORD']) {
-      writeFileSync(FIXTURE_PATH, `${JSON.stringify(trace)}\n`);
+      // Then `prettier --write` the fixture: the committed form is prettier's.
+      writeFileSync(FIXTURE_PATH, `${JSON.stringify(trace, null, 2)}\n`);
       return;
     }
     expectTraceMatches(trace, GOLDEN as Trace);

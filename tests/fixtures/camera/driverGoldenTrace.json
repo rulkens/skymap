@@ -8,13 +8,32 @@
     "register": [
       -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
     ],
-    "follow": { "fromDistance": null, "distanceTarget": null, "panOffset": [0, 0, 0] },
+    "follow": {
+      "fromDistance": null,
+      "distanceTarget": null,
+      "panOffset": [0, 0, 0]
+    },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": null, "refNull": true },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": null,
+        "refNull": true
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -27,13 +46,32 @@
     "register": [
       -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
     ],
-    "follow": { "fromDistance": null, "distanceTarget": null, "panOffset": [0, 0, 0] },
+    "follow": {
+      "fromDistance": null,
+      "distanceTarget": null,
+      "panOffset": [0, 0, 0]
+    },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": null, "refNull": true },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": null,
+        "refNull": true
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -46,13 +84,32 @@
     "register": [
       -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.7, 0.3, 1.23882029118e-15, 0
     ],
-    "follow": { "fromDistance": null, "distanceTarget": null, "panOffset": [0, 0, 0] },
+    "follow": {
+      "fromDistance": null,
+      "distanceTarget": null,
+      "panOffset": [0, 0, 0]
+    },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": null, "refNull": true },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": null,
+        "refNull": true
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -65,13 +122,32 @@
     "register": [
       -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 0.61, 0.3, 1.23882029118e-15, 0
     ],
-    "follow": { "fromDistance": null, "distanceTarget": null, "panOffset": [0, 0, 0] },
+    "follow": {
+      "fromDistance": null,
+      "distanceTarget": null,
+      "panOffset": [0, 0, 0]
+    },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": null, "refNull": true },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": null,
+        "refNull": true
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["camera/commitCameraPose", "camera/endDrag", "engine/engineScaleChanged"]
   },
@@ -90,11 +166,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -113,11 +204,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -136,11 +242,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -161,11 +282,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
   },
@@ -186,11 +322,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -211,11 +362,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -236,11 +402,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -261,11 +442,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -286,11 +482,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -311,11 +522,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": null, "refNull": true },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": null,
+        "refNull": true
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -336,11 +562,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 736, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 736,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
   },
@@ -361,11 +602,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 752, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 752,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -386,11 +642,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 752, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 752,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -411,11 +682,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
   },
@@ -436,11 +722,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -461,11 +762,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -486,11 +802,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": null, "refNull": true },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -511,11 +842,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
   },
@@ -536,11 +882,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -561,11 +922,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -586,11 +962,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -609,11 +1000,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -634,11 +1040,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 784, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 784,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["camera/cancelCameraTween", "engine/engineScaleChanged"]
   },
@@ -659,11 +1080,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1200, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1200,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
   },
@@ -684,11 +1120,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -709,11 +1160,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": null, "refNull": true }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": null,
+        "refNull": true
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -734,11 +1200,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1248, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1248,
+        "refNull": false
+      }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
   },
@@ -759,11 +1240,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1248, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1248,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -784,11 +1280,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1248, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1248,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -809,11 +1320,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1248, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1248,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -834,11 +1360,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1248, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1248,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -859,11 +1400,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1648, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -884,11 +1440,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1648, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -909,11 +1480,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1648, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -934,11 +1520,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1648, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
     },
     "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
   },
@@ -959,11 +1560,26 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1648, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   },
@@ -984,11 +1600,306 @@
       "panOffset": [0, 0, 0]
     },
     "epochs": {
-      "tween": { "startMs": 864, "refNull": false },
-      "frameTween": { "startMs": null, "refNull": true },
-      "autoRotate": { "startMs": 1216, "refNull": false },
-      "follow": { "startMs": 160, "refNull": false },
-      "clip": { "startMs": 1648, "refNull": false }
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 160,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "refocus 0",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.15427392094e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.15427392094e-15,
+      "distanceTarget": 8.9404153574e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 1952,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "refocus 3",
+    "winner": "followBody",
+    "displayed": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.09668137131e-15, 0
+    ],
+    "register": [
+      -8.58950454652e-13, 4.30222343256e-12, 1.86530400502e-12, 1.71073658949, 0.3,
+      1.09668137131e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.15427392094e-15,
+      "distanceTarget": 8.9404153574e-16,
+      "panOffset": [0, 0, 0]
+    },
+    "epochs": {
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 1952,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "pan 0",
+    "winner": "orbitDrag",
+    "displayed": [
+      -8.58952740065e-13, 4.30215003478e-12, 1.86531173992e-12, 1.71073658949, 0.3,
+      1.09668137131e-15, 0
+    ],
+    "register": [
+      -8.58952740065e-13, 4.30215003478e-12, 1.86531173992e-12, 1.71073658949, 0.3,
+      1.09668137131e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.15427392094e-15,
+      "distanceTarget": 8.9404153574e-16,
+      "panOffset": [-2.28541299061e-18, -7.33977774145e-17, 7.73489677741e-18]
+    },
+    "epochs": {
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 1952,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
+    },
+    "actions": ["camera/commitCameraPose", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "pan 1",
+    "winner": "orbitDrag",
+    "displayed": [
+      -8.58955025478e-13, 4.302076637e-12, 1.86531947481e-12, 1.71073658949, 0.3, 1.09668137131e-15,
+      0
+    ],
+    "register": [
+      -8.58955025478e-13, 4.302076637e-12, 1.86531947481e-12, 1.71073658949, 0.3, 1.09668137131e-15,
+      0
+    ],
+    "follow": {
+      "fromDistance": 1.15427392094e-15,
+      "distanceTarget": 8.9404153574e-16,
+      "panOffset": [-4.57082598121e-18, -1.46795554829e-16, 1.54697935548e-17]
+    },
+    "epochs": {
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 1952,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "pan end",
+    "winner": "followBody",
+    "displayed": [
+      -8.58957310891e-13, 4.30200323922e-12, 1.86532720971e-12, 1.71073658949, 0.3,
+      1.12766783533e-15, 0
+    ],
+    "register": [
+      -8.58957310891e-13, 4.30200323922e-12, 1.86532720971e-12, 1.71073658949, 0.3,
+      1.12766783533e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.15427392094e-15,
+      "distanceTarget": 1.09668137131e-15,
+      "panOffset": [-6.85623897182e-18, -2.20193332244e-16, 2.32046903322e-17]
+    },
+    "epochs": {
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 1952,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
+    },
+    "actions": ["camera/commitCameraPose", "camera/endDrag", "engine/engineScaleChanged"]
+  },
+  {
+    "label": "pan settle 0",
+    "winner": "followBody",
+    "displayed": [
+      -8.58957310891e-13, 4.30200323922e-12, 1.86532720971e-12, 1.71073658949, 0.3,
+      1.12471882376e-15, 0
+    ],
+    "register": [
+      -8.58957310891e-13, 4.30200323922e-12, 1.86532720971e-12, 1.71073658949, 0.3,
+      1.12471882376e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.15427392094e-15,
+      "distanceTarget": 1.09668137131e-15,
+      "panOffset": [-6.85623897182e-18, -2.20193332244e-16, 2.32046903322e-17]
+    },
+    "epochs": {
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 1952,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
+    },
+    "actions": ["engine/engineScaleChanged"]
+  },
+  {
+    "label": "pan settle 3",
+    "winner": "followBody",
+    "displayed": [
+      -8.58957310891e-13, 4.30200323922e-12, 1.86532720971e-12, 1.71073658949, 0.3,
+      1.11700541519e-15, 0
+    ],
+    "register": [
+      -8.58957310891e-13, 4.30200323922e-12, 1.86532720971e-12, 1.71073658949, 0.3,
+      1.11700541519e-15, 0
+    ],
+    "follow": {
+      "fromDistance": 1.15427392094e-15,
+      "distanceTarget": 1.09668137131e-15,
+      "panOffset": [-6.85623897182e-18, -2.20193332244e-16, 2.32046903322e-17]
+    },
+    "epochs": {
+      "tween": {
+        "startMs": 864,
+        "refNull": false
+      },
+      "frameTween": {
+        "startMs": null,
+        "refNull": true
+      },
+      "autoRotate": {
+        "startMs": 1216,
+        "refNull": false
+      },
+      "follow": {
+        "startMs": 1952,
+        "refNull": false
+      },
+      "clip": {
+        "startMs": 1648,
+        "refNull": false
+      }
     },
     "actions": ["engine/engineScaleChanged"]
   }
