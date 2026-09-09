@@ -55,26 +55,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 
-import { rootReducer } from '../../../../src/store/rootReducer';
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
-import {
-  buildCameraDrivers,
-  runCameraDrivers,
-} from '../../../../src/services/engine/camera/cameraDrivers';
+import { runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
-import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import { flyout } from '../../../../src/data/animation/clips/flyout';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
+import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
@@ -84,68 +75,12 @@ import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCamer
 // ---------------------------------------------------------------------------
 
 /**
- * Build a minimal EngineState fixture that satisfies `buildCameraDrivers`.
- * Only `cam` and `cameraRuntime` are needed — the driver table reads
- * everything else from the Redux store (`RootState`), not from EngineState.
+ * The playClip↔clipPlayer↔driver seam is driven directly (no GPU, no
+ * `runFrame` body), so the shared sim harness's boot focus/pose are noise —
+ * this test seeds exactly the live pose it needs at `startDistance`.
  */
-function makeEngineState(startDistance: number): {
-  state: Pick<EngineState, 'cam' | 'cameraRuntime'>;
-  cam: OrbitCamera;
-} {
-  const cam: OrbitCamera = {
-    yaw: 0,
-    pitch: 0,
-    distance: startDistance,
-    target: new Float32Array([0, 0, 0]),
-    position: new Float32Array([0, 0, 0]),
-    fovYRad: 0.8,
-    aspect: 1,
-    near: 0.01,
-    far: 1_000_000,
-  } as unknown as OrbitCamera;
-
-  const clock = createCameraClock();
-
-  const state = {
-    cam,
-    cameraRuntime: {
-      clock,
-      projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1_000_000 },
-      lastPose: {
-        current: absoluteArm({
-          target: [0, 0, 0] as Vec3,
-          yaw: 0,
-          pitch: 0,
-          distance: startDistance,
-        }),
-      },
-      displayedPose: {
-        current: absoluteArm({
-          target: [0, 0, 0] as Vec3,
-          yaw: 0,
-          pitch: 0,
-          distance: startDistance,
-        }),
-      },
-      prevActiveId: { current: 'resting' as string },
-      lastRenderedSimDays: { current: 0 },
-      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
-      lastZoomFactor: { current: null },
-      surface: createSurfaceController(),
-      skyCubemapCapture: {
-        bandActive: false,
-        gcDistanceMpc: Number.POSITIVE_INFINITY,
-        bakedSettings: null,
-      },
-    },
-  };
-
-  return { state, cam };
-}
-
-/** Build a real Redux store from the production root reducer. */
-function makeStore() {
-  return configureStore({ reducer: rootReducer });
+function makeHarness(startDistance: number) {
+  return makeCameraSimHarness({ focusBody: null, bootHR: null, neutralDistance: startDistance });
 }
 
 /**
@@ -163,9 +98,9 @@ function makeStore() {
  * Returns { pose, activeId, committed } for per-frame assertions.
  */
 function simulateFrame(
-  engineState: ReturnType<typeof makeEngineState>['state'],
-  store: ReturnType<typeof makeStore>,
-  drivers: ReturnType<typeof buildCameraDrivers>,
+  engineState: ReturnType<typeof makeHarness>['state'],
+  store: ReturnType<typeof makeHarness>['store'],
+  drivers: ReturnType<typeof makeHarness>['deps']['drivers'],
   clipPlayer: ReturnType<typeof createClipPlayer>,
   nowMs: number,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
@@ -209,8 +144,7 @@ describe('playClip — flyout seam', () => {
     const FLYOUT_TARGET = 29_500; // Mpc — the horizon-shell target
     const DURATION_SEC = 22; // seconds — from clips/flyout.ts
 
-    const store = makeStore();
-    const { state } = makeEngineState(LIVE_START_DISTANCE);
+    const { store, state, deps } = makeHarness(LIVE_START_DISTANCE);
 
     // Commit the live pose as the store's `camera.base` so resting produces
     // the correct floor and playClip's 'live' resolution captures the right
@@ -234,10 +168,11 @@ describe('playClip — flyout seam', () => {
       distance: LIVE_START_DISTANCE,
     });
 
-    // Build the real driver table. `buildCameraDrivers` takes an EngineState
-    // but the driver closures only read the Redux RootState at call time —
-    // the EngineState parameter is structurally unused (see cameraDrivers.ts).
-    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    // The real driver table, built by the harness. `buildCameraDrivers` takes
+    // an EngineState but the driver closures only read the Redux RootState at
+    // call time — the EngineState parameter is structurally unused (see
+    // cameraDrivers.ts).
+    const drivers = deps.drivers;
 
     // Build the real clipPlayer with the SAME clock that runCameraDrivers uses.
     // Sharing one CameraClock instance ensures clipElapsed's reference-identity
