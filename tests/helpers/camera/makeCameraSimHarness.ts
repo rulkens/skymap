@@ -32,6 +32,8 @@ import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFra
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { poseAtHR } from './poseAtHR';
+import type { SimBodyId } from './SimBodyId';
+import type { CameraSimHarnessOptions } from './CameraSimHarnessOptions';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
@@ -40,27 +42,6 @@ import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureE
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
 import type { RunFrameDeps } from '../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
-
-/**
- * The three bodies the migrated fixtures focus or measure against — the
- * `deriveBodyStates` / `SCENE_BODIES` id space (per-body identity), a
- * different, wider domain than `BodyId` (the visibility-toggle id space,
- * where every planet shares the single `'planet'` row).
- */
-export type SimBodyId = 'earth' | 'mars' | 'saturn';
-
-export type CameraSimHarnessOptions = {
-  readonly fovDeg?: number;
-  readonly canvasSize?: number;
-  /** Body focused via `setSelectionRow` at boot; `null` skips the dispatch. */
-  readonly focusBody?: SimBodyId | null;
-  /** h/R over `focusBody` (or Earth) the boot pose starts at; `null` skips
-   * seeding a pose — the fixture seeds its own via `seedPose`. */
-  readonly bootHR?: number | null;
-  /** Distance (Mpc) of the neutral origin-centred pose used when `bootHR` is
-   * `null` — no store commit, just what `cameraRuntime` starts holding. */
-  readonly neutralDistance?: number;
-};
 
 export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const {
@@ -190,5 +171,3 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
 
   return { store, state, deps, bodies, radiusM, seedPose, focus, tick, frame, push, wheel };
 }
-
-export type CameraSimHarness = ReturnType<typeof makeCameraSimHarness>;

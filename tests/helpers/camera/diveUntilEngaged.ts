@@ -8,7 +8,8 @@
 
 import { hrOverBody } from './hrOverBody';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
-import type { CameraSimHarness, SimBodyId } from './makeCameraSimHarness';
+import type { CameraSimHarness } from './CameraSimHarness';
+import type { SimBodyId } from './SimBodyId';
 
 export function diveUntilEngaged(
   h: CameraSimHarness,

@@ -6,7 +6,7 @@
  * wheel notch arriving on its own clock while frames still tick every 16ms.
  */
 
-import type { CameraSimHarness } from './makeCameraSimHarness';
+import type { CameraSimHarness } from './CameraSimHarness';
 
 export function driveWheelEvents(
   h: CameraSimHarness,

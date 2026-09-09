@@ -37,7 +37,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { CameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 

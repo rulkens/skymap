@@ -6,7 +6,7 @@
  * handles write the memory (w = 1) and the tilt ceiling is open.
  */
 
-import type { CameraSimHarness } from './makeCameraSimHarness';
+import type { CameraSimHarness } from './CameraSimHarness';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 

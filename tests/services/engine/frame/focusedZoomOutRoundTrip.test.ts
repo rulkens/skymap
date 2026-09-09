@@ -28,7 +28,7 @@ import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorld
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { CameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 
 const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
 const EARTH_RADIUS_M = SCENE_EARTH.radiusM;
