@@ -23,6 +23,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
@@ -209,42 +210,48 @@ describe('focus release while engaged (round 10)', () => {
     expect(distTo(eyeAfter, MARS)).toBeLessThan(marsBefore * 1e-2);
   });
 
-  it('parked at another body with a stale body focus: no engage there — the pin reclaims (R10-1)', () => {
-    // The reachable clip-path corner: guided beats (`flyAndFocusOnClip`)
-    // align focus with their destination, but a hand-authored
-    // `flyToClip`/`flyPath` can land at Mars's surface with the boot-seeded
-    // Earth focus still set. Pre-round-10 the focus-blind engage captured
-    // Mars during the approach, which SHIELDED the landing from the pivot
-    // pin (a body arm co-rotates; the pin only touches the absolute arm).
-    // With the focus gate, no engage happens — so on the first at-rest
-    // frame the incumbent pin re-targets the FOCUSED body at the tiny
-    // surface distance and the camera leaves Mars for Earth, engaging
-    // there. Demonstrated and flagged, not redesigned. With the focus
-    // aligned first, the same park engages on Mars on the next fold.
-    const marsPose: CameraPose = {
-      target: [MARS.positionMpc[0]!, MARS.positionMpc[1]!, MARS.positionMpc[2]!],
-      yaw: 0.7,
-      pitch: 0.3,
-      distance: 3390000 * 1.5 * SCALE_UNITS.M_TO_MPC, // h/R 0.5 over Mars
-      roll: 0,
-    };
+  const MARS_PARK: CameraPose = {
+    target: [MARS.positionMpc[0]!, MARS.positionMpc[1]!, MARS.positionMpc[2]!],
+    yaw: 0.7,
+    pitch: 0.3,
+    distance: 3390000 * 1.5 * SCALE_UNITS.M_TO_MPC, // h/R 0.5 over Mars
+    roll: 0,
+  };
 
+  function parkAtMars(h: ReturnType<typeof makeHarness>): void {
+    h.store.dispatch(commitCameraPose(absoluteArm(MARS_PARK)));
+    h.state.cameraRuntime.lastPose.current = absoluteArm(MARS_PARK);
+    h.state.cameraRuntime.displayedPose.current = absoluteArm(MARS_PARK);
+  }
+
+  it('parked at another body with a stale body focus: no engage there — follow flies to the focus (R10-1)', () => {
+    // The clip-path corner: a hand-authored `flyToClip`/`flyPath` can land at
+    // Mars's surface with the boot-seeded Earth focus still set. Pre-round-10
+    // the focus-blind engage captured Mars during the approach; with the focus
+    // gate no engage happens, so the follow's eye-preserving capture flies the
+    // camera from Mars's surface to the FOCUSED body and settles absolute at
+    // its framing distance.
     const parked = makeHarness(); // focus = Earth (the boot seed)
-    parked.store.dispatch(commitCameraPose(absoluteArm(marsPose)));
-    parked.state.cameraRuntime.lastPose.current = absoluteArm(marsPose);
-    parked.state.cameraRuntime.displayedPose.current = absoluteArm(marsPose);
+    parkAtMars(parked);
     const startDist = distTo(eyeMpcOf(liveWorldPose(parked.state), B), MARS);
-    for (let t = 16; t <= 480; t += 16) {
+    for (let t = 16; t <= 1600; t += 16) {
       runFrame(parked.state, parked.deps, t);
-      const frame = parked.state.cameraRuntime.lastPose.current.frame;
-      expect(frame === 'absolute' || frame.body === 'earth').toBe(true); // never Mars
+      expect(parked.state.cameraRuntime.lastPose.current.frame).toBe('absolute'); // never Mars
     }
-    const endFrame = parked.state.cameraRuntime.lastPose.current.frame;
-    expect(endFrame !== 'absolute' && endFrame.body).toBe('earth');
     const endDist = distTo(eyeMpcOf(liveWorldPose(parked.state), B), MARS);
-    expect(endDist).toBeGreaterThan(startDist * 100); // gone — back at Earth
+    expect(endDist).toBeGreaterThan(startDist * 100); // gone — at Earth
+    const dEarth = distTo(eyeMpcOf(liveWorldPose(parked.state), B), EARTH);
+    const earthFraming = bodyFocusDistance(R_MPC, Math.PI / 3);
+    expect(Math.abs(dEarth - earthFraming) / earthFraming).toBeLessThan(1e-3);
+  });
 
+  it('parked at a body with THAT body focused, after an earlier follow: engages on the next fold', () => {
+    // The ordinary tour landing (`flyAndFocusOnClip` aligns focus with the
+    // destination) in the ordinary session (the boot focus has followed
+    // before any beat lands). A capture that treats the switch as a cut to
+    // the framing distance yanks the eye out to h/R 3.3 and never engages.
     const aligned = makeHarness();
+    for (let t = 16; t <= 48; t += 16) runFrame(aligned.state, aligned.deps, t); // follow Earth first
     aligned.store.dispatch(
       setSelectionRow({
         slot: 'focus',
@@ -257,10 +264,8 @@ describe('focus release while engaged (round 10)', () => {
         },
       }),
     );
-    aligned.store.dispatch(commitCameraPose(absoluteArm(marsPose)));
-    aligned.state.cameraRuntime.lastPose.current = absoluteArm(marsPose);
-    aligned.state.cameraRuntime.displayedPose.current = absoluteArm(marsPose);
-    runFrame(aligned.state, aligned.deps, 16);
+    parkAtMars(aligned);
+    runFrame(aligned.state, aligned.deps, 64);
     const frame = aligned.state.cameraRuntime.lastPose.current.frame;
     expect(frame !== 'absolute' && frame.body).toBe('mars');
   });

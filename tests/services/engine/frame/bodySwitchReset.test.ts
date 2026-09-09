@@ -244,6 +244,49 @@ describe('body switch reset (ruling 18)', () => {
     expect(state.cameraRuntime.surface.rememberedTiltRad()).toBe(0);
   });
 
+  it('a body switch is a FLIGHT to the framing distance, never a cut', () => {
+    const { store, state, deps } = makeHarness();
+    let now = 0;
+    const frame = () => runFrame(state, deps, (now += 16));
+
+    // Settle the session's first follow at Earth, then switch to Saturn.
+    for (let i = 0; i < 80; i += 1) frame();
+    focusBody(store, 'saturn', 'Saturn', SATURN.positionMpc, R_SATURN_M);
+
+    // The eye starts where it was (Earth's neighbourhood, ~2e4 R♄ out) and
+    // approaches monotonically; a capture that adopts the framing distance
+    // as its START teleports the eye there on the first frame.
+    const ds: number[] = [];
+    for (let i = 0; i < 150; i += 1) {
+      frame();
+      ds.push(distTo(eyeMpcOf(liveWorldPose(state), B), SATURN));
+    }
+    expect(ds[0]!).toBeGreaterThan(FRAMING_MPC * 10);
+    for (let i = 1; i < ds.length; i += 1) {
+      expect(ds[i]!).toBeLessThanOrEqual(ds[i - 1]! * (1 + 1e-9));
+    }
+    expect(Math.abs(ds[ds.length - 1]! - FRAMING_MPC) / FRAMING_MPC).toBeLessThan(1e-3);
+    expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+    expect(state.cameraRuntime.prevActiveId.current).toBe('followBody');
+  });
+
+  it("the session's FIRST follow lands at the framing distance too", () => {
+    const { store, state, deps } = makeHarness();
+    let now = 0;
+    const frame = () => runFrame(state, deps, (now += 16));
+
+    // 11 R⊕ from Earth's centre is 1.2 R♄: a capture that carries that
+    // distance across to Saturn engages there and never reaches the framing.
+    focusBody(store, 'saturn', 'Saturn', SATURN.positionMpc, R_SATURN_M);
+    for (let i = 0; i < 200; i += 1) {
+      frame();
+      expect(distTo(eyeMpcOf(liveWorldPose(state), B), SATURN)).toBeGreaterThan(R_SATURN_MPC);
+    }
+    const dSat = distTo(eyeMpcOf(liveWorldPose(state), B), SATURN);
+    expect(Math.abs(dSat - FRAMING_MPC) / FRAMING_MPC).toBeLessThan(1e-3);
+    expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+  });
+
   it('same-body disengage/re-engage (with a null-focus stint) keeps the memory', () => {
     const { store, state, deps } = makeHarness();
     const push = (state.subsystems.inputAggregator as unknown as { push: (x: unknown) => void })

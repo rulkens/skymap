@@ -1,16 +1,12 @@
 /**
- * surfaceController — the body arm's gesture register (spec §6). All of it
+ * surfaceController — the body arm's gesture register (spec §6). Everything
  * runs in body-fixed metres and reads no world position, so a fast clock
- * cannot slide the ground under a gesture.
- *
- * What the cursor is over picks the control model; every mode moves the pose
- * so the grabbed content follows the cursor, which fixes each sign below.
- * One orientation authority (R1): gestures never create roll, and every zoom
- * notch — both directions — walks heading north and roll level by one bounded
- * decay. Tilt is Cesium-style (ruling 12): the display is the pure function
- * `remembered × bodyUpWeight(h/R)` — zoom never authors it, the tilt/look
- * handles write the memory, and the band weight reaching 0 at disengage is
- * what lands the crossing at tilt 0.
+ * cannot slide the ground under a gesture. What the cursor is over picks the
+ * control model; every mode moves the pose so the grabbed content follows the
+ * cursor, which fixes each sign below. One orientation authority (R1): gestures
+ * never create roll; every zoom notch walks heading north and roll level by one
+ * bounded decay. Tilt is Cesium-style (ruling 12): display = `remembered ×
+ * bodyUpWeight(h/R)`; only the tilt/look handles write the memory.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -613,13 +609,8 @@ export function createSurfaceController(): SurfaceController {
   // them makes "latched with the pointer up" — FW-C's trackpad burst —
   // unrepresentable rather than guarded.
   let live: { gesture: SurfaceGesture | null } | null = null;
-  // Ruling 12: the session's remembered tilt — ONE home, default 0 (looking
-  // from above). Survives gestures and same-body disengage/re-engage; a BODY
-  // SWITCH wipes it (ruling 18, superseding round 11's survive-the-switch
-  // scope): the memory belongs to the body that was current when it was
-  // authored, and is never restored per body. `memoryBodyId` tracks that
-  // body via `noteBody` (runFrame, the one caller) — null notes (no body
-  // engaged or focused) change nothing, so a null-focus stint keeps it.
+  // Ruling 12's remembered tilt, ONE home. A body SWITCH wipes it (ruling 18:
+  // never restored per body); a null note — nothing engaged or focused — keeps it.
   let rememberedTiltRad = 0;
   let memoryBodyId: string | null = null;
 
