@@ -1,8 +1,7 @@
 /**
  * SkyCubemapCaptureRuntime — cross-frame memory for the black-hole lens's
- * one-shot sky-cubemap bake. Lives on `cameraRuntime` alongside its sibling
- * amortized-Resources fields; single-writer: only `renderFrame` reads or
- * writes it.
+ * one-shot sky-cubemap bake. A top-level `EngineState` field; single-writer:
+ * only `renderFrame` writes it, and only `renderTargets.ts` reads it.
  */
 
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';

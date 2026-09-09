@@ -503,12 +503,10 @@ describe('renderFrame visual baseline', () => {
         },
         // The sky-cubemap capture bookkeeping — see the matching fixture
         // comment in renderFrame.test.ts.
-        cameraRuntime: {
-          skyCubemapCapture: {
-            bandActive: false,
-            gcDistanceMpc: Number.POSITIVE_INFINITY,
-            bakedSettings: null,
-          },
+        skyCubemapCapture: {
+          bandActive: false,
+          gcDistanceMpc: Number.POSITIVE_INFINITY,
+          bakedSettings: null,
         },
       } as never,
       device,

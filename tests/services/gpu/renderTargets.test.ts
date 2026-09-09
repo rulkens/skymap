@@ -53,7 +53,7 @@ function stateWithDivisor(
       milkyWay: { aggregateDivisor },
       sgrAStarLensingTuning: { cubemapResolutionPx },
     },
-    cameraRuntime: { skyCubemapCapture: { bandActive, gcDistanceMpc } },
+    skyCubemapCapture: { bandActive, gcDistanceMpc },
   } as unknown as EngineState;
 }
 

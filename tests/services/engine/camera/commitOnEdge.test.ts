@@ -94,11 +94,6 @@ function makeEngineState(): {
       prevActiveId: { current: 'resting' as string },
       lastRenderedSimDays: { current: 0 },
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
-      skyCubemapCapture: {
-        bandActive: false,
-        gcDistanceMpc: Number.POSITIVE_INFINITY,
-        bakedSettings: null,
-      },
     },
   };
 

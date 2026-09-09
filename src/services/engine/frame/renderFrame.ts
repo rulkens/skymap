@@ -34,10 +34,9 @@
  *
  * This module owns no cross-frame state of its OWN — every local value it
  * computes is recomputed each frame. It DOES read/write one Resource,
- * `state.cameraRuntime.skyCubemapCapture` (the black-hole lens's amortized
- * sky-capture bookkeeping), the same amortized-Resources shape
- * `cameraRuntime`'s other fields already carry. A free function taking a
- * struct of inputs bounds the encoder lifetime to the function body.
+ * `state.skyCubemapCapture` (the black-hole lens's amortized sky-capture
+ * bookkeeping). A free function taking a struct of inputs bounds the encoder
+ * lifetime to the function body.
  *
  * ### What stays in `runFrame()` (NOT here)
  *
@@ -114,9 +113,9 @@ export function renderFrame(input: RenderFrameInput): void {
 
   // The black-hole lens's sky-cubemap bake. The band keys on the CAMERA's
   // distance from the galactic-centre anchor, the same quantity + region
-  // every `sgrAStarLensing`-band consumer reads. The bookkeeping lives on
-  // `cameraRuntime` — see `SkyCubemapCaptureRuntime`.
-  const captureRuntime = state.cameraRuntime.skyCubemapCapture;
+  // every `sgrAStarLensing`-band consumer reads. See
+  // `SkyCubemapCaptureRuntime`.
+  const captureRuntime = state.skyCubemapCapture;
   const gcDistanceMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
     GALACTIC_CENTRE_REGION,

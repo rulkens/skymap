@@ -295,7 +295,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: (state, isAllocated) => {
-        const capture = state.cameraRuntime.skyCubemapCapture;
+        const capture = state.skyCubemapCapture;
         if (capture.bandActive) return true;
         return (
           isAllocated &&

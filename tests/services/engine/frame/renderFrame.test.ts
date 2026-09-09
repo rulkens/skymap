@@ -575,12 +575,10 @@ function makeInput(
         // band is active. The fixture camera sits Mpc-scale away from Sgr
         // A*, so the band stays closed and `facesToCapture` stays empty;
         // see `renderFrame.ts`'s in-band block.
-        cameraRuntime: {
-          skyCubemapCapture: {
-            bandActive: false,
-            gcDistanceMpc: Number.POSITIVE_INFINITY,
-            bakedSettings: null,
-          },
+        skyCubemapCapture: {
+          bandActive: false,
+          gcDistanceMpc: Number.POSITIVE_INFINITY,
+          bakedSettings: null,
         },
       } as never,
       device,
