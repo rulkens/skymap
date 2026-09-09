@@ -906,3 +906,132 @@ list with the user, full suite, `/feature-done`.
 - [Body render slabs — design (spec 1)](completed/2026-08-25-body-render-slabs.md) §5 (the seam contract), §7.1, §10; and its [execution ledger](../plans/completed/2026-08-26-body-render-slabs.ledger.md) (the `lonLatFocusPose` deferral, the one-seam allow-list ruling).
 - [ADR 0010 — continuous per-object floating origin](../../adrs/0010-continuous-floating-origin-for-free-zoom.md) — the anchor-relative lineage §5.3 extends to the camera state.
 - `docs/superpowers/conventions/simplicity.md` §7 (the asymmetry STOP signal, applied in §4 and §12-R3); `conventions/plan-style.md` (what the downstream plan takes from §3 and §11).
+
+## Ground preparation — cameraRuntime single-writer (2026-09-09)
+
+Prep for §14's "Clock" verification (plan T18) and for the follow-driver split
+R14-3 asks for. Judged against `1d44398e5`, `cameraRuntime` is a bag of six
+`{ current }` boxes with eleven writers across five files; both features are
+_second_ writers of state that has no single writer today, so both are bolt-ons
+on the incumbent shape. The prep lands as five commits on this branch ahead of
+the feature commits. Plan:
+[`plans/2026-09-09-camera-runtime-single-writer.md`](../plans/2026-09-09-camera-runtime-single-writer.md).
+Trace, greenfield derivation and the signed-off checkpoint:
+`.superpowers/sdd/2026-09-01-camera-pivot/runtime-{trace,greenfield,refactor-ground}.md`.
+
+**The value.** `CameraRuntime` is replaced once per frame, grouped by lifetime
+and owner — five groups, no boxes:
+
+```ts
+export type CameraRuntime = {
+  readonly register: { readonly pose: FramedCameraPose; readonly winner: string };
+  readonly epochs: CameraEpochs;
+  readonly follow: FollowMemory | null;
+  readonly surface: SurfaceMemory;
+  readonly outputs: FrameOutputs;
+};
+type Epoch<Ref> = { readonly ref: Ref | null; readonly startMs: number | null };
+type CameraEpochs = {
+  readonly tween: Epoch<CameraTweenDescriptor>;
+  readonly frameTween: Epoch<FrameTween>;
+  // ref = the base the spin froze against, null while inactive: the active bit
+  // and the base identity are ONE reset condition, not two fields.
+  readonly autoRotate: Epoch<FramedCameraPose>;
+  readonly follow: Epoch<SelectionRow>;
+  readonly clip: Epoch<NonNullable<CameraState['clip']>>;
+};
+type FollowMemory = {
+  readonly from: CameraPose | null;
+  readonly distanceTarget: number | null;
+  readonly panOffset: Vec3;
+};
+type SurfaceMemory = {
+  readonly gesture: SurfaceGesture | null;
+  readonly pointerDown: boolean;
+  readonly rememberedTiltRad: number;
+  readonly memoryBodyId: string | null;
+};
+type FrameOutputs = {
+  readonly displayed: FramedCameraPose;
+  readonly simDays: number;
+  readonly upBasis: Mat3;
+  readonly projection: CameraProjection;
+  readonly lastZoomFactor: number | null;
+};
+```
+
+`register.pose` is the authored register and `register.winner` the id that wrote
+it: one fact, one row, so "which driver produced the pose I am looking at" can
+no longer disagree with itself. Every output the frame publishes is stored, not
+re-derived, because a between-frame reader must agree with the frame that was
+last DRAWN — a resize or a sim-clock advance must not retro-change the aspect or
+the epoch a pick resolves against. Only elapsed is derived.
+
+**The step.** `runFrame` holds one assignment and one dispatch loop:
+
+```ts
+stepCameraRuntime(prev: CameraRuntime, inputs: StepInputs): {
+  readonly next: CameraRuntime; readonly actions: readonly UnknownAction[]; readonly requestRender: boolean };
+```
+
+Five pure stages, in this order (the fold stays last, spec §7):
+
+```ts
+replayInput(prev: { register; surface; follow }, steps, ctx) → { register; surface; follow; lastZoomFactor; zoomToFollow; autoRotateEpoch; actions }
+advanceEpochs(prev.epochs, { intent; focus; clip; winnerId; nowMs }) → CameraEpochs
+runCameraDrivers(drivers, ctx, mem) → { pose; winner; memory }
+commitOnEdge({ register; displayed; produced; prevWinner; winner; drivers }) → { render; authoredOverride; actions }
+projectFramePose({ render; authoredOverride; surface; … }) → { register; displayed; surface; actions; requestRender }
+```
+
+Epoch arithmetic is two pure functions — `advanceEpoch(prev, ref, nowMs)` and
+`elapsedMs(epoch, nowMs)` — and `advanceEpoch` is IDEMPOTENT for an unchanged
+ref. That property is what retires the "call it at most twice, the second is a
+no-op" guards at `runFrame.ts:153,168` and `applyWheelZoom.ts:39`: a second
+advance cannot mean a second reset when nothing mutates. Elapsed is milliseconds
+for all five rows; the clip's consumers divide at the point of use, so the
+`clipElapsed`-returns-SECONDS asymmetry (`CameraDriver.d.ts:8`) disappears rather
+than being documented again.
+
+**Effective intent.** Stages after `replayInput` read
+`cameraReducer(intent, actionsSoFar)` — the real slice reducer applied locally —
+so an at-rest wheel notch's commit is visible to the resting driver in the same
+frame exactly as it is today through `runFrame.ts:117`'s post-drain `getState()`,
+while the dispatch itself happens after `state.cameraRuntime = next`. Store
+listeners then see the frame's runtime already installed.
+
+**Drivers own their memory.** `pose(ctx: DriverCtx, mem: FollowMemory | null) →
+{ pose, memory }`; the winner's memory is adopted, the losers' discarded, and the
+memory clears as data when the follow epoch's `ref` changes. The wheel notch a
+following camera swallows arrives as `ctx.zoomToFollow` and comes back as a new
+`distanceTarget`, so `applyWheelZoom` stops being a writer. This is the joint
+R14-3 needs: `followApproach` (priority 55 — above `autoRotate` 20, below `tween`
+60, preserving today's follow-loses-to-tween ordering) and `followHold`
+(priority 10) are two rows returning the same memory type, not two writers of one
+mutable clock.
+
+**The clip epoch handshake.** `ClipPlayer.tick(clipEpoch, nowMs) →
+{ clipEpoch }`: the player is handed the epoch and returns the one it used,
+rebased when a looping clip wraps. It holds no reference to the runtime, which
+retires the one true reference capture at `engine.ts:280` and lets the bag be
+replaced wholesale.
+
+**Seed and guard.** `seedCameraRuntime({ committed, projection })` is the only
+constructor; `wireInput.ts:119-122` calls it instead of writing four fields into
+a half-built bag. A ts-morph gate test (the `oneMpcSeam.test.ts` shape) fails on
+any assignment whose left-hand side is rooted at `.cameraRuntime` outside
+`runFrame.ts` and that seed, and the sim harness deep-freezes the bag after every
+frame so a stray write throws in the suite rather than drifting.
+
+### Sketch + verdicts
+
+| Joint                          | Blocker today                                                                                                                              | Verdict                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| J1 driver returns its memory   | `CameraDriver` has no memory member; `followBody` writes `cameraDrivers.ts:163,180,185`, `applyWheelZoom.ts:33` writes it too              | bolt-on — R14-3's split adds a 2nd writer of one memory              |
+| J2 one epoch advance per frame | 5 mutating `*Elapsed` fns, up to 2 calls/frame behind identity guards (`runFrame.ts:153,168`, `applyWheelZoom.ts:39`, `clipPlayer.ts:241`) | bolt-on — every time-keyed driver adds a fn plus a second-call guard |
+| J3 runtime as a value          | 6 `{ current }` boxes; writers at `runFrame.ts:100,103,129,147,310-312`, `drainInput.ts:83,137,143,180,228`, `wireInput.ts:119-122`        | bolt-on — single-writer is a discipline, not a shape                 |
+| J4 surface memory as data      | a closure over 3 variables behind 6 methods, driven from `drainInput.ts:72,149,170` and `runFrame.ts:223`                                  | bolt-on — the only method-bearing object in a data bag               |
+| J5 pure input replay           | `drainInput` returns void, writes 5 fields, dispatches 4 actions                                                                           | bolt-on                                                              |
+| J6 clipPlayer epoch handshake  | `engine.ts:280` captures `cameraRuntime.clock` by reference; `clipPlayer.ts:270` rewinds `clipStartMs`                                     | breaks outright on wholesale replacement                             |
+| J7 seed                        | `wireInput.ts:119-122` is a second writer of the projection and both poses                                                                 | growth, once J3 exists                                               |
+| G guard                        | none                                                                                                                                       | new gate test + harness deep-freeze                                  |
