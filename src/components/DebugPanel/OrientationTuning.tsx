@@ -1,14 +1,11 @@
-// src/components/DebugPanel/OrientationTuning.tsx
 /**
- * OrientationTuning — the round-9 feel-trial knobs (ruling 11), a subsection
- * of the Camera debug section: engage/disengage sliders writing through
- * `setSurfaceBand` (the clamped ONE home the regime hysteresis and the
- * orientation band both read — ruling 10 forbids them diverging), the
- * lin/log blend-space toggle, and the north-up authority toggle. The records
- * are engine-side module state, read directly per the DebugPanel convention
- * for non-store data; session-only — winning values get hardcoded after the
- * trial. Values re-read from the records after every write, so a clamp that
- * moved the OTHER knob shows immediately.
+ * OrientationTuning — the feel-trial knobs (ruling 11), a subsection of the Camera
+ * debug section. The engage/disengage sliders write through `setSurfaceBand`, the
+ * clamped ONE home the regime hysteresis and the orientation band both read —
+ * ruling 10 forbids them diverging. The records are engine-side module state, read
+ * directly per the DebugPanel convention for non-store data, and session-only.
+ * Values re-read from the records after every write, so a clamp that moved the
+ * OTHER knob shows immediately.
  */
 
 import { useReducer, type ReactNode } from 'react';

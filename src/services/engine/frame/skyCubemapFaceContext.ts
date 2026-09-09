@@ -23,9 +23,8 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 const SKY_CAPTURE_NEAR_MPC = 0.1 * SCALE_UNITS.AU_TO_MPC;
 
 /**
- * Forward axis per `CubeFace` (±X/±Y/±Z), and the `texture_cube` convention's
- * per-face up (the ±Y faces borrow world ±Z, since world ±Y is forward
- * there). The cube-view bind relies on both matching that convention.
+ * Forward axis per `CubeFace` (±X/±Y/±Z) and the `texture_cube` convention's
+ * per-face up — the ±Y faces borrow world ±Z. The cube-view bind relies on both.
  */
 const FACE_FORWARD: readonly Vec3[] = [
   [1, 0, 0],
@@ -45,10 +44,9 @@ const FACE_UP: readonly Vec3[] = [
 ];
 
 /**
- * One basis per face, serving as both `poseBasis` and `upBasis` so the two
- * cannot drift. `updatePosition` decodes local +Z through the THIRD column,
- * so that column is `-forward`; `frameUp` reads the MIDDLE for screen-up, so
- * that one carries `FACE_UP`.
+ * One basis per face, serving as both `poseBasis` and `upBasis` so the two cannot
+ * drift. `updatePosition` decodes local +Z through the THIRD column, so that column
+ * is `-forward`; `frameUp` reads the MIDDLE for screen-up, so it carries `FACE_UP`.
  */
 const FACE_BASES: readonly Mat3[] = FACE_FORWARD.map((forward, i): Mat3 => {
   const up = FACE_UP[i]!;
@@ -113,7 +111,6 @@ export function skyCubemapFaceContext(input: {
   // In place is safe: `deriveFrameContext` freshly allocated these arrays.
   flipClipY(ctx.vp);
   for (const slab of ctx.slabs) flipClipY(slab.vp);
-  // Slot 0 is the main view, so the view-slot rings keep this call's writes
-  // off the real frame's (`ReadyFrameContext.viewSlot`).
+  // Slot 0 is the main view, so this call's ring writes stay off the real frame's.
   return { ...ctx, viewSlot: face + 1 };
 }

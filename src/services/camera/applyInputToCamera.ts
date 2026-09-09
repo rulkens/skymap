@@ -1,7 +1,6 @@
 /**
  * applyInputToCamera — fold one aggregated input step over a world-arm pose.
  * Pure: returns the next pose; committing to the store is the drain's job.
- *
  * Drag right (+dx) DECREASES yaw: the world follows the hand ("globe" drag)
  * rather than the camera swinging rightward (FPS look).
  */
@@ -20,11 +19,9 @@ import type { PivotFraming } from '../../@types/camera/PivotFraming';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 
-/**
- * Pitch ceiling. At exactly ±π/2 forward is collinear with the reference up and
- * `lookAt` degenerates to an all-NaN view matrix (gimbal lock); the 0.01 rad
- * (≈0.57°) gap is invisible.
- */
+// Pitch ceiling: at exactly ±π/2 forward is collinear with the reference up and
+// `lookAt` degenerates to an all-NaN view matrix (gimbal lock). The 0.01 rad
+// (≈0.57°) gap is invisible.
 const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
 /**

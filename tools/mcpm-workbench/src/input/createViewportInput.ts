@@ -1,11 +1,9 @@
 /**
- * createViewportInput — adopts the main app's gesture recognizer
- * (`attachOrbitControls`) + per-frame aggregator instead of hand-rolled DOM
- * handlers. A `dragAnchor` is hit-tested against the gizmo handles once, at
- * gesture start: a hit routes the whole gesture into the gizmo drag math
- * below (dispatched per move, unchanged); a miss routes it into a plain
- * camera register that reaches the store once, at `gestureEnd` or a
- * rest-wheel tick — no per-move dispatch.
+ * createViewportInput — the main app's gesture recognizer (`attachOrbitControls`)
+ * plus its per-frame aggregator. A `dragAnchor` is hit-tested against the gizmo
+ * handles once, at gesture start: a hit routes the whole gesture into the gizmo drag
+ * math below (dispatched per move); a miss routes it into a plain camera register
+ * that reaches the store once, at `gestureEnd` or a rest-wheel tick.
  */
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { attachOrbitControls } from '../../../../src/services/camera/orbitControls';
@@ -35,11 +33,11 @@ import { rayFromPointer } from './rayFromPointer';
 import { ringReferenceDirFor } from './ringReferenceDirFor';
 
 const DRAG_SPEED = 0.005;
-// Right/middle-drag pans the orbit target along the camera's right/up axes, screen-constant
-// dist*0.0016 px rate — galaxy-renderer's createOrbitCameraInput, so the two tools share one
-// hand feel. Wheel zoom no longer has its own speed constant here: the shared aggregator
-// folds wheel/pinch into a `factor` already scaled by ITS OWN rate (WHEEL_ZOOM_K), applied
-// to the register directly below — the same contract `applyInputToCamera`'s zoom branch uses.
+// Right/middle-drag pans the orbit target along the camera's right/up axes at a
+// screen-constant dist*0.0016 px rate, matching galaxy-renderer's
+// createOrbitCameraInput so the two tools share one hand feel. Wheel zoom has no
+// constant here: the shared aggregator folds wheel/pinch into a `factor` already
+// scaled by its own WHEEL_ZOOM_K, the contract `applyInputToCamera` also uses.
 const PAN_SPEED = 0.0016;
 
 export type ViewportInputDeps = {

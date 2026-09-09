@@ -1,29 +1,9 @@
 /**
- * wireInput — bootstrap phase that wires the pick renderer, the orbit
- * camera, click + double-click handlers, and the input-bindings listener
- * bag.
+ * wireInput — bootstrap phase that wires the pick renderer, the orbit camera,
+ * click + double-click handlers, and the input-bindings listener bag.
  *
- * Runs without waiting on any galaxy catalog load: the camera framing uses pure
- * constants from `cameraFraming.ts`, so the orbit camera and the loop
- * can come up immediately and galaxy catalogs can fade in as they arrive. The
- * `ready` status emission lives in `wireSlots` as a per-arrival
- * subscriber.
- *
- * No settings seed runs here: every settings cluster lives in the
- * engine-owned store (seeded at construction from the same
- * `data/defaults.ts` values React reads through `useStore` selectors),
- * so there is no startup echo to fan out.
- *
- * ### State writes
- *
- *   - `state.cam`.
- *   - `state.gpu.galaxyPickRenderer`, `state.gpu.pickProgram`.
- *   - `state.subsystems.clickResolver`, `state.subsystems.inputBindings`.
- *
- * ### Side effects on `deps`
- *
- *   - Mutates `deps.detachControlsRef.current` — written with the
- *     orbit-controls detach function.
+ * Runs without waiting on any galaxy catalog load: the camera framing is pure
+ * constants from `cameraFraming.ts`, so the loop can come up immediately.
  */
 
 import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
@@ -57,25 +37,14 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
-/**
- * Bootstrap phase 3: pick renderer + camera + orbit controls + click
- * handlers + input bindings + status-ready + settings seed.
- */
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas } = deps;
 
-  // The visual renderer must exist before we wire picking + the camera —
-  // `renderer` is the null-guard subject on the next line.
   const renderer = state.gpu.galaxyPointRenderer;
   if (!renderer) return;
-  // The two GPU_HANDLE_ROWS rows marked `constructPhase: 'wireInput'`: they
-  // read `state.gpu.focusUniform`, built by `initGpu`'s walker call, so they
-  // wait for this phase. `ctx.context`/`ctx.format`/`ctx.hdrCapable` and
-  // `fontAtlases` stay getters — neither row reads them — so this bag never
-  // widens this phase's boot-state requirement past what the old inline code
-  // required. `ctx.format` has no live source at this phase (no row here
-  // bakes a swap-format pipeline); it throws rather than silently re-deriving
-  // a value that could diverge from `initGpu`'s boot format.
+  // `ctx.format` has no live source at this phase (no row here bakes a
+  // swap-format pipeline); it throws rather than silently re-deriving a value
+  // that could diverge from `initGpu`'s boot format.
   const handleDeps: GpuHandleConstructDeps = {
     ctx: {
       device: deps.phaseLocals!.device,
@@ -104,20 +73,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state,
     handleDeps,
   );
-  // `pickProgram` derives its pick-time inputs from `state`; used below only
-  // as the hover/click resolvers' entry point.
   const pickProgram = state.gpu.pickProgram!;
 
-  // ── Hover-pick driver ────────────────────────────────────────────────
-  //
-  // `hoverPickDriver` owns the full async hover-pick path, decoupled from
-  // the render frame. A pointer move feeds `onPointerMove`; the driver
-  // coalesces moves (GPU readback latency is the natural throttle),
-  // fires an async pick, and dispatches the hover result to the Redux store.
-  // Because hover feeds only the React InfoCard text — not a visual halo —
-  // no `requestRender` is ever needed here. The driver hands the program a
-  // texture-space cursor position and nothing else; the program derives every
-  // other pick input live from `state`.
+  // Hover feeds only the React InfoCard text, not a visual halo, so the hover
+  // path never needs a `requestRender`; GPU readback latency is its throttle.
   const store = deps.cb.store;
   const hoverPickDriver = createHoverPickDriver({
     state,
@@ -126,158 +85,75 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     resolveDeps: { structures: state.data.structures },
   });
 
-  // The resolver runs the whole pixel → SelectionRef boundary via
-  // `resolvePick`: it decodes the pick and emits an identity ref. Galaxy
-  // identity is purely positional (no cloud read at pick time); the
-  // reconciler resolves the cloud at display time. Structure hits resolve
-  // the pick index to the record's durable id via the structure store.
+  // Galaxy identity is purely positional — no cloud read at pick time; the
+  // reconciler resolves the cloud at display time.
   state.subsystems.clickResolver = createClickResolver({
     pickProgram,
     structures: state.data.structures,
   });
 
-  // ── Camera auto-framing ──────────────────────────────────────────────
-  //
-  // Boot straight into the Earth home pose — see `cameraFraming.ts`. The pose
-  // is a pure function of the boot sim instant (the ephemeris is analytic), so
-  // the camera is still built before any galaxy catalog has arrived.
-  //
-  // `simDays` is the live wall-clock instant `startLoop`'s `goLive` re-anchors
-  // the sim clock to a moment later (`unixMsToJulianDays(Date.now())`). Reading
-  // the same source here — rather than `deriveSimDays(state.time, …)`, which
-  // would run against the still-placeholder J2000 anchor at this phase — frames
-  // Earth where it will actually sit the instant the loop goes live, so there
-  // is no jump on the first follow frame.
   const fovYRad = DEFAULT_FOV_Y_RAD;
+  // The live wall-clock instant `startLoop`'s `goLive` re-anchors the sim clock
+  // to, NOT `deriveSimDays(state.time, …)` — that would run against the still-
+  // placeholder J2000 anchor at this phase and frame Earth where it isn't, giving
+  // a jump on the first follow frame.
   const simDays = unixMsToJulianDays(Date.now());
   // The committed orientation basis the boot pose encodes through, so first-paint
-  // yaw/pitch round-trip under the same frame the render path decodes with. A
-  // `#orientation=<frame>` deep link is already committed by this async phase (see
-  // the boot-ordering note below), so this reads the URL frame when present.
+  // yaw/pitch round-trip under the same frame the render path decodes with.
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
   const initialCam = computeInitialCamera({ fovYRad, simDays, frameBasis });
 
-  // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
-  // live canvas ratio, not a captured one), so the camera is the framing
-  // snapshot plus the current aspect.
   const cam = createOrbitCamera({ ...initialCam, aspect: canvas.width / canvas.height });
   state.cam = cam;
 
-  // ── Bootstrap seed ───────────────────────────────────────────────────────
+  // Without this seed the first resting frame returns the placeholder `base`
+  // (yaw 0, distance 0.43) rather than the computed framing pose — a visible
+  // camera jump on frame one.
   //
-  // Fill the cameraRuntime Resources with real values now that the initial
-  // OrbitCamera exists. Without this seed the first resting frame would return
-  // the placeholder `base` (yaw 0, distance 0.43) rather than the computed
-  // framing pose, causing a visible camera jump on the first frame.
-  //
-  // Boot ordering vs the URL orientation frame: `watchHashSaga` holds both halves
-  // of the hash bridge on `sagaContextRegistered`, and `createEngine` dispatches
-  // that (via `setSagaContext`) SYNCHRONOUSLY, before it kicks off the async
-  // bootstrap IIFE this phase runs inside. So the read's `#orientation=<frame>`
-  // `setOrientation` is committed before this `commitCameraPose` and before the
-  // first produced frame — `runFrame` resolves B(t) from `settings.orientation`,
-  // so the first paint is framed in the URL's frame with no roll (the read snaps
-  // via `setOrientation`, never `requestOrientationChange`, so the frame-roll
-  // saga never fires on arrival). The load-bearing gap is registration-before-
-  // bootstrap, not construction-before-bootstrap: moving `setSagaContext` into a
-  // bootstrap phase, or making bootstrap synchronous with engine construction,
-  // would silently regress the boot frame to the default orientation.
-  //
-  // Three writes, in dependency order:
-  //   1. `projection` — read off the assembled camera via `projectionOf`.
-  //      `runFrame` patches `aspect` on resize and `fovYRad` from the settings
-  //      slider every frame thereafter.
-  //   2. `lastPose.current` — the initial pose so the first commit-on-edge has
-  //      a valid previous pose to refer to.
-  //   3. `commitCameraPose` dispatch — makes `camera.base` in the Redux store
-  //      authoritative before the first produced frame, so the `resting` driver
-  //      returns the correct pose and the first frame does not jump.
+  // The URL orientation frame is already committed here because `createEngine`
+  // dispatches `setSagaContext` SYNCHRONOUSLY, before the async bootstrap IIFE
+  // this phase runs inside. Registration-before-bootstrap is the load-bearing
+  // gap: moving `setSagaContext` into a bootstrap phase, or making bootstrap
+  // synchronous with engine construction, silently regresses the boot frame to
+  // the default orientation.
   state.cameraRuntime.projection = projectionOf(cam);
   state.cameraRuntime.lastPose.current = absoluteArm(poseOf(cam));
   // Displayed = authored at boot: nothing has been projected yet.
   state.cameraRuntime.displayedPose.current = state.cameraRuntime.lastPose.current;
   store.dispatch(commitCameraPose(absoluteArm(poseOf(cam))));
 
-  // ── Home selection seed ──────────────────────────────────────────────────
+  // Boot IS the home state: the sim clock boots live, so Earth moves from the
+  // first frame and a bare pose would let the globe slide out of frame.
   //
-  // Boot IS the home state: pose alone would drift. The sim clock boots live
-  // (`startLoop`'s `goLive`), so Earth moves from the first frame — a bare pose
-  // would let the globe slide out of frame. Seeding focus makes the follow-pivot
-  // driver track Earth's live position; seeding select pins the Earth InfoCard,
-  // which doubles as the "you are here" onboarding card.
-  //
-  // No tween is planted: `watchFocusTweenSaga` no-ops for follow-driver bodies,
-  // so this focus write never competes with a camera animation.
-  //
-  // The seed only fires when there is no selection INTENT at all — resolved or
-  // still in flight. This phase runs asynchronously after the store is built, and
-  // a URL-hash focus with a statically-resolvable id (`body-*`, milkyWay,
-  // structures) lands in the store during `watchHashReadSaga`'s arrival read —
-  // before this line runs. An unconditional seed would clobber that deep link,
-  // and `watchHashWriteSaga` would then publish the seeded state — which composes
-  // no `focus` param at all, Earth being the omitted home target — stripping the
-  // link off the address bar.
-  //
-  // A ref-only guard (`selectSelectedRef`/`selectFocusRef` both null) is not
-  // enough: a galaxy/star id defers until its catalog pulse lands
-  // (`resolveFocusRefDeferring` parks it), so the resolved ref slot reads null
-  // for the whole boot window while `selection.pending.focus` already holds
-  // the requested id. That window is exactly where this phase runs, so a
-  // ref-only guard sees "empty" and seeds Earth over a deep link that is
-  // simply still resolving — `resolveRef` then clears the pending id
-  // unconditionally, destroying the in-flight request along with the seed.
-  // `selectHasSelectionIntent` reads the pending slots too, so a parked
-  // request counts as non-empty and the seed defers to it.
-  //
-  // Accepted consequence: a junk `#focus=zzz` that never resolves parks
-  // forever, which permanently suppresses the Earth seed for that session.
-  // That is inherent to honouring intent over resolved state — the seed
-  // cannot tell "still resolving" from "never will" — and a junk deep link is
-  // already a broken URL.
+  // The guard is INTENT, not resolved refs: a galaxy/star id from `#focus=`
+  // defers until its catalog pulse lands, so the resolved ref slot reads null
+  // for the whole boot window this phase runs in. A ref-only guard would seed
+  // Earth over a deep link that is merely still resolving, and `resolveRef`
+  // would then clear the pending id along with it. Consequence accepted: a junk
+  // `#focus=zzz` parks forever and suppresses the Earth seed for that session.
   const rootState = store.getState();
   if (!selectHasSelectionIntent(rootState)) {
-    // Cinema seeds FOCUS only. `select` is what draws the selection ring
-    // (near0SelectionRingLayer reads selectionRows.select), and it earns its
-    // place by explaining the info card — which cinema mode hides. Seeded in
-    // cinema it would instead sit around Earth in every recorded frame of
-    // every take that opens at home. Focus still has to be seeded, or the
-    // camera loses its home target.
+    // Cinema seeds FOCUS only: `select` draws the selection ring, which earns its
+    // place by explaining the info card — and cinema mode hides that card, so the
+    // ring would just sit around Earth in every recorded frame.
     if (!isCinemaMode()) store.dispatch(updateSelectionSelect(EARTH_REF));
     store.dispatch(updateSelectionFocus(EARTH_REF));
   }
 
-  // ── Pointer / keyboard / resize listeners ────────────────────────────
-  //
-  // Centralised in `inputBindings.ts` so every DOM listener the
-  // engine cares about lives in one module.  Each callback below
-  // is the *semantic* engine action — the inputBindings module
-  // already converts `e.clientX/Y` to a CSS-pixel record and owns
-  // the requestRender wake for channel-uncovered events (see its
-  // module header for the contract).  pointermove is wake-free: the
-  // hoverPickDriver owns the async pick path and dispatches to the
-  // store; no render frame is required for hover.
+  // Callbacks are the semantic engine actions: `inputBindings` already converts
+  // `e.clientX/Y` to CSS pixels and owns the requestRender wake for
+  // channel-uncovered events (see its module header for the contract).
   state.subsystems.inputBindings = attachEngineInputs({
     canvas,
-    // Scheduler by reference — created eagerly in the state literal (the
-    // forward-declared `frame` binding handles the construction-vs-body
-    // chicken-and-egg).
     scheduler: state.subsystems.scheduler,
-    // Delegate to the hoverPickDriver, which coalesces moves and fires an
-    // async GPU pick. The driver dispatches the hover SelectionRef to the
-    // store; React reads it via selectors. No requestRender needed.
     onPointerMove: (cssPx) => {
       hoverPickDriver.onPointerMove(cssPx);
     },
-    // Pointer left the canvas → clear hover state.  If a point
-    // is selected the card stays visible (showing the pinned
-    // point) — selection state is unaffected.
     onPointerLeave: () => {
       store.dispatch(updateSelectionHover(null));
     },
-    // Clear hover on pointerdown so the card immediately reflects "nothing
-    // hovered" instead of lagging until the drag ends. Cancelling an in-flight
-    // tween on a grab is owned by `onGestureStart` (it dispatches
-    // `cancelCameraTween()` when a drag actually begins).
+    // Clear hover on pointerdown so the card reflects "nothing hovered"
+    // immediately instead of lagging until the drag ends.
     onPointerDown: () => {
       state.picking.pointerDown = true;
       store.dispatch(updateSelectionHover(null));
@@ -285,32 +161,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     onPointerUp: () => {
       state.picking.pointerDown = false;
     },
-    // Esc is an explicit dismiss: clear BOTH the select and focus ref slots
-    // (close the card, collapse the cluster-focus fade). `clearSelection`
-    // targets select + focus only — hover is not cleared, which is correct
-    // since the pointer hasn't moved. Self-contained at the engine level so
-    // it doesn't depend on the React Esc path — App.tsx also forwards Esc
-    // through the handle's `clearSelection()`, which dispatches the same
-    // action; the reducer dedupes, so a double-fire is a no-op.
+    // App.tsx forwards Esc through the handle's `clearSelection()` too; the
+    // reducer dedupes, so the double-fire is a no-op.
     onEscape: () => {
       store.dispatch(clearSelection());
     },
-    // resize: the next frame's resizeCanvasToDisplay() picks up
-    // the new dimensions and recreates the HDR target.  All we
-    // need to do is wake the loop, which inputBindings already
-    // does via `scheduler.requestRender()` — so this callback is
-    // a no-op.
+    // A no-op: `inputBindings` already wakes the loop, and the next frame's
+    // `resizeCanvasToDisplay` picks up the new dimensions.
     onResize: () => {},
   });
 
-  // ── Click handling ───────────────────────────────────────────────────
-  //
-  // Click detection is delegated to `attachOrbitControls` via the `onClick`
-  // option. A "click" fires only when pointerup is within 4 CSS pixels of
-  // pointerdown — pure drags (orbit gestures) are suppressed.
-
-  // Shared pick body for single-click.  Inline rather than module-level
-  // because it closes over `state` and `canvas`.
+  // `attachOrbitControls` owns click detection: `onClick` fires only when
+  // pointerup lands within 4 CSS pixels of pointerdown, so pure orbit drags are
+  // suppressed.
   const runPickAtCss = (
     xCss: number,
     yCss: number,
@@ -318,30 +181,21 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     const cr = state.subsystems.clickResolver;
     if (!cr) return null;
 
-    // The pick program owns every other decision — the pick-time camera,
-    // which layers are pickable, the timing slot. It resolves to null for a
-    // not-ready engine or an empty scene, so no pre-pick readiness / target
-    // gate is needed here. A zero-catalog scene with visible rings is now
-    // clickable (matching the hover path, which never had that gate); an
-    // all-hidden scene resolves to null and clears any stale selection.
+    // The pick program resolves to null for a not-ready engine or an empty
+    // scene, so no pre-pick readiness gate is needed here.
     return cr.resolveClick({
       pickXPx: cssToTexPx(xCss),
       pickYPx: cssToTexPx(yCss),
     });
   };
 
-  // The recognizer only emits; `drainInput` applies the frame's queue at the
-  // top of `runFrame`. Waking the loop is this sink's job — without a frame
-  // nothing would ever drain.
-  //
-  // The two gesture-start STORE edges fire here, at DOM time, not at the drain.
-  // `cancelCameraTween` must land before any tween the same click can start:
-  // `onDoubleClick` below dispatches focus synchronously and `watchFocusTweenSaga`
-  // reaches `put(startCameraTween)` with no intervening yield, so a cancel
-  // deferred to the next frame would kill the tween that double-tap-to-focus
-  // just started. `beginDrag` rides along to keep the pair atomic. Only the
-  // camera math stays deferred — nothing between the pointerdown and the drain
-  // can move `lastPose.current`, the pose the drain's first fold reads.
+  // The recognizer only emits; `drainInput` applies the queue at the top of
+  // `runFrame`, so waking the loop is this sink's job. The two gesture-start
+  // STORE edges fire here at DOM time, not at the drain: `onDoubleClick`
+  // dispatches focus synchronously and `watchFocusTweenSaga` reaches
+  // `put(startCameraTween)` with no intervening yield, so a `cancelCameraTween`
+  // deferred to the next frame would kill the tween double-tap-to-focus just
+  // started. `beginDrag` rides along to keep the pair atomic.
   deps.detachControlsRef.current = attachOrbitControls(
     canvas,
     (event) => {
@@ -354,29 +208,20 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     },
     {
       onClick: (xCss, yCss) => {
-        // Run a one-shot pick at the click position. No throttle guard —
-        // clicks are infrequent and want an immediate, synchronous-feeling
-        // response.
         const pick = runPickAtCss(xCss, yCss);
         if (!pick) return;
-        // Single-click dispatches the identity ref (null clears). The
-        // reconciler saga watches the slot and fills `selectionRows`.
         pick
           .then((ref) => {
             store.dispatch(updateSelectionSelect(ref));
           })
           .catch(() => {
-            // A failed pick readback should not crash input handling; the
-            // click is simply dropped and the prior selection stands.
+            // A failed pick readback must not crash input handling; the click is
+            // dropped and the prior selection stands.
           });
       },
       onDoubleClick: () => {
-        // Upgrade the current select ref to focus. The preceding single-click
-        // already wrote the ref to the store, so we read it back from the
-        // authoritative slot rather than running a second pick (racing
-        // readbacks resolve out of order). A null select ref means empty space:
-        // dispatch focus(null) to lift the cluster-focus fade. The camera tween
-        // is triggered by the watchFocusTweenSaga — not here.
+        // Read the select ref the preceding single-click wrote rather than
+        // running a second pick — racing readbacks resolve out of order.
         const ref = selectSelectedRef(store.getState());
         store.dispatch(updateSelectionFocus(ref));
       },

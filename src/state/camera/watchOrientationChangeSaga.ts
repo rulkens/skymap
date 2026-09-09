@@ -1,13 +1,12 @@
 /**
  * watchOrientationChangeSaga — the three effects of an orientation switch.
  *
- * `requestOrientationChange(frame)` becomes: persist the frame
- * (`setOrientation`), re-express `camera.base` into it so the eye holds still
- * the instant `poseBasis` flips (`commitCameraPose` + `reencodePose`), then
- * roll the up-basis toward it (`startFrameTween`). The re-encode's `from` and
- * the roll's `fromQuat` deliberately read DIFFERENT bases: `from` is the
- * OUTGOING REGISTRY frame (`poseBasis` never mid-slerps, so that's what
- * `base`'s angles are valid in); `fromQuat` is the LIVE up-basis. Do not unify.
+ * `requestOrientationChange(frame)` becomes: persist the frame, re-express
+ * `camera.base` into it so the eye holds still the instant `poseBasis` flips, then
+ * roll the up-basis toward it. The re-encode's `from` and the roll's `fromQuat`
+ * deliberately read DIFFERENT bases: `from` is the OUTGOING REGISTRY frame
+ * (`poseBasis` never mid-slerps, so that is what `base`'s angles are valid in);
+ * `fromQuat` is the LIVE up-basis. Do not unify.
  */
 import { takeLatest, getContext, put, select } from 'typed-redux-saga';
 

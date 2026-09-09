@@ -2,17 +2,11 @@
  * watchFlyToLonLatSaga — the effect of the Earth Tile Atlas panel's
  * fly-to-coordinates instrument: resolve the pose and commit it.
  *
- * Commits INSTANTLY (`commitCameraPose`, not a tween) — a snap, not a fly —
- * which composes cleanly with the follow driver the same way a resting-pose
- * commit always does: `followBody` re-centres `target` on Earth's live
- * position every frame regardless of what `base.target` holds, and its
- * yaw/pitch ease is already saturated whenever Earth has been focused for a
- * while, the common case while poking at this panel.
- *
- * Deliberate behavior change from the old engine-handle version: `distance`
- * now comes from the RESTING pose (`camera.base`, committed at drag-end/zoom/
- * driver-deactivation) rather than the engine's live per-frame pose. The
- * instrument is used while idle, where the two agree.
+ * Commits INSTANTLY (`commitCameraPose`, not a tween) — a snap, not a fly — which
+ * composes with the follow driver the way any resting-pose commit does: `followBody`
+ * re-centres `target` on Earth's live position every frame regardless of what
+ * `base.target` holds. `distance` comes from the RESTING pose, not the live
+ * per-frame pose; the instrument is used while idle, where the two agree.
  */
 import { takeLatest, select, put } from 'typed-redux-saga';
 

@@ -1,13 +1,8 @@
 /**
- * liveRenderCamera — the OrbitCamera actually drawn last frame, for debug
- * tooling that runs OUTSIDE the frame loop (the `l` hotkey).
- *
- * `runFrame` never stores a full assembled camera on `EngineState` — only the
- * orbit params it drew (`cameraRuntime.displayedPose`, via `liveWorldPose`)
- * plus the projection and orientation bases it refreshes every frame. This re-runs
- * the same `assembleOrbitCamera` merge `runFrame`/`deriveFrameContext` use, so
- * a caller off the frame gets the identical camera, not the stale
- * `state.cam` boot camera (see `frameContext.ts`'s header).
+ * liveRenderCamera — the OrbitCamera actually drawn last frame, for debug tooling
+ * that runs OUTSIDE the frame loop. `runFrame` stores only the orbit params it
+ * drew, so this re-runs the same `assembleOrbitCamera` merge the frame path uses
+ * rather than handing back the stale `state.cam` boot camera.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

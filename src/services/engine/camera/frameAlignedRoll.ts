@@ -1,16 +1,12 @@
 /**
- * frameAlignedRoll — the world-arm frame transition (rulings 8 + 10): the
- * roll TARGET is the ONE reference field (`blendedUpDir` on `bodyUpWeight`'s
- * band — the same objects the engaged settle norths toward, read in the image
- * plane), and each driven notch applies the ONE settle discipline
- * (`riddenOrientStepRad`). Nothing here can disagree with the engaged arm:
- * at the engage flip both arms' targets are the same function of altitude,
- * which is what makes the zoom-in/zoom-out pop unrepresentable. Above the
- * band the target is structurally the scene up, so the formula reduces to
- * deviation-only capped decay — the round-7 drain for the singular-locus
- * debt (~π of INTRINSIC up-rotation a 2–4-notch band crossing cannot spend
- * at the no-whip rate). Ruled cost: a deep-space arrival roll bleeds on
- * at-rest world-arm notches.
+ * frameAlignedRoll — the world-arm frame transition (rulings 8 + 10): the roll
+ * TARGET is the ONE reference field (`blendedUpDir` on `bodyUpWeight`'s band, read
+ * in the image plane), and each driven notch applies the ONE settle discipline
+ * (`riddenOrientStepRad`). At the engage flip both arms' targets are the same
+ * function of altitude, making the zoom pop unrepresentable. Above the band the
+ * target is structurally the scene up, so the formula reduces to deviation-only
+ * capped decay — the drain for the singular-locus debt (~π a band crossing cannot
+ * spend at the no-whip rate), at the ruled cost of arrival roll on at-rest notches.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';

@@ -1,10 +1,7 @@
-// src/components/containers/CameraStateSectionContainer.tsx
 /**
- * CameraStateSectionContainer — engine-handle boundary for the "Camera"
- * debug readout, the same shape as `EarthTileAtlasSectionContainer`:
- * `cameraDebug` is engine-only data (the store read for `camera.base.frame`
- * happens inside the getter itself), so there's nothing to read off Redux
- * here.
+ * CameraStateSectionContainer — engine-handle boundary for the "Camera" debug
+ * readout. `cameraDebug` is engine-only data (the store read for
+ * `camera.base.frame` happens inside the getter), so nothing is selected off Redux.
  */
 
 import { memo, type ReactElement } from 'react';

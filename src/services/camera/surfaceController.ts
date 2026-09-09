@@ -85,14 +85,12 @@ export function createSurfaceController(): SurfaceController {
         bodyRadiusM,
         rememberedTiltRad,
       );
-      // Drags stay heading-free (ruled) — only zoom writes walk north up — but
-      // no drag may ROLL: pan and orbit hold the heading they entered with
-      // (the transport that makes holonomy unrepresentable), look and tilt
-      // level around the heading they authored. Strafe translates with its
-      // basis untouched — a known small hole in the no-roll rule: it lives in
-      // a few-pixel grazing-incidence latch window at the limb, where a
-      // standpoint translation does turn the ENU (~0.03 rad over 30 steps at
-      // the boundary, measured); the next pan or notch settles the residual.
+      // Drags stay heading-free (ruled) — only zoom walks north up — but no drag
+      // may ROLL: pan and orbit hold their entry heading (the transport that makes
+      // holonomy unrepresentable), look and tilt level around the heading they
+      // authored. Strafe translates with its basis untouched, a known small hole in
+      // the no-roll rule: it lives in a few-pixel grazing-incidence latch window at
+      // the limb (~0.03 rad over 30 steps, measured), settled by the next notch.
       const final =
         mode === 'strafe' || preInPoleFrame === null
           ? walled

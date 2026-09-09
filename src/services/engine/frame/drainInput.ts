@@ -1,19 +1,12 @@
 /**
- * drainInput — the single per-frame input-apply site, and the only gesture
- * writer of the live register (`cameraRuntime.lastPose`). Runs at the top of
- * `runFrame`, above the store read the driver table resolves against, so a
- * gesture that began between frames is visible to this frame's produce step.
- * Steps arrive in order, so a wheel tick between two drags still changes the
- * rate the second drag is applied at.
+ * drainInput — the single per-frame input-apply site and the only gesture writer of
+ * the live register. Runs at the top of `runFrame`, above the store read the driver
+ * table resolves against, so a gesture begun between frames is visible to this
+ * frame's produce step. Each step folds the live pose into the next and writes the
+ * register; the store commits only at gesture end and per at-rest wheel notch.
  *
- * Both arms fold the same way: each step folds the live pose into the next
- * and writes the register; the store commits only at gesture end and per
- * at-rest wheel notch (its own atomic gesture) — the live pose is a Resource,
- * not Intent (intent.md's carve-out).
- *
- * `beginDrag` / `cancelCameraTween` are NOT here — the emit sink dispatches them
- * at DOM time (`wireInput`) so a cancel cannot outlive the tween a double-click
- * starts in the same gap.
+ * `beginDrag` / `cancelCameraTween` are NOT here: the emit sink dispatches them at
+ * DOM time so a cancel cannot outlive the tween a double-click starts in the gap.
  */
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
@@ -50,11 +43,10 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
 
   /**
    * The engaged arm's input owner (spec §6). The GATE is the stored regime
-   * (`base.frame`, T15); the POSE is the live register, because the fold
-   * commits on a regime EDGE only — mid-tween `base` holds the last crossing
-   * pose while the register tracks the animation, and a latch taken against a
-   * pose the user never saw sticks for the whole gesture (FW-G). `false`
-   * hands the step back to the world-arm path.
+   * (`base.frame`, T15); the POSE is the live register, because the fold commits on
+   * a regime EDGE only — mid-tween `base` holds the last crossing pose while the
+   * register tracks the animation, and a latch taken against a pose the user never
+   * saw sticks for the whole gesture (FW-G).
    */
   const routeToSurface = (step: InputStep): boolean => {
     const root = store.getState();
@@ -100,7 +92,6 @@ export function drainInput(state: EngineState, deps: RunFrameDeps, nowMs: number
     return true;
   };
 
-  /** World-arm fold: live pose → next pose, written to the register. */
   const applyWorldStep = (step: Extract<InputStep, { kind: 'drag' } | { kind: 'zoom' }>): void => {
     const root = store.getState();
     // Same rule as the body arm: a playing clip is not gesture-interruptible,

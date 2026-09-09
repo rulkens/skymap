@@ -1,15 +1,12 @@
 /**
- * approachTiltedPose — ruling 13: the world arm's in-window expression of
- * the ONE display-tilt mapping (`mappedTiltRad`), so the engage edge changes
- * ownership of the tilt, never the image. A pure per-frame projection
- * between the pivot pin and the fold, for the same pivot drivers the pin
- * re-centres: pitch the view off the FOCUSED body's nadir by exactly the
- * mapped amount, rotating about the rolled screen-right with the eye fixed.
- * The output reaches ONLY `displayedPose`, never the authored register or
- * `camera.base` (the centre-looking invariant at `commitCameraPose`) — and
- * the fold converts THIS pose, so engage inherits `remembered × 1` exactly. Zero
- * remembered (or zero mapped tilt) returns the input BY REFERENCE — the
- * never-engaged byte-identity control.
+ * approachTiltedPose — ruling 13: the world arm's in-window expression of the ONE
+ * display-tilt mapping (`mappedTiltRad`), so the engage edge changes ownership of
+ * the tilt, never the image. A pure per-frame projection between the pivot pin and
+ * the fold: pitch the view off the FOCUSED body's nadir by the mapped amount,
+ * rotating about the rolled screen-right with the eye fixed. The output reaches
+ * ONLY `displayedPose`, never the authored register or `camera.base` (the
+ * centre-looking invariant at `commitCameraPose`) — and the fold converts THIS pose,
+ * so engage inherits `remembered × 1`. Zero remembered returns the input BY REFERENCE.
  */
 
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
