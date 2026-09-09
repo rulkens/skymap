@@ -385,4 +385,39 @@ describe('createTexturedDiskSubsystem', () => {
 
     expect(fetcher).toHaveBeenCalledWith(expect.objectContaining({ famousId: 'ngc-224' }));
   });
+
+  // Task 13b's sky-cubemap capture roster replays this SAME `lastOutput.disks`
+  // array across all 6 capture faces (`texturedDisksLayer.ts`), including faces
+  // that look away from the live camera's forward direction. That reuse is only
+  // sound if this subsystem's admission gates never depend on VIEW DIRECTION —
+  // only on `cam.position` (see `diskPlannerWalk.ts`, which reads `cam.position`
+  // and never `cam.target`/yaw/pitch). This test places a Famous row on the
+  // opposite side of the camera from its look target (`makeCam`'s target is
+  // +x of position) and asserts it still lands in `lastOutput.disks` — it would
+  // fail if either the walk or this subsystem ever grew a direction-dependent
+  // cull, which capture-face reuse silently relies on NOT existing.
+  it('admits a Famous row behind the camera — capture-face reuse needs no direction cull', async () => {
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createTexturedDiskSubsystem({ device, atlas, fetcher });
+
+    const cam = makeCam(); // position (9.95,0,0), target (10,0,0) → forward is +x
+    const behindX = cam.position[0]! - 2.0; // opposite side from the look target
+    const catalog = makeGalaxyCatalog(1, {
+      positions: new Float32Array([behindX, 0, 0]),
+      axisRatio: new Float32Array([0.7]),
+      positionAngleDeg: new Float32Array([45]),
+      diameterKpc: new Float32Array([50]),
+    });
+    const clouds = new Map([[Source.FamousGalaxy, catalog]]);
+    const meta = makeFamousMeta(1);
+
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));
+    await new Promise((r) => setTimeout(r, 0));
+    const out = runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));
+
+    expect(out.disks).toHaveLength(1);
+    expect(out.disks[0]!.x).toBe(behindX);
+  });
 });

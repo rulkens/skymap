@@ -39,6 +39,7 @@
  */
 
 import type { CompositeStep } from './CompositeStep';
+import type { CubeFace } from '../../rendering/CubeFace';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
@@ -54,6 +55,32 @@ export type FrameStep =
        * foreground row — declare `'clear'` to restart depth mid-frame.
        */
       depthLoad?: 'clear' | 'load';
+      /**
+       * Which array layer of a `fixedSizePx` target this step writes — today
+       * only the black-hole lens's 6-face sky-cubemap capture (Task 12).
+       * Absent for every ordinary render step. Its sole job is disambiguating
+       * several `(target, slab)` steps that would otherwise collide: all six
+       * faces share `('sky-cubemap', NEAR0)`, unlike a body row (which gets
+       * its own `slab` index and so is unique without help) — see
+       * `timedSlotRowsOf`'s per-step naming and `executeFrame`'s matching
+       * timing-slot lookup, frameProgram.ts / executeFrame.ts.
+       */
+      face?: CubeFace;
+      /**
+       * Splits the shared `(hdr, NEAR0)` roster step around the black-hole
+       * lens's own `(hdr, BODY[k])` step (Task 14b), so
+       * `orbit-trails`/`body-glints` draw AFTER the lens rather than being
+       * sampled by it. Absent ⇒ every layer matches, the pre-Task-14b
+       * behaviour. `'pre'` admits every `(hdr, NEAR0)` layer EXCEPT those
+       * opted into `ContentLayer.hdrPostLensing`; `'post'` (emitted only
+       * when the lens step fires) admits ONLY those. Two steps sharing one
+       * `(target, slab)` would otherwise collide on one GPU-timing group
+       * slot — `slabs.ts`'s `matchesLensPhase` is the single predicate both
+       * `timedSlotRowsOf` and `executeFrame` read, and
+       * `renderStepTimingSlotName` gives the `'post'` step's group-total
+       * slot a distinct name so it can't collide with `'pre'`'s.
+       */
+      lensPhase?: 'pre' | 'post';
     }
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };

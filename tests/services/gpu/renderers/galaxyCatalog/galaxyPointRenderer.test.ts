@@ -22,6 +22,7 @@ import { describe, it, expect } from 'vitest';
 import { createGalaxyPointRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPointRenderer';
 // `BuildRunner` belongs to the store; the renderer only forwards it.
 import type { BuildRunner } from '../../../../../src/services/gpu/renderers/galaxyCatalog/catalogStore';
+import { VIEW_SLOT_COUNT } from '../../../../../src/utils/gpu/createViewSlotUniformRing';
 import { buildPointInterleavedBuffer } from '../../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -200,7 +201,7 @@ function makeDestroyTrackingDevice(createdBuffers: TrackedBuffer[]): GPUDevice {
 }
 
 describe('GalaxyPointRenderer.destroy', () => {
-  it("releases the renderer's uniform buffer", () => {
+  it("releases the renderer's uniform ring", () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
     const renderer = createGalaxyPointRenderer({
@@ -211,10 +212,11 @@ describe('GalaxyPointRenderer.destroy', () => {
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
-    // The constructor allocates one buffer: the renderer's own uniform.
-    // The cluster-focus uniform is shared and owned by the engine
-    // (state.gpu.focusUniform), not the renderer.
-    expect(buffers).toHaveLength(1);
+    // The constructor allocates VIEW_SLOT_COUNT buffers: the renderer's own
+    // per-view-slot uniform ring (Task 13b). The cluster-focus uniform is
+    // shared and owned by the engine (state.gpu.focusUniform), not the
+    // renderer.
+    expect(buffers).toHaveLength(VIEW_SLOT_COUNT);
     for (const b of buffers) expect(b.destroyCount).toBe(0);
 
     renderer.destroy();
@@ -222,7 +224,7 @@ describe('GalaxyPointRenderer.destroy', () => {
     for (const b of buffers) expect(b.destroyCount).toBe(1);
   });
 
-  it('releases each per-source buffer + fade uniform', async () => {
+  it('releases each per-source buffer + fade ring', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
     const renderer = createGalaxyPointRenderer({
@@ -233,26 +235,26 @@ describe('GalaxyPointRenderer.destroy', () => {
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
-    // Constructor allocates 1 buffer: the renderer's own uniform (the
-    // cluster-focus uniform is shared/engine-owned, not per renderer).
-    expect(buffers).toHaveLength(1);
+    // Constructor allocates the renderer's own per-view-slot uniform ring
+    // (the cluster-focus uniform is shared/engine-owned, not per renderer).
+    expect(buffers).toHaveLength(VIEW_SLOT_COUNT);
 
+    // upload() allocates VIEW_SLOT_COUNT + 2 more buffers per source: the
+    // vertex buffer, the per-view-slot FadeUniforms ring (Task 13b), and the
+    // SourceUniforms 16-byte uniform.
+    const perUpload = VIEW_SLOT_COUNT + 2;
     await renderer.upload(idOf(Source.SDSS), makeCloud(2));
-    // upload() allocates 3 more buffers per source: the vertex buffer,
-    // the FadeUniforms 16-byte uniform, and the SourceUniforms 16-byte
-    // uniform (unified-fade architecture).
-    expect(buffers).toHaveLength(4);
+    expect(buffers).toHaveLength(VIEW_SLOT_COUNT + perUpload);
 
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(3));
-    // Second source: another vertex + fade + source triple.
-    expect(buffers).toHaveLength(7);
+    expect(buffers).toHaveLength(VIEW_SLOT_COUNT + 2 * perUpload);
 
     // Sanity: every tracked buffer starts at 0 destroys.
     for (const b of buffers) expect(b.destroyCount).toBe(0);
 
     renderer.destroy();
 
-    // All seven buffers (renderer uniform + 2 sources × {vertex, fade,
+    // Every buffer (renderer's ring + 2 sources × {vertex, fade ring,
     // source}) should be destroyed exactly once.
     for (const b of buffers) expect(b.destroyCount).toBe(1);
   });
@@ -343,6 +345,7 @@ describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
       pxFadeEnd: 0,
       focusBindGroup: FOCUS_BIND_GROUP,
       fadeOpacityOf: () => 1,
+      viewSlot: 0,
     });
 
     expect(calls).toContain('setPipeline');
@@ -395,10 +398,75 @@ describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
       focusBindGroup: FOCUS_BIND_GROUP,
       // SDSS fully faded → skipped; GLADE at partial opacity → drawn.
       fadeOpacityOf: (source) => (source === Source.SDSS ? 0 : 0.5),
+      viewSlot: 0,
     });
 
     // Exactly one instanced draw fired (GLADE's 10 instances); SDSS's was
     // dropped by the skip, not merely drawn at alpha 0.
     expect(drawnCounts).toEqual([10]);
+  });
+});
+
+describe('GalaxyPointRenderer.draw — viewSlot (Task 13b)', () => {
+  it('two draw() calls with different viewSlot land their @group(0) uniform and fade writes in different buffers', async () => {
+    const buffers: TrackedBuffer[] = [];
+    const device = makeDestroyTrackingDevice(buffers);
+    const renderer = createGalaxyPointRenderer({
+      device,
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
+    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
+
+    const bindGroupsAt0: unknown[] = [];
+    const bindGroupsAt1: unknown[] = [];
+    const pass = {
+      setPipeline: () => {},
+      setBindGroup: (slot: number, bg: unknown) => {
+        if (slot === 0) bindGroupsAt0.push(bg);
+        if (slot === 1) bindGroupsAt1.push(bg);
+      },
+      setVertexBuffer: () => {},
+      draw: () => {},
+    } as unknown as GPURenderPassEncoder;
+
+    const settings = (viewSlot: number) => ({
+      pointSizePx: 1,
+      brightness: 1,
+      selectedPacked: 0xffffffff >>> 0,
+      visibleSourceMask: 0xffffffff,
+      camPosWorld: [0, 0, 0] as const,
+      pxPerRad: 1,
+      provenance: {
+        orientation: { highlight: false, filter: 'all' as const },
+        size: { highlight: false, filter: 'all' as const },
+      },
+      biasMode: 0,
+      absMagLimit: 0,
+      depthFadeEnabled: false,
+      sbScale: 8,
+      sbMax: 30,
+      falloffStrength: 0.8,
+      pxFadeStart: 0,
+      pxFadeEnd: 0,
+      focusBindGroup: FOCUS_BIND_GROUP,
+      fadeOpacityOf: () => 1,
+      viewSlot,
+    });
+
+    // A sky-cubemap capture sweep: two `draw()` calls (different faces) in
+    // the same frame, both before one `submit()`.
+    renderer.draw(pass, new Float32Array(16) as unknown as Mat4, [256, 256], settings(1));
+    renderer.draw(pass, new Float32Array(16) as unknown as Mat4, [256, 256], settings(2));
+
+    // The @group(0) per-frame uniform and the @group(1) per-catalog fade
+    // each resolve to a DIFFERENT physical bind group per view slot — slot
+    // 2's write can never land in slot 1's buffer (the writeBuffer/submit
+    // race this ring closes; docs/RENDERER.md landmine #1).
+    expect(bindGroupsAt0[0]).not.toBe(bindGroupsAt0[1]);
+    expect(bindGroupsAt1[0]).not.toBe(bindGroupsAt1[1]);
   });
 });

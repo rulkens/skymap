@@ -37,6 +37,7 @@ import {
   DEFAULT_ORBIT_TRAILS_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
+  DEFAULT_SGR_A_STAR_LENSING_TUNING,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
@@ -169,6 +170,9 @@ export function buildInitialSettings(): EngineSettingsState {
       enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
       ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
+    // The Sgr A* lens knobs; see `SgrAStarLensingTuning` for the tier
+    // breakdown and which module owns each default.
+    sgrAStarLensingTuning: DEFAULT_SGR_A_STAR_LENSING_TUNING,
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,

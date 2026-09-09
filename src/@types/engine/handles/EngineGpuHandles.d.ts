@@ -49,6 +49,7 @@ import type { CloudShellRenderer } from '../../rendering/CloudShellRenderer';
 import type { AtmosphereShellRenderer } from '../../rendering/AtmosphereShellRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
+import type { SgrAStarLensingRenderer } from '../../rendering/SgrAStarLensingRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { StarCatalogPickRenderer } from '../../rendering/StarCatalogPickRenderer';
 import type { BodyPickRenderer } from '../../rendering/BodyPickRenderer';
@@ -572,6 +573,15 @@ export type EngineGpuHandles = {
    * uniform buffers).
    */
   bodyGlintRenderer: BodyGlintRenderer | null;
+  /**
+   * The Sgr A* lens pass (Task 13): a single billboard draw classifying
+   * capture/escape/annulus rays against the Task 9 LUT and the Task 11 sky
+   * cubemap, premultiplied-OVER into the depthless `hdr` target on Sgr A*'s
+   * own body-m slab row (`sgr-a-star-lensing` layer). Null until `initGpu`
+   * constructs it; excluded from `isEngineReady` and null-checked at use by
+   * `sgrAStarLensingLayer`.
+   */
+  sgrAStarLensingRenderer: SgrAStarLensingRenderer | null;
   /**
    * The survey (Gaia bin) stars as additive point sprites into the depthless
    * HDR target — the wide-field twin of `starPointRenderer`, fed from an

@@ -1,0 +1,14 @@
+# WESL linker configuration for the Scene Workbench tool.
+#
+# Unlike flow-workbench/mcpm-workbench, this tool shares no shader families
+# with the main app — it views baked LiDAR point clouds, not a runtime field
+# skymap also renders — so `root` stays local, no `resolve.alias`, no
+# symlinks.
+#
+# wesl-plugin locates this file from the *explicit* `weslToml` option in
+# vite.config.ts, not from the Vite `root` or `process.cwd()` — see that
+# file's header for why the explicit path is mandatory.
+
+edition = "unstable_2025"
+include = ["src/render/shaders/**/*.wesl"]
+root = "src/render/shaders"

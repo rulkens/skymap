@@ -16,6 +16,11 @@
  * and it is derived from this same radius (clampDistance.ts stands off
  * `SURFACE_STANDOFF_RADII` from the pivot's surface), so the framing distance is
  * always comfortably reachable — the fill factor puts it several radii out.
+ *
+ * `focusDistanceRadii`, when a caller passes it (`AnchorPointBody`'s optional
+ * field), overrides the screen-fill formula with a fixed multiple of the
+ * radius instead — Sgr A*'s arrival distance is an r_s count the user framed
+ * live, not a FOV-dependent viewport fraction.
  */
 
 import { bodyFocusDistance } from './bodyFocusDistance';
@@ -23,11 +28,19 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FocusFraming } from './focusFraming';
 
-export function bodyLikeFraming(positionMpc: Vec3, radiusM: number, fovYRad: number): FocusFraming {
+export function bodyLikeFraming(
+  positionMpc: Vec3,
+  radiusM: number,
+  fovYRad: number,
+  focusDistanceRadii?: number,
+): FocusFraming {
   const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
   return {
     target: [positionMpc[0], positionMpc[1], positionMpc[2]],
-    distance: bodyFocusDistance(radiusMpc, fovYRad),
+    distance:
+      focusDistanceRadii !== undefined
+        ? radiusMpc * focusDistanceRadii
+        : bodyFocusDistance(radiusMpc, fovYRad),
     // A discrete object like a galaxy — its physical radius is a real pass-by
     // extent for flyPath's offset geometry.
     radius: radiusMpc,

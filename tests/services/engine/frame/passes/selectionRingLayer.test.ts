@@ -26,6 +26,7 @@ function makeCtx(): ReadyFrameContext {
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp) });
   return {
     isReady: true,
+    viewSlot: 0,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,

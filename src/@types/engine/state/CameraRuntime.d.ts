@@ -75,6 +75,13 @@
  *                    and is its SINGLE writer — the one place that answers 'which
  *                    way is up this frame' for every reader.
  *
+ *   `skyCubemapCapture` — the black-hole lens's sky-cubemap bake bookkeeping
+ *                    (the band-active edge, GC distance, and the settings
+ *                    reference the current bake was taken under). Not boxed —
+ *                    `renderFrame` is its only reader/writer, so no other
+ *                    module needs a shared live reference. See
+ *                    `SkyCubemapCaptureRuntime.d.ts`.
+ *
  * Constructed in `engine.ts` alongside `frameRef`, this bag is the single source
  * of truth for all four Resources: `wireInput`, `startLoop`, `runFrame`, and the
  * focus handlers all read from `state.cameraRuntime`, so there is no duplication
@@ -86,6 +93,7 @@ import type { CameraProjection } from '../../camera/CameraProjection';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { SurfaceController } from '../../camera/SurfaceController';
 import type { Mat3 } from '../../math/Mat3';
+import type { SkyCubemapCaptureRuntime } from './SkyCubemapCaptureRuntime';
 
 export type CameraRuntime = {
   /** The animation clock — mutated by tweenElapsed / autoRotateElapsed once per frame. */
@@ -130,4 +138,6 @@ export type CameraRuntime = {
    * direction line; null until the first notch. `drainInput` is the writer.
    */
   lastZoomFactor: { current: number | null };
+  /** The black-hole lens's sky-cubemap bake bookkeeping; single-writer `renderFrame`. */
+  skyCubemapCapture: SkyCubemapCaptureRuntime;
 };

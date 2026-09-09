@@ -1,0 +1,15 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  composes: sectionHeader from '../../../../../src/components/common/shared.module.css';
+}
+
+.select {
+  composes: control from '../../../../../src/components/common/shared.module.css';
+  padding: 6px 8px;
+  font-size: var(--font-size-md);
+}

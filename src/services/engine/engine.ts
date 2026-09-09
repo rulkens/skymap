@@ -199,6 +199,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
     surface: createSurfaceController(),
     lastZoomFactor: { current: null },
+    // Sky-cubemap bake bookkeeping — false/infinity/null until the first
+    // frame the lensing band goes active; `renderFrame` is the sole writer
+    // thereafter.
+    skyCubemapCapture: {
+      bandActive: false,
+      // Far outside the band pre-boot, so the row's hysteresis margin can't
+      // mistake "never measured" for "just closed".
+      gcDistanceMpc: Number.POSITIVE_INFINITY,
+      bakedSettings: null,
+    },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -388,6 +398,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // half of the body LOD, sibling of starPointRenderer. null until initGpu;
       // excluded from isEngineReady, null-checked at use by bodyGlintsLayer.
       bodyGlintRenderer: null,
+      // The Sgr A* lens pass — a single billboard draw on Sgr A*'s own
+      // body-m slab row. null until initGpu; excluded from isEngineReady,
+      // null-checked at use by sgrAStarLensingLayer.
+      sgrAStarLensingRenderer: null,
       starCatalogRenderer: null,
       starCatalogPickRenderer: null,
       // r32uint pick provider for the NEAR0 foreground bodies (Earth / planets /

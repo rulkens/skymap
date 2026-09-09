@@ -6,6 +6,7 @@ import { defineConfig } from 'vite';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
+import { DEV_PORTS } from './tools/utils/io/devPorts.ts';
 import { distDir } from './tools/utils/io/distDir.ts';
 
 // ── Opt-in LAN HTTPS for on-device (iPad/iPhone) testing ────────────────────
@@ -66,7 +67,7 @@ function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer }
 // dropped, but it's harmless until then.
 export default defineConfig({
   plugins: [viteWesl({ extensions: [staticBuildExtension] }), react()],
-  server: { port: 5173, ...lanHttpsServer() },
+  server: { port: DEV_PORTS.main, ...lanHttpsServer() },
   assetsInclude: ['**/*.wgsl'],
   build: { outDir: distDir },
 });

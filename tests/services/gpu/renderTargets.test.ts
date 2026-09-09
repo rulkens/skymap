@@ -10,8 +10,8 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets } from '../../../src/services/gpu/renderTargets';
+import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
-import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 
 function mockDevice(): GPUDevice {
   return {
@@ -29,22 +29,33 @@ const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 // and the row behaves like any other fixed-scale row.
 const MW_DIVISOR = 2;
 
-function stateWithDivisor(aggregateDivisor: number): EngineState {
-  return { settings: { milkyWay: { aggregateDivisor } } } as unknown as EngineState;
-}
+// The production `sky-cubemap` row's `fixedSizePx.size` reads
+// `settings.sgrAStarLensingTuning.cubemapResolutionPx` — every
+// `createRenderTargets`/`reconcile` call below goes through the real table,
+// so this fixture needs the field even in tests that don't care about the
+// sky-cubemap row itself.
+const SKY_CUBEMAP_RESOLUTION_PX = 256;
 
-// `fixedSizePx` has no row in the production table yet (Phase B adds the
-// real sky-cubemap row); `createRenderTargets`'s 5th `extraRows` param is a
-// test-only injection seam so the allocation branch can be exercised now.
-// No production caller passes it.
-const FIXED_SIZE_ROW: RenderTargetSpec = {
-  id: 'test:cubemap',
-  format: 'rgba16float',
-  depth: null,
-  scale: 1,
-  clearValue: { r: 0, g: 0, b: 0, a: 0 },
-  fixedSizePx: { size: 256, layers: 6 },
-};
+// The production `sky-cubemap` row is lazy: its `allocateWhen` reads the
+// lensing band flag `renderFrame` maintains, so every state fixture carries
+// one. Default `true` keeps the row present for the tests that count textures.
+// `gcDistanceMpc` defaults far outside the release margin so the pre-existing
+// bandActive-false tests (written before the row grew hysteresis) keep their
+// original "closes immediately" behaviour.
+function stateWithDivisor(
+  aggregateDivisor: number,
+  cubemapResolutionPx: number = SKY_CUBEMAP_RESOLUTION_PX,
+  bandActive = true,
+  gcDistanceMpc = Number.POSITIVE_INFINITY,
+): EngineState {
+  return {
+    settings: {
+      milkyWay: { aggregateDivisor },
+      sgrAStarLensingTuning: { cubemapResolutionPx },
+    },
+    cameraRuntime: { skyCubemapCapture: { bandActive, gcDistanceMpc } },
+  } as unknown as EngineState;
+}
 
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
@@ -76,11 +87,11 @@ describe('createRenderTargets', () => {
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
     // volume @ scale 3 (colour), zoa @ scale 5 (colour), star-aggregates @
     // scale 2 (colour), mw-aggregate @ scale 2 (colour), foreground:0 @
-    // scale 1 (colour + depth), and the five bloom-pyramid mips
-    // bloom0..bloom4 @ scale 2/4/8/16/32 (colour only) → 12 textures. hdr at
-    // full size, volume at floor(size/3), star-aggregates and mw-aggregate
-    // at floor(size/2).
-    expect(create.mock.calls).toHaveLength(12);
+    // scale 1 (colour + depth), the five bloom-pyramid mips bloom0..bloom4 @
+    // scale 2/4/8/16/32 (colour only), and sky-cubemap @ fixedSizePx (colour)
+    // → 13 textures. hdr at full size, volume at floor(size/3),
+    // star-aggregates and mw-aggregate at floor(size/2).
+    expect(create.mock.calls).toHaveLength(13);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     const aggDesc = create.mock.calls.find(
@@ -98,8 +109,10 @@ describe('createRenderTargets', () => {
     const aggViewBefore = targets.viewOf('star-aggregates');
     targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
 
-    // Each offscreen row reallocated at the new size/scale → 12 more textures.
-    expect(create.mock.calls).toHaveLength(24);
+    // Each SCALE-driven offscreen row reallocated at the new canvas size → 12
+    // more textures; sky-cubemap's fixedSizePx row holds its declared size
+    // and is not one of them.
+    expect(create.mock.calls).toHaveLength(25);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
@@ -126,12 +139,29 @@ describe('createRenderTargets', () => {
       SWAP_FORMAT,
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
-      [FIXED_SIZE_ROW],
     );
 
-    const desc = create.mock.calls.find((c) => c[0].label === 'render-target-test:cubemap')![0];
-    expect(desc.size).toEqual({ width: 256, height: 256, depthOrArrayLayers: 6 });
+    const desc = create.mock.calls.find((c) => c[0].label === 'render-target-sky-cubemap')![0];
+    expect(desc.size).toEqual({
+      width: SKY_CUBEMAP_RESOLUTION_PX,
+      height: SKY_CUBEMAP_RESOLUTION_PX,
+      depthOrArrayLayers: 6,
+    });
     expect(desc.dimension).toBe('2d');
+  });
+
+  it('cubeViewOf returns a dimension:cube view for a 6-layer row and throws for a non-cube row', () => {
+    const device = mockDevice();
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 800, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    expect(targets.cubeViewOf('sky-cubemap')).toBeDefined();
+    // 'hdr' has no fixedSizePx (a single layer), so it gets no cube view.
+    expect(() => targets.cubeViewOf('hdr')).toThrow();
+    expect(() => targets.cubeViewOf('nope')).toThrow();
   });
 
   it('reconcile does not reallocate a fixedSizePx row when the canvas resizes', () => {
@@ -142,18 +172,120 @@ describe('createRenderTargets', () => {
       SWAP_FORMAT,
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
-      [FIXED_SIZE_ROW],
     );
     const callsBefore = create.mock.calls.filter(
-      (c) => c[0].label === 'render-target-test:cubemap',
+      (c) => c[0].label === 'render-target-sky-cubemap',
     ).length;
 
     targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
 
     const callsAfter = create.mock.calls.filter(
-      (c) => c[0].label === 'render-target-test:cubemap',
+      (c) => c[0].label === 'render-target-sky-cubemap',
     ).length;
     expect(callsAfter).toBe(callsBefore);
+  });
+
+  it('a fixedSizePx row whose size is a function resolves it against live state, and reconcile reallocates when the resolved size moves', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      { width: 900, height: 600 },
+      stateWithDivisor(MW_DIVISOR, 256),
+    );
+    const desc = create.mock.calls.find((c) => c[0].label === 'render-target-sky-cubemap')![0];
+    expect(desc.size).toEqual({ width: 256, height: 256, depthOrArrayLayers: 6 });
+
+    const cubeViewBefore = targets.cubeViewOf('sky-cubemap');
+    // Canvas size is UNCHANGED — only the resolved fixedSizePx moved, mirroring
+    // the mw-aggregate divisor test's "a texture's dimensions are fixed at
+    // creation" reasoning.
+    targets.reconcile(stateWithDivisor(MW_DIVISOR, 512), { width: 900, height: 600 });
+
+    const resized = create.mock.calls
+      .filter((c) => c[0].label === 'render-target-sky-cubemap')
+      .at(-1)![0];
+    expect(resized.size).toEqual({ width: 512, height: 512, depthOrArrayLayers: 6 });
+    expect(targets.sizeOf('sky-cubemap')).toEqual({ width: 512, height: 512 });
+    expect(targets.cubeViewOf('sky-cubemap')).not.toBe(cubeViewBefore);
+  });
+
+  // The lens's 50 MB cubemap must not sit in VRAM on a machine that never
+  // goes near Sgr A*, and must be back before the band-entry frame reads it.
+  it('an allocateWhen row holds no texture until its condition turns true, and is released when it turns false', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const canvas = { width: 900, height: 600 };
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      canvas,
+      stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false),
+    );
+    const cubemapCalls = (): number[] =>
+      create.mock.calls
+        .map((c, i) => (c[0].label === 'render-target-sky-cubemap' ? i : -1))
+        .filter((i) => i >= 0);
+
+    // Booted outside the band: no texture, and every reader throws rather
+    // than handing back something stale.
+    expect(cubemapCalls()).toHaveLength(0);
+    expect(() => targets.sizeOf('sky-cubemap')).toThrow();
+    expect(() => targets.cubeViewOf('sky-cubemap')).toThrow();
+
+    targets.reconcile(stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, true), canvas);
+
+    expect(cubemapCalls()).toHaveLength(1);
+    expect(create.mock.calls[cubemapCalls()[0]!]![0].size).toEqual({
+      width: SKY_CUBEMAP_RESOLUTION_PX,
+      height: SKY_CUBEMAP_RESOLUTION_PX,
+      depthOrArrayLayers: 6,
+    });
+    expect(targets.cubeViewOf('sky-cubemap')).toBeDefined();
+    const texture = create.mock.results[cubemapCalls()[0]!]!.value;
+
+    targets.reconcile(stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false), canvas);
+
+    expect(texture.destroy).toHaveBeenCalled();
+    expect(() => targets.cubeViewOf('sky-cubemap')).toThrow();
+  });
+
+  it('an allocateWhen row with a release margin survives a frame just past its condition, and releases beyond the margin', () => {
+    // Guards NEW-1 from the black-hole fix round's re-review: a camera
+    // dithering across the band edge must not destroy + reallocate the
+    // row's 50 MB every frame. `goneAt` is the band's close distance;
+    // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (1.5×, named beside the row in
+    // `renderTargets.ts`) is the row's own wider release edge.
+    const goneAt = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const canvas = { width: 900, height: 600 };
+    const targets = createRenderTargets(
+      device,
+      SWAP_FORMAT,
+      canvas,
+      stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, true, 0),
+    );
+    const cubemapCallCount = (): number =>
+      create.mock.calls.filter((c) => c[0].label === 'render-target-sky-cubemap').length;
+    expect(cubemapCallCount()).toBe(1);
+
+    // Band just closed (bandActive false), but the camera sits just outside
+    // `goneAt` — still inside the 1.5× margin — so the row must survive.
+    targets.reconcile(
+      stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false, goneAt * 1.1),
+      canvas,
+    );
+    expect(cubemapCallCount()).toBe(1);
+    expect(targets.cubeViewOf('sky-cubemap')).toBeDefined();
+
+    // Past the margin: the row releases.
+    targets.reconcile(
+      stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false, goneAt * 1.6),
+      canvas,
+    );
+    expect(() => targets.cubeViewOf('sky-cubemap')).toThrow();
   });
 
   it("reconcile reallocates a row whose state-driven scale moved and leaves the other rows' views untouched", () => {

@@ -15,9 +15,11 @@
  *
  * Body parsing: JSON requests are read via `await readJsonBody(req)`;
  * multipart uploads (only /api/fetch supports them) are read via
- * `readBinaryBody(req)`.  Both helpers are inlined below — the project
- * doesn't use express-style middleware libraries, so we roll the
- * minimal byte-collector here.
+ * `readBinaryBody(req)`.  Both helpers, plus `sendJson` and the ordered
+ * message→status matcher `statusForError`, live in `tools/utils/http/` —
+ * generic Node `http` plumbing with nothing curator-specific in it. The
+ * project doesn't use express-style middleware libraries, so these are
+ * the minimal byte-collectors that stand in for one.
  *
  * Test driveability: this module wires the routes but doesn't own the
  * handler logic.  All five route handlers live in ./routes/ and are
@@ -28,6 +30,11 @@ import type { Plugin } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createReadStream, existsSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
+import { readJsonBody } from '../../utils/http/readJsonBody.ts';
+import { readBinaryBody } from '../../utils/http/readBinaryBody.ts';
+import { sendJson } from '../../utils/http/sendJson.ts';
+import { statusForError } from '../../utils/http/statusForError.ts';
+import type { ErrorStatusRule } from '../../utils/http/ErrorStatusRule';
 import { handleFetch } from './routes/fetch.ts';
 import { handleProcess } from './routes/process.ts';
 import { handleProcessAlphaOnly } from './routes/processAlphaOnly.ts';
@@ -55,31 +62,6 @@ function resolveRepoRoot(): string {
   return resolve(import.meta.dirname, '../../..');
 }
 
-function readJsonBody(req: IncomingMessage): Promise<unknown> {
-  return new Promise((res, rej) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (c: Buffer) => chunks.push(c));
-    req.on('end', () => {
-      const body = Buffer.concat(chunks).toString('utf8');
-      try {
-        res(body.length > 0 ? JSON.parse(body) : {});
-      } catch (err) {
-        rej(err);
-      }
-    });
-    req.on('error', rej);
-  });
-}
-
-function readBinaryBody(req: IncomingMessage): Promise<Buffer> {
-  return new Promise((res, rej) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (c: Buffer) => chunks.push(c));
-    req.on('end', () => res(Buffer.concat(chunks)));
-    req.on('error', rej);
-  });
-}
-
 // Matches /api/preview/<8-hex-chars>/<filename-with-extensions>
 // e.g. /api/preview/a1b2c3d4/source.webp
 const PREVIEW_RE = /^\/api\/preview\/([a-f0-9]+)\/([\w.-]+)$/;
@@ -100,11 +82,18 @@ const MIME: Readonly<Record<string, string>> = {
   '.jpeg': 'image/jpeg',
 };
 
-function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
+// The size-cap and validation messages are curator policy (the handlers
+// throw plain Error with well-known wording), so the rule list — unlike
+// the generic `statusForError` matcher it feeds — lives here, not in
+// tools/utils/http/. 413 for the size cap, 400 for other validation
+// errors; no match falls through to the catch block's 500 default.
+const MESSAGE_STATUS_RULES: readonly ErrorStatusRule[] = [
+  { test: (err) => /50 MB/.test((err as Error).message), status: 413 },
+  {
+    test: (err) => /not an image|missing|must be|invalid/.test((err as Error).message),
+    status: 400,
+  },
+];
 
 export function apiPlugin(): Plugin {
   // Resolve StarNet config at server boot — surfaces the install hint
@@ -372,12 +361,9 @@ export function apiPlugin(): Plugin {
             return;
           }
           const msg = (err as Error).message;
-          // 413 for the size-cap error, 400 for other validation errors,
-          // 500 for everything else.  The handlers throw plain Error,
-          // so we string-match against well-known messages.
-          let status = 500;
-          if (/50 MB/.test(msg)) status = 413;
-          else if (/not an image|missing|must be|invalid/.test(msg)) status = 400;
+          // 500 for everything that matches no rule.  The handlers throw
+          // plain Error, so this string-matches well-known messages.
+          const status = statusForError(err, MESSAGE_STATUS_RULES) ?? 500;
           sendJson(res, status, { error: msg });
         }
       }

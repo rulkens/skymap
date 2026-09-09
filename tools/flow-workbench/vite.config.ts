@@ -5,8 +5,8 @@
  * famous-curator, it is a sibling dev tool rather than part of the skymap
  * runtime bundle, so it gets its own self-contained Vite app:
  *
- *  - Its own port (5300), deliberately clear of the main app's 5173 and the
- *    curator's 5200, so all three can run side-by-side during development.
+ *  - Its own port (`../utils/io/devPorts.ts`), clear of the other tools' so
+ *    all can run side-by-side during development.
  *  - Its own `root` — this `tools/flow-workbench/` directory — so Vite resolves
  *    `index.html` from here rather than the repo root.
  *  - Its `publicDir` points at the REPO's `public/` (`../../public`), so the
@@ -33,6 +33,7 @@ import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
+import { DEV_PORTS } from '../utils/io/devPorts.ts';
 import { distDir } from '../utils/io/distDir.ts';
 import { toolPages } from '../utils/io/toolPages.ts';
 
@@ -46,7 +47,7 @@ export default defineConfig(({ command }) => ({
   publicDir: command === 'build' ? false : resolve(import.meta.dirname, '../../public'),
   envDir: resolve(import.meta.dirname, '../../'),
   build: { outDir: resolve(distDir, toolPages.flowWorkbench), emptyOutDir: true },
-  server: { port: 5300 },
+  server: { port: DEV_PORTS.flowWorkbench },
   plugins: [
     viteWesl({
       extensions: [staticBuildExtension],

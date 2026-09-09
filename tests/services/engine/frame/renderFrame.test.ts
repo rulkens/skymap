@@ -390,6 +390,7 @@ function makeInput(
   });
   const ctx = {
     isReady: true as const,
+    viewSlot: 0,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
@@ -566,8 +567,20 @@ function makeInput(
           // filamentsLayer.enabled consults the FadeRegistry to keep the
           // layer alive through fade-out tails. A minimal opacityOf stub
           // keeps the gate from crashing.
-          fades: { opacityOf: () => 1 },
+          fades: { opacityOf: () => 1, isAnyAnimating: () => false },
           clipPlayer: { clipOpacityOf: () => 1 },
+        },
+        // The sky-cubemap bake bookkeeping — `bandActive`/`gcDistanceMpc`
+        // update every frame; `bakedSettings` only changes while the lensing
+        // band is active. The fixture camera sits Mpc-scale away from Sgr
+        // A*, so the band stays closed and `facesToCapture` stays empty;
+        // see `renderFrame.ts`'s in-band block.
+        cameraRuntime: {
+          skyCubemapCapture: {
+            bandActive: false,
+            gcDistanceMpc: Number.POSITIVE_INFINITY,
+            bakedSettings: null,
+          },
         },
       } as never,
       device,

@@ -91,14 +91,62 @@ export function groupKeyOf(target: string, slab: number): string {
  * `layerName` for NEAR0/COSMO (one instance per frame, already unique), or
  * `'<layerName>·BODY[k]'` for a body row, so two body rows sharing one
  * `'body'`-slab layer (e.g. `planetsLayer` drawing Jupiter AND a moon) don't
- * collide on the same query-set index pair. `timedSlotRowsOf`
+ * collide on the same query-set index pair. A capture step's `face` appends
+ * the same way and for the same reason: a roster layer draws once per
+ * captured face AND once for the real view, all on `(hdr|sky-cubemap, NEAR0)`
+ * — without the face, all seven passes would attach the same query pair and
+ * the last one silently overwrite the rest. `timedSlotRowsOf`
  * (frameProgram.ts, the build-time slot-list/query-set-size derivation) and
  * `executeFrame`'s `perLayerTimed` pass (the runtime `descriptorFor` lookup)
  * both call this, so the allocated slot and the looked-up slot can never
  * drift apart.
  */
-export function layerTimingSlotName(layerName: string, slabIndex: number): string {
-  return isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
+export function layerTimingSlotName(layerName: string, slabIndex: number, face?: number): string {
+  const base = isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
+  return face === undefined ? base : `${base}·FACE[${face}]`;
+}
+
+/**
+ * The per-STEP query-set slot name for a render step that may carry a
+ * `face` (the sky-cubemap capture) — `groupKey` unchanged, or
+ * `'<groupKey>·FACE[n]'` when a face is present. Six capture steps share one
+ * `(target, slab)` — `('sky-cubemap', NEAR0)` — because the array-layer they
+ * write isn't part of the `(target, slab)` key at all (unlike a body row,
+ * which gets its OWN `slab` index and so is already unique), so `groupKeyOf`
+ * alone collides across faces; this is `layerTimingSlotName`'s counterpart
+ * one level up, disambiguating the STEP's own slot rather than a layer's.
+ * `timedSlotRowsOf` (frameProgram.ts) allocates under this name;
+ * `executeFrame`'s merged pass must resolve the identical name via
+ * `descriptorFor`, so both call this rather than templating `·FACE[n]` twice.
+ */
+export function renderStepTimingSlotName(
+  groupKey: string,
+  face: number | undefined,
+  lensPhase?: 'pre' | 'post',
+): string {
+  if (face !== undefined) return `${groupKey}·FACE[${face}]`;
+  // Only 'post' needs disambiguating: 'pre' keeps the bare groupKey because
+  // no frame ever emits an untagged (hdr, NEAR0) step alongside it (the
+  // split is all-or-nothing per frame — see frameProgram.ts) — so 'pre' and
+  // the untagged single-step case can safely share one name.
+  return lensPhase === 'post' ? `${groupKey}·POST_LENSING` : groupKey;
+}
+
+/**
+ * The lens-phase gate: whether a layer belongs to a
+ * render step's group, given the step's `lensPhase` (FrameStep.d.ts). Single-
+ * sourced here because `frameProgram.ts`'s `timedSlotRowsOf` (the derived
+ * timing-slot list) and `executeFrame`'s group filter (the actual draw
+ * selection) must never disagree on which layers a `'pre'`/`'post'` step
+ * selects — a drift would either draw a layer the timing list never billed,
+ * or bill a slot for a layer that never drew.
+ */
+export function matchesLensPhase(
+  hdrPostLensing: true | undefined,
+  stepLensPhase: 'pre' | 'post' | undefined,
+): boolean {
+  if (stepLensPhase === undefined) return true;
+  return stepLensPhase === 'post' ? hdrPostLensing === true : hdrPostLensing !== true;
 }
 
 /**

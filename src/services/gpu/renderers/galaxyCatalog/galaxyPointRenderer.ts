@@ -50,6 +50,7 @@ import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsB
 import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';
 import { packGalaxyPointUniforms } from '../../../../utils/gpu/packGalaxyPointUniforms';
+import { createViewSlotUniformRing } from '../../../../utils/gpu/createViewSlotUniformRing';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import {
   POINT_STRIDE,
@@ -107,20 +108,24 @@ export function createGalaxyPointRenderer(init: {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'points.vertex');
   const fsModule = createShaderModuleWithDevLog(device, colorFsCode, 'points.colorFragment');
 
+  // @group(0) per-frame Uniforms (points-pipeline-specific). Named so the
+  // view-slot ring below (Task 13b) can build its per-slot bind groups
+  // against the SAME layout the pipeline binds.
+  const uniformsBgl = device.createBindGroupLayout({
+    label: 'points-bgl-group0',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+
   const pipelineLayout = device.createPipelineLayout({
     label: 'points-pipeline-layout',
     bindGroupLayouts: [
-      // @group(0) per-frame Uniforms (points-pipeline-specific).
-      device.createBindGroupLayout({
-        label: 'points-bgl-group0',
-        entries: [
-          {
-            binding: 0,
-            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-            buffer: { type: 'uniform' },
-          },
-        ],
-      }),
+      uniformsBgl,
       fadeBgl, // @group(1) FadeUniforms (canonical)
       sourceBgl, // @group(2) SourceUniforms (canonical, shared with GalaxyPickRenderer)
       // @group(3) FocusUniforms — a single shared/global binding (only
@@ -162,16 +167,15 @@ export function createGalaxyPointRenderer(init: {
     primitive: { topology: 'triangle-list' },
   });
 
-  const uniformBuffer = device.createBuffer({
-    label: 'points-uniform-buffer',
-    size: UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const bindGroup = device.createBindGroup({
-    label: 'points-bg-uniforms',
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  // One physical buffer + bind group per view slot (Task 13b): a sky-cubemap
+  // capture sweep calls `draw()` several times — different camera, same
+  // submit — before this frame's `submit()`, so a single shared buffer would
+  // keep only the last call's viewProj/viewport (see the ring's own doc).
+  const uniformRing = createViewSlotUniformRing({
+    device,
+    label: 'points-uniform',
+    byteSize: UNIFORM_BYTES,
+    layout: uniformsBgl,
   });
 
   // 16 bytes (opacity + pad) of scratch reused per-source-per-frame
@@ -209,7 +213,7 @@ export function createGalaxyPointRenderer(init: {
     viewportPx: Vec2,
     settings: GalaxyPointDrawSettings,
   ): void {
-    const { visibleSourceMask, focusBindGroup } = settings;
+    const { visibleSourceMask, focusBindGroup, viewSlot } = settings;
 
     // Materialised because the "nothing loaded, skip the uniform write
     // entirely" early-out needs to know emptiness before the loop.  At
@@ -221,12 +225,16 @@ export function createGalaxyPointRenderer(init: {
     // Pack 176 bytes — see `UNIFORM_BYTES` for the layout, and
     // `points/io.wesl::Uniforms` for the WGSL-side struct.  `pickPass`
     // defaults to 0 (visual pass); the pick path packs its own image via
-    // `pickUniformBytesOf`, never this buffer.
+    // `pickUniformBytesOf`, never this buffer. Written into THIS call's own
+    // `viewSlot` buffer (Task 13b) — a sky-cubemap capture sweep calls
+    // `draw()` several times per frame with different cameras, all before
+    // one `submit()`, so a shared buffer would keep only the last call's
+    // bytes (see `createViewSlotUniformRing`'s doc).
     const buf = packGalaxyPointUniforms(viewProj, viewportPx, settings);
-    device.queue.writeBuffer(uniformBuffer, 0, buf);
+    uniformRing.writeSlot(viewSlot, buf);
 
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(0, uniformRing.bindGroupOf(viewSlot));
     // @group(3) focus is the engine's shared focus bind group (one POI
     // focused at a time, written once per frame in renderFrame). Bind once
     // before the per-source loop, not per source like fade/source.
@@ -247,11 +255,13 @@ export function createGalaxyPointRenderer(init: {
       const fadeOpacity = settings.fadeOpacityOf(source);
       if (fadeOpacity === 0) continue;
 
-      // One 16-byte fade writeBuffer per visible galaxy catalog per frame.
+      // One 16-byte fade writeBuffer per visible galaxy catalog per frame,
+      // into this call's own `viewSlot` slot of the catalog's fade ring —
+      // same writeBuffer/submit reasoning as the uniform above.
       fadeScratchF32[0] = fadeOpacity;
-      device.queue.writeBuffer(catalog.fadeBuffer, 0, fadeScratchBuffer);
+      catalog.fade.writeSlot(viewSlot, fadeScratchBuffer);
 
-      pass.setBindGroup(1, catalog.fadeBindGroup);
+      pass.setBindGroup(1, catalog.fade.bindGroupOf(viewSlot));
       pass.setBindGroup(2, catalog.sourceBindGroup);
       pass.setVertexBuffer(0, catalog.vertexBuffer);
       pass.draw(3, catalog.count);
@@ -275,7 +285,7 @@ export function createGalaxyPointRenderer(init: {
    */
   function destroy(): void {
     store.destroy();
-    uniformBuffer.destroy();
+    uniformRing.destroy();
   }
 
   const renderer: GalaxyPointRenderer = {

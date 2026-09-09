@@ -35,12 +35,18 @@
  *   8. horizon-shell       — translucent sphere at the observable-universe edge
  *   9. structure-markers   — at-rest halo + ring for cluster / SC / void structures
  *
- * Six more near-field rows follow, projected through the near0 slab (COSMO's
- * fixed near plane would clip their kpc-to-AU-scale anchors). Five accumulate
+ * Nine more near-field rows follow, projected through the near0 slab (COSMO's
+ * fixed near plane would clip their kpc-to-AU-scale anchors). Seven accumulate
  * into the HDR target via the shared `(hdr, NEAR0)` render step (milky-way,
- * star-points, orbit-trails, star-catalog, star-upsample); the sixth,
- * `star-aggregates`, has its OWN `(star-aggregates, NEAR0)` render step into the
- * half-res offscreen that `star-upsample` then composites back:
+ * star-points, star-catalog, star-upsample, constellations, orbit-trails,
+ * body-glints); `star-aggregates` has its OWN `(star-aggregates, NEAR0)` render
+ * step into the half-res offscreen `star-upsample` composites back, and
+ * `sgr-a-star-lensing` has its OWN `(hdr, BODY[k])` render step. Its
+ * position below is registry-order documentation for items 10-15 — but for
+ * orbit-trails/body-glints (17/17b) the ordering IS enforced, by
+ * `ContentLayer.hdrPostLensing` splitting the shared `(hdr, NEAR0)` step
+ * around the lens step whenever the band is active; see
+ * `frameProgram.ts`:
  *
  *  10. milky-way           — star/dust point cloud at the galactic centre
  *                            (the fixed 10 kpc COSMO near plane clipped the
@@ -51,80 +57,100 @@
  *                            stars (partitionStarsByResolution) as additive
  *                            point sprites, riding the same tone-map as the
  *                            galaxies
- *  12. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
- *                            Moon) as screen-space conics with a brightness
- *                            lobe at the body's position (f64 compose seam)
- *  12b. body-glints        — the sub-pixel bodies (the glints branch of the body
- *                            partition) as brightness-scaled additive points
- *                            (size x albedo x phase, cross-fading with the mesh
- *                            over 1-3 px), sibling of star-points (f64 rebase seam)
- *  13. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
+ *  12. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
  *                            flux-mip glows), drawn LINEAR into the half-res
  *                            `star-aggregates` offscreen by its own render step
  *                            (the fill-bound half of the star pass)
- *  14. star-catalog        — the survey LEAF stream (real point-source stars),
+ *  13. star-catalog        — the survey LEAF stream (real point-source stars),
  *                            drawn full-res into HDR as a per-frame flux-mip
  *                            cut of additive point sprites (f64 rebase seam),
  *                            crossfading to the procedural Milky-Way cloud
- *  15. star-upsample       — composites the half-res `star-aggregates` offscreen
+ *  14. star-upsample       — composites the half-res `star-aggregates` offscreen
  *                            back into HDR, applying the hue-preserving knee to
  *                            the summed aggregate field (the LOD-symmetry fix)
+ *  15. constellations      — additive stick-figure lines between the real stars,
+ *                            drawn after the star streams so the figures read
+ *                            over the starfield; the LAST roster row the lens
+ *                            pass below samples
+ *  16. sgr-a-star-lensing  — the black-hole lens pass (Tasks 13-14): a `body`-slab
+ *                            row drawing ONLY on Sgr A*'s own row, PREMULTIPLIED
+ *                            OVER (not additive) into hdr — captured rays occlude
+ *                            the additive roster light already accumulated behind
+ *                            them; escaping rays sample the sky-cubemap
+ *                            bent by the deflection LUT. Its OWN `(hdr, BODY[k])`
+ *                            step (`frameProgram.ts`) runs after the `(hdr,
+ *                            NEAR0)` roster step above so it draws over items
+ *                            10-15
+ *  17. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
+ *                            Moon, and the 39 bound S-stars orbiting Sgr A*
+ *                            itself) as screen-space conics with a brightness
+ *                            lobe at the body's position (f64 compose seam);
+ *                            opts into the lens's `'post'` split half
+ *                            (`hdrPostLensing`) so it draws unwarped over the
+ *                            lens pass whenever the band is active, per spec
+ *                            "Draw order"
+ *  17b. body-glints        — the sub-pixel bodies (the glints branch of the body
+ *                            partition) as brightness-scaled additive points
+ *                            (size x albedo x phase, cross-fading with the mesh
+ *                            over 1-3 px), sibling of star-points (f64 rebase
+ *                            seam); opts into the lens's `'post'` split half
+ *                            for the same reason
  *
  * The next six are premultiplied-OVER overlays, projected through the
  * cosmological slab (except near0-selection-ring, which rides near0) and drawn
  * post-tone-map onto the swap chain:
  *
- *  16. selection-ring      — per-galaxy / Milky-Way / structure selection halo
+ *  18. selection-ring      — per-galaxy / Milky-Way / structure selection halo
  *                            (COSMO slab)
- *  17. near0-selection-ring — the same halo for a NEAR0-slab pick (a survey
+ *  19. near0-selection-ring — the same halo for a NEAR0-slab pick (a survey
  *                            star): shared renderer + selectionHalo gate,
  *                            projected through near0 with the f64 rebase seam
- *  18. disk-radius-ring    — debug: catalog-disk-radius calibration ring
- *  19. marker-lines        — screen-space thick-line overlay (e.g. label stems)
- *  20. labels              — MSDF text labels
- *  21. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *  20. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  21. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  22. labels              — MSDF text labels
+ *  23. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
  * The final rows leave the cosmological slab entirely — the near-field
  * foreground group, projected through the near0 slab (whose near/far track
  * the camera's orbit distance) so the true-scale bodies are never clipped by
  * the cosmological near plane:
  *
- *  22. earth               — true-scale Blue-Marble-textured Earth (f64 compose
+ *  24. earth               — true-scale Blue-Marble-textured Earth (f64 compose
  *                            seam), opaque (depth-tested) into the `foreground:0`
  *                            target
- *  23. cloud-shell         — Earth's translucent cloud deck, drawn right after
+ *  25. cloud-shell         — Earth's translucent cloud deck, drawn right after
  *                            the opaque surface so it depth-tests against it (far
  *                            hemisphere occluded), writing no depth and blending
  *                            straight-alpha OVER (like the ring — a blend
  *                            exception in the otherwise opaque foreground group)
- *  24. star-spheres        — the resolved partition of the stars (the Sun +
+ *  26. star-spheres        — the resolved partition of the stars (the Sun +
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  25. field-star-sphere  — the close-range sphere for the ONE nearest
+ *  27. field-star-sphere  — the close-range sphere for the ONE nearest
  *                            resolvable Gaia field star (presence derived from
  *                            proximity, not selection), reusing the same star
  *                            renderer + f64 compose seam, opaque into the same
  *                            target
- *  26. planets             — the flat branch of the body partition: resolved
+ *  28. planets             — the flat branch of the body partition: resolved
  *                            bodies without a resident surface texture, as
  *                            true-scale flat-lit albedo spheres (f64 compose
  *                            seam), opaque into the same target
- *  27. textured-bodies     — the textured branch of the body partition: resolved
+ *  29. textured-bodies     — the textured branch of the body partition: resolved
  *                            bodies whose surface texture is resident, as lit
  *                            surface-mapped spheres (Saturn's ring casts an
  *                            analytic on-planet shadow); opaque into the same
  *                            target (f64 compose seam)
- *  28. rings               — Saturn's translucent ring overlay, drawn LAST in the
+ *  30. rings               — Saturn's translucent ring overlay, drawn LAST in the
  *                            (foreground:0, NEAR0) group so it depth-tests against
  *                            the opaque spheres already stamped there (far ring
  *                            half occluded), writing no depth and blending
  *                            straight-alpha OVER — like cloud-shell, a blend
  *                            exception in the otherwise opaque foreground group
- *  29. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  31. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
- *  30. atmosphere-shell    — Earth's physically-based in-scatter atmosphere,
+ *  32. atmosphere-shell    — Earth's physically-based in-scatter atmosphere,
  *                            the LAST content-layer row (spec §8.3): a
  *                            translucent proxy sphere at the atmosphere-top
  *                            radius, drawn last in the (foreground:0, NEAR0)
@@ -234,6 +260,7 @@ import { constellationsLayer } from './constellationsLayer';
 import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 import { atmosphereShellLayer } from './atmosphereShellLayer';
+import { sgrAStarLensingLayer } from './sgrAStarLensingLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
@@ -272,10 +299,14 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // hdr layers above and before the tone-map — so the HDR-target members ride
   // the same tone curve as the galaxies. Milky Way FIRST — its dust pass is
   // multiplicative, and leading the group keeps the local starfield below out of
-  // that multiply (see the header) — then star points, the conic orbit trails,
-  // and the survey (Gaia bin) star streams. All the HDR members are additive, so
-  // their relative order is a listing choice, not a compositing one — with the
-  // one exception noted on the Milky Way rows below.
+  // that multiply (see the header) — then the survey (Gaia bin) star streams and
+  // the constellation figures: the whole additive "sky" roster the Sgr A* lens
+  // pass (below) samples. `orbit-trails`/`body-glints` trail LAST in this group,
+  // after the lens pass's own step, so they stay unwarped over it (spec "Draw
+  // order", Q5) rather than sitting among the roster they used to interleave
+  // with. All the HDR members here are additive, so their relative order among
+  // THEMSELVES is a listing choice, not a compositing one — with the one
+  // exception noted on the Milky Way rows below.
   //
   // The Milky Way cloud is three rows, and their order IS load-bearing. The
   // star billboards draw into the reduced-resolution `mw-aggregate` offscreen
@@ -290,12 +321,6 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   milkyWayUpsampleLayer,
   milkyWayLayer,
   starPointsLayer,
-  orbitTrailsLayer,
-  // The sub-pixel bodies (the glints branch of the body partition) as
-  // brightness-scaled additive points — the far half of the body LOD, sibling of
-  // star-points. Additive into HDR through NEAR0, so its position among the
-  // additive rows is a listing choice, not a compositing one.
-  bodyGlintsLayer,
   // The survey (Gaia bin) stars split into two streams sharing one per-frame
   // walk: the AGGREGATE glow field draws LINEAR into the half-res
   // `star-aggregates` offscreen by its OWN render step (so its position here is
@@ -310,8 +335,30 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // through NEAR0 into HDR, so they ride the same tone-map as the stars they
   // connect and join the existing (hdr, NEAR0) render step. Drawn after the star
   // streams so the figure lines read over the starfield; additive blend makes
-  // that a listing choice, not a compositing one.
+  // that a listing choice, not a compositing one. The LAST roster row the Sgr
+  // A* lens pass samples (below).
   constellationsLayer,
+  // The Sgr A* lens pass: a 'body'-slab row, blend 'over'
+  // (Blend.d.ts) rather than additive like its neighbours, so — unlike the
+  // additive rows around it — its position IS load-bearing: it must draw AFTER
+  // every roster row above (so its captured/escaping rays occlude the additive
+  // light already accumulated behind them) and BEFORE orbit-trails/body-glints
+  // below (so those stay unwarped on top, spec "Draw order", Q5). Registry
+  // order alone can't enforce this against `orbit-trails`/`body-glints` — they
+  // share this SAME (hdr, NEAR0) render step with the roster above. The real
+  // enforcement is `ContentLayer.hdrPostLensing`: those
+  // two opt in, so `frameProgram` splits the shared step into `'pre'`/`'post'`
+  // halves around this row's own `(hdr, BODY[k])` step whenever the band is
+  // active (see its module header); this array position stays the
+  // documentation of the intent, registry order deciding each half's internal
+  // ordering.
+  sgrAStarLensingLayer,
+  orbitTrailsLayer,
+  // The sub-pixel bodies (the glints branch of the body partition) as
+  // brightness-scaled additive points — the far half of the body LOD, sibling of
+  // star-points. Additive into HDR through NEAR0, so its position among the
+  // additive rows is a listing choice, not a compositing one.
+  bodyGlintsLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the debug
   // clip-path overlay is the very last swap row (below, past the NEAR0 group) so
@@ -408,6 +455,7 @@ export { texturedBodiesLayer } from './texturedBodiesLayer';
 export { ringsLayer } from './ringsLayer';
 export { starPointsLayer } from './starPointsLayer';
 export { bodyGlintsLayer } from './bodyGlintsLayer';
+export { sgrAStarLensingLayer } from './sgrAStarLensingLayer';
 export { starCatalogLayer } from './starCatalogLayer';
 export { starAggregatesLayer } from './starAggregatesLayer';
 export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';

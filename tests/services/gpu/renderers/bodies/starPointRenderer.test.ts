@@ -74,12 +74,12 @@ describe('createStarPointRenderer', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 
-  const DRAW_OPTS = { sizePx: 2.5, brightness: 1 };
+  const DRAW_OPTS = { sizePx: 2.5, brightness: 1, viewSlot: 0 };
 
   it('setStars and draw are callable with the right arity', () => {
     const renderer = createStarPointRenderer(mockDevice(), 'rgba16float');
     expect(typeof renderer.setStars).toBe('function');
-    expect(renderer.setStars.length).toBe(1);
+    expect(renderer.setStars.length).toBe(2);
     expect(typeof renderer.draw).toBe('function');
     expect(renderer.draw.length).toBe(4);
   });
@@ -95,14 +95,14 @@ describe('createStarPointRenderer', () => {
     expect(before.draw).not.toHaveBeenCalled();
 
     // Two stars uploaded — one instanced draw of 6 vertices × 2 instances.
-    renderer.setStars([SUN, SIRIUS]);
+    renderer.setStars([SUN, SIRIUS], 0);
     const after = mockPass();
     renderer.draw(after, new Float32Array(16), [1920, 1080], DRAW_OPTS);
     expect(after.draw).toHaveBeenCalledTimes(1);
     expect(after.draw).toHaveBeenCalledWith(6, 2);
 
     // Empty upload clears the renderer back to the no-op state.
-    renderer.setStars([]);
+    renderer.setStars([], 0);
     const cleared = mockPass();
     renderer.draw(cleared, new Float32Array(16), [1920, 1080], DRAW_OPTS);
     expect(cleared.draw).not.toHaveBeenCalled();
@@ -116,16 +116,21 @@ describe('createStarPointRenderer', () => {
 
     // The StarPointUniforms buffer is the CameraUniforms prefix (80 B) plus the
     // sizePx / brightness tail rounded to 96 B — must match starPoints/io.wesl.
+    // One physical buffer per view slot (Task 13b); slot 0's is checked here.
     const uniformCreate = createBuffer.mock.calls.find(
-      ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-uniform-buffer',
+      ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-uniform-slot0',
     );
     expect((uniformCreate![0] as GPUBufferDescriptor).size).toBe(96);
 
-    renderer.setStars([SUN, SIRIUS]);
-    renderer.draw(mockPass(), new Float32Array(16), [1920, 1080], { sizePx: 3.5, brightness: 42 });
+    renderer.setStars([SUN, SIRIUS], 0);
+    renderer.draw(mockPass(), new Float32Array(16), [1920, 1080], {
+      sizePx: 3.5,
+      brightness: 42,
+      viewSlot: 0,
+    });
 
     const uniformWrite = writeBuffer.mock.calls.find(
-      ([buffer]) => (buffer as { label?: string }).label === 'star-points-uniform-buffer',
+      ([buffer]) => (buffer as { label?: string }).label === 'star-points-uniform-slot0',
     );
     const scratch = uniformWrite![2] as Float32Array;
     // sizePx at float 20 (byte 80), brightness at float 21 (byte 84); the pad
@@ -145,21 +150,62 @@ describe('createStarPointRenderer', () => {
 
     const instanceCreates = () =>
       createBuffer.mock.calls.filter(
-        ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-instance-buffer',
+        ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-instance-buffer-slot0',
       ).length;
     const instanceUploads = () =>
       writeBuffer.mock.calls.filter(
-        ([buffer]) => (buffer as { label?: string }).label === 'star-points-instance-buffer',
+        ([buffer]) => (buffer as { label?: string }).label === 'star-points-instance-buffer-slot0',
       ).length;
 
     // Per-frame `starPointsLayer.draw` re-hands camera-relative anchors each
     // frame, so `setStars` fires every frame with the same star count. That
     // must NOT churn a fresh GPU buffer per call: allocate once, re-upload.
-    renderer.setStars([SUN, SIRIUS]);
-    renderer.setStars([SUN, SIRIUS]);
+    renderer.setStars([SUN, SIRIUS], 0);
+    renderer.setStars([SUN, SIRIUS], 0);
 
     expect(instanceCreates()).toBe(1);
     expect(instanceUploads()).toBe(2);
+  });
+
+  it('viewSlot — two draw() calls with different viewSlot land their camera uniform in different buffers', () => {
+    const device = mockDevice();
+    const renderer = createStarPointRenderer(device, 'rgba16float');
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+
+    // Two "faces" of a capture sweep, each with its own star set and camera,
+    // both drawn before the frame's single submit — the writeBuffer/submit
+    // race `viewSlot` exists to close (docs/RENDERER.md landmine #1).
+    renderer.setStars([SUN], 1);
+    renderer.setStars([SIRIUS], 2);
+    renderer.draw(mockPass(), new Float32Array(16), [256, 256], {
+      sizePx: 2.5,
+      brightness: 1,
+      viewSlot: 1,
+    });
+    renderer.draw(mockPass(), new Float32Array(16), [256, 256], {
+      sizePx: 2.5,
+      brightness: 1,
+      viewSlot: 2,
+    });
+
+    const uniformSlot1 = writeBuffer.mock.calls.find(
+      ([buffer]) => (buffer as { label?: string }).label === 'star-points-uniform-slot1',
+    );
+    const uniformSlot2 = writeBuffer.mock.calls.find(
+      ([buffer]) => (buffer as { label?: string }).label === 'star-points-uniform-slot2',
+    );
+    // Distinct GPU buffer objects — slot 2's write never touched slot 1's.
+    expect(uniformSlot1![0]).not.toBe(uniformSlot2![0]);
+
+    const instanceSlot1 = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
+    const slot1Label = instanceSlot1.mock.calls.find(
+      ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-instance-buffer-slot1',
+    );
+    const slot2Label = instanceSlot1.mock.calls.find(
+      ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-instance-buffer-slot2',
+    );
+    expect(slot1Label).toBeDefined();
+    expect(slot2Label).toBeDefined();
   });
 
   it('bakes the additive depthless profile — targetFormat + one/one blend, no depthStencil', () => {

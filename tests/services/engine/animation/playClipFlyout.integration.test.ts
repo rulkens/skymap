@@ -132,6 +132,11 @@ function makeEngineState(startDistance: number): {
       upBasis: { current: ORIENTATION_FRAMES.ecliptic },
       lastZoomFactor: { current: null },
       surface: createSurfaceController(),
+      skyCubemapCapture: {
+        bandActive: false,
+        gcDistanceMpc: Number.POSITIVE_INFINITY,
+        bakedSettings: null,
+      },
     },
   };
 

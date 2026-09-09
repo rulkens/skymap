@@ -99,6 +99,7 @@ function packSentinels(): ArrayBuffer {
     pxFadeEnd: 0,
     focusBindGroup: {} as unknown as GPUBindGroup,
     fadeOpacityOf: () => 1,
+    viewSlot: 0,
   };
   return packGalaxyPointUniforms(
     viewProj as unknown as Mat4,

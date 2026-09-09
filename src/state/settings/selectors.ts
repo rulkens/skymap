@@ -50,6 +50,7 @@ import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSetti
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { MilkyWaySettings } from '../../@types/settings/MilkyWaySettings';
 import type { ZoneOfAvoidanceSettings } from '../../@types/settings/ZoneOfAvoidanceSettings';
+import type { SgrAStarLensingTuning } from '../../@types/settings/SgrAStarLensingTuning';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
@@ -187,6 +188,12 @@ export const selectZoneOfAvoidanceEnabled = (state: RootState): boolean =>
 /** The whole Zone-of-Avoidance cluster — mirrors `selectMilkyWay`. */
 export const selectZoneOfAvoidance = (state: RootState): ZoneOfAvoidanceSettings =>
   selectSettings(state).zoneOfAvoidance;
+
+// --- sgrAStarLensingTuning cluster ---------------------------------------------
+
+/** The whole tuning cluster — mirrors `selectMilkyWay` / `selectZoneOfAvoidance`. */
+export const selectSgrAStarLensingTuning = (state: RootState): SgrAStarLensingTuning =>
+  selectSettings(state).sgrAStarLensingTuning;
 
 // --- filaments cluster --------------------------------------------------------
 

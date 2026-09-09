@@ -48,6 +48,18 @@
  * filtered to enabled layers — a non-empty group always has a first layer to
  * carry the clear.
  *
+ * A capture render step (`step.face !== undefined`) is the one exception: its
+ * target ('sky-cubemap') has six LAYERS, one per face, but `touched` tracks by
+ * target string alone — so it can't distinguish "this face's first pass this
+ * frame" from "a DIFFERENT face already rendered this frame". Capture steps
+ * therefore take their first-touch fact from a private `(target, face)`-keyed
+ * set instead, rather than growing the public `renderedTargets` surface to that
+ * granularity. Per-face granularity is load-bearing in BOTH directions: the
+ * roster spans two slabs, so `frameProgram` emits TWO steps per face (COSMO
+ * then NEAR0) — a blanket always-clear made the NEAR0 step wipe the COSMO
+ * step's galaxy points and textured disks off the face it had just drawn them
+ * into.
+ *
  * The same `touched` fact drives depth: a render step whose target row declares
  * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is
  * `'clear'` (to this slab's far-plane depth via `depthClearValueFor` — `0.0` under
@@ -65,7 +77,14 @@ import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import { slabViewOf, groupKeyOf, layerTimingSlotName } from './slabs';
+import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import {
+  slabViewOf,
+  groupKeyOf,
+  layerTimingSlotName,
+  renderStepTimingSlotName,
+  matchesLensPhase,
+} from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
@@ -93,9 +112,21 @@ const COMPUTE: Record<
  * allocated texture like the offscreen rows — so it stays confined to this one
  * site: every other id resolves through the render-target table, which throws
  * for ids it never allocated.
+ *
+ * `face` (present only for a sky-cubemap capture render step, `FrameStep.face`)
+ * routes through `layerViewOf` instead of `viewOf` — the default view spans
+ * every array layer, which WebGPU rejects as a colour attachment once a row
+ * has more than one, so every capture face would otherwise write the SAME
+ * multi-layer view.
  */
-function viewFor(id: string, ctx: ReadyFrameContext, swapView: GPUTextureView): GPUTextureView {
+function viewFor(
+  id: string,
+  ctx: ReadyFrameContext,
+  swapView: GPUTextureView,
+  face?: CubeFace,
+): GPUTextureView {
   if (id === 'swap') return swapView;
+  if (face !== undefined) return ctx.renderTargets.layerViewOf(id, face);
   return ctx.renderTargets.viewOf(id);
 }
 
@@ -167,7 +198,17 @@ function timestampSpread(
 }
 
 export function executeFrame(args: ExecuteFrameArgs): void {
-  const { encoder, ctx, state, program, layers, strategy, timing, swapView } = args;
+  const {
+    encoder,
+    ctx,
+    state,
+    program,
+    layers,
+    strategy,
+    timing,
+    swapView,
+    skyCubemapFaceContexts,
+  } = args;
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
   // first time a pass is opened against it, flipping subsequent passes from
@@ -177,6 +218,10 @@ export function executeFrame(args: ExecuteFrameArgs): void {
   // executor populates it here and later layers read which targets rendered this
   // frame via `ctx.renderedTargets`.
   const touched = ctx.renderedTargets as Set<string>;
+  // Capture steps' own first-touch bookkeeping, keyed `<target>:<face>` —
+  // see the module header. Private to this call because `renderedTargets`
+  // is a public consumer surface keyed by bare target id.
+  const touchedFaces = new Set<string>();
 
   for (const step of program) {
     switch (step.kind) {
@@ -189,6 +234,17 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         break;
       }
       case 'render': {
+        // The runtime hand-off: a step carrying `face` (the
+        // black-hole lens's sky-cubemap capture) resolves EVERY per-step value
+        // below — slab view, enable gate, draw ctx — from ITS OWN camera
+        // (`renderFrame`'s per-face `skyCubemapFaceContext` derivation), not
+        // the frame-wide `ctx`. A missing map entry (that face's
+        // `skyCubemapFaceContext` returned null — e.g. a pre-bootstrap frame)
+        // skips the step cleanly, the same outcome an empty group already
+        // produces below. For every ordinary step `step.face` is undefined and
+        // `stepCtx` is just `ctx` — a no-op passthrough.
+        const stepCtx = step.face === undefined ? ctx : skyCubemapFaceContexts?.get(step.face);
+        if (stepCtx === undefined) break;
         // The DebugPanel renderer-toggle override is one-way: it hides a layer
         // whose own `enabled()` gate returned true, and can never force-enable
         // one whose gate returned false — hence the check follows the gate.
@@ -199,17 +255,30 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // (not after, as before body slabs): a 'body' layer's `enabled` needs
         // the view to read `view.slab.frame.bodyId`, and a step whose slab is
         // a body row still resolves cheaply even when its group ends up empty.
-        const view = slabViewOf(ctx, step.slab);
+        const view = slabViewOf(stepCtx, step.slab);
+        // A capture step (the sky-cubemap sweep) selects its group by
+        // the `skyCapture` opt-in flag, not `target`: every capture step
+        // targets 'sky-cubemap', but the roster's own layers keep their
+        // ordinary `target` ('hdr', typically) for their NORMAL per-frame
+        // draw — target-matching could never select them for a capture step
+        // (the capture roster is an opt-in list, not a target match). `step.face`
+        // is the same discriminant `stepCtx` above already reads.
+        const isCaptureStep = step.face !== undefined;
+        const faceKey = step.face === undefined ? null : `${step.target}:${step.face}`;
         const group = layers.filter(
           (l) =>
-            l.target === step.target &&
+            (isCaptureStep ? l.skyCapture === true : l.target === step.target) &&
             // A 'body' layer matches every body-slab step, not one fixed
-            // index — Task 7 emits one such step per body row. `view.slab` is
+            // index. `view.slab` is
             // in hand here, so this reads `frame.kind` directly rather than
             // going through `isBodySlabIndex` (slabs.ts) — the index-only
             // sibling check `frameProgram.ts` uses where no `Slab` is in hand.
             (l.slab === step.slab || (l.slab === 'body' && view.slab.frame.kind === 'body-m')) &&
-            l.enabled(state, ctx, view) &&
+            // The black-hole lens's (hdr, NEAR0) split: a step
+            // carrying `lensPhase` further narrows the group to the layers
+            // that opted into `hdrPostLensing` accordingly — see slabs.ts.
+            matchesLensPhase(l.hdrPostLensing, step.lensPhase) &&
+            l.enabled(state, stepCtx, view) &&
             disabledPasses[l.name] !== true,
         );
         if (group.length === 0) break;
@@ -217,21 +286,39 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
         // definition `timedSlotRowsOf` allocates the slot under — so
         // `descriptorFor(groupKey)` resolves exactly that slot.
-        const groupKey = groupKeyOf(step.target, step.slab);
+        // `renderStepTimingSlotName` appends `step.face` when present — the
+        // sky-cubemap capture's 6 faces all share `('sky-cubemap', NEAR0)`, so
+        // the bare groupKey would look up the SAME slot for all 6 (see its doc,
+        // slabs.ts); for every other step `step.face` is absent and this is a
+        // no-op passthrough of `groupKey`. It appends a `'post'` lens-phase
+        // suffix the same way, so the split roster's two halves don't collide
+        // on one query-set slot.
+        const groupKey = renderStepTimingSlotName(
+          groupKeyOf(step.target, step.slab),
+          step.face,
+          step.lensPhase,
+        );
         renderGroup(strategy, {
           encoder,
-          ctx,
+          ctx: stepCtx,
           state,
           timing,
           swapView,
           target: step.target,
+          face: step.face,
           group,
           view,
           groupKey,
-          alreadyTouched: touched.has(step.target),
+          // `touched` tracks by TARGET, but a capture step's target
+          // ('sky-cubemap') has six LAYERS — one per face — so it cannot tell
+          // "this face's first pass this frame" from "some OTHER face already
+          // rendered this frame". Capture steps read the face-keyed set
+          // instead. See the module header.
+          alreadyTouched: faceKey === null ? touched.has(step.target) : touchedFaces.has(faceKey),
           depthLoadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
         });
         touched.add(step.target);
+        if (faceKey !== null) touchedFaces.add(faceKey);
         break;
       }
       case 'composite': {
@@ -293,6 +380,7 @@ function renderGroup(
     timing: GpuTimingService;
     swapView: GPUTextureView;
     target: string;
+    face?: CubeFace;
     group: readonly ContentLayer[];
     view: SlabView;
     groupKey: string;
@@ -307,13 +395,14 @@ function renderGroup(
     timing,
     swapView,
     target,
+    face,
     group,
     view,
     groupKey,
     alreadyTouched,
     depthLoadOp,
   } = p;
-  const targetView = viewFor(target, ctx, swapView);
+  const targetView = viewFor(target, ctx, swapView, face);
 
   if (strategy === 'merged') {
     // Tile-local: one pass holds the whole group, so OVER blends read coherent
@@ -347,7 +436,7 @@ function renderGroup(
   // others' timestamps (see `layerTimingSlotName`'s doc, slabs.ts).
   group.forEach((layer, i) => {
     const touchedBefore = alreadyTouched || i > 0;
-    const slot = layerTimingSlotName(layer.name, view.slab.index);
+    const slot = layerTimingSlotName(layer.name, view.slab.index, face);
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${slot}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],

@@ -32,6 +32,9 @@ export type SStarSeed = {
   readonly periodYr: number;
   /** Apparent K-band magnitude — reddened; dereddening is downstream. */
   readonly kMag: number;
-  /** The table's `SpT` flag: `e`, `l`, or blank for the two unclassified rows. */
+  /**
+   * Gillessen's `SpT` flag (`early`/`late`, blank → `unknown` for two rows);
+   * also `unknown` by choice for S301, an F dwarf neither bin fits.
+   */
   readonly spectralClass: 'early' | 'late' | 'unknown';
 };

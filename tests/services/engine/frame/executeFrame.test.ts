@@ -31,6 +31,7 @@ import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlo
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 
 // ── Encoder / pass recorder ──────────────────────────────────────────────────
 //
@@ -119,12 +120,20 @@ function makeLayer(init: {
   // `slab.frame.bodyId`) instead of the constant `enabled` flag above.
   enabledFor?: (view: SlabView) => boolean;
   log?: string[];
+  // Ruling 6: opts this fixture layer into the sky-cubemap capture roster —
+  // see `ContentLayer.skyCapture`'s doc.
+  skyCapture?: true;
+  // Task 14b (Ruling 9): opts this fixture layer into the black-hole lens's
+  // 'post' step split half — see `ContentLayer.hdrPostLensing`'s doc.
+  hdrPostLensing?: true;
 }): SpyLayer {
   return {
     name: init.name,
     slab: init.slab ?? COSMO,
     target: init.target,
     blend: 'additive',
+    ...(init.skyCapture ? { skyCapture: true as const } : {}),
+    ...(init.hdrPostLensing ? { hdrPostLensing: true as const } : {}),
     enabled: vi.fn<ContentLayer['enabled']>((_state, _ctx, view) =>
       init.enabledFor ? init.enabledFor(view) : (init.enabled ?? true),
     ),
@@ -141,6 +150,13 @@ const VOLUME_VIEW = { __id: 'volume-view' } as unknown as GPUTextureView;
 const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
 const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
 const SWAP_VIEW = { __id: 'swap-view' } as unknown as GPUTextureView;
+const SKY_CUBEMAP_VIEW = { __id: 'sky-cubemap-view' } as unknown as GPUTextureView;
+// One distinct view per capture face — proves `layerViewOf` (not the shared
+// `viewOf`) resolves a capture step's colour attachment, and that each face
+// lands on its OWN layer rather than all six colliding on one.
+const SKY_CUBEMAP_FACE_VIEWS: readonly GPUTextureView[] = [0, 1, 2, 3, 4, 5].map(
+  (face) => ({ __id: `sky-cubemap-face${face}-view` }) as unknown as GPUTextureView,
+);
 
 const EXEC_SPECS = [
   {
@@ -170,6 +186,14 @@ const EXEC_SPECS = [
     depth: null,
     scale: 1,
     clearValue: { r: 0, g: 0, b: 0, a: 1 },
+  },
+  {
+    id: 'sky-cubemap',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    fixedSizePx: { size: 256, layers: 6 },
   },
 ];
 
@@ -202,7 +226,13 @@ function makeCtx(): ReadyFrameContext {
         if (id === 'hdr') return HDR_VIEW;
         if (id === 'volume') return VOLUME_VIEW;
         if (id === 'foreground:0') return FG_VIEW;
+        if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
         throw new Error(`mock renderTargets: no view for '${id}'`);
+      },
+      layerViewOf: (id: string, face: number) => {
+        const view = id === 'sky-cubemap' ? SKY_CUBEMAP_FACE_VIEWS[face] : undefined;
+        if (!view) throw new Error(`mock renderTargets: no layer view for '${id}' layer ${face}`);
+        return view;
       },
       depthViewOf: (id: string) => {
         if (id === 'foreground:0') return FG_DEPTH_VIEW;
@@ -258,6 +288,7 @@ function makeArgs(over: {
   state?: EngineState;
   env?: ReturnType<typeof makeEncoderEnv>;
   ctx?: ReadyFrameContext;
+  skyCubemapFaceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
 }): { args: ExecuteFrameArgs; env: ReturnType<typeof makeEncoderEnv> } {
   const env = over.env ?? makeEncoderEnv();
   const args: ExecuteFrameArgs = {
@@ -269,20 +300,22 @@ function makeArgs(over: {
     strategy: over.strategy ?? 'merged',
     timing: over.timing ?? makeNoTiming(),
     swapView: SWAP_VIEW,
+    skyCubemapFaceContexts: over.skyCubemapFaceContexts,
   };
   return { args, env };
 }
 
-/** The recorded attachment of the pass a given layer.draw spy drew into. */
+/** The recorded attachment of the pass a given layer.draw spy's `callIndex` call drew into. */
 function attachmentOfDraw(
   env: ReturnType<typeof makeEncoderEnv>,
   layer: SpyLayer,
+  callIndex = 0,
 ): {
   loadOp: string;
   clearValue?: GPUColor;
   view: GPUTextureView;
 } {
-  const pass = layer.draw.mock.calls[0]![0] as GPURenderPassEncoder;
+  const pass = layer.draw.mock.calls[callIndex]![0] as GPURenderPassEncoder;
   const rec = env.passes.find((p) => p.pass === pass)!;
   const att = Array.from(rec.desc.colorAttachments as Iterable<unknown>)[0] as {
     view: GPUTextureView;
@@ -725,5 +758,245 @@ describe('executeFrame', () => {
     const { args } = makeArgs({ program, layers: [layer] });
     executeFrame(args);
     expect(layer.draw).not.toHaveBeenCalled();
+  });
+
+  describe('sky-cubemap capture hand-off (Task 12)', () => {
+    // A step carrying `face` must resolve its OWN camera (`enabled`/`draw`'s
+    // `ctx`), not the frame-wide `args.ctx` — the runtime hand-off `renderFrame`
+    // derives per scheduled face via `skyCubemapFaceContext` and threads in as
+    // `skyCubemapFaceContexts`. Two distinct fixture contexts stand in for two
+    // faces' synthetic cameras; identity (`toBe`), not content, is what proves
+    // routing, since a real face ctx and the frame ctx share the same shape.
+    it("resolves each capture step's own face ctx, never the frame-wide ctx", () => {
+      const layer = makeLayer({ name: 'probe', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const face0Ctx = makeCtx();
+      const face1Ctx = makeCtx();
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1 },
+      ];
+      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
+        [0, face0Ctx],
+        [1, face1Ctx],
+      ]);
+      const { args } = makeArgs({ program, layers: [layer], skyCubemapFaceContexts });
+      executeFrame(args);
+
+      expect(layer.enabled).toHaveBeenCalledTimes(2);
+      expect(layer.draw).toHaveBeenCalledTimes(2);
+      expect(layer.enabled.mock.calls[0]![1]).toBe(face0Ctx);
+      expect(layer.draw.mock.calls[0]![2]).toBe(face0Ctx);
+      expect(layer.enabled.mock.calls[1]![1]).toBe(face1Ctx);
+      expect(layer.draw.mock.calls[1]![2]).toBe(face1Ctx);
+      // Neither call reached for the frame-wide ctx — the whole point of the
+      // per-step override.
+      expect(layer.draw.mock.calls[0]![2]).not.toBe(args.ctx);
+      expect(layer.draw.mock.calls[1]![2]).not.toBe(args.ctx);
+    });
+
+    it('skips a capture step cleanly when its face has no context (skyCubemapFaceContext returned null)', () => {
+      const layer = makeLayer({ name: 'probe', target: 'sky-cubemap', slab: NEAR0 });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 2 },
+      ];
+      // Map has no entry for face 2 — mirrors renderFrame omitting a face whose
+      // skyCubemapFaceContext call returned null (pre-bootstrap frame).
+      const { args } = makeArgs({
+        program,
+        layers: [layer],
+        skyCubemapFaceContexts: new Map(),
+      });
+      expect(() => executeFrame(args)).not.toThrow();
+      expect(layer.enabled).not.toHaveBeenCalled();
+      expect(layer.draw).not.toHaveBeenCalled();
+    });
+
+    it('an ordinary (non-face) render step is unaffected by an absent skyCubemapFaceContexts map', () => {
+      const layer = makeLayer({ name: 'a', target: 'hdr' });
+      const program: FrameStep[] = [{ kind: 'render', target: 'hdr', slab: COSMO }];
+      const { args } = makeArgs({ program, layers: [layer] });
+      executeFrame(args);
+      expect(layer.draw.mock.calls[0]![2]).toBe(args.ctx);
+    });
+
+    // Ruling 6: capture steps select by `skyCapture`, not `target` — the
+    // whole point being that a roster layer keeps its ordinary `target`
+    // ('hdr') for its normal per-frame draw and is ALSO reachable from a
+    // capture step via the flag alone.
+    it("selects a capture step group by the skyCapture flag, ignoring the layer's own target", () => {
+      const layer = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 3 },
+      ];
+      const faceCtx = makeCtx();
+      const { args, env } = makeArgs({
+        program,
+        layers: [layer],
+        skyCubemapFaceContexts: new Map([[3, faceCtx]]),
+      });
+      executeFrame(args);
+      expect(layer.draw).toHaveBeenCalledTimes(1);
+      // The pass it drew into is face 3's OWN sky-cubemap layer view, not
+      // 'hdr' and not the shared whole-array `viewOf('sky-cubemap')` — the
+      // step's `(target, face)` wins for the PASS, regardless of the layer's
+      // own `target` field (which only gated selection above).
+      expect(attachmentOfDraw(env, layer).view).toBe(SKY_CUBEMAP_FACE_VIEWS[3]);
+      expect(attachmentOfDraw(env, layer).view).not.toBe(SKY_CUBEMAP_VIEW);
+    });
+
+    it('resolves EACH capture face to its OWN colour-attachment view, distinct per face and from viewOf', () => {
+      // Pins the real bug: before the fix, every capture step resolved the
+      // same multi-layer `viewOf('sky-cubemap')` regardless of `step.face`,
+      // so all 6 faces wrote the same texture layer.
+      const layer = makeLayer({ name: 'probe', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const program: FrameStep[] = [0, 1, 2, 3, 4, 5].map(
+        (face): FrameStep => ({
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: NEAR0,
+          face: face as CubeFace,
+        }),
+      );
+      const faceCtx = makeCtx();
+      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>(
+        [0, 1, 2, 3, 4, 5].map((face) => [face as CubeFace, faceCtx]),
+      );
+      const { args, env } = makeArgs({ program, layers: [layer], skyCubemapFaceContexts });
+      executeFrame(args);
+
+      expect(layer.draw).toHaveBeenCalledTimes(6);
+      const viewsPerFace = [0, 1, 2, 3, 4, 5].map(
+        (face) => attachmentOfDraw(env, layer, face).view,
+      );
+      for (const view of viewsPerFace) expect(view).not.toBe(SKY_CUBEMAP_VIEW);
+      expect(new Set(viewsPerFace).size).toBe(6);
+    });
+
+    it("the SECOND capture step for the SAME face loads — it must not wipe the first slab's draws", () => {
+      // Pins the real bug: `frameProgram` emits TWO steps per face (COSMO then
+      // NEAR0) because the roster spans both slabs. A blanket always-clear made
+      // the NEAR0 step clear the face the COSMO step had just drawn the galaxy
+      // points and textured disks into, so no COSMO content ever survived into
+      // the cubemap the lens samples.
+      const cosmoLayer = makeLayer({
+        name: 'textured-disks',
+        target: 'hdr',
+        slab: COSMO,
+        skyCapture: true,
+      });
+      const near0Layer = makeLayer({
+        name: 'star-points',
+        target: 'hdr',
+        slab: NEAR0,
+        skyCapture: true,
+      });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: COSMO, face: 0 },
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+      ];
+      const faceCtx = makeCtx();
+      const { args, env } = makeArgs({
+        program,
+        layers: [cosmoLayer, near0Layer],
+        skyCubemapFaceContexts: new Map([[0, faceCtx]]),
+      });
+      executeFrame(args);
+
+      expect(attachmentOfDraw(env, cosmoLayer).loadOp).toBe('clear');
+      expect(attachmentOfDraw(env, near0Layer).loadOp).toBe('load');
+    });
+
+    it('two capture steps for different faces in ONE frame BOTH clear — one face never loads another face', () => {
+      // Pins the real bug: `touched` tracks by TARGET ('sky-cubemap'), not by
+      // LAYER (face). Before the fix, face 0's pass cleared and marked
+      // 'sky-cubemap' touched; face 1's pass then LOADED — against its own
+      // stale prior-frame content, not face 0's — and stars drew additively
+      // over it, flickering the cubemap bright/dim by capture order.
+      const layer = makeLayer({ name: 'probe', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1 },
+      ];
+      const faceCtx = makeCtx();
+      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
+        [0, faceCtx],
+        [1, faceCtx],
+      ]);
+      const { args, env } = makeArgs({ program, layers: [layer], skyCubemapFaceContexts });
+      executeFrame(args);
+
+      expect(attachmentOfDraw(env, layer, 0).loadOp).toBe('clear');
+      expect(attachmentOfDraw(env, layer, 1).loadOp).toBe('clear');
+    });
+
+    it('never selects a capture step group by target alone — a layer targeting sky-cubemap without the flag is skipped', () => {
+      const layer = makeLayer({ name: 'unflagged', target: 'sky-cubemap', slab: NEAR0 });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0 },
+      ];
+      const faceCtx = makeCtx();
+      const { args } = makeArgs({
+        program,
+        layers: [layer],
+        skyCubemapFaceContexts: new Map([[0, faceCtx]]),
+      });
+      executeFrame(args);
+      expect(layer.draw).not.toHaveBeenCalled();
+    });
+
+    it('a skyCapture-flagged layer is NOT drawn by its own ordinary (non-capture) render step under target-matching alone — slab/target still gate normally', () => {
+      // The flag only changes SELECTION for a capture step; an ordinary step
+      // still requires target-matching, so a flagged layer with a mismatched
+      // target is skipped exactly as before Ruling 6.
+      const layer = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0, skyCapture: true });
+      const program: FrameStep[] = [{ kind: 'render', target: 'sky-cubemap', slab: NEAR0 }];
+      const { args } = makeArgs({ program, layers: [layer] });
+      executeFrame(args);
+      expect(layer.draw).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('black-hole lens (hdr, NEAR0) roster split (Task 14b, Ruling 9)', () => {
+    // A step's `lensPhase` narrows the (target, slab) group by
+    // `ContentLayer.hdrPostLensing` — 'pre' excludes flagged layers, 'post'
+    // admits only them. This is the mechanism that keeps orbit-trails/
+    // body-glints drawing AFTER the lens step instead of under it.
+    it("a 'pre' step excludes hdrPostLensing layers; a 'post' step draws only them", () => {
+      const roster = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0 });
+      const trails = makeLayer({
+        name: 'orbit-trails',
+        target: 'hdr',
+        slab: NEAR0,
+        hdrPostLensing: true,
+      });
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'pre' },
+        { kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'post' },
+      ];
+      const { args } = makeArgs({ program, layers: [roster, trails] });
+      executeFrame(args);
+      expect(roster.draw).toHaveBeenCalledTimes(1);
+      expect(trails.draw).toHaveBeenCalledTimes(1);
+      // Each drew into a DIFFERENT pass — the 'pre'/'post' split opens two
+      // passes even though both steps share (target: 'hdr', slab: NEAR0).
+      expect(roster.draw.mock.calls[0]![0]).not.toBe(trails.draw.mock.calls[0]![0]);
+    });
+
+    it('a step with no lensPhase draws every matching layer regardless of hdrPostLensing — the untagged, outside-the-band shape', () => {
+      const roster = makeLayer({ name: 'roster', target: 'hdr', slab: NEAR0 });
+      const trails = makeLayer({
+        name: 'orbit-trails',
+        target: 'hdr',
+        slab: NEAR0,
+        hdrPostLensing: true,
+      });
+      const program: FrameStep[] = [{ kind: 'render', target: 'hdr', slab: NEAR0 }];
+      const { args } = makeArgs({ program, layers: [roster, trails] });
+      executeFrame(args);
+      expect(roster.draw).toHaveBeenCalledTimes(1);
+      expect(trails.draw).toHaveBeenCalledTimes(1);
+      // Both drew into the SAME single pass — one untagged step, one group.
+      expect(roster.draw.mock.calls[0]![0]).toBe(trails.draw.mock.calls[0]![0]);
+    });
   });
 });

@@ -954,6 +954,25 @@ export const RAW_DATA = {
       'Provenance for the GeoDanmark orthophoto harvest — WMS layer, licence, harvested region, tile grid, BBOX axis-order landmine.',
   },
 
+  // ─── DHM Punktsky — Datafordeler LiDAR point cloud over Søndermarken ──
+
+  'dhm.dir': {
+    path: 'data/raw/dhm',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'DHM Punktsky LAS tile harvest, one file per DDKN 1 km cell (`punktsky_1km_<n>_<e>.las`) covering the Søndermarken group extent (see README).',
+    fetcher: 'tools/fetch/fetchDhm.ts',
+    readme: 'dhm.readme',
+  },
+  'dhm.readme': {
+    path: 'data/raw/dhm/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the DHM Punktsky harvest — endpoint, licence, anchor height derivation, tile list, fetch landmines.',
+  },
+
   // ─── Constellations (d3-celestial stick-figure lines) ─────────────────
 
   'constellations.lines': {

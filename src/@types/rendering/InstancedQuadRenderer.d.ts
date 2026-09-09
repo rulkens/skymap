@@ -51,6 +51,14 @@ export type InstancedQuadRenderer = {
      *  the engine against the canonical focusBgl and written once per frame;
      *  the same group serves every impostor pipeline. */
     focusBindGroup: GPUBindGroup;
+    /**
+     * Which `@group(0)` buffer+bindGroup copy this call writes/binds.
+     * Defaults to 0. Only meaningful when `config.viewSlotCount > 1`
+     * (TexturedDiskRenderer, Task 13b) — every other consumer omits it and
+     * always uses the single slot-0 copy, byte-identical to pre-Task-13b
+     * behaviour.
+     */
+    viewSlot?: number;
   }) => void;
   /**
    * Release the GPU buffers this factory owns: the uniform buffer

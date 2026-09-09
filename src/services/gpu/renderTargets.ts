@@ -146,6 +146,7 @@ import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
+import { SCALE_FADE_BANDS } from '../engine/presentation/scaleFadeBands';
 
 /**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
@@ -162,9 +163,30 @@ const STAR_AGGREGATE_DIVISOR = 2;
  */
 const ZONE_OF_AVOIDANCE_DIVISOR = 5;
 
+/**
+ * Hysteresis margin for the `sky-cubemap` row's `allocateWhen`: once
+ * allocated, the row survives until the camera-to-anchor distance exceeds
+ * this multiple of the lensing band's `goneAt` (500 AU) — 750 AU — rather
+ * than releasing the instant the band itself closes. Without it, a camera
+ * dithering across the 500 AU edge destroys and reallocates the row's 50 MB
+ * + 7 views every frame.
+ */
+const SKY_CUBEMAP_ROW_RELEASE_MARGIN = 1.5;
+
 /** A row's divisor for this state — constant rows ignore the state entirely. */
 function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
   return typeof spec.scale === 'function' ? spec.scale(state) : spec.scale;
+}
+
+/**
+ * A `fixedSizePx` row's declared per-axis size for this state — mirrors
+ * `resolveScale`.
+ */
+function resolveFixedSize(
+  fixedSizePx: { size: number | ((state: EngineState) => number) },
+  state: EngineState,
+): number {
+  return typeof fixedSizePx.size === 'function' ? fixedSizePx.size(state) : fixedSizePx.size;
 }
 
 /**
@@ -252,6 +274,44 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
         clearValue: { r: 0, g: 0, b: 0, a: 0 },
       }),
     ),
+    // The black-hole lens's captured environment: 6 layers of a fixed-size
+    // 2d-array, later bound as a `texture_cube` (see `CubeFace.d.ts`). Same
+    // depthless/additive/zero-clear profile as `hdr` — the captured roster
+    // (point-sprites, star-catalog/aggregates, S-star glints) is additive.
+    //
+    // The one row with an `allocateWhen`: 1024² × 6 × 8 B is 50 MB, and the
+    // lens draws only within ~500 AU of Sgr A*, so the texture exists only
+    // while the band does. `renderFrame` writes the band flag and reconciles
+    // on its edge, so the row is there on the band-entry frame — the frame
+    // that sweeps all six faces. Once allocated it outlives a brief close by
+    // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (a camera dithering across the band
+    // edge would otherwise destroy + reallocate the row every frame); a row
+    // never allocated does not spring into existence from proximity alone —
+    // only `bandActive` triggers first allocation.
+    {
+      id: 'sky-cubemap',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: 1, // unused: fixedSizePx below overrides it (required by the type).
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+      allocateWhen: (state, isAllocated) => {
+        const capture = state.cameraRuntime.skyCubemapCapture;
+        if (capture.bandActive) return true;
+        return (
+          isAllocated &&
+          capture.gcDistanceMpc <=
+            SKY_CUBEMAP_ROW_RELEASE_MARGIN * SCALE_FADE_BANDS.sgrAStarLensing.goneAt
+        );
+      },
+      // `size` is a live setting (the DebugPanel resolution knob,
+      // 256/512/1024/2048) — `reconcile` resolves it every frame exactly like
+      // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
+      // (and its cube/layer views) without a rebuild path of its own.
+      fixedSizePx: {
+        size: (state) => state.settings.sgrAStarLensingTuning.cubemapResolutionPx,
+        layers: 6,
+      },
+    },
     {
       id: 'swap',
       format: swapFormat,
@@ -267,15 +327,10 @@ export function createRenderTargets(
   swapFormat: GPUTextureFormat,
   size: Size,
   state: EngineState,
-  // Test-only injection seam: appends rows the production table
-  // (`renderTargetRows`) doesn't declare yet, so `fixedSizePx` behaviour is
-  // exercisable before Phase B lands the real sky-cubemap row. No production
-  // caller passes this.
-  extraRows: readonly RenderTargetSpec[] = [],
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = [...renderTargetRows(swapFormat), ...extraRows];
+  let specs = [...renderTargetRows(swapFormat)];
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.
@@ -288,6 +343,19 @@ export function createRenderTargets(
   // depth attachment", which is exactly what `depthViewOf` throws on.
   const textures = new Map<string, GPUTexture>();
   const views = new Map<string, GPUTextureView>();
+  // A dimension:'cube' view alongside `views`' default (2d-array) one, for the
+  // one row whose 6 layers are later sampled as a `texture_cube` (see
+  // `RenderTargets.cubeViewOf`'s doc). Keyed off `fixedSizePx.layers === 6`
+  // (data-driven, not a hardcoded 'sky-cubemap' id check) so a future second
+  // 6-layer row gets one for free.
+  const cubeViews = new Map<string, GPUTextureView>();
+  // One single-array-layer `dimension: '2d'` view per layer, for a row whose
+  // `views`' default (a whole-array `2d-array` view with no `baseArrayLayer`)
+  // is unusable as a COLOUR ATTACHMENT when the row has more than one layer —
+  // WebGPU rejects a multi-layer view there. Only the sky-cubemap capture
+  // needs this today (`executeFrame`'s per-face colour attachment), gated the
+  // same data-driven way as `cubeViews` rather than a hardcoded id check.
+  const layerViews = new Map<string, readonly GPUTextureView[]>();
   const depthTextures = new Map<string, GPUTexture>();
   const depthViews = new Map<string, GPUTextureView>();
   // Recorded beside `textures`/`views` so `sizeOf` never reads a texture's
@@ -317,6 +385,31 @@ export function createRenderTargets(
     });
     textures.set(spec.id, texture);
     views.set(spec.id, texture.createView());
+    if (spec.fixedSizePx?.layers === 6) {
+      cubeViews.set(
+        spec.id,
+        texture.createView({
+          label: `render-target-${spec.id}-cube-view`,
+          dimension: 'cube',
+          baseArrayLayer: 0,
+          arrayLayerCount: 6,
+        }),
+      );
+    }
+    const layerCount = spec.fixedSizePx?.layers ?? 1;
+    if (layerCount > 1) {
+      layerViews.set(
+        spec.id,
+        Array.from({ length: layerCount }, (_unused, layer) =>
+          texture.createView({
+            label: `render-target-${spec.id}-layer${layer}-view`,
+            dimension: '2d',
+            baseArrayLayer: layer,
+            arrayLayerCount: 1,
+          }),
+        ),
+      );
+    }
 
     if (spec.depth) {
       depthTextures.get(spec.id)?.destroy();
@@ -339,6 +432,24 @@ export function createRenderTargets(
     }
   }
 
+  /**
+   * Drop one row's textures + views. Every map is cleared together with the
+   * size record, so the row misses the held-size comparison on the frame its
+   * `allocateWhen` turns true again and reallocates through the normal path.
+   */
+  function release(id: string): void {
+    if (!textures.has(id) && !depthTextures.has(id)) return;
+    textures.get(id)?.destroy();
+    depthTextures.get(id)?.destroy();
+    textures.delete(id);
+    views.delete(id);
+    cubeViews.delete(id);
+    layerViews.delete(id);
+    depthTextures.delete(id);
+    depthViews.delete(id);
+    sizes.delete(id);
+  }
+
   // Keyed on the size the row was allocated at, never on a remembered divisor:
   // the texture is the authoritative record of what it was built at, so a canvas
   // resize and a settings-driven divisor move reduce to one question. Two
@@ -347,11 +458,23 @@ export function createRenderTargets(
   // (`reducedTargetSize` is the shared sizing rule; see its docblock.)
   function reconcile(s: EngineState, canvas: Size): void {
     for (const spec of offscreenSpecs) {
+      // A row that declares `allocateWhen` holds VRAM only while its
+      // condition does — same per-frame seam as a moved size, so entering
+      // and leaving the condition need no lifecycle path of their own.
+      // `sizes.has` (not `textures.has`) is the "currently allocated" signal
+      // a hysteresis predicate needs — it's cleared by `release` in lockstep
+      // with the texture, so a row can't observe itself as allocated the
+      // frame after it was dropped.
+      if (spec.allocateWhen !== undefined && !spec.allocateWhen(s, sizes.has(spec.id))) {
+        release(spec.id);
+        continue;
+      }
       // A fixed-size row is a size that never changes across resizes, not a
       // separate code path past this one branch: the held-size comparison
       // and `allocate` call below stay shared with every other row.
+      const fixed = spec.fixedSizePx ? resolveFixedSize(spec.fixedSizePx, s) : 0;
       const [width, height] = spec.fixedSizePx
-        ? [spec.fixedSizePx.size, spec.fixedSizePx.size]
+        ? [fixed, fixed]
         : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
       const held = sizes.get(spec.id);
       if (held !== undefined && held.width === width && held.height === height) continue;
@@ -394,6 +517,25 @@ export function createRenderTargets(
       }
       return view;
     },
+    cubeViewOf(id: string): GPUTextureView {
+      const view = cubeViews.get(id);
+      if (!view) {
+        // Covers a row with < 6 layers, 'swap', unknown ids, and
+        // use-after-destroy — same loud-failure discipline as `viewOf`.
+        throw new Error(`renderTargets: no cube view for target '${id}'`);
+      }
+      return view;
+    },
+    layerViewOf(id: string, layer: number): GPUTextureView {
+      const view = layerViews.get(id)?.[layer];
+      if (!view) {
+        // Covers a row with <= 1 layer, an out-of-range layer index, 'swap',
+        // unknown ids, and use-after-destroy — same loud-failure discipline
+        // as `viewOf`.
+        throw new Error(`renderTargets: no layer view for target '${id}' layer ${layer}`);
+      }
+      return view;
+    },
     depthViewOf(id: string): GPUTextureView {
       const view = depthViews.get(id);
       if (!view) {
@@ -413,6 +555,8 @@ export function createRenderTargets(
       for (const texture of depthTextures.values()) texture.destroy();
       textures.clear();
       views.clear();
+      cubeViews.clear();
+      layerViews.clear();
       depthTextures.clear();
       depthViews.clear();
       sizes.clear();

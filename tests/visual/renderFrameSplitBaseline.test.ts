@@ -344,6 +344,7 @@ describe('renderFrame visual baseline', () => {
       lastOutput: {
         disks: [{ stub: true }] as unknown[],
       },
+      hasInFlightWork: () => false,
     };
 
     const ctx = {
@@ -500,6 +501,15 @@ describe('renderFrame visual baseline', () => {
           },
           clipPlayer: { clipOpacityOf: () => 1 },
         },
+        // The sky-cubemap capture bookkeeping — see the matching fixture
+        // comment in renderFrame.test.ts.
+        cameraRuntime: {
+          skyCubemapCapture: {
+            bandActive: false,
+            gcDistanceMpc: Number.POSITIVE_INFINITY,
+            bakedSettings: null,
+          },
+        },
       } as never,
       device,
       context,
@@ -533,7 +543,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "procedural-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1]",
+          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1],undefined",
           "renderer": "textured-disks",
         },
         {

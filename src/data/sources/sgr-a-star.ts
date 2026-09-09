@@ -5,11 +5,12 @@ import { Source } from '../source';
  * Sagittarius A\* — the Galactic Centre's supermassive black hole, and the
  * focus every S-star orbit hangs off.
  *
- * Today it draws only its caption, so `bearsLabel` is the one capability flag
+ * Today it draws its caption plus a far-field glint (`bodyGlintsLayer`, keyed
+ * on `SCENE_ANCHOR_POINT_BODIES`), so `bearsLabel` is the one capability flag
  * that matters here and the caption production path (`captionPriority` /
  * `captionFadeRules` / `sceneBodyLabels`) is where its visibility actually
- * lives. A future far-field glint and lensing-band geodesic pass ride
- * dedicated `ContentLayer` rows keyed on its id, not this flag.
+ * lives. A future lensing-band geodesic pass rides its own dedicated
+ * `ContentLayer` row keyed on its id, not this flag.
  *
  * Its own registry row rather than a member of the curated star map, for the
  * reason the Sun's row records: a row makes the star map's gate a plain

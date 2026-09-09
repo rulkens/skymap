@@ -24,7 +24,7 @@ describe('timedSlotsOf — per-render-step group keys', () => {
   // Bloom ON so the derivation covers the single `'bloom'` slot the sub-pipeline
   // adds alongside the per-render-step group keys.
   const slots = timedSlotsOf(
-    frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true, [NEAR0]),
+    frameProgram({ exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 }, true, [NEAR0], []),
     CONTENT_LAYERS,
   );
 

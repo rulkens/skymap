@@ -131,6 +131,19 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
   MNRAS 453, 3234** — the floor on the fixture's residuals, and the reason
   the acceptance test allows a few sigma rather than exact closure.
 
+### Abd El Dayem et al. 2026 — S301
+
+- **Use:** One additional row in `src/data/bodies/sStarElements.ts`, the
+  40th bound orbit rendered around Sagittarius A\*. The paper's Extended
+  Data Table 2 gives two degenerate orbital solutions for this star; the
+  transcribed row uses Solution A (the headline values quoted in the
+  paper's abstract), with Solution B recorded in the row's comment.
+- **Reference:** Abd El Dayem, K., Abuter, R., Aimar, N., et al. (GRAVITY
+  Collaboration) 2026, "Discovery of a star sensitive to the spin of
+  Sgr A\*", Nature, doi:10.1038/s41586-026-10894-w
+  ([arXiv:2607.12664](https://arxiv.org/abs/2607.12664)).
+- **Licence:** Published paper; cite it above.
+
 ### GRAVITY Collaboration — the Galactic-Centre distance and black-hole mass
 
 - **Use:** R₀ = 8178 pc, which sets the angular-to-linear scale for every
@@ -501,6 +514,40 @@ The volumetric raymarched fragment shader at the heart of
   sanitisation (NaN masking, disk-extent envelope). Display-space
   post-processing (gamma, contrast, vignette) was deleted so the
   engine's HDR tone-map pass can run on a clean linear-light input.
+
+### Atmospheres — Bruneton & Neyret 2008, Hillaire 2020
+
+- **Use:** Method reference, no code reused. The three-LUT atmosphere pipeline
+  (`src/services/gpu/shaders/atmosphere/`) follows Bruneton's transmittance-LUT
+  horizon-packing (r, mu) uv parametrisation (`scattering.wesl`,
+  `transmittanceLut.wesl`) and Hillaire's closed-form single-order
+  approximation of the multiple-scattering series (`multiScatterLut.wesl`);
+  the shell fragment's segment-transmittance ratio (`shell/fragment.wesl`) is
+  Bruneton's ratio identity. `AtmosphereShellRenderer.d.ts` and
+  `atmosphereParams.ts` describe the same three-LUT structure.
+- **Reference:** Bruneton, E. & Neyret, F. 2008, "Precomputed Atmospheric
+  Scattering", EGSR / Computer Graphics Forum 27(4); reference implementation
+  <https://github.com/ebruneton/precomputed_atmospheric_scattering> (BSD-3).
+  Hillaire, S. 2020, "A Scalable and Production Ready Sky and Atmosphere
+  Rendering Technique", EGSR / Computer Graphics Forum 39(4),
+  <https://sebh.github.io/publications/egsr2020.pdf>.
+- **Licence:** Both papers are cited above; no code from either is reused, so
+  no licence obligation applies beyond citation.
+
+### Sgr A\* lens — Bruneton 2020
+
+- **Use:** Reference and audit baseline only — no code reused. The Sgr A\*
+  lens computes its own Schwarzschild bending-angle LUT by quadrature
+  (`src/utils/lensing/buildSchwarzschildDeflectionLut.ts`) and its own march
+  (`src/services/gpu/shaders/bodies/sgrAStarLensing/fragment.wesl`), design
+  descended from an earlier in-repo NFW lens LUT. Bruneton's paper informed
+  the backward-lookup convention (rotate the escape ray toward the hole by
+  the bending angle) and served as the comparison baseline for the
+  emission-disk and LUT math audit during development.
+- **Reference:** Eric Bruneton, "Real-time High-Quality Rendering of
+  Non-Rotating Black Holes," 2020, [arXiv:2010.08735](https://arxiv.org/abs/2010.08735);
+  reference implementation <https://github.com/ebruneton/black_hole_shader>.
+- **Licence:** BSD-3-Clause (reference implementation).
 
 ## Vendored data
 

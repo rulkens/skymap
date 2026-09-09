@@ -289,6 +289,18 @@ vi.mock(
     createBodyGlintRenderer: vi.fn(() => makeStub('bodyGlintRenderer')),
   }),
 );
+// The Sgr A* lens renderer's constructor builds a real LUT texture
+// (createTexture + writeTexture), which the plain stub device above doesn't
+// support — mock the factory like every other renderer here.
+vi.mock(
+  '../../../../src/services/gpu/renderers/bodies/sgrAStarLensingRenderer',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/services/gpu/renderers/bodies/sgrAStarLensingRenderer')
+    >()),
+    createSgrAStarLensingRenderer: vi.fn(() => makeStub('sgrAStarLensingRenderer')),
+  }),
+);
 // The survey star-catalog renderer's constructor uses the full device API
 // (limits + createBuffer + bind groups + pipeline), so a `limits` patch on
 // the plain stub device wouldn't survive the next line — mock the factory

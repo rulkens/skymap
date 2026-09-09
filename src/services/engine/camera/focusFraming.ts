@@ -27,7 +27,9 @@
  *     math, because at ~2e-16 Mpc (Earth) any Mpc-scale floor would swallow the
  *     framing. `radius` is the physical radius, a real pass-by extent. Their row
  *     shapes differ (body: id/label; star: index/photometry + a nominal solar
- *     radius, the bin having no per-star size), so the cases stay separate.
+ *     radius, the bin having no per-star size), so the cases stay separate. A
+ *     body row's optional `focusDistanceRadii` (e.g. Sgr A*'s ~30.4 r_s)
+ *     overrides the screen-fill distance with a fixed radius multiple.
  *
  * The return type is `Pick<CameraPose, 'target' | 'distance'>` plus the subject's
  * pass-by `radius` (Mpc) — the position-and-depth slice, with the extent a fly-past
@@ -104,7 +106,7 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
     // to the shared bodyLikeFraming; the star's radius is the extractor-stamped
     // nominal solar radius (the bin has no per-star size).
     case 'body':
-      return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad);
+      return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad, row.focusDistanceRadii);
     case 'star':
       return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad);
     // The band carries no x/y/z (a line-of-sight effect, not a point), so it

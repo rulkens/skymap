@@ -27,6 +27,11 @@ export const galaxyPointSpritesLayer: ContentLayer = {
   slab: COSMO,
   target: 'hdr',
   blend: 'additive',
+  // Sky-cubemap capture roster (Task 13b, Ruling 6): the galaxy points are
+  // part of the black-hole lens's captured "sky". Draw-safe against a
+  // synthetic per-face ctx — every read below is `view`/`ctx`/`state`, none
+  // of it frame-real-camera-specific.
+  skyCapture: true,
 
   enabled(_state, _ctx, _view) {
     return true;
@@ -50,6 +55,7 @@ export const galaxyPointSpritesLayer: ContentLayer = {
         : SELECTION_NONE_SENTINEL;
 
     galaxyPointRenderer.draw(pass, view.vp, view.viewportPx, {
+      viewSlot: ctx.viewSlot,
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
       selectedPacked,

@@ -6,6 +6,23 @@ import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
+import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
+import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
+
+/**
+ * Slab-candidacy floor for a body whose PASS paints far beyond its own disc:
+ * the Sgr A* lens quad spans up to ~0.75× the camera distance (vertex.wesl's
+ * edgeFadeEndRs sizing), so both culls below — correct for a body that draws
+ * itself — would birth the lens mid-band (Sgr A*'s r_s-scale disc clears the
+ * 1-px floor only at ~346 AU on a dpr-2 1080p-class viewport, where
+ * bandAlpha is already ~0.4: a visible, viewport-dependent pop). Keyed to
+ * the SAME band row the layer's alpha reads, so the slab — and with it the
+ * lens step — is born exactly where alpha = 0 and onset rides the ramp. The
+ * frustum cull is skipped too: inside the band the lensed footprint can
+ * span most of the view, so no conservative disc-based cull is available,
+ * and one always-on slab row is negligible.
+ */
+const BAND_SLAB_FLOOR_MPC = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
 
 /**
  * visibleSlabBodies — which of `bodies` get a body slab row this frame:
@@ -53,6 +70,15 @@ export function visibleSlabBodies(input: {
   return candidates.filter((body) => {
     const state = bodyStates.get(body.id);
     if (state === undefined) return false;
+
+    // Band-bearing lens body: candidacy for the whole band support, both
+    // culls bypassed — see BAND_SLAB_FLOOR_MPC.
+    if (body.id === SGR_A_STAR.id) {
+      const bdx = state.positionMpc[0] - camPosMpc[0];
+      const bdy = state.positionMpc[1] - camPosMpc[1];
+      const bdz = state.positionMpc[2] - camPosMpc[2];
+      if (Math.hypot(bdx, bdy, bdz) < BAND_SLAB_FLOOR_MPC) return true;
+    }
 
     // The widest thing this row can draw — the same value the frustum cull
     // below needs, so both culls agree on the body's footprint (radar frame

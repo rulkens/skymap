@@ -1,0 +1,81 @@
+// lib/sgrAStarLensing.wesl — byte-layout contract (exceeds the usual header
+// budget on that basis, same allowance camera.wesl takes) for the Sgr A*
+// lens pass's per-frame uniform buffer.
+//
+// This is the struct-only half of the contract. 'SchwarzschildDeflectionLut
+// .samples' upload as a separate 1D texture, NOT a field here — only the two
+// scalars that address it ('lutMinImpactParamRs'/'lutMaxImpactParamRs') and
+// its texel count ride in the uniform buffer.
+//
+// ## Byte layout (canonical — the offset authority for the CPU packer)
+//
+//   offset   0 : cam: CameraUniforms      (80 B shared prefix — viewProj
+//                                           0..63, viewportPx 64..71,
+//                                           _pad0 72..75, _pad1 76..79)
+//   offset  80 : schwarzschildRadiusM     f32  — r_s in metres
+//   offset  84 : innerRs                  f32  — emission annulus inner edge, r_s units
+//   offset  88 : outerRs                  f32  — emission annulus outer edge, r_s units
+//   offset  92 : inclinationRad           f32
+//   offset  96 : positionAngleRad         f32
+//   offset 100 : flickerAmp               f32
+//   offset 104 : _pad0                    f32  — unread; flickerTimescaleS only
+//                                                 feeds the CPU-side flickerPhase
+//                                                 precompute (sgrAStarLensingLayer.ts),
+//                                                 never sampled by this shader
+//   offset 108 : flickerPhase             f32  — sim-clock-derived, per-frame
+//   offset 112 : lutMinImpactParamRs      f32  — SchwarzschildDeflectionLut.minImpactParamRs
+//   offset 116 : lutMaxImpactParamRs      f32  — SchwarzschildDeflectionLut.maxImpactParamRs
+//   offset 120 : lutSampleCount           f32  — LUT texture's texel count
+//   offset 124 : bandAlpha                f32  — fade band's own alpha this frame
+//   offset 128 : anchorPosRelCamM         vec3<f32>  — camera-relative anchor, metres (f64->f32 rebase seam)
+//   offset 140 : diskScaleHeightRs        f32  — tuning knob (DebugPanel)
+//   offset 144 : edgeFadeStartFraction    f32  — tuning knob (DebugPanel)
+//   offset 148 : dopplerStrength          f32  — tuning knob (DebugPanel)
+//   offset 152 : emissionStrength         f32  — tuning knob, overall annulus-emission multiplier
+//   offset 156 : edgeFadeEndRs            f32  — escape fade's end impact parameter, r_s units (derived per
+//                                                frame by the layer — min(subpixel-deflection b, 0.6·camera
+//                                                distance), floored at lutMaxImpactParamRs)
+//   offset 160 : emissionTint             vec3<f32>  — tuning knob, overall annulus-emission tint
+//   offset 172 : quadPlaneRadiusRs        f32  — lens billboard half-size, r_s units (derived per frame in f64
+//                                                by the layer via 'lensQuadPlaneRadiusRs' — the in-shader f32
+//                                                inversion shook close orbits)
+//   total: 176 bytes.
+//
+// The 12 scalar fields (80..127, 48 bytes) exactly fill the run up to 128,
+// so 'anchorPosRelCamM' lands on a 16-byte boundary with no implicit padding
+// — the same "count the scalars before a vec3" check 'camera.wesl' and
+// 'milkyWay/sprites/io.wesl' document. The CPU-side 'Float32Array' must
+// write each field at the matching f32 index (see 'packSgrAStarLensingUniforms.ts',
+// the single source of truth for that half of the contract) or the GPU
+// silently reads garbage — no compile error, no runtime error, just a wrong
+// (or on iOS, dropped) frame.
+//
+// Every field after 'anchorPosRelCamM' is either a DebugPanel tuning knob
+// ('settings.sgrAStarLensingTuning') or a per-frame layer-derived scalar, as
+// marked above.
+
+import package::lib::camera::CameraUniforms;
+
+struct SgrAStarLensingUniforms {
+  cam: CameraUniforms,
+  schwarzschildRadiusM: f32,
+  innerRs: f32,
+  outerRs: f32,
+  inclinationRad: f32,
+  positionAngleRad: f32,
+  flickerAmp: f32,
+  _pad0: f32,
+  flickerPhase: f32,
+  lutMinImpactParamRs: f32,
+  lutMaxImpactParamRs: f32,
+  lutSampleCount: f32,
+  bandAlpha: f32,
+  anchorPosRelCamM: vec3<f32>,
+  diskScaleHeightRs: f32,
+  edgeFadeStartFraction: f32,
+  dopplerStrength: f32,
+  emissionStrength: f32,
+  edgeFadeEndRs: f32,
+  emissionTint: vec3<f32>,
+  quadPlaneRadiusRs: f32,
+};

@@ -15,8 +15,8 @@ contained Vite + React + TS app, not part of the skymap runtime bundle.
 npm run cosmic-flow
 ```
 
-Then open <http://localhost:5300>. The port (5300) is deliberately clear of the
-main app (5173) and the curator (5200) so all three can run side-by-side.
+Then open <http://localhost:5300> (see `tools/utils/io/devPorts.ts` for the
+full port registry).
 
 ## Field asset
 

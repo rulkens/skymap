@@ -75,6 +75,9 @@ const SETTINGS: GalaxyPointDrawSettings = {
   // concern owned by the renderer.  The pure packer receives the settings
   // shape, not the render loop.
   fadeOpacityOf: () => 1,
+  // packGalaxyPointUniforms omits viewSlot (Task 13b) from what it reads —
+  // it's the CALLER's GPU-destination choice, not a byte this struct encodes.
+  viewSlot: 0,
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

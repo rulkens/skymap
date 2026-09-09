@@ -139,6 +139,11 @@ export const starPointsLayer: ContentLayer = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
+  // Deliberately OFF the sky-cubemap capture roster: the capture face pose
+  // carries a placeholder `distance: 1` Mpc (`skyCubemapFaceContext.ts`)
+  // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew
+  // anything. The S-stars need finite-distance lensing rather than an
+  // at-infinity cubemap — see `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
 
   enabled(state, ctx, _view) {
     // Handle first, distance second, backdrop-band third, partition last —
@@ -237,7 +242,7 @@ export const starPointsLayer: ContentLayer = {
         star.color[2] * backdropFade,
       ] as Vec3,
     }));
-    renderer.setStars(rebasedPoints);
+    renderer.setStars(rebasedPoints, ctx.viewSlot);
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // anchors. Uses the slab's f64 `vp`, NOT the f32-narrowed `view.vp` —
@@ -263,7 +268,7 @@ export const starPointsLayer: ContentLayer = {
         state.settings.starCatalogs.exposureMidX,
         state.settings.starCatalogs.exposureFarX,
       );
-    renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness });
+    renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness, viewSlot: ctx.viewSlot });
   },
 
   // Pick aspect — stamps the POINT-partition scene stars into the NEAR0 r32uint

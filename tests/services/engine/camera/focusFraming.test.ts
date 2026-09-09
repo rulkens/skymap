@@ -150,6 +150,24 @@ describe('focusFraming', () => {
     expect(result.radius).toBeCloseTo(EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC, 20);
   });
 
+  it('body arm — focusDistanceRadii override lands at a fixed radius multiple, bypassing screen-fill', () => {
+    // Sgr A*'s arrival distance is an r_s count the user framed live, not a
+    // FOV-dependent viewport fraction — this pins that the override replaces
+    // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it.
+    const radiusMpc = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
+    const row = bodyRow({ focusDistanceRadii: 30.4 });
+    const result = focusFraming(row, FOVY);
+    expect(result.distance).toBe(radiusMpc * 30.4);
+    expect(result.distance).not.toBe(bodyFocusDistance(radiusMpc, FOVY));
+  });
+
+  it('body arm — focusDistanceRadii override is independent of FOV', () => {
+    const row = bodyRow({ focusDistanceRadii: 30.4 });
+    const atFovA = focusFraming(row, 0.5).distance;
+    const atFovB = focusFraming(row, 1.4).distance;
+    expect(atFovA).toBe(atFovB);
+  });
+
   it('body arm — target is a fresh array, not aliased from positionMpc', () => {
     const row = bodyRow();
     const result = focusFraming(row, FOVY);

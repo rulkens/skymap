@@ -19,9 +19,8 @@ part of the skymap runtime bundle.
 npm run mcpm-workbench
 ```
 
-Then open <http://localhost:5500>. The port (5500) is deliberately clear of
-the main app (5173), the curator (5200), flow-workbench (5300), and
-galaxy-renderer (5400) so all can run side-by-side.
+Then open <http://localhost:5500> (see `tools/utils/io/devPorts.ts` for the
+full port registry).
 
 ## Architecture
 
