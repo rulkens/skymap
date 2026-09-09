@@ -5,8 +5,8 @@
  * so the two constructions are directly comparable there. The target reads
  * only the pose (no direction input), so equality across arms is what makes
  * an in/out discrepancy unrepresentable. Fails if either arm re-grows its own
- * curve (the pre-round-8 seam: world authority ≈ 0.53 vs engaged weight 1 at
- * the engage flip, a ~0.12 rad pop walked out by the decay).
+ * curve: a mismatch there (world authority ≈ 0.53 vs engaged weight 1 at the
+ * engage flip) would show up as a ~0.12 rad pop walked out by the decay.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';

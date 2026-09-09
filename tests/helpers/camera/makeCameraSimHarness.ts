@@ -1,17 +1,11 @@
 /**
- * makeCameraSimHarness — the shared runFrame-sim fixture. One Redux store,
+ * makeCameraSimHarness — the shared runFrame-sim fixture: one Redux store,
  * one EngineState (gpu stubbed so `deriveFrameContext`'s ready gate bails
  * right after the fold — the slice every frame-level camera fixture actually
- * exercises), and the RunFrameDeps that make `runFrame` callable. Every
- * `frame/*`, `camera/commitOnEdge` and `animation/playClipFlyout` fixture
- * rebuilt this bag by hand before this file existed: the union of what they
- * read is this shape, the intersection is these defaults (Earth focused,
- * h/R 10, 60° FOV, 100×100 canvas).
- *
- * `bootHR: null` skips the boot pose/commit entirely (the fixture then seeds
- * its own per test via `seedPose` — the `poseFold`/`commitOnEdge` shape);
- * `focusBody: null` skips the boot focus row (no body engages by altitude
- * alone).
+ * exercises), and the RunFrameDeps that make `runFrame` callable. Defaults
+ * (Earth focused, h/R 10, 60° FOV, 100×100 canvas) are the intersection of
+ * what fixtures need; `CameraSimHarnessOptions` documents per-field override
+ * semantics.
  */
 
 import { configureStore } from '@reduxjs/toolkit';
@@ -154,7 +148,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     runFrame(state, deps, nowMs);
     now = nowMs;
   };
-  /** Advance the internal 16ms clock and run `count` frames (default 1). */
+  /** Advance the internal 16ms clock and run `count` frames. */
   const frame = (count = 1): void => {
     for (let i = 0; i < count; i += 1) tick((now += 16));
   };
@@ -162,8 +156,8 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const push = (event: InputGestureEvent): void => {
     state.subsystems.inputAggregator.push(event);
   };
-  /** One wheel notch at `cursorPx`: push + two frames — the shape every
-   * migrated fixture used to fold a notch fully into the register. */
+  /** One wheel notch at `cursorPx`: push + two frames, the shape needed to
+   * fully fold a notch into the register. */
   const wheel = (deltaY: number, cursorPx: Vec2 = [50, 50]): void => {
     push({ kind: 'wheel', deltaY, duringGesture: false, xPx: cursorPx[0], yPx: cursorPx[1] });
     frame(2);

@@ -2,8 +2,8 @@
  * tiltFromNadirRad — the unsigned polar readout. The fold to a magnitude is
  * the load-bearing contract, not an accident: a pose tilted at the opposite
  * azimuth is byte-identical to a "crossed" one, so a pose-level readout has
- * no sign to give — round 13b measured that signing it breaks the ceiling
- * wall for legitimate opposite-azimuth look tilts. Signed questions belong
+ * no sign to give — signing it would break the ceiling wall for legitimate
+ * opposite-azimuth look tilts. Signed questions belong
  * to `tiltFloorBudgetRad`, which has the rotation axis in hand.
  */
 

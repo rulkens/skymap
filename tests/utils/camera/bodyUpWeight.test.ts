@@ -1,10 +1,10 @@
 /**
- * bodyUpWeight — the ONE band curve (rulings 8 + 10) under the round-9
- * blend-space toggle (ruling 11): 'log' (trial default) interpolates over
- * log(h/R), so the half-weight point sits at the window's GEOMETRIC midpoint
- * — zoom is multiplicative, and equal notches now spend equal band. The
- * sliders retune the same record both the regime hysteresis and this curve
- * read, so the one-home invariant is what these fixtures pin.
+ * bodyUpWeight — the ONE band curve (rulings 8 + 10) under the blend-space
+ * toggle (ruling 11): 'log' (trial default) interpolates over log(h/R), so
+ * the half-weight point sits at the window's GEOMETRIC midpoint — zoom is
+ * multiplicative, and equal notches spend equal band. The sliders retune the
+ * same record both the regime hysteresis and this curve read, so the
+ * one-home invariant is what these fixtures pin.
  */
 
 import { describe, it, expect, afterEach } from 'vitest';

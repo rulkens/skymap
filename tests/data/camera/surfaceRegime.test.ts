@@ -1,8 +1,8 @@
 /**
- * setSurfaceBand — the round-9 slider write path into the ONE regime/band
- * home (ruling 11). What can break: the hysteresis collapsing (disengage
- * must stay ≥ engage × the ratio, with the knob the user moved winning and
- * the other yielding) and values escaping the slider ranges.
+ * setSurfaceBand — the slider write path into the ONE regime/band home
+ * (ruling 11). What can break: the hysteresis collapsing (disengage must
+ * stay ≥ engage × the ratio, with the knob the user moved winning and the
+ * other yielding) and values escaping the slider ranges.
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
@@ -22,7 +22,7 @@ describe('setSurfaceBand', () => {
   it('pulling disengage down drags engage below it — hysteresis never collapses', () => {
     // Ruling 19 dropped engageHR's default to 0.2, flush against disengageMin
     // (0.2) — the window that still clears the disengage floor while landing
-    // inside engage × minRatio (0.22) is now this narrow, not the old 1.5.
+    // inside engage × minRatio (0.22) is this narrow.
     const moved = setSurfaceBand({ disengageHR: 0.21 });
     expect(SURFACE_REGIME.disengageHR).toBe(0.21);
     expect(SURFACE_REGIME.engageHR).toBeCloseTo(0.21 / 1.1, 12);

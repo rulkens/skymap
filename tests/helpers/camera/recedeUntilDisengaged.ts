@@ -1,7 +1,7 @@
 /**
  * recedeUntilDisengaged — wheel-out over `body` until its displayed h/R
  * crosses `disengageHR * factor` (default the disengage edge itself),
- * guard-bounded (default 40, the value the round-18 fixture measured it at).
+ * guard-bounded so a broken regime fails the test instead of hanging it.
  */
 
 import { hrOverBody } from './hrOverBody';

@@ -1,6 +1,6 @@
 /**
- * focusReleaseWhileEngaged — round-10 regression: engaged on Earth, a search
- * focus on Mars must release the camera THROUGH the fold (the single regime
+ * focusReleaseWhileEngaged — engaged on Earth, a search focus on Mars must
+ * release the camera THROUGH the fold (the single regime
  * author) — conversion + commit-on-edge untouched, followBody active next
  * frame — instead of doing nothing until a manual zoom-out past disengage.
  * Also pins the low-altitude conversion (finite, eye-preserving, targeted at
@@ -115,11 +115,11 @@ describe('focus release while engaged (round 10)', () => {
 
   it('parked at another body with a stale body focus: no engage there — follow flies to the focus (R10-1)', () => {
     // The clip-path corner: a hand-authored `flyToClip`/`flyPath` can land at
-    // Mars's surface with the boot-seeded Earth focus still set. Pre-round-10
-    // the focus-blind engage captured Mars during the approach; with the focus
-    // gate no engage happens, so the follow's eye-preserving capture flies the
-    // camera from Mars's surface to the FOCUSED body and settles absolute at
-    // its framing distance.
+    // Mars's surface with the boot-seeded Earth focus still set. Without the
+    // focus gate, a focus-blind engage would capture Mars during the
+    // approach; with the gate, no engage happens, so the follow's
+    // eye-preserving capture flies the camera from Mars's surface to the
+    // FOCUSED body and settles absolute at its framing distance.
     const h = makeCameraSimHarness(); // focus = Earth (the boot seed)
     h.seedPose(absoluteArm(MARS_PARK));
     const startDist = distTo(displayedEye(h.state), MARS);

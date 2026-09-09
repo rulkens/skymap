@@ -254,9 +254,8 @@ describe('runFrame — the regime fold', () => {
     const { store, state, deps } = makeHarness();
     probe.state = state;
     // Body arm just inside the band, tilt 0 (looking at the centre) — the pose
-    // every driven recession reaches the boundary with. 0.39: just below
-    // ruling 19's disengageHR (0.4), the same relative placement the old
-    // fixture (3.39, just below the old 3.4) held.
+    // every driven recession reaches the boundary with. 0.39 sits just below
+    // ruling 19's disengageHR (0.4).
     const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.39);
     const arm = {
       frame: EARTH_ARM,

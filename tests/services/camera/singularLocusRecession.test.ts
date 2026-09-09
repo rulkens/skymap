@@ -1,13 +1,10 @@
 /**
- * singularLocusRecession — the round-7 amended acceptance bar for the
- * reviewer's worst cells (standpoints ON the pole→sceneUp arc, where the
- * reference endpoints are anti-parallel and ~π of up-rotation is INTRINSIC):
- * plain no-park recessions at default (e^0.10) and brisk (e^0.24) cadence
- * must stay whip-free through the band, and the debt surviving the disengage
- * bake must drain to nothing in the continued above-band notches of the same
- * gesture — measured 36–37 notches from the ~2.7 rad worst-cell bake at the
- * ruled cap (the ≤20 estimate in the round-7 mandate was optimistic; the
- * envelope here is the measured physics, flagged in the report).
+ * singularLocusRecession — acceptance bar for standpoints ON the
+ * pole→sceneUp arc, where the reference endpoints are anti-parallel and ~π
+ * of up-rotation is INTRINSIC: plain no-park recessions at default (e^0.10)
+ * and brisk (e^0.24) cadence must stay whip-free through the band, and the
+ * debt surviving the disengage bake must drain to nothing within the ruled
+ * cap of continued above-band notches in the same gesture.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -101,9 +98,8 @@ describe('singular-locus recession (round 7)', () => {
     'no-park recession at lnf %f: whip-free through the band, drained in the same gesture',
     (lnf) => {
       const c = createSurfaceController();
-      // Start below ruling 19's engage threshold (was h/R 1, comfortably
-      // below the old engage of 1.7; 0.05 is the analogous start under the
-      // new 0.2/0.4 band).
+      // Start below ruling 19's engage threshold: 0.05 sits comfortably
+      // inside the 0.2/0.4 band's floor.
       const startHR = 0.05;
       let pose: BodyFixedPose = {
         bodyId: 'earth',
@@ -151,7 +147,7 @@ describe('singular-locus recession (round 7)', () => {
         drain += 1;
       }
       expect(Math.abs(roll)).toBeLessThan(1e-2);
-      // Measured 36–37 at the ruled cap; the freeze this replaces was ∞.
+      // Must drain within the ruled cap — an unbounded settle here would never converge.
       expect(drain).toBeLessThanOrEqual(40);
     },
   );

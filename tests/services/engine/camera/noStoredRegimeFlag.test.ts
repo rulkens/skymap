@@ -41,9 +41,8 @@ const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walk(dir, ['.ts', '
 
 // Allow-list: pre-existing declarations the sweep's name pattern would catch
 // that are NOT a regime flag. Each entry names why it is not the thing §4
-// forbids. Empty at time of writing — kept as the widening point a future
-// false-positive should use instead of loosening NAME_PATTERN or
-// BOOLEAN_TYPE_TEXTS.
+// forbids. Empty — kept as the widening point a future false-positive should
+// use instead of loosening NAME_PATTERN or BOOLEAN_TYPE_TEXTS.
 const ALLOW_LIST: ReadonlySet<string> = new Set();
 
 const project = new Project({ useInMemoryFileSystem: false });

@@ -1,27 +1,13 @@
 /**
  * frameContext — unit tests for the per-frame derived snapshot.
  *
- * `deriveFrameContext` receives an already-produced `CameraPose`, the
- * `FramedCameraPose` (`arm`) it was resolved from, a `CameraProjection`, and
- * the frame's two orientation bases (`poseBasis`, `upBasis` — the engine
- * Resources), assembles the full `OrbitCamera` via `assembleOrbitCamera`, and
- * pre-computes the view-projection matrix, camera-position tuple, and
- * pixel-per-radian scalar. These tests pin both halves: the branching shape
- * (ready vs not-ready) and the arithmetic. They use the SAME value for both
- * basis arguments (`BASIS`) throughout — this file exercises the assembly
- * arithmetic, not the poseBasis/upBasis split itself, which
- * `runFrame.test.ts`'s orientation-frame-roll suite covers. Every fixture
- * below passes `arm` as the absolute arm wrapping the same `pose` — the last
- * two describe blocks are the only ones that construct a body arm, to
- * exercise the pose-provider seam (spec §5.2, Task 14).
- *
- * The threaded-pose variant (binding decision 1) means `deriveFrameContext`
- * does NOT re-call `runCameraDrivers` internally; it only calls
- * `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` +
- * `computeViewProj`. The `cam` on the ready context is the assembled camera,
- * NOT `state.cam`.
- *
- * Tests also verify the bootstrap gate still works (cam=null → not-ready) even
+ * `deriveFrameContext` assembles the full `OrbitCamera` from an
+ * already-produced pose + arm + projection + orientation bases, and
+ * pre-computes the view-projection matrix, camera position, and
+ * pixel-per-radian scalar. Fixtures reuse one basis (`BASIS`) throughout —
+ * the poseBasis/upBasis split is `runFrame.test.ts`'s orientation-frame-roll
+ * suite's job. The ready context's `cam` is the ASSEMBLED camera, never
+ * `state.cam`; the bootstrap gate (cam=null → not-ready) still holds even
  * though the rendered camera comes from the assembled pose, not `state.cam`.
  */
 

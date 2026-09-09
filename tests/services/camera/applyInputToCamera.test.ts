@@ -2,10 +2,10 @@
  * applyInputToCamera — the orbit / pan / zoom fold the frame's drain runs.
  *
  * Two things worth pinning: the aggregated net delta must produce the same
- * pose the old per-event apply did (the whole premise of collapsing a frame's
- * moves), and the pivot radius must reach both rate and zoom-floor sites — drop
- * it and the camera silently sweeps a third of a screen per pixel, or scrolls
- * straight through the planet.
+ * pose applying each event individually would (the whole premise of
+ * collapsing a frame's moves), and the pivot radius must reach both rate and
+ * zoom-floor sites — drop it and the camera silently sweeps a third of a
+ * screen per pixel, or scrolls straight through the planet.
  */
 
 import { describe, it, expect } from 'vitest';

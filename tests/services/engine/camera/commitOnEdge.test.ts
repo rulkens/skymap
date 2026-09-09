@@ -1,37 +1,11 @@
 /**
- * commitOnEdge — unit tests for the per-frame commit-on-edge contract.
- *
- * The frame loop runs four camera steps per frame:
- *
- *   1. PRODUCE the pose from the driver table (runCameraDrivers).
- *   2. TWEEN COMPLETION: cancel a finished tween with cancelCameraTween().
- *   3. COMMIT-ON-EDGE: dispatch commitCameraPose(lastPose) when the active
- *      driver changes AND the departing driver has `commitsOnEdge: true`
- *      (tween, autoRotate, clip). orbitDrag and resting are excluded.
- *   4. UPDATE Resources: prevActiveId.current = activeId; lastPose.current = pose.
- *
- * These tests pin the commit-on-edge contract — the invariants that prevent
- * mid-tween yaw flicker, spurious per-frame commits, and jump-on-grab:
- *
- *   - A tween that completes fires `cancelCameraTween()` exactly once and
- *     `commitCameraPose` exactly once (on the next frame, when the driver
- *     changes away from 'tween').
- *   - While the tween is the active driver, no `commitCameraPose` fires
- *     per frame — only on the deactivation edge.
- *   - When auto-rotate deactivates, `commitCameraPose` fires exactly once.
- *   - When a clip deactivates (clip → null), `commitCameraPose` fires exactly
- *     once (clip declares `commitsOnEdge: true`).
- *   - Grabbing during a tween (orbitDrag takes over) does NOT produce a
- *     jump: the grab seeds from `lastPose.current` (the visible position),
- *     not from `base` (the stale committed pose).
- *   - orbitDrag and resting deactivation edges do NOT fire commitCameraPose
- *     (neither declares `commitsOnEdge`).
- *   - The auto-rotate bridge fires `setAutoRotate` when settings bit ≠
- *     camera slice bit; on steady-state frames it is a no-op.
- *
- * These behaviors are tested by driving the driver table + Redux store
- * directly, without the GPU or the full `runFrame` body — which keeps the
- * tests cheap and independent of the rendering subsystem.
+ * commitOnEdge — unit tests for the per-frame commit-on-edge contract: on the
+ * frame the active driver changes, if the departing driver declared
+ * `commitsOnEdge: true` (tween, autoRotate, clip — not orbitDrag/resting),
+ * dispatch `commitCameraPose(lastPose)` exactly once, mirroring runFrame's
+ * produce → tween-completion → commit-on-edge → Resource-update order.
+ * Driven directly against the driver table + Redux store, no GPU or
+ * `runFrame` body.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -67,13 +41,7 @@ function makeHarness() {
 }
 
 /**
- * Simulate one frame of the commit-on-edge logic:
- *   1. Produce pose via runCameraDrivers.
- *   2. If activeId === 'tween' and elapsed >= durationMs, dispatch cancelCameraTween.
- *   3. If prevActiveId changed AND the departing driver has commitsOnEdge: true,
- *      dispatch commitCameraPose (mirrors runFrame's property-based guard).
- *   4. Update prevActiveId and lastPose.
- *
+ * Simulate one frame of the commit-on-edge logic, mirroring runFrame's guard.
  * Returns { pose, activeId, committed } so tests can inspect per-frame output.
  */
 function simulateFrame(
@@ -233,8 +201,8 @@ describe('commitOnEdge — tween settles', () => {
   });
 
   it('the deactivation frame RENDERS the committed pose, not the stale base (no edge flicker)', () => {
-    // Regression: commit-on-edge fires AFTER produce, so on the deactivation
-    // frame the resting driver reads the pre-commit base. Without the renderPose
+    // Commit-on-edge fires AFTER produce, so on the deactivation frame the
+    // resting driver reads the pre-commit base. Without the renderPose
     // override the frame would flash the pre-tween pose (PRE) for one frame
     // before the next frame snaps to the target.
     const { store, state, deps } = makeHarness();

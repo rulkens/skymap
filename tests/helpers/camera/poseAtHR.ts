@@ -1,8 +1,7 @@
 /**
  * poseAtHR — a world-arm pose looking at `body`'s centre from altitude ratio
- * `hr` = distance/radius − 1. Every frame-level camera fixture redefined this
- * by hand before it moved here; yaw 0.7 / pitch 0.3 is the shared off-nadir
- * standpoint they all picked so the eye isn't degenerately on-axis.
+ * `hr` = distance/radius − 1. yaw 0.7 / pitch 0.3 is a shared off-nadir
+ * standpoint so the eye isn't degenerately on-axis.
  */
 
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';

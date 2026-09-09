@@ -1,23 +1,14 @@
 /**
  * engineSliceDispatches — verifies that every engine wiring site dispatches
  * the matching engineSlice action to the store alongside its existing callback.
- *
- * Tests are modelled on the `vi.spyOn(store, 'dispatch')` pattern from
+ * Modelled on the `vi.spyOn(store, 'dispatch')` pattern from
  * `catalogLoadedDispatch.test.ts`: spin up a real Redux store, spy on
  * `dispatch`, drive the wiring function, assert the matching action creator
  * was called.
  *
- * Sites covered:
- *   - `wireGalaxyCatalogSourceSlot` → `engineSourceCountReported`
- *   - `wireStructureProjection`     → `engineStructureCountsChanged`
- *   - `installLoadProgress`         → `engineLoadProgressChanged`
- *   - `createSyntheticFallback`     → `engineStatusChanged({ kind:'ready' })`
- *
  * `wireSlots`'s `loading` emission and `engine.ts`'s `initializing`/`error`
- * emissions are integration-level: they are exercised by `wireSlots.test.ts`
- * and `bootstrap.test.ts` respectively.  Adding lightweight assertions here
- * for wireSlots would require mounting the full GPU bootstrap; the loading
- * dispatch is thin-enough to trust from a code review.
+ * emissions are integration-level, exercised by `wireSlots.test.ts` and
+ * `bootstrap.test.ts` respectively — not duplicated here.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

@@ -257,17 +257,17 @@ describe('deriveSlabs', () => {
   });
 
   it("keys a body row's reversedZ + projection off SLAB_REVERSED_Z[NEAR0], not a hard-coded literal (M3 fix)", () => {
-    // Regression: `bodySlabRow` used to hard-code `reversedZ: true` and always
-    // build the reversed-Z projection, independent of `SLAB_REVERSED_Z` — the
-    // very constant every body-row PIPELINE (`gpuHandleRegistry`) already
-    // reads for its `depthCompare`. Mutating the shared constant (it's a
-    // plain object at runtime, only `Readonly` at the type level) and
-    // re-deriving must flip BOTH the `reversedZ` field and the projection
-    // SHAPE together, or the module header's "partial flip impossible" claim
-    // is false. `computeForegroundViewProj` pins the identical NEAR0-side
-    // coupling by rebuilding the expected matrix from the same util this
-    // test rebuilds by hand for the body row (no shared "foreground" util
-    // exists for body rows, so the two mat4d calls are inlined here).
+    // `bodySlabRow` must key both `reversedZ` and the projection SHAPE off
+    // `SLAB_REVERSED_Z[NEAR0]` together — the same constant every body-row
+    // PIPELINE (`gpuHandleRegistry`) already reads for its `depthCompare`.
+    // Mutating the shared constant (it's a plain object at runtime, only
+    // `Readonly` at the type level) and re-deriving must flip BOTH the
+    // `reversedZ` field and the projection SHAPE together, or the module
+    // header's "partial flip impossible" claim is false. `computeForegroundViewProj`
+    // pins the identical NEAR0-side coupling by rebuilding the expected
+    // matrix from the same util this test rebuilds by hand for the body row
+    // (no shared "foreground" util exists for body rows, so the two mat4d
+    // calls are inlined here).
     const body = makePlanet({ id: 'flip-body', radiusM: 1e5 });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [0, 0, -1e9],
@@ -333,10 +333,10 @@ describe('deriveSlabs', () => {
   });
 
   it("keys a body row's near plane off view-axis depth for a RINGLESS off-axis body — the margin was NEGATIVE under the old radial formula", () => {
-    // Scope note from the investigation: a body whose outermost shell IS its
-    // surface has rMaxM === radiusM while the rasterised proxy is
-    // PROXY_SCALE × radiusM — a negative budget under the old `dM - rMaxM`
-    // formula, so this bites every ringless body, not just Saturn.
+    // A body whose outermost shell IS its surface has rMaxM === radiusM
+    // while the rasterised proxy is PROXY_SCALE × radiusM — a negative
+    // budget under a naive `dM - rMaxM` formula, so this would bite every
+    // ringless body, not just Saturn.
     const dM = 2e8;
     const thetaRad = (20 * Math.PI) / 180;
     const radiusM = 5e6;
@@ -374,7 +374,7 @@ describe('deriveSlabs', () => {
     // ~100 km above the surface — the exact regression this guards
     // (.superpowers/sdd/2026-08-26-body-render-slabs/label-window-investigation.md).
     // Camera at 78 km altitude: inside the atmosphere shell (dM < rMaxM), so
-    // the old `max(dM - rMaxM, MIN_NEAR_M)` formula collapsed near to 1e-6 m.
+    // a naive `max(dM - rMaxM, MIN_NEAR_M)` formula would collapse near to 1e-6 m.
     const radiusM = 6.371e6;
     const dM = 6.449e6; // altitude = dM - radiusM = 78,000 m
     const body = makePlanet({ id: 'earth', radiusM });

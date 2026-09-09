@@ -1,9 +1,9 @@
 /**
  * driveWheelEvents — replay a hand-scheduled wheel event timeline against
  * real 16ms frame ticks, applying each event at its own timestamp rather than
- * folding it into the frame loop's own cadence. Several round regressions
- * (round-5, round-8, R10) only reproduced at this decoupled cadence — a
- * wheel notch arriving on its own clock while frames still tick every 16ms.
+ * folding it into the frame loop's own cadence. Some regressions only
+ * reproduce at this decoupled cadence — a wheel notch arriving on its own
+ * clock while frames still tick every 16ms.
  */
 
 import type { CameraSimHarness } from './CameraSimHarness';

@@ -1,21 +1,16 @@
 /**
- * shouldKeepTicking — the render-on-demand keep-alive predicate.
+ * shouldKeepTicking — the render-on-demand keep-alive predicate. An animated
+ * overlay must keep the loop ticking INDEPENDENTLY of whether anything is
+ * pickable — the predicate takes no pick/catalog information at all, so
+ * 'only flow is on' is a first-class case here rather than needing a full
+ * GPU-ready runFrame fixture. runFrame's job is only to REACH this predicate
+ * every ready frame, guarded structurally by the pick block not
+ * early-returning.
  *
- * These tests pin the contract that froze the flow field: an animated overlay
- * must keep the loop ticking INDEPENDENTLY of whether anything is pickable. The
- * predicate takes no pick/catalog information at all — its signature is the
- * proof — so the regression case ('only flow is on') is a first-class test here
- * rather than needing a full GPU-ready runFrame fixture (which the runFrame
- * suite documents as disproportionate). runFrame's job is only to REACH this
- * predicate every ready frame; that it does is guarded structurally by the
- * pick block no longer early-returning.
- *
- * The camera term is `selectCameraActive(s)` over the store `RootState`; each
- * test seeds an at-rest or active camera slice rather than a driver array. The
+ * The camera term is `selectCameraActive(s)` over the store `RootState`. The
  * final `anim` parameter is the in-frame-animation vote bag runFrame collects
- * from the planners it just ran (the star LOD fade, the Earth tile subsystem);
- * every case here defaults it to at-rest (`NO_ANIM`) and one dedicated case per
- * vote flips it on.
+ * from the planners it just ran (star LOD fade, Earth tile subsystem); every
+ * case here defaults it to at-rest (`NO_ANIM`).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -220,7 +215,7 @@ describe('shouldKeepTicking', () => {
     // The star-cut planner (prepareStarCut) reports a node mid-dissolve for this
     // frame; the loop must keep ticking to finish the ramp even though the camera
     // is still, no thumbnails are loading, and nothing else animates. This is the
-    // vote the star pass used to fire as its own requestRender — now decided here.
+    // vote read here instead of the star pass firing its own requestRender.
     const state = makeState({});
     expect(
       shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, starFadeAnimating: true }),
@@ -239,8 +234,8 @@ describe('shouldKeepTicking', () => {
   });
 
   it('a label envelope mid-ramp → true even with everything else at rest', () => {
-    // The label director's appear/disappear envelope used to fire its own
-    // requestRender; now it returns the vote and this predicate decides.
+    // The label director's appear/disappear envelope returns this vote
+    // rather than firing its own requestRender.
     const state = makeState({});
     expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, labelsAnimating: true })).toBe(
       true,

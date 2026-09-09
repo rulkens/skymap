@@ -50,8 +50,8 @@ describe('applyFocusedBodyPivot', () => {
     const pinnedA = worldArmOf(applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, SIM_A, NO_PAN));
     const pinnedB = worldArmOf(applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, SIM_B, NO_PAN));
 
-    // The pivot TRACKS the body across frames — the drift bug was the pivot
-    // staying at the frozen DRAG_POSE.target while the body moved.
+    // The pivot TRACKS the body across frames — the failure mode this guards
+    // against is the pivot staying at the frozen DRAG_POSE.target instead.
     expect(pinnedA.target).toEqual(posA);
     expect(pinnedB.target).toEqual(posB);
     expect(pinnedA.target).not.toEqual(DRAG_POSE.target);

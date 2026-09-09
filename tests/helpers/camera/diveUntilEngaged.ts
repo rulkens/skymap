@@ -1,9 +1,8 @@
 /**
  * diveUntilEngaged — wheel-in over `body` until its displayed h/R crosses
  * `engageHR * factor` (default the engage edge itself), guard-bounded so a
- * broken regime fails the test instead of hanging it. Several fixtures used
- * to dive a fixed notch count (32) chosen only to land comfortably past
- * engage; this is that intent made explicit.
+ * broken regime fails the test instead of hanging it. A threshold rather than
+ * a fixed notch count keeps the dive past engage regardless of its value.
  */
 
 import { hrOverBody } from './hrOverBody';

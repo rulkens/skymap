@@ -45,8 +45,8 @@ describe('applyWheelZoom', () => {
   it('scales the follow distance target in place while following (zoom is not swallowed)', () => {
     // Follow is the active winner (prevActiveId 'followBody') with a seeded
     // distance target. A wheel-out factor > 1 must GROW the follow target, not
-    // the (invisible) base — this is the whole bug: pre-fix the wheel committed
-    // base and the follow driver ignored it.
+    // the base — committing base while following is invisible, since the
+    // follow driver ignores it and re-asserts its own target every frame.
     const clock = createCameraClock();
     clock.followDistanceTarget = 50;
 
@@ -91,8 +91,6 @@ describe('applyWheelZoom', () => {
     // autoRotate renders `spinAutoRotate(base, rate, elapsed)`. A wheel zoom must
     // commit the ALREADY-spun yaw, else installing a fresh base with the un-spun
     // yaw resets the elapsed clock and the rendered yaw snaps back — the pop.
-    // Old code returned `zoomedPose(base, factor)` with yaw === base.yaw; this
-    // case fails against it because we assert the spun yaw.
     const clock = createCameraClock();
     const rate = 0.01;
     // Install the auto-rotate start at t=0 (mirrors the driver's first read),

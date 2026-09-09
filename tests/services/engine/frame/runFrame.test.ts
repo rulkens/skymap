@@ -353,8 +353,9 @@ describe('runFrame — the input drain runs before the produce step', () => {
 describe('runFrame — camera drivers (regression)', () => {
   it('tween wins over auto-rotate; lastPose.current reflects the tween pose, not auto-rotate', () => {
     // The tween driver (priority 60) outranks auto-rotate (20), so with both
-    // active the resolver runs ONLY the tween's pose. This pins the
-    // precedence that the old `!tweens.isActive()` guard used to encode.
+    // active the resolver runs ONLY the tween's pose. This pins that
+    // precedence via the priority table rather than an imperative
+    // `!tweens.isActive()` guard.
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -759,20 +760,19 @@ describe('runFrame — sim clock (Task 8)', () => {
 
 describe('runFrame — hover-pick removed from frame body', () => {
   it('does not call galaxyPickRenderer.pick inside the frame body', () => {
-    // The hover-pick block was removed from runFrame. Hover picking is now
-    // fully pointer-driven via hoverPickDriver (wired in wireInput.ts).
-    // This test pins that invariant: even with a non-null galaxyPickRenderer and a
-    // non-null latestMouseCss-equivalent, runFrame must NEVER call
-    // galaxyPickRenderer.pick itself. If the block is accidentally re-added,
-    // this assertion catches it.
+    // Hover picking is fully pointer-driven via hoverPickDriver (wired in
+    // wireInput.ts); runFrame itself must never call galaxyPickRenderer.pick.
+    // This test pins that invariant — a re-added hover-pick block in the
+    // frame body would be caught here.
     //
     // The fixture leaves state.gpu.galaxyPointRenderer=null so the frame bails before
     // the GPU-dispatch section — we only need to confirm pick is not called
-    // during the camera + demand pre-pass (where the old block lived).
+    // during the camera + demand pre-pass, before that bail.
     const store = makeStore();
     const state = makeState();
     const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
-    // Seed a non-null galaxyPickRenderer so the old guard would have let through.
+    // Seed a non-null galaxyPickRenderer so a re-added pick call would have
+    // something to call.
     (state.gpu as any).galaxyPickRenderer = {
       pick: pickSpy,
       renderForDebug: vi.fn<() => null>(),

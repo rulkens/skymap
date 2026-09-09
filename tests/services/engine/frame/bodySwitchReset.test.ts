@@ -1,11 +1,10 @@
 /**
  * bodySwitchReset — ruling 18: a body switch fully resets the body pose.
- * Pre-fix, focusing Saturn from an engaged Earth camera stranded the eye
- * INSIDE Saturn at 0.26 R: followBody's capture carried the Earth-orbit
- * distance (~2.4 R⊕ = 0.26 R♄) across the switch, the fold engaged Saturn on
- * the first eased frame (h/R < 0 < engage, focus matching), and the body arm
- * then blocked followBody (absolute-arm gate) with disengage unreachable.
- * The remembered tilt also survived the switch. Real runFrame loop.
+ * Without the reset, followBody's captured distance carries across the
+ * switch (e.g. Earth's ~2.4 R⊕ ≈ 0.26 R♄), the fold can engage the new body
+ * on the very next frame with the eye still inside it, and the absolute-arm
+ * gate then blocks followBody with disengage unreachable — the remembered
+ * tilt must reset too. Real runFrame loop.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -65,8 +64,9 @@ describe('body switch reset (ruling 18)', () => {
     // the flight, so the store focus write alone reproduces the app flow.
     h.focus('saturn');
 
-    // Pre-fix f1 put the eye at 0.259 R♄ (inside) and engaged there; every
-    // post-switch frame must stay outside the planet.
+    // Without the reset the eye would land at 0.259 R♄ (inside Saturn) on
+    // frame 1 and engage there; every post-switch frame must stay outside
+    // the planet.
     for (let i = 0; i < 200; i += 1) {
       h.frame();
       expect(distTo(displayedEye(h.state), SATURN)).toBeGreaterThan(R_SATURN_MPC);
@@ -134,7 +134,7 @@ describe('body switch reset (ruling 18)', () => {
 
     // Recede past disengage, clear the focus for a stint, re-focus Earth,
     // and dive back into the band — never a DIFFERENT body, so the memory
-    // must survive the whole trip (round 11 standing for the same body).
+    // must survive the whole trip.
     recedeUntilDisengaged(h, { factor: 1.25, guard: 40 });
     expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
     h.focus(null);

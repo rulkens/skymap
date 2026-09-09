@@ -155,8 +155,8 @@ function bodyAngle(pose: BodyFixedPose): number {
 
 /**
  * One step through the controller with the fixture's viewport / FOV / radius.
- * `sceneUpLocal` defaults to the body pole, which makes the band blend the
- * pure body ENU at every altitude — every pre-round-5 fixture unchanged.
+ * `sceneUpLocal` defaults to the body pole, which makes the band blend
+ * reduce to the pure body ENU at every altitude.
  */
 function apply(
   controller: ReturnType<typeof createSurfaceController>,
@@ -336,9 +336,8 @@ describe('surfaceController', () => {
 
   it('anchors an at-rest wheel on the cursor’s surface pick, not screen centre', () => {
     // From [0,0,2] the ray through x = 75 px (ndc 0.5, tan(FOV/2) = 1) is
-    // [0.5,0,−1]/√1.25 and hits the unit sphere at exactly [0.6,0,0.8]; the
-    // screen-centre pick a pixel-less wheel used to take is [0,0,1], so the
-    // two fallbacks are metres apart in this fixture.
+    // [0.5,0,−1]/√1.25 and hits the unit sphere at exactly [0.6,0,0.8] — metres
+    // apart from [0,0,1], the screen-centre pick a pixel-less wheel falls back to.
     const c = createSurfaceController();
     const start = poseAt([0, 0, 2], NADIR);
     const anchor: Vec3 = [0.6, 0, 0.8];
@@ -366,11 +365,11 @@ describe('surfaceController', () => {
   });
 
   it('a zoom-out walks the view level by the bounded decay, never in one tick', () => {
-    // R1: recession converges toward the canonical framing through the SAME
+    // Recession converges toward the canonical framing through the SAME
     // capped decay the approach uses — from 2.4 rad of held tilt no notch may
     // turn the view by more than the per-axis cap sum, and the staircase still
-    // lands on nadir. (The old model clamped the whole excess to the altitude
-    // ceiling in one tick — a 153°-class snap from large residuals, C1.)
+    // lands on nadir. Clamping the whole excess to the altitude ceiling in one
+    // tick instead would produce a 153°-class snap from large residuals.
     const c = createSurfaceController();
     let pose = poseAt([0, 0, 2], basisAtTilt(2.4));
     let lastTilt = bodyAngle(pose);
@@ -402,15 +401,15 @@ describe('surfaceController', () => {
   });
 
   it('an engaged recession blends the reference up onto the scene up by disengage (round 5)', () => {
-    // The freeze the round-5 sim measured: the engaged settle northed toward
-    // the BODY pole for the whole recession, then disengage baked that as
-    // scene-frame roll at exactly the altitude where the world-arm authority
-    // is zero. The settle's reference is now the band blend — pure body ENU
+    // The engaged settle's reference is the band blend — pure body ENU
     // at/below engage, the scene up at disengage — so the pose the fold bakes
-    // is scene-aligned by construction. Scene up tilted 0.41 rad off the pole
-    // (the Earth-vs-ecliptic magnitude) toward +y — PERPENDICULAR to the
-    // standpoint's meridian, so the two references' horizontal projections
-    // genuinely disagree and the final assertions discriminate.
+    // is scene-aligned by construction; without the blend the settle norths
+    // toward the body pole for the whole recession, and disengage bakes that
+    // as spurious scene-frame roll where the world-arm authority is zero.
+    // Scene up sits 0.41 rad off the pole (the Earth-vs-ecliptic magnitude)
+    // toward +y — PERPENDICULAR to the standpoint's meridian — so the two
+    // references' horizontal projections genuinely disagree and the
+    // assertions discriminate.
     const sceneUp: Vec3 = [0, Math.sin(0.41), Math.cos(0.41)];
     const normalizeV = (v: Vec3): Vec3 => {
       const m = Math.hypot(...v);
@@ -446,9 +445,9 @@ describe('surfaceController', () => {
     const right = crossV(forward, north);
     const basis: Mat3 = [...right, ...north, ...forward] as Mat3;
 
-    // Both cadences of the round-7 protocol: default e^0.10 and brisk e^0.24
-    // (folded notches). Off the singular neighbourhood the ride is exact and
-    // the bake lands under the amended 1e-2 bar at either pacing.
+    // Both cadences tested: default e^0.10 and brisk e^0.24 (folded notches).
+    // Off the singular neighbourhood the ride is exact and the bake lands
+    // under the 1e-2 bar at either pacing.
     // Start at h/R 0.1, below engage, so the recession rides the whole band.
     for (const lnf of [0.1, 0.24]) {
       const c = createSurfaceController();
@@ -470,13 +469,13 @@ describe('surfaceController', () => {
   });
 
   it('the blend flip on the pole→sceneUp locus is continuity-bounded, then converges (round 6)', () => {
-    // R5-1's basin: a standpoint ON the arc between the body pole and the
-    // scene up sees the two horizontal projections anti-parallel, so the
-    // blended north flips π as the weight crosses their ratio (~mid-band).
-    // Pre-fix the ride applied that flip in ONE notch (measured 180°); the
-    // continuity bound treats the excess as unauthored, so no notch may turn
-    // the basis by more than rideBound + the two decay caps, and parking
-    // in-band afterwards converges fully.
+    // A standpoint ON the arc between the body pole and the scene up sees the
+    // two horizontal projections anti-parallel, so the blended north flips π
+    // as the weight crosses their ratio (~mid-band). Without a continuity
+    // bound the ride would apply that flip in a single notch (a full 180°
+    // turn); treating the excess as unauthored instead means no notch may
+    // turn the basis by more than rideBound + the two decay caps, and
+    // parking in-band afterwards converges fully.
     const sceneUp: Vec3 = [Math.sin(0.41), 0, Math.cos(0.41)];
     const lu: Vec3 = [Math.sin(0.205), 0, Math.cos(0.205)]; // ON the arc, midway
     const eastRaw: Vec3 = [-lu[1], lu[0], 0];
@@ -531,10 +530,9 @@ describe('surfaceController', () => {
   });
 
   it('near (not on) the locus, the projection blend stays continuous and lands the bake (round 6)', () => {
-    // The (a)-discriminator: 10° off the arc the horizontal projections never
-    // cancel, so the target sweeps fast but finitely and a plain recession
-    // converges without parking. Blending the raw AXES here whipped 101° in
-    // one notch (measured) — unrecoverable in the remaining band notches.
+    // 10° off the arc the horizontal projections never cancel, so the target
+    // sweeps fast but finitely and a plain recession converges without
+    // parking (contrast the on-arc case above, which needs it).
     const sceneUp: Vec3 = [Math.sin(0.41), 0, Math.cos(0.41)];
     const offRad = 0.175; // 10°
     const lu: Vec3 = [
@@ -579,9 +577,9 @@ describe('surfaceController', () => {
       sceneUp[2] - luEnd[2] * sVert,
     ];
     const up: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
-    // ~0.17 rad: the bounded ride's tail through the fast sweep — the raw
-    // AXIS blend left ~1 rad here (a 101° single-notch whip, unrecoverable
-    // in the remaining band notches).
+    // ~0.17 rad: the bounded ride's tail through the fast sweep — blending
+    // the raw AXES instead would leave ~1 rad here (a 101° single-notch whip,
+    // unrecoverable in the remaining band notches).
     expect(angleBetween(up, sHoriz)).toBeLessThan(0.25);
   });
 
@@ -657,7 +655,7 @@ describe('surfaceController', () => {
       lastProxy = proxy;
     }
     // Eight capped notches take ~0.8 rad of the 1.1 rad bank out — eased, not
-    // snapped (one tick of the old rebuild would have zeroed it).
+    // snapped (a naive `(heading, tilt)` rebuild would zero it in one tick).
     expect(lastProxy).toBeLessThan(0.4);
   });
 
@@ -777,7 +775,7 @@ describe('surfaceController', () => {
 
     expect(mag / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
     // The residual is the capped decay's geometric tail — under 0.6°, visually
-    // nothing, but never exactly 0 the way the old hard clamp was.
+    // nothing, but never exactly 0 the way a hard clamp would land it.
     expect(bodyAngle(pose)).toBeLessThan(0.01);
     const upCol: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
     expect(angleBetween(upCol, north)).toBeLessThan(0.01);
@@ -813,9 +811,7 @@ describe('surfaceController', () => {
     // Drag-DOWN is the tilt-lowering direction (ruling 17). At tilt exactly 0
     // the through-zero budget is 0, so the whole gesture — TILT_GAIN, 200 px
     // of travel — maps to zero rotation and the pose comes back untouched
-    // (full-pose byte bar, not an epsilon on tilt). Round 13's clamp sat on
-    // the raising side instead: this pose was "dead" only as a lock, while
-    // the real lowering drag still orbited through nadir (R13-1).
+    // (full-pose byte bar, not an epsilon on tilt).
     const c = createSurfaceController();
     c.onGestureStart();
     const start = poseAt([0, 0, 2], NADIR);
@@ -827,11 +823,9 @@ describe('surfaceController', () => {
   });
 
   it('from exactly 0 a horizon-ward drag tilts immediately, on the near side (ruling 17)', () => {
-    // R13-4's vacated coverage: the floor must not lock nadir. Drag-UP is
-    // the tilt-up direction (ruling 17), so from tilt exactly 0 it produces
-    // tilt at once — on the NEAR side. Pre-13b the equivalent drag rotated
-    // through nadir to the far side (eye y POSITIVE here): the wrong-side
-    // clamp left the lowering direction unbounded and locked the raise.
+    // The floor must not lock nadir: Drag-UP is the tilt-up direction
+    // (ruling 17), so from tilt exactly 0 it produces tilt at once — on the
+    // NEAR side (eye y POSITIVE here), not through nadir to the far side.
     const c = createSurfaceController();
     c.onGestureStart();
     const h = 0.1; // h/R 0.1: in-band, so w = 1 and the ceiling is open
@@ -850,13 +844,11 @@ describe('surfaceController', () => {
   });
 
   it('lowering drags land the floor exactly and never cross nadir (rulings 14+17)', () => {
-    // The R13-1 signature: a one-way lowering drag whose tilt bounced between
-    // 0.5° and 2.2° while the eye kept orbiting 1.29°/event and the memory
-    // followed the bounce (0.47→2.15→1.90→2.16). The toward-zero budget is
-    // the EXACT through-zero rotation — larger than the tilt itself by the
-    // anchor-pivot attenuation; bounding by the unsigned tilt readout is the
-    // mutation this fixture kills — so tilt and memory walk monotonically to
-    // 0 and everything is still once there.
+    // The toward-zero budget is the EXACT through-zero rotation — larger
+    // than the tilt itself, by the anchor-pivot attenuation — so tilt and
+    // memory walk monotonically to 0 and everything is still once there;
+    // bounding by the unsigned tilt readout instead would let both bounce
+    // on repeated lowering drags instead of settling.
     const c = createSurfaceController();
     c.onGestureStart();
     const h = 0.1; // h/R 0.1: in-band, the ceiling is open for the raise
@@ -920,10 +912,9 @@ describe('surfaceController', () => {
   });
 
   it('a receding notch corrects a huge drag-authored heading by the cap, no more', () => {
-    // The C1 regression fixture the shipped tests lacked: the clamp fixture
-    // reached its limit with a 1e-5 rad residual, so an unbounded one-tick
-    // correction (measured 153°/notch) was invisible. Park the heading near
-    // 170° with a drag — legal, drags are heading-free — then recede once.
+    // Park the heading near 170° with a drag (legal — drags are heading-free)
+    // so an unbounded one-tick correction would be a large, visible turn
+    // rather than lost in a small residual, then recede once.
     const c = createSurfaceController();
     c.onGestureStart();
     let pose = poseAt([0, 0, R * 3.5], NADIR);

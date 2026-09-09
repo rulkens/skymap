@@ -1,11 +1,11 @@
 /**
  * tiltRegisterLoop — R12b-1: the register holds the AUTHORED centre-looking
- * pose; the displayed pose is a pure projection derived at read. Pre-fix the
- * per-frame loop store-projected-pose → pivot pin → re-project walked the eye
- * 8,519 km per frame during ANY in-window drag — including press-and-hold
- * with zero pointer motion — while displayed tilt and h/R stayed constant
- * (invisible on screen, catastrophic in state). Real runFrame loop, real
- * gesture steps, same regime the round-12b review measured.
+ * pose; the displayed pose is a pure projection derived at read. Storing the
+ * PROJECTED pose instead and re-pinning/re-projecting it each frame would
+ * walk the eye 8,519 km per frame during ANY in-window drag — including
+ * press-and-hold with zero pointer motion — while displayed tilt and h/R
+ * stay constant (invisible on screen, catastrophic in state). Real runFrame
+ * loop, real gesture steps.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -90,9 +90,9 @@ describe('the register loop during an active drag (R12b-1)', () => {
     toMidWindow(h);
 
     // Press and hold: dragging=true, an anchor, and no pointer motion at all.
-    // Pre-fix every frame re-read the PROJECTED register, re-pinned it, and
-    // re-projected — 8,519 km of eye walk per frame with tilt and h/R
-    // constant (nothing on screen moves except the ground underneath).
+    // Storing the PROJECTED pose and re-pinning/re-projecting it each frame
+    // would walk the eye 8,519 km per frame with tilt and h/R constant
+    // (nothing on screen moves except the ground underneath).
     h.store.dispatch(beginDrag());
     h.push({ kind: 'gestureStart' });
     h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
@@ -145,7 +145,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
       h.frame();
       const cur = display(h.state);
       // Each frame moves the eye by the 2-px drag mapping only — never a
-      // teleport (pre-fix: ~8,519 km/frame rides on top of the drag).
+      // teleport (a projected register would add ~8,519 km/frame on top of the drag).
       expect(stepKm(prev.eye, cur.eye)).toBeLessThan(500);
       prev = cur;
     }

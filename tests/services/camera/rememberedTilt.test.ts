@@ -123,9 +123,9 @@ describe('remembered tilt (ruling 12)', () => {
     for (let i = 0; i < 8; i += 1) {
       pose = apply(c, pose, zoom(Math.exp(-0.1)));
       // A bounded geometric transient remains (the anchor-pivoted restore is
-      // attenuated by the localUp chase, ≤ ~0.04 measured, easing back as the
-      // range shrinks) — the assertion pins "never trends to nadir": pre-fix
-      // the toNadir settle left 0.75⁸ ≈ 10% of the set tilt here.
+      // attenuated by the localUp chase, ≤ ~0.04, easing back as the range
+      // shrinks) — the assertion pins "never trends to nadir": a toNadir
+      // settle would instead decay this to 0.75⁸ ≈ 10% of the set tilt here.
       expect(Math.abs(tiltOf(pose) - set)).toBeLessThan(0.05);
     }
     expect(tiltOf(pose)).toBeGreaterThan(0.9 * set);
@@ -206,7 +206,7 @@ describe('remembered tilt (ruling 12)', () => {
     // Recede into the window until the mapped display exceeds the drag ramp.
     // Ruling 19's ceiling ramp (ties to disengageHR/tiltFullHR) is wider than
     // the up-weight ramp (ties to disengageHR/engageHR), so the premise below
-    // only holds close to engage, not mid-band as under the old wide band.
+    // only holds close to engage, not mid-band.
     let hr = 0;
     const target = SURFACE_REGIME.engageHR * 1.1;
     while (hr < target) {

@@ -52,12 +52,11 @@ const SEAM_FILES: readonly string[] = [
 // directories the migrations actually put files in — a new file dropped into
 // any of these (a layer, a body renderer, a driver) is gated with no
 // hand-edit here. `walk` recurses, so sweeping 'frame' also covers
-// 'frame/passes', and sweeping 'utils/camera' also covers what used to be
-// two separate single-file entries (`composeBodySlabMvp.ts`,
-// `bodySlabCamLocal.ts`) — no longer named apart from the walk. The two
-// remaining single-file entries aren't under any swept dir, so they stay
-// named (a rename/move of one of them is then a deliberate edit here, not a
-// silent drop from the gate).
+// 'frame/passes', and sweeping 'utils/camera' covers `composeBodySlabMvp.ts`
+// and `bodySlabCamLocal.ts` without naming them individually. The two
+// remaining single-file entries below aren't under any swept dir, so they
+// stay named (a rename/move of one of them is then a deliberate edit here,
+// not a silent drop from the gate).
 const TS_FILES: readonly string[] = [
   ...walk('src/services/engine/frame', ['.ts']),
   ...walk('src/services/gpu/renderers/bodies', ['.ts']),
@@ -85,10 +84,7 @@ const WESL_FILES: readonly string[] = walk('src/services/gpu/shaders/bodies', ['
 
 // The ONE table of "files on the body-slab path or the engaged camera path
 // allowed to bridge Mpc<->m outside the two seams (bodyRelativePose.ts,
-// poseFrameConversion.ts), and why" — folds in what used to be three separate
-// homes for this same question: this map (originally 3 cull/fade entries),
-// starSphereRangeM.ts's own header (a distinct NEAR0 exception), and
-// visibleSlabBodies.ts's undocumented use (radar findings 1+2,
+// poseFrameConversion.ts), and why" (see radar findings 1+2 in
 // .superpowers/sdd/2026-08-26-body-render-slabs/radar-seams-tests.md). Each
 // entry names the category so a NEW use beyond these needs its own line —
 // keeping this a real (if per-file) gate, not a rubber stamp.
@@ -179,8 +175,8 @@ describe('the body-slab path never re-derives the Mpc<->metre conversion', () =>
   it('the directory sweep found real files, including each known anchor', () => {
     // A typo'd glob dir/extension returns [] silently and every it.each below
     // would vacuously pass with zero cases — this is the loud-failure check.
-    // Five swept dirs now (~145 files at time of writing); 100 leaves ample
-    // margin below the true count while still catching an empty/typo'd walk.
+    // Five swept dirs (~145 files); 100 leaves ample margin below the true
+    // count while still catching an empty/typo'd walk.
     expect(TS_FILES.length).toBeGreaterThan(100);
     for (const anchor of KNOWN_ANCHOR_FILES) {
       expect(TS_FILES).toContain(anchor);

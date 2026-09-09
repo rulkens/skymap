@@ -1,19 +1,10 @@
 /**
  * cameraDrivers — unit tests for the store-reading driver table and resolver.
- *
- * The five drivers read directly from the Redux store; the resolver picks the
- * highest-priority active one and calls its `pose`. Tests cover:
- *
- *   - Each driver's `isActive` reads the right slice field.
- *   - Each driver's `pose` produces the correct result (evaluateClip via
- *     tweenToClip for tween, spinAutoRotate, s.camera.base, or the register).
- *   - `pickWinner` selects by priority, not list order (incl. clip > orbitDrag).
- *   - `pickWinner` and `activeDriverId` always agree (invariant 1).
- *   - `runCameraDrivers` passes the winner's elapsed (tween/autoRotate use
- *     the clock in ms; clip uses the clock in seconds; orbitDrag/resting use 0).
- *
- * Fixtures use a real `RootState` built via `configureStore({ reducer:
- * rootReducer })` so the shape is always in sync with the actual slices.
+ * `pickWinner` and `activeDriverId` must always agree (invariant 1).
+ * `runCameraDrivers` passes elapsed in different units per winner: ms for
+ * tween/autoRotate, seconds for clip, 0 for orbitDrag/resting. Fixtures use a
+ * real `RootState` via `configureStore({ reducer: rootReducer })` so the
+ * shape stays in sync with the actual slices.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -96,8 +87,6 @@ const FAKE_ENGINE_STATE = {
 // actual evaluateClip call is not exercised in these structural tests.
 const CLIP_DATA: ClipData = { timeline: [] };
 
-// ── isActive: store-reading predicates ─────────────────────────────────────
-
 describe('buildCameraDrivers — isActive reads the store', () => {
   const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
   function byId(id: string): CameraDriver {
@@ -147,8 +136,6 @@ describe('buildCameraDrivers — isActive reads the store', () => {
     expect(byId('resting').isActive(store.getState() as unknown as RootState)).toBe(true);
   });
 });
-
-// ── pose: correct outputs ───────────────────────────────────────────────────
 
 describe('buildCameraDrivers — pose functions', () => {
   const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
@@ -233,7 +220,7 @@ describe('buildCameraDrivers — pose functions', () => {
   });
 });
 
-// ── clip driver: frame pinning across a mid-clip orientation switch ─────────
+// clip driver: frame pinning across a mid-clip orientation switch.
 //
 // A clip's authored (yaw, pitch) is only meaningful relative to the frame it
 // started under. `clip.frame` pins that frame; the driver must evaluate
@@ -285,7 +272,7 @@ describe('buildCameraDrivers — clip pins the frame it started under', () => {
   });
 });
 
-// ── tween driver: frame pinning across a mid-tween orientation switch ───────
+// tween driver: frame pinning across a mid-tween orientation switch.
 //
 // Same contract as the clip driver above: `tween.frame` pins the frame `from`/
 // `to` were captured under. A mid-tween orientation switch must re-express the
@@ -342,8 +329,6 @@ describe('buildCameraDrivers — tween pins the frame it started under', () => {
   });
 });
 
-// ── pickWinner ──────────────────────────────────────────────────────────────
-
 describe('pickWinner', () => {
   function makeDriver(id: string, priority: number, active: boolean): CameraDriver {
     return {
@@ -390,8 +375,6 @@ describe('pickWinner', () => {
   });
 });
 
-// ── pickWinner === activeDriverId (invariant 1) ─────────────────────────────
-
 describe('pickWinner / activeDriverId invariant', () => {
   it('pickWinner.id === activeDriverId (same scan, same result)', () => {
     const store = makeStore();
@@ -411,8 +394,6 @@ describe('pickWinner / activeDriverId invariant', () => {
     expect(activeDriverId(drivers, s)).toBe('orbitDrag');
   });
 });
-
-// ── runCameraDrivers: clock elapsed dispatch ────────────────────────────────
 
 describe('runCameraDrivers — elapsed dispatch', () => {
   it('passes tween elapsed to the tween driver pose', () => {
@@ -495,7 +476,7 @@ describe('runCameraDrivers — elapsed dispatch', () => {
   });
 });
 
-// ── followBody driver ───────────────────────────────────────────────────────
+// followBody driver.
 //
 // The follow driver reads the per-frame body snapshot (memoized deriveBodyStates
 // at the frame's `lastRenderedSimDays`) plus the follow ease clock, both off the
@@ -680,9 +661,9 @@ describe('buildCameraDrivers — followBody', () => {
     //      dragged distance is committed into `base` (COMMITTED_DIST here).
     //   3. Follow re-wins the SAME focus ref this frame — but was NOT the previous
     //      winner (prevActiveId === 'orbitDrag').
-    // The follow driver must re-capture `base.distance` as the steady-state target
-    // so the zoom is honoured. The OLD behaviour re-asserted the framing distance
-    // every frame (snap-back), which this test rejects.
+    // The follow driver must re-capture `base.distance` as the steady-state
+    // target so the zoom is honoured, instead of re-asserting the framing
+    // distance every frame (snap-back).
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
     const livePos = snapshot.get('earth')!.positionMpc;
     const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
@@ -718,19 +699,18 @@ describe('buildCameraDrivers — followBody', () => {
     // Saturated (t=1): distance is the committed base distance, NOT framing.
     const result = worldArmOf(follow.pose(s, FOCUS_TWEEN_MS * 4));
     expect(result.distance).toBeCloseTo(COMMITTED_DIST, 9);
-    // Guard the snap-back regression explicitly: the framing distance is tiny, so
-    // 'equals framing' would be a hard failure the old code produced.
+    // Guard the snap-back explicitly: the framing distance is tiny, so
+    // 'equals framing' would be a hard failure if the driver re-asserted it.
     expect(result.distance).not.toBeCloseTo(framingDistance, 3);
   });
 });
 
-// ── followBody sits BELOW autoRotate: the pivot un-braid ─────────────────────
+// followBody sits BELOW autoRotate: the pivot un-braid.
 //
-// followBody no longer competes for the WHOLE pose. A focused body pins the
-// pivot (via the frame-loop pivot-pin); the ORBIT terms go to whoever wins the
-// table. autoRotate (20) therefore outranks followBody (10) — the auto-rotate
-// button spins AROUND a focused body instead of being blocked by follow. This
-// was the third live symptom.
+// followBody does not compete for the WHOLE pose. A focused body pins the
+// pivot (via the frame-loop pivot-pin); the ORBIT terms go to whoever wins
+// the table. autoRotate (20) outranks followBody (10), so the auto-rotate
+// button spins AROUND a focused body instead of being blocked by follow.
 
 describe('buildCameraDrivers — followBody priority under body focus', () => {
   it('autoRotate outranks followBody while a body is focused (button not blocked)', () => {
@@ -747,7 +727,6 @@ describe('buildCameraDrivers — followBody priority under body focus', () => {
     const drivers = buildCameraDrivers(engineState);
 
     // Both are active; the winner is autoRotate (20) over followBody (10).
-    // Pre-fix followBody@70 blocked autoRotate — this assertion is the regression.
     expect(drivers.find((d) => d.id === 'followBody')!.isActive(s)).toBe(true);
     expect(pickWinner(drivers, s).id).toBe('autoRotate');
   });

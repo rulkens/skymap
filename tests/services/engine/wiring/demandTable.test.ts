@@ -340,9 +340,9 @@ function collectFired(state: EngineState): Set<AssetKey> {
 /**
  * Drive `reevaluateDemand(state)` to a fixpoint and report which rows fired.
  *
- * Two things this has to do that a single synchronous call no longer does.
+ * Two things this has to do that a naive single synchronous call would miss.
  *
- * **Drain.** `reevaluateDemand` doesn't call `slot.load()` itself any more; it
+ * **Drain.** `reevaluateDemand` doesn't call `slot.load()` itself; it
  * enqueues, and the queue starts at most `ASSET_QUEUE_CONCURRENCY` fetchers
  * before the call returns. Reading the spies straight after one call would
  * report only the first two rows and turn this demand table into a concurrency

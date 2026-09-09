@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 /**
- * OrientationTuning — light plumbing test for the round-9 trial knobs: each
- * control writes through to its one home (`setSurfaceBand` / ORIENT_TUNING),
- * and a clamp that moves the OTHER knob is reflected back into the UI.
+ * OrientationTuning — light plumbing test: each control writes through to its
+ * one home (`setSurfaceBand` / ORIENT_TUNING), and a clamp that moves the
+ * OTHER knob is reflected back into the UI.
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
@@ -40,9 +40,9 @@ describe('OrientationTuning', () => {
 
   it('a clamp that moves the other knob is re-read into the UI', () => {
     const { getByLabelText, container } = render(createElement(OrientationTuning));
-    // Ruling 19's engage default (0.2) sits flush against disengageMin
-    // (0.2), so the window that clears the floor while still tripping the
-    // engage × minRatio clamp (0.22) is narrow — 0.21, not the old 1.5.
+    // Ruling 19's engage default (0.2) sits flush against disengageMin (0.2),
+    // so the window that clears the floor while still tripping the engage ×
+    // minRatio clamp (0.22) is narrow — 0.21.
     fireEvent.change(getByLabelText('disengage h/R'), { target: { value: '0.21' } });
     expect(SURFACE_REGIME.engageHR).toBeCloseTo(0.21 / 1.1, 12);
     const engage = getByLabelText('engage h/R') as HTMLInputElement;

@@ -1,12 +1,11 @@
 /**
- * engageFlipPop — round-8 regression at the user's altitude (the engage
- * neighbourhood): a focused zoom-IN through the flip must hand the
- * orientation settle over seamlessly. The pre-fix two-curve seam (world roll
- * target keyed to `maxTiltRad`, engaged reference to `bodyUpWeight`) made the
- * target jump ~0.12 rad AT the flip, which the capped decay then walked out
- * over ~8 notches — the end-of-dive roll pop. Windowed assertions, not a
+ * engageFlipPop — a focused zoom-IN through the engage flip must hand the
+ * orientation settle over seamlessly. A two-curve seam (world roll target
+ * keyed to `maxTiltRad`, engaged reference to `bodyUpWeight`) would make the
+ * target jump ~0.12 rad AT the flip, which the capped decay would then walk
+ * out over ~8 notches — an end-of-dive roll pop. Windowed assertions, not a
  * single-notch rate check: the conversion notch itself carries a legitimate
- * bounded settle step; the defect is the burst AFTER it.
+ * bounded settle step; the defect would be the burst AFTER it.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
@@ -102,11 +101,12 @@ describe('engage-flip pop (round 8)', () => {
         ORIENT_DECAY.rideBoundRad + 2 * ORIENT_DECAY.capRad + 0.02,
       );
       // Monotone hand-off: the engaged settle may only CONTINUE the world arm's
-      // convergence, never open a fresh residual. Pre-fix: 0.030 > 0.024 (the
-      // flip minted ~0.12 rad of new deviation from the target-curve seam).
+      // convergence, never open a fresh residual — a target-curve seam would
+      // mint ~0.12 rad of new deviation right at the flip (0.030 > 0.024 here).
       expect(maxPost).toBeLessThanOrEqual(maxPre + 1e-3);
-      // The pop itself: pre-fix the post-flip window walked 0.119 rad
-      // (unified field: 1.8e-4 — the flip finds no fresh residual to spend).
+      // The pop itself: a seamed field would walk the post-flip window 0.119
+      // rad; the unified field measures 1.8e-4 — the flip finds no fresh
+      // residual to spend.
       expect(cumPost).toBeLessThan(0.01);
     },
   );

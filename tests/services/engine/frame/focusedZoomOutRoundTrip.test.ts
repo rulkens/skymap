@@ -1,11 +1,11 @@
 /**
- * focusedZoomOutRoundTrip — the round-5 regression, as a wall-clock-faithful
- * `runFrame` loop (real drivers, follow ease, fold, drain; GPU mocked at the
- * ready gate): Earth focused, zoom IN through engage, zoom OUT to deep space
- * at the fast cadence that froze 14.85° of scene roll (`−0.2592` rad measured
- * at the pre-fix HEAD). The engaged settle's band-blended reference must hand
- * the fold a scene-aligned screen-up at disengage, so the far-field roll
- * returns to the configured scene up.
+ * focusedZoomOutRoundTrip — a wall-clock-faithful `runFrame` loop (real
+ * drivers, follow ease, fold, drain; GPU mocked at the ready gate): Earth
+ * focused, zoom IN through engage, zoom OUT to deep space at a fast cadence.
+ * The engaged settle's band-blended reference must hand the fold a
+ * scene-aligned screen-up at disengage, or the far-field roll freezes at
+ * whatever scene roll accumulated in the band (up to 14.85°, `−0.2592` rad)
+ * instead of returning to the configured scene up.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -59,7 +59,6 @@ describe('focused zoom-out round trip (round 5)', () => {
 
     expect(end.arm).toBe('abs');
     expect(end.hr).toBeGreaterThan(4); // genuinely out of the band
-    // Pre-fix HEAD measured −0.2592 rad frozen here (the 14.85° bake).
     expect(Math.abs(end.roll)).toBeLessThan(1e-4);
   });
 
@@ -73,8 +72,7 @@ describe('focused zoom-out round trip (round 5)', () => {
     const end = runLoop(h, events, t + 1000);
 
     expect(end.arm).toBe('abs');
-    // ~2.5e-5 rad (0.0014°): the world ride's own decay tail — the round-5
-    // probe's "0.0" was this value at 4-decimal display precision.
+    // ~2.5e-5 rad (0.0014°): the world ride's own decay tail, negligible here.
     expect(Math.abs(end.roll)).toBeLessThan(1e-4);
   });
 });

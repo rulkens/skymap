@@ -1,11 +1,11 @@
 /**
  * tiltLerpRoundTrip — ruling 13: display tilt is `remembered × w(h/R)` as a
- * pure function of altitude REGARDLESS of arm and direction. The round-11
- * shape expressed the mapping only on the engaged arm; a focused zoom-out
- * past disengage and back in was world-armed through the whole hysteresis
- * window (pivot-pinned to the body centre, tilt 0), then at the engage
- * notch the remembered tilt returned as a capped 0.1 rad/notch walk — the
- * threshold flip the user saw. Real runFrame loop, real drag/wheel steps.
+ * pure function of altitude REGARDLESS of arm and direction. Expressing the
+ * mapping only on the engaged arm would leave a focused zoom-out past
+ * disengage and back in world-armed through the whole hysteresis window
+ * (pivot-pinned to the body centre, tilt 0), with the remembered tilt only
+ * returning at the engage notch as a capped 0.1 rad/notch walk — a visible
+ * threshold flip. Real runFrame loop, real drag/wheel steps.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -61,9 +61,9 @@ describe('tilt lerp round trip (ruling 13)', () => {
     expect(Math.abs(tiltOverBody(h.state, EARTH) - remembered)).toBeLessThan(0.03); // converged
 
     // Round trip: out past disengage, then back in below engage. At every
-    // notch the display must sit on the ONE mapping — pre-fix the zoom-in
-    // leg was world-armed and pin-centred (tilt 0) through the whole window,
-    // then walked 0.1/notch after the engage flip.
+    // notch the display must sit on the ONE mapping — without it, the
+    // zoom-in leg would be world-armed and pin-centred (tilt 0) through the
+    // whole window, then walk 0.1/notch after the engage flip.
     const trace: { tilt: number; hr: number; arm: string }[] = [];
     const notch = (deltaY: number) => {
       h.wheel(deltaY);
@@ -82,17 +82,16 @@ describe('tilt lerp round trip (ruling 13)', () => {
     for (const s of trace) {
       // The pure function, both arms, both directions. World-armed rows sit
       // on the map to 4 decimals (the projection is exact); engaged rows
-      // carry the round-11 anchored-dive transient (the anchor-pivoted
-      // restore is attenuated by the localUp chase — bounded, easing back),
-      // hence the wider engaged bar. Pre-fix the world-armed zoom-in leg
-      // deviated by up to 0.355 — remembered × w with nothing expressed.
+      // carry an anchored-dive transient (the anchor-pivoted restore is
+      // attenuated by the localUp chase — bounded, easing back), hence the
+      // wider engaged bar. A world-armed zoom-in leg without this mapping
+      // would deviate by up to 0.355 — remembered × w with nothing expressed.
       const bar = s.arm === 'abs' ? 0.01 : 0.09;
       expect(Math.abs(s.tilt - mappedTiltRad(remembered, s.hr))).toBeLessThan(bar);
       // No threshold step: a notch may move tilt by ~the map's own delta.
-      // Ruling 19's band is 8.5x narrower, so the same wheel notch now
-      // crosses a proportionally larger slice of it per step (observed
-      // ~0.094, vs the old band's ~0.09) — still nowhere near a real snap
-      // (documented regressions ran 0.1-0.355+).
+      // Ruling 19's band is 8.5x narrower, so the same wheel notch crosses a
+      // proportionally larger slice of it per step (~0.094) — still nowhere
+      // near a real snap (a broken mapping would run 0.1-0.355+).
       expect(Math.abs(s.tilt - prevTilt)).toBeLessThan(0.12);
       prevTilt = s.tilt;
     }

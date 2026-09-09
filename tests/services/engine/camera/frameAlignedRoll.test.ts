@@ -1,5 +1,5 @@
 /**
- * frameAlignedRoll — the world-arm frame-transition ride (ruling 8, round 3).
+ * frameAlignedRoll — the world-arm frame-transition ride (ruling 8).
  *
  * Angle assertions only: roll is O(1) whatever the heliocentric magnitudes,
  * so real Earth at J2000 is an honest fixture here (the blind-assertion trap
@@ -92,7 +92,7 @@ describe('frameAlignedRoll', () => {
     // 2–4 notch band crossing), so ride debt surviving the disengage bake
     // MUST spend itself up here — deviation-only capped decay toward roll 0,
     // never a ride (the target is static above the band). Ruled cost: a
-    // deep-space arrival roll now bleeds on notches too.
+    // deep-space arrival roll bleeds off on notches too.
     const stepped = frameAlignedRoll(poseAtHR(5, 1.4), poseAtHR(5.5, 1.4), BODIES, B, B);
     expect(stepped).toBeCloseTo(1.4 - ORIENT_DECAY.capRad, 12);
 
@@ -110,12 +110,12 @@ describe('frameAlignedRoll', () => {
   });
 
   it('a recession rides the target to exactly the global up at the band top', () => {
-    // The round-3 ruling: the curve defines the roll TARGET (pole ↔ scene up
-    // blend) and a recession notch rides the target's change IN FULL — the
-    // share-decay step it replaces froze the band roll verbatim above the
-    // band (measured: −0.259 rad at h/R 4.9, zero return). Riding from an
-    // aligned start, no notch moves more than that notch's own target delta,
-    // and the first above-band pose is at roll 0 — the configured up.
+    // The ruling: the curve defines the roll TARGET (pole ↔ scene up blend)
+    // and a recession notch rides the target's change IN FULL — a
+    // share-decay step instead would freeze the band roll verbatim above the
+    // band (a −0.259 rad stick at h/R 4.9, never returning to 0). Riding from
+    // an aligned start, no notch moves more than that notch's own target
+    // delta, and the first above-band pose is at roll 0 — the configured up.
     let hr = 0.1;
     let roll = convergedRoll(poseAtHR(hr, 0), B, 300);
     expect(Math.abs(roll)).toBeGreaterThan(0.1); // the band really bent it
@@ -162,11 +162,12 @@ describe('frameAlignedRoll', () => {
   });
 
   it('the anti-parallel knot rides continuity-bounded, no single-notch flip (round 6)', () => {
-    // R5-2's locus: at yaw 0 / pitch −1.40 in the default frame the blend's
-    // raw terms cancel across the band, `normalize` reverses, and the
-    // pre-round-6 ride applied the π flip in one notch (measured 3.1416 rad).
-    // The continuity bound treats the excess as unauthored; parking at a
-    // stable altitude afterwards converges fully by the capped decay.
+    // At yaw 0 / pitch −1.40 in the default frame the blend's raw terms
+    // cancel across the band and `normalize` reverses — without a continuity
+    // bound the ride would apply the π flip in a single notch. Treating the
+    // excess as unauthored instead means no notch may exceed rideBound +
+    // capRad; parking at a stable altitude afterwards converges fully by the
+    // capped decay.
     let roll = convergedRoll(poseAtHR(0.12, 0, 0, -1.4), B, 300);
     let hr = 0.12;
     let maxStep = 0;
@@ -194,11 +195,10 @@ describe('frameAlignedRoll', () => {
   });
 
   it('a view near the spin axis converges to the scene up — no projection chase', () => {
-    // The user's "completely different up vector": with the pole projection
-    // NORMALIZED, a view 2° off the spin axis chased the near-degenerate
-    // direction to −1.49 rad of roll (measured at the previous HEAD). The
-    // raw-projection blend hands the target to the scene up there instead.
-    // Fixture sits MID-WINDOW (w = 0.5): ruling 10 re-keyed the band to
+    // With the pole projection NORMALIZED rather than raw, a view 2° off the
+    // spin axis hands the target to the scene up instead of chasing the
+    // near-degenerate direction to a large roll. Fixture sits MID-WINDOW
+    // (w = 0.5): ruling 10 re-keyed the band to
     // `bodyUpWeight`, so below engage the field is the pure body ENU by
     // construction — identical to the engaged arm — and the blend (where
     // the hand-off property lives) spans the hysteresis window.
@@ -215,7 +215,7 @@ describe('frameAlignedRoll', () => {
     );
 
     // In-band settle: bounded and near the scene up (the raw-weighted pole
-    // term is only sin 2° strong; the old chase converged 1.4 rad off).
+    // term is only sin 2° strong; a raw-weighted chase would converge 1.4 rad off).
     const midHR = (SURFACE_REGIME.engageHR + SURFACE_REGIME.disengageHR) / 2;
     let pose = poseAtHR(midHR, 0, yaw, pitch);
     let maxStep = 0;

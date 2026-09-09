@@ -1,7 +1,7 @@
 /**
  * drainInput — the frame's single input-apply site.
  *
- * What matters here is the wiring the recognizer no longer does for itself:
+ * What matters here is the wiring the recognizer itself does not do:
  * nothing reaches the camera between frames, a gesture that ENDS mid-frame
  * still commits the moves that preceded it, the at-rest wheel goes to the
  * store rather than the invisible register, and the focused body's radius
@@ -93,9 +93,9 @@ describe('drainInput', () => {
   });
 
   it('commits the tail of a gesture that ended mid-frame', () => {
-    // The pointerup used to fire the commit synchronously, with every move
-    // already applied. Deferred, the moves must still land BEFORE the commit or
-    // the store bakes a pose one frame stale.
+    // The commit fires on a deferred frame rather than synchronously at
+    // pointerup, so the moves must still land BEFORE the commit or the store
+    // bakes a pose one frame stale.
     const { agg, state, deps, store } = makeHarness();
     // The sink already flipped `dragging` at DOM time; the drain ends it.
     store.dispatch(beginDrag());
@@ -175,8 +175,8 @@ describe('drainInput', () => {
 
     const cursorAnchor = anchorFor(cursorPx);
     expect(rangeTo(cursorAnchor, got)).toBeCloseTo(f * rangeTo(cursorAnchor, eyeM), 3);
-    // Not a coincidence of two nearby points: the screen-centre anchor the
-    // pixel-less wheel used to take is ~500 km away and does not fit the law.
+    // Not a coincidence of two nearby points: the screen-centre anchor a
+    // pixel-less wheel falls back to is ~500 km away and does not fit the law.
     const centreAnchor = anchorFor([500, 500]);
     expect(rangeTo(centreAnchor, cursorAnchor)).toBeGreaterThan(100_000);
     expect(Math.abs(rangeTo(centreAnchor, got) - f * rangeTo(centreAnchor, eyeM))).toBeGreaterThan(
@@ -318,11 +318,11 @@ describe('drainInput', () => {
   });
 
   it('a drag in the same drain as an at-rest body-arm notch chains from the notch, not before it', () => {
-    // Review I1: the at-rest branch committed to the store but left the live
-    // register stale, so a `[wheel, gestureStart, drag]` drain (routine in a
-    // 33-50 ms frame window, or trackpad scroll → click-drag) folded the drag
-    // from the PRE-notch pose and the gesture-end commit then overwrote the
-    // notch — user input silently discarded.
+    // Without chaining from the post-notch pose, a `[wheel, gestureStart,
+    // drag]` drain (routine in a 33-50 ms frame window, or trackpad scroll →
+    // click-drag) would fold the drag from the PRE-notch pose, and the
+    // gesture-end commit would then overwrite the notch — user input
+    // silently discarded.
     const { agg, state, deps, store } = makeHarness();
     const arm = earthArm(3);
     store.dispatch(commitCameraPose(arm));
@@ -342,8 +342,7 @@ describe('drainInput', () => {
   });
 
   it('a world-arm drag in the same drain as an at-rest notch chains from the notch too', () => {
-    // The world-arm twin of the same staleness (pre-existing before the
-    // simplification wave; fixed in the same pass). Base seeded to match the
+    // The world-arm twin of the same staleness fix. Base seeded to match the
     // register — at rest the two agree in production (runFrame restamps).
     const { agg, state, deps, store } = makeHarness();
     store.dispatch(
@@ -430,13 +429,12 @@ describe('drainInput', () => {
   it('a FOCUSED zoom-out rides the roll back to the scene up (the default path)', () => {
     // The user's real configuration: Earth focused, followBody owns the wheel
     // (`applyWheelZoom` scales `followDistanceTarget`; the driver eases to
-    // it). Feeding the ride identical pre/post poses there zeroed the target
-    // delta — the ride was dead exactly on the default path, and once the
-    // eased altitude left the band the notches went fully inert, freezing the
-    // in-band roll (the "equatorial is still there" report). The notch's
-    // authored altitude change IS the followDistanceTarget change, so the
-    // ride must run across it. Ease simulated as saturated between notches
-    // (the register stamped with the target-distance pose, as runFrame would).
+    // it). The notch's authored altitude change IS the followDistanceTarget
+    // change, so the ride must run across it — feeding it identical pre/post
+    // poses would zero the target delta and leave the in-band roll frozen
+    // once the eased altitude left the band. Ease simulated as saturated
+    // between notches (the register stamped with the target-distance pose,
+    // as runFrame would).
     const { agg, state, deps, store } = makeHarness();
     const earth = deriveBodyStates(CONST_J2000).get('earth')!;
     const poseAt = (distMpc: number, roll: number) => ({
@@ -499,8 +497,8 @@ describe('drainInput', () => {
 
     // Above the band the scene frame owns the view again — no frozen residual
     // (1e-4 rad ≈ 0.006°: the live clock advancing between notches feeds the
-    // decay a hair of target drift; the dead-ride bug left 5e-2 here and the
-    // real-pacing case the whole band roll).
+    // decay a hair of target drift; a dead ride would leave 5e-2 here, and
+    // the real-pacing case the whole band roll).
     expect(Math.abs(rollOfBase())).toBeLessThan(1e-4);
   });
 

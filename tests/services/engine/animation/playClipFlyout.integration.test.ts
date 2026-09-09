@@ -1,57 +1,9 @@
 /**
  * playClipFlyout — integration test for the full playClip→clipPlayer→clip@95
- * driver→commit-on-edge seam, driven by the `flyout` ClipData.
- *
- * ### What this tests (and what it does NOT test)
- *
- * This file validates the SEAM: the handshake between dispatch, frames, and
- * the two-frame deferred endClip → commit-on-edge bake → Promise resolution.
- * It does NOT test the evaluator math — Plan A's `evaluateClip.test.ts` owns
- * that. Here we only care that:
- *
- *   1. Camera distance MOVES from the live start pose toward the flyout's
- *      horizon-shell target (29 500 Mpc) as frames advance.
- *   2. The Promise from `playClip(flyout)` RESOLVES after the timeline duration.
- *   3. `camera.base` is committed to the saturated final pose (distance ≈ 29 500)
- *      via the commit-on-edge bake — not a one-frame-stale pose.
- *
- * ### Frame schedule
- *
- * The flyout duration is 22 seconds. We drive coarse 1-second steps:
- *
- *   T0      = 0 ms    — arrival frame: clipPlayer.tick primes the clock (elapsed 0).
- *             clip@95 active, pose == live start distance (100 Mpc).
- *
- *   T_early = 2000 ms — sampled after 2 s of travel. Pose distance has started
- *             moving toward 29 500 Mpc (log-dolly, so even early motion is visible).
- *
- *   T_mid   = 11000 ms — sampled at the halfway mark. Distance should be well
- *             above the early sample, confirming continued movement.
- *
- *   T_end   = 22000 ms — elapsed == 22 s == durationSec. This is the saturation
- *             frame. clipPlayer.tick sets pendingEnd (does NOT dispatch endClip
- *             yet). The driver evaluates to the saturated pose (distance ≈ 29 500).
- *             lastPose is updated to the saturated pose.
- *
- *   T_next  = 23000 ms — the deferred-completion frame. clipPlayer.tick fires
- *             endClip() and the Promise resolver. The driver switches from
- *             clip@95 to resting@0. commit-on-edge (prev='clip',
- *             commitsOnEdge=true) bakes lastPose (saturated, ≈ 29 500) into
- *             camera.base.
- *
- * ### Why one shared clock
- *
- * `clipPlayer.tick` and `runCameraDrivers` MUST receive the same `CameraClock`
- * instance (the one in `cameraRuntime.clock`). `clipElapsed` keys on the
- * `camera.clip` reference identity to detect the start frame and records the
- * wall-clock stamp. Both consumers must call into the SAME bookkeeping bag or
- * the elapsed values diverge between the cue-firer and the driver.
- *
- * ### Why not a stub for clipPlayer / playClip
- *
- * This is an integration test. The whole point is to prove that the REAL
- * pieces close together: real store, real drivers, real clipPlayer, real
- * playClip. A stub would only prove that the stub works.
+ * driver→commit-on-edge seam, driven by the `flyout` ClipData. Validates the
+ * handshake (dispatch, frames, the two-frame deferred endClip → bake →
+ * Promise resolve) with REAL store/drivers/clipPlayer/playClip, not stubs —
+ * `evaluateClip.test.ts` owns the evaluator math itself.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -70,9 +22,7 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 
-// ---------------------------------------------------------------------------
-// Fixture helpers — mirror the commitOnEdge.test.ts harness shape
-// ---------------------------------------------------------------------------
+// Fixture helpers mirror the commitOnEdge.test.ts harness shape.
 
 /**
  * The playClip↔clipPlayer↔driver seam is driven directly (no GPU, no
@@ -86,15 +36,6 @@ function makeHarness(startDistance: number) {
 /**
  * Simulate one frame of the commit-on-edge loop, with clipPlayer.tick firing
  * FIRST (as it does in the real runFrame) BEFORE the camera produce step.
- *
- * Steps:
- *   1. clipPlayer.tick(nowMs) — fires deferred endClip if pendingEnd, fires
- *      scene cues, advances clipOpacity, records pendingEnd when elapsed ≥ durationSec.
- *   2. Produce pose via runCameraDrivers.
- *   3. Commit-on-edge: if prev driver changed AND the departing driver has
- *      commitsOnEdge, dispatch commitCameraPose(lastPose) and override renderPose.
- *   4. Update bookkeeping: prevActiveId, lastPose.
- *
  * Returns { pose, activeId, committed } for per-frame assertions.
  */
 function simulateFrame(
@@ -131,10 +72,6 @@ function simulateFrame(
 
   return { pose: renderPose, activeId: currActiveId, committed };
 }
-
-// ---------------------------------------------------------------------------
-// Integration test
-// ---------------------------------------------------------------------------
 
 describe('playClip — flyout seam', () => {
   it('playClip(flyout) drives the camera and resolves', async () => {

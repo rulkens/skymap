@@ -3,10 +3,10 @@
  * WIRING. The tilt projection (`approachTiltedPose`) holds the eye by moving
  * `target` off the body centre; the pivot pin SETS target to the centre and
  * derives the eye — composing them on a COMMITTED tilted pose moves the eye
- * by d·2sin(τ/2) and ACCUMULATES
- * over commit→re-derive cycles. The round-12 sim committed once at h/R 10
- * then only read; this fixture commits mid-window, where the two contracts
- * actually compose. Real runFrame loop, real gesture steps.
+ * by d·2sin(τ/2) and ACCUMULATES over commit→re-derive cycles. Committing
+ * once and only reading afterward wouldn't exercise that; this fixture
+ * commits mid-window, repeatedly, where the two contracts actually compose.
+ * Real runFrame loop, real gesture steps.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -57,7 +57,7 @@ function display(state: EngineState): { eye: Vec3; tilt: number; hr: number } {
  * Shared approach: dive engaged, set a large remembered tilt through the
  * controller's own handles, zoom out past disengage, then back IN to
  * mid-window — the world-armed, pivot-pinned, projection-live standpoint
- * where the round-12 review measured the teleport.
+ * where a broken composition would show up as the eye teleporting.
  */
 function toMidWindow(h: CameraSimHarness): void {
   diveUntilEngaged(h);
@@ -92,8 +92,9 @@ describe('commit → re-derive idempotence (R12-1)', () => {
 
     // Each cycle: an empty in-window gesture (press + release) — gestureEnd
     // commits the register — then frames for the pin + projection to
-    // re-derive. Pre-fix each commit bakes the TILTED pose and the pin
-    // moves the eye d·2sin(τ/2) ≈ thousands of km, accumulating per cycle.
+    // re-derive. Without idempotence, each commit would bake the TILTED pose
+    // and the pin would move the eye d·2sin(τ/2) ≈ thousands of km,
+    // accumulating per cycle.
     const eyes: Vec3[] = [];
     for (let cycle = 0; cycle < 4; cycle += 1) {
       h.store.dispatch(beginDrag());

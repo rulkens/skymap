@@ -6,7 +6,7 @@
  *   1. Near a pivot's surface, successive zoom-in notches shrink (a taper)
  *      and never overshoot the standoff floor.
  *   2. Far from a pivot (every astronomical viewing distance), the result is
- *      indistinguishable from the old `distance * factor` model — so this
+ *      indistinguishable from the plain `distance * factor` model — so this
  *      change doesn't alter deep-space zoom feel.
  *   3. With no pivot radius, the proportional model applies exactly, not
  *      approximately.
@@ -36,7 +36,7 @@ const NO_PIVOT: PivotFraming = { radiusMpc: null, floorMpc: MIN_DISTANCE_MPC };
 describe('zoomedDistance', () => {
   it('tapers into the standoff floor: zoom-in steps shrink and never overshoot it', () => {
     // Zoom in repeatedly from a comfortable orbital altitude (4 radii) with a
-    // gentle per-notch factor. Under the OLD proportional-in-distance model
+    // gentle per-notch factor. Under a plain proportional-in-distance model
     // this walks distance to zero in a handful of notches; under the taper it
     // should approach the floor with ever-smaller steps and never cross it.
     const factor = 0.9;
@@ -74,7 +74,7 @@ describe('zoomedDistance', () => {
   it('matches the plain proportional model far from the pivot (deep-space feel is unchanged)', () => {
     // At a distance millions of times the pivot's radius, the altitude and the
     // raw distance are the same number to within float precision, so the
-    // taper must degenerate to the old `distance * factor` model.
+    // taper must degenerate to the plain `distance * factor` model.
     const distance = EARTH_RADIUS_MPC * 1e6;
     const factor = 0.87;
     const plainModel = distance * factor;
@@ -86,8 +86,8 @@ describe('zoomedDistance', () => {
 
   it('with no pivot radius, scales distance proportionally with no taper', () => {
     // null means "no surface to taper against" — deep space, a galaxy, a
-    // structure. The taper must not engage; distance scales exactly as it did
-    // before this change existed.
+    // structure. The taper must not engage; distance scales exactly
+    // proportionally, no taper applied.
     expect(zoomedDistance(100, 2, NO_PIVOT)).toBe(200);
     expect(zoomedDistance(100, 0.5, NO_PIVOT)).toBe(50);
   });

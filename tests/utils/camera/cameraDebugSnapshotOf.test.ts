@@ -42,7 +42,8 @@ function poseWithEye(eyeMpc: Vec3): CameraPose {
   return { target: eyeMpc, yaw: 0, pitch: 0, distance: 0 };
 }
 
-/** The new-in-round-4 inputs the pre-existing assertions never read. */
+/** Inputs the regime/epoch assertions below never read (present only to
+ * satisfy the full snapshot shape). */
 const SNAP_COMMON = {
   poseBasis: IDENTITY,
   upBasis: IDENTITY,
@@ -238,8 +239,8 @@ describe('cameraDebugSnapshotOf', () => {
 
   it('scales the epoch-mismatch floor to the active time-ladder rate (I4)', () => {
     // rateIndex 6 = '1 day/s' (86_400 simSecPerRealSec): a routine ~250 ms
-    // poll gap advances the sim by ~0.25 days, four orders over the OLD fixed
-    // real-time-tuned constant — this must still read healthy at this rate.
+    // poll gap advances the sim by ~0.25 days, four orders over a naive
+    // real-time-tuned floor — this must still read healthy at this rate.
     const fastTime: TimeState = {
       mode: 'manual',
       anchor: { simDays: 0, realMs: 0 },
@@ -278,8 +279,8 @@ describe('cameraDebugSnapshotOf', () => {
   });
 
   it('derives a self-consistent orientation pipeline for a real in-band pose', () => {
-    // The round-4 readout: the residual columns the user pastes back must be
-    // the wrapped differences of the raw columns beside them, and the band
+    // This readout: the residual columns the user pastes back must be the
+    // wrapped differences of the raw columns beside them, and the band
     // scalars must come off the one curve — a wiring slip here would send us
     // debugging fabricated numbers.
     const eye = eyeAt(EARTH_RADIUS_M, 2.0);
