@@ -124,7 +124,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // Recorded unconditionally (not just while the band is active) — the
   // `sky-cubemap` row's release-margin check needs the distance on the very
   // frame the band closes, not one frame later.
-  captureRuntime.gcDistanceMpc = gcDistanceMpc;
+  captureRuntime.lastGcDistanceMpc = gcDistanceMpc;
   const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
 
   // The `sky-cubemap` row's 50 MB exists only while the band does (its
@@ -134,8 +134,8 @@ export function renderFrame(input: RenderFrameInput): void {
   // whenever the band is inactive (seeded null, reset null on close below),
   // so the band-entry frame always finds nothing baked and sweeps all six
   // faces — it needs the row to already exist.
-  if (bandActive !== captureRuntime.bandActive) {
-    captureRuntime.bandActive = bandActive;
+  if (bandActive !== captureRuntime.lastBandActive) {
+    captureRuntime.lastBandActive = bandActive;
     ctx.renderTargets.reconcile(state, ctx.canvasSize);
     if (!bandActive) captureRuntime.bakedSettings = null;
   }

@@ -378,8 +378,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // The sky-cubemap capture bookkeeping — see the matching fixture
       // comment in renderFrame.test.ts.
       skyCubemapCapture: {
-        bandActive: false,
-        gcDistanceMpc: Number.POSITIVE_INFINITY,
+        lastBandActive: false,
+        lastGcDistanceMpc: Number.POSITIVE_INFINITY,
         bakedSettings: null,
       },
     } as never,

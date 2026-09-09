@@ -287,7 +287,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (a camera dithering across the band
     // edge would otherwise destroy + reallocate the row every frame); a row
     // never allocated does not spring into existence from proximity alone —
-    // only `bandActive` triggers first allocation.
+    // only `lastBandActive` triggers first allocation.
     {
       id: 'sky-cubemap',
       format: HDR_TARGET_FORMAT,
@@ -296,10 +296,10 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: (state, isAllocated) => {
         const capture = state.skyCubemapCapture;
-        if (capture.bandActive) return true;
+        if (capture.lastBandActive) return true;
         return (
           isAllocated &&
-          capture.gcDistanceMpc <=
+          capture.lastGcDistanceMpc <=
             SKY_CUBEMAP_ROW_RELEASE_MARGIN * SCALE_FADE_BANDS.sgrAStarLensing.goneAt
         );
       },

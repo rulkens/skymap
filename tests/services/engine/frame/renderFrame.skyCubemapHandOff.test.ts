@@ -39,8 +39,8 @@ const ALL_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 /** A fresh, never-baked `skyCubemapCapture` Resource. */
 function makeCaptureRuntime() {
   return {
-    bandActive: false,
-    gcDistanceMpc: Number.POSITIVE_INFINITY,
+    lastBandActive: false,
+    lastGcDistanceMpc: Number.POSITIVE_INFINITY,
     bakedSettings: null,
   };
 }
@@ -188,7 +188,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     expect(handedOff.size).toBe(0);
   });
 
-  // The sky-cubemap row is lazily allocated off `bandActive`, and the frame
+  // The sky-cubemap row is lazily allocated off `lastBandActive`, and the frame
   // that opens the band is the frame that sweeps all six faces — so the row
   // has to be reconciled into existence BEFORE this frame reads it, and
   // reconciled away again when the band closes.
@@ -197,7 +197,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     const inBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
     renderFrame(makeInput(inBand, state));
     expect(inBand.renderTargets.reconcile).toHaveBeenCalledTimes(1);
-    expect(state.skyCubemapCapture.bandActive).toBe(true);
+    expect(state.skyCubemapCapture.lastBandActive).toBe(true);
 
     // Still in-band: nothing about the row's existence changed.
     const stillInBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
@@ -207,7 +207,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     const outOfBand = makeCtx([1000, 0, 0]);
     renderFrame(makeInput(outOfBand, state));
     expect(outOfBand.renderTargets.reconcile).toHaveBeenCalledTimes(1);
-    expect(state.skyCubemapCapture.bandActive).toBe(false);
+    expect(state.skyCubemapCapture.lastBandActive).toBe(false);
   });
 
   it('a second in-band frame with the same state and a moved camera captures nothing', () => {

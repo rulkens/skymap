@@ -187,10 +187,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Sky-cubemap bake bookkeeping — false/infinity/null until the first frame
   // the lensing band goes active; `renderFrame` is the sole writer thereafter.
   const skyCubemapCapture: SkyCubemapCaptureRuntime = {
-    bandActive: false,
+    lastBandActive: false,
     // Far outside the band pre-boot, so the row's hysteresis margin can't
     // mistake "never measured" for "just closed".
-    gcDistanceMpc: Number.POSITIVE_INFINITY,
+    lastGcDistanceMpc: Number.POSITIVE_INFINITY,
     bakedSettings: null,
   };
 
