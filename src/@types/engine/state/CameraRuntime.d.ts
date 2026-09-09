@@ -6,8 +6,8 @@
  * pose, an optional tween descriptor, an auto-rotate config, and a drag flag. It
  * is deliberately timeless — no wall-clock values live there.
  *
- * The per-frame produce step needs four transient Resources that DO depend on
- * the passage of real time and on the precise sequence of frame-produced poses:
+ * The per-frame produce step needs transient Resources that DO depend on the
+ * passage of real time and on the precise sequence of frame-produced poses:
  *
  *   `clock`        — the `CameraClock` that converts 'this tween descriptor was
  *                    seen before' / 'auto-rotate is active' into elapsed-ms for
@@ -63,7 +63,7 @@
  *                    way is up this frame' for every reader.
  *
  * Constructed in `engine.ts` alongside `frameRef`, this bag is the single source
- * of truth for all four Resources: `wireInput`, `startLoop`, `runFrame`, and the
+ * of truth for every one of them: `wireInput`, `startLoop`, `runFrame`, and the
  * focus handlers all read from `state.cameraRuntime`, so there is no duplication
  * and no 'which copy is live?' ambiguity.
  */
