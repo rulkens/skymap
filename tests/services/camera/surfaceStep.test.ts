@@ -66,7 +66,7 @@ describe('surfaceStep', () => {
     // flat pair can spell it, so the arm has to check rather than trust.
     const up = surfaceStep(EMPTY, IN_BAND, tiltDrag(15), CTX);
     expect(up.pose).toBe(IN_BAND);
-    expect(up.next).toEqual(EMPTY);
+    expect(up.next).toBe(EMPTY);
 
     const down = surfaceStep({ ...EMPTY, pointerDown: true }, IN_BAND, tiltDrag(15), CTX);
     expect(tiltOf(down.pose)).toBeGreaterThan(0.1);

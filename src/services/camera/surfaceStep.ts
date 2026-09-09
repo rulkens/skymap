@@ -53,7 +53,7 @@ export function surfaceStep(
     return {
       pose: surfaceZoomStep(
         arm,
-        prev.gesture,
+        prev.pointerDown ? prev.gesture : null,
         step.factor,
         step.cursorPx,
         viewportPx,
