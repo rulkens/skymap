@@ -10,16 +10,22 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import type { BodyLocalRay } from '../../@types/camera/BodyLocalRay';
+import type { DragStep } from '../../@types/camera/DragStep';
+import type { EyeFrame } from '../../@types/camera/EyeFrame';
 import type { InputStep } from '../../@types/camera/InputStep';
 import type { SurfaceController } from '../../@types/camera/SurfaceController';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
+import type { SurfacePick } from '../../@types/camera/SurfacePick';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { Vec4 } from '../../@types/math/Vec4';
+import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
+import { TILT_GAIN } from '../../data/camera/tiltGain';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from '../../utils/camera/anchoredDragRotation';
 import { anchoredZoomStep } from '../../utils/camera/anchoredZoomStep';
 import { blendedEnuAt } from '../../utils/camera/blendedEnuAt';
@@ -43,15 +49,6 @@ import { quatFromAxisAngle } from '../../utils/math/quatFromAxisAngle';
 import { raySphereRoots } from '../../utils/math/raySphereRoots';
 import { rotateVec3ByQuat } from '../../utils/math/rotateVec3ByQuat';
 
-const BODY_CENTRE: Vec3 = [0, 0, 0];
-const BODY_POLE: Vec3 = [0, 0, 1];
-export const TILT_GAIN = 1.6;
-
-type Ray = { readonly originM: Vec3; readonly dir: Vec3 };
-type DragStep = Extract<InputStep, { kind: 'drag' }>;
-/** `incidence` is `ray·normal` at the hit — 0 is edge-on. */
-type Pick = { readonly pointM: Vec3; readonly incidence: number };
-
 function dot3(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
@@ -62,8 +59,8 @@ function eyeOf(pose: BodyFixedPose): Vec3 {
 }
 
 /** The nearest hit AHEAD of the eye; a hit behind it would grab the far side. */
-function pickOn(ray: Ray, radiusM: number): Pick | null {
-  const roots = raySphereRoots(ray.originM, ray.dir, BODY_CENTRE, radiusM);
+function pickOn(ray: BodyLocalRay, radiusM: number): SurfacePick | null {
+  const roots = raySphereRoots(ray.originM, ray.dir, BODY_LOCAL_FRAME.centreM, radiusM);
   if (roots === null || roots[0] <= 0) return null;
   const t = roots[0];
   const pointM: Vec3 = [
@@ -96,23 +93,6 @@ function flooredPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
     eyeRelAnchorM: [eyeM[0] * scale - a[0], eyeM[1] * scale - a[1], eyeM[2] * scale - a[2]],
   };
 }
-
-/**
- * The pose's orientation readout in the ENU at its own standpoint. `azimuthRad`
- * is what the user calls "how far off north the view is": read off screen-up
- * below 45° tilt and off forward above — their horizontal parts are cos(tilt)
- * and sin(tilt) long, so they trade places there. For a roll-free pose the two
- * agree; while an arriving roll is still bleeding out, the chosen one is the
- * user-visible residual (nulling forward's near nadir drove a measured polar
- * dive THROUGH north-up and back out to 79° off).
- */
-type EyeFrame = {
-  readonly localUp: Vec3;
-  readonly tiltRad: number;
-  readonly east: Vec3;
-  readonly north: Vec3;
-  readonly azimuthRad: number;
-};
 
 /**
  * The pose's orientation readout in the band-blended reference ENU
@@ -255,7 +235,7 @@ function walledTiltPose(
  * gesture-created roll unrepresentable rather than merely damped.
  */
 function levelledPose(pose: BodyFixedPose, heldAzimuthRad: number | null): BodyFixedPose {
-  const frame = eyeFrameOf(pose, 1, BODY_POLE);
+  const frame = eyeFrameOf(pose, 1, BODY_LOCAL_FRAME.pole);
   if (frame === null) return pose;
   const target = canonicalBasisAt(frame, heldAzimuthRad ?? frame.azimuthRad, frame.tiltRad);
   const q = cappedRotationToward(pose.basisLocal, target, ORIENT_DECAY.capRad);
@@ -330,7 +310,7 @@ function canonicalledPose(
         })();
   if (dPsi !== 0) {
     const q = quatFromAxisAngle(diveAnchorM ? normalize3(diveAnchorM) : f0.localUp, dPsi);
-    out = diveAnchorM ? rotatedAbout(out, q, BODY_CENTRE) : withBasis(out, q);
+    out = diveAnchorM ? rotatedAbout(out, q, BODY_LOCAL_FRAME.centreM) : withBasis(out, q);
   }
 
   const f1 = eyeFrameOf(out, blendW, sceneUpLocal);
@@ -464,7 +444,7 @@ function draggedPose(
     // heading, so this is the north-locked orbit, not a free trackball.
     const up: Vec3 = [b[3], b[4], b[5]];
     const q = multiplyQuat(quatFromAxisAngle(right, -pitchRad), quatFromAxisAngle(up, -yawRad));
-    return { pose: rotatedAbout(arm, q, BODY_CENTRE), mode };
+    return { pose: rotatedAbout(arm, q, BODY_LOCAL_FRAME.centreM), mode };
   }
 
   if (mode === 'look') {
@@ -650,7 +630,7 @@ export function createSurfaceController(): SurfaceController {
       // heading pan transports. Drags level against the PURE body ENU — the
       // band blend is the zoom's authority; a drag-created deviation from the
       // blend is "unauthored" and the next notch's decay settles it.
-      const preInPoleFrame = eyeFrameOf(arm, 1, BODY_POLE);
+      const preInPoleFrame = eyeFrameOf(arm, 1, BODY_LOCAL_FRAME.pole);
       const { pose, mode } = draggedPose(arm, gesture, step, viewportPx, fovYRad);
       live.gesture = { ...gesture, mode, prevPixel: step.endPx };
       // One floor site, after every position write — `anchoredZoomStep` owns
@@ -685,7 +665,7 @@ export function createSurfaceController(): SurfaceController {
       // tiltMaxRad clamp is the sane ceiling, and a degenerate weight leaves
       // the memory untouched (no intent is readable there).
       if (mode === 'tilt' || mode === 'look') {
-        const f = eyeFrameOf(final, 1, BODY_POLE);
+        const f = eyeFrameOf(final, 1, BODY_LOCAL_FRAME.pole);
         const hr = Math.hypot(...eyeOf(final)) / bodyRadiusM - 1;
         if (f !== null && bodyUpWeight(hr) > 1e-6) {
           rememberedTiltRad = Math.min(unmappedTiltRad(f.tiltRad, hr), SURFACE_REGIME.tiltMaxRad);

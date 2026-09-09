@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { createSurfaceController, TILT_GAIN } from '../../../src/services/camera/surfaceController';
+import { createSurfaceController } from '../../../src/services/camera/surfaceController';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
@@ -19,6 +19,7 @@ import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { TILT_GAIN } from '../../../src/data/camera/tiltGain';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
