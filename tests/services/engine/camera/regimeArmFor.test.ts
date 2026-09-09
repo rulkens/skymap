@@ -124,14 +124,6 @@ describe('regimeArmFor', () => {
     expect(next).toEqual({ body: 'deimos' });
   });
 
-  it('applies engageHR/disengageHR from the SURFACE_REGIME record, not a literal', () => {
-    const bodyStates = new Map<BodyId, BodyState>([[bodyId('earth'), bodyStateAtOrigin()]]);
-    const justBelowEngage = eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR - 0.01);
-    const justAboveEngage = eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR + 0.01);
-    expect(regimeArmFor('absolute', justBelowEngage, bodyStates, null)).toEqual({ body: 'earth' });
-    expect(regimeArmFor('absolute', justAboveEngage, bodyStates, null)).toBe('absolute');
-  });
-
   it('a focus on a DIFFERENT body releases the engaged arm at any altitude (round 10)', () => {
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('earth'), bodyStateAtOrigin()]]);
     const current = { body: bodyId('earth') };

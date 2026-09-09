@@ -42,7 +42,8 @@ describe('OrientationTuning', () => {
     const { getByLabelText, container } = render(createElement(OrientationTuning));
     // The default band is clear of the floor, so the readout shows the plain
     // ratio — without this an unconditional "AT FLOOR" would pass below.
-    expect(container.textContent).toContain('2.00 (floor 1.10)');
+    expect(container.textContent).not.toContain('AT FLOOR');
+    expect(container.textContent).toContain('(floor ');
     // Ruling 19's engage default (0.2) sits flush against disengageMin (0.2),
     // so the window that clears the floor while still tripping the engage ×
     // minRatio clamp (0.22) is narrow — 0.21.

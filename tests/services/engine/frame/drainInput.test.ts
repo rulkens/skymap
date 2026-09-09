@@ -380,10 +380,11 @@ describe('drainInput', () => {
     const committed = worldArmOf(store.getState().camera.base);
     const moved = Math.abs((committed.roll ?? 0) - 1.4);
     expect(moved).toBeGreaterThan(0.01);
-    // Strictly UNDER the 0.1 cap: mid-band the notch's demand is a fraction of
-    // the full scene-up → body-pole correction. Pinning either weight extreme
-    // (w ≡ 0 or w ≡ 1) saturates the cap instead, so this bar is what makes the
-    // blend — not merely "some step happened" — the thing under test.
+    // Strictly UNDER the 0.1 cap: h/R 0.35 sits near the band's scene-up end
+    // (weight ≈ 0.097), so the notch's demand is a small fraction of the full
+    // scene-up → body-pole correction. Pinning either weight extreme (w ≡ 0 or
+    // w ≡ 1) saturates the cap instead, so this bar is what makes the blend —
+    // not merely "some step happened" — the thing under test.
     expect(moved).toBeLessThan(0.09);
   });
 
