@@ -1,5 +1,5 @@
 /**
- * cameraEpochs — unit tests for the pure `advanceEpoch`/`elapsedMs` pair.
+ * cameraEpochs — unit tests for the pure epoch primitives and `advanceEpochs`.
  *
  * All tests drive `nowMs` explicitly — no real wall-clock — validating the
  * purity-of-source contract the mutable `CameraClock` will be replaced by.
@@ -101,6 +101,19 @@ describe('advanceEpochs', () => {
       nowMs: 1000,
     });
     expect(result.tween).toBe(UNSTARTED_EPOCHS.tween);
+  });
+
+  it('a winning tween starts its epoch on that frame', () => {
+    const tween = makeDescriptor();
+    const intent = makeCameraState({ tween });
+    const result = advanceEpochs(UNSTARTED_EPOCHS, {
+      intent,
+      focus: null,
+      clip: UNSTARTED_EPOCHS.clip,
+      winnerId: 'tween',
+      nowMs: 1000,
+    });
+    expect(result.tween).toEqual({ ref: tween, startMs: 1000 });
   });
 
   it('the frameTween epoch advances on a frame no driver owns it', () => {

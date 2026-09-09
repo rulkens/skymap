@@ -20,9 +20,9 @@ export function elapsedMs<Ref>(epoch: Epoch<Ref>, nowMs: number): number {
  * their live ref only when their driver wins this frame (else the ease would
  * burn while some other driver, e.g. a drag, holds) — replaying `prev.ref`
  * when ineligible makes `advanceEpoch` a guaranteed no-op for that row.
- * `frameTween` has no eligibility gate: `resolveFrameBasis.ts:90` reads it
- * every frame regardless of winner. `clip` is not advanced here at all — its
- * owner (Task 5) already did, so it is passed through by reference.
+ * `frameTween` has no eligibility gate: `resolveFrameBasis` reads it
+ * regardless of winner. `clip` is not advanced here at all — the clip player
+ * advances it before the frame step runs, so it is passed through by reference.
  */
 export function advanceEpochs(
   prev: CameraEpochs,
@@ -36,8 +36,8 @@ export function advanceEpochs(
 ): CameraEpochs {
   const { intent, focus, clip, winnerId, nowMs } = inputs;
 
-  // One eligibility fact per row — the brief's table, minus the two rows that
-  // don't need one. A later follow id is a one-cell edit to this line.
+  // One eligibility fact per row, minus the two rows that don't need one.
+  // A later follow id is a one-cell edit to this literal.
   const eligible = {
     tween: winnerId === 'tween',
     autoRotate: winnerId === 'autoRotate',
