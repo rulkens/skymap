@@ -9,14 +9,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 
 import { drainInput } from '../../../../src/services/engine/frame/drainInput';
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
-import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
-import { rootReducer } from '../../../../src/store/rootReducer';
+import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import {
   startCameraTween,
@@ -34,52 +29,27 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 
+/**
+ * `drainInput` is exercised directly (never `runFrame`), so the shared
+ * harness's boot pose/focus are noise here — every test seeds its own start
+ * pose. `bootHR: null` leaves `cameraRuntime` holding a plain origin pose at
+ * `distance` with no store commit, matching `drainInput`'s only two reads of
+ * boot state (the register and `deps.canvas`).
+ */
 function makeHarness(distance = 100) {
-  const cam = createOrbitCamera({
-    target: [0, 0, 0],
-    distance,
-    yaw: 0,
-    pitch: 0,
-    fovYRad: (Math.PI / 180) * 60,
-    aspect: 1,
-    near: 0.1,
-    far: 1000,
+  const h = makeCameraSimHarness({
+    focusBody: null,
+    bootHR: null,
+    neutralDistance: distance,
+    canvasSize: 1000,
   });
-  const inputAggregator = createInputAggregator();
-  const state = {
-    cam,
-    // The world-arm fold resolves the live pose's arm, so the harness carries
-    // the orientation + epoch that resolution reads.
-    settings: { orientation: 'ecliptic' },
-    subsystems: { inputAggregator },
-    cameraRuntime: {
-      clock: createCameraClock(),
-      lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance }) },
-      displayedPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance }) },
-      prevActiveId: { current: 'resting' },
-      lastRenderedSimDays: { current: CONST_J2000 },
-      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
-      projection: { fovYRad: Math.PI / 3, aspect: 1, near: 0.01, far: 50000 },
-      surface: createSurfaceController(),
-      lastZoomFactor: { current: null },
-    },
-  } as unknown as EngineState;
-
-  const store = configureStore({ reducer: rootReducer });
-  const deps = {
-    canvas: { clientWidth: 1000, clientHeight: 1000 } as HTMLCanvasElement,
-    cb: { store },
-  } as unknown as RunFrameDeps;
-
-  return { cam, agg: inputAggregator, state, deps, store };
+  return { agg: { push: h.push }, state: h.state, deps: h.deps, store: h.store };
 }
 
 /** Earth's body arm, eye `radii` Earth-radii from the centre, looking at it. */
