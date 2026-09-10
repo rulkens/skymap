@@ -7,7 +7,7 @@
  *
  * Every OTHER focus (a palette body pick, the `f` key) preserves the user's
  * live yaw/pitch — the camera glides to the target from wherever it already
- * looks. Home is the ONE deliberate exception: it tweens to `earthHomePose`,
+ * looks. Home is the ONE deliberate exception: it tweens to `bodyHomePose`,
  * whose yaw/pitch aim at Earth's sunlit side with the terminator raking across
  * the globe. Landing on the night side (a black disc) would waste the "you are
  * here" arrival shot, so home overrides orientation on purpose.
@@ -21,7 +21,7 @@
  * tween's end pose as its `from`, and re-seeds its distance target to the exact
  * framing distance the pose already carries (`followElapsed` in cameraClock.ts
  * nulls `followDistanceTarget` on every focus-row change; the driver re-seeds it
- * to `bodyLikeFraming`'s distance — the same one `earthHomePose` used). Because
+ * to `bodyLikeFraming`'s distance — the same one `bodyHomePose` used). Because
  * the pose already sits at that distance, the tween→follow handoff is seamless:
  * the driver takes over a camera already at rest.
  *
@@ -47,7 +47,7 @@ import { goHome } from './goHome';
 import { EARTH_REF } from '../../data/selection/earthRef';
 import { updateSelectionSelect, updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
-import { earthHomePose } from '../../services/engine/camera/earthHomePose';
+import { bodyHomePose } from '../../services/engine/camera/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectOrientation } from '../settings/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -69,7 +69,7 @@ export function* watchGoHomeSaga() {
     const simDays = deriveSimDays(time, performance.now());
 
     // The steady committed orientation basis, so the home pose encodes its aim
-    // through the same frame the render path decodes with (see `earthHomePose`).
+    // through the same frame the render path decodes with (see `bodyHomePose`).
     // The bare id is also stamped onto the descriptor (`frame`) so the tween
     // driver can re-express the pose if the setting changes mid-flight.
     const frame = yield* select(selectOrientation);
@@ -80,7 +80,7 @@ export function* watchGoHomeSaga() {
     yield* put(
       startCameraTween({
         from: runtime.from,
-        to: earthHomePose(simDays, runtime.fovYRad, frameBasis),
+        to: bodyHomePose(simDays, runtime.fovYRad, frameBasis),
         durationMs: FOCUS_TWEEN_MS,
         easing: 'easeOutCubic',
         frame,

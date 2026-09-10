@@ -1,10 +1,10 @@
 /**
  * cameraFraming — unit tests for the pure initial-camera helper.
  *
- * The helper now boots into the Earth home pose (`earthHomePose`), so the one
+ * The helper now boots into the Earth home pose (`bodyHomePose`), so the one
  * load-bearing invariant is that the snapshot's pose is that helper's pose at
  * the boot instant, wrapped in the near/far/fov envelope. Pinning the pose
- * against `earthHomePose` regresses loudly if boot ever drifts back to the old
+ * against `bodyHomePose` regresses loudly if boot ever drifts back to the old
  * Milky-Way constants or clamps away the Earth-scale framing distance.
  */
 
@@ -15,7 +15,7 @@ import {
   FAR_CLIP_MPC,
   GALACTIC_DISC_FORWARD,
 } from '../../../../src/services/engine/camera/cameraFraming';
-import { earthHomePose } from '../../../../src/services/engine/camera/earthHomePose';
+import { bodyHomePose } from '../../../../src/services/engine/camera/bodyHomePose';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { orbitAnglesLookingAlong } from '../../../../src/utils/camera/orbitAnglesLookingAlong';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -25,7 +25,7 @@ describe('computeInitialCamera', () => {
 
   it('boots into the Earth home pose at the given sim instant', () => {
     const cam = computeInitialCamera({ fovYRad: FOV, simDays: CONST_J2000 });
-    const home = earthHomePose(CONST_J2000, FOV);
+    const home = bodyHomePose(CONST_J2000, FOV);
 
     expect(cam.target).toEqual(home.target);
     expect(cam.yaw).toBe(home.yaw);

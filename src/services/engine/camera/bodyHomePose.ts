@@ -1,5 +1,5 @@
 /**
- * earthHomePose — the one canonical 'home' camera pose: Earth, framed to fill
+ * bodyHomePose — the one canonical 'home' camera pose: Earth, framed to fill
  * the lens, viewed from its sunlit side with the terminator raking across the
  * globe. This is the pose the Home pill, the `h`/`e` keys, and cold boot all
  * converge on, so it lives in exactly one place.
@@ -66,7 +66,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
  */
 export const HOME_TERMINATOR_OFFSET_RAD = (Math.PI / 180) * 60;
 
-export function earthHomePose(simDays: number, fovYRad: number, frameBasis?: Mat3): CameraPose {
+export function bodyHomePose(simDays: number, fovYRad: number, frameBasis?: Mat3): CameraPose {
   const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
   const { target, distance } = bodyLikeFraming(earthPos, SCENE_EARTH.radiusM, fovYRad);
 

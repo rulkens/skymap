@@ -16,7 +16,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
 import { goHome } from '../../../src/state/selection/goHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
-import { earthHomePose } from '../../../src/services/engine/camera/earthHomePose';
+import { bodyHomePose } from '../../../src/services/engine/camera/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
@@ -80,7 +80,7 @@ describe('watchGoHomeSaga', () => {
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
     const orientation = selectOrientation(store.getState());
     const frameBasis = ORIENTATION_FRAMES[orientation];
-    expect(tween!.to).toEqual(earthHomePose(simDays, FOV, frameBasis));
+    expect(tween!.to).toEqual(bodyHomePose(simDays, FOV, frameBasis));
 
     // The descriptor pins the orientation live at dispatch time, mirroring
     // `clip.frame` and `focusTweenDescriptor`'s `frame` — the driver re-expresses
