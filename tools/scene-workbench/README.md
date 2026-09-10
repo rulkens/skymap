@@ -30,7 +30,9 @@ script or `/scene-workbench/` subpath.
    asset into `public/data/geo3d/`. Needs `bake-lidar` to have already run
    for the group (its `points.bin` seeds the COLMAP model's `points3D`), and
    `brush-cli` and PROJ's `cct` on PATH. Install brush with
-   `cargo install --git https://github.com/ArthurBrussee/brush brush-cli`.
+   `cargo install --locked --git https://github.com/ArthurBrussee/brush brush-cli`
+   (`--locked` is load-bearing: an unlocked build pulls a burn revision that
+   panics in Brush's splat initialisation).
    <!-- bake numbers: splatCount / shDegree / wall time — filled after the first real bake -->
 6. `npm run scene-workbench`
 

@@ -226,12 +226,14 @@ function brushVersion(): string {
   const result = spawnSync('brush-cli', ['--version'], { encoding: 'utf8' });
   if (result.status !== 0) {
     // A stale toolchain is the usual cause of a failed `cargo install`, so name it.
+    // `--locked` matters: an unlocked build resolves burn to its current main,
+    // which panicked in Brush's splat init ("require_grad requires autodiff").
     const rustc = spawnSync('rustc', ['--version'], { encoding: 'utf8' });
     const toolchain = rustc.status === 0 ? rustc.stdout.trim() : 'none on PATH';
     throw new Error(
       'bakeSplats: `brush-cli --version` failed — is Brush installed and on PATH ' +
         '(cargo puts it in ~/.cargo/bin)? Install with:\n' +
-        '  rustup update && cargo install --git https://github.com/ArthurBrussee/brush brush-cli\n' +
+        '  rustup update && cargo install --locked --git https://github.com/ArthurBrussee/brush brush-cli\n' +
         `  local Rust toolchain: ${toolchain}`,
     );
   }
