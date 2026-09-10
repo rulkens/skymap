@@ -45,4 +45,10 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // 360°/6.387222 d, Charon's period in `orbitalElements.ts`; 56.3625225 × 6.387222 =
   // 359.99994°, the residual being their rounding).
   { id: 'charon', poleRaDeg: 132.993, poleDecDeg: -6.163, primeMeridianDeg: 122.695, spinRateDegPerDay: 56.3625225 },
+  // Whale and petunias (Hitchhiker's Guide easter egg): tumble poles are
+  // DECORATIVE, not measured — chosen off-axis so the tumble visibly wobbles
+  // rather than spinning about a screen-aligned axis. One turn per 3 minutes;
+  // the pot tumbles twice as fast.
+  { id: 'whale', poleRaDeg: 57.3, poleDecDeg: 24.8, primeMeridianDeg: 0.0, spinRateDegPerDay: 172800 },
+  { id: 'petunias', poleRaDeg: 198.6, poleDecDeg: -37.2, primeMeridianDeg: 0.0, spinRateDegPerDay: 345600 },
 ];

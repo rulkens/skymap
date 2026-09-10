@@ -13,7 +13,9 @@ import { SCALE_UNITS } from '../scaleUnits';
 import { satellite } from './makers/satellite';
 import { sStar } from './makers/sStar';
 import { S_STAR_SEEDS } from './sStarElements';
+import { SCENE_EARTH } from './sceneEarth';
 import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
+import { periodDaysFromSemiMajorKm } from '../../utils/orbit/periodDaysFromSemiMajorKm';
 import {
   MERCURY_GREY,
   VENUS_CREAM,
@@ -30,10 +32,22 @@ import {
   SAT_ICE,
   IO_SULFUR,
   TITAN_ORANGE,
+  WHALE_GREY,
+  PETUNIA_PINK,
 } from './palette';
 import { degToRad } from '../../utils/math/degToRad';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
+
+// The whale and petunias (Hitchhiker's Guide easter egg) share one 400 km
+// circular geocentric orbit — the pot trails the whale in PHASE, not
+// altitude — so one semi-major axis and period feed both `satellite()` rows.
+// 40 m behind along the track, converted to mean-anomaly degrees by arc
+// length: 40 / (2π·a) × 360.
+const MESH_BODY_SEMI_MAJOR_KM = SCENE_EARTH.radiusM / 1000 + 400;
+const MESH_BODY_PERIOD_DAYS = periodDaysFromSemiMajorKm(MESH_BODY_SEMI_MAJOR_KM);
+const PETUNIA_TRAIL_OFFSET_DEG =
+  (40 / (2 * Math.PI * MESH_BODY_SEMI_MAJOR_KM * SCALE_UNITS.KM_TO_M)) * 360;
 
 export function elementsById(id: string): OrbitalElements {
   return findByIdOrThrow(ORBITAL_ELEMENTS, id, 'orbitalElements');
@@ -591,6 +605,46 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // off, unlike the same approximation Earth–Moon already makes. Deliberate;
     // the fix is scoped in docs/backlog/2026-08-16-barycentric-orbit-pairs.md.
     color: CHARON_GREY,
+  }),
+
+  // The whale and the petunias (Hitchhiker's Guide easter egg): a circular,
+  // equatorial 400 km orbit — i=0/node=0/ω=0 are all undefined at this
+  // geometry, same convention as Deimos/Dione above — riding Earth's OWN
+  // equatorial pole (poleRaDeg/poleDecDeg match the 'earth' row in
+  // rotationElements.ts) rather than a distinct Laplace plane.
+  satellite({
+    id: 'whale',
+    focusId: 'earth',
+    semiMajorKm: MESH_BODY_SEMI_MAJOR_KM,
+    eccentricity: 0,
+    inclinationDeg: 0,
+    ascendingNodeDeg: 0,
+    argPeriapsisDeg: 0,
+    meanAnomalyDeg: 0,
+    periodDays: MESH_BODY_PERIOD_DAYS,
+    apsidalPrecessionYears: 0,
+    nodalPrecessionYears: 0,
+    poleRaDeg: 0.0,
+    poleDecDeg: 90.0,
+    color: WHALE_GREY,
+  }),
+  satellite({
+    // Trails the whale by PETUNIA_TRAIL_OFFSET_DEG in mean anomaly — behind in
+    // the direction of travel, so a smaller M at this shared epoch.
+    id: 'petunias',
+    focusId: 'earth',
+    semiMajorKm: MESH_BODY_SEMI_MAJOR_KM,
+    eccentricity: 0,
+    inclinationDeg: 0,
+    ascendingNodeDeg: 0,
+    argPeriapsisDeg: 0,
+    meanAnomalyDeg: -PETUNIA_TRAIL_OFFSET_DEG,
+    periodDays: MESH_BODY_PERIOD_DAYS,
+    apsidalPrecessionYears: 0,
+    nodalPrecessionYears: 0,
+    poleRaDeg: 0.0,
+    poleDecDeg: 90.0,
+    color: PETUNIA_PINK,
   }),
 
   // The 39 bound S-stars are mapped rather than spelled out: their per-row facts live in
