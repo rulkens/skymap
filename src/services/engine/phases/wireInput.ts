@@ -60,10 +60,6 @@ import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas, home } = deps;
 
-  // The visual renderer must exist before we wire picking + the camera —
-  // `renderer` is the null-guard subject on the next line.
-  const renderer = state.gpu.galaxyPointRenderer;
-  if (!renderer) return;
   // The two GPU_HANDLE_ROWS rows marked `constructPhase: 'wireInput'`: they
   // read `state.gpu.focusUniform`, built by `initGpu`'s walker call, so they
   // wait for this phase. `ctx.context`/`ctx.format`/`ctx.hdrCapable` and

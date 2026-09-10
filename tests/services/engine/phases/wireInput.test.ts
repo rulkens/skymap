@@ -294,6 +294,21 @@ describe('wireInput', () => {
     expect(selectFocusRef(root)).toEqual(jupiter);
   });
 
+  it('wires the camera and the input bindings when galaxyPointRenderer is null', async () => {
+    // The worst of the three phase-guard failures: no renderer must never mean
+    // no input and no error — the camera and controls come up regardless.
+    const state = makeState();
+    state.gpu.galaxyPointRenderer = null;
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    expect(state.cam).not.toBeNull();
+    expect(state.subsystems.inputBindings).not.toBeNull();
+    expect(attachOrbitControlsSpy).toHaveBeenCalled();
+  });
+
   it('wires the recognizer’s emit sink to the aggregator and the render wake', async () => {
     // This four-line sink is the ONLY path from a DOM event to the camera. Wire
     // it to a locally-built aggregator, or drop the requestRender, and all input
