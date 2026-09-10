@@ -48,6 +48,7 @@ import { liveFocusRow } from './helpers/liveFocusRow';
 import { deriveBodyStates } from './frame/deriveBodyStates';
 import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
+import { readOrientDeltas } from './camera/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
 import type { BodyId } from '../../@types/data/body/BodyId';
@@ -620,6 +621,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           gesture: surface.gesture,
           lastZoomFactor: outputs.lastZoomFactor,
           rememberedTiltRad: surface.rememberedTiltRad,
+          deltas: readOrientDeltas(),
         });
       },
     },

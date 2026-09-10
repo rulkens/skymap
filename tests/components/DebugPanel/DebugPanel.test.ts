@@ -39,6 +39,9 @@ const stubTimingService: GpuTimingService = {
 
 const stubSlots = new Map();
 
+const ABSENT_DOF = { currentRad: null, targetRad: null, residualRad: null };
+const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0, peakAtMs: null };
+
 /** A quiet, self-consistent stub — armMismatch/epochMismatch both false. */
 const EMPTY_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
   storedFrame: 'absolute',
@@ -51,13 +54,14 @@ const EMPTY_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
   orientationFrame: 'ecliptic',
   bandUpWeight: null,
   rememberedTiltRad: 0,
-  headingRad: null,
-  tiltRad: null,
-  rollRad: 0,
-  poleRollRad: null,
-  rollToPoleRad: null,
-  bandTargetRollRad: null,
-  rollToTargetRad: null,
+  dofs: {
+    bodyId: null,
+    hOverR: null,
+    heading: ABSENT_DOF,
+    tilt: ABSENT_DOF,
+    roll: ABSENT_DOF,
+  },
+  deltas: { heading: QUIET_DELTA, tilt: QUIET_DELTA, roll: QUIET_DELTA },
   lastRenderedSimDays: 0,
   liveSimDays: 0,
   epochDeltaDays: 0,

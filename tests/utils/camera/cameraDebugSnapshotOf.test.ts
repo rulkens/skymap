@@ -42,6 +42,8 @@ function poseWithEye(eyeMpc: Vec3): CameraPose {
   return { target: eyeMpc, yaw: 0, pitch: 0, distance: 0 };
 }
 
+const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0, peakAtMs: null } as const;
+
 /** Inputs the regime/epoch assertions below never read (present only to
  * satisfy the full snapshot shape). */
 const SNAP_COMMON = {
@@ -51,6 +53,11 @@ const SNAP_COMMON = {
   gesture: null,
   lastZoomFactor: null,
   rememberedTiltRad: 0,
+  deltas: {
+    heading: QUIET_DELTA,
+    tilt: QUIET_DELTA,
+    roll: QUIET_DELTA,
+  },
 } as const;
 
 function bodyState(positionMpc: Vec3): BodyState {
@@ -298,12 +305,13 @@ describe('cameraDebugSnapshotOf', () => {
       lastZoomFactor: 1.2,
     });
 
-    expect(snap.rollRad).toBe(0.3);
+    expect(snap.dofs.roll.currentRad).toBe(0.3);
     expect(snap.lastZoomDirection).toBe('out');
-    expect(snap.tiltRad).toBeCloseTo(0, 6); // looking straight at the centre
-    expect(snap.poleRollRad).not.toBeNull();
-    expect(snap.rollToPoleRad).toBeCloseTo(0.3 - snap.poleRollRad!, 6);
-    expect(snap.bandTargetRollRad).not.toBeNull();
-    expect(snap.rollToTargetRad).toBeCloseTo(0.3 - snap.bandTargetRollRad!, 6);
+    expect(snap.dofs.tilt.currentRad).toBeCloseTo(0, 6); // looking straight at the centre
+    expect(snap.dofs.roll.targetRad).not.toBeNull();
+    expect(snap.dofs.roll.residualRad).toBeCloseTo(0.3 - snap.dofs.roll.targetRad!, 6);
+    // Heading's target IS north, so its residual is the heading itself.
+    expect(snap.dofs.heading.targetRad).toBe(0);
+    expect(snap.dofs.heading.residualRad).toBeCloseTo(snap.dofs.heading.currentRad!, 12);
   });
 });

@@ -1,4 +1,6 @@
 import type { BodyId } from '../data/body/BodyId';
+import type { CameraDofAngles } from './CameraDofAngles';
+import type { OrientDeltas } from './OrientDeltas';
 import type { PoseFrame } from './PoseFrame';
 import type { Vec3 } from '../math/Vec3';
 
@@ -22,19 +24,10 @@ export type CameraDebugSnapshot = {
   readonly bandUpWeight: number | null;
   /** The session's Cesium-style remembered tilt (ruling 12), radians. */
   readonly rememberedTiltRad: number;
-  /** Body-local heading/tilt of the rendered view; null off-roster. */
-  readonly headingRad: number | null;
-  readonly tiltRad: number | null;
-  /** The pose's roll — 0 IS the configured scene up, by the roll convention. */
-  readonly rollRad: number;
-  /** The roll that would put the body spin axis up on screen; null when degenerate. */
-  readonly poleRollRad: number | null;
-  /** Wrapped `rollRad − poleRollRad` — residual to pure spin-axis alignment. */
-  readonly rollToPoleRad: number | null;
-  /** `bandRollTarget` — the band-blended target the notch ride follows. */
-  readonly bandTargetRollRad: number | null;
-  /** Wrapped `rollRad − bandTargetRollRad` — residual to the ride's target. */
-  readonly rollToTargetRad: number | null;
+  /** Heading / tilt / roll as current-target-residual, radians. */
+  readonly dofs: CameraDofAngles;
+  /** The same three DOFs' per-FRAME motion; the 4 Hz poll cannot measure this. */
+  readonly deltas: OrientDeltas;
   /** `cameraRuntime.outputs.simDays` — the epoch last frame drew at. */
   readonly lastRenderedSimDays: number;
   /** The live clock's instant, resolved at read time (not what any frame drew). */
