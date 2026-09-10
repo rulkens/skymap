@@ -1,12 +1,9 @@
 /**
- * SkraafotoStacItem — the fields of a Dataforsyningen skråfoto STAC item this
- * pipeline reads, not the whole STAC schema (the live item carries ~20 more).
+ * The fields of a skråfoto STAC item this pipeline reads (`data/raw/skraafoto/README.md`).
  *
- * Units and frames, none of them recoverable from the field names:
- * `pers:omega/phi/kappa` degrees; `pers:perspective_center` metres in
+ * Units: `pers:omega/phi/kappa` degrees; `pers:perspective_center` metres,
  * EPSG:25832 easting/northing + DVR90 height; `pers:interior_orientation`
- * millimetres; `proj:shape` STAC's `[rows, cols]` — height first, width
- * second, the reverse of the `[width, height]` most raster APIs take.
+ * millimetres. `proj:shape` is STAC's `[rows, cols]` — height first.
  */
 export type SkraafotoStacItem = {
   readonly id: string;

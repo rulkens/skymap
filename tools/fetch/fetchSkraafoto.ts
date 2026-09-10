@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /**
- * fetchSkraafoto — harvest the Søndermarken oblique frames from
- * Dataforsyningen's skråfoto STAC search into
- * `data/raw/skraafoto/<collection>/`: the item JSON verbatim plus one
- * 1920-long-edge JPEG per photo, cut from the COG's own overview pyramid
- * (`data/raw/skraafoto/README.md` — endpoint, credential, licence).
+ * fetchSkraafoto — harvest the Søndermarken oblique frames from Dataforsyningen's
+ * skråfoto STAC search into `data/raw/skraafoto/<collection>/`: the item JSON
+ * verbatim plus one 1920-long-edge JPEG per photo, cut from the COG's own
+ * overview pyramid (`data/raw/skraafoto/README.md` — endpoint, credential, licence).
  *
  * The token is a *different* credential from `fetchDhm.ts`'s Datafordeler
  * apiKey, and travels only as a request header / `GDAL_HTTP_HEADERS` — never
@@ -58,11 +57,7 @@ function downsampledSize(item: SkraafotoStacItem): readonly [number, number] {
 function fetchItem(item: SkraafotoStacItem, destDir: string, apiKey: string): ItemOutcome {
   const jsonPath = join(destDir, `${item.id}.json`);
   const jpgPath = join(destDir, `${item.id}.jpg`);
-  // A failed gdal_translate never leaves a renamed file behind, so presence of
-  // both is a trustworthy resume marker — no header check as fetchDhm needs.
   if (existsSync(jsonPath) && existsSync(jpgPath)) return { id: item.id, status: 'existing' };
-
-  writeFileSync(jsonPath, `${JSON.stringify(item, null, 2)}\n`);
 
   const [outW, outH] = downsampledSize(item);
   const tmpPath = `${jpgPath}.tmp`;
@@ -93,7 +88,13 @@ function fetchItem(item: SkraafotoStacItem, destDir: string, apiKey: string): It
     };
   }
 
+  // The JSON is written last, after the download it describes has landed — an
+  // interrupt during gdal's multi-second fetch would otherwise strand a JSON
+  // with no JPEG, and the bake enumerates this directory by `*.json`. The
+  // reverse leftover (a JPEG with no JSON) is invisible to that enumeration and
+  // is re-fetched by the both-present check above.
   renameSync(tmpPath, jpgPath);
+  writeFileSync(jsonPath, `${JSON.stringify(item, null, 2)}\n`);
   return { id: item.id, status: 'fetched' };
 }
 
@@ -113,6 +114,11 @@ async function main(): Promise<void> {
     process.stderr.write(
       `  warning: hit the ${SEARCH_LIMIT}-item search limit — harvest is short\n`,
     );
+  }
+  if (items.length === 0) {
+    process.stderr.write('  no items matched — check the collection name and the group bbox\n');
+    process.exitCode = 1;
+    return;
   }
 
   const outcomes: ItemOutcome[] = [];

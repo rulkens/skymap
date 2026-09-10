@@ -111,10 +111,17 @@ not hours, and is bounded by request latency rather than bandwidth.
 - **GDAL writes a `.aux.xml` sidecar by default.** `GDAL_PAM_ENABLED=NO` keeps
   the output directory to exactly the `.json`/`.jpg` pair the resume check and
   the COLMAP model builder both enumerate.
-- **Resume is presence-only.** Both `<itemId>.json` and `<itemId>.jpg` present
-  means done. Unlike the DHM LAS tiles, no header check is needed: the fetcher
-  writes to `<dest>.tmp` and renames only on exit code 0, so a failed or
-  interrupted `gdal_translate` never leaves a file under the final name.
+- **Resume is presence-only, and the write order is what makes that safe.**
+  Both `<itemId>.json` and `<itemId>.jpg` present ⇔ that item succeeded. Unlike
+  the DHM LAS tiles, no header check is needed: `gdal_translate` writes to
+  `<dest>.tmp` and is renamed only on exit code 0, and the **item JSON is
+  written last, after the JPEG lands**. A failed or interrupted frame therefore
+  never leaves a `.json` behind — which matters because the COLMAP model builder
+  and `bakeSplats` enumerate this directory by `*.json`, and a JSON without its
+  JPEG would be a frame the trainer cannot open. The reverse leftover (a JPEG
+  with no JSON, from an interrupt in the sub-millisecond window between the two
+  writes) is invisible to that enumeration and is re-fetched on the next run.
+  Don't "tidy" the JSON write back to the top of the function.
 
 ## Prerequisite versions (verified 2026-09-10)
 
