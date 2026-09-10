@@ -59,20 +59,21 @@ full port registry).
 State lives in an RTK store, wired up in `src/store/`; the slices themselves
 live one per domain under `src/state/<domain>/` — `registry` (`scenes.json`'s
 group list), `group` (the selected group's manifest and per-asset load
-status), `view` (camera pose, per-asset visibility, device-lost). Two watcher
-sagas own every side effect: `watchRegistrySaga` loads the registry and
-auto-selects the
-first group; `watchGroupSaga` disposes the previous group, fetches its
-manifest, then fetches/parses/uploads each asset. Both reach the WebGPU
+status), `view` (camera pose, per-asset visibility, per-layer display knobs,
+device-lost). Three watcher sagas own every side effect: `watchRegistrySaga`
+loads the registry and auto-selects the first group; `watchGroupSaga` disposes
+the previous group, fetches its manifest, then fetches/parses/uploads each
+asset; `watchSplatSortSaga` re-sorts splat draw order at each camera commit.
+All three reach the WebGPU
 objects — `gpu`, `gpuAssets`, the renderer, the depth texture — through
 `RenderResources` (`src/render/renderResources.ts`), handed to the saga layer
 once via `registerSagaContext`; `Viewport.tsx` stays a dumb frame driver that
 only reads it.
 
-The bake CLIs (`npm run fetch-dhm`, `npm run bake-lidar`) write
+The bake CLIs (`npm run bake-lidar`, `npm run bake-splats`) write
 `public/data/geo3d/scenes.json` (the registry) and
 `public/data/geo3d/groups/<id>/manifest.json` alongside one
-`groups/<id>/assets/<assetId>/points.bin` per asset (gitignored, not
+`groups/<id>/assets/<assetId>/{points,splats}.bin` per asset (gitignored, not
 part of the deployed static bundle). A group's local frame is ENU, +Z up,
 metres — `GroupAnchor` (`@types/GroupAnchor.d.ts`) is the geodetic anchor that
 places it in the world.
