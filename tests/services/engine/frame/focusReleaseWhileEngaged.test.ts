@@ -142,6 +142,7 @@ describe('focus release while engaged (round 10)', () => {
     const h = makeCameraSimHarness();
     h.frame(3); // follow Earth first (t = 16, 32, 48)
     h.focus('mars');
+    // A cut, not a flight: the reseed's fresh epochs and memory are intended.
     h.seedPose(absoluteArm(MARS_PARK));
     h.tick(64);
     const frame = h.state.cameraRuntime.register.pose.frame;
