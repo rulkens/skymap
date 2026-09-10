@@ -735,23 +735,10 @@ must sit exactly at `disengageHR`.
 
 ### Task 18: clock and frame-loop integration
 
-**Files (new):** `tests/services/engine/frame/engagedArmClock.test.ts`
-
-The spec §14 "Clock" verification, stated as an **equality, not a tolerance**: with
-the sim clock at high rate and the arm engaged, a tracked ground point's body-fixed
-coordinates are **bit-identical across frames** — the `ω × r` residual is exactly
-zero, because nothing in the engaged path reads a world position.
-
-**Tests:**
-
-- `the tracked ground point is bit-identical across frames under a 10⁶× clock`
-  (**FW-F**).
-- `the engaged pose is unchanged by advancing the clock alone` — no gesture, no
-  driver, just time.
-- `crossing out of the arm under an accelerated clock does not snap the image` —
-  the H1 boundary; the perceptual measurement itself is Task 22's user gate.
-
-- [ ] TDD, commit.
+Superseded by
+[`2026-09-09-camera-runtime-single-writer.md`](2026-09-09-camera-runtime-single-writer.md)
+Task 17 — `tests/services/engine/frame/engagedArmClock.test.ts`, spec §14 clock
+invariance, driven through the pure step instead of a running engine.
 
 ## Phase 4 — late consumers
 
@@ -899,7 +886,7 @@ src/data/camera/surfaceRegime.ts                    T2
 src/services/engine/camera/poseFrameConversion.ts   T3  (+ resolveWorldArm, T13)
 src/services/engine/camera/regimeArmFor.ts          T12
 src/services/engine/helpers/liveWorldPose.ts        T13
-src/services/camera/surfaceController.ts            T16
+src/services/camera/surfaceController.ts            T16  deleted by the prep → surfaceStep.ts
 src/utils/camera/maxTiltRad.ts                      T5
 src/utils/camera/reanchoredPose.ts                  T6
 src/utils/camera/cursorRayBodyLocal.ts              T7
@@ -913,34 +900,78 @@ src/utils/camera/poseFromBodyArm.ts                 T14
 tests/** mirroring each of the above
 tests/services/engine/camera/noStoredRegimeFlag.test.ts   T12
 tests/services/engine/frame/poseFold.test.ts              T15
-tests/services/engine/frame/engagedArmClock.test.ts       T18
+```
+
+`reanchoredPose.ts`, `surfaceReadoutOf.ts` and `SurfaceReadout.d.ts` were deleted by
+the 2026-09-02 simplification wave (zero importers — spec §5.3, §13).
+
+**Created — cameraRuntime single-writer prep**
+([plan](2026-09-09-camera-runtime-single-writer.md), its task numbers)
+
+```
+src/@types/engine/camera/Epoch.d.ts                 P2
+src/@types/engine/camera/CameraEpochs.d.ts          P2
+src/@types/engine/camera/FollowMemory.d.ts          P4
+src/@types/engine/camera/DriverCtx.d.ts             P7
+src/@types/engine/camera/StepInputs.d.ts            P15
+src/@types/camera/SurfaceMemory.d.ts                P10
+src/@types/engine/state/FrameOutputs.d.ts           P14
+src/services/engine/camera/cameraEpochs.ts          P2, P3
+src/services/camera/surfaceStep.ts                  P10
+src/services/engine/camera/replayInput.ts           P12
+src/services/engine/camera/seedCameraRuntime.ts     P14
+src/services/engine/camera/stepCameraRuntime.ts     P15
+src/services/engine/camera/commitOnEdge.ts          P15
+src/services/engine/frame/projectFramePose.ts       P15
+src/utils/camera/surfaceGestureEdge.ts              P15
+src/utils/camera/isFollowDriverId.ts                P18
+tests/helpers/deepFreeze.ts                                    P16
+tests/fixtures/camera/driverGoldenTrace.json                   P1
+tests/services/engine/frame/driverGoldenTrace.test.ts          P1
+tests/services/engine/frame/cameraRuntimeSingleWriter.test.ts  P16
+tests/services/engine/frame/engagedArmClock.test.ts            P17  (was T18)
+tests/services/engine/frame/followApproachStrand.test.ts       P18
+tests/** mirroring each new src file
+```
+
+**Deleted — cameraRuntime single-writer prep**
+
+```
+src/@types/engine/camera/CameraClock.d.ts           P4   → Epoch + FollowMemory
+src/services/engine/camera/cameraClock.ts           P4
+src/@types/camera/SurfaceController.d.ts            P11  → SurfaceMemory
+src/services/camera/surfaceController.ts            P11  → surfaceStep.ts
+src/services/engine/frame/drainInput.ts             P13  → replayInput.ts
 ```
 
 **Modified**
 
 ```
 src/@types/camera/CameraState.d.ts                  T13  base: FramedCameraPose
-src/@types/engine/state/CameraRuntime.d.ts          T13  lastPose: framed
-src/@types/engine/camera/CameraDriver.d.ts          T13  pose returns framed
+src/@types/engine/state/CameraRuntime.d.ts          T13, prep  five value groups, no boxes
+src/@types/engine/camera/CameraDriver.d.ts          T13, prep  pose(ctx, mem) → { pose, memory };
+                                                    isActive(s, approachDone?)
 src/@types/animation/CameraAction.d.ts              T20  frame tag on set/setVec
 src/state/camera/{cameraSlice,selectors}.ts         T13
 src/state/camera/{watchOrientationChangeSaga,orientationActions}.ts   T13
 src/state/camera/watchFlyToLonLatSaga.ts            T13, T19
 src/state/perf/installPerfHook.ts                   T13
-src/services/engine/camera/cameraDrivers.ts         T13, T16, T20
-src/services/engine/camera/applyWheelZoom.ts        T13  world arm only
+src/services/engine/camera/cameraDrivers.ts         T13, T16, T20, prep  module-constant
+                                                    table; followApproach 55 / followHold 10
+src/services/engine/camera/applyWheelZoom.ts        T13  world arm only; prep  writes nothing
 src/services/engine/camera/applyFocusedBodyPivot.ts T13  world arm only
 src/services/engine/camera/evaluateClip.ts          T20  per-leg frame conversion
-src/services/engine/frame/runFrame.ts               T13, T15  the fold
+src/services/engine/frame/runFrame.ts               T13, T15  the fold; prep  the fold moves
+                                                    into projectFramePose, one runtime write
 src/services/engine/frame/frameContext.ts           T14  provider B branch
-src/services/engine/frame/drainInput.ts             T13, T16
-src/services/engine/phases/wireInput.ts             T13
-src/services/engine/engine.ts                       T13
+src/services/engine/phases/wireInput.ts             T13, prep  seeds via seedCameraRuntime
+src/services/engine/engine.ts                       T13, prep  seeds the runtime; the clip
+                                                    player holds no reference into it
 src/services/engine/wiring/buildDemandCtx.ts        T13
 src/services/engine/helpers/liveRenderCamera.ts     T13
 src/services/engine/helpers/logCameraState.ts       T20  names the frame
 src/services/engine/animation/playClip.ts           T13
-src/services/engine/subsystems/clipPlayer.ts        T13
+src/services/engine/subsystems/clipPlayer.ts        T13, prep  tick(clipEpoch, nowMs)
 src/utils/camera/updatePosition.ts                  T13  delegates to eyeMpcOf
 src/utils/camera/lonLatFocusPose.ts                 T19  body-arm constructor
 tests/services/engine/camera/oneMpcSeam.test.ts     T4   importer amendment

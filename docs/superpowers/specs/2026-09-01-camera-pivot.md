@@ -909,12 +909,12 @@ list with the user, full suite, `/feature-done`.
 
 ## Ground preparation — cameraRuntime single-writer (2026-09-09)
 
-Prep for §14's "Clock" verification (plan T18) and for the follow-driver split
-R14-3 asks for. Judged against `1d44398e5`, `cameraRuntime` is a bag of six
-`{ current }` boxes with eleven writers across five files; both features are
-_second_ writers of state that has no single writer today, so both are bolt-ons
-on the incumbent shape. The prep lands as five commits on this branch ahead of
-the feature commits. Plan:
+Prep for §14's "Clock" verification (the plan's T17, superseding the parent plan's
+T18) and for the follow-driver split R14-3 asks for. Judged against `1d44398e5`,
+`cameraRuntime` is a bag of six `{ current }` boxes with eleven writers across five
+files; both features are _second_ writers of state that has no single writer today,
+so both are bolt-ons on the incumbent shape. The prep lands as five phases (P1–P5) on
+this branch ahead of those two features. Plan:
 [`plans/2026-09-09-camera-runtime-single-writer.md`](../plans/2026-09-09-camera-runtime-single-writer.md).
 Trace, greenfield derivation and the signed-off checkpoint:
 `.superpowers/sdd/2026-09-01-camera-pivot/runtime-{trace,greenfield,refactor-ground}.md`.
@@ -944,6 +944,9 @@ type FollowMemory = {
   readonly from: CameraPose | null;
   readonly distanceTarget: number | null;
   readonly panOffset: Vec3;
+  // The approach's hand-off signal — its ease reached 1 on the frame that set
+  // this. A phase fact of the produce, so pick and produce cannot disagree.
+  readonly saturated: boolean;
 };
 type SurfaceMemory = {
   readonly gesture: SurfaceGesture | null;
@@ -971,8 +974,20 @@ the epoch a pick resolves against. Only elapsed is derived.
 
 ```ts
 stepCameraRuntime(prev: CameraRuntime, inputs: StepInputs): {
-  readonly next: CameraRuntime; readonly actions: readonly UnknownAction[]; readonly requestRender: boolean };
+  readonly next: CameraRuntime; readonly actions: readonly UnknownAction[]; readonly requestRender: boolean;
+  // The world arm the frame draws, PRE-flip on a crossing frame: the scale bar
+  // must read the pose the fold judged, not the one it flipped to.
+  readonly world: CameraPose;
+  // The effective snapshot the stages read; the keep-ticking vote has to be off
+  // the same reading, or a commit this frame parks the loop.
+  readonly rootState: RootState };
 ```
+
+`StepInputs` is values only: the frame's one store snapshot, the drained steps, the
+sim instant + body snapshot, the clip epoch the player already ticked, the driver
+table, and **two sizes** — `canvasPx` (CSS, what the cursor math maps through) and
+`aspect` (the backing store's, resize-keyed). The focus row is read off the snapshot,
+not passed.
 
 Five pure stages, in this order (the fold stays last, spec §7):
 
@@ -981,8 +996,14 @@ replayInput(prev: { register; surface; follow }, steps, ctx) → { register; sur
 advanceEpochs(prev.epochs, { intent; focus; clip; winnerId; nowMs }) → CameraEpochs
 runCameraDrivers(drivers, ctx, mem) → { pose; winner; memory }
 commitOnEdge({ register; displayed; produced; prevWinner; winner; drivers }) → { render; authoredOverride; actions }
-projectFramePose({ render; authoredOverride; surface; … }) → { register; displayed; surface; actions; requestRender }
+projectFramePose({ render; authoredOverride; surface; intent; … }) → { register; displayed; surface; world; actions; requestRender }
 ```
+
+The fold's gesture skip reads `intent.dragging` off the effective snapshot — no
+`dragging` argument of its own, so it cannot disagree with the intent the drivers
+resolved against. `advanceEpochs`' winner-keyed rows (`tween`, `autoRotate`, and the
+`follow` cell both follow ids share) replay `prev.ref` when their driver is not
+winning, so an ease cannot burn under some other driver.
 
 Epoch arithmetic is two pure functions — `advanceEpoch(prev, ref, nowMs)` and
 `elapsedMs(epoch, nowMs)` — and `advanceEpoch` is IDEMPOTENT for an unchanged
@@ -998,18 +1019,49 @@ than being documented again.
 so an at-rest wheel notch's commit is visible to the resting driver in the same
 frame exactly as it is today through `runFrame.ts:117`'s post-drain `getState()`,
 while the dispatch itself happens after `state.cameraRuntime = next`. Store
-listeners then see the frame's runtime already installed.
+listeners then see the frame's runtime already installed — **the one ruled behaviour
+change of the prep**; the relative order of the frame's actions is unchanged.
+
+**Three further deltas from the incumbent, recorded rather than argued away.** (i)
+The authored-world reads inside the step resolve against **this** frame's body
+snapshot and instant; the between-frame helpers still read `outputs.simDays`, the
+instant the last frame DREW at, which is what a pick must agree with. (ii) The
+`frameTween` and `clip` epoch rows null out where the incumbent left them stale — a
+null `frameTween`, and the clip after `stop()` / a `pendingEnd` tick (20 `epochs.clip`
+cells in the driver fixture, nothing else). (iii) On the single frame the approach
+hands off to the spin, a wheel notch is **dropped**: `replayInput` routes a notch by
+LAST frame's winner, so it resolves into follow memory the winning spin never adopts.
+That is a pre-existing route defect — the key is a guess about this frame's winner —
+pinned in the driver fixture; the fix is to pick the winner before the drain, which is
+the user's call and not this prep's.
 
 **Drivers own their memory.** `pose(ctx: DriverCtx, mem: FollowMemory | null) →
 { pose, memory }`; the winner's memory is adopted, the losers' discarded, and the
-memory clears as data when the follow epoch's `ref` changes. The wheel notch a
-following camera swallows is resolved by the drain (the one `zoomedDistance` site)
-and arrives as `ctx.followDistanceTarget`, which the driver adopts as its new
-`distanceTarget`, so `applyWheelZoom` stops being a writer. This is the joint
-R14-3 needs: `followApproach` (priority 55 — above `autoRotate` 20, below `tween`
-60, preserving today's follow-loses-to-tween ordering) and `followHold`
-(priority 10) are two rows returning the same memory type, not two writers of one
-mutable clock.
+memory clears as data when the follow epoch's `ref` changes. `DriverCtx` is the
+frame as values — the store snapshot, the winner's `elapsedMs`, the authored
+`register` and its `authoredWorld` arm (the follow capture reads that eye, never the
+displayed pose — R12b-1), `winnerLastFrame`, `simDays`, `projection`, `pivot`, plus
+the two facts the follow pair needs: `approachDone` and `followDistanceTarget`.
+
+The wheel notch a following camera swallows is resolved by the drain (the one
+`zoomedDistance` site) and arrives as `ctx.followDistanceTarget`, which the driver
+adopts as its new `distanceTarget`, so `applyWheelZoom` stops being a writer. The
+roll ride the notch carries (ruling 8) stays in the drain too, now on a pre/post
+distance pair as **data**: moved after the drivers it lags the follow driver's roll
+lerp by one frame, because the driver would read the ride's commit from a snapshot
+taken before it.
+
+This is the joint R14-3 needs: `followApproach` (priority 55 — above `autoRotate` 20,
+below `tween` 60, preserving today's follow-loses-to-tween ordering) and `followHold`
+(priority 10) are two rows over one shared produce and one shared memory, not two
+writers of one mutable clock. The approach is active while it has not yet authored a
+**saturated** frame — `followActive(s) && !approachDone`, with `approachDone` = last
+frame's `memory.saturated` and `false` for a fresh focus row — never a clock of the
+pick's own: a window measured independently of the produce hands the next driver
+whatever pose the ease happened to be at, which at 30 fps leaves most of the approach
+untravelled. `commitOnEdge` treats the two rows as **one author**, or the
+approach↔hold swap bakes the old body's distance into `base` for the pin to read
+around the new one.
 
 **The clip epoch handshake.** `ClipPlayer.tick(clipEpoch, nowMs) →
 { clipEpoch }`: the player is handed the epoch and returns the one it used,
@@ -1019,10 +1071,11 @@ replaced wholesale.
 
 **Seed and guard.** `seedCameraRuntime({ committed, projection })` is the only
 constructor; `wireInput.ts:119-122` calls it instead of writing four fields into
-a half-built bag. A ts-morph gate test (the `oneMpcSeam.test.ts` shape) fails on
-any assignment whose left-hand side is rooted at `.cameraRuntime` outside
-`runFrame.ts` and that seed, and the sim harness deep-freezes the bag after every
-frame so a stray write throws in the suite rather than drifting.
+a half-built bag, and `engine.ts`'s boot value comes through it too. A ts-morph gate
+test (the `oneMpcSeam.test.ts` shape) fails on any assignment whose left-hand side is
+rooted at `.cameraRuntime` — or at a **local alias** of it, which is how six sagas
+reach the bag — outside `runFrame.ts` and that seed, and the sim harness deep-freezes
+the bag after every frame so a stray write throws in the suite rather than drifting.
 
 ### Sketch + verdicts
 
