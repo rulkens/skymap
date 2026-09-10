@@ -1,6 +1,6 @@
 /**
  * Stages a known-pose COLMAP **text** model for Brush: one PINHOLE camera per
- * photo, the poses as world←camera rigid transforms, and the LiDAR cloud as
+ * photo, the poses as camera←world rigid transforms, and the LiDAR cloud as
  * the initial points3D. Header-free — COLMAP's readers skip `#` lines but
  * never require them, and Brush inherits that reader.
  *
@@ -28,10 +28,12 @@ export async function writeColmapModel(spec: ColmapModelSpec): Promise<void> {
 
   const cameras: string[] = [];
   const images: string[] = [];
+  // One rule for the NAME column and the copy destination: images.txt names a
+  // file Brush then opens, so the two can never be spelled separately.
+  const names = spec.poses.map((pose) => `${pose.id}.jpg`);
 
   spec.poses.forEach((pose, i) => {
     const id = i + 1;
-    const name = `${pose.id}.jpg`;
     const [cx, cy] = pose.principalPointPx;
     cameras.push(
       `${id} PINHOLE ${pose.imageWidthPx} ${pose.imageHeightPx} ` +
@@ -39,7 +41,7 @@ export async function writeColmapModel(spec: ColmapModelSpec): Promise<void> {
     );
 
     const [qx, qy, qz, qw] = pose.rotation;
-    // Conjugate of the unit quaternion (w, v) is (w, -v) — the world←camera
+    // Conjugate of the unit quaternion (w, v) is (w, -v) — the camera←world
     // rotation, which is what both the columns below and `t` need.
     const [w, x, y, z] = [qw, -qx, -qy, -qz];
     const [px, py, pz] = pose.positionM;
@@ -50,7 +52,7 @@ export async function writeColmapModel(spec: ColmapModelSpec): Promise<void> {
     ];
 
     images.push(
-      `${id} ${w} ${x} ${y} ${z} ${t[0]} ${t[1]} ${t[2]} ${id} ${name}`,
+      `${id} ${w} ${x} ${y} ${z} ${t[0]} ${t[1]} ${t[2]} ${id} ${names[i]}`,
       // POINTS2D, deliberately empty: Brush's loader needs no observations.
       '',
     );
@@ -61,7 +63,7 @@ export async function writeColmapModel(spec: ColmapModelSpec): Promise<void> {
   await writeFile(join(spec.outDir, 'points3D.txt'), await points3DText(spec));
 
   await Promise.all(
-    spec.poses.map((pose) => copyFile(pose.imageUrl, join(imagesDir, `${pose.id}.jpg`))),
+    spec.poses.map((pose, i) => copyFile(pose.imageUrl, join(imagesDir, names[i]!))),
   );
 }
 

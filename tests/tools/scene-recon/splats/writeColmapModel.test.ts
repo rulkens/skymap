@@ -38,6 +38,7 @@ beforeAll(() => {
   writeFileSync(pointsBinPath, packPoints(TEN_POINTS));
   writeFileSync(join(root, 'photo_a.jpg'), 'jpeg-a');
   writeFileSync(join(root, 'photo_b.jpg'), 'jpeg-b');
+  writeFileSync(join(root, 'photo_c.jpg'), 'jpeg-c');
 
   poses = [
     {
@@ -63,6 +64,20 @@ beforeAll(() => {
       imageHeightPx: 768,
       imageUrl: join(root, 'photo_b.jpg'),
     },
+    {
+      id: 'photo_c',
+      positionM: [10, 20, 30],
+      // All four components equal, so every cross term of the quaternion→matrix
+      // expansion is non-zero and every column of the conjugate is signed —
+      // the pure-Z fixtures above leave x, y and four matrix cells at zero,
+      // where a dropped negation or a swapped term would print the same text.
+      rotation: [0.5, 0.5, 0.5, 0.5],
+      focalLengthPx: 1500,
+      principalPointPx: [800, 600],
+      imageWidthPx: 1600,
+      imageHeightPx: 1200,
+      imageUrl: join(root, 'photo_c.jpg'),
+    },
   ];
 });
 
@@ -78,7 +93,9 @@ describe('writeColmapModel', () => {
   it('writes cameras.txt with one PINHOLE entry per image', async () => {
     const outDir = await writeModel('cameras', 10);
     expect(readFileSync(join(outDir, 'cameras.txt'), 'utf8')).toBe(
-      '1 PINHOLE 800 600 1000 1000 400 300\n2 PINHOLE 1024 768 1200 1200 512 384\n',
+      '1 PINHOLE 800 600 1000 1000 400 300\n' +
+        '2 PINHOLE 1024 768 1200 1200 512 384\n' +
+        '3 PINHOLE 1600 1200 1500 1500 800 600\n',
     );
   });
 
@@ -87,15 +104,24 @@ describe('writeColmapModel', () => {
     // photo_a: identity, so the conjugate is identity and t = -I·(10,20,30).
     //
     // photo_b: q_group←cam = (x,y,z,w) = (0,0,0.6,0.8); its conjugate, written
-    // scalar-first, is (0.8, -0, -0, -0.6) and its matrix (world←camera) is
+    // scalar-first, is (0.8, -0, -0, -0.6) and its matrix (camera←world) is
     //   [ 1-2·0.36     2·0.8·0.6   0 ]   [  0.28  0.96  0 ]
     //   [ -2·0.8·0.6   1-2·0.36    0 ] = [ -0.96  0.28  0 ]
     //   [ 0            0           1 ]   [  0     0     1 ]
     // t = -R·(100,50,25) = -(28+48, -96+14, 25) = (-76, 82, -25).
+    //
+    // photo_c: q = (0.5,0.5,0.5,0.5); conjugate scalar-first (0.5,-0.5,-0.5,-0.5).
+    // Every product of two components is ±0.25, so each matrix cell is 0 or ±1
+    // exactly:  m00 = 1-2(0.25+0.25) = 0,  m01 = 2(0.25+0.25) = 1,
+    // m02 = 2(0.25-0.25) = 0 — and likewise down the rows, giving the cyclic
+    // permutation [[0,1,0],[0,0,1],[1,0,0]].
+    // t = -R·(10,20,30) = -(20, 30, 10) = (-20, -30, -10).
     expect(readFileSync(join(outDir, 'images.txt'), 'utf8')).toBe(
       '1 1 0 0 0 -10 -20 -30 1 photo_a.jpg\n' +
         '\n' +
         '2 0.8 0 0 -0.6 -76 82 -25 2 photo_b.jpg\n' +
+        '\n' +
+        '3 0.5 -0.5 -0.5 -0.5 -20 -30 -10 3 photo_c.jpg\n' +
         '\n',
     );
   });
@@ -131,6 +157,7 @@ describe('writeColmapModel', () => {
     const outDir = await writeModel('images-dir', 10);
     expect(readFileSync(join(outDir, 'images', 'photo_a.jpg'), 'utf8')).toBe('jpeg-a');
     expect(readFileSync(join(outDir, 'images', 'photo_b.jpg'), 'utf8')).toBe('jpeg-b');
+    expect(readFileSync(join(outDir, 'images', 'photo_c.jpg'), 'utf8')).toBe('jpeg-c');
     // Real bytes, not a link: the staged model gets moved to the training host.
     expect(lstatSync(join(outDir, 'images', 'photo_a.jpg')).isSymbolicLink()).toBe(false);
   });
