@@ -1,41 +1,40 @@
-import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import type { BodyId } from '../../@types/data/body/BodyId';
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
-import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
+import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
+import { blendedEnuAt } from './blendedEnuAt';
+import { canonicalBasisAt } from './canonicalBasisAt';
 import { lonLatDegToDirection } from '../scene/lonLatDegToDirection';
-import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
-import { orbitAnglesLookingAlong } from './orbitAnglesLookingAlong';
 
 /**
- * lonLatFocusPose — the CameraPose that puts a body's given geodetic point
- * exactly under the camera (sub-camera point = `point`), at `distance`, with
- * the target at the body's centre.
- *
- * The exact inverse of the sub-camera readout `earthTileSubsystem.getDebugSnapshot`
- * computes: that reads `dirLocal = bodyOrientationᵀ · normalize(camPos − bodyPos)`
- * then `directionToLonLatDeg(dirLocal)`. Here we go the other way —
- * `lonLatDegToDirection` → rotate by `bodyOrientation` (untransposed, local→world)
- * to get the world direction from the body centre toward the camera — then hand
- * that to `orbitAnglesLookingAlong` (the aim is the opposite direction, back
- * toward the body) to recover the (yaw, pitch) the SAME `frameBasis` decodes
- * back to that exact world direction.
+ * lonLatFocusPose — the body arm that puts a geodetic point under the camera:
+ * standpoint from the lon/lat, `rangeM` the straight-down sightline range to
+ * the surface (so |eye| = R + rangeM), tilt 0, heading held. No Mpc in it — a
+ * pose that lands outside the band is the frame fold's business, not the
+ * caller's (spec §9).
  */
 export function lonLatFocusPose(
   point: LonLatDeg,
-  targetMpc: Readonly<Vec3>,
-  distance: number,
-  bodyOrientation: Readonly<Mat3>,
-  frameBasis: Mat3,
-): CameraPose {
-  const dirLocal = lonLatDegToDirection(point);
-  // local→world: bodyOrientation's columns are the body-local axes in world
-  // space (the same convention camPosLocal's header derives its transpose
-  // from), so the untransposed product carries a local direction OUT to world.
-  const dirWorld = rotateVec3ByTightMat3(dirLocal, bodyOrientation);
-  // orbitAnglesLookingAlong wants the AIM (camera → target); the eye sits on
-  // the OPPOSITE side of the target from the sub-camera point, so the aim is
-  // the negated direction-toward-camera.
-  const forward: Vec3 = [-dirWorld[0], -dirWorld[1], -dirWorld[2]];
-  const { yaw, pitch } = orbitAnglesLookingAlong(forward, frameBasis);
-  return { target: [targetMpc[0], targetMpc[1], targetMpc[2]], yaw, pitch, distance };
+  bodyId: BodyId,
+  bodyRadiusM: number,
+  rangeM: number,
+  headingRad: number,
+): BodyFixedPose {
+  const localUp = lonLatDegToDirection(point);
+  const eyeMagM = bodyRadiusM + rangeM;
+  const eyeRelAnchorM: Vec3 = [localUp[0] * eyeMagM, localUp[1] * eyeMagM, localUp[2] * eyeMagM];
+  // Pure body ENU (`blendW` 1 — the scene up carries no weight there), the same
+  // reference `eyeFrameOf` reads a heading back against.
+  const { east, north } = blendedEnuAt(localUp, 1, BODY_LOCAL_FRAME.pole, null);
+  return {
+    bodyId,
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM,
+    basisLocal: canonicalBasisAt(
+      { localUp, east, north, tiltRad: 0, azimuthRad: headingRad },
+      headingRad,
+      0,
+    ),
+  };
 }
