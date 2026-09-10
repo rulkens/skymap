@@ -4,9 +4,7 @@ import type { HomeFocusTarget } from './HomeFocusTarget';
 
 /**
  * EngineHomeConfig — a composition's boot-time home, threaded into
- * `wireInput` instead of the Earth default it used to hard-code. `pose` stays
- * a function (not a snapshot) because the boot instant and orientation basis
- * are only known once `wireInput` runs.
+ * `wireInput` instead of the Earth default it used to hard-code.
  */
 export type EngineHomeConfig = {
   /**
