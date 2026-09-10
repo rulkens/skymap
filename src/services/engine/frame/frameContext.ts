@@ -101,6 +101,8 @@ import { starSphereRangeM } from '../../../utils/scene/starSphereRangeM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
+import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
+import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
@@ -239,6 +241,30 @@ export function deriveFrameContext(
     return bodyRelativePose({ camPosMpc: cam.position, camBasisWorld, bodyState });
   };
 
+  // Host body id → the mesh bodies riding its slab row (spec's fifth
+  // `SceneBody` arm), each resolved into the host's own frame — the SAME
+  // `bodyStates` snapshot `bodyPose` reads above, so this can never disagree
+  // with a slab row's own pose. Hosts with no mesh-body attachment (every
+  // body but Earth, today) get no map entry, and `deriveSlabs` reads a
+  // missing entry as `undefined` — see `bodySlabRow`'s `attachedBodies` doc.
+  const attachedBodiesByHostId = new Map<
+    string,
+    readonly { readonly posM: Vec3; readonly radiusM: number }[]
+  >();
+  for (const host of slabBodyCandidates) {
+    const attached = meshBodiesAttachedTo(host.id);
+    if (attached.length === 0) continue;
+    const hostState = bodyStates.get(host.id);
+    if (hostState === undefined) continue;
+    attachedBodiesByHostId.set(
+      host.id,
+      attached.map((meshBody) => {
+        const { posM } = bodyStateInHostFrame(bodyStates.get(meshBody.id)!, hostState);
+        return { posM, radiusM: meshBody.radiusM };
+      }),
+    );
+  }
+
   // NEAR0's distanceRangeM (spec §7.1): the star spheres actually drawn this
   // frame, not `foregroundFrustum`'s bracket. `positionedVisibleStars` needs
   // `ctx.simDays` only, so its join is inlined by hand here for the same
@@ -270,6 +296,7 @@ export function deriveFrameContext(
     visibleBodies,
     viewportPx: [canvasSize.width, canvasSize.height] as Vec2,
     starSphereRangeM: starRangeM,
+    attachedBodiesByHostId,
   });
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));

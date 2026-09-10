@@ -403,8 +403,16 @@ export function deriveSlabs(input: {
   readonly visibleBodies: readonly SceneBody[];
   readonly viewportPx: Readonly<Vec2>;
   readonly starSphereRangeM: readonly [number, number] | null;
+  /** Host body id → its attached mesh bodies, already resolved into the
+   * host's frame — see `bodySlabRow`'s `attachedBodies` param (Task 13). Only
+   * Earth has an entry today; every other host's row is unaffected. */
+  readonly attachedBodiesByHostId?: ReadonlyMap<
+    string,
+    readonly { readonly posM: Readonly<Vec3>; readonly radiusM: number }[]
+  >;
 }): readonly Slab[] {
-  const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies, viewportPx } = input;
+  const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
+    input;
   // The near-field slab's near/far are adaptive, sized from the camera's
   // ALTITUDE above a known pivot (else raw orbit distance) by
   // `foregroundFrustum`, so depth precision holds from galaxy scale down to
@@ -480,7 +488,14 @@ export function deriveSlabs(input: {
   // whose pose is null this frame (culled) contributes no row.
   const sortedBodyRows = visibleBodies
     .map((body) =>
-      bodySlabRow({ body, pose, fovYRad: cam.fovYRad, aspect: cam.aspect, viewportPx }),
+      bodySlabRow({
+        body,
+        pose,
+        fovYRad: cam.fovYRad,
+        aspect: cam.aspect,
+        viewportPx,
+        attachedBodies: attachedBodiesByHostId?.get(body.id),
+      }),
     )
     .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) => b.slab.distanceRangeM[0] - a.slab.distanceRangeM[0]);
