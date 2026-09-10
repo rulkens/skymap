@@ -71,3 +71,33 @@ Two directions, neither worked through:
 
 Either way, re-record `tests/fixtures/camera/driverGoldenTrace.json` with a
 parse-compared cell diff in the commit body, and drop the marker at the leg.
+
+## (d) The spin phase the notch zooms off is advanced twice, under two rules
+
+Raised by the wave-end entanglement radar (2026-09-10, finding M3). Same family:
+the replay needs a fact the frame has not resolved yet, so it resolves a private
+copy.
+
+`replayInput.ts:236-239` advances the autoRotate epoch locally —
+`advanceEpoch(ctx.autoRotateEpoch, active ? camera.base : null, nowMs)` — reads
+`elapsedMs` off it for `applyWheelZoom`'s `spinElapsedMs`, and throws the row
+away (handing it to `advanceEpochs` would keep a fold-time reset the frame's own
+rule declines). The frame's advance
+(`stepCameraRuntime.ts:106` → `cameraEpochs.ts:59-67`) replays `prev.ref` — a
+guaranteed no-op — on every frame the winner is not `autoRotate`.
+
+The two disagree by construction on any frame some other driver wins while
+auto-rotate is on: the local advance re-bases on a changed `camera.base` (a
+commit from earlier in the same drain) where the frame's does nothing. On that
+frame `applyWheelZoom` zooms off a spin position the renderer never showed, and
+the commit bakes it — a yaw pop on a wheel notch during auto-rotate, which is
+the bug `applyWheelZoom`'s header says it fixed, re-entered through the other
+door.
+
+Fix shape: make the spin phase a VALUE rather than a place read twice — resolve
+`(base ref, nowMs) → spinElapsedMs` once, above the replay, and let both the
+replay and `advanceEpochs` take it. The equivalent: advance the real row before
+the replay and let the winner gate only the RESET, never the read. Either
+removes the discard, and with it the comment at `replayInput.ts:236-237` that
+exists to teach the discard. Golden-trace re-record likely — this moves a phase
+the `driverGoldenTrace` fixtures sample.
