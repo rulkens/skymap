@@ -126,7 +126,7 @@ function makeRendererSpy(residentIds: readonly string[] = []) {
 function makeState(renderer: unknown, bodies: readonly PlanetBody[]): EngineState {
   return {
     gpu: { texturedBodyRenderer: renderer },
-    data: { bodies: { planets: bodies } },
+    data: { bodies: { planets: bodies, meshBodies: [] } },
   } as unknown as EngineState;
 }
 
