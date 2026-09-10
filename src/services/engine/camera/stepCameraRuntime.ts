@@ -21,7 +21,6 @@ import { replayInput } from './replayInput';
 import { pickWinner, elapsedForWinner } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
-import { pivotFraming } from './pivotRadiusMpc';
 import { resolveWorldArm } from './poseFrameConversion';
 import { resolveFrameBasis } from './resolveFrameBasis';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
@@ -120,14 +119,12 @@ export function stepCameraRuntime(
     {
       state: rootState,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
-      approachDone,
       register: drained.register,
       // Against the PREVIOUS frame's up-basis: produce precedes the basis resolve.
       authoredWorld: resolveWorldArm(drained.register, bodies, poseBasis, prev.outputs.upBasis),
       winnerLastFrame: prev.register.winner,
       simDays,
       projection,
-      pivot: pivotFraming(focus),
       followDistanceTarget: drained.followDistanceTarget,
     },
     followIn,

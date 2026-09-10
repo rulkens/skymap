@@ -1,10 +1,9 @@
 /**
  * makeDriverCtx — the `DriverCtx` a driver-level fixture hands `pose`. Defaults
- * are the inert values (no notch, no pivot body, nothing elapsed) so each test
- * names only the fields its row reads.
+ * are the inert values (no notch, nothing elapsed) so each test names only the
+ * fields its row reads.
  */
 
-import { pivotFraming } from '../../../src/services/engine/camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { worldArmOf } from '../../fixtures/worldArmOf';
@@ -26,13 +25,11 @@ export function makeDriverCtx(
   return {
     state: args.state,
     elapsedMs: args.elapsedMs ?? 0,
-    approachDone: args.approachDone ?? false,
     register,
     authoredWorld: args.authoredWorld ?? worldArmOf(register),
     winnerLastFrame: args.winnerLastFrame ?? 'resting',
     simDays: args.simDays ?? CONST_J2000,
     projection: args.projection ?? { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
-    pivot: args.pivot ?? pivotFraming(null),
     followDistanceTarget: args.followDistanceTarget ?? null,
   };
 }

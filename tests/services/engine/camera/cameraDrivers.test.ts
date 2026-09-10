@@ -113,7 +113,6 @@ function runAtWinner(
   const ctx = makeDriverCtx({
     state: s,
     elapsedMs: elapsedForWinner(winner, epochs, nowMs),
-    approachDone,
     register: REGISTER_POSE,
   });
   return { ...winner.pose(ctx, null), winner };
