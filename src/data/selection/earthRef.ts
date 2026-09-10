@@ -8,4 +8,4 @@ import type { SelectionRef } from '../../@types/engine/SelectionRef';
  * id: 'earth' }` literals drifting apart. It keys the static `SCENE_BODIES`
  * table the same way any body ref does.
  */
-export const EARTH_REF: SelectionRef = { type: 'body', id: 'earth' };
+export const EARTH_REF = { type: 'body', id: 'earth' } as const satisfies SelectionRef;
