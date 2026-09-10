@@ -6,9 +6,8 @@
  * the aim is its negation (the same sign flip `reencodePose` documents).
  *
  * DECODED, never accumulated (spec §8) — the pole degeneracy that rules angles
- * out as camera state never reaches an authored keyframe. The screen-up
- * residual has no channel, so the basis is levelled against the body's pole and
- * a body-framed keyframe cannot express roll.
+ * out as camera state never reaches an authored keyframe. A body-framed
+ * keyframe cannot express roll: there is no fifth channel to carry it.
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';
@@ -29,7 +28,9 @@ export function decodeBodyFixedChannels(channels: CameraPose, bodyId: BodyId): B
     target[2] + arm[2] * distance,
   ];
   const forward: Vec3 = [-arm[0], -arm[1], -arm[2]];
-  const { right, up } = imagePlaneBasis(forward, channels.roll ?? 0, BODY_LOCAL_FRAME.pole);
+  // Roll 0: the four channels carry no screen-up residual, so the basis is
+  // levelled against the body's pole.
+  const { right, up } = imagePlaneBasis(forward, 0, BODY_LOCAL_FRAME.pole);
 
   return {
     bodyId,
