@@ -481,7 +481,7 @@ home.focus.ref.id`) with `DEFAULT_FOV_Y_RAD`, and gates the select seed on
       `seeds focus but not select …` uses `seedSelection: false`; `dispatches no selection …`
       also asserts the spy was called with `bodyId: null`. `cameraFraming.test.ts` passes
       `bodyId: 'earth'` and adds `boots to the neutral Local-Group pose when there is no home
-  body` (`bodyId: null` ⇒ target origin, distance `INITIAL_DISTANCE_MPC`, yaw/pitch equal
+body` (`bodyId: null` ⇒ target origin, distance `INITIAL_DISTANCE_MPC`, yaw/pitch equal
       `orbitAnglesLookingAlong(GALACTIC_DISC_FORWARD, basis)`). `bodyHomePose.test.ts` adds
       `frames the requested body, not Earth` (`'mars'` at the same instant ⇒ target ≠ the
       Earth pose's target and equals `bodyLikeFraming(marsPos, marsRadius, fov).target`).
@@ -499,9 +499,11 @@ home.focus.ref.id`) with `DEFAULT_FOV_Y_RAD`, and gates the select seed on
 - [ ] `src/@types/engine/EngineHomeConfig.d.ts` and `HomeFocusTarget.d.ts` exist, one type
       each, **data only — no function-typed field** (Task 7); `createEngine` and
       `BootstrapDeps` both require a `home: EngineHomeConfig`.
-- [ ] `src/compositions/earthHome.ts` exports `EARTH_HOME`, and it is the ONLY place the
-      app's home pose recipe, home target and cinema branch are named.
-- [ ] `rg -n "EARTH_REF|isCinemaMode|computeInitialCamera" src/services/engine/phases` → empty.
+- [ ] `src/data/selection/earthHome.ts` exports `EARTH_HOME`, and it is the ONLY place the
+      app's home target is named as boot configuration (Task 7: the pose recipe is
+      `bodyHomePose` mechanism keyed on that target; the cinema gate is `wireInput`'s).
+- [ ] `rg -n "EARTH_REF|EARTH_HOME|earthHomePose" src/services/engine/phases` → empty (Task 7:
+      `isCinemaMode` and `computeInitialCamera` are back in `wireInput` as mechanism).
 - [ ] `followedBodyHome` is the only producer of a `HomeFocusTarget`, and
       `bodyFollowsSimClock` is the only expression of `ORBITAL_ELEMENTS` membership.
 - [ ] No boot phase throws on, or returns early for, a named renderer:
