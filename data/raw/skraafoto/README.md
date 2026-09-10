@@ -9,7 +9,7 @@
 | Image CDN   | `https://skraafoto-cdn.dataforsyningen.dk/…/<itemId>.tif` (COG, from STAC) |
 | Camera CRS  | EPSG:25832 (ETRS89 / UTM zone 32N), heights DVR90                          |
 | Flight date | 2025-04-27 (single flight over this bbox)                                  |
-| Harvested   | 2026-09-10 (search confirmed live; frames fetched by task 8)               |
+| Harvested   | 2026-09-10 (306 frames, `npm run fetch-skraafoto`)                         |
 
 Feeds the scene-workbench Gaussian-splat bake (`tools/fetch/fetchSkraafoto.ts`
 → `tools/scene-recon/bakeSplats.ts`): whole downsampled frames plus their

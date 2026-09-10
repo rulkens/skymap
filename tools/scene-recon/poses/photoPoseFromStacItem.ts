@@ -41,8 +41,8 @@ export function photoPoseFromStacItem(
   // Rows of the collinearity matrix — UTM-grid axes into photogrammetric image
   // axes (x right, y up, z toward the camera). This is the TRANSPOSE of
   // Rx(ω)·Ry(φ)·Rz(κ); the untransposed form makes every oblique frame look
-  // north, which the items' own `direction` field disproves. Verified against
-  // the fixture item's `pers:rotation_matrix` to nine decimals.
+  // north, which the items' own `direction` field disproves (pinned by the
+  // oblique fixture test); matched the live item's `pers:rotation_matrix`.
   const m: readonly Vec3[] = [
     [cp * ck, co * sk + so * sp * ck, so * sk - co * sp * ck],
     [-cp * sk, co * ck - so * sp * sk, so * ck + co * sp * sk],
