@@ -73,6 +73,8 @@ export function photoPoseFromStacItem(
     focalLengthPx: (io.focal_length / pixelSpacingXMm) * downsampleScale,
     principalPointPx: [
       imageWidthPx / 2 + (principalOffsetXMm / pixelSpacingXMm) * downsampleScale,
+      // SDFI defines ppo_y y-UP from the centre (image origin lower-left); these are
+      // y-down pixels: github.com/SDFIdk/skraafoto_stac_public/blob/main/dokumentation.md
       imageHeightPx / 2 - (principalOffsetYMm / pixelSpacingYMm) * downsampleScale,
     ],
     imageWidthPx,

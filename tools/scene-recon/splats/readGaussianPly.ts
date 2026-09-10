@@ -117,6 +117,9 @@ export function readGaussianPly(buffer: ArrayBuffer): GaussianPly {
   for (let v = 0; v < vertexCount; v++) {
     const base = bodyOffset + v * stride;
     const at = (property: number): number => dv.getFloat32(base + property * 4, true);
+    // Reference 3DGS clamps after summing every band; `splats.bin`'s u8 dcColor
+    // forces the clamp here, so a DC that saturates alone loses the SH1
+    // correction `splat.wesl` adds on top. Deliberate — not a bug to "fix".
     const toRgb = (property: number): number =>
       Math.min(1, Math.max(0, 0.5 + SH0 * at(property))) * 255;
 

@@ -158,5 +158,7 @@ fn fs(i: VsOut) -> @location(0) vec4<f32> {
   if (alpha < 1.0 / 255.0) {
     discard;
   }
+  // Capped below 1 so no single splat writes full coverage and terminates the
+  // back-to-front chain early — Brush's own kernels cap at the same place.
   return vec4<f32>(i.color, min(alpha, 0.99));
 }

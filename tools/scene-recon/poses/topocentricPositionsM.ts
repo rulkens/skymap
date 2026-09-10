@@ -1,8 +1,7 @@
 /**
- * topocentricPositionsM — camera centres from EPSG:25832 + DVR90 into the
- * group's ENU metre frame, sharing the `+proj=topocentric` tail the LiDAR bake
- * reprojects points with (`lidar/lidarPipelineStages.ts`) so both
- * reconstructions land in one frame.
+ * topocentricPositionsM — camera centres from EPSG:25832 + DVR90 into the group's
+ * ENU metre frame, sharing the `+proj=topocentric` tail the LiDAR bake reprojects
+ * points with (`lidar/lidarPipelineStages.ts`), so both land in one frame.
  *
  * No leading `+proj=unitconvert`: PROJ's inverse UTM already emits radians,
  * unlike that pipeline's degree input. DVR90 heights go into `cart` as if

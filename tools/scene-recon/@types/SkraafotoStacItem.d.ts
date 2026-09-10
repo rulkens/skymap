@@ -1,9 +1,8 @@
 /**
  * The fields of a skråfoto STAC item this pipeline reads (`data/raw/skraafoto/README.md`).
- *
- * Units: `pers:omega/phi/kappa` degrees; `pers:perspective_center` metres,
- * EPSG:25832 easting/northing + DVR90 height; `pers:interior_orientation`
- * millimetres. `proj:shape` is STAC's `[rows, cols]` — height first.
+ * Units: `pers:omega/phi/kappa` degrees; `pers:perspective_center` metres, EPSG:25832
+ * easting/northing + DVR90 height; `pers:interior_orientation` millimetres; `datetime`
+ * ISO 8601. `proj:shape` is STAC's `[rows, cols]` — height first.
  */
 export type SkraafotoStacItem = {
   readonly id: string;
@@ -21,7 +20,6 @@ export type SkraafotoStacItem = {
     readonly 'proj:shape': readonly [number, number];
     /** Which way the Maltese-cross rig looked — the API's own label for the frame. */
     readonly direction: 'nadir' | 'north' | 'east' | 'south' | 'west';
-    /** ISO 8601 acquisition time. */
     readonly datetime: string;
   };
   readonly assets: { readonly data: { readonly href: string } };

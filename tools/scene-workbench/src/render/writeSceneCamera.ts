@@ -22,7 +22,7 @@ const viewScratch = new Float32Array(16);
 const projScratch = new Float32Array(16);
 const viewProjScratch = new Float32Array(16);
 
-/** Fill `out` (>= 46 floats) with the `SceneCamera` for `view`. */
+/** Fill `out` (>= `SCENE_CAMERA_BYTES / 4` floats) with the `SceneCamera` for `view`. */
 export function writeSceneCamera(
   out: Float32Array,
   view: SceneCameraView,

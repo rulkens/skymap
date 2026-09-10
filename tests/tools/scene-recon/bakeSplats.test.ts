@@ -1,9 +1,8 @@
 /**
  * Covers the decisions that live only in the orchestrator, each of which fails
- * silently rather than loudly: the bare `<id>.jpg` must be resolved against the
- * harvest directory before `writeColmapModel` copies it (assert on the staged
- * `images/`, not on the poses); a previous bake's `final.ply` must not survive
- * into this one; and an empty export must not ship as a 16-byte `splats.bin`.
+ * silently: the bare `<id>.jpg` resolved against the harvest directory before
+ * `writeColmapModel` copies it (assert on the staged `images/`, not the poses); a
+ * previous bake's `final.ply` cleared; an empty export not shipped as a stub .bin.
  *
  * cct and brush-cli are stubbed and the bake runs against a tmpdir cwd, so
  * this file needs vitest's `forks` pool — `process.chdir` is undefined under

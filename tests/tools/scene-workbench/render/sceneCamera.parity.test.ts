@@ -135,5 +135,15 @@ describe('SceneCamera TS↔WESL parity (lib/sceneCamera.wesl ↔ writeSceneCamer
     // The splat pass transports covariance into CAMERA space; writing viewProj
     // here would fold the projection in twice and pass every other check.
     expect(block).not.toEqual(Array.from(out.subarray(0, 16)));
+    // Only a view matrix maps the eye to the camera origin — the property that
+    // separates it from the projection, which the finite/non-zero/differs trio
+    // cannot: column-major, so column c is block[4 * c + r].
+    const [ex, ey, ez] = EYE_M;
+    for (let r = 0; r < 3; r++) {
+      expect(block[r]! * ex + block[4 + r]! * ey + block[8 + r]! * ez + block[12 + r]!).toBeCloseTo(
+        0,
+        4,
+      );
+    }
   });
 });

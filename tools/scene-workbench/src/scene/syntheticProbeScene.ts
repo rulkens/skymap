@@ -87,7 +87,10 @@ const SPLAT_MAX_HEIGHT_M = 12;
  * Deliberately anisotropic, arbitrarily oriented and visibly coloured: a
  * degenerate covariance or a mis-multiplied rotation basis hides behind
  * axis-aligned unit spheres, and a zero-size quad renders as a clean pass.
- * Rotations use Shoemake's uniform-quaternion construction.
+ * Rotations use Shoemake's uniform-quaternion construction. `fRest` is
+ * populated because the real bake is always shDegree 1: it is the only
+ * thing that puts the `sh1` buffer and the two-entry bind group on the
+ * probe's path.
  */
 function probeSplats(): GaussianSplatRecord[] {
   const rand = mulberry32(SPLAT_SEED);
@@ -117,7 +120,8 @@ function probeSplats(): GaussianSplatRecord[] {
       logScale,
       opacity: 0.5 + 0.4 * rand(),
       dcColor: [channel(0), channel(1 / 3), channel(2 / 3)],
-      fRest: null,
+      // ±0.125 — a view-dependent tint that shows up without saturating the DC colour.
+      fRest: Array.from({ length: 9 }, (_, k) => (k - 4) / 32),
     });
   }
   return splats;
@@ -160,8 +164,8 @@ export function syntheticProbeScene(): GroupRegistryEntry {
     label: 'Probe splats',
     kind: 'gaussianSplat',
     splatCount: splats.length,
-    shDegree: 0,
-    artifactUrl: artifactBlobUrl(packSplats(splats, 0)),
+    shDegree: 1,
+    artifactUrl: artifactBlobUrl(packSplats(splats, 1)),
     transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
     provenance: {
       source: 'userPhotoCapture',

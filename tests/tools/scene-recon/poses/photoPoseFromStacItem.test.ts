@@ -1,15 +1,12 @@
 /**
- * photoPoseFromStacItem — the ω/φ/κ matrix, the grid-convergence correction
- * and the principal-point sign are only ever wrong in ways a real frame shows,
- * so the anchor test projects the group anchor through the returned
- * pose and compares against a pixel read off the fetched JPEG by hand.
- *
- * Ground truth (independent of this formula): the 1920-long-edge JPEG of
- * fixture item 2025_84_40_1_0049_00002495_100mm was overlaid on the
- * georeferenced GeoDanmark 2025 orthophoto and the anchor's own ortho pixel
- * matched to the photo by eye — Søndermarken lawn, just north of the S-bend
- * footpath, ~24 m west of the three poplars. See the task report for the
- * overlay sweep that brackets it.
+ * photoPoseFromStacItem — the ω/φ/κ matrix, the grid convergence and the
+ * principal-point sign only go wrong in ways a real frame shows, so the anchor
+ * test projects the group anchor through the pose and compares with a pixel
+ * read by hand off the fetched JPEG. That reading is the independent ground
+ * truth: the 1920-long-edge JPEG of fixture 2025_84_40_1_0049_00002495_100mm
+ * overlaid on the georeferenced GeoDanmark 2025 orthophoto, the anchor's ortho
+ * pixel matched by eye to the Søndermarken lawn north of the S-bend footpath,
+ * ~24 m west of the three poplars, re-read until stable to ±3 px.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -74,9 +71,10 @@ describe('photoPoseFromStacItem', () => {
   // Ground truth is the API's own `direction: "west"`, not the collinearity formula:
   // the nadir frame cannot separate the transposed matrix from the untransposed one
   // (1.8 px), but a 45° oblique swings ~90° of azimuth between them, silently ruining
-  // the bake. Cross-check from the item's `pers:rotation_matrix`: −row3 = (−0.709,
-  // 0.001, −0.705) in the grid, i.e. ENU (−0.708, 0.037, −0.705) once the +2.9151°
-  // convergence is undone; transposing `m` back gives (−0.03, −0.709, −0.705) — south.
+  // the bake. Cross-checked against the LIVE item's `pers:rotation_matrix`, which the
+  // trimmed fixture does not carry: −row3 = (−0.709, 0.001, −0.705) in the grid, i.e.
+  // ENU (−0.708, 0.037, −0.705) once the +2.9151° convergence is undone; transposing
+  // `m` back gives (−0.03, −0.709, −0.705) — south.
   it('points a west-looking oblique frame west', () => {
     // Nadir centre + its grid offset de-rotated; the axis assertion ignores it.
     const positionM: Vec3 = [2077.866, -103.811, 2183.842];
