@@ -24,6 +24,7 @@ import type { TimeState } from '../../@types/time/TimeState';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { hOverR } from '../../services/engine/camera/hOverR';
+import { nearestBodyHR } from '../../services/engine/camera/nearestBodyHR';
 import { bandRollTarget } from '../../services/engine/camera/frameAlignedRoll';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
 import { deriveSimDays } from '../time/deriveSimDays';
@@ -98,18 +99,11 @@ export function cameraDebugSnapshotOf(input: {
     const body = SCENE_BODIES.find((row) => row.id === bodyId);
     if (bodyState !== undefined && body !== undefined) hr = hOverR(eyeMpc, bodyState, body.radiusM);
   } else {
-    let nearestHR = Infinity;
-    for (const body of SCENE_BODIES) {
-      const id = body.id as BodyId;
-      const bodyState = bodyStates.get(id);
-      if (bodyState === undefined) continue;
-      const candidate = hOverR(eyeMpc, bodyState, body.radiusM);
-      if (candidate < nearestHR) {
-        nearestHR = candidate;
-        bodyId = id;
-      }
+    const nearest = nearestBodyHR(eyeMpc, bodyStates);
+    if (nearest !== null) {
+      bodyId = nearest.bodyId;
+      hr = nearest.hr;
     }
-    hr = bodyId !== null ? nearestHR : null;
   }
   const radiusM =
     bodyId !== null ? SCENE_BODIES.find((row) => row.id === bodyId)?.radiusM : undefined;
