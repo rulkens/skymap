@@ -16,7 +16,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shouldKeepTicking';
-import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RootState } from '../../../../src/store/types';
@@ -74,7 +73,7 @@ function makeState(over: {
   fadesAnimating?: boolean;
   focusAwake?: boolean;
   followWinner?: boolean;
-  followStartMs?: number | null;
+  followSaturated?: boolean | null;
 }): EngineState {
   const flowSlot =
     over.flowReady === true
@@ -92,10 +91,13 @@ function makeState(over: {
     },
     cam: null,
     // The follow-approach-ease term reads these two: the frame's winner id and
-    // the follow epoch's start. Default is at-rest (resting won, no ease running).
+    // the follow memory's saturation. Default is at-rest (resting won, no memory).
     cameraRuntime: {
       register: { winner: over.followWinner === true ? 'followApproach' : 'resting' },
-      epochs: { follow: { ref: null, startMs: over.followStartMs ?? null } },
+      follow:
+        over.followSaturated === null || over.followSaturated === undefined
+          ? null
+          : { saturated: over.followSaturated },
     },
     subsystems: {
       texturedDisks: null,
@@ -184,31 +186,31 @@ describe('shouldKeepTicking', () => {
   });
 
   it('a follow approach ease in flight → true (the wake term the body tween used to carry)', () => {
-    // A follow row won this frame and its ease started FOCUS_TWEEN_MS/2 ago — still
-    // running. Without this term the loop would sleep and the ease would saturate
-    // while asleep, snapping the zoom on the next interaction. Everything else is
-    // at rest, so this disjunct alone must keep the loop ticking.
-    const state = makeState({ followWinner: true, followStartMs: 1000 });
-    expect(shouldKeepTicking(state, restingRoot, 1000 + FOCUS_TWEEN_MS / 2, NO_ANIM)).toBe(true);
+    // A follow row won this frame and its memory has not saturated. Without this
+    // term the loop would sleep and the ease would saturate while asleep, snapping
+    // the zoom on the next interaction. Everything else is at rest, so this
+    // disjunct alone must keep the loop ticking.
+    const state = makeState({ followWinner: true, followSaturated: false });
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(true);
   });
 
   it('a SATURATED follow ease → false (steady follow must not pin 60 fps)', () => {
-    // The ease finished (elapsed >= FOCUS_TWEEN_MS): steady follow of a body must
-    // fall back to the coarse-idle / manual-play paths, not this predicate.
-    const state = makeState({ followWinner: true, followStartMs: 1000 });
-    expect(shouldKeepTicking(state, restingRoot, 1000 + FOCUS_TWEEN_MS + 1, NO_ANIM)).toBe(false);
-  });
-
-  it('a fresh follow with no start yet → false (defensive: null followStartMs)', () => {
-    const state = makeState({ followWinner: true, followStartMs: null });
+    // The approach handed off: steady follow of a body must fall back to the
+    // coarse-idle / manual-play paths, not this predicate.
+    const state = makeState({ followWinner: true, followSaturated: true });
     expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
   });
 
-  it('mid-ease window but no follow row is the winner → false (term is winner-gated)', () => {
+  it('a follow row winning with no memory yet → false', () => {
+    const state = makeState({ followWinner: true, followSaturated: null });
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
+  });
+
+  it('an unsaturated ease but no follow row winning → false (term is winner-gated)', () => {
     // A body is focused but autoRotate/drag won the orbit terms; that driver's own
     // wake (selectCameraActive) covers it, so the follow-ease term must not fire.
-    const state = makeState({ followWinner: false, followStartMs: 1000 });
-    expect(shouldKeepTicking(state, restingRoot, 1000 + FOCUS_TWEEN_MS / 2, NO_ANIM)).toBe(false);
+    const state = makeState({ followWinner: false, followSaturated: false });
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
   });
 
   it('a star LOD fade in flight → true even with everything else at rest', () => {
@@ -251,7 +253,7 @@ describe('shouldKeepTicking', () => {
       cam: null,
       cameraRuntime: {
         register: { winner: 'resting' },
-        epochs: { follow: { ref: null, startMs: null } },
+        follow: null,
       },
       subsystems: {
         texturedDisks: null,

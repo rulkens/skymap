@@ -15,18 +15,18 @@ import { selectCameraActive } from '../../../state/camera/selectors';
 import { selectIsManualPlaying } from '../../../state/time/selectors';
 import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
-import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 
 /**
- * Time-based ease with no camera-slice flag behind it: without this term the
- * loop sleeps mid-ease and wakes to a snapped zoom. False at saturation —
- * steady follow of a moving body is NOT a wake term (the pin re-centres on wake).
+ * Ease with no camera-slice flag behind it: without this term the loop sleeps
+ * mid-ease and wakes to a snapped zoom. Reads the approach's OWN exit signal
+ * (the memory it saturated on), not a second copy of the ease duration — steady
+ * follow of a moving body is not a wake term (the pin re-centres on wake).
  */
-function followApproachEaseActive(state: EngineState, nowMs: number): boolean {
-  if (!isFollowDriverId(state.cameraRuntime.register.winner)) return false;
-  const start = state.cameraRuntime.epochs.follow.startMs;
-  return start !== null && nowMs - start < FOCUS_TWEEN_MS;
+function followApproachEaseActive(state: EngineState): boolean {
+  const { register, follow } = state.cameraRuntime;
+  if (!isFollowDriverId(register.winner)) return false;
+  return follow !== null && !follow.saturated;
 }
 
 export function shouldKeepTicking(
@@ -42,7 +42,7 @@ export function shouldKeepTicking(
     state.subsystems.structureFocus.isAwake(nowMs) ||
     (state.settings.flow.enabled && slotReady(state.assetSlots.flow)) ||
     selectIsManualPlaying(s) ||
-    followApproachEaseActive(state, nowMs) ||
+    followApproachEaseActive(state) ||
     anim.starFadeAnimating ||
     anim.earthTilesAnimating ||
     anim.labelsAnimating
