@@ -18,7 +18,7 @@ export type BootstrapDeps = {
   /** createEngine arg — UI-callback sink. */
   cb: EngineCallbacks;
 
-  /** createEngine arg — the composition's boot-time home (Task 3 reads it in `wireInput`). */
+  /** createEngine arg — the composition's boot-time home; read by `wireInput`. */
   readonly home: EngineHomeConfig;
 
   /**

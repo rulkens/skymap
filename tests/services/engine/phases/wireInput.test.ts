@@ -295,8 +295,7 @@ describe('wireInput', () => {
   });
 
   it('wires the camera and the input bindings when galaxyPointRenderer is null', async () => {
-    // The worst of the three phase-guard failures: no renderer must never mean
-    // no input and no error — the camera and controls come up regardless.
+    // No renderer must never mean no input and no error.
     const state = makeState();
     state.gpu.galaxyPointRenderer = null;
     const deps = makeDeps();

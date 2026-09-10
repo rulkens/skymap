@@ -13,10 +13,6 @@
  *      `composeAtlasBindGroup()` gate never fires and the LOD-2/LOD-3
  *      pass is permanently dark.
  *
- * The disk renderers arrive as typed, non-null `disks` arguments now —
- * "both exist" is a compile-time fact this file no longer asserts at
- * runtime.
- *
  * Mocking strategy: stub the five GPU-bearing factory functions so no
  * real GPUDevice is needed; inject a stub `texturedDiskRenderer` with
  * spied bind methods to verify the bind contract.

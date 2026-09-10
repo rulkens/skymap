@@ -3,8 +3,7 @@ import type { InitialCam } from '../camera/InitialCam';
 import type { HomeFocusTarget } from './HomeFocusTarget';
 
 /**
- * EngineHomeConfig — a composition's boot-time home, threaded into
- * `wireInput` instead of the Earth default it used to hard-code.
+ * EngineHomeConfig — a composition's boot-time home, read by `wireInput`.
  */
 export type EngineHomeConfig = {
   /**
