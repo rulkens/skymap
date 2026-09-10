@@ -168,3 +168,7 @@ Status board artifact: https://claude.ai/code/artifact/86210d40-3b05-4ad9-8fe6-4
 - 00:15Z USER VISUAL: works without radius cull (I3 resolved by deletion, attested). Remaining: re-review result → archive ledger → /feature-done → PR ready. Visual check of the splat layer itself (T14) partially attested: user has been driving the :5600 view with splats + LiDAR, zoom to ground OK.
 
 - 00:20Z RE-REVIEW post-review-hardening-rereview.md: all 9 resolved, skips sound, 723b485e4 OK; N1 test header 12 lines → trimmed by controller (commit above, pushed); N2 informational (unreachable JSON.parse path) — no change. HARDENING REVIEW CLOSED. Next: archive ledger → /feature-done → PR ready.
+
+- 00:40Z /feature-done: full suite 1226/8219 green, tsc clean, backlog has no splat item, no new TODOs, plan checkboxes ticked (68). Deletion audit (opus, GREENFIELD framing) dispatched → deletion-audit-whole-branch.md. Awaiting it for the verdict.
+
+- 01:00Z /feature-done READY: safe-now 0d2ac033e, README 65c778220, completion 3293a9afa (plan+spec → completed/), pushed. NEEDS-RULING N1-N5 to user. Next: PR #676 ready → user merges → worktree cleanup.
