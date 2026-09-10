@@ -239,6 +239,15 @@ export type MeshSourceEntry = { readonly native: RawDataKey };
 export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>>;
 ```
 
+**Pre-bake.** A source carrying more than one material is flattened to one by a
+committed, hand-run headless Blender script (`tools/meshes/prebake/`) that
+strips edge/line geometry, joins the meshes, and bakes every material's base
+colour into a single albedo atlas on a fresh UV set; `MESH_SOURCES` then names
+that pre-baked GLB rather than the download. The tool's one-material refusal
+therefore stands unchanged: multi-material input is an authoring problem,
+solved upstream, so nothing in the `.mesh` format, the renderer or the shaders
+learns about material stacks.
+
 ### Baked outputs
 
 `public/data/meshes/<key>.mesh` plus `<key>_albedo.png` (sRGB), `<key>_mr.png`
@@ -263,9 +272,10 @@ Little-endian. Header:
 
 Then `vertexCount` interleaved vertices, stride 48 bytes: position (f32×3),
 normal (f32×3), tangent (f32×4, `w` = handedness), uv (f32×2). Then
-`indexCount` u32 indices. Geometry is authored in metres; the tool scales to
-a `--length-m` target, since CC0 or CC BY 4.0 source models are rarely at
-real-world scale.
+`indexCount` u32 indices. Geometry is authored in metres and passes through at
+native scale: both chosen sources turned out to be modelled at real-world size
+(the whale's bbox spans 12.9 m), so the tool has no `--length-m` knob to
+rescale them with.
 
 ### Tool
 
@@ -277,11 +287,14 @@ gradient accumulation, handedness in `w`), `meanAlbedo.ts`. Uses
 decimating, and resizing; the runtime never parses glTF, only the `.mesh`
 format above.
 
-Constraints: one mesh, one material. The tool refuses multi-mesh or
-multi-material input rather than silently picking one. A source with no
-normal map gets a 1×1 flat normal, a printed warning naming the asset, and
-`normalMapSubstituted: true` on its generated row. Skinning and animation are
-dropped at convert time. Triangle-budget (decimate) and texture-size-budget
+Constraints: one material. The tool refuses multi-material input rather than
+silently picking one; several primitives sharing that one material are merged,
+not refused (the whale ships as three). A source with no normal map gets a 1×1
+flat normal, a printed warning naming the asset, and
+`normalMapSubstituted: true` on its generated row; one with no
+metallicRoughness map likewise gets a 1×1 constant from the material's scalar
+factors. An authored `TANGENT` is used as-is and only generated when absent.
+Skinning and animation are dropped at convert time, baking the rest pose. Triangle-budget (decimate) and texture-size-budget
 (resize) are tool constants. Provenance is reported to the user before any
 asset is committed.
 
