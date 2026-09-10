@@ -101,7 +101,7 @@ export function groupKeyOf(target: string, slab: number): string {
  * both call this, so the allocated slot and the looked-up slot can never
  * drift apart.
  */
-export function layerTimingSlotName(layerName: string, slabIndex: number, face?: number): string {
+export function passTimingSlotName(layerName: string, slabIndex: number, face?: number): string {
   const base = isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
   return face === undefined ? base : `${base}·FACE[${face}]`;
 }
@@ -113,7 +113,7 @@ export function layerTimingSlotName(layerName: string, slabIndex: number, face?:
  * `(target, slab)` — `('sky-cubemap', NEAR0)` — because the array-layer they
  * write isn't part of the `(target, slab)` key at all (unlike a body row,
  * which gets its OWN `slab` index and so is already unique), so `groupKeyOf`
- * alone collides across faces; this is `layerTimingSlotName`'s counterpart
+ * alone collides across faces; this is `passTimingSlotName`'s counterpart
  * one level up, disambiguating the STEP's own slot rather than a layer's.
  * `timedSlotRowsOf` (frameProgram.ts) allocates under this name;
  * `executeFrame`'s merged pass must resolve the identical name via

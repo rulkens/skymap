@@ -89,7 +89,7 @@ describe('GpuTimingsSection', () => {
         perPassMs: new Map([
           // Two rows in the Cosmos · HDR group + one in Foreground bodies · depth.
           // 'earth·BODY[0]' — a body-slab layer's slot name carries its row
-          // (`layerTimingSlotName`, M2 fix), so a live body-0 sample reports
+          // (`passTimingSlotName`, M2 fix), so a live body-0 sample reports
           // under the suffixed name, not the bare layer name.
           ['point-sprites', 2.0],
           ['procedural-disks', 1.0],

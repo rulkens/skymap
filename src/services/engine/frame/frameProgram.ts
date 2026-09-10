@@ -69,7 +69,7 @@ import {
   NEAR0,
   groupKeyOf,
   isBodySlabIndex,
-  layerTimingSlotName,
+  passTimingSlotName,
   matchesLensPhase,
   renderStepTimingSlotName,
   slabName,
@@ -414,14 +414,14 @@ function timedSlotRowsOf(
           matchesStep &&
           matchesLensPhase(contentPass.hdrPostLensing, step.lensPhase)
         ) {
-          // `layerTimingSlotName` carries the body row and the capture face
+          // `passTimingSlotName` carries the body row and the capture face
           // into the slot NAME, so two body rows sharing one layer (Jupiter +
           // a moon, both drawn by `planetsPass`) — or one roster layer drawn
           // once per captured face and once for the real view — each get their
           // own query-set slot instead of colliding on the same two indices
           // (see its doc, slabs.ts).
           rows.push({
-            name: layerTimingSlotName(contentPass.name, step.slab, step.face),
+            name: passTimingSlotName(contentPass.name, step.slab, step.face),
             groupKey,
           });
         }
@@ -471,7 +471,7 @@ function timedSlotRowsOf(
  * `namesSeen` still guards against a genuine same-title duplicate (two
  * distinct groupKeys sharing a display title, e.g. every `foreground:0·BODY[k]`
  * bucketing under "Foreground bodies · depth") landing the same row NAME
- * twice — no such collision exists today (`layerTimingSlotName` keys a
+ * twice — no such collision exists today (`passTimingSlotName` keys a
  * `slab: 'body'` layer's per-row name by its own `BODY[k]`), but the guard
  * stays as the cheap belt for that shape rather than assuming it can't recur.
  */

@@ -28,7 +28,7 @@
  * Names MUST be unique — a duplicate would collide on its index pair, so
  * every pass sharing the name would overwrite the same two timestamps
  * (whichever pass resolves last "wins", silently). The caller's registry is
- * the place that guarantees uniqueness (`layerTimingSlotName` is what makes a
+ * the place that guarantees uniqueness (`passTimingSlotName` is what makes a
  * body-row layer's name unique per row); this function enforces the
  * precondition rather than trusting it, since a collision here corrupts data
  * rather than throwing on its own.

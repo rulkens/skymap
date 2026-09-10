@@ -459,7 +459,7 @@ describe('timedSlotsOf', () => {
       // atmosphere-shell all land here, in registry order — star-spheres and
       // field-star-sphere are the only foreground layers still literal NEAR0,
       // so they sit alone in the NEXT (NEAR0) step instead. Each name carries
-      // its row (`·BODY[0]`, this fixture's one body slab) — `layerTimingSlotName`
+      // its row (`·BODY[0]`, this fixture's one body slab) — `passTimingSlotName`
       // (M2 fix): a second body row would give these a DIFFERENT suffix rather
       // than colliding on the same query-set slot.
       'earth·BODY[0]',
@@ -679,7 +679,7 @@ describe('timedSlotGroupsOf', () => {
     // (`buildTimingSlotMap`), so two same-named passes in one encoder would
     // both write the SAME two query indices and the reported figure would be
     // whichever pass resolved last — under-reporting a multi-body scene by a
-    // factor of N. See `layerTimingSlotName` (slabs.ts).
+    // factor of N. See `passTimingSlotName` (slabs.ts).
     const bodyPass: ContentPass = {
       name: 'planets',
       slab: 'body',
@@ -721,7 +721,7 @@ describe('groupPassNames', () => {
     // 'earth' is a real `slab: 'body'` layer: the engine handle's `allNames`
     // passes its PLAIN name (one entry regardless of body-row count), which
     // must still resolve to 'Foreground bodies · depth' even though
-    // `layerTimingSlotName` suffixes its TIMED_SLOTS row — `PASS_GROUP_KEYS`
+    // `passTimingSlotName` suffixes its TIMED_SLOTS row — `PASS_GROUP_KEYS`
     // is built from the separate `plainLayerGroupKeys` walk for exactly this.
     const groups = groupPassNames(['labels', 'point-sprites', 'earth', 'star-aggregates']);
     expect(groups.map((g) => g.title)).toEqual([

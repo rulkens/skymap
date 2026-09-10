@@ -81,7 +81,7 @@ import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import {
   slabViewOf,
   groupKeyOf,
-  layerTimingSlotName,
+  passTimingSlotName,
   renderStepTimingSlotName,
   matchesLensPhase,
 } from './slabs';
@@ -429,14 +429,14 @@ function renderGroup(
   // the module header) is the price of per-pass timing; this path runs only
   // under ?gpuTimings. The step's clear (colour or depth) belongs to the FIRST
   // layer's pass only — the rest load, or each would wipe its predecessor.
-  // `layerTimingSlotName` keys the slot by `view.slab.index` (not just
+  // `passTimingSlotName` keys the slot by `view.slab.index` (not just
   // `contentPass.name`): a `slab: 'body'` layer draws once per body row in one
   // encoder, and without the row in the name every row's pass would attach
   // the SAME two query indices — the last one to run silently overwrites the
-  // others' timestamps (see `layerTimingSlotName`'s doc, slabs.ts).
+  // others' timestamps (see `passTimingSlotName`'s doc, slabs.ts).
   group.forEach((contentPass, i) => {
     const touchedBefore = alreadyTouched || i > 0;
-    const slot = layerTimingSlotName(contentPass.name, view.slab.index, face);
+    const slot = passTimingSlotName(contentPass.name, view.slab.index, face);
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${slot}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],

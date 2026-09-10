@@ -534,7 +534,7 @@ describe('executeFrame', () => {
     // The regression: a `slab: 'body'` layer drawing into TWO body rows in one
     // encoder used to attach `descriptorFor(layer.name)` for BOTH passes —
     // the same two query indices, written twice, so the reported figure was
-    // whichever pass resolved last. `layerTimingSlotName` folds the row into
+    // whichever pass resolved last. `passTimingSlotName` folds the row into
     // the slot name, so each row's pass gets its OWN descriptor.
     const env = makeEncoderEnv();
     const { svc, descriptorFor } = makeTimingService();
