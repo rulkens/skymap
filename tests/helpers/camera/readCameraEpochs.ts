@@ -9,11 +9,9 @@ import type { Epoch } from '../../../src/@types/engine/camera/Epoch';
 
 export type EpochCell = { readonly startMs: number | null; readonly refNull: boolean };
 
-export type EpochCells = Readonly<
-  Record<'tween' | 'frameTween' | 'autoRotate' | 'follow' | 'clip', EpochCell>
->;
-
-export function readCameraEpochs(state: EngineState): EpochCells {
+export function readCameraEpochs(
+  state: EngineState,
+): Readonly<Record<keyof EngineState['cameraRuntime']['epochs'], EpochCell>> {
   const cell = (epoch: Epoch<unknown>): EpochCell => ({
     startMs: epoch.startMs,
     refNull: epoch.ref === null,
