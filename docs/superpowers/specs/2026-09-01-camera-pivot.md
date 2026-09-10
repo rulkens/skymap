@@ -977,7 +977,7 @@ stepCameraRuntime(prev: CameraRuntime, inputs: StepInputs): {
 Five pure stages, in this order (the fold stays last, spec §7):
 
 ```ts
-replayInput(prev: { register; surface; follow }, steps, ctx) → { register; surface; follow; lastZoomFactor; followDistanceTarget; autoRotateEpoch; actions }
+replayInput(prev: { register; surface; follow }, steps, ctx) → { register; surface; follow; lastZoomFactor; followDistanceTarget; actions }
 advanceEpochs(prev.epochs, { intent; focus; clip; winnerId; nowMs }) → CameraEpochs
 runCameraDrivers(drivers, ctx, mem) → { pose; winner; memory }
 commitOnEdge({ register; displayed; produced; prevWinner; winner; drivers }) → { render; authoredOverride; actions }

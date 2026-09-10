@@ -660,7 +660,6 @@ export function replayInput(
   readonly follow: FollowMemory | null;
   readonly lastZoomFactor: number | null;
   readonly followDistanceTarget: number | null;
-  readonly autoRotateEpoch: Epoch<FramedCameraPose>;
   readonly actions: readonly UnknownAction[];
 };
 ```
@@ -676,11 +675,12 @@ Four contracts the current file gets from the store and must now get from the fo
   except the first.
 - **The at-rest notch's commit is its gesture end** (`:88-91`) — identity-gated
   (`next !== from`), because a declined step returns its input by reference.
-- **`autoRotateEpoch` in and out.** The autoRotate zoom branch needs elapsed _this_
-  frame; replay advances the row itself and returns it, and Task 15 hands it to
-  `advanceEpochs`, whose second advance is a no-op by Task 2's idempotence. This is
-  the one epoch touched outside `advanceEpochs`, and it is safe for exactly that
-  reason — not by a call-count convention.
+- **`autoRotateEpoch` in, not out** (ruled at Task 12's review). The autoRotate zoom
+  branch needs elapsed _this_ frame, so replay advances the row locally for its own
+  `elapsedMs` read — and discards it, exactly as the incumbent drain did. Handing the
+  advanced row to `advanceEpochs` is NOT a no-op: when another driver wins, the row
+  replays `prev.ref`, so a fold-time reset would be kept where the incumbent never
+  stored one. Task 13 removes the field from the return shape.
 
 `beginDrag` / `cancelCameraTween` stay at DOM time in the `wireInput` emit sink
 (`drainInput.ts:8-9`): a cancel must not outlive the tween a double-click starts in
