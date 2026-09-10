@@ -469,9 +469,8 @@ describe('runCameraDrivers — elapsed dispatch', () => {
 
     runAtWinner(patchedDrivers, s, UNSTARTED_EPOCHS, 9999);
     // resting wins when nothing else is active; elapsed must be 0.
-    if (poseSpy.mock.calls.length > 0) {
-      expect(poseSpy.mock.calls[0]![0].elapsedMs).toBe(0);
-    }
+    expect(poseSpy).toHaveBeenCalled();
+    expect(poseSpy.mock.calls[0]![0].elapsedMs).toBe(0);
   });
 
   it("the clip driver's pose at 1500 ms matches the pose at 1.5 s of clip time", () => {

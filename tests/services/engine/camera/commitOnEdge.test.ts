@@ -34,6 +34,8 @@ import {
   elapsedMs,
 } from '../../../../src/services/engine/camera/cameraEpochs';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
+import { selectTimeState } from '../../../../src/state/time/selectors';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
@@ -80,6 +82,8 @@ function simulateFrame(
       elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),
       register: lastPose.current,
       winnerLastFrame: prevActiveId.current,
+      simDays: deriveSimDays(selectTimeState(rootState), nowMs),
+      projection: engineState.cameraRuntime.projection,
     }),
     engineState.cameraRuntime.follow,
   );

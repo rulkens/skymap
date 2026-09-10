@@ -21,6 +21,8 @@ import { createPlayClip } from '../../../../src/services/engine/animation/playCl
 import { flyout } from '../../../../src/data/animation/clips/flyout';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
+import { selectTimeState } from '../../../../src/state/time/selectors';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -75,6 +77,8 @@ function simulateFrame(
       elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),
       register: lastPose.current,
       winnerLastFrame: prevActiveId.current,
+      simDays: deriveSimDays(selectTimeState(freshState), nowMs),
+      projection: engineState.cameraRuntime.projection,
     }),
     engineState.cameraRuntime.follow,
   );

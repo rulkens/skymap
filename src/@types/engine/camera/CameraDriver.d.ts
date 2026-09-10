@@ -1,7 +1,6 @@
 /**
- * CameraDriver — one row of the camera precedence table, which is DATA: the
- * resolver calls only the highest-priority active row's `pose` (single writer,
- * no blending). The ranking and its rationale live with the table itself.
+ * CameraDriver — one row of the camera precedence table; the ranking and its
+ * rationale live with the table itself (`cameraDrivers.ts`).
  */
 
 import type { DriverCtx } from './DriverCtx';
