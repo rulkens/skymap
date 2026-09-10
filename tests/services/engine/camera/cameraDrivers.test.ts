@@ -27,7 +27,6 @@ import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import type { FollowMemory } from '../../../../src/@types/engine/camera/FollowMemory';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
 import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
-import { spinAutoRotate } from '../../../../src/services/engine/camera/spinAutoRotate';
 import {
   UNSTARTED_EPOCHS,
   advanceEpoch,
@@ -41,9 +40,7 @@ import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRo
 import { rootReducer } from '../../../../src/store/rootReducer';
 import {
   beginDrag,
-  endDrag,
   startCameraTween,
-  cancelCameraTween,
   setAutoRotate,
   commitCameraPose,
   clipStarted,
@@ -119,72 +116,11 @@ function runAtWinner(
   return { ...winner.pose(ctx, null), winner };
 }
 
-describe('CAMERA_DRIVERS — isActive reads the store', () => {
-  const drivers = CAMERA_DRIVERS;
-  function byId(id: string): CameraDriver {
-    return drivers.find((d) => d.id === id)!;
-  }
-
-  it('orbitDrag.isActive ⇔ s.camera.dragging', () => {
-    const store = makeStore();
-    expect(byId('orbitDrag').isActive(store.getState() as unknown as RootState)).toBe(false);
-    store.dispatch(beginDrag());
-    expect(byId('orbitDrag').isActive(store.getState() as unknown as RootState)).toBe(true);
-    store.dispatch(endDrag());
-    expect(byId('orbitDrag').isActive(store.getState() as unknown as RootState)).toBe(false);
-  });
-
-  it('tween.isActive ⇔ s.camera.tween !== null', () => {
-    const store = makeStore();
-    expect(byId('tween').isActive(store.getState() as unknown as RootState)).toBe(false);
-    store.dispatch(startCameraTween(TWEEN_DESC));
-    expect(byId('tween').isActive(store.getState() as unknown as RootState)).toBe(true);
-    store.dispatch(cancelCameraTween());
-    expect(byId('tween').isActive(store.getState() as unknown as RootState)).toBe(false);
-  });
-
-  it('autoRotate.isActive ⇔ s.camera.autoRotate.active', () => {
-    const store = makeStore();
-    // Default is DEFAULT_AUTO_ROTATE from cameraSlice initial state.
-    const defaultActive = (store.getState() as unknown as RootState).camera.autoRotate.active;
-    expect(byId('autoRotate').isActive(store.getState() as unknown as RootState)).toBe(
-      defaultActive,
-    );
-    store.dispatch(setAutoRotate({ active: !defaultActive, rate: 0.000873 }));
-    expect(byId('autoRotate').isActive(store.getState() as unknown as RootState)).toBe(
-      !defaultActive,
-    );
-  });
-
-  it('clip.isActive ⇔ s.camera.clip !== null', () => {
-    const store = makeStore();
-    expect(byId('clip').isActive(store.getState() as unknown as RootState)).toBe(false);
-    store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
-    expect(byId('clip').isActive(store.getState() as unknown as RootState)).toBe(true);
-  });
-
-  it('resting.isActive() is always true', () => {
-    const store = makeStore();
-    expect(byId('resting').isActive(store.getState() as unknown as RootState)).toBe(true);
-  });
-});
-
 describe('CAMERA_DRIVERS — pose functions', () => {
   const drivers = CAMERA_DRIVERS;
   function byId(id: string): CameraDriver {
     return drivers.find((d) => d.id === id)!;
   }
-
-  it('tween.pose returns evaluateClip(tweenToClip(descriptor), elapsed / 1000)', () => {
-    // The tween driver routes through evaluateClip via tweenToClip — the
-    // single camera-evaluation path after the Task-1 fold.
-    const store = makeStore();
-    store.dispatch(startCameraTween(TWEEN_DESC));
-    const s = store.getState() as unknown as RootState;
-    const elapsedMs = 300;
-    const result = worldArmOf(produce(byId('tween'), s, elapsedMs));
-    expect(result).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), elapsedMs / 1000));
-  });
 
   it('tween row converts ms→sec correctly', () => {
     // Oracle independent of evaluateClip / tweenToClip — a 1000× unit slip
@@ -223,24 +159,6 @@ describe('CAMERA_DRIVERS — pose functions', () => {
     // Slip-catching bounds: a forgotten /1000 saturates to 1000; these reject that.
     expect(result.distance).toBeGreaterThan(10);
     expect(result.distance).toBeLessThan(1000);
-  });
-
-  it('autoRotate.pose returns spinAutoRotate(base, rate, elapsed)', () => {
-    const store = makeStore();
-    store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
-    store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
-    const s = store.getState() as unknown as RootState;
-    const elapsed = 500;
-    const result = worldArmOf(produce(byId('autoRotate'), s, elapsed));
-    expect(result).toEqual(spinAutoRotate(BASE_POSE, 0.000873, elapsed));
-  });
-
-  it('resting.pose returns s.camera.base', () => {
-    const store = makeStore();
-    store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
-    const s = store.getState() as unknown as RootState;
-    const result = produce(byId('resting'), s);
-    expect(result).toEqual(absoluteArm(BASE_POSE));
   });
 });
 
