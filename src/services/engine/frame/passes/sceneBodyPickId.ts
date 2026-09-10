@@ -13,6 +13,8 @@ import { seedIndexOfBody } from './seedIndexOfBody';
 import { starPickId } from './starPickId';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
 
+// Without this, 'sirius' would also match the sun row and pack Source.Sun —
+// wrong, and unreachable by the round-trip test, which reads that same row back.
 const PACKABLE_BODY_ENTRIES = SOURCE_ENTRIES.filter(
   (entry) => entry.type === 'body' && entry.id !== 'sun',
 );

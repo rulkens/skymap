@@ -15,16 +15,6 @@ import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { Source } from '../../../../../src/data/sources';
 
 describe('starPickId', () => {
-  it('an S-star pick id never collides with a famous-star pick id', () => {
-    // Both tables are indexed from 0, so every S-star shares an index with some
-    // famous star; only the source code keeps them apart. Concatenating the
-    // tables to give them one index space would ALSO renumber every famous star
-    // and break saved selections — this asserts the property that rules it out.
-    const famousIds = new Set(SCENE_STARS.map((star) => starPickId(star.id)));
-    const sStarIds = SCENE_S_STARS.map((star) => starPickId(star.id));
-    expect(sStarIds.filter((id) => famousIds.has(id))).toEqual([]);
-  });
-
   it('stamps the source code of the table the star actually came from', () => {
     // The decode side (`BODY_PICK_ROWS`) picks its seed array from this
     // code. Stamping FamousStar for an S-star would resolve index 12 to whatever

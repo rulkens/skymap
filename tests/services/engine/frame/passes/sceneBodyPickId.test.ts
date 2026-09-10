@@ -21,6 +21,9 @@ import type { ResolvePickDeps } from '../../../../../src/@types/engine/ResolvePi
 const deps: ResolvePickDeps = { structures: { byCategory: () => [] } };
 
 describe('sceneBodyPickId', () => {
+  // Not subsumed by the round-trip test below: a consistent row swap (e.g. earth
+  // ↔ sgr-a-star in BODY_PICK_ROWS) round-trips cleanly while diverging from the
+  // GPU stamp — only these sourceCode assertions catch that.
   it('routes each seeded body to the table its own geometry pick indexes', () => {
     const earth = unpackPick(sceneBodyPickId(SCENE_EARTH.id)!)!;
     expect(earth.sourceCode).toBe(Source.Earth);

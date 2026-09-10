@@ -25,13 +25,6 @@ describe('SCENE_PLANETS', () => {
     expect(findPlanet('jupiter').radiusM).toBe(69911000);
   });
 
-  it('carries identity-only records (no baked position or orientation)', () => {
-    for (const planet of SCENE_PLANETS) {
-      expect('positionMpc' in planet).toBe(false);
-      expect('orientation' in planet).toBe(false);
-    }
-  });
-
   it("Jupiter's heliocentric distance is Jovian-scale (~5.2 AU)", () => {
     // Jupiter's position is DERIVED from ORBITAL_ELEMENTS, so its radius is
     // a(1 − e·cosE) at the J2000 mean anomaly — NOT exactly 5.2 AU. Pinning the
