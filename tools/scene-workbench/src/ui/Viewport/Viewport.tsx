@@ -104,9 +104,12 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       dirty = false;
 
       const view = sceneCameraView(input.getCameraPose(), [canvas.width, canvas.height]);
-      // The two 1s are the splat scale/opacity defaults: the uniform carries them
-      // before `display.gaussianSplat` exists to read them from.
-      cameraUniform.write(view, state.view.display.pointCloud.pointSizePx, 1, 1);
+      cameraUniform.write(
+        view,
+        state.view.display.pointCloud.pointSizePx,
+        state.view.display.gaussianSplat.splatScale,
+        state.view.display.gaussianSplat.opacityScale,
+      );
 
       const encoder = gpu.device.createCommandEncoder({ label: 'scene-workbench-frame' });
       const pass = encoder.beginRenderPass({

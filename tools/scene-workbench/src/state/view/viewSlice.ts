@@ -13,7 +13,10 @@ export type ViewSlice = {
   hiddenAssetIds: readonly string[];
   deviceLost: boolean;
   /** Per-render-layer display knobs. `pointSizePx` is device pixels (quad edge). */
-  display: { pointCloud: { pointSizePx: number } };
+  display: {
+    pointCloud: { pointSizePx: number };
+    gaussianSplat: { splatScale: number; opacityScale: number };
+  };
 };
 
 /** Pitch ceiling matching `applyInputToCamera.ts`'s: at exactly ±π/2 forward
@@ -25,7 +28,10 @@ export const defaultViewSlice: ViewSlice = {
   hiddenAssetIds: [],
   deviceLost: false,
   // 2px: closes the gaps a 5cm cloud leaves at building scale without fattening the ground.
-  display: { pointCloud: { pointSizePx: 2 } },
+  display: {
+    pointCloud: { pointSizePx: 2 },
+    gaussianSplat: { splatScale: 1, opacityScale: 1 },
+  },
 };
 
 export const viewSlice = createSlice({
@@ -53,8 +59,20 @@ export const viewSlice = createSlice({
     setPointCloudPointSize: (state, action: PayloadAction<number>) => {
       state.display.pointCloud.pointSizePx = action.payload;
     },
+    setSplatScale: (state, action: PayloadAction<number>) => {
+      state.display.gaussianSplat.splatScale = action.payload;
+    },
+    setOpacityScale: (state, action: PayloadAction<number>) => {
+      state.display.gaussianSplat.opacityScale = action.payload;
+    },
   },
 });
 
-export const { commitCameraPose, toggleAssetVisibility, deviceLost, setPointCloudPointSize } =
-  viewSlice.actions;
+export const {
+  commitCameraPose,
+  toggleAssetVisibility,
+  deviceLost,
+  setPointCloudPointSize,
+  setSplatScale,
+  setOpacityScale,
+} = viewSlice.actions;
