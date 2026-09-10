@@ -15,28 +15,26 @@ export function sortSplatOrder(positionsM: Float32Array, eyeM: Vec3, forwardM: V
   const order = new Uint32Array(count);
   if (count === 0) return order;
 
-  // f64, not f32: the bucket key is `depth − min`, and an f32 round-trip could
-  // push a stored depth below the f64 `min` tracked here — a negative key.
-  const depths = new Float64Array(count);
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i < count; i++) {
-    const base = i * 3;
-    const depth =
-      (positionsM[base]! - eyeM[0]) * forwardM[0] +
-      (positionsM[base + 1]! - eyeM[1]) * forwardM[1] +
-      (positionsM[base + 2]! - eyeM[2]) * forwardM[2];
-    depths[i] = depth;
+    const depth = depthOf(positionsM, i, eyeM, forwardM);
     if (depth < min) min = depth;
     if (depth > max) max = depth;
   }
 
-  // Zero extent (one splat, or a camera-facing plane) would divide by zero;
+  // Zero extent (one splat, or a camera dead-on a plane) would divide by zero;
   // one bucket holds everything and the input order is already an answer.
   const scale = max > min ? (BUCKETS - 1) / (max - min) : 0;
   const counts = new Uint32Array(BUCKETS);
+  // The keys, not the depths: 2 bytes a splat instead of 8, and the scatter
+  // below re-reads them rather than re-quantising.
+  const keys = new Uint16Array(count);
   for (let i = 0; i < count; i++) {
-    counts[bucketOf(depths[i]!, min, scale)]! += 1;
+    // Clamped: `(max − min) * (65535 / (max − min))` can round above 65535.
+    const key = Math.min(BUCKETS - 1, ((depthOf(positionsM, i, eyeM, forwardM) - min) * scale) | 0);
+    keys[i] = key;
+    counts[key]! += 1;
   }
 
   // Prefix-summed from the TOP bucket down, so the farthest splats claim the
@@ -49,14 +47,20 @@ export function sortSplatOrder(positionsM: Float32Array, eyeM: Vec3, forwardM: V
   }
 
   for (let i = 0; i < count; i++) {
-    const bucket = bucketOf(depths[i]!, min, scale);
+    const bucket = keys[i]!;
     order[counts[bucket]!] = i;
     counts[bucket]! += 1;
   }
   return order;
 }
 
-/** Clamped because `(max − min) * (65535 / (max − min))` can round above 65535. */
-function bucketOf(depth: number, min: number, scale: number): number {
-  return Math.min(BUCKETS - 1, ((depth - min) * scale) | 0);
+/** Both passes above quantise through this one expression: a `min` rounded any
+ *  differently would make `depth − min` negative, and the key −1. */
+function depthOf(positionsM: Float32Array, i: number, eyeM: Vec3, forwardM: Vec3): number {
+  const base = i * 3;
+  return (
+    (positionsM[base]! - eyeM[0]) * forwardM[0] +
+    (positionsM[base + 1]! - eyeM[1]) * forwardM[1] +
+    (positionsM[base + 2]! - eyeM[2]) * forwardM[2]
+  );
 }
