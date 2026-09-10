@@ -15,7 +15,6 @@ import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { poseOf } from '../camera/poseOf';
-import { projectionOf } from '../camera/projectionOf';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
@@ -118,7 +117,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // synchronous with engine construction, silently regresses the boot frame to
   // the default orientation.
   const committed = absoluteArm(poseOf(cam));
-  state.cameraRuntime = seedCameraRuntime({ committed, projection: projectionOf(cam) });
+  state.cameraRuntime = seedCameraRuntime({
+    committed,
+    projection: { fovYRad: cam.fovYRad, aspect: cam.aspect, near: cam.near, far: cam.far },
+  });
   store.dispatch(commitCameraPose(committed));
 
   // Boot IS the home state: the sim clock boots live, so Earth moves from the
