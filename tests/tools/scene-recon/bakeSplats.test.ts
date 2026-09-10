@@ -47,16 +47,21 @@ const PLY_PROPERTIES = [
   'f_dc_2',
 ];
 
-/** A Brush export at shDegree 0 whose vertices are all-zero bytes — the reader
- *  only needs the header to be honest about the count. */
-function ply(vertexCount: number): Uint8Array {
+/** A Brush export at shDegree 0, one vertex per given z (metres) and every
+ *  other property zero — the reader needs only the header to be honest. */
+function ply(zsM: readonly number[]): Uint8Array {
   const header =
     'ply\nformat binary_little_endian 1.0\n' +
-    `element vertex ${vertexCount}\n` +
+    `element vertex ${zsM.length}\n` +
     `${PLY_PROPERTIES.map((name) => `property float ${name}\n`).join('')}end_header\n`;
   const headerBytes = new TextEncoder().encode(header);
-  const bytes = new Uint8Array(headerBytes.length + vertexCount * PLY_PROPERTIES.length * 4);
+  const stride = PLY_PROPERTIES.length * 4;
+  const bytes = new Uint8Array(headerBytes.length + zsM.length * stride);
   bytes.set(headerBytes);
+  const dv = new DataView(bytes.buffer);
+  zsM.forEach((zM, i) => {
+    dv.setFloat32(headerBytes.length + i * stride + PLY_PROPERTIES.indexOf('z') * 4, zM, true);
+  });
   return bytes;
 }
 
@@ -74,7 +79,7 @@ beforeAll(() => {
   // A previous bake's export, left where this one will look for its own.
   stalePlyPath = join(collectionDir, `colmap-${SOENDERMARKEN.id}`, 'final.ply');
   mkdirSync(join(collectionDir, `colmap-${SOENDERMARKEN.id}`), { recursive: true });
-  writeFileSync(stalePlyPath, ply(9));
+  writeFileSync(stalePlyPath, ply(new Array<number>(9).fill(0)));
 
   copyFileSync(FIXTURE, join(collectionDir, `${ITEM_ID}.json`));
   writeFileSync(join(collectionDir, `${ITEM_ID}.jpg`), 'jpeg-bytes');
@@ -106,7 +111,7 @@ describe('bakeSplats', () => {
       runBrush: async (colmapDir) => {
         staged = readdirSync(join(colmapDir, 'images'));
         staleSurvived = existsSync(stalePlyPath);
-        writeFileSync(join(colmapDir, 'final.ply'), ply(1));
+        writeFileSync(join(colmapDir, 'final.ply'), ply([0]));
       },
       brushVersion: () => '0.1.0-test',
     });
@@ -118,12 +123,42 @@ describe('bakeSplats', () => {
     expect(asset.provenance.sourceVintage).toBe('2025-04-27');
   });
 
+  it('prunes splats below the LiDAR floor and packs only the rest', async () => {
+    const asset = await bakeSplats(SOENDERMARKEN, {
+      runCct: RUN_CCT,
+      runBrush: async (colmapDir) => {
+        // The seed cloud's floor is 0 m: -40 is the sub-surface junk an
+        // airborne-only bake invents, -4 is inside the margin's slack.
+        writeFileSync(join(colmapDir, 'final.ply'), ply([12, -4, -40, -600]));
+      },
+      brushVersion: () => '0.1.0-test',
+    });
+
+    expect(asset.splatCount).toBe(2);
+  });
+
+  it('packs the last export without training again when reusePly is set', async () => {
+    const asset = await bakeSplats(
+      SOENDERMARKEN,
+      {
+        runCct: RUN_CCT,
+        runBrush: async () => {
+          throw new Error('brush must not run under reusePly');
+        },
+        brushVersion: () => '0.1.0-test',
+      },
+      { reusePly: true },
+    );
+
+    expect(asset.splatCount).toBe(2);
+  });
+
   it('refuses an export with no splats in it', async () => {
     await expect(
       bakeSplats(SOENDERMARKEN, {
         runCct: RUN_CCT,
         runBrush: async (colmapDir) => {
-          writeFileSync(join(colmapDir, 'final.ply'), ply(0));
+          writeFileSync(join(colmapDir, 'final.ply'), ply([]));
         },
         brushVersion: () => '0.1.0-test',
       }),

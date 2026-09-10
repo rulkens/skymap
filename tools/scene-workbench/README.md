@@ -33,6 +33,12 @@ script or `/scene-workbench/` subpath.
    `cargo install --locked --git https://github.com/ArthurBrussee/brush brush-cli`
    (`--locked` is load-bearing: an unlocked build pulls a burn revision that
    panics in Brush's splat initialisation).
+   Splats below the LiDAR floor are pruned on the way into `splats.bin`:
+   every frame is airborne, so training is free to park large ground-coloured
+   Gaussians underground, where they are invisible from above and a wall of
+   flat colour once the camera descends. `npm run bake-splats -- --reuse-ply`
+   re-packs the last export instead of training again, which is how to re-tune
+   that prune without paying for another 30k-iteration run.
    <!-- bake numbers: splatCount / shDegree / wall time — filled after the first real bake -->
 6. `npm run scene-workbench`
 

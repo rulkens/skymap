@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { SOENDERMARKEN, type SceneGroupDefinition } from './groups/soendermarken';
 import { photoPoseFromStacItem } from './poses/photoPoseFromStacItem';
 import { topocentricPositionsM, type CctRunner } from './poses/topocentricPositionsM';
+import { lidarFloorZM } from './lidar/lidarFloorZM';
 import { packSplats } from './pack/packSplats';
 import { readGaussianPly } from './splats/readGaussianPly';
 import { writeColmapModel } from './splats/writeColmapModel';
@@ -45,6 +46,12 @@ const GEO3D_DIR = 'public/data/geo3d';
 const PLY_NAME = 'final.ply';
 const POINT_SAMPLE_TARGET = 200_000;
 const TRAIN_ITERS = 30000;
+/** Every frame is airborne, so nothing constrains where along a ray the ground
+ *  colour sits and training parks large ground-coloured Gaussians below the
+ *  terrain — invisible from above, a wall of flat colour once the camera dives
+ *  into them. Prune below the LiDAR floor, less this slack for real basements
+ *  and the cloud's own vertical spread. */
+const FLOOR_MARGIN_M = 5;
 
 export type BrushRunner = (colmapDir: string) => Promise<void>;
 
@@ -55,6 +62,10 @@ export async function bakeSplats(
     readonly runBrush: BrushRunner;
     readonly brushVersion: () => string;
   },
+  /** `reusePly`: pack the last run's export instead of staging and training
+   *  again — the only affordable way to re-tune the prune on a 30k-iteration
+   *  bake. */
+  options: { readonly reusePly?: boolean } = {},
 ): Promise<GaussianSplatAsset> {
   const pointsBinPath = join(GEO3D_DIR, 'groups', group.id, 'assets', LIDAR_ASSET_ID, 'points.bin');
   if (!existsSync(pointsBinPath)) {
@@ -76,34 +87,43 @@ export async function bakeSplats(
   // brush-cli costs a second rather than the whole copy.
   const brushVersion = deps.brushVersion();
 
-  const centresUtm: Vec3[] = items.map((item) => [...item.properties['pers:perspective_center']]);
-  const positions = await topocentricPositionsM(group.anchor, centresUtm, { runCct: deps.runCct });
-
-  const poses: PhotoPose[] = items.map((item, i) => {
-    const scale = skraafotoDownsampleScale(item.properties['proj:shape']);
-    const pose = photoPoseFromStacItem(item, group.anchor, positions[i]!, scale);
-    // photoPoseFromStacItem names the JPEG bare and writeColmapModel hands
-    // `imageUrl` straight to `copyFile`, which resolves against cwd — so the
-    // harvest directory has to be folded in here or the copy misses.
-    return { ...pose, imageUrl: join(collectionDir, pose.imageUrl) };
-  });
-
   const colmapDir = join(collectionDir, `colmap-${group.id}`);
-  await writeColmapModel({
-    poses,
-    pointsBinPath,
-    pointSampleTarget: POINT_SAMPLE_TARGET,
-    outDir: colmapDir,
-  });
-
-  // `colmapDir` survives between bakes, so a run where Brush exits 0 without
-  // exporting would otherwise re-read the previous run's PLY and ship it under
-  // a fresh provenance stamp. Deleting first makes that failure visible below.
   const plyPath = join(colmapDir, PLY_NAME);
-  await rm(plyPath, { force: true });
 
-  process.stderr.write(`bakeSplats: training ${poses.length} frame(s) with brush-cli…\n`);
-  await deps.runBrush(colmapDir);
+  if (options.reusePly) {
+    if (!existsSync(plyPath)) {
+      throw new Error(`bakeSplats: --reuse-ply, but no export at ${plyPath} to pack.`);
+    }
+  } else {
+    const centresUtm: Vec3[] = items.map((item) => [...item.properties['pers:perspective_center']]);
+    const positions = await topocentricPositionsM(group.anchor, centresUtm, {
+      runCct: deps.runCct,
+    });
+
+    const poses: PhotoPose[] = items.map((item, i) => {
+      const scale = skraafotoDownsampleScale(item.properties['proj:shape']);
+      const pose = photoPoseFromStacItem(item, group.anchor, positions[i]!, scale);
+      // photoPoseFromStacItem names the JPEG bare and writeColmapModel hands
+      // `imageUrl` straight to `copyFile`, which resolves against cwd — so the
+      // harvest directory has to be folded in here or the copy misses.
+      return { ...pose, imageUrl: join(collectionDir, pose.imageUrl) };
+    });
+
+    await writeColmapModel({
+      poses,
+      pointsBinPath,
+      pointSampleTarget: POINT_SAMPLE_TARGET,
+      outDir: colmapDir,
+    });
+
+    // `colmapDir` survives between bakes, so a run where Brush exits 0 without
+    // exporting would otherwise re-read the previous run's PLY and ship it under
+    // a fresh provenance stamp. Deleting first makes that failure visible below.
+    await rm(plyPath, { force: true });
+
+    process.stderr.write(`bakeSplats: training ${poses.length} frame(s) with brush-cli…\n`);
+    await deps.runBrush(colmapDir);
+  }
 
   const ply = await readFile(plyPath).catch(() => {
     throw new Error(
@@ -120,9 +140,22 @@ export async function bakeSplats(
     throw new Error(`bakeSplats: brush-cli exported zero splats for group "${group.id}"`);
   }
 
+  const floorZM = (await lidarFloorZM(pointsBinPath)) - FLOOR_MARGIN_M;
+  const kept = splats.filter((splat) => splat.zM >= floorZM);
+  process.stderr.write(
+    `bakeSplats: pruned ${(splats.length - kept.length).toLocaleString()} splat(s) below ` +
+      `${floorZM.toFixed(1)} m of ${splats.length.toLocaleString()}\n`,
+  );
+  if (kept.length === 0) {
+    throw new Error(
+      `bakeSplats: every splat sits below the ${floorZM.toFixed(1)} m floor — the export and ` +
+        'the LiDAR seed are in different frames.',
+    );
+  }
+
   const assetDir = join(GEO3D_DIR, 'groups', group.id, 'assets', ASSET_ID);
   await mkdir(assetDir, { recursive: true });
-  await writeFile(join(assetDir, 'splats.bin'), packSplats(splats, shDegree));
+  await writeFile(join(assetDir, 'splats.bin'), packSplats(kept, shDegree));
 
   const asset: GaussianSplatAsset = {
     kind: 'gaussianSplat',
@@ -138,7 +171,7 @@ export async function bakeSplats(
         { step: 'brush-cli', version: brushVersion },
       ],
     },
-    splatCount: splats.length,
+    splatCount: kept.length,
     shDegree,
     artifactUrl: `geo3d/groups/${group.id}/assets/${ASSET_ID}/splats.bin`,
   };
@@ -242,11 +275,11 @@ function brushVersion(): string {
 
 async function main(): Promise<void> {
   const start = Date.now();
-  const asset = await bakeSplats(SOENDERMARKEN, {
-    runCct: spawnCct,
-    runBrush: spawnBrush,
-    brushVersion,
-  });
+  const asset = await bakeSplats(
+    SOENDERMARKEN,
+    { runCct: spawnCct, runBrush: spawnBrush, brushVersion },
+    { reusePly: process.argv.includes('--reuse-ply') },
+  );
   const seconds = ((Date.now() - start) / 1000).toFixed(1);
   process.stderr.write(
     `bakeSplats: done in ${seconds}s — ${asset.splatCount.toLocaleString()} splats → ${asset.artifactUrl}\n`,
