@@ -72,4 +72,20 @@ describe('sunVisibleFraction', () => {
     expect(result).toBeGreaterThan(0);
     expect(result).toBeLessThan(1);
   });
+
+  it("never goes below 0 when the Sun's disc is the larger", () => {
+    // Annular regime: host 5°, sun 10°, colinear (separation 0°) —
+    // sun.angRad > host.angRad, so the 0-branch's host-larger guard refuses
+    // even though separation is under |hostAngRad − sunAngRad|.
+    const distM = 10_000_000;
+    const result = sunVisibleFraction({
+      bodyPosMpc: BODY,
+      sunPosMpc: posAt([1, 0, 0], distM),
+      hostPosMpc: posAt([1, 0, 0], distM),
+      sunRadiusM: Math.sin((10 * Math.PI) / 180) * distM,
+      hostRadiusM: Math.sin((5 * Math.PI) / 180) * distM,
+    });
+    expect(result).toBeGreaterThanOrEqual(0);
+    expect(result).toBeLessThanOrEqual(1);
+  });
 });

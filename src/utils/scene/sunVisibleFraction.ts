@@ -21,6 +21,8 @@ export function sunVisibleFraction(input: {
   const { bodyPosMpc, sunPosMpc, hostPosMpc, sunRadiusM, hostRadiusM } = input;
   const sun = angularRadiusAndDirection(bodyPosMpc, sunPosMpc, sunRadiusM);
   const host = angularRadiusAndDirection(bodyPosMpc, hostPosMpc, hostRadiusM);
+  // Clamp: near-colinear unit vectors can round their dot product above 1
+  // (e.g. 1.0000000000000007), which would send acos to NaN.
   const cosSeparation =
     sun.dir[0] * host.dir[0] + sun.dir[1] * host.dir[1] + sun.dir[2] * host.dir[2];
   const separationRad = Math.acos(Math.min(1, Math.max(-1, cosSeparation)));
@@ -29,7 +31,11 @@ export function sunVisibleFraction(input: {
   const highThreshold = host.angRad + sun.angRad;
   if (separationRad <= lowThreshold && host.angRad >= sun.angRad) return 0;
   if (separationRad >= highThreshold) return 1;
-  return (separationRad - lowThreshold) / (highThreshold - lowThreshold);
+  const ramp = (separationRad - lowThreshold) / (highThreshold - lowThreshold);
+  // Clamp: annular regime (Sun angularly larger than the host, never seen at a
+  // 400 km orbit) sends this negative — true value there is 1 − (hostAngRad /
+  // sunAngRad)² at alignment; the clamp overstates occlusion, accepted as unreachable.
+  return Math.min(1, Math.max(0, ramp));
 }
 
 /** Angular radius (asin) and unit direction from the body toward `posMpc`. */
