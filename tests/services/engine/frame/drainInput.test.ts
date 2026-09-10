@@ -83,6 +83,15 @@ function rangeM(framed: FramedCameraPose): number {
 }
 
 describe('drainInput', () => {
+  it('an empty drain hands back the follow memory it was holding', () => {
+    // runFrame assigns the returned memory unconditionally; returning null here
+    // would drop the follow memory on every gesture-free frame.
+    const { state, deps } = makeHarness();
+    const held = { from: null, distanceTarget: 5, panOffset: [0, 0, 0] as Vec3 };
+    state.cameraRuntime.follow = held;
+    expect(drainInput(state, deps, 0).follow).toBe(held);
+  });
+
   it('applies nothing until the frame drains', () => {
     const { agg, state, deps } = makeHarness();
     agg.push({ kind: 'gestureStart' });

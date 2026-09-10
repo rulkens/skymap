@@ -19,8 +19,8 @@ export type CameraRuntime = {
   /** Replaced once per frame by `runFrame`'s `advanceEpochs`; the clip row
    * comes from the clip player's tick. */
   epochs: CameraEpochs;
-  /** Adopted from the follow driver's produce once per frame (and written by
-   * the pan fold); nulled by `runFrame` when the follow row changes. */
+  /** `runFrame` is the only writer: the drain's returned memory, the
+   * focus-edge null, then the follow driver's adopted produce. */
   follow: FollowMemory | null;
   /** Live projection config; aspect patched on each canvas resize. */
   projection: CameraProjection;

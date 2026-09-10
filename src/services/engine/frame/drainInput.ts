@@ -269,7 +269,7 @@ export function drainInput(
           base: root.camera.base,
           factor: step.factor,
           spin: { owns: state.cameraRuntime.prevActiveId.current === 'autoRotate', rate },
-          autoRotateElapsedMs: elapsedMs(spinEpoch, nowMs),
+          spinElapsedMs: elapsedMs(spinEpoch, nowMs),
           pivot,
         });
         if (zoomed !== null && root.camera.base.frame === 'absolute') {

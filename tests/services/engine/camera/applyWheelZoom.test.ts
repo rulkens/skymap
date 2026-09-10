@@ -26,7 +26,7 @@ describe('applyWheelZoom', () => {
       base: BASE,
       factor: 2,
       spin: IDLE_SPIN,
-      autoRotateElapsedMs: 0,
+      spinElapsedMs: 0,
       pivot: NO_PIVOT,
     });
     expect(result!.distance).toBeCloseTo(200, 9); // 100 * 2
@@ -42,7 +42,7 @@ describe('applyWheelZoom', () => {
       base: BASE,
       factor: 0.5,
       spin: { owns: true, rate },
-      autoRotateElapsedMs: 500,
+      spinElapsedMs: 500,
       pivot: NO_PIVOT,
     });
 
@@ -64,7 +64,7 @@ describe('applyWheelZoom', () => {
       base: base as typeof BASE,
       factor: 1.5,
       spin: Object.freeze({ owns: true, rate: 0.01 }),
-      autoRotateElapsedMs: 250,
+      spinElapsedMs: 250,
       pivot,
     });
 

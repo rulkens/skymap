@@ -16,12 +16,12 @@ export function applyWheelZoom(args: {
   readonly factor: number;
   /** `owns` = the spin authored the pose last frame, not merely enabled. */
   readonly spin: { readonly owns: boolean; readonly rate: number };
-  readonly autoRotateElapsedMs: number;
+  readonly spinElapsedMs: number;
   readonly pivot: PivotFraming;
 }): CameraPose | null {
-  const { base, factor, spin, autoRotateElapsedMs, pivot } = args;
+  const { base, factor, spin, spinElapsedMs, pivot } = args;
   // World arm only (spec §7): in a body arm the wheel routes to the surface gesture.
   if (base.frame !== 'absolute') return null;
-  const pose = spin.owns ? spinAutoRotate(base.pose, spin.rate, autoRotateElapsedMs) : base.pose;
+  const pose = spin.owns ? spinAutoRotate(base.pose, spin.rate, spinElapsedMs) : base.pose;
   return zoomedPose(pose, factor, pivot);
 }
