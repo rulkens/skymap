@@ -186,6 +186,9 @@ function runScript(): Trace {
   // The approach outranks the pill until it saturates (R14-3), which lands inside
   // this leg; the pill authors from the next frame on. Same frame clock as before.
   expect(steps(3, 'autoRotate').winner).toBe('followApproach');
+  // This notch lands on the hand-off frame and is DROPPED (routed by last frame's
+  // winner into follow memory the spin never adopts) — a known pre-existing route
+  // defect the fixture pins; fixing it re-records this leg.
   notch('notch under autoRotate');
   expect(steps(3, 'autoRotate settle').winner).toBe('autoRotate');
 
