@@ -1,7 +1,7 @@
 /**
- * The floor is read straight out of packed bytes, so the only way it can be
- * wrong is a field offset that lands on x, y or the colour bytes — which a
- * cloud whose lowest z is not its lowest anything-else catches.
+ * Two ways this goes wrong, both silently: a field offset that lands on x, y
+ * or the colour bytes (so the cloud's lowest z is nothing else's lowest), and
+ * a floor taken as the minimum, which one DHM blunder drags kilometres down.
  */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -20,10 +20,19 @@ beforeAll(() => {
   binPath = join(dir, 'points.bin');
   writeFileSync(
     binPath,
+    // 1000 points of real terrain plus one blunder, so the 0.1% quantile
+    // lands on the lowest ground point rather than on the blunder.
     packPoints([
-      { xM: -90, yM: -80, zM: 12.5, r: 1, g: 2, b: 3, classification: 2 },
-      { xM: 40, yM: 30, zM: -7.25, r: 4, g: 5, b: 6, classification: 2 },
-      { xM: 10, yM: 20, zM: 3, r: 7, g: 8, b: 9, classification: 2 },
+      { xM: 0, yM: 0, zM: -413.5, r: 1, g: 2, b: 3, classification: 2 },
+      ...Array.from({ length: 1000 }, (_unused, i) => ({
+        xM: -90 - i,
+        yM: -80 - i,
+        zM: -7.25 + i * 0.03,
+        r: 4,
+        g: 5,
+        b: 6,
+        classification: 2,
+      })),
     ]),
   );
 });
@@ -33,7 +42,7 @@ afterAll(() => {
 });
 
 describe('lidarFloorZM', () => {
-  it('returns the lowest z in the cloud', async () => {
-    await expect(lidarFloorZM(binPath)).resolves.toBe(-7.25);
+  it('takes the floor from the terrain, not from a blunder below it', async () => {
+    await expect(lidarFloorZM(binPath)).resolves.toBeCloseTo(-7.25, 5);
   });
 });
