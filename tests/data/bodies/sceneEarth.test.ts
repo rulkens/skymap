@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
-import { rotationById } from '../../../src/data/bodies/rotationElements';
+import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 
@@ -40,6 +40,6 @@ describe('SCENE_EARTH', () => {
   it('derives a baked orientation from the IAU rotation elements', () => {
     // Earth's facing is baked from its IAU rotation elements through the same
     // util the derive calls — this pins the wiring, not a matrix restatement.
-    expect(earthState.orientation).toEqual(rotationFromIau(rotationById('earth')));
+    expect(earthState.orientation).toEqual(rotationFromIau(rotationRowById('earth')!));
   });
 });

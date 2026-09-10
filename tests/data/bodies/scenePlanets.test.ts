@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
-import { rotationById } from '../../../src/data/bodies/rotationElements';
+import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -72,7 +72,7 @@ describe('SCENE_PLANETS', () => {
     // matrix. A textured body carries its baked IAU rotation; an irregular moon
     // with no registry row (Phobos) carries the identity, the honest "no facing
     // modelled" value.
-    expect(stateOf('saturn').orientation).toEqual(rotationFromIau(rotationById('saturn')));
+    expect(stateOf('saturn').orientation).toEqual(rotationFromIau(rotationRowById('saturn')!));
     expect(stateOf('phobos').orientation).toEqual([...IDENTITY_MAT3]);
   });
 });

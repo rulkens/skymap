@@ -83,8 +83,8 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   const states = new Map<string, BodyState>();
 
   // The roots: position authored, not orbited. They still go through
-  // `orientationForBody` so the texture-keyed facing gate stays one gate for
-  // every body, and carry M = 0 — an anchor has no orbit for a trail to fade
+  // `orientationForBody` so the rotation-row gate stays one gate for every
+  // body, and carry M = 0 — an anchor has no orbit for a trail to fade
   // along. The authored position is shared by reference rather than copied: it
   // is never mutated, and a copy would allocate per instant for nothing.
   for (const anchor of SCENE_ANCHORS) {

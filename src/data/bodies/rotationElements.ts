@@ -1,19 +1,18 @@
 /**
- * rotationElements — J2000 rotation elements for the fifteen textured bodies:
+ * rotationElements — J2000 rotation elements for bodies with a modelled facing:
  * pole (α₀, δ₀), prime meridian W₀ and spin rate Ẇ, all degrees. `orbitalElements`
- * places a body; this aims it. An untextured body is rotation-invariant, carries no
- * row, and falls back to `IDENTITY_MAT3`. Only Ẇ is live: the published pole rates
+ * places a body; this aims it. A body with no row is rotation-invariant and
+ * falls back to `IDENTITY_MAT3`. Only Ẇ is live: the published pole rates
  * α̇/δ̇ and the periodic nutation/libration terms (Neptune's `N`, the Moon's `E1…`,
  * the Galileans' `Jn`) are dropped — they move the pole under an arcminute over 250
  * years, below a textured sphere's resolution. Source: the constant terms of
  * Archinal et al. (2018), Cel. Mech. Dyn. Astron. 130:22, Tables 1 and 2/3.
  */
 
-import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { RotationElements } from '../../@types/scene/RotationElements';
 
-export function rotationById(id: string): RotationElements {
-  return findByIdOrThrow(ROTATION_ELEMENTS, id, 'rotationElements');
+export function rotationRowById(id: string): RotationElements | null {
+  return ROTATION_ELEMENTS.find((el) => el.id === id) ?? null;
 }
 
 export const ROTATION_ELEMENTS: readonly RotationElements[] = [
