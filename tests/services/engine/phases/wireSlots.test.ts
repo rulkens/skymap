@@ -683,6 +683,20 @@ describe('wireSlots', () => {
     expect(state.subsystems.hiResFamousTexture).not.toBeNull();
   });
 
+  it('boots without the disk renderers, skipping the impostor wiring', async () => {
+    // Absent is legal: a composition that never runs initGpu's disk
+    // renderers must still boot — the impostor cluster just stays unwired.
+    // Fails the day someone reinstates a boot-wide renderer requirement.
+    const state = makeState({ points: bootPointSlots() });
+    state.gpu.texturedDiskRenderer = null;
+    state.gpu.proceduralDiskRenderer = null;
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    expect(state.subsystems.texturedDisks).toBeNull();
+  });
+
   it('registers the overlay, volume-master, and label-layer fade handles', async () => {
     // seedFades pins each layer's frame-1 opacity in the fade
     // registry.  A missed handle means that layer's toggle has nothing to

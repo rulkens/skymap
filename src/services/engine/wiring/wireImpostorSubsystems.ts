@@ -3,6 +3,9 @@
  * and wires them into the textured-disk renderer.
  *
  * Called from `wireSlots` so each bootstrap concern lives in its own module.
+ * The disk renderers arrive as typed, non-null parameters: `wireSlots` is
+ * the one call site and skips the call when either is absent, so "both
+ * exist" is a compile-time fact here, not a runtime check.
  *
  * ### Construction order
  *
@@ -10,13 +13,6 @@
  * eviction subscription) AND the LOD-3 hi-res planner (per-frame crossfade
  * alpha lookup), so both must exist first.  The procedural-disk planner is
  * independent of the other two.
- *
- * ### Why the renderer null-checks live here
- *
- * `texturedDiskRenderer` is used directly (bindAtlas / bindHiResArray);
- * `proceduralDiskRenderer` is checked as a phase-ordering precondition.
- * Co-locating both checks with the reads they guard avoids a guard that
- * lives pages away from what it protects.
  */
 
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
@@ -29,28 +25,27 @@ import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../data/sou
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
+import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
+import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 
 /**
  * Build the five impostor subsystems and assign them onto
  * `state.subsystems.*`.  Also binds the atlas and hi-res array views
  * into the textured-disk renderer so the LOD-2/LOD-3 pass can draw.
- *
- * Precondition: `initGpu` has run — both disk renderers must be non-null.
- * The explicit throws below turn a bootstrap-ordering bug into a clear
- * runtime error rather than a confusing downstream NPE.
  */
-export function wireImpostorSubsystems(state: EngineState, deps: BootstrapDeps): void {
+export function wireImpostorSubsystems(
+  state: EngineState,
+  deps: BootstrapDeps,
+  disks: {
+    readonly texturedDiskRenderer: TexturedDiskRenderer;
+    readonly proceduralDiskRenderer: ProceduralDiskRenderer;
+  },
+): void {
   // `phaseLocals` is written by `initGpu`, which always runs before this
   // call per the orchestrator's order.  The non-null assertion is safe.
   const phaseLocals = deps.phaseLocals!;
   const { device } = phaseLocals;
-
-  const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
-  if (texturedDiskRenderer === null || proceduralDiskRenderer === null) {
-    throw new Error(
-      'wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
-    );
-  }
+  const { texturedDiskRenderer } = disks;
 
   // ── Dependency-ordered construction ──────────────────────────────────
   //
