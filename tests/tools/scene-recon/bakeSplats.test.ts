@@ -1,10 +1,9 @@
 /**
  * Covers the decisions that live only in the orchestrator, each of which fails
  * silently: the bare `<id>.jpg` resolved against the harvest directory before
- * `writeColmapModel` copies it (assert on the staged `images/`, not the poses); a
- * previous bake's `final.ply` cleared; sub-floor splats pruned; a `--reuse-ply`
- * repack that neither trains nor re-stamps the provenance; an empty export not
- * shipped as a stub .bin.
+ * `writeColmapModel` copies it (assert on the staged `images/`, not the poses);
+ * a stale `final.ply` cleared; sub-floor splats pruned; `--reuse-ply` neither
+ * training nor re-stamping; an empty export not shipped as a stub .bin.
  *
  * cct and brush-cli are stubbed and the bake runs against a tmpdir cwd, so
  * this file needs vitest's `forks` pool — `process.chdir` is undefined under
