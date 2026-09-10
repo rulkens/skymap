@@ -18,7 +18,7 @@ Three additions for `docs/RENDERER.md`:
    camera that asks this frame." A second walk of the same `ctx` with a
    different camera (a second eye, a cube-map face, a shadow view) silently
    gets served the first camera's cached result. Bitten four times in the
-   spike: the earth-layer prepared planner, `starCatalogLayer`'s
+   spike: the earth-layer prepared planner, `starCatalogPass`'s
    `prepareStarCut`, `cosmoLabelProjection.ts`, and `near0LabelProjection.ts`.
 2. **Precision-rebased data must carry its rebase origin with it.** The
    `produceSceneBodyCaptions` convention of subtracting camera position at

@@ -5,7 +5,7 @@
 
 ## The target shape (user directive, 2026-08-20)
 
-Not "fold one overlay into `CONTENT_LAYERS` some day." Pick execution itself
+Not "fold one overlay into `CONTENT_PASSES` some day." Pick execution itself
 adopts the frame-program shape: a **parallel program instance** — the same
 executor, the same `(target, slab)` vocabulary — with its own rows and its own
 targets. This is sequenced as a **new ladder rung at the umbrella
@@ -17,14 +17,14 @@ rather than re-deriving it.
 
 - `runFrame.ts:697` calls `drawPickDebugOverlay(state, deps)` **after**
   `renderFrame()` (`runFrame.ts:677`) — its own command encoder, its own
-  `queue.submit`, no `ContentLayer`, no `frameProgram` step.
+  `queue.submit`, no `ContentPass`, no `frameProgram` step.
 - `drawPickDebugOverlay.ts` is the call site; `pickProgram.ts`'s
   `renderForDebug()` (`:304-338`) does the actual per-slab recording.
 
 Why it's off-program: `drawPickDebugOverlay.ts` itself argues the post-submit
 placement is "a latency choice, not a data dep" and that folding it in would
 widen `renderFrame`'s input type. Both are true and neither is the real
-blocker — as a `ContentLayer` on `(swap, NEAR0)` it would need no encoder, no
+blocker — as a `ContentPass` on `(swap, NEAR0)` it would need no encoder, no
 pass and no swap view of its own (the executor supplies them), the pipeline is
 depth-less and swap-formatted so it is pass-compatible, and it would join the
 timing and toggle lists for free. What actually blocks it is a hazard neither
@@ -32,7 +32,7 @@ file names: `renderForDebug()` submits its own encoder from inside a layer's
 `draw()`, and every `queue.writeBuffer` call issued there lands on the GPU
 **before** the outer frame's already-recorded commands execute — the same trap
 `bodyPickRenderer.ts` documents for the real pick path — and it was read as
-breaking the non-reentrancy discipline `starCatalogLayer.ts:168-175` relies on
+breaking the non-reentrancy discipline `starCatalogPass.ts:168-175` relies on
 for its shared frustum scratch. The exhaustive renderer/layer sweep
 (`renderer-layer-outliers.md:27`) never captured this site: it lists
 `pickDebugOverlay` only as a factory-signature outlier, never as an
@@ -66,17 +66,17 @@ the audit:**
   outer frame samples them. This was assumed to be a problem; it is not.
 - The `frustumScratch` re-entrancy worry is **placement-contingent**, not
   fatal. It does not bite provided the folded row sits in the program's last
-  step, `(swap, NEAR0)`, immediately before `clipPathDebugLayer` — every
+  step, `(swap, NEAR0)`, immediately before `clipPathDebugPass` — every
   visual `draw()` has returned by then, having already flushed its scratch to
   the GPU.
 
 ## Conditions, if the eventual rung picks this up
 
-1. The row must sit at `(swap, NEAR0)` immediately before `clipPathDebugLayer`,
+1. The row must sit at `(swap, NEAR0)` immediately before `clipPathDebugPass`,
    or the `frustumScratch` re-entry hazard reopens.
 2. Dawn must be runtime-verified to accept `queue.submit` from inside an open
    render pass recorded on another encoder — unproven, not merely assumed.
-3. The gizmo-over-overlay stacking flip (`clipPathDebugLayer`'s gizmo would
+3. The gizmo-over-overlay stacking flip (`clipPathDebugPass`'s gizmo would
    paint OVER the pick overlay instead of under it, as it does today) needs
    the user's explicit acceptance — a product call, not an engineering one.
 4. The `zoneOfAvoidanceRenderer.ts:70` blocker above is fixed first (or as

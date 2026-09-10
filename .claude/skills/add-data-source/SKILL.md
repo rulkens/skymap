@@ -139,7 +139,7 @@ renderer/layer order the galaxy catalogs use:
 - **Renderer + layer** — a dedicated per-source `starCatalog/` renderer family
   (`src/services/gpu/renderers/starCatalog/` + `shaders/starCatalog/`):
   vertex-pulling billboards, BP−RP tint, additive HDR, an octree draw-cut walker
-  and an f64 origin seam. `starCatalogLayer` (in `frame/passes/`) draws it and
+  and an f64 origin seam. `starCatalogPass` (in `frame/passes/`) draws it and
   owns the crossfade to the procedural Milky-Way cloud — whose fade band lives in
   exactly one home, the registry row's `crossfadePc`, evaluated per source. Don't
   reuse the galaxy point renderer or `galaxyCatalogFormat.ts` machinery for star

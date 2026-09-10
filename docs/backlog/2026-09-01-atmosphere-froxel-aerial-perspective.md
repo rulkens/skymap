@@ -18,7 +18,7 @@ line numbers when the spec is written.
   each painter-chain row CLEARS its own depth — the buffer only holds the LAST row's depth
   (`frameProgram.ts:97-100,172-174`, `executeFrame.ts:51-58`). Cross-row occlusion via depth is
   impossible today; a froxel apply keyed on sampled depth inherits that seam.
-- Later-pass-samples-earlier-colour precedent: `createUpsampleLayer.ts:21-27`
+- Later-pass-samples-earlier-colour precedent: `createUpsamplePass.ts:21-27`
   (`viewOf(row.sourceTargetId)` — volume/star-aggregates/mw-aggregate/zoa upsamplers).
 - The atmosphere shell is a body-slab layer drawn INSIDE the same merged pass as the body's
   opaque draw (`executeFrame.ts:203-214` group matching), so same-pass depth sampling is out

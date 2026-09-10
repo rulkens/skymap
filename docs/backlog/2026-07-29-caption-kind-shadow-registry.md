@@ -11,13 +11,13 @@ Three of the original four per-caption dispatch sites have merged into
 `captionFadeRules.ts`'s `CAPTION_FADE_RULES` — a `satisfies Record<CaptionKind,
 CaptionFadeRule>` table with one row per kind carrying:
 
-- `labelEnabled` (was: `labelGateFor`, a `switch` in `foregroundLabelsLayer`)
+- `labelEnabled` (was: `labelGateFor`, a `switch` in `foregroundLabelsPass`)
 - `subjectVisible` (was: inline `starMapEnabled` / `sunVisible` conjunctions)
 - `fadeTarget` (was: a 4-way ternary selecting `SCALE_FADE_BANDS`, keyed per-kind on
   the right distance units)
 
-`foregroundLabelsLayer.draw` now reduces to `CAPTION_FADE_RULES[label.kind]` plus
-applying the two gates (`foregroundLabelsLayer.ts:501-505`). None of `labelGateFor`,
+`foregroundLabelsPass.draw` now reduces to `CAPTION_FADE_RULES[label.kind]` plus
+applying the two gates (`foregroundLabelsPass.ts:501-505`). None of `labelGateFor`,
 `starMapEnabled`, or `sunVisible` exist in the tree anymore — confirmed by search, only
 the historical description above still names them.
 
@@ -46,7 +46,7 @@ is done. `constellation` carries a `CaptionKind` but its source row
 (`data/sources/constellations.ts`) is `bearsLabel: false`; conversely `cluster`,
 `supercluster`, `void`, `group`, `milky-way`, and `famous-galaxy` are all
 `bearsLabel: true` but have no `CaptionKind` — their captions ride the COSMO
-`labelsLayer` / structure-label path entirely, a different pipeline from the NEAR0
+`labelsPass` / structure-label path entirely, a different pipeline from the NEAR0
 scene-body captions this file's tables drive. `CaptionKind` is specifically "the
 kinds of the seeded near-field bodies with their own foreground caption pipeline," a
 narrower and differently-shaped set than "registry rows with `bearsLabel: true`" — the

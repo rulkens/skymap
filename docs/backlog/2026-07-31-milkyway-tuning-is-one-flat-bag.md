@@ -9,7 +9,7 @@ are knobs of the _sprite_ implementation: `starSizeScale`, `exposure`, `starPxMi
 
 Two consumers read that one bag today, and one of them ignores nearly all of it.
 `milkyWay/sprites/io.wesl` records the tell in its own prose — _"Dust ignores all
-four"_ — and `milkyWayLayer` packs the whole struct anyway because the layout is
+four"_ — and `milkyWayPass` packs the whole struct anyway because the layout is
 shared. The dust pass carries eight star knobs to reach two fields.
 
 ## Why it matters now
