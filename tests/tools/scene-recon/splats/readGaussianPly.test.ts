@@ -53,7 +53,7 @@ function buildPly(
 
 // opacity, f_dc_0..2, nx, rot_0..3 (scalar-first w,x,y,z), x, y, z, scale_0..2
 const VERTEX_A = [
-  2.0, 1.0, -3.0, 0.0, 0.0, 0.9, 0.1, 0.2, 0.3, 1.5, -2.25, 10.0, -2.5, -3.0, -1.25,
+  2.0, 1.0, -3.0, 0.0, 0.0, 0.8, 0.4, 0.4, 0.2, 1.5, -2.25, 10.0, -2.5, -3.0, -1.25,
 ];
 const VERTEX_B = [
   -1.0, 4.0, 0.5, -0.5, 0.0, -0.5, 0.5, -0.5, 0.5, -7.0, 0.5, 3.25, 0.25, -0.5, 1.75,
@@ -118,14 +118,33 @@ describe('readGaussianPly reorders rot_0..3 from scalar-first to [x, y, z, w]', 
   it('moves the leading scalar to the tail', () => {
     const { splats } = readGaussianPly(SHUFFLED_PLY);
 
-    // Fixture wrote w=0.9, x=0.1, y=0.2, z=0.3.
-    expect(splats[0]!.rotation[0]).toBeCloseTo(0.1, 6);
-    expect(splats[0]!.rotation[1]).toBeCloseTo(0.2, 6);
-    expect(splats[0]!.rotation[2]).toBeCloseTo(0.3, 6);
-    expect(splats[0]!.rotation[3]).toBeCloseTo(0.9, 6);
+    // Fixture wrote the unit quaternion w=0.8, x=0.4, y=0.4, z=0.2.
+    expect(splats[0]!.rotation[0]).toBeCloseTo(0.4, 6);
+    expect(splats[0]!.rotation[1]).toBeCloseTo(0.4, 6);
+    expect(splats[0]!.rotation[2]).toBeCloseTo(0.2, 6);
+    expect(splats[0]!.rotation[3]).toBeCloseTo(0.8, 6);
 
     // Fixture wrote w=-0.5, x=0.5, y=-0.5, z=0.5 — signs alone catch a rotate-left.
     expect(splats[1]!.rotation).toEqual([0.5, -0.5, 0.5, -0.5]);
+  });
+
+  it('normalizes the raw optimizer quaternion, and emits identity for a zero one', () => {
+    const withRotation = (w: number, x: number, y: number, z: number): readonly number[] => {
+      const values = [...VERTEX_A];
+      [values[5], values[6], values[7], values[8]] = [w, x, y, z];
+      return values;
+    };
+    const { splats } = readGaussianPly(
+      buildPly(SHUFFLED, [withRotation(1, 1, 0, 0), withRotation(0, 0, 0, 0)]),
+    );
+
+    // Raw (w,x,y,z) = (1,1,0,0) has |q| = √2, so [x,y,z,w] = [1/√2, 0, 0, 1/√2].
+    expect(splats[0]!.rotation[0]).toBeCloseTo(0.7071067811865475, 12);
+    expect(splats[0]!.rotation[1]).toBe(0);
+    expect(splats[0]!.rotation[2]).toBe(0);
+    expect(splats[0]!.rotation[3]).toBeCloseTo(0.7071067811865475, 12);
+
+    expect(splats[1]!.rotation).toEqual([0, 0, 0, 1]);
   });
 });
 
@@ -155,20 +174,47 @@ describe('readGaussianPly infers shDegree from the f_rest properties', () => {
 });
 
 describe('readGaussianPly rejects PLYs it cannot decode', () => {
-  it('throws on an ASCII body, a missing property and a truncated body', () => {
-    const ascii = new TextEncoder().encode(
-      'ply\nformat ascii 1.0\nelement vertex 1\nproperty float x\nend_header\n1.0\n',
-    ).buffer as ArrayBuffer;
-    expect(() => readGaussianPly(ascii)).toThrow(/binary_little_endian/);
+  const headerOnly = (lines: string): ArrayBuffer =>
+    new TextEncoder().encode(lines).buffer as ArrayBuffer;
 
+  it('throws unless the header declares binary_little_endian', () => {
+    expect(() =>
+      readGaussianPly(
+        headerOnly('ply\nformat ascii 1.0\nelement vertex 1\nproperty float x\nend_header\n1.0\n'),
+      ),
+    ).toThrow(/binary_little_endian/);
+
+    // No format line at all must not be read as "binary little-endian by default".
+    expect(() =>
+      readGaussianPly(headerOnly('ply\nelement vertex 0\nproperty float x\nend_header\n')),
+    ).toThrow(/binary_little_endian/);
+  });
+
+  it('throws when a field it must convert is absent', () => {
     const noOpacity = buildPly(
       SHUFFLED.filter((name) => name !== 'opacity'),
       [VERTEX_A.slice(1)],
     );
     expect(() => readGaussianPly(noOpacity)).toThrow(/opacity/);
+  });
 
+  it('throws when the body is shorter than the header implies', () => {
     expect(() => readGaussianPly(SHUFFLED_PLY.slice(0, SHUFFLED_PLY.byteLength - 8))).toThrow(
       /truncat/i,
     );
+  });
+
+  it('accepts a CRLF header', () => {
+    const crlf = buildPly(SHUFFLED, [VERTEX_A]);
+    const asText = new TextDecoder('latin1').decode(crlf);
+    const withCrlf = headerOnly(
+      asText.slice(0, asText.indexOf('end_header\n')).replace(/\n/g, '\r\n') + 'end_header\r\n',
+    );
+    const body = new Uint8Array(crlf, crlf.byteLength - SHUFFLED.length * 4);
+    const joined = new Uint8Array(withCrlf.byteLength + body.byteLength);
+    joined.set(new Uint8Array(withCrlf));
+    joined.set(body, withCrlf.byteLength);
+
+    expect(readGaussianPly(joined.buffer as ArrayBuffer).splats[0]!.xM).toBe(1.5);
   });
 });

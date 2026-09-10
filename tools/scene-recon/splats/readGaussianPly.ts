@@ -8,7 +8,6 @@
  * then G's, then B's — so a channel's stride is `(deg+1)²−1`, not 3. Only
  * the first three of each channel survive; higher orders are dropped.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../src/@types/math/Vec4';
 import type { GaussianSplatRecord } from '../pack/packSplats';
 
@@ -19,7 +18,7 @@ export type GaussianPly = {
 
 /** SH band-0 basis function, √(1/4π) — the constant every 3DGS codebase hard-codes. */
 const SH0 = 0.28209479;
-const END_HEADER = 'end_header\n';
+const END_HEADER = /end_header\r?\n/;
 const MAX_HEADER_BYTES = 65536;
 
 type PlyHeader = {
@@ -34,18 +33,22 @@ function parseHeader(buffer: ArrayBuffer): PlyHeader {
   const prefix = new TextDecoder('latin1').decode(
     new Uint8Array(buffer, 0, Math.min(buffer.byteLength, MAX_HEADER_BYTES)),
   );
-  const end = prefix.indexOf(END_HEADER);
-  if (end < 0) {
+  const end = END_HEADER.exec(prefix);
+  if (!end) {
     throw new Error(`readGaussianPly: no "end_header" in the first ${MAX_HEADER_BYTES} bytes`);
   }
 
   const properties: string[] = [];
   let vertexCount = -1;
   let inVertexElement = false;
-  for (const line of prefix.slice(0, end).split('\n')) {
+  let littleEndian = false;
+  for (const line of prefix.slice(0, end.index).split('\n')) {
     const parts = line.trim().split(/\s+/);
-    if (parts[0] === 'format' && parts[1] !== 'binary_little_endian') {
-      throw new Error(`readGaussianPly: PLY format "${parts[1]}" — need binary_little_endian`);
+    if (parts[0] === 'format') {
+      if (parts[1] !== 'binary_little_endian') {
+        throw new Error(`readGaussianPly: PLY format "${parts[1]}" — need binary_little_endian`);
+      }
+      littleEndian = true;
     } else if (parts[0] === 'element') {
       inVertexElement = parts[1] === 'vertex';
       if (inVertexElement) vertexCount = Number(parts[2]);
@@ -56,11 +59,14 @@ function parseHeader(buffer: ArrayBuffer): PlyHeader {
       properties.push(parts[2] ?? '');
     }
   }
+  if (!littleEndian) {
+    throw new Error('readGaussianPly: header has no "format binary_little_endian" line');
+  }
   if (!Number.isInteger(vertexCount) || vertexCount < 0) {
     throw new Error('readGaussianPly: header declares no "element vertex <count>"');
   }
 
-  return { properties, vertexCount, bodyOffset: end + END_HEADER.length };
+  return { properties, vertexCount, bodyOffset: end.index + end[0].length };
 }
 
 export function readGaussianPly(buffer: ArrayBuffer): GaussianPly {
@@ -94,12 +100,17 @@ export function readGaussianPly(buffer: ArrayBuffer): GaussianPly {
         )
       : null;
 
-  const xyz = [slot('x'), slot('y'), slot('z')];
-  const scale = [slot('scale_0'), slot('scale_1'), slot('scale_2')];
+  const xyz: [number, number, number] = [slot('x'), slot('y'), slot('z')];
+  const scale: [number, number, number] = [slot('scale_0'), slot('scale_1'), slot('scale_2')];
   const opacity = slot('opacity');
   // rot_0 is the scalar; SimilarityTransform.rotation wants [x, y, z, w].
-  const rot = [slot('rot_1'), slot('rot_2'), slot('rot_3'), slot('rot_0')];
-  const dc = [slot('f_dc_0'), slot('f_dc_1'), slot('f_dc_2')];
+  const rot: [number, number, number, number] = [
+    slot('rot_1'),
+    slot('rot_2'),
+    slot('rot_3'),
+    slot('rot_0'),
+  ];
+  const dc: [number, number, number] = [slot('f_dc_0'), slot('f_dc_1'), slot('f_dc_2')];
 
   const dv = new DataView(buffer);
   const splats: GaussianSplatRecord[] = [];
@@ -109,14 +120,24 @@ export function readGaussianPly(buffer: ArrayBuffer): GaussianPly {
     const toRgb = (property: number): number =>
       Math.min(1, Math.max(0, 0.5 + SH0 * at(property))) * 255;
 
+    // Brush stores the optimizer's raw quaternion, which drifts off unit
+    // length; packSplats' snorm8 would silently clip anything past ±1.
+    const qx = at(rot[0]);
+    const qy = at(rot[1]);
+    const qz = at(rot[2]);
+    const qw = at(rot[3]);
+    const qLen = Math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw);
+    // A degenerate quaternion must not become NaN bytes downstream.
+    const rotation: Vec4 = qLen > 0 ? [qx / qLen, qy / qLen, qz / qLen, qw / qLen] : [0, 0, 0, 1];
+
     splats.push({
-      xM: at(xyz[0]!),
-      yM: at(xyz[1]!),
-      zM: at(xyz[2]!),
-      rotation: rot.map(at) as Vec4,
-      logScale: scale.map(at) as Vec3,
+      xM: at(xyz[0]),
+      yM: at(xyz[1]),
+      zM: at(xyz[2]),
+      rotation,
+      logScale: [at(scale[0]), at(scale[1]), at(scale[2])],
       opacity: 1 / (1 + Math.exp(-at(opacity))),
-      dcColor: [toRgb(dc[0]!), toRgb(dc[1]!), toRgb(dc[2]!)],
+      dcColor: [toRgb(dc[0]), toRgb(dc[1]), toRgb(dc[2])],
       fRest: fRestSlots ? fRestSlots.map(at) : null,
     });
   }
