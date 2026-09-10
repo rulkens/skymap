@@ -40,6 +40,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -71,17 +72,20 @@ function toMidWindow(h: CameraSimHarness) {
   diveUntilEngaged(h);
   expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
 
-  // Set the memory via surfaceStep's tilt/look steps (unit-radius, h/R 0.15 so the
-  // tilt ceiling is open under ruling 19's tighter band).
+  // Set the memory via surfaceStep's tilt/look steps (unit-radius, just under
+  // the engage edge, where the tilt ceiling is well open).
   seedRememberedTilt(h, { targetRad: 0.95, guard: 40, pxStep: 5 });
   expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeGreaterThan(0.5);
 
-  // Out past disengage, back in to mid-window; thresholds rescaled for
-  // ruling 19's tighter band (engage 0.2 / disengage 0.4, was 1.7/3.4).
-  while (display(h.state).hr < 0.45) h.wheel(100);
+  // Out past disengage, back in to mid-window — as FRACTIONS of the live edge,
+  // so the leg keeps its shape (and its blend weight, on a 2:1 band) wherever
+  // the band is tuned. Back-in stops above engage: the hysteresis holds the
+  // arm absolute, which is the standpoint every test below needs.
+  const { disengageHR } = SURFACE_REGIME;
+  while (display(h.state).hr < disengageHR * 1.15) h.wheel(100);
   expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
-  while (display(h.state).hr > 0.32) h.wheel(-100);
-  expect(display(h.state).hr).toBeGreaterThan(0.26);
+  while (display(h.state).hr > disengageHR * 0.8) h.wheel(-100);
+  expect(display(h.state).hr).toBeGreaterThan(disengageHR * 0.65);
   expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
 
   h.frame(60);
