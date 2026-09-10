@@ -37,6 +37,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
+import { deepFreeze } from '../../../helpers/deepFreeze';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -70,16 +71,6 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     drivers: CAMERA_DRIVERS,
     ...over,
   };
-}
-
-function deepFreeze<T>(value: T): T {
-  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
-    Object.freeze(value);
-    for (const key of Object.keys(value)) {
-      deepFreeze((value as Record<string, unknown>)[key]);
-    }
-  }
-  return value;
 }
 
 describe('stepCameraRuntime', () => {

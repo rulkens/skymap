@@ -58,7 +58,8 @@ export function elapsedForWinner(
   return winner.epoch === undefined ? 0 : elapsedMs(epochs[winner.epoch], nowMs);
 }
 
-const NO_FOLLOW_MEMORY: FollowMemory = {
+/** The no-memory default; exported so a fixture pinning the memory never branches on null. */
+export const NO_FOLLOW_MEMORY: FollowMemory = {
   from: null,
   distanceTarget: null,
   panOffset: [0, 0, 0],

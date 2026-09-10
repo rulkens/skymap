@@ -658,7 +658,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     //   2. User grabs a drag (orbitDrag@80 wins) and ZOOMS OUT; on release the
     //      dragged distance is committed into `base` (COMMITTED_DIST here).
     //   3. Follow re-wins the SAME focus ref this frame — but was NOT the previous
-    //      winner (prevActiveId === 'orbitDrag').
+    //      winner (register.winner === 'orbitDrag').
     // The follow driver must re-capture `base.distance` as the steady-state
     // target so the zoom is honoured, instead of re-asserting the framing
     // distance every frame (snap-back).

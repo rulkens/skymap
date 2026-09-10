@@ -3,8 +3,8 @@
  * the one on-screen resolution site. Authoring paths must not read it: the
  * folds resolve the register themselves (`stepCameraRuntime`'s `authoredWorld`),
  * because feeding a projected pose back in re-creates the R12b-1 register walk.
- * It always reads
- * `outputs.simDays` — between frames that is the epoch the last frame DREW at.
+ * It always reads `outputs.simDays` — between frames that is the epoch the last
+ * frame DREW at.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';

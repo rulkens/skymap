@@ -2,7 +2,7 @@
  * seedCameraRuntime — the ONE constructor of `CameraRuntime`: the engine's
  * boot placeholder and `wireInput`'s first real pose both come through here, so
  * no seed site can leave a half-built bag. Displayed = authored at the seed:
- * nothing has been projected yet (runFrame step 4 splits them thereafter).
+ * nothing has been projected yet (`projectFramePose` splits them thereafter).
  */
 
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';

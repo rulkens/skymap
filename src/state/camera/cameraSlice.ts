@@ -52,7 +52,7 @@ const cameraSlice = createSlice({
     // pivot pin re-reads an absolute `target` as the pivot and re-derives the eye
     // from yaw/pitch/distance one frame later, so a pose aimed anywhere else
     // teleports the eye by d·2sin(τ/2) (R12-1, up to ~24,000 km). Held by
-    // CONSTRUCTION at three sites — the pin's stamp (runFrame step 4), the gesture
+    // CONSTRUCTION at three sites — the pin's stamp (projectFramePose), the gesture
     // folds (replayInput), and the fold's disengage retarget — never by a bake
     // here. Break any of them and the teleport re-enters through this reducer.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {

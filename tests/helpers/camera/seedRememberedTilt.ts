@@ -8,6 +8,7 @@
  */
 
 import { surfaceStep } from '../../../src/services/camera/surfaceStep';
+import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
 import type { CameraSimHarness } from './CameraSimHarness';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { SurfaceMemory } from '../../../src/@types/camera/SurfaceMemory';
@@ -33,7 +34,7 @@ export function seedRememberedTilt(
     eyeRelAnchorM: [0, 0, 1.15],
     basisLocal: NADIR,
   };
-  mem = { ...mem, pointerDown: true, gesture: null };
+  mem = surfaceGestureEdge(mem, true);
   const unlatch = surfaceStep(
     mem,
     p,
@@ -41,9 +42,9 @@ export function seedRememberedTilt(
     CTX,
   );
   p = unlatch.pose;
-  mem = { ...unlatch.next, pointerDown: false, gesture: null };
+  mem = surfaceGestureEdge(unlatch.next, false);
   for (let g = 0; g < guard && mem.rememberedTiltRad < targetRad; g += 1) {
-    mem = { ...mem, pointerDown: true, gesture: null };
+    mem = surfaceGestureEdge(mem, true);
     for (let px = 5; px < 90 && mem.rememberedTiltRad < targetRad; px += pxStep) {
       const out = surfaceStep(
         mem,
@@ -54,7 +55,7 @@ export function seedRememberedTilt(
       p = out.pose;
       mem = out.next;
     }
-    mem = { ...mem, pointerDown: false, gesture: null };
+    mem = surfaceGestureEdge(mem, false);
   }
   h.state.cameraRuntime = { ...h.state.cameraRuntime, surface: mem };
 }

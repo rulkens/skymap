@@ -427,7 +427,7 @@ describe('runFrame — camera drivers (regression)', () => {
     expect(pose.distance).toBe(77);
   });
 
-  it('autoRotate on, nothing else active → lastPose.yaw advances from base', () => {
+  it('autoRotate on, nothing else active → register.pose yaw advances from base', () => {
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
