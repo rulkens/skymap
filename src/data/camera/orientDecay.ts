@@ -1,7 +1,8 @@
 /**
  * The one bounded orientation decay both arms' settles read (R1, ruling 8):
  * `clamp(residual·(1 − e^(−perLogZoom·u)), ±capRadPerLogZoom·u)`, with `u` the log-zoom
- * the notch is ALLOWED to spend (`spentZoomFactor`), never the raw folded factor.
+ * the notch is ALLOWED to spend (`spentZoomFactor`) on the body arm; the world arm spends
+ * its notch raw (`frameAlignedRoll`).
  */
 
 import { WHEEL_ZOOM_K } from '../../services/engine/subsystems/inputAggregator';

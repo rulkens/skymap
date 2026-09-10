@@ -5,8 +5,8 @@
  * engage flip both arms' targets are the same function of altitude, making the zoom pop
  * unrepresentable; above the band the target is the scene up and the formula reduces to the
  * singular-locus drain, at the ruled cost of arrival roll on at-rest notches. `logZoom` is the
- * zoom the CALLER's pivot spent (`zoomedDistance` scales ALTITUDE, so no pose ratio recovers
- * it), and with `rideBoundRad` is all that bounds one notch's turn.
+ * zoom the CALLER's pivot spent, except where the envelope pins (`zoomedDistance` scales
+ * ALTITUDE, so no pose ratio recovers it), and with `rideBoundRad` bounds one notch's turn.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';

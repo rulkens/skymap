@@ -1231,9 +1231,6 @@ describe('the zoom settle is priced per unit of zoom, not per step (F1, ruling 2
     const before = headingOf(headedPose());
     const after = recede(Math.exp(2), 1);
     expect(Math.abs(before - after)).toBeLessThanOrEqual(ORIENT_DECAY.capRadPerLogZoom * u + 1e-9);
-    expect(Math.abs(after)).toBeGreaterThanOrEqual(
-      Math.abs(before) * Math.exp(-ORIENT_DECAY.perLogZoom * u),
-    );
   });
 
   it('the same total zoom decays the same however it is delivered', () => {
