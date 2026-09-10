@@ -76,17 +76,19 @@
  * ### Frames
  *
  * A `set`/`setVec` endpoint may name the frame its `to` is read in (spec §8);
- * untagged ⇒ absolute. Interpolation runs in the endpoint's own frame, so a
- * clip time splits into "legs", one per frame, and a leg's start is converted
- * ONCE, at leg start (memoised per playback). `spin`/`rate`/`osc` are relative
- * and untouched. Body-framed channels are body-FIXED metres — a LookAt the
- * driver decodes at its exit, never Mpc.
+ * untagged ⇒ absolute. Interpolation runs in the endpoint's own frame, so clip
+ * time splits into "legs", one per frame, and a leg's start is converted ONCE,
+ * at leg start. `spin`/`rate`/`osc` are relative writers: they act in whatever
+ * arm is current, never open a leg, and are otherwise untouched. Body-framed
+ * channels are body-FIXED metres — a LookAt the driver decodes at its exit.
  *
  * ### Purity
  *
  * - `data` and the cached `CompiledClip` are never mutated.
  * - The returned `CameraPose` allocates a fresh `target` triple each call.
- * - Same `(data, elapsedSec, frameBasis)` triple ⇒ deep-equal output.
+ * - Same `(data, elapsedSec, frameBasis)` triple ⇒ deep-equal output — EXCEPT
+ *   across a frame change, where the leg-start conversion is captured against
+ *   the bodies of the first call that reached the leg and held for the playback.
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
@@ -111,7 +113,6 @@ import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { lerp } from '../../../utils/math/lerp';
-import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 import { toBodyFixedChannels, fromBodyFixedChannels } from './clipFrameChannels';
 
 // ---------------------------------------------------------------------------
@@ -311,6 +312,21 @@ function oscOffset(compiled: CompiledClip, ch: Channel, t: number): number {
 // ---------------------------------------------------------------------------
 
 /**
+ * The clip time a base walk answers for: `[fromSec, beforeSec)` on a segment's
+ * START. Earlier segments are already folded into the seed value, in this leg's
+ * frame. `beforeSec` tightens only when seeding the NEXT leg — a segment
+ * starting exactly where that leg opens states its `to` in the NEW leg's units,
+ * so folding it in leaks metres into an Mpc pose (or the reverse).
+ */
+type LegWindow = { readonly fromSec: number; readonly beforeSec: number };
+
+const WHOLE_CLIP: LegWindow = { fromSec: -Infinity, beforeSec: Infinity };
+
+function outsideLeg(seg: BaseSegment, window: LegWindow): boolean {
+  return seg.startSec < window.fromSec || seg.startSec >= window.beforeSec;
+}
+
+/**
  * evaluateBaseScalar — evaluate the base layer for a scalar channel at time t.
  *
  * Walks the channel's segments in order, accumulating the "running value" that
@@ -325,7 +341,7 @@ function evaluateBaseScalar(
   startVal: number,
   channel: Channel,
   t: number,
-  fromSec: number,
+  window: LegWindow,
 ): number {
   if (segments.length === 0) return startVal;
 
@@ -333,9 +349,7 @@ function evaluateBaseScalar(
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]!;
-    // Earlier than the frame leg's own start: its value is already folded into
-    // `startVal`, which was converted into this leg's frame.
-    if (seg.startSec < fromSec) continue;
+    if (outsideLeg(seg, window)) continue;
 
     if (t < seg.startSec) {
       // Before this segment starts — running value from prior segments is the result.
@@ -401,7 +415,7 @@ function evaluateBaseVec3(
   segments: BaseSegment[],
   startVal: Vec3,
   t: number,
-  fromSec: number,
+  window: LegWindow,
 ): Vec3 {
   if (segments.length === 0) return [startVal[0], startVal[1], startVal[2]];
 
@@ -412,7 +426,7 @@ function evaluateBaseVec3(
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]!;
-    if (seg.startSec < fromSec) continue;
+    if (outsideLeg(seg, window)) continue;
 
     if (t < seg.startSec) {
       return [rx, ry, rz];
@@ -459,18 +473,6 @@ function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
   return best;
 }
 
-// ---------------------------------------------------------------------------
-// Frame legs — where the interpolation frame changes, and the ONE conversion
-// each change costs.
-//
-// A leg is a maximal run of clip time under one `PoseFrame`. The opening leg is
-// always absolute (a clip's `start` is a world pose); each later leg opens at
-// the `set`/`setVec` endpoint whose tag differs from the frame in force. Its
-// start is the previous leg's BASE pose at that second, converted once — the
-// relative layers (`rate`, `osc`) are offsets in whatever arm is current and so
-// ride on top of the converted base rather than through the conversion.
-// ---------------------------------------------------------------------------
-
 /** The pose a frame leg starts from, and the second it starts at. */
 type LegOrigin = { readonly atSec: number; readonly pose: CameraPose };
 
@@ -495,8 +497,11 @@ function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
   const cached = legsCache.get(compiled);
   if (cached !== undefined) return cached;
 
+  // `'tween'` only: reading a relative `spin`'s absent tag as `'absolute'` sent
+  // an earth-framed pose back through the Mpc seam mid-orbit.
   const segments = Object.values(compiled.baseTracks)
     .flat()
+    .filter((seg) => seg.segKind === 'tween')
     .sort((a, b) => a.startSec - b.startSec);
   const legs: FrameLeg[] = [{ frame: 'absolute', startSec: -Infinity, anchor: null }];
   for (const seg of segments) {
@@ -517,33 +522,36 @@ function legIndexAt(legs: readonly FrameLeg[], t: number): number {
   return index;
 }
 
-function bodyStateFor(bodyId: BodyId, opts: ClipFrameOptions): BodyState {
-  const state = opts.bodies?.get(bodyId);
-  if (state === undefined) {
+type FrameDeps = {
+  readonly bodies: ReadonlyMap<BodyId, BodyState>;
+  /** The clip's own steady basis — its absolute angles were authored through it. */
+  readonly basis: Mat3;
+  /** Memo owner: the leg-start conversion is captured once per playback. */
+  readonly owner: object;
+};
+
+function frameDepsOf(opts: ClipFrameOptions): FrameDeps {
+  const { bodies, frameBasis, playback } = opts;
+  if (bodies === undefined || frameBasis === undefined || playback === undefined) {
     throw new Error(
-      `evaluateFramedClip: a keyframe framed on '${bodyId}' needs that body's state — pass \`bodies\``,
+      'evaluateFramedClip: a frame-tagged keyframe needs `bodies`, `frameBasis` and `playback`',
     );
   }
-  return state;
+  return { bodies, basis: frameBasis, owner: playback };
 }
 
 function convertChannels(
   channels: CameraPose,
   from: PoseFrame,
   to: PoseFrame,
-  opts: ClipFrameOptions,
+  deps: FrameDeps,
 ): CameraPose {
   if (frameKeyOf(from) === frameKeyOf(to)) return channels;
-  // The clip's own steady basis: its absolute angles were authored through it,
-  // and a keyframe carries no roll, so it serves as the up reference too.
-  const basis = opts.frameBasis ?? IDENTITY_MAT3;
   const world =
     from === 'absolute'
       ? channels
-      : fromBodyFixedChannels(channels, from.body, bodyStateFor(from.body, opts), basis);
-  return to === 'absolute'
-    ? world
-    : toBodyFixedChannels(world, to.body, bodyStateFor(to.body, opts), basis);
+      : fromBodyFixedChannels(channels, from.body, deps.bodies, deps.basis);
+  return to === 'absolute' ? world : toBodyFixedChannels(world, to.body, deps.bodies, deps.basis);
 }
 
 function originOfLeg(
@@ -555,21 +563,21 @@ function originOfLeg(
   const leg = legs[index]!;
   if (leg.anchor === null) return { atSec: -Infinity, pose: compiled.start };
 
-  const owner = opts.playback ?? compiled;
-  let byAnchor = legStartCache.get(owner);
+  const deps = frameDepsOf(opts);
+  let byAnchor = legStartCache.get(deps.owner);
   if (byAnchor === undefined) {
     byAnchor = new Map();
-    legStartCache.set(owner, byAnchor);
+    legStartCache.set(deps.owner, byAnchor);
   }
   const hit = byAnchor.get(leg.anchor);
   if (hit !== undefined) return { atSec: leg.startSec, pose: hit };
 
   const previous = originOfLeg(compiled, legs, index - 1, opts);
   const converted = convertChannels(
-    evaluateBaseAt(compiled, leg.startSec, previous),
+    evaluateBaseAt(compiled, leg.startSec, previous, leg.startSec),
     legs[index - 1]!.frame,
     leg.frame,
-    opts,
+    deps,
   );
   byAnchor.set(leg.anchor, converted);
   return { atSec: leg.startSec, pose: converted };
@@ -583,8 +591,14 @@ function originOfLeg(
  * evaluateBaseAt — the base layer (or the path that supersedes it) at `t`,
  * seeded from the current leg's origin. `origin.atSec` is `-Infinity` on the
  * opening leg, so every segment counts and the walk is the pre-frames one.
+ * `beforeSec` is only passed when seeding the NEXT leg (see `LegWindow`).
  */
-function evaluateBaseAt(compiled: CompiledClip, t: number, origin: LegOrigin): CameraPose {
+function evaluateBaseAt(
+  compiled: CompiledClip,
+  t: number,
+  origin: LegOrigin,
+  beforeSec = Infinity,
+): CameraPose {
   const { baseTracks } = compiled;
   const path = activePathAt(compiled.pathTracks, t);
   if (path !== null) {
@@ -595,11 +609,13 @@ function evaluateBaseAt(compiled: CompiledClip, t: number, origin: LegOrigin): C
     return { target: pose.target, yaw: pose.yaw, pitch: pose.pitch, distance: pose.distance };
   }
   const { atSec, pose: start } = origin;
+  const window: LegWindow =
+    atSec === -Infinity && beforeSec === Infinity ? WHOLE_CLIP : { fromSec: atSec, beforeSec };
   return {
-    target: evaluateBaseVec3(baseTracks['target'], start.target, t, atSec),
-    yaw: evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, atSec),
-    pitch: evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, atSec),
-    distance: evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, atSec),
+    target: evaluateBaseVec3(baseTracks['target'], start.target, t, window),
+    yaw: evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, window),
+    pitch: evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, window),
+    distance: evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, window),
   };
 }
 
