@@ -1075,6 +1075,8 @@ src/@types/engine/camera/FollowMemory.d.ts              T4
 src/@types/engine/camera/DriverCtx.d.ts                 T7
 src/@types/camera/SurfaceMemory.d.ts                    T10
 src/@types/engine/state/FrameOutputs.d.ts               T14
+src/@types/engine/camera/StepInputs.d.ts                T15
+src/@types/engine/camera/EpochRow.d.ts                  T20
 src/services/engine/camera/cameraEpochs.ts              T2, T3
 src/services/camera/surfaceStep.ts                      T10
 src/services/engine/camera/replayInput.ts               T12
@@ -1082,6 +1084,8 @@ src/services/engine/camera/seedCameraRuntime.ts         T14
 src/services/engine/camera/stepCameraRuntime.ts         T15
 src/services/engine/camera/commitOnEdge.ts              T15
 src/services/engine/frame/projectFramePose.ts           T15
+src/utils/camera/surfaceGestureEdge.ts                  T15
+src/utils/camera/isFollowDriverId.ts                    T18
 tests/helpers/deepFreeze.ts                             T16
 tests/fixtures/camera/driverGoldenTrace.json            T1
 tests/services/engine/frame/driverGoldenTrace.test.ts   T1
@@ -1099,7 +1103,13 @@ src/services/engine/camera/cameraClock.ts               T4
 src/@types/camera/SurfaceController.d.ts                T11
 src/services/camera/surfaceController.ts                T11
 src/services/engine/frame/drainInput.ts                 T13
+src/services/engine/camera/activeDriverId.ts            review
+src/services/engine/camera/projectionOf.ts              review
+src/services/engine/helpers/authoredWorldPose.ts        review
 ```
+
+`runCameraDrivers` also went — a function in `cameraDrivers.ts`, not a file: the step
+calls `pickWinner` then `winner.pose` directly.
 
 **Untouched** — every renderer, slab, layer, shader and `.wesl` file; the tile
 pipeline; the `.bin` catalog path; `src/state/camera/*` (the slice and its sagas keep

@@ -993,8 +993,8 @@ Five pure stages, in this order (the fold stays last, spec §7):
 
 ```ts
 replayInput(prev: { register; surface; follow }, steps, ctx) → { register; surface; follow; lastZoomFactor; followDistanceTarget; actions }
-advanceEpochs(prev.epochs, { intent; focus; clip; winnerId; nowMs }) → CameraEpochs
-runCameraDrivers(drivers, ctx, mem) → { pose; winner; memory }
+advanceEpochs(prev.epochs, { intent; focus; clip; winnerEpoch; nowMs }) → CameraEpochs
+pickWinner(drivers, s, approachDone) → CameraDriver, then winner.pose(ctx, mem) → { pose; memory }
 commitOnEdge({ register; displayed; produced; prevWinner; winner; drivers }) → { render; authoredOverride; actions }
 projectFramePose({ render; authoredOverride; surface; intent; … }) → { register; displayed; surface; world; actions; requestRender }
 ```
@@ -1022,7 +1022,7 @@ while the dispatch itself happens after `state.cameraRuntime = next`. Store
 listeners then see the frame's runtime already installed — **the one ruled behaviour
 change of the prep**; the relative order of the frame's actions is unchanged.
 
-**Three further deltas from the incumbent, recorded rather than argued away.** (i)
+**Four further deltas from the incumbent, recorded rather than argued away.** (i)
 The authored-world reads inside the step resolve against **this** frame's body
 snapshot and instant; the between-frame helpers still read `outputs.simDays`, the
 instant the last frame DREW at, which is what a pick must agree with. (ii) The
@@ -1033,15 +1033,22 @@ hands off to the spin, a wheel notch is **dropped**: `replayInput` routes a notc
 LAST frame's winner, so it resolves into follow memory the winning spin never adopts.
 That is a pre-existing route defect — the key is a guess about this frame's winner —
 pinned in the driver fixture; the fix is to pick the winner before the drain, which is
-the user's call and not this prep's.
+the user's call and not this prep's. (iv) `wireInput`'s re-seed replaces ALL FIVE groups
+where the incumbent wrote three fields, and the first rAF can beat that async phase
+(`engine.ts:265`): a follow capture taken on a pre-seed frame is against the placeholder
+pose, so the re-seed discards it and the driver recaptures next frame; `register.winner`
+resets to `'resting'` and `upBasis` holds `DEFAULT_ORIENTATION` for one input-free frame.
+Benign and spec-sanctioned — the seed IS the one constructor, and a frame before the
+recognizer exists has no gesture to lose.
 
 **Drivers own their memory.** `pose(ctx: DriverCtx, mem: FollowMemory | null) →
 { pose, memory }`; the winner's memory is adopted, the losers' discarded, and the
 memory clears as data when the follow epoch's `ref` changes. `DriverCtx` is the
 frame as values — the store snapshot, the winner's `elapsedMs`, the authored
 `register` and its `authoredWorld` arm (the follow capture reads that eye, never the
-displayed pose — R12b-1), `winnerLastFrame`, `simDays`, `projection`, `pivot`, plus
-the two facts the follow pair needs: `approachDone` and `followDistanceTarget`.
+displayed pose — R12b-1), `winnerLastFrame`, `simDays`, `projection`, plus the one
+fact the follow pair needs: `followDistanceTarget`. `approachDone` reaches the rows
+through `isActive`'s second argument, not the ctx.
 
 The wheel notch a following camera swallows is resolved by the drain (the one
 `zoomedDistance` site) and arrives as `ctx.followDistanceTarget`, which the driver
