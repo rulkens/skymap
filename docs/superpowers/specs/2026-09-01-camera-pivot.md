@@ -807,9 +807,12 @@ measured, worst case near the pole), because the eye moving is itself what
 turns the ENU under a fixed basis. So each approach notch also rotates the pose
 — eye **and** basis — about the axis through the cursor anchor and the body
 centre, easing screen-up back onto north by a capped share of the residual,
-priced in the notch's log-zoom `u = |ln factor|`: the residual multiplier is
-`e^(−k·u)` and the cap is `capPerLogZoom · u`, calibrated so a deltaY-100 mouse
-notch spends the 25 % / 0.1 rad it always did. _(User ruling 2026-09-10 (F1):
+priced in the log-zoom the notch is allowed to SPEND: the residual multiplier
+is `e^(−k·u)` and the cap is `capRadPerLogZoom · u`, calibrated so a deltaY-100
+mouse notch spends the 25 % / 0.1 rad it always did. Spent, not requested —
+`u = |ln spentZoomFactor(factor)|` on the body arm, where a frame's folded wheel
+events are clamped to a ×2 altitude step before the eye moves, so a burst can
+never buy more settle than it bought zoom. _(User ruling 2026-09-10 (F1):
 the share was spent per input STEP, so a deltaY-1 trackpad event cost as much
 heading as a full notch and norths the view in ~0.2 s of scrolling. Every
 zoom-driven settle — the dive heading, the recession ride's decay half, the

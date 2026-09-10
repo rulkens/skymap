@@ -1,8 +1,4 @@
-/**
- * One step of the bounded orientation decay, priced in the notch's log-zoom
- * `u = |ln factor|` (`ORIENT_DECAY`): the multiplier `e^(−k·u)` composes, so N
- * notches spend exactly what their product spends — and a twitch spends ~1 %.
- */
+/** One step of the bounded orientation decay, priced in spent log-zoom (`ORIENT_DECAY`). */
 
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
 

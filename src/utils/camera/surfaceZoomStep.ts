@@ -10,6 +10,7 @@ import { eyeFrameOf } from './eyeFrameOf';
 import { mappedTiltRad } from './mappedTiltRad';
 import { pickOnBody } from './pickOnBody';
 import { settledZoomPose } from './settledZoomPose';
+import { spentZoomFactor } from './spentZoomFactor';
 import { dot3 } from '../math/dot3';
 import { normalize3 } from '../math/normalize3';
 
@@ -68,8 +69,8 @@ export function surfaceZoomStep(
     sceneUpLocal,
     preInBlendFrame?.azimuthRad ?? null,
     rememberedTiltRad,
-    // The settle is priced in the notch the USER turned, not the one
-    // `anchoredZoomStep` was allowed to spend after its [0.5, 2] fold clamp.
-    Math.abs(Math.log(factor)),
+    // Priced in the zoom the step is allowed to SPEND, not the folded notch:
+    // `anchoredZoomStep` moves the eye by the same clamped factor.
+    Math.abs(Math.log(spentZoomFactor(factor))),
   );
 }

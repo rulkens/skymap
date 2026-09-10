@@ -12,10 +12,8 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
+import { spentZoomFactor } from './spentZoomFactor';
 import { surfaceFloorM } from './surfaceFloorM';
-
-const MIN_FACTOR = 0.5;
-const MAX_FACTOR = 2.0;
 
 export function anchoredZoomStep(
   pose: BodyFixedPose,
@@ -23,7 +21,7 @@ export function anchoredZoomStep(
   cursorAnchorM: Vec3 | null,
   bodyRadiusM: number,
 ): BodyFixedPose {
-  const clampedFactor = Math.min(MAX_FACTOR, Math.max(MIN_FACTOR, factor));
+  const clampedFactor = spentZoomFactor(factor);
   const { anchorLocalM } = pose;
   const eyeM = bodyFixedEyeM(pose);
 

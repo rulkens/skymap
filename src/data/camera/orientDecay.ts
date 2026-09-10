@@ -1,16 +1,18 @@
 /**
- * The one bounded orientation decay both arms' settles read (R1, ruling 8),
- * spent per unit of log-zoom `u = |ln factor|`:
- * `clamp(residual·(1 − e^(−perLogZoom·u)), ±capRadPerLogZoom·u)`. Calibrated on
- * the deltaY-100 mouse notch (`u = 100 · WHEEL_ZOOM_K = 0.1` = `notchLogZoom`)
- * to the legacy per-step 25 % / 0.1 rad: `perLogZoom = −ln(0.75)/0.1`,
- * `capRadPerLogZoom = 0.1/0.1`. A reference move beyond `rideBoundRad` in ONE
- * notch is unauthored, so a blend flip cannot whip.
+ * The one bounded orientation decay both arms' settles read (R1, ruling 8):
+ * `clamp(residual·(1 − e^(−perLogZoom·u)), ±capRadPerLogZoom·u)`, with `u` the log-zoom
+ * the notch is ALLOWED to spend (`spentZoomFactor`), never the raw folded factor.
  */
+
+import { WHEEL_ZOOM_K } from '../../services/engine/subsystems/inputAggregator';
+
+const NOTCH_LOG_ZOOM = 100 * WHEEL_ZOOM_K;
+
 export const ORIENT_DECAY = {
-  perLogZoom: 2.8768207245178088,
-  capRadPerLogZoom: 1,
-  /** What a DRAG step spends: it carries no zoom, and its settle is out of the per-zoom scope. */
-  notchLogZoom: 0.1,
+  perLogZoom: -Math.log(0.75) / NOTCH_LOG_ZOOM,
+  capRadPerLogZoom: 0.1 / NOTCH_LOG_ZOOM,
+  /** The calibration notch, and what a DRAG step spends — a drag carries no zoom of its own. */
+  notchLogZoom: NOTCH_LOG_ZOOM,
+  /** A reference move beyond this in ONE notch is unauthored, so a blend flip cannot whip. */
   rideBoundRad: 0.3,
 } as const;

@@ -21,7 +21,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
  * step. Exponential rather than additive so the proportional step is the same
  * whether the camera sits 0.1 Mpc or 1000 Mpc out.
  */
-const WHEEL_ZOOM_K = 0.001;
+export const WHEEL_ZOOM_K = 0.001;
 
 export function createInputAggregator(): InputAggregator {
   const steps: InputStep[] = [];

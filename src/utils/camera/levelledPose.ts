@@ -27,8 +27,9 @@ export function levelledPose(
     readonly logZoom: number;
   },
 ): BodyFixedPose {
-  // A zero-zoom notch is inert on orientation, and the identity turn a zero cap
-  // yields would still hand the caller a fresh pose object (which reads as a move).
+  // A zero-zoom notch is inert, and a zero cap does not deliver that by itself:
+  // `cappedRotationToward` still returns a quat wherever the bases differ, and
+  // `turnedPose`'s eye − pivot … + pivot round trip re-adds float noise.
   const capRad = ORIENT_DECAY.capRadPerLogZoom * Math.abs(args.logZoom);
   if (capRad === 0) return pose;
   const frame = eyeFrameOf(pose, args.blendW, args.sceneUpLocal);

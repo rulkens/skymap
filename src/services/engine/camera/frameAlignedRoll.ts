@@ -1,13 +1,12 @@
 /**
- * frameAlignedRoll — the world-arm frame transition (rulings 8 + 10): the roll
- * TARGET is the ONE reference field (`blendedUpDir` on `bodyUpWeight`'s band, read
- * in the image plane), and each driven notch applies the ONE settle discipline
- * (`riddenOrientStepRad`). At the engage flip both arms' targets are the same
- * function of altitude, making the zoom pop unrepresentable. Above the band the
- * target is structurally the scene up, so the formula reduces to deviation-only
- * capped decay — the drain for the singular-locus debt (~π a band crossing cannot
- * spend at the no-whip rate), at the ruled cost of arrival roll on at-rest notches.
- * `logZoom` (`|ln factor|`) prices that decay, so it is only ever called on a notch.
+ * frameAlignedRoll — the world-arm frame transition (rulings 8 + 10): the roll TARGET is
+ * the ONE reference field (`blendedUpDir` on `bodyUpWeight`'s band, read in the image plane),
+ * and each driven notch applies the ONE settle discipline (`riddenOrientStepRad`). At the
+ * engage flip both arms' targets are the same function of altitude, making the zoom pop
+ * unrepresentable; above the band the target is the scene up and the formula reduces to the
+ * singular-locus drain, at the ruled cost of arrival roll on at-rest notches. `logZoom` is the
+ * zoom the CALLER's pivot spent (`zoomedDistance` scales ALTITUDE, so no pose ratio recovers
+ * it), and with `rideBoundRad` is all that bounds one notch's turn.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
