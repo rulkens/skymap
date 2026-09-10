@@ -175,7 +175,7 @@ function makeState(bodyGlintRenderer: unknown, planets: readonly PlanetBody[]): 
     data: { bodies: { planets, meshBodies: [] } },
     // Empty texture family → nothing resident; the glints branch is decided by
     // apparent size before residency anyway.
-    assetSlots: { bodyTextures: new Map() },
+    assetSlots: { bodyTextures: new Map(), meshBodies: new Map() },
   } as unknown as EngineState;
 }
 
@@ -391,7 +391,7 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
     return {
       gpu: { bodyGlintRenderer: {} },
       data: { bodies: { planets: [], meshBodies: [], earth } },
-      assetSlots: { bodyTextures: new Map() },
+      assetSlots: { bodyTextures: new Map(), meshBodies: new Map() },
     } as unknown as EngineState;
   }
   const camWithin: Vec3 = [1e-6, 0, 0]; // inside the caption gate
@@ -540,7 +540,7 @@ function makePickState(
       earthRenderer: opts && 'earthRenderer' in opts ? opts.earthRenderer : {},
     },
     data: { bodies: { planets, meshBodies: [], earth: opts?.earth ?? null } },
-    assetSlots: { bodyTextures: new Map() },
+    assetSlots: { bodyTextures: new Map(), meshBodies: new Map() },
   } as unknown as EngineState;
 }
 

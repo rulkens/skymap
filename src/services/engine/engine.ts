@@ -573,6 +573,9 @@ export function createEngine(
       // minted in wireSlots. Empty map at construction — proximity-demanded +
       // released per body (mirrors the `points` map).
       bodyTextures: new Map(),
+      // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
+      // Empty map at construction — mirrors `bodyTextures`, un-keyed.
+      meshBodies: new Map(),
       // The all-bodies low-res atlas: one boot fetch seeding every body's
       // placeholder, so no body ever draws untextured while its own map loads.
       bodyTextureAtlas: null,

@@ -173,6 +173,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     assetSlots: {
       points: slots as unknown as Map<SourceType, AssetSlot<unknown, unknown>>,
       bodyTextures: new Map(),
+      meshBodies: new Map(),
     },
     // `reevaluateDemand` enqueues onto this instead of calling `slot.load()`.
     // The Synthetic row is the only one demanded in these cases (every real

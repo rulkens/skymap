@@ -39,6 +39,7 @@
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -62,6 +63,14 @@ export function slotFor(
   // sidecar fields without a cast.
   if (isBodyTextureKey(key)) {
     return (state.assetSlots.bodyTextures.get(key) ?? undefined) as
+      | AssetSlot<unknown, unknown>
+      | undefined;
+  }
+  // A mesh-body key routes through the keyed `meshBodies` Map, un-prefixed —
+  // the Map itself is keyed by the plain body id, the `mesh:` prefix exists
+  // only to keep this branch's `AssetKey` member distinct (see `AssetKey.d.ts`).
+  if (isMeshBodyKey(key)) {
+    return (state.assetSlots.meshBodies.get(key.slice('mesh:'.length)) ?? undefined) as
       | AssetSlot<unknown, unknown>
       | undefined;
   }
