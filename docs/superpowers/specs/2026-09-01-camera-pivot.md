@@ -977,7 +977,7 @@ stepCameraRuntime(prev: CameraRuntime, inputs: StepInputs): {
 Five pure stages, in this order (the fold stays last, spec §7):
 
 ```ts
-replayInput(prev: { register; surface; follow }, steps, ctx) → { register; surface; follow; lastZoomFactor; zoomToFollow; autoRotateEpoch; actions }
+replayInput(prev: { register; surface; follow }, steps, ctx) → { register; surface; follow; lastZoomFactor; followDistanceTarget; autoRotateEpoch; actions }
 advanceEpochs(prev.epochs, { intent; focus; clip; winnerId; nowMs }) → CameraEpochs
 runCameraDrivers(drivers, ctx, mem) → { pose; winner; memory }
 commitOnEdge({ register; displayed; produced; prevWinner; winner; drivers }) → { render; authoredOverride; actions }
@@ -1003,7 +1003,8 @@ listeners then see the frame's runtime already installed.
 **Drivers own their memory.** `pose(ctx: DriverCtx, mem: FollowMemory | null) →
 { pose, memory }`; the winner's memory is adopted, the losers' discarded, and the
 memory clears as data when the follow epoch's `ref` changes. The wheel notch a
-following camera swallows arrives as `ctx.zoomToFollow` and comes back as a new
+following camera swallows is resolved by the drain (the one `zoomedDistance` site)
+and arrives as `ctx.followDistanceTarget`, which the driver adopts as its new
 `distanceTarget`, so `applyWheelZoom` stops being a writer. This is the joint
 R14-3 needs: `followApproach` (priority 55 — above `autoRotate` 20, below `tween`
 60, preserving today's follow-loses-to-tween ordering) and `followHold`

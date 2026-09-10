@@ -402,8 +402,8 @@ export type DriverCtx = {
   readonly simDays: number;
   readonly projection: CameraProjection;
   readonly pivot: PivotFraming;
-  /** This frame's at-rest wheel notch, when the follow driver owns the distance. */
-  readonly zoomToFollow: number | null;
+  /** This frame's notch-resolved follow distance, when the follow driver owns it. */
+  readonly followDistanceTarget: number | null;
 };
 
 export type CameraDriver = {
@@ -481,7 +481,7 @@ export function drainInput(
   deps: RunFrameDeps,
   nowMs: number,
 ): {
-  readonly zoomToFollow: number | null;
+  readonly followDistanceTarget: number | null;
 };
 ```
 
@@ -489,15 +489,17 @@ export function drainInput(
 the follow driver exactly when `base.frame === 'absolute'` **and**
 `winnerLastFrame === 'followBody'` **and** `follow?.distanceTarget !== null`. In every
 other case `applyWheelZoom` behaves as today (null for a body arm, the spun-base
-branch under autoRotate, the plain base otherwise). The follow driver applies
-`zoomedDistance(mem.distanceTarget, ctx.zoomToFollow, ctx.pivot)` to its returned
-memory.
+branch under autoRotate, the plain base otherwise). The drain resolves the notch with
+the one `zoomedDistance` call site and hands the result over as
+`ctx.followDistanceTarget`; the follow driver adopts it into its returned memory (no
+formula in the driver).
 
-**The roll ride** (`drainInput.ts:230-255`) moves to `runFrame`, immediately after
-`runCameraDrivers` and **before** the register write at `:310-312` — so its
-`authoredWorldPose(state)` read still sees the same register value it sees today.
-Its pre/post pair is now `prev.follow.distanceTarget` and the adopted memory's, which
-removes the read-mutate-read through the clock that the current site depends on. It
+**The roll ride stays in `drainInput`** (ruled during execution: moved after
+`runCameraDrivers` it lags the follow driver's roll lerp by one frame — the driver
+reads the ride's commit from the store snapshot taken after the drain; both golden
+traces caught it). Its pre/post pair is now data — the previous
+`follow.distanceTarget` and the resolved `followDistanceTarget` — which removes the
+read-mutate-read through the clock that the current site depends on. It
 must not re-derive `zoomedDistance` itself — a second copy of that formula is a mirror.
 
 - [ ] Failing test `a notch under follow lands on the driver's distance target, not
@@ -657,7 +659,7 @@ export function replayInput(
   readonly surface: SurfaceMemory;
   readonly follow: FollowMemory | null;
   readonly lastZoomFactor: number | null;
-  readonly zoomToFollow: number | null;
+  readonly followDistanceTarget: number | null;
   readonly autoRotateEpoch: Epoch<FramedCameraPose>;
   readonly actions: readonly UnknownAction[];
 };
