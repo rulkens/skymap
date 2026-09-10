@@ -15,6 +15,14 @@ import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
 import { setSurfaceBand, SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
 import { setTiltBand, TILT_BAND } from '../../../src/data/camera/tiltBand';
 
+/** Readouts are pre-formatted by the caller; these fixtures only need to be distinguishable. */
+const PROPS = {
+  hOverR: 0.3,
+  markerReadout: 'h/R 0.300 · 1,911,300 m',
+  weightReadout: '0.500',
+  rememberedTiltReadout: '0.0°',
+};
+
 const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const BAND_AT_LOAD = {
   engageHR: SURFACE_REGIME.engageHR,
@@ -30,7 +38,7 @@ afterEach(() => {
 
 describe('OrientationTuning', () => {
   it('each control writes through to the one home', () => {
-    const { getByLabelText } = render(createElement(OrientationTuning));
+    const { getByLabelText } = render(createElement(OrientationTuning, PROPS));
     fireEvent.change(getByLabelText('engage h/R'), { target: { value: '2.5' } });
     expect(SURFACE_REGIME.engageHR).toBe(2.5);
     fireEvent.change(getByLabelText('disengage h/R'), { target: { value: '5' } });
@@ -46,7 +54,7 @@ describe('OrientationTuning', () => {
   });
 
   it('a clamp that moves the other knob is re-read into the UI', () => {
-    const { getByLabelText, container } = render(createElement(OrientationTuning));
+    const { getByLabelText, container } = render(createElement(OrientationTuning, PROPS));
     // The default band is clear of the floor, so the readout shows the plain
     // ratio — without this an unconditional "AT FLOOR" would pass below.
     expect(container.textContent).not.toContain('AT FLOOR');

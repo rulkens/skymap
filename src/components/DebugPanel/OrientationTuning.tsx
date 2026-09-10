@@ -1,11 +1,12 @@
 /**
- * OrientationTuning — the feel-trial knobs (ruling 11), a subsection of the Camera
- * debug section. The engage/disengage sliders write through `setSurfaceBand`, the
- * clamped home of the regime hysteresis; the tilt-blend pair writes through
- * `setTiltBand`. The records are engine-side module state, read directly per the
- * DebugPanel convention for non-store data, and session-only.
- * Values re-read from the records after every write, so a clamp that moved the
- * OTHER knob shows immediately.
+ * OrientationTuning — the band as one visual object (grill Q5): the drawn
+ * ruler, then the four edge sliders directly under it, so dragging an edge
+ * moves its own tick instead of a number in a different block. The engage/
+ * disengage pair writes through `setSurfaceBand`, the tilt pair through
+ * `setTiltBand`; both are engine-side module records, read directly per the
+ * DebugPanel convention for non-store data, and session-only. Values re-read
+ * from the records after every write, so a clamp that moved the OTHER knob
+ * shows immediately.
  */
 
 import { useReducer, type ReactNode } from 'react';
@@ -19,15 +20,20 @@ import {
   SURFACE_REGIME,
 } from '../../data/camera/surfaceRegime';
 import { setTiltBand, TILT_BAND, TILT_BAND_LIMITS } from '../../data/camera/tiltBand';
+import CameraBandBar from './CameraBandBar';
 import DebugSlider from './DebugSlider';
 import styles from './OrientationTuning.module.css';
 
 export type OrientationTuningProps = {
+  /** Where the camera sits on the ruler; null when no scene body resolved. */
+  readonly hOverR: number | null;
   /**
-   * The session's remembered tilt (ruling 12), read-only trial observability.
-   * Pre-formatted by the caller (CameraStateSection's `num`), the same
-   * contract as DebugSlider's `readout` — one formatting home per panel.
+   * Marker caption, band-weight readout, and the session's remembered tilt
+   * (ruling 12). Pre-formatted by the caller, the same contract as
+   * DebugSlider's `readout` — one formatting home per panel.
    */
+  readonly markerReadout: string;
+  readonly weightReadout: string;
   readonly rememberedTiltReadout: string;
 };
 
@@ -50,19 +56,28 @@ function hysteresisReadoutOf(lastClamped: SurfaceBandKnob | TiltBandKnob): strin
   return `${ratio.toFixed(2)} (floor ${minRatio.toFixed(2)})`;
 }
 
-function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): ReactNode {
+function OrientationTuning({
+  hOverR,
+  markerReadout,
+  weightReadout,
+  rememberedTiltReadout,
+}: OrientationTuningProps): ReactNode {
   const [{ lastClamped }, dispatch] = useReducer(tuningReducer, { lastClamped: null });
   const limits = SURFACE_BAND_LIMITS;
   return (
     <div className={styles.root}>
-      <div className={styles.title}>orientation tuning</div>
+      <CameraBandBar
+        ticks={[
+          { label: 'tilt full', hOverR: TILT_BAND.fullHR },
+          { label: 'engage', hOverR: SURFACE_REGIME.engageHR },
+          { label: 'tilt zero', hOverR: TILT_BAND.zeroHR },
+          { label: 'disengage', hOverR: SURFACE_REGIME.disengageHR },
+        ]}
+        hOverR={hOverR}
+        markerLabel={markerReadout}
+      />
       <div className={styles.readoutRow}>
-        <span>remembered_tilt_rad</span>
-        <span>{rememberedTiltReadout}</span>
-      </div>
-      <div className={styles.readoutRow}>
-        <span>hysteresis (dis/eng)</span>
-        <span>{hysteresisReadoutOf(lastClamped)}</span>
+        <span>w {weightReadout}</span>
       </div>
       <DebugSlider
         label="engage h/R"
@@ -116,6 +131,10 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
           dispatch({ clamped });
         }}
       />
+      <div className={styles.readoutRow}>
+        <span>hysteresis (dis/eng)</span>
+        <span>{hysteresisReadoutOf(lastClamped)}</span>
+      </div>
       <label className={styles.toggle}>
         <input
           type="checkbox"
@@ -138,6 +157,10 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         />
         north-up framing
       </label>
+      <div className={styles.readoutRow}>
+        <span>remembered_tilt</span>
+        <span>{rememberedTiltReadout}</span>
+      </div>
     </div>
   );
 }

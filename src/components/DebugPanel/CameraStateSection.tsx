@@ -1,19 +1,23 @@
 // src/components/DebugPanel/CameraStateSection.tsx
 /**
- * CameraStateSection — the camera-pivot branch's DebugPanel readout: the
- * regime/arm state, the full orientation pipeline (roll against the scene up
- * AND the body spin axis, the band's ride target), and the live input state.
- * One rows model feeds both the rendered grid and the copy-all clipboard dump,
- * so what the user pastes is exactly what they saw. Polls at 4 Hz like every
- * textual DebugPanel readout; numbers render at full JS precision on purpose —
- * this section exists to capture data, not to be pretty.
+ * CameraStateSection — the camera-pivot readout, organised by the question it
+ * answers (grill 2026-09-10): who is driving (header), is each DOF where it
+ * should be (three rows), and where in the band are we (the drawn ruler). One
+ * model feeds the degrees on screen AND the full-precision radians `copy all`
+ * dumps, so a pasted bug report is the thing that was looked at. Polls at 4 Hz
+ * like every textual DebugPanel readout — Δ and peak are measured in the frame
+ * loop, so the poll rate cannot blur them.
  */
 
 import { useEffect, useState, type ReactElement } from 'react';
 import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
+import type { CameraDofRow } from '../../@types/camera/CameraDofRow';
+import type { OrientDofDelta } from '../../@types/camera/OrientDofDelta';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
+import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { TILT_BAND } from '../../data/camera/tiltBand';
+import { clearOrientPeaks } from '../../services/engine/camera/orientDeltas';
 import DebugSection from './DebugSection';
 import OrientationTuning from './OrientationTuning';
 import styles from './CameraStateSection.module.css';
@@ -23,9 +27,23 @@ export type CameraStateSectionProps = {
 };
 
 const POLL_MS = 250;
+const RAD_TO_DEG = 180 / Math.PI;
 
-type Row = { readonly key: string; readonly value: string; readonly warn?: boolean };
-type Group = { readonly title: string; readonly rows: readonly Row[] };
+type DofModel = {
+  readonly name: string;
+  /** North-up unchecked: the target is still a field property, nothing applies it. */
+  readonly off: boolean;
+  readonly row: CameraDofRow;
+  readonly delta: OrientDofDelta;
+};
+type RawRow = { readonly key: string; readonly value: string };
+type PanelModel = {
+  readonly header: string;
+  readonly badge: string | null;
+  readonly dofs: readonly DofModel[];
+  readonly band: readonly RawRow[];
+  readonly raw: readonly RawRow[];
+};
 
 function frameLabel(frame: PoseFrame): string {
   return frame === 'absolute' ? 'absolute' : `body:${frame.body}`;
@@ -36,86 +54,75 @@ function num(n: number | null | undefined): string {
   return n === null || n === undefined ? '—' : String(n);
 }
 
-function groupsOf(snap: CameraDebugSnapshot): Group[] {
-  return [
-    {
-      title: 'regime',
-      rows: [
-        { key: 'stored_regime', value: frameLabel(snap.storedFrame) },
-        {
-          key: 'rendered_arm',
-          value: frameLabel(snap.renderedFrame) + (snap.armMismatch ? '  ⚠ MISMATCH' : ''),
-          warn: snap.armMismatch,
-        },
-        { key: 'body', value: snap.engagedBodyId ?? '—' },
-        { key: 'active_driver', value: snap.activeDriverId },
-      ],
-    },
-    {
-      title: 'altitude',
-      rows: [
-        { key: 'h_over_R', value: num(snap.hOverR) },
-        { key: 'altitude_m', value: num(snap.altitudeM) },
-        { key: 'distance_mpc', value: num(snap.distanceMpc) },
-        {
-          key: 'band_engage/disengage',
-          value: `${SURFACE_REGIME.engageHR} / ${SURFACE_REGIME.disengageHR}`,
-        },
-        {
-          key: 'tilt_band_full/zero',
-          value: `${TILT_BAND.fullHR} / ${TILT_BAND.zeroHR}`,
-        },
-        { key: 'band_up_weight', value: num(snap.bandUpWeight) },
-      ],
-    },
-    {
-      title: 'orientation',
-      rows: [
-        { key: 'scene_frame', value: snap.orientationFrame },
-        { key: 'heading_rad', value: num(snap.dofs.heading.currentRad) },
-        { key: 'tilt_rad', value: num(snap.dofs.tilt.currentRad) },
-        { key: 'tilt_target_rad', value: num(snap.dofs.tilt.targetRad) },
-        { key: 'roll_vs_scene_up_rad', value: num(snap.dofs.roll.currentRad) },
-        { key: 'band_target_roll_rad', value: num(snap.dofs.roll.targetRad) },
-        { key: 'roll_residual_to_band_target_rad', value: num(snap.dofs.roll.residualRad) },
-      ],
-    },
-    {
-      title: 'input',
-      rows: [
-        { key: 'gesture', value: snap.gestureMode ?? 'none' },
-        {
-          key: 'gesture_cursor_hit',
-          value: snap.gestureCursorHit === null ? '—' : String(snap.gestureCursorHit),
-        },
-        {
-          key: 'anchor_local_m',
-          value: snap.anchorLocalM === null ? '—' : `[${snap.anchorLocalM.map(String).join(', ')}]`,
-        },
-        { key: 'eye_rel_anchor_m', value: num(snap.eyeRelAnchorMagM) },
-        { key: 'last_zoom', value: snap.lastZoomDirection ?? '—' },
-      ],
-    },
-    {
-      title: 'epoch',
-      rows: [
-        { key: 'rendered_sim_days', value: num(snap.lastRenderedSimDays) },
-        { key: 'live_sim_days', value: num(snap.liveSimDays) },
-        {
-          key: 'delta_s',
-          value: String(snap.epochDeltaDays * 86_400) + (snap.epochMismatch ? '  ⚠ MISMATCH' : ''),
-          warn: snap.epochMismatch,
-        },
-      ],
-    },
-  ];
+function deg(rad: number | null): string {
+  return rad === null ? '—' : `${(rad * RAD_TO_DEG).toFixed(1)}°`;
 }
 
-function copyTextOf(groups: readonly Group[]): string {
+function modelOf(snap: CameraDebugSnapshot): PanelModel {
+  const { dofs, deltas } = snap;
+  const off = !ORIENT_TUNING.northUp;
+  return {
+    header: `${frameLabel(snap.renderedFrame)} · ${snap.activeDriverId} · gesture: ${snap.gestureMode ?? 'none'}`,
+    badge: snap.armMismatch ? 'ARM MISMATCH' : snap.epochMismatch ? 'EPOCH MISMATCH' : null,
+    dofs: [
+      { name: 'heading', off, row: dofs.heading, delta: deltas.heading },
+      { name: 'tilt', off: false, row: dofs.tilt, delta: deltas.tilt },
+      { name: 'roll', off, row: dofs.roll, delta: deltas.roll },
+    ],
+    band: [
+      { key: 'h_over_R', value: num(snap.hOverR) },
+      { key: 'altitude_m', value: num(snap.altitudeM) },
+      { key: 'band_up_weight', value: num(snap.bandUpWeight) },
+      {
+        key: 'engage/disengage_hr',
+        value: `${SURFACE_REGIME.engageHR} / ${SURFACE_REGIME.disengageHR}`,
+      },
+      { key: 'tilt_full/zero_hr', value: `${TILT_BAND.fullHR} / ${TILT_BAND.zeroHR}` },
+      { key: 'blend_space', value: ORIENT_TUNING.blendSpace },
+      { key: 'north_up', value: String(ORIENT_TUNING.northUp) },
+      { key: 'remembered_tilt_rad', value: num(snap.rememberedTiltRad) },
+    ],
+    raw: [
+      { key: 'stored_regime', value: frameLabel(snap.storedFrame) },
+      { key: 'rendered_arm', value: frameLabel(snap.renderedFrame) },
+      { key: 'scene_frame', value: snap.orientationFrame },
+      { key: 'distance_mpc', value: num(snap.distanceMpc) },
+      {
+        key: 'gesture_cursor_hit',
+        value: snap.gestureCursorHit === null ? '—' : String(snap.gestureCursorHit),
+      },
+      {
+        key: 'anchor_local_m',
+        value: snap.anchorLocalM === null ? '—' : `[${snap.anchorLocalM.map(String).join(', ')}]`,
+      },
+      { key: 'eye_rel_anchor_m', value: num(snap.eyeRelAnchorMagM) },
+      { key: 'last_zoom', value: snap.lastZoomDirection ?? '—' },
+      { key: 'rendered_sim_days', value: num(snap.lastRenderedSimDays) },
+      { key: 'live_sim_days', value: num(snap.liveSimDays) },
+      { key: 'delta_s', value: String(snap.epochDeltaDays * 86_400) },
+    ],
+  };
+}
+
+/** Radians at full precision — the paste target, whatever the screen shows. */
+function copyTextOf(model: PanelModel): string {
   const lines = ['camera-debug (rad = radians, m = metres, mpc = megaparsec)'];
-  for (const group of groups) {
-    lines.push(`[${group.title}]`);
-    for (const row of group.rows) lines.push(`${row.key}: ${row.value}`);
+  lines.push(`[header] ${model.header}${model.badge === null ? '' : ` ⚠ ${model.badge}`}`);
+  lines.push('[dof, radians]');
+  for (const dof of model.dofs) {
+    lines.push(
+      `${dof.name}: current=${num(dof.row.currentRad)} target=${num(dof.row.targetRad)} ` +
+        `residual=${num(dof.row.residualRad)} delta=${num(dof.delta.deltaRad)} ` +
+        `peak=${num(dof.delta.peakAbsRad)} peak_at_ms=${num(dof.delta.peakAtMs)}` +
+        (dof.off ? ' (north-up off)' : ''),
+    );
+  }
+  for (const [title, rows] of [
+    ['band', model.band],
+    ['raw', model.raw],
+  ] as const) {
+    lines.push(`[${title}]`);
+    for (const row of rows) lines.push(`${row.key}: ${row.value}`);
   }
   return lines.join('\n');
 }
@@ -129,16 +136,80 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
     return () => clearInterval(id);
   }, [cameraDebug]);
 
-  const groups = groupsOf(snap);
+  const model = modelOf(snap);
 
   return (
     <DebugSection title="Camera">
+      <div className={styles.headerLine}>
+        <span>{model.header}</span>
+        {model.badge === null ? null : <span className={styles.badge}>⚠ {model.badge}</span>}
+      </div>
+
+      <div className={styles.dofGrid}>
+        <span />
+        <span className={styles.colHead}>current</span>
+        <span className={styles.colHead}>target</span>
+        <span className={styles.colHead}>residual</span>
+        <span className={styles.colHead}>Δ</span>
+        <span className={styles.colHead}>peak</span>
+        {model.dofs.map((dof) => (
+          <div key={dof.name} className={styles.dofRow}>
+            <span className={styles.dofName}>
+              {dof.name}
+              {dof.off ? <span className={styles.offMark}> (off)</span> : null}
+            </span>
+            <span>{deg(dof.row.currentRad)}</span>
+            <span>{deg(dof.row.targetRad)}</span>
+            <span>{deg(dof.row.residualRad)}</span>
+            <span>{deg(dof.delta.deltaRad)}</span>
+            <span>{deg(dof.delta.peakAbsRad)}</span>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        className={styles.smallButton}
+        onClick={() => {
+          clearOrientPeaks();
+          setSnap(cameraDebug());
+        }}
+      >
+        clear peaks
+      </button>
+
+      <OrientationTuning
+        hOverR={snap.hOverR}
+        markerReadout={
+          snap.hOverR === null
+            ? '—'
+            : `h/R ${snap.hOverR.toFixed(3)} · ${
+                snap.altitudeM === null
+                  ? '—'
+                  : `${Math.round(snap.altitudeM).toLocaleString('en-US')} m`
+              }`
+        }
+        weightReadout={snap.bandUpWeight === null ? '—' : snap.bandUpWeight.toFixed(3)}
+        rememberedTiltReadout={deg(snap.rememberedTiltRad)}
+      />
+
+      <details className={styles.rawBlock}>
+        <summary className={styles.rawSummary}>raw</summary>
+        <div className={styles.grid}>
+          {model.raw.map((row) => (
+            <div key={row.key} className={styles.row}>
+              <span className={styles.key}>{row.key}</span>
+              <span>{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </details>
+
       <button
         type="button"
         className={styles.copyButton}
         onClick={() => {
           // A fresh snapshot, not the 4 Hz-stale one, so the paste is current.
-          void navigator.clipboard.writeText(copyTextOf(groupsOf(cameraDebug()))).then(() => {
+          void navigator.clipboard.writeText(copyTextOf(modelOf(cameraDebug()))).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 1200);
           });
@@ -146,20 +217,6 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
       >
         {copied ? 'copied ✓' : 'copy all'}
       </button>
-      {groups.map((group) => (
-        <div key={group.title}>
-          <div className={styles.groupTitle}>{group.title}</div>
-          <div className={styles.grid}>
-            {group.rows.map((row) => (
-              <div key={row.key} className={row.warn ? styles.rowWarn : styles.row}>
-                <span className={styles.key}>{row.key}</span>
-                <span>{row.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-      <OrientationTuning rememberedTiltReadout={num(snap.rememberedTiltRad)} />
     </DebugSection>
   );
 }
