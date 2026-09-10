@@ -1,10 +1,6 @@
 // meshBody/io.wesl — uniform + inter-stage declarations for the lit
 // triangle-mesh body renderer.
 //
-// PLACEHOLDER (Task 15): the struct byte layout below is final and is the
-// contract 'utils/gpu/packMeshBodyUniforms.ts' packs; the stages are stubs that
-// Task 16 replaces with the real PBR + Earthshine shading.
-//
 // FRAME CONTRACT: 'camPosLocal' and 'dirToHost' are in the HOST body's fixed
 // axes, relative to this body's centre, in metres -- the same axes the vertex
 // stage's 'localPos = u.model * position' lands in. 'u.model' is the body's own
@@ -49,8 +45,13 @@ struct MeshBodyUniforms {
 
 struct MeshBodyVSOut {
   @builtin(position) clip: vec4<f32>,
-  // Position on the mesh surface in the host's fixed axes, relative to the
-  // body's centre, in metres -- the frame 'camPosLocal' and 'dirToHost' share.
-  @location(0) localPos: vec3<f32>,
-  @location(1) uv: vec2<f32>,
+  // Normal and tangent rotated by 'u.model' alone -- host axes, NOT view space.
+  @location(0) worldNormal: vec3<f32>,
+  // 'w' is the bake's handedness (+/-1); it rides through untouched, and the
+  // fragment's bitangent is 'cross(n, t.xyz) * t.w'.
+  @location(1) worldTangent: vec4<f32>,
+  @location(2) uv: vec2<f32>,
+  // Surface point in host axes relative to the body's centre, in metres -- the
+  // frame 'camPosLocal' shares, so the view vector is their difference.
+  @location(3) localPos: vec3<f32>,
 };
