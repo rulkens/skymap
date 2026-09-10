@@ -25,6 +25,7 @@ import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { deepFreeze } from '../deepFreeze';
 import { poseAtHR } from './poseAtHR';
 import type { SimBodyId } from './SimBodyId';
 import type { CameraSimHarnessOptions } from './CameraSimHarnessOptions';
@@ -121,6 +122,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       committed: framed,
       projection: state.cameraRuntime.outputs.projection,
     });
+    deepFreeze(state.cameraRuntime);
   };
 
   /** Dispatch a focus row for `id` off its real seeded position, or clear it. */
@@ -154,6 +156,10 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   /** Run one frame at an explicit wall-clock ms (for hand-scheduled events). */
   const tick = (nowMs: number): void => {
     runFrame(state, deps, nowMs);
+    // The runtime-half of the single-writer gate (see
+    // `cameraRuntimeSingleWriter.test.ts`): a between-frames write into last
+    // frame's runtime throws here instead of drifting into the next `prev`.
+    deepFreeze(state.cameraRuntime);
     now = nowMs;
   };
   /** Advance the internal 16ms clock and run `count` frames. */
