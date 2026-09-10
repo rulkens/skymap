@@ -21,7 +21,7 @@ describe('DisplayPanel', () => {
     expect(store.getState().view.display.pointCloud.pointSizePx).toBe(2.5);
   });
 
-  it('drives the gaussianSplat splat-scale slice through its slider', () => {
+  it('drives each gaussianSplat slice through its own slider, not its neighbour', () => {
     const { store } = createSceneStore();
 
     render(
@@ -30,24 +30,18 @@ describe('DisplayPanel', () => {
       </Provider>,
     );
 
-    const slider = screen.getByRole('slider', { name: /splat scale/i });
-    fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    fireEvent.keyDown(screen.getByRole('slider', { name: /splat scale/i }), { key: 'ArrowRight' });
+    expect(store.getState().view.display.gaussianSplat).toEqual({
+      splatScale: 1.05,
+      opacityScale: 1,
+    });
 
-    expect(store.getState().view.display.gaussianSplat.splatScale).toBe(1.05);
-  });
-
-  it('drives the gaussianSplat opacity-scale slice through its slider', () => {
-    const { store } = createSceneStore();
-
-    render(
-      <Provider store={store}>
-        <DisplayPanel />
-      </Provider>,
-    );
-
-    const slider = screen.getByRole('slider', { name: /opacity scale/i });
-    fireEvent.keyDown(slider, { key: 'ArrowRight' });
-
-    expect(store.getState().view.display.gaussianSplat.opacityScale).toBe(1.05);
+    fireEvent.keyDown(screen.getByRole('slider', { name: /opacity scale/i }), {
+      key: 'ArrowRight',
+    });
+    expect(store.getState().view.display.gaussianSplat).toEqual({
+      splatScale: 1.05,
+      opacityScale: 1.05,
+    });
   });
 });
