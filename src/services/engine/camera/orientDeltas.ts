@@ -41,7 +41,10 @@ let watchers = 0;
  */
 export function watchOrientDeltas(): () => void {
   watchers += 1;
-  for (const dof of Object.values(RECORD)) dof.prevRad = null;
+  for (const dof of Object.values(RECORD)) {
+    dof.prevRad = null;
+    dof.deltaRad = 0;
+  }
   return () => {
     watchers -= 1;
   };

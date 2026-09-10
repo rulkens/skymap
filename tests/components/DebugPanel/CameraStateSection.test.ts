@@ -19,6 +19,7 @@ import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebug
 const NORTH_UP_AT_LOAD = ORIENT_TUNING.northUp;
 afterEach(() => {
   ORIENT_TUNING.northUp = NORTH_UP_AT_LOAD;
+  delete (navigator as { clipboard?: unknown }).clipboard;
 });
 
 /** 0.5235987755982988 rad = 30.0°: the degrees column and the radian dump differ visibly. */
