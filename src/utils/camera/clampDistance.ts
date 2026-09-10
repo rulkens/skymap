@@ -12,14 +12,14 @@
 // ─── Distance limits ──────────────────────────────────────────────────────────
 
 /**
- * Absolute floor for `cam.distance` in Mpc — 1e-17 Mpc ≈ 309 km. A degeneracy
+ * Absolute floor for `cam.distance` in Mpc — 1e-24 Mpc ≈ 3 cm. A degeneracy
  * backstop, NOT a surface stop (`SURFACE_STANDOFF_RADII` handles that): this
  * only keeps distance strictly positive with no pivot radius to stand off
- * from, and floors bodies smaller than ~309 km. Sits below the galaxy-focus
+ * from, and floors bodies smaller than ~3 cm. Sits below the galaxy-focus
  * tween's minimum end distance (0.15 Mpc), so `clampDistance` never ratchets
  * a focus-on tween back outward.
  */
-export const MIN_DISTANCE_MPC = 1e-17;
+export const MIN_DISTANCE_MPC = 1e-24;
 
 /**
  * Where the camera stops relative to the pivot's surface, as a multiple of its

@@ -36,6 +36,7 @@ describe('meshBody()', () => {
       description: 'a test body',
       radiusM: 12345,
       albedo: [0.1, 0.2, 0.3],
+      standoffRadii: 2,
     });
   });
 

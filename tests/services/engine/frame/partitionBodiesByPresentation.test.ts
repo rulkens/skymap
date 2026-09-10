@@ -65,6 +65,7 @@ function meshAt(id: string, radiusM: number, distanceM: number): SeededMesh {
     albedo: [0.5, 0.5, 0.5],
     meshKey: `${id}-mesh`,
     description: id,
+    standoffRadii: 2,
     orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   };
 }

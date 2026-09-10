@@ -84,17 +84,32 @@ describe('pivotFraming', () => {
   });
 
   it('a body smaller than the absolute floor still gets the absolute floor', () => {
-    // A 10 km moonlet's own standoff (~10.2 km) is far below MIN_DISTANCE_MPC
-    // (~309 km), where the near-plane ratio stops being well conditioned. The
-    // floor is a max of the two, so the absolute floor wins for tiny pivots.
-    const moonlet: SelectionRow = {
+    // A 1 cm pebble's own standoff is below MIN_DISTANCE_MPC (~3 cm), the
+    // degeneracy backstop. The floor is a max of the two, so the absolute
+    // floor wins for pivots that small.
+    const pebble: SelectionRow = {
       type: 'body',
-      id: 'moonlet',
-      label: 'Moonlet',
+      id: 'pebble',
+      label: 'Pebble',
       positionMpc: [0, 0, 0],
-      radiusM: 10000,
+      radiusM: 0.01,
     };
-    expect(pivotFraming(moonlet).floorMpc).toBe(MIN_DISTANCE_MPC);
+    expect(pivotFraming(pebble).floorMpc).toBe(MIN_DISTANCE_MPC);
+  });
+
+  it('a metre-scale mesh body is floored at its own two-radii standoff, not the absolute floor', () => {
+    // Regression for the wheel-zoom snap: the 6.8 m whale must keep the floor
+    // the fly-to landed against instead of being flung out to the backstop.
+    const whale: SelectionRow = {
+      type: 'body',
+      id: 'whale',
+      label: 'Whale',
+      positionMpc: [0, 0, 0],
+      radiusM: 6.8,
+      standoffRadii: 2,
+    };
+    expect(pivotFraming(whale).floorMpc).toBeCloseTo(13.6 * SCALE_UNITS.M_TO_MPC, 30);
+    expect(pivotFraming(whale).floorMpc).toBeGreaterThan(MIN_DISTANCE_MPC);
   });
 
   it('falls through to the global ratio for a star, and to the absolute floor for a galaxy / no focus', () => {

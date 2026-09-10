@@ -12,6 +12,9 @@
 import { MESH_ASSETS } from '../meshAssets.generated';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
 
+/** Camera floor at two radii: the body fills the view. A ratio, not metres, so the 0.46 m pot and the 6.8 m whale both frame. */
+const MESH_BODY_STANDOFF_RADII = 2;
+
 export type MeshBodySeed = {
   readonly id: string;
   readonly label: string;
@@ -29,5 +32,6 @@ export function meshBody(seed: MeshBodySeed): MeshBody {
     description: seed.description,
     radiusM: asset.boundingRadiusM,
     albedo: asset.meanAlbedo,
+    standoffRadii: MESH_BODY_STANDOFF_RADII,
   };
 }
