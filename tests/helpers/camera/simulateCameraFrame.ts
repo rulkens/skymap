@@ -46,8 +46,11 @@ export function simulateCameraFrame(
   return {
     pose: next.register.pose,
     activeId: next.register.winner,
-    // The fold's crossing commit is the other source of `commitCameraPose`;
-    // no fixture on this helper crosses a regime, so this reads the edge commit.
+    // `commitCameraPose` has three producers: `commitOnEdge`, the fold's regime
+    // crossing, and `replayInput` (every at-rest wheel/drag fold). This reads the
+    // edge commit only while the caller neither crosses a regime nor feeds the
+    // input aggregator — true of both fixtures today; a caller that pushes input
+    // must narrow it instead.
     committed: actions.some((action) => action.type === commitCameraPose.type),
   };
 }

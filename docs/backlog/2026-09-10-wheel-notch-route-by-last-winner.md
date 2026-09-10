@@ -2,9 +2,9 @@
 
 **Raised:** 2026-09-10, during PR #647's final review. User ruled: later, own change.
 
-Two pre-existing defects with one cause. `replayInput` runs before the winner is
-picked, so it routes a notch by `cameraRuntime.register.winner` — last frame's
-answer — because the input is already drained by then
+Two pre-existing defects with one cause, and it is stage order: the replay runs
+BEFORE the winner is picked, so `replayInput` has nothing to route a notch by
+except `cameraRuntime.register.winner` — last frame's answer
 (`src/services/engine/camera/replayInput.ts:215`, `:242`).
 
 ## (a) The notch on a follow→spin hand-off frame is dropped
@@ -26,12 +26,33 @@ autoRotate goes off, so the notch is applied to the pre-spin `base` the spin fro
 and `commitOnEdge` (`src/services/engine/camera/commitOnEdge.ts`) bakes that stale
 pose on the same edge.
 
-## Fix shape (pre-agreed)
+## Fix shape
 
-Pick the winner BEFORE draining input, so a notch routes to THIS frame's winner. It
-is a stage-order change in `src/services/engine/camera/stepCameraRuntime.ts`; the
-design work is un-braiding the order, since `pickWinner` needs the epochs and the
-epochs advance after the replay today.
+Route the notch by THIS frame's winner. The routing stage is the replay, so the
+winner has to be known above it — and today the pick cannot simply move up, because
+both of its arguments are replay OUTPUTS:
 
-Then re-record `tests/fixtures/camera/driverGoldenTrace.json` with a parse-compared
-cell diff in the commit body, and drop the marker at the leg.
+- `pickWinner(drivers, rootState, approachDone)` reads the POST-replay EFFECTIVE
+  `rootState` — the snapshot with the replay's own actions folded through the camera
+  reducer (`src/services/engine/camera/stepCameraRuntime.ts:89-95`). That is
+  load-bearing, not incidental: the drivers must see this frame's commits, `endDrag`
+  above all, or `orbitDrag` wins one frame too long.
+- `approachDone` is `drained.follow.saturated` (`stepCameraRuntime.ts:100-101`) —
+  the replay's follow memory.
+
+Not a blocker, contrary to first appearances: the epochs. `pickWinner` takes none
+(`src/services/engine/camera/cameraDrivers.ts:38-42`), and `advanceEpochs` already
+runs AFTER the pick, consuming `winner.epoch` (`stepCameraRuntime.ts:104-112`).
+
+Two directions, neither worked through:
+
+- Pick from the PRE-replay snapshot and re-establish the `endDrag` guarantee some
+  other way — the gesture-end edge is present in the drained steps themselves,
+  before the replay folds it.
+- Split the pick in two: a ROUTE decision above the replay, needing only the
+  pre-replay intent plus last frame's follow memory, with the existing post-replay
+  pick kept for the pose. Whether a correct route can be decided on that much is
+  the open question.
+
+Either way, re-record `tests/fixtures/camera/driverGoldenTrace.json` with a
+parse-compared cell diff in the commit body, and drop the marker at the leg.

@@ -105,6 +105,7 @@ import { createInputAggregator } from '../../../../src/services/engine/subsystem
 import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { worldArmOf } from '../../../fixtures/worldArmOf';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -238,6 +239,19 @@ describe('wireInput', () => {
       frameBasis: ORIENTATION_FRAMES.ecliptic,
     });
     expect(state.cam).not.toBeNull();
+  });
+
+  it('seeds the register with a COPY of the camera target, not the live array', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+
+    await wireInput(state, deps);
+
+    // `cam.target` is mutated in place by every drag; the seeded pose outlives the
+    // frame that made it, so a shared array would drag the boot commit along.
+    (state.cam!.target as number[])[0] = 99;
+
+    expect(worldArmOf(state.cameraRuntime.register.pose).target[0]).toBe(0);
   });
 
   it('seeds the home selection: select + focus pinned to Earth at boot', async () => {
