@@ -12,7 +12,6 @@ A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at b
 src/
   @types/  one type per file; deep relative imports, no barrels
   components/  React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
-  compositions/  boot home recipe: pose, focus, selection seed
   data/  static data: sources enum, colourIndex spec, binary format
   hooks/  React hooks (useEngine, useSplash, alias/structure indexes, …)
   services/

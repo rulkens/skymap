@@ -5,11 +5,11 @@
  * from `wireInput`) — `select` draws the InfoCard ring, which cinema hides.
  */
 
-import type { EngineHomeConfig } from '../@types/engine/EngineHomeConfig';
-import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../services/engine/camera/cameraFraming';
-import { followedBodyHome } from '../utils/scene/followedBodyHome';
-import { EARTH_REF } from '../data/selection/earthRef';
-import { isCinemaMode } from '../utils/url/isCinemaMode';
+import type { EngineHomeConfig } from '../../@types/engine/EngineHomeConfig';
+import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/cameraFraming';
+import { followedBodyHome } from '../../utils/scene/followedBodyHome';
+import { EARTH_REF } from './earthRef';
+import { isCinemaMode } from '../../utils/url/isCinemaMode';
 
 export const EARTH_HOME: EngineHomeConfig = {
   pose: ({ simDays, frameBasis }) =>

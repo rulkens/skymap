@@ -16,7 +16,7 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
-import { EARTH_HOME } from '../../../../src/compositions/earthHome';
+import { EARTH_HOME } from '../../../../src/data/selection/earthHome';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 

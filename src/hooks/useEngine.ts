@@ -52,7 +52,7 @@ import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
 import { installPerfHook } from '../state/perf/installPerfHook';
-import { EARTH_HOME } from '../compositions/earthHome';
+import { EARTH_HOME } from '../data/selection/earthHome';
 
 export function useEngine(): UseEngineReturn {
   // The injected settings store — created in main.tsx, shared with React via
