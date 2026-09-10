@@ -1,15 +1,13 @@
 /**
- * commitOnEdge — on the frame the winner changes, a DEPARTING driver that declared
- * `commitsOnEdge` has its saturated register baked into `base` verbatim (R12b-1:
- * the authored register, never the displayed pose). Produce already ran the
- * INCOMING driver against the pre-commit `base`, so which pose covers the edge
- * frame depends on that driver (R12c-1): a pivoting one re-derives its image
- * downstream and renders the AUTHORED register (the displayed pose would be
- * re-pinned — one frame of eye walk); a non-pivoting one (clip, tween) would flash
- * the untilted register ~0.4 rad to nadir, so it renders the DISPLAYED pose with
- * the register pinned to its authored value.
+ * commitOnEdge — on the frame the winner changes, a DEPARTING driver that
+ * declared `commitsOnEdge` bakes its saturated register into `base` verbatim
+ * (R12b-1: the authored register, never the displayed pose). Produce already ran
+ * the INCOMING driver against the pre-commit `base`, so which pose covers the
+ * edge frame is that driver's (R12c-1): a pivoting one re-derives its image
+ * downstream and renders the AUTHORED register (displaying it would re-pin the
+ * tilt — one frame of eye walk); a non-pivoting one (clip, tween) would flash
+ * the untilted register ~0.4 rad to nadir, so it renders the DISPLAYED pose.
  */
-
 import type { UnknownAction } from '@reduxjs/toolkit';
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';

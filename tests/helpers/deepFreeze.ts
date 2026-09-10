@@ -1,9 +1,7 @@
 /**
- * deepFreeze — freeze in place so a stray write THROWS (modules are strict)
- * instead of drifting. Plain objects and arrays only: `Object.freeze` on a
- * non-empty typed array throws. Already-frozen values return early — that
- * terminates cycles and skips what a steady frame shares by identity
- * (`UNSTARTED_EPOCHS`, `EMPTY_SURFACE_MEMORY`, immer-frozen store refs).
+ * deepFreeze — freeze in place so a stray write THROWS (modules are strict).
+ * Plain objects and arrays only: `Object.freeze` on a non-empty typed array
+ * throws. The already-frozen early return is what terminates cycles.
  */
 export function deepFreeze<T>(value: T): T {
   if (value === null || typeof value !== 'object') return value;

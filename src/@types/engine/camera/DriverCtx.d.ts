@@ -11,19 +11,18 @@ import type { RootState } from '../../../store/types';
 
 export type DriverCtx = {
   readonly state: RootState;
-  /** Elapsed on the WINNER's epoch row; 0 for the untimed rows. */
+  /** Elapsed on the winner's own `epoch` row (`CameraDriver`); 0 for the untimed rows. */
   readonly elapsedMs: number;
-  /** The follow memory saturated last frame — `followApproach`'s only exit. */
   readonly approachDone: boolean;
   /** The AUTHORED register (`cameraRuntime.register.pose`), pre-projection — R12b-1. */
   readonly register: FramedCameraPose;
   /** World arm of `register`; the follow capture reads its eye. */
   readonly authoredWorld: CameraPose;
   readonly winnerLastFrame: string;
+  /** Julian days. */
   readonly simDays: number;
   readonly projection: CameraProjection;
   readonly pivot: PivotFraming;
-  /** This frame's notch-resolved follow distance; the follow driver adopts it
-   * into its memory. Null on a frame with no swallowed notch. */
+  /** Mpc; null on a frame with no swallowed wheel notch. */
   readonly followDistanceTarget: number | null;
 };
