@@ -13,15 +13,18 @@ import { createElement } from 'react';
 import OrientationTuning from '../../../src/components/DebugPanel/OrientationTuning';
 import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
 import { setSurfaceBand, SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
+import { setTiltBand, TILT_BAND } from '../../../src/data/camera/tiltBand';
 
 const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const BAND_AT_LOAD = {
   engageHR: SURFACE_REGIME.engageHR,
   disengageHR: SURFACE_REGIME.disengageHR,
 };
+const TILT_AT_LOAD = { fullHR: TILT_BAND.fullHR, zeroHR: TILT_BAND.zeroHR };
 
 afterEach(() => {
   setSurfaceBand(BAND_AT_LOAD);
+  setTiltBand(TILT_AT_LOAD);
   Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
 });
 
@@ -32,6 +35,10 @@ describe('OrientationTuning', () => {
     expect(SURFACE_REGIME.engageHR).toBe(2.5);
     fireEvent.change(getByLabelText('disengage h/R'), { target: { value: '5' } });
     expect(SURFACE_REGIME.disengageHR).toBe(5);
+    fireEvent.change(getByLabelText('tilt-blend full h/R'), { target: { value: '1.5' } });
+    expect(TILT_BAND.fullHR).toBe(1.5);
+    fireEvent.change(getByLabelText('tilt-blend zero h/R'), { target: { value: '3' } });
+    expect(TILT_BAND.zeroHR).toBe(3);
     fireEvent.click(getByLabelText('log(h/R) blend-space'));
     expect(ORIENT_TUNING.blendSpace).toBe('lin');
     fireEvent.click(getByLabelText('north-up framing'));

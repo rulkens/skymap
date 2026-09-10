@@ -1,9 +1,9 @@
 /**
  * OrientationTuning — the feel-trial knobs (ruling 11), a subsection of the Camera
  * debug section. The engage/disengage sliders write through `setSurfaceBand`, the
- * clamped ONE home the regime hysteresis and the orientation band both read —
- * ruling 10 forbids them diverging. The records are engine-side module state, read
- * directly per the DebugPanel convention for non-store data, and session-only.
+ * clamped home of the regime hysteresis; the tilt-blend pair writes through
+ * `setTiltBand`. The records are engine-side module state, read directly per the
+ * DebugPanel convention for non-store data, and session-only.
  * Values re-read from the records after every write, so a clamp that moved the
  * OTHER knob shows immediately.
  */
@@ -11,12 +11,14 @@
 import { useReducer, type ReactNode } from 'react';
 
 import type { SurfaceBandKnob } from '../../@types/camera/SurfaceBandKnob';
+import type { TiltBandKnob } from '../../@types/camera/TiltBandKnob';
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import {
   setSurfaceBand,
   SURFACE_BAND_LIMITS,
   SURFACE_REGIME,
 } from '../../data/camera/surfaceRegime';
+import { setTiltBand, TILT_BAND, TILT_BAND_LIMITS } from '../../data/camera/tiltBand';
 import DebugSlider from './DebugSlider';
 import styles from './OrientationTuning.module.css';
 
@@ -29,9 +31,9 @@ export type OrientationTuningProps = {
   readonly rememberedTiltReadout: string;
 };
 
-type TuningState = { readonly lastClamped: SurfaceBandKnob };
+type TuningState = { readonly lastClamped: SurfaceBandKnob | TiltBandKnob };
 /** `clamped` omitted: a re-render bump unrelated to the band knobs. */
-type TuningAction = { readonly clamped?: SurfaceBandKnob };
+type TuningAction = { readonly clamped?: SurfaceBandKnob | TiltBandKnob };
 
 // A fresh object every time, so an omitted `clamped` still re-reads the records.
 function tuningReducer(state: TuningState, action: TuningAction): TuningState {
@@ -39,7 +41,7 @@ function tuningReducer(state: TuningState, action: TuningAction): TuningState {
 }
 
 /** Ruling 19's ×1.10 clamp, surfaced live rather than left to the tooltip. */
-function hysteresisReadoutOf(lastClamped: SurfaceBandKnob): string {
+function hysteresisReadoutOf(lastClamped: SurfaceBandKnob | TiltBandKnob): string {
   const { minRatio } = SURFACE_BAND_LIMITS;
   const ratio = SURFACE_REGIME.disengageHR / SURFACE_REGIME.engageHR;
   if (Math.abs(ratio - minRatio) < 1e-9) {
@@ -85,6 +87,32 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         title="h/R at which it hands back (kept > engage × 1.1)"
         onChange={(v) => {
           const clamped = setSurfaceBand({ disengageHR: v });
+          dispatch({ clamped });
+        }}
+      />
+      <DebugSlider
+        label="tilt-blend full h/R"
+        value={TILT_BAND.fullHR}
+        min={TILT_BAND_LIMITS.fullMin}
+        max={TILT_BAND_LIMITS.fullMax}
+        step={0.05}
+        readout={TILT_BAND.fullHR.toFixed(2)}
+        title="h/R at or below which the blend is pure body ENU (full tilt)"
+        onChange={(v) => {
+          const clamped = setTiltBand({ fullHR: v });
+          dispatch({ clamped });
+        }}
+      />
+      <DebugSlider
+        label="tilt-blend zero h/R"
+        value={TILT_BAND.zeroHR}
+        min={TILT_BAND_LIMITS.zeroMin}
+        max={TILT_BAND_LIMITS.zeroMax}
+        step={0.05}
+        readout={TILT_BAND.zeroHR.toFixed(2)}
+        title="h/R at or above which it is the scene up (zero tilt); capped at disengage"
+        onChange={(v) => {
+          const clamped = setTiltBand({ zeroHR: v });
           dispatch({ clamped });
         }}
       />

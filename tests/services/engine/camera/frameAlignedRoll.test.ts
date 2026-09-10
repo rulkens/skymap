@@ -18,7 +18,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { TILT_BAND } from '../../../../src/data/camera/tiltBand';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
@@ -78,9 +78,10 @@ const EARTH_POLE = rotateVec3ByTightMat3([0, 0, 1], EARTH.orientation);
 
 describe('frameAlignedRoll', () => {
   it('aligns screen-up with the body pole at the band floor', () => {
-    // Below engage the blend is the pure pole (`bodyUpWeight` = 1 exactly,
-    // ruling 10 — the same reference the engaged settle norths toward).
-    const pose = poseAtHR(0.1, 1.4);
+    // Under the tilt band's full edge the blend is the pure pole
+    // (`bodyUpWeight` = 1 exactly, the same reference the engaged settle
+    // norths toward).
+    const pose = poseAtHR(TILT_BAND.fullHR / 2, 1.4);
     const misaligned = screenUpOffset(pose, B, EARTH_POLE);
     expect(misaligned).toBeGreaterThan(0.5); // the fixture really is off
     const settled = { ...pose, roll: convergedRoll(pose, B) };
@@ -119,7 +120,7 @@ describe('frameAlignedRoll', () => {
     let hr = 0.1;
     let roll = convergedRoll(poseAtHR(hr, 0), B, 300);
     expect(Math.abs(roll)).toBeGreaterThan(0.1); // the band really bent it
-    while (hr <= SURFACE_REGIME.disengageHR) {
+    while (hr <= TILT_BAND.zeroHR) {
       const nextHR = hr * 1.15;
       const pre = poseAtHR(hr, roll);
       const post = poseAtHR(nextHR, roll);
@@ -127,13 +128,13 @@ describe('frameAlignedRoll', () => {
       // The notch's own target delta, measured off the ride's fixed points —
       // above the band the target is 0 structurally (the probe is inert there).
       const targetPost =
-        nextHR > SURFACE_REGIME.disengageHR ? 0 : convergedRoll(poseAtHR(nextHR, roll), B, 300);
+        nextHR > TILT_BAND.zeroHR ? 0 : convergedRoll(poseAtHR(nextHR, roll), B, 300);
       const targetDelta = Math.abs(targetPost - convergedRoll(pre, B, 300));
       expect(Math.abs(next - roll)).toBeLessThanOrEqual(targetDelta + 1e-9);
       roll = next;
       hr = nextHR;
     }
-    expect(hr).toBeGreaterThan(SURFACE_REGIME.disengageHR);
+    expect(hr).toBeGreaterThan(TILT_BAND.zeroHR);
     expect(Math.abs(roll)).toBeLessThan(1e-9);
   });
 
@@ -149,7 +150,7 @@ describe('frameAlignedRoll', () => {
 
     let hr = 0.1;
     let roll = convergedRoll(poseAtHR(hr, 0), alt, 300);
-    while (hr <= SURFACE_REGIME.disengageHR) {
+    while (hr <= TILT_BAND.zeroHR) {
       const nextHR = hr * 1.15;
       roll = frameAlignedRoll(poseAtHR(hr, roll), poseAtHR(nextHR, roll), BODIES, alt, alt);
       hr = nextHR;
@@ -171,7 +172,7 @@ describe('frameAlignedRoll', () => {
     let roll = convergedRoll(poseAtHR(0.12, 0, 0, -1.4), B, 300);
     let hr = 0.12;
     let maxStep = 0;
-    while (hr < SURFACE_REGIME.disengageHR * 0.9) {
+    while (hr < TILT_BAND.zeroHR * 0.9) {
       const nextHR = hr * 1.1;
       const next = frameAlignedRoll(
         poseAtHR(hr, roll, 0, -1.4),
@@ -197,11 +198,10 @@ describe('frameAlignedRoll', () => {
   it('a view near the spin axis converges to the scene up — no projection chase', () => {
     // With the pole projection NORMALIZED rather than raw, a view 2° off the
     // spin axis hands the target to the scene up instead of chasing the
-    // near-degenerate direction to a large roll. Fixture sits MID-WINDOW
-    // (w = 0.5): ruling 10 re-keyed the band to
-    // `bodyUpWeight`, so below engage the field is the pure body ENU by
-    // construction — identical to the engaged arm — and the blend (where
-    // the hand-off property lives) spans the hysteresis window.
+    // near-degenerate direction to a large roll. Fixture sits mid-window:
+    // under `fullHR` the field is the pure body ENU by construction —
+    // identical to the engaged arm — so the hand-off property lives in the
+    // blend, and that is the span the fixture has to sit in.
     const tiltRad = (2 * Math.PI) / 180;
     const perp: Vec3 = Math.abs(EARTH_POLE[0]!) < 0.9 ? [1, 0, 0] : [0, 1, 0];
     const dir = normalize3([
@@ -216,7 +216,7 @@ describe('frameAlignedRoll', () => {
 
     // In-band settle: bounded and near the scene up (the raw-weighted pole
     // term is only sin 2° strong; a raw-weighted chase would converge 1.4 rad off).
-    const midHR = (SURFACE_REGIME.engageHR + SURFACE_REGIME.disengageHR) / 2;
+    const midHR = (TILT_BAND.fullHR + TILT_BAND.zeroHR) / 2;
     let pose = poseAtHR(midHR, 0, yaw, pitch);
     let maxStep = 0;
     for (let i = 0; i < 60; i += 1) {
@@ -230,7 +230,7 @@ describe('frameAlignedRoll', () => {
     // Recede past the band top: the ride lands screen-up on the configured
     // global up — not its negation, not a perpendicular.
     let hr = midHR;
-    while (hr <= SURFACE_REGIME.disengageHR) {
+    while (hr <= TILT_BAND.zeroHR) {
       const nextHR = hr * 1.15;
       const next = frameAlignedRoll(
         poseAtHR(hr, pose.roll ?? 0, yaw, pitch),

@@ -13,6 +13,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
+import { TILT_BAND } from '../../data/camera/tiltBand';
 import DebugSection from './DebugSection';
 import OrientationTuning from './OrientationTuning';
 import styles from './CameraStateSection.module.css';
@@ -59,6 +60,10 @@ function groupsOf(snap: CameraDebugSnapshot): Group[] {
         {
           key: 'band_engage/disengage',
           value: `${SURFACE_REGIME.engageHR} / ${SURFACE_REGIME.disengageHR}`,
+        },
+        {
+          key: 'tilt_band_full/zero',
+          value: `${TILT_BAND.fullHR} / ${TILT_BAND.zeroHR}`,
         },
         { key: 'ceiling_maxTiltRad', value: num(snap.ceilingRad) },
         { key: 'band_up_weight', value: num(snap.bandUpWeight) },

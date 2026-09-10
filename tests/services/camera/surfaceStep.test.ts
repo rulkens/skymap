@@ -17,6 +17,7 @@ import {
 import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
 import { ORIENT_DECAY } from '../../../src/data/camera/orientDecay';
+import { TILT_BAND } from '../../../src/data/camera/tiltBand';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
@@ -38,9 +39,9 @@ const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 const POLE: Vec3 = [0, 0, 1];
 const CTX = { viewportPx: VIEWPORT, fovYRad: FOV, bodyRadiusM: R, sceneUpLocal: POLE };
 
-/** The band's geometric midpoint: `bodyUpWeight` blends in LOG h/R, so this is
- * where the weight is exactly ½ whatever the edges are set to. */
-const BAND_MID_HR = Math.sqrt(SURFACE_REGIME.engageHR * SURFACE_REGIME.disengageHR);
+/** The TILT band's geometric midpoint: `bodyUpWeight` blends in LOG h/R, so
+ * this is where the weight is exactly ½ whatever the edges are set to. */
+const BAND_MID_HR = Math.sqrt(TILT_BAND.fullHR * TILT_BAND.zeroHR);
 
 /** Parked at the midpoint, so `bodyUpWeight` is strictly in (0, 1) and the
  * un-map shows up in the numbers rather than as an identity. */
