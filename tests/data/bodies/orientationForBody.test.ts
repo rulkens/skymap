@@ -21,6 +21,7 @@ vi.mock('../../../src/data/bodies/rotationElements', async (importOriginal) => {
     },
   ];
   return {
+    ...actual,
     ROTATION_ELEMENTS: rows,
     rotationRowById: (id: string) => rows.find((r) => r.id === id) ?? null,
   };

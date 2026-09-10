@@ -13,10 +13,12 @@ import { seedIndexOfBody } from './seedIndexOfBody';
 import { starPickId } from './starPickId';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
 
-const BODY_ENTRIES = SOURCE_ENTRIES.filter((entry) => entry.type === 'body' && entry.id !== 'sun');
+const PACKABLE_BODY_ENTRIES = SOURCE_ENTRIES.filter(
+  (entry) => entry.type === 'body' && entry.id !== 'sun',
+);
 
 export function sceneBodyPickId(id: string): number | null {
-  for (const entry of BODY_ENTRIES) {
+  for (const entry of PACKABLE_BODY_ENTRIES) {
     const index = seedIndexOfBody(id, BODY_PICK_ROWS[entry.id as BodyId]);
     if (index >= 0) return packSelection(entry.code, index + PICK_SENTINEL_OFFSET);
   }

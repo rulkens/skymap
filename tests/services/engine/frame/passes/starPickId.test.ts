@@ -26,7 +26,7 @@ describe('starPickId', () => {
   });
 
   it('stamps the source code of the table the star actually came from', () => {
-    // The decode side (`PICK_SEEDS_BY_BODY_ID`) picks its seed array from this
+    // The decode side (`BODY_PICK_ROWS`) picks its seed array from this
     // code. Stamping FamousStar for an S-star would resolve index 12 to whatever
     // famous star sits at 12 — a plausible, silently wrong body.
     const s2 = unpackPick(starPickId('s2')!)!;

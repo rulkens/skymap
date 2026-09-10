@@ -1,12 +1,9 @@
 /**
  * orientationForBody — bake a scene body's local → equatorial-world rotation
- * from its id, the site every body maker bakes orientation through. A body
- * with no rotation row carries `IDENTITY_MAT3`: no facing modelled, not a
- * fabricated pole.
- *
- * `simDays` turns the prime meridian: `W = W₀ + Ẇ·(simDays − J2000)`, so at
- * `CONST_J2000` the result is the epoch facing, byte-identical to the
- * pre-clock bake.
+ * from its id. A body with no rotation row carries `IDENTITY_MAT3`: no facing
+ * modelled, not a fabricated pole. `simDays` turns the prime meridian:
+ * `W = W₀ + Ẇ·(simDays − J2000)`, so at `CONST_J2000` the result is the
+ * epoch facing.
  */
 
 import { rotationRowById } from './rotationElements';
@@ -17,6 +14,7 @@ import type { Mat3 } from '../../@types/math/Mat3';
 
 export function orientationForBody(id: string, simDays: number): Mat3 {
   const row = rotationRowById(id);
+
   // A fresh mutable copy of the shared readonly identity — the body record's
   // `orientation` is a mutable `Mat3`, and each body owns its own array.
   if (!row) return [...IDENTITY_MAT3] as Mat3;

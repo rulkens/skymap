@@ -97,7 +97,7 @@ can replace the table wholesale with `vi.mock`. There is no real id today with
 a rotation row but no texture entry — the mocked fixture row is the only way to
 get a test that fails before the change.
 
-- [ ] **Step 1: Write the failing test** in
+- [x] **Step 1: Write the failing test** in
       `tests/data/bodies/orientationForBody.test.ts`. Hoisted at the top of the
       file, mock the rotation table with a superset of the real rows:
 
@@ -129,13 +129,13 @@ is **not** equal to `[...IDENTITY_MAT3]`, and that a half-day later the
 applied local `+x` direction has moved (reuse the file's existing `apply`
 helper at `:11-15`, the same way the Earth test at `:23-37` does).
 
-- [ ] **Step 2: Run it and watch it fail.**
+- [x] **Step 2: Run it and watch it fail.**
       `npx vitest run tests/data/bodies/orientationForBody.test.ts`
       Expected: FAIL — the id is not in `BODY_TEXTURE_REGISTRY`, so the current
       gate returns identity. (`rotationRowById` not existing is also a fail;
       either way it must be red before Step 3.)
 
-- [ ] **Step 3: Replace `rotationById` with `rotationRowById`.**
+- [x] **Step 3: Replace `rotationById` with `rotationRowById`.**
       `npm run refactor -- rename src/data/bodies/rotationElements.ts rotationById rotationRowById`,
       then change the body to a non-throwing `find` returning `null`, drop the
       now-unused `findByIdOrThrow` import (it stays in use elsewhere —
@@ -144,7 +144,7 @@ helper at `:11-15`, the same way the Earth test at `:23-37` does).
       sites (`sceneEarth.test.ts:43`, `scenePlanets.test.ts:75`,
       `rotationElements.test.ts:33,64`).
 
-- [ ] **Step 4: Flip the gate** in `orientationForBody.ts`: look the row up
+- [x] **Step 4: Flip the gate** in `orientationForBody.ts`: look the row up
       first, return the identity copy when it is `null`, and delete the
       `bodyTextureSpec` import. Rewrite the module header (`:1-21`, currently
       four paragraphs on why texture membership is the sole gate — over the ≤ 10
@@ -152,7 +152,7 @@ helper at `:11-15`, the same way the Earth test at `:23-37` does).
       and the "identity is the honest 'no facing modelled' value" note, drop the
       texture-registry rationale.
 
-- [ ] **Step 5: Fix the two stale comments** the change falsifies:
+- [x] **Step 5: Fix the two stale comments** the change falsifies:
       `deriveBodyStates.ts:86` ("the texture-keyed facing gate stays one gate
       for every body") and `rotationElements.ts:1-2` ("for the fifteen textured
       bodies" — a rotation row no longer implies a texture). Update the two
@@ -160,7 +160,7 @@ helper at `:11-15`, the same way the Earth test at `:23-37` does).
       which explain the old gate by name; their assertions do not change (Titan
       and Sgr A\* have no rotation row either).
 
-- [ ] **Step 6: Delete the registry-count test.**
+- [x] **Step 6: Delete the registry-count test.**
       `tests/data/bodies/rotationElements.test.ts:10-11` asserts
       `expect(ROTATION_ELEMENTS).toHaveLength(15)`. That is a constant/registry
       restatement (`testing.md` — "no constant / registry restatements"): it
@@ -169,12 +169,12 @@ helper at `:11-15`, the same way the Earth test at `:23-37` does).
       duplicate-id and pole-declination checks in the same `it` block — those
       are structural invariants and stay.
 
-- [ ] **Step 7: Verify.**
+- [x] **Step 7: Verify.**
       `npx vitest run tests/data/bodies tests/services/engine/frame/deriveBodyStates.test.ts`
       → green, then `npm run typecheck:fast`, then `npx tsc --noEmit`.
       Every pre-existing assertion must pass unedited.
 
-- [ ] **Step 8: Commit** (stage the listed paths only).
+- [x] **Step 8: Commit** (stage the listed paths only).
 
 ```
 refactor(bodies): gate orientationForBody on rotation-row presence
@@ -243,28 +243,28 @@ PICK_SENTINEL_OFFSET)`. The entry carries both the `BodyId` key and the source
   is data rather than a branch chain, and the one line about the Sun's row being
   addressed by no layer's stamp.
 
-- [ ] **Step 1: Write the failing test** `tests/data/bodies/bodyPickRows.test.ts`
+- [x] **Step 1: Write the failing test** `tests/data/bodies/bodyPickRows.test.ts`
       with one test, `no id appears in two rows' seed tables`: flatten every
       row's ids and assert no duplicates. This is the invariant that makes a
       first-match scan well-defined — the day two rows share an id, one of them
       silently stops being pickable. (Structural invariant, not a registry
       restatement: it names neither the rows nor their count.)
 
-- [ ] **Step 2: Run it and watch it fail.**
+- [x] **Step 2: Run it and watch it fail.**
       `npx vitest run tests/data/bodies/bodyPickRows.test.ts`
       Expected: FAIL — module not found.
 
-- [ ] **Step 3: Create the table** per the Interfaces block and point
+- [x] **Step 3: Create the table** per the Interfaces block and point
       `resolvePickTable.ts`'s `body` arm at it, deleting the local
       `PICK_SEEDS_BY_BODY_ID`.
 
-- [ ] **Step 4: Rewrite `sceneBodyPickId`** as the scan plus the `starPickId`
+- [x] **Step 4: Rewrite `sceneBodyPickId`** as the scan plus the `starPickId`
       tail, hoisting the `type: 'body'` entry list to a module const rather than
       filtering `SOURCE_ENTRIES` per call. Rewrite its module header (`:1-10`,
       which enumerates the if-chain by name) to describe the table lookup, the
       Sun skip, and the unchanged `null`-means-SKIP contract.
 
-- [ ] **Step 5: Add the pack/unpack consistency case** to
+- [x] **Step 5: Add the pack/unpack consistency case** to
       `tests/services/engine/frame/passes/sceneBodyPickId.test.ts`:
       `a packed caption id resolves back to the body it was packed for` —
       for one id per row (`SCENE_EARTH.id`, `'moon'`, `SGR_A_STAR.id`, `'s2'`,
@@ -277,13 +277,13 @@ PICK_SENTINEL_OFFSET)`. The entry carries both the `BodyId` key and the source
       decoding as `Source.FamousStar` at `:35-37`**, must pass untouched: that
       line is the proof the Sun skip preserved behaviour.
 
-- [ ] **Step 6: Verify.**
+- [x] **Step 6: Verify.**
       `npx vitest run tests/data/bodies/bodyPickRows.test.ts tests/services/engine/frame/passes tests/services/engine/helpers`
       → green, then `npm run typecheck:fast`, then `npx tsc --noEmit`. Finish
       with a full `npm test` — the pick path is read from the label and
       selection layers too (`sceneBodyLabels.ts:144`).
 
-- [ ] **Step 7: Commit** (stage the listed paths only).
+- [x] **Step 7: Commit** (stage the listed paths only).
 
 ```
 refactor(pick): one body pick-row table for pack and unpack
