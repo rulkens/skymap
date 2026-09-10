@@ -153,7 +153,11 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       dirty = true;
     });
 
-    void initGpu(canvas)
+    // A 6 M-splat bake is 168 MB of core records in ONE storage binding, past
+    // the 128 MiB default; initGpu clamps the ask to the adapter's maximum.
+    void initGpu(canvas, {
+      requiredLimits: { maxStorageBufferBindingSize: Number.MAX_SAFE_INTEGER },
+    })
       .then((gpu) => {
         if (disposed) return;
         resources.gpu = gpu;
