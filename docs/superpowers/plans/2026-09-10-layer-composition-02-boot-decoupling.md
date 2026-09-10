@@ -342,7 +342,7 @@ export function wireImpostorSubsystems(
       `throws when texturedDisk/proceduralDisk renderers are null` — it now asserts a
       compile-time fact. Update that file's `makeState`/call sites for the new argument.
 - [ ] Add to `wireSlots.test.ts`: `boots without the disk renderers, skipping the impostor
-    wiring` — with both `state.gpu.*DiskRenderer` null the phase resolves, and
+wiring` — with both `state.gpu.*DiskRenderer` null the phase resolves, and
       `state.subsystems.texturedDisks` is still null. Fails the day someone reinstates a
       boot-wide requirement.
 - [ ] Commit.
@@ -401,12 +401,104 @@ alone.
 
 ---
 
+## Task 7 — home as data (amendment, 2026-09-10)
+
+**Ruling (user, at /feature-done):** `EngineHomeConfig` exposes no functions. Tasks 1–3
+lifted the Earth pose _recipe_ into the config; the recipe is keyed on nothing but the
+focus body, and both inputs it deferred (boot instant + orientation basis; the cinema URL
+read) are engine facts the phase computes anyway. The config names WHAT; the phase owns HOW.
+
+**Files:** `src/@types/engine/EngineHomeConfig.d.ts`, `src/compositions/earthHome.ts` →
+`src/data/selection/earthHome.ts` (move; `src/compositions/` is deleted — it arrives with
+(c)'s `app.ts`, the first file that needs it), `CLAUDE.md` (drop the Task 5 line),
+`src/services/engine/camera/earthHomePose.ts` → `bodyHomePose.ts` (rename via
+`npm run refactor -- rename`), `src/services/engine/camera/cameraFraming.ts`,
+`src/services/engine/phases/wireInput.ts`, `src/state/selection/watchGoHomeSaga.ts`;
+mirrors `tests/services/engine/camera/{earthHomePose→bodyHomePose,cameraFraming}.test.ts`,
+`tests/services/engine/phases/wireInput.test.ts`, `tests/state/selection/watchGoHomeSaga.test.ts`.
+
+**Contract:**
+
+```ts
+// src/@types/engine/EngineHomeConfig.d.ts — pure data
+export type EngineHomeConfig = {
+  /** The home target: framed by the boot pose AND seeded into the focus slot. `null` = no home. */
+  readonly focus: HomeFocusTarget | null;
+  /** Whether the home target is also seeded into the SELECT slot (ring + InfoCard). */
+  readonly seedSelection: boolean;
+};
+
+// src/data/selection/earthHome.ts — pure data, no services/ import, so src/data/ is its home
+export const EARTH_HOME: EngineHomeConfig = {
+  focus: followedBodyHome(EARTH_REF),
+  seedSelection: true,
+};
+
+// src/services/engine/camera/bodyHomePose.ts — earthHomePose generalised; Earth was
+// hard-coded twice (`deriveBodyStates(simDays).get('earth')`, `SCENE_EARTH.radiusM`).
+// Radius comes from the SCENE_BODIES row; throws if `bodyId` is in neither table.
+export function bodyHomePose(
+  bodyId: string,
+  simDays: number,
+  fovYRad: number,
+  frameBasis?: Mat3,
+): CameraPose;
+
+// src/services/engine/camera/cameraFraming.ts
+export function computeInitialCamera(args: {
+  bodyId: string | null; // null ⇒ the engine's neutral pose
+  fovYRad: number;
+  simDays: number;
+  frameBasis?: Mat3;
+}): InitialCam;
+```
+
+- The neutral pose (`bodyId: null`): target `[0, 0, 0]`, distance `INITIAL_DISTANCE_MPC`,
+  yaw/pitch = `orbitAnglesLookingAlong(GALACTIC_DISC_FORWARD, frameBasis)`. It is the
+  engine's, not a composition's; (c) may promote it to data when the reference engine
+  wants to choose. It lives in `cameraFraming.ts` beside the constants it reads.
+- `wireInput` computes the pose from `home.focus` (`bodyId: home.focus === null ? null :
+home.focus.ref.id`) with `DEFAULT_FOV_Y_RAD`, and gates the select seed on
+  `home.seedSelection && !isCinemaMode()`. The cinema rationale (≤ 3 lines) returns to the
+  phase: cinema is an app mode gating what the composition asked for, same class as the
+  deep-link deference guard. The seed's guard order/nesting is otherwise unchanged.
+- `watchGoHomeSaga` calls `bodyHomePose('earth', …)` — the Home-pill half keeps its own
+  Earth hard-coding (out of scope, unchanged).
+
+- [ ] Rename `earthHomePose` → `bodyHomePose` (file + mirror + references) as its own
+      mechanical commit; then the content edit: `bodyId` parameter, radius from
+      `SCENE_BODIES`, position from `deriveBodyStates(simDays).get(bodyId)`. Header: change
+      "Earth" to "the body" only where the sentence is about the mechanism; do not rewrite
+      the header otherwise.
+- [ ] `computeInitialCamera` gains `bodyId: string | null`; neutral branch as above.
+- [ ] `EngineHomeConfig` loses `pose`; `seedSelection` becomes `boolean`; drop the
+      `Mat3`/`InitialCam` imports. `earthHome.ts` becomes the data literal; header ≤ 3 lines;
+      move it to `src/data/selection/` via `npm run refactor -- move` and remove the empty
+      `src/compositions/` + the CLAUDE.md tree line.
+- [ ] `wireInput.ts` as above; re-import `computeInitialCamera`, `DEFAULT_FOV_Y_RAD`,
+      `isCinemaMode`.
+- [ ] Tests — adapt: `frames the boot camera …` asserts `bodyId: 'earth'` in the spy call;
+      `seeds focus but not select …` uses `seedSelection: false`; `dispatches no selection …`
+      also asserts the spy was called with `bodyId: null`. `cameraFraming.test.ts` passes
+      `bodyId: 'earth'` and adds `boots to the neutral Local-Group pose when there is no home
+  body` (`bodyId: null` ⇒ target origin, distance `INITIAL_DISTANCE_MPC`, yaw/pitch equal
+      `orbitAnglesLookingAlong(GALACTIC_DISC_FORWARD, basis)`). `bodyHomePose.test.ts` adds
+      `frames the requested body, not Earth` (`'mars'` at the same instant ⇒ target ≠ the
+      Earth pose's target and equals `bodyLikeFraming(marsPos, marsRadius, fov).target`).
+      Every fixture stub `home` literal drops `pose` and uses `seedSelection: false`.
+- [ ] `npm run typecheck` + `npm test` green. Commit (rename commit + content commit).
+
+**Reject if:** `EngineHomeConfig` has a function-typed field; `earthHome.ts` imports
+`services/`; `src/compositions/` still exists; the seed's guard order changed; the neutral pose lives anywhere but
+`cameraFraming.ts`; `watchGoHomeSaga` gained or lost behaviour.
+
 ## Definition of Done
 
 **Deliverable inventory**
 
 - [ ] `src/@types/engine/EngineHomeConfig.d.ts` and `HomeFocusTarget.d.ts` exist, one type
-      each; `createEngine` and `BootstrapDeps` both require a `home: EngineHomeConfig`.
+      each, **data only — no function-typed field** (Task 7); `createEngine` and
+      `BootstrapDeps` both require a `home: EngineHomeConfig`.
 - [ ] `src/compositions/earthHome.ts` exports `EARTH_HOME`, and it is the ONLY place the
       app's home pose recipe, home target and cinema branch are named.
 - [ ] `rg -n "EARTH_REF|isCinemaMode|computeInitialCamera" src/services/engine/phases` → empty.
