@@ -29,9 +29,8 @@ script or `/scene-workbench/` subpath.
 5. `npm run bake-splats` — trains a Gaussian splat and writes the `splats`
    asset into `public/data/geo3d/`. Needs `bake-lidar` to have already run
    for the group (its `points.bin` seeds the COLMAP model's `points3D`), and
-   `brush-cli` (Rust, `cargo install --git
-https://github.com/ArthurBrussee/brush brush-cli`) and PROJ's `cct` on
-   PATH.
+   `brush-cli` and PROJ's `cct` on PATH. Install brush with
+   `cargo install --git https://github.com/ArthurBrussee/brush brush-cli`.
    <!-- bake numbers: splatCount / shDegree / wall time — filled after the first real bake -->
 6. `npm run scene-workbench`
 
@@ -71,7 +70,8 @@ baked data — see that file's own doc for the `Blob` mechanism.
 The left panel's "Display" group holds one nested section per render layer.
 "Point cloud" has the point-size slider (`view.display.pointCloud.pointSizePx`,
 px). "Gaussian splats" sits beside it with two more: splat scale
-(`view.display.gaussianSplat.splatScale`) multiplies each splat's `3σ` quad
-half-extent; opacity scale (`view.display.gaussianSplat.opacityScale`)
+(`view.display.gaussianSplat.splatScale`) scales each splat's projected
+covariance by `s²` (the standard 3DGS scaling modifier); opacity scale
+(`view.display.gaussianSplat.opacityScale`)
 multiplies each splat's opacity. Both live in `DisplayPanel.tsx`, wired to
 `viewSlice`'s `setSplatScale`/`setOpacityScale`.
