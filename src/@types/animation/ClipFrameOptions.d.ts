@@ -13,10 +13,9 @@ export type ClipFrameOptions = {
   /** Body states at the clip-start instant — the leg-start conversion's frame. */
   readonly bodies?: ReadonlyMap<BodyId, BodyState>;
   /**
-   * This playback's identity (the `camera.clip` / `camera.tween` object). Each
-   * leg's start converts ONCE per playback; replaying the same `ClipData` under
-   * a new object re-converts. Absent ⇒ keyed on the compiled clip, so a replay
-   * would reuse the first playback's capture.
+   * This playback's identity (the `camera.clip` / `camera.tween` object): a
+   * leg's start converts once per playback. Absent ⇒ keyed on the compiled
+   * clip, so a replay would reuse the first playback's capture.
    */
   readonly playback?: object;
 };
