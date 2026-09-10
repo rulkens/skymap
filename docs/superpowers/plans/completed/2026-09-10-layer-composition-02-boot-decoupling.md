@@ -184,24 +184,24 @@ export function followedBodyHome(ref: Extract<SelectionRef, { type: 'body' }>): 
 export function bodyFollowsSimClock(id: string): boolean;
 ```
 
-- [ ] Extract the `ORBITAL_ELEMENTS` membership test out of
+- [x] Extract the `ORBITAL_ELEMENTS` membership test out of
       `bodyMovesThisFrame.ts:17` into `bodyFollowsSimClock`, and call it from both
       `bodyMovesThisFrame` and `followedBodyHome`. One home for the fact, per
       [`comments.md`](../conventions/comments.md)'s echo rule; `bodyMovesThisFrame` keeps
       its row-shaped signature and its module header (trim it to what still applies).
       Use `npm run refactor -- extract` for the move if it fits; otherwise hand-write the
       new file and re-point the one caller.
-- [ ] Narrow `EARTH_REF` to the body arm — `export const EARTH_REF = { type: 'body', id: 'earth' } as const satisfies SelectionRef;`
+- [x] Narrow `EARTH_REF` to the body arm — `export const EARTH_REF = { type: 'body', id: 'earth' } as const satisfies SelectionRef;`
       — so it is assignable to `followedBodyHome`'s parameter. Check
       `src/state/url/hashParamSources.ts:147-152` still compiles unchanged (its
       `EARTH_REF.type === 'body'` discriminant clause stays; do not "simplify" it here).
-- [ ] Add `tests/utils/scene/followedBodyHome.test.ts`: - `followedBodyHome returns the target for a body the sim clock propagates` —
+- [x] Add `tests/utils/scene/followedBodyHome.test.ts`: - `followedBodyHome returns the target for a body the sim clock propagates` —
       `followedBodyHome(EARTH_REF).ref` is `EARTH_REF`. - `followedBodyHome throws for a static anchor body` — `{ type: 'body', id: 'sun' }`
       (a `famousStars` anchor, deliberately absent from `ORBITAL_ELEMENTS`) throws. This
       is the test that fails the day someone points a composition's home at a body the
       focus-tween saga would tween to.
       No test that `followsSimClock === true`; the compiler owns that.
-- [ ] `npm run typecheck` + `npm test -- followedBodyHome bodyMovesThisFrame` green. Commit.
+- [x] `npm run typecheck` + `npm test -- followedBodyHome bodyMovesThisFrame` green. Commit.
 
 **Reject if:** the membership expression exists in two files; `HomeFocusTarget` carries a
 field that gets dispatched into the store; or a test restates a type fact.
@@ -234,12 +234,12 @@ export function createEngine(
 readonly home: EngineHomeConfig;
 ```
 
-- [ ] Write `EARTH_HOME`. Module header ≤ 10 lines: what earns its place is _why the two
+- [x] Write `EARTH_HOME`. Module header ≤ 10 lines: what earns its place is _why the two
       halves are functions_ (boot-time inputs) and _why cinema seeds focus only_ — the
       latter migrating from `wireInput.ts:236-241`, not duplicated there.
-- [ ] Thread it: `createEngine`'s third parameter onto `bootstrapDeps.home`
+- [x] Thread it: `createEngine`'s third parameter onto `bootstrapDeps.home`
       (`engine.ts:651-659`); `useEngine.ts:76` passes `EARTH_HOME`.
-- [ ] Update the 6 typed `BootstrapDeps` fixtures. `tests/services/engine/phases/wireInput.test.ts:200`
+- [x] Update the 6 typed `BootstrapDeps` fixtures. `tests/services/engine/phases/wireInput.test.ts:200`
       uses the real `EARTH_HOME` (Task 3 asserts against it); the other five —
       `phases/wireSlots.test.ts:525`, `phases/startLoop.test.ts:~90`,
       `phases/initGpu.hdrCapabilityWiring.test.ts:448`,
@@ -247,8 +247,8 @@ readonly home: EngineHomeConfig;
       `:415` — never read `home`, so give them a minimal inline literal rather than an
       import that couples them to the app composition. `phases/bootstrap.test.ts:98`'s
       `makeDeps(): any` needs no edit.
-- [ ] No phase reads `deps.home` yet — that is Task 3. This commit is threading only.
-- [ ] `npm run typecheck` + `npm test` green. Commit.
+- [x] No phase reads `deps.home` yet — that is Task 3. This commit is threading only.
+- [x] `npm run typecheck` + `npm test` green. Commit.
 
 **Reject if:** `EARTH_HOME` evaluates `isCinemaMode()`, `Date.now()` or a store read at
 module scope; `home` is optional anywhere; or `src/data/` gained a `services/` import.
@@ -272,25 +272,25 @@ if (home.seedSelection()) store.dispatch(updateSelectionSelect(home.focus.ref));
 store.dispatch(updateSelectionFocus(home.focus.ref));
 ```
 
-- [ ] Replace `wireInput.ts:150-157` with the `home.pose({ simDays, frameBasis })` call.
+- [x] Replace `wireInput.ts:150-157` with the `home.pose({ simDays, frameBasis })` call.
       `unixMsToJulianDays(Date.now())` and `ORIENTATION_FRAMES[selectOrientation(...)]` stay
       here, with their two rationale comments (`:144-149`, `:152-155`) — both explain a
       choice about the INPUT, which is still this file's decision.
-- [ ] Gate the seed block on `home.focus !== null`, inside or ahead of the existing
+- [x] Gate the seed block on `home.focus !== null`, inside or ahead of the existing
       `selectHasSelectionIntent` guard.
-- [ ] Drop the now-dead imports (`computeInitialCamera`, `DEFAULT_FOV_Y_RAD`, `EARTH_REF`,
+- [x] Drop the now-dead imports (`computeInitialCamera`, `DEFAULT_FOV_Y_RAD`, `EARTH_REF`,
       `isCinemaMode`) and the comment material the config now carries: `:200-207`
       (home-is-boot-state + the tween landmine, now `HomeFocusTarget`'s doc) and `:236-241`
       (the cinema rationale, now `EARTH_HOME`'s). **Keep** `:209-233` — the deep-link
       deference argument is mechanism this file owns.
-- [ ] Tests — adapt, don't duplicate: - keep `frames the boot camera at the canonical 60° FOV and the live sim instant`
+- [x] Tests — adapt, don't duplicate: - keep `frames the boot camera at the canonical 60° FOV and the live sim instant`
       (the `computeInitialCamera` module mock still fires, through `EARTH_HOME`'s recipe;
       it now proves the boot inputs reach the recipe, which is the wire that can break). - keep `seeds the home selection: select + focus pinned to Earth at boot`. - keep both deep-link tests unchanged. - add `seeds focus but not select when the home config withholds the selection` —
       a config with `seedSelection: () => false`: focus is `EARTH_REF`, select is null.
       This is the cinema behaviour, untested today; a regression puts a selection ring
       in every recorded frame that opens at home. - add `dispatches no selection at all for a composition with no home target` —
       `focus: null`: both slots null after the phase.
-- [ ] `npm run typecheck` + `npm test -- wireInput` green. Commit.
+- [x] `npm run typecheck` + `npm test -- wireInput` green. Commit.
 
 **Reject if:** the seed's two guards changed order or nesting semantics; the deep-link
 comment block was trimmed; or `wireInput.ts` still names Earth.
@@ -311,15 +311,15 @@ after Task 3 because two of them touch files Task 3 edits.
 
 **4a — `wireInput`'s early return (spec §9(b) bullet 2).**
 
-- [ ] Delete `wireInput.ts:66-69` (the `renderer` read and its guard) and the comment above
+- [x] Delete `wireInput.ts:66-69` (the `renderer` read and its guard) and the comment above
       it. Verified: `renderer` is referenced nowhere else in the file — re-check before
       deleting, and if a reference has appeared, guard that read alone, not the phase.
-- [ ] Add `wires the camera and the input bindings when galaxyPointRenderer is null` to
+- [x] Add `wires the camera and the input bindings when galaxyPointRenderer is null` to
       `wireInput.test.ts`: with `state.gpu.galaxyPointRenderer = null`, `state.cam` is
       non-null, `state.subsystems.inputBindings` is non-null, and `attachOrbitControls` was
       called. This is the test for the worst of the three failures — an engine with no
       input and no error.
-- [ ] Commit.
+- [x] Commit.
 
 **4b — `wireSlots`' disk-renderer precondition (bullet 1).** Per ruling 1 above.
 
@@ -334,30 +334,30 @@ export function wireImpostorSubsystems(
 ): void;
 ```
 
-- [ ] Delete `wireSlots.ts:93-101` and call `wireImpostorSubsystems` only when both
+- [x] Delete `wireSlots.ts:93-101` and call `wireImpostorSubsystems` only when both
       renderers narrow non-null at `wireSlots.ts:128`.
-- [ ] Delete `wireImpostorSubsystems.ts:48-53`'s throw and the "Why the renderer
+- [x] Delete `wireImpostorSubsystems.ts:48-53`'s throw and the "Why the renderer
       null-checks live here" header section; the parameters carry it now.
-- [ ] Delete `tests/.../wireImpostorSubsystems.test.ts`'s
+- [x] Delete `tests/.../wireImpostorSubsystems.test.ts`'s
       `throws when texturedDisk/proceduralDisk renderers are null` — it now asserts a
       compile-time fact. Update that file's `makeState`/call sites for the new argument.
-- [ ] Add to `wireSlots.test.ts`: `boots without the disk renderers, skipping the impostor
+- [x] Add to `wireSlots.test.ts`: `boots without the disk renderers, skipping the impostor
 wiring` — with both `state.gpu.*DiskRenderer` null the phase resolves, and
       `state.subsystems.texturedDisks` is still null. Fails the day someone reinstates a
       boot-wide requirement.
-- [ ] Commit.
+- [x] Commit.
 
 **4c — `startLoop`'s readiness subject (bullet 3).** Per ruling 2 above.
 
-- [ ] Replace `startLoop.ts:88-97`'s four-renderer throw with a `deps.phaseLocals` presence
+- [x] Replace `startLoop.ts:88-97`'s four-renderer throw with a `deps.phaseLocals` presence
       check that throws a phase-ordering error, and consume the checked binding at `:76` so
       the `!` assertion goes with it. Rewrite the `:77-87` comment down to the invariant
       that survives (≤ 3 lines); it must not narrate the change.
-- [ ] Rewrite the existing `throws a clear error when a required GPU renderer is null` test
+- [x] Rewrite the existing `throws a clear error when a required GPU renderer is null` test
       as the same claim against the new subject (`deps.phaseLocals` undefined ⇒ throws),
       and drop the renderer fields from `startLoop.test.ts`'s `makeState` if nothing else
       reads them.
-- [ ] `npm run typecheck` + `npm test -- phases wiring` green. Commit.
+- [x] `npm run typecheck` + `npm test -- phases wiring` green. Commit.
 
 **Reject if:** any of the three phases now fails silently on a reorder/skip of `initGpu`;
 a deleted throw was replaced by an equivalent one further down; or `state.gpu` reads gained
@@ -367,17 +367,17 @@ a deleted throw was replaced by an equivalent one further down; or `state.gpu` r
 
 **Files:** `CLAUDE.md` (the "Where to look" tree).
 
-- [ ] Add one line for `src/compositions/` to the tree, beside `components/` — the folder
+- [x] Add one line for `src/compositions/` to the tree, beside `components/` — the folder
       is real from Task 2 and an undocumented top-level `src/` directory is worse than a
       line spec §15 will rewrite anyway when `src/layers/` joins it.
-- [ ] Verified at plan time and expected to still hold — re-run and report:
+- [x] Verified at plan time and expected to still hold — re-run and report:
       `rg -n "wireInput|wireSlots|startLoop|EARTH_REF|isCinemaMode" docs/RENDERER.md docs/DATA.md docs/DEPLOY.md docs/BACKLOG.md docs/superpowers/conventions .claude/skills`
       → **empty**. If it is not, fix only identifier text.
-- [ ] Deliberately NOT touched: `docs/backlog/2026-07-30-boot-ordering-argument-nine-copies.md:29`
+- [x] Deliberately NOT touched: `docs/backlog/2026-07-30-boot-ordering-argument-nine-copies.md:29`
       and `docs/backlog/2026-08-16-windows-touchscreen-pinch-zoom.md:13` cite `wireInput.ts`
       line numbers that this PR moves. Both files say line numbers drift; chasing them turns
       a code PR into a docs edit (plan 01, Task 5). Neither backlog item is consumed here.
-- [ ] `npx prettier --write` on the touched markdown. Commit.
+- [x] `npx prettier --write` on the touched markdown. Commit.
 
 **Reject if:** a `docs/research/**`, `docs/grill-sessions/**`, `plans/completed/**` or
 `specs/completed/**` file was edited, or a backlog item was struck through rather than left
@@ -385,18 +385,18 @@ alone.
 
 ## Task 6 — gate
 
-- [ ] `npm run typecheck` (both projects) — green.
-- [ ] `npm test` — green. Expected delta: **+4 tests** (1 in Task 1, 2 in Task 3, 2 in
+- [x] `npm run typecheck` (both projects) — green.
+- [x] `npm test` — green. Expected delta: **+4 tests** (1 in Task 1, 2 in Task 3, 2 in
       Task 4, minus 1 deleted in 4b, and `startLoop`'s guard test is rewritten in place).
       Report the actual delta with the reason for any difference.
-- [ ] `npm run build` — green.
-- [ ] Visual smoke, on this worktree's dev server: - the main app boots at Earth, globe framed as before, with the Earth InfoCard
+- [x] `npm run build` — green.
+- [x] Visual smoke, on this worktree's dev server: - the main app boots at Earth, globe framed as before, with the Earth InfoCard
       pinned and the selection ring around it; - the same URL with `?cinema` boots at Earth, the globe stays framed as the sim clock
       advances (focus is seeded), and there is **no** selection ring and no InfoCard; - a `#focus=body-jupiter` deep link still wins over the home seed.
-- [ ] `git diff main --stat` — the diff should be net-negative in `src/services/engine/phases/`
+- [x] `git diff main --stat` — the diff should be net-negative in `src/services/engine/phases/`
       and add nothing outside the six new files, the four phase/wiring files, `engine.ts`,
       `useEngine.ts`, `earthRef.ts`, `bodyMovesThisFrame.ts` and the test mirrors.
-- [ ] Skipped on purpose, state it in the PR body: `npm run perf` — no pass, shader or
+- [x] Skipped on purpose, state it in the PR body: `npm run perf` — no pass, shader or
       per-frame statement changes.
 
 ---
@@ -465,19 +465,19 @@ home.focus.ref.id`) with `DEFAULT_FOV_Y_RAD`, and gates the select seed on
 - `watchGoHomeSaga` calls `bodyHomePose('earth', …)` — the Home-pill half keeps its own
   Earth hard-coding (out of scope, unchanged).
 
-- [ ] Rename `earthHomePose` → `bodyHomePose` (file + mirror + references) as its own
+- [x] Rename `earthHomePose` → `bodyHomePose` (file + mirror + references) as its own
       mechanical commit; then the content edit: `bodyId` parameter, radius from
       `SCENE_BODIES`, position from `deriveBodyStates(simDays).get(bodyId)`. Header: change
       "Earth" to "the body" only where the sentence is about the mechanism; do not rewrite
       the header otherwise.
-- [ ] `computeInitialCamera` gains `bodyId: string | null`; neutral branch as above.
-- [ ] `EngineHomeConfig` loses `pose`; `seedSelection` becomes `boolean`; drop the
+- [x] `computeInitialCamera` gains `bodyId: string | null`; neutral branch as above.
+- [x] `EngineHomeConfig` loses `pose`; `seedSelection` becomes `boolean`; drop the
       `Mat3`/`InitialCam` imports. `earthHome.ts` becomes the data literal; header ≤ 3 lines;
       move it to `src/data/selection/` via `npm run refactor -- move` and remove the empty
       `src/compositions/` + the CLAUDE.md tree line.
-- [ ] `wireInput.ts` as above; re-import `computeInitialCamera`, `DEFAULT_FOV_Y_RAD`,
+- [x] `wireInput.ts` as above; re-import `computeInitialCamera`, `DEFAULT_FOV_Y_RAD`,
       `isCinemaMode`.
-- [ ] Tests — adapt: `frames the boot camera …` asserts `bodyId: 'earth'` in the spy call;
+- [x] Tests — adapt: `frames the boot camera …` asserts `bodyId: 'earth'` in the spy call;
       `seeds focus but not select …` uses `seedSelection: false`; `dispatches no selection …`
       also asserts the spy was called with `bodyId: null`. `cameraFraming.test.ts` passes
       `bodyId: 'earth'` and adds `boots to the neutral Local-Group pose when there is no home
@@ -486,7 +486,7 @@ body` (`bodyId: null` ⇒ target origin, distance `INITIAL_DISTANCE_MPC`, yaw/pi
       `frames the requested body, not Earth` (`'mars'` at the same instant ⇒ target ≠ the
       Earth pose's target and equals `bodyLikeFraming(marsPos, marsRadius, fov).target`).
       Every fixture stub `home` literal drops `pose` and uses `seedSelection: false`.
-- [ ] `npm run typecheck` + `npm test` green. Commit (rename commit + content commit).
+- [x] `npm run typecheck` + `npm test` green. Commit (rename commit + content commit).
 
 **Reject if:** `EngineHomeConfig` has a function-typed field; `earthHome.ts` imports
 `services/`; `src/compositions/` still exists; the seed's guard order changed; the neutral pose lives anywhere but
@@ -496,25 +496,25 @@ body` (`bodyId: null` ⇒ target origin, distance `INITIAL_DISTANCE_MPC`, yaw/pi
 
 **Deliverable inventory**
 
-- [ ] `src/@types/engine/EngineHomeConfig.d.ts` and `HomeFocusTarget.d.ts` exist, one type
+- [x] `src/@types/engine/EngineHomeConfig.d.ts` and `HomeFocusTarget.d.ts` exist, one type
       each, **data only — no function-typed field** (Task 7); `createEngine` and
       `BootstrapDeps` both require a `home: EngineHomeConfig`.
-- [ ] `src/data/selection/earthHome.ts` exports `EARTH_HOME`, and it is the ONLY place the
+- [x] `src/data/selection/earthHome.ts` exports `EARTH_HOME`, and it is the ONLY place the
       app's home target is named as boot configuration (Task 7: the pose recipe is
       `bodyHomePose` mechanism keyed on that target; the cinema gate is `wireInput`'s).
-- [ ] `rg -n "EARTH_REF|EARTH_HOME|earthHomePose" src/services/engine/phases` → empty (Task 7:
+- [x] `rg -n "EARTH_REF|EARTH_HOME|earthHomePose" src/services/engine/phases` → empty (Task 7:
       `isCinemaMode` and `computeInitialCamera` are back in `wireInput` as mechanism).
-- [ ] `followedBodyHome` is the only producer of a `HomeFocusTarget`, and
+- [x] `followedBodyHome` is the only producer of a `HomeFocusTarget`, and
       `bodyFollowsSimClock` is the only expression of `ORBITAL_ELEMENTS` membership.
-- [ ] No boot phase throws on, or returns early for, a named renderer:
+- [x] No boot phase throws on, or returns early for, a named renderer:
       `rg -n "Renderer === null" src/services/engine/phases` → empty.
 
 **Named observable behaviours** (the Task 6 smoke pass)
 
-- [ ] Main app: boots at Earth, InfoCard pinned, selection ring present, no camera jump on
+- [x] Main app: boots at Earth, InfoCard pinned, selection ring present, no camera jump on
       the first follow frame.
-- [ ] `?cinema`: boots at Earth, focus follows the live globe, no ring, no InfoCard.
-- [ ] `#focus=body-jupiter`: the deep link wins; the home seed does not clobber it.
+- [x] `?cinema`: boots at Earth, focus follows the live globe, no ring, no InfoCard.
+- [x] `#focus=body-jupiter`: the deep link wins; the home seed does not clobber it.
 
 **The deferral boundary** — nothing else. No `EngineComposition`, no `layers`, no `tier` or
 `dataUrl` field, no Layer formed, no renderer moved, no reference engine.
