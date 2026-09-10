@@ -544,9 +544,14 @@ describe('replayInput', () => {
       target = next.followDistanceTarget!;
       register = poseAt(target, rollOfBase());
     };
-    // Converge the roll onto the ride's own fixed point first with factor-1
-    // notches, so the recession isolates the RIDE.
-    for (let i = 0; i < 60; i += 1) notch(0, i);
+    // Converge the roll onto the ride's own fixed point first, so the
+    // recession isolates the RIDE. The settle spends only what the zoom spends
+    // (ruling 2026-09-10), so the pre-converge is a DITHER at one altitude
+    // rather than a run of factor-1 notches.
+    for (let i = 0; i < 60; i += 1) {
+      notch(30, 2 * i);
+      notch(-30, 2 * i + 1);
+    }
     expect(Math.abs(rollOfBase())).toBeGreaterThan(0.05); // in-band target held
 
     // Ride clear of disengage — a quarter-band of overshoot, and a guard sized

@@ -97,6 +97,6 @@ describe('north-up toggle', () => {
       distance: SCENE_EARTH.radiusM * (1 + hr) * SCALE_UNITS.M_TO_MPC,
       roll: 0.7,
     });
-    expect(frameAlignedRoll(poseAtHR(2.0), poseAtHR(2.2), bodies, B, B)).toBe(0.7);
+    expect(frameAlignedRoll(poseAtHR(2.0), poseAtHR(2.2), bodies, B, B, 0.1)).toBe(0.7);
   });
 });

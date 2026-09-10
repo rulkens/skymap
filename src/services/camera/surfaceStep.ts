@@ -15,6 +15,7 @@ import type { SurfaceMemory } from '../../@types/camera/SurfaceMemory';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
+import { ORIENT_DECAY } from '../../data/camera/orientDecay';
 import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
 import { bodyUpWeight } from '../../utils/camera/bodyUpWeight';
@@ -107,6 +108,8 @@ export function surfaceStep(
           sceneUpLocal: BODY_LOCAL_FRAME.pole,
           heldAzimuthRad: mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
           pivotM: null,
+          // A drag carries no zoom; it spends the reference notch, unchanged.
+          logZoom: ORIENT_DECAY.notchLogZoom,
         });
   // Ruling 12: tilt-authoring handles update the memory. Un-mapping
   // through the band weight keeps the just-set display a FIXED POINT of

@@ -68,5 +68,8 @@ export function surfaceZoomStep(
     sceneUpLocal,
     preInBlendFrame?.azimuthRad ?? null,
     rememberedTiltRad,
+    // The settle is priced in the notch the USER turned, not the one
+    // `anchoredZoomStep` was allowed to spend after its [0.5, 2] fold clamp.
+    Math.abs(Math.log(factor)),
   );
 }

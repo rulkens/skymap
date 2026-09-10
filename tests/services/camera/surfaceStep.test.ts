@@ -20,8 +20,10 @@ import { ORIENT_DECAY } from '../../../src/data/camera/orientDecay';
 import { TILT_BAND } from '../../../src/data/camera/tiltBand';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
+import { eyeFrameOf } from '../../../src/utils/camera/eyeFrameOf';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
 import { raySphereRoots } from '../../../src/utils/math/raySphereRoots';
+import { normalize3 } from '../../../src/utils/math/normalize3';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
@@ -38,6 +40,10 @@ const FOV = Math.PI / 2; // tan(FOV/2) = 1 — one NDC unit is one eye-distance
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 const POLE: Vec3 = [0, 0, 1];
 const CTX = { viewportPx: VIEWPORT, fovYRad: FOV, bodyRadiusM: R, sceneUpLocal: POLE };
+
+/** The settle's per-notch cap, priced in the notch's log-zoom (ruling 2026-09-10). */
+const capOf = (factor: number): number =>
+  ORIENT_DECAY.capRadPerLogZoom * Math.abs(Math.log(factor));
 
 /** The TILT band's geometric midpoint: `bodyUpWeight` blends in LOG h/R, so
  * this is where the weight is exactly ½ whatever the edges are set to. */
@@ -367,11 +373,15 @@ describe('surfaceStep', () => {
     // The gesture is live, so the re-pick goes through the drag's last pixel.
     const fresh = pickThrough(tilted, [60, -20])!;
     expect(fresh).not.toBeNull();
-    const zoomedEye = eyeOf(apply(c, tilted, zoom(0.5, true)));
+    // A gentle notch on purpose: the settle is priced in the notch, so a
+    // factor-0.5 one spends ~0.7 rad about the anchor and drives the eye onto
+    // the standoff floor, whose radial push is what would break the law below.
+    const F = 0.9;
+    const zoomedEye = eyeOf(apply(c, tilted, zoom(F, true)));
     const rangeTo = (a: Vec3, e: Vec3): number => Math.hypot(e[0] - a[0], e[1] - a[1], e[2] - a[2]);
 
-    expect(rangeTo(fresh, zoomedEye)).toBeCloseTo(0.5 * rangeTo(fresh, eye), 12);
-    expect(rangeTo(anchor, zoomedEye)).not.toBeCloseTo(0.5 * rangeTo(anchor, eye), 6);
+    expect(rangeTo(fresh, zoomedEye)).toBeCloseTo(F * rangeTo(fresh, eye), 12);
+    expect(rangeTo(anchor, zoomedEye)).not.toBeCloseTo(F * rangeTo(anchor, eye), 6);
     expect(angleBetween(fresh, anchor)).toBeGreaterThan(0.5);
   });
 
@@ -414,14 +424,14 @@ describe('surfaceStep', () => {
     const c = makeSurfaceDriver();
     let pose = poseAt([0, 0, 2], basisAtTilt(2.4));
     let lastTilt = bodyAngle(pose);
-    for (let i = 0; i < 40; i += 1) {
+    for (let i = 0; i < 120; i += 1) {
       const upBefore: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
       pose = apply(c, pose, zoom(1.05, false));
       const upAfter: Vec3 = [pose.basisLocal[3], pose.basisLocal[4], pose.basisLocal[5]];
       const tilt = bodyAngle(pose);
       expect(tilt).toBeLessThanOrEqual(lastTilt + 1e-6);
       // Heading, tilt and level each contribute at most one cap per notch.
-      expect(angleBetween(upBefore, upAfter)).toBeLessThan(0.3 + 1e-9);
+      expect(angleBetween(upBefore, upAfter)).toBeLessThan(3 * capOf(1.05) + 1e-9);
       lastTilt = tilt;
     }
     expect(lastTilt).toBeLessThan(0.02);
@@ -437,8 +447,8 @@ describe('surfaceStep', () => {
     const start = poseAt([0, 0, 2], basisAt(1.2, 0.7));
     const out = apply(makeSurfaceDriver(), start, zoom(1.5, false));
 
-    expect(northUpOffset(out)).toBeCloseTo(1.1, 9);
-    expect(bodyAngle(out)).toBeCloseTo(0.6, 9);
+    expect(northUpOffset(out)).toBeCloseTo(1.2 - capOf(1.5), 9);
+    expect(bodyAngle(out)).toBeCloseTo(0.7 - capOf(1.5), 9);
   });
 
   it('an engaged recession blends the reference up onto the scene up by disengage (round 5)', () => {
@@ -580,8 +590,14 @@ describe('surfaceStep', () => {
     expect(maxTurn).toBeGreaterThan(0.05); // the flip really was crossed
     expect(maxTurn).toBeLessThanOrEqual(ORIENT_DECAY.rideBoundRad + 1e-9);
 
-    // Park in-band (factor-1 notches, target stable) ⇒ full convergence…
-    for (let i = 0; i < 60; i += 1) pose = apply(c, pose, zoom(1, false), sceneUp);
+    // Park in-band ⇒ full convergence. A park is a DITHER, not a hold: the
+    // settle only spends what the zoom spends (ruling 2026-09-10), so the
+    // altitude — and with it the blend target — returns to itself each pair
+    // while the deviation keeps draining.
+    for (let i = 0; i < 60; i += 1) {
+      pose = apply(c, pose, zoom(Math.exp(LN_NOTCH), false), sceneUp);
+      pose = apply(c, pose, zoom(Math.exp(-LN_NOTCH), false), sceneUp);
+    }
     // …then cross: the bake is on the scene up, the flip fully spent. One notch
     // past the edge, so the assertion below is not sitting on it.
     const crossNotches = Math.ceil(Math.log(SURFACE_REGIME.disengageHR / rideToHR) / 0.1) + 1;
@@ -662,18 +678,20 @@ describe('surfaceStep', () => {
   it('a recession decays an arrival tilt toward the band target by the CAP, never a snap', () => {
     // Excess the zoom did not author (this pose ARRIVED at tilt 1.4;
     // remembered is 0) eases toward the band target by the capped share —
-    // 0.25·1.4 exceeds the cap, so exactly one cap comes off. A factor-1
-    // notch isolates the decay: zero altitude change, zero target movement.
-    // Heading 0 keeps the whole basis turn attributable to tilt. (The old
+    // 1.4 exceeds the notch's cap, so exactly one cap comes off. The
+    // remembered tilt is 0, so the band target is 0 at every altitude and the
+    // notch moves it not at all — the decay is isolated even though the notch
+    // must now carry real zoom to buy any. Heading 0 keeps the whole basis
+    // turn attributable to tilt. (The old
     // ceiling-wall crossing invariant is superseded by ruling 12: driven
     // recessions cross disengage at exactly 0 because the band weight does —
     // pinned in rememberedTilt.test.ts.)
     const c = makeSurfaceDriver();
     const start = poseAt([0, 0, 3], basisAtTilt(1.4));
-    const out = apply(c, start, zoom(1, false));
+    const out = apply(c, start, zoom(1.5, false));
 
     const reduced = 1.4 - bodyAngle(out);
-    expect(reduced).toBeCloseTo(0.1, 3);
+    expect(reduced).toBeCloseTo(capOf(1.5), 3);
   });
 
   it('a receding staircase converges heading and tilt to the canonical framing', () => {
@@ -722,16 +740,17 @@ describe('surfaceStep', () => {
     const rollProxyOf = (p: BodyFixedPose): number => bankOf(p) / Math.sin(bodyAngle(p));
     expect(rollProxyOf(pose)).toBeGreaterThan(0.8); // the arrival really is banked
     let lastProxy = rollProxyOf(pose);
-    for (let i = 0; i < 8; i += 1) {
+    for (let i = 0; i < 17; i += 1) {
       const before = upOf(pose);
       pose = apply(c, pose, zoom(1.05, false));
-      expect(angleBetween(before, upOf(pose))).toBeLessThan(0.3 + 1e-9);
+      expect(angleBetween(before, upOf(pose))).toBeLessThan(3 * capOf(1.05) + 1e-9);
       const proxy = rollProxyOf(pose);
       expect(proxy).toBeLessThanOrEqual(lastProxy + 0.02);
       lastProxy = proxy;
     }
-    // Eight capped notches take ~0.8 rad of the 1.1 rad bank out — eased, not
-    // snapped (a naive `(heading, tilt)` rebuild would zero it in one tick).
+    // 0.83 of log-zoom's worth of capped notches takes ~0.8 rad of the 1.1 rad
+    // bank out — eased, not snapped (a naive `(heading, tilt)` rebuild would
+    // zero it in one tick).
     expect(lastProxy).toBeLessThan(0.4);
   });
 
@@ -747,7 +766,7 @@ describe('surfaceStep', () => {
     for (const psi of [3.0, -3.0]) {
       const start = poseAt([0, 0, R * 3], basisAt(psi, 0.6));
       const out = apply(c, start, zoom(1.5, false));
-      expect(headingOnAxis(out)).toBeCloseTo(Math.sign(psi) * 2.9, 9);
+      expect(headingOnAxis(out)).toBeCloseTo(Math.sign(psi) * (3.0 - capOf(1.5)), 9);
     }
   });
 
@@ -781,7 +800,7 @@ describe('surfaceStep', () => {
     expect(bodyAngle(pose)).toBeLessThan(0.02);
     // And no notch is a jump: heading, tilt and level are each capped per
     // tick, so even their composition stays a small bounded turn.
-    expect(maxTurn).toBeLessThan(0.3 + 1e-12);
+    expect(maxTurn).toBeLessThan(3 * capOf(0.8) + 1e-12);
   });
 
   it('measures north-up off SCREEN-UP, not off the forward azimuth', () => {
@@ -824,7 +843,7 @@ describe('surfaceStep', () => {
     );
 
     const zoomed = apply(makeSurfaceDriver(), start, zoom(1.2, false));
-    expect(headingOnAxis(zoomed)).toBeCloseTo(1.1, 12);
+    expect(headingOnAxis(zoomed)).toBeCloseTo(1.2 - capOf(1.2), 12);
   });
 
   it('round-trips: dive at an off-centre point, then recede to the base pose', () => {
@@ -1008,9 +1027,12 @@ describe('surfaceStep', () => {
     const receded = apply(c, pose, zoom(1.5, false));
     const upAfter: Vec3 = [receded.basisLocal[3], receded.basisLocal[4], receded.basisLocal[5]];
     const turned = angleBetween(upBefore, upAfter);
-    expect(turned).toBeGreaterThan(0.1 - 1e-9);
-    expect(turned).toBeLessThan(0.1 + 1e-9);
-    expect(Math.abs(headingOnAxis(receded))).toBeCloseTo(Math.abs(headingOnAxis(pose)) - 0.1, 9);
+    expect(turned).toBeGreaterThan(capOf(1.5) - 1e-9);
+    expect(turned).toBeLessThan(capOf(1.5) + 1e-9);
+    expect(Math.abs(headingOnAxis(receded))).toBeCloseTo(
+      Math.abs(headingOnAxis(pose)) - capOf(1.5),
+      9,
+    );
   });
 
   it('a curved pan cannot rotate the image — north survives the corner', () => {
@@ -1135,5 +1157,76 @@ describe('surfaceStep', () => {
 
     expect(hrOf(pose)).toBeLessThan(hrOf(IN_BAND));
     expect(next).toEqual(prev);
+  });
+});
+
+describe('the zoom settle is priced per unit of zoom, not per step (F1, ruling 2026-09-10)', () => {
+  // Standpoint 45° off the pole so the body ENU is non-degenerate, screen-up
+  // 150° off north, nadir-looking with no tilt memory — so the only thing a
+  // recession notch can move is the heading residual.
+  const LAT_RAD = Math.PI / 4;
+  const LU: Vec3 = [Math.sin(LAT_RAD), 0, Math.cos(LAT_RAD)];
+  const HEADING_RAD = (150 * Math.PI) / 180;
+
+  function headedPose(): BodyFixedPose {
+    const v = LU[2]; // pole · localUp, pole = +Z
+    const north = normalize3([-LU[0] * v, -LU[1] * v, 1 - LU[2] * v] as Vec3);
+    const east: Vec3 = [
+      north[1] * LU[2] - north[2] * LU[1],
+      north[2] * LU[0] - north[0] * LU[2],
+      north[0] * LU[1] - north[1] * LU[0],
+    ];
+    const c = Math.cos(HEADING_RAD);
+    const sn = Math.sin(HEADING_RAD);
+    const up: Vec3 = [
+      north[0] * c + east[0] * sn,
+      north[1] * c + east[1] * sn,
+      north[2] * c + east[2] * sn,
+    ];
+    const forward: Vec3 = [-LU[0], -LU[1], -LU[2]];
+    const right: Vec3 = [
+      forward[1] * up[2] - forward[2] * up[1],
+      forward[2] * up[0] - forward[0] * up[2],
+      forward[0] * up[1] - forward[1] * up[0],
+    ];
+    const m = R * (1 + BAND_MID_HR);
+    return {
+      bodyId: 'earth',
+      anchorLocalM: [0, 0, 0],
+      eyeRelAnchorM: [LU[0] * m, LU[1] * m, LU[2] * m],
+      basisLocal: [...right, ...up, ...forward] as Mat3,
+    };
+  }
+
+  /** Screen-up's azimuth off north in the pure body ENU — the settle's residual. */
+  function headingOf(pose: BodyFixedPose): number {
+    return eyeFrameOf(pose, 1, POLE)!.azimuthRad;
+  }
+
+  function recede(factor: number, steps: number): number {
+    const driver = makeSurfaceDriver();
+    let pose = headedPose();
+    const step: InputStep = { kind: 'zoom', factor, duringGesture: false, cursorPx: null };
+    for (let i = 0; i < steps; i += 1) pose = driver.apply(pose, step, VIEWPORT, FOV, R, POLE);
+    return headingOf(pose);
+  }
+
+  const TRACKPAD = 1.004; // deltaY +4, one high-resolution trackpad event
+  const STEPS = 24; // 0.4 s at 60 Hz — the reported "instant" reset
+
+  it('24 trackpad events keep the heading they started with', () => {
+    // Per STEP (the defect) each of these spent 25 % of the residual and the
+    // 0.1 rad cap: 90 % of the heading gone in under half a second, with the
+    // altitude barely moved. Priced per unit of zoom, they spend 0.096 rad.
+    const before = Math.abs(headingOf(headedPose()));
+    expect(Math.abs(recede(TRACKPAD, STEPS)) / before).toBeGreaterThan(0.9);
+  });
+
+  it('the same total zoom decays the same however it is delivered', () => {
+    // The composition property, through the real driver: what makes a
+    // trackpad and a mouse converge on the same heading at the same altitude.
+    const total = TRACKPAD ** STEPS;
+    expect(recede(total, 1)).toBeCloseTo(recede(TRACKPAD, STEPS), 8);
+    expect(recede(Math.sqrt(total), 2)).toBeCloseTo(recede(total, 1), 8);
   });
 });

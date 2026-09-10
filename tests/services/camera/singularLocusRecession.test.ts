@@ -119,9 +119,10 @@ describe('singular-locus recession (round 7)', () => {
         hr = Math.hypot(...eyeOf(pose)) - 1;
         guard += 1;
       }
-      // No whip: rideBound + azimuth cap + level cap, with slack.
+      // No whip: rideBound + azimuth cap + level cap, with slack. Both caps
+      // are priced in THIS notch's log-zoom, so the envelope scales with `lnf`.
       expect(maxTurn).toBeLessThanOrEqual(
-        ORIENT_DECAY.rideBoundRad + 2 * ORIENT_DECAY.capRad + 0.02,
+        ORIENT_DECAY.rideBoundRad + 2 * ORIENT_DECAY.capRadPerLogZoom * lnf + 0.02,
       );
 
       // The bake carries the intrinsic remainder (measured ≈ 2.6–2.8 rad) —
@@ -142,6 +143,7 @@ describe('singular-locus recession (round 7)', () => {
           BODIES,
           B,
           B,
+          lnf,
         );
         whr = nextHR;
         drain += 1;

@@ -57,8 +57,13 @@ describe('tilt lerp round trip (ruling 13)', () => {
     // a coarse last increment inflates it.
     seedRememberedTilt(h, { targetRad: 0.35, guard: 6, pxStep: 2 });
 
-    // Converge the engaged display onto the memory before tracing.
-    for (let i = 0; i < 12; i += 1) h.wheel(0.0001);
+    // Converge the engaged display onto the memory before tracing. The settle
+    // spends only what the zoom spends (ruling 2026-09-10), so this is a
+    // DITHER at one altitude, not a run of vanishing notches.
+    for (let i = 0; i < 30; i += 1) {
+      h.wheel(30);
+      h.wheel(-30);
+    }
     const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
     expect(remembered).toBeGreaterThan(0.3);
     expect(Math.abs(tiltOverBody(h.state, EARTH) - remembered)).toBeLessThan(0.03); // converged

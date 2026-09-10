@@ -34,6 +34,10 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
 const EARTH = BODIES.get('earth')!;
+// Every step here is one deltaY-100 mouse notch — the calibration point, where
+// the per-log-zoom settle spends the ruled 25 % / 0.1 rad.
+const NOTCH = ORIENT_DECAY.notchLogZoom;
+const NOTCH_CAP = ORIENT_DECAY.capRadPerLogZoom * NOTCH;
 
 /** Eye at h/R over Earth, looking at its centre, with the given roll. */
 function poseAtHR(hr: number, roll: number, yaw = 0.7, pitch = 0.3): CameraPose {
@@ -50,7 +54,7 @@ function poseAtHR(hr: number, roll: number, yaw = 0.7, pitch = 0.3): CameraPose 
 function convergedRoll(pose: CameraPose, frame: Readonly<Mat3>, iterations = 200): number {
   let p = pose;
   for (let i = 0; i < iterations; i += 1) {
-    p = { ...p, roll: frameAlignedRoll(p, p, BODIES, frame, frame) };
+    p = { ...p, roll: frameAlignedRoll(p, p, BODIES, frame, frame, NOTCH) };
   }
   return p.roll ?? 0;
 }
@@ -94,15 +98,15 @@ describe('frameAlignedRoll', () => {
     // MUST spend itself up here — deviation-only capped decay toward roll 0,
     // never a ride (the target is static above the band). Ruled cost: a
     // deep-space arrival roll bleeds off on notches too.
-    const stepped = frameAlignedRoll(poseAtHR(5, 1.4), poseAtHR(5.5, 1.4), BODIES, B, B);
-    expect(stepped).toBeCloseTo(1.4 - ORIENT_DECAY.capRad, 12);
+    const stepped = frameAlignedRoll(poseAtHR(5, 1.4), poseAtHR(5.5, 1.4), BODIES, B, B, NOTCH);
+    expect(stepped).toBeCloseTo(1.4 - NOTCH_CAP, 12);
 
     let roll = 2.0; // worst-cell-class residual
     let hr = 3.6;
     let notches = 0;
     while (Math.abs(roll) >= 1e-2 && notches < 40) {
       const nextHR = hr * 1.15;
-      roll = frameAlignedRoll(poseAtHR(hr, roll), poseAtHR(nextHR, roll), BODIES, B, B);
+      roll = frameAlignedRoll(poseAtHR(hr, roll), poseAtHR(nextHR, roll), BODIES, B, B, NOTCH);
       hr = nextHR;
       notches += 1;
     }
@@ -124,7 +128,7 @@ describe('frameAlignedRoll', () => {
       const nextHR = hr * 1.15;
       const pre = poseAtHR(hr, roll);
       const post = poseAtHR(nextHR, roll);
-      const next = frameAlignedRoll(pre, post, BODIES, B, B);
+      const next = frameAlignedRoll(pre, post, BODIES, B, B, NOTCH);
       // The notch's own target delta, measured off the ride's fixed points —
       // above the band the target is 0 structurally (the probe is inert there).
       const targetPost =
@@ -152,7 +156,7 @@ describe('frameAlignedRoll', () => {
     let roll = convergedRoll(poseAtHR(hr, 0), alt, 300);
     while (hr <= TILT_BAND.zeroHR) {
       const nextHR = hr * 1.15;
-      roll = frameAlignedRoll(poseAtHR(hr, roll), poseAtHR(nextHR, roll), BODIES, alt, alt);
+      roll = frameAlignedRoll(poseAtHR(hr, roll), poseAtHR(nextHR, roll), BODIES, alt, alt, NOTCH);
       hr = nextHR;
     }
     expect(Math.abs(roll)).toBeLessThan(1e-9);
@@ -180,18 +184,19 @@ describe('frameAlignedRoll', () => {
         BODIES,
         B,
         B,
+        NOTCH,
       );
       maxStep = Math.max(maxStep, Math.abs(next - roll));
       roll = next;
       hr = nextHR;
     }
-    expect(maxStep).toBeLessThanOrEqual(ORIENT_DECAY.rideBoundRad + ORIENT_DECAY.capRad + 1e-9);
+    expect(maxStep).toBeLessThanOrEqual(ORIENT_DECAY.rideBoundRad + NOTCH_CAP + 1e-9);
 
     // Park in-band: the target is stable, so the deviation decays to it.
     let pose = poseAtHR(hr, roll, 0, -1.4);
     const settled = convergedRoll(pose, B, 300);
     pose = { ...pose, roll: settled };
-    const drift = Math.abs(frameAlignedRoll(pose, pose, BODIES, B, B) - settled);
+    const drift = Math.abs(frameAlignedRoll(pose, pose, BODIES, B, B, NOTCH) - settled);
     expect(drift).toBeLessThan(1e-9); // genuinely at the fixed point — converged
   });
 
@@ -220,7 +225,7 @@ describe('frameAlignedRoll', () => {
     let pose = poseAtHR(midHR, 0, yaw, pitch);
     let maxStep = 0;
     for (let i = 0; i < 60; i += 1) {
-      const next = frameAlignedRoll(pose, pose, BODIES, B, B);
+      const next = frameAlignedRoll(pose, pose, BODIES, B, B, NOTCH);
       maxStep = Math.max(maxStep, Math.abs(next - (pose.roll ?? 0)));
       pose = { ...pose, roll: next };
     }
@@ -238,6 +243,7 @@ describe('frameAlignedRoll', () => {
         BODIES,
         B,
         B,
+        NOTCH,
       );
       maxStep = Math.max(maxStep, Math.abs(next - (pose.roll ?? 0)));
       pose = poseAtHR(nextHR, next, yaw, pitch);

@@ -44,6 +44,8 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
+/** The script drives deltaY-100 notches — the settle's calibration point. */
+const NOTCH_CAP = ORIENT_DECAY.capRadPerLogZoom * ORIENT_DECAY.notchLogZoom;
 
 type FrameSample = { readonly arm: string; readonly up: Vec3; readonly w: number };
 
@@ -109,9 +111,7 @@ describe('engage-flip pop (round 8)', () => {
       expect(flipAt).toBeGreaterThan(0);
 
       // No whip anywhere near engage — the ruled per-notch envelope.
-      expect(maxPre).toBeLessThanOrEqual(
-        ORIENT_DECAY.rideBoundRad + 2 * ORIENT_DECAY.capRad + 0.02,
-      );
+      expect(maxPre).toBeLessThanOrEqual(ORIENT_DECAY.rideBoundRad + 2 * NOTCH_CAP + 0.02);
       // Seamless hand-off: the conversion notch spends the SAME image turn per
       // unit weight as the world-armed notch before it (0.268 rad/w on this
       // dive, both spaces — the pole↔scene-up separation at the locus). A
@@ -122,7 +122,7 @@ describe('engage-flip pop (round 8)', () => {
       const preRate = notches[flipAt - 1]!.rate;
       expect(notches[flipAt]!.rate).toBeCloseTo(preRate, 1);
       // And the whole post-flip window, normalized by the weight it spent: the
-      // engaged settle LAGS the field (0.25 share per write) and re-converges,
+      // engaged settle LAGS the field (0.25 share at this notch) and re-converges,
       // so this sits just under the notch rate — 0.25 rad/w here. A seam's
       // capped walk-out would spend its fresh 0.119 rad on top, ~1.4×.
       let cumPost = 0;

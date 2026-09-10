@@ -158,16 +158,21 @@ describe('remembered tilt (ruling 12)', () => {
     it('display tilt converges to remembered × w mid-window and crosses disengage at 0', () => {
       ORIENT_TUNING.blendSpace = space;
       const c = makeSurfaceDriver();
-      const set = tiltOf(setTiltByDrag(c, poseAt([0, 0, 1 + TILT_BAND.fullHR], NADIR), 20));
+      const tilted = setTiltByDrag(c, poseAt([0, 0, 1 + TILT_BAND.fullHR / 2], NADIR), 20);
+      const set = tiltOf(tilted);
       expect(set).toBeGreaterThan(0.1);
 
-      // Park at the tilt band's geometric midpoint: the settle converges onto
-      // the mapped display — the value DIFFERS between the two spaces, which
-      // is what makes this a discriminating fixture, not a mirror.
+      // Recede from the just-set pose (weight 1 there, so display = memory) to
+      // the tilt band's geometric midpoint: the target's own move RIDES in
+      // full, so the display lands on the mapping without spending any decay
+      // — which is what makes this survive the settle being priced per unit of
+      // zoom. The value DIFFERS between the two spaces, which is what makes
+      // this a discriminating fixture, not a mirror.
       const hrMid = midBandHR();
-      let pose = poseAt([0, 0, 1 + hrMid], NADIR);
-      for (let i = 0; i < 90; i += 1) pose = apply(c, pose, zoom(1));
-      expect(tiltOf(pose)).toBeCloseTo(set * bodyUpWeight(hrMid), 6);
+      let pose = tilted;
+      expect(bodyUpWeight(hrOf(pose))).toBeCloseTo(1, 12);
+      while (hrOf(pose) < hrMid) pose = apply(c, pose, zoom(Math.exp(0.02)));
+      expect(tiltOf(pose)).toBeCloseTo(set * bodyUpWeight(hrOf(pose)), 6);
 
       // Recede from the converged state: the ride tracks the mapping exactly,
       // so the first pose past disengage carries tilt 0 — the invariant the

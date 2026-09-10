@@ -7,6 +7,7 @@
  * target is structurally the scene up, so the formula reduces to deviation-only
  * capped decay — the drain for the singular-locus debt (~π a band crossing cannot
  * spend at the no-whip rate), at the ruled cost of arrival roll on at-rest notches.
+ * `logZoom` (`|ln factor|`) prices that decay, so it is only ever called on a notch.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
@@ -69,6 +70,7 @@ export function frameAlignedRoll(
   bodyStates: ReadonlyMap<BodyId, BodyState>,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
+  logZoom: number,
 ): number {
   const currentRoll = postPose.roll ?? 0;
   // Ruling 11 trial: north-up off switches the roll authority off whole —
@@ -82,6 +84,7 @@ export function frameAlignedRoll(
   const dPre = wrapRad(currentRoll - tPre);
   const dNewRaw = wrapRad(currentRoll - tNew);
   return (
-    currentRoll - riddenOrientStepRad(dPre, wrapRad(dNewRaw - dPre), ORIENT_DECAY.rideBoundRad)
+    currentRoll -
+    riddenOrientStepRad(dPre, wrapRad(dNewRaw - dPre), ORIENT_DECAY.rideBoundRad, logZoom)
   );
 }

@@ -26,7 +26,9 @@ import { wrapRad } from '../math/wrapRad';
  * (Q4c); a recession turns about the eye (anchor-pivoting there cancels
  * ~h/(R+h) of every correction, measured). `northUp` (ruling 11) gates
  * heading + roll only: the tilt term's 0-at-disengage is what keeps the
- * fold's retarget view-exact, toggle or no toggle.
+ * fold's retarget view-exact, toggle or no toggle. Every settle amount here is
+ * priced in `logZoom` (`|ln factor|`), so a trackpad twitch and a mouse notch
+ * of equal total zoom converge on the same orientation (`ORIENT_DECAY`).
  */
 export function settledZoomPose(
   pose: BodyFixedPose,
@@ -36,6 +38,7 @@ export function settledZoomPose(
   sceneUpLocal: Readonly<Vec3>,
   preBlendAzimuthRad: number | null,
   rememberedTiltRad: number,
+  logZoom: number,
 ): BodyFixedPose {
   let out = pose;
   const eyeM0 = bodyFixedEyeM(out);
@@ -54,8 +57,13 @@ export function settledZoomPose(
     // pre-notch pose against ITS reference) decays.
     const dPre = preBlendAzimuthRad ?? f0.azimuthRad;
     const dPsi = diveAnchorM
-      ? orientStepRad(f0.azimuthRad)
-      : riddenOrientStepRad(dPre, wrapRad(f0.azimuthRad - dPre), ORIENT_DECAY.rideBoundRad);
+      ? orientStepRad(f0.azimuthRad, logZoom)
+      : riddenOrientStepRad(
+          dPre,
+          wrapRad(f0.azimuthRad - dPre),
+          ORIENT_DECAY.rideBoundRad,
+          logZoom,
+        );
     if (dPsi !== 0) {
       out = diveAnchorM
         ? turnedPose(
@@ -78,11 +86,21 @@ export function settledZoomPose(
       tiltFromNadirRad([b[6], b[7], b[8]], eyeM1) -
       mappedTiltRad(rememberedTiltRad, eyeMag1 / bodyRadiusM - 1);
     const devPre = preTiltDevRad ?? devNew;
-    out = tiltTurnedPose(out, -riddenOrientStepRad(devPre, devNew - devPre, Infinity), diveAnchorM);
+    out = tiltTurnedPose(
+      out,
+      -riddenOrientStepRad(devPre, devNew - devPre, Infinity, logZoom),
+      diveAnchorM,
+    );
   }
 
   if (ORIENT_TUNING.northUp) {
-    out = levelledPose(out, { blendW, sceneUpLocal, heldAzimuthRad: null, pivotM: diveAnchorM });
+    out = levelledPose(out, {
+      blendW,
+      sceneUpLocal,
+      heldAzimuthRad: null,
+      pivotM: diveAnchorM,
+      logZoom,
+    });
   }
   // A tilt about a surface anchor holds |eye − anchor|, not |eye|.
   return flooredBodyPose(out, bodyRadiusM);

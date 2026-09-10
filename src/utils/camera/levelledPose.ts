@@ -14,7 +14,8 @@ import { turnedPose } from './turnedPose';
  * inputs. Drags level in the pure body ENU (`blendW` 1) and hold the heading
  * they entered with (`heldAzimuthRad` — a curved pan cannot rotate the
  * image); zoom notches level in the band-blended frame at the pose's own
- * azimuth, about the dive anchor or the eye.
+ * azimuth, about the dive anchor or the eye. `logZoom` prices the cap in the
+ * notch (`ORIENT_DECAY`); a drag carries no zoom and spends `notchLogZoom`.
  */
 export function levelledPose(
   pose: BodyFixedPose,
@@ -23,12 +24,17 @@ export function levelledPose(
     readonly sceneUpLocal: Readonly<Vec3>;
     readonly heldAzimuthRad: number | null;
     readonly pivotM: Readonly<Vec3> | null;
+    readonly logZoom: number;
   },
 ): BodyFixedPose {
+  // A zero-zoom notch is inert on orientation, and the identity turn a zero cap
+  // yields would still hand the caller a fresh pose object (which reads as a move).
+  const capRad = ORIENT_DECAY.capRadPerLogZoom * Math.abs(args.logZoom);
+  if (capRad === 0) return pose;
   const frame = eyeFrameOf(pose, args.blendW, args.sceneUpLocal);
   if (frame === null) return pose;
   const target = canonicalBasisAt(frame, args.heldAzimuthRad ?? frame.azimuthRad, frame.tiltRad);
-  const q = cappedRotationToward(pose.basisLocal, target, ORIENT_DECAY.capRad);
+  const q = cappedRotationToward(pose.basisLocal, target, capRad);
   if (q === null) return pose;
   return turnedPose(pose, q, args.pivotM);
 }

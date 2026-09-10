@@ -1,4 +1,5 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import { ORIENT_DECAY } from '../../data/camera/orientDecay';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { mappedTiltRad } from './mappedTiltRad';
 import { maxTiltRad } from './maxTiltRad';
@@ -32,7 +33,10 @@ export function walledTiltPose(
   const hr = eyeMagM / bodyRadiusM - 1;
   const ceilingRad = Math.max(maxTiltRad(hr), mappedTiltRad(rememberedTiltRad, hr));
   const allowed = Math.min(tiltRad, Math.max(ceilingRad, Math.min(preTiltRad, tiltRad)));
-  const target = allowed - orientStepRad(Math.max(0, allowed - ceilingRad));
+  // A drag is not zoom-driven: it spends the reference notch, i.e. what this
+  // wall has always spent per step (the per-zoom pricing is the zoom path's).
+  const target =
+    allowed - orientStepRad(Math.max(0, allowed - ceilingRad), ORIENT_DECAY.notchLogZoom);
   if (target >= tiltRad - 1e-15) return pose;
   return tiltTurnedPose(pose, target - tiltRad, null);
 }

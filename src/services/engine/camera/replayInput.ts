@@ -152,7 +152,14 @@ export function replayInput(
     );
     if (step.kind === 'zoom') {
       // The roll ride runs on every driven zoom path, gesture-held included.
-      const roll = frameAlignedRoll(world, next, bodies, poseBasis, upBasis);
+      const roll = frameAlignedRoll(
+        world,
+        next,
+        bodies,
+        poseBasis,
+        upBasis,
+        Math.abs(Math.log(step.factor)),
+      );
       next = { ...next, roll };
     }
     if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
@@ -201,6 +208,9 @@ export function replayInput(
 
       case 'zoom': {
         lastZoomFactor = step.factor;
+        // The settles are priced per unit of zoom, not per step (user ruling
+        // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
+        const logZoom = Math.abs(Math.log(step.factor));
         // In a body arm both zoom owners route to the anchored step (§7).
         if (routeToSurface(step)) break;
         if (step.duringGesture) {
@@ -228,6 +238,7 @@ export function replayInput(
             bodies,
             poseBasis,
             upBasis,
+            logZoom,
           );
           if (roll !== (basePose.roll ?? 0))
             emit(commitCameraPose(absoluteArm({ ...basePose, roll })));
@@ -247,7 +258,14 @@ export function replayInput(
         if (zoomed !== null && camera.base.frame === 'absolute') {
           // `base` is centre-looking by wiring (R12-1), so the pre/post pair is
           // self-consistent under an autoRotate-owned notch too.
-          const roll = frameAlignedRoll(camera.base.pose, zoomed, bodies, poseBasis, upBasis);
+          const roll = frameAlignedRoll(
+            camera.base.pose,
+            zoomed,
+            bodies,
+            poseBasis,
+            upBasis,
+            logZoom,
+          );
           register = absoluteArm({ ...zoomed, roll });
           emit(commitCameraPose(register));
         }
