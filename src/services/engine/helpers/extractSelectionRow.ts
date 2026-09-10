@@ -63,11 +63,7 @@ const EXTRACT_ROW: {
       // Only the AnchorPointBody arm of the SceneBody union carries these fields.
       standoffRadii: 'standoffRadii' in body ? body.standoffRadii : undefined,
       focusDistanceRadii: 'focusDistanceRadii' in body ? body.focusDistanceRadii : undefined,
-      // Only the MeshBody arm carries `description` — not every SceneBody arm
-      // declares it, so the property access narrows via an inline cast rather
-      // than `body.description` directly; the `in` check is still what gates it.
-      description:
-        'description' in body ? (body as { description?: string }).description : undefined,
+      description: 'description' in body ? body.description : undefined,
     };
   },
   // The star's physical fields are resolved off the LIVE catalog through the
