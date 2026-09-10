@@ -113,6 +113,7 @@ import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameD
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
+import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -772,7 +773,9 @@ describe('runFrame — sim clock (Task 8)', () => {
     // step runs (the resolver calls only the highest-priority active driver's
     // pose). The renderer stays null, so the frame bails right after produce.
     const stub: CameraDriver = {
-      id: 'resting',
+      // Not a real row id: `commitOnEdge` resolves `prevWinner` against this
+      // list, so a colliding label would shadow the row it names.
+      id: 'stub' as DriverId,
       priority: 1000,
       isActive: () => true,
       pose: (_ctx, mem) => {
@@ -1060,7 +1063,7 @@ describe('runFrame — effective intent', () => {
     const h = makeCameraSimHarness({ focusBody: null });
     let seen: RootState | null = null;
     const probe: CameraDriver = {
-      id: 'resting',
+      id: 'probe' as DriverId,
       priority: 1000,
       isActive: () => true,
       pose: (ctx, mem) => {

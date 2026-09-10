@@ -168,7 +168,11 @@ function followPose(
  * a body-framed one is DECODED (spec §8) — its angles are about the body's own
  * axes, which no orientation frame touches, so the re-encode must not run.
  */
-function framedClipArm(evaluated: FramedClipPose, from: Mat3, to: Mat3): FramedCameraPose {
+function framedClipArm(
+  evaluated: FramedClipPose,
+  from: Readonly<Mat3>,
+  to: Readonly<Mat3>,
+): FramedCameraPose {
   const { frame, channels } = evaluated;
   if (frame === 'absolute') return absoluteArm(reencodePose(channels, from, to));
   return { frame, pose: decodeBodyFixedChannels(channels, frame.body) };

@@ -22,8 +22,9 @@ export type DriverCtx = {
   readonly authoredWorld: CameraPose;
   readonly winnerLastFrame: DriverId;
   /** The frame's COMMITTED orientation basis (`stepCameraRuntime`); the live
-   * `upBasis` is the fold's, and no driver reads it. */
-  readonly poseBasis: Mat3;
+   * `upBasis` is the fold's, and no driver reads it. `Readonly` because it
+   * ALIASES the `ORIENTATION_FRAMES` entry — a write here corrupts the registry. */
+  readonly poseBasis: Readonly<Mat3>;
   /** Julian days. */
   readonly simDays: number;
   readonly projection: CameraProjection;

@@ -70,7 +70,7 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
 
 const ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   ['src/services/engine/frame/runFrame.ts', "the frame's one install of stepCameraRuntime's next"],
-  ['src/services/engine/phases/wireInput.ts', 'the boot seed, once, when state.cam is built'],
+  ['src/services/engine/phases/wireInput.ts', 'the boot seed, once, at bootstrap'],
 ]);
 
 const project = new Project({ useInMemoryFileSystem: false });
