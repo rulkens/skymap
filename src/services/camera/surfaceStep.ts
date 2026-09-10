@@ -4,9 +4,7 @@
  * the ground under a gesture; every mode moves the pose so the grabbed content
  * follows the cursor, which fixes each sign below. One orientation authority
  * (R1): gestures never create roll. Tilt is Cesium-style (ruling 12): display =
- * `remembered × bodyUpWeight(h/R)`; only tilt/look write it. Flat `{gesture,
- * pointerDown}` can spell "latched with the pointer up" — the nesting it
- * replaced could not — so the drag arm checks it rather than trusting it.
+ * `remembered × bodyUpWeight(h/R)`; only tilt/look write it.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -38,7 +36,6 @@ type SurfaceStepCtx = {
 /** The engine's boot value; immutable, so one shared object is fine. */
 export const EMPTY_SURFACE_MEMORY: SurfaceMemory = {
   gesture: null,
-  pointerDown: false,
   rememberedTiltRad: 0,
   memoryBodyId: null,
 };
@@ -46,7 +43,7 @@ export const EMPTY_SURFACE_MEMORY: SurfaceMemory = {
 /** Once per frame with the camera's current body; a DIFFERENT body wipes the tilt (ruling 18), null keeps it. */
 export function noteBody(prev: SurfaceMemory, bodyId: string | null): SurfaceMemory {
   if (bodyId === null || bodyId === prev.memoryBodyId) return prev;
-  const wipe = prev.memoryBodyId !== null && prev.memoryBodyId !== bodyId;
+  const wipe = prev.memoryBodyId !== null;
   return { ...prev, rememberedTiltRad: wipe ? 0 : prev.rememberedTiltRad, memoryBodyId: bodyId };
 }
 
@@ -61,7 +58,7 @@ export function surfaceStep(
     return {
       pose: surfaceZoomStep(
         arm,
-        prev.pointerDown ? prev.gesture : null,
+        prev.gesture === 'down' ? null : prev.gesture,
         step.factor,
         step.cursorPx,
         viewportPx,
@@ -73,10 +70,13 @@ export function surfaceStep(
       next: prev,
     };
   }
-  // The gesture boundaries reach the memory at `replayInput`'s two gesture edges,
-  // as the two `pointerDown` writes; nothing latches here with the pointer up.
-  if (step.kind !== 'drag' || !prev.pointerDown) return { pose: arm, next: prev };
-  const gesture = prev.gesture ?? latchSurfaceGesture(arm, step, viewportPx, fovYRad, bodyRadiusM);
+  // The press and release reach the memory at `replayInput`'s two gesture
+  // edges; nothing latches here from idle.
+  if (step.kind !== 'drag' || prev.gesture === null) return { pose: arm, next: prev };
+  const gesture =
+    prev.gesture === 'down'
+      ? latchSurfaceGesture(arm, step, viewportPx, fovYRad, bodyRadiusM)
+      : prev.gesture;
   // The step's ENTRY heading, which pan transports. Drags level against the
   // PURE body ENU — the band blend is the zoom's authority; a drag-created
   // deviation from the blend is "unauthored" and the next notch's decay

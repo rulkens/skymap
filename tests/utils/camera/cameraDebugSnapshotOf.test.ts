@@ -48,7 +48,6 @@ const SNAP_COMMON = {
   poseBasis: IDENTITY,
   upBasis: IDENTITY,
   orientationFrame: 'ecliptic',
-  pointerDown: false,
   gesture: null,
   lastZoomFactor: null,
   rememberedTiltRad: 0,

@@ -183,7 +183,7 @@ export function replayInput(
   for (const step of steps) {
     switch (step.kind) {
       case 'gestureStart':
-        // The gesture boundaries are the memory's `pointerDown` edges; the latch
+        // The gesture boundaries are the memory's only 'down' writes; the latch
         // is taken by the first drag step, which carries the press pixel.
         surface = surfaceGestureEdge(surface, true);
         break;

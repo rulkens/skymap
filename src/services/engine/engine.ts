@@ -617,7 +617,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          pointerDown: surface.pointerDown,
           gesture: surface.gesture,
           lastZoomFactor: outputs.lastZoomFactor,
           rememberedTiltRad: surface.rememberedTiltRad,

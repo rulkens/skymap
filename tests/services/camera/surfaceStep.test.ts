@@ -1062,14 +1062,13 @@ describe('surfaceStep', () => {
   });
 
   it('a drag with the pointer up is declined', () => {
-    // FW-C: a trackpad burst can deliver a drag run after the pointerup. The
-    // flat pair can spell it, so the arm has to check rather than trust.
+    // FW-C: a trackpad burst can deliver a drag run after the pointerup.
     const up = surfaceStep(EMPTY_SURFACE_MEMORY, IN_BAND, tiltDrag(15), CTX);
     expect(up.pose).toBe(IN_BAND);
     expect(up.next).toBe(EMPTY_SURFACE_MEMORY);
 
     const down = surfaceStep(
-      { ...EMPTY_SURFACE_MEMORY, pointerDown: true },
+      { ...EMPTY_SURFACE_MEMORY, gesture: 'down' },
       IN_BAND,
       tiltDrag(15),
       CTX,
@@ -1080,7 +1079,7 @@ describe('surfaceStep', () => {
   it('a tilt drag writes the un-mapped memory and returns a new object', () => {
     const prev = Object.freeze({
       ...EMPTY_SURFACE_MEMORY,
-      pointerDown: true,
+      gesture: 'down' as const,
       memoryBodyId: 'earth',
     });
     const { pose, next } = surfaceStep(prev, IN_BAND, tiltDrag(15), CTX);
@@ -1093,8 +1092,7 @@ describe('surfaceStep', () => {
     expect(w).toBeGreaterThan(0);
     expect(w).toBeLessThan(1);
     expect(next.rememberedTiltRad).toBeCloseTo(tiltOf(pose) / w, 9);
-    expect(next.gesture?.mode).toBe('tilt');
-    expect(next.gesture?.prevPixel).toEqual([50, 35]);
+    expect(next.gesture).toMatchObject({ mode: 'tilt', prevPixel: [50, 35] });
   });
 
   it('noteBody wipes the tilt on a different body and keeps it on null', () => {

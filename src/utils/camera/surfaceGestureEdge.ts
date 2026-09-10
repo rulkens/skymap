@@ -3,6 +3,6 @@
 
 import type { SurfaceMemory } from '../../@types/camera/SurfaceMemory';
 
-export function surfaceGestureEdge(prev: SurfaceMemory, pointerDown: boolean): SurfaceMemory {
-  return { ...prev, pointerDown, gesture: null };
+export function surfaceGestureEdge(prev: SurfaceMemory, down: boolean): SurfaceMemory {
+  return { ...prev, gesture: down ? 'down' : null };
 }
