@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   sceneBodyLabels,
   FOREGROUND_LABEL_CAPACITY,
@@ -8,6 +8,7 @@ import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -27,7 +28,9 @@ describe('sceneBodyLabels', () => {
     // producer as well, so a body that joins SCENE_BODIES and DOES want a name
     // still fails here rather than agreeing with itself.
     expect(labels).toHaveLength(SCENE_BODIES.length - SCENE_S_STARS.length);
-    expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length + 1);
+    expect(labels).toHaveLength(
+      1 + SCENE_STARS.length + SCENE_PLANETS.length + 1 + SCENE_MESH_BODIES.length,
+    );
   });
 
   it("gives the Galactic Centre its own caption kind, not the star map's", () => {
@@ -122,5 +125,42 @@ describe('sceneBodyLabels', () => {
     }
     // ids are unique — one caption per body, addressable for future fades.
     expect(new Set(labels.map((label) => label.id)).size).toBe(labels.length);
+  });
+
+  it('captions a seeded mesh body under its own kind', async () => {
+    // `SCENE_MESH_BODIES` is empty until the whale/petunias assets land, so a
+    // stood-up row is the only way to prove the mesh arm reaches the caption
+    // pipeline at all. Without it the `mesh-body` Labels & Guides row is a dead
+    // toggle and the kind never routes to `CAPTION_FADE_RULES.meshBody`.
+    vi.resetModules();
+    vi.doMock('../../../../src/data/bodies/sceneMeshBodies', () => ({
+      SCENE_MESH_BODIES: [
+        {
+          id: 'whale',
+          label: 'Whale',
+          radiusM: 8,
+          albedo: [0.62, 0.4, 0.44],
+          meshKey: 'whale',
+          description: '',
+        },
+      ],
+    }));
+    const { sceneBodyLabels: withMeshBody } =
+      await import('../../../../src/services/engine/presentation/sceneBodyLabels');
+
+    const states = new Map(J2000_STATES);
+    states.set('whale', {
+      positionMpc: [1e-13, 2e-13, 3e-13],
+      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      meanAnomalyRad: 0,
+    });
+    const whale = withMeshBody(states).find((label) => label.id === 'sceneBody-whale')!;
+
+    expect(whale.kind).toBe('meshBody');
+    expect(whale.text).toBe('Whale');
+    expect(whale.color).toEqual([0.62, 0.4, 0.44, 1]);
+
+    vi.doUnmock('../../../../src/data/bodies/sceneMeshBodies');
+    vi.resetModules();
   });
 });

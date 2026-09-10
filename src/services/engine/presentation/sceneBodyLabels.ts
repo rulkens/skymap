@@ -8,11 +8,12 @@
  * neighbourhood — something to aim at.
  *
  * Sourced from the full seed set (`SCENE_EARTH` + `SCENE_STARS` +
- * `SCENE_PLANETS` + `SGR_A_STAR`), each tinted by its own authored colour: a
- * star's spectral-class `color`, a planet's `albedo`, and fixed tints for the
- * two records that carry no colour (Earth, which has a texture instead, and
- * Sgr A*, which has no light). Deriving the tints from the body records keeps
- * this file free of a parallel colour table that would drift from the seeds.
+ * `SCENE_PLANETS` + `SGR_A_STAR` + `SCENE_MESH_BODIES`), each tinted by its own
+ * authored colour: a star's spectral-class `color`, a planet's or mesh body's
+ * `albedo`, and fixed tints for the two records that carry no colour (Earth,
+ * which has a texture instead, and Sgr A*, which has no light). Deriving the
+ * tints from the body records keeps this file free of a parallel colour table
+ * that would drift from the seeds.
  *
  * ### Why the foreground projection, not the main one
  *
@@ -42,6 +43,7 @@ import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
+import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SUN_ENTRY } from '../../../data/sources/sun';
@@ -139,7 +141,7 @@ function bodyLabel(
   // The caption carries its subject's pick id so clicking the NAME selects the
   // body — the affordance a sub-pixel body's glint footprint can only
   // approximate. `?? undefined` keeps an unseeded id (impossible from these
-  // four tables, but the −1 contract is the helper's) out of the pick set
+  // seed tables, but the −1 contract is the helper's) out of the pick set
   // rather than aliasing body 0.
   const pickId = sceneBodyPickId(body.id) ?? undefined;
   return {
@@ -205,5 +207,10 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
     // presence: omitted here it is invisible with nothing to diagnose, which is
     // why it is emitted from the seed record rather than from a drawn set.
     bodyLabel(SGR_A_STAR, bodyStates.get(SGR_A_STAR.id)!.positionMpc, SGR_A_STAR_TINT, 'sgrAStar'),
+    // Tinted from `albedo` like a planet — a mesh body is a lit surface, not a
+    // light source, so the same derivation applies.
+    ...SCENE_MESH_BODIES.map((body) =>
+      bodyLabel(body, bodyStates.get(body.id)!.positionMpc, body.albedo, 'meshBody'),
+    ),
   ];
 }
