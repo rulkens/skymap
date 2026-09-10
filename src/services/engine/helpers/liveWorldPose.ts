@@ -1,8 +1,9 @@
 /**
  * liveWorldPose — the world arm of the DISPLAYED pose (tilt projection included),
- * the one on-screen resolution site. Authored-side reads (the gesture folds) go
- * through `authoredWorldPose` instead: feeding a projected pose back into an
- * authoring path re-creates the R12b-1 register walk. It always reads
+ * the one on-screen resolution site. Authoring paths must not read it: the
+ * folds resolve the register themselves (`stepCameraRuntime`'s `authoredWorld`),
+ * because feeding a projected pose back in re-creates the R12b-1 register walk.
+ * It always reads
  * `outputs.simDays` — between frames that is the epoch the last frame DREW at.
  */
 
