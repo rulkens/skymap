@@ -19,6 +19,8 @@ export type SkraafotoStacItem = {
       readonly principal_point_offset: readonly [number, number];
     };
     readonly 'proj:shape': readonly [number, number];
+    /** Which way the Maltese-cross rig looked — the API's own label for the frame. */
+    readonly direction: 'nadir' | 'north' | 'east' | 'south' | 'west';
     /** ISO 8601 acquisition time. */
     readonly datetime: string;
   };

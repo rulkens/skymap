@@ -3,6 +3,7 @@
   "properties": {
     "datetime": "2025-04-27T10:49:24Z",
     "proj:shape": [14016, 20544],
+    "direction": "nadir",
     "pers:omega": 0.11006,
     "pers:phi": -0.11306,
     "pers:kappa": 179.8224,
