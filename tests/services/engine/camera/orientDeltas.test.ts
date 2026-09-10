@@ -4,7 +4,7 @@
  * replaces, so the test drives real frames rather than the record's API.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
@@ -19,6 +19,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 import {
   clearOrientPeaks,
   readOrientDeltas,
+  watchOrientDeltas,
 } from '../../../../src/services/engine/camera/orientDeltas';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
@@ -27,11 +28,18 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 const JUMP_RAD = 0.25;
 
 describe('the camera debug delta record', () => {
+  let unwatch: (() => void) | null = null;
+
   beforeEach(() => {
     clearOrientPeaks();
   });
+  afterEach(() => {
+    unwatch?.();
+    unwatch = null;
+  });
 
   it('reads a one-frame roll swing as that frame’s Δ, then holds it as the peak', () => {
+    unwatch = watchOrientDeltas();
     const h = makeCameraSimHarness({ focusBody: null, bootHR: 10 });
     const earth = h.bodies.get('earth')!;
     const restPose = poseAtHR(earth, h.radiusM('earth'), 10);
@@ -61,9 +69,34 @@ describe('the camera debug delta record', () => {
     expect(readOrientDeltas().roll.peakAtMs).toBeNull();
   });
 
+  it('records nothing while unwatched, and does not bill the closed period to the first frame back', () => {
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: 10 });
+    const earth = h.bodies.get('earth')!;
+    const restPose = poseAtHR(earth, h.radiusM('earth'), 10);
+    h.seedPose(absoluteArm(restPose));
+    const stop = watchOrientDeltas();
+    h.frame(2);
+    stop();
+
+    // Panel closed, camera flying: nothing accumulates.
+    h.seedPose(absoluteArm({ ...restPose, roll: JUMP_RAD }));
+    h.tick(1_000);
+    const unwatched = readOrientDeltas();
+    expect(unwatched.roll.deltaRad).toBe(0);
+    expect(unwatched.roll.peakAbsRad).toBe(0);
+
+    // Re-opened: the radians flown while it was shut are not one frame's Δ.
+    unwatch = watchOrientDeltas();
+    h.tick(1_016);
+    const remounted = readOrientDeltas();
+    expect(remounted.roll.deltaRad).toBe(0);
+    expect(remounted.roll.peakAbsRad).toBe(0);
+  });
+
   it('reads a swing across the ±π seam as the short way round', () => {
     // Unwrapped, this pair reads as −6 rad in one frame: a spike that never
     // happened, and one that would then own the peak column for the session.
+    unwatch = watchOrientDeltas();
     const h = makeCameraSimHarness({ focusBody: null, bootHR: 10 });
     const restPose = poseAtHR(h.bodies.get('earth')!, h.radiusM('earth'), 10);
     h.seedPose(absoluteArm({ ...restPose, roll: 3 }));

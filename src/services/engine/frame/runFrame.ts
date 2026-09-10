@@ -15,7 +15,7 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
-import { recordOrientDeltas } from '../camera/orientDeltas';
+import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
 import { cameraDofAnglesOf } from '../../../utils/camera/cameraDofAnglesOf';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
@@ -128,19 +128,21 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // The debug panel's Δ/peak columns, at FRAME rate: its 4 Hz poll averages
   // ~15 frames into one reading, which is precisely how a per-frame decay
-  // passes for a per-notch one. Always on and off `cameraRuntime` — see
-  // `orientDeltas`.
-  recordOrientDeltas(
-    cameraDofAnglesOf({
-      storedFrame: rootState.camera.base.frame,
-      worldPose,
-      poseBasis,
-      upBasis,
-      bodyStates,
-      rememberedTiltRad: next.surface.rememberedTiltRad,
-    }),
-    nowMs,
-  );
+  // passes for a per-notch one. Gated on the panel being mounted — the
+  // derivation walks the body roster, which nobody who never opens it pays for.
+  if (orientDeltasWatched()) {
+    recordOrientDeltas(
+      cameraDofAnglesOf({
+        storedFrame: rootState.camera.base.frame,
+        worldPose,
+        poseBasis,
+        upBasis,
+        bodyStates,
+        rememberedTiltRad: next.surface.rememberedTiltRad,
+      }),
+      nowMs,
+    );
+  }
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
   // silently breaks the bar on retina.

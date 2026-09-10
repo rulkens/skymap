@@ -17,7 +17,7 @@ import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { TILT_BAND } from '../../data/camera/tiltBand';
-import { clearOrientPeaks } from '../../services/engine/camera/orientDeltas';
+import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camera/orientDeltas';
 import DebugSection from './DebugSection';
 import OrientationTuning from './OrientationTuning';
 import styles from './CameraStateSection.module.css';
@@ -41,7 +41,11 @@ type PanelModel = {
   readonly header: string;
   readonly badge: string | null;
   readonly dofs: readonly DofModel[];
+  /** Radians/raw for the dump; the `*Readout` strings are the same band on screen. */
   readonly band: readonly RawRow[];
+  readonly markerReadout: string;
+  readonly weightReadout: string;
+  readonly rememberedTiltReadout: string;
   readonly raw: readonly RawRow[];
 };
 
@@ -82,6 +86,16 @@ function modelOf(snap: CameraDebugSnapshot): PanelModel {
       { key: 'north_up', value: String(ORIENT_TUNING.northUp) },
       { key: 'remembered_tilt_rad', value: num(snap.rememberedTiltRad) },
     ],
+    markerReadout:
+      snap.hOverR === null
+        ? '—'
+        : `h/R ${snap.hOverR.toFixed(3)} · ${
+            snap.altitudeM === null
+              ? '—'
+              : `${Math.round(snap.altitudeM).toLocaleString('en-US')} m`
+          }`,
+    weightReadout: snap.bandUpWeight === null ? '—' : snap.bandUpWeight.toFixed(3),
+    rememberedTiltReadout: deg(snap.rememberedTiltRad),
     raw: [
       { key: 'stored_regime', value: frameLabel(snap.storedFrame) },
       { key: 'rendered_arm', value: frameLabel(snap.renderedFrame) },
@@ -132,8 +146,13 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    // This mount is what turns the frame loop's Δ/peak record on.
+    const stop = watchOrientDeltas();
     const id = setInterval(() => setSnap(cameraDebug()), POLL_MS);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      stop();
+    };
   }, [cameraDebug]);
 
   const model = modelOf(snap);
@@ -179,17 +198,9 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
 
       <OrientationTuning
         hOverR={snap.hOverR}
-        markerReadout={
-          snap.hOverR === null
-            ? '—'
-            : `h/R ${snap.hOverR.toFixed(3)} · ${
-                snap.altitudeM === null
-                  ? '—'
-                  : `${Math.round(snap.altitudeM).toLocaleString('en-US')} m`
-              }`
-        }
-        weightReadout={snap.bandUpWeight === null ? '—' : snap.bandUpWeight.toFixed(3)}
-        rememberedTiltReadout={deg(snap.rememberedTiltRad)}
+        markerReadout={model.markerReadout}
+        weightReadout={model.weightReadout}
+        rememberedTiltReadout={model.rememberedTiltReadout}
       />
 
       <details className={styles.rawBlock}>

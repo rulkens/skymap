@@ -1,13 +1,13 @@
 /**
  * orientDeltas — how far each orientation DOF moved between the last two
  * FRAMES, plus the largest such step since the last clear. Fed by `runFrame`
- * once the displayed pose is final, always on: the debug panel polls at 4 Hz,
- * which averages ~15 frames into one reading and hides exactly the defect this
+ * once the displayed pose is final, at frame rate: the panel's 4 Hz poll
+ * averages ~15 frames into one reading and hides exactly the defect this
  * exists for — a decay keyed to the wrong clock (per frame instead of per zoom
  * notch). Module state, not `cameraRuntime`: that has one writer by gate
  * (`cameraRuntimeSingleWriter.test.ts`) and this is not camera mechanism.
- * Δ tracks the pose's OWN motion, never a residual, so a target moving under a
- * still camera cannot read as something being pulled.
+ * Δ is the pose's OWN motion, never a residual — but heading and tilt are
+ * measured body-fixed, so a rotating body moves them under a still camera.
  */
 
 import type { CameraDofAngles } from '../../../@types/camera/CameraDofAngles';
@@ -31,6 +31,25 @@ const RECORD: Record<keyof OrientDeltas, DofRecord> = {
   tilt: emptyDof(),
   roll: emptyDof(),
 };
+
+let watchers = 0;
+
+/**
+ * The panel's mount IS the gate. `prevRad` resets on subscribe: without it the
+ * first frame back reports every radian flown while the panel was closed as one
+ * frame's Δ, and that phantom then owns the peak column.
+ */
+export function watchOrientDeltas(): () => void {
+  watchers += 1;
+  for (const dof of Object.values(RECORD)) dof.prevRad = null;
+  return () => {
+    watchers -= 1;
+  };
+}
+
+export function orientDeltasWatched(): boolean {
+  return watchers > 0;
+}
 
 function step(dof: DofRecord, currentRad: number | null, nowMs: number): void {
   const prevRad = dof.prevRad;
