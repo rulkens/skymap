@@ -1,0 +1,21 @@
+{
+  "id": "2025_84_40_1_0049_00002495_100mm",
+  "properties": {
+    "datetime": "2025-04-27T10:49:24Z",
+    "proj:shape": [14016, 20544],
+    "pers:omega": 0.11006,
+    "pers:phi": -0.11306,
+    "pers:kappa": 179.8224,
+    "pers:perspective_center": [721650.33, 6175011.07, 2200.39],
+    "pers:interior_orientation": {
+      "focal_length": 79.6,
+      "pixel_spacing": [0.00376, 0.00376],
+      "principal_point_offset": [0, 0]
+    }
+  },
+  "assets": {
+    "data": {
+      "href": "https://skraafoto-cdn.dataforsyningen.dk/skraafoto_server/100mm/2025/10km_617_72/1km_6175_721/2025_84_40_1_0049_00002495_100mm.tif"
+    }
+  }
+}
