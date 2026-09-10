@@ -31,6 +31,7 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -39,9 +40,17 @@ export function drainInput(
   state: EngineState,
   deps: RunFrameDeps,
   nowMs: number,
-): { readonly followDistanceTarget: number | null } {
+): {
+  readonly followDistanceTarget: number | null;
+  readonly follow: FollowMemory | null;
+} {
+  // Drain-local, and the ONLY read of the field: each strafe step REPLACES it,
+  // so several in one drain accumulate onto each other, and the caller assigns
+  // the result unconditionally — hence the no-input frame hands it straight
+  // back rather than nulling the memory.
+  let follow = state.cameraRuntime.follow;
   const steps = state.subsystems.inputAggregator.drain();
-  if (steps.length === 0) return { followDistanceTarget: null };
+  if (steps.length === 0) return { followDistanceTarget: null, follow };
 
   const store = deps.cb.store;
   const cssHeight = deps.canvas.clientHeight || 1;
@@ -139,9 +148,8 @@ export function drainInput(
       // (`bodyPosition + panOffset`), so the pan step's own delta goes to the
       // follow memory's offset the pin reads. Folding it here — where the delta
       // is in hand — is what lets the offset stay clean while the body moves.
-      const follow = state.cameraRuntime.follow;
       const off = follow?.panOffset ?? [0, 0, 0];
-      state.cameraRuntime.follow = {
+      follow = {
         from: follow?.from ?? null,
         distanceTarget: follow?.distanceTarget ?? null,
         panOffset: [
@@ -218,8 +226,7 @@ export function drainInput(
         // resolved to a distance here and travels to the driver, which adopts
         // it. A second notch in the same drain resolves off the first (the
         // aggregator only splits a zoom run a drag interrupts).
-        const followTargetBefore =
-          followDistanceTarget ?? state.cameraRuntime.follow?.distanceTarget ?? null;
+        const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         if (
           root.camera.base.frame === 'absolute' &&
           state.cameraRuntime.prevActiveId.current === 'followBody' &&
@@ -287,5 +294,5 @@ export function drainInput(
     }
   }
 
-  return { followDistanceTarget };
+  return { followDistanceTarget, follow };
 }

@@ -114,7 +114,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // (0) Above the `getState()` below so the gesture edges it dispatches are in
   // the snapshot the driver table resolves against.
-  const { followDistanceTarget } = drainInput(state, deps, nowMs);
+  const { followDistanceTarget, follow: drainedFollow } = drainInput(state, deps, nowMs);
+  // The drain's pan strafe lands on the memory HERE — above the focus-edge drop
+  // below, which still overrides it, and above the driver adoption that reads
+  // it. Those two writes plus this one are the whole set (spec: single writer).
+  state.cameraRuntime.follow = drainedFollow;
 
   // The camera steps run before `deriveFrameContext` so a camera-only-ready
   // frame still makes motion progress before the missing-GPU early return.

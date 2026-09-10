@@ -34,6 +34,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { FollowMemory } from '../../../../src/@types/engine/camera/FollowMemory';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 
@@ -327,16 +328,54 @@ describe('drainInput', () => {
     agg.push({ kind: 'gestureStart' });
     agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
     agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
-    drainInput(state, deps, 0);
-    expect(readFollowMemory(state).panOffset).toEqual([0, 0, 0]);
+    expect(drainInput(state, deps, 0).follow?.panOffset ?? [0, 0, 0]).toEqual([0, 0, 0]);
 
     agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
     agg.push({ kind: 'dragMove', mode: 'pan', xPx: 150, yPx: 100 });
-    drainInput(state, deps, 16);
+    const panned = drainInput(state, deps, 16).follow!.panOffset;
 
     // 50 px at the image plane: 2 · distance · tan(fov/2) / cssHeight per px.
     const pxToWorld = (2 * 100 * Math.tan(Math.PI / 6)) / 1000;
-    expect(Math.hypot(...readFollowMemory(state).panOffset)).toBeCloseTo(50 * pxToWorld, 9);
+    expect(Math.hypot(...panned)).toBeCloseTo(50 * pxToWorld, 9);
+  });
+
+  it('a pan strafe under follow returns a new offset and mutates nothing', () => {
+    // The single-writer bar: `runFrame` owns `cameraRuntime.follow`, so the
+    // drain reports the strafe it folded rather than assigning it. Frozen deep
+    // — the array is where an in-place `off[0] += …` would hide, and the
+    // module is strict-mode, so such a write throws right here.
+    const { agg, state, deps, store } = makeHarness();
+    store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusM: 6371000,
+        },
+      }),
+    );
+    const before: FollowMemory = Object.freeze({
+      from: null,
+      distanceTarget: 42,
+      panOffset: Object.freeze([1, 2, 3]) as unknown as Vec3,
+    });
+    state.cameraRuntime.follow = before;
+
+    agg.push({ kind: 'gestureStart' });
+    agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
+    agg.push({ kind: 'dragMove', mode: 'pan', xPx: 150, yPx: 100 });
+    const { follow } = drainInput(state, deps, 0);
+
+    expect(state.cameraRuntime.follow).toBe(before);
+    expect(before.panOffset).toEqual([1, 2, 3]);
+    expect(follow).not.toBe(before);
+    // Accumulated onto the incoming offset, and the rest of the memory rides
+    // through untouched — the strafe knows nothing about the follow distance.
+    expect(follow!.panOffset).not.toEqual([1, 2, 3]);
+    expect(follow!.distanceTarget).toBe(42);
   });
 
   it('a drag in the same drain as an at-rest body-arm notch chains from the notch, not before it', () => {
