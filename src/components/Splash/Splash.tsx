@@ -227,7 +227,36 @@ function Splash({
               Solar System Scope
             </a>{' '}
             (solarsystemscope.com), CC&nbsp;BY&nbsp;4.0, with Earth from NASA Earth Observatory
-            (Blue Marble) and the Galilean moons from NASA/USGS.
+            (Blue Marble) and the Galilean moons from NASA/USGS. The orbiting whale and bowl of
+            petunias are based on{' '}
+            <a
+              href="https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              &ldquo;Livyatan melvillei&rdquo;
+            </a>{' '}
+            by{' '}
+            <a href="https://sketchfab.com/majorgalah" target="_blank" rel="noopener noreferrer">
+              Major
+            </a>{' '}
+            and{' '}
+            <a
+              href="https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              &ldquo;Flowers Petunia White&rdquo;
+            </a>{' '}
+            by{' '}
+            <a
+              href="https://sketchfab.com/mariannegoudriaan"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Marianne Goudriaan
+            </a>
+            , both CC&nbsp;BY&nbsp;4.0.
           </p>
           <p className={styles.attribution}>
             by Alexander Rulkens
