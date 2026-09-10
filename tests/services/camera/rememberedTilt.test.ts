@@ -4,7 +4,7 @@
  * tilt handle writes the memory (un-mapped through the band weight so a
  * just-set display is a FIXED POINT of the zoom mapping), and the weight
  * reaching 0 at disengage lands the crossing at tilt 0 by construction.
- * Unit-radius closed-form fixtures, per the controller suite's convention.
+ * Unit-radius closed-form fixtures, per the surfaceStep suite's convention.
  */
 
 import { describe, it, expect, afterEach } from 'vitest';

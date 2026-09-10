@@ -122,7 +122,7 @@ describe('drainInput', () => {
     expect(store.getState().camera.dragging).toBe(false);
   });
 
-  it('routes a body-arm drag to the surface controller and commits it at gesture end', () => {
+  it('routes a body-arm drag to the surface step and commits it at gesture end', () => {
     // The anchored gesture is what moves the camera, folded into the live
     // register step by step, and it stays in the body arm the whole way; the
     // release bakes the folded pose — never a stale world-arm reading — into
@@ -149,7 +149,7 @@ describe('drainInput', () => {
   });
 
   it('carries the wheel’s cursor pixel to the body arm’s zoom anchor', () => {
-    // End to end: recognizer pixel → aggregator step → surface controller pick.
+    // End to end: recognizer pixel → aggregator step → surfaceStep anchor pick.
     // With no pointer down there is no drag baseline to read the cursor off,
     // so the wheel event's own pixel is the whole plumbing (spec §12-R4) —
     // without it the zoom anchors at screen centre, a different point.

@@ -43,7 +43,7 @@ describe('tilt lerp round trip (ruling 13)', () => {
     diveUntilEngaged(h);
     expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
 
-    // Set the memory through the controller's own tilt/look handles. The
+    // Set the memory through surfaceStep's own tilt/look drag steps. The
     // memory is session state and body-agnostic, so a unit-radius drag is
     // the same write path an engaged Earth drag takes — without hand-tuning
     // a metre-scale gesture through the whole input stack (the drag path

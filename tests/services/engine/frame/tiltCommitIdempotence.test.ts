@@ -55,7 +55,7 @@ function display(state: EngineState): { eye: Vec3; tilt: number; hr: number } {
 
 /**
  * Shared approach: dive engaged, set a large remembered tilt through the
- * controller's own handles, zoom out past disengage, then back IN to
+ * surfaceStep's tilt/look drag steps, zoom out past disengage, then back IN to
  * mid-window — the world-armed, pivot-pinned, projection-live standpoint
  * where a broken composition would show up as the eye teleporting.
  */
@@ -63,7 +63,7 @@ function toMidWindow(h: CameraSimHarness): void {
   diveUntilEngaged(h);
   expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
 
-  // Set the memory via the controller's handles (unit-radius, h/R 0.15 so the
+  // Set the memory via surfaceStep's tilt/look steps (unit-radius, h/R 0.15 so the
   // tilt ceiling is open under ruling 19's tighter band — the memory itself
   // is session state, same rationale as tiltLerpRoundTrip's harness).
   seedRememberedTilt(h, { targetRad: 0.95, guard: 40, pxStep: 5 });

@@ -63,7 +63,7 @@ function stepKm(a: Vec3, b: Vec3): number {
 
 /**
  * Same approach recipe as tiltCommitIdempotence: dive engaged, set a large
- * remembered tilt through the controller's own handles, zoom out past
+ * remembered tilt through surfaceStep's tilt/look drag steps, zoom out past
  * disengage, then back IN to mid-window — world-armed, pivot-pinned,
  * projection live.
  */
@@ -71,7 +71,7 @@ function toMidWindow(h: CameraSimHarness) {
   diveUntilEngaged(h);
   expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
 
-  // Set the memory via the controller's handles (unit-radius, h/R 0.15 so the
+  // Set the memory via surfaceStep's tilt/look steps (unit-radius, h/R 0.15 so the
   // tilt ceiling is open under ruling 19's tighter band).
   seedRememberedTilt(h, { targetRad: 0.95, guard: 40, pxStep: 5 });
   expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeGreaterThan(0.5);
