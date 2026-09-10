@@ -1,14 +1,11 @@
 /**
  * bodyStateInHostFrame — re-express an attached body's heliocentric
- * `BodyState` in its HOST's fixed axes, in SI metres. `posM`/`rotM` land in
- * the host's own axes, which is what lets a mesh-local vector composed
- * through `rotM` land in host axes too — the contract the mesh pass's model
- * matrix (Task 17) and shader normal transform (Task 16) both depend on.
+ * `BodyState` in its HOST's fixed axes, in SI metres; `posM`/`rotM` land in
+ * host axes, so a mesh-local vector composed through `rotM` lands there too.
  *
- * LANDMINE: cancel the two heliocentric `positionMpc`s in f64 Mpc FIRST, then
- * scale the small remainder to metres — scaling each operand up first would
- * inflate the shared heliocentric rounding error before cancellation ever
- * happens. Same order/reasoning as `bodyRelativePose.ts:5-9`.
+ * LANDMINE: cancel the two heliocentric `positionMpc`s in Mpc FIRST, then
+ * scale to metres — scaling first would inflate the shared rounding error
+ * before cancellation happens; same order as `bodyRelativePose.ts:5-9`.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
