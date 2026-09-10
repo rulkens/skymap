@@ -14,7 +14,10 @@ import type { SurfaceMemory } from '../../camera/SurfaceMemory';
 import type { FrameOutputs } from './FrameOutputs';
 
 export type CameraRuntime = {
-  /** The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame, R12b-1) and the driver id that wrote it. */
+  /**
+   * The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame,
+   * R12b-1) and the driver id that wrote it.
+   */
   readonly register: { readonly pose: FramedCameraPose; readonly winner: string };
   readonly epochs: CameraEpochs;
   readonly follow: FollowMemory | null;

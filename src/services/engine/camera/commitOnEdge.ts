@@ -27,7 +27,10 @@ export function commitOnEdge(args: {
   readonly drivers: readonly CameraDriver[];
 }): {
   readonly render: FramedCameraPose;
-  /** Non-null only on a non-pivoting edge: the register value when `render` had to be the displayed pose. */
+  /**
+   * Non-null only on a non-pivoting edge: the register value when `render` had
+   * to be the displayed pose.
+   */
   readonly authoredOverride: FramedCameraPose | null;
   readonly actions: readonly UnknownAction[];
 } {

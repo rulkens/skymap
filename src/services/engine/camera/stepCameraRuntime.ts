@@ -40,7 +40,10 @@ export function stepCameraRuntime(
   readonly next: CameraRuntime;
   readonly actions: readonly UnknownAction[];
   readonly requestRender: boolean;
-  /** The world arm the frame draws — pre-flip on a crossing frame, so the draw and the scale bar see the pose the fold judged. */
+  /**
+   * The world arm the frame draws — pre-flip on a crossing frame, so the draw
+   * and the scale bar see the pose the fold judged.
+   */
   readonly world: CameraPose;
   /** The effective snapshot the stages read; the keep-ticking vote must be off the same reading. */
   readonly rootState: RootState;
