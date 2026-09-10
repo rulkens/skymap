@@ -36,9 +36,12 @@ script or `/scene-workbench/` subpath.
    Splats below the LiDAR floor are pruned on the way into `splats.bin`:
    every frame is airborne, so training is free to park large ground-coloured
    Gaussians underground, where they are invisible from above and a wall of
-   flat colour once the camera descends. `npm run bake-splats -- --reuse-ply`
-   re-packs the last export instead of training again, which is how to re-tune
-   that prune without paying for another 30k-iteration run.
+   flat colour once the camera descends. Removing that layer is what stopped
+   the viewport turning one flat colour whenever the orbit target sank below
+   the terrain. `npm run bake-splats -- --reuse-ply` re-packs the last export
+   instead of training again, which is how to re-tune that prune without
+   paying for another 30k-iteration run; it carries the brush-cli version
+   already in `manifest.json`, so it neither retrains nor re-stamps.
    First Søndermarken bake (2026-09-10, 306 frames, Apple Silicon): 30k
    iterations is a multi-hour run, and slows as densification grows the model;
    this one was stopped after ~3 h 20 min at its last 5,000-step export.

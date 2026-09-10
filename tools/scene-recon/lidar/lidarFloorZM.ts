@@ -1,18 +1,14 @@
 /**
  * The terrain floor of a `points.bin` cloud, metres in the group's ENU frame —
- * what `bakeSplats` prunes sub-surface splats against.
- *
- * A low quantile, NOT the minimum: the DHM tiles carry blunders (Søndermarken
- * spans −413 m to +844 m against real terrain of about −18 m to +25 m), and a
- * single one drags the floor below every splat worth pruning.
+ * what `bakeSplats` prunes sub-surface splats against. A low quantile, NOT the
+ * minimum: one DHM blunder drags the floor below every splat worth pruning.
  */
 import { readFile } from 'node:fs/promises';
 
 import { parsePoints } from '../../scene-workbench/src/scene/parsePoints';
 import { POINTS_RECORD_BYTES } from '../pack/pointCloudFormat';
 
-/** 0.1%: past the blunders (34 points below −50 m in 1.6 M), still well under
- *  the lowest real ground. */
+/** 0.1%: past the blunders (34 points below −50 m in 1.6 M), under real ground. */
 const FLOOR_QUANTILE = 0.001;
 
 export async function lidarFloorZM(pointsBinPath: string): Promise<number> {
@@ -30,6 +26,7 @@ export async function lidarFloorZM(pointsBinPath: string): Promise<number> {
   for (let i = 0; i < pointCount; i++) {
     heightsM[i] = dv.getFloat32(i * POINTS_RECORD_BYTES + 8, true);
   }
+  // TypedArray sort is numeric (and NaN-last); a plain array sorts lexicographically.
   heightsM.sort();
   return heightsM[Math.floor(FLOOR_QUANTILE * (pointCount - 1))]!;
 }

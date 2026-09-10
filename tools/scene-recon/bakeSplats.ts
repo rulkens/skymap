@@ -46,11 +46,9 @@ const GEO3D_DIR = 'public/data/geo3d';
 const PLY_NAME = 'final.ply';
 const POINT_SAMPLE_TARGET = 200_000;
 const TRAIN_ITERS = 30000;
-/** Every frame is airborne, so nothing constrains where along a ray the ground
- *  colour sits and training parks large ground-coloured Gaussians below the
- *  terrain — invisible from above, a wall of flat colour once the camera dives
- *  into them. Prune below the LiDAR floor, less this slack for real basements
- *  and the cloud's own vertical spread. */
+/** Slack below the LiDAR floor for real basements and the cloud's own vertical
+ *  spread; why an airborne bake buries splats at all is in the README's
+ *  `bake-splats` step. */
 const FLOOR_MARGIN_M = 5;
 
 export type BrushRunner = (colmapDir: string) => Promise<void>;
@@ -64,7 +62,8 @@ export async function bakeSplats(
   },
   /** `reusePly`: pack the last run's export instead of staging and training
    *  again — the only affordable way to re-tune the prune on a 30k-iteration
-   *  bake. */
+   *  bake. The manifest's existing brush-cli stamp rides along, so a repack
+   *  never credits the geometry to whatever version happens to be installed. */
   options: { readonly reusePly?: boolean } = {},
 ): Promise<GaussianSplatAsset> {
   const pointsBinPath = join(GEO3D_DIR, 'groups', group.id, 'assets', LIDAR_ASSET_ID, 'points.bin');
@@ -83,18 +82,23 @@ export async function bakeSplats(
     );
   }
 
-  // Probed before the staging below copies every frame's JPEG, so a missing
-  // brush-cli costs a second rather than the whole copy.
-  const brushVersion = deps.brushVersion();
-
   const colmapDir = join(collectionDir, `colmap-${group.id}`);
   const plyPath = join(colmapDir, PLY_NAME);
+  const manifestPath = join(GEO3D_DIR, 'groups', group.id, 'manifest.json');
 
+  let brushVersion: string;
   if (options.reusePly) {
     if (!existsSync(plyPath)) {
       throw new Error(`bakeSplats: --reuse-ply, but no export at ${plyPath} to pack.`);
     }
+    // Nothing trained here, so the trainer's stamp carries forward; probing is
+    // the fallback only, and lazy, so a repack works with brush-cli uninstalled.
+    brushVersion = (await manifestBrushVersion(manifestPath)) ?? deps.brushVersion();
   } else {
+    // Probed before the staging below copies every frame's JPEG, so a missing
+    // brush-cli costs a second rather than the whole copy.
+    brushVersion = deps.brushVersion();
+
     const centresUtm: Vec3[] = items.map((item) => [...item.properties['pers:perspective_center']]);
     const positions = await topocentricPositionsM(group.anchor, centresUtm, {
       runCct: deps.runCct,
@@ -117,8 +121,10 @@ export async function bakeSplats(
     });
 
     // `colmapDir` survives between bakes, so a run where Brush exits 0 without
-    // exporting would otherwise re-read the previous run's PLY and ship it under
-    // a fresh provenance stamp. Deleting first makes that failure visible below.
+    // exporting would otherwise re-read the previous run's PLY and ship it as
+    // this run's training output. Deleting first makes that failure visible
+    // below — a train reads only a PLY it just produced, and only a `reusePly`
+    // repack packs an older one, under that run's stamp.
     await rm(plyPath, { force: true });
 
     process.stderr.write(`bakeSplats: training ${poses.length} frame(s) with brush-cli…\n`);
@@ -176,7 +182,6 @@ export async function bakeSplats(
     artifactUrl: `geo3d/groups/${group.id}/assets/${ASSET_ID}/splats.bin`,
   };
 
-  const manifestPath = join(GEO3D_DIR, 'groups', group.id, 'manifest.json');
   await writeJsonAtomic<SceneManifest>(manifestPath, (current) =>
     nextManifest(current, group, asset),
   );
@@ -191,6 +196,18 @@ export async function bakeSplats(
   );
 
   return asset;
+}
+
+/** The brush-cli version already stamped on this group's splats asset, if the
+ *  manifest exists and carries one. */
+async function manifestBrushVersion(manifestPath: string): Promise<string | undefined> {
+  const manifest = await readFile(manifestPath, 'utf8').then(
+    (text) => JSON.parse(text) as SceneManifest,
+    () => null,
+  );
+  return manifest?.assets
+    .find((asset) => asset.id === ASSET_ID)
+    ?.provenance.pipeline.find((step) => step.step === 'brush-cli')?.version;
 }
 
 async function readStacItems(dir: string): Promise<SkraafotoStacItem[]> {

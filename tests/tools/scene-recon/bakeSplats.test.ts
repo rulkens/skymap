@@ -2,7 +2,9 @@
  * Covers the decisions that live only in the orchestrator, each of which fails
  * silently: the bare `<id>.jpg` resolved against the harvest directory before
  * `writeColmapModel` copies it (assert on the staged `images/`, not the poses); a
- * previous bake's `final.ply` cleared; an empty export not shipped as a stub .bin.
+ * previous bake's `final.ply` cleared; sub-floor splats pruned; a `--reuse-ply`
+ * repack that neither trains nor re-stamps the provenance; an empty export not
+ * shipped as a stub .bin.
  *
  * cct and brush-cli are stubbed and the bake runs against a tmpdir cwd, so
  * this file needs vitest's `forks` pool — `process.chdir` is undefined under
@@ -26,6 +28,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bakeSplats } from '../../../tools/scene-recon/bakeSplats';
 import { SOENDERMARKEN } from '../../../tools/scene-recon/groups/soendermarken';
 import { packPoints } from '../../../tools/scene-recon/pack/packPoints';
+import type { SceneManifest } from '../../../tools/scene-workbench/@types/SceneManifest';
 
 const ITEM_ID = '2025_84_40_1_0049_00002495_100mm';
 const FIXTURE = fileURLToPath(new URL(`../../fixtures/skraafoto/${ITEM_ID}.json`, import.meta.url));
@@ -138,6 +141,35 @@ describe('bakeSplats', () => {
   });
 
   it('packs the last export without training again when reusePly is set', async () => {
+    // Its own export and its own manifest, so neither assertion rides on what
+    // an earlier test left in `colmapDir` or in `manifest.json`.
+    writeFileSync(stalePlyPath, ply([7, -99]));
+    writeFileSync(
+      join(root, 'public/data/geo3d/groups', SOENDERMARKEN.id, 'manifest.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        groupId: SOENDERMARKEN.id,
+        groupName: SOENDERMARKEN.name,
+        anchor: SOENDERMARKEN.anchor,
+        assets: [
+          {
+            kind: 'gaussianSplat',
+            id: 'splats',
+            label: 'a previous bake',
+            transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
+            provenance: {
+              source: 'nationalGeodataApi',
+              sourceVintage: '2025-04-27',
+              pipeline: [{ step: 'brush-cli', version: 'trained-0.0.1' }],
+            },
+            splatCount: 3,
+            shDegree: 1,
+            artifactUrl: `geo3d/groups/${SOENDERMARKEN.id}/assets/splats/splats.bin`,
+          },
+        ],
+      } satisfies SceneManifest),
+    );
+
     const asset = await bakeSplats(
       SOENDERMARKEN,
       {
@@ -145,12 +177,18 @@ describe('bakeSplats', () => {
         runBrush: async () => {
           throw new Error('brush must not run under reusePly');
         },
-        brushVersion: () => '0.1.0-test',
+        brushVersion: () => 'installed-9.9.9',
       },
       { reusePly: true },
     );
 
-    expect(asset.splatCount).toBe(2);
+    expect(asset.splatCount).toBe(1);
+    // The stamp names what trained the geometry, never what happens to be
+    // installed when it is repacked.
+    expect(asset.provenance.pipeline).toContainEqual({
+      step: 'brush-cli',
+      version: 'trained-0.0.1',
+    });
   });
 
   it('refuses an export with no splats in it', async () => {
