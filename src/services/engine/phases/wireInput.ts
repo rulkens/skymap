@@ -14,7 +14,6 @@ import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
-import { poseOf } from '../camera/poseOf';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
@@ -116,7 +115,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // gap: moving `setSagaContext` into a bootstrap phase, or making bootstrap
   // synchronous with engine construction, silently regresses the boot frame to
   // the default orientation.
-  const committed = absoluteArm(poseOf(cam));
+  // `target` is COPIED: `cam.target` is mutable and this pose outlives the seed.
+  const committed = absoluteArm({
+    target: [cam.target[0], cam.target[1], cam.target[2]],
+    yaw: cam.yaw,
+    pitch: cam.pitch,
+    distance: cam.distance,
+    roll: cam.roll,
+  });
   state.cameraRuntime = seedCameraRuntime({
     committed,
     projection: { fovYRad: cam.fovYRad, aspect: cam.aspect, near: cam.near, far: cam.far },

@@ -560,7 +560,7 @@ current tree:
 | `applyWheelZoom`                              | world arm only (§7)                                   |
 | `applyFocusedBodyPivot`                       | world arm only (§7)                                   |
 | scale bar (`runFrame` snap), `focusFraming`   | read the resolved range; the body arm reports metres  |
-| `seedCameraFromBase`, `poseOf`                | seed/read the arm, not a bare `CameraPose`            |
+| `seedCameraFromBase`                          | seeds the arm, not a bare `CameraPose`                |
 | `logCameraState`                              | prints the frame (§8)                                 |
 
 **`lonLatFocusPose` is the deferred item from spec 1** (ledger: "STOPPED per

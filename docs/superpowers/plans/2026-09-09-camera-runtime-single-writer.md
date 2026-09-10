@@ -1106,6 +1106,7 @@ src/services/engine/frame/drainInput.ts                 T13
 src/services/engine/camera/activeDriverId.ts            review
 src/services/engine/camera/projectionOf.ts              review
 src/services/engine/helpers/authoredWorldPose.ts        review
+src/services/engine/camera/poseOf.ts                    review
 ```
 
 `runCameraDrivers` also went — a function in `cameraDrivers.ts`, not a file: the step
