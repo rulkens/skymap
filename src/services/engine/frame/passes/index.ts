@@ -1,11 +1,11 @@
 /**
  * passes/index — the content-layer registry.
  *
- * `CONTENT_LAYERS` is the flat, ordered list of every `ContentLayer` the
+ * `CONTENT_PASSES` is the flat, ordered list of every `ContentPass` the
  * renderer draws — the additive-into-HDR layers, the premultiplied-OVER
  * swap-chain overlays, and the near-field groups.  It replaces the two `Pass[]`
  * arrays this module once exported — those were two arrays because a `Pass`
- * baked its target and blend into "which array it lives in"; a `ContentLayer`
+ * baked its target and blend into "which array it lives in"; a `ContentPass`
  * states `target` and `blend` as data fields on the row itself, so one array is
  * enough and grouping by `(target, slab)` becomes a `.filter()`.
  *
@@ -13,9 +13,9 @@
  * executor walks a `FrameStep[]` program that groups layers by `(target, slab)`
  * directly, and the timing-slot list is derived from that program (`TIMED_SLOTS`
  * in `frameProgram.ts`).  Consumers that need one group take a `.filter()` over
- * `CONTENT_LAYERS` at the call site (e.g. the DebugPanel's toggle-name list).
+ * `CONTENT_PASSES` at the call site (e.g. the DebugPanel's toggle-name list).
  *
- * ### CONTENT_LAYERS — draw order
+ * ### CONTENT_PASSES — draw order
  *
  * The first nine entries are additively blended into the HDR `rgba16float`
  * target, projected through the cosmological slab:
@@ -44,7 +44,7 @@
  * `sgr-a-star-lensing` has its OWN `(hdr, BODY[k])` render step. Its
  * position below is registry-order documentation for items 10-15 — but for
  * orbit-trails/body-glints (17/17b) the ordering IS enforced, by
- * `ContentLayer.hdrPostLensing` splitting the shared `(hdr, NEAR0)` step
+ * `ContentPass.hdrPostLensing` splitting the shared `(hdr, NEAR0)` step
  * around the lens step whenever the band is active; see
  * `frameProgram.ts`:
  *
@@ -203,7 +203,7 @@
  *
  * The Milky Way rode the COSMO group until its fixed 10 kpc near plane
  * clipped the disc mid-descent (the disc's near edge is ~9.5 kpc from
- * the origin) — see milkyWayLayer's module header.  Living in the NEAR0
+ * the origin) — see milkyWayPass's module header.  Living in the NEAR0
  * step means the whole cloud now draws AFTER the cosmological group, so
  * its multiplicative dust pass darkens the full COSMO accumulation behind
  * it (physically reasonable extinction of background light).  Within the
@@ -280,7 +280,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   // position (frameProgram.ts hand-orders render steps independently of
   // this registry) — but the PICK program groups by slab alone and walks
   // this array's order within a slab, so this row's `drawPick` DOES care:
-  // it must sit after `galaxyPointSpritesLayer`, which establishes the COSMO pick
+  // it must sit after `galaxyPointSpritesPass`, which establishes the COSMO pick
   // pass's shared @group(0) camera every other COSMO drawPick relies on.
   zoneOfAvoidancePass,
   proceduralDisksPass,
@@ -346,7 +346,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   // below (so those stay unwarped on top, spec "Draw order", Q5). Registry
   // order alone can't enforce this against `orbit-trails`/`body-glints` — they
   // share this SAME (hdr, NEAR0) render step with the roster above. The real
-  // enforcement is `ContentLayer.hdrPostLensing`: those
+  // enforcement is `ContentPass.hdrPostLensing`: those
   // two opt in, so `frameProgram` splits the shared step into `'pre'`/`'post'`
   // halves around this row's own `(hdr, BODY[k])` step whenever the band is
   // active (see its module header); this array position stays the
@@ -383,7 +383,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   earthPass,
   // Earth's translucent cloud deck: drawn immediately AFTER earth (so it
   // depth-tests against the opaque surface, far hemisphere occluded) and BEFORE
-  // plan E's atmosphereShellLayer (which lands after this row, drawn last),
+  // plan E's atmosphereShellPass (which lands after this row, drawn last),
   // writing no depth and blending straight-alpha OVER.
   cloudShellPass,
   starSpheresPass,
@@ -411,7 +411,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   // (so a near-field route — Earth-to-parsec — clears COSMO's 10 kpc near plane;
   // see the layer header). Listed LAST among the (swap, NEAR0) rows so its route
   // + gizmo draw on top of every other overlay, the same "trails everything"
-  // intent it had as a COSMO row. `atmosphereShellLayer` below is (foreground:0,
+  // intent it had as a COSMO row. `atmosphereShellPass` below is (foreground:0,
   // NEAR0), a step the frame program runs BEFORE the swap overlays, so this stays
   // the last thing painted.
   clipPathDebugPass,

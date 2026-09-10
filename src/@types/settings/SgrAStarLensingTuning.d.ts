@@ -3,7 +3,7 @@
  * pass. Tier 1 overrides `BLACK_HOLES` at pack time; Tier 2 + emission
  * strength/tint are `SgrAStarLensingUniforms` fields (the 176-byte tail); the
  * rest are non-uniform CPU-side knobs on the same settings seam. No
- * `glintTint`/`glintIntensity` — see `bodyGlintsLayer.ts`.
+ * `glintTint`/`glintIntensity` — see `bodyGlintsPass.ts`.
  */
 
 import type { Vec3 } from '../math/Vec3';

@@ -1,5 +1,5 @@
 /**
- * orbitTrailsLayer — unit tests for the conic orbit-trails content row.
+ * orbitTrailsPass — unit tests for the conic orbit-trails content row.
  *
  * Two load-bearing assertions:
  *
@@ -177,7 +177,7 @@ function makeState(
   } as unknown as EngineState;
 }
 
-describe('orbitTrailsLayer registry row', () => {
+describe('orbitTrailsPass registry row', () => {
   it('declares the (hdr, NEAR0, additive) row shape', () => {
     expect(orbitTrailsPass.name).toBe('orbit-trails');
     expect(orbitTrailsPass.slab).toBe(NEAR0);
@@ -186,7 +186,7 @@ describe('orbitTrailsLayer registry row', () => {
   });
 });
 
-describe('orbitTrailsLayer.enabled', () => {
+describe('orbitTrailsPass.enabled', () => {
   it('gates on the renderer handle + the foreground distance — conics are static seeds', () => {
     const state = makeState(makeRendererSpy());
     const view = makeNear0View();
@@ -320,7 +320,7 @@ describe('orbitReachByRegion', () => {
   });
 });
 
-describe('orbitTrailsLayer.draw', () => {
+describe('orbitTrailsPass.draw', () => {
   it('composes each visible conic from view.slab.vp and issues ONE packed draw', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy();
@@ -575,12 +575,7 @@ describe('orbitTrailsLayer.draw', () => {
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
-    orbitTrailsPass.draw(
-      PASS_STUB,
-      view,
-      makeDrawCtx(),
-      makeState(renderer, { impostorOn: true }),
-    );
+    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer, { impostorOn: true }));
     expect(renderer.draw.mock.calls[0]![3]).toBe(true);
 
     renderer.draw.mockClear();

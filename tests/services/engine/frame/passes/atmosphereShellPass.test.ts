@@ -1,5 +1,5 @@
 /**
- * atmosphereShellLayer — unit tests for the in-scatter atmosphere's `'body'`-
+ * atmosphereShellPass — unit tests for the in-scatter atmosphere's `'body'`-
  * slab content row.
  *
  * Like the other body-slab layers, the load-bearing assertion is the f64
@@ -56,7 +56,7 @@ import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLoc
 // atmosphereDrawList (unmocked — its own cull math is covered by
 // atmosphereDrawList.test.ts) reads live body positions off this per-frame
 // snapshot. Stub it to each fixture's own positionMpc/orientation refs, the
-// same pattern earthLayer.test.ts uses, so the layer sees the exact fixture
+// same pattern earthPass.test.ts uses, so the layer sees the exact fixture
 // values.
 type SeededBody = (EarthBody | PlanetBody) & Pick<BodyState, 'positionMpc' | 'orientation'>;
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
@@ -146,7 +146,7 @@ function makeState(renderer: unknown): EngineState {
   } as unknown as EngineState;
 }
 
-describe('atmosphereShellLayer.enabled', () => {
+describe('atmosphereShellPass.enabled', () => {
   it('is true for earth’s and mars’s own body-m rows, false for the moon’s (no ATMOSPHERE_PARAMS row)', () => {
     const state = makeState({ draw: vi.fn() });
     const ctx = makeCtx();
@@ -163,7 +163,7 @@ describe('atmosphereShellLayer.enabled', () => {
   });
 });
 
-describe('atmosphereShellLayer.draw', () => {
+describe('atmosphereShellPass.draw', () => {
   it('composes mvp/camLocal from the slab f64 vp and the pose off ctx.bodyPose, never view.vp', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();

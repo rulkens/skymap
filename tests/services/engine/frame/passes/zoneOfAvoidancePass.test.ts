@@ -1,5 +1,5 @@
 /**
- * zoneOfAvoidanceLayer — the reduced-res producer half of the band (the upsample
+ * zoneOfAvoidancePass — the reduced-res producer half of the band (the upsample
  * layer is the consumer). The executor owns the pass and the additive-identity
  * clear, so what is pinned here is the draw-arg contract and the `enabled` gate
  * tracking `deriveZoneOfAvoidanceLiveness`.
@@ -77,7 +77,7 @@ function liveState(
 // `enabled` never reads `view` — an opaque stub satisfies the 3-arg signature.
 const VIEW_STUB = {} as unknown as SlabView;
 
-describe('zoneOfAvoidanceLayer.enabled', () => {
+describe('zoneOfAvoidancePass.enabled', () => {
   it('is enabled when the camera sits inside the visibility window', () => {
     expect(zoneOfAvoidancePass.enabled(liveState(), makeCtx(), VIEW_STUB)).toBe(true);
   });
@@ -97,7 +97,7 @@ describe('zoneOfAvoidanceLayer.enabled', () => {
   });
 });
 
-describe('zoneOfAvoidanceLayer.draw', () => {
+describe('zoneOfAvoidancePass.draw', () => {
   it('draws with ctx.cam, the downsampled viewport, and the composed opacity', () => {
     const drawSpy = vi.fn();
     const state = liveState({ draw: drawSpy });
@@ -136,7 +136,7 @@ describe('zoneOfAvoidanceLayer.draw', () => {
   });
 });
 
-describe('zoneOfAvoidanceLayer.drawPick', () => {
+describe('zoneOfAvoidancePass.drawPick', () => {
   it('draws with ctx.cam, the FULL canvas viewport, and the composed opacity', () => {
     const drawPickSpy = vi.fn();
     const state = liveState({ drawPick: drawPickSpy });

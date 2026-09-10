@@ -135,7 +135,7 @@ function makeStateWithSelection(row: SelectionRow | null): EngineState {
 
 // ── enabled() ─────────────────────────────────────────────────────
 
-describe('selectionRingLayer.enabled', () => {
+describe('selectionRingPass.enabled', () => {
   it('returns false when renderer is null', () => {
     const state = {
       gpu: { selectionRingRenderer: null },
@@ -215,7 +215,7 @@ describe('selection-ring slab exclusivity (COSMO vs NEAR0)', () => {
 
 // ── draw() ────────────────────────────────────────────────────────
 
-describe('selectionRingLayer.draw', () => {
+describe('selectionRingPass.draw', () => {
   it('computes ringRadiusPx from the row and forwards to renderer', () => {
     const state = makeStateWithSizePx(galaxyRow(), 4);
     const ctx = makeCtx();

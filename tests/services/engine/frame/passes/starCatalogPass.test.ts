@@ -1,5 +1,5 @@
 /**
- * starCatalogLayer — unit tests for the survey (Gaia bin) star LEAF content
+ * starCatalogPass — unit tests for the survey (Gaia bin) star LEAF content
  * row. The walk / fade / partition that feeds both streams lives in
  * `prepareStarCut` and is tested in `prepareStarCut.test.ts`; here we pin only
  * the layer's own behaviour:
@@ -133,7 +133,7 @@ const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 // signature for every case below.
 const VIEW_STUB = makeNear0View([0, 0, 0]);
 
-describe('starCatalogLayer.enabled', () => {
+describe('starCatalogPass.enabled', () => {
   it('is false while the renderer handle is null (pre-bootstrap)', () => {
     const state = makeState(null);
     expect(starCatalogPass.enabled(state, CTX_STUB, VIEW_STUB)).toBe(false);
@@ -156,7 +156,7 @@ describe('starCatalogLayer.enabled', () => {
   });
 });
 
-describe('starCatalogLayer.draw', () => {
+describe('starCatalogPass.draw', () => {
   it('draws the LEAF stream, handing every source the SAME rebased vp', () => {
     // Two loaded catalogs (same source) exercise the shared-buffer invariant:
     // the rebased vp must be computed once and passed identically to each draw.

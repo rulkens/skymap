@@ -1,5 +1,5 @@
 /**
- * ringsLayer — unit tests for the translucent planetary-ring row, one
+ * ringsPass — unit tests for the translucent planetary-ring row, one
  * `'body'`-slab content row per host body.
  *
  * Load-bearing assertions:
@@ -7,7 +7,7 @@
  *   1. The row profile: `slab: 'body'`, `(foreground:0)`, blend 'over'.
  *   2. The gate: a row draws only when `SCENE_RINGS` has an entry for THIS
  *      row's `bodyId` AND that ring's strip is resident — the required
- *      "ringsLayer draws only for a body with a ring row" case: an earth row
+ *      "ringsPass draws only for a body with a ring row" case: an earth row
  *      and a saturn row, exactly one draw, on saturn.
  *   3. The f64 seam: the ring MVP composes from the slab's `Float64Array`
  *      view-projection (`view.slab.vp`), NOT the f32-narrowed `view.vp`,
@@ -152,7 +152,7 @@ function makeRendererSpy() {
   return { draw: vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array) => void>() };
 }
 
-describe('ringsLayer row profile', () => {
+describe('ringsPass row profile', () => {
   it('is a body-slab row over (foreground:0) with straight-alpha over', () => {
     expect(ringsPass.name).toBe('rings');
     expect(ringsPass.slab).toBe('body');
@@ -161,7 +161,7 @@ describe('ringsLayer row profile', () => {
   });
 });
 
-describe('ringsLayer.enabled', () => {
+describe('ringsPass.enabled', () => {
   it('is false while the ringRenderer handle is null (bare ctx short-circuits)', () => {
     const state = makeState(null, [], []);
     expect(ringsPass.enabled(state, CTX_STUB, makeBodyView('saturn' as BodyId))).toBe(false);
@@ -191,7 +191,7 @@ describe('ringsLayer.enabled', () => {
   });
 });
 
-describe('ringsLayer.draw', () => {
+describe('ringsPass.draw', () => {
   it('draws exactly once across an earth row and a saturn row — the saturn row only', () => {
     const renderer = makeRendererSpy();
     const state = makeState(renderer, [earthBody(), saturnBody()], ['saturn-ring']);
@@ -232,7 +232,7 @@ describe('ringsLayer.draw', () => {
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
     // NOT the ring's outer radius — the fragment's in-front-of-planet test
-    // wants "planet radii", the same frame texturedBodiesLayer's Minnaert
+    // wants "planet radii", the same frame texturedBodiesPass's Minnaert
     // term uses.
     expect(camLocalMock.mock.calls[0]![1]).toBe(saturn.radiusM);
     expect(camLocalMock.mock.calls[0]![1]).not.toBeCloseTo(

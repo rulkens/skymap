@@ -1,6 +1,6 @@
 /**
- * volumeUpsampleLayer — HDR composite of the half-res scalar-volume
- * offscreen `scalarVolumeLayer` produces.
+ * volumeUpsamplePass — HDR composite of the half-res scalar-volume
+ * offscreen `scalarVolumePass` produces.
  *
  * Position: after milky-way/filaments/flow, before horizon-shell — a
  * visual layering choice (all-additive siblings), not a correctness one.

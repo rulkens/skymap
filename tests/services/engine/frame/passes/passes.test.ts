@@ -1,5 +1,5 @@
 /**
- * passes — the per-layer `enabled` gates and the `CONTENT_LAYERS` table shape,
+ * passes — the per-layer `enabled` gates and the `CONTENT_PASSES` table shape,
  * against stub state + ctx with no GPU device. The spot-checked `draw` calls pin
  * that a layer threads the resolved `SlabView`'s `vp`/`viewportPx` rather than
  * reading `ctx.vp`/`ctx.canvasSize` directly.
@@ -142,7 +142,7 @@ const MW_CLOUD_BUFFERS = {
 };
 
 // `state` is forwarded through — most layers ignore it, but
-// `galaxyPointSpritesLayer` reads `state.subsystems.fades.opacityOf` for
+// `galaxyPointSpritesPass` reads `state.subsystems.fades.opacityOf` for
 // per-source fade opacity. A minimal fades stub returning full opacity
 // lets the layer run without a live FadeRegistry.
 const STATE_STUB = {
@@ -160,13 +160,13 @@ const STATE_STUB = {
   // baseline stub has to carry it or `draw` throws before reaching the
   // renderer. Tests that need the toggle off override `settings` wholesale.
   settings: { milkyWay: { enabled: true } },
-  // galaxyPointSpritesLayer / disk layers bind the shared focus group off
+  // galaxyPointSpritesPass / disk layers bind the shared focus group off
   // state.gpu.focusUniform; an opaque bind group is all they read.
   // The nullable GPU renderer fields default to null (pre-bootstrap
   // shape); individual draw tests override the one they exercise.
   gpu: {
     focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
-    // milkyWayLayer.draw reads the generated cloud buffers off this handle.
+    // milkyWayPass.draw reads the generated cloud buffers off this handle.
     milkyWayCloud: { buffers: () => MW_CLOUD_BUFFERS },
     milkyWayCloudRenderer: null,
     horizonShellRenderer: null,
@@ -234,7 +234,7 @@ const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere'];
 // pass rather than sitting among the roster it samples. Neither aggregate
 // STREAM is here — the Milky Way's star billboards target 'mw-aggregate' and
 // the survey's target 'star-aggregates', so both sit outside the hdr group;
-// `sgrAStarLensingLayer` itself is ALSO not here — its slab is 'body', not
+// `sgrAStarLensingPass` itself is ALSO not here — its slab is 'body', not
 // NEAR0.
 const NEAR_HDR_NAMES = [
   'milky-way-upsample',
@@ -262,7 +262,7 @@ const NEAR_SWAP_NAMES = ['near0-selection-ring', 'foreground-labels', 'clip-path
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('CONTENT_LAYERS migration table (hdr group)', () => {
+describe('CONTENT_PASSES migration table (hdr group)', () => {
   it('every hdr content layer matches the migration table', () => {
     // Every current layer projects through the cosmological slab into the
     // HDR target with additive blending — see the renderer-unification
@@ -280,7 +280,7 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
   });
 });
 
-describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
+describe('CONTENT_PASSES migration table (near-field hdr group)', () => {
   it('the (hdr, NEAR0) group holds the sky roster, then orbit-trails/body-glints LAST (Task 14), additive', () => {
     // The hdr rows outside the cosmological slab: the Milky-Way cloud's
     // upsample + dust, the far-partition neighbourhood stars, the survey
@@ -314,7 +314,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
   });
 });
 
-describe('CONTENT_LAYERS migration table (swap group)', () => {
+describe('CONTENT_PASSES migration table (swap group)', () => {
   it('every swap content layer matches the migration table', () => {
     // The COSMO post-tone-map UI overlays project through the same
     // cosmological slab as the HDR group but target the swap chain with
@@ -330,7 +330,7 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
   });
 });
 
-describe('CONTENT_LAYERS migration table (foreground group)', () => {
+describe('CONTENT_PASSES migration table (foreground group)', () => {
   it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
     // The near-field bodies still on a fixed NEAR0 index (the Sun sphere, the
     // focused field star): project through NEAR0 into the depth-bearing
@@ -357,7 +357,7 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
   });
 });
 
-describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
+describe('CONTENT_PASSES migration table (near-field swap group)', () => {
   it('the star selection ring, scene-body captions, and clip-path overlay draw into swap through the near0 slab, over', () => {
     // The (swap, NEAR0) group: like the COSMO swap overlays these target the
     // swap chain with premultiplied-OVER, but they project through NEAR0 so
@@ -381,7 +381,7 @@ describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
   });
 });
 
-describe('CONTENT_LAYERS blend legality', () => {
+describe('CONTENT_PASSES blend legality', () => {
   it('every layer blends per its target — hdr/volume additive, foreground:0 opaque, swap over', () => {
     // The registry half of the target<->blend invariant — the renderer half,
     // that the WebGPU pipeline's actual blend state matches, is covered
@@ -413,11 +413,7 @@ describe('CONTENT_LAYERS blend legality', () => {
         // the swap-chain rows). A third non-additive hdr row should fail
         // this test and be a deliberate decision.
         const expected =
-          layer === milkyWayPass
-            ? 'multiply'
-            : layer === sgrAStarLensingPass
-              ? 'over'
-              : 'additive';
+          layer === milkyWayPass ? 'multiply' : layer === sgrAStarLensingPass ? 'over' : 'additive';
         expect(layer.blend).toBe(expected);
       } else if (layer.target === 'foreground:0') {
         // The `foreground:0` group is opaque bodies EXCEPT the three translucent
@@ -454,7 +450,7 @@ describe('CONTENT_LAYERS blend legality', () => {
         }
       } else {
         throw new Error(
-          `CONTENT_LAYERS: unexpected target '${layer.target}' on layer '${layer.name}'`,
+          `CONTENT_PASSES: unexpected target '${layer.target}' on layer '${layer.name}'`,
         );
       }
     }
@@ -471,7 +467,7 @@ describe('CONTENT_LAYERS blend legality', () => {
   });
 });
 
-describe('ringsLayer registry row', () => {
+describe('ringsPass registry row', () => {
   it("rides the 'body' slab sentinel into foreground:0 with over, AFTER the opaque bodies", () => {
     // The ring is the translucent overlay half of Saturn's rings: it shares the
     // opaque bodies' (foreground:0, 'body') render step but blends OVER, so it
@@ -492,13 +488,13 @@ describe('ringsLayer registry row', () => {
   });
 });
 
-describe('cloudShellLayer registry row', () => {
+describe('cloudShellPass registry row', () => {
   it("rides the 'body' slab sentinel into foreground:0 with over, AFTER earth", () => {
     // Earth's cloud deck is the second translucent overlay of the (foreground:0,
     // 'body') group: it blends OVER, so it must be ordered after the opaque
-    // surface earthLayer stamps, to depth-test against its z (far hemisphere
+    // surface earthPass stamps, to depth-test against its z (far hemisphere
     // occluded). Task 10 (body render slabs) moved it off the fixed NEAR0 index
-    // onto the same 'body' expansion earthLayer uses — see frameProgram.ts. It
+    // onto the same 'body' expansion earthPass uses — see frameProgram.ts. It
     // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) —
     // it is the exception, alongside the ring.
     const cloud = CONTENT_PASSES.find((layer) => layer.name === 'cloud-shell')!;
@@ -513,14 +509,14 @@ describe('cloudShellLayer registry row', () => {
   });
 });
 
-describe('atmosphereShellLayer registry row', () => {
+describe('atmosphereShellPass registry row', () => {
   it("rides the 'body' slab sentinel into foreground:0 with over, LAST — after the rings overlay", () => {
     // Earth's in-scatter atmosphere is the outermost translucent overlay of the
     // (foreground:0, 'body') group (spec §8.3): it blends OVER and must be
     // ordered AFTER every opaque sphere AND the ring overlay, so it depth-tests
     // against their stamped z (over-disc occluded, limb over space passes).
     // Task 10 moved it off the fixed NEAR0 index onto the same 'body' expansion
-    // earthLayer uses. It is deliberately NOT in FOREGROUND_NAMES (that group's
+    // earthPass uses. It is deliberately NOT in FOREGROUND_NAMES (that group's
     // opaque assertion) — it is the third exception, alongside the ring and
     // cloud shell. Non-pickable.
     const atmosphere = CONTENT_PASSES.find((layer) => layer.name === 'atmosphere-shell')!;
@@ -542,8 +538,8 @@ describe('atmosphereShellLayer registry row', () => {
   });
 });
 
-describe('scalarVolumeLayer registry row', () => {
-  it('leads CONTENT_LAYERS as the volume-target raymarch', () => {
+describe('scalarVolumePass registry row', () => {
+  it('leads CONTENT_PASSES as the volume-target raymarch', () => {
     // The half-res raymarch draws into its own 'volume' offscreen before the
     // hdr group upsamples it, so it sits first in the registry — and its
     // 'volume' target keeps it out of both the hdr and swap groups.
@@ -557,7 +553,7 @@ describe('scalarVolumeLayer registry row', () => {
   });
 });
 
-describe('starAggregatesLayer registry row', () => {
+describe('starAggregatesPass registry row', () => {
   it('draws into the star-aggregates offscreen through NEAR0, additive, and stays out of the hdr group', () => {
     // The survey-star AGGREGATE stream draws LINEAR into its own half-res
     // offscreen via a dedicated (star-aggregates, NEAR0) render step, so its
@@ -576,7 +572,7 @@ describe('starAggregatesLayer registry row', () => {
   });
 });
 
-describe('galaxyPointSpritesLayer.enabled', () => {
+describe('galaxyPointSpritesPass.enabled', () => {
   it('always returns true (no user-facing toggle for point-sprites)', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
@@ -587,11 +583,11 @@ describe('galaxyPointSpritesLayer.enabled', () => {
 });
 
 // Coverage for the `textured-disks` layer lives in
-// `texturedDisksLayer.test.ts` (one test file per ContentLayer module,
+// `texturedDisksPass.test.ts` (one test file per ContentPass module,
 // matching the convention used by every other entry in `passes/`). The
 // hdr-target layers check above pins the name in canonical order.
 
-describe('filamentsLayer.enabled', () => {
+describe('filamentsPass.enabled', () => {
   it('returns true when filaments.enabled is true (renderer presence checked in draw)', () => {
     const stateOn = {
       ...STATE_STUB,
@@ -625,7 +621,7 @@ describe('filamentsLayer.enabled', () => {
   });
 });
 
-describe('filamentsLayer.draw', () => {
+describe('filamentsPass.draw', () => {
   it('threads the SlabView vp/viewport to filamentRenderer.draw when present', () => {
     // This is the representative "draw threads the SlabView" check: the
     // layer must forward the SlabView's `vp`/`viewportPx` — NOT
@@ -650,7 +646,7 @@ describe('filamentsLayer.draw', () => {
   });
 });
 
-describe('milkyWayLayer.enabled', () => {
+describe('milkyWayPass.enabled', () => {
   it('returns true when milkyWay.enabled is true and the disc is above the FULL apparent size', () => {
     // Half the FULL-threshold distance → apparent diameter is twice
     // MILKY_WAY_FADE_FULL_PX, safely full-alpha. Both gates pass.
@@ -706,7 +702,7 @@ describe('milkyWayLayer.enabled', () => {
   });
 });
 
-describe('milkyWayLayer.draw', () => {
+describe('milkyWayPass.draw', () => {
   it('calls state.gpu.milkyWayCloudRenderer.drawDust with the packed args when the disc is above the FULL apparent size', () => {
     // Half the FULL-threshold distance → apparent diameter is twice
     // MILKY_WAY_FADE_FULL_PX — fadeAlpha should be 1.0.
@@ -725,7 +721,7 @@ describe('milkyWayLayer.draw', () => {
     milkyWayPass.draw(PASS_STUB, view, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // This row draws ONLY the dust pass now — the additive star pass moved to
-    // milkyWayAggregateLayer, which renders it into the reduced-resolution
+    // milkyWayAggregatePass, which renders it into the reduced-resolution
     // `mw-aggregate` offscreen. Signature: drawDust(pass, MilkyWayCloudDrawArgs).
     const [passArg, args] = drawSpy.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
@@ -752,7 +748,7 @@ describe('milkyWayLayer.draw', () => {
   });
 });
 
-describe('horizonShellLayer.enabled', () => {
+describe('horizonShellPass.enabled', () => {
   it('returns false near the origin — the inverse of the Milky-Way band', () => {
     // Camera at 5 Mpc is far below the shell's fade-in band (5% of
     // 14.3 Gpc ≈ 0.7 Gpc), so the layer is skipped — no empty
@@ -770,7 +766,7 @@ describe('horizonShellLayer.enabled', () => {
   });
 });
 
-describe('horizonShellLayer.draw', () => {
+describe('horizonShellPass.draw', () => {
   it('forwards the distance-fade alpha as the 4th draw arg', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx({
@@ -801,7 +797,7 @@ describe('horizonShellLayer.draw', () => {
   });
 });
 
-// Minimal settings shape for the galaxyPointSpritesLayer.draw tests — only
+// Minimal settings shape for the galaxyPointSpritesPass.draw tests — only
 // the fields the layer now reads from `state.settings`.
 const POINT_SPRITES_SETTINGS_STUB = {
   galaxyCatalogs: {
@@ -816,7 +812,7 @@ const POINT_SPRITES_SETTINGS_STUB = {
   },
 } as unknown as EngineState['settings'];
 
-describe('galaxyPointSpritesLayer.draw', () => {
+describe('galaxyPointSpritesPass.draw', () => {
   it('packs (source, index) into the selectedPacked u32', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
@@ -965,8 +961,8 @@ describe('drawPick migration-table rows', () => {
     // The two label rows are the exception to the ordering freedom above —
     // not because their pick aspect needs a fixed slot (each restores the
     // shared point-pick camera prefix before returning, same postcondition
-    // `proceduralDisksLayer` already satisfies from mid-registry — see
-    // `ContentLayer.drawPick`), but because CONTENT_LAYERS is the ONE list
+    // `proceduralDisksPass` already satisfies from mid-registry — see
+    // `ContentPass.drawPick`), but because CONTENT_PASSES is the ONE list
     // both the visual and pick programs filter, and 'labels' visual row must
     // sit last among the swap-target layers so its text composites over the
     // marker-line stroke it sits over (`passes/index.ts`). The pick filter
@@ -990,7 +986,7 @@ describe('drawPick migration-table rows', () => {
   });
 });
 
-describe('structureMarkersLayer.enabled', () => {
+describe('structureMarkersPass.enabled', () => {
   it('disables once the surveyDeepZoom fade completes (opacity-zero principle)', () => {
     // Every marker fragment resolves to alpha 0 past the goneAt edge, so the
     // layer must leave the pass plan entirely — the executor drops the
@@ -1009,7 +1005,7 @@ describe('structureMarkersLayer.enabled', () => {
   });
 });
 
-describe('galaxyPointSpritesLayer.drawPick', () => {
+describe('galaxyPointSpritesPass.drawPick', () => {
   it('filters loadedSources by ctx.visibleSourceMask before drawPoints', () => {
     // The pick ctx's `visibleSourceMask` IS the pick mask, so a catalog whose
     // bit is clear (toggled off / fading out) is dropped before the picker

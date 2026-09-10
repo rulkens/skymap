@@ -1,6 +1,6 @@
 /**
- * scalarVolumeLayer — the half-resolution scalar-volume raymarch, as a
- * ContentLayer that draws into the volume offscreen target.
+ * scalarVolumePass — the half-resolution scalar-volume raymarch, as a
+ * ContentPass that draws into the volume offscreen target.
  *
  * The raymarch is a `render` step over the `(target: 'volume', slab: COSMO)`
  * group. The executor owns the pass and the additive-identity `(0, 0, 0, 0)`

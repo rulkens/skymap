@@ -113,7 +113,7 @@
  * nothing samples it downstream: each painter-chain row clears its own depth
  * (spec §7.3), so the buffer only ever holds the LAST row's value and can't
  * back a cross-row occlusion test. The caption occlusion pass
- * (`foregroundLabelsLayer` and the other overlay layers, via
+ * (`foregroundLabelsPass` and the other overlay layers, via
  * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
  * accumulates across rows under OVER compositing. It renders at full
  * resolution (`scale: 1`) because opaque geometry has hard edges that the
@@ -123,7 +123,7 @@
  *
  * ### Why the swap row has a spec but no texture
  *
- * The `swap` row completes the target table (a `ContentLayer.target` can
+ * The `swap` row completes the target table (a `ContentPass.target` can
  * name it, and its format is the renderer-profile half of the
  * target↔pipeline invariant), but the swap chain is an ACQUIRED texture —
  * `context.getCurrentTexture()` per frame — not one this owner allocates.
@@ -195,7 +195,7 @@ function resolveFixedSize(
  * the live swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
  * Rows per the renderer-unification design's concrete target table; the pick
  * rows arrive in a later plan phase. Exported so `targetParity.test.ts` can
- * cross-check its ids against `CONTENT_LAYERS` and `frameProgram` without a
+ * cross-check its ids against `CONTENT_PASSES` and `frameProgram` without a
  * GPU device — see that file's header for why those checks matter.
  */
 export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {

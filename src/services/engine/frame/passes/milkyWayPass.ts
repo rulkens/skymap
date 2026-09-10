@@ -1,11 +1,11 @@
 /**
- * milkyWayLayer — the Milky Way point cloud's DUST pass, plus the cloud's pick
+ * milkyWayPass — the Milky Way point cloud's DUST pass, plus the cloud's pick
  * aspect, at the galactic centre (`MILKY_WAY_CENTER_WORLD`, the ~8 kpc Sgr A*
  * offset from the observer origin, applied via the model matrix).
  *
  * The MULTIPLICATIVE dust pass stays here, full-res in HDR, because its
  * per-channel transmittance has to land on the real cosmological
- * accumulation; the ADDITIVE star pass lives in `milkyWayAggregateLayer`
+ * accumulation; the ADDITIVE star pass lives in `milkyWayAggregatePass`
  * instead (see that layer's header for why). Dust sprites are camera-facing
  * billboards from the live camera basis; the cloud's world placement is
  * `milkyWayModelCached`, shared with the aggregate layer.
@@ -20,7 +20,7 @@
  * `pickEnabled` is the one place draw and pick diverge: `enabled` AND a floor
  * on the camera's origin distance (`MILKY_WAY_PICK_MIN_DISTANCE_MPC`) — the
  * only registry gate where the pick set is NARROWER than the draw set (see
- * `ContentLayer.pickEnabled` on why that direction needs its own
+ * `ContentPass.pickEnabled` on why that direction needs its own
  * justification).
  *
  * Slab is NEAR0, not COSMO: COSMO's near plane is fixed at 10 kpc
@@ -28,8 +28,8 @@
  * from the heliocentric origin, so on the way down that plane would slice
  * visibly through the clumps while the approach fade (full to 2 kpc) still
  * shows them — a hard clip mid-crossfade. NEAR0's near/far track the camera's
- * orbit distance instead, the same fix `starPointsLayer`, `starCatalogLayer`,
- * `orbitTrailsLayer`, and `foregroundLabelsLayer` each carry. Unlike those
+ * orbit distance instead, the same fix `starPointsPass`, `starCatalogPass`,
+ * `orbitTrailsPass`, and `foregroundLabelsPass` each carry. Unlike those
  * four there is no f64 rebase seam here: the cloud's kpc-scale anchors bound
  * the f32 large-minus-large cancellation at ~1e-9 Mpc, deeply sub-pixel
  * against a kpc-sized disc. NEAR0's adaptive far plane is the one hazard it
@@ -42,7 +42,7 @@
  * full cosmological accumulation behind it, but must NOT darken the near-field
  * starfield (star-points / star-catalog) that sits between the camera and the
  * dust during descent — so this layer leads the group and those draw after.
- * `milkyWayUpsampleLayer` is the one row that must still precede it: it adds
+ * `milkyWayUpsamplePass` is the one row that must still precede it: it adds
  * the cloud's own starlight into HDR, which the dust then has to multiply too.
  */
 
@@ -87,7 +87,7 @@ export const milkyWayPass: ContentPass = {
   },
 
   // Pick gate — NARROWER than `enabled`, the only row in the registry that way
-  // round (see `ContentLayer.pickEnabled`). The disc stays DRAWN all the way
+  // round (see `ContentPass.pickEnabled`). The disc stays DRAWN all the way
   // down to the 200 pc approach fade, but stops taking clicks once the camera
   // is inside it: `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above carries the why.
   // Composed over `enabled` rather than restating its three terms, so the

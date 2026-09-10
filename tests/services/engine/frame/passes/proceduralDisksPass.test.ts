@@ -72,7 +72,7 @@ function makeProceduralDiskRenderer() {
   return { draw: vi.fn() } as any;
 }
 
-describe('proceduralDisksLayer', () => {
+describe('proceduralDisksPass', () => {
   it('enabled() returns false when subsystems.proceduralDisks is null', () => {
     const state = {
       subsystems: { proceduralDisks: null },
@@ -142,7 +142,7 @@ describe('proceduralDisksLayer', () => {
     // pickDisks binds the disk camera at slot 0; the Milky-Way + structure
     // rows drawn after this one read the shared point-pick camera prefix, so
     // drawPick must call galaxyPickRenderer.bindCamera(pass) to put it back —
-    // ordered strictly after the disk pick. (See ContentLayer.drawPick's
+    // ordered strictly after the disk pick. (See ContentPass.drawPick's
     // postcondition.)
     const callLog: string[] = [];
     const proceduralDiskRenderer = {

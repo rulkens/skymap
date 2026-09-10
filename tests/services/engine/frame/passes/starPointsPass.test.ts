@@ -1,8 +1,8 @@
 /**
- * starPointsLayer — unit tests for the point-partition star content row.
+ * starPointsPass — unit tests for the point-partition star content row.
  *
  * The load-bearing threading assertion here is the f64 rebase seam: like the
- * captions in `foregroundLabelsLayer`, the point anchors and the NEAR0 view
+ * captions in `foregroundLabelsPass`, the point anchors and the NEAR0 view
  * translation are near-equal parsec-scale numbers during the final approach to
  * a local star, so an f32 subtraction cancels catastrophically and jitters the
  * sprite centre. The layer must therefore hand the renderer CAMERA-RELATIVE
@@ -13,7 +13,7 @@
  * The membership assertions pin the other half of the structural XOR: the
  * layer uploads (via `setStars`) EXACTLY the `points` branch of
  * `partitionStarsByResolution` — the complement of the `spheres` branch
- * `starSpheresLayer`'s suite asserts over the same
+ * `starSpheresPass`'s suite asserts over the same
  * camera-half-an-AU-off-Sirius mixed fixture. Because the anchors are rebased
  * per frame, the upload is per-frame (no membership cache): a promoted star
  * still LEAVES the point set the frame it resolves, so it is never drawn as
@@ -107,7 +107,7 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
 
 // A camera within MAX_ORBIT_EXTENT_MPC of the origin — Neptune's ~30 AU orbit
-// is the system's farthest reach, ~1.5e-10 Mpc — so orbitTrailsLayer's
+// is the system's farthest reach, ~1.5e-10 Mpc — so orbitTrailsPass's
 // whole-layer sub-pixel bound (its module header) clamps the camera's nearest
 // possible distance to any orbit point to 0 and treats every orbit as
 // always-visible, regardless of apparent size. NEAR_FIELD_CAM (5 kpc out) is
@@ -200,7 +200,7 @@ function makeState(
 // signature for every gating case in this file.
 const VIEW_STUB = makeNear0View([0, 0, 0]);
 
-describe('starPointsLayer.enabled', () => {
+describe('starPointsPass.enabled', () => {
   it('is false while starPointRenderer is null and while every star resolves; true with a point star', () => {
     const renderer = makeRenderer();
     // Null handle. NOTE: deliberately no state.data and a bare ctx — the
@@ -221,9 +221,7 @@ describe('starPointsLayer.enabled', () => {
     // Renderer + the full seed inside the gate at 5 kpc: every star — the
     // Sun included — is a sub-pixel point.
     const nearCtx = makeCtx(NEAR_FIELD_CAM);
-    expect(starPointsPass.enabled(makeState(renderer, SCENE_STARS), nearCtx, VIEW_STUB)).toBe(
-      true,
-    );
+    expect(starPointsPass.enabled(makeState(renderer, SCENE_STARS), nearCtx, VIEW_STUB)).toBe(true);
   });
 
   it('is disabled beyond the foreground gate even with point stars present', () => {
@@ -258,12 +256,12 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     // the (foreground:0, NEAR0) body group — for the skip to be wholesale.
     const state = {
       // starCatalogRenderer null (like the real gpu bag pre-load): no Gaia bin
-      // committed here, so starCatalogLayer — one of the group's (hdr, NEAR0)
+      // committed here, so starCatalogPass — one of the group's (hdr, NEAR0)
       // rows — short-circuits its handle gate and stays out of this assertion.
       gpu: {
         starPointRenderer: makeRenderer(),
         orbitTrailRenderer: { draw: vi.fn() },
-        // Explicit null so bodyGlintsLayer.enabled (a member of the same
+        // Explicit null so bodyGlintsPass.enabled (a member of the same
         // (hdr, NEAR0) group this filter walks) short-circuits on its strict
         // `=== null` handle check rather than reading state.data.bodies.planets,
         // which this star-focused fixture does not carry.
@@ -311,7 +309,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
   });
 });
 
-describe('starPointsLayer.draw', () => {
+describe('starPointsPass.draw', () => {
   it('threads the REBASED vp (not the raw f32 view.vp) and view.viewportPx to draw', () => {
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, 5];
@@ -358,10 +356,10 @@ describe('starPointsLayer.draw', () => {
     expect(uploadedProxima.positionMpc).not.toEqual(PROXIMA.positionMpc);
   });
 
-  it('starPointsLayer draws only the point stars', () => {
+  it('starPointsPass draws only the point stars', () => {
     const renderer = makeRenderer();
     // Mixed fixture, camera half an AU off Sirius: only Sirius resolves
-    // (1.71 R☉) and belongs to starSpheresLayer — its suite asserts exactly
+    // (1.71 R☉) and belongs to starSpheresPass — its suite asserts exactly
     // that set over this same fixture — leaving the Sun and Proxima (parsecs
     // out, sub-pixel: a point is what keeps them VISIBLE from here) as the
     // point stars. Disjoint + covering by construction: the structural XOR.
@@ -439,7 +437,7 @@ describe('starPointsLayer.draw', () => {
     // Camera parked mid-band so the roster uploads and the exposure ramp is a
     // genuine non-trivial factor. The layer must forward `starCatalogs.sizePx`
     // verbatim and `brightness × starExposureRamp(camDistMpc, near, mid, far)` —
-    // the SAME fold `starCatalogLayer` applies — NOT the raw brightness trim.
+    // the SAME fold `starCatalogPass` applies — NOT the raw brightness trim.
     const camDistMpc =
       (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
     const renderer = makeRenderer();

@@ -9,7 +9,7 @@
  *
  *   - `program` is the ordered step list (`frameProgram(tone)`), the frame as
  *     data — the executor is the only code that walks it.
- *   - `layers` is the content-layer registry; each `'render'` step selects its
+ *   - `passes` is the content-layer registry; each `'render'` step selects its
  *     group out of this list by `(target, slab)` plus the layer's own gate.
  *   - `strategy` is how a render step's group becomes GPU passes ('merged' in
  *     production, 'perLayerTimed' under `?gpuTimings`) — a property of *how* a
@@ -46,7 +46,7 @@ export type ExecuteFrameArgs = {
   /** The ordered step program to walk (`frameProgram(tone)`). */
   program: readonly FrameStep[];
   /** The content-layer registry each render step selects its group from. */
-  layers: readonly ContentPass[];
+  passes: readonly ContentPass[];
   /** How each render step's layer group becomes GPU passes. */
   strategy: RenderStrategy;
   /** Per-pass GPU-timing descriptor source (no-op when timing is disabled). */

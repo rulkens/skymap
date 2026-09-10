@@ -1,5 +1,5 @@
 /**
- * bodyGlintsLayer — unit tests for the sub-pixel body glint content row.
+ * bodyGlintsPass — unit tests for the sub-pixel body glint content row.
  *
  * The load-bearing behaviours:
  *
@@ -7,7 +7,7 @@
  *     `brightness · fadeBand(apparentPx)` rounds to 0 — here a body turned to its
  *     unlit far side — is NOT packed into the instance batch; a mid-fade LIT body
  *     IS, with a brightness strictly in (0, 1) (the phase term + the cross-fade).
- *   - The f64 rebase seam (like `starPointsLayer`): the layer hands the renderer
+ *   - The f64 rebase seam (like `starPointsPass`): the layer hands the renderer
  *     CAMERA-RELATIVE anchors (`pos − camPos`, f64) paired with the REBASED
  *     view-projection, not the raw anchors through the f32-narrowed `view.vp`.
  *   - The migration-table row + registry membership are pinned in
@@ -216,7 +216,7 @@ function statesWithAnchorPinnedAt(
   };
 }
 
-describe('bodyGlintsLayer.enabled', () => {
+describe('bodyGlintsPass.enabled', () => {
   it('is false while the renderer handle is null (short-circuits before ctx / state.data)', () => {
     expect(
       bodyGlintsPass.enabled(
@@ -242,7 +242,7 @@ describe('bodyGlintsLayer.enabled', () => {
   });
 });
 
-describe('bodyGlintsLayer.enabled — far dissolve (the bite)', () => {
+describe('bodyGlintsPass.enabled — far dissolve (the bite)', () => {
   it('stays on mid-dissolve but LEAVES the pass plan past the backdrop goneAt while still inside the foreground gate', () => {
     // The user-reported bug: the glints have only a NEAR handoff (`bodyGlint`, the
     // 3→1 px fade-in), so as their apparent size drops toward zero they read FULL
@@ -250,7 +250,7 @@ describe('bodyGlintsLayer.enabled — far dissolve (the bite)', () => {
     // `FOREGROUND_MAX_DISTANCE_MPC` gate — deep in Milky-Way framing, where all ~22
     // collapse onto one bright dot. The `bodyGlintBackdrop` far-dissolve fixes it:
     // once the band zeroes, the layer must LEAVE the pass plan (opacity 0 ⇒ no
-    // render), exactly as `starPointsLayer` does with `starBackdrop`.
+    // render), exactly as `starPointsPass` does with `starBackdrop`.
     const backdrop = SCALE_FADE_BANDS.bodyGlintBackdrop;
     const dMid = (backdrop.fullAt + backdrop.goneAt) / 2; // mid fade → band in (0,1)
     const dGone = backdrop.goneAt * 2; // past goneAt → band 0
@@ -279,9 +279,7 @@ describe('bodyGlintsLayer.enabled — far dissolve (the bite)', () => {
     // many `mockImplementationOnce` per call.
     const pinAtDMid = statesWithAnchorPinnedAt([dMid, 0, 0]);
     vi.mocked(sceneBodyStates).mockImplementationOnce(pinAtDMid).mockImplementationOnce(pinAtDMid);
-    expect(bodyGlintsPass.enabled(state, makeCtx([dMid, 0, 0]), makeNear0View(CAM_POS))).toBe(
-      true,
-    );
+    expect(bodyGlintsPass.enabled(state, makeCtx([dMid, 0, 0]), makeNear0View(CAM_POS))).toBe(true);
     vi.mocked(sceneBodyStates).mockImplementationOnce(statesWithAnchorPinnedAt([dGone, 0, 0]));
     // The bite: unfixed `enabled` has no far-dissolve check, so this reads true.
     expect(bodyGlintsPass.enabled(state, makeCtx([dGone, 0, 0]), makeNear0View(CAM_POS))).toBe(
@@ -290,7 +288,7 @@ describe('bodyGlintsLayer.enabled — far dissolve (the bite)', () => {
   });
 });
 
-describe('bodyGlintsLayer — Sgr A* far-field glint (task 8)', () => {
+describe('bodyGlintsPass — Sgr A* far-field glint (task 8)', () => {
   it('enabled is true when the anchor alpha is positive even with an empty glints partition', () => {
     // No seeded planets — the row can only be admitted by the anchor. Move it
     // OUT to its real ~8 kpc position (the default fixture keeps it inert,
@@ -321,7 +319,7 @@ describe('bodyGlintsLayer — Sgr A* far-field glint (task 8)', () => {
   });
 });
 
-describe('bodyGlintsLayer.draw — far-dissolve brightness scaling', () => {
+describe('bodyGlintsPass.draw — far-dissolve brightness scaling', () => {
   it('scales the packed glint brightness by the backdrop band (identical geometry, only camera-origin distance differs)', () => {
     // Two cameras at DIFFERENT origin distances, but the body pinned the SAME small
     // offset just beyond each (farther from the Sun → full phase at both). So the
@@ -376,7 +374,7 @@ describe('bodyGlintsLayer.draw — far-dissolve brightness scaling', () => {
   });
 });
 
-describe('bodyGlintsLayer.pickEnabled (Bug B — Earth-stamp-only frame stays in the pick pass)', () => {
+describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in the pick pass)', () => {
   // With NO glints (empty partition) `enabled` is false, but the Earth caption
   // stamp still needs to ride this layer's pick pass while the caption is on. The
   // pick gate is therefore WIDER than the draw gate: admit when glints are present
@@ -431,7 +429,7 @@ describe('bodyGlintsLayer.pickEnabled (Bug B — Earth-stamp-only frame stays in
   });
 });
 
-describe('bodyGlintsLayer.draw', () => {
+describe('bodyGlintsPass.draw', () => {
   it('skips the zero-brightness (unlit far side) body and packs only the lit mid-fade one', () => {
     const renderer = makeRenderer();
     const state = makeState(renderer, [LIT, UNLIT]);
@@ -515,7 +513,7 @@ function makePickRenderer() {
 }
 
 // A resolved Earth 1.1e6 km down +x — with the camera at 1e6 km its apparent
-// diameter is many px, so `earthLayer.enabled` (the SAME predicate the Earth
+// diameter is many px, so `earthPass.enabled` (the SAME predicate the Earth
 // stamp is gated on) holds and the stamp is emitted.
 const EARTH_RESOLVED: SeededPlanet = {
   id: 'earth',
@@ -532,7 +530,7 @@ function makePickState(
   opts?: { earth?: PlanetBody | null; earthRenderer?: unknown },
 ): EngineState {
   return {
-    // earthRenderer defaults to a truthy stand-in so `earthLayer.enabled` (which
+    // earthRenderer defaults to a truthy stand-in so `earthPass.enabled` (which
     // short-circuits on a null handle) is exercised by the earth+distance test,
     // not skipped. Distinguish "not provided" (→ {}) from an explicit `null` — a
     // `?? {}` fallback would collapse the pre-bootstrap null-handle case. earth
@@ -546,7 +544,7 @@ function makePickState(
   } as unknown as EngineState;
 }
 
-describe('bodyGlintsLayer.drawPick', () => {
+describe('bodyGlintsPass.drawPick', () => {
   it('WITHIN the caption gate picks BOTH the lit and the invisible (unlit) glint, dropping unknowns', () => {
     // Bug B: the camera (CAM_POS, ~3e-14 Mpc) sits deep inside
     // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, so every body's foreground LABEL is on
@@ -660,7 +658,7 @@ describe('bodyGlintsLayer.drawPick', () => {
 
   it('emits the Earth stamp with the EARTH class (0) inside the caption gate, so Earth out-picks every glint', () => {
     // Two lit io/jupiter glints plus a resolved Earth, camera inside the caption
-    // gate. Earth is not in the partition (it rides earthLayer), so the layer emits
+    // gate. Earth is not in the partition (it rides earthPass), so the layer emits
     // its stamp gated on the caption range (earth !== null && distance < gate).
     // Priority is
     // now the per-instance bandClass — 0 (earth) beats 1 (planet) beats 2 (moon) as
@@ -719,10 +717,10 @@ describe('bodyGlintsLayer.drawPick', () => {
     // SUB_PIXEL_BODY_CULL_PX 1 px cull, but its caption stays on out to
     // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC — ten orders of magnitude of zoom where
     // the label invites a click. A camera 1e-6 Mpc from a 6371 km Earth makes it
-    // ~1e-7 px across (deep sub-pixel — earthLayer.enabled is FALSE here), yet
+    // ~1e-7 px across (deep sub-pixel — earthPass.enabled is FALSE here), yet
     // 1e-6 Mpc ≪ the caption gate. No planets seeded (empty glints branch), so the
     // Earth stamp is the ONLY pick point. On the pre-fix code (gated on
-    // earthLayer.enabled) this batch is empty — the bite.
+    // earthPass.enabled) this batch is empty — the bite.
     const earthSubPixel: SeededPlanet = {
       id: 'earth',
       label: 'Earth',

@@ -113,7 +113,7 @@ function makeState(opts: {
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
-describe('clipPathDebugLayer.enabled', () => {
+describe('clipPathDebugPass.enabled', () => {
   it('is false when the renderer is null', () => {
     const state = makeState({ renderer: null, snapshot: SNAPSHOT });
     const ctx = makeCtx();
@@ -133,7 +133,7 @@ describe('clipPathDebugLayer.enabled', () => {
   });
 });
 
-describe('clipPathDebugLayer.draw', () => {
+describe('clipPathDebugPass.draw', () => {
   it('builds lines from the snapshot and forwards to setLines + draw', () => {
     const renderer = makeRendererSpy();
     const state = makeState({ renderer, snapshot: SNAPSHOT, scrub01: 0 });

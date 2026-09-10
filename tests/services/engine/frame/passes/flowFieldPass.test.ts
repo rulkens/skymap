@@ -1,9 +1,9 @@
 /**
- * flowFieldLayer tests — the enabled() gate (settings.flow.enabled AND
+ * flowFieldPass tests — the enabled() gate (settings.flow.enabled AND
  * slotReady(assetSlots.flow)) and the draw delegation + defensive renderer-null
  * guard.
  *
- * No real GPUDevice — every GPU-typed value is a cast stub. The ContentLayer
+ * No real GPUDevice — every GPU-typed value is a cast stub. The ContentPass
  * interface splits `enabled` from `draw`, so the gate predicate is asserted
  * independently of the draw commands.
  */
@@ -86,7 +86,7 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-describe('flowFieldLayer.enabled', () => {
+describe('flowFieldPass.enabled', () => {
   it('returns false when the cube is not loaded (even if enabled)', () => {
     expect(
       flowFieldPass.enabled(
@@ -124,7 +124,7 @@ describe('flowFieldLayer.enabled', () => {
   });
 });
 
-describe('flowFieldLayer.draw', () => {
+describe('flowFieldPass.draw', () => {
   it('delegates to state.gpu.flowFieldRenderer.draw with the pass, vp, viewport, settings.flow, and fade opacity', () => {
     const drawSpy = vi.fn();
     const state = makeState({ opacity: 0.42, flowFieldRenderer: { draw: drawSpy } });

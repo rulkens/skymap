@@ -2,9 +2,9 @@
  * encodeFlowCompute — pre-HDR compute dispatch for the flow-field layer.
  *
  * The engine's first compute step. Runs inside the single per-frame command
- * encoder, BEFORE the HDR render step opens (alongside `scalarVolumeLayer`),
+ * encoder, BEFORE the HDR render step opens (alongside `scalarVolumePass`),
  * because the compute pass writes the trail buffers that the ribbon draw
- * (`flowFieldLayer`, an hdr-target layer) reads later the same frame. WebGPU
+ * (`flowFieldPass`, an hdr-target layer) reads later the same frame. WebGPU
  * orders the compute write before the subsequent vertex read.
  *
  * ### No out-of-band submit (decision §5)

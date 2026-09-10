@@ -285,7 +285,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       uiCtx: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
-      // resources, null-checked at use by labelsLayer / markerLinesLayer).
+      // resources, null-checked at use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
       // Second MSDF label renderer for the foreground Sun/Earth captions
@@ -302,7 +302,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       labelPickRenderer: null,
       foregroundLabelPickRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use by
-      // clipPathDebugLayer.
+      // clipPathDebugPass.
       debugLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
@@ -319,24 +319,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       // Galactic-plane dust-band guide. null until initGpu; excluded from
-      // isEngineReady, null-checked at use by zoneOfAvoidanceLayer.
+      // isEngineReady, null-checked at use by zoneOfAvoidancePass.
       zoneOfAvoidanceRenderer: null,
       // Shared world-geometry text renderer. null until initGpu; its first
       // consumer is the zone-of-avoidance lettering path, null-checked at use.
       label3DRenderer: null,
-      // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
+      // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
       // null until initGpu; excluded from isEngineReady —
-      // milkyWayUpsampleLayer null-checks it in draw, so a null no-ops.
+      // milkyWayUpsamplePass null-checks it in draw, so a null no-ops.
       milkyWayAggregateUpsample: null,
       // null until initGpu; excluded from isEngineReady —
-      // zoneOfAvoidanceUpsampleLayer null-checks it in draw, so a null no-ops.
+      // zoneOfAvoidanceUpsamplePass null-checks it in draw, so a null no-ops.
       zoneOfAvoidanceUpsample: null,
       // null until initGpu; excluded from isEngineReady —
-      // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
+      // starAggregateUpsamplePass null-checks it in draw, so a null no-ops.
       starAggregateUpsample: null,
       // null until initGpu; excluded from isEngineReady — every bloom content
       // layer's enable gate is exactly `bloomPyramid !== null`, so a null handle
@@ -349,10 +349,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
       // constructs it; its 'earth' texture slot in the bodyTextures family
       // (proximity-demanded, commits via setMap) is minted later, in wireSlots.
-      // Excluded from isEngineReady, null-checked at use by earthLayer.
+      // Excluded from isEngineReady, null-checked at use by earthPass.
       earthRenderer: null,
       // Instanced surface-tile detail draw over the base globe. null until
-      // initGpu; excluded from isEngineReady, null-checked at use by earthLayer.
+      // initGpu; excluded from isEngineReady, null-checked at use by earthPass.
       earthSurfaceTileRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
       // (the Sun), one instanced planet renderer drawing every seeded
@@ -365,12 +365,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       texturedBodyRenderer: null,
       // Saturn's rings — the translucent overlay half of the ring system, drawn
       // last in the (foreground:0, NEAR0) group. null until initGpu; excluded
-      // from isEngineReady, null-checked at use by ringsLayer.
+      // from isEngineReady, null-checked at use by ringsPass.
       ringRenderer: null,
       // Earth's translucent cloud shell — the thin deck drawn just above the
-      // opaque surface, immediately after earthLayer in the (foreground:0, NEAR0)
+      // opaque surface, immediately after earthPass in the (foreground:0, NEAR0)
       // group. null until initGpu; excluded from isEngineReady, null-checked at
-      // use by cloudShellLayer.
+      // use by cloudShellPass.
       cloudShellRenderer: null,
       // The in-scatter atmosphere — the outermost translucent shell, drawn LAST in
       // the (foreground:0, NEAR0) group and also read by the atmosphereSkyView step.
@@ -379,11 +379,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Sub-pixel bodies (the glints branch of the body partition) as
       // brightness-scaled additive points on the (hdr, NEAR0) step — the far
       // half of the body LOD, sibling of starPointRenderer. null until initGpu;
-      // excluded from isEngineReady, null-checked at use by bodyGlintsLayer.
+      // excluded from isEngineReady, null-checked at use by bodyGlintsPass.
       bodyGlintRenderer: null,
       // The Sgr A* lens pass — a single billboard draw on Sgr A*'s own
       // body-m slab row. null until initGpu; excluded from isEngineReady,
-      // null-checked at use by sgrAStarLensingLayer.
+      // null-checked at use by sgrAStarLensingPass.
       sgrAStarLensingRenderer: null,
       starCatalogRenderer: null,
       starCatalogPickRenderer: null,
@@ -393,7 +393,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       bodyPickRenderer: null,
       // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
       // conics on the (hdr, NEAR0) step. null until initGpu; excluded from
-      // isEngineReady, null-checked at use by orbitTrailsLayer.
+      // isEngineReady, null-checked at use by orbitTrailsPass.
       orbitTrailRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
@@ -442,7 +442,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // The NEAR0 sibling of `cosmoLabelDirector` — same factory, `screenSeparation`
       // + `exponentialApproach` + lift arms instead. Owns the caption + leader-
       // line upload for `produceSceneBodyCaptions` + `produceConstellationCaptions`
-      // (registered just after this literal); `foregroundLabelsLayer` only
+      // (registered just after this literal); `foregroundLabelsPass` only
       // issues the draw calls against what this director already flushed.
       foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
 
@@ -713,7 +713,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // Debug clip-path inspector seam — `watchClipPathInspectSaga` calls `compute`
   // to sample a clip's camera route into the `clipPathInspector` subsystem (read
-  // each frame by `clipPathDebugLayer`) and `clear` to drop it. Shares the same
+  // each frame by `clipPathDebugPass`) and `clear` to drop it. Shares the same
   // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
   // pose the user sees.
   //
@@ -931,7 +931,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     //
     // `passOverrides`: read-only pass-name list for the DebugPanel's renderer
     // toggle section. `allNames` is materialised from the hdr- and swap-target
-    // `CONTENT_LAYERS` (the volume-target raymarch has no user toggle, so it is
+    // `CONTENT_PASSES` (the volume-target raymarch has no user toggle, so it is
     // excluded) so the React rows track the frame's actual draw order.
     // The DebugPanel dispatches `setPassDisabled` directly; `watchWakeSaga` wakes
     // the render loop on the store write.

@@ -11,7 +11,7 @@
  * thread-through by object identity: `viewOf('foreground:0')` is called, and
  * its return reaches both the caption and the leader-line draws.
  *
- * The rest of the mock scaffolding mirrors `foregroundLabelsLayer.test.ts`.
+ * The rest of the mock scaffolding mirrors `foregroundLabelsPass.test.ts`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -75,7 +75,7 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
 // `view` is unused by `draw` (the projection comes from `near0LabelProjection(ctx)`).
 const VIEW_STUB = {} as unknown as SlabView;
 
-describe('foregroundLabelsLayer.draw — coverage occlusion thread-through', () => {
+describe('foregroundLabelsPass.draw — coverage occlusion thread-through', () => {
   it('passes the foreground:0 colour view to both draws when the body pass ran this frame', () => {
     const renderer = makeRenderer();
     const lineRenderer = makeLineRenderer();

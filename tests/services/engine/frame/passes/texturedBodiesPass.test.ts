@@ -1,5 +1,5 @@
 /**
- * texturedBodiesLayer — unit tests for the `textured` branch of the body
+ * texturedBodiesPass — unit tests for the `textured` branch of the body
  * partition, one `'body'`-slab content row per body.
  *
  * Load-bearing assertions:
@@ -10,8 +10,8 @@
  *      pose off `ctx.bodyPose(bodyId)` rather than re-deriving it.
  *   2. The partition gate — a row draws ONLY when its `bodyId` is in the
  *      `textured` branch (resolved AND its surface texture is resident);
- *      otherwise it is flat (drawn by `planetsLayer`, not here). The
- *      cross-layer no-double-draw invariant lives in `planetsLayer.test.ts`.
+ *      otherwise it is flat (drawn by `planetsPass`, not here). The
+ *      cross-layer no-double-draw invariant lives in `planetsPass.test.ts`.
  *   3. The ring ratios are DATA: Saturn packs its `SCENE_RINGS` radii in
  *      planet-radius units; a ringless body packs zeros (the fragment's "no
  *      ring" sentinel). Minnaert limb darkening is the same data-gate.
@@ -130,12 +130,10 @@ function makeState(renderer: unknown, bodies: readonly PlanetBody[]): EngineStat
   } as unknown as EngineState;
 }
 
-describe('texturedBodiesLayer.enabled', () => {
+describe('texturedBodiesPass.enabled', () => {
   it('is false while the texturedBodyRenderer handle is null (bare ctx short-circuits)', () => {
     const state = makeState(null, []);
-    expect(texturedBodiesPass.enabled(state, CTX_STUB, makeBodyView('mars' as BodyId))).toBe(
-      false,
-    );
+    expect(texturedBodiesPass.enabled(state, CTX_STUB, makeBodyView('mars' as BodyId))).toBe(false);
   });
 
   it('is false beyond the foreground gate even for a resident resolved body', () => {
@@ -149,7 +147,7 @@ describe('texturedBodiesLayer.enabled', () => {
     ).toBe(false);
   });
 
-  it('is false for a registry body that is NOT resident (it is flat, drawn by planetsLayer)', () => {
+  it('is false for a registry body that is NOT resident (it is flat, drawn by planetsPass)', () => {
     const state = makeState(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
     expect(texturedBodiesPass.enabled(state, makeCtx(), makeBodyView('mars' as BodyId))).toBe(
       false,
@@ -167,7 +165,7 @@ describe('texturedBodiesLayer.enabled', () => {
   });
 });
 
-describe('texturedBodiesLayer.draw', () => {
+describe('texturedBodiesPass.draw', () => {
   it('composes the MVP from view.slab.vp (never view.vp) and the pose off ctx.bodyPose', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();

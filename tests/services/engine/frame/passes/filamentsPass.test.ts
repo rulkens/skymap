@@ -1,5 +1,5 @@
 /**
- * filamentsLayer — focus-recession routing of the overlay opacity, pinned at both
+ * filamentsPass — focus-recession routing of the overlay opacity, pinned at both
  * ends of the blend on the 6th argument of `filamentRenderer.draw`.
  *
  * Also pins that the `enabled` gate is UNAFFECTED by recession: recession ∈
@@ -75,16 +75,11 @@ function makeState(
 
 const PASS_STUB = {} as GPURenderPassEncoder;
 
-describe('filamentsLayer.draw focus recession', () => {
+describe('filamentsPass.draw focus recession', () => {
   it('passes plain opacityOf at blend 0', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(0);
-    filamentsPass.draw(
-      PASS_STUB,
-      slabViewOf(ctx, COSMO),
-      ctx,
-      makeState(1, {}, { draw: drawSpy }),
-    );
+    filamentsPass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1, {}, { draw: drawSpy }));
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Args: (pass, vp, viewport, halfwidth, intensity, opacity).
     expect(drawSpy.mock.calls[0]![5]).toBe(1);
@@ -93,18 +88,13 @@ describe('filamentsLayer.draw focus recession', () => {
   it('passes opacityOf × FILAMENT_RECESSION at blend 1', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(1);
-    filamentsPass.draw(
-      PASS_STUB,
-      slabViewOf(ctx, COSMO),
-      ctx,
-      makeState(1, {}, { draw: drawSpy }),
-    );
+    filamentsPass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1, {}, { draw: drawSpy }));
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect(drawSpy.mock.calls[0]![5]).toBeCloseTo(FILAMENT_RECESSION, 6);
   });
 });
 
-describe('filamentsLayer.enabled is unaffected by focus recession', () => {
+describe('filamentsPass.enabled is unaffected by focus recession', () => {
   it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
     // Pass enabled=false via state; settings arg is unused by the layer.
     const state = makeState(0, { enabled: false });
@@ -115,7 +105,7 @@ describe('filamentsLayer.enabled is unaffected by focus recession', () => {
   });
 });
 
-describe('filamentsLayer.draw renderer-null guard', () => {
+describe('filamentsPass.draw renderer-null guard', () => {
   it('skips drawing when state.gpu.filamentRenderer is null even if enabled', () => {
     const state = makeState(1, { enabled: true }, null);
     const ctx = makeCtx(0);

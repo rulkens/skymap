@@ -1,15 +1,15 @@
 /**
- * starAggregatesLayer — the survey (Gaia bin) star AGGREGATE stream, drawn
+ * starAggregatesPass — the survey (Gaia bin) star AGGREGATE stream, drawn
  * LINEAR into the half-res `star-aggregates` offscreen.
  *
  * The fill-bound half of the star pass. Interior octree nodes (flux-mip glows
  * whose radius fills the box footprint × the glow-overlap spread) deposit
  * tens-to-hundreds of full screens of additive overdraw at kpc-scale zoom, so
  * they draw into a half-res target (quartering the fragment cost) instead of
- * straight into HDR. The `star-upsample` layer (`starAggregateUpsampleLayer`)
+ * straight into HDR. The `star-upsample` layer (`starAggregateUpsamplePass`)
  * then composites this offscreen back, applying the hue-preserving knee to the
  * SUMMED aggregate field. The leaf stream stays full-resolution in HDR
- * (`starCatalogLayer`).
+ * (`starCatalogPass`).
  *
  * The per-frame octree walk, LOD-fade advance, and leaf/aggregate partition are
  * ALL shared with the other two star layers via `prepareStarCut` (memoised on

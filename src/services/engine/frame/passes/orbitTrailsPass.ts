@@ -1,5 +1,5 @@
 /**
- * orbitTrailsLayer — Keplerian orbit trails (Earth / Jupiter / Moon) as additive
+ * orbitTrailsPass — Keplerian orbit trails (Earth / Jupiter / Moon) as additive
  * screen-space conics. Drawn through NEAR0 because AU-to-lunar orbits sit far
  * inside COSMO's 0.01 Mpc near plane, while still accumulating into HDR.
  *

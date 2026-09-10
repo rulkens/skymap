@@ -13,7 +13,7 @@
  *
  * The §8.1 "seed index, not the pack-loop slot" regression lives where the bug
  * could actually be introduced — the `drawPick` call site — as a behavioural
- * test in `starSpheresLayer.test.ts`: a captured pick id whose decoded index is
+ * test in `starSpheresPass.test.ts`: a captured pick id whose decoded index is
  * the star's SCENE_STARS row, differing from its slot in the culled sphere
  * list. Restating that relationship here over a locally-filtered copy of the
  * seed table would only re-test `findIndex` against itself, so these are plain

@@ -71,7 +71,7 @@ const GLINT_CAPACITY_MARGIN = 4;
  * tight one), plus `GLINT_CAPACITY_MARGIN` headroom. Mirrors
  * `BODY_SLAB_CAPACITY`'s derivation in `frameProgram.ts` — sized off the
  * registries, not a hand-picked number that silently goes stale as the seed
- * tables grow. Both pack loops in `bodyGlintsLayer` `break` on `count >=
+ * tables grow. Both pack loops in `bodyGlintsPass` `break` on `count >=
  * MAX_GLINTS` with no error, so zero margin would let the next seeded body
  * silently starve a glint — see "Why draw takes the batch" above, its
  * instance buffer is a single fixed-capacity allocation.

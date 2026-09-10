@@ -6,7 +6,7 @@
  * (`update()`) into allocations and fetches, answers per-tile residency
  * queries (`residentSlot`, the callback `cutSurfaceTiles` resolves through),
  * and carries the frame's resolved cut (`setLastCut`/`getLastCut`) from
- * `runFrame`'s planning block to `earthLayer.draw`.
+ * `runFrame`'s planning block to `earthPass.draw`.
  *
  * `update()` owns both sides of engagement (`plan.zWin > baseLevel`), not
  * just a caller's `if` — a drive-site `if` once left stale tiles drawing
@@ -115,7 +115,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   let frameCounter = 0;
 
   // This frame's (or the last engaged frame's) `cutSurfaceTiles` cut, for
-  // `earthLayer.draw` to read — the "compute in runFrame, consume in draw"
+  // `earthPass.draw` to read — the "compute in runFrame, consume in draw"
   // seam `plannerParams`/`update` already use, one field further. Written
   // unconditionally by `runFrame`'s tile-planning block (empty on a
   // disengaged frame), so a stale cut can never survive a camera pull-back.

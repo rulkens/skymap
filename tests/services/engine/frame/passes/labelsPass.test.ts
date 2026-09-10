@@ -1,5 +1,5 @@
 /**
- * labelsLayer — enable gate + the coverage-view thread-through (Task 12).
+ * labelsPass — enable gate + the coverage-view thread-through (Task 12).
  *
  * `draw` occludes captions per-pixel behind an opaque body by sampling
  * 'foreground:0's COLOUR view (its alpha, via lib/sceneDepth.wesl), not its
@@ -47,7 +47,7 @@ function makeCtx(
   } as unknown as ReadyFrameContext;
 }
 
-describe('labelsLayer.enabled', () => {
+describe('labelsPass.enabled', () => {
   it('is false when the renderer is null', () => {
     const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
     expect(labelsPass.enabled(makeState(null), ctx, VIEW_STUB)).toBe(false);
@@ -60,7 +60,7 @@ describe('labelsLayer.enabled', () => {
   });
 });
 
-describe('labelsLayer.draw', () => {
+describe('labelsPass.draw', () => {
   it("passes the foreground:0 colour view (not the depth view) as draw's 4th arg when the body pass ran", () => {
     const renderer = makeRenderer(3);
     const sentinelColorView = {} as GPUTextureView;

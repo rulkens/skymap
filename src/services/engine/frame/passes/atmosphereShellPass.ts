@@ -1,5 +1,5 @@
 /**
- * atmosphereShellLayer — Earth's (and any seeded planet's) physically-based
+ * atmosphereShellPass — Earth's (and any seeded planet's) physically-based
  * in-scatter atmosphere as a `'body'`-slab content row, drawn into the
  * depth-bearing `foreground:0` target (spec §8.3). A translucent proxy sphere
  * scaled to the atmosphere-TOP radius, sitting just outside the cloud shell.
@@ -29,7 +29,7 @@
  * ### Why it draws LAST, OVER not opaque (spec §8.3)
  *
  * The atmosphere is the outermost translucent member of the `(foreground:0,
- * 'body')` group — registered LAST in `CONTENT_LAYERS`, after the opaque
+ * 'body')` group — registered LAST in `CONTENT_PASSES`, after the opaque
  * bodies, the rings, AND Earth's cloud shell, so it draws once every opaque
  * sphere has stamped its depth. Its pipeline depth-TESTS against them
  * (`depthCompare: 'greater-equal'`, the body-m slab's reversed-Z convention —
@@ -40,7 +40,7 @@
  * attenuate three wavelengths; the `blend: 'over'` this row carries is target-
  * GROUPING metadata (it is what sorts the row into the translucent half),
  * never applied to a pipeline. It is non-pickable (a translucent halo has no
- * clickable silhouette; clicking Earth hits the opaque surface `earthLayer`
+ * clickable silhouette; clicking Earth hits the opaque surface `earthPass`
  * stamps into the pick pass), so it declares no `drawPick`.
  *
  * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis

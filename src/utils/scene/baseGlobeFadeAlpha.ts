@@ -3,7 +3,7 @@
  * camera descends through `EARTH_BASE_GLOBE_FADE_*_ALTITUDE_KM`.
  *
  * Only meaningful once the detail-tile path is actually resident — the
- * caller (`earthLayer`) gates its use on a non-empty cut, since fading the
+ * caller (`earthPass`) gates its use on a non-empty cut, since fading the
  * globe out with nothing covering the cap would punch a hole through to
  * whatever is behind it. Altitude, not the tile planner's resolved level,
  * drives the curve for the same reason `cloudDeckFade` uses altitude: it is

@@ -106,7 +106,7 @@ struct Uniforms {
   // The currently-selected point packed as '(sourceCode << 26) | localIdx',
   // or '0xFFFFFFFFu' when nothing is selected. The points pipeline does
   // not read this field — the selection ring is drawn by the dedicated
-  // selectionRingLayer — but the picker mutates the slot in place to
+  // selectionRingPass — but the picker mutates the slot in place to
   // suppress its own self-hit, so the byte layout must stay. See
   // 'galaxyPickRenderer.ts' SELECTED_PACKED_OFFSET.
   selectedPacked: u32,

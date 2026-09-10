@@ -45,7 +45,7 @@
  * HDR by the `volume-upsample` *layer* inside the HDR render step, not a
  * separate whole-texture composite (plan-time decision 3). The `zoa`
  * offscreen (the zone-of-avoidance band raymarch) is merged the same way, by
- * `zoneOfAvoidanceUpsampleLayer` inside the same hdr COSMO step — so there is
+ * `zoneOfAvoidanceUpsamplePass` inside the same hdr COSMO step — so there is
  * no `zoa→hdr` composite step either; that layer also draws the band's
  * full-res curved lettering straight into HDR, since MSDF text can't ride a
  * reduced-res offscreen without blurring. The `star-aggregates` offscreen is
@@ -80,7 +80,7 @@ import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPoint
 
 /**
  * Upper bound on body rows `deriveSlabs` can emit in one frame: Earth (the
- * NEAR0-adjacent body baked into `earthLayer`, not a `SCENE_PLANETS` row)
+ * NEAR0-adjacent body baked into `earthPass`, not a `SCENE_PLANETS` row)
  * plus every `SCENE_PLANETS` entry plus every `SCENE_ANCHOR_POINT_BODIES`
  * entry. `TIMED_SLOTS` allocates one slot per capacity row (not per row
  * actually drawn this frame) so the query-set size is a compile-time
@@ -121,7 +121,7 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * every other render step, so a same-frame lensing draw can sample a
  * cubemap this frame actually wrote. TWO steps per requested face — COSMO
  * then NEAR0 — because
- * the fixed opt-in roster (`ContentLayer.skyCapture`) spans both
+ * the fixed opt-in roster (`ContentPass.skyCapture`) spans both
  * slabs: `point-sprites` / `textured-disks` project through COSMO;
  * `star-catalog` / `star-aggregates` through NEAR0. A
  * capture step selects its group by the flag rather than by `target`
@@ -133,7 +133,7 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * capture composites in the same order the live frame would.
  *
  * `sgrAStarLensingBodySlabs` is the black-hole lens's OWN step: without it
- * nothing here matches `sgrAStarLensingLayer` (`slab: 'body'`, `target:
+ * nothing here matches `sgrAStarLensingPass` (`slab: 'body'`, `target:
  * 'hdr'`), which registers and compiles but never draws. `renderFrame`
  * resolves Sgr
  * A*'s body-m row each frame and passes it here ONLY inside the fade band, so
@@ -144,7 +144,7 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * means the band is active, so the `(hdr, NEAR0)` roster step ABOVE this one
  * splits into `'pre'`/`'post'` halves around it:
  * `orbit-trails`/`body-glints` opt into the `'post'` half via
- * `ContentLayer.hdrPostLensing`, so they draw AFTER the lens rather than
+ * `ContentPass.hdrPostLensing`, so they draw AFTER the lens rather than
  * being sampled by it, while an inactive band leaves the roster as the one
  * untagged step it always was. See `slabs.ts`'s `matchesLensPhase`.
  */
@@ -175,7 +175,7 @@ export function frameProgram(
   steps.push({ kind: 'render', target: 'volume', slab: COSMO });
   // Zone-of-avoidance band raymarch into its own reduced-res offscreen —
   // the twin of the volume render immediately above. Precedes the hdr
-  // COSMO step so `zoneOfAvoidanceUpsampleLayer` inside it can composite
+  // COSMO step so `zoneOfAvoidanceUpsamplePass` inside it can composite
   // this offscreen back in; merged by a LAYER, never a `'composite'` step,
   // so there is no `zoa→hdr` step either (same reasoning as `volume`).
   steps.push({ kind: 'render', target: 'zoa', slab: COSMO });
@@ -208,7 +208,7 @@ export function frameProgram(
   // by the COSMO step above, so this pass loads rather than clears.
   // Outside the band this is one untagged step. Inside it, the roster
   // splits around the lens's own (hdr, BODY[k]) step(s) below so
-  // `orbit-trails`/`body-glints` (ContentLayer.hdrPostLensing) draw AFTER
+  // `orbit-trails`/`body-glints` (ContentPass.hdrPostLensing) draw AFTER
   // the lens instead of being sampled by it — see this function's doc.
   if (sgrAStarLensingBodySlabs.length > 0) {
     steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'pre' });
@@ -291,9 +291,9 @@ export function frameProgram(
  */
 export function timedSlotsOf(
   program: readonly FrameStep[],
-  layers: readonly ContentPass[],
+  passes: readonly ContentPass[],
 ): readonly string[] {
-  return timedSlotRowsOf(program, layers).map((row) => row.name);
+  return timedSlotRowsOf(program, passes).map((row) => row.name);
 }
 
 /**
@@ -340,7 +340,7 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   // One `hdr·BODY[k]` row per capacity slot — today only the black-hole lens
-  // (`sgrAStarLensingLayer`) targets `hdr` on a body-m slab, so every slot
+  // (`sgrAStarLensingPass`) targets `hdr` on a body-m slab, so every slot
   // buckets under one title regardless of which row Sgr A* lands in this
   // frame, same reasoning as the `foreground:0·BODY[k]` block below.
   ...Object.fromEntries(
@@ -378,7 +378,7 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
  */
 function timedSlotRowsOf(
   program: readonly FrameStep[],
-  layers: readonly ContentPass[],
+  passes: readonly ContentPass[],
 ): readonly TimedSlotRow[] {
   const rows: TimedSlotRow[] = [];
   for (const step of program) {
@@ -396,7 +396,7 @@ function timedSlotRowsOf(
       // `target` — the same discriminant `executeFrame` applies, so the slots
       // allocated here are exactly the ones its per-layer passes look up.
       const isCaptureStep = step.face !== undefined;
-      for (const layer of layers) {
+      for (const contentPass of passes) {
         // A 'body' layer has no fixed slab index — it matches every body-row
         // step, the same widening `executeFrame` applies via
         // `view.slab.frame.kind === 'body-m'`. This derivation has no `ctx` to
@@ -404,22 +404,26 @@ function timedSlotRowsOf(
         // through `isBodySlabIndex` — the one other legitimate reading of the
         // same fact (slabs.ts).
         const matchesStep =
-          layer.slab === step.slab || (layer.slab === 'body' && isBodySlabIndex(step.slab));
+          contentPass.slab === step.slab ||
+          (contentPass.slab === 'body' && isBodySlabIndex(step.slab));
         const matchesTarget = isCaptureStep
-          ? layer.skyCapture === true
-          : layer.target === step.target;
+          ? contentPass.skyCapture === true
+          : contentPass.target === step.target;
         if (
           matchesTarget &&
           matchesStep &&
-          matchesLensPhase(layer.hdrPostLensing, step.lensPhase)
+          matchesLensPhase(contentPass.hdrPostLensing, step.lensPhase)
         ) {
           // `layerTimingSlotName` carries the body row and the capture face
           // into the slot NAME, so two body rows sharing one layer (Jupiter +
-          // a moon, both drawn by `planetsLayer`) — or one roster layer drawn
+          // a moon, both drawn by `planetsPass`) — or one roster layer drawn
           // once per captured face and once for the real view — each get their
           // own query-set slot instead of colliding on the same two indices
           // (see its doc, slabs.ts).
-          rows.push({ name: layerTimingSlotName(layer.name, step.slab, step.face), groupKey });
+          rows.push({
+            name: layerTimingSlotName(contentPass.name, step.slab, step.face),
+            groupKey,
+          });
         }
       }
       // One extra slot per render STEP whose NAME is the groupKey itself, so
@@ -516,9 +520,9 @@ function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
  */
 export function timedSlotGroupsOf(
   program: readonly FrameStep[],
-  layers: readonly ContentPass[],
+  passes: readonly ContentPass[],
 ): readonly TimedSlotGroup[] {
-  return groupRows(timedSlotRowsOf(program, layers));
+  return groupRows(timedSlotRowsOf(program, passes));
 }
 
 /**
@@ -587,7 +591,7 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
 /**
  * The real timing slots grouped for the GpuTimingsSection. Same program +
  * registry walk that orders `TIMED_SLOTS`, so a renderer that joins
- * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
+ * `CONTENT_PASSES` gets a grouped row here with zero DebugPanel edits.
  */
 export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
   frameProgram(
@@ -601,9 +605,9 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
 );
 
 /**
- * Plain `layer.name` → groupKey — a SEPARATE walk from `timedSlotRowsOf`,
+ * Plain `contentPass.name` → groupKey — a SEPARATE walk from `timedSlotRowsOf`,
  * because the engine handle's `allNames` (what `groupPassNames` below
- * actually receives) is `CONTENT_LAYERS.map(l => l.name)`: one entry per
+ * actually receives) is `CONTENT_PASSES.map(l => l.name)`: one entry per
  * REGISTERED layer, never per-body-row (toggling a layer disables it on
  * every row it draws — see `RenderTogglesSection`'s one-way override doc).
  * A `slab: 'body'` layer's plain name therefore matches every body-row step
@@ -614,16 +618,17 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  */
 function plainLayerGroupKeys(
   program: readonly FrameStep[],
-  layers: readonly ContentPass[],
+  passes: readonly ContentPass[],
 ): ReadonlyMap<string, string> {
   const map = new Map<string, string>();
   for (const step of program) {
     if (step.kind !== 'render') continue;
     const groupKey = groupKeyOf(step.target, step.slab);
-    for (const layer of layers) {
+    for (const contentPass of passes) {
       const matchesStep =
-        layer.slab === step.slab || (layer.slab === 'body' && isBodySlabIndex(step.slab));
-      if (layer.target === step.target && matchesStep) map.set(layer.name, groupKey);
+        contentPass.slab === step.slab ||
+        (contentPass.slab === 'body' && isBodySlabIndex(step.slab));
+      if (contentPass.target === step.target && matchesStep) map.set(contentPass.name, groupKey);
     }
   }
   return map;

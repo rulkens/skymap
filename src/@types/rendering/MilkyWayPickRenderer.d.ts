@@ -39,7 +39,7 @@ export type MilkyWayPickRenderer = {
    * world radius to its apparent on-screen half-extent using the camera
    * facts in `uniformBytes`, so no per-pick size argument exists. Gating
    * on disc visibility is the CALLER's job — the pick program only invokes
-   * this row when `milkyWayLayer.enabled` passes against the pick-time
+   * this row when `milkyWayPass.enabled` passes against the pick-time
    * camera — so this renderer is deliberately dumb and draws whenever told.
    */
   pickMilkyWay(pass: GPURenderPassEncoder, uniformBytes: ArrayBuffer): void;

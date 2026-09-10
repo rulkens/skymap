@@ -1,5 +1,5 @@
 /**
- * starPointsLayer — the point-partition stars (everything not resolved to a
+ * starPointsPass — the point-partition stars (everything not resolved to a
  * sphere) as additive point sprites in the depthless HDR accumulation.
  *
  * ### What it draws
@@ -7,7 +7,7 @@
  * The `points` branch of `partitionStarsByResolution` — every seeded star
  * whose apparent size stays below `STAR_RESOLVE_PX`, the Sun included (its
  * sphere is sub-pixel beyond ~tens of AU, and a point is what keeps it
- * visible from the rest of the neighbourhood). `starSpheresLayer` draws the
+ * visible from the rest of the neighbourhood). `starSpheresPass` draws the
  * complementary `spheres` branch of the SAME partition call, so a star is a
  * point XOR a sphere by construction — see the partition module's docblock
  * for the structural-disjointness argument.
@@ -37,7 +37,7 @@
  * the f32-narrowed `view.vp` — whose translation bits are already gone — cannot
  * fix this.
  *
- * The fix mirrors `foregroundLabelsLayer`'s caption seam exactly. Each frame we
+ * The fix mirrors `foregroundLabelsPass`'s caption seam exactly. Each frame we
  * rebase both operands into a camera-relative frame in f64 before narrowing:
  * `rebaseViewProj(view.slab.vp, camPos)` folds the eye offset into the vp
  * (zeroing the large view translation) and each anchor is re-expressed as
@@ -52,7 +52,7 @@
  * upload. `draw` therefore re-partitions and `setStars` the point subset every
  * frame. That rebuilds the GPU instance buffer per frame, but the point set is
  * the seeded roster (119 famous stars incl. the Sun, plus 39 S-stars) minus whichever few
- * resolve to a sphere via `starSpheresLayer`, so the create/destroy is
+ * resolve to a sphere via `starSpheresPass`, so the create/destroy is
  * trivially cheap — the churn the old fingerprint cache guarded against does
  * not exist at this scale.
  *
@@ -120,10 +120,10 @@ const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
  * what makes the anchor clickable, since it draws NOTHING at any zoom.
  * `pickEnabled` (admit this layer on a frame with no star points) and `drawPick`
  * (emit the stamp) must AGREE on it, so it is spelled once here — the same
- * discipline `bodyGlintsLayer`'s `earthCaptionPickable` keeps for Earth.
+ * discipline `bodyGlintsPass`'s `earthCaptionPickable` keeps for Earth.
  *
  * `sgrAStarCaptionTarget` IS the caption's own fade target, off the same rules
- * row `foregroundLabelsLayer` indexes, so pick follows the visible AFFORDANCE by
+ * row `foregroundLabelsPass` indexes, so pick follows the visible AFFORDANCE by
  * construction rather than by two gates kept in step. With the label off there
  * is no mark at all, and an invisible 18 px target in empty sky would be a trap.
  * The shared foreground gate rides alongside it: past that the whole NEAR0 group
@@ -180,7 +180,7 @@ export const starPointsPass: ContentPass = {
   // stays partition-only so no zero-star row enters the VISUAL pass plan.
   // Composed over `enabled` rather than restating its gates. The handle guard
   // is `drawPick`'s, checked first so a pre-bootstrap frame never reaches the
-  // body-state snapshot. See `ContentLayer.pickEnabled`.
+  // body-state snapshot. See `ContentPass.pickEnabled`.
   pickEnabled(state, ctx, view) {
     if (state.gpu.bodyPickRenderer === null) return false;
     if (starPointsPass.enabled(state, ctx, view)) return true;
@@ -255,7 +255,7 @@ export const starPointsPass: ContentPass = {
     // are the cluster's APPEARANCE knobs, read unconditionally — the cluster's
     // visibility gate is applied upstream, where `visibleStars` composes
     // `starCatalogs.enabled` with the famous-star row's own bit. `brightness`
-    // folds the SAME scale-dependent `starExposureRamp` `starCatalogLayer`
+    // folds the SAME scale-dependent `starExposureRamp` `starCatalogPass`
     // applies: the user trim times the camera-distance ramp, keyed on the
     // camera's heliocentric Mpc distance (the ramp's own input unit).
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
@@ -279,7 +279,7 @@ export const starPointsPass: ContentPass = {
   // `partitionStarsByResolution` call `draw` runs — `positionedVisibleStars`
   // split at `STAR_RESOLVE_PX` against `view.camPos`/`view.viewportPx[1]` — so a star
   // is pickable-as-a-point exactly when it draws as one (its complement rides
-  // `starSpheresLayer`'s sphere pick).
+  // `starSpheresPass`'s sphere pick).
   //
   // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit —
   // this layer's call and the body-glint layer's call claim DIFFERENT slots

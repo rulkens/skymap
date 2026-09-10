@@ -59,7 +59,7 @@ function stateWith(row: SelectionRow | null, renderer: unknown = makeRendererSpy
   } as unknown as EngineState;
 }
 
-describe('near0SelectionRingLayer.enabled', () => {
+describe('near0SelectionRingPass.enabled', () => {
   it('is true when a star row is selected and the renderer is present', () => {
     expect(near0SelectionRingPass.enabled(stateWith(STAR_ROW), CTX, VIEW_STUB)).toBe(true);
   });
@@ -122,7 +122,7 @@ function farClippingView(farMpc: number): SlabView {
   } as unknown as SlabView;
 }
 
-describe('near0SelectionRingLayer.draw — far-plane clamp regression', () => {
+describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
   it('pulls the ring centre inside the far plane while sizing from the TRUE distance', () => {
     const renderer = makeRendererSpy();
     const state = stateWith(FAR_STAR_ROW, renderer);
@@ -157,7 +157,7 @@ describe('near0SelectionRingLayer.draw — far-plane clamp regression', () => {
   });
 });
 
-describe('near0SelectionRingLayer.draw — live body position', () => {
+describe('near0SelectionRingPass.draw — live body position', () => {
   // A body's SelectionRow snapshots its position at pick time, but the sim clock
   // keeps orbiting it. The ring must centre on the LIVE position this frame, not
   // the stale snapshot. This fails against the old code, which centred on

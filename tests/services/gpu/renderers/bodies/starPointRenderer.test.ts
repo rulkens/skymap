@@ -157,7 +157,7 @@ describe('createStarPointRenderer', () => {
         ([buffer]) => (buffer as { label?: string }).label === 'star-points-instance-buffer-slot0',
       ).length;
 
-    // Per-frame `starPointsLayer.draw` re-hands camera-relative anchors each
+    // Per-frame `starPointsPass.draw` re-hands camera-relative anchors each
     // frame, so `setStars` fires every frame with the same star count. That
     // must NOT churn a fresh GPU buffer per call: allocate once, re-upload.
     renderer.setStars([SUN, SIRIUS], 0);

@@ -1,5 +1,5 @@
 /**
- * starCatalogLayer — frustum-cull WIRING tests (Task 5). Tasks 1–4 built the
+ * starCatalogPass — frustum-cull WIRING tests (Task 5). Tasks 1–4 built the
  * plane-extraction util, the sphere test, and the cull blocks in both the visual
  * and pick renderers; those receive `frustumPlanes` + `glowMarginAngleRad` as
  * draw args. This file pins only the load-bearing regression the wiring exists to
@@ -104,18 +104,13 @@ const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 // opacity is the pure crossfade (> 0) and it survives into both draw streams.
 const MID_BAND_PC = inner + (outer - inner) * 0.5;
 
-describe('starCatalogLayer frustum cull wiring', () => {
+describe('starCatalogPass frustum cull wiring', () => {
   it('drawStream forwards extracted frustum planes and a positive margin', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const camPos = camAtPc(MID_BAND_PC);
     const view = makeNear0View(camPos);
 
-    starCatalogPass.draw(
-      PASS_STUB,
-      view,
-      makeCtx(camPos),
-      makeState(renderer, makePickRenderer()),
-    );
+    starCatalogPass.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer, makePickRenderer()));
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const args = renderer.draw.mock.calls[0]![1];

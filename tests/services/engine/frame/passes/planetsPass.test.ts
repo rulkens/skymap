@@ -1,5 +1,5 @@
 /**
- * planetsLayer — unit tests for the seeded-planets `'body'`-slab content row.
+ * planetsPass — unit tests for the seeded-planets `'body'`-slab content row.
  *
  * Load-bearing assertions:
  *
@@ -9,7 +9,7 @@
  *      pose off `ctx.bodyPose(bodyId)` rather than re-deriving it.
  *   2. The partition boundary, now re-exposed by N body-m rows: a row draws
  *      ONLY when its `bodyId` is in the partition's `flat` branch, and
- *      `texturedBodiesLayer` / `planetsLayer` never both draw the same body —
+ *      `texturedBodiesPass` / `planetsPass` never both draw the same body —
  *      the double-draw/z-fight bug the shared `sceneBodyPartition` exists to
  *      prevent.
  *   3. The MVP / `bodySlabCamLocal` pairing — the renderer ray-traces its
@@ -53,7 +53,7 @@ vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
 
-// Both planetsLayer and texturedBodiesLayer read each body's live
+// Both planetsPass and texturedBodiesPass read each body's live
 // position/orientation off this per-frame snapshot — mocked once so the
 // cross-layer no-double-draw test sees consistent state through both layers.
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
@@ -150,7 +150,7 @@ function makePartitionFixtureState(): EngineState {
   } as unknown as EngineState;
 }
 
-describe('planetsLayer.enabled', () => {
+describe('planetsPass.enabled', () => {
   it('is false while planetRenderer is null (bare ctx short-circuits)', () => {
     const state = { gpu: { planetRenderer: null } } as unknown as EngineState;
     expect(planetsPass.enabled(state, CTX_STUB, makeBodyView('mercury' as BodyId))).toBe(false);
@@ -171,7 +171,7 @@ describe('planetsLayer.enabled', () => {
   });
 });
 
-describe('planetsLayer.draw — one body per row (partition boundary)', () => {
+describe('planetsPass.draw — one body per row (partition boundary)', () => {
   it('draws only the flat-branch body matching this row', () => {
     const state = makePartitionFixtureState();
     const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
@@ -186,7 +186,7 @@ describe('planetsLayer.draw — one body per row (partition boundary)', () => {
     expect(renderer.draw.mock.calls[0]![1]).toBe('mercury'); // this row's bodyId
   });
 
-  it('texturedBodiesLayer and planetsLayer never both draw the same body', () => {
+  it('texturedBodiesPass and planetsPass never both draw the same body', () => {
     const state = makePartitionFixtureState();
     const planetsRenderer = state.gpu.planetRenderer as unknown as ReturnType<
       typeof makeRendererSpy
@@ -224,7 +224,7 @@ describe('planetsLayer.draw — one body per row (partition boundary)', () => {
   });
 });
 
-describe('planetsLayer.draw — the f64 seam and packed record layout', () => {
+describe('planetsPass.draw — the f64 seam and packed record layout', () => {
   it('composes the MVP from view.slab.vp (never view.vp) and the pose off ctx.bodyPose', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();
@@ -283,7 +283,7 @@ describe('planetsLayer.draw — the f64 seam and packed record layout', () => {
   });
 });
 
-describe('planetsLayer.pickEnabled (Bug A — textured-only row stays pickable)', () => {
+describe('planetsPass.pickEnabled (Bug A — textured-only row stays pickable)', () => {
   it('is true for the textured row even though enabled (flat-only) is false there', () => {
     const state = makePartitionFixtureState();
     const ctx = makeCtx();
@@ -305,7 +305,7 @@ describe('planetsLayer.pickEnabled (Bug A — textured-only row stays pickable)'
   });
 });
 
-describe('planetsLayer.drawPick', () => {
+describe('planetsPass.drawPick', () => {
   it('stamps the flat and textured rows, never the glint row', () => {
     const flat = bodyAt('mercury', 2440000);
     const textured = bodyAt('mars', 3390000);

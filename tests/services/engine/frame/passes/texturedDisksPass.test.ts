@@ -70,7 +70,7 @@ function makeTexturedDiskRenderer() {
   return { draw: vi.fn(), bindAtlas: vi.fn() } as any;
 }
 
-describe('texturedDisksLayer', () => {
+describe('texturedDisksPass', () => {
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } },

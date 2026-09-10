@@ -1,5 +1,5 @@
 /**
- * texturedBodiesLayer — the `textured` branch of the per-frame body partition
+ * texturedBodiesPass — the `textured` branch of the per-frame body partition
  * (spec §6, §6.4): a resolved, resident-texture body drawn as a lit,
  * surface-mapped sphere, one `'body'`-slab content row per body.
  *
@@ -8,7 +8,7 @@
  * The frame program expands a `'body'` layer into one render step per body-m
  * slab row (Task 7); `enabled`/`draw` are called once per body-m row, gated on
  * `view.slab.frame.bodyId` filtered to the `textured` branch of
- * `sceneBodyPartition`. Its sibling `planetsLayer` takes the `flat` branch, so
+ * `sceneBodyPartition`. Its sibling `planetsPass` takes the `flat` branch, so
  * a body is textured XOR flat by construction — a given bodyId matches at most
  * one, so the two opaque `foreground:0` layers can never z-fight over the same
  * sphere. A body whose texture has not landed yet is `flat` (the plain lit
@@ -39,7 +39,7 @@
  * pre-bootstrap), the shared near-field distance gate
  * (`FOREGROUND_MAX_DISTANCE_MPC`), AND this row's `bodyId` appearing in the
  * partition's `textured` branch. This layer carries no pick aspect of its
- * own — `planetsLayer` is the sole pick site for `flat ∪ textured`.
+ * own — `planetsPass` is the sole pick site for `flat ∪ textured`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';

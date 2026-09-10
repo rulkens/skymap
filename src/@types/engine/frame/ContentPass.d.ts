@@ -1,9 +1,9 @@
 /**
- * ContentLayer — one point in the (slab, target, blend) space, plus a
+ * ContentPass — one point in the (slab, target, blend) space, plus a
  * renderer call and an enable gate. A layer states its projection slab,
  * render target, and blend mode as data fields on the row itself, so
  * grouping by `(target, slab)` — the executor's and `timedSlotsOf`'s
- * grouping key — is a `.filter()` over `CONTENT_LAYERS` at the call site
+ * grouping key — is a `.filter()` over `CONTENT_PASSES` at the call site
  * rather than a hand-maintained split. See `passes/index.ts` for the
  * registry and the full layer catalog.
  *
@@ -50,7 +50,7 @@ export type ContentPass = {
    * overlays; the near-field fold kept its opaque bodies on
    * `foreground:0` and its OVER captions on `swap`), but `hdr` already
    * mixes two — additive emission across most HDR layers, and
-   * `milkyWayLayer`'s genuinely multiplicative dust pass, order-dependent
+   * `milkyWayPass`'s genuinely multiplicative dust pass, order-dependent
    * against the emission it darkens (see `Blend.d.ts`). This value must
    * match the profile baked into the renderer pipeline its `draw` calls,
    * but nothing enforces that today; a layer↔pipeline parity check across
@@ -72,8 +72,8 @@ export type ContentPass = {
   readonly skyCapture?: true;
   /**
    * Opt-in to the `'post'` half of the black-hole lens's `(hdr, NEAR0)`
-   * step split (Task 14b): set only by `orbitTrailsLayer` and
-   * `bodyGlintsLayer`, the two rows the spec keeps unwarped ON TOP of the
+   * step split (Task 14b): set only by `orbitTrailsPass` and
+   * `bodyGlintsPass`, the two rows the spec keeps unwarped ON TOP of the
    * lens rather than sampled by it. `frameProgram` only emits the split
    * (and a `'post'` step) when the lens's own `(hdr, BODY[k])` step fires —
    * outside the band this flag is inert and every `(hdr, NEAR0)` layer
@@ -108,15 +108,15 @@ export type ContentPass = {
    * serves both and the layer omits this. A layer declares `pickEnabled` only
    * where the two genuinely differ — usually because the pick set is WIDER:
    *
-   *  - `planetsLayer` draws only the partition's `flat` branch but is the
-   *    SOLE pick site for `flat ∪ textured` (`texturedBodiesLayer` carries no
+   *  - `planetsPass` draws only the partition's `flat` branch but is the
+   *    SOLE pick site for `flat ∪ textured` (`texturedBodiesPass` carries no
    *    pick aspect), so a textured-only frame (a lone textured Saturn before
    *    its untextured moons resolve into `flat`) must stay pickable while its
    *    visual row leaves the pass plan;
-   *  - `bodyGlintsLayer` draws only the `glints` branch but also stamps
+   *  - `bodyGlintsPass` draws only the `glints` branch but also stamps
    *    Earth's caption-range pick footprint, so it must be admitted even with
    *    an empty `glints` branch when the Earth caption is on;
-   *  - `starPointsLayer` draws the star roster but also stamps Sgr A*, which
+   *  - `starPointsPass` draws the star roster but also stamps Sgr A*, which
    *    draws nothing anywhere and is invited by its caption alone.
    *
    * Keeping `enabled` narrow (draw set) preserves the executor's "a row that
@@ -124,7 +124,7 @@ export type ContentPass = {
    * wider pick gate lives here so picking is not forced to inject a no-op row
    * into the visual program.
    *
-   * `milkyWayLayer` is the one row where it runs the other way — its
+   * `milkyWayPass` is the one row where it runs the other way — its
    * impostor keeps drawing while the camera flies through the disc but stops
    * taking clicks, because a screen-filling hit target starves everything
    * behind it. A narrower pick gate is only ever right when the content is

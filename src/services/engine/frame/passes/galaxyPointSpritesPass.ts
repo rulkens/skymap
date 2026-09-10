@@ -1,5 +1,5 @@
 /**
- * galaxyPointSpritesLayer — every loaded galaxy from every visible source as an
+ * galaxyPointSpritesPass — every loaded galaxy from every visible source as an
  * instanced additive billboard in the HDR target; the headline content layer.
  *
  * Always on: per-source visibility is a shader-side `visibleSourceMask` uniform,

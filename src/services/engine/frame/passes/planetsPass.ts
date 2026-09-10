@@ -1,5 +1,5 @@
 /**
- * planetsLayer — the `flat` branch of the per-frame body partition as a
+ * planetsPass — the `flat` branch of the per-frame body partition as a
  * true-scale, flat-lit albedo sphere, one `'body'`-slab content row per body.
  *
  * ### What it draws
@@ -9,7 +9,7 @@
  * gated on `view.slab.frame.bodyId` filtered to the `flat` branch of
  * `sceneBodyPartition` — the resolved body whose surface texture is not
  * resident. A body with a resident texture is `textured` (drawn by
- * `texturedBodiesLayer`), and a sub-pixel body is a `glint` (`bodyGlintsLayer`,
+ * `texturedBodiesPass`), and a sub-pixel body is a `glint` (`bodyGlintsPass`,
  * untouched) — so a given bodyId matches at most one of these branches, and
  * the two opaque `foreground:0` sphere layers can never z-fight over one body.
  *
@@ -78,10 +78,10 @@ export const planetsPass: ContentPass = {
   },
 
   // Pick gate — WIDER than `enabled`: this layer is the sole pick site for the
-  // whole planet source (`flat ∪ textured`; `texturedBodiesLayer` carries no
+  // whole planet source (`flat ∪ textured`; `texturedBodiesPass` carries no
   // pick aspect — see `drawPick`'s header), so a textured-only row (a lone
   // textured Saturn before its untextured moons resolve into `flat`) must stay
-  // pickable while its visual row leaves the pass plan. See `ContentLayer.pickEnabled`.
+  // pickable while its visual row leaves the pass plan. See `ContentPass.pickEnabled`.
   pickEnabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;
     if (state.gpu.planetRenderer === null) return false;

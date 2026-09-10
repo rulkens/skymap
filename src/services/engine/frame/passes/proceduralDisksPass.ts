@@ -1,5 +1,5 @@
 /**
- * proceduralDisksLayer — LOD-1 procedural disk impostors.
+ * proceduralDisksPass — LOD-1 procedural disk impostors.
  *
  * Reads `state.settings.thumbnails.enabled` as the master gate, then
  * `state.subsystems.proceduralDisks.lastOutput.instances` (populated by
@@ -22,7 +22,7 @@
  * `state.gpu.proceduralDiskRenderer` is nullable pre-bootstrap (like every
  * GPU handle on `state.gpu`); `enabled` doesn't check it (it only gates on
  * settings + pending instances), so `draw` guards defensively — same
- * pattern as `filamentsLayer.draw`.
+ * pattern as `filamentsPass.draw`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -70,7 +70,7 @@ export const proceduralDisksPass: ContentPass = {
   // one reads (it binds nothing at slot 0 itself). So this row calls
   // `galaxyPickRenderer.bindCamera(pass)` before returning to put the shared
   // prefix back — the postcondition every COSMO `drawPick` owes its
-  // successors (see `ContentLayer.drawPick`). Null-guarded like the disk
+  // successors (see `ContentPass.drawPick`). Null-guarded like the disk
   // renderer.
   drawPick(pass, view, ctx, state) {
     if (state.gpu.proceduralDiskRenderer === null) return;

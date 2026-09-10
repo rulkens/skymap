@@ -1,7 +1,7 @@
 /**
- * cloudShellLayer — Earth's translucent cloud deck as a `'body'`-slab content
+ * cloudShellPass — Earth's translucent cloud deck as a `'body'`-slab content
  * row drawing into the depth-bearing `foreground:0` target (spec §8), a thin
- * shell just above the opaque surface `earthLayer` stamps.
+ * shell just above the opaque surface `earthPass` stamps.
  *
  * ### What it draws — the translucent deck over the opaque globe
  *
@@ -28,12 +28,12 @@
  *
  * The shell is the second translucent member of the `(foreground:0, 'body')`
  * render group (the ring is the other). It is registered immediately AFTER
- * `earthLayer` so it draws once the opaque globe has stamped its depth: the
+ * `earthPass` so it draws once the opaque globe has stamped its depth: the
  * shell pipeline depth-TESTS against the surface (`depthCompare: 'greater'`,
  * the body-m slab's reversed-Z convention — clear `0.0`, greater-z-wins, so a
  * nearer surface stamps a LARGER depth) so the far hemisphere is correctly
  * occluded, but writes NO depth (`depthWriteEnabled: false`) and blends
- * straight-alpha OVER. `atmosphereShellLayer` lands AFTER this row (drawn
+ * straight-alpha OVER. `atmosphereShellPass` lands AFTER this row (drawn
  * last), so the deck sits under the atmosphere but over the surface.
  *
  * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis
@@ -46,7 +46,7 @@
  *
  * `enabled` gates on the `cloudShellRenderer` handle (null pre-bootstrap),
  * this row being Earth's own body-m row, the shared near-field distance gate
- * (`FOREGROUND_MAX_DISTANCE_MPC`) — the same near-field gate `earthLayer`
+ * (`FOREGROUND_MAX_DISTANCE_MPC`) — the same near-field gate `earthPass`
  * applies, so the shell appears exactly when the surface does — AND the
  * clouds slot being RESIDENT and `cloudDeckFade` (see its header) being above
  * 0: a row that would add nothing to the frame — no map yet, or fully faded
@@ -56,7 +56,7 @@
  *
  * The shell is non-pickable (spec §8.3): a translucent overlay has no
  * clickable silhouette of its own — clicking Earth hits the opaque surface
- * `earthLayer` stamps into the pick pass. So this row declares no `drawPick`.
+ * `earthPass` stamps into the pick pass. So this row declares no `drawPick`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -95,7 +95,7 @@ type CloudShellDraw = {
  * committed, the body is beyond the near-field distance gate, it resolves to
  * sub-pixel, or the descent fade has reached 0. ONE derivation feeds both
  * `enabled` and `draw`, so the gate and the loop can never disagree about
- * whether the shell renders. Mirrors `earthLayer`'s near-field gate plus the
+ * whether the shell renders. Mirrors `earthPass`'s near-field gate plus the
  * ring's residency gate.
  */
 function cloudShellDraw(

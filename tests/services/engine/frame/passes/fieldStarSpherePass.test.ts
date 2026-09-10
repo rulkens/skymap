@@ -1,5 +1,5 @@
 /**
- * fieldStarSphereLayer — unit tests for the close-range field-star sphere whose
+ * fieldStarSpherePass — unit tests for the close-range field-star sphere whose
  * PRESENCE is derived from PROXIMITY, not selection.
  *
  * The un-braid this suite pins: the layer draws a solar-radius sphere for the
@@ -119,7 +119,7 @@ function makeNear0View(camPos: Vec3): SlabView {
   return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, VIEWPORT_H] };
 }
 
-describe('fieldStarSphereLayer.enabled', () => {
+describe('fieldStarSpherePass.enabled', () => {
   it('is present for a nearby star with NO selection at all — the core un-braid', async () => {
     const cat = await threeStarCatalog();
     const starPos = resolveStarRecord(cat, 1)!.positionMpc;
@@ -184,7 +184,7 @@ describe('fieldStarSphereLayer.enabled', () => {
   });
 });
 
-describe('fieldStarSphereLayer.draw', () => {
+describe('fieldStarSpherePass.draw', () => {
   it('draws the resolved present star (populated by enabled, read here)', async () => {
     const cat = await threeStarCatalog();
     const starPos = resolveStarRecord(cat, 1)!.positionMpc;
@@ -199,7 +199,7 @@ describe('fieldStarSphereLayer.draw', () => {
   });
 });
 
-describe('fieldStarSphereLayer.drawPick', () => {
+describe('fieldStarSpherePass.drawPick', () => {
   it('packs the PRESENT star’s Gaia record index — the id the point pick packs', async () => {
     const cat = await threeStarCatalog();
     const starPos = resolveStarRecord(cat, 1)!.positionMpc;

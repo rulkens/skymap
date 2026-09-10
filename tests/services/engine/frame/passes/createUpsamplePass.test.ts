@@ -1,6 +1,6 @@
 /**
- * createUpsampleLayer tests — the shared factory behind the four HDR upsample
- * ContentLayers (volume, star-aggregate, milky-way, zone-of-avoidance).
+ * createUpsamplePass tests — the shared factory behind the four HDR upsample
+ * ContentPasses (volume, star-aggregate, milky-way, zone-of-avoidance).
  * `enabled`/`name`/`slab` are forwarded verbatim from the row (untested here
  * — trivial passthrough); these tests cover `draw`'s two independent halves:
  * the blit (guarded by the row's handle) and `postBlit`, which the factory
@@ -104,7 +104,7 @@ function makeRow(overrides: Partial<UpsamplePassRow> = {}): UpsamplePassRow {
   };
 }
 
-describe('createUpsampleLayer', () => {
+describe('createUpsamplePass', () => {
   it("blits the source target's view through the row's handle", () => {
     const offscreenView = {} as GPUTextureView;
     const drawSpy = vi.fn();

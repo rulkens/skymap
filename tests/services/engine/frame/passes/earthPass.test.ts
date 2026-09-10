@@ -1,5 +1,5 @@
 /**
- * earthLayer — unit tests for Earth's `'body'`-slab content row.
+ * earthPass — unit tests for Earth's `'body'`-slab content row.
  *
  * Like the other body-slab layers, the load-bearing assertion is the f64 seam: the
  * layer MUST feed `composeBodySlabMvp` the slab's `Float64Array` view-projection
@@ -131,7 +131,7 @@ const BODY_STATES_BY_ID = new Map<string, BodyState>([
  * A real `BodyPoseProvider` for a given camera position/target — mirrors
  * `frameContext.ts`'s own construction (camBasisWorld via
  * imagePlaneBasis/frameUp at roll 0, then `bodyRelativePose` per body) so
- * `ctx.bodyPose` here exercises the SAME seam `earthLayer.ts` now reads
+ * `ctx.bodyPose` here exercises the SAME seam `earthPass.ts` now reads
  * (Task 9 fix round 1, B2) instead of a bespoke double. Resolves both earth
  * and mars unconditionally — a given test's `state.data.bodies` (via the
  * mocked `sceneBodyStates` above) is the actual per-test gate on which body
@@ -194,7 +194,7 @@ function makeCtx(distance: number): ReadyFrameContext {
 }
 
 // A camera comfortably inside the shared foreground gate. Reused by reference
-// where safe; the first few `earthLayer.draw` tests below call `makeCtx`
+// where safe; the first few `earthPass.draw` tests below call `makeCtx`
 // fresh instead — `prepareBodySurfaceFrame`'s ctx-keyed memo would otherwise
 // let the second and third hit the cache the first one primed (same
 // NEAR_CTX object ⇒ same memo entry ⇒ composeBodySlabMvp not re-invoked, and
@@ -238,7 +238,7 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
     // shipped identity case, in which the packed page-table window is all-zero
     // and the fragment reads the whole-globe base texture alone.
     subsystems: { earthTiles: null },
-    // earthLayer.draw reads the live night-side floor + ocean-glint roughness
+    // earthPass.draw reads the live night-side floor + ocean-glint roughness
     // from settings.earth each frame; seed both from EARTH_SURFACE_PARAMS so the
     // packed tail slots equal the authored defaults (a no-op override, exactly
     // how the settings slice seeds them).
@@ -247,7 +247,7 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
         ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
-      // The Earth LOD overlay debug toggle earthLayer.draw now reads each
+      // The Earth LOD overlay debug toggle earthPass.draw now reads each
       // frame (forwarded into the tile draw args) — off by default, like the
       // fixture's other DEBUG_OVERLAY_ROWS entries.
       debug: { overlays: { 'earth-lod-overlay': false } },
@@ -290,7 +290,7 @@ function makeTileDrawState(input: {
 // what's under test).
 const VIEW_STUB = makeEarthBodyView('earth');
 
-describe('earthLayer.enabled', () => {
+describe('earthPass.enabled', () => {
   it('is false when the view is not Earth’s own body-m row', () => {
     const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
     const worldMpcView = makeSlab({ frame: { kind: 'world-mpc', originRelative: true } });
@@ -428,7 +428,7 @@ describe('prepareBodySurfaceFrame', () => {
   });
 });
 
-describe('earthLayer.draw', () => {
+describe('earthPass.draw', () => {
   it('draws the seeded earth via composeBodySlabMvp with the slab f64 vp', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();
@@ -468,7 +468,7 @@ describe('earthLayer.draw', () => {
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
-    // The lit-body seam: earthLayer must rotate the sun direction into Earth's
+    // The lit-body seam: earthPass must rotate the sun direction into Earth's
     // local frame (via the sunDirLocal util with Earth's baked orientation and
     // the render origin) and pack it at f32 slots 16..18 (bytes 64..75). We pin
     // it by recomputing sunDirLocal independently — NOT through the layer — so a
@@ -585,8 +585,8 @@ describe('earthLayer.draw', () => {
   });
 });
 
-describe('earthLayer.draw — detail tiles', () => {
-  // A minimal stand-in for `SurfaceCutTile` — `earthLayer.draw` forwards it
+describe('earthPass.draw — detail tiles', () => {
+  // A minimal stand-in for `SurfaceCutTile` — `earthPass.draw` forwards it
   // opaquely to `earthSurfaceTileRenderer.draw`, never reading its fields.
   const STUB_CUT = [
     {
@@ -697,7 +697,7 @@ describe('earthLayer.draw — detail tiles', () => {
   });
 });
 
-describe('earthLayer.draw — base globe fade under the tile cut', () => {
+describe('earthPass.draw — base globe fade under the tile cut', () => {
   // A minimal stand-in cut, reused from the detail-tiles suite above.
   const STUB_CUT = [
     {
@@ -803,7 +803,7 @@ describe('earthLayer.draw — base globe fade under the tile cut', () => {
   });
 });
 
-describe('earthLayer.drawPick', () => {
+describe('earthPass.drawPick', () => {
   it('floors the pick radius and composes mvp/camLocal from the SAME floored radius', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();

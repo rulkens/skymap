@@ -1,8 +1,8 @@
 /**
- * selectionRingLayer — per-galaxy selection halo overlay.
+ * selectionRingPass — per-galaxy selection halo overlay.
  *
  * Lives at the HEAD of the swap-target layers (the `blend: 'over'` group
- * within `CONTENT_LAYERS`, drawn post-tone-map) so marker-lines and labels
+ * within `CONTENT_PASSES`, drawn post-tone-map) so marker-lines and labels
  * composite OVER the ring — labels carry information that should stay
  * legible when they overlap the stroke.
  *
@@ -25,14 +25,14 @@
  *
  * This layer shares `state.gpu.selectionRingRenderer` — and its
  * `queue.writeBuffer`-backed camera + selection uniforms — with the NEAR0
- * `near0SelectionRingLayer`.  A frame records both into one encoder with one
+ * `near0SelectionRingPass`.  A frame records both into one encoder with one
  * `queue.submit`, so if both drew, both draws would read the last-written
  * uniforms (the writeBuffer/submit race).  The two layers avoid that by
  * partitioning the `selectionHalo` table by slab: this layer is
  * `enabled()`-true only for a COSMO-slab descriptor, the sibling only for
  * NEAR0.  Nothing selected, a star, or a structure leaves this layer disabled,
  * so its 16-byte selection + 80-byte camera upload fires only on frames where
- * a COSMO ring is actually visible.  See `near0SelectionRingLayer`'s header for
+ * a COSMO ring is actually visible.  See `near0SelectionRingPass`'s header for
  * the full race argument.
  */
 
@@ -53,7 +53,7 @@ export const selectionRingPass: ContentPass = {
     // A row drives THIS ring iff the table yields a COSMO-slab descriptor for
     // its kind. The slab test is what keeps this layer and the NEAR0 sibling
     // from both firing on the same frame — they share one renderer, and only
-    // one may write its uniforms per frame (see `near0SelectionRingLayer`).
+    // one may write its uniforms per frame (see `near0SelectionRingPass`).
     const halo = selectionHalo(row);
     return halo !== null && halo.slab === COSMO;
   },
@@ -83,7 +83,7 @@ export const selectionRingPass: ContentPass = {
     // actually ran this frame — else the `foreground:0` colour is stale/absent
     // and would spuriously blank the whole ring. When undefined, the
     // occlusion renderer falls back to its plain pipeline and draws the ring
-    // un-occluded. Mirrors `markerLinesLayer`'s guard.
+    // un-occluded. Mirrors `markerLinesPass`'s guard.
     const colorView = ctx.renderedTargets.has('foreground:0')
       ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;

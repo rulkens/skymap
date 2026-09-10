@@ -1,5 +1,5 @@
 /**
- * fieldStarSphereLayer — the close-range, true-scale sphere for the ONE
+ * fieldStarSpherePass — the close-range, true-scale sphere for the ONE
  * catalogued Gaia field star the camera has descended into resolving range of.
  *
  * ### Why this layer exists
@@ -20,7 +20,7 @@
  * selected. Each frame the layer asks `nearestResolvableStar` for the nearest
  * catalogued star within the resolve radius of `ctx.drawCamPos` and draws THAT
  * one — reading `state.selectionRows` nowhere. Selection only DECORATES the
- * result (the halo `near0SelectionRingLayer` draws, the InfoCard the reconciler
+ * result (the halo `near0SelectionRingPass` draws, the InfoCard the reconciler
  * fills); it never decides whether the body exists. This is the load-bearing
  * un-braid: clicking the background nulls both selection slots, but the star the
  * camera is parked at must keep its sphere, because that sphere is its only
@@ -42,7 +42,7 @@
  * clearly moved to it), but a merely-nearer star still in the band does not
  * dislodge the one already shown. The present star is remembered per catalog in a
  * `WeakMap` — the same catalog-keyed, tier-swap-isolated pattern
- * `starCatalogLayer`'s fade state uses.
+ * `starCatalogPass`'s fade state uses.
  *
  * `enabled` runs the query and STORES the result; `draw` / `drawPick` READ the
  * stored star (never re-query), so the sphere they stamp and the presence flag
@@ -54,7 +54,7 @@
  * ### Why option B (a thin sphere layer), NOT option A (a transient scene star)
  *
  * Appending the resolved star to `visibleStars(state)` so
- * `partitionStarsByResolution` / `starSpheresLayer` pick it up "for free" reads
+ * `partitionStarsByResolution` / `starSpheresPass` pick it up "for free" reads
  * tidy but braids two independent things: it makes the authored SCENE-BODY star
  * set (a static seed table + one settings toggle) depend on the RUNTIME star cut,
  * and it drives the catalog star through the point-partition path it does not
@@ -70,7 +70,7 @@
  *
  * ### Why the f64 `composeBodyMvp` seam kills the wobble
  *
- * Like `earthLayer` and `starSpheresLayer`, this reads the slab's `Float64Array`
+ * Like `earthPass` and `starSpheresPass`, this reads the slab's `Float64Array`
  * view-projection (`view.slab.vp`) rather than the f32-narrowed `view.vp`. A
  * sphere placed parsecs from the render origin sits where the VP's large
  * translation nearly cancels the tiny position; `composeBodyMvp` resolves that
@@ -143,7 +143,7 @@ const OFF_FRACTION = 0.8;
 
 /**
  * Per-catalog presence memory. Keyed by the CATALOG object (like
- * `starCatalogLayer`'s fade state) so a tier swap — a fresh catalog object —
+ * `starCatalogPass`'s fade state) so a tier swap — a fresh catalog object —
  * starts empty and the old entry is GC'd with the WeakMap. Holds the currently
  * shown star, or `null` once nothing is present (both read as "not present").
  */

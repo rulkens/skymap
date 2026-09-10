@@ -1,12 +1,12 @@
 /**
- * sgrAStarLensingLayer — the Sgr A* lens pass's `ContentLayer` row.
+ * sgrAStarLensingPass — the Sgr A* lens pass's `ContentPass` row.
  *
  * `slab: 'body'` expands into one render step per body-m row, so
  * `enabled`/`draw` run once per body and are narrowed here to Sgr A*'s.
  * `blend: 'over'`, not the additive convention most `hdr` layers use: the
  * captured disc must truly OCCLUDE the starlight behind it, while per-pixel
  * alpha lets the earlier roster through where deflection is negligible.
- * No `drawPick` — Sgr A*'s pick stamp lives in `starPointsLayer`.
+ * No `drawPick` — Sgr A*'s pick stamp lives in `starPointsPass`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -32,7 +32,7 @@ const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 // row's VALUES are not read here: `state.settings.sgrAStarLensingTuning` is
 // what packs (seeded from this same row — `DEFAULT_SGR_A_STAR_LENSING_TUNING`).
 if (BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id) === undefined) {
-  throw new Error(`sgrAStarLensingLayer: BLACK_HOLES carries no row for '${SGR_A_STAR.id}'`);
+  throw new Error(`sgrAStarLensingPass: BLACK_HOLES carries no row for '${SGR_A_STAR.id}'`);
 }
 
 const SCHWARZSCHILD_RADIUS_M = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
@@ -70,7 +70,7 @@ export const sgrAStarLensingPass: ContentPass = {
     if (view.slab.frame.bodyId !== SGR_A_STAR.id) return;
 
     // The SAME pose-provider closure `deriveSlabs` built this row's
-    // `view.slab.vp` from — see `planetsLayer`'s identical seam.
+    // `view.slab.vp` from — see `planetsPass`'s identical seam.
     const pose = ctx.bodyPose(view.slab.frame.bodyId);
     if (pose === null) return;
 

@@ -1,5 +1,5 @@
 /**
- * zoneOfAvoidanceUpsampleLayer tests — the consumer half of the reduced-res
+ * zoneOfAvoidanceUpsamplePass tests — the consumer half of the reduced-res
  * band: the hdr-target layer that composites the reduced-res `zoa` offscreen into HDR
  * (`state.gpu.zoneOfAvoidanceUpsample`) and then draws the full-res curved
  * lettering via the shared `label3DRenderer.draw` — the two halves are
@@ -79,7 +79,7 @@ function makeState(
   } as unknown as EngineState;
 }
 
-describe('zoneOfAvoidanceUpsampleLayer.enabled', () => {
+describe('zoneOfAvoidanceUpsamplePass.enabled', () => {
   it('is enabled when the camera sits inside the visibility window', () => {
     const ctx = makeCtx();
     expect(zoneOfAvoidanceUpsamplePass.enabled(makeState(), ctx, slabViewOf(ctx, COSMO))).toBe(
@@ -107,7 +107,7 @@ describe('zoneOfAvoidanceUpsampleLayer.enabled', () => {
   });
 });
 
-describe('zoneOfAvoidanceUpsampleLayer.draw', () => {
+describe('zoneOfAvoidanceUpsamplePass.draw', () => {
   it('composites the zoa offscreen into HDR and draws the full-res lettering', () => {
     const upsampleDraw = vi.fn();
     const labelDraw = vi.fn();

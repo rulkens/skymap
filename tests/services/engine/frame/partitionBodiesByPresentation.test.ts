@@ -2,8 +2,8 @@
  * partitionBodiesByPresentation — unit tests for the body presentation split.
  *
  * The partition is the ONE branch point deciding which layer draws each seeded
- * body this frame: an additive glint (`bodyGlintsLayer`), a flat-lit albedo
- * sphere (`planetsLayer`), or a textured sphere (`texturedBodiesLayer`). All
+ * body this frame: an additive glint (`bodyGlintsPass`), a flat-lit albedo
+ * sphere (`planetsPass`), or a textured sphere (`texturedBodiesPass`). All
  * three layers consume opposite branches of one result, so a body lands in
  * EXACTLY one bucket by construction — the same disjoint-and-covering invariant
  * `partitionStarsByResolution` guarantees for the point↔sphere handoff.
@@ -124,7 +124,7 @@ describe('partitionBodiesByPresentation', () => {
     // apparentSizePx returns 0 at distance 0 (divide-by-zero guard); a bare size
     // test would misread that as sub-pixel and glint the body the camera is
     // inside. The partition resolves distance 0 unconditionally, mirroring
-    // planetsLayer's planetResolvesPx.
+    // planetsPass's planetResolvesPx.
     const mars = bodyAt('mars', 3390000, 0);
     const { glints, textured } = partition([mars], () => true);
     expect(glints).toEqual([]);

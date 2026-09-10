@@ -2,7 +2,7 @@
  * near0LabelProjection — the NEAR0 label director's `Label2DDirectorConfig.project`.
  *
  * Rebases the slab's f64 `vp` about the camera in f64 (`rebaseViewProj`) — the
- * same precision fix `foregroundLabelsLayer.ts` applies today, load-bearing at
+ * same precision fix `foregroundLabelsPass.ts` applies today, load-bearing at
  * solar-system zoom where the raw vp's view translation and a near anchor's
  * coordinate agree to only ~4 f32 digits (see `rebaseViewProj`'s module
  * header). `vp` stays f64 for the lift stage's inverse-projection math;

@@ -1,7 +1,7 @@
 /**
  * resolvesToSphere — the star LOD partition: a star renders as a foreground
- * SPHERE (`starSpheresLayer`) once its apparent size crosses a threshold, and
- * as an additive backdrop POINT (`starPointsLayer`) below it. This is the same
+ * SPHERE (`starSpheresPass`) once its apparent size crosses a threshold, and
+ * as an additive backdrop POINT (`starPointsPass`) below it. This is the same
  * "point when far, resolved when near" promotion galaxies use for their
  * point→thumbnail gate — a star's apparent size drives presentation exactly as
  * a galaxy's does.

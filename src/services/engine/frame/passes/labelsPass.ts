@@ -1,5 +1,5 @@
 /**
- * labelsLayer — MSDF text label draw call.
+ * labelsPass — MSDF text label draw call.
  *
  * A swap-target layer, NOT an hdr-target one — see `passes/index.ts`
  * module header for why marker-lines + labels moved out of the HDR
@@ -34,7 +34,7 @@
  *
  * ### Position among the swap-target layers
  *
- * Placed AFTER `markerLinesLayer` so the label text composites over
+ * Placed AFTER `markerLinesPass` so the label text composites over
  * the line where they overlap, preserving readability.
  */
 
@@ -69,7 +69,7 @@ export const labelsPass: ContentPass = {
     // pass actually ran this frame — else the `foreground:0` colour is
     // stale/uninitialised and would spuriously blank every caption. When
     // undefined, the occlusion renderer falls back to its plain pipeline and
-    // draws the captions un-occluded. Mirrors `foregroundLabelsLayer`'s guard.
+    // draws the captions un-occluded. Mirrors `foregroundLabelsPass`'s guard.
     const colorView = ctx.renderedTargets.has('foreground:0')
       ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;
@@ -99,7 +99,7 @@ export const labelsPass: ContentPass = {
     pickRenderer.draw(pass, quads, projection.viewportPx);
     // Postcondition: this row bound its OWN @group(0), so put the shared
     // point-pick camera prefix back for anything recorded after it in the
-    // COSMO pick pass (see `ContentLayer.drawPick`).
+    // COSMO pick pass (see `ContentPass.drawPick`).
     state.gpu.galaxyPickRenderer?.bindCamera(pass);
   },
 };

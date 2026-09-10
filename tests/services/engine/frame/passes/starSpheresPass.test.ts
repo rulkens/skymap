@@ -1,7 +1,7 @@
 /**
- * starSpheresLayer — unit tests for the resolved-partition star content row.
+ * starSpheresPass — unit tests for the resolved-partition star content row.
  *
- * Like `earthLayer`, the load-bearing assertion is the f64 seam: the layer
+ * Like `earthPass`, the load-bearing assertion is the f64 seam: the layer
  * MUST feed `composeBodyMvp` the slab's `Float64Array` view-projection
  * (`view.slab.vp`), NOT the f32-narrowed `view.vp` the other layers consume.
  * A sphere-filling body placed against the VP's nearly-cancelling
@@ -14,7 +14,7 @@
  * The partition matters here too: the layer draws EXACTLY the `spheres`
  * branch of `partitionStarsByResolution` — the stars whose apparent size
  * crosses `STAR_RESOLVE_PX`, the Sun included (sub-resolve it demotes to a
- * point like any other star) — while `starPointsLayer` draws the
+ * point like any other star) — while `starPointsPass` draws the
  * complementary `points` branch of the same call. The two layer suites
  * share the camera-half-an-AU-off-Sirius mixed fixture, so the sphere set
  * asserted here and the point set asserted there are disjoint and cover the
@@ -161,7 +161,7 @@ function makeState(
 // signature for every gating case in this file.
 const VIEW_STUB = makeNear0View([0, 0, 0]);
 
-describe('starSpheresLayer.enabled', () => {
+describe('starSpheresPass.enabled', () => {
   it('is false while starRenderer is null and while no star resolves; true once one does', () => {
     const renderer = { draw: vi.fn() };
     // Null handle. NOTE: deliberately an empty state.data AND a bare ctx —
@@ -184,9 +184,7 @@ describe('starSpheresLayer.enabled', () => {
     // Renderer + a camera half an AU off the Sun: the Sun resolves and the
     // spheres branch is non-empty.
     const sunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
-    expect(starSpheresPass.enabled(makeState(renderer, SCENE_STARS), sunCtx, VIEW_STUB)).toBe(
-      true,
-    );
+    expect(starSpheresPass.enabled(makeState(renderer, SCENE_STARS), sunCtx, VIEW_STUB)).toBe(true);
   });
 
   it('is disabled beyond the foreground gate', () => {
@@ -201,7 +199,7 @@ describe('starSpheresLayer.enabled', () => {
   });
 });
 
-describe('starSpheresLayer.draw', () => {
+describe('starSpheresPass.draw', () => {
   it('the Sun is drawn via composeBodyMvp with the slab f64 vp', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
@@ -254,12 +252,12 @@ describe('starSpheresLayer.draw', () => {
     );
   });
 
-  it('starSpheresLayer draws only the resolved stars', () => {
+  it('starSpheresPass draws only the resolved stars', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
     // Mixed fixture, camera half an AU off Sirius: only Sirius resolves
     // (1.71 R☉). The Sun and Proxima stay parsecs away, sub-pixel, and belong
-    // to starPointsLayer — the complementary set its suite asserts over this
+    // to starPointsPass — the complementary set its suite asserts over this
     // same fixture (the structural XOR).
     const camPos = halfAuFrom(SIRIUS.positionMpc);
     const view = makeNear0View(camPos);
@@ -322,7 +320,7 @@ describe('starSpheresLayer.draw', () => {
 // instant a sibling entered or left the partition. The helper's own
 // determinism has plain unit tests in `seedIndexOfBody.test.ts`; this proves
 // the call site actually feeds it the seed table.
-describe('starSpheresLayer.drawPick', () => {
+describe('starSpheresPass.drawPick', () => {
   it('stamps each sphere’s SCENE_STARS seed index, not its slot in the culled sphere partition', () => {
     // Mixed roster [Sun, Proxima, Sirius], camera half an AU off Sirius: only
     // Sirius (SCENE_STARS index 6) resolves to a sphere — the Sun (seed 0) and

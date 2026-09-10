@@ -243,7 +243,7 @@ export function createEarthSurfaceTileRenderer(
 
     ensureScratch(tileCount);
 
-    // Sampled ONCE per draw call (== once per frame; `earthLayer` calls
+    // Sampled ONCE per draw call (== once per frame; `earthPass` calls
     // `draw` at most once), never per tile — every tile's fade weight must
     // read the same instant, or tiles that upload microseconds apart would
     // visibly desync. REAL time: a fade must run even while the sim clock

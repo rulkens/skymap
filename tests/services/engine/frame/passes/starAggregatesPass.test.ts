@@ -1,5 +1,5 @@
 /**
- * starAggregatesLayer — the survey-star AGGREGATE stream into the half-res
+ * starAggregatesPass — the survey-star AGGREGATE stream into the half-res
  * offscreen. Its walk/fade/partition is `prepareStarCut` (tested in
  * `prepareStarCut.test.ts`); here we pin only that it shares the star gate and
  * records the AGGREGATE sub-stream (never the leaf one) into its pass.
@@ -103,7 +103,7 @@ function makeNear0View(camPos: Vec3): SlabView {
   return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, 720] };
 }
 
-describe('starAggregatesLayer', () => {
+describe('starAggregatesPass', () => {
   it('shares the star visibility gate (same enabled as star-catalog) and targets the offscreen', () => {
     expect(starAggregatesPass.enabled).toBe(starCatalogPass.enabled);
     expect(starAggregatesPass.target).toBe('star-aggregates');
@@ -113,12 +113,7 @@ describe('starAggregatesLayer', () => {
   it('records the AGGREGATE stream (stream tag, isAggregate all 1) into its pass', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
-    starAggregatesPass.draw(
-      PASS_STUB,
-      makeNear0View(camPos),
-      makeCtx(camPos),
-      makeState(renderer),
-    );
+    starAggregatesPass.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState(renderer));
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const args = renderer.draw.mock.calls[0]![1];

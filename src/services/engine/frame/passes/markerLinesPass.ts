@@ -1,5 +1,5 @@
 /**
- * markerLinesLayer — screen-space thick-line overlay draw call.
+ * markerLinesPass — screen-space thick-line overlay draw call.
  *
  * A swap-target layer, NOT an hdr-target one — see `passes/index.ts`
  * module header for why marker-lines + labels moved out of the HDR
@@ -33,7 +33,7 @@
  *
  * ### Position among the swap-target layers
  *
- * Placed BEFORE `labelsLayer` so the label text composites over the
+ * Placed BEFORE `labelsPass` so the label text composites over the
  * line where they overlap, preserving readability.
  */
 
@@ -56,7 +56,7 @@ export const markerLinesPass: ContentPass = {
     // body pass actually ran this frame — else the `foreground:0` colour is
     // stale/uninitialised and would spuriously blank every line. When
     // undefined, the occlusion renderer falls back to its plain pipeline and
-    // draws the lines un-occluded. Mirrors `foregroundLabelsLayer`'s guard.
+    // draws the lines un-occluded. Mirrors `foregroundLabelsPass`'s guard.
     const colorView = ctx.renderedTargets.has('foreground:0')
       ? ctx.renderTargets.viewOf('foreground:0')
       : undefined;

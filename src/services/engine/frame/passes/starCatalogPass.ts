@@ -1,6 +1,6 @@
 /**
- * starCatalogLayer — the survey (Gaia bin) stars as additive point sprites in
- * the depthless HDR accumulation, the wide-field twin of `starPointsLayer`.
+ * starCatalogPass — the survey (Gaia bin) stars as additive point sprites in
+ * the depthless HDR accumulation, the wide-field twin of `starPointsPass`.
  *
  * ### The two-stream split (leaf here, aggregate + composite in siblings)
  *
@@ -11,12 +11,12 @@
  * measured at tens-to-hundreds of full screens of additive overdraw at
  * kpc-scale zoom. So the streams draw into different targets:
  *
- *   - `starCatalogLayer` (this file) draws the LEAF stream at full resolution
+ *   - `starCatalogPass` (this file) draws the LEAF stream at full resolution
  *     into the HDR target, keeping the per-fragment hue-preserving knee. Its
  *     output is unchanged from the single-stream era.
- *   - `starAggregatesLayer` draws the AGGREGATE stream LINEAR into the half-res
+ *   - `starAggregatesPass` draws the AGGREGATE stream LINEAR into the half-res
  *     `star-aggregates` offscreen (quartering its fragment cost).
- *   - `starAggregateUpsampleLayer` composites that offscreen back into HDR,
+ *   - `starAggregateUpsamplePass` composites that offscreen back into HDR,
  *     applying the knee to the SUMMED aggregate field — which also fixes the
  *     LOD compression asymmetry (a stack of sub-knee aggregate quads now
  *     compresses like a concentrated bright leaf does).
@@ -32,7 +32,7 @@
  * and its upsample consumer can never disagree (the stale-offscreen trap the
  * volume liveness projection also guards against).
  *
- * ### Why NEAR0 + the f64 rebase seam (same trap as `starPointsLayer`)
+ * ### Why NEAR0 + the f64 rebase seam (same trap as `starPointsPass`)
  *
  * COSMO's near plane (0.01 Mpc) would clip the parsec-scale star anchors, so
  * this row projects through NEAR0 while still accumulating into the HDR target
@@ -132,7 +132,7 @@
  * source code is composed at pick time from the pick uniform, never baked into
  * the record), so a tier swap can stale a saved index — accepted, it clears on
  * mismatch. The Sun is excluded from the catalog at build time (it is the
- * origin, drawn by the true-scale `starSpheresLayer`/`starPointsLayer` seed), so
+ * origin, drawn by the true-scale `starSpheresPass`/`starPointsPass` seed), so
  * the octree carries no record at [0,0,0] to double the local starfield.
  */
 
@@ -369,7 +369,7 @@ const NODE_FADE_MS = 250;
  * first frame a catalog is seen, which snaps every node straight to its target
  * (dt = Infinity ⇒ step = 1): the star bubble's first paint is its steady state,
  * and only later membership CHANGES animate — the same first-frame rule
- * `foregroundLabelsLayer` uses.
+ * `foregroundLabelsPass` uses.
  */
 type StarFadeState = {
   /** Per-node current LOD opacity; meaningful only while the node is active. */

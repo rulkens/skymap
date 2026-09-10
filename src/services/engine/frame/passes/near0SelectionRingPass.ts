@@ -1,10 +1,10 @@
 /**
- * near0SelectionRingLayer — the selection halo for a picked NEAR0-slab thing
+ * near0SelectionRingPass — the selection halo for a picked NEAR0-slab thing
  * (today: a survey star), drawn OVER onto the swap chain post-tone-map.
  *
- * ## Why a NEAR0 sibling to `selectionRingLayer`, and why they partition by slab
+ * ## Why a NEAR0 sibling to `selectionRingPass`, and why they partition by slab
  *
- * The COSMO `selectionRingLayer` and this layer feed the SAME
+ * The COSMO `selectionRingPass` and this layer feed the SAME
  * `state.gpu.selectionRingRenderer` and read the SAME `selectionHalo` table —
  * the difference is the slab their ring projects through. A picked galaxy sits
  * at Mpc scale and rings cleanly in COSMO, whose fixed 10 kpc near plane a
@@ -36,7 +36,7 @@
  * A star anchor is a parsec-scale coordinate (~1.3×10⁻⁶ Mpc) and, during the
  * final approach, the NEAR0 vp's view translation is the same tiny magnitude:
  * their f32 subtraction cancels catastrophically, hopping the ring centre by
- * pixels. Like `starPointsLayer`, this layer rebases both operands into a
+ * pixels. Like `starPointsPass`, this layer rebases both operands into a
  * camera-relative frame in f64 BEFORE narrowing: `rebaseViewProj(view.slab.vp,
  * view.camPos)` folds the eye offset into the vp (zeroing the large view
  * translation), and the ring centre is re-expressed as `worldPos − view.camPos`

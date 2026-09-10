@@ -1,5 +1,5 @@
 /**
- * milkyWayAggregateLayer — the Milky Way point cloud's ADDITIVE star pass,
+ * milkyWayAggregatePass — the Milky Way point cloud's ADDITIVE star pass,
  * drawn into the reduced-resolution `mw-aggregate` offscreen.
  *
  * The cloud stands in for ~1e11 stars with a budget in the hundreds of
@@ -10,10 +10,10 @@
  * baseline sprite area collapses the frame rate while instance count drops.
  * A summed additive glow field is low-frequency, so rendering at `1/scale`
  * and bilinearly upsampling buys back the square of the divisor in fragment
- * cost — the same split the survey star pass makes (`starAggregatesLayer` →
- * `star-aggregates` → `starAggregateUpsampleLayer`); full rationale on the
+ * cost — the same split the survey star pass makes (`starAggregatesPass` →
+ * `star-aggregates` → `starAggregateUpsamplePass`); full rationale on the
  * `mw-aggregate` spec row in `renderTargets.ts`. The DUST pass stays in
- * `milkyWayLayer`, full-res in HDR, since its multiplicative transmittance
+ * `milkyWayPass`, full-res in HDR, since its multiplicative transmittance
  * has to land on the real cosmological accumulation.
  *
  * Viewport is the DOWNSCALED size, not the canvas: `stars.wesl` clamps each
@@ -23,7 +23,7 @@
  *
  * Slab is NEAR0, not COSMO: COSMO's near plane is fixed at 10 kpc, but the
  * disc's near edge sits ~9.5 kpc out, so that plane would slice the cloud
- * mid-descent while the approach fade still shows it — see `milkyWayLayer`'s
+ * mid-descent while the approach fade still shows it — see `milkyWayPass`'s
  * header for the full note, including why NEAR0's adaptive far plane means
  * both shaders clamp clip-z.
  */
@@ -47,7 +47,7 @@ export const milkyWayAggregatePass: ContentPass = {
   },
 
   draw(pass, view, ctx, state) {
-    // Defensive re-derivation, mirroring `scalarVolumeLayer`: `enabled` already
+    // Defensive re-derivation, mirroring `scalarVolumePass`: `enabled` already
     // proved liveness, but re-deriving keeps this a pure function of
     // (state, ctx) with no reliance on gate ordering.
     const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx);

@@ -9,7 +9,7 @@
  * ### The step-kind switch is the frame's only switch
  *
  * Every per-layer, per-target, per-blend decision is resolved from data the
- * `ContentLayer`s and `FrameStep`s already carry — a render step selects its
+ * `ContentPass`es and `FrameStep`s already carry — a render step selects its
  * group by matching `(target, slab)`, a composite names its blend/tone inline.
  * There are no layer-identity branches, no per-layer slab lookups (exactly one
  * `slabViewOf` per render step), and no membership-implies-blend logic. Adding a
@@ -203,7 +203,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
     ctx,
     state,
     program,
-    layers,
+    passes,
     strategy,
     timing,
     swapView,
@@ -265,7 +265,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // is the same discriminant `stepCtx` above already reads.
         const isCaptureStep = step.face !== undefined;
         const faceKey = step.face === undefined ? null : `${step.target}:${step.face}`;
-        const group = layers.filter(
+        const group = passes.filter(
           (l) =>
             (isCaptureStep ? l.skyCapture === true : l.target === step.target) &&
             // A 'body' layer matches every body-slab step, not one fixed
@@ -417,8 +417,8 @@ function renderGroup(
       // so this spreads to nothing in production merged frames.
       ...timestampSpread(timing, groupKey),
     });
-    for (const layer of group) {
-      layer.draw(pass, view, ctx, state);
+    for (const contentPass of group) {
+      contentPass.draw(pass, view, ctx, state);
     }
     pass.end();
     return;
@@ -430,20 +430,20 @@ function renderGroup(
   // under ?gpuTimings. The step's clear (colour or depth) belongs to the FIRST
   // layer's pass only — the rest load, or each would wipe its predecessor.
   // `layerTimingSlotName` keys the slot by `view.slab.index` (not just
-  // `layer.name`): a `slab: 'body'` layer draws once per body row in one
+  // `contentPass.name`): a `slab: 'body'` layer draws once per body row in one
   // encoder, and without the row in the name every row's pass would attach
   // the SAME two query indices — the last one to run silently overwrites the
   // others' timestamps (see `layerTimingSlotName`'s doc, slabs.ts).
-  group.forEach((layer, i) => {
+  group.forEach((contentPass, i) => {
     const touchedBefore = alreadyTouched || i > 0;
-    const slot = layerTimingSlotName(layer.name, view.slab.index, face);
+    const slot = layerTimingSlotName(contentPass.name, view.slab.index, face);
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${slot}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],
       ...depthAttachment(ctx, target, i === 0 ? depthLoadOp : 'load', view.slab.reversedZ),
       ...timestampSpread(timing, slot),
     });
-    layer.draw(pass, view, ctx, state);
+    contentPass.draw(pass, view, ctx, state);
     pass.end();
   });
 }

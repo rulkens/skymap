@@ -153,7 +153,7 @@ describe('startLoop', () => {
     expect(callArgs[0]).toBe(state);
     // frameDeps is built inside startLoop — verify it carries the
     // canvas reference threaded from deps.  Renderer handles are NOT part
-    // of `RunFrameDeps` any more — every `ContentLayer.draw` reads its
+    // of `RunFrameDeps` any more — every `ContentPass.draw` reads its
     // renderer straight off `state.gpu.*` (see `passes/index.ts`), so
     // there's nothing renderer-shaped to assert on this bag.
     const calledFrameDeps = callArgs[1] as Record<string, unknown>;

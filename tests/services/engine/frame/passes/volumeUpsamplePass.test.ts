@@ -1,5 +1,5 @@
 /**
- * volumeUpsampleLayer — the gate predicate and the draw call, against cast stubs
+ * volumeUpsamplePass — the gate predicate and the draw call, against cast stubs
  * rather than a real GPUDevice.
  *
  * `draw`'s `SlabView` argument is an opaque placeholder here: the upsample is a
@@ -89,7 +89,7 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
   };
 }
 
-// `volumeUpsampleLayer.draw` never reads `view` — an opaque placeholder
+// `volumeUpsamplePass.draw` never reads `view` — an opaque placeholder
 // documents that this layer is the one HDR content layer with no
 // SlabView-dependent behaviour.
 const VIEW_STUB = {} as SlabView;
@@ -135,7 +135,7 @@ function livenessState(init: {
   } as unknown as EngineState;
 }
 
-describe('volumeUpsampleLayer.enabled', () => {
+describe('volumeUpsamplePass.enabled', () => {
   it('returns false when volumes.enabled is false and master fade is fully out', () => {
     expect(
       volumeUpsamplePass.enabled(
@@ -180,7 +180,7 @@ describe('volumeUpsampleLayer.enabled', () => {
 // draw()
 // ---------------------------------------------------------------------------
 
-describe('volumeUpsampleLayer.draw', () => {
+describe('volumeUpsamplePass.draw', () => {
   it("calls volumeUpsample.draw with the HDR pass and the target table's volume view", () => {
     const offscreenView = {} as GPUTextureView;
     const drawSpy = vi.fn();

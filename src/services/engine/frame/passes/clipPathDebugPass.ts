@@ -1,9 +1,9 @@
 /**
- * clipPathDebugLayer — draws the clip-path inspector overlay (the precomputed
+ * clipPathDebugPass — draws the clip-path inspector overlay (the precomputed
  * speed-coloured eye route + the scrub-instant camera gizmo).
  *
  * A swap-target layer, drawn post-tone-map onto the swap chain via the shared
- * swap render step — same family as `markerLinesLayer`, but fed by the
+ * swap render step — same family as `markerLinesPass`, but fed by the
  * dedicated `debugLineRenderer` (no label-director coupling). The geometry is
  * NOT in Redux: the snapshot is held by the `clipPathInspector` subsystem
  * (precomputed once on the debug panel's "Calculate"), and only the scalar
@@ -25,7 +25,7 @@
  * shader's clip-z clamp, never near- or far-clips content at any depth. A cosmic
  * route renders identically here — the XY projection is the same camera, and the
  * overlay is a depthless OVER composite, so the differing depth convention is
- * unobserved. This is the same slab choice `near0SelectionRingLayer` makes for a
+ * unobserved. This is the same slab choice `near0SelectionRingPass` makes for a
  * picked star's halo, and for the same reason.
  *
  * ### The f64 rebase seam — camera-relative lines + a rebased vp

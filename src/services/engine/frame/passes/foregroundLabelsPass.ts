@@ -1,8 +1,8 @@
 /**
- * foregroundLabelsLayer — issues the draw calls for the NEAR0 caption + leader
+ * foregroundLabelsPass — issues the draw calls for the NEAR0 caption + leader
  * -line renderers `foregroundLabelDirector` uploads earlier in `runFrame`
  * (`enabled` therefore reads THIS frame's real demand, not a stale artifact of
- * its own draw). A second renderer pair, not the COSMO `labelsLayer`'s pair,
+ * its own draw). A second renderer pair, not the COSMO `labelsPass`'s pair,
  * because one renderer draws with one view-projection and these anchors sit
  * AU-to-parsec away, inside COSMO's fixed 10-kpc near plane.
  */
@@ -58,7 +58,7 @@ export const foregroundLabelsPass: ContentPass = {
   // click and a body click resolve to one selection. Uses
   // `near0LabelProjection` (the f64-rebased vp the captions are drawn
   // through), not `view.vp` — the caption anchors are camera-relative.
-  // `bodyGlintsLayer.drawPick` widens its own pick to this caption range for
+  // `bodyGlintsPass.drawPick` widens its own pick to this caption range for
   // the same affordance.
   drawPick(pass, _view, ctx, state) {
     const renderer = state.gpu.foregroundLabelRenderer;

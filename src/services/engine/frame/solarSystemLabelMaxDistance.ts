@@ -29,7 +29,7 @@
  * It stays deliberately TIGHTER than the shared foreground gate
  * (`FOREGROUND_MAX_DISTANCE_MPC` = the widest region extent × 100, ~25× wider): on
  * descent the bodies and the star-point backdrop appear first, the captions
- * later. `foregroundLabelsLayer`'s `enabled` ANDs both — the shared gate is what
+ * later. `foregroundLabelsPass`'s `enabled` ANDs both — the shared gate is what
  * lets the executor skip the whole NEAR0 foreground group (that row included) in
  * one sweep at galaxy zoom, while this constant keeps the captions' own later
  * entrance.

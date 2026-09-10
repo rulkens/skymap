@@ -1,9 +1,9 @@
 /**
- * zoneOfAvoidanceLayer — the reduced-res producer half of the ZoA guide
+ * zoneOfAvoidancePass — the reduced-res producer half of the ZoA guide
  * band: ray-marches the shell into the reduced-res `zoa` offscreen (a
  * full-res march is needless cost — the band is smooth low-frequency haze
  * an upsample reconstructs losslessly). The consumer,
- * `zoneOfAvoidanceUpsampleLayer`, composites this into HDR and draws the
+ * `zoneOfAvoidanceUpsamplePass`, composites this into HDR and draws the
  * full-res lettering. Both gate on `deriveZoneOfAvoidanceLiveness`, which
  * also carries the renderer-null check, so producer/consumer can't disagree
  * and no empty pass opens pre-bootstrap.

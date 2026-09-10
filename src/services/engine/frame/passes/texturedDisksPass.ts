@@ -1,5 +1,5 @@
 /**
- * texturedDisksLayer — LOD-2 textured galaxy thumbnails (3D-oriented disks).
+ * texturedDisksPass — LOD-2 textured galaxy thumbnails (3D-oriented disks).
  *
  * Reads `state.settings.thumbnails.enabled` as the master gate, then
  * `state.subsystems.texturedDisks.lastOutput.disks` (populated upstream
@@ -12,7 +12,7 @@
  *
  * `state.gpu.texturedDiskRenderer` is nullable pre-bootstrap (like every
  * GPU handle on `state.gpu`); `enabled` doesn't check it, so `draw` guards
- * defensively — same pattern as `filamentsLayer.draw`.
+ * defensively — same pattern as `filamentsPass.draw`.
  *
  * ### Sky-cubemap capture roster (Task 13b, Ruling 6)
  *

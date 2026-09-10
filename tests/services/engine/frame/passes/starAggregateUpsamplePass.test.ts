@@ -1,7 +1,7 @@
 /**
- * starAggregateUpsampleLayer — the HDR composite that reads the half-res
+ * starAggregateUpsamplePass — the HDR composite that reads the half-res
  * `star-aggregates` offscreen and adds the knee'd result into HDR. Mirrors
- * `volumeUpsampleLayer.test.ts`: the gate delegates to `starCatalogVisible`
+ * `volumeUpsamplePass.test.ts`: the gate delegates to `starCatalogVisible`
  * (shared with the aggregate producer, so no stale-offscreen composite), and
  * `draw` calls `starAggregateUpsample.draw` with the HDR pass + the
  * 'star-aggregates' offscreen view, defended by a null-check.
@@ -82,7 +82,7 @@ function makeState(upsample: unknown, renderer: unknown = makeRenderer()): Engin
 
 const inBand: Vec3 = [0, 0, (inner + (outer - inner) * 0.5) * PC_TO_MPC];
 
-describe('starAggregateUpsampleLayer', () => {
+describe('starAggregateUpsamplePass', () => {
   it('shares the star visibility gate and targets HDR', () => {
     expect(starAggregateUpsamplePass.enabled).toBe(starCatalogPass.enabled);
     expect(starAggregateUpsamplePass.target).toBe('hdr');
@@ -101,7 +101,12 @@ describe('starAggregateUpsampleLayer', () => {
   it('does not throw when starAggregateUpsample is null (defensive null-check)', () => {
     const state = makeState(null);
     expect(() =>
-      starAggregateUpsamplePass.draw(PASS_STUB, VIEW_STUB, makeCtx({} as GPUTextureView, inBand), state),
+      starAggregateUpsamplePass.draw(
+        PASS_STUB,
+        VIEW_STUB,
+        makeCtx({} as GPUTextureView, inBand),
+        state,
+      ),
     ).not.toThrow();
   });
 });

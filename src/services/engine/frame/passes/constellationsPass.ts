@@ -1,5 +1,5 @@
 /**
- * constellationsLayer — the 88 classical asterisms as additive lines between
+ * constellationsPass — the 88 classical asterisms as additive lines between
  * their real member stars, so flying away shears the figures apart.
  *
  * The odd row out among the HDR layers: the endpoints sit at parsec-to-
@@ -53,7 +53,7 @@ export const constellationsPass: ContentPass = {
     // Multiplying absolute parsec-scale endpoints by an f32 vp cancels catastrophically
     // on approach and makes the lines hop, so fold the eye offset in at f64 — from the
     // slab's f64 `vp`, NOT the already-narrowed `view.vp` — and pair it with the
-    // camera-relative endpoints the renderer writes per frame (the starPointsLayer seam).
+    // camera-relative endpoints the renderer writes per frame (the starPointsPass seam).
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
 
     renderer.draw(

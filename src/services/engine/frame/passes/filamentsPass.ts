@@ -1,5 +1,5 @@
 /**
- * filamentsLayer — cosmic-web skeleton from the optional `npm run build-filaments`
+ * filamentsPass — cosmic-web skeleton from the optional `npm run build-filaments`
  * pipeline (DisPerSE → `filaments.bin`), drawn as additive screen-space ridges.
  *
  * `filaments.bin` is optional: unshipped, `filamentRenderer` stays null and the

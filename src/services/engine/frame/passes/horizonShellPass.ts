@@ -1,5 +1,5 @@
 /**
- * horizonShellLayer — translucent sphere at the comoving particle-
+ * horizonShellPass — translucent sphere at the comoving particle-
  * horizon distance, marking the edge of the observable universe.
  *
  * ### What it draws

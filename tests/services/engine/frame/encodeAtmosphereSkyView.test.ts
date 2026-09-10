@@ -15,7 +15,7 @@
  *
  * The other load-bearing assertion is the SOURCE of the camera altitude (the
  * M1 fix): the bake must derive `camLocal` via `bodySlabCamLocal` from
- * `ctx.bodyPose(body.id)` — the SAME body-slab pose seam `atmosphereShellLayer`
+ * `ctx.bodyPose(body.id)` — the SAME body-slab pose seam `atmosphereShellPass`
  * reads for its fragment — NOT a second Mpc-side re-derivation off
  * `ctx.drawCamPos`/`state.cam.position`. The packing test recomputes from the
  * pose fixture directly, and a dedicated test proves a null pose is a per-body
@@ -149,7 +149,7 @@ const DRAW_CAM_POS: Vec3 = [
   SEEDED_EARTH.positionMpc[2],
 ];
 
-// The rendered pose (what `atmosphereShellLayer`'s fragment sees): the camera
+// The rendered pose (what `atmosphereShellPass`'s fragment sees): the camera
 // 5 Earth radii out along the body's local +x axis, in METRES — already in the
 // body-fixed frame the seam promises, so the recompute below needs no
 // orientation matrix multiply of its own.
@@ -222,7 +222,7 @@ describe('encodeAtmosphereSkyView', () => {
     expect(uniforms).toHaveLength(4);
 
     // Independent recompute from the contract's formula, using the SAME
-    // `bodySlabCamLocal` util the encode (and `atmosphereShellLayer`'s
+    // `bodySlabCamLocal` util the encode (and `atmosphereShellPass`'s
     // fragment-facing draw) calls — the camera is expressed in
     // ATMOSPHERE-TOP-radius units (NOT surface radius); its length ×
     // the atmosphere-top km recovers the camera radius in km.
@@ -238,7 +238,7 @@ describe('encodeAtmosphereSkyView', () => {
     // The encode narrows this exact f64 expression once at the Float32Array
     // write, so the slot equals Math.fround of the recomputed value bit-for-bit
     // (the values are ~3e4 km, where toBeCloseTo's absolute tolerance is
-    // meaningless — the same posture earthLayer.test uses for bodySlabCamLocal).
+    // meaningless — the same posture earthPass.test uses for bodySlabCamLocal).
     expect(uniforms[0]).toBe(Math.fround(expectedViewHeightKm));
     expect(uniforms[1]).toBe(Math.fround(expectedSunZenithCos));
 

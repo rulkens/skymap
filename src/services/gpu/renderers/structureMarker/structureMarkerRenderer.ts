@@ -97,7 +97,7 @@ export function createStructureMarkerRenderer(
   ctx: GpuContext,
   /**
    * The colour-attachment format the halo + ring pipelines write into.
-   * `structureMarkersLayer` draws into the hdr target, so the format is the
+   * `structureMarkersPass` draws into the hdr target, so the format is the
    * offscreen HDR target (`rgba16float`) — NOT `ctx.format`, which is the canvas
    * swap-chain (`bgra8unorm`).  Halos accumulate additively into the same
    * float buffer the points / quads / disks / filaments write, then the

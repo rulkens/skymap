@@ -1,5 +1,5 @@
 /**
- * ringsLayer — the translucent planetary rings (Saturn) as a `'body'`-slab
+ * ringsPass — the translucent planetary rings (Saturn) as a `'body'`-slab
  * content row, one draw per host body, into the depth-bearing `foreground:0`
  * target (spec §8).
  *
@@ -35,7 +35,7 @@
  * `composeBodySlabMvp`'s module header). `bodySlabCamLocal`, though, is
  * measured at the PLANET's radius, not the ring's outer radius: the fragment's
  * in-front-of-planet view-ray test wants the camera in "planet radii", the
- * frame `texturedBodiesLayer`'s Minnaert term also uses, so the ring keeps its
+ * frame `texturedBodiesPass`'s Minnaert term also uses, so the ring keeps its
  * own lit brightness where it occults the disc. This asymmetry is inherited
  * unchanged from the pre-body-slabs layer — it is not a bug to unify.
  *

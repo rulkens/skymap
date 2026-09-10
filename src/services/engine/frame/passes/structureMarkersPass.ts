@@ -1,5 +1,5 @@
 /**
- * structureMarkersLayer — halo + ring draws for every structure category
+ * structureMarkersPass — halo + ring draws for every structure category
  * (cluster / supercluster / void / group).
  *
  * Targets the hdr layer (NOT the swap target) because halos are additive
@@ -8,7 +8,7 @@
  * the alpha is already in the linear HDR range; tone-map applies
  * cleanly.
  *
- * Position: after volumeUpsampleLayer so halos composite over the
+ * Position: after volumeUpsamplePass so halos composite over the
  * cosmic web / volume fields rather than the other way round.  Labels
  * (a swap-target layer) still draw on top of everything HDR via the
  * post-tone-map swap render step.
@@ -50,7 +50,7 @@ export const structureMarkersPass: ContentPass = {
     // descent into the solar system so cosmic-scale annotations (all
     // categories, voids included) don't hang in front of the near field.
     // Keyed on distance from the heliocentric render origin, same as
-    // galaxyPointSpritesLayer. The layer has no FadeRegistry handle — the
+    // galaxyPointSpritesPass. The layer has no FadeRegistry handle — the
     // renderer still binds a real fade group at @group(1) so the BGL
     // matches what filaments (and other HDR layers) bind at the same slot
     // on the shared encoder; a future opacityOf({kind:'structureMarkers'})

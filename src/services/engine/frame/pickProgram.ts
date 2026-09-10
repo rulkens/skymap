@@ -12,9 +12,9 @@
  * render loop. Folding it into the FRAME would braid "which galaxy is under the
  * cursor?" into "draw the next frame" — two concerns that vary independently.
  * So this program is a sibling of the FRAME executor: it shares only the same
- * `ContentLayer` registry, filters it by `drawPick` presence + the pick gate
+ * `ContentPass` registry, filters it by `drawPick` presence + the pick gate
  * `(pickEnabled ?? enabled)` — a layer's own pick gate wherever its pick set
- * differs from its draw set, else `enabled` (see `ContentLayer.pickEnabled`) —
+ * differs from its draw set, else `enabled` (see `ContentPass.pickEnabled`) —
  * groups the survivors by slab, and re-rasterises each slab's pickable geometry
  * through the r32uint pick pipeline into its own pick target. See the
  * renderer-unification design's "Pick" section.
@@ -106,16 +106,16 @@ type PickSlabTarget = {
 
 /**
  * Construct the pick program bound to `device` + `canvas`, driven by the
- * shared `state` and the content-layer registry `layers`. This is the single
+ * shared `state` and the content-layer registry `passes`. This is the single
  * owner of the hover / click / debug-overlay pick path.
  */
 export function createPickProgram(deps: {
   device: GPUDevice;
   canvas: HTMLCanvasElement;
   state: EngineState;
-  layers: readonly ContentPass[];
+  passes: readonly ContentPass[];
 }): PickProgram {
-  const { device, canvas, state, layers } = deps;
+  const { device, canvas, state, passes } = deps;
 
   // COSMO/NEAR0 pick targets + staging buffers, allocated lazily per slab and
   // recreated on viewport change — body rows use `bodyPickTarget` instead, so
@@ -293,8 +293,8 @@ export function createPickProgram(deps: {
       ...(timing ? { timestampWrites: timing } : {}),
     });
 
-    for (const layer of slabPickables) {
-      layer.drawPick!(pass, view, ctx, state);
+    for (const contentPass of slabPickables) {
+      contentPass.drawPick!(pass, view, ctx, state);
     }
 
     pass.end();
@@ -319,10 +319,10 @@ export function createPickProgram(deps: {
   // carries no @group(0) dependence.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
-  ): { slabIndex: number; view: SlabView; layers: ContentPass[] }[] {
-    const candidates = layers.filter((l) => l.drawPick);
+  ): { slabIndex: number; view: SlabView; passes: ContentPass[] }[] {
+    const candidates = passes.filter((l) => l.drawPick);
     // Every body-row slab index present this frame — a 'body' layer's
-    // `drawPick` (`earthLayer`, `planetsLayer`) contributes to each one, the
+    // `drawPick` (`earthPass`, `planetsPass`) contributes to each one, the
     // same widening `executeFrame` applies. `ctx.slabs` holds full `Slab`s, so this
     // reads `frame.kind` directly (the index-only sibling, `isBodySlabIndex`
     // in slabs.ts, is for the one call site with no `Slab` in hand).
@@ -342,18 +342,18 @@ export function createPickProgram(deps: {
       .map((slabIndex) => {
         const view = slabViewOf(ctx, slabIndex);
         // Filter by the PICK gate: `pickEnabled` when a layer declares one (its
-        // pick set differs from its draw set — planetsLayer's flat ∪ textured,
+        // pick set differs from its draw set — planetsPass's flat ∪ textured,
         // the caption stamps, the Milky Way's narrower close-range gate), else
         // `enabled` (pick set == draw set, the common case). See
-        // `ContentLayer.pickEnabled`.
-        const slabLayers = candidates.filter(
+        // `ContentPass.pickEnabled`.
+        const slabPasses = candidates.filter(
           (l) =>
             (l.slab === slabIndex || (l.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
             (l.pickEnabled ?? l.enabled)(state, ctx, view),
         );
-        return { slabIndex, view, layers: slabLayers };
+        return { slabIndex, view, passes: slabPasses };
       })
-      .filter((group) => group.layers.length > 0);
+      .filter((group) => group.passes.length > 0);
   }
 
   async function pick(pickXPx: number, pickYPx: number): Promise<PickResult | null> {
@@ -383,7 +383,7 @@ export function createPickProgram(deps: {
     // buffers are collected in slab order (near→far) so the readback fold is a
     // simple "first non-zero".
     const stagingInOrder: GPUBuffer[] = [];
-    for (const { slabIndex, view, layers: slabPickables } of groups) {
+    for (const { slabIndex, view, passes: slabPickables } of groups) {
       // Body rows share ONE target — see `ensureBodyPickTarget`'s doc.
       const target = isBodySlabIndex(slabIndex)
         ? ensureBodyPickTarget(w, h)
@@ -452,7 +452,7 @@ export function createPickProgram(deps: {
     // rows are evicted below, after recording (see `ensureDebugBodyTarget`).
     const touchedBodySlabs = new Set<number>();
     const texturesNearToFar: GPUTexture[] = [];
-    for (const { slabIndex, view, layers: slabPickables } of groups) {
+    for (const { slabIndex, view, passes: slabPickables } of groups) {
       let target: PickSlabTarget;
       if (isBodySlabIndex(slabIndex)) {
         target = ensureDebugBodyTarget(slabIndex, w, h);

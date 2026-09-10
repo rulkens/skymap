@@ -5,7 +5,7 @@
  * the content-layer registry (`TIMED_SLOTS` in
  * `services/engine/frame/frameProgram.ts`): one slot per timed layer, a
  * `'<source>→<dest>'` slot per composite, and a trailing `'pick'`.  Because
- * `ContentLayer.name` is typed `string`, the slot set cannot be a closed
+ * `ContentPass.name` is typed `string`, the slot set cannot be a closed
  * literal union — so this is a `string` alias rather than an enumerated type.
  * It keeps the *intent* legible at every signature
  * (`descriptorFor(slot: TimingSlotName)`, `Map<TimingSlotName, number>`) while
@@ -15,8 +15,8 @@
  * returns `undefined` for a name with no allocated index pair, so the
  * pass simply isn't measured and still draws.
  *
- * The strings match the `name` fields on `ContentLayer` objects (e.g.
- * `galaxyPointSpritesLayer.name === 'point-sprites'`).
+ * The strings match the `name` fields on `ContentPass` objects (e.g.
+ * `galaxyPointSpritesPass.name === 'point-sprites'`).
  */
 
 export type TimingSlotName = string;

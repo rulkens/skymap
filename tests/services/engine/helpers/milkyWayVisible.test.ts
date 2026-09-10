@@ -1,6 +1,6 @@
 /**
  * milkyWayVisible — the ONE home of the MW visibility predicate, reached
- * through `milkyWayLayer.enabled`, which the draw program runs against the
+ * through `milkyWayPass.enabled`, which the draw program runs against the
  * frame camera and the pick program runs against the replayed pick camera.
  * These tests pin the predicate itself — the toggle/fade-tail gate and the
  * apparent-size fade band — against an injected camera and clock, the way

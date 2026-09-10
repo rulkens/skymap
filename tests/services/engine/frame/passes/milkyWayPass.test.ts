@@ -1,5 +1,5 @@
 /**
- * milkyWayLayer — the one registry row whose pick set is NARROWER than its draw
+ * milkyWayPass — the one registry row whose pick set is NARROWER than its draw
  * set. Its hit target is a disc sized from the galaxy's physical radius, so the
  * footprint grows without bound as the camera closes; with the pick fold being
  * SLAB-ordered (any NEAR0 hit beats every COSMO one regardless of depth), a
@@ -46,7 +46,7 @@ function makeCtx(camDistMpc: number): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-describe('milkyWayLayer pick vs draw', () => {
+describe('milkyWayPass pick vs draw', () => {
   it('keeps drawing but stops taking clicks once the camera is inside the disc', () => {
     // Well inside the impostor, still an order of magnitude outside the 2 kpc
     // approach fade: the disc is DRAWN at full strength here.

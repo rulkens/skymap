@@ -97,7 +97,7 @@ describe('visibleSlabBodies', () => {
     // alone while the frustum cull (below) already used the ring-inclusive
     // bodyDrawRadiusM — a ring could still be several px across while the
     // bare globe was sub-pixel, and the roster gate dropped the row before
-    // any per-layer gate (e.g. ringsLayer's own outer-diameter cull) got a
+    // any per-layer gate (e.g. ringsPass's own outer-diameter cull) got a
     // chance to disagree. Real Saturn at 1.2e11 m, on-axis: bare disc
     // ≈0.49px (sub-pixel), ring-inclusive rEff ≈1.17px (clears the floor).
     const saturn = SCENE_PLANETS.find((p) => p.id === 'saturn');

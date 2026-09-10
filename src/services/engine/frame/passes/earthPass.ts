@@ -1,11 +1,11 @@
 /**
- * earthLayer — Earth's `'body'`-slab content row: the base globe, then the
+ * earthPass — Earth's `'body'`-slab content row: the base globe, then the
  * resident surface-tile detail patches over it, drawn into `foreground:0`.
  *
  * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
  * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`;
  * the foreground-distance check below is the one gate this layer still owns,
- * shared with `planetsLayer`.
+ * shared with `planetsPass`.
  *
  * `earthRenderer.draw` writes ONE non-dynamic uniform buffer, so this row
  * draws the base globe AT MOST once per frame (see that renderer's header for
@@ -78,7 +78,7 @@ function sceneBodyForId(state: EngineState, bodyId: BodyId): SceneBody | null {
  * `runFrame`'s tile planner — the three sites that each used to
  * independently look up the body's state and recompute the same body-local
  * MVP + camera. Memoised per `(ctx, bodyId)` (mirrors `prepareStarCut` in
- * `starCatalogLayer.ts`), so whichever call site reaches it first in a frame
+ * `starCatalogPass.ts`), so whichever call site reaches it first in a frame
  * does the work and the rest read the cache — keyed on `bodyId`, not just
  * `ctx`, because a single ctx now serves every body-slab row and a `ctx`-only
  * memo would return Earth's frame for any other body sharing the same frame.
@@ -222,7 +222,7 @@ export const earthPass: ContentPass = {
           EARTH_SURFACE_PARAMS.f0,
           EARTH_SURFACE_PARAMS.sunIrradiance,
           cloudShadowStrength,
-          // Unit-sphere local radius of the SAME shell cloudShellLayer draws, so
+          // Unit-sphere local radius of the SAME shell cloudShellPass draws, so
           // the cast shadow and the drawn deck agree by construction.
           CLOUD_SHELL_PARAMS.radiusRatio,
           // Live user settings, not the WESL consts (seeded from

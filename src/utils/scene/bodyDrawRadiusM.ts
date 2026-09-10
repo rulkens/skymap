@@ -21,7 +21,7 @@ export function bodyDrawRadiusM(body: SceneBody): number {
   }
 
   // Cloud shell has no per-body registry row (Earth is its only consumer today,
-  // hardcoded the same way in cloudShellLayer.ts/earthLayer.ts).
+  // hardcoded the same way in cloudShellPass.ts/earthPass.ts).
   if (body.id === 'earth') {
     radiusM = Math.max(radiusM, body.radiusM * CLOUD_SHELL_PARAMS.radiusRatio);
   }

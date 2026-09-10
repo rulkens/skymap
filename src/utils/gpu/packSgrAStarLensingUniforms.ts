@@ -7,8 +7,8 @@
  * `CameraUniforms` prefix (`writeCameraPrefix`, the same helper every
  * world-space renderer uses) plus the lens's own scalar params, the LUT
  * addressing pair, this frame's fade-band alpha, and the camera-relative
- * anchor position (the f64->f32 rebase seam `bodyGlintsLayer` /
- * `starPointsLayer` already use — the caller subtracts the eye and folds
+ * anchor position (the f64->f32 rebase seam `bodyGlintsPass` /
+ * `starPointsPass` already use — the caller subtracts the eye and folds
  * it into `viewProj` before calling this).
  *
  * ## Byte layout (must stay byte-exact with `shaders/lib/sgrAStarLensing.wesl`)

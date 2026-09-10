@@ -1,5 +1,5 @@
 /**
- * flowFieldLayer — CF4++ peculiar-velocity ribbons, additive into HDR. It draws
+ * flowFieldPass — CF4++ peculiar-velocity ribbons, additive into HDR. It draws
  * only the trails the pre-HDR compute step (`encodeFlowCompute`) already
  * integrated this frame; it owns no compute work itself.
  */

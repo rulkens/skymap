@@ -22,7 +22,7 @@
  * fields it never touches.  They flow through `RunFrameDeps` instead.  Every
  * per-frame renderer (`milkyWayCloudRenderer`, `filamentRenderer`,
  * `texturedDiskRenderer`, …) DOES live on `state.gpu.*` already — every
- * `ContentLayer.draw` reads its renderer straight from there (see
+ * `ContentPass.draw` reads its renderer straight from there (see
  * `passes/index.ts`), so `RunFrameDeps` carries no renderer fields.
  *
  * ### Camera produce → commit-on-edge ordering
@@ -543,7 +543,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Per-frame impostor planners ───────────────────────────────────────────
   //
   // CPU-side step that populates the LOD subsystems' `lastOutput` arrays, which
-  // `proceduralDisksLayer` / `texturedDisksLayer` read at draw time. The
+  // `proceduralDisksPass` / `texturedDisksPass` read at draw time. The
   // atlas subsystem is mutated transitively by the textured-disk run (slot
   // allocations + fetch enqueues).
   // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
@@ -592,7 +592,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // A CPU-side planner, sited with the disk planners above. Resolved off
   // Earth's OWN body-slab row rather than a fixed NEAR0 index — no row this
   // frame means Task 1 already culled Earth, so there is nothing to plan.
-  // Where a row DOES exist, the gate is still `earthLayer.enabled` itself,
+  // Where a row DOES exist, the gate is still `earthPass.enabled` itself,
   // not a hand-copied predicate, so the tiles and the layer they refine can
   // never disagree about whether Earth is on screen.
   const earthTiles = state.subsystems.earthTiles;
@@ -601,7 +601,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === 'earth',
   );
   if (earthTiles !== null && earth !== null && earthSlab !== undefined) {
-    // Same slab resolution `earthLayer.draw` uses, resolved once and reused
+    // Same slab resolution `earthPass.draw` uses, resolved once and reused
     // below so the tiles the planner asks for never drift from the pixels
     // the fragment samples them into.
     const earthTilesView = slabViewOf(ctx, earthSlab.index);
@@ -622,7 +622,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // outer guard's reasoning to satisfy the type checker.
         const prepared = prepareBodySurfaceFrame(state, ctx, earthTilesView);
         if (prepared !== null) {
-          // The single walk: `cut` is what earthLayer.draw draws this frame,
+          // The single walk: `cut` is what earthPass.draw draws this frame,
           // `requests` is what update()'s fetch loop drives — see
           // cutSurfaceTiles's header for why one walk produces both rather
           // than two independently re-deriving the same horizon/frustum logic.
@@ -685,7 +685,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Like the label flush above: runMarkerProducers walks the producer array (no
   // sort/filter/dedupe, picks order preserved) and hands descriptors to the
   // renderer. Must run BEFORE the GPU dispatch so the instance buffer is
-  // uploaded before `structureMarkersLayer` reads it. Null-checked for the
+  // uploaded before `structureMarkersPass` reads it. Null-checked for the
   // pre-initGpu window.
   if (state.gpu.structureMarkerRenderer !== null) {
     state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));

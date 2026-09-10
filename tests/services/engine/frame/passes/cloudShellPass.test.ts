@@ -1,11 +1,11 @@
 /**
- * cloudShellLayer — unit tests for Earth's translucent cloud-shell `'body'`-
+ * cloudShellPass — unit tests for Earth's translucent cloud-shell `'body'`-
  * slab content row.
  *
  * Two things this suite pins beyond the descent fade (its original scope):
  * the layer now reads its pose off `ctx.bodyPose(bodyId)` and composes
  * against the slab's f64 `view.slab.vp` via `composeBodySlabMvp` (the seam
- * every body-slab layer shares — see `earthLayer.test.ts`), and it must
+ * every body-slab layer shares — see `earthPass.test.ts`), and it must
  * leave the pass plan for a body-m row that ISN'T Earth's (`cloudShellDraw`'s
  * widened gate — CLOUD_SHELL_PARAMS has no per-body table, so today that
  * means every non-Earth row).
@@ -50,7 +50,7 @@ vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 
 // Stub the per-frame body-state snapshot to the seeded fixture's own
-// positionMpc/orientation refs, mirroring earthLayer.test.ts.
+// positionMpc/orientation refs, mirroring earthPass.test.ts.
 type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
@@ -134,7 +134,7 @@ function makeState(renderer: unknown, resident: boolean): EngineState {
   } as unknown as EngineState;
 }
 
-describe('cloudShellLayer.enabled', () => {
+describe('cloudShellPass.enabled', () => {
   it('is false while the clouds slot is not resident, even well above the fade band', () => {
     const state = makeState({ draw: vi.fn() }, false);
     expect(cloudShellPass.enabled(state, ctxAtAltitude(10), makeBodyView('earth' as BodyId))).toBe(
@@ -167,7 +167,7 @@ describe('cloudShellLayer.enabled', () => {
 
   it('is false for a body-m row that is not Earth’s own, even resident and well above the fade band', () => {
     // CLOUD_SHELL_PARAMS carries no per-body table — the deliberate lean
-    // choice (atmosphereShellLayer's header) — so every non-Earth row must
+    // choice (atmosphereShellPass's header) — so every non-Earth row must
     // leave the pass plan regardless of how favourable its OTHER gates are.
     const state = makeState({ draw: vi.fn() }, true);
     expect(cloudShellPass.enabled(state, ctxAtAltitude(10), makeBodyView('mars' as BodyId))).toBe(
@@ -176,7 +176,7 @@ describe('cloudShellLayer.enabled', () => {
   });
 });
 
-describe('cloudShellLayer.draw', () => {
+describe('cloudShellPass.draw', () => {
   it('scales the packed opacity by the descent fade partway through the band', () => {
     const drawSpy =
       vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean) => void>();

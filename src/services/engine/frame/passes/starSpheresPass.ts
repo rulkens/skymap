@@ -1,5 +1,5 @@
 /**
- * starSpheresLayer — the resolved-partition stars as true-scale,
+ * starSpheresPass — the resolved-partition stars as true-scale,
  * flat-emissive spheres in the depth-bearing `foreground:0` target.
  *
  * ### What it draws
@@ -13,7 +13,7 @@
  * tinted by its blackbody colour — derived from its `temperatureK` via
  * `temperatureToLinearRgb`. A star's optional `oblateness` flattens
  * the polar (model-Z) axis via `composeBodyMvp` — the sphere is the
- * `oblateness` absent (⇒ 0) case. `starPointsLayer` draws the complementary
+ * `oblateness` absent (⇒ 0) case. `starPointsPass` draws the complementary
  * `points` branch of the SAME partition call, so a star is a sphere XOR a
  * point by construction — see the partition module's docblock for the
  * structural-disjointness argument.
@@ -31,7 +31,7 @@
  *
  * ### The f64 seam — why `view.slab.vp`, NOT `view.vp`
  *
- * Like `earthLayer`, this is a near-field sphere body that reads the slab's
+ * Like `earthPass`, this is a near-field sphere body that reads the slab's
  * `Float64Array` view-projection (`view.slab.vp`) rather than the
  * f32-narrowed `view.vp` every cosmological layer consumes. A sphere placed
  * parsecs (or, for the Sun, zero) from the render origin sits where the VP's
@@ -135,7 +135,7 @@ export const starSpheresPass: ContentPass = {
   // offsets). The resolved set is the SAME `partitionStarsByResolution` call
   // `draw` runs — `positionedVisibleStars` split at `STAR_RESOLVE_PX` against
   // `view.camPos` and `view.viewportPx[1]` — so a star is pickable-as-a-sphere
-  // exactly when it draws as a sphere (its complement rides `starPointsLayer`'s
+  // exactly when it draws as a sphere (its complement rides `starPointsPass`'s
   // point pick), never both and never neither.
   //
   // The packed id carries each star's STABLE seed-table index, NOT its slot in

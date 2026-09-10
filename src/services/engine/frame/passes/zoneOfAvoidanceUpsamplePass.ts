@@ -1,5 +1,5 @@
 /**
- * zoneOfAvoidanceUpsampleLayer — composites the reduced-res `zoa` offscreen
+ * zoneOfAvoidanceUpsamplePass — composites the reduced-res `zoa` offscreen
  * into HDR, then draws the full-res curved lettering via `postBlit` — MSDF
  * text at reduced res would blur past legibility, so captions can't ride
  * the producer's reduced-res target.

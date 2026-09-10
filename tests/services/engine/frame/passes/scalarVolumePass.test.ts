@@ -1,6 +1,6 @@
 /**
- * scalarVolumeLayer tests — the half-resolution scalar-volume raymarch as a
- * ContentLayer (`target: 'volume'`, `slab: COSMO`, `blend: 'additive'`).
+ * scalarVolumePass tests — the half-resolution scalar-volume raymarch as a
+ * ContentPass (`target: 'volume'`, `slab: COSMO`, `blend: 'additive'`).
  *
  * The executor owns the pass + the (0,0,0,0) clear (verified in
  * executeFrame.test.ts); this layer only draws. These tests pin the
@@ -94,7 +94,7 @@ function liveState(
   } as unknown as EngineState;
 }
 
-describe('scalarVolumeLayer.enabled', () => {
+describe('scalarVolumePass.enabled', () => {
   it('is enabled when deriveVolumeLiveness is non-null (renderer active, master on)', () => {
     const ctx = makeCtx();
     expect(scalarVolumePass.enabled(liveState(), ctx, slabViewOf(ctx, COSMO))).toBe(true);
@@ -122,7 +122,7 @@ describe('scalarVolumeLayer.enabled', () => {
   });
 });
 
-describe('scalarVolumeLayer.draw', () => {
+describe('scalarVolumePass.draw', () => {
   it('draws with the SlabView vp/camPos and the downsampled viewport', () => {
     const drawSpy = vi.fn();
     const state = liveState({ draw: drawSpy });

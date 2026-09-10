@@ -83,7 +83,7 @@
  *
  * Renderers attach asynchronously (after the font atlas fetch); the
  * director silently no-ops until both are present.  This mirrors the
- * existing pattern at point-of-use in `filamentsLayer`.
+ * existing pattern at point-of-use in `filamentsPass`.
  */
 
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';

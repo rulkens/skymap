@@ -1,5 +1,5 @@
 /**
- * markerLinesLayer — enable gate + the coverage-view thread-through (Task 12).
+ * markerLinesPass — enable gate + the coverage-view thread-through (Task 12).
  *
  * `draw` occludes leader lines per-pixel behind an opaque body by sampling
  * 'foreground:0's COLOUR view (its alpha, via lib/sceneDepth.wesl), not its
@@ -45,7 +45,7 @@ function makeCtx(
   } as unknown as ReadyFrameContext;
 }
 
-describe('markerLinesLayer.enabled', () => {
+describe('markerLinesPass.enabled', () => {
   it('is false when the renderer is null', () => {
     const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
     expect(markerLinesPass.enabled(makeState(null), ctx, VIEW_STUB)).toBe(false);
@@ -58,7 +58,7 @@ describe('markerLinesLayer.enabled', () => {
   });
 });
 
-describe('markerLinesLayer.draw', () => {
+describe('markerLinesPass.draw', () => {
   it("passes the foreground:0 colour view (not the depth view) as draw's 4th arg when the body pass ran", () => {
     const renderer = makeRenderer(2);
     const sentinelColorView = {} as GPUTextureView;

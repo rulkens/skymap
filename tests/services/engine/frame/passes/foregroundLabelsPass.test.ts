@@ -1,5 +1,5 @@
 /**
- * foregroundLabelsLayer — now a thin draw-call shim over what
+ * foregroundLabelsPass — now a thin draw-call shim over what
  * `foregroundLabelDirector` already uploaded earlier in `runFrame` (spec §5.2).
  *
  * `enabled` must read `renderer.glyphCount()` fresh every call — the "latches
@@ -99,7 +99,7 @@ function makeCtx(nowMs = 0): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-describe('foregroundLabelsLayer.enabled', () => {
+describe('foregroundLabelsPass.enabled', () => {
   it("tracks the director's last flush across the runFrame/draw seam, and re-opens when demand returns", () => {
     // The "latches false forever" regression, exercised across the REAL seam:
     // a REAL `label2DDirector` uploads via `setLabels` (as `runFrame` does,
@@ -168,7 +168,7 @@ describe('foregroundLabelsLayer.enabled', () => {
   });
 });
 
-describe('foregroundLabelsLayer.draw', () => {
+describe('foregroundLabelsPass.draw', () => {
   it('resolves the shared NEAR0 projection (near0LabelProjection(ctx)) and draws the labels through it', () => {
     const renderer = makeRenderer(3);
     const state = makeState(renderer, null);

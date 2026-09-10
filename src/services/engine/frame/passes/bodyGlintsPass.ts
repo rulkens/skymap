@@ -1,12 +1,12 @@
 /**
- * bodyGlintsLayer — the `glints` branch of the per-frame body partition as
+ * bodyGlintsPass — the `glints` branch of the per-frame body partition as
  * brightness-scaled additive point sprites in the depthless HDR accumulation.
  *
  * ### What it draws — the sub-pixel bodies, plus Sgr A*'s far-field marker
  *
  * The `glints` branch of `sceneBodyPartition` — every seeded body whose apparent
- * diameter stays below `BODY_GLINT_MAX_PX`. Its siblings `planetsLayer` /
- * `texturedBodiesLayer` draw the `flat` / `textured` branches of the SAME
+ * diameter stays below `BODY_GLINT_MAX_PX`. Its siblings `planetsPass` /
+ * `texturedBodiesPass` draw the `flat` / `textured` branches of the SAME
  * partition, so a body is a glint XOR a mesh by construction — the interim gap
  * where sub-pixel bodies simply vanished (the mesh culled them and nothing drew
  * the glint) is closed here.
@@ -34,7 +34,7 @@
  *     onto one bright dot. This band fades the whole field out a few solar-system
  *     radii out, so glints stop mattering long before Milky-Way framing rather
  *     than riding full-brightness to the coarse foreground gate — the sibling of
- *     `starPointsLayer`'s `starBackdrop`. Hoisted per-frame in `draw` (one camera).
+ *     `starPointsPass`'s `starBackdrop`. Hoisted per-frame in `draw` (one camera).
  * `color` is the body's albedo tint (the shader premultiplies it by brightness).
  *
  * ### The zero-brightness skip (`feedback_opacity_zero_no_render`)
@@ -46,9 +46,9 @@
  *
  * ### The odd row out: `hdr` target, NEAR0 slab — and the f64 rebase seam
  *
- * Like `starPointsLayer`, this projects through NEAR0 (COSMO's fixed near plane
+ * Like `starPointsPass`, this projects through NEAR0 (COSMO's fixed near plane
  * would clip the AU-scale body anchors) while accumulating into the HDR target
- * so the glints ride the galaxies' tone-map. And like `starPointsLayer` it hands
+ * so the glints ride the galaxies' tone-map. And like `starPointsPass` it hands
  * the renderer CAMERA-RELATIVE anchors (`pos - camPos`, in f64) paired with the
  * REBASED view-projection (`rebaseViewProj(view.slab.vp, camPos)`), so the f32
  * upload carries no catastrophic cancellation as the camera closes on a body —
@@ -170,7 +170,7 @@ export const bodyGlintsPass: ContentPass = {
 
   enabled(state, ctx, _view) {
     // Handle first (short-circuits before any ctx / state.data read — matches
-    // starPointsLayer), shared distance gate second, the anchor widening
+    // starPointsPass), shared distance gate second, the anchor widening
     // third, far-dissolve band fourth, partition last.
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
@@ -186,7 +186,7 @@ export const bodyGlintsPass: ContentPass = {
     if (sgrAStarGlintBrightness(ctx.drawCamPos, states) > GLINT_MIN_BRIGHTNESS) return true;
     // Once the far-dissolve band has zeroed the glint backdrop, DISABLE the layer
     // rather than pack invisible points — the "opacity 0 ⇒ no render" house rule,
-    // mirroring `starPointsLayer`'s `starBackdrop` gate (which also empties the
+    // mirroring `starPointsPass`'s `starBackdrop` gate (which also empties the
     // (hdr, NEAR0) step so the executor skips it). Keyed on the camera's distance
     // from the solar system's own anchor — the eye position (`drawCamPos`), NOT
     // `cam.distance`, which measures to the orbit TARGET and so read a different
@@ -206,7 +206,7 @@ export const bodyGlintsPass: ContentPass = {
   // sub-pixel Earth with a visible label but no other glints would drop out of
   // the pick pass entirely. `enabled` stays glints-only so a caption-range frame
   // with no glints leaves no zero-glint row in the VISUAL pass plan. Same Earth
-  // gate `drawPick` uses. See `ContentLayer.pickEnabled`.
+  // gate `drawPick` uses. See `ContentPass.pickEnabled`.
   pickEnabled(state, ctx, _view) {
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
@@ -236,7 +236,7 @@ export const bodyGlintsPass: ContentPass = {
     // glint shares one camera), so it is hoisted OUT of the per-body loop. It
     // scales every glint's brightness so the whole sub-pixel body field dissolves
     // as the camera pulls back from the solar system, mirroring
-    // `starPointsLayer`'s backdrop fade. May be 0 when only the Sgr A* anchor
+    // `starPointsPass`'s backdrop fade. May be 0 when only the Sgr A* anchor
     // glint keeps the layer alive (`enabled`'s widening); the seeded glints
     // then all fall out on the `GLINT_MIN_BRIGHTNESS` skip below.
     const backdropFade = fadeBand(
@@ -324,14 +324,14 @@ export const bodyGlintsPass: ContentPass = {
   // targets), so a sub-pixel planet stays easily pickable at its true screen
   // position. The set is the SAME `sceneBodyPartition(state, ctx).glints` branch
   // `draw` packs — a body is pickable-as-a-glint exactly when it draws as one; its
-  // resolved complement (`flat` ∪ `textured`) rides `planetsLayer`'s sphere pick.
+  // resolved complement (`flat` ∪ `textured`) rides `planetsPass`'s sphere pick.
   //
   // The per-body `brightness` term (phase x near cross-fade x FAR dissolve) is
   // mirrored here — but the skip fires only BEYOND the caption range. Pick follows
   // the visible AFFORDANCE, and within SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC the
   // affordance is the body's foreground LABEL. Planet / moon / Earth captions ride
   // a FLAT per-body `bodies.items[id].labelEnabled` gate in
-  // `foregroundLabelsLayer` — full alpha
+  // `foregroundLabelsPass` — full alpha
   // (declutter aside) out to the caption gate, with NO distance fade band (unlike
   // the star map, which keys on the star's own pc distance). So the label persists
   // across the ENTIRE `bodyGlintBackdrop` dissolve (which completes ~6 decades
@@ -350,12 +350,12 @@ export const bodyGlintsPass: ContentPass = {
   // affordance.
   //
   // Each body's packed id carries its STABLE `SCENE_PLANETS` index (the same seed
-  // table + `Source.Planet` code `planetsLayer`'s sphere pick stamps, so a body
+  // table + `Source.Planet` code `planetsPass`'s sphere pick stamps, so a body
   // round-trips to the SAME selection whether it is picked as a glint or a sphere),
   // NOT its slot in the glints partition (which shifts as a body crosses
   // `BODY_GLINT_MAX_PX` — see `seedIndexOfBody`); a body id absent from the seed
   // table returns −1 and is dropped (a packed id from −1 would alias body 0). Earth
-  // is not in this partition (it rides its own `bodies.earth` / `earthLayer`), but
+  // is not in this partition (it rides its own `bodies.earth` / `earthPass`), but
   // its glint-scale pick footprint IS emitted here as a `Source.Earth` stamp (see
   // the Earth-stamp note in the body). Anchors are rebased into the camera-relative
   // frame in f64 before narrowing, the SAME seam `draw` uses.
@@ -366,7 +366,7 @@ export const bodyGlintsPass: ContentPass = {
   // points appear in this list carries no priority. See `starPointPick.wesl`.
   //
   // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit
-  // (see its module header); this layer and `starPointsLayer` are its two
+  // (see its module header); this layer and `starPointsPass` are its two
   // callers, each calling exactly once per `drawPick`.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
@@ -395,21 +395,21 @@ export const bodyGlintsPass: ContentPass = {
     // glint band, so Earth out-picks the Moon and every planet at glint scale
     // regardless of nearness or list position (the class, not draw order, decides —
     // see the `'glint'` variant below and `lib/pickDepthBands.wesl`). Earth is not
-    // in `sceneBodyPartition` (it rides `bodies.earth` / `earthLayer`), so without
+    // in `sceneBodyPartition` (it rides `bodies.earth` / `earthPass`), so without
     // this stamp its only glint-scale pick coverage is its sub-pixel sphere — the
     // Moon's 18 px footprint would own the area and steal the click.
     //
-    // Gate on the CAPTION range, not `earthLayer.enabled`: pick follows the
+    // Gate on the CAPTION range, not `earthPass.enabled`: pick follows the
     // visible AFFORDANCE, and the affordance inviting the click here is Earth's
     // foreground LABEL, which stays on out to SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC.
-    // `earthLayer.enabled` dies ten orders of magnitude earlier — at the
+    // `earthPass.enabled` dies ten orders of magnitude earlier — at the
     // SUB_PIXEL_BODY_CULL_PX 1 px cull — so gating on it strands the click for the
     // whole zoom range where the label still shows (the famous-star enlarged-
     // footprint precedent). The caption range strictly contains the sphere-visible
     // range, so nothing narrows; when Earth is resolved and large the extra 18 px
     // point overlapping the sphere pick is harmless — it writes the SAME
-    // `Source.Earth` id `earthLayer`'s sphere pick writes. This also drops v2's
-    // cross-layer coupling to `earthLayer`. Unlike the per-body glint brightness
+    // `Source.Earth` id `earthPass`'s sphere pick writes. This also drops v2's
+    // cross-layer coupling to `earthPass`. Unlike the per-body glint brightness
     // skip below, the Earth stamp is NOT brightness-gated (it is not a partition
     // glint).
     const earth = state.data.bodies.earth;
@@ -434,7 +434,7 @@ export const bodyGlintsPass: ContentPass = {
 
       // Per-body visibility skip — but only BEYOND the caption range. Within it
       // the visible affordance is the body's LABEL, which rides a flat toggle in
-      // `foregroundLabelsLayer` (no distance fade) and so stays on out to
+      // `foregroundLabelsPass` (no distance fade) and so stays on out to
       // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC; pick follows the label and a
       // near-invisible glint stays clickable — a new-phase Venus, or a Jupiter
       // whose far-dissolve backdrop has zeroed, with a visible name must still be

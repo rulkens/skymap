@@ -26,7 +26,7 @@
 //   @location(1) color:    vec3<f32>  — linear-RGB spectral tint, offset 12.
 //   @location(2) absMag:   f32        — absolute magnitude, offset 24.
 //
-// Positions are f32, but the caller ('starPointsLayer') hands them in already
+// Positions are f32, but the caller ('starPointsPass') hands them in already
 // CAMERA-RELATIVE: it subtracts the eye from each anchor and folds the eye
 // offset into 'viewProj' (via 'rebaseViewProj'), both in f64, before upload.
 // Without that rebase the raw parsec-scale anchor (~1e-6 Mpc from the render

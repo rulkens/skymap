@@ -14,7 +14,7 @@
  *
  * This is one of three independent axes a content layer is positioned on
  * (the other two are the render target and the blend mode — see
- * `ContentLayer` and the "Core concepts" section of the renderer
+ * `ContentPass` and the "Core concepts" section of the renderer
  * unification design). A layer names its slab by a plain `slab: number`
  * index into the per-frame slab list; there is deliberately no
  * `ContentSpace` wrapper type, because the slab table already holds every

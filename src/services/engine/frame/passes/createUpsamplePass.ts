@@ -1,10 +1,10 @@
 /**
- * createUpsampleLayer — shared factory behind the four HDR upsample content
+ * createUpsamplePass — shared factory behind the four HDR upsample content
  * layers (volume, star-aggregate, milky-way, zone-of-avoidance): a
  * screen-space blit of a reduced-res offscreen into HDR, ignoring the
  * resolved `SlabView`, gated by one liveness projection its producer shares
- * (see `UpsampleLayerRow.d.ts`). `postBlit` guards itself independently of
- * the blit handle (`zoneOfAvoidanceUpsampleLayer.ts:30-38`) — a missing
+ * (see `UpsamplePassRow.d.ts`). `postBlit` guards itself independently of
+ * the blit handle (`zoneOfAvoidanceUpsamplePass.ts:30-38`) — a missing
  * handle must never suppress it.
  */
 
