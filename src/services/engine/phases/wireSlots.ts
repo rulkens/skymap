@@ -121,7 +121,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   if (texturedDiskRenderer !== null && proceduralDiskRenderer !== null) {
     wireImpostorSubsystems(state, deps.phaseLocals!.device, {
       texturedDiskRenderer,
-      proceduralDiskRenderer,
     });
   }
 

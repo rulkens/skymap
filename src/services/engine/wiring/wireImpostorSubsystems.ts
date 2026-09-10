@@ -1,8 +1,8 @@
 /**
  * wireImpostorSubsystems — constructs the galaxy-thumbnail GPU subsystems
  * and wires them into the textured-disk renderer. Called from `wireSlots`,
- * the one call site, which narrows the disk renderers non-null before
- * calling — "both exist" is a compile-time fact here, not a runtime check.
+ * the one call site, which narrows the disk renderer non-null before
+ * calling — it exists as a compile-time fact here, not a runtime check.
  *
  * Construction order: galaxyAtlas + the LOD-3 hi-res planner must exist
  * before texturedDisks (which depends on both); proceduralDisks is
@@ -19,7 +19,6 @@ import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../data/sou
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
-import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 
 /**
  * Build the five impostor subsystems and assign them onto
@@ -31,7 +30,6 @@ export function wireImpostorSubsystems(
   device: GPUDevice,
   disks: {
     readonly texturedDiskRenderer: TexturedDiskRenderer;
-    readonly proceduralDiskRenderer: ProceduralDiskRenderer;
   },
 ): void {
   const { texturedDiskRenderer } = disks;

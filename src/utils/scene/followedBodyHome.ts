@@ -10,5 +10,5 @@ export function followedBodyHome(ref: Extract<SelectionRef, { type: 'body' }>): 
   if (!bodyFollowsSimClock(ref.id)) {
     throw new Error(`followedBodyHome: '${ref.id}' has no ORBITAL_ELEMENTS row to follow`);
   }
-  return { ref, followsSimClock: true };
+  return { ref };
 }

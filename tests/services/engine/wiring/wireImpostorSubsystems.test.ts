@@ -107,7 +107,6 @@ function makeDisks(texturedDiskRenderer?: { bindAtlas: () => void; bindHiResArra
   const bindHiResArray = vi.fn();
   return {
     texturedDiskRenderer: texturedDiskRenderer ?? { bindAtlas, bindHiResArray },
-    proceduralDiskRenderer: {},
   } as unknown as Parameters<typeof wireImpostorSubsystems>[2];
 }
 
