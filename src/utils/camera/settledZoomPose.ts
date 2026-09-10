@@ -99,7 +99,7 @@ export function settledZoomPose(
       sceneUpLocal,
       heldAzimuthRad: null,
       pivotM: diveAnchorM,
-      logZoom,
+      capRad: ORIENT_DECAY.capRadPerLogZoom * Math.abs(logZoom),
     });
   }
   // A tilt about a surface anchor holds |eye − anchor|, not |eye|.

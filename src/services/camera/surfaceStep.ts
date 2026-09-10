@@ -102,8 +102,7 @@ export function surfaceStep(
           sceneUpLocal: BODY_LOCAL_FRAME.pole,
           heldAzimuthRad: mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
           pivotM: null,
-          // A drag carries no zoom; it spends the reference notch, unchanged.
-          logZoom: ORIENT_DECAY.notchLogZoom,
+          capRad: ORIENT_DECAY.dragLevelCapRad,
         });
   // Ruling 12: tilt-authoring handles update the memory. Un-mapping
   // through the band weight keeps the just-set display a FIXED POINT of

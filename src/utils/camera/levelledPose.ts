@@ -1,6 +1,5 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { ORIENT_DECAY } from '../../data/camera/orientDecay';
 import { canonicalBasisAt } from './canonicalBasisAt';
 import { cappedRotationToward } from './cappedRotationToward';
 import { eyeFrameOf } from './eyeFrameOf';
@@ -14,8 +13,8 @@ import { turnedPose } from './turnedPose';
  * inputs. Drags level in the pure body ENU (`blendW` 1) and hold the heading
  * they entered with (`heldAzimuthRad` — a curved pan cannot rotate the
  * image); zoom notches level in the band-blended frame at the pose's own
- * azimuth, about the dive anchor or the eye. `logZoom` prices the cap in the
- * notch (`ORIENT_DECAY`); a drag carries no zoom and spends `notchLogZoom`.
+ * azimuth, about the dive anchor or the eye. The caller prices `capRad` in its
+ * own currency (`ORIENT_DECAY`): a notch per log-zoom spent, a drag per step.
  */
 export function levelledPose(
   pose: BodyFixedPose,
@@ -24,18 +23,17 @@ export function levelledPose(
     readonly sceneUpLocal: Readonly<Vec3>;
     readonly heldAzimuthRad: number | null;
     readonly pivotM: Readonly<Vec3> | null;
-    readonly logZoom: number;
+    readonly capRad: number;
   },
 ): BodyFixedPose {
-  // A zero-zoom notch is inert, and a zero cap does not deliver that by itself:
+  // A zero cap must return BY REFERENCE, which it does not deliver by itself:
   // `cappedRotationToward` still returns a quat wherever the bases differ, and
   // `turnedPose`'s eye − pivot … + pivot round trip re-adds float noise.
-  const capRad = ORIENT_DECAY.capRadPerLogZoom * Math.abs(args.logZoom);
-  if (capRad === 0) return pose;
+  if (args.capRad === 0) return pose;
   const frame = eyeFrameOf(pose, args.blendW, args.sceneUpLocal);
   if (frame === null) return pose;
   const target = canonicalBasisAt(frame, args.heldAzimuthRad ?? frame.azimuthRad, frame.tiltRad);
-  const q = cappedRotationToward(pose.basisLocal, target, capRad);
+  const q = cappedRotationToward(pose.basisLocal, target, args.capRad);
   if (q === null) return pose;
   return turnedPose(pose, q, args.pivotM);
 }
