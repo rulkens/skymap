@@ -21,10 +21,11 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
-import { recedeUntilDisengaged } from '../../../helpers/camera/recedeUntilDisengaged';
 import { seedRememberedTilt } from '../../../helpers/camera/seedRememberedTilt';
 import { tiltOverBody } from '../../../helpers/camera/tiltOverBody';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
+import { hrOverBody } from '../../../helpers/camera/hrOverBody';
+import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
 import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -135,7 +136,15 @@ describe('body switch reset (ruling 18)', () => {
     // Recede past disengage, clear the focus for a stint, re-focus Earth,
     // and dive back into the band — never a DIFFERENT body, so the memory
     // must survive the whole trip.
-    recedeUntilDisengaged(h, { factor: 1.25, guard: 40 });
+    const earth = h.bodies.get('earth')!;
+    // Guard-bounded: a broken regime fails the assertion below rather than hanging.
+    for (
+      let i = 0;
+      i < 40 && hrOverBody(h.state, earth, h.radiusM('earth')) < SURFACE_REGIME.disengageHR * 1.25;
+      i += 1
+    ) {
+      h.wheel(100);
+    }
     expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
     h.focus(null);
     h.frame(10);
