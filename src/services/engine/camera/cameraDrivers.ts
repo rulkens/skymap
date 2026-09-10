@@ -49,16 +49,13 @@ export function pickWinner(
   return winner ?? drivers[0]!;
 }
 
-/**
- * The winner → epoch-row mapping, in one place. `epochs` must already be
- * advanced for this frame (`runFrame` does it once, at the winner).
- */
-export function elapsedForWinner(winnerId: string, epochs: CameraEpochs, nowMs: number): number {
-  if (winnerId === 'clip') return elapsedMs(epochs.clip, nowMs);
-  if (winnerId === 'tween') return elapsedMs(epochs.tween, nowMs);
-  if (winnerId === 'autoRotate') return elapsedMs(epochs.autoRotate, nowMs);
-  if (isFollowDriverId(winnerId)) return elapsedMs(epochs.follow, nowMs);
-  return 0;
+/** `epochs` must already be advanced for this frame (the step does it once, at the winner). */
+export function elapsedForWinner(
+  winner: CameraDriver,
+  epochs: CameraEpochs,
+  nowMs: number,
+): number {
+  return winner.epoch === undefined ? 0 : elapsedMs(epochs[winner.epoch], nowMs);
 }
 
 const NO_FOLLOW_MEMORY: FollowMemory = {
@@ -166,6 +163,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'clip',
     priority: 95,
+    epoch: 'clip',
     // Holds the camera above orbitDrag in EITHER arm: a gesture handed back
     // to a clip whose commit-on-edge bakes its own final pose would be
     // discarded at pointerup (`replayInput` swallows the steps too).
@@ -216,6 +214,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // follow already yields to an explicitly authored move. Not 60: a tie is
     // broken by table order, which is order-dependence, not policy.
     priority: 55,
+    epoch: 'follow',
     // Bakes the last follow pose into `base` on focus loss, so lower drivers
     // resume from where the camera is.
     commitsOnEdge: true,
@@ -230,6 +229,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // is saturated the row only re-asserts the body's own target, which the
     // pivot pin gives those drivers anyway.
     priority: 10,
+    epoch: 'follow',
     commitsOnEdge: true,
     pivotsOnFocusedBody: true,
     isActive: followActive,
@@ -238,6 +238,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'tween',
     priority: 60,
+    epoch: 'tween',
     // Bakes the final pose on deactivation; it is already in the CURRENT
     // frame, so the commit never bakes a stale pinned-frame reading.
     commitsOnEdge: true,
@@ -268,6 +269,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'autoRotate',
     priority: 20,
+    epoch: 'autoRotate',
     commitsOnEdge: true,
     pivotsOnFocusedBody: true,
     // Absolute arm only (spec §7): a yaw spin about the frame pole is not a

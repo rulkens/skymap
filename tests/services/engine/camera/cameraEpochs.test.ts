@@ -89,7 +89,7 @@ describe('advanceEpochs', () => {
       intent,
       focus: null,
       clip: UNSTARTED_EPOCHS.clip,
-      winnerId: 'orbitDrag',
+      winnerEpoch: undefined,
       nowMs: 1000,
     });
     expect(result.tween).toBe(UNSTARTED_EPOCHS.tween);
@@ -102,7 +102,7 @@ describe('advanceEpochs', () => {
       intent,
       focus: null,
       clip: UNSTARTED_EPOCHS.clip,
-      winnerId: 'tween',
+      winnerEpoch: 'tween' as const,
       nowMs: 1000,
     });
     expect(result.tween).toEqual({ ref: tween, startMs: 1000 });
@@ -115,7 +115,7 @@ describe('advanceEpochs', () => {
       intent,
       focus: null,
       clip: UNSTARTED_EPOCHS.clip,
-      winnerId: 'resting',
+      winnerEpoch: undefined,
       nowMs: 2000,
     });
     expect(result.frameTween).toEqual({ ref: frameTween, startMs: 2000 });
@@ -127,14 +127,14 @@ describe('advanceEpochs', () => {
       intent,
       focus: null,
       clip: UNSTARTED_EPOCHS.clip,
-      winnerId: 'resting',
+      winnerEpoch: undefined,
       nowMs: 1000,
     });
     const second = advanceEpochs(first, {
       intent,
       focus: null,
       clip: UNSTARTED_EPOCHS.clip,
-      winnerId: 'resting',
+      winnerEpoch: undefined,
       nowMs: 1016,
     });
     expect(second).toBe(first);
@@ -145,7 +145,7 @@ describe('advanceEpochs', () => {
     // must restart from 0 against it, not carry the accumulated time forward
     // (which would jump the camera).
     const spinning = makeCameraState({ autoRotate: { active: true, rate: 0.01 } });
-    const inputs = { focus: null, clip: UNSTARTED_EPOCHS.clip, winnerId: 'autoRotate' };
+    const inputs = { focus: null, clip: UNSTARTED_EPOCHS.clip, winnerEpoch: 'autoRotate' as const };
     const first = advanceEpochs(UNSTARTED_EPOCHS, { ...inputs, intent: spinning, nowMs: 2000 });
     expect(
       elapsedMs(
@@ -169,7 +169,7 @@ describe('advanceEpochs', () => {
       intent,
       focus: null,
       clip: clipEpoch,
-      winnerId: 'clip',
+      winnerEpoch: 'clip' as const,
       nowMs: 5000,
     });
     expect(result.clip).toBe(clipEpoch);

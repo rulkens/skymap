@@ -63,14 +63,14 @@ function simulateFrame(
     intent: freshState.camera,
     focus: freshState.selectionRows.focus,
     clip: clipEpoch,
-    winnerId: currActiveId,
+    winnerEpoch: currWinner.epoch,
     nowMs,
   });
   engineState.cameraRuntime = { ...engineState.cameraRuntime, epochs };
   const { pose } = currWinner.pose(
     makeDriverCtx({
       state: freshState,
-      elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),
+      elapsedMs: elapsedForWinner(currWinner, epochs, nowMs),
       register: register.pose,
       winnerLastFrame: register.winner,
       simDays: deriveSimDays(selectTimeState(freshState), nowMs),

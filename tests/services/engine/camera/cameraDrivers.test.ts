@@ -15,6 +15,7 @@ import { lerp } from '../../../../src/utils/math/lerp';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
+import type { EpochRow } from '../../../../src/@types/engine/camera/EpochRow';
 import type { RootState } from '../../../../src/store/types';
 import {
   CAMERA_DRIVERS,
@@ -79,13 +80,13 @@ const TWEEN_DESC: CameraTweenDescriptor = {
 /** The live gesture register `orbitDrag` holds — replayInput's fold output. */
 const REGISTER_POSE = absoluteArm({ target: [5, 5, 5], yaw: 0.7, pitch: -0.1, distance: 200 });
 
-/** Every row `winnerId` owns started at `nowMs`, as `runFrame`'s advance leaves them. */
-function epochsAt(s: RootState, winnerId: string, nowMs: number) {
+/** The row `winnerEpoch` names started at `nowMs`, as the step's advance leaves it. */
+function epochsAt(s: RootState, winnerEpoch: EpochRow, nowMs: number) {
   return advanceEpochs(UNSTARTED_EPOCHS, {
     intent: s.camera,
     focus: s.selectionRows.focus,
     clip: advanceEpoch(UNSTARTED_EPOCHS.clip, s.camera.clip, nowMs),
-    winnerId,
+    winnerEpoch,
     nowMs,
   });
 }
@@ -110,7 +111,7 @@ function runAtWinner(
 ) {
   const ctx = makeDriverCtx({
     state: s,
-    elapsedMs: elapsedForWinner(pickWinner(drivers, s, approachDone).id, epochs, nowMs),
+    elapsedMs: elapsedForWinner(pickWinner(drivers, s, approachDone), epochs, nowMs),
     approachDone,
     register: REGISTER_POSE,
   });

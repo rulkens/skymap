@@ -108,7 +108,7 @@ export function stepCameraRuntime(
     intent: rootState.camera,
     focus,
     clip: clipEpoch,
-    winnerId,
+    winnerEpoch: winner.epoch,
     nowMs,
   });
   // The follow memory belongs to one focus row: a fresh row (a same-body
@@ -119,7 +119,7 @@ export function stepCameraRuntime(
   const { pose, memory } = winner.pose(
     {
       state: rootState,
-      elapsedMs: elapsedForWinner(winnerId, epochs, nowMs),
+      elapsedMs: elapsedForWinner(winner, epochs, nowMs),
       approachDone,
       register: drained.register,
       // Against the PREVIOUS frame's up-basis: produce precedes the basis resolve.

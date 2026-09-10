@@ -8,8 +8,8 @@
 import type { Epoch } from '../../../@types/engine/camera/Epoch';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { CameraState } from '../../../@types/camera/CameraState';
+import type { EpochRow } from '../../../@types/engine/camera/EpochRow';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 
 /** Every row unstarted — the engine's boot value; immutable, so one shared object is fine. */
 export const UNSTARTED_EPOCHS: CameraEpochs = {
@@ -26,18 +26,18 @@ export function advanceEpoch<Ref>(prev: Epoch<Ref>, ref: Ref | null, nowMs: numb
   return { ref, startMs: ref === null ? null : nowMs };
 }
 
-export function elapsedMs<Ref>(epoch: Epoch<Ref>, nowMs: number): number {
+export function elapsedMs(epoch: Epoch<unknown>, nowMs: number): number {
   return epoch.startMs === null ? 0 : nowMs - epoch.startMs;
 }
 
 /**
- * Advances the five rows in one call. `tween`/`autoRotate`/`follow` read
- * their live ref only when their driver wins this frame (else the ease would
- * burn while some other driver, e.g. a drag, holds) — replaying `prev.ref`
- * when ineligible makes `advanceEpoch` a guaranteed no-op for that row.
- * `frameTween` has no eligibility gate: `resolveFrameBasis` reads it
- * regardless of winner. `clip` is not advanced here at all — the clip player
- * advances it before the frame step runs, so it is passed through by reference.
+ * Advances the five rows in one call. `tween`/`autoRotate`/`follow` read their
+ * live ref only when the winner names that epoch (else the ease would burn while
+ * some other driver, e.g. a drag, holds) — replaying `prev.ref` when ineligible
+ * makes `advanceEpoch` a guaranteed no-op for that row. `frameTween` has no gate:
+ * `resolveFrameBasis` reads it regardless of winner. `clip` is not advanced here
+ * at all — the clip player advances it before the frame step runs, so it is
+ * passed through by reference.
  */
 export function advanceEpochs(
   prev: CameraEpochs,
@@ -45,28 +45,31 @@ export function advanceEpochs(
     readonly intent: CameraState;
     readonly focus: SelectionRow | null;
     readonly clip: Epoch<NonNullable<CameraState['clip']>>;
-    readonly winnerId: string;
+    readonly winnerEpoch: EpochRow | undefined;
     readonly nowMs: number;
   },
 ): CameraEpochs {
-  const { intent, focus, clip, winnerId, nowMs } = inputs;
+  const { intent, focus, clip, winnerEpoch, nowMs } = inputs;
 
-  // One eligibility fact per row, minus the two rows that don't need one.
-  // The follow cell covers BOTH follow rows: they share this epoch, so the
-  // approach's ease and the hold's saturation read one clock.
-  const eligible = {
-    tween: winnerId === 'tween',
-    autoRotate: winnerId === 'autoRotate',
-    follow: isFollowDriverId(winnerId),
-  };
-
-  const tween = advanceEpoch(prev.tween, eligible.tween ? intent.tween : prev.tween.ref, nowMs);
-  const autoRotate = advanceEpoch(
-    prev.autoRotate,
-    eligible.autoRotate ? (intent.autoRotate.active ? intent.base : null) : prev.autoRotate.ref,
+  const tween = advanceEpoch(
+    prev.tween,
+    winnerEpoch === 'tween' ? intent.tween : prev.tween.ref,
     nowMs,
   );
-  const follow = advanceEpoch(prev.follow, eligible.follow ? focus : prev.follow.ref, nowMs);
+  const autoRotate = advanceEpoch(
+    prev.autoRotate,
+    winnerEpoch === 'autoRotate'
+      ? intent.autoRotate.active
+        ? intent.base
+        : null
+      : prev.autoRotate.ref,
+    nowMs,
+  );
+  const follow = advanceEpoch(
+    prev.follow,
+    winnerEpoch === 'follow' ? focus : prev.follow.ref,
+    nowMs,
+  );
   const frameTween = advanceEpoch(prev.frameTween, intent.frameTween, nowMs);
 
   if (
