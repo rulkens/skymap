@@ -86,26 +86,17 @@ export function computeInitialCamera({
   simDays: number;
   frameBasis?: Mat3;
 }): InitialCam {
-  if (bodyId === null) {
-    const { yaw, pitch } = orbitAnglesLookingAlong(GALACTIC_DISC_FORWARD, frameBasis);
-    return {
-      target: [0, 0, 0],
-      distance: INITIAL_DISTANCE_MPC,
-      yaw,
-      pitch,
-      fovYRad,
-      near: 0.01,
-      far: FAR_CLIP_MPC,
-    };
-  }
   // The home distance is `bodyLikeFraming`'s deliberately UNCLAMPED body-scale
   // value — no `clampDistance` here: it takes a pivot radius the boot pose
   // hasn't resolved yet, and the absolute floor alone would swallow the framing
   // at ~2e-16 Mpc. The wheel-zoom clamps own the floor; see `bodyLikeFraming`.
-  return {
-    ...bodyHomePose(bodyId, simDays, fovYRad, frameBasis),
-    fovYRad,
-    near: 0.01,
-    far: FAR_CLIP_MPC,
-  };
+  const pose =
+    bodyId === null
+      ? {
+          target: [0, 0, 0] as Vec3,
+          distance: INITIAL_DISTANCE_MPC,
+          ...orbitAnglesLookingAlong(GALACTIC_DISC_FORWARD, frameBasis),
+        }
+      : bodyHomePose(bodyId, simDays, fovYRad, frameBasis);
+  return { ...pose, fovYRad, near: 0.01, far: FAR_CLIP_MPC };
 }

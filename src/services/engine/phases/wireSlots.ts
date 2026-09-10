@@ -119,7 +119,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // this cluster and `state.subsystems.texturedDisks` stays null.
   const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
   if (texturedDiskRenderer !== null && proceduralDiskRenderer !== null) {
-    wireImpostorSubsystems(state, deps, { texturedDiskRenderer, proceduralDiskRenderer });
+    wireImpostorSubsystems(state, deps.phaseLocals!.device, {
+      texturedDiskRenderer,
+      proceduralDiskRenderer,
+    });
   }
 
   // Earth's surface virtual texture. A subsystem, not a renderer — it owns

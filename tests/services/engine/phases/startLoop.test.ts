@@ -59,10 +59,11 @@ import { goLive } from '../../../../src/state/time/timeSlice';
 /**
  * Minimal `EngineState` shaped for startLoop's body.  Populates only
  * what the phase reads:
- *   - `state.sources.clouds.size` for the early-return guard;
- *   - `state.subsystems.scheduler.requestRender` for the rAF kick.
+ *   - `state.sources.catalogs` for the early-return guard;
+ *   - `state.subsystems.scheduler.requestRender` for the rAF kick;
+ *   - `state.gpu.timingService` omitted (the fixture keeps `gpu: {}`).
  *
- * `cloudCount` controls how many entries `clouds` carries; the values
+ * `cloudCount` controls how many entries `catalogs` carries; the values
  * don't matter (only `.size` is read in this phase).
  */
 function makeState({ cloudCount = 1 } = {}): EngineState {

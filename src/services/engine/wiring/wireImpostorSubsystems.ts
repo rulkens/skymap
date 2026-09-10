@@ -18,7 +18,6 @@ import { createHiResFamousTexture } from '../../gpu/resources/hiResFamousTexture
 import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../data/sources';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 
@@ -29,16 +28,12 @@ import type { ProceduralDiskRenderer } from '../../../@types/rendering/Procedura
  */
 export function wireImpostorSubsystems(
   state: EngineState,
-  deps: BootstrapDeps,
+  device: GPUDevice,
   disks: {
     readonly texturedDiskRenderer: TexturedDiskRenderer;
     readonly proceduralDiskRenderer: ProceduralDiskRenderer;
   },
 ): void {
-  // `phaseLocals` is written by `initGpu`, which always runs before this
-  // call per the orchestrator's order.  The non-null assertion is safe.
-  const phaseLocals = deps.phaseLocals!;
-  const { device } = phaseLocals;
   const { texturedDiskRenderer } = disks;
 
   // ── Dependency-ordered construction ──────────────────────────────────

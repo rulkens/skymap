@@ -20,7 +20,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
@@ -112,24 +111,6 @@ function makeDisks(texturedDiskRenderer?: { bindAtlas: () => void; bindHiResArra
   } as unknown as Parameters<typeof wireImpostorSubsystems>[2];
 }
 
-/** Build a minimal BootstrapDeps with the phaseLocals needed by wireImpostorSubsystems. */
-function makeDeps(): BootstrapDeps {
-  return {
-    canvas: {} as HTMLCanvasElement,
-    cb: {} as BootstrapDeps['cb'],
-    home: { focus: null, seedSelection: false },
-    frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
-    handleRef: { current: null },
-    allSlots: new Map(),
-    phaseLocals: {
-      device: {} as GPUDevice,
-      context: {} as GPUCanvasContext,
-      unwatchHdrCapability: () => {},
-    },
-  };
-}
-
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe('wireImpostorSubsystems', () => {
@@ -142,9 +123,8 @@ describe('wireImpostorSubsystems', () => {
     // The test verifies assignment without caring about the specific
     // objects returned by the (mocked) factories.
     const state = makeState();
-    const deps = makeDeps();
 
-    wireImpostorSubsystems(state, deps, makeDisks());
+    wireImpostorSubsystems(state, {} as GPUDevice, makeDisks());
 
     expect(state.subsystems.galaxyAtlas).not.toBeNull();
     expect(state.subsystems.texturedDisks).not.toBeNull();
@@ -161,9 +141,8 @@ describe('wireImpostorSubsystems', () => {
     const bindAtlas = vi.fn();
     const bindHiResArray = vi.fn();
     const state = makeState();
-    const deps = makeDeps();
 
-    wireImpostorSubsystems(state, deps, makeDisks({ bindAtlas, bindHiResArray }));
+    wireImpostorSubsystems(state, {} as GPUDevice, makeDisks({ bindAtlas, bindHiResArray }));
 
     expect(bindAtlas).toHaveBeenCalledTimes(1);
     expect(bindHiResArray).toHaveBeenCalledTimes(1);
