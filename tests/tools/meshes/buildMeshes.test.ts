@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -31,6 +31,42 @@ function addTriangle(doc: Document, material: Material, x: number): Primitive {
         .setBuffer(buffer),
     )
     .setMaterial(material);
+}
+
+/** A primitive with hand-authored attributes, for the transform fixtures. */
+function addPrim(
+  doc: Document,
+  material: Material,
+  data: {
+    positions: number[];
+    normals: number[];
+    tangents?: number[];
+    indices?: number[];
+  },
+): Primitive {
+  const buffer = doc.getRoot().listBuffers()[0]!;
+  const count = data.positions.length / 3;
+  const accessor = (type: 'VEC4' | 'VEC3' | 'VEC2', array: number[]) =>
+    doc.createAccessor().setType(type).setArray(new Float32Array(array)).setBuffer(buffer);
+  const prim = doc
+    .createPrimitive()
+    .setAttribute('POSITION', accessor('VEC3', data.positions))
+    .setAttribute('NORMAL', accessor('VEC3', data.normals))
+    .setAttribute('TEXCOORD_0', accessor('VEC2', new Array<number>(count * 2).fill(0)))
+    .setIndices(
+      doc
+        .createAccessor()
+        .setType('SCALAR')
+        .setArray(new Uint32Array(data.indices ?? [...Array(count).keys()]))
+        .setBuffer(buffer),
+    )
+    .setMaterial(material);
+  if (data.tangents) prim.setAttribute('TANGENT', accessor('VEC4', data.tangents));
+  return prim;
+}
+
+function near(actual: ArrayLike<number>, expected: number[]): void {
+  expected.forEach((e, i) => expect(actual[i]).toBeCloseTo(e, 4));
 }
 
 async function solidPng(r: number, g: number, b: number): Promise<Uint8Array> {
@@ -152,7 +188,95 @@ describe('buildMeshes()', () => {
 
     const decoded = decodeMesh(readMesh());
     expect(decoded.vertexCount).toBe(3);
+    // The joint/weight attributes left without taking the rest of the vertex.
+    expect([...decoded.uvs]).toEqual([0, 0, 1, 0, 0, 1]);
+    expect([...decoded.normals]).toEqual([0, 0, 1, 0, 0, 1, 0, 0, 1]);
     expect(row.attribution).toBe('A. Modeller — https://example.invalid/author');
+  });
+
+  it('bakes a rotated, non-uniformly scaled parent node into the vertices', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const s = Math.SQRT1_2;
+    const diagonal = [s, s, 0, 1, s, s, 0, 1, s, s, 0, 1];
+    const mesh = doc
+      .createMesh('m')
+      .addPrimitive(
+        addPrim(doc, material, {
+          positions: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+          normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+          tangents: diagonal,
+        }),
+      )
+      .addPrimitive(
+        addPrim(doc, material, {
+          positions: [2, 0, 0, 0, 0, 0, 0, 0, 1],
+          normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+          tangents: diagonal,
+        }),
+      );
+    // 90 deg about Z on top of a 2/3/1 scale: x -> +2y, y -> -3x, z -> z.
+    const parent = doc.createNode('parent').setRotation([0, 0, s, s]).setScale([2, 3, 1]);
+    parent.addChild(doc.createNode('child').setMesh(mesh));
+    doc.createScene('s').addChild(parent);
+
+    const row = (await run(await writeGlb(doc)))[0]!;
+    const decoded = decodeMesh(readMesh());
+
+    near(decoded.positions.slice(0, 6), [0, 2, 0, -3, 0, 0]);
+    near(decoded.normals.slice(0, 3), [0, 0, 1]);
+    // The tangent takes the PLAIN 3x3 — (1,1,0) -> (-3,2,0) normalised. Running
+    // it through the cofactor matrix normals use would give (-2,3,0) instead.
+    near(decoded.tangents.slice(0, 4), [-0.83205, 0.5547, 0, 1]);
+    // Furthest vertex is prim 2's (2,0,0) -> (0,4,0).
+    expect(row.boundingRadiusM).toBeCloseTo(4, 4);
+  });
+
+  it('flips normals, handedness and winding for a mirrored node', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const prim = addPrim(doc, material, {
+      positions: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+      tangents: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1],
+      indices: [0, 1, 2],
+    });
+    const node = doc
+      .createNode('n')
+      .setMesh(doc.createMesh('m').addPrimitive(prim))
+      .setScale([-1, 1, 1]);
+    doc.createScene('s').addChild(node);
+
+    await run(await writeGlb(doc));
+    const decoded = decodeMesh(readMesh());
+
+    near(decoded.positions.slice(0, 3), [-1, 0, 0]);
+    // The cofactor matrix alone hands back (0,0,-1) here — a mirrored node needs
+    // the determinant's sign put back, or every normal points into the surface.
+    near(decoded.normals.slice(0, 3), [0, 0, 1]);
+    near(decoded.tangents.slice(0, 4), [-1, 0, 0, -1]);
+    expect([...decoded.indices]).toEqual([0, 2, 1]);
+  });
+
+  it('ignores geometry orphaned off the scene graph', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    // A second material, reachable from no scene: an exporter leftover must not
+    // contribute vertices, nor trip the one-material refusal.
+    const orphanMaterial = await withBaseColour(doc, doc.createMaterial('orphan'));
+    doc
+      .createNode('orphan')
+      .setMesh(doc.createMesh('om').addPrimitive(addTriangle(doc, orphanMaterial, 8)));
+
+    const row = (await run(await writeGlb(doc)))[0]!;
+
+    expect(decodeMesh(readMesh()).vertexCount).toBe(3);
+    expect(row.triangleCount).toBe(1);
   });
 
   it('keeps an authored TANGENT instead of regenerating one', async () => {
@@ -190,8 +314,15 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
 
     expect(row.normalMapSubstituted).toBe(true);
-    expect(existsSync(join(dir, 'out', 'testmesh_normal.png'))).toBe(true);
-    expect(existsSync(join(dir, 'out', 'testmesh_mr.png'))).toBe(true);
+    const normalPx = await sharp(join(dir, 'out', 'testmesh_normal.png'))
+      .raw()
+      .toBuffer();
+    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.png'))
+      .raw()
+      .toBuffer();
+    expect([...normalPx.subarray(0, 3)]).toEqual([128, 128, 255]);
+    // glTF packs roughness in G and metallic in B; the material set 1 and 0.
+    expect([...mrPx.subarray(0, 3)]).toEqual([0, 255, 0]);
     expect(warn.mock.calls.flat().join(' ')).toMatch(/testmesh/);
     // Pure red albedo — the mean the glint fallback reads back.
     expect(row.meanAlbedo).toEqual([1, 0, 0]);

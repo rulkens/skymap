@@ -54,15 +54,29 @@ type Geometry = {
   readonly boundingRadiusM: number;
 };
 
+/**
+ * Every primitive reachable from the default scene, with its node's world
+ * matrix. Nodes off the scene graph are deliberately skipped: an orphan left
+ * behind by an exporter is not part of the model, and counting it would let it
+ * contribute vertices and trip the one-material refusal.
+ */
 function listPrimitives(doc: Document): { prim: Primitive; matrix: number[] }[] {
+  const root = doc.getRoot();
+  const scene = root.getDefaultScene() ?? root.listScenes()[0];
   const out: { prim: Primitive; matrix: number[] }[] = [];
-  for (const node of doc.getRoot().listNodes()) {
+  scene?.traverse((node) => {
     const mesh = node.getMesh();
-    if (!mesh) continue;
+    if (!mesh) return;
     const matrix = [...node.getWorldMatrix()];
     for (const prim of mesh.listPrimitives()) out.push({ prim, matrix });
-  }
+  });
   return out;
+}
+
+/** Triangles a primitive draws, indexed or not. */
+function triangleCount(prim: Primitive): number {
+  const count = prim.getIndices()?.getCount() ?? prim.getAttribute('POSITION')?.getCount() ?? 0;
+  return count / 3;
 }
 
 /**
@@ -108,7 +122,7 @@ function soleMaterial(doc: Document, key: string): Material {
 
 function countTriangles(doc: Document): number {
   let n = 0;
-  for (const { prim } of listPrimitives(doc)) n += (prim.getIndices()?.getCount() ?? 0) / 3;
+  for (const { prim } of listPrimitives(doc)) n += triangleCount(prim);
   return n;
 }
 
@@ -121,13 +135,31 @@ function transformPoint(m: readonly number[], x: number, y: number, z: number): 
   ];
 }
 
+function normalize(x: number, y: number, z: number): Vec3 {
+  const len = Math.hypot(x, y, z) || 1;
+  return [x / len, y / len, z / len];
+}
+
 /**
- * Directions transform by the cofactor matrix, not the matrix itself — under
- * non-uniform scale the plain 3x3 skews normals off the surface. Cofactors are
- * the adjugate transpose without the determinant divide, which renormalizing
- * discards anyway.
+ * Determinant of the upper-left 3x3. Negative means the node MIRRORS its
+ * geometry — routine on a bilaterally symmetric Sketchfab export, where one
+ * half is an instance of the other under a negative scale.
  */
-function transformDirection(m: readonly number[], x: number, y: number, z: number): Vec3 {
+function basisDeterminant(m: readonly number[]): number {
+  return (
+    m[0]! * (m[5]! * m[10]! - m[9]! * m[6]!) -
+    m[4]! * (m[1]! * m[10]! - m[9]! * m[2]!) +
+    m[8]! * (m[1]! * m[6]! - m[5]! * m[2]!)
+  );
+}
+
+/**
+ * Surface NORMALS transform by the cofactor matrix (the adjugate transpose,
+ * minus a determinant divide renormalizing discards): under non-uniform scale
+ * the plain 3x3 skews them off the surface. Cofactors carry the determinant's
+ * SIGN, though, so a mirrored node comes back inside-out and is flipped here.
+ */
+function transformNormal(m: readonly number[], det: number, x: number, y: number, z: number): Vec3 {
   // Columns of the upper-left 3x3: (a,b,c), (d,e,f), (g,h,i).
   const a = m[0]!;
   const b = m[1]!;
@@ -138,11 +170,26 @@ function transformDirection(m: readonly number[], x: number, y: number, z: numbe
   const g = m[8]!;
   const h = m[9]!;
   const i = m[10]!;
-  const vx = (e * i - h * f) * x + (h * c - b * i) * y + (b * f - e * c) * z;
-  const vy = (g * f - d * i) * x + (a * i - g * c) * y + (d * c - a * f) * z;
-  const vz = (d * h - g * e) * x + (g * b - a * h) * y + (a * e - d * b) * z;
-  const len = Math.hypot(vx, vy, vz) || 1;
-  return [vx / len, vy / len, vz / len];
+  const s = det < 0 ? -1 : 1;
+  return normalize(
+    s * ((e * i - h * f) * x + (h * c - b * i) * y + (b * f - e * c) * z),
+    s * ((g * f - d * i) * x + (a * i - g * c) * y + (d * c - a * f) * z),
+    s * ((d * h - g * e) * x + (g * b - a * h) * y + (a * e - d * b) * z),
+  );
+}
+
+/**
+ * TANGENTS lie IN the surface, so they take the PLAIN 3x3 — the split
+ * `@gltf-transform`'s own `transformPrimitive` makes between its normal matrix
+ * (inverse-transpose) and its tangent matrix. Re-orthogonalised against the
+ * already-transformed normal, which a non-uniform scale bends away from it.
+ */
+function transformTangent(m: readonly number[], n: Vec3, x: number, y: number, z: number): Vec3 {
+  const vx = m[0]! * x + m[4]! * y + m[8]! * z;
+  const vy = m[1]! * x + m[5]! * y + m[9]! * z;
+  const vz = m[2]! * x + m[6]! * y + m[10]! * z;
+  const dot = vx * n[0] + vy * n[1] + vz * n[2];
+  return normalize(vx - n[0] * dot, vy - n[1] * dot, vz - n[2] * dot);
 }
 
 /**
@@ -167,6 +214,8 @@ function mergeGeometry(doc: Document): Geometry {
 
   for (const { prim, matrix } of prims) {
     const base = positions.length / 3;
+    const mirrored = basisDeterminant(matrix) < 0;
+    const det = mirrored ? -1 : 1;
     const pos = prim.getAttribute('POSITION');
     const nrm = prim.getAttribute('NORMAL');
     const uv = prim.getAttribute('TEXCOORD_0');
@@ -180,21 +229,30 @@ function mergeGeometry(doc: Document): Geometry {
       radiusSq = Math.max(radiusSq, world[0] ** 2 + world[1] ** 2 + world[2] ** 2);
 
       const n = nrm ? nrm.getElement(v, [0, 0, 0]) : [0, 0, 1];
-      normals.push(...transformDirection(matrix, n[0]!, n[1]!, n[2]!));
+      const normal = transformNormal(matrix, det, n[0]!, n[1]!, n[2]!);
+      normals.push(...normal);
 
       const t = uv ? uv.getElement(v, [0, 0]) : [0, 0];
       uvs.push(t[0]!, t[1]!);
 
       if (authoredTangents && tan) {
         const a = tan.getElement(v, [0, 0, 0, 0]);
-        const d = transformDirection(matrix, a[0]!, a[1]!, a[2]!);
-        tangents.push(d[0], d[1], d[2], a[3]! < 0 ? -1 : 1);
+        const d = transformTangent(matrix, normal, a[0]!, a[1]!, a[2]!);
+        // Mirroring swaps which side of the tangent the bitangent falls on, so
+        // the handedness bit swaps with it.
+        const w = a[3]! < 0 ? -1 : 1;
+        tangents.push(d[0], d[1], d[2], mirrored ? -w : w);
       }
     }
 
+    // A mirrored node also inverts triangle winding; leaving it would turn
+    // every face away from the camera under back-face culling.
     const idx = prim.getIndices();
-    if (!idx) throw new Error('buildMeshes: primitive without indices');
-    for (let i = 0; i < idx.getCount(); i++) indices.push(base + idx.getScalar(i));
+    const count = idx ? idx.getCount() : pos.getCount();
+    const at = (i: number) => base + (idx ? idx.getScalar(i) : i);
+    for (let i = 0; i < count; i += 3) {
+      indices.push(at(i), at(mirrored ? i + 2 : i + 1), at(mirrored ? i + 1 : i + 2));
+    }
   }
 
   const geometry = {
@@ -247,6 +305,14 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     await doc.transform(
       simplify({ simplifier: MeshoptSimplifier, ratio: TRIANGLE_BUDGET / triangles, error: 0.001 }),
     );
+    // meshopt stops early rather than wreck topology, so the budget is a target
+    // it can miss — say so instead of shipping a silently over-budget mesh.
+    const after = countTriangles(doc);
+    if (after > TRIANGLE_BUDGET) {
+      console.warn(
+        `buildMeshes: ${key} is still ${after} tris after decimation (budget ${TRIANGLE_BUDGET})`,
+      );
+    }
   }
 
   const geometry = mergeGeometry(doc);
