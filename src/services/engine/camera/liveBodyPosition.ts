@@ -1,34 +1,22 @@
 /**
- * liveBodyPosition — the live world position of the currently-focused scene
- * body this frame.
+ * liveBodyPosition — the live world position of a selection row's body in a
+ * body snapshot. The SINGLE resolution of that lookup; four callers share it
+ * (the follow rows' target term, the frame-loop pivot pin, the NEAR0 selection
+ * ring, and `liveFocusRow`'s off-frame debug read) rather than copying it.
  *
- * This is the SINGLE resolution of 'the live world position of a selection row's
- * body this frame'. Three callers share it, so that lookup is defined in exactly
- * one place rather than copied per site:
- *
- *   - The follow rows — their shared `pose` target term.
- *   - The frame-loop pivot-pin (`applyFocusedBodyPivot`) — re-centres whichever
- *     OTHER orbit driver wins (orbitDrag while dragging, autoRotate while
- *     spinning, resting while idle) on the same live body position.
- *   - The NEAR0 selection-ring layer — centres the halo on the SELECT row's live
- *     body position so the ring tracks the animated body, not its pick-time pose.
- *
- * This answers WHERE, never WHETHER: a null return means only that the snapshot
- * holds no position for the row, and callers that need 'does this body move'
- * ask `bodyMovesThisFrame` — the snapshot carries static anchors too, so
- * presence in it is not motion.
- *
- * The body keeps moving at the sim rate; resolving the position from the live
- * snapshot every frame is what lets the camera track it and the ring follow it.
- * `deriveBodyStates` is memoised one-deep on `simDays`, so a same-instant call
- * returns the cached Map for free — no extra Kepler solve.
+ * Answers WHERE, never WHETHER: null means only that the snapshot holds no
+ * position for the row. "Does this body move" is `bodyMovesThisFrame` — the
+ * snapshot carries static anchors too, so presence in it is not motion.
  */
 
-import { deriveBodyStates } from '../frame/deriveBodyStates';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
-export function liveBodyPosition(focusRow: SelectionRow | null, simDays: number): Vec3 | null {
+export function liveBodyPosition(
+  focusRow: SelectionRow | null,
+  bodies: ReadonlyMap<string, BodyState>,
+): Vec3 | null {
   if (focusRow === null || focusRow.type !== 'body') return null;
-  return deriveBodyStates(simDays).get(focusRow.id)?.positionMpc ?? null;
+  return bodies.get(focusRow.id)?.positionMpc ?? null;
 }

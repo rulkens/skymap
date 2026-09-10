@@ -23,6 +23,8 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 // Two instants far enough apart that Earth has visibly moved along its orbit.
 const SIM_A = CONST_J2000 + 3652.5; // ~10 years past epoch
 const SIM_B = SIM_A + 30; // one month later — the body has moved
+const BODIES_A = deriveBodyStates(SIM_A);
+const BODIES_B = deriveBodyStates(SIM_B);
 
 const EARTH_ROW: SelectionRow = {
   type: 'body',
@@ -47,8 +49,12 @@ describe('applyFocusedBodyPivot', () => {
     // Precondition for the test to mean anything: the body actually moved.
     expect(posA).not.toEqual(posB);
 
-    const pinnedA = worldArmOf(applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, SIM_A, NO_PAN));
-    const pinnedB = worldArmOf(applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, SIM_B, NO_PAN));
+    const pinnedA = worldArmOf(
+      applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, BODIES_A, NO_PAN),
+    );
+    const pinnedB = worldArmOf(
+      applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, BODIES_B, NO_PAN),
+    );
 
     // The pivot TRACKS the body across frames — the failure mode this guards
     // against is the pivot staying at the frozen DRAG_POSE.target instead.
@@ -69,8 +75,12 @@ describe('applyFocusedBodyPivot', () => {
     const posA = deriveBodyStates(SIM_A).get('earth')!.positionMpc;
     const posB = deriveBodyStates(SIM_B).get('earth')!.positionMpc;
 
-    const pinnedA = worldArmOf(applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, SIM_A, offset));
-    const pinnedB = worldArmOf(applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, SIM_B, offset));
+    const pinnedA = worldArmOf(
+      applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, BODIES_A, offset),
+    );
+    const pinnedB = worldArmOf(
+      applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, BODIES_B, offset),
+    );
 
     expect(pinnedA.target).toEqual([posA[0] + 10, posA[1] - 20, posA[2] + 30]);
     // Offset survives body motion: the shift from the live body is the SAME vector.
@@ -82,13 +92,13 @@ describe('applyFocusedBodyPivot', () => {
   });
 
   it('is a pass-through for drivers that opt out of the pin (clip / tween)', () => {
-    const result = applyFocusedBodyPivot(DRAG_FRAMED, false, EARTH_ROW, SIM_A, NO_PAN);
+    const result = applyFocusedBodyPivot(DRAG_FRAMED, false, EARTH_ROW, BODIES_A, NO_PAN);
     expect(result).toBe(DRAG_FRAMED); // same reference — no rewrite
   });
 
   it('is a pass-through when the focus is not a body', () => {
-    expect(applyFocusedBodyPivot(DRAG_FRAMED, true, null, SIM_A, NO_PAN)).toBe(DRAG_FRAMED);
-    expect(applyFocusedBodyPivot(DRAG_FRAMED, true, { type: 'milkyWay' }, SIM_A, NO_PAN)).toBe(
+    expect(applyFocusedBodyPivot(DRAG_FRAMED, true, null, BODIES_A, NO_PAN)).toBe(DRAG_FRAMED);
+    expect(applyFocusedBodyPivot(DRAG_FRAMED, true, { type: 'milkyWay' }, BODIES_A, NO_PAN)).toBe(
       DRAG_FRAMED,
     );
   });

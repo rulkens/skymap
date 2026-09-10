@@ -12,6 +12,7 @@
 import { liveBodyPosition } from './liveBodyPosition';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -20,7 +21,7 @@ export function applyFocusedBodyPivot(
   framed: FramedCameraPose,
   pivotsOnFocusedBody: boolean,
   focusRow: SelectionRow | null,
-  simDays: number,
+  bodies: ReadonlyMap<string, BodyState>,
   panOffset: Vec3,
 ): FramedCameraPose {
   // A body arm co-rotates with its body, so "keep the moving body centred" is
@@ -28,7 +29,7 @@ export function applyFocusedBodyPivot(
   if (framed.frame !== 'absolute') return framed;
   if (!pivotsOnFocusedBody) return framed;
   if (!bodyMovesThisFrame(focusRow)) return framed;
-  const pivot = liveBodyPosition(focusRow, simDays);
+  const pivot = liveBodyPosition(focusRow, bodies);
   // A moving body is in the snapshot by construction; the guard is the narrowing.
   if (pivot === null) return framed;
   const pose = framed.pose;

@@ -27,7 +27,8 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
-const EARTH = deriveBodyStates(SIM).get('earth')! as BodyState;
+const BODIES = deriveBodyStates(SIM);
+const EARTH = BODIES.get('earth')! as BodyState;
 const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
 
 const FOCUS_EARTH: SelectionRow = {
@@ -70,7 +71,7 @@ describe('approachTiltedPose (ruling 13)', () => {
   it('expresses exactly the ONE mapping at every altitude, eye fixed, roll carried', () => {
     for (const hr of [0.5, 1.0, 1.75, 2.0, 2.4, 2.8, 3.2, 3.39]) {
       const framed = centredPoseAt(hr);
-      const out = approachTiltedPose(framed, true, FOCUS_EARTH, SIM, 0.5, B, B);
+      const out = approachTiltedPose(framed, true, FOCUS_EARTH, BODIES, 0.5, B, B);
       if (out.frame !== 'absolute' || framed.frame !== 'absolute') {
         throw new Error('absolute expected');
       }
@@ -91,14 +92,14 @@ describe('approachTiltedPose (ruling 13)', () => {
 
   it('never-engaged control: zero remembered returns the input BY REFERENCE', () => {
     const framed = centredPoseAt(2.0);
-    expect(approachTiltedPose(framed, true, FOCUS_EARTH, SIM, 0, B, B)).toBe(framed);
+    expect(approachTiltedPose(framed, true, FOCUS_EARTH, BODIES, 0, B, B)).toBe(framed);
   });
 
   it('inert above the band and for non-pivot drivers (clip/tween opt out)', () => {
     const above = centredPoseAt(5.0);
-    expect(approachTiltedPose(above, true, FOCUS_EARTH, SIM, 0.5, B, B)).toBe(above);
+    expect(approachTiltedPose(above, true, FOCUS_EARTH, BODIES, 0.5, B, B)).toBe(above);
     const inWindow = centredPoseAt(2.0);
-    expect(approachTiltedPose(inWindow, false, FOCUS_EARTH, SIM, 0.5, B, B)).toBe(inWindow);
-    expect(approachTiltedPose(inWindow, true, null, SIM, 0.5, B, B)).toBe(inWindow);
+    expect(approachTiltedPose(inWindow, false, FOCUS_EARTH, BODIES, 0.5, B, B)).toBe(inWindow);
+    expect(approachTiltedPose(inWindow, true, null, BODIES, 0.5, B, B)).toBe(inWindow);
   });
 });

@@ -10,7 +10,6 @@
  */
 
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { hOverR } from './hOverR';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
@@ -19,6 +18,7 @@ import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
@@ -28,7 +28,7 @@ export function approachTiltedPose(
   framed: FramedCameraPose,
   pivotsOnFocusedBody: boolean,
   focusRow: SelectionRow | null,
-  simDays: number,
+  bodies: ReadonlyMap<string, BodyState>,
   rememberedTiltRad: number,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
@@ -38,9 +38,8 @@ export function approachTiltedPose(
   if (focusRow === null || focusRow.type !== 'body' || !bodyMovesThisFrame(focusRow)) {
     return framed;
   }
-  // The same live snapshot the pivot pin resolved against (memoized on
-  // simDays), and the sanctioned Mpc↔metre seam (`hOverR`) for the altitude.
-  const bodyState = deriveBodyStates(simDays).get(focusRow.id);
+  // `hOverR` is the sanctioned Mpc↔metre seam for the altitude.
+  const bodyState = bodies.get(focusRow.id);
   if (bodyState === undefined) return framed;
   const centreMpc = bodyState.positionMpc;
 

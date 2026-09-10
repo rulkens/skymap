@@ -175,7 +175,6 @@ export function stepCameraRuntime(
     authoredOverride: edge.authoredOverride,
     pivotsOnFocusedBody: winner.pivotsOnFocusedBody ?? false,
     focus,
-    simDays,
     follow: memory,
     surface: drained.surface,
     intent: rootState.camera,

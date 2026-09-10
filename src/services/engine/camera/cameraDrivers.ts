@@ -92,7 +92,7 @@ function followPose(
   const s = ctx.state;
   const focus = s.selectionRows.focus;
   const base = s.camera.base;
-  const livePos = liveBodyPosition(focus, ctx.simDays);
+  const livePos = liveBodyPosition(focus, ctx.bodies);
   // Null-guard keeps the arm total; isActive already proved a moving body.
   if (focus === null || focus.type !== 'body' || livePos === null) {
     return { pose: base, memory: mem };

@@ -41,7 +41,6 @@ export function projectFramePose(args: {
   readonly authoredOverride: FramedCameraPose | null;
   readonly pivotsOnFocusedBody: boolean;
   readonly focus: SelectionRow | null;
-  readonly simDays: number;
   readonly follow: FollowMemory | null;
   readonly surface: SurfaceMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime, `dragging` skips the fold. */
@@ -63,7 +62,6 @@ export function projectFramePose(args: {
     authoredOverride,
     pivotsOnFocusedBody,
     focus,
-    simDays,
     follow,
     surface,
     intent,
@@ -80,7 +78,7 @@ export function projectFramePose(args: {
     render,
     pivotsOnFocusedBody,
     focus,
-    simDays,
+    bodies,
     follow?.panOffset ?? NO_PAN,
   );
   // Post-pin, PRE-projection (R12b-1).
@@ -96,7 +94,7 @@ export function projectFramePose(args: {
     displayed,
     pivotsOnFocusedBody,
     focus,
-    simDays,
+    bodies,
     noted.rememberedTiltRad,
     poseBasis,
     upBasis,

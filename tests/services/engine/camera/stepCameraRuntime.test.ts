@@ -131,7 +131,6 @@ describe('stepCameraRuntime', () => {
         authoredOverride: null,
         pivotsOnFocusedBody: true,
         focus: EARTH_ROW,
-        simDays: CONST_J2000,
         follow: null,
         surface: { ...EMPTY_SURFACE_MEMORY, rememberedTiltRad, memoryBodyId: 'earth' },
         intent,
