@@ -12,6 +12,7 @@ import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
 
 // The caller passes the per-frame body snapshot; these tests use the J2000
 // instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
@@ -158,7 +159,7 @@ describe('sceneBodyLabels', () => {
 
     expect(whale.kind).toBe('meshBody');
     expect(whale.text).toBe('Whale');
-    expect(whale.color).toEqual([0.62, 0.4, 0.44, 1]);
+    expect(whale.color).toEqual([...scaleToUnitMax([0.62, 0.4, 0.44]), 1]);
 
     vi.doUnmock('../../../../src/data/bodies/sceneMeshBodies');
     vi.resetModules();

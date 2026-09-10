@@ -44,6 +44,7 @@ import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
+import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SUN_ENTRY } from '../../../data/sources/sun';
@@ -207,10 +208,17 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
     // presence: omitted here it is invisible with nothing to diagnose, which is
     // why it is emitted from the seed record rather than from a drawn set.
     bodyLabel(SGR_A_STAR, bodyStates.get(SGR_A_STAR.id)!.positionMpc, SGR_A_STAR_TINT, 'sgrAStar'),
-    // Tinted from `albedo` like a planet — a mesh body is a lit surface, not a
-    // light source, so the same derivation applies.
+    // A mesh body's baked `albedo` is a mean over the whole surface — dark
+    // skin, or (petunias) an atlas averaging in black gaps — far below a
+    // planet's, so it is scaled to full brightness first; the caption keeps
+    // the hue, just not the darkness.
     ...SCENE_MESH_BODIES.map((body) =>
-      bodyLabel(body, bodyStates.get(body.id)!.positionMpc, body.albedo, 'meshBody'),
+      bodyLabel(
+        body,
+        bodyStates.get(body.id)!.positionMpc,
+        scaleToUnitMax(body.albedo),
+        'meshBody',
+      ),
     ),
   ];
 }
