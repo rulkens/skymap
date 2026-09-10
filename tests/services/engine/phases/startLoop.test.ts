@@ -24,7 +24,7 @@
  *      performance.now())` — pinning the call contract guards against
  *      a refactor that drops one of the three args.
  *   3. The cloud-count early return: zero clouds → no rAF kick.
- *   4. The renderer-readiness guard: null renderer → typed error.
+ *   4. The readiness guard: `initGpu` never ran → typed error.
  *
  * ### Why mock `runFrame`
  *
@@ -60,8 +60,6 @@ import { goLive } from '../../../../src/state/time/timeSlice';
  * Minimal `EngineState` shaped for startLoop's body.  Populates only
  * what the phase reads:
  *   - `state.sources.clouds.size` for the early-return guard;
- *   - `state.gpu.{milkyWay,thumbnail,disk,filament}Renderer` for the
- *     dep-bag build + the null-check guard;
  *   - `state.subsystems.scheduler.requestRender` for the rAF kick.
  *
  * `cloudCount` controls how many entries `clouds` carries; the values
@@ -74,13 +72,7 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
   }
   return {
     sources: { catalogs },
-    gpu: {
-      milkyWayCloudRenderer: { label: 'milkyWayCloud' } as never,
-      horizonShellRenderer: { label: 'horizonShell' } as never,
-      texturedDiskRenderer: { label: 'disk' } as never,
-      proceduralDiskRenderer: { label: 'proc' } as never,
-      filamentRenderer: { label: 'filament' } as never,
-    },
+    gpu: {},
     subsystems: {
       scheduler: { requestRender: vi.fn() },
     },
@@ -229,17 +221,14 @@ describe('startLoop', () => {
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 
-  it('throws a clear error when a required GPU renderer is null', async () => {
-    // Pre-M1 these reads silently `!`-banged, deferring crashes to
-    // the first frame.  Post-M1 the phase fails loudly at the
-    // construction site so reordering bugs surface here, not five
-    // frames later in some renderer's draw() call.
+  it('throws a clear error when initGpu never ran', async () => {
+    // `phaseLocals` is written only by `initGpu`; its absence is the only
+    // reachable way this phase sees it undefined, so a missing value means
+    // `initGpu` was skipped or reordered ahead of `startLoop`.
     const state = makeState({ cloudCount: 1 });
-    state.gpu.milkyWayCloudRenderer = null as never;
     const deps = makeDeps();
+    delete (deps as { phaseLocals?: unknown }).phaseLocals;
 
-    await expect(startLoop(state, deps)).rejects.toThrow(
-      /milkyWayCloud\/horizonShell\/texturedDisk\/proceduralDisk renderers must be initialised/,
-    );
+    await expect(startLoop(state, deps)).rejects.toThrow(/initGpu must run before startLoop/);
   });
 });
