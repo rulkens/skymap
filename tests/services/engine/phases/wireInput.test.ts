@@ -252,6 +252,30 @@ describe('wireInput', () => {
     expect(selectFocusRef(root)).toEqual(EARTH_REF);
   });
 
+  it('seeds focus but not select when the home config withholds the selection', async () => {
+    const state = makeState();
+    const deps = { ...makeDeps(), home: { ...EARTH_HOME, seedSelection: () => false } };
+
+    await wireInput(state, deps);
+
+    // Cinema behaviour: focus still tracks Earth so the camera has a home
+    // target, but no selection ring/InfoCard is seeded.
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toBeNull();
+    expect(selectFocusRef(root)).toEqual(EARTH_REF);
+  });
+
+  it('dispatches no selection at all for a composition with no home target', async () => {
+    const state = makeState();
+    const deps = { ...makeDeps(), home: { ...EARTH_HOME, focus: null } };
+
+    await wireInput(state, deps);
+
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toBeNull();
+    expect(selectFocusRef(root)).toBeNull();
+  });
+
   it('leaves an existing selection alone — a URL-hash focus restored before bootstrap wins', async () => {
     const state = makeState();
     const deps = makeDeps();
