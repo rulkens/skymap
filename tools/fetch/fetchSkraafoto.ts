@@ -17,13 +17,13 @@ import { fileURLToPath } from 'node:url';
 import type { SkraafotoStacItem } from '../scene-recon/@types/SkraafotoStacItem';
 import { SOENDERMARKEN } from '../scene-recon/groups/soendermarken';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { skraafotoDownsampleScale } from '../utils/skraafoto/skraafotoDownsampleScale';
 import { readKeychainSecret } from '../utils/io/readKeychainSecret';
 import { redactSecret } from '../utils/io/redactSecret';
 
 const SEARCH_ENDPOINT = 'https://api.dataforsyningen.dk/rest/skraafoto_api/v1.0/search';
 const KEYCHAIN_SERVICE = 'skymap-dataforsyningen-apikey';
 const SEARCH_LIMIT = 1000;
-const LONG_EDGE_PX = 1920;
 
 type ItemOutcome =
   | { readonly id: string; readonly status: 'existing' | 'fetched' }
@@ -50,7 +50,7 @@ async function searchItems(apiKey: string): Promise<readonly SkraafotoStacItem[]
 /** `[width, height]` in the order `-outsize` wants — see the type's `proj:shape` note. */
 function downsampledSize(item: SkraafotoStacItem): readonly [number, number] {
   const [heightPx, widthPx] = item.properties['proj:shape'];
-  const scale = LONG_EDGE_PX / Math.max(widthPx, heightPx);
+  const scale = skraafotoDownsampleScale(item.properties['proj:shape']);
   return [Math.round(widthPx * scale), Math.round(heightPx * scale)];
 }
 

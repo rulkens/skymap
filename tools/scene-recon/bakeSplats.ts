@@ -11,7 +11,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,6 +25,10 @@ import { nextManifest } from './manifest/nextManifest';
 import { upsertGroup } from './manifest/upsertGroup';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeJsonAtomic } from '../utils/io/writeJsonAtomic';
+import {
+  LONG_EDGE_PX,
+  skraafotoDownsampleScale,
+} from '../utils/skraafoto/skraafotoDownsampleScale';
 import type { SkraafotoStacItem } from './@types/SkraafotoStacItem';
 import type { GaussianSplatAsset } from '../scene-workbench/@types/GaussianSplatAsset';
 import type { GroupRegistry } from '../scene-workbench/@types/GroupRegistry';
@@ -41,10 +45,6 @@ const GEO3D_DIR = 'public/data/geo3d';
 const PLY_NAME = 'final.ply';
 const POINT_SAMPLE_TARGET = 200_000;
 const TRAIN_ITERS = 30000;
-/** Twin of `fetchSkraafoto.ts`'s `LONG_EDGE_PX`: the long edge every harvested
- *  JPEG was downsampled to. The poses describe those files, so Brush must be
- *  told not to resize them again. */
-const LONG_EDGE_PX = 1920;
 
 export type BrushRunner = (colmapDir: string) => Promise<void>;
 
@@ -80,7 +80,8 @@ export async function bakeSplats(
   const positions = await topocentricPositionsM(group.anchor, centresUtm, { runCct: deps.runCct });
 
   const poses: PhotoPose[] = items.map((item, i) => {
-    const pose = photoPoseFromStacItem(item, group.anchor, positions[i]!, downsampleScale(item));
+    const scale = skraafotoDownsampleScale(item.properties['proj:shape']);
+    const pose = photoPoseFromStacItem(item, group.anchor, positions[i]!, scale);
     // photoPoseFromStacItem names the JPEG bare and writeColmapModel hands
     // `imageUrl` straight to `copyFile`, which resolves against cwd — so the
     // harvest directory has to be folded in here or the copy misses.
@@ -95,15 +96,29 @@ export async function bakeSplats(
     outDir: colmapDir,
   });
 
+  // `colmapDir` survives between bakes, so a run where Brush exits 0 without
+  // exporting would otherwise re-read the previous run's PLY and ship it under
+  // a fresh provenance stamp. Deleting first makes that failure visible below.
+  const plyPath = join(colmapDir, PLY_NAME);
+  await rm(plyPath, { force: true });
+
   process.stderr.write(`bakeSplats: training ${poses.length} frame(s) with brush-cli…\n`);
   await deps.runBrush(colmapDir);
 
-  const ply = await readFile(join(colmapDir, PLY_NAME));
+  const ply = await readFile(plyPath).catch(() => {
+    throw new Error(
+      `bakeSplats: brush-cli exited 0 but wrote no ${plyPath} — check its ` +
+        '`--export-path`/`--export-name` flags against the installed version.',
+    );
+  });
   // Node pools small Buffers, so slice out this file's own bytes before
   // handing the ArrayBuffer on (same trap as writeColmapModel's points3D read).
   const { splats, shDegree } = readGaussianPly(
     ply.buffer.slice(ply.byteOffset, ply.byteOffset + ply.byteLength) as ArrayBuffer,
   );
+  if (splats.length === 0) {
+    throw new Error(`bakeSplats: brush-cli exported zero splats for group "${group.id}"`);
+  }
 
   const assetDir = join(GEO3D_DIR, 'groups', group.id, 'assets', ASSET_ID);
   await mkdir(assetDir, { recursive: true });
@@ -155,13 +170,6 @@ async function readStacItems(dir: string): Promise<SkraafotoStacItem[]> {
   );
 }
 
-/** Recomputed rather than stored — `fetchSkraafoto`'s `downsampledSize` derives
- *  the same scale from the same `proj:shape` ([rows, cols]). */
-function downsampleScale(item: SkraafotoStacItem): number {
-  const [rowsPx, colsPx] = item.properties['proj:shape'];
-  return LONG_EDGE_PX / Math.max(rowsPx, colsPx);
-}
-
 function spawnCct(pipeline: string, inputLines: readonly string[]): Promise<readonly string[]> {
   return new Promise((resolvePromise, reject) => {
     // The pipeline is `cct`'s argv, one `+key=value` token per argument.
@@ -179,6 +187,9 @@ function spawnCct(pipeline: string, inputLines: readonly string[]): Promise<read
       }
       resolvePromise(stdout.split('\n').filter((line) => line.trim() !== ''));
     });
+    // An EPIPE from a `cct` that died before draining lands on the stream, not
+    // on the child — uncaught unless it is routed to the same rejection.
+    child.stdin.on('error', reject);
     child.stdin.end(`${inputLines.join('\n')}\n`);
   });
 }
