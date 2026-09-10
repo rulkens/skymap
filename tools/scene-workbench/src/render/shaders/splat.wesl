@@ -25,11 +25,6 @@ const SH_C1: f32 = 0.4886025;
 // reference 3DGS rasterizer evaluates J at a tangent clamped to 1.3x the
 // frustum half-angle; only the Jacobian sees the clamped t, never the position.
 const TANGENT_LIMIT: f32 = 1.3;
-// A 3-sigma radius past this many viewport heights is one Gaussian painting
-// every pixel at alpha ~0.99. Bakes from airborne cameras carry such splats
-// below ground (no view constrains depth there), so cull rather than let one
-// own the frame; the near plane alone cannot, the quad being depth-flat.
-const MAX_RADIUS_SCREENS: f32 = 1.0;
 
 struct Splat {
   positionM: vec3<f32>,
@@ -133,9 +128,6 @@ fn projectSplat(s: Splat, vi: u32, color: vec3<f32>) -> VsOut {
   let mid = 0.5 * (a + c);
   let lambdaMax = mid + sqrt(max(mid * mid - det, 0.0));
   let radiusPx = 3.0 * sqrt(lambdaMax);
-  if (radiusPx > MAX_RADIUS_SCREENS * cam.viewportH) {
-    return clippedVertex();
-  }
 
   var corners = array<vec2<f32>, 6>(
     vec2<f32>(-1., -1.), vec2<f32>(1., -1.), vec2<f32>(-1., 1.),
