@@ -12,6 +12,8 @@
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
+import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
+import type { Mat3 } from '../../../@types/math/Mat3';
 import type { RootState } from '../../../store/types';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
@@ -22,8 +24,9 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
-import { evaluateClip } from './evaluateClip';
+import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
+import { decodeBodyFixedChannels } from '../../../utils/camera/decodeBodyFixedChannels';
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -159,6 +162,18 @@ function followPose(
   };
 }
 
+/**
+ * The exit both keyframe rows share: an absolute evaluation is re-encoded from
+ * the clip's pinned basis into the CURRENT one (by reference when they match),
+ * a body-framed one is DECODED (spec §8) — its angles are about the body's own
+ * axes, which no orientation frame touches, so the re-encode must not run.
+ */
+function framedClipArm(evaluated: FramedClipPose, from: Mat3, to: Mat3): FramedCameraPose {
+  const { frame, channels } = evaluated;
+  if (frame === 'absolute') return absoluteArm(reencodePose(channels, from, to));
+  return { frame, pose: decodeBodyFixedChannels(channels, frame.body) };
+}
+
 /** The seven rows. Constant data: a driver sees the frame only through its `ctx`. */
 export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
@@ -177,19 +192,16 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pose: (ctx, mem) => {
       const s = ctx.state;
       const clip = s.camera.clip!;
-      const evaluated = evaluateClip(
-        clip.data,
-        ctx.elapsedMs / 1000,
-        ORIENTATION_FRAMES[clip.frame],
-      );
+      const pinned = ORIENTATION_FRAMES[clip.frame];
+      // `clip` IS this playback: a frame leg's start converts once against the
+      // bodies of the frame the leg opens on, and a replay re-converts.
+      const evaluated = evaluateFramedClip(clip.data, ctx.elapsedMs / 1000, {
+        frameBasis: pinned,
+        bodies: ctx.bodies,
+        playback: clip,
+      });
       return {
-        pose: absoluteArm(
-          reencodePose(
-            evaluated,
-            ORIENTATION_FRAMES[clip.frame],
-            ORIENTATION_FRAMES[s.settings.orientation],
-          ),
-        ),
+        pose: framedClipArm(evaluated, pinned, ORIENTATION_FRAMES[s.settings.orientation]),
         memory: mem,
       };
     },
@@ -250,19 +262,14 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pose: (ctx, mem) => {
       const s = ctx.state;
       const tween = s.camera.tween!;
-      const evaluated = evaluateClip(
-        tweenToClip(tween),
-        ctx.elapsedMs / 1000,
-        ORIENTATION_FRAMES[tween.frame],
-      );
+      const pinned = ORIENTATION_FRAMES[tween.frame];
+      const evaluated = evaluateFramedClip(tweenToClip(tween), ctx.elapsedMs / 1000, {
+        frameBasis: pinned,
+        bodies: ctx.bodies,
+        playback: tween,
+      });
       return {
-        pose: absoluteArm(
-          reencodePose(
-            evaluated,
-            ORIENTATION_FRAMES[tween.frame],
-            ORIENTATION_FRAMES[s.settings.orientation],
-          ),
-        ),
+        pose: framedClipArm(evaluated, pinned, ORIENTATION_FRAMES[s.settings.orientation]),
         memory: mem,
       };
     },

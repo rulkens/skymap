@@ -125,6 +125,7 @@ export function stepCameraRuntime(
       winnerLastFrame: prev.register.winner,
       simDays,
       projection,
+      bodies,
       followDistanceTarget: drained.followDistanceTarget,
     },
     followIn,
