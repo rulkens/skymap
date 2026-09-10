@@ -262,6 +262,26 @@ describe('buildMeshes()', () => {
     expect([...decoded.indices]).toEqual([0, 2, 1]);
   });
 
+  it('rewinds a triangle whose order disagrees with its authored normal', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    // Clockwise seen from +Z, yet every normal points +Z — a SketchUp two-sided
+    // face, which under back-face culling would be the side the camera loses.
+    const prim = addPrim(doc, material, {
+      positions: [0, 0, 0, 0, 1, 0, 1, 0, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+      indices: [0, 1, 2],
+    });
+    doc
+      .createScene('s')
+      .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(prim)));
+
+    await run(await writeGlb(doc));
+
+    expect([...decodeMesh(readMesh()).indices]).toEqual([0, 2, 1]);
+  });
+
   it('recentres an off-origin authored pivot instead of inflating the radius', async () => {
     const doc = new Document();
     doc.createBuffer();

@@ -127,10 +127,11 @@ export function createMeshBodyRenderer(
     primitive: {
       topology: 'triangle-list',
       frontFace: 'ccw',
-      // The authored surface IS what is drawn, so the standard rule applies: the
-      // near face wins and the far one is discarded. The sphere bodies' inverted
-      // `'front'` is a proxy-shell workaround with no counterpart here.
-      cullMode: 'back',
+      // Both approved sources declare glTF `doubleSided`: a petal or leaf is a
+      // single sheet with no interior, so culling its far side deletes half the
+      // plant. A closed mesh loses only the cull. `frontFace` still earns its
+      // keep — the fragment stage reads `front_facing` to flip the normal.
+      cullMode: 'none',
     },
     depthStencil: {
       format: depthFormat,

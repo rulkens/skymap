@@ -28,10 +28,11 @@ const DIELECTRIC_F0: f32 = 0.04;
 const SUN_IRRADIANCE: f32 = 3.0;
 
 @fragment
-fn fs(in: MeshBodyVSOut) -> @location(0) vec4<f32> {
+fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(0) vec4<f32> {
   // Barycentric blending shortens both and skews the tangent off the normal:
   // renormalize and Gram-Schmidt, so the bitangent 'cross' comes out unit-length.
-  let ng = normalize(in.worldNormal);
+  // No cull: negating 'ng' holds 't' and inverts 'b' -- the frame a back face is seen through.
+  let ng = normalize(in.worldNormal) * select(-1.0, 1.0, frontFacing);
   let t = normalize(in.worldTangent.xyz - ng * dot(ng, in.worldTangent.xyz));
   let b = cross(ng, t) * in.worldTangent.w;
 

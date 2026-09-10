@@ -193,6 +193,39 @@ function transformTangent(m: readonly number[], n: Vec3, x: number, y: number, z
 }
 
 /**
+ * Whether a triangle's winding agrees with the authored NORMAL it interpolates.
+ * A SketchUp two-sided face exports wound either way (34k of the petunias'
+ * 150k disagree), so winding is normalised at bake time rather than trusted —
+ * the mean of the three normals, since a smooth-shaded corner has no one truth.
+ * A degenerate triangle has no facing and keeps its authored order.
+ */
+function windingFollowsNormal(
+  positions: readonly number[],
+  normals: readonly number[],
+  i0: number,
+  i1: number,
+  i2: number,
+): boolean {
+  const a = i0 * 3;
+  const b = i1 * 3;
+  const c = i2 * 3;
+  const ux = positions[b]! - positions[a]!;
+  const uy = positions[b + 1]! - positions[a + 1]!;
+  const uz = positions[b + 2]! - positions[a + 2]!;
+  const vx = positions[c]! - positions[a]!;
+  const vy = positions[c + 1]! - positions[a + 1]!;
+  const vz = positions[c + 2]! - positions[a + 2]!;
+  const cx = uy * vz - uz * vy;
+  const cy = uz * vx - ux * vz;
+  const cz = ux * vy - uy * vx;
+  if (cx === 0 && cy === 0 && cz === 0) return true;
+  const nx = normals[a]! + normals[b]! + normals[c]!;
+  const ny = normals[a + 1]! + normals[b + 1]! + normals[c + 1]!;
+  const nz = normals[a + 2]! + normals[b + 2]! + normals[c + 2]!;
+  return cx * nx + cy * ny + cz * nz >= 0;
+}
+
+/**
  * Merge every primitive into one vertex/index buffer with node transforms
  * baked in, then RECENTRE on the bbox centre. Scale passes through untouched —
  * both approved sources are modelled at real-world size — but an authored pivot
@@ -250,13 +283,17 @@ function mergeGeometry(doc: Document): Geometry {
       }
     }
 
-    // A mirrored node also inverts triangle winding; leaving it would turn
-    // every face away from the camera under back-face culling.
+    // A mirrored node also inverts triangle winding, so undo that first; the
+    // per-face normalisation then judges the geometry as it will be drawn.
     const idx = prim.getIndices();
     const count = idx ? idx.getCount() : pos.getCount();
     const at = (i: number) => base + (idx ? idx.getScalar(i) : i);
     for (let i = 0; i < count; i += 3) {
-      indices.push(at(i), at(mirrored ? i + 2 : i + 1), at(mirrored ? i + 1 : i + 2));
+      const i0 = at(i);
+      const i1 = at(mirrored ? i + 2 : i + 1);
+      const i2 = at(mirrored ? i + 1 : i + 2);
+      if (windingFollowsNormal(positions, normals, i0, i1, i2)) indices.push(i0, i1, i2);
+      else indices.push(i0, i2, i1);
     }
   }
 
