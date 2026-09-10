@@ -85,12 +85,12 @@ Grounding for the counts each task must reproduce. Re-derive them, don't trust t
 
 **Files:** none modified. Manifests are scratch files, outside the repo.
 
-- [ ] `npm run refactor -- rename src/@types/engine/frame/ContentLayer.d.ts#ContentLayer ContentPass --dry`
+- [x] `npm run refactor -- rename src/@types/engine/frame/ContentLayer.d.ts#ContentLayer ContentPass --dry`
       → expect the header `104 refs across 42 files (21 in tests/)`. Note: the `--dry`
       report lists refs only, it does **not** print the file-rename plan. `planRename`
       handles `.d.ts` as one extension and drags the `tests/` mirror
       (`tools/utils/refactor/planRename.ts:87-109`); the proof is `git status` after T2.
-- [ ] Write the T3 manifest to the scratch dir as a bare array of positional-arg arrays,
+- [x] Write the T3 manifest to the scratch dir as a bare array of positional-arg arrays,
       one entry per pass row — the batch form validates all 37 against one `Project` and
       aborts the whole batch on any throw:
 
@@ -104,17 +104,17 @@ Grounding for the counts each task must reproduce. Re-derive them, don't trust t
 ]
 ```
 
-- [ ] `npm run refactor -- rename --manifest <scratch>/passRenames.json --dry` → 37
+- [x] `npm run refactor -- rename --manifest <scratch>/passRenames.json --dry` → 37
       entries, no throw. Confirm every entry's basename equals its symbol (it does for
       all 37; that is what makes the file move fire).
-- [ ] Blind-spot sweep, recorded in the task report:
+- [x] Blind-spot sweep, recorded in the task report:
       `rg -n "Layer" -g '*.wesl' src` → **11** comment sites, **0** `package::` imports;
       `rg -n "frame/passes" tests --type ts | rg "vi.mock|import\(|readFileSync"` → one
       hit, `tests/services/engine/phases/wireInput.test.ts:66`, which mocks the
       **directory** `.../frame/passes` (unmoved) — but its factory body names
       `CONTENT_LAYERS`, so T2 must check it;
       `rg -l "ContentLayer|CONTENT_LAYERS" tools` → empty.
-- [ ] **No commit.** Report the four counts.
+- [x] **No commit.** Report the four counts.
 
 **Reject if:** any count differs from the inventory table without an explanation, or
 the manifest was skipped in favour of 37 individual invocations.
@@ -129,19 +129,19 @@ so that file is correctly left in place.
 
 Four renames, one manifest, one commit:
 
-- [ ] `src/@types/engine/frame/ContentLayer.d.ts#ContentLayer` → `ContentPass`
-- [ ] `src/services/engine/frame/passes/index.ts#CONTENT_LAYERS` → `CONTENT_PASSES`
-- [ ] `src/@types/engine/frame/UpsampleLayerRow.d.ts#UpsampleLayerRow` → `UpsamplePassRow`
-- [ ] `src/services/engine/frame/passes/createUpsampleLayer.ts#createUpsampleLayer` → `createUpsamplePass`
-- [ ] `--dry` the manifest, then run it for real.
-- [ ] `git status` must show three renames plus one test-mirror rename
+- [x] `src/@types/engine/frame/ContentLayer.d.ts#ContentLayer` → `ContentPass`
+- [x] `src/services/engine/frame/passes/index.ts#CONTENT_LAYERS` → `CONTENT_PASSES`
+- [x] `src/@types/engine/frame/UpsampleLayerRow.d.ts#UpsampleLayerRow` → `UpsamplePassRow`
+- [x] `src/services/engine/frame/passes/createUpsampleLayer.ts#createUpsampleLayer` → `createUpsamplePass`
+- [x] `--dry` the manifest, then run it for real.
+- [x] `git status` must show three renames plus one test-mirror rename
       (`tests/services/engine/frame/passes/createUpsampleLayer.test.ts` →
       `createUpsamplePass.test.ts`). If `ContentPass.d.ts` did not appear, the `.d.ts`
       basename check failed — stop and report, do not `git mv`.
-- [ ] Fix the one string-literal blind spot by hand:
+- [x] Fix the one string-literal blind spot by hand:
       `tests/services/engine/phases/wireInput.test.ts:66`'s `vi.mock` factory returns
       `CONTENT_LAYERS`; the mocked module's _path_ is unchanged, its _export name_ is not.
-- [ ] `npm run typecheck` green. Commit: `refactor(frame): ContentLayer → ContentPass, CONTENT_LAYERS → CONTENT_PASSES`.
+- [x] `npm run typecheck` green. Commit: `refactor(frame): ContentLayer → ContentPass, CONTENT_LAYERS → CONTENT_PASSES`.
 
 **Reject if:** the commit contains any edit the CLI did not make, other than the
 `vi.mock` export name; or `ContentLayer.d.ts` still exists.
@@ -152,16 +152,16 @@ Four renames, one manifest, one commit:
 surviving `tests/.../passes/<x>Layer.test.ts` mirrors, and every importer the CLI
 repoints (the 37 re-export lines in `passes/index.ts` among them).
 
-- [ ] Run the T1 manifest for real:
+- [x] Run the T1 manifest for real:
       `npm run refactor -- rename --manifest <scratch>/passRenames.json`
-- [ ] `git status` → **37** source renames + **29** test-mirror renames (30 minus
+- [x] `git status` → **37** source renames + **29** test-mirror renames (30 minus
       `createUpsampleLayer.test.ts`, already moved in T2). Files with extra exports —
       `earthPass.ts` (`prepareBodySurfaceFrame`), `orbitTrailsPass.ts`
       (`orbitReachByRegion`), `starCatalogPass.ts` (`starCatalogVisible`,
       `prepareStarCut`) — move whole; those extra symbols are **not** renamed.
       `tests/.../passes/prepareStarCut.test.ts` and `foregroundLabelsOcclusion.test.ts`
       are hand-named tests with no mirrored source basename and correctly stay put.
-- [ ] `npm run typecheck` green. Commit: `refactor(frame): 37 *Layer pass files → *Pass`.
+- [x] `npm run typecheck` green. Commit: `refactor(frame): 37 *Layer pass files → *Pass`.
 
 **Reject if:** any import path was hand-edited; any of the three multi-export files lost
 or renamed a non-pass export; the source and mirror counts don't match the numbers above.
@@ -205,12 +205,12 @@ the `tests/` files the greps below turn up.
    `passes/index.ts`'s draft-order header, which spec §5 relocates to `frameOrder.ts` in
    (c). Rewriting that prose now is churn (c) would immediately undo.
 
-- [ ] Sweep: `rg -n "ContentLayer|CONTENT_LAYERS|UpsampleLayerRow|createUpsampleLayer" src tests` → empty.
-- [ ] Sweep: `rg -n "[a-zA-Z]Layer\.ts|[a-zA-Z]Layer\b" src tests -g '!**/fadeLayers.ts'` →
+- [x] Sweep: `rg -n "ContentLayer|CONTENT_LAYERS|UpsampleLayerRow|createUpsampleLayer" src tests` → empty.
+- [x] Sweep: `rg -n "[a-zA-Z]Layer\.ts|[a-zA-Z]Layer\b" src tests -g '!**/fadeLayers.ts'` →
       only the EXCLUDED vocabulary from Global Constraints remains. Read every hit; do
       not blanket-replace.
-- [ ] Sweep: `rg -n "Layer" -g '*.wesl' src` → only `hiResLayerIdx` / `safeLayer`.
-- [ ] `npm run typecheck` + `npm test` green. Commit: `refactor(frame): finish the ContentPass rename in fields, locals and comments`.
+- [x] Sweep: `rg -n "Layer" -g '*.wesl' src` → only `hiResLayerIdx` / `safeLayer`.
+- [x] `npm run typecheck` + `npm test` green. Commit: `refactor(frame): finish the ContentPass rename in fields, locals and comments`.
 
 **Reject if:** a diff hunk touches `FadeLayer`, `FADE_LAYERS`, `LAYER_GROUPS`,
 `VisibilityLayerKey`, `CategoryLabelLayer`, `labelLayer`, `hiResLayerIdx` or any
@@ -225,27 +225,27 @@ citation at `:14`), `docs/superpowers/conventions/renderers.md` (`:119`, `:319`,
 `:152`) and the ~20 `docs/backlog/*.md` detail files that cite `ContentLayer` or a
 `*Layer.ts` basename.
 
-- [ ] Rename the identifiers only. Do not restructure an entry, do not add or delete a
+- [x] Rename the identifiers only. Do not restructure an entry, do not add or delete a
       backlog line, do not update a `file:line` number — line numbers barely moved and
       chasing them turns a rename into a docs edit.
-- [ ] `rg -n "ContentLayer|CONTENT_LAYERS|createUpsampleLayer" docs/RENDERER.md docs/BACKLOG.md docs/backlog docs/superpowers/conventions .claude/skills` → empty.
-- [ ] `npx prettier --write` on the touched markdown. Commit: `docs: ContentLayer → ContentPass in living docs`.
+- [x] `rg -n "ContentLayer|CONTENT_LAYERS|createUpsampleLayer" docs/RENDERER.md docs/BACKLOG.md docs/backlog docs/superpowers/conventions .claude/skills` → empty.
+- [x] `npx prettier --write` on the touched markdown. Commit: `docs: ContentLayer → ContentPass in living docs`.
 
 **Reject if:** any file under `plans/completed/`, `specs/completed/`, `grill-sessions/`
 or `research/` was touched; or a backlog line's content changed beyond the identifier.
 
 ## Task 6 — gate
 
-- [ ] `npm run typecheck` (both projects) — green.
-- [ ] `npm test` — green, and the **test count is unchanged** from `main`. A changed
+- [x] `npm run typecheck` (both projects) — green.
+- [x] `npm test` — green, and the **test count is unchanged** from `main`. A changed
       count means a test was renamed out of the suite or a mirror got orphaned.
-- [ ] `npm run build` — green. This is the load-bearing one: it is the only check that
+- [x] `npm run build` — green. This is the load-bearing one: it is the only check that
       links WESL, so it proves no `package::` specifier or `?static` path was disturbed
       by the 38 file moves.
-- [ ] `git diff main --stat` — confirm the shape: ~38 renames + ~80 modified files, and
+- [x] `git diff main --stat` — confirm the shape: ~38 renames + ~80 modified files, and
       **no** line in the diff that is neither an identifier, a filename, nor comment text
       containing one.
-- [ ] Skipped on purpose, state it in the PR body: `npm run perf` (no executable
+- [x] Skipped on purpose, state it in the PR body: `npm run perf` (no executable
       statement changed) and the visual smoke pass (same draws, same order, same targets).
 
 **Reject if:** the PR body claims a perf or visual result that was not run, or omits the
@@ -255,16 +255,20 @@ statement that both were deliberately skipped.
 
 ## Definition of Done
 
+> Completed 2026-09-10 on PR #674 (9 commits, 8f8ae20fb..39bca686b). Mirror count landed at 31, not 30:
+> `starCatalogLayer.frustumCull.test.ts` lived in `tests/services/engine/frame/` and moved into
+> `passes/` as its source's mirror home. Ledger: `2026-09-10-layer-composition-01-content-pass-rename.ledger.md`.
+
 **Deliverable inventory**
 
-- [ ] `src/@types/engine/frame/ContentPass.d.ts` exists; `ContentLayer.d.ts` does not.
-- [ ] `src/services/engine/frame/passes/` contains **38** `*Pass.ts` files and **zero**
+- [x] `src/@types/engine/frame/ContentPass.d.ts` exists; `ContentLayer.d.ts` does not.
+- [x] `src/services/engine/frame/passes/` contains **38** `*Pass.ts` files and **zero**
       `*Layer.ts` files; `tests/services/engine/frame/passes/` contains **30** matching
       `*Pass*.test.ts` mirrors and zero `*Layer*.test.ts`.
-- [ ] `passes/index.ts` exports `CONTENT_PASSES` (37 rows, 37 re-exports, same order).
-- [ ] `rg -n "ContentLayer|CONTENT_LAYERS|UpsampleLayerRow|createUpsampleLayer" src tests docs/RENDERER.md docs/BACKLOG.md docs/backlog docs/superpowers/conventions .claude/skills` → empty.
-- [ ] The EXCLUDED identifiers of Global Constraints are byte-identical to `main`.
-- [ ] The diff contains no expression change — every hunk is a name or a filename.
+- [x] `passes/index.ts` exports `CONTENT_PASSES` (37 rows, 37 re-exports, same order).
+- [x] `rg -n "ContentLayer|CONTENT_LAYERS|UpsampleLayerRow|createUpsampleLayer" src tests docs/RENDERER.md docs/BACKLOG.md docs/backlog docs/superpowers/conventions .claude/skills` → empty.
+- [x] The EXCLUDED identifiers of Global Constraints are byte-identical to `main`.
+- [x] The diff contains no expression change — every hunk is a name or a filename.
 
 **The deferral boundary** — nothing else. No field is deleted, no signature narrowed, no
 `FRAME_ORDER` authored, no Layer formed.
