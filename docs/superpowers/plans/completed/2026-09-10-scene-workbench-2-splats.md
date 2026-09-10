@@ -1,6 +1,6 @@
 # Scene Workbench 2/4 — Gaussian splats
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** a second, alpha-blended render pass shows Søndermarken's Brush-trained Gaussian-splat radiance field over the same LiDAR point cloud, in the same metre frame — the whole path from `fetchSkraafoto` through pose recovery, COLMAP staging, `brush-cli`, and `splats.bin` to pixels, with a working splat-scale/opacity display panel and a CPU depth sort.
 
@@ -104,11 +104,11 @@ export function parseSplats(buffer: ArrayBuffer): ParsedGaussianSplats;
 
 `GaussianSplatRecord` lives in `packSplats.ts` (not `readGaussianPly.ts`) — mirrors `packPoints.ts` owning `ScenePoint`; task 2's `readGaussianPly` imports it from here. `records`/`sh1` are views, uploaded verbatim (mirrors `parsePoints`'s no-copy contract). `positionsM` is the one field actually **decoded** into a fresh `Float32Array(3 * splatCount)`: the stride is 28 bytes, not 12, so the xyz floats aren't contiguous, and the sort (task 12) needs them dense every frame — decoding once at parse time is cheaper than re-deriving it per sort.
 
-- [ ] Test `packSplats → parseSplats round-trips a shDegree-0 record set` — 5 splats (not a power of two), every field varying per record, decoded in the test via a hand-written `DataView` per the byte table above (never by re-calling the packer): `getFloat32` for xyz, `getInt8`/127 for rotation, hand-computed `f16` decode for `logScale` (`tests/tools/scene-workbench` has no existing f16 decode helper to reuse — decode inline from the raw 16 bits, e.g. via `src/utils/math/f16BitsToFloat.ts`, which is a _different_ function than whatever `packSplats` uses to encode, so this stays a round-trip check, not a mirror), `getUint8`/255 for opacity, `getUint8` ×3 for `dcColor`. Assert `sh1` is `null` and the total buffer length matches `SPLATS_HEADER_BYTES + count * SPLATS_RECORD_BYTES` (no trailing block).
-- [ ] Test `packSplats → parseSplats round-trips a shDegree-1 record set` — same 5 splats, each with a distinct 9-value `fRest`, asserting the trailing block's byte length (`count * SPLATS_SH1_RECORD_BYTES`) and every `fRest` coefficient decoded via `getInt8`/127.
-- [ ] Test `parseSplats rejects a wrong magic` and `parseSplats rejects a splatCount that disagrees with the buffer length` — mirrors `parsePoints`'s two negative tests (`tests/tools/scene-recon/pack/packPoints.test.ts:51-71`) for the same reason: a truncated download must not render as silent garbage.
-- [ ] Implement `packSplats` (per-field quantization from the table's Notes column) and `parseSplats` (magic/version/count validation, view construction, the one `positionsM` decode loop).
-- [ ] `npx vitest run tests/tools/scene-recon/pack tests/tools/scene-workbench/scene`; `npm run format`; commit `tools/scene-recon/pack/splatFormat.ts`, `tools/scene-recon/pack/packSplats.ts`, `tools/scene-workbench/src/scene/parseSplats.ts`, `tests/tools/scene-recon/pack/packSplats.test.ts` as `feat(scene-recon): splats.bin format, packSplats, parseSplats`.
+- [x] Test `packSplats → parseSplats round-trips a shDegree-0 record set` — 5 splats (not a power of two), every field varying per record, decoded in the test via a hand-written `DataView` per the byte table above (never by re-calling the packer): `getFloat32` for xyz, `getInt8`/127 for rotation, hand-computed `f16` decode for `logScale` (`tests/tools/scene-workbench` has no existing f16 decode helper to reuse — decode inline from the raw 16 bits, e.g. via `src/utils/math/f16BitsToFloat.ts`, which is a _different_ function than whatever `packSplats` uses to encode, so this stays a round-trip check, not a mirror), `getUint8`/255 for opacity, `getUint8` ×3 for `dcColor`. Assert `sh1` is `null` and the total buffer length matches `SPLATS_HEADER_BYTES + count * SPLATS_RECORD_BYTES` (no trailing block).
+- [x] Test `packSplats → parseSplats round-trips a shDegree-1 record set` — same 5 splats, each with a distinct 9-value `fRest`, asserting the trailing block's byte length (`count * SPLATS_SH1_RECORD_BYTES`) and every `fRest` coefficient decoded via `getInt8`/127.
+- [x] Test `parseSplats rejects a wrong magic` and `parseSplats rejects a splatCount that disagrees with the buffer length` — mirrors `parsePoints`'s two negative tests (`tests/tools/scene-recon/pack/packPoints.test.ts:51-71`) for the same reason: a truncated download must not render as silent garbage.
+- [x] Implement `packSplats` (per-field quantization from the table's Notes column) and `parseSplats` (magic/version/count validation, view construction, the one `positionsM` decode loop).
+- [x] `npx vitest run tests/tools/scene-recon/pack tests/tools/scene-workbench/scene`; `npm run format`; commit `tools/scene-recon/pack/splatFormat.ts`, `tools/scene-recon/pack/packSplats.ts`, `tools/scene-workbench/src/scene/parseSplats.ts`, `tests/tools/scene-recon/pack/packSplats.test.ts` as `feat(scene-recon): splats.bin format, packSplats, parseSplats`.
 
 ### Task 2: `readGaussianPly`
 
@@ -139,12 +139,12 @@ Reads Brush's binary little-endian PLY export (`x y z scale_0..2 opacity rot_0..
 
 A PLY file's ASCII header (`ply`, `format binary_little_endian 1.0`, `element vertex N`, one `property float <name>` line per field, `end_header`) precedes the binary body — the reader must parse the header to find `N` and the field order/offsets rather than assume Brush's field order is fixed forever.
 
-- [ ] Build a tiny hand-crafted binary PLY (2–3 vertices) with known `scale_0..2`, pre-sigmoid `opacity`, scalar-first `rot_0..3`, and `f_dc_0..2` values — write it via a `DataView` in the test (or as a committed fixture file, implementer's call; if a file, it belongs under `tests/fixtures/skraafoto/` per the repo's `tests/fixtures/<source>/` convention).
-- [ ] Test `readGaussianPly applies the sigmoid to opacity` — hand-compute `1/(1+e^-x)` for the fixture's pre-sigmoid value, assert against the decoded record's `opacity` (not against `readGaussianPly`'s own sigmoid expression).
-- [ ] Test `readGaussianPly evaluates f_dc to 0..255 RGB via the SH0 formula` — hand-compute `clamp(0.5 + 0.28209479 * f_dc, 0, 1) * 255`, for at least one channel that would clamp (a large negative `f_dc`) to prove the clamp fires.
-- [ ] Test `readGaussianPly reorders rot_0..3 from scalar-first to [x,y,z,w]` — assert the decoded `rotation` array order directly against the fixture's raw `w,x,y,z` values, permuted by hand in the assertion.
-- [ ] Test `readGaussianPly reports shDegree 0 for a PLY with no f_rest properties and 1 for one that has them` — two small fixtures (or one PLY built both ways).
-- [ ] Implement; `npx vitest run tests/tools/scene-recon/splats`; `npm run format`; commit `tools/scene-recon/splats/readGaussianPly.ts`, its test, and any fixture file as `feat(scene-recon): readGaussianPly — decode Brush's PLY export`.
+- [x] Build a tiny hand-crafted binary PLY (2–3 vertices) with known `scale_0..2`, pre-sigmoid `opacity`, scalar-first `rot_0..3`, and `f_dc_0..2` values — write it via a `DataView` in the test (or as a committed fixture file, implementer's call; if a file, it belongs under `tests/fixtures/skraafoto/` per the repo's `tests/fixtures/<source>/` convention).
+- [x] Test `readGaussianPly applies the sigmoid to opacity` — hand-compute `1/(1+e^-x)` for the fixture's pre-sigmoid value, assert against the decoded record's `opacity` (not against `readGaussianPly`'s own sigmoid expression).
+- [x] Test `readGaussianPly evaluates f_dc to 0..255 RGB via the SH0 formula` — hand-compute `clamp(0.5 + 0.28209479 * f_dc, 0, 1) * 255`, for at least one channel that would clamp (a large negative `f_dc`) to prove the clamp fires.
+- [x] Test `readGaussianPly reorders rot_0..3 from scalar-first to [x,y,z,w]` — assert the decoded `rotation` array order directly against the fixture's raw `w,x,y,z` values, permuted by hand in the assertion.
+- [x] Test `readGaussianPly reports shDegree 0 for a PLY with no f_rest properties and 1 for one that has them` — two small fixtures (or one PLY built both ways).
+- [x] Implement; `npx vitest run tests/tools/scene-recon/splats`; `npm run format`; commit `tools/scene-recon/splats/readGaussianPly.ts`, its test, and any fixture file as `feat(scene-recon): readGaussianPly — decode Brush's PLY export`.
 
 ### Task 3: `SkraafotoStacItem` type, registry rows, README, `fetchSkraafoto`
 
@@ -200,9 +200,9 @@ export type SkraafotoStacItem = {
 
 **No test** — `SkraafotoStacItem` is a type declaration (`tsc` proves it, `testing.md`'s no-runtime-type-test rule); the two registry rows are a constant restatement (plan 1 task 3's precedent); `fetchSkraafoto`'s download plumbing is the same "no test on `spawn`/`fetch` + exit code" exclusion as `fetchDhm.ts` (plan 1 task 8).
 
-- [ ] Add `package.json`'s `"fetch-skraafoto": "tsx tools/fetch/fetchSkraafoto.ts"`, alongside the existing `"fetch-dhm"` line.
-- [ ] Add the type, the group field, the two registry rows, the README (with the real, looked-up licence wording), and the fetcher.
-- [ ] `npm run typecheck`; `npm run format`; commit `tools/scene-recon/@types/SkraafotoStacItem.d.ts`, `tools/fetch/fetchSkraafoto.ts`, `data/raw/skraafoto/README.md`, `tools/scene-recon/groups/soendermarken.ts`, `tools/utils/io/rawDataRegistry.ts`, `package.json` as `feat(scene-recon): fetchSkraafoto — skråfoto STAC + downsampled JPEG harvest`.
+- [x] Add `package.json`'s `"fetch-skraafoto": "tsx tools/fetch/fetchSkraafoto.ts"`, alongside the existing `"fetch-dhm"` line.
+- [x] Add the type, the group field, the two registry rows, the README (with the real, looked-up licence wording), and the fetcher.
+- [x] `npm run typecheck`; `npm run format`; commit `tools/scene-recon/@types/SkraafotoStacItem.d.ts`, `tools/fetch/fetchSkraafoto.ts`, `data/raw/skraafoto/README.md`, `tools/scene-recon/groups/soendermarken.ts`, `tools/utils/io/rawDataRegistry.ts`, `package.json` as `feat(scene-recon): fetchSkraafoto — skråfoto STAC + downsampled JPEG harvest`.
 
 ### Task 4: `topocentricPositionsM` + `photoPoseFromStacItem`
 
@@ -264,14 +264,14 @@ export function photoPoseFromStacItem(
 
 Builds the ω/φ/κ rotation matrix `D` (SDFIdk/saul reference implementation, MIT), converts it to `PhotoPose.rotation` via `matrixToQuaternion` (`src/utils/math/matrixToQuaternion.ts`) composed with the grid-convergence correction `Rz(γ)`, `γ ≈ (lonDeg − 9) · sin(latDeg)` (≈2.9° at Søndermarken). `focalLengthPx = focal_length / pixel_spacing × downsampleScale`. `principalPointPx = (outW/2 + ppx/pixel_spacing, outH/2 ± ppy/pixel_spacing) × downsampleScale` — the sign on the `ppy` term follows the saul formula's own convention. **The composition order and the `ppy` sign are exactly what step 3's fixture test settles — this spec names the formula, not a verified sign** (spec §6, §10 open question 3).
 
-- [ ] Test `topocentricPositionsM batches every camera centre through one cct call` — 3 fake UTM points, a stub `CctRunner` capturing its arguments, asserting it was called **once** with the pipeline string as the first argument and the 3 lines as the second.
-- [ ] Test `topocentricPositionsM composes the inverse-UTM32 → cart → topocentric pipeline string with the anchor's lat/lon/height` — assert the pipeline string (the stub `CctRunner`'s first argument) contains `+inv +proj=utm +zone=32`, no leading `unitconvert` stage, and the anchor's `lat_0`/`lon_0`/`h_0` values.
-- [ ] Manually verify the pipeline lands the anchor's own coordinates near `(0,0,0)` (the same sanity check plan 1 task 1 ran for the LiDAR pipeline): forward-project `SOENDERMARKEN.anchor`'s lat/lon to UTM32 (`echo "<lonDeg> <latDeg> <heightMDvr90>" | cct +proj=utm +zone=32 +ellps=GRS80`), then feed that UTM triple through the pipeline string above via `cct` — the three output metre values must be within 0.01 of `0`. Record the result in this task's commit message or the README; do not skip it before trusting the pipeline on real camera centres.
-- [ ] Obtain one real 2025 skråfoto STAC item whose footprint contains the Søndermarken anchor (55.67°N, 12.53°E) roughly centred in frame — via `curl` against the search endpoint (task 3's fetcher isn't run for real until task 8, but the endpoint is public) or by running `npm run fetch-skraafoto` early if convenient. Trim it to exactly the fields `SkraafotoStacItem` reads and commit it as `tests/fixtures/skraafoto/<itemId>.json`.
-- [ ] By hand — reading off the image, never by re-deriving the formula `photoPoseFromStacItem` itself implements: open `<itemId>.jpg` (the fixture item's downsampled JPEG), locate the anchor point (55.67°N 12.53°E, Søndermarken) — pick the item whose frame shows an identifiable feature at or near the anchor, and note which feature — and record its pixel `(u, v)` by eye (a scratch script that draws a crosshair, or an image viewer's cursor readout). Optionally cross-check against SDFIdk/saul's own `world2image` output as a second independent source. This keeps the ground truth independent of the ω/φ/κ + `Rz(γ)` formula the source implements, so a wrong sign convention fails the test rather than passing it.
-- [ ] Add the test `photoPoseFromStacItem projects the group anchor to the independently hand-computed pixel` — call `photoPoseFromStacItem` with the fixture item, `SOENDERMARKEN.anchor`, the hand-derived `positionM`, and the fetcher's `downsampleScale`; project `[0,0,0]` through the **returned pose's own fields** using the same pinhole formula (re-implemented once in the test file, not imported from the source); assert the result is within ~15 px at the 1920-long-edge scale (eyeballed landmark; the failure mode being caught is a mirrored axis or a swapped composition order, which puts the point hundreds of pixels off, not 15) of the hand-computed `(u, v)`. This is the test that settles the `Rz(γ)` composition-order/sign question (spec §9, §10 open question 3) rather than leaving it asserted.
-- [ ] Implement both functions.
-- [ ] `npx vitest run tests/tools/scene-recon/poses`; `npm run typecheck`; `npm run format`; commit `tools/scene-workbench/@types/PhotoPose.d.ts`, `tools/scene-recon/poses/topocentricPositionsM.ts`, `tools/scene-recon/poses/photoPoseFromStacItem.ts`, both tests, and the fixture as `feat(scene-recon): topocentricPositionsM + photoPoseFromStacItem`.
+- [x] Test `topocentricPositionsM batches every camera centre through one cct call` — 3 fake UTM points, a stub `CctRunner` capturing its arguments, asserting it was called **once** with the pipeline string as the first argument and the 3 lines as the second.
+- [x] Test `topocentricPositionsM composes the inverse-UTM32 → cart → topocentric pipeline string with the anchor's lat/lon/height` — assert the pipeline string (the stub `CctRunner`'s first argument) contains `+inv +proj=utm +zone=32`, no leading `unitconvert` stage, and the anchor's `lat_0`/`lon_0`/`h_0` values.
+- [x] Manually verify the pipeline lands the anchor's own coordinates near `(0,0,0)` (the same sanity check plan 1 task 1 ran for the LiDAR pipeline): forward-project `SOENDERMARKEN.anchor`'s lat/lon to UTM32 (`echo "<lonDeg> <latDeg> <heightMDvr90>" | cct +proj=utm +zone=32 +ellps=GRS80`), then feed that UTM triple through the pipeline string above via `cct` — the three output metre values must be within 0.01 of `0`. Record the result in this task's commit message or the README; do not skip it before trusting the pipeline on real camera centres.
+- [x] Obtain one real 2025 skråfoto STAC item whose footprint contains the Søndermarken anchor (55.67°N, 12.53°E) roughly centred in frame — via `curl` against the search endpoint (task 3's fetcher isn't run for real until task 8, but the endpoint is public) or by running `npm run fetch-skraafoto` early if convenient. Trim it to exactly the fields `SkraafotoStacItem` reads and commit it as `tests/fixtures/skraafoto/<itemId>.json`.
+- [x] By hand — reading off the image, never by re-deriving the formula `photoPoseFromStacItem` itself implements: open `<itemId>.jpg` (the fixture item's downsampled JPEG), locate the anchor point (55.67°N 12.53°E, Søndermarken) — pick the item whose frame shows an identifiable feature at or near the anchor, and note which feature — and record its pixel `(u, v)` by eye (a scratch script that draws a crosshair, or an image viewer's cursor readout). Optionally cross-check against SDFIdk/saul's own `world2image` output as a second independent source. This keeps the ground truth independent of the ω/φ/κ + `Rz(γ)` formula the source implements, so a wrong sign convention fails the test rather than passing it.
+- [x] Add the test `photoPoseFromStacItem projects the group anchor to the independently hand-computed pixel` — call `photoPoseFromStacItem` with the fixture item, `SOENDERMARKEN.anchor`, the hand-derived `positionM`, and the fetcher's `downsampleScale`; project `[0,0,0]` through the **returned pose's own fields** using the same pinhole formula (re-implemented once in the test file, not imported from the source); assert the result is within ~15 px at the 1920-long-edge scale (eyeballed landmark; the failure mode being caught is a mirrored axis or a swapped composition order, which puts the point hundreds of pixels off, not 15) of the hand-computed `(u, v)`. This is the test that settles the `Rz(γ)` composition-order/sign question (spec §9, §10 open question 3) rather than leaving it asserted.
+- [x] Implement both functions.
+- [x] `npx vitest run tests/tools/scene-recon/poses`; `npm run typecheck`; `npm run format`; commit `tools/scene-workbench/@types/PhotoPose.d.ts`, `tools/scene-recon/poses/topocentricPositionsM.ts`, `tools/scene-recon/poses/photoPoseFromStacItem.ts`, both tests, and the fixture as `feat(scene-recon): topocentricPositionsM + photoPoseFromStacItem`.
 
 ### Task 5: `writeColmapModel` golden
 
@@ -300,13 +300,13 @@ Writes three text files into `spec.outDir` (COLMAP's known-pose text format) plu
 
 No COLMAP `#`-comment header lines are required — COLMAP's text-format readers skip `#`-prefixed lines but don't require them, and Brush's loader inherits that reader. Keep the files header-free; simpler to golden-test.
 
-- [ ] Build a small fixture: 2 `PhotoPose`s with deliberately simple rotations (identity quaternion for one, a clean 90°-about-Z quaternion for the other) so the expected `qw..tz` values in the golden text are exact hand arithmetic, not a re-derivation of the source's own conjugate/matrix code. Write a temporary `points.bin` via `packPoints` (task 1's sibling `pointCloudFormat`/`packPoints`, already on `main`) containing exactly 10 hand-picked `ScenePoint`s, in a `mkdtempSync` tmpdir (mirrors `tests/tools/scene-recon/ortho/orthoVrtXml.test.ts`'s tmpdir pattern).
-- [ ] Test `writeColmapModel writes cameras.txt with one PINHOLE entry per image at the downsampled size` — call with `pointSampleTarget: 10` (keeps all 10 fixture points, `N = 1`), assert the full `cameras.txt` text against the hand-composed expected string.
-- [ ] Test `writeColmapModel writes images.txt with the world→camera conjugate quaternion and translation` — assert the full `images.txt` text, including the empty POINTS2D lines.
-- [ ] Test `writeColmapModel writes points3D.txt sampling every Nth point of points.bin` — assert the full `points3D.txt` text against the 10 fixture points, `ERROR` column literally `0`, no track columns.
-- [ ] Test `writeColmapModel copies each pose's image into outDir/images, named to match images.txt` — assert the two files exist under `<outDir>/images/` with the names `images.txt` uses.
-- [ ] Implement.
-- [ ] `npx vitest run tests/tools/scene-recon/splats`; `npm run format`; commit `tools/scene-recon/splats/writeColmapModel.ts` and its test as `feat(scene-recon): writeColmapModel — known-pose COLMAP staging for Brush`.
+- [x] Build a small fixture: 2 `PhotoPose`s with deliberately simple rotations (identity quaternion for one, a clean 90°-about-Z quaternion for the other) so the expected `qw..tz` values in the golden text are exact hand arithmetic, not a re-derivation of the source's own conjugate/matrix code. Write a temporary `points.bin` via `packPoints` (task 1's sibling `pointCloudFormat`/`packPoints`, already on `main`) containing exactly 10 hand-picked `ScenePoint`s, in a `mkdtempSync` tmpdir (mirrors `tests/tools/scene-recon/ortho/orthoVrtXml.test.ts`'s tmpdir pattern).
+- [x] Test `writeColmapModel writes cameras.txt with one PINHOLE entry per image at the downsampled size` — call with `pointSampleTarget: 10` (keeps all 10 fixture points, `N = 1`), assert the full `cameras.txt` text against the hand-composed expected string.
+- [x] Test `writeColmapModel writes images.txt with the world→camera conjugate quaternion and translation` — assert the full `images.txt` text, including the empty POINTS2D lines.
+- [x] Test `writeColmapModel writes points3D.txt sampling every Nth point of points.bin` — assert the full `points3D.txt` text against the 10 fixture points, `ERROR` column literally `0`, no track columns.
+- [x] Test `writeColmapModel copies each pose's image into outDir/images, named to match images.txt` — assert the two files exist under `<outDir>/images/` with the names `images.txt` uses.
+- [x] Implement.
+- [x] `npx vitest run tests/tools/scene-recon/splats`; `npm run format`; commit `tools/scene-recon/splats/writeColmapModel.ts` and its test as `feat(scene-recon): writeColmapModel — known-pose COLMAP staging for Brush`.
 
 ### Task 6: `GaussianSplatAsset` growth + splat asset loading (moved ahead of `bakeSplats` — see the resequencing note above)
 
@@ -408,10 +408,10 @@ const visibleAssets = (hiddenAssetIds: readonly string[]): LidarGpuAsset[] => {
 
 A `gaussianSplat` asset that reaches `resources.gpuAssets` after this task loads onto the GPU and shows `ready` in the layer list, but draws nothing yet — no renderer consumes it until task 11. This mirrors plan 1 task 12's own intermediate state ("the layer statuses reaching `ready` — nothing is drawn until task 14").
 
-- [ ] Test `assetCount reports pts for a pointCloud asset and splats for a gaussianSplat asset` — one hand-built asset of each kind, asserting `{count, unit}` against hand-picked values (`tsc` already proves the table exhaustive; this test is for the dispatch itself).
-- [ ] Extend `LayerList.test.tsx`: add the test `LayerList shows a gaussianSplat asset's count in splats` — render with a manifest containing one `gaussianSplat` asset (`splatCount: 42_000`, `shDegree: 0`), assert the row's text includes `42,000 splats`.
-- [ ] Implement the two new types, `renderResources.ts`'s growth, `uploadGaussianSplat`, `loadGaussianSplat`, the `ASSET_LOADERS` row, `assetCount`, the `LayerList` swap, and the `Viewport.tsx` narrowing.
-- [ ] `npx vitest run tests/tools/scene-workbench`; `npm run typecheck`; `npm run format`; commit all of the above as `feat(scene-workbench): GaussianSplatAsset — type, GPU asset kind, loader row`.
+- [x] Test `assetCount reports pts for a pointCloud asset and splats for a gaussianSplat asset` — one hand-built asset of each kind, asserting `{count, unit}` against hand-picked values (`tsc` already proves the table exhaustive; this test is for the dispatch itself).
+- [x] Extend `LayerList.test.tsx`: add the test `LayerList shows a gaussianSplat asset's count in splats` — render with a manifest containing one `gaussianSplat` asset (`splatCount: 42_000`, `shDegree: 0`), assert the row's text includes `42,000 splats`.
+- [x] Implement the two new types, `renderResources.ts`'s growth, `uploadGaussianSplat`, `loadGaussianSplat`, the `ASSET_LOADERS` row, `assetCount`, the `LayerList` swap, and the `Viewport.tsx` narrowing.
+- [x] `npx vitest run tests/tools/scene-workbench`; `npm run typecheck`; `npm run format`; commit all of the above as `feat(scene-workbench): GaussianSplatAsset — type, GPU asset kind, loader row`.
 
 ### Task 7: `bakeSplats` orchestration + npm scripts
 
@@ -452,19 +452,19 @@ Follows `bakeLidar.ts`'s injected-dependency shape (`bakeLidar.ts:50-53`) exactl
 
 **No new unit test** — every decision `bakeSplats` makes is already covered by tasks 1–6; what remains is orchestration plus a subprocess (`bakeLidar.ts`'s own precedent, plan 1 task 9).
 
-- [ ] Add `package.json`'s `"bake-splats": "tsx tools/scene-recon/bakeSplats.ts"`, alongside `"bake-lidar"`.
-- [ ] Implement `bakeSplats.ts` (the function plus a `main()` wiring the real `spawnSync`-based `runBrush`/`brushVersion`/`runCct`, following `bakeLidar.ts`'s `spawnPdal`/`pdalVersion`/`main` tail exactly).
-- [ ] `npm run typecheck`; `npm run format`; commit `tools/scene-recon/bakeSplats.ts` and `package.json` as `feat(scene-recon): bakeSplats — photo pose recovery, COLMAP staging, brush-cli, splats.bin`.
+- [x] Add `package.json`'s `"bake-splats": "tsx tools/scene-recon/bakeSplats.ts"`, alongside `"bake-lidar"`.
+- [x] Implement `bakeSplats.ts` (the function plus a `main()` wiring the real `spawnSync`-based `runBrush`/`brushVersion`/`runCct`, following `bakeLidar.ts`'s `spawnPdal`/`pdalVersion`/`main` tail exactly).
+- [x] `npm run typecheck`; `npm run format`; commit `tools/scene-recon/bakeSplats.ts` and `package.json` as `feat(scene-recon): bakeSplats — photo pose recovery, COLMAP staging, brush-cli, splats.bin`.
 
 ### Task 8 (OPERATOR): run `fetch-skraafoto` + `bake-splats` for real
 
 No code changes. This is the multi-hour step the earlier ordering exists to unblock as early as possible — it can run **in the background while tasks 9–13 proceed**, since they need no baked data (the synthetic probe scene, task 12, covers viewer development and the probe).
 
-- [ ] Confirm the `skymap-dataforsyningen-apikey` keychain entry exists (`security find-generic-password -a "$USER" -s skymap-dataforsyningen-apikey -w | wc -c` → non-zero) and is entitled to the skråfoto self-service API on dataforsyningen.dk. Register/subscribe if not — this is the one step that can block a fresh checkout, same caveat as plan 1 task 1's Datafordeler key.
-- [ ] `brush-cli` v1.0.0 is already installed at `~/.cargo/bin` (2026-09-10, `cargo install --git`, Rust 1.98.1). Verify `brush-cli --help` runs; reinstall via `rustup update && cargo install --git https://github.com/ArthurBrussee/brush brush-cli` only if it doesn't.
-- [ ] Run `npm run fetch-skraafoto`. Verify: ~306 `<itemId>.json` + `<itemId>.jpg` pairs land under `data/raw/skraafoto/skraafotos2025/`, and re-running skips the completed ones.
-- [ ] Run `npm run bake-splats`. This trains for a real, possibly multi-hour session. Verify on completion: `public/data/geo3d/groups/soendermarken/assets/splats/splats.bin` exists with `splatCount > 0`; `manifest.json` parses and contains an asset with `kind: 'gaussianSplat', id: 'splats'`; `scenes.json` still lists the one `soendermarken` group (no duplicate).
-- [ ] Note the real `splatCount`, `shDegree`, and wall-clock training time somewhere durable (this plan's own progress ledger, or the SDD workspace) — task 10's open question 1 (the SH1 i8 scale factor) and open question 2 (training-time budget) both get their first real data point here.
+- [x] Confirm the `skymap-dataforsyningen-apikey` keychain entry exists (`security find-generic-password -a "$USER" -s skymap-dataforsyningen-apikey -w | wc -c` → non-zero) and is entitled to the skråfoto self-service API on dataforsyningen.dk. Register/subscribe if not — this is the one step that can block a fresh checkout, same caveat as plan 1 task 1's Datafordeler key.
+- [x] `brush-cli` v1.0.0 is already installed at `~/.cargo/bin` (2026-09-10, `cargo install --git`, Rust 1.98.1). Verify `brush-cli --help` runs; reinstall via `rustup update && cargo install --git https://github.com/ArthurBrussee/brush brush-cli` only if it doesn't.
+- [x] Run `npm run fetch-skraafoto`. Verify: ~306 `<itemId>.json` + `<itemId>.jpg` pairs land under `data/raw/skraafoto/skraafotos2025/`, and re-running skips the completed ones.
+- [x] Run `npm run bake-splats`. This trains for a real, possibly multi-hour session. Verify on completion: `public/data/geo3d/groups/soendermarken/assets/splats/splats.bin` exists with `splatCount > 0`; `manifest.json` parses and contains an asset with `kind: 'gaussianSplat', id: 'splats'`; `scenes.json` still lists the one `soendermarken` group (no duplicate).
+- [x] Note the real `splatCount`, `shDegree`, and wall-clock training time somewhere durable (this plan's own progress ledger, or the SDD workspace) — task 10's open question 1 (the SH1 i8 scale factor) and open question 2 (training-time budget) both get their first real data point here.
 
 No commit — the baked artifacts are gitignored.
 
@@ -513,11 +513,11 @@ export function writeSceneCamera(
 
 `Viewport.tsx`'s call site (`Viewport.tsx:107`, `cameraUniform.write(view, state.view.display.pointCloud.pointSizePx)`) grows to pass **hardcoded `1, 1`** for `splatScale`/`opacityScale` — `view.display.gaussianSplat` doesn't exist in the store until task 10, and hardcoding the spec's own defaults (`{splatScale: 1, opacityScale: 1}`, spec §7.6) keeps this task self-contained and typecheck-green without inventing a store shape a task early. Task 10 replaces the two literals with the real store reads.
 
-- [ ] Create `lib/sceneCamera.wesl` with the 10-field struct (7 existing + 3 new) above.
-- [ ] Modify `lidarPoint.wesl`: replace its inline `struct SceneCamera {...}` with `import package::lib::sceneCamera::SceneCamera;` at the top of the file (gotcha #3 — imports must be hoisted).
-- [ ] Modify `sceneCamera.parity.test.ts`: read `lib/sceneCamera.wesl` instead of `lidarPoint.wesl`, add `view`/`splatScale`/`opacityScale` to the `WGSL_TYPE`-driven layout parse (already generic — `mat4x4<f32>` and `f32` are both already in the map), and extend the sentinel-value assertions: a distinct `SPLAT_SCALE`/`OPACITY_SCALE` sentinel per new scalar field, plus an assertion that `view`'s 16 floats are finite and non-zero (mirrors the existing `viewProj` block check at `sceneCamera.parity.test.ts:116-124`) and that `struct size equals SCENE_CAMERA_BYTES` now asserts `192`.
-- [ ] Implement `writeSceneCamera`'s two new parameters and the `view` matrix write; `sceneCameraUniform.ts`'s grown `write()`; `Viewport.tsx`'s call-site literals.
-- [ ] `npx vitest run tests/tools/scene-workbench/render`; `npm run typecheck`; `npm run format`; commit `tools/scene-workbench/src/render/shaders/lib/sceneCamera.wesl`, `tools/scene-workbench/src/render/shaders/lidarPoint.wesl`, `tools/scene-workbench/src/render/writeSceneCamera.ts`, `tools/scene-workbench/src/render/sceneCameraUniform.ts`, `tools/scene-workbench/src/ui/Viewport/Viewport.tsx`, and the parity test as `feat(scene-workbench): grow SceneCamera to 192 bytes — view, splatScale, opacityScale`.
+- [x] Create `lib/sceneCamera.wesl` with the 10-field struct (7 existing + 3 new) above.
+- [x] Modify `lidarPoint.wesl`: replace its inline `struct SceneCamera {...}` with `import package::lib::sceneCamera::SceneCamera;` at the top of the file (gotcha #3 — imports must be hoisted).
+- [x] Modify `sceneCamera.parity.test.ts`: read `lib/sceneCamera.wesl` instead of `lidarPoint.wesl`, add `view`/`splatScale`/`opacityScale` to the `WGSL_TYPE`-driven layout parse (already generic — `mat4x4<f32>` and `f32` are both already in the map), and extend the sentinel-value assertions: a distinct `SPLAT_SCALE`/`OPACITY_SCALE` sentinel per new scalar field, plus an assertion that `view`'s 16 floats are finite and non-zero (mirrors the existing `viewProj` block check at `sceneCamera.parity.test.ts:116-124`) and that `struct size equals SCENE_CAMERA_BYTES` now asserts `192`.
+- [x] Implement `writeSceneCamera`'s two new parameters and the `view` matrix write; `sceneCameraUniform.ts`'s grown `write()`; `Viewport.tsx`'s call-site literals.
+- [x] `npx vitest run tests/tools/scene-workbench/render`; `npm run typecheck`; `npm run format`; commit `tools/scene-workbench/src/render/shaders/lib/sceneCamera.wesl`, `tools/scene-workbench/src/render/shaders/lidarPoint.wesl`, `tools/scene-workbench/src/render/writeSceneCamera.ts`, `tools/scene-workbench/src/render/sceneCameraUniform.ts`, `tools/scene-workbench/src/ui/Viewport/Viewport.tsx`, and the parity test as `feat(scene-workbench): grow SceneCamera to 192 bytes — view, splatScale, opacityScale`.
 
 ### Task 10: `view.display.gaussianSplat` + `DisplayPanel` + `viewSlice`
 
@@ -546,10 +546,10 @@ export type ViewSlice = {
 
 `Viewport.tsx`'s call site (task 9's hardcoded `1, 1`) becomes `state.view.display.gaussianSplat.splatScale`, `state.view.display.gaussianSplat.opacityScale`.
 
-- [ ] Following the existing `DisplayPanel.test.tsx` pattern (`fireEvent.keyDown(slider, { key: 'ArrowRight' })` against a real store, no `viewSlice` reducer unit test — the as-built tree tests these reducers through the UI, not in isolation, per `tests/tools/scene-workbench/ui/DisplayPanel.test.tsx:9-22`), add the test `DisplayPanel drives the gaussianSplat splat-scale slice through its slider` (`getByRole('slider', { name: /splat scale/i })`, one `ArrowRight`, assert `store.getState().view.display.gaussianSplat.splatScale` moved by one step).
-- [ ] Add the test `DisplayPanel drives the gaussianSplat opacity-scale slice through its slider`, same shape.
-- [ ] Implement the slice growth, the two reducers, the `DisplayPanel` section, and the `Viewport.tsx` call-site swap.
-- [ ] `npx vitest run tests/tools/scene-workbench/ui`; `npm run typecheck`; `npm run format`; commit `tools/scene-workbench/src/state/view/viewSlice.ts`, `tools/scene-workbench/src/ui/DisplayPanel/DisplayPanel.tsx`, `tools/scene-workbench/src/ui/Viewport/Viewport.tsx`, and the test as `feat(scene-workbench): gaussianSplat display knobs — splatScale, opacityScale`.
+- [x] Following the existing `DisplayPanel.test.tsx` pattern (`fireEvent.keyDown(slider, { key: 'ArrowRight' })` against a real store, no `viewSlice` reducer unit test — the as-built tree tests these reducers through the UI, not in isolation, per `tests/tools/scene-workbench/ui/DisplayPanel.test.tsx:9-22`), add the test `DisplayPanel drives the gaussianSplat splat-scale slice through its slider` (`getByRole('slider', { name: /splat scale/i })`, one `ArrowRight`, assert `store.getState().view.display.gaussianSplat.splatScale` moved by one step).
+- [x] Add the test `DisplayPanel drives the gaussianSplat opacity-scale slice through its slider`, same shape.
+- [x] Implement the slice growth, the two reducers, the `DisplayPanel` section, and the `Viewport.tsx` call-site swap.
+- [x] `npx vitest run tests/tools/scene-workbench/ui`; `npm run typecheck`; `npm run format`; commit `tools/scene-workbench/src/state/view/viewSlice.ts`, `tools/scene-workbench/src/ui/DisplayPanel/DisplayPanel.tsx`, `tools/scene-workbench/src/ui/Viewport/Viewport.tsx`, and the test as `feat(scene-workbench): gaussianSplat display knobs — splatScale, opacityScale`.
 
 ### Task 11: `splat.wesl` + `splatRenderer` + Viewport wiring
 
@@ -600,11 +600,11 @@ Mirrors `createLidarPointRenderer`'s exact 3-arg shape (`lidarPointRenderer.ts:2
 
 **No new automated test.** Per spec §9's explicit exclusion: no CPU-side shadow implementation exists to check the covariance/EWA maths against; the GPU probe's `uncapturederror` capture (task 12) is the automated gate, visual judgement is the operator's.
 
-- [ ] Write `splat.wesl` (licence header, `lib/sceneCamera.wesl` import, the two pipeline variants come from ONE module that declares both `@group(1) @binding(0) data` and `@group(1) @binding(1) sh1`, with two vertex entry points (`vs_deg0`, `vs_deg1`) sharing the covariance/quad helpers; `vs_deg0` never references `sh1`. WebGPU validates a pipeline layout only against the bindings an entry point _statically uses_, so the deg-0 pipeline's bind-group-1 layout legitimately omits binding 1 while the same module serves both. One fragment entry point. If the implementer finds a reason to deviate, note it in the file's header comment (budget ≤10 lines)).
-- [ ] Implement `splatRenderer.ts` (pipeline creation ×2, the `WeakMap` bind-group cache, `draw`).
-- [ ] Wire `Viewport.tsx`.
-- [ ] `npm run typecheck`; `npm run format`. If task 8's real bake has already landed, do a manual visual check now (`npm run scene-workbench`, select `soendermarken`, confirm the splat layer draws without a GPU validation error in the console) — otherwise defer visual verification to task 12's probe and task 13's operator check.
-- [ ] Commit `tools/scene-workbench/src/render/shaders/splat.wesl`, `tools/scene-workbench/src/render/splatRenderer.ts`, `tools/scene-workbench/src/ui/Viewport/Viewport.tsx` as `feat(scene-workbench): splatRenderer — covariance-projected Gaussian splats`.
+- [x] Write `splat.wesl` (licence header, `lib/sceneCamera.wesl` import, the two pipeline variants come from ONE module that declares both `@group(1) @binding(0) data` and `@group(1) @binding(1) sh1`, with two vertex entry points (`vs_deg0`, `vs_deg1`) sharing the covariance/quad helpers; `vs_deg0` never references `sh1`. WebGPU validates a pipeline layout only against the bindings an entry point _statically uses_, so the deg-0 pipeline's bind-group-1 layout legitimately omits binding 1 while the same module serves both. One fragment entry point. If the implementer finds a reason to deviate, note it in the file's header comment (budget ≤10 lines)).
+- [x] Implement `splatRenderer.ts` (pipeline creation ×2, the `WeakMap` bind-group cache, `draw`).
+- [x] Wire `Viewport.tsx`.
+- [x] `npm run typecheck`; `npm run format`. If task 8's real bake has already landed, do a manual visual check now (`npm run scene-workbench`, select `soendermarken`, confirm the splat layer draws without a GPU validation error in the console) — otherwise defer visual verification to task 12's probe and task 13's operator check.
+- [x] Commit `tools/scene-workbench/src/render/shaders/splat.wesl`, `tools/scene-workbench/src/render/splatRenderer.ts`, `tools/scene-workbench/src/ui/Viewport/Viewport.tsx` as `feat(scene-workbench): splatRenderer — covariance-projected Gaussian splats`.
 
 ### Task 12: `sortSplatOrder` + `watchSplatSortSaga`
 
@@ -640,10 +640,10 @@ The implementation must not be a comparator `Array.prototype.sort` over 1–2 M 
 
 `rootSaga.ts`'s `mainSaga` grows to `yield* all([watchRegistrySaga(), watchGroupSaga(), watchSplatSortSaga()])`.
 
-- [ ] Test `sortSplatOrder returns far-to-near order` — 5 hand-placed positions at known distances along a fixed `forwardM` from a fixed `eyeM`, asserting the returned index order is farthest-first.
-- [ ] Test `sortSplatOrder handles a splat behind the eye` — one position with negative depth along `forwardM`, asserting it still sorts (no NaN/crash) — the one case a naive "sort by dot product" implementation could get subtly wrong at the boundary.
-- [ ] Implement `sortSplatOrder`, `commands.ts`, `watchSplatSortSaga`, and the `rootSaga.ts` wiring. **No saga integration test** — pure IO shell, plan 1's own precedent (spec §9, "no saga integration test").
-- [ ] `npx vitest run tests/tools/scene-workbench/scene`; `npm run typecheck`; `npm run format`; commit `tools/scene-workbench/src/scene/sortSplatOrder.ts`, `tools/scene-workbench/src/state/commands.ts`, `tools/scene-workbench/src/state/splat/watchSplatSortSaga.ts`, `tools/scene-workbench/src/store/rootSaga.ts`, and the test as `feat(scene-workbench): watchSplatSortSaga — main-thread camera-relative depth sort`.
+- [x] Test `sortSplatOrder returns far-to-near order` — 5 hand-placed positions at known distances along a fixed `forwardM` from a fixed `eyeM`, asserting the returned index order is farthest-first.
+- [x] Test `sortSplatOrder handles a splat behind the eye` — one position with negative depth along `forwardM`, asserting it still sorts (no NaN/crash) — the one case a naive "sort by dot product" implementation could get subtly wrong at the boundary.
+- [x] Implement `sortSplatOrder`, `commands.ts`, `watchSplatSortSaga`, and the `rootSaga.ts` wiring. **No saga integration test** — pure IO shell, plan 1's own precedent (spec §9, "no saga integration test").
+- [x] `npx vitest run tests/tools/scene-workbench/scene`; `npm run typecheck`; `npm run format`; commit `tools/scene-workbench/src/scene/sortSplatOrder.ts`, `tools/scene-workbench/src/state/commands.ts`, `tools/scene-workbench/src/state/splat/watchSplatSortSaga.ts`, `tools/scene-workbench/src/store/rootSaga.ts`, and the test as `feat(scene-workbench): watchSplatSortSaga — main-thread camera-relative depth sort`.
 
 ### Task 13: Synthetic probe splat asset + probe selector fix
 
@@ -659,10 +659,10 @@ The implementation must not be a comparator `Array.prototype.sort` over 1–2 M 
 
 **Additional fix beyond the spec's literal three-call list, flagged as an author's call:** the boot step's readiness wait (`probeGpuErrors.ts:222`, `page.getByText('ready', { exact: true }).waitFor(...)`) is a **different** locator than the three the spec names, but it has the same two-asset collision risk once both assets reach `ready`. Left as `getByText(...).waitFor(...)` it would also throw under Playwright's strict mode. Change it to `await expect(page.getByText('ready', { exact: true })).toHaveCount(2);` (`expect(locator).toHaveCount(n)` doesn't require single-element resolution, unlike `.waitFor()`) — this both fixes the latent strict-mode risk and strengthens the assertion (both assets' full round trip, not just one).
 
-- [ ] Add the synthetic splat asset to `syntheticProbeScene.ts`'s returned manifest.
-- [ ] Fix the three checkbox locators and the boot readiness check in `probeGpuErrors.ts`.
-- [ ] Run `npm run scene-workbench:probe` — must exit 0 with no GPU, page, or console errors.
-- [ ] `npm run format`; commit `tools/scene-workbench/src/scene/syntheticProbeScene.ts` and `tools/scene-workbench/probeGpuErrors.ts` as `test(scene-workbench): synthetic splat asset in the GPU probe scene`.
+- [x] Add the synthetic splat asset to `syntheticProbeScene.ts`'s returned manifest.
+- [x] Fix the three checkbox locators and the boot readiness check in `probeGpuErrors.ts`.
+- [x] Run `npm run scene-workbench:probe` — must exit 0 with no GPU, page, or console errors.
+- [x] `npm run format`; commit `tools/scene-workbench/src/scene/syntheticProbeScene.ts` and `tools/scene-workbench/probeGpuErrors.ts` as `test(scene-workbench): synthetic splat asset in the GPU probe scene`.
 
 ### Task 14 (OPERATOR): visual check with the real bake + README update
 
@@ -672,16 +672,16 @@ The implementation must not be a comparator `Array.prototype.sort` over 1–2 M 
 
 No other code changes.
 
-- [ ] Confirm task 8's real bake has landed (`public/data/geo3d/groups/soendermarken/assets/splats/splats.bin` exists). If not, wait for it now.
-- [ ] `npm run scene-workbench`, select `soendermarken`. Named observable behaviours to check:
+- [x] Confirm task 8's real bake has landed (`public/data/geo3d/groups/soendermarken/assets/splats/splats.bin` exists). If not, wait for it now.
+- [x] `npm run scene-workbench`, select `soendermarken`. Named observable behaviours to check:
   - The splat layer renders recognizable geometry over the same ground the LiDAR layer occupies — facades, canopy, specular highlights read as "the place," not noise.
   - Toggling the splat layer off/on in `LayerList` removes and restores it; the LiDAR layer is unaffected.
   - The two `DisplayPanel` sliders (splat scale, opacity) visibly change the render.
   - Orbiting the camera keeps the splat draw order coherent — no visible sorting popping past what a per-gesture-commit sort implies (the sort only re-runs at `commitCameraPose`, spec §7.5 — this is the expected, not a bug).
   - No console GPU validation errors during normal use.
-- [ ] Update `tools/scene-workbench/README.md`: the splat pipeline's place in the prerequisite chain (`npm run fetch-skraafoto` → `npm run bake-splats`, after `fetch-dhm`/`bake-lidar`), the two keychain credentials, and the new `Display` panel section.
-- [ ] Record the real `splatCount`/`shDegree`/training time (task 8) and the fRest i8 scale factor's real-data plausibility (spec §10 open question 1) in the README or this plan's own record, whichever the operator prefers.
-- [ ] Commit `tools/scene-workbench/README.md` as `docs(scene-workbench): document the splat pipeline and display panel`.
+- [x] Update `tools/scene-workbench/README.md`: the splat pipeline's place in the prerequisite chain (`npm run fetch-skraafoto` → `npm run bake-splats`, after `fetch-dhm`/`bake-lidar`), the two keychain credentials, and the new `Display` panel section.
+- [x] Record the real `splatCount`/`shDegree`/training time (task 8) and the fRest i8 scale factor's real-data plausibility (spec §10 open question 1) in the README or this plan's own record, whichever the operator prefers.
+- [x] Commit `tools/scene-workbench/README.md` as `docs(scene-workbench): document the splat pipeline and display panel`.
 
 ## Definition of Done
 
