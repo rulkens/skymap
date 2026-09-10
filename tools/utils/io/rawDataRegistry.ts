@@ -1015,6 +1015,58 @@ export const RAW_DATA = {
     description:
       'Source GLBs for the mesh bodies, one subdirectory per mesh key holding the model plus its provenance README + LICENSE. Gitignored build inputs, same posture as the planet textures; `npm run build-meshes` bakes them to public/data/meshes/*.mesh + PBR PNGs. Per-file entries land with the assets themselves.',
   },
+  'meshes.whale': {
+    path: 'data/raw/meshes/whale/whale.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Sketchfab "Livyatan melvillei" by Major (CC BY 4.0) — the whale mesh body, rigged and modelled at real-world scale (12.9 m long axis). Baked as-is; buildMeshes strips the skin. Sketchfab needs a browser session, so there is no fetcher: see the README.',
+    upstream: 'https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba',
+    readme: 'meshes.whale.readme',
+  },
+  'meshes.whale.readme': {
+    path: 'data/raw/meshes/whale/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the whale model — author, model URL, CC BY 4.0, fetch date, checksum, and the attribution string the credit surface carries.',
+  },
+  'meshes.petuniasSource': {
+    path: 'data/raw/meshes/petunias/petunias.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Sketchfab "Flowers Petunia White" by Marianne Goudriaan (CC BY 4.0) — the untouched download, registered so the provenance chain is complete. buildMeshes never reads it: 11 materials and 79 LINES primitives go through the Blender pre-bake first.',
+    upstream: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
+    readme: 'meshes.petunias.readme',
+  },
+  'meshes.petunias': {
+    path: 'data/raw/meshes/petunias/petunias.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The petunia model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.petunias actually points at. Regenerate with `npm run prebake-petunias` (Blender, not CI), never by hand.',
+    // `upstream` is the model this file DERIVES from, not a download URL: it is
+    // what buildMeshes copies onto the generated row's `source`, and a local
+    // path there would credit nothing.
+    upstream: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
+    fetcher: 'tools/meshes/prebake/petuniasPrebake.py',
+    readme: 'meshes.petunias.readme',
+  },
+  'meshes.petunias.readme': {
+    path: 'data/raw/meshes/petunias/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the petunia model — author, model URL, CC BY 4.0, fetch date, checksum, the attribution string, and what the pre-bake does to it.',
+  },
+  'meshes.sha256': {
+    path: 'data/raw/meshes/meshes.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'SHA-256 sidecar for the two hand-downloaded mesh GLBs — the pre-baked output is excluded, being a rebuildable product rather than a fetch.',
+  },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
 

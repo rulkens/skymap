@@ -224,13 +224,14 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
     const decoded = decodeMesh(readMesh());
 
-    near(decoded.positions.slice(0, 6), [0, 2, 0, -3, 0, 0]);
+    // (1,0,0) -> (0,2,0) and (0,1,0) -> (-3,0,0), less the (-1.5,2,0.5) recentre.
+    near(decoded.positions.slice(0, 6), [1.5, 0, -0.5, -1.5, -2, -0.5]);
     near(decoded.normals.slice(0, 3), [0, 0, 1]);
     // The tangent takes the PLAIN 3x3 — (1,1,0) -> (-3,2,0) normalised. Running
     // it through the cofactor matrix normals use would give (-2,3,0) instead.
     near(decoded.tangents.slice(0, 4), [-0.83205, 0.5547, 0, 1]);
-    // Furthest vertex is prim 2's (2,0,0) -> (0,4,0).
-    expect(row.boundingRadiusM).toBeCloseTo(4, 4);
+    // Half-diagonal of the 3x4x1 world bbox.
+    expect(row.boundingRadiusM).toBeCloseTo(Math.hypot(1.5, 2, 0.5), 4);
   });
 
   it('flips normals, handedness and winding for a mirrored node', async () => {
@@ -252,12 +253,27 @@ describe('buildMeshes()', () => {
     await run(await writeGlb(doc));
     const decoded = decodeMesh(readMesh());
 
-    near(decoded.positions.slice(0, 3), [-1, 0, 0]);
+    // (1,0,0) -> (-1,0,0), less the (-0.5,0.5,0) recentre.
+    near(decoded.positions.slice(0, 3), [-0.5, -0.5, 0]);
     // The cofactor matrix alone hands back (0,0,-1) here — a mirrored node needs
     // the determinant's sign put back, or every normal points into the surface.
     near(decoded.normals.slice(0, 3), [0, 0, 1]);
     near(decoded.tangents.slice(0, 4), [-1, 0, 0, -1]);
     expect([...decoded.indices]).toEqual([0, 2, 1]);
+  });
+
+  it('recentres an off-origin authored pivot instead of inflating the radius', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 1000));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+
+    const row = (await run(await writeGlb(doc)))[0]!;
+
+    // Half-diagonal of the 1x1 triangle's bbox, not its ~1000 m from the origin.
+    expect(row.boundingRadiusM).toBeCloseTo(Math.SQRT1_2, 4);
+    near(decodeMesh(readMesh()).positions.slice(0, 3), [-0.5, -0.5, 0]);
   });
 
   it('ignores geometry orphaned off the scene graph', async () => {

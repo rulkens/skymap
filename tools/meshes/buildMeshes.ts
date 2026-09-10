@@ -194,9 +194,10 @@ function transformTangent(m: readonly number[], n: Vec3, x: number, y: number, z
 
 /**
  * Merge every primitive into one vertex/index buffer with node transforms
- * baked in. Positions pass through at native scale: both approved sources are
- * modelled at real-world size, so there is no rescale knob and
- * `boundingRadiusM` falls straight out of the vertices.
+ * baked in, then RECENTRE on the bbox centre. Scale passes through untouched —
+ * both approved sources are modelled at real-world size — but an authored pivot
+ * sitting off the model (a Sketchfab habit) would otherwise inflate
+ * `boundingRadiusM`, which the runtime reads as a sphere about the body origin.
  *
  * An authored `TANGENT` is used verbatim; `generateTangents` runs only when the
  * source has none on EVERY primitive, since regenerating over a good frame
@@ -210,7 +211,8 @@ function mergeGeometry(doc: Document): Geometry {
   const tangents: number[] = [];
   const indices: number[] = [];
   const authoredTangents = prims.every(({ prim }) => prim.getAttribute('TANGENT') !== null);
-  let radiusSq = 0;
+  const min: Vec3 = [Infinity, Infinity, Infinity];
+  const max: Vec3 = [-Infinity, -Infinity, -Infinity];
 
   for (const { prim, matrix } of prims) {
     const base = positions.length / 3;
@@ -226,7 +228,10 @@ function mergeGeometry(doc: Document): Geometry {
       const p = pos.getElement(v, [0, 0, 0]);
       const world = transformPoint(matrix, p[0]!, p[1]!, p[2]!);
       positions.push(...world);
-      radiusSq = Math.max(radiusSq, world[0] ** 2 + world[1] ** 2 + world[2] ** 2);
+      for (let a = 0; a < 3; a++) {
+        min[a] = Math.min(min[a]!, world[a]!);
+        max[a] = Math.max(max[a]!, world[a]!);
+      }
 
       const n = nrm ? nrm.getElement(v, [0, 0, 0]) : [0, 0, 1];
       const normal = transformNormal(matrix, det, n[0]!, n[1]!, n[2]!);
@@ -255,8 +260,20 @@ function mergeGeometry(doc: Document): Geometry {
     }
   }
 
+  const centred = new Float32Array(positions.length);
+  let radiusSq = 0;
+  for (let i = 0; i < positions.length; i += 3) {
+    const x = positions[i]! - (min[0]! + max[0]!) / 2;
+    const y = positions[i + 1]! - (min[1]! + max[1]!) / 2;
+    const z = positions[i + 2]! - (min[2]! + max[2]!) / 2;
+    centred[i] = x;
+    centred[i + 1] = y;
+    centred[i + 2] = z;
+    radiusSq = Math.max(radiusSq, x ** 2 + y ** 2 + z ** 2);
+  }
+
   const geometry = {
-    positions: new Float32Array(positions),
+    positions: centred,
     normals: new Float32Array(normals),
     uvs: new Float32Array(uvs),
     indices: new Uint32Array(indices),
@@ -386,20 +403,30 @@ function quote(s: string): string {
   return s.includes("'") || s.includes('\\') ? JSON.stringify(s) : `'${s}'`;
 }
 
+/**
+ * Prettier's `printWidth: 100` break — after the colon, since it cannot split a
+ * string literal. `format:check` runs over this generated file, so emitting
+ * anything else makes a fresh bake fail the format gate.
+ */
+function field(name: string, value: string): string {
+  const flat = `    ${name}: ${value},`;
+  return flat.length <= 100 ? flat : `    ${name}:\n      ${value},`;
+}
+
 function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
   const body = rows
     .map((row) =>
       [
         `  ${/^[A-Za-z_$][\w$]*$/.test(row.key) ? row.key : quote(row.key)}: {`,
-        `    key: ${quote(row.key)},`,
-        `    path: ${quote(row.path)},`,
-        `    boundingRadiusM: ${row.boundingRadiusM},`,
-        `    meanAlbedo: [${row.meanAlbedo.join(', ')}],`,
-        `    triangleCount: ${row.triangleCount},`,
-        `    normalMapSubstituted: ${row.normalMapSubstituted},`,
-        `    source: ${quote(row.source)},`,
-        `    licence: ${quote(row.licence)},`,
-        `    attribution: ${quote(row.attribution)},`,
+        field('key', quote(row.key)),
+        field('path', quote(row.path)),
+        field('boundingRadiusM', String(row.boundingRadiusM)),
+        field('meanAlbedo', `[${row.meanAlbedo.join(', ')}]`),
+        field('triangleCount', String(row.triangleCount)),
+        field('normalMapSubstituted', String(row.normalMapSubstituted)),
+        field('source', quote(row.source)),
+        field('licence', quote(row.licence)),
+        field('attribution', quote(row.attribution)),
         '  },',
       ].join('\n'),
     )

@@ -15,5 +15,22 @@ export type MeshSourceEntry = {
   readonly attribution: string;
 };
 
-/** Empty until the real assets clear their provenance gate. */
-export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {};
+/**
+ * `petunias` names the PRE-BAKED GLB, not the Sketchfab download: the source
+ * carries 11 materials and `buildMeshes` refuses those. `meshes.petuniasSource`
+ * stays registered so the provenance chain reaches the original.
+ */
+export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
+  whale: {
+    native: 'meshes.whale',
+    licence: 'CC BY 4.0',
+    attribution:
+      'This work is based on "Livyatan melvillei" (https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba) by Major (https://sketchfab.com/majorgalah) licensed under CC-BY-4.0',
+  },
+  petunias: {
+    native: 'meshes.petunias',
+    licence: 'CC BY 4.0',
+    attribution:
+      'This work is based on "Flowers Petunia White" (https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by Marianne Goudriaan (https://sketchfab.com/mariannegoudriaan) licensed under CC-BY-4.0',
+  },
+};
