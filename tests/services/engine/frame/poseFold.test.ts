@@ -94,6 +94,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -265,9 +266,9 @@ describe('runFrame — the regime fold', () => {
     const { store, state, deps } = makeHarness();
     probe.state = state;
     // Body arm just inside the band, tilt 0 (looking at the centre) — the pose
-    // every driven recession reaches the boundary with. 0.39 sits just below
-    // ruling 19's disengageHR (0.4).
-    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.39);
+    // every driven recession reaches the boundary with. A tenth of the edge
+    // below it, derived so a band re-tune keeps the premise.
+    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, SURFACE_REGIME.disengageHR * 0.9);
     const arm = {
       frame: EARTH_ARM,
       pose: toBodyArm(NEAR_EDGE, B, B, EARTH_ARM.body, EARTH),
@@ -291,7 +292,8 @@ describe('runFrame — the regime fold', () => {
       }),
     );
 
-    // One wheel notch out (factor e^0.24 ≈ 1.27 on altitude ⇒ crosses 0.4).
+    // One wheel notch out: factor e^0.24 ≈ 1.27 on the ALTITUDE (the anchor is
+    // the sub-eye footprint), so 0.9 of the edge clears it with margin.
     state.subsystems.inputAggregator.push({
       kind: 'wheel',
       deltaY: 240,
