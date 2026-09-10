@@ -22,6 +22,7 @@ import {
   earthPass,
   planetsPass,
   texturedBodiesPass,
+  meshBodiesPass,
   milkyWayPass,
   horizonShellPass,
   starPointsPass,
@@ -345,11 +346,12 @@ describe('CONTENT_PASSES migration table (foreground group)', () => {
     }
   });
 
-  it("earth, planets, and textured-bodies ride the 'body' slab sentinel into foreground:0, opaque", () => {
+  it("earth, planets, textured-bodies and mesh-bodies ride the 'body' slab sentinel into foreground:0, opaque", () => {
     // Task 9 (earth) / Task 11 (planets, textured-bodies): each expands into
     // one render step per body-m row instead of a fixed NEAR0 index — see
-    // frameProgram.ts's 'body' expansion.
-    for (const layer of [earthPass, planetsPass, texturedBodiesPass]) {
+    // frameProgram.ts's 'body' expansion. Mesh bodies own no row of their own;
+    // they ride their HOST's, the way the ring rides Saturn's.
+    for (const layer of [earthPass, planetsPass, texturedBodiesPass, meshBodiesPass]) {
       expect(layer.slab).toBe('body');
       expect(layer.target).toBe('foreground:0');
       expect(layer.blend).toBe('opaque');
@@ -938,12 +940,12 @@ describe('galaxyPointSpritesPass.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly the fourteen pickables expose drawPick, in registry order', () => {
+  it('exactly the fifteen pickables expose drawPick, in registry order', () => {
     // Pins the spec's migration table: the six COSMO/near-field survey
     // pickables (pointSprites / zoneOfAvoidance / proceduralDisks /
-    // structureMarkers / milkyWay / starCatalog) PLUS the six NEAR0 true-scale
+    // structureMarkers / milkyWay / starCatalog) PLUS the seven NEAR0 true-scale
     // foreground bodies (starPoints / bodyGlints / earth / starSpheres /
-    // focusedFieldStarSphere / planets), the selection-gated
+    // focusedFieldStarSphere / planets / meshBodies), the selection-gated
     // focused-field-star sphere's pick and the sub-pixel body glints' pick
     // among them — plus the two label rows, whose text is a click target for
     // the subject it names. Order is registry order: the COSMO pick pass leads with
@@ -956,7 +958,7 @@ describe('drawPick migration-table rows', () => {
     // relative order carries no @group(0) dependence (it is depth-resolved,
     // nearest-wins). The production code stays name-blind — the pick program
     // filters by `drawPick` presence + `enabled`, never a hardcoded name
-    // list — so this test is the ONLY place the fourteen names are asserted.
+    // list — so this test is the ONLY place the fifteen names are asserted.
     //
     // The two label rows are the exception to the ordering freedom above —
     // not because their pick aspect needs a fixed slot (each restores the
@@ -981,6 +983,7 @@ describe('drawPick migration-table rows', () => {
       'star-spheres',
       'field-star-sphere',
       'planets',
+      'mesh-bodies',
       'foreground-labels',
     ]);
   });
