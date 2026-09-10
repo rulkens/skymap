@@ -164,7 +164,6 @@ export function syntheticProbeScene(): GroupRegistryEntry {
     label: 'Probe splats',
     kind: 'gaussianSplat',
     splatCount: splats.length,
-    shDegree: 1,
     artifactUrl: artifactBlobUrl(packSplats(splats, 1)),
     transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
     provenance: {

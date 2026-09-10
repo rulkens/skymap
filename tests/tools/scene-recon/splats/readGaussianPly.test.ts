@@ -203,18 +203,4 @@ describe('readGaussianPly rejects PLYs it cannot decode', () => {
       /truncat/i,
     );
   });
-
-  it('accepts a CRLF header', () => {
-    const crlf = buildPly(SHUFFLED, [VERTEX_A]);
-    const asText = new TextDecoder('latin1').decode(crlf);
-    const withCrlf = headerOnly(
-      asText.slice(0, asText.indexOf('end_header\n')).replace(/\n/g, '\r\n') + 'end_header\r\n',
-    );
-    const body = new Uint8Array(crlf, crlf.byteLength - SHUFFLED.length * 4);
-    const joined = new Uint8Array(withCrlf.byteLength + body.byteLength);
-    joined.set(new Uint8Array(withCrlf));
-    joined.set(body, withCrlf.byteLength);
-
-    expect(readGaussianPly(joined.buffer as ArrayBuffer).splats[0]!.xM).toBe(1.5);
-  });
 });

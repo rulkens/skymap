@@ -162,7 +162,6 @@ describe('bakeSplats', () => {
               pipeline: [{ step: 'brush-cli', version: 'trained-0.0.1' }],
             },
             splatCount: 3,
-            shDegree: 1,
             artifactUrl: `geo3d/groups/${SOENDERMARKEN.id}/assets/splats/splats.bin`,
           },
         ],

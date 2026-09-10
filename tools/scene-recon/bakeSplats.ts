@@ -178,7 +178,6 @@ export async function bakeSplats(
       ],
     },
     splatCount: kept.length,
-    shDegree,
     artifactUrl: `geo3d/groups/${group.id}/assets/${ASSET_ID}/splats.bin`,
   };
 

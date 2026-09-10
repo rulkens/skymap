@@ -48,7 +48,6 @@ const SPLAT_MANIFEST: SceneManifest = {
       label: 'Facade splats',
       kind: 'gaussianSplat',
       splatCount: 42_000,
-      shDegree: 0,
       artifactUrl: 'geo3d/g1/a1/splats.bin',
     },
   ],
