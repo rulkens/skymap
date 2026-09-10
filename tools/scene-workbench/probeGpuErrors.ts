@@ -9,7 +9,7 @@
  * touches the network or `public/data`.
  */
 
-import { chromium, type Browser, type Page, type ConsoleMessage } from '@playwright/test';
+import { chromium, expect, type Browser, type Page, type ConsoleMessage } from '@playwright/test';
 import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
@@ -205,9 +205,12 @@ async function settleFrames(page: Page, count: number): Promise<void> {
 
 /**
  * The exercise: boot into the `?probe` synthetic scene, orbit-drag, dolly to
- * the near clamp, toggle the one layer off then on, then resize — the layer
- * checkbox is unambiguous because the synthetic scene carries exactly one
- * asset (`LayerList.tsx` renders one `role="checkbox"` per manifest asset).
+ * the near clamp, toggle the point-cloud layer off then on, then resize.
+ * `LayerList.tsx` renders one `role="checkbox"` per manifest asset and the
+ * probe scene carries two, so every locator here is name-scoped or
+ * count-asserted — a bare one trips Playwright's strict mode. Only the point
+ * cloud toggles: the splats staying visible across a sibling's visibility
+ * change is itself coverage of their buffers surviving the rebuild.
  */
 function buildSteps(url: string): readonly ExerciseStep[] {
   return [
@@ -215,11 +218,16 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       name: 'boot',
       run: async (page) => {
         await page.goto(`${url}/?probe`, { waitUntil: 'load', timeout: BOOT_TIMEOUT_MS });
-        // The checkbox appearing proves the synthetic manifest loaded; its
-        // status column reaching 'ready' proves the points.bin blob round
-        // trip (fetch shim → parsePoints → GPU upload) actually completed.
-        await page.getByRole('checkbox').waitFor({ state: 'visible', timeout: BOOT_TIMEOUT_MS });
-        await page.getByText('ready', { exact: true }).waitFor({ timeout: BOOT_TIMEOUT_MS });
+        // The checkbox appearing proves the synthetic manifest loaded; BOTH
+        // status columns reaching 'ready' proves the points.bin and
+        // splats.bin blob round trips (fetch shim → parse → GPU upload)
+        // actually completed.
+        await page
+          .getByRole('checkbox', { name: /point cloud/i })
+          .waitFor({ state: 'visible', timeout: BOOT_TIMEOUT_MS });
+        await expect(page.getByText('ready', { exact: true })).toHaveCount(2, {
+          timeout: BOOT_TIMEOUT_MS,
+        });
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -254,14 +262,14 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       name: 'layer:off',
       run: async (page) => {
-        await page.getByRole('checkbox').uncheck();
+        await page.getByRole('checkbox', { name: /point cloud/i }).uncheck();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
       name: 'layer:on',
       run: async (page) => {
-        await page.getByRole('checkbox').check();
+        await page.getByRole('checkbox', { name: /point cloud/i }).check();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

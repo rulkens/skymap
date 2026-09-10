@@ -1,16 +1,22 @@
 /**
  * syntheticProbeScene — the `?probe` gate's in-tool stand-in for a baked
- * LiDAR group (mirrors mcpm-workbench's `syntheticCatalog.ts`): a ground
- * plane plus a raised box, ~10k points total, deterministic. Manifest and
- * points both ride a `Blob` + `URL.createObjectURL`, so the probe needs no
- * baked data; `resolveAssetUrl.ts` is what lets the resulting blob: URLs
- * through the saga's fetches unprefixed.
+ * group (mirrors mcpm-workbench's `syntheticCatalog.ts`): a ground plane
+ * plus a raised box at ~10k points, and a few hundred Gaussian splats
+ * above them, all deterministic. Manifest and artifacts ride a `Blob` +
+ * `URL.createObjectURL`, so the probe needs no baked data;
+ * `resolveAssetUrl.ts` is what lets the resulting blob: URLs through the
+ * saga's fetches unprefixed.
  */
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import type { GaussianSplatAsset } from '../../@types/GaussianSplatAsset';
 import type { GroupAnchor } from '../../@types/GroupAnchor';
 import type { GroupRegistryEntry } from '../../@types/GroupRegistryEntry';
 import type { PointCloudAsset } from '../../@types/PointCloudAsset';
 import type { SceneManifest } from '../../@types/SceneManifest';
 import { packPoints, type ScenePoint } from '../../../scene-recon/pack/packPoints';
+import { packSplats, type GaussianSplatRecord } from '../../../scene-recon/pack/packSplats';
 
 const GROUND_HALF_EXTENT_M = 35;
 const GROUND_STEPS = 88; // 89x89 grid, ~7.9k points
@@ -71,6 +77,52 @@ function boxPoints(): ScenePoint[] {
   return points;
 }
 
+const SPLAT_COUNT = 320;
+const SPLAT_SEED = 0x5eed;
+const SPLAT_HALF_EXTENT_M = 20;
+const SPLAT_MIN_HEIGHT_M = 1;
+const SPLAT_MAX_HEIGHT_M = 12;
+
+/**
+ * Deliberately anisotropic, arbitrarily oriented and visibly coloured: a
+ * degenerate covariance or a mis-multiplied rotation basis hides behind
+ * axis-aligned unit spheres, and a zero-size quad renders as a clean pass.
+ * Rotations use Shoemake's uniform-quaternion construction.
+ */
+function probeSplats(): GaussianSplatRecord[] {
+  const rand = mulberry32(SPLAT_SEED);
+  const splats: GaussianSplatRecord[] = [];
+  for (let i = 0; i < SPLAT_COUNT; i++) {
+    const u1 = rand();
+    const u2 = 2 * Math.PI * rand();
+    const u3 = 2 * Math.PI * rand();
+    const rotation: Vec4 = [
+      Math.sqrt(1 - u1) * Math.sin(u2),
+      Math.sqrt(1 - u1) * Math.cos(u2),
+      Math.sqrt(u1) * Math.sin(u3),
+      Math.sqrt(u1) * Math.cos(u3),
+    ];
+    const logScale: Vec3 = [
+      Math.log(0.3 + 0.7 * rand()),
+      Math.log(0.3 + 0.7 * rand()),
+      Math.log(0.3 + 0.7 * rand()),
+    ];
+    const hue = i / SPLAT_COUNT;
+    const channel = (phase: number): number => 128 + 110 * Math.cos(2 * Math.PI * (hue + phase));
+    splats.push({
+      xM: (2 * rand() - 1) * SPLAT_HALF_EXTENT_M,
+      yM: (2 * rand() - 1) * SPLAT_HALF_EXTENT_M,
+      zM: SPLAT_MIN_HEIGHT_M + rand() * (SPLAT_MAX_HEIGHT_M - SPLAT_MIN_HEIGHT_M),
+      rotation,
+      logScale,
+      opacity: 0.5 + 0.4 * rand(),
+      dcColor: [channel(0), channel(1 / 3), channel(2 / 3)],
+      fRest: null,
+    });
+  }
+  return splats;
+}
+
 const PROBE_ANCHOR: GroupAnchor = {
   kind: 'geodetic',
   latDeg: 55.6761,
@@ -79,21 +131,21 @@ const PROBE_ANCHOR: GroupAnchor = {
   headingDeg: 0,
 };
 
-export function syntheticProbeScene(): GroupRegistryEntry {
-  const points = [...groundPoints(), ...boxPoints()];
-  const packed = packPoints(points);
-  const artifactUrl = URL.createObjectURL(
-    // `BlobPart` wants an ArrayBuffer-backed view; `Uint8Array`'s declared
-    // `.buffer` is the wider, SharedArrayBuffer-including `ArrayBufferLike`.
-    new Blob([packed.buffer as ArrayBuffer], { type: 'application/octet-stream' }),
+// `BlobPart` wants an ArrayBuffer-backed view; `Uint8Array`'s declared
+// `.buffer` is the wider, SharedArrayBuffer-including `ArrayBufferLike`.
+const artifactBlobUrl = (bytes: Uint8Array): string =>
+  URL.createObjectURL(
+    new Blob([bytes.buffer as ArrayBuffer], { type: 'application/octet-stream' }),
   );
 
-  const asset: PointCloudAsset = {
+export function syntheticProbeScene(): GroupRegistryEntry {
+  const points = [...groundPoints(), ...boxPoints()];
+  const pointAsset: PointCloudAsset = {
     id: 'probe-points',
     label: 'Probe point cloud',
     kind: 'pointCloud',
     pointCount: points.length,
-    artifactUrl,
+    artifactUrl: artifactBlobUrl(packPoints(points)),
     transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
     provenance: {
       source: 'nationalGeodataApi',
@@ -101,12 +153,29 @@ export function syntheticProbeScene(): GroupRegistryEntry {
       pipeline: [{ step: 'syntheticProbeScene', version: '1' }],
     },
   };
+
+  const splats = probeSplats();
+  const splatAsset: GaussianSplatAsset = {
+    id: 'probe-splats',
+    label: 'Probe splats',
+    kind: 'gaussianSplat',
+    splatCount: splats.length,
+    shDegree: 0,
+    artifactUrl: artifactBlobUrl(packSplats(splats, 0)),
+    transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
+    provenance: {
+      source: 'userPhotoCapture',
+      sourceVintage: '2026-01-01',
+      pipeline: [{ step: 'syntheticProbeScene', version: '1' }],
+    },
+  };
+
   const manifest: SceneManifest = {
     formatVersion: 1,
     groupId: 'probe',
     groupName: 'Probe scene',
     anchor: PROBE_ANCHOR,
-    assets: [asset],
+    assets: [pointAsset, splatAsset],
   };
   const manifestUrl = URL.createObjectURL(
     new Blob([JSON.stringify(manifest)], { type: 'application/json' }),
