@@ -3,7 +3,7 @@
  * fly-to-coordinates instrument: resolve the pose and commit it.
  *
  * Commits INSTANTLY (`commitCameraPose`, not a tween) — a snap, not a fly — which
- * composes with the follow driver the way any resting-pose commit does: `followBody`
+ * composes with the follow rows the way any resting-pose commit does: follow
  * re-centres `target` on Earth's live position every frame regardless of what
  * `base.target` holds. `distance` comes from the RESTING pose, not the live
  * per-frame pose; the instrument is used while idle, where the two agree.

@@ -389,9 +389,9 @@ describe('runFrame — the regime fold', () => {
       }),
     );
 
-    // Frame 1: the absolute arm, so followBody wins and the fold engages.
+    // Frame 1: the absolute arm, so the follow approach wins and the fold engages.
     runFrame(state, deps, 0);
-    expect(state.cameraRuntime.register.winner).toBe('followBody');
+    expect(state.cameraRuntime.register.winner).toBe('followApproach');
     const engaged = state.cameraRuntime.register.pose;
     expect(engaged.frame).toEqual(EARTH_ARM);
 

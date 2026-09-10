@@ -94,7 +94,7 @@ function makeState(over: {
     // The follow-approach-ease term reads these two: the frame's winner id and
     // the follow epoch's start. Default is at-rest (resting won, no ease running).
     cameraRuntime: {
-      register: { winner: over.followWinner === true ? 'followBody' : 'resting' },
+      register: { winner: over.followWinner === true ? 'followApproach' : 'resting' },
       epochs: { follow: { ref: null, startMs: over.followStartMs ?? null } },
     },
     subsystems: {
@@ -184,7 +184,7 @@ describe('shouldKeepTicking', () => {
   });
 
   it('a follow approach ease in flight → true (the wake term the body tween used to carry)', () => {
-    // followBody won this frame and its ease started FOCUS_TWEEN_MS/2 ago — still
+    // A follow row won this frame and its ease started FOCUS_TWEEN_MS/2 ago — still
     // running. Without this term the loop would sleep and the ease would saturate
     // while asleep, snapping the zoom on the next interaction. Everything else is
     // at rest, so this disjunct alone must keep the loop ticking.
@@ -204,7 +204,7 @@ describe('shouldKeepTicking', () => {
     expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
   });
 
-  it('mid-ease window but followBody is NOT the winner → false (term is winner-gated)', () => {
+  it('mid-ease window but no follow row is the winner → false (term is winner-gated)', () => {
     // A body is focused but autoRotate/drag won the orbit terms; that driver's own
     // wake (selectCameraActive) covers it, so the follow-ease term must not fire.
     const state = makeState({ followWinner: false, followStartMs: 1000 });

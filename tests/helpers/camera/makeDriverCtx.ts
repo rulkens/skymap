@@ -26,6 +26,7 @@ export function makeDriverCtx(
   return {
     state: args.state,
     elapsedMs: args.elapsedMs ?? 0,
+    followElapsedMs: args.followElapsedMs ?? args.elapsedMs ?? 0,
     register,
     authoredWorld: args.authoredWorld ?? worldArmOf(register),
     winnerLastFrame: args.winnerLastFrame ?? 'resting',

@@ -110,7 +110,7 @@ export function* watchFocusTweenSaga() {
       // inside the saga worker.
       if (!ROW_FOCUSABLE[row.type]) return;
 
-      // A body the `followBody` driver WILL handle is followed, not tweened — the
+      // A body the follow rows WILL handle is followed, not tweened — the
       // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
       // moves. But 'body row' is BROADER than 'followed body': famous stars are
       // scene bodies too (star-body presence), yet they are static, so the follow

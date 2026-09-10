@@ -2,11 +2,11 @@
  * cameraDrivers — the camera-driver table and its resolver. Among the drivers
  * active this frame the highest `priority` wins and ONLY its `pose` is used:
  * one author per frame, no blending; precedence is data, not call order.
- * Priorities: clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 > followBody
- * 10 > resting 0 (gaps are headroom). Body focus is un-braided: the focused
- * body owns the PIVOT (applied by the frame-loop pin to every driver flagged
- * `pivotsOnFocusedBody`), the winning driver owns the orbit terms — which is
- * why followBody sits below autoRotate and the drag.
+ * Priorities: clip 95 > orbitDrag 80 > tween 60 > followApproach 55 >
+ * autoRotate 20 > followHold 10 > resting 0 (gaps are headroom). Body focus is
+ * un-braided: the focused body owns the PIVOT (applied by the frame-loop pin to
+ * every driver flagged `pivotsOnFocusedBody`), the winning driver owns the
+ * orbit terms — which is why the follow HOLD sits below autoRotate and the drag.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
@@ -31,13 +31,18 @@ import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
+import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { lerp } from '../../../utils/math/lerp';
 
 /** Exported so `activeDriverId` resolves the SAME winner the produce step used. */
-export function pickWinner(drivers: readonly CameraDriver[], s: RootState): CameraDriver {
+export function pickWinner(
+  drivers: readonly CameraDriver[],
+  s: RootState,
+  followElapsedMs = 0,
+): CameraDriver {
   let winner: CameraDriver | null = null;
   for (const d of drivers) {
-    if (!d.isActive(s)) continue;
+    if (!d.isActive(s, followElapsedMs)) continue;
     if (winner === null || d.priority > winner.priority) winner = d;
   }
   // Only an empty table reaches the fallback; `resting` is always active.
@@ -52,7 +57,7 @@ export function elapsedForWinner(winnerId: string, epochs: CameraEpochs, nowMs: 
   if (winnerId === 'clip') return elapsedMs(epochs.clip, nowMs);
   if (winnerId === 'tween') return elapsedMs(epochs.tween, nowMs);
   if (winnerId === 'autoRotate') return elapsedMs(epochs.autoRotate, nowMs);
-  if (winnerId === 'followBody') return elapsedMs(epochs.follow, nowMs);
+  if (isFollowDriverId(winnerId)) return elapsedMs(epochs.follow, nowMs);
   return 0;
 }
 
@@ -65,14 +70,107 @@ export function runCameraDrivers(
   readonly winner: CameraDriver;
   readonly memory: FollowMemory | null;
 } {
-  const winner = pickWinner(drivers, ctx.state);
+  const winner = pickWinner(drivers, ctx.state, ctx.followElapsedMs);
   const { pose, memory } = winner.pose(ctx, mem);
   return { pose, winner, memory };
 }
 
 const NO_FOLLOW_MEMORY: FollowMemory = { from: null, distanceTarget: null, panOffset: [0, 0, 0] };
 
-/** The six rows. Constant data: a driver sees the frame only through its `ctx`. */
+/**
+ * The follow conditions both follow rows share. Active only for a body the sim
+ * clock MOVES: a static focus (a famous star, the Sun) carries a position but is
+ * not followed. Gated on the absolute arm (spec §7): the ease has no meaning
+ * once the state co-rotates with the body.
+ */
+function followActive(s: RootState): boolean {
+  return s.camera.base.frame === 'absolute' && bodyMovesThisFrame(s.selectionRows.focus);
+}
+
+/**
+ * One produce for both follow rows: same pose, same returned memory, and the
+ * ease reads the same `follow` epoch — so the priority hand-off at
+ * `FOCUS_TWEEN_MS` is continuous by construction (`easeOutCubic` saturates and
+ * `lerp(a, b, 1)` returns `b` exactly).
+ */
+function followPose(
+  ctx: DriverCtx,
+  mem: FollowMemory | null,
+): { readonly pose: FramedCameraPose; readonly memory: FollowMemory | null } {
+  const s = ctx.state;
+  const focus = s.selectionRows.focus;
+  const base = s.camera.base;
+  const livePos = liveBodyPosition(focus, ctx.simDays);
+  // Null-guard keeps the arm total; isActive already proved a moving body.
+  if (focus === null || focus.type !== 'body' || livePos === null) {
+    return { pose: base, memory: mem };
+  }
+  if (base.frame !== 'absolute') return { pose: base, memory: mem };
+
+  // Captured ONCE per activation (`runFrame` nulls the memory on the focus
+  // edge) through the EYE, not the angles: `approachTiltedPose` is eye-preserving
+  // by construction, so authored and displayed registers now yield an
+  // identical capture (why eye, not angle, is carried across — R12b-1).
+  // Eye-preserving against the NEW target: `from` is read against
+  // `livePos` below, so a capture relative to the OLD target silently
+  // changes meaning on a body switch — an Earth-orbit distance read from
+  // Saturn's centre is INSIDE Saturn, where the fold engages and the
+  // absolute-arm gate strands the camera.
+  const memory = mem ?? NO_FOLLOW_MEMORY;
+  let from = memory.from;
+  if (from === null) {
+    const cur = ctx.authoredWorld;
+    const pb = ORIENTATION_FRAMES[s.settings.orientation];
+    const eye = eyeMpcOf(cur, pb);
+    const rel: Vec3 = [livePos[0] - eye[0], livePos[1] - eye[1], livePos[2] - eye[2]];
+    const ang = orbitAnglesLookingAlong(rel, pb);
+    from = {
+      target: [livePos[0], livePos[1], livePos[2]],
+      yaw: ang.yaw,
+      pitch: ang.pitch,
+      distance: Math.hypot(rel[0], rel[1], rel[2]),
+      roll: cur.roll,
+    };
+  }
+
+  // Distance target, two sources (see FollowMemory): a fresh focus seeds
+  // the framing distance — `bodyFocusDistance` directly, allocation-free,
+  // only on this branch; follow re-winning after a drag committed a zoom
+  // (last frame's winner was some OTHER row, same focus ref) re-captures
+  // `base.distance` so the zoom sticks.
+  // A third source is the wheel: `base` is invisible while a follow row wins
+  // (it re-asserts its own target every frame), so the notch a following
+  // camera swallows arrives already resolved to a distance and is simply
+  // adopted. The drain only routes one with a target already captured and
+  // a follow row winning last frame, so the three sources never compete.
+  let distanceTarget = memory.distanceTarget;
+  if (distanceTarget === null) {
+    const radiusMpc = focus.radiusM * SCALE_UNITS.M_TO_MPC;
+    distanceTarget = bodyFocusDistance(radiusMpc, ctx.projection.fovYRad);
+  } else if (!isFollowDriverId(ctx.winnerLastFrame)) {
+    distanceTarget = base.pose.distance;
+  } else if (ctx.followDistanceTarget !== null) {
+    distanceTarget = ctx.followDistanceTarget;
+  }
+
+  const t = easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);
+  return {
+    pose: absoluteArm({
+      target: livePos,
+      // Eases toward the committed `base`: honours a post-follow drag, keeps heading when un-dragged.
+      yaw: lerp(from.yaw, base.pose.yaw, t),
+      pitch: lerp(from.pitch, base.pose.pitch, t),
+      distance: lerp(from.distance, distanceTarget, t),
+      // Roll rides like yaw/pitch: the approach frame-alignment (ruling 8)
+      // lands per wheel notch, and dropping it pinned a followed approach
+      // to scene-frame up until the engage edge.
+      roll: lerp(from.roll ?? 0, base.pose.roll ?? 0, t),
+    }),
+    memory: { from, distanceTarget, panOffset: memory.panOffset },
+  };
+}
+
+/** The seven rows. Constant data: a driver sees the frame only through its `ctx`. */
 export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'clip',
@@ -119,92 +217,32 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pose: (ctx, mem) => ({ pose: ctx.register, memory: mem }),
   },
   {
-    id: 'followBody',
-    priority: 10,
+    id: 'followApproach',
+    // 55 keeps the two relationships that matter and nothing else: ABOVE
+    // autoRotate (20), or the spin outranks a body switch and the camera never
+    // approaches — it holds the old body's distance, which over Saturn is
+    // inside the planet with the arm engaged (R14-3); BELOW tween (60), where
+    // follow already yields to an explicitly authored move. Not 60: a tie is
+    // broken by table order, which is order-dependence, not policy.
+    priority: 55,
     // Bakes the last follow pose into `base` on focus loss, so lower drivers
     // resume from where the camera is.
     commitsOnEdge: true,
     // Idempotent (the pose already targets the body); keeps the pin's rule uniform.
     pivotsOnFocusedBody: true,
-    // Active only for a body the sim clock MOVES: a static focus (a famous
-    // star, the Sun) carries a position but is not followed. Gated on the
-    // absolute arm (spec §7): the ease has no meaning once the state
-    // co-rotates with the body.
-    isActive: (s) =>
-      s.camera.base.frame === 'absolute' && bodyMovesThisFrame(s.selectionRows.focus),
-    pose: (ctx, mem) => {
-      const s = ctx.state;
-      const focus = s.selectionRows.focus;
-      const base = s.camera.base;
-      const livePos = liveBodyPosition(focus, ctx.simDays);
-      // Null-guard keeps the arm total; isActive already proved a moving body.
-      if (focus === null || focus.type !== 'body' || livePos === null) {
-        return { pose: base, memory: mem };
-      }
-      if (base.frame !== 'absolute') return { pose: base, memory: mem };
-
-      // Captured ONCE per activation (`runFrame` nulls the memory on the focus
-      // edge) through the EYE, not the angles: `approachTiltedPose` is eye-preserving
-      // by construction, so authored and displayed registers now yield an
-      // identical capture (why eye, not angle, is carried across — R12b-1).
-      // Eye-preserving against the NEW target: `from` is read against
-      // `livePos` below, so a capture relative to the OLD target silently
-      // changes meaning on a body switch — an Earth-orbit distance read from
-      // Saturn's centre is INSIDE Saturn, where the fold engages and the
-      // absolute-arm gate strands the camera.
-      const memory = mem ?? NO_FOLLOW_MEMORY;
-      let from = memory.from;
-      if (from === null) {
-        const cur = ctx.authoredWorld;
-        const pb = ORIENTATION_FRAMES[s.settings.orientation];
-        const eye = eyeMpcOf(cur, pb);
-        const rel: Vec3 = [livePos[0] - eye[0], livePos[1] - eye[1], livePos[2] - eye[2]];
-        const ang = orbitAnglesLookingAlong(rel, pb);
-        from = {
-          target: [livePos[0], livePos[1], livePos[2]],
-          yaw: ang.yaw,
-          pitch: ang.pitch,
-          distance: Math.hypot(rel[0], rel[1], rel[2]),
-          roll: cur.roll,
-        };
-      }
-
-      // Distance target, two sources (see FollowMemory): a fresh focus seeds
-      // the framing distance — `bodyFocusDistance` directly, allocation-free,
-      // only on this branch; follow re-winning after a drag committed a zoom
-      // (`winnerLastFrame !== 'followBody'`, same focus ref) re-captures
-      // `base.distance` so the zoom sticks.
-      // A third source is the wheel: `base` is invisible while this row wins
-      // (it re-asserts its own target every frame), so the notch a following
-      // camera swallows arrives already resolved to a distance and is simply
-      // adopted. The drain only routes one with a target already captured and
-      // this row winning last frame, so the three sources never compete.
-      let distanceTarget = memory.distanceTarget;
-      if (distanceTarget === null) {
-        const radiusMpc = focus.radiusM * SCALE_UNITS.M_TO_MPC;
-        distanceTarget = bodyFocusDistance(radiusMpc, ctx.projection.fovYRad);
-      } else if (ctx.winnerLastFrame !== 'followBody') {
-        distanceTarget = base.pose.distance;
-      } else if (ctx.followDistanceTarget !== null) {
-        distanceTarget = ctx.followDistanceTarget;
-      }
-
-      const t = easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);
-      return {
-        pose: absoluteArm({
-          target: livePos,
-          // Eases toward the committed `base`: honours a post-follow drag, keeps heading when un-dragged.
-          yaw: lerp(from.yaw, base.pose.yaw, t),
-          pitch: lerp(from.pitch, base.pose.pitch, t),
-          distance: lerp(from.distance, distanceTarget, t),
-          // Roll rides like yaw/pitch: the approach frame-alignment (ruling 8)
-          // lands per wheel notch, and dropping it pinned a followed approach
-          // to scene-frame up until the engage edge.
-          roll: lerp(from.roll ?? 0, base.pose.roll ?? 0, t),
-        }),
-        memory: { from, distanceTarget, panOffset: memory.panOffset },
-      };
-    },
+    isActive: (s, followElapsedMs = 0) => followActive(s) && followElapsedMs < FOCUS_TWEEN_MS,
+    pose: followPose,
+  },
+  {
+    id: 'followHold',
+    // The steady follow, back under autoRotate and the drag: once the approach
+    // is saturated the row only re-asserts the body's own target, which the
+    // pivot pin gives those drivers anyway.
+    priority: 10,
+    commitsOnEdge: true,
+    pivotsOnFocusedBody: true,
+    isActive: followActive,
+    pose: followPose,
   },
   {
     id: 'tween',

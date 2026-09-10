@@ -206,7 +206,7 @@ describe('replayInput', () => {
     const ride = replayInput(
       { register: nearEarth, surface: EMPTY_SURFACE_MEMORY, follow },
       [atRestZoom(Math.exp(0.1))],
-      ctxOf(followStore, { winnerLastFrame: 'followBody' }),
+      ctxOf(followStore, { winnerLastFrame: 'followHold' }),
     );
     expect(ride.actions.map((a) => a.type)).toEqual(['camera/commitCameraPose']);
     const committed = worldArmOf(ride.actions[0]!.payload as FramedCameraPose);
@@ -447,8 +447,8 @@ describe('replayInput', () => {
     expect(moved).toBeLessThan(0.09);
   });
 
-  it('routes the notch to the base while followBody holds no captured target yet', () => {
-    // followBody won last frame but captured no distance (first frame after
+  it('routes the notch to the base while follow holds no captured target yet', () => {
+    // A follow row won last frame but captured no distance (first frame after
     // the focus-edge drop): the notch takes the plain base-commit path rather
     // than resolving against a target the driver never captured.
     const store = makeStore();
@@ -457,7 +457,7 @@ describe('replayInput', () => {
     const next = replayInput(
       { register: base, surface: EMPTY_SURFACE_MEMORY, follow: null },
       [atRestZoom(Math.exp(0.1))],
-      ctxOf(store, { winnerLastFrame: 'followBody' }),
+      ctxOf(store, { winnerLastFrame: 'followHold' }),
     );
 
     expect(next.followDistanceTarget).toBeNull();
@@ -490,7 +490,7 @@ describe('replayInput', () => {
     const next = replayInput(
       { register: nearEarth, surface: EMPTY_SURFACE_MEMORY, follow },
       [atRestZoom(Math.exp(-10))],
-      ctxOf(store, { winnerLastFrame: 'followBody' }),
+      ctxOf(store, { winnerLastFrame: 'followHold' }),
     );
 
     const radii = next.followDistanceTarget! / EARTH_RADIUS_MPC;
@@ -499,7 +499,7 @@ describe('replayInput', () => {
   });
 
   it('a FOCUSED zoom-out rides the roll back to the scene up (the default path)', () => {
-    // Earth focused, followBody owns the wheel: the notch's authored altitude
+    // Earth focused, the follow row owns the wheel: the notch's authored altitude
     // change IS the `distanceTarget` change, so the ride must run across it —
     // identical pre/post poses would zero the delta and leave the in-band
     // roll frozen once the eased altitude left the band. `runFrame`'s
@@ -531,7 +531,7 @@ describe('replayInput', () => {
           follow: { from: null, distanceTarget: target, panOffset: [0, 0, 0] },
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
-        ctxOf(store, { winnerLastFrame: 'followBody', nowMs }),
+        ctxOf(store, { winnerLastFrame: 'followHold', nowMs }),
       );
       for (const action of next.actions) store.dispatch(action);
       target = next.followDistanceTarget!;

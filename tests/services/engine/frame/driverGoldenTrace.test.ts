@@ -171,7 +171,7 @@ function runScript(): Trace {
 
   harness.focus('earth');
   const followStart = nowMs();
-  expect(steps(10, 'follow').winner).toBe('followBody');
+  expect(steps(10, 'follow').winner).toBe('followApproach');
 
   const targetBeforeNotch = readFollowMemory(state).distanceTarget;
   notch('notch under follow');
@@ -227,7 +227,7 @@ function runScript(): Trace {
   // The pan lands on the follow's own offset and survives the gesture (same
   // focus row, so no reset): the pin re-centres off the body from then on.
   harness.focus('earth');
-  expect(steps(4, 'refocus').winner).toBe('followBody');
+  expect(steps(4, 'refocus').winner).toBe('followApproach');
   store.dispatch(beginDrag());
   harness.push({ kind: 'gestureStart' });
   harness.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
@@ -238,7 +238,7 @@ function runScript(): Trace {
   harness.push({ kind: 'gestureEnd' });
   step('pan end');
   const settled = steps(4, 'pan settle');
-  expect(settled.winner).toBe('followBody');
+  expect(settled.winner).toBe('followApproach');
   expect(settled.follow.panOffset).not.toEqual([0, 0, 0]);
 
   return trace;

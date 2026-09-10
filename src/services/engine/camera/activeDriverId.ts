@@ -8,6 +8,10 @@ import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { RootState } from '../../../store/types';
 import { pickWinner } from './cameraDrivers';
 
-export function activeDriverId(drivers: readonly CameraDriver[], s: RootState): string {
-  return pickWinner(drivers, s).id;
+export function activeDriverId(
+  drivers: readonly CameraDriver[],
+  s: RootState,
+  followElapsedMs = 0,
+): string {
+  return pickWinner(drivers, s, followElapsedMs).id;
 }

@@ -9,6 +9,7 @@ import type { Epoch } from '../../../@types/engine/camera/Epoch';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { CameraState } from '../../../@types/camera/CameraState';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
+import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 
 /** Every row unstarted — the engine's boot value; immutable, so one shared object is fine. */
 export const UNSTARTED_EPOCHS: CameraEpochs = {
@@ -51,11 +52,12 @@ export function advanceEpochs(
   const { intent, focus, clip, winnerId, nowMs } = inputs;
 
   // One eligibility fact per row, minus the two rows that don't need one.
-  // A later follow id is a one-cell edit to this literal.
+  // The follow cell covers BOTH follow rows: they share this epoch, so the
+  // approach's ease and the hold's saturation read one clock.
   const eligible = {
     tween: winnerId === 'tween',
     autoRotate: winnerId === 'autoRotate',
-    follow: winnerId === 'followBody',
+    follow: isFollowDriverId(winnerId),
   };
 
   const tween = advanceEpoch(prev.tween, eligible.tween ? intent.tween : prev.tween.ref, nowMs);

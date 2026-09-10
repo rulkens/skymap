@@ -131,7 +131,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   ],
   [
     'src/services/engine/camera/cameraDrivers.ts',
-    "framing-bridge precedent (line 332) — the followBody driver's initial-approach branch converts the focused body's radiusM to Mpc to seed bodyFocusDistance's framing target, the same radius->Mpc bridge as bodyLikeFraming, not pose math",
+    "framing-bridge precedent (line 332) — the follow rows' initial-approach branch converts the focused body's radiusM to Mpc to seed bodyFocusDistance's framing target, the same radius->Mpc bridge as bodyLikeFraming, not pose math",
   ],
   [
     'src/services/engine/camera/pivotRadiusMpc.ts',

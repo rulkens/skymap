@@ -178,7 +178,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     }
   });
 
-  it('a fresh followBody capture in-window starts from the authored pose (no re-pin walk)', () => {
+  it('a fresh follow capture in-window starts from the authored pose (no re-pin walk)', () => {
     const h = makeCameraSimHarness();
     toMidWindow(h);
 
@@ -211,7 +211,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     const before = display(h.state);
 
     // Seed the tween the way watchFocusTweenSaga does: `from` = the DISPLAYED
-    // live pose. The followBody→tween deactivation edge fires with an incoming
+    // live pose. The follow→tween deactivation edge fires with an incoming
     // driver that neither pins nor projects, so an authored (untilted) render
     // override flashes 0.40 rad ≈ 453 px to nadir for exactly one frame
     // (R12c-1) — the override must fall back to the displayed box there.
@@ -225,7 +225,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    h.frame(); // the edge frame: followBody commits, the override renders
+    h.frame(); // the edge frame: the follow row commits, the override renders
     const edge = display(h.state);
     expect(Math.abs(edge.tilt - before.tilt)).toBeLessThan(0.01);
 

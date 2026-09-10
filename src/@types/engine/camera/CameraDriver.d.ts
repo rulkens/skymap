@@ -20,7 +20,10 @@ export type CameraDriver = {
   // (`applyFocusedBodyPivot`). clip / tween keyframe a full path, target
   // included, and leave this unset so their own target is honoured.
   readonly pivotsOnFocusedBody?: boolean;
-  isActive(s: RootState): boolean;
+  // `followElapsedMs` is the follow epoch's elapsed as the frame's PICK sees it
+  // (`stepCameraRuntime`): the only timing an activity test needs, since
+  // `followApproach` is the one row with a window. Omitted ⇒ a just-opened one.
+  isActive(s: RootState, followElapsedMs?: number): boolean;
   // Takes the frame as values and RETURNS its memory: a row that owns none
   // hands `mem` straight back, so the winner's adoption needs no branch.
   pose(

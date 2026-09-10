@@ -1,7 +1,7 @@
 /**
  * focusReleaseWhileEngaged — engaged on Earth, a search focus on Mars must
  * release the camera THROUGH the fold (the single regime
- * author) — conversion + commit-on-edge untouched, followBody active next
+ * author) — conversion + commit-on-edge untouched, the follow row active next
  * frame — instead of doing nothing until a manual zoom-out past disengage.
  * Also pins the low-altitude conversion (finite, eye-preserving, targeted at
  * the RELEASED body's centre) and the no-flap property: the engage test may
@@ -94,13 +94,13 @@ describe('focus release while engaged (round 10)', () => {
     expect(released.distance / R_MPC).toBeCloseTo(1 + hrBefore, 6); // eye preserved
 
     // Follow-through: the arm stays absolute EVERY frame (no engage/release
-    // flap while the eye is still inside Earth's engage range), followBody
+    // flap while the eye is still inside Earth's engage range), the follow row
     // takes the frame, and the camera actually travels to Mars.
     for (let i = 0; i < 150; i += 1) {
       h.frame();
       expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
     }
-    expect(h.state.cameraRuntime.register.winner).toBe('followBody');
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
     const eyeAfter = displayedEye(h.state);
     expect(distTo(eyeAfter, MARS)).toBeLessThan(marsBefore * 1e-2);
   });

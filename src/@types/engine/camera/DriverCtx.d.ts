@@ -13,6 +13,9 @@ export type DriverCtx = {
   readonly state: RootState;
   /** Elapsed on the WINNER's epoch row; 0 for the untimed rows. */
   readonly elapsedMs: number;
+  /** Elapsed on the `follow` epoch at PICK time — `followApproach`'s window; it
+   * equals `elapsedMs` whenever a follow row wins, so the hand-off is one reading. */
+  readonly followElapsedMs: number;
   /** The AUTHORED register (`cameraRuntime.register.pose`), pre-projection — R12b-1. */
   readonly register: FramedCameraPose;
   /** World arm of `register`; the follow capture reads its eye. */

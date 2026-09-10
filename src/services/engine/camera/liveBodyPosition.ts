@@ -6,7 +6,7 @@
  * body this frame'. Three callers share it, so that lookup is defined in exactly
  * one place rather than copied per site:
  *
- *   - The `followBody` driver — its `pose` target term.
+ *   - The follow rows — their shared `pose` target term.
  *   - The frame-loop pivot-pin (`applyFocusedBodyPivot`) — re-centres whichever
  *     OTHER orbit driver wins (orbitDrag while dragging, autoRotate while
  *     spinning, resting while idle) on the same live body position.

@@ -23,6 +23,7 @@ import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { frameUp } from '../../../utils/camera/frameUp';
+import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
@@ -204,13 +205,13 @@ export function replayInput(
           applyWorldStep(step);
           break;
         }
-        // followBody re-asserts its own target every frame and would swallow a
-        // committed base, so its notch is resolved to a distance the driver
+        // A follow row re-asserts its own target every frame and would swallow
+        // a committed base, so its notch is resolved to a distance the driver
         // adopts; a second notch in the same drain resolves off the first.
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         if (
           camera.base.frame === 'absolute' &&
-          winnerLastFrame === 'followBody' &&
+          isFollowDriverId(winnerLastFrame) &&
           followTargetBefore !== null
         ) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);

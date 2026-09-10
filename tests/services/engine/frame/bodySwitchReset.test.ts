@@ -1,9 +1,9 @@
 /**
  * bodySwitchReset — ruling 18: a body switch fully resets the body pose.
- * Without the reset, followBody's captured distance carries across the
+ * Without the reset, the follow capture's distance carries across the
  * switch (e.g. Earth's ~2.4 R⊕ ≈ 0.26 R♄), the fold can engage the new body
  * on the very next frame with the eye still inside it, and the absolute-arm
- * gate then blocks followBody with disengage unreachable — the remembered
+ * gate then blocks the follow row with disengage unreachable — the remembered
  * tilt must reset too. Real runFrame loop.
  */
 
@@ -60,7 +60,7 @@ describe('body switch reset (ruling 18)', () => {
     expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeGreaterThan(0.3);
 
     // The user's action. The real saga path dispatches NO tween for a moving
-    // body (watchFocusTweenSaga gates on bodyMovesThisFrame) — followBody IS
+    // body (watchFocusTweenSaga gates on bodyMovesThisFrame) — the follow row IS
     // the flight, so the store focus write alone reproduces the app flow.
     h.focus('saturn');
 
@@ -73,13 +73,13 @@ describe('body switch reset (ruling 18)', () => {
     }
 
     // Arrival: the actual focus framing distance (outside, FOV-framed), the
-    // approach not stranded by a bogus engage (followBody still owns the
+    // approach not stranded by a bogus engage (the follow hold still owns the
     // frame on the absolute arm), a centre-looking display, and the memory
     // read back as 0.
     const dSat = distTo(displayedEye(h.state), SATURN);
     expect(Math.abs(dSat - FRAMING_MPC) / FRAMING_MPC).toBeLessThan(1e-3);
     expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
-    expect(h.state.cameraRuntime.register.winner).toBe('followBody');
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
     expect(tiltOverBody(h.state, SATURN)).toBeLessThan(1e-6);
     expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBe(0);
   });
@@ -105,7 +105,7 @@ describe('body switch reset (ruling 18)', () => {
     }
     expect(Math.abs(ds[ds.length - 1]! - FRAMING_MPC) / FRAMING_MPC).toBeLessThan(1e-3);
     expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
-    expect(h.state.cameraRuntime.register.winner).toBe('followBody');
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
   });
 
   it("the session's FIRST follow lands at the framing distance too", () => {

@@ -34,7 +34,7 @@ export function regimeArmFor(
       : 'absolute';
   }
 
-  // A differing body focus releases the arm so followBody can take over next frame.
+  // A differing body focus releases the arm so follow can take over next frame.
   if (focusedBodyId !== null && focusedBodyId !== current.body) return 'absolute';
 
   // Unresolved this frame: hold rather than guess — the caller's next frame retries.

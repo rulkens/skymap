@@ -16,6 +16,7 @@ import { selectIsManualPlaying } from '../../../state/time/selectors';
 import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
 import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
+import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 
 /**
  * Time-based ease with no camera-slice flag behind it: without this term the
@@ -23,7 +24,7 @@ import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
  * steady follow of a moving body is NOT a wake term (the pin re-centres on wake).
  */
 function followApproachEaseActive(state: EngineState, nowMs: number): boolean {
-  if (state.cameraRuntime.register.winner !== 'followBody') return false;
+  if (!isFollowDriverId(state.cameraRuntime.register.winner)) return false;
   const start = state.cameraRuntime.epochs.follow.startMs;
   return start !== null && nowMs - start < FOCUS_TWEEN_MS;
 }

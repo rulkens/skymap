@@ -108,10 +108,12 @@ function runAtWinner(
   s: RootState,
   epochs: CameraEpochs,
   nowMs: number,
+  followElapsedMs = 0,
 ) {
   const ctx = makeDriverCtx({
     state: s,
-    elapsedMs: elapsedForWinner(activeDriverId(drivers, s), epochs, nowMs),
+    elapsedMs: elapsedForWinner(activeDriverId(drivers, s, followElapsedMs), epochs, nowMs),
+    followElapsedMs,
     register: REGISTER_POSE,
   });
   return runCameraDrivers(drivers, ctx, null);
@@ -494,9 +496,9 @@ describe('runCameraDrivers — elapsed dispatch', () => {
   });
 });
 
-// followBody driver.
+// The follow rows.
 //
-// The follow driver reads the per-frame body snapshot (memoized deriveBodyStates
+// The follow produce reads the per-frame body snapshot (memoized deriveBodyStates
 // at `ctx.simDays`) plus the memory it is handed. A body id present in
 // ORBITAL_ELEMENTS + SCENE_BODIES ('earth') is focused; the snapshot is primed
 // by calling deriveBodyStates once.
@@ -519,7 +521,7 @@ const EARTH_ROW = {
 /** The follow row's produce at an elapsed instant. `from` seeds the captured
  * approach (bypassing the live-pose capture so the ease endpoints are
  * deterministic); `distanceTarget` seeds the distance-target un-braid state.
- * `winnerLastFrame` defaults to 'followBody' — the steady state, so the
+ * `winnerLastFrame` defaults to the approach row — the steady state, so the
  * drag-interrupt re-capture branch stays quiet unless a test names another. */
 function makeFollowProduce(opts: {
   state: RootState;
@@ -528,7 +530,7 @@ function makeFollowProduce(opts: {
   winnerLastFrame?: string;
   followDistanceTarget?: number | null;
 }) {
-  const follow = CAMERA_DRIVERS.find((d) => d.id === 'followBody')!;
+  const follow = CAMERA_DRIVERS.find((d) => d.id === 'followApproach')!;
   const mem: FollowMemory = {
     from: opts.from ?? null,
     distanceTarget: opts.distanceTarget ?? null,
@@ -542,14 +544,14 @@ function makeFollowProduce(opts: {
         simDays: FOLLOW_SIM_DAYS,
         projection: { fovYRad: FOLLOW_FOV, aspect: 1, near: 0.01, far: 50000 },
         register: absoluteArm(BASE_POSE),
-        winnerLastFrame: opts.winnerLastFrame ?? 'followBody',
+        winnerLastFrame: opts.winnerLastFrame ?? 'followApproach',
         followDistanceTarget: opts.followDistanceTarget ?? null,
       }),
       mem,
     );
 }
 
-describe('CAMERA_DRIVERS — followBody', () => {
+describe('CAMERA_DRIVERS — the follow rows', () => {
   it('pose target equals the body snapshot position while active', () => {
     // The snapshot at the frame instant — the driver's target term must be THIS
     // (the live body), not the row's static positionMpc.
@@ -572,7 +574,7 @@ describe('CAMERA_DRIVERS — followBody', () => {
 
   it('carries base.roll into the follow pose like yaw and pitch', () => {
     // The at-rest wheel's frame alignment (ruling 8) lands on `base.roll`
-    // while followBody owns the distance; a follow pose that drops roll would
+    // while a follow row owns the distance; a follow pose that drops roll would
     // pin a followed approach to scene-frame up until the engage edge.
     const store = makeStore();
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
@@ -591,28 +593,33 @@ describe('CAMERA_DRIVERS — followBody', () => {
     store.dispatch(setAutoRotate({ active: false, rate: 0.000873 }));
 
     const drivers = CAMERA_DRIVERS;
-    const follow = drivers.find((d) => d.id === 'followBody')!;
+    const approach = drivers.find((d) => d.id === 'followApproach')!;
+    const hold = drivers.find((d) => d.id === 'followHold')!;
 
-    // No focus → inactive → resting wins.
+    // No focus → both inactive → resting wins.
     let s = store.getState() as unknown as RootState;
-    expect(follow.isActive(s)).toBe(false);
+    expect([approach.isActive(s), hold.isActive(s)]).toEqual([false, false]);
     expect(pickWinner(drivers, s).id).toBe('resting');
 
     // A non-body focus (Milky Way) → still inactive.
     store.dispatch(setSelectionRow({ slot: 'focus', row: { type: 'milkyWay' } }));
     s = store.getState() as unknown as RootState;
-    expect(follow.isActive(s)).toBe(false);
+    expect([approach.isActive(s), hold.isActive(s)]).toEqual([false, false]);
 
-    // A body focus present in the snapshot → active, and it wins over resting.
+    // A body focus present in the snapshot → active, and follow wins over
+    // resting. The window is the ONLY thing that separates the two rows: inside
+    // it the approach authors, past it the hold does.
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
     s = store.getState() as unknown as RootState;
-    expect(follow.isActive(s)).toBe(true);
-    expect(pickWinner(drivers, s).id).toBe('followBody');
+    expect([approach.isActive(s, 0), hold.isActive(s, 0)]).toEqual([true, true]);
+    expect(pickWinner(drivers, s, 0).id).toBe('followApproach');
+    expect(approach.isActive(s, FOCUS_TWEEN_MS)).toBe(false);
+    expect(pickWinner(drivers, s, FOCUS_TWEEN_MS).id).toBe('followHold');
 
     // Focus leaves the body again → deactivates → hands back to resting.
     store.dispatch(setSelectionRow({ slot: 'focus', row: null }));
     s = store.getState() as unknown as RootState;
-    expect(follow.isActive(s)).toBe(false);
+    expect([approach.isActive(s), hold.isActive(s)]).toEqual([false, false]);
     expect(pickWinner(drivers, s).id).toBe('resting');
   });
 
@@ -735,15 +742,17 @@ describe('CAMERA_DRIVERS — followBody', () => {
   });
 });
 
-// followBody sits BELOW autoRotate: the pivot un-braid.
+// followHold sits BELOW autoRotate: the pivot un-braid.
 //
-// followBody does not compete for the WHOLE pose. A focused body pins the
+// The follow hold does not compete for the WHOLE pose. A focused body pins the
 // pivot (via the frame-loop pivot-pin); the ORBIT terms go to whoever wins
-// the table. autoRotate (20) outranks followBody (10), so the auto-rotate
+// the table. autoRotate (20) outranks followHold (10), so the auto-rotate
 // button spins AROUND a focused body instead of being blocked by follow.
+// followApproach (55) is the exception, and only while its window is open:
+// the spin used to swallow the approach and strand the camera (R14-3).
 
-describe('CAMERA_DRIVERS — followBody priority under body focus', () => {
-  it('autoRotate outranks followBody while a body is focused (button not blocked)', () => {
+describe('CAMERA_DRIVERS — follow priority under body focus', () => {
+  it('autoRotate outranks the follow hold, but not the approach (button not blocked)', () => {
     const store = makeStore();
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
     store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
@@ -751,9 +760,11 @@ describe('CAMERA_DRIVERS — followBody priority under body focus', () => {
 
     const drivers = CAMERA_DRIVERS;
 
-    // Both are active; the winner is autoRotate (20) over followBody (10).
-    expect(drivers.find((d) => d.id === 'followBody')!.isActive(s)).toBe(true);
-    expect(pickWinner(drivers, s).id).toBe('autoRotate');
+    // All three are active; past the approach window the winner is autoRotate
+    // (20) over followHold (10), inside it the approach (55).
+    expect(drivers.find((d) => d.id === 'followHold')!.isActive(s)).toBe(true);
+    expect(pickWinner(drivers, s, FOCUS_TWEEN_MS).id).toBe('autoRotate');
+    expect(pickWinner(drivers, s, 0).id).toBe('followApproach');
   });
 
   it('yaw advances over frames while auto-rotating a focused body', () => {
@@ -766,8 +777,9 @@ describe('CAMERA_DRIVERS — followBody priority under body focus', () => {
     const drivers = CAMERA_DRIVERS;
     const epochs = epochsAt(s, 'autoRotate', 1000);
 
-    const p0 = worldArmOf(runAtWinner(drivers, s, epochs, 1000).pose);
-    const p1 = worldArmOf(runAtWinner(drivers, s, epochs, 1500).pose);
+    // Past the approach window, or the approach would author these frames.
+    const p0 = worldArmOf(runAtWinner(drivers, s, epochs, 1000, FOCUS_TWEEN_MS).pose);
+    const p1 = worldArmOf(runAtWinner(drivers, s, epochs, 1500, FOCUS_TWEEN_MS).pose);
     // autoRotate is authoring (not blocked by follow) → yaw advances with elapsed.
     expect(p0.yaw).toBeCloseTo(BASE_POSE.yaw, 9); // elapsed 0 on the arrival frame
     expect(p1.yaw).not.toBe(p0.yaw);
@@ -800,7 +812,7 @@ describe('runCameraDrivers — memory adoption', () => {
   });
 });
 
-describe('followBody — the capture is returned, not written', () => {
+describe('the follow produce — the capture is returned, not written', () => {
   it('leaves the memory it was handed untouched and re-derives the same capture', () => {
     const store = makeStore();
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
@@ -809,14 +821,14 @@ describe('followBody — the capture is returned, not written', () => {
       simDays: FOLLOW_SIM_DAYS,
       projection: { fovYRad: FOLLOW_FOV, aspect: 1, near: 0.01, far: 50000 },
       register: absoluteArm(BASE_POSE),
-      winnerLastFrame: 'followBody',
+      winnerLastFrame: 'followApproach',
     });
     const mem: FollowMemory = Object.freeze<FollowMemory>({
       from: null,
       distanceTarget: null,
       panOffset: [0, 0, 0],
     });
-    const follow = CAMERA_DRIVERS.find((d) => d.id === 'followBody')!;
+    const follow = CAMERA_DRIVERS.find((d) => d.id === 'followApproach')!;
 
     const first = follow.pose(ctx, mem);
     const second = follow.pose(ctx, mem);

@@ -15,6 +15,7 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
+import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 
 const NO_ACTIONS: readonly UnknownAction[] = [];
 
@@ -36,7 +37,12 @@ export function commitOnEdge(args: {
 } {
   const { register, displayed, produced, prevWinner, winner, drivers } = args;
   const departing = drivers.find((d) => d.id === prevWinner);
-  if (prevWinner === winner.id || !departing?.commitsOnEdge) {
+  // The follow pair is ONE author (same produce, same memory): committing between
+  // them baked the OLD body's distance into `base`, and the pin read it around the
+  // NEW body — one frame inside it, on every settled body switch.
+  const sameAuthor =
+    prevWinner === winner.id || (isFollowDriverId(prevWinner) && isFollowDriverId(winner.id));
+  if (sameAuthor || !departing?.commitsOnEdge) {
     return { render: produced, authoredOverride: null, actions: NO_ACTIONS };
   }
   const pivots = winner.pivotsOnFocusedBody ?? false;
