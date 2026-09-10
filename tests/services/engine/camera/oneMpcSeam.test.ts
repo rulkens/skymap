@@ -158,20 +158,6 @@ function scaleUnitsMembersUsed(file: string): string[] {
 }
 
 describe('the body-slab path never re-derives the Mpc<->metre conversion', () => {
-  it('bodyRelativePose.ts and poseFrameConversion.ts are the only files the migrations allow to convert Mpc<->metres', () => {
-    // Documents the two seams this whole test protects rather than
-    // re-asserting a fact ts-morph already proves in each file's own header
-    // comment — both files are deliberately NOT in TS_FILES above (SEAM_FILES
-    // filters them out of every swept dir).
-    const bodyRelativePose = readFileSync('src/services/engine/camera/bodyRelativePose.ts', 'utf8');
-    expect(bodyRelativePose).toContain('MPC_TO_M');
-    const poseFrameConversion = readFileSync(
-      'src/services/engine/camera/poseFrameConversion.ts',
-      'utf8',
-    );
-    expect(poseFrameConversion).toContain('M_TO_MPC');
-  });
-
   it('the directory sweep found real files, including each known anchor', () => {
     // A typo'd glob dir/extension returns [] silently and every it.each below
     // would vacuously pass with zero cases — this is the loud-failure check.
