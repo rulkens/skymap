@@ -73,6 +73,15 @@
  * stable `ORIENTATION_FRAMES[frame]` object). Steady frames — the common case —
  * hit the cache and avoid re-flattening the effect tree every frame.
  *
+ * ### Frames
+ *
+ * A `set`/`setVec` endpoint may name the frame its `to` is read in (spec §8);
+ * untagged ⇒ absolute. Interpolation runs in the endpoint's own frame, so a
+ * clip time splits into "legs", one per frame, and a leg's start is converted
+ * ONCE, at leg start (memoised per playback). `spin`/`rate`/`osc` are relative
+ * and untouched. Body-framed channels are body-FIXED metres — a LookAt the
+ * driver decodes at its exit, never Mpc.
+ *
  * ### Purity
  *
  * - `data` and the cached `CompiledClip` are never mutated.
@@ -81,13 +90,18 @@
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
+import type { ClipFrameOptions } from '../../../@types/animation/ClipFrameOptions';
+import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
 import type {
   CompiledClip,
   BaseSegment,
   VelRamp,
   PathTrack,
 } from '../../../@types/animation/CompiledClip';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { PoseFrame } from '../../../@types/camera/PoseFrame';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -97,6 +111,8 @@ import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { lerp } from '../../../utils/math/lerp';
+import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
+import { toBodyFixedChannels, fromBodyFixedChannels } from './clipFrameChannels';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.
@@ -309,6 +325,7 @@ function evaluateBaseScalar(
   startVal: number,
   channel: Channel,
   t: number,
+  fromSec: number,
 ): number {
   if (segments.length === 0) return startVal;
 
@@ -316,6 +333,9 @@ function evaluateBaseScalar(
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]!;
+    // Earlier than the frame leg's own start: its value is already folded into
+    // `startVal`, which was converted into this leg's frame.
+    if (seg.startSec < fromSec) continue;
 
     if (t < seg.startSec) {
       // Before this segment starts — running value from prior segments is the result.
@@ -377,7 +397,12 @@ function evaluateBaseScalar(
  * component-wise in linear space (log-space and additive-angle semantics are
  * undefined for signed 3D positions).
  */
-function evaluateBaseVec3(segments: BaseSegment[], startVal: Vec3, t: number): Vec3 {
+function evaluateBaseVec3(
+  segments: BaseSegment[],
+  startVal: Vec3,
+  t: number,
+  fromSec: number,
+): Vec3 {
   if (segments.length === 0) return [startVal[0], startVal[1], startVal[2]];
 
   // Compute component-wise running Vec3.
@@ -387,6 +412,7 @@ function evaluateBaseVec3(segments: BaseSegment[], startVal: Vec3, t: number): V
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]!;
+    if (seg.startSec < fromSec) continue;
 
     if (t < seg.startSec) {
       return [rx, ry, rz];
@@ -434,52 +460,175 @@ function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
 }
 
 // ---------------------------------------------------------------------------
-// Public entry point
+// Frame legs — where the interpolation frame changes, and the ONE conversion
+// each change costs.
+//
+// A leg is a maximal run of clip time under one `PoseFrame`. The opening leg is
+// always absolute (a clip's `start` is a world pose); each later leg opens at
+// the `set`/`setVec` endpoint whose tag differs from the frame in force. Its
+// start is the previous leg's BASE pose at that second, converted once — the
+// relative layers (`rate`, `osc`) are offsets in whatever arm is current and so
+// ride on top of the converted base rather than through the conversion.
+// ---------------------------------------------------------------------------
+
+/** The pose a frame leg starts from, and the second it starts at. */
+type LegOrigin = { readonly atSec: number; readonly pose: CameraPose };
+
+type FrameLeg = {
+  readonly frame: PoseFrame;
+  readonly startSec: number;
+  /** The endpoint that opened the leg — the memo key for its converted start. */
+  readonly anchor: BaseSegment | null;
+};
+
+function frameKeyOf(frame: PoseFrame): string {
+  return frame === 'absolute' ? 'absolute' : frame.body;
+}
+
+const legsCache = new WeakMap<CompiledClip, readonly FrameLeg[]>();
+
+// Keyed on the PLAYBACK, not the compiled clip: replaying the same `ClipData`
+// must re-convert against the bodies where they are now.
+const legStartCache = new WeakMap<object, Map<BaseSegment, CameraPose>>();
+
+function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
+  const cached = legsCache.get(compiled);
+  if (cached !== undefined) return cached;
+
+  const segments = Object.values(compiled.baseTracks)
+    .flat()
+    .sort((a, b) => a.startSec - b.startSec);
+  const legs: FrameLeg[] = [{ frame: 'absolute', startSec: -Infinity, anchor: null }];
+  for (const seg of segments) {
+    const frame = seg.frame ?? 'absolute';
+    if (frameKeyOf(frame) !== frameKeyOf(legs[legs.length - 1]!.frame)) {
+      legs.push({ frame, startSec: seg.startSec, anchor: seg });
+    }
+  }
+  legsCache.set(compiled, legs);
+  return legs;
+}
+
+function legIndexAt(legs: readonly FrameLeg[], t: number): number {
+  let index = 0;
+  for (let i = 1; i < legs.length; i++) {
+    if (legs[i]!.startSec <= t) index = i;
+  }
+  return index;
+}
+
+function bodyStateFor(bodyId: BodyId, opts: ClipFrameOptions): BodyState {
+  const state = opts.bodies?.get(bodyId);
+  if (state === undefined) {
+    throw new Error(
+      `evaluateFramedClip: a keyframe framed on '${bodyId}' needs that body's state — pass \`bodies\``,
+    );
+  }
+  return state;
+}
+
+function convertChannels(
+  channels: CameraPose,
+  from: PoseFrame,
+  to: PoseFrame,
+  opts: ClipFrameOptions,
+): CameraPose {
+  if (frameKeyOf(from) === frameKeyOf(to)) return channels;
+  // The clip's own steady basis: its absolute angles were authored through it,
+  // and a keyframe carries no roll, so it serves as the up reference too.
+  const basis = opts.frameBasis ?? IDENTITY_MAT3;
+  const world =
+    from === 'absolute'
+      ? channels
+      : fromBodyFixedChannels(channels, from.body, bodyStateFor(from.body, opts), basis);
+  return to === 'absolute'
+    ? world
+    : toBodyFixedChannels(world, to.body, bodyStateFor(to.body, opts), basis);
+}
+
+function originOfLeg(
+  compiled: CompiledClip,
+  legs: readonly FrameLeg[],
+  index: number,
+  opts: ClipFrameOptions,
+): LegOrigin {
+  const leg = legs[index]!;
+  if (leg.anchor === null) return { atSec: -Infinity, pose: compiled.start };
+
+  const owner = opts.playback ?? compiled;
+  let byAnchor = legStartCache.get(owner);
+  if (byAnchor === undefined) {
+    byAnchor = new Map();
+    legStartCache.set(owner, byAnchor);
+  }
+  const hit = byAnchor.get(leg.anchor);
+  if (hit !== undefined) return { atSec: leg.startSec, pose: hit };
+
+  const previous = originOfLeg(compiled, legs, index - 1, opts);
+  const converted = convertChannels(
+    evaluateBaseAt(compiled, leg.startSec, previous),
+    legs[index - 1]!.frame,
+    leg.frame,
+    opts,
+  );
+  byAnchor.set(leg.anchor, converted);
+  return { atSec: leg.startSec, pose: converted };
+}
+
+// ---------------------------------------------------------------------------
+// Layer composition
 // ---------------------------------------------------------------------------
 
 /**
- * evaluateClip — evaluate the clip at `elapsedSec` seconds after its start.
- *
- * Compiles `data` on first call (memoised on reference identity); subsequent
- * calls with the same `data` reference reuse the cached `CompiledClip`.
- *
- * Returns a fresh `CameraPose` with a fresh `target` array — no aliasing with
- * any internal structure.
- *
- * @param data        The authored clip description.
- * @param elapsedSec  Seconds since the clip started (≥ 0).
- * @param frameBasis  The STEADY orientation-frame basis a `flyPath` encodes its
- *                    aim through (see `buildPathTrack`). Absent ⇒ identity
- *                    (world-frame aim) — the pre-feature behaviour, so a clip
- *                    with no `flyPath` is unaffected.
- * @returns           The camera pose at that instant.
+ * evaluateBaseAt — the base layer (or the path that supersedes it) at `t`,
+ * seeded from the current leg's origin. `origin.atSec` is `-Infinity` on the
+ * opening leg, so every segment counts and the walk is the pre-frames one.
  */
-export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Mat3): CameraPose {
-  const compiled = getCompiled(data, frameBasis);
-  const { start, baseTracks } = compiled;
-  const t = elapsedSec;
-
-  // --- Base layer (a flyPath supersedes it for all four channels) ---
+function evaluateBaseAt(compiled: CompiledClip, t: number, origin: LegOrigin): CameraPose {
+  const { baseTracks } = compiled;
   const path = activePathAt(compiled.pathTracks, t);
-  let baseDistance: number;
-  let baseYaw: number;
-  let basePitch: number;
-  let baseTarget: Vec3;
   if (path !== null) {
     // Clamp into the path's own window: before it starts we never get here
     // (activePathAt requires startSec ≤ t); after it ends, hold the final pose.
     const localSec = Math.min(Math.max(t - path.startSec, 0), path.endSec - path.startSec);
     const pose = path.sample(localSec);
-    baseDistance = pose.distance;
-    baseYaw = pose.yaw;
-    basePitch = pose.pitch;
-    baseTarget = pose.target;
-  } else {
-    baseDistance = evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t);
-    baseYaw = evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t);
-    basePitch = evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t);
-    baseTarget = evaluateBaseVec3(baseTracks['target'], start.target, t);
+    return { target: pose.target, yaw: pose.yaw, pitch: pose.pitch, distance: pose.distance };
   }
+  const { atSec, pose: start } = origin;
+  return {
+    target: evaluateBaseVec3(baseTracks['target'], start.target, t, atSec),
+    yaw: evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, atSec),
+    pitch: evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, atSec),
+    distance: evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, atSec),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Public entry points
+// ---------------------------------------------------------------------------
+
+/**
+ * evaluateFramedClip — the clip at `elapsedSec`, and the frame its channels are
+ * expressed in (spec §8).
+ *
+ * Compiles `data` on first call (memoised on reference identity); subsequent
+ * calls with the same `data` reference reuse the cached `CompiledClip`.
+ *
+ * `channels` is always fresh, with a fresh `target` array — no aliasing with
+ * any internal structure.
+ */
+export function evaluateFramedClip(
+  data: ClipData,
+  elapsedSec: number,
+  opts: ClipFrameOptions = {},
+): FramedClipPose {
+  const compiled = getCompiled(data, opts.frameBasis);
+  const legs = frameLegsOf(compiled);
+  const index = legIndexAt(legs, elapsedSec);
+  const origin = originOfLeg(compiled, legs, index, opts);
+  const t = elapsedSec;
+
+  const base = evaluateBaseAt(compiled, t, origin);
 
   // --- Velocity layer (displacement, additive) ---
   const velDist = velDisplacement(compiled, 'distance', t);
@@ -498,14 +647,34 @@ export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Ma
   const oscTarget = oscOffset(compiled, 'target', t);
 
   return {
-    // Fresh target triple — never alias any input.
-    target: [
-      baseTarget[0] + velTarget + oscTarget,
-      baseTarget[1] + velTarget + oscTarget,
-      baseTarget[2] + velTarget + oscTarget,
-    ],
-    yaw: baseYaw + velYaw + oscYaw,
-    pitch: basePitch + velPitch + oscPitch,
-    distance: baseDistance + velDist + oscDist,
+    frame: legs[index]!.frame,
+    channels: {
+      // Fresh target triple — never alias any input.
+      target: [
+        base.target[0] + velTarget + oscTarget,
+        base.target[1] + velTarget + oscTarget,
+        base.target[2] + velTarget + oscTarget,
+      ],
+      yaw: base.yaw + velYaw + oscYaw,
+      pitch: base.pitch + velPitch + oscPitch,
+      distance: base.distance + velDist + oscDist,
+    },
   };
+}
+
+/**
+ * evaluateClip — the channel values at `elapsedSec`, WITHOUT their frame: Mpc
+ * and orientation-frame angles for every untagged clip, which is every clip in
+ * the registry. A caller that must survive a body-framed endpoint — where the
+ * same four numbers are body-fixed metres — reads `evaluateFramedClip` instead.
+ *
+ * @param data        The authored clip description.
+ * @param elapsedSec  Seconds since the clip started (≥ 0).
+ * @param frameBasis  The STEADY orientation-frame basis a `flyPath` encodes its
+ *                    aim through (see `buildPathTrack`). Absent ⇒ identity
+ *                    (world-frame aim) — the pre-feature behaviour, so a clip
+ *                    with no `flyPath` is unaffected.
+ */
+export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Mat3): CameraPose {
+  return evaluateFramedClip(data, elapsedSec, { frameBasis }).channels;
 }
