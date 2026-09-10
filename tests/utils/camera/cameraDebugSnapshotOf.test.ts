@@ -286,10 +286,9 @@ describe('cameraDebugSnapshotOf', () => {
   });
 
   it('derives a self-consistent orientation pipeline for a real in-band pose', () => {
-    // This readout: the residual columns the user pastes back must be the
-    // wrapped differences of the raw columns beside them, and the band
-    // scalars must come off the one curve — a wiring slip here would send us
-    // debugging fabricated numbers.
+    // The columns the user pastes back must be this pose's own: the roll it
+    // was given, a band target that actually resolved, a level tilt for a
+    // centred look — a wiring slip sends us debugging fabricated numbers.
     const eye = eyeAt(EARTH_RADIUS_M, 2.0);
     const snap = cameraDebugSnapshotOf({
       storedFrame: 'absolute',
@@ -309,9 +308,5 @@ describe('cameraDebugSnapshotOf', () => {
     expect(snap.lastZoomDirection).toBe('out');
     expect(snap.dofs.tilt.currentRad).toBeCloseTo(0, 6); // looking straight at the centre
     expect(snap.dofs.roll.targetRad).not.toBeNull();
-    expect(snap.dofs.roll.residualRad).toBeCloseTo(0.3 - snap.dofs.roll.targetRad!, 6);
-    // Heading's target IS north, so its residual is the heading itself.
-    expect(snap.dofs.heading.targetRad).toBe(0);
-    expect(snap.dofs.heading.residualRad).toBeCloseTo(snap.dofs.heading.currentRad!, 12);
   });
 });

@@ -40,7 +40,8 @@ const SNAP: CameraDebugSnapshot = {
     hOverR: 0.3,
     heading: { currentRad: HEADING_RAD, targetRad: 0, residualRad: HEADING_RAD },
     tilt: { currentRad: 0, targetRad: 0, residualRad: 0 },
-    roll: { currentRad: 0, targetRad: 0, residualRad: 0 },
+    // Roll's target is independent of its current, so a blanked target cell shows.
+    roll: { currentRad: 0.1, targetRad: -0.2, residualRad: 0.3 },
   },
   deltas: {
     heading: { deltaRad: 0, peakAbsRad: HEADING_RAD, peakAtMs: 42 },
@@ -84,7 +85,9 @@ describe('CameraStateSection', () => {
     ORIENT_TUNING.northUp = false;
     const { container } = renderSection();
     expect(container.textContent).toContain('(off)');
-    // Q8: the target is a property of the field, not of whether it is applied.
-    expect(container.textContent).toContain('30.0°');
+    // Q8: the target is a property of the field, not of whether it is applied —
+    // the roll row keeps both its target and its residual, not an em-dash.
+    expect(container.textContent).toContain('-11.5°');
+    expect(container.textContent).toContain('17.2°');
   });
 });
