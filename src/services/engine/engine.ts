@@ -616,9 +616,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          // The readout reads the NESTING to tell "at rest" from "down, not yet
-          // latched", so the pointer-up case is the absent wrapper, not a null latch.
-          gesture: surface.pointerDown ? { gesture: surface.gesture } : null,
+          pointerDown: surface.pointerDown,
+          gesture: surface.gesture,
           lastZoomFactor: outputs.lastZoomFactor,
           rememberedTiltRad: surface.rememberedTiltRad,
         });

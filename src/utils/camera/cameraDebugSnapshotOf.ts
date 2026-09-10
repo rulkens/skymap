@@ -61,7 +61,10 @@ export function cameraDebugSnapshotOf(input: {
   readonly liveSimDays: number;
   readonly time: TimeState;
   readonly activeDriverId: string;
-  readonly gesture: { readonly gesture: SurfaceGesture | null } | null;
+  /** The two gesture facts as they live on `SurfaceMemory`: a press with no
+   * latch yet reads as `pointerDown` with a null `gesture`. */
+  readonly pointerDown: boolean;
+  readonly gesture: SurfaceGesture | null;
   readonly lastZoomFactor: number | null;
   readonly rememberedTiltRad: number;
 }): CameraDebugSnapshot {
@@ -77,6 +80,7 @@ export function cameraDebugSnapshotOf(input: {
     liveSimDays,
     time,
     activeDriverId,
+    pointerDown,
     gesture,
     lastZoomFactor,
     rememberedTiltRad,
@@ -195,8 +199,8 @@ export function cameraDebugSnapshotOf(input: {
     anchorLocalM: engagedPose !== null ? [...engagedPose.anchorLocalM] : null,
     eyeRelAnchorMagM: engagedPose !== null ? Math.hypot(...engagedPose.eyeRelAnchorM) : null,
     activeDriverId,
-    gestureMode: gesture === null ? null : (gesture.gesture?.mode ?? 'down (unlatched)'),
-    gestureCursorHit: gesture?.gesture ? gesture.gesture.anchorLocalM !== null : null,
+    gestureMode: pointerDown ? (gesture?.mode ?? 'down (unlatched)') : null,
+    gestureCursorHit: pointerDown && gesture !== null ? gesture.anchorLocalM !== null : null,
     lastZoomDirection: lastZoomFactor === null ? null : lastZoomFactor < 1 ? 'in' : 'out',
   };
 }
