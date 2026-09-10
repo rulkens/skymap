@@ -13,9 +13,9 @@ import { SURFACE_REGIME } from './surfaceRegime';
 
 export const TILT_BAND = {
   /** h/R at or below which the reference up is the pure body ENU (full tilt). */
-  fullHR: 0.45,
+  fullHR: 0.06,
   /** h/R at or above which it is the scene up (zero tilt). */
-  zeroHR: 0.9,
+  zeroHR: 0.6,
 };
 
 /** Slider ranges + the same ×1.1 window floor the surface band keeps. */

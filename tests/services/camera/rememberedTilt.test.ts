@@ -15,7 +15,7 @@ import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
 import { maxTiltRad } from '../../../src/utils/camera/maxTiltRad';
 import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
-import { TILT_BAND } from '../../../src/data/camera/tiltBand';
+import { setTiltBand, TILT_BAND } from '../../../src/data/camera/tiltBand';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
@@ -30,9 +30,11 @@ const POLE: Vec3 = [0, 0, 1];
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 
 const TUNING_AT_LOAD = { ...ORIENT_TUNING };
+const BAND_AT_LOAD = { fullHR: TILT_BAND.fullHR, zeroHR: TILT_BAND.zeroHR };
 
 afterEach(() => {
   Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
+  setTiltBand(BAND_AT_LOAD);
 });
 
 function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
@@ -125,11 +127,12 @@ function raiseTiltTo(
 describe('remembered tilt (ruling 12)', () => {
   it('zoom-in never authors tilt: a user-set tilt survives a dive unchanged', () => {
     const c = makeSurfaceDriver();
-    let pose = raiseTiltTo(c, poseAt([0, 0, 1.15], NADIR), 0.35);
+    let pose = raiseTiltTo(c, poseAt([0, 0, 1 + TILT_BAND.fullHR], NADIR), 0.35);
     const set = tiltOf(pose);
     expect(set).toBeGreaterThan(0.35); // the handles really tilted the view
-    expect(set).toBeLessThan(0.45); // …but the centre ray still hits ground
-    expect(c.rememberedTiltRad()).toBeCloseTo(set, 9); // w = 1 below the band
+    // …but the centre ray still hits ground: under the horizon angle asin(R/d).
+    expect(set).toBeLessThan(Math.asin(1 / (1 + TILT_BAND.fullHR)));
+    expect(c.rememberedTiltRad()).toBeCloseTo(set, 9); // w = 1 at/below fullHR
 
     for (let i = 0; i < 8; i += 1) {
       pose = apply(c, pose, zoom(Math.exp(-0.1)));
@@ -155,7 +158,7 @@ describe('remembered tilt (ruling 12)', () => {
     it('display tilt converges to remembered × w mid-window and crosses disengage at 0', () => {
       ORIENT_TUNING.blendSpace = space;
       const c = makeSurfaceDriver();
-      const set = tiltOf(setTiltByDrag(c, poseAt([0, 0, 1.15], NADIR), 20));
+      const set = tiltOf(setTiltByDrag(c, poseAt([0, 0, 1 + TILT_BAND.fullHR], NADIR), 20));
       expect(set).toBeGreaterThan(0.1);
 
       // Park at the tilt band's geometric midpoint: the settle converges onto
@@ -209,15 +212,20 @@ describe('remembered tilt (ruling 12)', () => {
 
   it('the drag wall never erodes the band-mapped display (reconciliation 1)', () => {
     ORIENT_TUNING.blendSpace = 'lin';
+    // The reconciliation only BITES where the mapped display outruns the drag
+    // ramp, and the ceiling ramp spans (tiltFullHR, disengageHR): a blend band
+    // strictly inside it — the 2026-09-10 defaults — is under the ceiling
+    // everywhere, so the wall is unreachable there. Widen the (session-tunable)
+    // band onto the regime edges, the widest the cap allows, to reach it.
+    setTiltBand({ fullHR: SURFACE_REGIME.engageHR, zeroHR: SURFACE_REGIME.disengageHR });
     const c = makeSurfaceDriver();
     let pose = raiseTiltTo(c, poseAt([0, 0, 1.1], NADIR), 2.8); // deep, ceiling slack
     const remembered = c.rememberedTiltRad();
     expect(remembered).toBeGreaterThan(2.8);
 
     // Recede into the window until the mapped display exceeds the drag ramp.
-    // Ruling 19's ceiling ramp (ties to disengageHR/tiltFullHR) is wider than
-    // the up-weight ramp (ties to disengageHR/engageHR), so the premise below
-    // only holds close to engage, not mid-band.
+    // The ceiling ramp is wider than the up-weight ramp even at this band, so
+    // the premise below only holds close to engage, not mid-band.
     let hr = 0;
     const target = SURFACE_REGIME.engageHR * 1.1;
     while (hr < target) {

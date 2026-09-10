@@ -261,6 +261,14 @@ measuring a Δtilt of 0.00042 rad across the abs→body flip at the default
 cadence (0.0134 on the Q6 edges); the 2026-09-10 edges have not been
 re-measured — `engageFlipPop` is the standing guard either way.
 
+**The orientation blend has its own band since 2026-09-10** (`TILT_BAND`,
+`fullHR` / `zeroHR`, session-tunable from the debug panel, capped at
+`disengageHR`): weight 1 at or below `fullHR`, 0 at or above `zeroHR`. It
+started at the regime's own edges and the same ruling re-tuned it to
+**0.06 R / 0.60 R** — so the flip no longer happens where the weight is 1, and
+the blend spends most of its band inside the body arm. Fixtures that need full
+weight key on `TILT_BAND.fullHR`; the arm flip stays on `SURFACE_REGIME`.
+
 No change to `BodyRelativePose`, `BodyPoseProvider`, `Slab`, `SlabFrame`, or
 any layer type. The seam type does not move.
 

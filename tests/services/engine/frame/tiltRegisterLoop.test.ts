@@ -41,6 +41,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -63,6 +64,17 @@ function stepKm(a: Vec3, b: Vec3): number {
 }
 
 /**
+ * The eye step a projected register would add here: the pivot chord
+ * `d·2sin(τ/2)` for the displayed tilt. Every loose bar below is a fraction of
+ * it — the tilt at a legal in-window standpoint scales with `TILT_BAND`'s
+ * weight there, so a km literal stops discriminating the moment the band moves.
+ */
+function projectedWalkKm(state: EngineState): number {
+  const { tilt } = display(state);
+  return 2 * liveWorldPose(state).distance * Math.sin(tilt / 2) * MPC_TO_KM;
+}
+
+/**
  * Same approach recipe as tiltCommitIdempotence: dive engaged, set a large
  * remembered tilt through surfaceStep's tilt/look drag steps, zoom out past
  * disengage, then back IN to mid-window — world-armed, pivot-pinned,
@@ -72,24 +84,31 @@ function toMidWindow(h: CameraSimHarness) {
   diveUntilEngaged(h);
   expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
 
-  // Set the memory via surfaceStep's tilt/look steps (unit-radius, just under
-  // the engage edge, where the tilt ceiling is well open).
-  seedRememberedTilt(h, { targetRad: 0.95, guard: 40, pxStep: 5 });
-  expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeGreaterThan(0.5);
+  // A deep memory: the world arm can only be reached ABOVE engage, and the
+  // 2026-09-10 band leaves a thin weight there, so a small one would map to a
+  // projection too shallow to see.
+  seedRememberedTilt(h, { targetRad: 2.8, guard: 60, pxStep: 5 });
+  const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
+  expect(remembered).toBeGreaterThan(2.5);
 
-  // Out past disengage, back in to mid-window — as FRACTIONS of the live edge,
-  // so the leg keeps its shape (and its blend weight, on a 2:1 band) wherever
-  // the band is tuned. Back-in stops above engage: the hysteresis holds the
-  // arm absolute, which is the standpoint every test below needs.
-  const { disengageHR } = SURFACE_REGIME;
+  // Out past disengage, then back in to the ONE standpoint that is both world
+  // armed and inside the tilt band: just above engage, where the hysteresis
+  // still holds the arm absolute. Coarse notches to the neighbourhood, then
+  // tenth notches so the last step cannot overshoot the flip.
+  const { disengageHR, engageHR } = SURFACE_REGIME;
   while (display(h.state).hr < disengageHR * 1.15) h.wheel(100);
   expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
-  while (display(h.state).hr > disengageHR * 0.8) h.wheel(-100);
-  expect(display(h.state).hr).toBeGreaterThan(disengageHR * 0.65);
+  while (display(h.state).hr > engageHR * 1.5) h.wheel(-100);
+  while (display(h.state).hr > engageHR * 1.02) h.wheel(-10);
+  expect(display(h.state).hr).toBeGreaterThan(engageHR);
   expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
 
   h.frame(60);
-  expect(display(h.state).tilt).toBeGreaterThan(0.2); // projection live here
+  // Projection live: display is `remembered × w`, read off the band rather
+  // than pinned to a rad literal that only held while the two bands shared
+  // edges.
+  const live = display(h.state);
+  expect(live.tilt).toBeGreaterThan(0.5 * remembered * bodyUpWeight(live.hr));
 }
 
 describe('the register loop during an active drag (R12b-1)', () => {
@@ -135,7 +154,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     expect(tiltOfPose(register.pose, registerEye, EARTH)).toBeLessThan(1e-6);
 
     const displayed = display(h.state);
-    expect(displayed.tilt).toBeGreaterThan(0.2);
+    expect(displayed.tilt).toBeGreaterThan(0);
     expect(stepKm(registerEye, displayed.eye)).toBeLessThan(1e-9);
   });
 
@@ -143,6 +162,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     const h = makeCameraSimHarness();
     toMidWindow(h);
     let prev = display(h.state);
+    const walkKm = projectedWalkKm(h.state);
 
     // A real 6-px drag across three frames, then release.
     h.store.dispatch(beginDrag());
@@ -153,15 +173,15 @@ describe('the register loop during an active drag (R12b-1)', () => {
       h.frame();
       const cur = display(h.state);
       // Each frame moves the eye by the 2-px drag mapping only — never a
-      // teleport (a projected register would add ~8,519 km/frame on top of the drag).
-      expect(stepKm(prev.eye, cur.eye)).toBeLessThan(500);
+      // teleport (a projected register would add the whole pivot chord on top).
+      expect(stepKm(prev.eye, cur.eye)).toBeLessThan(walkKm * 0.5);
       prev = cur;
     }
     h.push({ kind: 'gestureEnd' });
     for (let i = 0; i < 10; i += 1) {
       h.frame();
       const cur = display(h.state);
-      expect(stepKm(prev.eye, cur.eye)).toBeLessThan(500);
+      expect(stepKm(prev.eye, cur.eye)).toBeLessThan(walkKm * 0.5);
       expect(Math.abs(cur.tilt - prev.tilt)).toBeLessThan(0.02);
       prev = cur;
     }
@@ -189,9 +209,10 @@ describe('the register loop during an active drag (R12b-1)', () => {
     // Re-select the same body: a fresh focus ROW reference re-arms the follow
     // ease, whose `from` capture pairs captured yaw/pitch with a body-centred
     // target. Captured from the DISPLAYED (tilted) pose that decode walks the
-    // eye by d·2sin(τ/2) ≈ 8,519 km on the first eased frame — the capture
-    // must read the authored register instead.
+    // eye by the whole pivot chord on the first eased frame — the capture must
+    // read the authored register instead.
     const prev = display(h.state);
+    const walkKm = projectedWalkKm(h.state);
     h.store.dispatch(
       setSelectionRow({
         slot: 'focus',
@@ -206,7 +227,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     );
     h.frame();
     const cur = display(h.state);
-    expect(stepKm(prev.eye, cur.eye)).toBeLessThan(1000);
+    expect(stepKm(prev.eye, cur.eye)).toBeLessThan(walkKm * 0.5);
   });
 
   it('a tween start in-window (NON-pivoting incoming driver) draws the displayed image on the edge frame', () => {

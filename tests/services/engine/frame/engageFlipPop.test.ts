@@ -3,9 +3,10 @@
  * orientation settle over seamlessly. A two-curve seam (world roll target
  * keyed to `maxTiltRad`, engaged reference to `bodyUpWeight`) would make the
  * target jump ~0.12 rad AT the flip, which the capped decay would then walk
- * out over ~8 notches — an end-of-dive roll pop. Windowed assertions, not a
- * single-notch rate check: the conversion notch itself carries a legitimate
- * bounded settle step; the defect would be the burst AFTER it.
+ * out over ~8 notches — an end-of-dive roll pop. The measure is image turn per
+ * unit of blend WEIGHT: the unified field spends a fixed angle per unit w, so
+ * that ratio is flat across the conversion and a seam's unauthored target move
+ * shows up as a burst in it.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
@@ -23,7 +24,10 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { driveWheelEvents } from '../../../helpers/camera/driveWheelEvents';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
+import { hrOfPose } from '../../../helpers/camera/hrOfPose';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
+import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
@@ -31,13 +35,17 @@ import { ORIENT_DECAY } from '../../../../src/data/camera/orientDecay';
 import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
 
-type FrameSample = { readonly arm: string; readonly up: Vec3 };
+type FrameSample = { readonly arm: string; readonly up: Vec3; readonly w: number };
 
 function sampleOf(state: EngineState): FrameSample {
   const live = liveWorldPose(state);
@@ -51,6 +59,7 @@ function sampleOf(state: EngineState): FrameSample {
   return {
     arm: state.cameraRuntime.register.pose.frame === 'absolute' ? 'abs' : 'body',
     up: [...up] as Vec3,
+    w: bodyUpWeight(hrOfPose(eye, EARTH, SCENE_EARTH.radiusM)),
   };
 }
 
@@ -88,26 +97,40 @@ describe('engage-flip pop (round 8)', () => {
       for (let i = 1; i < flipIdx; i += 1) {
         maxPre = Math.max(maxPre, turnBetween(samples[i - 1]!, samples[i]!));
       }
-      let maxPost = 0;
-      let cumPost = 0; // total image turn AFTER the conversion notch
-      for (let i = flipIdx + 1; i < samples.length; i += 1) {
-        const turn = turnBetween(samples[i - 1]!, samples[i]!);
-        maxPost = Math.max(maxPost, turn);
-        cumPost += turn;
+      // Only the frames whose notch spent real weight: the ratio below divides
+      // by it, so frames between notches (dw = 0) and the tail past the band's
+      // full edge (w pinned at 1) leave it undefined or ill-conditioned.
+      const notches: { readonly i: number; readonly rate: number }[] = [];
+      for (let i = 1; i < samples.length; i += 1) {
+        const dw = samples[i]!.w - samples[i - 1]!.w;
+        if (dw > 1e-3) notches.push({ i, rate: turnBetween(samples[i - 1]!, samples[i]!) / dw });
       }
+      const flipAt = notches.findIndex((n) => n.i === flipIdx);
+      expect(flipAt).toBeGreaterThan(0);
 
       // No whip anywhere near engage — the ruled per-notch envelope.
       expect(maxPre).toBeLessThanOrEqual(
         ORIENT_DECAY.rideBoundRad + 2 * ORIENT_DECAY.capRad + 0.02,
       );
-      // Monotone hand-off: the engaged settle may only CONTINUE the world arm's
-      // convergence, never open a fresh residual — a target-curve seam would
-      // mint ~0.12 rad of new deviation right at the flip (0.030 > 0.024 here).
-      expect(maxPost).toBeLessThanOrEqual(maxPre + 1e-3);
-      // The pop itself: a seamed field would walk the post-flip window 0.119
-      // rad; the unified field measures 1.8e-4 — the flip finds no fresh
-      // residual to spend.
-      expect(cumPost).toBeLessThan(0.01);
+      // Seamless hand-off: the conversion notch spends the SAME image turn per
+      // unit weight as the world-armed notch before it (0.268 rad/w on this
+      // dive, both spaces — the pole↔scene-up separation at the locus). A
+      // two-curve seam mints ~0.12 rad of unauthored target there, ~3.5× the
+      // rate. The tilt band now runs well below engage, so the blend keeps
+      // turning the image after the flip — a quiet post-window is no longer
+      // the signal, this rate is.
+      const preRate = notches[flipAt - 1]!.rate;
+      expect(notches[flipAt]!.rate).toBeCloseTo(preRate, 1);
+      // And the whole post-flip window, normalized by the weight it spent: the
+      // engaged settle LAGS the field (0.25 share per write) and re-converges,
+      // so this sits just under the notch rate — 0.25 rad/w here. A seam's
+      // capped walk-out would spend its fresh 0.119 rad on top, ~1.4×.
+      let cumPost = 0;
+      for (let i = flipIdx + 1; i < samples.length; i += 1) {
+        cumPost += turnBetween(samples[i - 1]!, samples[i]!);
+      }
+      const spent = samples[samples.length - 1]!.w - samples[flipIdx]!.w;
+      expect(cumPost / spent).toBeLessThan(preRate * 1.25);
     },
   );
 });

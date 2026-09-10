@@ -542,8 +542,8 @@ describe('surfaceStep', () => {
     // a log-h/R span over the live band edges: start a fixed fraction under
     // engage, ride to the upper half of the band, then cross out of it.
     const LN_NOTCH = 0.03;
-    const startHR = SURFACE_REGIME.engageHR * 0.6;
-    const belowNotches = 4; // e^0.12 < 1/0.6 ⇒ still under engage when they end
+    const startHR = TILT_BAND.fullHR * 0.6;
+    const belowNotches = 4; // e^0.12 < 1/0.6 ⇒ still under fullHR when they end
     const rideToHR = Math.sqrt(BAND_MID_HR * SURFACE_REGIME.disengageHR);
     const bandNotches = Math.ceil(
       Math.log(rideToHR / (startHR * Math.exp(LN_NOTCH * belowNotches))) / LN_NOTCH,
@@ -563,7 +563,7 @@ describe('surfaceStep', () => {
       maxTurn = Math.max(maxTurn, angleBetween(before, upOf(pose)));
     };
 
-    // Still below engage, where the weight is 1: the ride holds the BODY
+    // Still below the band's full edge, where the weight is 1: the ride holds the BODY
     // pole's north and only swings off it inside the band. Pinning the weight
     // to the scene up instead walks away from the pole at a full decay cap per
     // notch from the first one.
@@ -904,7 +904,7 @@ describe('surfaceStep', () => {
     // NEAR side (eye y POSITIVE here), not through nadir to the far side.
     const c = makeSurfaceDriver();
     c.onGestureStart();
-    const h = 0.1; // h/R 0.1: in-band, so w = 1 and the ceiling is open
+    const h = TILT_BAND.fullHR; // the band's full edge: w = 1, ceiling open
     const alpha = (10 / 100) * FOV * TILT_GAIN;
     const out = apply(c, poseAt([0, 0, 1 + h], NADIR), drag('pan', [50, 50], [50, 40]));
     const eye = eyeOf(out);

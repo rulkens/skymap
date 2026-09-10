@@ -33,6 +33,7 @@ import { beginDrag, setAutoRotate } from '../../../../src/state/camera/cameraSli
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -64,28 +65,32 @@ function toMidWindow(h: CameraSimHarness): void {
   diveUntilEngaged(h);
   expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
 
-  // Set the memory via surfaceStep's tilt/look steps (unit-radius, just under
-  // the engage edge where the tilt ceiling is well open — the memory itself
-  // is session state, same rationale as tiltLerpRoundTrip's harness).
-  seedRememberedTilt(h, { targetRad: 0.95, guard: 40, pxStep: 5 });
+  // A deep memory (unit-radius surfaceStep drags — session state, same
+  // rationale as tiltLerpRoundTrip's harness): the world arm is only reachable
+  // ABOVE engage, and the 2026-09-10 band leaves a thin weight there, so a
+  // small memory would map to a projection too shallow to compose against.
+  seedRememberedTilt(h, { targetRad: 2.8, guard: 60, pxStep: 5 });
   const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
-  expect(remembered).toBeGreaterThan(0.5);
+  expect(remembered).toBeGreaterThan(2.5);
 
-  // Out past disengage (arm flips absolute), back in to mid-window; the
-  // hysteresis keeps the leg world-armed until engage. As FRACTIONS of the
-  // live edge, so the leg keeps its shape (and its blend weight, on a 2:1
-  // band) wherever the band is tuned.
-  const { disengageHR } = SURFACE_REGIME;
+  // Out past disengage (arm flips absolute), then back in to the ONE
+  // standpoint that is both world armed and inside the tilt band: just above
+  // engage, where the hysteresis still holds the arm absolute. Coarse notches
+  // to the neighbourhood, then tenth notches so the last cannot overshoot.
+  const { disengageHR, engageHR } = SURFACE_REGIME;
   while (display(h.state).hr < disengageHR * 1.15) h.wheel(100);
   expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
-  while (display(h.state).hr > disengageHR * 0.8) h.wheel(-100);
-  const { hr } = display(h.state);
-  expect(hr).toBeGreaterThan(disengageHR * 0.65);
+  while (display(h.state).hr > engageHR * 1.5) h.wheel(-100);
+  while (display(h.state).hr > engageHR * 1.02) h.wheel(-10);
+  expect(display(h.state).hr).toBeGreaterThan(engageHR);
   expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
 
   // Let the follow ease and the projection settle before measuring.
   h.frame(60);
-  expect(display(h.state).tilt).toBeGreaterThan(0.2); // projection live here
+  // Projection live: display is `remembered × w`, read off the band rather
+  // than pinned to a rad literal that only held while the bands shared edges.
+  const live = display(h.state);
+  expect(live.tilt).toBeGreaterThan(0.5 * remembered * bodyUpWeight(live.hr));
 }
 
 describe('commit → re-derive idempotence (R12-1)', () => {
@@ -146,13 +151,17 @@ describe('commit → re-derive idempotence (R12-1)', () => {
     h.frame(8);
     const after = display(h.state);
     expect(Math.abs(after.tilt - before.tilt)).toBeLessThan(0.02);
-    // The release itself moved the eye by at most the 2 px drag, not a teleport.
+    // The release itself moved the eye by at most the 2 px drag, not a
+    // teleport: the bar is a fraction of the pivot chord `d·2sin(τ/2)` a
+    // committed tilted pose would walk, which scales with the band's weight
+    // at this standpoint.
     const shiftKm =
       Math.hypot(
         before.eye[0]! - after.eye[0]!,
         before.eye[1]! - after.eye[1]!,
         before.eye[2]! - after.eye[2]!,
       ) * MPC_TO_KM;
-    expect(shiftKm).toBeLessThan(500);
+    const chordKm = 2 * liveWorldPose(h.state).distance * Math.sin(before.tilt / 2) * MPC_TO_KM;
+    expect(shiftKm).toBeLessThan(chordKm * 0.5);
   });
 });
