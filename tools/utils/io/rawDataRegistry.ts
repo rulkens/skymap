@@ -1006,6 +1006,16 @@ export const RAW_DATA = {
       'Hand-authored per-vertex overrides (HIP id or explicit position) the stars-rs constellation resolver consults at step 3 when a stick-figure vertex has no famous-seed or population star to anchor to. Extended in response to the build failure that names each unresolvable vertex.',
   },
 
+  // ─── Mesh bodies (source GLBs for the orbiting props) ─────────────────
+
+  'meshes.dir': {
+    path: 'data/raw/meshes',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Source GLBs for the mesh bodies, one subdirectory per mesh key holding the model plus its provenance README + LICENSE. Gitignored build inputs, same posture as the planet textures; `npm run build-meshes` bakes them to public/data/meshes/*.mesh + PBR PNGs. Per-file entries land with the assets themselves.',
+  },
+
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
 
   'starnet.weights': {
