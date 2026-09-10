@@ -77,13 +77,17 @@ export type MeshAssetRow = {
   readonly normalMapSubstituted: boolean;
   readonly source: string;
   readonly licence: string;
+  readonly attribution: string; // author + URL; empty string for CC0
 };
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>>;
 ```
 
 Single source of truth for every geometry-derived number, the same role
 `bodyAtlas.generated.ts` plays for atlas layout and `bodyFacts.generated.ts`
-for fact-sheet prose.
+for fact-sheet prose. `attribution` exists so the runtime can show credit for
+a CC BY 4.0 asset without a second lookup: the two mesh model authors are
+credited the same way Solar System Scope's texture credit already is, in the
+Splash footer's credits paragraph (`src/components/Splash/Splash.tsx:195-231`).
 
 ### Seed table and maker
 
@@ -260,8 +264,8 @@ Little-endian. Header:
 Then `vertexCount` interleaved vertices, stride 48 bytes: position (f32×3),
 normal (f32×3), tangent (f32×4, `w` = handedness), uv (f32×2). Then
 `indexCount` u32 indices. Geometry is authored in metres; the tool scales to
-a `--length-m` target, since CC0 source models are rarely at real-world
-scale.
+a `--length-m` target, since CC0 or CC BY 4.0 source models are rarely at
+real-world scale.
 
 ### Tool
 
@@ -540,6 +544,10 @@ the user's ruling, not process momentum.
 - Tests green, `npm run typecheck` green.
 - Visual pass attested by the user (see "Testing" above for the checklist).
 - Provenance for both mesh assets recorded before commit.
+- The whale and petunia model authors are credited (CC0 or CC BY 4.0 with
+  attribution) in the Splash footer's credits paragraph
+  (`src/components/Splash/Splash.tsx:195-231`), the same surface that
+  already credits Solar System Scope for the planet/moon/ring textures.
 - R2 sync of `public/data/meshes/` noted as a deploy step (docs/DEPLOY.md).
 - Backlog detail files for the three adjacent findings exist (written
   alongside this spec) and ride the feature PR.
