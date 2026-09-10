@@ -36,6 +36,7 @@ import {
   EARTH_SURFACE_TILE_MESH_RESOLUTION,
 } from '../../../data/bodies/earthTileParams';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
+import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
 import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
 import { createCloudShellRenderer } from '../../gpu/renderers/bodies/cloudShellRenderer';
 import { createAtmosphereShellRenderer } from '../../gpu/renderers/atmosphere/atmosphereShellRenderer';
@@ -437,6 +438,18 @@ export const GPU_HANDLE_ROWS = [
     key: 'texturedBodyRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createTexturedBodyRenderer(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
+        SLAB_REVERSED_Z[NEAR0]!,
+      ),
+  },
+  {
+    // Mesh bodies ride their host's NEAR0 body slab, so they share the sphere
+    // bodies' foreground:0 formats and depth convention exactly.
+    key: 'meshBodyRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createMeshBodyRenderer(
         deps.ctx.device,
         HDR_TARGET_FORMAT,
         FOREGROUND_DEPTH_FORMAT,
