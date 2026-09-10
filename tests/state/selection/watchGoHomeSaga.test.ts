@@ -80,7 +80,7 @@ describe('watchGoHomeSaga', () => {
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
     const orientation = selectOrientation(store.getState());
     const frameBasis = ORIENTATION_FRAMES[orientation];
-    expect(tween!.to).toEqual(bodyHomePose(simDays, FOV, frameBasis));
+    expect(tween!.to).toEqual(bodyHomePose('earth', simDays, FOV, frameBasis));
 
     // The descriptor pins the orientation live at dispatch time, mirroring
     // `clip.frame` and `focusTweenDescriptor`'s `frame` — the driver re-expresses

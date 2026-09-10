@@ -18,6 +18,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { updatePosition } from '../../../../src/utils/camera/updatePosition';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -27,7 +28,7 @@ const FOV_Y_RAD = (Math.PI / 180) * 45;
 const SIM_DAYS = CONST_J2000 + 1234.5;
 
 const earthPos = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
-const pose = bodyHomePose(SIM_DAYS, FOV_Y_RAD);
+const pose = bodyHomePose('earth', SIM_DAYS, FOV_Y_RAD);
 
 // The orbit convention places the eye at target + distance·dir with dir pointing
 // target→eye; reconstruct that eye-offset direction from the returned angles.
@@ -86,7 +87,7 @@ describe('bodyHomePose', () => {
   };
 
   it('encoded through the ecliptic basis, decodes back to the sunlit aim under that same basis', () => {
-    const framed = bodyHomePose(SIM_DAYS, FOV_Y_RAD, ORIENTATION_FRAMES.ecliptic);
+    const framed = bodyHomePose('earth', SIM_DAYS, FOV_Y_RAD, ORIENTATION_FRAMES.ecliptic);
     const decoded = decodeAim(framed);
     expect(decoded[0]).toBeCloseTo(aim[0]);
     expect(decoded[1]).toBeCloseTo(aim[1]);
@@ -94,12 +95,22 @@ describe('bodyHomePose', () => {
 
     // Teeth: a legacy-identity encode (no basis) decoded through the ecliptic
     // basis misses the aim — proving the parameter is load-bearing, not inert.
-    const legacyDecoded = decodeAim(bodyHomePose(SIM_DAYS, FOV_Y_RAD));
+    const legacyDecoded = decodeAim(bodyHomePose('earth', SIM_DAYS, FOV_Y_RAD));
     const err = Math.hypot(
       legacyDecoded[0] - aim[0],
       legacyDecoded[1] - aim[1],
       legacyDecoded[2] - aim[2],
     );
     expect(err).toBeGreaterThan(0.1);
+  });
+
+  it('frames the requested body, not Earth', () => {
+    const marsPos = deriveBodyStates(SIM_DAYS).get('mars')!.positionMpc;
+    const marsRadiusM = SCENE_BODIES.find((b) => b.id === 'mars')!.radiusM;
+    const marsPose = bodyHomePose('mars', SIM_DAYS, FOV_Y_RAD);
+    const marsFraming = bodyLikeFraming(marsPos, marsRadiusM, FOV_Y_RAD);
+
+    expect(marsPose.target).not.toEqual(pose.target);
+    expect(marsPose.target).toEqual(marsFraming.target);
   });
 });

@@ -14,6 +14,7 @@ import {
   computeInitialCamera,
   FAR_CLIP_MPC,
   GALACTIC_DISC_FORWARD,
+  INITIAL_DISTANCE_MPC,
 } from '../../../../src/services/engine/camera/cameraFraming';
 import { bodyHomePose } from '../../../../src/services/engine/camera/bodyHomePose';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -24,8 +25,8 @@ describe('computeInitialCamera', () => {
   const FOV = (Math.PI / 180) * 60;
 
   it('boots into the Earth home pose at the given sim instant', () => {
-    const cam = computeInitialCamera({ fovYRad: FOV, simDays: CONST_J2000 });
-    const home = bodyHomePose(CONST_J2000, FOV);
+    const cam = computeInitialCamera({ bodyId: 'earth', fovYRad: FOV, simDays: CONST_J2000 });
+    const home = bodyHomePose('earth', CONST_J2000, FOV);
 
     expect(cam.target).toEqual(home.target);
     expect(cam.yaw).toBe(home.yaw);
@@ -34,10 +35,28 @@ describe('computeInitialCamera', () => {
   });
 
   it('wraps the home pose in the near/far/fov envelope', () => {
-    const cam = computeInitialCamera({ fovYRad: FOV, simDays: CONST_J2000 });
+    const cam = computeInitialCamera({ bodyId: 'earth', fovYRad: FOV, simDays: CONST_J2000 });
     expect(cam.fovYRad).toBe(FOV);
     expect(cam.near).toBe(0.01);
     expect(cam.far).toBe(FAR_CLIP_MPC);
+  });
+
+  it('boots to the neutral Local-Group pose when there is no home body', () => {
+    const cam = computeInitialCamera({
+      bodyId: null,
+      fovYRad: FOV,
+      simDays: CONST_J2000,
+      frameBasis: ORIENTATION_FRAMES.ecliptic,
+    });
+    const { yaw, pitch } = orbitAnglesLookingAlong(
+      GALACTIC_DISC_FORWARD,
+      ORIENTATION_FRAMES.ecliptic,
+    );
+
+    expect(cam.target).toEqual([0, 0, 0]);
+    expect(cam.distance).toBe(INITIAL_DISTANCE_MPC);
+    expect(cam.yaw).toBe(yaw);
+    expect(cam.pitch).toBe(pitch);
   });
 });
 

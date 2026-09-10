@@ -449,19 +449,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb: { store: { dispatch: vi.fn() } } as unknown as EngineCallbacks,
-    home: {
-      pose: () => ({
-        target: [0, 0, 0],
-        distance: 1,
-        yaw: 0,
-        pitch: 0,
-        fovYRad: 1,
-        near: 0.01,
-        far: 100,
-      }),
-      focus: null,
-      seedSelection: () => false,
-    },
+    home: { focus: null, seedSelection: false },
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

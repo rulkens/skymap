@@ -58,19 +58,7 @@ describe('createEngine — saga context registration', () => {
     // internally and forwarded to onStatusChange above). The synchronous prefix
     // never reads `home` (that's `wireInput`, inside the async IIFE), so a minimal
     // stub stands in for the real composition value.
-    createEngine(canvas, cb, {
-      pose: () => ({
-        target: [0, 0, 0],
-        distance: 1,
-        yaw: 0,
-        pitch: 0,
-        fovYRad: 1,
-        near: 0.01,
-        far: 100,
-      }),
-      focus: null,
-      seedSelection: () => false,
-    });
+    createEngine(canvas, cb, { focus: null, seedSelection: false });
 
     // The registration is synchronous — assert immediately after the call.
     expect(setSagaContext).toHaveBeenCalledTimes(1);

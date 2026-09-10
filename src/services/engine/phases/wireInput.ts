@@ -35,6 +35,7 @@ import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { poseOf } from '../camera/poseOf';
 import { projectionOf } from '../camera/projectionOf';
+import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
@@ -47,6 +48,7 @@ import {
 import { selectSelectedRef, selectHasSelectionIntent } from '../../../state/selection/selectors';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { isCinemaMode } from '../../../utils/url/isCinemaMode';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -146,7 +148,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // `#orientation=<frame>` deep link is already committed by this async phase (see
   // the boot-ordering note below), so this reads the URL frame when present.
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
-  const initialCam = home.pose({ simDays, frameBasis });
+  const bodyId = home.focus === null ? null : home.focus.ref.id;
+  const initialCam = computeInitialCamera({
+    bodyId,
+    fovYRad: DEFAULT_FOV_Y_RAD,
+    simDays,
+    frameBasis,
+  });
 
   // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
   // live canvas ratio, not a captured one), so the camera is the framing
@@ -216,7 +224,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // already a broken URL.
   const rootState = store.getState();
   if (home.focus !== null && !selectHasSelectionIntent(rootState)) {
-    if (home.seedSelection()) store.dispatch(updateSelectionSelect(home.focus.ref));
+    // Cinema is an app mode gating what the composition asked for — the same
+    // class of override as the deep-link deference guard above — so it stays
+    // a phase-level gate rather than a composition knob.
+    if (home.seedSelection && !isCinemaMode()) {
+      store.dispatch(updateSelectionSelect(home.focus.ref));
+    }
     store.dispatch(updateSelectionFocus(home.focus.ref));
   }
 

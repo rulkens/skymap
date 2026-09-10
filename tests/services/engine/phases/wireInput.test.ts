@@ -232,6 +232,7 @@ describe('wireInput', () => {
     // that committed basis into the framing call (first-paint encodes through the
     // frame the render path decodes with).
     expect(computeInitialCameraSpy).toHaveBeenCalledWith({
+      bodyId: 'earth',
       fovYRad: (Math.PI / 180) * 60,
       simDays: expect.any(Number),
       frameBasis: ORIENTATION_FRAMES.ecliptic,
@@ -254,7 +255,7 @@ describe('wireInput', () => {
 
   it('seeds focus but not select when the home config withholds the selection', async () => {
     const state = makeState();
-    const deps = { ...makeDeps(), home: { ...EARTH_HOME, seedSelection: () => false } };
+    const deps = { ...makeDeps(), home: { ...EARTH_HOME, seedSelection: false } };
 
     await wireInput(state, deps);
 
@@ -274,6 +275,7 @@ describe('wireInput', () => {
     const root = deps.cb.store.getState();
     expect(selectSelectedRef(root)).toBeNull();
     expect(selectFocusRef(root)).toBeNull();
+    expect(computeInitialCameraSpy).toHaveBeenCalledWith(expect.objectContaining({ bodyId: null }));
   });
 
   it('leaves an existing selection alone — a URL-hash focus restored before bootstrap wins', async () => {
