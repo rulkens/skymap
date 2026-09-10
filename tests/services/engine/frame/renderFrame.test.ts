@@ -130,7 +130,7 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       scale: 3,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
-    // zoneOfAvoidanceLayer.draw reads this row's `scale` to size the
+    // zoneOfAvoidancePass.draw reads this row's `scale` to size the
     // downscaled viewport it hands the band raymarch. The default fixture
     // keeps zoneOfAvoidanceRenderer null, so deriveZoneOfAvoidanceLiveness
     // gates the 'zoa' step off (mirrors volumeLiveness's renderer-null
@@ -142,7 +142,7 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       scale: 5,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
-    // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+    // milkyWayAggregatePass.draw reads this row's `scale` to size the
     // downscaled viewport it hands the star pass (the sprite clamp is in
     // TARGET pixels), so the row has to be here, not just a view.
     {
@@ -167,7 +167,7 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
       return spec;
     },
-    // scalarVolumeLayer / milkyWayAggregateLayer read this for their
+    // scalarVolumePass / milkyWayAggregatePass read this for their
     // downscaled viewport; the fixture canvas is the fixed 1280x720 the
     // `ctx` built below uses (`canvasWidth`/`FIXTURE_CANVAS_HEIGHT_PX`).
     sizeOf: (id: string) => {
@@ -448,25 +448,25 @@ function makeInput(
     settings,
     input: {
       ctx,
-      // ContentLayers read engine state via `input.state`. The label +
+      // ContentPasses read engine state via `input.state`. The label +
       // marker-line layers read `state.gpu.*` in their `enabled()` gates;
       // nulling those handles makes the layers skip (enabled → false), so
       // these tests stay focused on point + milky-way ordering.
       state: {
         // focusUniform: renderFrame writes it once per frame and
-        // galaxyPointSpritesLayer binds its group; a no-op write + opaque bind
+        // galaxyPointSpritesPass binds its group; a no-op write + opaque bind
         // group keeps the mock encoder happy.
         gpu: {
           labelRenderer: null,
           markerLineRenderer: null,
-          // clipPathDebugLayer.enabled short-circuits on a null renderer.
+          // clipPathDebugPass.enabled short-circuits on a null renderer.
           debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
           // Near-field handles null → the body layers, star-points,
-          // star-catalog, and foregroundLabelsLayer all report enabled=false,
+          // star-catalog, and foregroundLabelsPass all report enabled=false,
           // so the program's
           // (hdr, NEAR0) render and foreground:0 render select nothing and
           // the foreground:0→swap composite is touched-set-skipped. These
@@ -475,7 +475,7 @@ function makeInput(
           earthRenderer: null,
           starRenderer: null,
           planetRenderer: null,
-          // Near-field handle null → atmosphereShellLayer reports enabled=false
+          // Near-field handle null → atmosphereShellPass reports enabled=false
           // AND the atmosphereSkyView compute step early-outs, so these fixtures
           // stay a pure cosmological-frame trace (like the other body handles).
           atmosphereShellRenderer: null,
@@ -483,15 +483,15 @@ function makeInput(
           orbitTrailRenderer: null,
           starCatalogRenderer: null,
           foregroundLabelRenderer: null,
-          // milkyWayLayer.draw reads the generated cloud buffers off this handle.
+          // milkyWayPass.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,
-          // milkyWayUpsampleLayer shares the cloud's liveness gate, so it is
+          // milkyWayUpsamplePass shares the cloud's liveness gate, so it is
           // enabled here; a null handle makes its `draw` self-guard and issue
           // nothing, keeping these fixtures free of an upsample blit they
           // don't assert on. The key must EXIST — the layer's guard is
           // `=== null`, which `undefined` would slip past.
           milkyWayAggregateUpsample: null,
-          // Every `ContentLayer.draw` reads its renderer straight off
+          // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `input.*` duplication; see
           // `RenderFrameInput`'s slimmed shape).
@@ -500,13 +500,13 @@ function makeInput(
           texturedDiskRenderer,
           proceduralDiskRenderer,
           filamentRenderer: null,
-          // zoneOfAvoidanceLayer.draw (the band) and zoneOfAvoidanceUpsampleLayer.draw
+          // zoneOfAvoidancePass.draw (the band) and zoneOfAvoidanceUpsamplePass.draw
           // (the lettering) both read this off state.gpu.* directly, same === null
           // early-return guard as filamentRenderer above; the key must EXIST
           // (undefined would slip past `=== null`) — see the
           // milkyWayAggregateUpsample comment above for the same landmine.
           zoneOfAvoidanceRenderer: null,
-          // zoneOfAvoidanceUpsampleLayer's offscreen blit shares the same
+          // zoneOfAvoidanceUpsamplePass's offscreen blit shares the same
           // key-must-exist landmine as milkyWayAggregateUpsample above — the
           // fixture camera sits inside the band's visibility window, so this
           // layer's `enabled` is true and `draw` runs every frame here.
@@ -558,13 +558,13 @@ function makeInput(
           pickInFlight: false,
           pointerDown: false,
         },
-        // proceduralDisksLayer / texturedDisksLayer each read their slot
+        // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
         // references makes the layers skip cleanly.
         subsystems: {
           proceduralDisks: null,
           texturedDisks: null,
-          // filamentsLayer.enabled consults the FadeRegistry to keep the
+          // filamentsPass.enabled consults the FadeRegistry to keep the
           // layer alive through fade-out tails. A minimal opacityOf stub
           // keeps the gate from crashing.
           fades: { opacityOf: () => 1, isAnyAnimating: () => false },
@@ -846,7 +846,7 @@ describe('renderFrame', () => {
       hasActiveFields: () => true,
       listIds: () => [],
     };
-    // volumeUpsampleLayer.draw self-guards on a null volumeUpsample — keep it
+    // volumeUpsamplePass.draw self-guards on a null volumeUpsample — keep it
     // null so the upsample layer draws nothing; this test pins the volume pass
     // ordering. Its enabled() still tracks the SAME liveness (no desync).
     (fx2.input.state as any).gpu.volumeUpsample = null;

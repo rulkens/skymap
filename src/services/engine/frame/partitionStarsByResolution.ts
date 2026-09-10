@@ -2,8 +2,8 @@
  * partitionStarsByResolution — the ONE branch point deciding which star
  * layer draws each seeded star this frame.
  *
- * `starSpheresLayer` draws the `spheres` branch (true-scale emissive
- * spheres in the depth-bearing foreground); `starPointsLayer` draws the
+ * `starSpheresPass` draws the `spheres` branch (true-scale emissive
+ * spheres in the depth-bearing foreground); `starPointsPass` draws the
  * `points` branch (additive billboards in the HDR accumulation). Both
  * layers call THIS function and consume opposite branches of one result,
  * so a star is a sphere XOR a point **by construction**: every star lands

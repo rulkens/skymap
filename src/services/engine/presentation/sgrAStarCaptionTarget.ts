@@ -2,10 +2,10 @@
  * sgrAStarCaptionTarget — the Galactic Centre caption's fade target for a given
  * camera, ahead of declutter.
  *
- * `foregroundLabelsLayer.draw` computes this inline for every caption by
+ * `foregroundLabelsPass.draw` computes this inline for every caption by
  * indexing `CAPTION_FADE_RULES`. Two OTHER sites need the same number for this
  * ONE kind: the layer's `enabled` (this caption reaches past the solar system's
- * range, so it carries its own demand term) and `starPointsLayer`'s pick stamp
+ * range, so it carries its own demand term) and `starPointsPass`'s pick stamp
  * (the anchor draws nothing, so the caption is the entire affordance the click
  * follows). Both go through the rules table here rather than re-spelling the
  * gates and the band, which is what would let a "clickable but unnamed" or

@@ -123,7 +123,7 @@ function makeRenderTargets(views: Record<string, GPUTextureView>) {
       scale: 3,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
-    // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+    // milkyWayAggregatePass.draw reads this row's `scale` to size the
     // downscaled viewport it hands the star pass, so the row must exist here
     // and not only in the views record.
     {
@@ -148,7 +148,7 @@ function makeRenderTargets(views: Record<string, GPUTextureView>) {
       if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
       return spec;
     },
-    // scalarVolumeLayer / milkyWayAggregateLayer read this for their
+    // scalarVolumePass / milkyWayAggregatePass read this for their
     // downscaled viewport; the fixture canvas is the fixed 1280x720
     // `makeMinimalInputWithTiming` builds `ctx` with.
     sizeOf: (id: string) => {
@@ -300,23 +300,23 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         earthRenderer: null,
         starRenderer: null,
         planetRenderer: null,
-        // Near-field handle null → atmosphereShellLayer disabled AND the
+        // Near-field handle null → atmosphereShellPass disabled AND the
         // atmosphereSkyView compute step early-outs, so it bills no work.
         atmosphereShellRenderer: null,
         starPointRenderer: null,
         orbitTrailRenderer: null,
         starCatalogRenderer: null,
         foregroundLabelRenderer: null,
-        // milkyWayLayer.draw reads the generated cloud buffers off this handle.
+        // milkyWayPass.draw reads the generated cloud buffers off this handle.
         milkyWayCloud: {
           buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),
         },
-        // milkyWayUpsampleLayer shares the cloud's liveness gate, so it is
+        // milkyWayUpsamplePass shares the cloud's liveness gate, so it is
         // enabled here and bills its own timed pass; the null handle makes its
         // `draw` self-guard and issue no blit. The key must EXIST — the guard
         // is `=== null`, which `undefined` would slip past.
         milkyWayAggregateUpsample: null,
-        // Every `ContentLayer.draw` reads its renderer straight off
+        // Every `ContentPass.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are
         // wired in (no top-level `input.*` duplication).
         milkyWayCloudRenderer,
@@ -362,7 +362,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       subsystems: {
         proceduralDisks: null,
         texturedDisks: null,
-        // filamentsLayer.enabled consults the FadeRegistry to keep the layer
+        // filamentsPass.enabled consults the FadeRegistry to keep the layer
         // alive through fade-out tails; this fixture wants it GATED OFF, so
         // every other id fades to 0. The Milky-Way cloud is the exception: its
         // liveness projection MULTIPLIES this opacity into its alpha, so a

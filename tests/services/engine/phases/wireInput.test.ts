@@ -64,7 +64,7 @@ vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPickRenderer
 // wireInput only needs the array to hand to createPickProgram, so an empty
 // stub is enough and keeps the phase test free of the full renderer graph.
 vi.mock('../../../../src/services/engine/frame/passes', () => ({
-  CONTENT_LAYERS: [],
+  CONTENT_PASSES: [],
 }));
 
 vi.mock('../../../../src/services/engine/frame/pickProgram', () => ({

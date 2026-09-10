@@ -457,8 +457,8 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     // required BYTES outgrow this slot's allocation. Sizing the check by bytes (not
     // instance count) is load-bearing: a slot is claimed by call ORDER, so the same
     // slot can be inherited by a WIDER-stride variant across submits — e.g. when
-    // starPointsLayer drops out of a submit (famous-stars toggle off, or the roster
-    // resolves to spheres) and bodyGlintsLayer becomes the first point caller,
+    // starPointsPass drops out of a submit (famous-stars toggle off, or the roster
+    // resolves to spheres) and bodyGlintsPass becomes the first point caller,
     // inheriting slot 0 that was last sized for 16-byte scene-star instances. A
     // count-only check (`n > capacity`) would keep the 16-byte buffer for 20-byte
     // glints whenever `n` still fits, and `writeBuffer` would then run PAST the

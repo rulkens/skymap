@@ -6,7 +6,7 @@
  * body-state snapshot (`sceneBodyStates`), a camera, a projection, and an
  * `isTextureResident` predicate. This thin adapter binds those inputs to the
  * current frame ONCE so the layers that consume opposite
- * branches (`planetsLayer` the `flat` branch, `texturedBodiesLayer` the
+ * branches (`planetsPass` the `flat` branch, `texturedBodiesPass` the
  * `textured` branch, and eventually the glints layer) cannot drift apart on how
  * they build them. If two layers spelled the residency lookup separately, a
  * resident body could be counted `textured` by one and `flat` by the other and

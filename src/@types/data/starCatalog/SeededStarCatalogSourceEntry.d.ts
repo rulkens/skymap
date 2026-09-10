@@ -13,7 +13,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * requests a `.bin` that doesn't exist.
  *
  * Unlike the Gaia bin it DOES bear labels: the map's star names caption the
- * final descent through `foregroundLabelsLayer`.
+ * final descent through `foregroundLabelsPass`.
  */
 export type SeededStarCatalogSourceEntry = SourceEntryBase & {
   readonly type: 'starCatalog';

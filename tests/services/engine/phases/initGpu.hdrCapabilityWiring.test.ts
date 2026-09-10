@@ -37,7 +37,7 @@ function makeStub(name: string): Stub {
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
-    // `initGpu` never calls `setLabels` itself — `foregroundLabelsLayer`
+    // `initGpu` never calls `setLabels` itself — `foregroundLabelsPass`
     // uploads the live caption set on its own first draw. Kept on the stub
     // shape because other stubbed renderers built from the same factory
     // expose the method.
@@ -141,7 +141,7 @@ vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/proceduralDiskRend
 vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
   // initGpu imports the FRAME program (for TIMED_SLOTS), which transitively
-  // loads the content-layer registry incl. horizonShellLayer — that module
+  // loads the content-layer registry incl. horizonShellPass — that module
   // reads this const, so the mock must provide it.
   HORIZON_RADIUS_GPC: 14.3,
 }));
@@ -263,7 +263,7 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () =
 vi.mock('../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer', () => ({
   createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
 }));
-// Partial mock: planetsLayer.ts imports the real INSTANCE_FLOATS constant at
+// Partial mock: planetsPass.ts imports the real INSTANCE_FLOATS constant at
 // module scope to size its staging buffer (against SCENE_PLANETS.length —
 // no fixed cap), so only the factory is stubbed — passing INSTANCE_FLOATS
 // through keeps that sizing real.
@@ -276,7 +276,7 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (i
 vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
   createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
 }));
-// Partial mock, same rationale as planetRenderer's below: bodyGlintsLayer.ts
+// Partial mock, same rationale as planetRenderer's below: bodyGlintsPass.ts
 // (loaded transitively via the frame program's registry import) reads the real
 // MAX_GLINTS / INSTANCE_FLOATS constants at module scope to size its staging
 // buffer, so only the factory is stubbed.
@@ -321,7 +321,7 @@ vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogPickRende
 vi.mock('../../../../src/services/gpu/renderers/bodies/bodyPickRenderer', () => ({
   createBodyPickRenderer: vi.fn(() => makeStub('bodyPickRenderer')),
 }));
-// Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
+// Partial mock, same rationale as planetRenderer's above: orbitTrailsPass.ts
 // (loaded transitively via the frame program's registry import) reads the
 // real INSTANCE_FLOATS constant at module scope to size its staging buffer
 // (against ORBITAL_ELEMENTS.length — no fixed cap), so only the factory is
@@ -357,7 +357,7 @@ import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineS
 import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
 // The real seeded data bag: the starPointRenderer row's construct closure
 // reads `state.data.bodies` (the far-star partition for setStars; the seeded
-// planet list drives planetsLayer), so the state fixture carries the real
+// planet list drives planetsPass), so the state fixture carries the real
 // construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 // The registry itself: derives the expected non-null / null key sets for the

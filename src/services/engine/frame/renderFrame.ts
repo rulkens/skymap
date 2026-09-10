@@ -20,7 +20,7 @@
  *      `'perLayerTimed'` when timing is enabled (one pass per layer so each can
  *      carry its own `timestampWrites`), else `'merged'` (one pass per target
  *      group — the tile-local production path OVER blends need).
- *   4. `executeFrame` walks `frameProgram(tone)` over `CONTENT_LAYERS`: the flow
+ *   4. `executeFrame` walks `frameProgram(tone)` over `CONTENT_PASSES`: the flow
  *      compute, the scalar-volume render, the HDR render, the `hdr→swap`
  *      tone-map composite, then the swap-chain overlay render.
  *   5. Record the timing resolve/copy (`endFrame`) and submit.
@@ -56,7 +56,7 @@ import { executeFrame } from './executeFrame';
 import { frameProgram } from './frameProgram';
 import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
-import { CONTENT_LAYERS } from './passes';
+import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -67,8 +67,8 @@ import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 
 // Hoisted rather than resolved per frame (a linear `.find` over `BODY_REGIONS`),
-// matching the other two consumers of the same lookup — `sgrAStarLensingLayer`
-// and `bodyGlintsLayer`.
+// matching the other two consumers of the same lookup — `sgrAStarLensingPass`
+// and `bodyGlintsPass`.
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
 const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
@@ -220,7 +220,7 @@ export function renderFrame(input: RenderFrameInput): void {
       skyCubemapFacesToCapture,
       sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
     ),
-    layers: CONTENT_LAYERS,
+    passes: CONTENT_PASSES,
     strategy,
     timing: timingService,
     swapView,

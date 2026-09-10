@@ -6,7 +6,7 @@
  *
  * A planet too small to resolve as a mesh is drawn as a single additive point
  * whose brightness is this product (the cross-fade `fadeBand` the layer applies
- * on top is a SEPARATE factor — see `bodyGlintsLayer`). Three physically honest
+ * on top is a SEPARATE factor — see `bodyGlintsPass`). Three physically honest
  * terms:
  *
  *   - **apparent size** — a bigger (closer) sub-pixel body glints brighter. The
@@ -64,9 +64,7 @@ export function bodyGlintBrightness(input: {
   // treat as fully lit. The camera-on-body case never reaches here anyway (the
   // partition sends distance-0 bodies to the mesh, not the glint).
   const illum =
-    sLen > 0 && cLen > 0
-      ? Math.max(0, 1 + (sx * cx + sy * cy + sz * cz) / (sLen * cLen)) * 0.5
-      : 1;
+    sLen > 0 && cLen > 0 ? Math.max(0, 1 + (sx * cx + sy * cy + sz * cz) / (sLen * cLen)) * 0.5 : 1;
 
   return sizeFactor * lum * illum;
 }

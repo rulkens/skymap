@@ -17,7 +17,7 @@ export type LabelPickRenderer = {
    * pass them nearest-subject-first.
    *
    * Binds its own `@group(0)`; a COSMO caller must restore the shared
-   * point-pick camera prefix afterwards (see `ContentLayer.drawPick`).
+   * point-pick camera prefix afterwards (see `ContentPass.drawPick`).
    */
   draw(pass: GPURenderPassEncoder, quads: readonly LabelPickQuad[], viewportPx: Vec2): void;
   /** Release the uniform + instance buffers. */

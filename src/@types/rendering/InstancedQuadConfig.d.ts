@@ -53,7 +53,7 @@ export type InstancedQuadConfig = {
    * buffer, `viewSlot` ignored) — every consumer except TexturedDiskRenderer.
    *
    * TexturedDiskRenderer passes `VIEW_SLOT_COUNT` (Task 13b, Ruling 6): its
-   * consumer, `texturedDisksLayer`, is on the black-hole lens's sky-cubemap
+   * consumer, `texturedDisksPass`, is on the black-hole lens's sky-cubemap
    * capture roster, whose several `draw()` calls (one per captured face, one
    * for the real view, all before one `submit()`) each carry a DIFFERENT
    * `viewProj`/`viewport`/`camPos`. A single shared `@group(0)` buffer would

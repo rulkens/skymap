@@ -1,7 +1,7 @@
 /**
  * Parity guard: `FAMOUS_STAR_PICK_RADIUS_PX` is authored in
  * `bodies/starPointPick.wesl` (which actually rasterises the footprint) and
- * mirrored in TS for `starPointsLayer`'s satellite-suppression rule. `?static`
+ * mirrored in TS for `starPointsPass`'s satellite-suppression rule. `?static`
  * WESL linking injects no values, so a test is what keeps the two in step —
  * the same discipline `constants.parity.test.ts` keeps for the flow field.
  *

@@ -14,7 +14,7 @@ about flattening before either could move. It has: `camPosLocal.ts:89-95` takes 
 optional `oblateness` (default 0) and divides the polar component by
 `radiusMpc·(1 − oblateness)` (`camPosLocal.ts:110,121`), landing the ray origin in
 the frame where the body is the unit sphere. `drawFlooredSpherePick.ts:96-113`
-already feeds it, and `starSpheresLayer.ts:178` already passes each star's real
+already feeds it, and `starSpheresPass.ts:178` already passes each star's real
 `oblateness` through.
 
 So the coupling argument is spent, and the two halves are more separable than the
@@ -68,12 +68,12 @@ Both render as perfect spheres today. Real flattening is 0.0649 (Jupiter) and
 0.098 (Saturn), and `composeBodyMvp` already accepts the parameter — but nothing
 carries the value: `PlanetBody` (`src/@types/scene/PlanetBody.d.ts:17-22`) has
 `id`, `label`, `radiusKm`, `albedo` and nothing else, and neither
-`planetsLayer.ts:134-140` nor `texturedBodiesLayer` passes an oblateness argument.
+`planetsPass.ts:134-140` nor `texturedBodiesPass` passes an oblateness argument.
 
 The blocker is not the seed field. It is that **the atmosphere shell is spherical
 and its ground radius is a scalar**.
 
-`atmosphereShellLayer.ts:92-98` composes the shell's proxy with no oblateness
+`atmosphereShellPass.ts:92-98` composes the shell's proxy with no oblateness
 argument, and `packAtmosphereUniforms.ts:75` takes `bottomRadius =
 planetRadiusKm / atmosphereTopKm` — one number, no axis. Both gas giants carry an
 `ATMOSPHERE_PARAMS` row (`atmosphereParams.ts:167-208`), so both draw a shell.
@@ -135,7 +135,7 @@ Option B) gets reintroduced.
 - `src/services/gpu/shaders/bodies/star/{vertex,fragment}.wesl` — the conversion.
 - `src/services/gpu/shaders/lib/sphere.wesl` — `TintedSphereUniforms`.
 - `src/@types/scene/PlanetBody.d.ts` — where an `oblateness` seed field would go.
-- `src/services/engine/frame/passes/{planetsLayer,texturedBodiesLayer,atmosphereShellLayer}.ts`
+- `src/services/engine/frame/passes/{planetsPass,texturedBodiesPass,atmosphereShellPass}.ts`
   — the `composeBodyMvp` / `camPosLocal` call sites that would carry it.
 - `src/utils/gpu/packAtmosphereUniforms.ts:75`,
   `src/services/gpu/shaders/atmosphere/shell/fragment.wesl:139-158` — the scalar

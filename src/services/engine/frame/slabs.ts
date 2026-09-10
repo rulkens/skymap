@@ -88,9 +88,9 @@ export function groupKeyOf(target: string, slab: number): string {
 
 /**
  * The per-slot GPU-timing NAME for a layer drawing into `slabIndex` — bare
- * `layerName` for NEAR0/COSMO (one instance per frame, already unique), or
- * `'<layerName>·BODY[k]'` for a body row, so two body rows sharing one
- * `'body'`-slab layer (e.g. `planetsLayer` drawing Jupiter AND a moon) don't
+ * `passName` for NEAR0/COSMO (one instance per frame, already unique), or
+ * `'<passName>·BODY[k]'` for a body row, so two body rows sharing one
+ * `'body'`-slab layer (e.g. `planetsPass` drawing Jupiter AND a moon) don't
  * collide on the same query-set index pair. A capture step's `face` appends
  * the same way and for the same reason: a roster layer draws once per
  * captured face AND once for the real view, all on `(hdr|sky-cubemap, NEAR0)`
@@ -101,8 +101,8 @@ export function groupKeyOf(target: string, slab: number): string {
  * both call this, so the allocated slot and the looked-up slot can never
  * drift apart.
  */
-export function layerTimingSlotName(layerName: string, slabIndex: number, face?: number): string {
-  const base = isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
+export function passTimingSlotName(passName: string, slabIndex: number, face?: number): string {
+  const base = isBodySlabIndex(slabIndex) ? `${passName}·${slabName(slabIndex)}` : passName;
   return face === undefined ? base : `${base}·FACE[${face}]`;
 }
 
@@ -113,7 +113,7 @@ export function layerTimingSlotName(layerName: string, slabIndex: number, face?:
  * `(target, slab)` — `('sky-cubemap', NEAR0)` — because the array-layer they
  * write isn't part of the `(target, slab)` key at all (unlike a body row,
  * which gets its OWN `slab` index and so is already unique), so `groupKeyOf`
- * alone collides across faces; this is `layerTimingSlotName`'s counterpart
+ * alone collides across faces; this is `passTimingSlotName`'s counterpart
  * one level up, disambiguating the STEP's own slot rather than a layer's.
  * `timedSlotRowsOf` (frameProgram.ts) allocates under this name;
  * `executeFrame`'s merged pass must resolve the identical name via

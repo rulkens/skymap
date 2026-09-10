@@ -148,9 +148,9 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
     >
       {/*
         Iterate `TIMED_SLOT_GROUPS` (derived from the FRAME program +
-        the CONTENT_LAYERS registry) so groups + row order stay in
+        the CONTENT_PASSES registry) so groups + row order stay in
         lockstep with the actual renderer draw order — reordering
-        CONTENT_LAYERS in `passes/index.ts` automatically reorders the
+        CONTENT_PASSES in `passes/index.ts` automatically reorders the
         timing UI. A slot that hasn't sampled yet is skipped; a group
         with no sampled rows renders no header.
       */}

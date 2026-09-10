@@ -244,7 +244,7 @@ export function createFilamentRenderer(
     /**
      * The density-ramp tint endpoints (RGB): `baseTint` the dim cool-purple
      * tendril tone, `hotTint` the bright near-white violet spine tone. Defined
-     * once in `filamentsLayer.ts` and packed into the uniform's tint slots; the
+     * once in `filamentsPass.ts` and packed into the uniform's tint slots; the
      * fragment mixes between them by per-vertex density.
      */
     baseTint: Vec3,

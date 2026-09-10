@@ -6,7 +6,7 @@ closed unmerged, branch kept). User ruling: not now.
 
 ## What is wrong on main today
 
-1. **The S-stars never enter the sky cubemap.** `starPointsLayer` no longer
+1. **The S-stars never enter the sky cubemap.** `starPointsPass` no longer
    carries `skyCapture` at all (removed once it was confirmed dead weight):
    each capture face's synthetic pose used a placeholder `distance: 1` (Mpc)
    to land the eye (`skyCubemapFaceContext.ts`), and the layer's
@@ -32,10 +32,10 @@ closed unmerged, branch kept). User ruling: not now.
   the numerical derivative, → 0 continuously at the shadow (no cull needed).
   Weak-field first version popped at the rim because 2/b keeps the secondary
   bright to the photon sphere.
-- `src/services/engine/frame/sStarLensedImages.ts` + `passes/sStarLensedImagesLayer.ts`
+- `src/services/engine/frame/sStarLensedImages.ts` + `passes/sStarLensedImagesPass.ts`
   — hdr / NEAR0 / additive / `hdrPostLensing: true` (must draw AFTER the lens
   `over` blend or the disc wipes it). Own `StarPointRenderer` instance: `setStars`
-  is a `writeBuffer`, last write wins per submit. `starPointsLayer` drops the
+  is a `writeBuffer`, last write wins per submit. `starPointsPass` drops the
   S-stars while band alpha > 0 (hard swap; at 500 AU the primary is hundredths
   of a degree off the anchor). `skyCapture` removed from star-points.
 - Shared pieces extracted: `sgrAStarLensBandAlpha.ts`, `starPointDrawParams.ts`,

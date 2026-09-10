@@ -6,7 +6,7 @@
  *
  * The catalogue point cloud composes each galaxy's pick id on the GPU from a
  * per-draw source code and the draw's `instance_index`. The foreground bodies
- * cannot: the set they draw is camera-dependent. `planetsLayer` packs only the
+ * cannot: the set they draw is camera-dependent. `planetsPass` packs only the
  * planets clearing the sub-pixel cull; the star layers draw
  * `partitionStarsByResolution`'s `spheres`/`points` split, which shifts every
  * frame as a body crosses `STAR_RESOLVE_PX`. An `instance_index` into that

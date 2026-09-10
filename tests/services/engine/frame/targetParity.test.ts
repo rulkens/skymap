@@ -1,9 +1,9 @@
 /**
  * targetParity — cross-checks between three independently maintained lists
  * that all name render targets by the same bare string: the declared
- * `renderTargetRows` table, `CONTENT_LAYERS`' `target` field, and
+ * `renderTargetRows` table, `CONTENT_PASSES`' `target` field, and
  * `frameProgram`'s `'render'`/`'composite'` steps. Nothing type-checks a
- * `ContentLayer.target`/`FrameStep.target` string against the row table — a
+ * `ContentPass.target`/`FrameStep.target` string against the row table — a
  * typo produces an empty `.filter()` group instead of an error at the typo
  * site, so the layer silently never draws (`executeFrame.ts:193`, no throw,
  * no test failure). These are structural invariants over real production
@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
-import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
+import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { frameProgram } from '../../../../src/services/engine/frame/frameProgram';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 
@@ -21,8 +21,8 @@ const ROWS = renderTargetRows('bgra8unorm');
 const ROW_IDS = new Set(ROWS.map((row) => row.id));
 
 describe('render-target parity', () => {
-  it('every CONTENT_LAYERS target names a declared render-target row', () => {
-    for (const layer of CONTENT_LAYERS) {
+  it('every CONTENT_PASSES target names a declared render-target row', () => {
+    for (const layer of CONTENT_PASSES) {
       expect(ROW_IDS.has(layer.target)).toBe(true);
     }
   });

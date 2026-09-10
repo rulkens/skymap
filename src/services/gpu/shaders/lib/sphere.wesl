@@ -293,7 +293,7 @@ struct RingUniforms {
 // floats (byte 116): the base-globe descent-fade multiplier, 1 outside the
 // fade band or before the tile path engages, dissolving toward 0 as the
 // resident detail-tile cut takes over the visible cap (see
-// 'earthLayer.ts's module header for the depth-fight this resolves). The
+// 'earthPass.ts's module header for the depth-fight this resolves). The
 // fragment multiplies it into its output alpha; the pipeline blends
 // straight-alpha OVER so alpha 1 renders identically to the old opaque draw.
 //

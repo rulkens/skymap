@@ -7,7 +7,7 @@
  * The body render slabs migration moved every OTHER spherical body (Earth,
  * planets, textured bodies, rings, cloud/atmosphere shells) onto the
  * metre-native `composeBodySlabMvp` seam. This function's surviving callers —
- * `starSpheresLayer`, `fieldStarSphereLayer`, and their shared
+ * `starSpheresPass`, `fieldStarSpherePass`, and their shared
  * `drawFlooredSpherePick` pick pass — stay in world-mpc deliberately: S4 keeps
  * star spheres out of body slabs (there is no per-star seam to key one on).
  *

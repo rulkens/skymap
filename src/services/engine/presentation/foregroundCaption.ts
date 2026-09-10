@@ -1,5 +1,5 @@
 /**
- * ForegroundCaption — the caption shape the near-field `foregroundLabelsLayer`
+ * ForegroundCaption — the caption shape the near-field `foregroundLabelsPass`
  * draws.
  *
  * A `Label` whose tint, em height, and pixel clamps are ALWAYS authored —

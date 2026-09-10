@@ -234,7 +234,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   const rootState = store.getState();
   if (!selectHasSelectionIntent(rootState)) {
     // Cinema seeds FOCUS only. `select` is what draws the selection ring
-    // (near0SelectionRingLayer reads selectionRows.select), and it earns its
+    // (near0SelectionRingPass reads selectionRows.select), and it earns its
     // place by explaining the info card — which cinema mode hides. Seeded in
     // cinema it would instead sit around Earth in every recorded frame of
     // every take that opens at home. Focus still has to be seeded, or the

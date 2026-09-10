@@ -2,10 +2,10 @@
  * partitionBodiesByPresentation — the ONE branch point deciding which layer
  * draws each seeded body this frame.
  *
- * Three layers consume opposite branches of one result: `bodyGlintsLayer` draws
+ * Three layers consume opposite branches of one result: `bodyGlintsPass` draws
  * the `glints` branch (sub-resolution additive point sprites in the HDR
- * accumulation), `planetsLayer` the `flat` branch (flat-lit albedo spheres in
- * the depth-bearing foreground), and `texturedBodiesLayer` the `textured` branch
+ * accumulation), `planetsPass` the `flat` branch (flat-lit albedo spheres in
+ * the depth-bearing foreground), and `texturedBodiesPass` the `textured` branch
  * (surface-mapped spheres in the same foreground). Because all three read THIS
  * partition and take one branch each, a body is a glint XOR flat XOR textured
  * **by construction** — every input body lands in exactly one array (disjoint)

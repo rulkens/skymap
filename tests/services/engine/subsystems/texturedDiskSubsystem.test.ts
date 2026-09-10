@@ -387,7 +387,7 @@ describe('createTexturedDiskSubsystem', () => {
   });
 
   // Task 13b's sky-cubemap capture roster replays this SAME `lastOutput.disks`
-  // array across all 6 capture faces (`texturedDisksLayer.ts`), including faces
+  // array across all 6 capture faces (`texturedDisksPass.ts`), including faces
   // that look away from the live camera's forward direction. That reuse is only
   // sound if this subsystem's admission gates never depend on VIEW DIRECTION —
   // only on `cam.position` (see `diskPlannerWalk.ts`, which reads `cam.position`

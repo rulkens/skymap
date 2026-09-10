@@ -46,7 +46,7 @@
  * The f64 inverse holds only for anchors INSIDE the frustum. An anchor far
  * BEYOND the far plane still un-projects to a jittering point (its `ndc_z`
  * rounds to 1.0 within f64 error, which the inverse's huge depth rows amplify),
- * so the caller must keep the anchor in range: `foregroundLabelsLayer` clamps
+ * so the caller must keep the anchor in range: `foregroundLabelsPass` clamps
  * far-star anchors to just inside the far plane before the lift (see its
  * header). This function trusts an in-domain anchor rather than clamping itself
  * — the layer owns the slab, so it owns the domain guard.

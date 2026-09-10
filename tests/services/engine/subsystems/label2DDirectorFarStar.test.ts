@@ -13,13 +13,13 @@
  * leader-line endpoints) shifts every frame as the camera — hence the
  * matrix — moves.
  *
- * Moved from `foregroundLabelsLayer.test.ts` (spec §5.2): the lift stage this
+ * Moved from `foregroundLabelsPass.test.ts` (spec §5.2): the lift stage this
  * regression guards now lives in `label2DDirector.ts`'s `applyLift`, driven
  * here through the REAL `produceSceneBodyCaptions` producer and a REAL
  * Earth-zoom NEAR0 frustum, so the ill-conditioning is genuine. The fix
  * clamps the anchor handed to the lift to just inside the far plane
  * (direction-preserving, in the camera-relative frame, so the on-screen
- * position is unchanged) — mirroring `near0SelectionRingLayer`'s ring-clip
+ * position is unchanged) — mirroring `near0SelectionRingPass`'s ring-clip
  * clamp. After the fix the un-projected geometry lands inside the
  * well-conditioned part of the frustum, so it is stable frame-to-frame and
  * bounded by the far plane.

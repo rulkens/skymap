@@ -2,7 +2,7 @@
  * produceSceneBodyCaptions — candidate math for the true-scale foreground
  * bodies (Earth, the local star map, the planets, Sgr A*).
  *
- * Cases moved from `foregroundLabelsLayer.test.ts` (Task 4, spec §12): the
+ * Cases moved from `foregroundLabelsPass.test.ts` (Task 4, spec §12): the
  * producer emits EVERY candidate caption every frame — declutter and the
  * temporal envelope moved to the director — so each case now reads the
  * candidate's `fadeAlpha` (the producer's TARGET) instead of asking whether
@@ -66,7 +66,7 @@ function makeCtx(camPos: Vec3, distance = 5e-4): ReadyFrameContext {
  * `bodyLabels` seeds ALL body rows from one flag by default, so a test that
  * only cares whether body captions are on at all passes a bare boolean; the
  * per-row cases pass the bits separately, which is the axis those rows buy.
- * Moved verbatim from `foregroundLabelsLayer.test.ts`'s `makeState`.
+ * Moved verbatim from `foregroundLabelsPass.test.ts`'s `makeState`.
  *
  * `registryOverrides`/`clipOverrides` key by a fade handle's `item` (e.g.
  * `'earth'`, `'famousStar'`) / clip key (`'bodyLabel'`, `'starCatalogLabel'`).

@@ -2,7 +2,7 @@
  * visibleStars — the seeded star set the near-field star layers actually draw
  * this frame.
  *
- * Both star content rows (`starPointsLayer`, `starSpheresLayer`) feed their
+ * Both star content rows (`starPointsPass`, `starSpheresPass`) feed their
  * `partitionStarsByResolution` call this set rather than `state.data.bodies.stars`
  * directly, so the gates are honoured in ONE place shared across all four call
  * sites (each layer's `enabled` gate + its `draw`), keeping the enable gate and
@@ -26,12 +26,12 @@
  * The map's gate is the cluster master AND the row's own bit, because a star
  * catalog's visibility is a two-level fact everywhere else in the engine: the
  * asset-demand predicate (`assetWiring`'s star-catalog row) and the survey draw
- * path (`starCatalogLayer`) both require `starCatalogs.enabled` before
+ * path (`starCatalogPass`) both require `starCatalogs.enabled` before
  * consulting `items[id].enabled`. A cluster master that governed the survey row
  * but not the seeded one would be a master over PART of its own cluster — the
  * Stars panel derives its header tri-state over every star-catalog id, so it
  * would show a checkbox claiming authority it did not have.
- * `foregroundLabelsLayer` composes the same two bits for the map's captions,
+ * `foregroundLabelsPass` composes the same two bits for the map's captions,
  * keeping dots and names in lockstep — and reads `bodies.items.sun.enabled`
  * for the Sun's caption the same way it reads it here for the Sun's dot, so
  * the same lockstep holds for the Sun even though nothing writes that flag

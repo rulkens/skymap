@@ -37,7 +37,7 @@ const RECESSION_BY_LABEL_LAYER = {
   // The scale bar is a readout, not scenery — it must stay legible at full focus.
   scaleBar: undefined,
   // The near-field caption layers draw on the NEAR0 slab through
-  // `foregroundLabelsLayer`, which owns its OWN declutter (a screen-space
+  // `foregroundLabelsPass`, which owns its OWN declutter (a screen-space
   // separation cull with priority tiers) and its own temporal envelope, and
   // never routes through `resolveLayerOpacity`. A recession factor here would
   // be a second, competing dimming authority over the same captions — and the

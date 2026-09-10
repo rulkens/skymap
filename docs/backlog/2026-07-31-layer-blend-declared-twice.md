@@ -5,12 +5,12 @@
 Every content layer states its blend mode twice, in two places that cannot see each
 other:
 
-- `ContentLayer.blend` — a `Blend` value on the registry row
+- `ContentPass.blend` — a `Blend` value on the registry row
   (`src/services/engine/frame/passes/*.ts`).
 - The `GPUBlendState` baked into the render pipeline the row's `draw` calls
   (`src/services/gpu/renderers/**`).
 
-`ContentLayer.d.ts`'s `blend` field docblock already names the guardrail — "a
+`ContentPass.d.ts`'s `blend` field docblock already names the guardrail — "a
 layer↔pipeline parity check" — and defers it to "once a target's layers stop
 agreeing on blend". That condition has been met for some time without anyone
 noticing, which is the point: the field that would have shown it was the field

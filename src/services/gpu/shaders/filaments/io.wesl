@@ -57,7 +57,7 @@ struct Uniforms {
   // The two endpoints of the density-driven tint ramp: 'baseTint' the dim
   // cool-purple tendril tone at low density, 'hotTint' the bright near-white
   // violet spine tone at high density. One home for the layer's palette,
-  // defined CPU-side in 'filamentsLayer.ts' and packed into these slots; the
+  // defined CPU-side in 'filamentsPass.ts' and packed into these slots; the
   // fragment mixes between them by 'in.density'. vec3 needs 16-byte alignment,
   // hence the pad after each.
   baseTint : vec3<f32>,    // offset 96

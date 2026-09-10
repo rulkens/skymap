@@ -5,19 +5,19 @@
  * One home for the two shell dials, shared by three consumers so they can never
  * drift onto separate literals:
  *
- *   1. **The shell scale** (`cloudShellLayer`): `radiusRatio` scales the unit
+ *   1. **The shell scale** (`cloudShellPass`): `radiusRatio` scales the unit
  *      sphere the shell rides, lifting it from the surface (unit radius 1.0) to
  *      just above the cloud tops, so the deck floats over the globe instead of
  *      z-fighting the surface it co-registers with.
- *   2. **The shell opacity uniform** (`cloudShellLayer` → `packCloudShellUniforms`):
+ *   2. **The shell opacity uniform** (`cloudShellPass` → `packCloudShellUniforms`):
  *      `opacity` is the coverage-to-alpha multiplier folded into the shell's
  *      straight-alpha output — a global dimmer over the map's per-texel `.a`.
- *   3. **The surface shadow radius** (`earthLayer` → `packEarthSurfaceUniforms`):
+ *   3. **The surface shadow radius** (`earthPass` → `packEarthSurfaceUniforms`):
  *      the surface pass casts the cloud deck's shadow using the SAME shell radius,
  *      so the shadow geometry and the drawn shell agree by construction (wired in
- *      Task 7 — earthLayer currently passes a literal placeholder there).
+ *      Task 7 — earthPass currently passes a literal placeholder there).
  *   4. **The descent fade band** (`cloudDeckFade`, consumed by both
- *      `cloudShellLayer` and `earthLayer`): `fadeStartAltitudeRadii` and
+ *      `cloudShellPass` and `earthPass`): `fadeStartAltitudeRadii` and
  *      `fadeEndAltitudeRadii` bound the altitude-above-surface range over which
  *      the deck (and the shadow it casts) dissolves as the camera descends
  *      toward streamed surface tiles — see that util's header for why altitude,
