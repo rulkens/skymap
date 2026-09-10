@@ -4,7 +4,7 @@
  * every tilt-mapping fixture primes its memory before tracing the band. The
  * memory threads through the loop and lands back on the harness, so the frames
  * that follow read what the drags authored. Unit-radius, h/R 0.15 — inside the
- * band, where the handles write the memory (w = 1) and the ceiling is open.
+ * blend band, where the handles write the memory (w > 0).
  */
 
 import { surfaceStep } from '../../../src/services/camera/surfaceStep';
