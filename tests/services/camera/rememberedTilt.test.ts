@@ -211,8 +211,13 @@ describe('remembered tilt (ruling 12)', () => {
 
     // Zoom must not move a just-set tilt (the rule that FORCED the un-map:
     // remembered = display would erode the set value on the very next notch).
-    pose = apply(c, pose, zoom(1));
-    expect(tiltOf(pose)).toBeCloseTo(display, 9);
+    // A ±notch DITHER, not a factor-1 notch: the settle spends only what the
+    // zoom spends, so a notch that moves nowhere cannot erode anything.
+    pose = apply(c, pose, zoom(Math.exp(0.1)));
+    pose = apply(c, pose, zoom(Math.exp(-0.1)));
+    // Loose against the anchored pair's own walk (~1e-3, F6), tight against
+    // the erosion `remembered = display` would spend: devPre = display·(1−w).
+    expect(Math.abs(tiltOf(pose) - display)).toBeLessThan(0.005);
   });
 
   it('the drag wall never erodes the band-mapped display (reconciliation 1)', () => {

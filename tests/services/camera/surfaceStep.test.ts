@@ -1222,6 +1222,20 @@ describe('the zoom settle is priced per unit of zoom, not per step (F1, ruling 2
     expect(Math.abs(recede(TRACKPAD, STEPS)) / before).toBeGreaterThan(0.9);
   });
 
+  it('one frame can spend only the zoom the fold clamp lets it (no whip)', () => {
+    // 20 wheel events in one frame — the measured trackpad flick — fold to a
+    // factor of e², which `spentZoomFactor` clamps to 2 before the eye moves.
+    // Pricing the settle off the FOLD instead would north the view in that one
+    // frame, harder than the per-step defect this whole change removes.
+    const u = Math.log(2);
+    const before = headingOf(headedPose());
+    const after = recede(Math.exp(2), 1);
+    expect(Math.abs(before - after)).toBeLessThanOrEqual(ORIENT_DECAY.capRadPerLogZoom * u + 1e-9);
+    expect(Math.abs(after)).toBeGreaterThanOrEqual(
+      Math.abs(before) * Math.exp(-ORIENT_DECAY.perLogZoom * u),
+    );
+  });
+
   it('the same total zoom decays the same however it is delivered', () => {
     // The composition property, through the real driver: what makes a
     // trackpad and a mouse converge on the same heading at the same altitude.
