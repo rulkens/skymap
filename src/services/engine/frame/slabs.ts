@@ -88,8 +88,8 @@ export function groupKeyOf(target: string, slab: number): string {
 
 /**
  * The per-slot GPU-timing NAME for a layer drawing into `slabIndex` — bare
- * `layerName` for NEAR0/COSMO (one instance per frame, already unique), or
- * `'<layerName>·BODY[k]'` for a body row, so two body rows sharing one
+ * `passName` for NEAR0/COSMO (one instance per frame, already unique), or
+ * `'<passName>·BODY[k]'` for a body row, so two body rows sharing one
  * `'body'`-slab layer (e.g. `planetsPass` drawing Jupiter AND a moon) don't
  * collide on the same query-set index pair. A capture step's `face` appends
  * the same way and for the same reason: a roster layer draws once per
