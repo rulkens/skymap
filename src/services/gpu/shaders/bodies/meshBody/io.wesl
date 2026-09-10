@@ -1,11 +1,12 @@
 // meshBody/io.wesl — uniform + inter-stage declarations for the lit
 // triangle-mesh body renderer.
 //
-// FRAME CONTRACT: 'camPosLocal' and 'dirToHost' are in the HOST body's fixed
-// axes, relative to this body's centre, in metres -- the same axes the vertex
-// stage's 'localPos = u.model * position' lands in. 'u.model' is the body's own
-// tumble rotation only (for rotating normal/tangent); the view rotation lives in
-// 'u.mvp' alone.
+// FRAME CONTRACT: 'camPosLocal' (metres, relative to this body's centre),
+// 'dirToHost' and 'sunDirLocal' are all in the HOST body's fixed axes -- the
+// axes the vertex stage's 'localPos = u.model * position' lands in, NOT the
+// body's own frame that 'utils/camera/sunDirLocal.ts' returns. 'u.model' is the
+// body's tumble rotation only (for rotating normal/tangent); the view rotation
+// lives in 'u.mvp' alone.
 //
 // One authoritative inter-stage struct so a '@location' drift between the two
 // stages is structurally impossible, and it is the module's ONLY
