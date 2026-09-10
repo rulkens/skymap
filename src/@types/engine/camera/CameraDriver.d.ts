@@ -1,13 +1,14 @@
 /** CameraDriver — one precedence-table row; the ranking and its why live with the table. */
 
 import type { DriverCtx } from './DriverCtx';
+import type { DriverId } from './DriverId';
 import type { EpochRow } from './EpochRow';
 import type { FollowMemory } from './FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { RootState } from '../../../store/types';
 
 export type CameraDriver = {
-  readonly id: string;
+  readonly id: DriverId;
   readonly priority: number;
   // The epoch this row's `ctx.elapsedMs` measures on; unset for the rows that
   // read no clock (orbitDrag, resting). Both follow rows name `follow`, so the

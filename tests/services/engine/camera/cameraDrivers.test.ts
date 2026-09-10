@@ -15,6 +15,7 @@ import { lerp } from '../../../../src/utils/math/lerp';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
+import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { EpochRow } from '../../../../src/@types/engine/camera/EpochRow';
 import type { RootState } from '../../../../src/store/types';
 import {
@@ -357,7 +358,7 @@ describe('CAMERA_DRIVERS — tween pins the frame it started under', () => {
 });
 
 describe('pickWinner', () => {
-  function makeDriver(id: string, priority: number, active: boolean): CameraDriver {
+  function makeDriver(id: DriverId, priority: number, active: boolean): CameraDriver {
     return {
       id,
       priority,
@@ -372,21 +373,21 @@ describe('pickWinner', () => {
   const fakeState = {} as RootState;
 
   it('picks by priority, not list order', () => {
-    const low = makeDriver('low', 20, true);
-    const high = makeDriver('high', 60, true);
+    const low = makeDriver('autoRotate', 20, true);
+    const high = makeDriver('tween', 60, true);
 
-    expect(pickWinner([low, high], fakeState).id).toBe('high');
-    expect(pickWinner([high, low], fakeState).id).toBe('high');
+    expect(pickWinner([low, high], fakeState).id).toBe('tween');
+    expect(pickWinner([high, low], fakeState).id).toBe('tween');
   });
 
   it('skips inactive drivers', () => {
-    const inactive = makeDriver('inactive', 80, false);
-    const active = makeDriver('active', 20, true);
-    expect(pickWinner([inactive, active], fakeState).id).toBe('active');
+    const inactive = makeDriver('orbitDrag', 80, false);
+    const active = makeDriver('autoRotate', 20, true);
+    expect(pickWinner([inactive, active], fakeState).id).toBe('autoRotate');
   });
 
   it('defensive: returns drivers[0] for an empty-ish all-inactive list', () => {
-    const only = makeDriver('only', 0, false);
+    const only = makeDriver('resting', 0, false);
     // All inactive → defensive fallback → drivers[0]
     expect(pickWinner([only], fakeState)).toBe(only);
   });
@@ -515,7 +516,7 @@ function makeFollowProduce(opts: {
   state: RootState;
   from?: CameraPose | null;
   distanceTarget?: number | null;
-  winnerLastFrame?: string;
+  winnerLastFrame?: DriverId;
   followDistanceTarget?: number | null;
 }) {
   const follow = CAMERA_DRIVERS.find((d) => d.id === 'followApproach')!;

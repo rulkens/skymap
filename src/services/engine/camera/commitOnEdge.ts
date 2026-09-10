@@ -11,6 +11,7 @@
 import type { UnknownAction } from '@reduxjs/toolkit';
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
+import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
@@ -21,7 +22,7 @@ export function commitOnEdge(args: {
   readonly register: FramedCameraPose;
   readonly displayed: FramedCameraPose;
   readonly produced: FramedCameraPose;
-  readonly prevWinner: string;
+  readonly prevWinner: DriverId;
   readonly winner: CameraDriver;
   readonly drivers: readonly CameraDriver[];
 }): {

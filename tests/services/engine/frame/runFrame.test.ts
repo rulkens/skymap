@@ -788,7 +788,7 @@ describe('runFrame — sim clock (Task 8)', () => {
     // step runs (the resolver calls only the highest-priority active driver's
     // pose). The renderer stays null, so the frame bails right after produce.
     const stub: CameraDriver = {
-      id: 'stub',
+      id: 'resting',
       priority: 1000,
       isActive: () => true,
       pose: (_ctx, mem) => {
@@ -1076,7 +1076,7 @@ describe('runFrame — effective intent', () => {
     const h = makeCameraSimHarness({ focusBody: null });
     let seen: RootState | null = null;
     const probe: CameraDriver = {
-      id: 'probe',
+      id: 'resting',
       priority: 1000,
       isActive: () => true,
       pose: (ctx, mem) => {

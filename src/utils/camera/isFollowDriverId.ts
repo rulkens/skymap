@@ -4,6 +4,8 @@
  * driving?" asks this rather than one id.
  */
 
-export function isFollowDriverId(id: string): boolean {
+import type { DriverId } from '../../@types/engine/camera/DriverId';
+
+export function isFollowDriverId(id: DriverId): boolean {
   return id === 'followApproach' || id === 'followHold';
 }

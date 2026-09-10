@@ -7,6 +7,7 @@ import type { BodyId } from '../../data/body/BodyId';
 import type { BodyState } from '../../scene/BodyState';
 import type { CameraPose } from '../../camera/CameraPose';
 import type { CameraProjection } from '../../camera/CameraProjection';
+import type { DriverId } from './DriverId';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { RootState } from '../../../store/types';
 
@@ -18,7 +19,7 @@ export type DriverCtx = {
   readonly register: FramedCameraPose;
   /** World arm of `register`; the follow capture reads its eye. */
   readonly authoredWorld: CameraPose;
-  readonly winnerLastFrame: string;
+  readonly winnerLastFrame: DriverId;
   /** Julian days. */
   readonly simDays: number;
   readonly projection: CameraProjection;

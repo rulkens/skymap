@@ -39,6 +39,7 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
+import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EpochCell } from '../../../helpers/camera/readCameraEpochs';
 
@@ -63,7 +64,7 @@ type FollowCell = {
 };
 type Step = {
   readonly label: string;
-  readonly winner: string;
+  readonly winner: DriverId;
   readonly displayed: readonly number[];
   readonly register: readonly number[];
   readonly follow: FollowCell;

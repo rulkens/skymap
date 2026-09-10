@@ -32,6 +32,7 @@ import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { Epoch } from '../../../@types/engine/camera/Epoch';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
@@ -57,7 +58,7 @@ export function replayInput(
     readonly upBasis: Readonly<Mat3>;
     readonly poseBasis: Readonly<Mat3>;
     readonly bodies: ReadonlyMap<BodyId, BodyState>;
-    readonly winnerLastFrame: string;
+    readonly winnerLastFrame: DriverId;
     readonly autoRotateEpoch: Epoch<FramedCameraPose>;
   },
 ): {

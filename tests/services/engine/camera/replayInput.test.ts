@@ -32,6 +32,7 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
+import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -55,7 +56,7 @@ const EARTH_ROW: SelectionRow = {
 /** The replay's frame context with the store snapshot taken NOW. */
 function ctxOf(
   store: ReturnType<typeof makeStore>,
-  overrides: { readonly winnerLastFrame?: string; readonly nowMs?: number } = {},
+  overrides: { readonly winnerLastFrame?: DriverId; readonly nowMs?: number } = {},
 ) {
   return {
     rootState: store.getState(),
