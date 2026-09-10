@@ -17,4 +17,7 @@ struct SceneCamera {
   view: mat4x4<f32>,
   splatScale: f32,
   opacityScale: f32,
+  // Split from its 'viewportH' twin on purpose: here it fills the struct's
+  // 4-byte tail hole, whereas beside 'viewportH' it pushes 'view' past 192.
+  viewportW: f32,
 };

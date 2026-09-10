@@ -47,4 +47,5 @@ export function writeSceneCamera(
   out.set(look, 28);
   out[44] = splatScale;
   out[45] = opacityScale;
+  out[46] = width;
 }

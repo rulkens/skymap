@@ -108,6 +108,7 @@ describe('SceneCamera TS↔WESL parity (lib/sceneCamera.wesl ↔ writeSceneCamer
     expect(out[at('pointSizePx')]).toBe(POINT_SIZE_PX);
     expect(vec3At('upM')).toEqual([...UP_M]);
     expect(out[at('viewportH')]).toBe(VIEWPORT_PX[1]);
+    expect(out[at('viewportW')]).toBe(VIEWPORT_PX[0]);
     expect(vec3At('eyeM')).toEqual([...EYE_M]);
     // Metres per pixel per metre of depth — the shader scales it by the clip w.
     // `Math.fround`: the store into a Float32Array is the only rounding here.

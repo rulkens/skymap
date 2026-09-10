@@ -20,6 +20,16 @@ const WORDS_PER_SH1: u32 = 3u;
 // Pixel-space variance floor: a sub-pixel splat still covers ~one texel.
 const AA_FLOOR_PX2: f32 = 0.3;
 const SH_C1: f32 = 0.4886025;
+// J's third column carries t/depth^2, so a splat well outside the frustum
+// projects an inflated Sigma2D whose quad swings back across the screen. The
+// reference 3DGS rasterizer evaluates J at a tangent clamped to 1.3x the
+// frustum half-angle; only the Jacobian sees the clamped t, never the position.
+const TANGENT_LIMIT: f32 = 1.3;
+// A 3-sigma radius past this many viewport heights is one Gaussian painting
+// every pixel at alpha ~0.99. Bakes from airborne cameras carry such splats
+// below ground (no view constrains depth there), so cull rather than let one
+// own the frame; the near plane alone cannot, the quad being depth-flat.
+const MAX_RADIUS_SCREENS: f32 = 1.0;
 
 struct Splat {
   positionM: vec3<f32>,
@@ -98,10 +108,15 @@ fn projectSplat(s: Splat, vi: u32, color: vec3<f32>) -> VsOut {
   let sigma = m * transpose(m);
   let w = mat3x3<f32>(cam.view[0].xyz, cam.view[1].xyz, cam.view[2].xyz);
   let focalPx = 1.0 / cam.metresPerPx;
+  // Half-angle tangents: 'metresPerPx' is 2*tan(fovY/2)/viewportH, and square
+  // pixels make the x half-angle the same ratio over the width.
+  let tanHalf = 0.5 * cam.metresPerPx * vec2<f32>(cam.viewportW, cam.viewportH);
+  let limitM = TANGENT_LIMIT * tanHalf * depth;
+  let tj = clamp(t.xy, -limitM, limitM);
   // J is 2x3; padding a zero third row lets one mat3 product carry it.
   let j = transpose(mat3x3<f32>(
-    vec3<f32>(focalPx / depth, 0.0, focalPx * t.x / (depth * depth)),
-    vec3<f32>(0.0, focalPx / depth, focalPx * t.y / (depth * depth)),
+    vec3<f32>(focalPx / depth, 0.0, focalPx * tj.x / (depth * depth)),
+    vec3<f32>(0.0, focalPx / depth, focalPx * tj.y / (depth * depth)),
     vec3<f32>(0.0, 0.0, 0.0),
   ));
   let tt = j * w;
@@ -118,6 +133,9 @@ fn projectSplat(s: Splat, vi: u32, color: vec3<f32>) -> VsOut {
   let mid = 0.5 * (a + c);
   let lambdaMax = mid + sqrt(max(mid * mid - det, 0.0));
   let radiusPx = 3.0 * sqrt(lambdaMax);
+  if (radiusPx > MAX_RADIUS_SCREENS * cam.viewportH) {
+    return clippedVertex();
+  }
 
   var corners = array<vec2<f32>, 6>(
     vec2<f32>(-1., -1.), vec2<f32>(1., -1.), vec2<f32>(-1., 1.),
