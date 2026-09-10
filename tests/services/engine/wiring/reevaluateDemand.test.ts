@@ -96,13 +96,13 @@ function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): Engine
     // must be present. A far resting pose keeps the proximity-gated body-texture
     // rows out of the demand set.
     cameraRuntime: {
-      lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
-      displayedPose: {
-        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }),
+      register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
+      outputs: {
+        displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+        simDays: CONST_J2000,
+        upBasis: ORIENTATION_FRAMES.ecliptic,
       },
-      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
-      lastRenderedSimDays: { current: CONST_J2000 },
-      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   } as unknown as EngineState;
 }
@@ -333,13 +333,13 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
       // Per-call queue, for the same reasons spelled out on `makeState`.
       subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
       cameraRuntime: {
-        lastPose: { current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
-        displayedPose: {
-          current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }),
+        register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
+        outputs: {
+          displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }),
+          projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+          simDays: CONST_J2000,
+          upBasis: ORIENTATION_FRAMES.ecliptic,
         },
-        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
-        lastRenderedSimDays: { current: CONST_J2000 },
-        upBasis: { current: ORIENTATION_FRAMES.ecliptic },
       },
     } as unknown as EngineState;
   }

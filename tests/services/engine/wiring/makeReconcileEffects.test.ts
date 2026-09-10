@@ -78,7 +78,7 @@ function makeState(overrides?: { flowFieldRenderer?: { maybeReseed: () => void }
     gpu: { flowFieldRenderer },
     cam: null,
     selectionRows: { hover: null, select: null, focus: null },
-    cameraRuntime: { lastRenderedSimDays: { current: 2461272.948547558 } },
+    cameraRuntime: { outputs: { simDays: 2461272.948547558 } },
   } as unknown as EngineState;
 
   return { state, requestRender, setMode, maybeReseed };
@@ -151,20 +151,22 @@ describe('makeReconcileEffects', () => {
     expect(liveRenderCamera).toHaveBeenCalledWith(state);
     expect(liveFocusRow).toHaveBeenCalledWith(
       state.selectionRows.focus,
-      state.cameraRuntime.lastRenderedSimDays.current,
+      state.cameraRuntime.outputs.simDays,
     );
     expect(logCameraState).toHaveBeenCalledTimes(1);
     expect(logCameraState).toHaveBeenCalledWith(
       'LIVE_CAM',
       CANVAS,
       'LIVE_FOCUS_ROW',
-      state.cameraRuntime.lastRenderedSimDays.current,
+      state.cameraRuntime.outputs.simDays,
       null,
     );
   });
 
-  it('logCameraState forwards the earthTiles subsystem\'s sub-camera readout when engaged', () => {
-    const getDebugSnapshot = vi.fn(() => ({ subCamera: { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 } }));
+  it("logCameraState forwards the earthTiles subsystem's sub-camera readout when engaged", () => {
+    const getDebugSnapshot = vi.fn(() => ({
+      subCamera: { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
+    }));
     const { state } = makeState();
     (state as unknown as { subsystems: { earthTiles: unknown } }).subsystems.earthTiles = {
       getDebugSnapshot,
@@ -176,7 +178,7 @@ describe('makeReconcileEffects', () => {
       'LIVE_CAM',
       CANVAS,
       'LIVE_FOCUS_ROW',
-      state.cameraRuntime.lastRenderedSimDays.current,
+      state.cameraRuntime.outputs.simDays,
       { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
     );
   });

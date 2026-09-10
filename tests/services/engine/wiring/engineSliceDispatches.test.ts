@@ -279,15 +279,15 @@ function makeSyntheticFallbackState(): {
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set.
     cameraRuntime: {
-      lastPose: {
-        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+      register: {
+        pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
       },
-      displayedPose: {
-        current: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+      outputs: {
+        displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+        simDays: CONST_J2000,
+        upBasis: ORIENTATION_FRAMES.ecliptic,
       },
-      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
-      lastRenderedSimDays: { current: CONST_J2000 },
-      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
     },
   } as unknown as EngineState;
 

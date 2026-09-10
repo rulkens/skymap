@@ -69,7 +69,7 @@ function stepKm(a: Vec3, b: Vec3): number {
  */
 function toMidWindow(h: CameraSimHarness) {
   diveUntilEngaged(h);
-  expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+  expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
 
   // Set the memory via surfaceStep's tilt/look steps (unit-radius, h/R 0.15 so the
   // tilt ceiling is open under ruling 19's tighter band).
@@ -79,10 +79,10 @@ function toMidWindow(h: CameraSimHarness) {
   // Out past disengage, back in to mid-window; thresholds rescaled for
   // ruling 19's tighter band (engage 0.2 / disengage 0.4, was 1.7/3.4).
   while (display(h.state).hr < 0.45) h.wheel(100);
-  expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+  expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
   while (display(h.state).hr > 0.32) h.wheel(-100);
   expect(display(h.state).hr).toBeGreaterThan(0.26);
-  expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+  expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
 
   h.frame(60);
   expect(display(h.state).tilt).toBeGreaterThan(0.2); // projection live here
@@ -124,7 +124,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     // Authored register: centre-looking (tilt ~0). Displayed (what pick, the
     // clip/tween seams, and the draw path read via liveWorldPose): the full
     // mapped tilt. Same eye — the projection is eye-preserving by contract.
-    const register = h.state.cameraRuntime.lastPose.current;
+    const register = h.state.cameraRuntime.register.pose;
     expect(register.frame).toBe('absolute');
     if (register.frame !== 'absolute') return;
     const registerEye = eyeMpcOf(register.pose, B);
@@ -232,7 +232,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     // And the register stayed AUTHORED (R12c-4a): the displayed override must
     // not be stamped back into it — a drag folding from a projected register
     // on the next drain re-opens the walk.
-    const register = h.state.cameraRuntime.lastPose.current;
+    const register = h.state.cameraRuntime.register.pose;
     expect(register.frame).toBe('absolute');
     if (register.frame !== 'absolute') return;
     const registerEye = eyeMpcOf(register.pose, B);

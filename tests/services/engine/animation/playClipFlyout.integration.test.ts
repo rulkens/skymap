@@ -52,7 +52,7 @@ function simulateFrame(
   clipPlayer: ReturnType<typeof createClipPlayer>,
   nowMs: number,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
-  const { lastPose, prevActiveId } = engineState.cameraRuntime;
+  const { register } = engineState.cameraRuntime;
 
   // Step 1 — clipPlayer fires FIRST, before the produce step; the clip epoch it
   // hands back feeds this frame's advance.
@@ -69,34 +69,36 @@ function simulateFrame(
     winnerId: currActiveId,
     nowMs,
   });
-  engineState.cameraRuntime.epochs = epochs;
+  engineState.cameraRuntime = { ...engineState.cameraRuntime, epochs };
   const { pose } = runCameraDrivers(
     drivers,
     makeDriverCtx({
       state: freshState,
       elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),
-      register: lastPose.current,
-      winnerLastFrame: prevActiveId.current,
+      register: register.pose,
+      winnerLastFrame: register.winner,
       simDays: deriveSimDays(selectTimeState(freshState), nowMs),
-      projection: engineState.cameraRuntime.projection,
+      projection: engineState.cameraRuntime.outputs.projection,
     }),
     engineState.cameraRuntime.follow,
   );
 
   // Step 3 — commit-on-edge. Mirror the production property-based guard in
   // runFrame.ts: fire commitCameraPose when the prev driver had commitsOnEdge.
-  const prev = prevActiveId.current;
+  const prev = register.winner;
   let committed = false;
   let renderPose = pose;
   if (prev !== currActiveId && drivers.find((d) => d.id === prev)?.commitsOnEdge) {
-    store.dispatch(commitCameraPose(lastPose.current));
+    store.dispatch(commitCameraPose(register.pose));
     committed = true;
-    renderPose = lastPose.current;
+    renderPose = register.pose;
   }
 
   // Step 4 — update bookkeeping.
-  prevActiveId.current = currActiveId;
-  lastPose.current = renderPose;
+  engineState.cameraRuntime = {
+    ...engineState.cameraRuntime,
+    register: { pose: renderPose, winner: currActiveId },
+  };
 
   return { pose: renderPose, activeId: currActiveId, committed };
 }
@@ -125,13 +127,14 @@ describe('playClip — flyout seam', () => {
       ),
     );
 
-    // Seed the cameraRuntime's lastPose to match.
-    state.cameraRuntime.lastPose.current = absoluteArm({
-      target: [0, 0, 0],
-      yaw: 0,
-      pitch: 0,
-      distance: LIVE_START_DISTANCE,
-    });
+    // Seed the cameraRuntime's register to match.
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: {
+        ...state.cameraRuntime.register,
+        pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: LIVE_START_DISTANCE }),
+      },
+    };
 
     const drivers = deps.drivers;
 
@@ -146,18 +149,18 @@ describe('playClip — flyout seam', () => {
       getEngineState: () => ({}) as EngineState,
     });
 
-    // Build the real playClip. getLivePose reads lastPose.current — the same
+    // Build the real playClip. getLivePose reads register.pose — the same
     // box cameraRuntime holds, so 'live' resolution captures the live pose at
     // dispatch time.
     const playClip = createPlayClip({
       store,
       clipPlayer,
-      getLivePose: () => worldArmOf(state.cameraRuntime.lastPose.current),
+      getLivePose: () => worldArmOf(state.cameraRuntime.register.pose),
     });
 
     // ── Kick off the flyout ──────────────────────────────────────────────────
 
-    // playClip resolves 'live' → { ...flyout.data, start: lastPose.current },
+    // playClip resolves 'live' → { ...flyout.data, start: register.pose },
     // registers the end-resolver, attaches the [CANCEL] hook, and dispatches
     // clipStarted. The Promise resolves on the deferred clipEnded frame.
     let settled = false;
@@ -166,9 +169,12 @@ describe('playClip — flyout seam', () => {
       settled = true;
     });
 
-    // Seed prevActiveId to 'clip' so there is no spurious commit on the
+    // Seed register.winner to 'clip' so there is no spurious commit on the
     // arrival frame (same pattern as commitOnEdge.test.ts's clip test).
-    state.cameraRuntime.prevActiveId.current = 'clip';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'clip' },
+    };
 
     // ── Drive frames ─────────────────────────────────────────────────────────
 
@@ -180,11 +186,11 @@ describe('playClip — flyout seam', () => {
 
     // Early frame (2 s): distance has started moving toward the target.
     simulateFrame(state, store, drivers, clipPlayer, T0 + 2_000);
-    const earlyDistance = worldArmOf(state.cameraRuntime.lastPose.current).distance;
+    const earlyDistance = worldArmOf(state.cameraRuntime.register.pose).distance;
 
     // Mid frame (11 s): distance continues to grow (log-dolly is monotonic).
     simulateFrame(state, store, drivers, clipPlayer, T0 + 11_000);
-    const midDistance = worldArmOf(state.cameraRuntime.lastPose.current).distance;
+    const midDistance = worldArmOf(state.cameraRuntime.register.pose).distance;
 
     // --- ASSERTION 1: camera distance moves toward the target ----------------
     // Early distance must exceed the live start (clip has dolly'd forward).
@@ -200,16 +206,16 @@ describe('playClip — flyout seam', () => {
 
     // Saturation frame (22 s): elapsed == durationSec. clipPlayer.tick sets
     // pendingEnd but does NOT dispatch endClip. The clip driver evaluates at
-    // t=22s → saturated pose (distance ≈ 29 500). lastPose := saturated.
+    // t=22s → saturated pose (distance ≈ 29 500). register.pose := saturated.
     // NO commit fires this frame (clip is still active).
     const satFrame = simulateFrame(state, store, drivers, clipPlayer, T0 + DURATION_SEC * 1_000);
     expect(satFrame.activeId).toBe('clip'); // still active
     expect(satFrame.committed).toBe(false); // no commit yet
-    const saturatedDistance = worldArmOf(state.cameraRuntime.lastPose.current).distance;
+    const saturatedDistance = worldArmOf(state.cameraRuntime.register.pose).distance;
 
     // Deferred-completion frame (23 s): clipPlayer.tick fires endClip() and
     // the Promise resolver. The clip driver sees null → resting wins. The
-    // commit-on-edge guard (prev='clip', commitsOnEdge=true) bakes lastPose
+    // commit-on-edge guard (prev='clip', commitsOnEdge=true) bakes register.pose
     // (the saturated pose) into camera.base.
     const endFrame = simulateFrame(
       state,
@@ -235,7 +241,7 @@ describe('playClip — flyout seam', () => {
     // log-interpolation is very close but not necessarily a round integer.
     expect(base.distance).toBeCloseTo(FLYOUT_TARGET, 0);
 
-    // Confirm lastPose.current (which the commit baked) was the saturated pose,
+    // Confirm register.pose (which the commit baked) was the saturated pose,
     // not the initial base distance (regression guard for the two-frame defer).
     expect(saturatedDistance).toBeCloseTo(FLYOUT_TARGET, 0);
   });

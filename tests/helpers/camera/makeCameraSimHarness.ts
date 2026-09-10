@@ -12,10 +12,9 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { CAMERA_DRIVERS } from '../../../src/services/engine/camera/cameraDrivers';
-import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
+import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { createInputAggregator } from '../../../src/services/engine/subsystems/inputAggregator';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
-import { EMPTY_SURFACE_MEMORY } from '../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { runFrame } from '../../../src/services/engine/frame/runFrame';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
@@ -23,7 +22,6 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
-import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { poseAtHR } from './poseAtHR';
@@ -57,7 +55,6 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
   const radiusM = (id: SimBodyId): number => SCENE_BODIES.find((b) => b.id === id)!.radiusM;
 
-  const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
   const neutralPose: CameraPose = {
     target: [0, 0, 0],
     yaw: 0,
@@ -84,18 +81,10 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       near: 0.01,
       far: 1000,
     } as unknown as OrbitCamera,
-    cameraRuntime: {
-      epochs: UNSTARTED_EPOCHS,
-      follow: null,
+    cameraRuntime: seedCameraRuntime({
+      committed: absoluteArm(neutralPose),
       projection: { fovYRad, aspect: 1, near: 0.01, far: 50000 },
-      lastPose: { current: absoluteArm(neutralPose) },
-      displayedPose: { current: absoluteArm(neutralPose) },
-      prevActiveId: { current: 'resting' },
-      lastRenderedSimDays: { current: CONST_J2000 },
-      upBasis: { current: [...B] },
-      surface: EMPTY_SURFACE_MEMORY,
-      lastZoomFactor: { current: null },
-    },
+    }),
     skyCubemapCapture: {
       lastBandActive: false,
       lastGcDistanceMpc: Number.POSITIVE_INFINITY,
@@ -124,11 +113,13 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     drivers: CAMERA_DRIVERS,
   } as unknown as RunFrameDeps;
 
-  /** Commit `framed` to the store and seed both pose Resources with it. */
+  /** Commit `framed` to the store and re-seed the runtime from it. */
   const seedPose = (framed: FramedCameraPose): void => {
     store.dispatch(commitCameraPose(framed));
-    state.cameraRuntime.lastPose.current = framed;
-    state.cameraRuntime.displayedPose.current = framed;
+    state.cameraRuntime = seedCameraRuntime({
+      committed: framed,
+      projection: state.cameraRuntime.outputs.projection,
+    });
   };
 
   /** Dispatch a focus row for `id` off its real seeded position, or clear it. */

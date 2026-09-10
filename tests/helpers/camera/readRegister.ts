@@ -11,7 +11,7 @@ export function readRegister(state: EngineState): {
   readonly winner: string;
 } {
   return {
-    pose: state.cameraRuntime.lastPose.current,
-    winner: state.cameraRuntime.prevActiveId.current,
+    pose: state.cameraRuntime.register.pose,
+    winner: state.cameraRuntime.register.winner,
   };
 }

@@ -97,7 +97,7 @@ describe('replayInput', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('mutates nothing', () => {
-    // Frozen deep: the strafe's `off[0] + …` and the register's `.current`
+    // Frozen deep: the strafe's `off[0] + …` and the register itself
     // are where an in-place write would hide, and the module is strict-mode,
     // so such a write throws right here. The world at-rest notch, a followed
     // pan and the gesture edges cover every accumulator field.

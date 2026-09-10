@@ -4,7 +4,7 @@
  * the tilt, never the image. A pure per-frame projection between the pivot pin and
  * the fold: pitch the view off the FOCUSED body's nadir by the mapped amount,
  * rotating about the rolled screen-right with the eye fixed. The output reaches
- * ONLY `displayedPose`, never the authored register or `camera.base` (the
+ * ONLY `outputs.displayed`, never the authored register or `camera.base` (the
  * centre-looking invariant at `commitCameraPose`) — and the fold converts THIS pose,
  * so engage inherits `remembered × 1`. Zero remembered returns the input BY REFERENCE.
  */

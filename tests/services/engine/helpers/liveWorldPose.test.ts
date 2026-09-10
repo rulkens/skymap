@@ -44,10 +44,12 @@ function makeState(): EngineState {
   return {
     settings: { orientation: 'ecliptic' },
     cameraRuntime: {
-      lastPose: { current: EARTH_ARM },
-      displayedPose: { current: EARTH_ARM },
-      lastRenderedSimDays: { current: RENDERED_SIM_DAYS },
-      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      register: { pose: EARTH_ARM },
+      outputs: {
+        displayed: EARTH_ARM,
+        simDays: RENDERED_SIM_DAYS,
+        upBasis: ORIENTATION_FRAMES.ecliptic,
+      },
     },
   } as unknown as EngineState;
 }

@@ -41,7 +41,7 @@ describe('tilt lerp round trip (ruling 13)', () => {
 
     // Dive to the surface regime.
     diveUntilEngaged(h);
-    expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+    expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
 
     // Set the memory through surfaceStep's own tilt/look drag steps. The
     // memory is session state and body-agnostic, so a unit-radius drag is
@@ -70,7 +70,7 @@ describe('tilt lerp round trip (ruling 13)', () => {
       trace.push({
         tilt: tiltOverBody(h.state, EARTH),
         hr: hrOverBody(h.state, EARTH, EARTH_RADIUS_M),
-        arm: h.state.cameraRuntime.lastPose.current.frame === 'absolute' ? 'abs' : 'body',
+        arm: h.state.cameraRuntime.register.pose.frame === 'absolute' ? 'abs' : 'body',
       });
     };
     for (let i = 0; i < 22; i += 1) notch(100);

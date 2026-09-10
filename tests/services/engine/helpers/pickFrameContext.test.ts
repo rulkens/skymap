@@ -2,7 +2,7 @@
  * pickFrameContext — unit tests for the pick-time camera as a value.
  *
  * `pickFrameContext` re-derives a `ReadyFrameContext` from the last RENDERED
- * pose (`state.cameraRuntime.lastPose.current`) and the live projection, using
+ * pose (`state.cameraRuntime.register.pose`) and the live projection, using
  * the PICK source mask so `ctx.visibleSourceMask` means "pickable sources". It
  * returns `null` before the engine is ready. These tests pin all three
  * properties.
@@ -107,11 +107,13 @@ function makeState(
     // `deriveFrameContext` needs this now.
     data: { bodies: { earth: null, planets: [], stars: [] } },
     cameraRuntime: {
-      lastPose: { current: absoluteArm(LAST_POSE) },
-      displayedPose: { current: absoluteArm(LAST_POSE) },
-      projection: PROJECTION,
-      lastRenderedSimDays: { current: LAST_SIM_DAYS },
-      upBasis: { current: ORIENTATION_FRAMES.equatorial },
+      register: { pose: absoluteArm(LAST_POSE) },
+      outputs: {
+        displayed: absoluteArm(LAST_POSE),
+        projection: PROJECTION,
+        simDays: LAST_SIM_DAYS,
+        upBasis: ORIENTATION_FRAMES.equatorial,
+      },
     },
   } as unknown as EngineState;
 }
@@ -129,7 +131,7 @@ describe('pickFrameContext', () => {
     expect(pickFrameContext(makeState({ galaxyPickRenderer: null }), makeCanvas())).toBeNull();
   });
 
-  it('reproduces the frame’s camera from lastPose + projection', () => {
+  it('reproduces the frame’s camera from register.pose + projection', () => {
     const state = makeState();
     const canvas = makeCanvas();
     const ctx = pickFrameContext(state, canvas);
@@ -137,13 +139,13 @@ describe('pickFrameContext', () => {
     if (ctx === null) return;
 
     // The camera the pick pass draws from must equal the one `deriveFrameContext`
-    // produces for the SAME lastPose + projection the last frame rendered.
+    // produces for the SAME register.pose + projection the last frame rendered.
     const expected = deriveFrameContext(
       state,
       canvas,
       LAST_POSE,
       absoluteArm(LAST_POSE),
-      state.cameraRuntime.projection,
+      state.cameraRuntime.outputs.projection,
       // Same steady basis `pickFrameContext` resolves internally for BOTH
       // halves, so the two cameras decode position and screen-up through the
       // same pole and their vp matches.
@@ -166,7 +168,7 @@ describe('pickFrameContext', () => {
     // pick (e.g. `extractSelectionRow`). If the pick read the derive memo's
     // cached key it would re-derive pickable bodies at J2000 while the screen
     // still shows LAST_SIM_DAYS — a pick/draw epoch desync. Single-writer state
-    // (`cameraRuntime.lastRenderedSimDays`, written only by runFrame) is immune:
+    // (`cameraRuntime.outputs.simDays`, written only by runFrame) is immune:
     // the memo write does not touch it, so the pick stays at the frame instant.
     const state = makeState();
     deriveBodyStates(CONST_J2000);

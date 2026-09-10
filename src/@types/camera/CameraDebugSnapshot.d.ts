@@ -6,7 +6,7 @@ import type { Vec3 } from '../math/Vec3';
 export type CameraDebugSnapshot = {
   /** `camera.base.frame` — the regime itself. */
   readonly storedFrame: PoseFrame;
-  /** `cameraRuntime.lastPose.current.frame` — the arm actually drawn last frame. */
+  /** `cameraRuntime.register.pose.frame` — the arm actually drawn last frame. */
   readonly renderedFrame: PoseFrame;
   readonly armMismatch: boolean;
   /** The engaged body when `storedFrame` is a body arm, else the nearest roster body. */
@@ -37,7 +37,7 @@ export type CameraDebugSnapshot = {
   readonly bandTargetRollRad: number | null;
   /** Wrapped `rollRad − bandTargetRollRad` — residual to the ride's target. */
   readonly rollToTargetRad: number | null;
-  /** `cameraRuntime.lastRenderedSimDays.current` — the epoch last frame drew at. */
+  /** `cameraRuntime.outputs.simDays` — the epoch last frame drew at. */
   readonly lastRenderedSimDays: number;
   /** The live clock's instant, resolved at read time (not what any frame drew). */
   readonly liveSimDays: number;
@@ -48,7 +48,7 @@ export type CameraDebugSnapshot = {
   readonly anchorLocalM: Vec3 | null;
   /** `|eyeRelAnchorM|`, metres, when `renderedFrame` is a body arm; else null. */
   readonly eyeRelAnchorMagM: number | null;
-  /** `cameraRuntime.prevActiveId.current` — last frame's driver-table winner. */
+  /** `cameraRuntime.register.winner` — last frame's driver-table winner. */
   readonly activeDriverId: string;
   /** Latched gesture mode; 'down (unlatched)' between press and first step; null at rest. */
   readonly gestureMode: string | null;

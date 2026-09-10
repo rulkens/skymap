@@ -13,7 +13,7 @@ export type DriverCtx = {
   readonly state: RootState;
   /** Elapsed on the WINNER's epoch row; 0 for the untimed rows. */
   readonly elapsedMs: number;
-  /** The AUTHORED register (`lastPose`), pre-projection — R12b-1. */
+  /** The AUTHORED register (`cameraRuntime.register.pose`), pre-projection — R12b-1. */
   readonly register: FramedCameraPose;
   /** World arm of `register`; the follow capture reads its eye. */
   readonly authoredWorld: CameraPose;

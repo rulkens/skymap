@@ -49,7 +49,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   // `clipEnded` on the frame elapsed first reaches `durationSec` would leave the
   // clip driver inactive that same frame and commit-on-edge would bake the
   // PRE-saturation pose. Instead this latches, the produce step runs saturated
-  // and `lastPose` captures the held final pose; the NEXT tick dispatches.
+  // and the register captures the held final pose; the NEXT tick dispatches.
   let pendingEnd = false;
 
   let compileCache: CompileCache | null = null;

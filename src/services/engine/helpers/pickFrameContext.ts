@@ -20,10 +20,10 @@ export function pickFrameContext(
     state,
     canvas,
     liveWorldPose(state),
-    // The DISPLAYED box, not the authored `lastPose`: the authored register is
+    // The DISPLAYED pose, not the authored register: the authored register is
     // untilted in-window and a pick against it misses (round-12c two-box contract).
-    state.cameraRuntime.displayedPose.current,
-    state.cameraRuntime.projection,
+    state.cameraRuntime.outputs.displayed,
+    state.cameraRuntime.outputs.projection,
     // A demand read at rest, where the live `upBasis` equals the steady frame.
     ORIENTATION_FRAMES[state.settings.orientation],
     ORIENTATION_FRAMES[state.settings.orientation],
@@ -32,7 +32,7 @@ export function pickFrameContext(
     performance.now(),
     // The instant the last frame derived its bodies at, so pickable body sprites
     // are re-derived exactly where they were drawn.
-    state.cameraRuntime.lastRenderedSimDays.current,
+    state.cameraRuntime.outputs.simDays,
   );
   return ctx.isReady ? ctx : null;
 }

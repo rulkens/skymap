@@ -61,7 +61,7 @@ function display(state: EngineState): { eye: Vec3; tilt: number; hr: number } {
  */
 function toMidWindow(h: CameraSimHarness): void {
   diveUntilEngaged(h);
-  expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+  expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
 
   // Set the memory via surfaceStep's tilt/look steps (unit-radius, h/R 0.15 so the
   // tilt ceiling is open under ruling 19's tighter band — the memory itself
@@ -74,11 +74,11 @@ function toMidWindow(h: CameraSimHarness): void {
   // hysteresis keeps the leg world-armed until engage. Thresholds rescaled
   // for ruling 19's tighter band (engage 0.2 / disengage 0.4, was 1.7/3.4).
   while (display(h.state).hr < 0.45) h.wheel(100);
-  expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+  expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
   while (display(h.state).hr > 0.32) h.wheel(-100);
   const { hr } = display(h.state);
   expect(hr).toBeGreaterThan(0.26);
-  expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+  expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
 
   // Let the follow ease and the projection settle before measuring.
   h.frame(60);

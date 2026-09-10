@@ -43,7 +43,7 @@ function runLoop(
   return {
     hr: hrOverBody(h.state, EARTH, EARTH_RADIUS_M),
     roll: liveWorldPose(h.state).roll ?? 0,
-    arm: h.state.cameraRuntime.lastPose.current.frame === 'absolute' ? 'abs' : 'body',
+    arm: h.state.cameraRuntime.register.pose.frame === 'absolute' ? 'abs' : 'body',
   };
 }
 

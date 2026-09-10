@@ -26,7 +26,7 @@ export function makeReconcileEffects(
     bakeBias: (mode) => void state.subsystems.biasCorrection.setMode(mode),
     // The LIVE rendered pose, assembled fresh — never the stale `state.cam`.
     logCameraState: () => {
-      const simDays = state.cameraRuntime.lastRenderedSimDays.current;
+      const simDays = state.cameraRuntime.outputs.simDays;
       logCameraState(
         liveRenderCamera(state),
         canvas,

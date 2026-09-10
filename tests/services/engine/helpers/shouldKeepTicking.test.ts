@@ -94,7 +94,7 @@ function makeState(over: {
     // The follow-approach-ease term reads these two: the frame's winner id and
     // the follow epoch's start. Default is at-rest (resting won, no ease running).
     cameraRuntime: {
-      prevActiveId: { current: over.followWinner === true ? 'followBody' : 'resting' },
+      register: { winner: over.followWinner === true ? 'followBody' : 'resting' },
       epochs: { follow: { ref: null, startMs: over.followStartMs ?? null } },
     },
     subsystems: {
@@ -250,7 +250,7 @@ describe('shouldKeepTicking', () => {
       gpu: { galaxyPointRenderer: null, galaxyPickRenderer: null, renderTargets: null },
       cam: null,
       cameraRuntime: {
-        prevActiveId: { current: 'resting' },
+        register: { winner: 'resting' },
         epochs: { follow: { ref: null, startMs: null } },
       },
       subsystems: {

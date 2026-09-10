@@ -96,9 +96,8 @@ function makeState(
     selectionRows: { hover: null, select: null, focus: null },
     data: { bodies: { earth: null, planets: [], stars: [] } },
     cameraRuntime: {
-      lastPose: { current: LAST_POSE },
-      projection: PROJECTION,
-      lastRenderedSimDays: { current: LAST_SIM_DAYS },
+      register: { pose: LAST_POSE },
+      outputs: { projection: PROJECTION, simDays: LAST_SIM_DAYS },
     },
   } as unknown as EngineState;
 }

@@ -62,11 +62,13 @@ function makeState(
       famousGalaxiesMeta,
     },
     cameraRuntime: {
-      lastPose: { current: absoluteArm(pose) },
-      displayedPose: { current: absoluteArm(pose) },
-      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
-      lastRenderedSimDays: { current: opts.simDays ?? 0 },
-      upBasis: { current: ORIENTATION_FRAMES.ecliptic },
+      register: { pose: absoluteArm(pose) },
+      outputs: {
+        displayed: absoluteArm(pose),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+        simDays: opts.simDays ?? 0,
+        upBasis: ORIENTATION_FRAMES.ecliptic,
+      },
     },
   } as unknown as EngineState;
 }
@@ -114,7 +116,7 @@ describe('buildDemandCtx', () => {
     expect(ctx.cameraPosMpc[2]).toBeCloseTo(13);
   });
 
-  it('carries the live sim instant from cameraRuntime.lastRenderedSimDays', () => {
+  it('carries the live sim instant from cameraRuntime.outputs.simDays', () => {
     // The proximity gate derives host body positions at this instant, so the
     // builder must forward the clock's last-rendered value verbatim (not the
     // epoch). A wiring that hard-coded J2000 here would fail.

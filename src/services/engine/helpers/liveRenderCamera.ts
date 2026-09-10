@@ -15,8 +15,8 @@ export function liveRenderCamera(state: EngineState): OrbitCamera | null {
   if (!state.cam) return null;
   return assembleOrbitCamera(
     liveWorldPose(state),
-    state.cameraRuntime.projection,
+    state.cameraRuntime.outputs.projection,
     ORIENTATION_FRAMES[state.settings.orientation],
-    state.cameraRuntime.upBasis.current,
+    state.cameraRuntime.outputs.upBasis,
   );
 }

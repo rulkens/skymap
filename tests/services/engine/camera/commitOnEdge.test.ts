@@ -2,7 +2,7 @@
  * commitOnEdge — unit tests for the per-frame commit-on-edge contract: on the
  * frame the active driver changes, if the departing driver declared
  * `commitsOnEdge: true` (tween, autoRotate, clip — not orbitDrag/resting),
- * dispatch `commitCameraPose(lastPose)` exactly once, mirroring runFrame's
+ * dispatch `commitCameraPose(register.pose)` exactly once, mirroring runFrame's
  * produce → tween-completion → commit-on-edge → Resource-update order.
  * Driven directly against the driver table + Redux store, no GPU or
  * `runFrame` body.
@@ -61,7 +61,7 @@ function simulateFrame(
   nowMs: number,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
   const rootState = store.getState();
-  const { lastPose, prevActiveId } = engineState.cameraRuntime;
+  const { register } = engineState.cameraRuntime;
 
   // Step 1: the epoch advance at the winner (the clip row as the player would
   // hand it over), then produce off the advanced rows.
@@ -74,16 +74,16 @@ function simulateFrame(
     winnerId: currActiveId,
     nowMs,
   });
-  engineState.cameraRuntime.epochs = epochs;
+  engineState.cameraRuntime = { ...engineState.cameraRuntime, epochs };
   const { pose } = runCameraDrivers(
     drivers,
     makeDriverCtx({
       state: rootState,
       elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),
-      register: lastPose.current,
-      winnerLastFrame: prevActiveId.current,
+      register: register.pose,
+      winnerLastFrame: register.winner,
       simDays: deriveSimDays(selectTimeState(rootState), nowMs),
-      projection: engineState.cameraRuntime.projection,
+      projection: engineState.cameraRuntime.outputs.projection,
     }),
     engineState.cameraRuntime.follow,
   );
@@ -99,21 +99,23 @@ function simulateFrame(
   }
 
   // Step 3: Commit-on-edge. On a deactivation edge the frame renders the
-  // just-committed pose (lastPose), not the stale-base produce result — mirrors
-  // runFrame's `renderPose` override that prevents the one-frame edge flicker.
-  // MIRROR: this guard must stay identical to runFrame's property-based guard so
-  // the clip case reflects real production behaviour.
-  const prev = prevActiveId.current;
+  // just-committed pose (the register), not the stale-base produce result —
+  // mirrors runFrame's `renderPose` override that prevents the one-frame edge
+  // flicker. MIRROR: this guard must stay identical to runFrame's property-based
+  // guard so the clip case reflects real production behaviour.
+  const prev = register.winner;
   let renderPose = pose;
   if (prev !== currActiveId && drivers.find((d) => d.id === prev)?.commitsOnEdge) {
-    store.dispatch(commitCameraPose(lastPose.current));
+    store.dispatch(commitCameraPose(register.pose));
     committed = true;
-    renderPose = lastPose.current;
+    renderPose = register.pose;
   }
 
   // Step 4: Update Resources.
-  prevActiveId.current = currActiveId;
-  lastPose.current = renderPose;
+  engineState.cameraRuntime = {
+    ...engineState.cameraRuntime,
+    register: { pose: renderPose, winner: currActiveId },
+  };
 
   return { pose: renderPose, activeId: currActiveId, committed };
 }
@@ -133,9 +135,12 @@ describe('commitOnEdge — tween settles', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    // Seed prevActiveId to 'tween' so the tween is treated as already active
+    // Seed register.winner to 'tween' so the tween is treated as already active
     // from frame 0 (no edge on the first frame of a tween).
-    state.cameraRuntime.prevActiveId.current = 'tween';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'tween' },
+    };
 
     // Run several frames in the middle of the tween.
     let anyCommit = false;
@@ -161,7 +166,10 @@ describe('commitOnEdge — tween settles', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    state.cameraRuntime.prevActiveId.current = 'tween';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'tween' },
+    };
 
     // Arrival frame starts the epoch (elapsed 0); subsequent frames read off it.
     simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
@@ -192,7 +200,10 @@ describe('commitOnEdge — tween settles', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    state.cameraRuntime.prevActiveId.current = 'tween';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'tween' },
+    };
 
     simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
     // Cancel frame: elapsed 200 >= durationMs, cancelCameraTween dispatched,
@@ -206,7 +217,7 @@ describe('commitOnEdge — tween settles', () => {
     expect(frame2.committed).toBe(true);
   });
 
-  it('commit bakes the saturated `to` pose into base (lastPose on the cancel frame == to)', () => {
+  it('commit bakes the saturated `to` pose into base (register.pose on the cancel frame == to)', () => {
     const { store, state, deps } = makeHarness();
     const drivers = deps.drivers;
     const TO: CameraPose = { target: [5, 10, 15], yaw: 2.5, pitch: -0.3, distance: 40 };
@@ -220,11 +231,14 @@ describe('commitOnEdge — tween settles', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    state.cameraRuntime.prevActiveId.current = 'tween';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'tween' },
+    };
 
     simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
-    simulateFrame(state, store, drivers, 200); // cancel frame: elapsed 200 >= durationMs, lastPose := saturated TO
-    simulateFrame(state, store, drivers, 220); // commit frame: base := lastPose == TO
+    simulateFrame(state, store, drivers, 200); // cancel frame: elapsed 200 >= durationMs, register.pose := saturated TO
+    simulateFrame(state, store, drivers, 220); // commit frame: base := register.pose == TO
 
     const base = worldArmOf(store.getState().camera.base);
     expect(base.yaw).toBeCloseTo(TO.yaw, 6);
@@ -253,10 +267,13 @@ describe('commitOnEdge — tween settles', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    state.cameraRuntime.prevActiveId.current = 'tween';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'tween' },
+    };
 
     simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
-    simulateFrame(state, store, drivers, 200); // cancel frame: lastPose := saturated TO
+    simulateFrame(state, store, drivers, 200); // cancel frame: register.pose := saturated TO
     const edge = simulateFrame(state, store, drivers, 220); // deactivation edge
 
     expect(edge.activeId).toBe('resting');
@@ -274,7 +291,10 @@ describe('commitOnEdge — auto-rotate deactivation', () => {
 
     // Activate auto-rotate.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
-    state.cameraRuntime.prevActiveId.current = 'autoRotate';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'autoRotate' },
+    };
 
     // Run one frame with auto-rotate still active.
     const frame1 = simulateFrame(state, store, drivers, 1000);
@@ -296,10 +316,10 @@ describe('commitOnEdge — auto-rotate deactivation', () => {
 });
 
 describe('commitOnEdge — no-jump-on-grab', () => {
-  it('lastPose.current during a tween reflects the visible pose, not base', () => {
-    // If drag seeding reads `lastPose.current` (as it should), grabbing during
+  it('register.pose during a tween reflects the visible pose, not base', () => {
+    // If drag seeding reads `register.pose` (as it should), grabbing during
     // a tween never snaps to the stale `base`. This test verifies that after a
-    // tween runs for a few frames, `lastPose.current` differs from `base`.
+    // tween runs for a few frames, `register.pose` differs from `base`.
     const { store, state, deps } = makeHarness();
     const drivers = deps.drivers;
 
@@ -314,14 +334,17 @@ describe('commitOnEdge — no-jump-on-grab', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    state.cameraRuntime.prevActiveId.current = 'tween';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'tween' },
+    };
 
-    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch, elapsed 0, lastPose == from == base
+    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch, elapsed 0, register.pose == from == base
     simulateFrame(state, store, drivers, 500); // elapsed 500/1000 → yaw interpolated between 0 and 1
 
-    // `lastPose.current` must NOT equal the stale `base` (which is still
+    // `register.pose` must NOT equal the stale `base` (which is still
     // the pre-tween committed pose).
-    const lastPose = worldArmOf(state.cameraRuntime.lastPose.current);
+    const lastPose = worldArmOf(state.cameraRuntime.register.pose);
     const base = worldArmOf(store.getState().camera.base);
     // After 500ms of a 1000ms tween the yaw is somewhere between 0 and 1.
     expect(lastPose.yaw).not.toBe(base.yaw);
@@ -330,7 +353,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
   it('grab mid-tween commits the displaced tween pose into base (tween→orbitDrag edge)', () => {
     // When the user grabs during a tween, the commit-on-edge guard fires because
     // the prev driver was 'tween'. This bakes the displaced tween's last pose into
-    // `base` so the drag seeds from `lastPose` and the final pose is jump-free.
+    // `base` so the drag seeds from `register.pose` and the final pose is jump-free.
     // orbitDrag is excluded from triggering a commit only as the PREV driver, not
     // as the incoming one — design §6 no-jump guarantee.
     const { store, state, deps } = makeHarness();
@@ -345,7 +368,10 @@ describe('commitOnEdge — no-jump-on-grab', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    state.cameraRuntime.prevActiveId.current = 'tween';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'tween' },
+    };
 
     simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
     // Mid-tween frame.
@@ -381,8 +407,11 @@ describe('commitOnEdge — clip deactivation', () => {
     // so the driver's re-encode is a no-op — this test only cares about the
     // commit-on-edge boolean, not the pose value.
     store.dispatch(clipStarted({ data: clip, frame: DEFAULT_ORIENTATION }));
-    // Seed prevActiveId so there's no spurious commit on the first frame.
-    state.cameraRuntime.prevActiveId.current = 'clip';
+    // Seed register.winner so there's no spurious commit on the first frame.
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'clip' },
+    };
 
     // Run one frame with the clip active — no commit expected.
     const frame1 = simulateFrame(state, store, drivers, 0);
@@ -404,7 +433,10 @@ describe('commitOnEdge — clip deactivation', () => {
     const drivers = deps.drivers;
 
     store.dispatch(beginDrag());
-    state.cameraRuntime.prevActiveId.current = 'orbitDrag';
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, winner: 'orbitDrag' },
+    };
 
     // Frame with drag active — no commit.
     const frame1 = simulateFrame(state, store, drivers, 0);

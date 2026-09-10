@@ -55,7 +55,7 @@ describe('body switch reset (ruling 18)', () => {
 
     // Dive into the Earth surface regime and author a tilt there.
     diveUntilEngaged(h);
-    expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+    expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
     seedRememberedTilt(h);
     expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeGreaterThan(0.3);
 
@@ -78,8 +78,8 @@ describe('body switch reset (ruling 18)', () => {
     // read back as 0.
     const dSat = distTo(displayedEye(h.state), SATURN);
     expect(Math.abs(dSat - FRAMING_MPC) / FRAMING_MPC).toBeLessThan(1e-3);
-    expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
-    expect(h.state.cameraRuntime.prevActiveId.current).toBe('followBody');
+    expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
+    expect(h.state.cameraRuntime.register.winner).toBe('followBody');
     expect(tiltOverBody(h.state, SATURN)).toBeLessThan(1e-6);
     expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBe(0);
   });
@@ -104,8 +104,8 @@ describe('body switch reset (ruling 18)', () => {
       expect(ds[i]!).toBeLessThanOrEqual(ds[i - 1]! * (1 + 1e-9));
     }
     expect(Math.abs(ds[ds.length - 1]! - FRAMING_MPC) / FRAMING_MPC).toBeLessThan(1e-3);
-    expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
-    expect(h.state.cameraRuntime.prevActiveId.current).toBe('followBody');
+    expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
+    expect(h.state.cameraRuntime.register.winner).toBe('followBody');
   });
 
   it("the session's FIRST follow lands at the framing distance too", () => {
@@ -120,14 +120,14 @@ describe('body switch reset (ruling 18)', () => {
     }
     const dSat = distTo(displayedEye(h.state), SATURN);
     expect(Math.abs(dSat - FRAMING_MPC) / FRAMING_MPC).toBeLessThan(1e-3);
-    expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+    expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
   });
 
   it('same-body disengage/re-engage (with a null-focus stint) keeps the memory', () => {
     const h = makeCameraSimHarness();
 
     diveUntilEngaged(h);
-    expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+    expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
     seedRememberedTilt(h);
     const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
     expect(remembered).toBeGreaterThan(0.3);
@@ -136,13 +136,13 @@ describe('body switch reset (ruling 18)', () => {
     // and dive back into the band — never a DIFFERENT body, so the memory
     // must survive the whole trip.
     recedeUntilDisengaged(h, { factor: 1.25, guard: 40 });
-    expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+    expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
     h.focus(null);
     h.frame(10);
     h.focus('earth');
     h.frame(10);
     diveUntilEngaged(h, { factor: 0.75, guard: 40 });
-    expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+    expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
     expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeCloseTo(remembered, 10);
   });
 

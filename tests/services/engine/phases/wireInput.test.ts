@@ -182,12 +182,13 @@ function makeState(): EngineState {
     } as never,
     cam: null,
     cameraRuntime: {
+      register: { pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }, winner: 'resting' },
       epochs: UNSTARTED_EPOCHS,
       follow: null,
-      projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
-      displayedPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
-      prevActiveId: { current: 'resting' },
+      outputs: {
+        displayed: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+        projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
+      },
     },
     assetSlots: {
       points: new Map(),

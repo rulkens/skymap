@@ -17,14 +17,10 @@ import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
-import { UNSTARTED_EPOCHS } from './camera/cameraEpochs';
-import { EMPTY_SURFACE_MEMORY } from '../camera/surfaceStep';
+import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
-import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import type { SkyCubemapCaptureRuntime } from '../../@types/engine/state/SkyCubemapCaptureRuntime';
-import { CONST_J2000 } from '../../data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { createEngineData } from './data/createEngineData';
 import { SCENE_STARS } from '../../data/bodies/sceneStars';
 import { Source } from '../../data/source';
@@ -106,29 +102,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // "no frame has run yet" sentinel that seeds the first interval to 0.
   const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0 };
 
-  // Seeded with placeholders; wireInput's bootstrap seed fills real values once the
-  // initial OrbitCamera exists. `lastPose` seeds from the camera slice's initial
-  // `base` — the single home for the pre-bootstrap placeholder pose, arm tag
-  // included — copied, so the engine's Resource never aliases the store's object.
-  const cameraRuntime: CameraRuntime = {
-    epochs: UNSTARTED_EPOCHS,
-    follow: null,
+  // Seeded with placeholders; wireInput re-seeds once the initial OrbitCamera
+  // exists. The register seeds from the camera slice's initial `base` — the
+  // single home for the pre-bootstrap placeholder pose, arm tag included.
+  const cameraRuntime = seedCameraRuntime({
+    committed: cb.store.getState().camera.base,
     projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
-    lastPose: {
-      current: { ...cb.store.getState().camera.base },
-    },
-    // Same seed as the register: before the first frame nothing has been projected,
-    // so authored and displayed coincide (runFrame step 4 splits them thereafter).
-    displayedPose: {
-      current: { ...cb.store.getState().camera.base },
-    },
-    prevActiveId: { current: 'resting' },
-    lastRenderedSimDays: { current: CONST_J2000 },
-    // Copied, so the seed never aliases the shared registry entry.
-    upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
-    surface: EMPTY_SURFACE_MEMORY,
-    lastZoomFactor: { current: null },
-  };
+  });
 
   // Sky-cubemap bake bookkeeping — false/infinity/null until the first frame
   // the lensing band goes active; `renderFrame` is the sole writer thereafter.
@@ -454,7 +434,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.cam
         ? {
             from: liveWorldPose(state),
-            fovYRad: state.cameraRuntime.projection.fovYRad,
+            fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
         : null,
@@ -477,7 +457,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Declared up-front so the handle literal can reference each by name — no forward
   // references, no `!` assertions.
   function logCameraStateFn(): void {
-    const simDays = state.cameraRuntime.lastRenderedSimDays.current;
+    const simDays = state.cameraRuntime.outputs.simDays;
     logCameraState(
       liveRenderCamera(state),
       canvas,
@@ -616,33 +596,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       earthTiles: () =>
         state.subsystems.earthTiles?.getDebugSnapshot() ?? EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
-      // `liveWorldPose` + `deriveBodyStates` at `lastRenderedSimDays`. `liveSimDays`
+      // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
       // alone resolves fresh — it is what the epoch-mismatch check compares against.
       cameraDebug: () => {
         const rootState = store.getState();
         const time = selectTimeState(rootState);
-        const bodyStates = deriveBodyStates(
-          state.cameraRuntime.lastRenderedSimDays.current,
-        ) as ReadonlyMap<BodyId, BodyState>;
+        const { register, surface, outputs } = state.cameraRuntime;
+        const bodyStates = deriveBodyStates(outputs.simDays) as ReadonlyMap<BodyId, BodyState>;
         return cameraDebugSnapshotOf({
           storedFrame: rootState.camera.base.frame,
-          renderedPose: state.cameraRuntime.displayedPose.current,
+          renderedPose: outputs.displayed,
           worldPose: liveWorldPose(state),
           poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
-          upBasis: state.cameraRuntime.upBasis.current,
+          upBasis: outputs.upBasis,
           orientationFrame: state.settings.orientation,
           bodyStates,
-          lastRenderedSimDays: state.cameraRuntime.lastRenderedSimDays.current,
+          lastRenderedSimDays: outputs.simDays,
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
-          activeDriverId: state.cameraRuntime.prevActiveId.current,
+          activeDriverId: register.winner,
           // The readout reads the NESTING to tell "at rest" from "down, not yet
           // latched", so the pointer-up case is the absent wrapper, not a null latch.
-          gesture: state.cameraRuntime.surface.pointerDown
-            ? { gesture: state.cameraRuntime.surface.gesture }
-            : null,
-          lastZoomFactor: state.cameraRuntime.lastZoomFactor.current,
-          rememberedTiltRad: state.cameraRuntime.surface.rememberedTiltRad,
+          gesture: surface.pointerDown ? { gesture: surface.gesture } : null,
+          lastZoomFactor: outputs.lastZoomFactor,
+          rememberedTiltRad: surface.rememberedTiltRad,
         });
       },
     },

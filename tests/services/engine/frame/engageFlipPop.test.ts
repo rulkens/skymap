@@ -49,7 +49,7 @@ function sampleOf(state: EngineState): FrameSample {
   ] as Vec3);
   const { up } = imagePlaneBasis(forward, live.roll ?? 0, frameUp(B));
   return {
-    arm: state.cameraRuntime.lastPose.current.frame === 'absolute' ? 'abs' : 'body',
+    arm: state.cameraRuntime.register.pose.frame === 'absolute' ? 'abs' : 'body',
     up: [...up] as Vec3,
   };
 }

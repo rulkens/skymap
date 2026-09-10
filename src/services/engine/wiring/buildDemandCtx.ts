@@ -27,12 +27,12 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // is a read at rest, so the steady orientation frame is the correct basis.
     cameraPosMpc: assembleOrbitCamera(
       liveWorldPose(state),
-      state.cameraRuntime.projection,
+      state.cameraRuntime.outputs.projection,
       ORIENTATION_FRAMES[state.settings.orientation],
       ORIENTATION_FRAMES[state.settings.orientation],
     ).position,
     // The instant the last frame derived its bodies at, so demand-time body
     // positions match the frame that drew them.
-    simDays: state.cameraRuntime.lastRenderedSimDays.current,
+    simDays: state.cameraRuntime.outputs.simDays,
   };
 }

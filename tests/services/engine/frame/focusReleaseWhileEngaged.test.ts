@@ -59,7 +59,7 @@ describe('focus release while engaged (round 10)', () => {
     for (let i = 0; i < 35; i += 1, t += 33) events.push({ t, deltaY: -100 });
     driveWheelEvents(h, events, t + 500);
 
-    expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute'); // engaged
+    expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute'); // engaged
     const eyeBefore = displayedEye(h.state);
     const marsBefore = distTo(eyeBefore, MARS);
     const hrBefore = distTo(eyeBefore, EARTH) / R_MPC - 1;
@@ -98,9 +98,9 @@ describe('focus release while engaged (round 10)', () => {
     // takes the frame, and the camera actually travels to Mars.
     for (let i = 0; i < 150; i += 1) {
       h.frame();
-      expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+      expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
     }
-    expect(h.state.cameraRuntime.prevActiveId.current).toBe('followBody');
+    expect(h.state.cameraRuntime.register.winner).toBe('followBody');
     const eyeAfter = displayedEye(h.state);
     expect(distTo(eyeAfter, MARS)).toBeLessThan(marsBefore * 1e-2);
   });
@@ -125,7 +125,7 @@ describe('focus release while engaged (round 10)', () => {
     const startDist = distTo(displayedEye(h.state), MARS);
     for (let time = 16; time <= 1600; time += 16) {
       h.tick(time);
-      expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute'); // never Mars
+      expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute'); // never Mars
     }
     const endDist = distTo(displayedEye(h.state), MARS);
     expect(endDist).toBeGreaterThan(startDist * 100); // gone — at Earth
@@ -144,7 +144,7 @@ describe('focus release while engaged (round 10)', () => {
     h.focus('mars');
     h.seedPose(absoluteArm(MARS_PARK));
     h.tick(64);
-    const frame = h.state.cameraRuntime.lastPose.current.frame;
+    const frame = h.state.cameraRuntime.register.pose.frame;
     expect(frame !== 'absolute' && frame.body).toBe('mars');
   });
 });

@@ -103,16 +103,17 @@ function makeHarness() {
       far: 1000,
     } as unknown as OrbitCamera,
     cameraRuntime: {
+      register: { pose: absoluteArm(poseAtHR(5)), winner: 'resting' },
       epochs: UNSTARTED_EPOCHS,
       follow: null,
-      projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 50000 },
-      lastPose: { current: absoluteArm(poseAtHR(5)) },
-      displayedPose: { current: absoluteArm(poseAtHR(5)) },
-      prevActiveId: { current: 'resting' },
-      lastRenderedSimDays: { current: SIM },
-      upBasis: { current: [...B] },
       surface: EMPTY_SURFACE_MEMORY,
-      lastZoomFactor: { current: null },
+      outputs: {
+        displayed: absoluteArm(poseAtHR(5)),
+        simDays: SIM,
+        upBasis: [...B],
+        projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 50000 },
+        lastZoomFactor: null,
+      },
     },
   } as unknown as EngineState;
   const deps = {
@@ -172,7 +173,7 @@ function snapshot(state: EngineState, label: string): Step {
     ) /
       R_MPC -
     1;
-  const reg = state.cameraRuntime.lastPose.current;
+  const reg = state.cameraRuntime.register.pose;
   const register =
     reg.frame === 'absolute'
       ? [...reg.pose.target, reg.pose.yaw, reg.pose.pitch, reg.pose.distance, reg.pose.roll ?? 0]
@@ -238,7 +239,7 @@ function runScript(): Trace {
   frame();
   record('start');
   for (let i = 0; i < 40; i += 1) notch(-100, 65, 40, `dive ${i}`);
-  expect(state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+  expect(state.cameraRuntime.register.pose.frame).not.toBe('absolute');
   for (let i = 0; i < 36; i += 1) notch(-300, 65, 40, `dive brisk ${i}`);
   expect(trace[trace.length - 1]!.hr).toBeLessThan(1e-5); // at the standoff floor
 
@@ -271,20 +272,20 @@ function runScript(): Trace {
 
   for (let i = 0; i < 36; i += 1) notch(300, 50, 50, `recede brisk ${i}`);
   let i = 0;
-  while (state.cameraRuntime.lastPose.current.frame !== 'absolute' && i < 40) {
+  while (state.cameraRuntime.register.pose.frame !== 'absolute' && i < 40) {
     notch(100, 50, 50, `recede ${i}`);
     i += 1;
   }
-  expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+  expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
   for (let j = 0; j < 8; j += 1) notch(100, 50, 50, `recede world ${j}`);
   // Back in through the window world-armed with a non-zero memory: the only
   // leg on which the world arm's tilt projection is live.
   i = 0;
-  while (state.cameraRuntime.lastPose.current.frame === 'absolute' && i < 40) {
+  while (state.cameraRuntime.register.pose.frame === 'absolute' && i < 40) {
     notch(-100, 40, 60, `re-dive ${i}`);
     i += 1;
   }
-  expect(state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
+  expect(state.cameraRuntime.register.pose.frame).not.toBe('absolute');
   for (let j = 0; j < 4; j += 1) notch(-100, 40, 60, `re-dive engaged ${j}`);
   return trace;
 }

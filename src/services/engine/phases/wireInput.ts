@@ -16,6 +16,7 @@ import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { poseOf } from '../camera/poseOf';
 import { projectionOf } from '../camera/projectionOf';
+import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { EARTH_REF } from '../../../data/selection/earthRef';
@@ -116,11 +117,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // gap: moving `setSagaContext` into a bootstrap phase, or making bootstrap
   // synchronous with engine construction, silently regresses the boot frame to
   // the default orientation.
-  state.cameraRuntime.projection = projectionOf(cam);
-  state.cameraRuntime.lastPose.current = absoluteArm(poseOf(cam));
-  // Displayed = authored at boot: nothing has been projected yet.
-  state.cameraRuntime.displayedPose.current = state.cameraRuntime.lastPose.current;
-  store.dispatch(commitCameraPose(absoluteArm(poseOf(cam))));
+  const committed = absoluteArm(poseOf(cam));
+  state.cameraRuntime = seedCameraRuntime({ committed, projection: projectionOf(cam) });
+  store.dispatch(commitCameraPose(committed));
 
   // Boot IS the home state: the sim clock boots live, so Earth moves from the
   // first frame and a bare pose would let the globe slide out of frame.

@@ -1,5 +1,5 @@
 /**
- * authoredWorldPose — the world arm of the AUTHORED register (`lastPose`,
+ * authoredWorldPose — the world arm of the AUTHORED register (`register.pose`,
  * pre-projection). The gesture folds MUST read this, never `liveWorldPose`:
  * folding drag deltas over the displayed (tilted) pose and re-committing it
  * through the pivot pin is the R12b-1 loop that walked the eye 8,519 km per
@@ -18,12 +18,9 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 
 export function authoredWorldPose(state: EngineState): CameraPose {
   return resolveWorldArm(
-    state.cameraRuntime.lastPose.current,
-    deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current) as ReadonlyMap<
-      BodyId,
-      BodyState
-    >,
+    state.cameraRuntime.register.pose,
+    deriveBodyStates(state.cameraRuntime.outputs.simDays) as ReadonlyMap<BodyId, BodyState>,
     ORIENTATION_FRAMES[state.settings.orientation],
-    state.cameraRuntime.upBasis.current,
+    state.cameraRuntime.outputs.upBasis,
   );
 }

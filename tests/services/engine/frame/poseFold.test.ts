@@ -16,7 +16,7 @@ import { configureStore } from '@reduxjs/toolkit';
 // Spies that DELEGATE to the real modules: the fold's placement is a call-order
 // property, so the frame has to run its production path while the probe records
 // where each step landed. `state` is the live EngineState, read inside the
-// regimeArmFor spy to prove `lastPose` has not been updated yet at fold time.
+// regimeArmFor spy to prove `register.pose` has not been updated yet at fold time.
 const probe = vi.hoisted(() => ({
   order: [] as string[],
   lastPoseAtFold: [] as unknown[],
@@ -54,9 +54,7 @@ vi.mock('../../../../src/services/engine/camera/regimeArmFor', async (importOrig
     ...actual,
     regimeArmFor: (...args: Parameters<typeof actual.regimeArmFor>) => {
       probe.order.push('fold');
-      probe.lastPoseAtFold.push(
-        (probe.state as EngineState | null)?.cameraRuntime.lastPose.current,
-      );
+      probe.lastPoseAtFold.push((probe.state as EngineState | null)?.cameraRuntime.register.pose);
       return actual.regimeArmFor(...args);
     },
   };
@@ -130,9 +128,16 @@ function makeHarness() {
 }
 
 /** Seed both pose homes with the same world-arm pose, the bootstrap posture. */
-function seedPose(store: ReturnType<typeof makeHarness>['store'], state: EngineState, pose: CameraPose): void {
+function seedPose(
+  store: ReturnType<typeof makeHarness>['store'],
+  state: EngineState,
+  pose: CameraPose,
+): void {
   store.dispatch(commitCameraPose(absoluteArm(pose)));
-  state.cameraRuntime.lastPose.current = absoluteArm(pose);
+  state.cameraRuntime = {
+    ...state.cameraRuntime,
+    register: { ...state.cameraRuntime.register, pose: absoluteArm(pose) },
+  };
 }
 
 /** Geocentric range of a body-arm pose, metres — the anchor is the centre. */
@@ -155,23 +160,26 @@ beforeEach(() => {
 });
 
 describe('runFrame — the regime fold', () => {
-  it('runs after the pivot pin and before lastPose is updated', () => {
+  it('runs after the pivot pin and before register.pose is updated', () => {
     // FW-G: a fold above driver arbitration is discarded by whatever writes the
     // pose after it. Its two neighbours pin it exactly — below the pivot pin
-    // (the last pose writer) and above the `lastPose.current` update, which is
-    // why the pose the fold sees in `lastPose` is still the PREVIOUS frame's.
+    // (the last pose writer) and above the `register.pose` update, which is
+    // why the pose the fold sees in `register.pose` is still the PREVIOUS frame's.
     const { store, state, deps } = makeHarness();
     probe.state = state;
     const PREVIOUS = absoluteArm({ target: [1, 2, 3], yaw: 0.1, pitch: 0.2, distance: 5 });
     const PRODUCED = poseAtHR(EARTH, SCENE_EARTH.radiusM, 12);
-    state.cameraRuntime.lastPose.current = PREVIOUS;
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, pose: PREVIOUS },
+    };
     store.dispatch(commitCameraPose(absoluteArm(PRODUCED)));
 
     runFrame(state, deps, 0);
 
     expect(probe.order).toEqual(['pin', 'fold', 'deriveFrameContext']);
     expect(probe.lastPoseAtFold).toEqual([PREVIOUS]);
-    expect(state.cameraRuntime.lastPose.current).not.toBe(PREVIOUS);
+    expect(state.cameraRuntime.register.pose).not.toBe(PREVIOUS);
   });
 
   it('commits the engaged arm to camera.base once, then holds it', () => {
@@ -236,12 +244,15 @@ describe('runFrame — the regime fold', () => {
       pose: toBodyArm(FAR, B, B, EARTH_ARM.body, EARTH),
     } as const;
     store.dispatch(commitCameraPose(arm));
-    state.cameraRuntime.lastPose.current = arm;
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, pose: arm },
+    };
 
     runFrame(state, deps, 0);
 
     expect(store.getState().camera.base.frame).toBe('absolute');
-    expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+    expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
   });
 
   it('disengaging with a moving body focused keeps the eye continuous past the pivot pin', () => {
@@ -262,7 +273,10 @@ describe('runFrame — the regime fold', () => {
       pose: toBodyArm(NEAR_EDGE, B, B, EARTH_ARM.body, EARTH),
     } as const;
     store.dispatch(commitCameraPose(arm));
-    state.cameraRuntime.lastPose.current = arm;
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, pose: arm },
+    };
     // Earth focused and MOVING (in ORBITAL_ELEMENTS): the pin fires at rest.
     store.dispatch(
       setSelectionRow({
@@ -288,7 +302,7 @@ describe('runFrame — the regime fold', () => {
     runFrame(state, deps, 0); // frame N: the zoom lands, the fold flips
     runFrame(state, deps, 16); // frame N+1: at rest, the pin re-reads the target
 
-    expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+    expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
     const flip = renderedCamera(probe.drawnPoses[0] as CameraPose);
     const pinned = renderedCamera(probe.drawnPoses[1] as CameraPose);
     for (let i = 0; i < 3; i++) {
@@ -320,13 +334,13 @@ describe('runFrame — the regime fold', () => {
     runFrame(state, deps, 0);
 
     expect(probe.order).not.toContain('fold');
-    expect(state.cameraRuntime.lastPose.current.frame).toBe('absolute');
+    expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
     expect(store.getState().camera.base.frame).toBe('absolute');
 
     store.dispatch(endDrag());
     runFrame(state, deps, 16);
 
-    expect(state.cameraRuntime.lastPose.current.frame).toEqual(EARTH_ARM);
+    expect(state.cameraRuntime.register.pose.frame).toEqual(EARTH_ARM);
   });
 
   it('crossing the engage threshold does not move the rendered camera', () => {
@@ -345,7 +359,7 @@ describe('runFrame — the regime fold', () => {
     runFrame(state, deps, 0);
     runFrame(state, deps, 16);
 
-    expect(state.cameraRuntime.lastPose.current.frame).toEqual(EARTH_ARM);
+    expect(state.cameraRuntime.register.pose.frame).toEqual(EARTH_ARM);
     const before = renderedCamera(probe.drawnPoses[0] as CameraPose);
     const after = renderedCamera(probe.drawnPoses[1] as CameraPose);
     for (let i = 0; i < 3; i++) {
@@ -377,15 +391,15 @@ describe('runFrame — the regime fold', () => {
 
     // Frame 1: the absolute arm, so followBody wins and the fold engages.
     runFrame(state, deps, 0);
-    expect(state.cameraRuntime.prevActiveId.current).toBe('followBody');
-    const engaged = state.cameraRuntime.lastPose.current;
+    expect(state.cameraRuntime.register.winner).toBe('followBody');
+    const engaged = state.cameraRuntime.register.pose;
     expect(engaged.frame).toEqual(EARTH_ARM);
 
     runFrame(state, deps, 16);
 
-    expect(state.cameraRuntime.prevActiveId.current).toBe('resting');
+    expect(state.cameraRuntime.register.winner).toBe('resting');
     // Untouched by reference: the pin rebuilds the pose whenever it applies.
-    expect(state.cameraRuntime.lastPose.current).toBe(engaged);
+    expect(state.cameraRuntime.register.pose).toBe(engaged);
   });
 
   it('the wheel does not route through applyWheelZoom in a body arm', () => {
@@ -397,7 +411,7 @@ describe('runFrame — the regime fold', () => {
     seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
 
     runFrame(state, deps, 0);
-    const engaged = state.cameraRuntime.lastPose.current;
+    const engaged = state.cameraRuntime.register.pose;
     expect(engaged.frame).toEqual(EARTH_ARM);
 
     const spy = vi.spyOn(store, 'dispatch');

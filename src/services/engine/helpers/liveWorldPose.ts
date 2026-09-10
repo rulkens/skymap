@@ -3,7 +3,7 @@
  * the one on-screen resolution site. Authored-side reads (the gesture folds) go
  * through `authoredWorldPose` instead: feeding a projected pose back into an
  * authoring path re-creates the R12b-1 register walk. It always reads
- * `lastRenderedSimDays` — between frames that is the epoch the last frame DREW at.
+ * `outputs.simDays` — between frames that is the epoch the last frame DREW at.
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
@@ -16,14 +16,11 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 
 export function liveWorldPose(state: EngineState): CameraPose {
   return resolveWorldArm(
-    state.cameraRuntime.displayedPose.current,
-    deriveBodyStates(state.cameraRuntime.lastRenderedSimDays.current) as ReadonlyMap<
-      BodyId,
-      BodyState
-    >,
+    state.cameraRuntime.outputs.displayed,
+    deriveBodyStates(state.cameraRuntime.outputs.simDays) as ReadonlyMap<BodyId, BodyState>,
     // The committed pose basis (the decode never mid-slerps) and the live
     // up-basis — the same split `runFrame` feeds the draw path.
     ORIENTATION_FRAMES[state.settings.orientation],
-    state.cameraRuntime.upBasis.current,
+    state.cameraRuntime.outputs.upBasis,
   );
 }

@@ -98,14 +98,14 @@ export function skyCubemapFaceContext(input: {
       fovYRad: Math.PI / 2,
       aspect: 1,
       near: SKY_CAPTURE_NEAR_MPC,
-      far: state.cameraRuntime.projection.far,
+      far: state.cameraRuntime.outputs.projection.far,
     },
     basis,
     basis,
     deriveSourceMasks(state).draw, // draw mask: a capture, not a click target
 
     nowMs,
-    state.cameraRuntime.lastRenderedSimDays.current,
+    state.cameraRuntime.outputs.simDays,
   );
   if (!ctx.isReady) return null;
   // In place is safe: `deriveFrameContext` freshly allocated these arrays.

@@ -56,5 +56,5 @@ export function seedRememberedTilt(
     }
     mem = { ...mem, pointerDown: false, gesture: null };
   }
-  h.state.cameraRuntime.surface = mem;
+  h.state.cameraRuntime = { ...h.state.cameraRuntime, surface: mem };
 }

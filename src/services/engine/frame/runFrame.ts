@@ -4,7 +4,7 @@
  * this exact order: (0) drain input, (1) produce from the driver table, (2)
  * tween completion, (3) commit-on-edge, (3b) pivot-pin, (3c) THE FOLD (world
  * arm resolved once, regime normalised), (4) update the pose Resources —
- * AUTHORED pose to `lastPose`, projected pose to `displayedPose`. The epochs
+ * AUTHORED pose to `register`, projected pose to `outputs.displayed`. The epochs
  * advance exactly once per frame, in step 1 once the winner is known. Then the
  * frame context, the planners, the GPU dispatch and the keep-ticking vote.
  */
@@ -101,11 +101,19 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // `reconcile` runs unconditionally (canvas size AND every state-driven scale
   // feed it) and reallocates only rows whose pixel size moved; `renderTargets`
   // is null until initGpu.
-  if (resizeCanvasToDisplay(deps.canvas)) {
-    state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
-  }
   // The FOV slider can change on any frame with no resize event.
-  state.cameraRuntime.projection.fovYRad = state.settings.camera.fovDeg * (Math.PI / 180);
+  const prevProjection = state.cameraRuntime.outputs.projection;
+  const projection = {
+    ...prevProjection,
+    aspect: resizeCanvasToDisplay(deps.canvas)
+      ? deps.canvas.width / deps.canvas.height
+      : prevProjection.aspect,
+    fovYRad: state.settings.camera.fovDeg * (Math.PI / 180),
+  };
+  state.cameraRuntime = {
+    ...state.cameraRuntime,
+    outputs: { ...state.cameraRuntime.outputs, projection },
+  };
   state.gpu.renderTargets?.reconcile(state, {
     width: deps.canvas.width,
     height: deps.canvas.height,
@@ -130,7 +138,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Single-writer epoch the pick path reads — NOT the derive memo's key, which
   // a between-frames `deriveBodyStates(CONST_J2000)` (extractSelectionRow) can
   // repoint.
-  state.cameraRuntime.lastRenderedSimDays.current = simDays;
+  state.cameraRuntime = {
+    ...state.cameraRuntime,
+    outputs: { ...state.cameraRuntime.outputs, simDays },
+  };
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
   // `settings.orientation` when a switch starts, so the eye holds still through
   // a roll and only up rotates (`upBasis`, the live B(t)).
@@ -138,27 +149,33 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   const runtime = state.cameraRuntime;
   const drained = replayInput(
-    { register: runtime.lastPose.current, surface: runtime.surface, follow: runtime.follow },
+    { register: runtime.register.pose, surface: runtime.surface, follow: runtime.follow },
     steps,
     {
       rootState: stored,
       nowMs,
       canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
-      projection: runtime.projection,
-      upBasis: runtime.upBasis.current,
+      projection,
+      upBasis: runtime.outputs.upBasis,
       poseBasis,
       bodies: bodyStates,
-      winnerLastFrame: runtime.prevActiveId.current,
+      winnerLastFrame: runtime.register.winner,
       autoRotateEpoch: runtime.epochs.autoRotate,
     },
   );
-  runtime.lastPose.current = drained.register;
-  runtime.surface = drained.surface;
   // The pan strafe lands on the memory HERE — above the focus-edge drop below,
   // which still overrides it, and above the driver adoption that reads it.
   // Those two writes plus this one are the whole set (spec: single writer).
-  runtime.follow = drained.follow;
-  if (drained.lastZoomFactor !== null) runtime.lastZoomFactor.current = drained.lastZoomFactor;
+  state.cameraRuntime = {
+    ...runtime,
+    register: { pose: drained.register, winner: runtime.register.winner },
+    surface: drained.surface,
+    follow: drained.follow,
+    outputs: {
+      ...runtime.outputs,
+      lastZoomFactor: drained.lastZoomFactor ?? runtime.outputs.lastZoomFactor,
+    },
+  };
   // AFTER the runtime writes (ruled): a store listener fired by a commit sees
   // this frame's register already installed, not last frame's.
   for (const action of drained.actions) deps.cb.store.dispatch(action);
@@ -181,37 +198,41 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     winnerId: activeId,
     nowMs,
   });
-  state.cameraRuntime.epochs = epochs;
   // The follow memory belongs to one focus row: a fresh row (a same-body
   // re-select included) drops it, and the driver re-captures against the new
   // target on its next produce.
-  if (epochs.follow.ref !== prevEpochs.follow.ref) state.cameraRuntime.follow = null;
+  state.cameraRuntime = {
+    ...state.cameraRuntime,
+    epochs,
+    follow: epochs.follow.ref !== prevEpochs.follow.ref ? null : state.cameraRuntime.follow,
+  };
 
   // The drivers read the frame only through this bag; the winner's memory is
   // adopted, the losers' discarded. `authoredWorld` is `authoredWorldPose`
   // spelled against values this frame already holds, and takes the PREVIOUS
   // frame's `upBasis` — the write below is the produce step's successor.
+  const { register } = state.cameraRuntime;
   const { pose, memory } = runCameraDrivers(
     deps.drivers,
     {
       state: rootState,
       elapsedMs: elapsedForWinner(activeId, epochs, nowMs),
-      register: state.cameraRuntime.lastPose.current,
+      register: register.pose,
       authoredWorld: resolveWorldArm(
-        state.cameraRuntime.lastPose.current,
+        register.pose,
         bodyStates,
         poseBasis,
-        state.cameraRuntime.upBasis.current,
+        state.cameraRuntime.outputs.upBasis,
       ),
-      winnerLastFrame: state.cameraRuntime.prevActiveId.current,
+      winnerLastFrame: register.winner,
       simDays,
-      projection: state.cameraRuntime.projection,
+      projection,
       pivot: pivotFraming(rootState.selectionRows.focus),
       followDistanceTarget: drained.followDistanceTarget,
     },
     state.cameraRuntime.follow,
   );
-  state.cameraRuntime.follow = memory;
+  state.cameraRuntime = { ...state.cameraRuntime, follow: memory };
 
   // The Resource gets `upBasis`, NOT `poseBasis`: it seeds the next switch's
   // `fromQuat`, and a re-switch mid-roll must compose from the live pole.
@@ -221,7 +242,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     rootState.camera.frameTween,
     rollElapsed,
   );
-  state.cameraRuntime.upBasis.current = upBasis;
+  state.cameraRuntime = {
+    ...state.cameraRuntime,
+    outputs: { ...state.cameraRuntime.outputs, upBasis },
+  };
 
   // `EASE` clamps, so this frame's basis is already the destination; clearing
   // only affects the next frame's getState.
@@ -234,7 +258,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // (2) After produce (the pose is already saturated at `to`) and before
   // commit-on-edge: the cancel lands next frame, when the tween deactivates and
-  // the edge commits `lastPose` — exactly one commit, exactly at `to`.
+  // the edge commits the register — exactly one commit, exactly at `to`.
   if (
     activeId === 'tween' &&
     rootState.camera.tween !== null &&
@@ -243,17 +267,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.cb.store.dispatch(cancelCameraTween());
   }
 
-  // (3) `lastPose.current` still holds the PREVIOUS frame's pose here (step 4
+  // (3) The register still holds the PREVIOUS frame's pose here (step 4
   // updates it), which is the saturated pose the departing driver must bake.
   // `orbitDrag` commits via `onGestureEnd`; `resting`'s pose IS base.
-  const { lastPose, displayedPose, prevActiveId } = state.cameraRuntime;
-  const prev = prevActiveId.current;
+  const prev = register.winner;
   // The SAME store snapshot the drivers resolved against, so the pin, the fold
   // and the winner never disagree on what is focused.
   const pivotFocus = rootState.selectionRows.focus;
   let renderPose = pose;
   // Non-null only on a non-pivoting edge: the register value for step 4 when
-  // `renderPose` had to be the displayed box.
+  // `renderPose` had to be the displayed pose.
   let authoredOverride: FramedCameraPose | null = null;
   const pivotsOnFocusedBody =
     deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false;
@@ -261,17 +284,17 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (prev !== activeId && prevRow?.commitsOnEdge) {
     // The AUTHORED register is committed verbatim (R12b-1; see
     // `commitCameraPose`'s invariant note).
-    deps.cb.store.dispatch(commitCameraPose(lastPose.current));
+    deps.cb.store.dispatch(commitCameraPose(register.pose));
     // Produce ran the INCOMING driver against the PRE-commit `base`, so a
     // base-reading driver would flash the pre-animation pose for one frame.
-    // Which box overrides depends on the incoming driver (R12c-1): a pivoting
+    // Which pose overrides depends on the incoming driver (R12c-1): a pivoting
     // one re-derives the image below, so it gets the AUTHORED register (the
-    // displayed box would be re-pinned — one frame of eye walk); a non-pivoting
+    // displayed pose would be re-pinned — one frame of eye walk); a non-pivoting
     // one (clip/tween) would flash the untilted register ~0.4 rad to nadir, so
-    // it renders the DISPLAYED box and the register is pinned to its authored
+    // it renders the DISPLAYED pose and the register is pinned to its authored
     // value.
-    renderPose = pivotsOnFocusedBody ? lastPose.current : displayedPose.current;
-    if (!pivotsOnFocusedBody) authoredOverride = lastPose.current;
+    renderPose = pivotsOnFocusedBody ? register.pose : state.cameraRuntime.outputs.displayed;
+    if (!pivotsOnFocusedBody) authoredOverride = register.pose;
   }
 
   // (3b) The pin SETS the target (never adds), so baking `renderPose` into
@@ -291,14 +314,17 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The body the tilt memory belongs to: the ENGAGED one while a body arm holds
   // (a differing focus has already released it), else the FOCUSED one.
   const regimeFrame = rootState.camera.base.frame;
-  state.cameraRuntime.surface = noteBody(
-    state.cameraRuntime.surface,
-    regimeFrame !== 'absolute'
-      ? regimeFrame.body
-      : pivotFocus?.type === 'body'
-        ? pivotFocus.id
-        : null,
-  );
+  state.cameraRuntime = {
+    ...state.cameraRuntime,
+    surface: noteBody(
+      state.cameraRuntime.surface,
+      regimeFrame !== 'absolute'
+        ? regimeFrame.body
+        : pivotFocus?.type === 'body'
+          ? pivotFocus.id
+          : null,
+    ),
+  };
   // The tilt projection (ruling 13) sits between the pin and the fold, so the
   // engage edge converts the image it already shows.
   renderPose = approachTiltedPose(
@@ -312,7 +338,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   );
 
   // (3c) THE FOLD, below every pose writer (spec §7 steps 5-6): a fold above
-  // driver arbitration is discarded by whatever writes after it. `lastPose`
+  // driver arbitration is discarded by whatever writes after it. The register
   // stays FRAMED; every world-Mpc reader takes this value.
   const worldPose = resolveWorldArm(renderPose, bodyStates, poseBasis, upBasis);
 
@@ -379,16 +405,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // (4) After the commit, which reads the previous frame's values. The
   // authored/displayed split keeps the produce→pin→project loop dead (R12b-1).
-  prevActiveId.current = activeId;
-  lastPose.current = authoredPose;
-  displayedPose.current = renderPose;
+  state.cameraRuntime = {
+    ...state.cameraRuntime,
+    register: { pose: authoredPose, winner: activeId },
+    outputs: { ...state.cameraRuntime.outputs, displayed: renderPose },
+  };
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
   // silently breaks the bar on retina. `state.cam` is the bootstrap-ready proxy.
   if (state.cam) {
     const snap = {
       distance: worldPose.distance,
-      fovYRad: state.cameraRuntime.projection.fovYRad,
+      fovYRad: projection.fovYRad,
     };
     const scaleInfo = computeScaleInfo({
       cam: snap,
@@ -407,7 +435,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.canvas,
     worldPose,
     renderPose,
-    state.cameraRuntime.projection,
+    projection,
     poseBasis,
     upBasis,
     masks.draw,

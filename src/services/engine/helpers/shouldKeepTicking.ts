@@ -23,7 +23,7 @@ import { FOCUS_TWEEN_MS } from '../camera/focusTweenDuration';
  * steady follow of a moving body is NOT a wake term (the pin re-centres on wake).
  */
 function followApproachEaseActive(state: EngineState, nowMs: number): boolean {
-  if (state.cameraRuntime.prevActiveId.current !== 'followBody') return false;
+  if (state.cameraRuntime.register.winner !== 'followBody') return false;
   const start = state.cameraRuntime.epochs.follow.startMs;
   return start !== null && nowMs - start < FOCUS_TWEEN_MS;
 }
