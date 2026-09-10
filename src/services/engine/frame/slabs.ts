@@ -231,12 +231,22 @@ const NEAR_MARGIN_EPS = 1e-3;
  * at `dM` (only the hypot distance matters to it) rather than threading the
  * body's real Mpc position through just for this.
  */
-function bodySlabRow(input: {
+export function bodySlabRow(input: {
   readonly body: SceneBody;
   readonly pose: BodyPoseProvider;
   readonly fovYRad: number;
   readonly aspect: number;
   readonly viewportPx: Readonly<Vec2>;
+  /**
+   * Mesh bodies riding THIS row's slab (see `meshBodiesAttachedTo`, Task 13):
+   * already resolved into this host's fixed-axis frame, in metres. Each
+   * face is `|posM − eyeRelBodyM| − radiusM`; the row's `near` is lowered to
+   * the nearest such face when it undercuts the host's own margin.
+   */
+  readonly attachedBodies?: readonly {
+    readonly posM: Readonly<Vec3>;
+    readonly radiusM: number;
+  }[];
 }): {
   // A body row always spans a real interval (its own drawn radius about its own
   // distance), so its `distanceRangeM` is narrowed back to non-null here —
@@ -246,7 +256,7 @@ function bodySlabRow(input: {
   };
   readonly chainRow: Omit<ChainRow, 'index'>;
 } | null {
-  const { body, pose, fovYRad, aspect, viewportPx } = input;
+  const { body, pose, fovYRad, aspect, viewportPx, attachedBodies } = input;
   const relPose = pose(body.id as BodyId);
   if (relPose === null) return null;
   const { eyeRelBodyM, basisM } = relPose;
@@ -281,7 +291,27 @@ function bodySlabRow(input: {
   // THIS body, where θ ≈ 0. Dropping this term and falling straight to
   // MIN_NEAR_M there measurably collapses the near-field label window at low
   // altitude, so it must stay well-conditioned instead.
-  const near = Math.max(viewZ - marginM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
+  const hostNear = Math.max(viewZ - marginM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
+  // An attached mesh body (e.g. a whale riding Earth's row) can sit closer to
+  // the eye than the host's own margin; its near face only ever LOWERS the
+  // plane (never pushes it past the host's own MIN_NEAR_M floor).
+  const near =
+    attachedBodies && attachedBodies.length > 0
+      ? Math.max(
+          Math.min(
+            hostNear,
+            ...attachedBodies.map(
+              (b) =>
+                Math.hypot(
+                  b.posM[0] - eyeRelBodyM[0],
+                  b.posM[1] - eyeRelBodyM[1],
+                  b.posM[2] - eyeRelBodyM[2],
+                ) - b.radiusM,
+            ),
+          ),
+          MIN_NEAR_M,
+        )
+      : hostNear;
   // distanceRangeM STAYS RADIAL — the painter sort and pick ordering key off
   // the body's actual distance, not its view-axis depth.
   const distanceRangeM: readonly [number, number] = [Math.max(dM - rMaxM, 0), dM + rMaxM];
