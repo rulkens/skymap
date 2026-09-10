@@ -18,5 +18,5 @@ export function uploadPointCloud(
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
   gpu.device.queue.writeBuffer(vertexBuffer, 0, records);
-  return { vertexBuffer, pointCount };
+  return { kind: 'pointCloud', vertexBuffer, pointCount, dispose: () => vertexBuffer.destroy() };
 }
