@@ -22,6 +22,10 @@ const AUTHORED: readonly (readonly [string, readonly string[]])[] = [
     SGR_A_STAR_ENTRY.id,
     [SGR_A_STAR_ENTRY.label, 'Galactic Center', 'Sagittarius A*', 'Sgr A*', 'SgrA*'],
   ],
+  // The mesh bodies — the petunias' aliases are what a reader who knows the
+  // joke will actually type.
+  ['whale', ['whale']],
+  ['petunias', ['petunias', 'bowl of petunias', 'oh no not again']],
 ];
 
 export const BODY_SEARCH_NAMES: ReadonlyMap<string, readonly string[]> = new Map([
