@@ -1,14 +1,12 @@
 /**
  * drainInput — the single per-frame input-apply site and the only gesture writer of
- * the live register. Runs at the top of `runFrame`, above the store read the driver
- * table resolves against, so a gesture begun between frames is visible to this
- * frame's produce step. Each step folds the live pose into the next and writes the
- * register; the store commits only at gesture end and per at-rest wheel notch.
- * A notch a following camera swallows is neither: it comes back as
- * `followDistanceTarget` for the driver that owns that distance.
+ * the live register. Runs above the store read the drivers resolve against, so a
+ * gesture begun between frames reaches this frame's produce. Each step chains from
+ * the register it wrote; the store commits only at gesture end and per at-rest notch.
+ * What a following camera swallows is neither — it rides the return instead.
  *
- * `beginDrag` / `cancelCameraTween` are NOT here: the emit sink dispatches them at
- * DOM time so a cancel cannot outlive the tween a double-click starts in the gap.
+ * `beginDrag` / `cancelCameraTween` are dispatched at DOM time by the emit sink, so a
+ * cancel cannot outlive the tween a double-click starts in the gap.
  */
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
@@ -194,7 +192,7 @@ export function drainInput(
       case 'zoom': {
         state.cameraRuntime.lastZoomFactor.current = step.factor; // debug readout
         // Both zoom owners route to the anchored step in a body arm: it owns
-        // its range, so `applyWheelZoom`'s three owners go unconsulted (§7).
+        // its range, so `applyWheelZoom` is never consulted there (§7).
         if (routeToSurface(step)) break;
         if (step.duringGesture) {
           applyWorldStep(step);
@@ -263,10 +261,7 @@ export function drainInput(
         const zoomed = applyWheelZoom({
           base: root.camera.base,
           factor: step.factor,
-          // The spin AUTHORS the pose only if it won last frame: under a tween
-          // or clip the setting alone would fold a stale multi-second spin
-          // into the commit.
-          autoRotate: { active: state.cameraRuntime.prevActiveId.current === 'autoRotate', rate },
+          spin: { owns: state.cameraRuntime.prevActiveId.current === 'autoRotate', rate },
           autoRotateElapsedMs: elapsedMs(spinEpoch, nowMs),
           pivot,
         });

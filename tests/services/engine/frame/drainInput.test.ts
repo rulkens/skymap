@@ -410,6 +410,24 @@ describe('drainInput', () => {
     expect(moved).toBeLessThan(0.09);
   });
 
+  it('routes the notch to the base while followBody holds no captured target yet', () => {
+    // The route's third clause. followBody won last frame but has captured no
+    // distance (first frame after the focus-edge drop), so there is nothing for
+    // the notch to resolve against: it must take the plain base-commit path.
+    // Substituting the live distance here would hand the driver a target it
+    // never captured, and the base commit the resting path needs would vanish.
+    const { agg, state, deps, store } = makeHarness();
+    const baseBefore = worldArmOf(store.getState().camera.base).distance;
+    state.cameraRuntime.prevActiveId.current = 'followBody';
+    state.cameraRuntime.follow = null;
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+
+    const { followDistanceTarget } = drainInput(state, deps, 0);
+
+    expect(followDistanceTarget).toBeNull();
+    expect(worldArmOf(store.getState().camera.base).distance).toBeGreaterThan(baseBefore);
+  });
+
   it('the follow roll ride fires on the notch\u2019s target change', () => {
     // While followBody owns the wheel (it eases its own distance target and the
     // drain commits no base), the alignment must still ride the notch —

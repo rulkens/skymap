@@ -18,14 +18,14 @@ const BASE = absoluteArm(BASE_POSE);
 const FRAME_MS = 1000 / 60;
 /** No focused pivot — the absolute floor, no taper anchor. */
 const NO_PIVOT: PivotFraming = { radiusMpc: null, floorMpc: MIN_DISTANCE_MPC };
-const IDLE_SPIN = { active: false, rate: 0 };
+const IDLE_SPIN = { owns: false, rate: 0 };
 
 describe('applyWheelZoom', () => {
   it('zooms the base when the resting driver owns the distance', () => {
     const result = applyWheelZoom({
       base: BASE,
       factor: 2,
-      autoRotate: IDLE_SPIN,
+      spin: IDLE_SPIN,
       autoRotateElapsedMs: 0,
       pivot: NO_PIVOT,
     });
@@ -41,7 +41,7 @@ describe('applyWheelZoom', () => {
     const result = applyWheelZoom({
       base: BASE,
       factor: 0.5,
-      autoRotate: { active: true, rate },
+      spin: { owns: true, rate },
       autoRotateElapsedMs: 500,
       pivot: NO_PIVOT,
     });
@@ -63,7 +63,7 @@ describe('applyWheelZoom', () => {
     const args = Object.freeze({
       base: base as typeof BASE,
       factor: 1.5,
-      autoRotate: Object.freeze({ active: true, rate: 0.01 }),
+      spin: Object.freeze({ owns: true, rate: 0.01 }),
       autoRotateElapsedMs: 250,
       pivot,
     });
