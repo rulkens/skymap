@@ -9,14 +9,21 @@
 
 import { describe, expect, it } from 'vitest';
 import { sceneBodyPickId } from '../../../../../src/services/engine/frame/passes/sceneBodyPickId';
+import { resolvePick } from '../../../../../src/services/engine/helpers/resolvePick';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SGR_A_STAR } from '../../../../../src/data/bodies/sceneSgrAStar';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { Source } from '../../../../../src/data/sources';
+import type { ResolvePickDeps } from '../../../../../src/@types/engine/ResolvePickDeps';
+
+const deps: ResolvePickDeps = { structures: { byCategory: () => [] } };
 
 describe('sceneBodyPickId', () => {
+  // Not subsumed by the round-trip test below: a consistent row swap (e.g. earth
+  // ↔ sgr-a-star in BODY_PICK_ROWS) round-trips cleanly while diverging from the
+  // GPU stamp — only these sourceCode assertions catch that.
   it('routes each seeded body to the table its own geometry pick indexes', () => {
     const earth = unpackPick(sceneBodyPickId(SCENE_EARTH.id)!)!;
     expect(earth.sourceCode).toBe(Source.Earth);
@@ -41,5 +48,16 @@ describe('sceneBodyPickId', () => {
     // The −1 contract: callers must SKIP rather than stamp, because an index
     // packed from −1 aliases body 0.
     expect(sceneBodyPickId('krypton')).toBeNull();
+  });
+
+  it('a packed caption id resolves back to the body it was packed for', () => {
+    // One id per BODY_PICK_ROWS row: this is the test that fails the day pack
+    // and unpack read different tables.
+    for (const id of [SCENE_EARTH.id, 'moon', SGR_A_STAR.id, 's2', 'sirius']) {
+      expect(resolvePick(unpackPick(sceneBodyPickId(id)!)!, deps)).toEqual({
+        type: 'body',
+        id,
+      });
+    }
   });
 });

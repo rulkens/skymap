@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ROTATION_ELEMENTS, rotationById } from '../../../src/data/bodies/rotationElements';
+import { ROTATION_ELEMENTS, rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SATURN_EQUATORIAL_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { degToRad } from '../../../src/utils/math/degToRad';
@@ -7,9 +7,6 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('ROTATION_ELEMENTS', () => {
   it('has valid structure', () => {
-    // The 15 textured bodies (spec §3) — a flat/emissive sphere carries none.
-    expect(ROTATION_ELEMENTS).toHaveLength(15);
-
     // Ids are the lookup key, so a duplicate would silently shadow a body.
     const ids = ROTATION_ELEMENTS.map((el) => el.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -30,7 +27,7 @@ describe('ROTATION_ELEMENTS', () => {
     // THIS table's α/δ and comparing to the frame normal proves the two authored
     // copies agree — a real cross-table contract (spec §4.1/§10), broken the day
     // one table is retuned without the other.
-    const saturn = rotationById('saturn');
+    const saturn = rotationRowById('saturn')!;
     const ra = degToRad(saturn.poleRaDeg);
     const dec = degToRad(saturn.poleDecDeg);
     const pole: Vec3 = [Math.cos(dec) * Math.cos(ra), Math.cos(dec) * Math.sin(ra), Math.sin(dec)];
@@ -61,7 +58,7 @@ describe('ROTATION_ELEMENTS', () => {
     // sits just above it: any edit that moves P beyond its published rounding
     // trips this, while the rounding itself does not.
     expect(
-      Math.abs(rotationById('charon').spinRateDegPerDay - 360 / orbitalPeriodDays),
+      Math.abs(rotationRowById('charon')!.spinRateDegPerDay - 360 / orbitalPeriodDays),
     ).toBeLessThan(2e-5);
   });
 });

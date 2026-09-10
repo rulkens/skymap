@@ -25,7 +25,7 @@ The Sun is addressed two ways, and neither is the whole truth:
 `starPointsPass` and `starSpheresPass` stamp every seeded star — the Sun
 included — with `packSelection(Source.FamousStar, …)`. A click on the Sun resolves
 through the `starCatalog` arm, so `Source.Sun` is a registry code no pick ever
-carries, and `PICK_SEEDS_BY_BODY_ID.sun` exists only to satisfy a
+carries, and `BODY_PICK_ROWS.sun` exists only to satisfy a
 `Record<BodyId, …>`.
 
 Meanwhile `visibleStars` — a star-pipeline function — reads

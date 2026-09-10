@@ -5,12 +5,8 @@
  * TWO tables, never merged. A packed id is a stable INDEX into one table
  * (`seedIndexOfBody`), so concatenating the S-stars onto `SCENE_STARS` would
  * renumber every famous star and break every saved selection URL. Each table
- * therefore carries its own source code, and `PICK_SEEDS_BY_BODY_ID` decodes
- * back through the matching one.
- *
- * `null` for an id in neither table — `seedIndexOfBody`'s −1 contract hoisted to
- * the caller, which must SKIP rather than stamp: an id packed from −1 aliases
- * body 0.
+ * therefore carries its own source code, and `BODY_PICK_ROWS` decodes back
+ * through the matching one. `null` = SKIP; see `seedIndexOfBody`'s −1 contract.
  */
 
 import { Source } from '../../../../data/sources';

@@ -32,7 +32,7 @@ describe('SCENE_S_STARS', () => {
 
   it('picking an S-star materialises a body ref that SCENE_BODIES can resolve', () => {
     // Two halves of one path, and both fail by returning null rather than
-    // throwing: the pick decodes through `PICK_SEEDS_BY_BODY_ID`'s `s-star` row,
+    // throwing: the pick decodes through `BODY_PICK_ROWS`'s `s-star` row,
     // and `extractSelectionRow` then looks the id up in `SCENE_BODIES`. Omitting
     // either leaves a click that highlights nothing and opens no card.
     const s2Index = SCENE_S_STARS.findIndex((star) => star.id === 's2');
