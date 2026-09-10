@@ -39,7 +39,13 @@ script or `/scene-workbench/` subpath.
    flat colour once the camera descends. `npm run bake-splats -- --reuse-ply`
    re-packs the last export instead of training again, which is how to re-tune
    that prune without paying for another 30k-iteration run.
-   <!-- bake numbers: splatCount / shDegree / wall time — filled after the first real bake -->
+   First Søndermarken bake (2026-09-10, 306 frames, Apple Silicon): 30k
+   iterations is a multi-hour run, and slows as densification grows the model;
+   this one was stopped after ~3 h 20 min at its last 5,000-step export.
+   That export held 7,771,755 splats; the floor prune (0.1% LiDAR quantile
+   −17.1 m, less the 5 m margin) dropped 1,773,702, leaving **5,998,053
+   splats, SH degree 1, 240 MB `splats.bin`**. A `--reuse-ply` repack takes
+   about 20 s.
 6. `npm run scene-workbench`
 
 Then open <http://localhost:5600> (see `tools/utils/io/devPorts.ts` for the
