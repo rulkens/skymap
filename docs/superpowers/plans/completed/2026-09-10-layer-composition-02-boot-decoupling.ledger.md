@@ -73,3 +73,7 @@ Scan clean; no rulings needed before T1.
 - Deletion commit dispatched (haiku; BASE 769e250f0): C1 (wireImpostorSubsystems takes device, drop test makeDeps), C6.2 (startLoop.test docblock), T7 minor (envelope fold). C3 + C4 → user ruling. C6.1/C6.3 moot after T7.
 - Deletion commit DONE: bb828e95a (−31 LOC: src +8/−15, tests −16). Scoped re-review dispatched (haiku; 769e250f0..bb828e95a). Gate rerun (tsc/test/build) in background at bb828e95a → scratchpad fd2-*.log.
 - Deletion commit re-review: clean. Branch review-clean at bb828e95a; awaiting gate rerun.
+- USER: smoke test PASS at 8bf228a46 (post-Task 7). All DoD items closed.
+- USER RULING: delete deletion-audit C3 (`disks.proceduralDiskRenderer` param, never read) and C4 (`HomeFocusTarget.followsSimClock`, write-only) before merge. HomeFocusTarget stays a `{ ref }` wrapper; wireSlots two-renderer gate untouched.
+- Deletion commit 2: 8339f9b27 (−9 LOC; report `deletion-commit-2-report.md`). Gate at 8339f9b27: tsc clean, 1217 files / 8195 tests, build green. Scoped re-review package `review-8bf228a46..8339f9b27.diff`.
+- Re-review of 8339f9b27: APPROVED (haiku, 4 checks). Merge-ready.
