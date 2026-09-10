@@ -609,15 +609,15 @@ sites. The debug snapshot at `engine.ts:639-641` reads
 signature does not move. `seedRememberedTilt` threads the memory through its loop
 instead of calling six methods on a closure.
 
-- [ ] Migrate; `npm run refactor -- delete createSurfaceController` then
+- [x] Migrate; `npm run refactor -- delete createSurfaceController` then
       `npm run refactor -- delete SurfaceController`.
-- [ ] `npm test` green with **no assertion changes** in the four surface test files —
+- [x] `npm test` green with **no assertion changes** in the four surface test files —
       only the driving shape moves. An assertion that has to change is a behaviour
       difference: stop and report.
-- [ ] `settleGoldenTrace` byte-identical (it reads the tilt memory at `:181`).
-- [ ] Comment budget on every touched file.
-- [ ] Commit: `refactor(camera): delete the surface controller closure`.
-- [ ] **Phase gate:** `npm run typecheck`; `npm test -- surfaceStep surfaceController
+- [x] `settleGoldenTrace` byte-identical (it reads the tilt memory at `:181`).
+- [x] Comment budget on every touched file.
+- [x] Commit: `refactor(camera): delete the surface controller closure`.
+- [x] **Phase gate:** `npm run typecheck`; `npm test -- surfaceStep surfaceController
     rememberedTilt northUpToggle singularLocus drainInput runFrame settleGoldenTrace
     driverGoldenTrace` green.
 

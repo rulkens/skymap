@@ -67,7 +67,7 @@ function toMidWindow(h: CameraSimHarness): void {
   // tilt ceiling is open under ruling 19's tighter band — the memory itself
   // is session state, same rationale as tiltLerpRoundTrip's harness).
   seedRememberedTilt(h, { targetRad: 0.95, guard: 40, pxStep: 5 });
-  const remembered = h.state.cameraRuntime.surface.rememberedTiltRad();
+  const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
   expect(remembered).toBeGreaterThan(0.5);
 
   // Out past disengage (arm flips absolute), back in to mid-window; the

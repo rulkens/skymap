@@ -56,7 +56,7 @@ describe('tilt lerp round trip (ruling 13)', () => {
 
     // Converge the engaged display onto the memory before tracing.
     for (let i = 0; i < 12; i += 1) h.wheel(0.0001);
-    const remembered = h.state.cameraRuntime.surface.rememberedTiltRad();
+    const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
     expect(remembered).toBeGreaterThan(0.3);
     expect(Math.abs(tiltOverBody(h.state, EARTH) - remembered)).toBeLessThan(0.03); // converged
 

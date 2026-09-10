@@ -57,7 +57,7 @@ describe('body switch reset (ruling 18)', () => {
     diveUntilEngaged(h);
     expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
     seedRememberedTilt(h);
-    expect(h.state.cameraRuntime.surface.rememberedTiltRad()).toBeGreaterThan(0.3);
+    expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeGreaterThan(0.3);
 
     // The user's action. The real saga path dispatches NO tween for a moving
     // body (watchFocusTweenSaga gates on bodyMovesThisFrame) — followBody IS
@@ -81,7 +81,7 @@ describe('body switch reset (ruling 18)', () => {
     expect(h.state.cameraRuntime.lastPose.current.frame).toBe('absolute');
     expect(h.state.cameraRuntime.prevActiveId.current).toBe('followBody');
     expect(tiltOverBody(h.state, SATURN)).toBeLessThan(1e-6);
-    expect(h.state.cameraRuntime.surface.rememberedTiltRad()).toBe(0);
+    expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBe(0);
   });
 
   it('a body switch is a FLIGHT to the framing distance, never a cut', () => {
@@ -129,7 +129,7 @@ describe('body switch reset (ruling 18)', () => {
     diveUntilEngaged(h);
     expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
     seedRememberedTilt(h);
-    const remembered = h.state.cameraRuntime.surface.rememberedTiltRad();
+    const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
     expect(remembered).toBeGreaterThan(0.3);
 
     // Recede past disengage, clear the focus for a stint, re-focus Earth,
@@ -143,7 +143,7 @@ describe('body switch reset (ruling 18)', () => {
     h.frame(10);
     diveUntilEngaged(h, { factor: 0.75, guard: 40 });
     expect(h.state.cameraRuntime.lastPose.current.frame).not.toBe('absolute');
-    expect(h.state.cameraRuntime.surface.rememberedTiltRad()).toBeCloseTo(remembered, 10);
+    expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeCloseTo(remembered, 10);
   });
 
   it('a body switch while ABSOLUTE (never engaged on the new body) also resets the memory', () => {
@@ -154,10 +154,10 @@ describe('body switch reset (ruling 18)', () => {
     // path itself is pinned in rememberedTilt.test.ts).
     h.frame();
     seedRememberedTilt(h);
-    expect(h.state.cameraRuntime.surface.rememberedTiltRad()).toBeGreaterThan(0.3);
+    expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeGreaterThan(0.3);
 
     h.focus('saturn');
     h.frame(2);
-    expect(h.state.cameraRuntime.surface.rememberedTiltRad()).toBe(0);
+    expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBe(0);
   });
 });

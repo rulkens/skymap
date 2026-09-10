@@ -19,6 +19,7 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { drainInput } from './drainInput';
+import { noteBody } from '../../camera/surfaceStep';
 import { runCameraDrivers, elapsedForWinner } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
@@ -261,7 +262,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The body the tilt memory belongs to: the ENGAGED one while a body arm holds
   // (a differing focus has already released it), else the FOCUSED one.
   const regimeFrame = rootState.camera.base.frame;
-  state.cameraRuntime.surface.noteBody(
+  state.cameraRuntime.surface = noteBody(
+    state.cameraRuntime.surface,
     regimeFrame !== 'absolute'
       ? regimeFrame.body
       : pivotFocus?.type === 'body'
@@ -275,7 +277,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     pivotsOnFocusedBody,
     pivotFocus,
     simDays,
-    state.cameraRuntime.surface.rememberedTiltRad(),
+    state.cameraRuntime.surface.rememberedTiltRad,
     poseBasis,
     upBasis,
   );

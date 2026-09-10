@@ -18,7 +18,7 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { UNSTARTED_EPOCHS } from './camera/cameraEpochs';
-import { createSurfaceController } from '../camera/surfaceController';
+import { EMPTY_SURFACE_MEMORY } from '../camera/surfaceStep';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import type { SkyCubemapCaptureRuntime } from '../../@types/engine/state/SkyCubemapCaptureRuntime';
@@ -126,7 +126,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     lastRenderedSimDays: { current: CONST_J2000 },
     // Copied, so the seed never aliases the shared registry entry.
     upBasis: { current: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]] },
-    surface: createSurfaceController(),
+    surface: EMPTY_SURFACE_MEMORY,
     lastZoomFactor: { current: null },
   };
 
@@ -636,9 +636,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: state.cameraRuntime.prevActiveId.current,
-          gesture: state.cameraRuntime.surface.debugGesture(),
+          // The readout reads the NESTING to tell "at rest" from "down, not yet
+          // latched", so the pointer-up case is the absent wrapper, not a null latch.
+          gesture: state.cameraRuntime.surface.pointerDown
+            ? { gesture: state.cameraRuntime.surface.gesture }
+            : null,
           lastZoomFactor: state.cameraRuntime.lastZoomFactor.current,
-          rememberedTiltRad: state.cameraRuntime.surface.rememberedTiltRad(),
+          rememberedTiltRad: state.cameraRuntime.surface.rememberedTiltRad,
         });
       },
     },

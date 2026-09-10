@@ -35,6 +35,14 @@ type SurfaceStepCtx = {
   readonly sceneUpLocal: Readonly<Vec3>;
 };
 
+/** The engine's boot value; immutable, so one shared object is fine. */
+export const EMPTY_SURFACE_MEMORY: SurfaceMemory = {
+  gesture: null,
+  pointerDown: false,
+  rememberedTiltRad: 0,
+  memoryBodyId: null,
+};
+
 /** Once per frame with the camera's current body; a DIFFERENT body wipes the tilt (ruling 18), null keeps it. */
 export function noteBody(prev: SurfaceMemory, bodyId: string | null): SurfaceMemory {
   if (bodyId === null) return prev;

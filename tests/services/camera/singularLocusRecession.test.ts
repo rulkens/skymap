@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createSurfaceController } from '../../../src/services/camera/surfaceController';
+import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { frameAlignedRoll } from '../../../src/services/engine/camera/frameAlignedRoll';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENT_DECAY } from '../../../src/data/camera/orientDecay';
@@ -97,7 +97,7 @@ describe('singular-locus recession (round 7)', () => {
   it.each([[0.1], [0.24]])(
     'no-park recession at lnf %f: whip-free through the band, drained in the same gesture',
     (lnf) => {
-      const c = createSurfaceController();
+      const c = makeSurfaceDriver();
       // Start below ruling 19's engage threshold: 0.05 sits comfortably
       // inside the 0.2/0.4 band's floor.
       const startHR = 0.05;
@@ -159,7 +159,7 @@ describe('singular-locus recession (round 7)', () => {
     // the SCENE side of the flip (up = −pole-north) — the direction a
     // mid-recession pose legitimately holds past w* — where the no-carry
     // fallback (pole ENU) reads azimuth ≈ π and would churn ~0.3–0.4.
-    const c = createSurfaceController();
+    const c = makeSurfaceDriver();
     const hrInside = 2.45; // w ≈ 0.53 → conditioning |2w−1| ≈ 0.06 « 0.3
     const b = arcBasis(LU);
     // Rotate π about forward: up and right negate — still right-handed.

@@ -15,7 +15,7 @@ import { CAMERA_DRIVERS } from '../../../src/services/engine/camera/cameraDriver
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
 import { createInputAggregator } from '../../../src/services/engine/subsystems/inputAggregator';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
-import { createSurfaceController } from '../../../src/services/camera/surfaceController';
+import { EMPTY_SURFACE_MEMORY } from '../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { runFrame } from '../../../src/services/engine/frame/runFrame';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
@@ -93,7 +93,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       prevActiveId: { current: 'resting' },
       lastRenderedSimDays: { current: CONST_J2000 },
       upBasis: { current: [...B] },
-      surface: createSurfaceController(),
+      surface: EMPTY_SURFACE_MEMORY,
       lastZoomFactor: { current: null },
     },
     skyCubemapCapture: {

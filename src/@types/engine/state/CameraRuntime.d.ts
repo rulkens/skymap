@@ -12,7 +12,7 @@ import type { CameraEpochs } from '../camera/CameraEpochs';
 import type { FollowMemory } from '../camera/FollowMemory';
 import type { CameraProjection } from '../../camera/CameraProjection';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
-import type { SurfaceController } from '../../camera/SurfaceController';
+import type { SurfaceMemory } from '../../camera/SurfaceMemory';
 import type { Mat3 } from '../../math/Mat3';
 
 export type CameraRuntime = {
@@ -44,9 +44,9 @@ export type CameraRuntime = {
   /** This frame's resolved orientation basis B(t) — NOT the clip-authoring
    * `frameBasis` parameter. Single writer: `runFrame`, from `resolveFrameBasis`. */
   upBasis: { current: Mat3 };
-  /** The body arm's gesture latch (mode, anchor, frozen pan radius); `drainInput`
-   * is its only caller. */
-  surface: SurfaceController;
+  /** The body arm's gesture memory (latch + remembered tilt); `drainInput` folds
+   * the gesture steps and their boundaries, `runFrame` notes the body. */
+  surface: SurfaceMemory;
   /** The last zoom step's factor, for the debug readout; null until the first
    * notch. `drainInput` writes it. */
   lastZoomFactor: { current: number | null };

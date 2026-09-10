@@ -8,7 +8,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 
-import { createSurfaceController } from '../../../src/services/camera/surfaceController';
+import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { frameAlignedRoll } from '../../../src/services/engine/camera/frameAlignedRoll';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
@@ -36,7 +36,7 @@ afterEach(() => {
   Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
 });
 
-/** Roll-free basis at heading ψ / tilt θ for an eye on +Z (see surfaceController fixtures). */
+/** Roll-free basis at heading ψ / tilt θ for an eye on +Z (see surfaceStep fixtures). */
 function basisAt(psi: number, theta: number): Mat3 {
   const ch = Math.cos(psi);
   const sh = Math.sin(psi);
@@ -68,11 +68,11 @@ describe('north-up toggle', () => {
     const start = () => poseAt([0, 0, 2.2], basisAt(0.4, 0));
 
     ORIENT_TUNING.northUp = false;
-    const off = createSurfaceController().apply(start(), zoomOut(), VIEWPORT, FOV, 1, POLE);
+    const off = makeSurfaceDriver().apply(start(), zoomOut(), VIEWPORT, FOV, 1, POLE);
     expect([...off.basisLocal]).toEqual([...start().basisLocal]); // bit-untouched
 
     ORIENT_TUNING.northUp = true;
-    const on = createSurfaceController().apply(start(), zoomOut(), VIEWPORT, FOV, 1, POLE);
+    const on = makeSurfaceDriver().apply(start(), zoomOut(), VIEWPORT, FOV, 1, POLE);
     // At tilt 0 the heading lives in the UP column (forward is straight down).
     const headingOn = Math.atan2(on.basisLocal[3], on.basisLocal[4]);
     expect(headingOn).toBeCloseTo(0.3, 9); // one 0.25·0.4 decay step toward north
@@ -81,7 +81,7 @@ describe('north-up toggle', () => {
   it('off: the tilt wall still squeezes an above-ceiling recession (C1 not gated)', () => {
     ORIENT_TUNING.northUp = false;
     const pose = poseAt([0, 0, 3.0], basisAt(0, 1.5)); // h/R 2.0, tilt over the ceiling
-    const out = createSurfaceController().apply(pose, zoomOut(), VIEWPORT, FOV, 1, POLE);
+    const out = makeSurfaceDriver().apply(pose, zoomOut(), VIEWPORT, FOV, 1, POLE);
     expect(tiltOf(out)).toBeLessThan(1.5 - 1e-4);
   });
 

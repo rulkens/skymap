@@ -9,7 +9,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 
-import { createSurfaceController } from '../../../src/services/camera/surfaceController';
+import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
 import { maxTiltRad } from '../../../src/utils/camera/maxTiltRad';
 import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
@@ -66,7 +66,7 @@ function hrOf(p: BodyFixedPose): number {
 }
 
 function apply(
-  c: ReturnType<typeof createSurfaceController>,
+  c: ReturnType<typeof makeSurfaceDriver>,
   pose: BodyFixedPose,
   step: InputStep,
 ): BodyFixedPose {
@@ -75,7 +75,7 @@ function apply(
 
 /** Drag the tilt handle once and return the pose (remembered updates inside). */
 function setTiltByDrag(
-  c: ReturnType<typeof createSurfaceController>,
+  c: ReturnType<typeof makeSurfaceDriver>,
   pose: BodyFixedPose,
   px: number,
 ): BodyFixedPose {
@@ -92,7 +92,7 @@ function setTiltByDrag(
  * large tilts — the eye's localUp chases the rotation.
  */
 function raiseTiltTo(
-  c: ReturnType<typeof createSurfaceController>,
+  c: ReturnType<typeof makeSurfaceDriver>,
   pose: BodyFixedPose,
   wantRad: number,
 ): BodyFixedPose {
@@ -113,7 +113,7 @@ function raiseTiltTo(
 
 describe('remembered tilt (ruling 12)', () => {
   it('zoom-in never authors tilt: a user-set tilt survives a dive unchanged', () => {
-    const c = createSurfaceController();
+    const c = makeSurfaceDriver();
     let pose = raiseTiltTo(c, poseAt([0, 0, 1.15], NADIR), 0.35);
     const set = tiltOf(pose);
     expect(set).toBeGreaterThan(0.35); // the handles really tilted the view
@@ -132,7 +132,7 @@ describe('remembered tilt (ruling 12)', () => {
   });
 
   it('a never-tilted session dives at nadir throughout (default feel unchanged)', () => {
-    const c = createSurfaceController();
+    const c = makeSurfaceDriver();
     let pose = poseAt([0, 0, 2.2], NADIR);
     for (let i = 0; i < 15; i += 1) {
       pose = apply(c, pose, zoom(Math.exp(-0.1)));
@@ -143,7 +143,7 @@ describe('remembered tilt (ruling 12)', () => {
   describe.each(['log', 'lin'] as const)('band mapping in %s space', (space) => {
     it('display tilt converges to remembered × w mid-window and crosses disengage at 0', () => {
       ORIENT_TUNING.blendSpace = space;
-      const c = createSurfaceController();
+      const c = makeSurfaceDriver();
       const set = tiltOf(setTiltByDrag(c, poseAt([0, 0, 1.15], NADIR), 20));
       expect(set).toBeGreaterThan(0.1);
 
@@ -177,7 +177,7 @@ describe('remembered tilt (ruling 12)', () => {
     // tilt readout. The toggle gates exactly those two (ruling 11) and
     // leaves the tilt mapping live.
     ORIENT_TUNING.northUp = false;
-    const c = createSurfaceController();
+    const c = makeSurfaceDriver();
     const hr = (SURFACE_REGIME.engageHR + SURFACE_REGIME.disengageHR) / 2; // mid-window
     let pose = setTiltByDrag(c, poseAt([0, 0, 1 + hr], NADIR), 10);
     const display = tiltOf(pose);
@@ -198,7 +198,7 @@ describe('remembered tilt (ruling 12)', () => {
 
   it('the drag wall never erodes the band-mapped display (reconciliation 1)', () => {
     ORIENT_TUNING.blendSpace = 'lin';
-    const c = createSurfaceController();
+    const c = makeSurfaceDriver();
     let pose = raiseTiltTo(c, poseAt([0, 0, 1.1], NADIR), 2.8); // deep, ceiling slack
     const remembered = c.rememberedTiltRad();
     expect(remembered).toBeGreaterThan(2.8);

@@ -10,6 +10,7 @@
  */
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
+import { surfaceStep } from '../../camera/surfaceStep';
 import { applyWheelZoom } from '../camera/applyWheelZoom';
 import { advanceEpoch, elapsedMs } from '../camera/cameraEpochs';
 import { frameAlignedRoll } from '../camera/frameAlignedRoll';
@@ -84,14 +85,13 @@ export function drainInput(
     const sceneUpLocal: Vec3 = bodyState
       ? rotateVec3ByTightMat3T(frameUp(state.cameraRuntime.upBasis.current), bodyState.orientation)
       : [0, 0, 1];
-    const next = state.cameraRuntime.surface.apply(
-      from,
-      step,
-      [deps.canvas.clientWidth || 1, cssHeight],
-      state.cameraRuntime.projection.fovYRad,
-      body.radiusM,
+    const { pose: next, next: memory } = surfaceStep(state.cameraRuntime.surface, from, step, {
+      viewportPx: [deps.canvas.clientWidth || 1, cssHeight],
+      fovYRad: state.cameraRuntime.projection.fovYRad,
+      bodyRadiusM: body.radiusM,
       sceneUpLocal,
-    );
+    });
+    state.cameraRuntime.surface = memory;
     // EVERY step writes the register — a later step in the same drain chains
     // from it, so an at-rest notch left out of it would be folded over and
     // silently discarded by a drag arriving in the same frame window.
@@ -167,7 +167,13 @@ export function drainInput(
   for (const step of steps) {
     switch (step.kind) {
       case 'gestureStart':
-        state.cameraRuntime.surface.onGestureStart();
+        // The gesture boundaries are the memory's `pointerDown` edges; the latch
+        // itself is taken by the first drag step, which carries the press pixel.
+        state.cameraRuntime.surface = {
+          ...state.cameraRuntime.surface,
+          pointerDown: true,
+          gesture: null,
+        };
         break;
 
       case 'gestureEnd': {
@@ -188,7 +194,11 @@ export function drainInput(
         if (root.camera.clip === null && sameArm) {
           store.dispatch(commitCameraPose(live));
         }
-        state.cameraRuntime.surface.onGestureEnd();
+        state.cameraRuntime.surface = {
+          ...state.cameraRuntime.surface,
+          pointerDown: false,
+          gesture: null,
+        };
         store.dispatch(endDrag());
         break;
       }

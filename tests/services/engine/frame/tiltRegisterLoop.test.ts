@@ -28,7 +28,11 @@ import { hrOfPose } from '../../../helpers/camera/hrOfPose';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { beginDrag, setAutoRotate, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import {
+  beginDrag,
+  setAutoRotate,
+  startCameraTween,
+} from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -70,7 +74,7 @@ function toMidWindow(h: CameraSimHarness) {
   // Set the memory via the controller's handles (unit-radius, h/R 0.15 so the
   // tilt ceiling is open under ruling 19's tighter band).
   seedRememberedTilt(h, { targetRad: 0.95, guard: 40, pxStep: 5 });
-  expect(h.state.cameraRuntime.surface.rememberedTiltRad()).toBeGreaterThan(0.5);
+  expect(h.state.cameraRuntime.surface.rememberedTiltRad).toBeGreaterThan(0.5);
 
   // Out past disengage, back in to mid-window; thresholds rescaled for
   // ruling 19's tighter band (engage 0.2 / disengage 0.4, was 1.7/3.4).

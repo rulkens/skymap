@@ -26,7 +26,7 @@ import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { createSurfaceController } from '../../../../src/services/camera/surfaceController';
+import { EMPTY_SURFACE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { rootReducer } from '../../../../src/store/rootReducer';
@@ -111,7 +111,7 @@ function makeHarness() {
       prevActiveId: { current: 'resting' },
       lastRenderedSimDays: { current: SIM },
       upBasis: { current: [...B] },
-      surface: createSurfaceController(),
+      surface: EMPTY_SURFACE_MEMORY,
       lastZoomFactor: { current: null },
     },
   } as unknown as EngineState;
@@ -183,7 +183,7 @@ function snapshot(state: EngineState, label: string): Step {
     hr: sig(hr),
     displayed: [...live.target, live.yaw, live.pitch, live.distance, live.roll ?? 0].map(sig),
     register: register.map(sig),
-    memory: sig(state.cameraRuntime.surface.rememberedTiltRad()),
+    memory: sig(state.cameraRuntime.surface.rememberedTiltRad),
   };
 }
 
@@ -224,7 +224,7 @@ function runScript(): Trace {
     });
     // The script must exercise the mode it names, or the trace is silently
     // pinning a different gesture.
-    expect(state.cameraRuntime.surface.debugGesture()?.gesture?.mode).toBe(expectMode);
+    expect(state.cameraRuntime.surface.gesture?.mode).toBe(expectMode);
     push({ kind: 'gestureEnd' });
     frame();
     record(`${label} end`);
