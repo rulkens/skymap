@@ -8,7 +8,6 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -22,18 +21,13 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { runFrame } from '../../../../src/services/engine/frame/runFrame';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
-import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { EMPTY_SURFACE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { expectSigRows } from '../../../helpers/camera/expectSigRows';
+import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
+import { goldenSig } from '../../../helpers/camera/goldenSig';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { rootReducer } from '../../../../src/store/rootReducer';
-import { beginDrag, commitCameraPose } from '../../../../src/state/camera/cameraSlice';
-import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { setSimDays, pause } from '../../../../src/state/time/timeSlice';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { beginDrag } from '../../../../src/state/camera/cameraSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -43,12 +37,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import GOLDEN from '../../../fixtures/camera/settleGoldenTrace.json';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
-import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
@@ -57,7 +46,7 @@ const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../fixtures/camera/settleGoldenTrace.json', import.meta.url),
 );
-const DIGITS = 12;
+const BOOT_HR = 5;
 
 type Step = {
   readonly label: string;
@@ -68,79 +57,6 @@ type Step = {
   readonly memory: number;
 };
 type Trace = readonly Step[];
-
-function poseAtHR(hr: number): CameraPose {
-  return {
-    target: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
-    yaw: 0.7,
-    pitch: 0.3,
-    distance: R_MPC * (1 + hr),
-    roll: 0,
-  };
-}
-
-function makeHarness() {
-  const store = configureStore({ reducer: rootReducer });
-  store.dispatch(setSimDays({ simDays: SIM, nowMs: 0 }));
-  store.dispatch(pause({ nowMs: 0 }));
-  const state = {
-    settings: { camera: { fovDeg: 60 }, orientation: DEFAULT_ORIENTATION },
-    gpu: { galaxyPointRenderer: null, renderTargets: null, milkyWayCloud: null },
-    subsystems: {
-      scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
-      clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },
-      inputAggregator: createInputAggregator(),
-    },
-    cam: {
-      yaw: 0,
-      pitch: 0,
-      distance: 1,
-      target: new Float32Array(3),
-      position: new Float32Array(3),
-      fovYRad: 0.8,
-      aspect: 1,
-      near: 0.01,
-      far: 1000,
-    } as unknown as OrbitCamera,
-    cameraRuntime: {
-      register: { pose: absoluteArm(poseAtHR(5)), winner: 'resting' },
-      epochs: UNSTARTED_EPOCHS,
-      follow: null,
-      surface: EMPTY_SURFACE_MEMORY,
-      outputs: {
-        displayed: absoluteArm(poseAtHR(5)),
-        simDays: SIM,
-        upBasis: [...B],
-        projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 50000 },
-        lastZoomFactor: null,
-      },
-    },
-  } as unknown as EngineState;
-  const deps = {
-    canvas: { width: 100, height: 100, clientWidth: 100, clientHeight: 100 },
-    cb: { store },
-    device: {},
-    context: {},
-    timingService: {},
-    drivers: CAMERA_DRIVERS,
-  } as unknown as RunFrameDeps;
-  store.dispatch(commitCameraPose(absoluteArm(poseAtHR(5))));
-  store.dispatch(
-    setSelectionRow({
-      slot: 'focus',
-      row: {
-        type: 'body',
-        id: 'earth',
-        label: 'Earth',
-        positionMpc: [0, 0, 0],
-        radiusM: SCENE_EARTH.radiusM,
-      },
-    }),
-  );
-  return { store, state, deps };
-}
-
-const sig = (x: number): number => Number(x.toPrecision(DIGITS));
 
 // Every STRIDEth step, PLUS every leg's first/last step and every arm change
 // (a latched-mode flip) — a regression inside a dropped step still shows up
@@ -174,17 +90,13 @@ function snapshot(state: EngineState, label: string): Step {
       R_MPC -
     1;
   const reg = state.cameraRuntime.register.pose;
-  const register =
-    reg.frame === 'absolute'
-      ? [...reg.pose.target, reg.pose.yaw, reg.pose.pitch, reg.pose.distance, reg.pose.roll ?? 0]
-      : [...reg.pose.anchorLocalM, ...reg.pose.eyeRelAnchorM, ...reg.pose.basisLocal];
   return {
     label,
     arm: reg.frame === 'absolute' ? 'absolute' : reg.frame.body,
-    hr: sig(hr),
-    displayed: [...live.target, live.yaw, live.pitch, live.distance, live.roll ?? 0].map(sig),
-    register: register.map(sig),
-    memory: sig(state.cameraRuntime.surface.rememberedTiltRad),
+    hr: goldenSig(hr),
+    displayed: [...live.target, live.yaw, live.pitch, live.distance, live.roll ?? 0].map(goldenSig),
+    register: flatFramedPose(reg).map(goldenSig),
+    memory: goldenSig(state.cameraRuntime.surface.rememberedTiltRad),
   };
 }
 
@@ -195,17 +107,13 @@ function snapshot(state: EngineState, label: string): Step {
  * the horizon, a look at the sky, then a recession out past disengage.
  */
 function runScript(): Trace {
-  const { store, state, deps } = makeHarness();
-  const push = (e: InputGestureEvent) => state.subsystems.inputAggregator.push(e);
-  let now = 0;
-  const frame = () => runFrame(state, deps, (now += 16));
+  const harness = makeCameraSimHarness({ focusBody: 'earth', bootHR: BOOT_HR });
+  const { store, state, frame, push, wheel } = harness;
   const trace: Step[] = [];
   const record = (label: string) => trace.push(snapshot(state, label));
 
   const notch = (deltaY: number, xPx: number, yPx: number, label: string) => {
-    push({ kind: 'wheel', deltaY, duringGesture: false, xPx, yPx });
-    frame();
-    frame();
+    wheel(deltaY, [xPx, yPx]);
     record(label);
   };
   const drag = (
@@ -299,23 +207,18 @@ function expectTraceMatches(actual: Trace, golden: Trace): void {
   expect(actual.length).toBe(golden.length);
   actual.forEach((step, i) => {
     const want = golden[i]!;
+    const at = `step ${i} (${step.label})`;
     expect(step.label, `step ${i}`).toBe(want.label);
-    expect(step.arm, `step ${i} ${step.label}`).toBe(want.arm);
-    const rows: [string, readonly number[], readonly number[]][] = [
-      ['hr', [step.hr], [want.hr]],
-      ['displayed', step.displayed, want.displayed],
-      ['register', step.register, want.register],
-      ['memory', [step.memory], [want.memory]],
-    ];
-    for (const [name, got, exp] of rows) {
-      expect(got.length, `step ${i} ${step.label} ${name}`).toBe(exp.length);
-      got.forEach((g, k) => {
-        const e = exp[k]!;
-        // Both sides are rounded to DIGITS, so a match is exact; the message
-        // names the step and field on the first mismatch.
-        expect(g, `step ${i} (${step.label}) ${name}[${k}]`).toBe(e);
-      });
-    }
+    expect(step.arm, at).toBe(want.arm);
+    expectSigRows(
+      [
+        ['hr', [step.hr], [want.hr]],
+        ['displayed', step.displayed, want.displayed],
+        ['register', step.register, want.register],
+        ['memory', [step.memory], [want.memory]],
+      ],
+      at,
+    );
   });
 }
 

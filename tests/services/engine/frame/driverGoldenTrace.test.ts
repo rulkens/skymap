@@ -24,6 +24,9 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { expectSigRows } from '../../../helpers/camera/expectSigRows';
+import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
+import { goldenSig } from '../../../helpers/camera/goldenSig';
 import { readCameraEpochs } from '../../../helpers/camera/readCameraEpochs';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { readRegister } from '../../../helpers/camera/readRegister';
@@ -46,7 +49,6 @@ import type { EpochCell } from '../../../helpers/camera/readCameraEpochs';
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../fixtures/camera/driverGoldenTrace.json', import.meta.url),
 );
-const DIGITS = 12;
 const HARNESS_FRAME_MS = 16;
 const BOOT_HR = 5;
 const TWEEN_MS = 320;
@@ -73,8 +75,7 @@ type Step = {
 };
 type Trace = readonly Step[];
 
-const sig = (x: number): number => Number(x.toPrecision(DIGITS));
-const sigOrNull = (x: number | null): number | null => (x === null ? null : sig(x));
+const sigOrNull = (x: number | null): number | null => (x === null ? null : goldenSig(x));
 const sigCell = (c: EpochCell): EpochCell => ({
   startMs: sigOrNull(c.startMs),
   refNull: c.refNull,
@@ -90,21 +91,17 @@ function snapshot(state: EngineState, label: string, actions: readonly string[])
   // Step 4 of `runFrame` stamps the winner it produced from, so this is the
   // arbitration result itself, not a re-resolution against a moved store.
   const { pose: reg, winner } = readRegister(state);
-  const register =
-    reg.frame === 'absolute'
-      ? [...reg.pose.target, reg.pose.yaw, reg.pose.pitch, reg.pose.distance, reg.pose.roll ?? 0]
-      : [...reg.pose.anchorLocalM, ...reg.pose.eyeRelAnchorM, ...reg.pose.basisLocal];
   const follow = readFollowMemory(state);
   const epochs = readCameraEpochs(state);
   return {
     label,
     winner,
-    displayed: [...live.target, live.yaw, live.pitch, live.distance, live.roll ?? 0].map(sig),
-    register: register.map(sig),
+    displayed: [...live.target, live.yaw, live.pitch, live.distance, live.roll ?? 0].map(goldenSig),
+    register: flatFramedPose(reg).map(goldenSig),
     follow: {
-      fromDistance: follow.from === null ? null : sig(follow.from.distance),
+      fromDistance: follow.from === null ? null : goldenSig(follow.from.distance),
       distanceTarget: sigOrNull(follow.distanceTarget),
-      panOffset: [...follow.panOffset].map(sig),
+      panOffset: [...follow.panOffset].map(goldenSig),
     },
     epochs: {
       tween: sigCell(epochs.tween),
@@ -286,16 +283,13 @@ function expectTraceMatches(actual: Trace, golden: Trace): void {
     for (const name of EPOCH_NAMES) {
       expect(step.epochs[name], `${at} epoch ${name}`).toEqual(want.epochs[name]);
     }
-    const rows: [string, readonly number[], readonly number[]][] = [
-      ['displayed', step.displayed, want.displayed],
-      ['register', step.register, want.register],
-    ];
-    for (const [name, got, exp] of rows) {
-      expect(got.length, `${at} ${name}`).toBe(exp.length);
-      // Both sides are rounded to DIGITS, so a match is exact; the message
-      // names the step and field on the first mismatch.
-      got.forEach((g, k) => expect(g, `${at} ${name}[${k}]`).toBe(exp[k]!));
-    }
+    expectSigRows(
+      [
+        ['displayed', step.displayed, want.displayed],
+        ['register', step.register, want.register],
+      ],
+      at,
+    );
   });
 }
 
