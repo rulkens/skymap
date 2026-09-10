@@ -183,9 +183,11 @@ function runScript(): Trace {
 
   const { rate } = store.getState().camera.autoRotate;
   store.dispatch(setAutoRotate({ active: true, rate }));
-  expect(steps(3, 'autoRotate').winner).toBe('autoRotate');
+  // The approach outranks the pill until it saturates (R14-3), which lands inside
+  // this leg; the pill authors from the next frame on. Same frame clock as before.
+  expect(steps(3, 'autoRotate').winner).toBe('followApproach');
   notch('notch under autoRotate');
-  steps(3, 'autoRotate settle');
+  expect(steps(3, 'autoRotate settle').winner).toBe('autoRotate');
 
   const from = liveWorldPose(state);
   store.dispatch(

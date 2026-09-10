@@ -108,12 +108,12 @@ function runAtWinner(
   s: RootState,
   epochs: CameraEpochs,
   nowMs: number,
-  followElapsedMs = 0,
+  approachDone = false,
 ) {
   const ctx = makeDriverCtx({
     state: s,
-    elapsedMs: elapsedForWinner(activeDriverId(drivers, s, followElapsedMs), epochs, nowMs),
-    followElapsedMs,
+    elapsedMs: elapsedForWinner(activeDriverId(drivers, s, approachDone), epochs, nowMs),
+    approachDone,
     register: REGISTER_POSE,
   });
   return runCameraDrivers(drivers, ctx, null);
@@ -535,6 +535,7 @@ function makeFollowProduce(opts: {
     from: opts.from ?? null,
     distanceTarget: opts.distanceTarget ?? null,
     panOffset: [0, 0, 0],
+    saturated: false,
   };
   return (elapsedMs: number) =>
     follow.pose(
@@ -607,14 +608,14 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect([approach.isActive(s), hold.isActive(s)]).toEqual([false, false]);
 
     // A body focus present in the snapshot → active, and follow wins over
-    // resting. The window is the ONLY thing that separates the two rows: inside
-    // it the approach authors, past it the hold does.
+    // resting. A saturated approach is the ONLY thing that separates the two
+    // rows: before it the approach authors, after it the hold does.
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
     s = store.getState() as unknown as RootState;
-    expect([approach.isActive(s, 0), hold.isActive(s, 0)]).toEqual([true, true]);
-    expect(pickWinner(drivers, s, 0).id).toBe('followApproach');
-    expect(approach.isActive(s, FOCUS_TWEEN_MS)).toBe(false);
-    expect(pickWinner(drivers, s, FOCUS_TWEEN_MS).id).toBe('followHold');
+    expect([approach.isActive(s, false), hold.isActive(s, false)]).toEqual([true, true]);
+    expect(pickWinner(drivers, s, false).id).toBe('followApproach');
+    expect(approach.isActive(s, true)).toBe(false);
+    expect(pickWinner(drivers, s, true).id).toBe('followHold');
 
     // Focus leaves the body again → deactivates → hands back to resting.
     store.dispatch(setSelectionRow({ slot: 'focus', row: null }));
@@ -760,11 +761,11 @@ describe('CAMERA_DRIVERS — follow priority under body focus', () => {
 
     const drivers = CAMERA_DRIVERS;
 
-    // All three are active; past the approach window the winner is autoRotate
-    // (20) over followHold (10), inside it the approach (55).
+    // All three are active; once the approach has saturated the winner is
+    // autoRotate (20) over followHold (10), before that the approach (55).
     expect(drivers.find((d) => d.id === 'followHold')!.isActive(s)).toBe(true);
-    expect(pickWinner(drivers, s, FOCUS_TWEEN_MS).id).toBe('autoRotate');
-    expect(pickWinner(drivers, s, 0).id).toBe('followApproach');
+    expect(pickWinner(drivers, s, true).id).toBe('autoRotate');
+    expect(pickWinner(drivers, s, false).id).toBe('followApproach');
   });
 
   it('yaw advances over frames while auto-rotating a focused body', () => {
@@ -777,9 +778,9 @@ describe('CAMERA_DRIVERS — follow priority under body focus', () => {
     const drivers = CAMERA_DRIVERS;
     const epochs = epochsAt(s, 'autoRotate', 1000);
 
-    // Past the approach window, or the approach would author these frames.
-    const p0 = worldArmOf(runAtWinner(drivers, s, epochs, 1000, FOCUS_TWEEN_MS).pose);
-    const p1 = worldArmOf(runAtWinner(drivers, s, epochs, 1500, FOCUS_TWEEN_MS).pose);
+    // Approach done, or the approach would author these frames.
+    const p0 = worldArmOf(runAtWinner(drivers, s, epochs, 1000, true).pose);
+    const p1 = worldArmOf(runAtWinner(drivers, s, epochs, 1500, true).pose);
     // autoRotate is authoring (not blocked by follow) → yaw advances with elapsed.
     expect(p0.yaw).toBeCloseTo(BASE_POSE.yaw, 9); // elapsed 0 on the arrival frame
     expect(p1.yaw).not.toBe(p0.yaw);
@@ -796,8 +797,18 @@ describe('runCameraDrivers — memory adoption', () => {
   });
 
   it("adopts the winner's memory and discards the losers'", () => {
-    const winnerMem: FollowMemory = { from: null, distanceTarget: 2, panOffset: [2, 2, 2] };
-    const loserMem: FollowMemory = { from: null, distanceTarget: 1, panOffset: [1, 1, 1] };
+    const winnerMem: FollowMemory = {
+      from: null,
+      distanceTarget: 2,
+      panOffset: [2, 2, 2],
+      saturated: false,
+    };
+    const loserMem: FollowMemory = {
+      from: null,
+      distanceTarget: 1,
+      panOffset: [1, 1, 1],
+      saturated: false,
+    };
     const store = makeStore();
     const ctx = makeDriverCtx({ state: store.getState() as unknown as RootState });
 
@@ -827,6 +838,7 @@ describe('the follow produce — the capture is returned, not written', () => {
       from: null,
       distanceTarget: null,
       panOffset: [0, 0, 0],
+      saturated: false,
     });
     const follow = CAMERA_DRIVERS.find((d) => d.id === 'followApproach')!;
 

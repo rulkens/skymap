@@ -7,5 +7,12 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { FollowMemory } from '../../../src/@types/engine/camera/FollowMemory';
 
 export function readFollowMemory(state: EngineState): FollowMemory {
-  return state.cameraRuntime.follow ?? { from: null, distanceTarget: null, panOffset: [0, 0, 0] };
+  return (
+    state.cameraRuntime.follow ?? {
+      from: null,
+      distanceTarget: null,
+      panOffset: [0, 0, 0],
+      saturated: false,
+    }
+  );
 }

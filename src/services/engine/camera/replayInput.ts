@@ -166,6 +166,7 @@ export function replayInput(
           off[1] + next.target[1] - world.target[1],
           off[2] + next.target[2] - world.target[2],
         ],
+        saturated: follow?.saturated ?? false,
       };
     }
     register = absoluteArm(next);

@@ -15,4 +15,6 @@ export type FollowMemory = {
   readonly distanceTarget: number | null;
   /** WORLD frame — a stable screen strafe at follow scales, no basis re-projection. */
   readonly panOffset: Vec3;
+  /** The approach's hand-off signal: its ease reached 1 on the frame that set this. */
+  readonly saturated: boolean;
 };

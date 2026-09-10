@@ -72,14 +72,15 @@ describe('follow approach under autoRotate (R14-3)', () => {
       (hrOverBody(h.state, SATURN, h.radiusM('saturn')) + 1) *
       h.radiusM('saturn') *
       SCALE_UNITS.M_TO_MPC;
-    // 2 %, not the 1e-3 the un-spun approach lands inside: the edge commit bakes
-    // the LAST approach frame, one 16 ms tick short of saturation, and 2.4e-6 of
-    // `easeOutCubic` left over a 5000× approach is 1.2 % of the framing distance.
-    // The spin then holds that — outside the planet, at the framing distance.
-    expect(Math.abs(arrivedMpc - framingMpc) / framingMpc).toBeLessThan(0.02);
+    // To the float floor, at any frame phase: the approach yields only after a
+    // frame it saturated, so the pose commit-on-edge hands the spin IS the
+    // framing distance. Yielding on a clock instead left the ease's tail baked
+    // in — 1.2 % here, but (1 − t_last)³ × (from − framing), so ~10 % at 60 Hz
+    // worst phase and ~1000× from a light-year out: never arriving.
+    expect(arrivedMpc / framingMpc).toBeCloseTo(1, 12);
   });
 
-  it('the approach hands off to the hold with no jump', () => {
+  it('the approach hands off to the hold with no pose discontinuity', () => {
     const h = makeCameraSimHarness();
     h.focus('saturn');
 
@@ -96,19 +97,11 @@ describe('follow approach under autoRotate (R14-3)', () => {
     }
     expect(held).toBeGreaterThan(1);
 
-    // `easeOutCubic` decelerates, so the step ACROSS the hand-off can only be
-    // smaller than the step before it: the change of author adds no motion of
-    // its own. Term by term, target included — the hold reads the same memory,
-    // the same base and the same epoch, or one of these steps would blow up.
-    const [before, last, first] = [
-      armNumbers(regs[held - 2]!),
-      armNumbers(regs[held - 1]!),
-      armNumbers(regs[held]!),
-    ];
-    first.forEach((_, k) => {
-      const easing = Math.abs(last[k]! - before[k]!);
-      expect(Math.abs(first[k]! - last[k]!)).toBeLessThanOrEqual(easing * (1 + 1e-9));
-    });
+    // Bit-equal, not close: the approach's last frame is one it SATURATED, so
+    // both sides evaluate `lerp(_, _, 1)` off the same memory, base and epoch —
+    // and `lerp(a, b, 1)` returns `b` exactly. Any drift here means the hold
+    // read something the approach did not.
+    expect(armNumbers(regs[held]!)).toEqual(armNumbers(regs[held - 1]!));
   });
 
   it('an autoRotate spin resumes after the approach completes', () => {

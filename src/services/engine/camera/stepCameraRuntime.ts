@@ -20,7 +20,7 @@ import type { RootState } from '../../../store/types';
 import { replayInput } from './replayInput';
 import { runCameraDrivers, elapsedForWinner } from './cameraDrivers';
 import { activeDriverId } from './activeDriverId';
-import { advanceEpoch, advanceEpochs, elapsedMs } from './cameraEpochs';
+import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
 import { resolveWorldArm } from './poseFrameConversion';
@@ -96,13 +96,12 @@ export function stepCameraRuntime(
       ? stored
       : { ...stored, camera: drained.actions.reduce(cameraReducer, stored.camera) };
 
-  // The follow window is read BEFORE the advance, off the epoch the advance
-  // would install if a follow row won: a focus change reads 0 (the advance
-  // resets it), an unchanged focus reads its true elapsed. That is what makes
-  // the pick and `elapsedForWinner` agree on the hand-off frame — pure, so this
-  // is a reading, not a second advance.
-  const followElapsedMs = elapsedMs(advanceEpoch(prev.epochs.follow, focus, nowMs), nowMs);
-  const winnerId = activeDriverId(drivers, rootState, followElapsedMs);
+  // The approach hands off on a frame it SATURATED, never on a clock the pick
+  // reads independently: a fresh focus row starts a new approach whatever the
+  // old memory said, so the two are one fact and cannot disagree on phase.
+  const approachDone =
+    focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false;
+  const winnerId = activeDriverId(drivers, rootState, approachDone);
   const epochs = advanceEpochs(prev.epochs, {
     intent: rootState.camera,
     focus,
@@ -120,7 +119,7 @@ export function stepCameraRuntime(
     {
       state: rootState,
       elapsedMs: elapsedForWinner(winnerId, epochs, nowMs),
-      followElapsedMs,
+      approachDone,
       register: drained.register,
       // Against the PREVIOUS frame's up-basis: produce precedes the basis resolve.
       authoredWorld: resolveWorldArm(drained.register, bodies, poseBasis, prev.outputs.upBasis),

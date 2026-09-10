@@ -106,7 +106,7 @@ describe('replayInput', () => {
     const prev = deepFreeze({
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       surface: { ...EMPTY_SURFACE_MEMORY },
-      follow: { from: null, distanceTarget: 42, panOffset: [1, 2, 3] as Vec3 },
+      follow: { from: null, distanceTarget: 42, panOffset: [1, 2, 3] as Vec3, saturated: false },
     });
     const steps = deepFreeze<readonly InputStep[]>([
       atRestZoom(1.5),
@@ -202,6 +202,7 @@ describe('replayInput', () => {
       from: null,
       distanceTarget: 2.5 * EARTH_RADIUS_MPC,
       panOffset: [0, 0, 0] as Vec3,
+      saturated: false,
     };
     const ride = replayInput(
       { register: nearEarth, surface: EMPTY_SURFACE_MEMORY, follow },
@@ -484,6 +485,7 @@ describe('replayInput', () => {
       from: null,
       distanceTarget: 4 * EARTH_RADIUS_MPC,
       panOffset: [0, 0, 0] as Vec3,
+      saturated: false,
     };
 
     // A dive steep enough to blow through the surface in one notch.
@@ -528,7 +530,7 @@ describe('replayInput', () => {
         {
           register,
           surface: EMPTY_SURFACE_MEMORY,
-          follow: { from: null, distanceTarget: target, panOffset: [0, 0, 0] },
+          follow: { from: null, distanceTarget: target, panOffset: [0, 0, 0], saturated: false },
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
         ctxOf(store, { winnerLastFrame: 'followHold', nowMs }),

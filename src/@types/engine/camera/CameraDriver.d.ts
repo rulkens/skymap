@@ -1,7 +1,4 @@
-/**
- * CameraDriver — one row of the camera precedence table; the ranking and its
- * rationale live with the table itself (`cameraDrivers.ts`).
- */
+/** CameraDriver — one precedence-table row; the ranking and its why live with the table. */
 
 import type { DriverCtx } from './DriverCtx';
 import type { FollowMemory } from './FollowMemory';
@@ -11,21 +8,15 @@ import type { RootState } from '../../../store/types';
 export type CameraDriver = {
   readonly id: string;
   readonly priority: number;
-  // Set when this driver's final pose must bake into `camera.base` as it
-  // DEACTIVATES, so the frame loop freezes the saturated pose instead of
-  // snapping back to the previous base.
+  // Bake this row's final register into `camera.base` as it DEACTIVATES, so the
+  // loop freezes the saturated pose instead of snapping back to the old base.
   readonly commitsOnEdge?: boolean;
-  // Set by drivers that author ORBIT terms (yaw / pitch / distance around a
-  // target): the frame loop re-centres their `target` on the focused scene body
-  // (`applyFocusedBodyPivot`). clip / tween keyframe a full path, target
-  // included, and leave this unset so their own target is honoured.
+  // This row authors ORBIT terms, so `applyFocusedBodyPivot` re-centres its `target`
+  // on the focused body; clip / tween keyframe a target of their own and leave it unset.
   readonly pivotsOnFocusedBody?: boolean;
-  // `followElapsedMs` is the follow epoch's elapsed as the frame's PICK sees it
-  // (`stepCameraRuntime`): the only timing an activity test needs, since
-  // `followApproach` is the one row with a window. Omitted ⇒ a just-opened one.
-  isActive(s: RootState, followElapsedMs?: number): boolean;
-  // Takes the frame as values and RETURNS its memory: a row that owns none
-  // hands `mem` straight back, so the winner's adoption needs no branch.
+  // `approachDone` = the follow memory saturated last frame; only `followApproach` reads it.
+  isActive(s: RootState, approachDone?: boolean): boolean;
+  // A row that owns no memory hands `mem` back, so the winner's adoption needs no branch.
   pose(
     ctx: DriverCtx,
     mem: FollowMemory | null,

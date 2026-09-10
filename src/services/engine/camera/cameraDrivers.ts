@@ -38,11 +38,11 @@ import { lerp } from '../../../utils/math/lerp';
 export function pickWinner(
   drivers: readonly CameraDriver[],
   s: RootState,
-  followElapsedMs = 0,
+  approachDone = false,
 ): CameraDriver {
   let winner: CameraDriver | null = null;
   for (const d of drivers) {
-    if (!d.isActive(s, followElapsedMs)) continue;
+    if (!d.isActive(s, approachDone)) continue;
     if (winner === null || d.priority > winner.priority) winner = d;
   }
   // Only an empty table reaches the fallback; `resting` is always active.
@@ -70,12 +70,17 @@ export function runCameraDrivers(
   readonly winner: CameraDriver;
   readonly memory: FollowMemory | null;
 } {
-  const winner = pickWinner(drivers, ctx.state, ctx.followElapsedMs);
+  const winner = pickWinner(drivers, ctx.state, ctx.approachDone);
   const { pose, memory } = winner.pose(ctx, mem);
   return { pose, winner, memory };
 }
 
-const NO_FOLLOW_MEMORY: FollowMemory = { from: null, distanceTarget: null, panOffset: [0, 0, 0] };
+const NO_FOLLOW_MEMORY: FollowMemory = {
+  from: null,
+  distanceTarget: null,
+  panOffset: [0, 0, 0],
+  saturated: false,
+};
 
 /**
  * The follow conditions both follow rows share. Active only for a body the sim
@@ -89,9 +94,9 @@ function followActive(s: RootState): boolean {
 
 /**
  * One produce for both follow rows: same pose, same returned memory, and the
- * ease reads the same `follow` epoch — so the priority hand-off at
- * `FOCUS_TWEEN_MS` is continuous by construction (`easeOutCubic` saturates and
- * `lerp(a, b, 1)` returns `b` exactly).
+ * ease reads the same `follow` epoch. The approach yields only AFTER a frame it
+ * saturated, so the hand-off pose is `lerp(_, _, 1)` on both sides — identical
+ * bit for bit, whatever the frame phase.
  */
 function followPose(
   ctx: DriverCtx,
@@ -166,7 +171,7 @@ function followPose(
       // to scene-frame up until the engage edge.
       roll: lerp(from.roll ?? 0, base.pose.roll ?? 0, t),
     }),
-    memory: { from, distanceTarget, panOffset: memory.panOffset },
+    memory: { from, distanceTarget, panOffset: memory.panOffset, saturated: t >= 1 },
   };
 }
 
@@ -230,7 +235,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     commitsOnEdge: true,
     // Idempotent (the pose already targets the body); keeps the pin's rule uniform.
     pivotsOnFocusedBody: true,
-    isActive: (s, followElapsedMs = 0) => followActive(s) && followElapsedMs < FOCUS_TWEEN_MS,
+    isActive: (s, approachDone = false) => followActive(s) && !approachDone,
     pose: followPose,
   },
   {

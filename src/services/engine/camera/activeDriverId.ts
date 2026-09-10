@@ -11,7 +11,7 @@ import { pickWinner } from './cameraDrivers';
 export function activeDriverId(
   drivers: readonly CameraDriver[],
   s: RootState,
-  followElapsedMs = 0,
+  approachDone = false,
 ): string {
-  return pickWinner(drivers, s, followElapsedMs).id;
+  return pickWinner(drivers, s, approachDone).id;
 }
