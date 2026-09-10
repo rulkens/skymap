@@ -9,23 +9,17 @@
 import { describe, it, expect } from 'vitest';
 
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
-import { elapsedForWinner, pickWinner } from '../../../../src/services/engine/camera/cameraDrivers';
-import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
-import { advanceEpochs } from '../../../../src/services/engine/camera/cameraEpochs';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import { flyout } from '../../../../src/data/animation/clips/flyout';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
-import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
-import { selectTimeState } from '../../../../src/state/time/selectors';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import { simulateCameraFrame } from '../../../helpers/camera/simulateCameraFrame';
+import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
-
-// Fixture helpers mirror the commitOnEdge.test.ts harness shape.
 
 /**
  * The playClip↔clipPlayer↔driver seam is driven directly (no GPU, no
@@ -36,67 +30,14 @@ function makeHarness(startDistance: number) {
   return makeCameraSimHarness({ focusBody: null, bootHR: null, neutralDistance: startDistance });
 }
 
-/**
- * Simulate one frame of the commit-on-edge loop, with clipPlayer.tick firing
- * FIRST (as it does in the real runFrame) BEFORE the camera produce step.
- * Returns { pose, activeId, committed } for per-frame assertions.
- */
+/** One frame, with the real clip player advancing the clip row first, as `runFrame` does. */
 function simulateFrame(
-  engineState: ReturnType<typeof makeHarness>['state'],
-  store: ReturnType<typeof makeHarness>['store'],
-  drivers: ReturnType<typeof makeHarness>['deps']['drivers'],
+  harness: CameraSimHarness,
   clipPlayer: ReturnType<typeof createClipPlayer>,
   nowMs: number,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
-  const { register } = engineState.cameraRuntime;
-
-  // Step 1 — clipPlayer fires FIRST, before the produce step; the clip epoch it
-  // hands back feeds this frame's advance.
-  const { clipEpoch } = clipPlayer.tick(engineState.cameraRuntime.epochs.clip, nowMs);
-
-  // Step 2 — advance at the winner, then produce off the advanced rows (reads
-  // fresh store state after tick).
-  const freshState = store.getState();
-  const currWinner = pickWinner(drivers, freshState);
-  const currActiveId = currWinner.id;
-  const epochs = advanceEpochs(engineState.cameraRuntime.epochs, {
-    intent: freshState.camera,
-    focus: freshState.selectionRows.focus,
-    clip: clipEpoch,
-    winnerEpoch: currWinner.epoch,
-    nowMs,
-  });
-  engineState.cameraRuntime = { ...engineState.cameraRuntime, epochs };
-  const { pose } = currWinner.pose(
-    makeDriverCtx({
-      state: freshState,
-      elapsedMs: elapsedForWinner(currWinner, epochs, nowMs),
-      register: register.pose,
-      winnerLastFrame: register.winner,
-      simDays: deriveSimDays(selectTimeState(freshState), nowMs),
-      projection: engineState.cameraRuntime.outputs.projection,
-    }),
-    engineState.cameraRuntime.follow,
-  );
-
-  // Step 3 — commit-on-edge. Mirror the production property-based guard in
-  // runFrame.ts: fire commitCameraPose when the prev driver had commitsOnEdge.
-  const prev = register.winner;
-  let committed = false;
-  let renderPose = pose;
-  if (prev !== currActiveId && drivers.find((d) => d.id === prev)?.commitsOnEdge) {
-    store.dispatch(commitCameraPose(register.pose));
-    committed = true;
-    renderPose = register.pose;
-  }
-
-  // Step 4 — update bookkeeping.
-  engineState.cameraRuntime = {
-    ...engineState.cameraRuntime,
-    register: { pose: renderPose, winner: currActiveId },
-  };
-
-  return { pose: renderPose, activeId: currActiveId, committed };
+  const { clipEpoch } = clipPlayer.tick(harness.state.cameraRuntime.epochs.clip, nowMs);
+  return simulateCameraFrame(harness, nowMs, clipEpoch);
 }
 
 describe('playClip — flyout seam', () => {
@@ -107,7 +48,8 @@ describe('playClip — flyout seam', () => {
     const FLYOUT_TARGET = 29_500; // Mpc — the horizon-shell target
     const DURATION_SEC = 22; // seconds — from clips/flyout.ts
 
-    const { store, state, deps } = makeHarness(LIVE_START_DISTANCE);
+    const harness = makeHarness(LIVE_START_DISTANCE);
+    const { store, state } = harness;
 
     // Commit the live pose as the store's `camera.base` so resting produces
     // the correct floor and playClip's 'live' resolution captures the right
@@ -131,8 +73,6 @@ describe('playClip — flyout seam', () => {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: LIVE_START_DISTANCE }),
       },
     };
-
-    const drivers = deps.drivers;
 
     // The real clipPlayer; `simulateFrame` threads the clip epoch it returns
     // into the frame's advance, as `runFrame` does.
@@ -178,14 +118,14 @@ describe('playClip — flyout seam', () => {
     const STEP_MS = 1_000; // 1-second coarse steps — evaluateClip is pure in t
 
     // Arrival frame: the clip epoch starts; elapsed = 0; pose == start.
-    simulateFrame(state, store, drivers, clipPlayer, T0);
+    simulateFrame(harness, clipPlayer, T0);
 
     // Early frame (2 s): distance has started moving toward the target.
-    simulateFrame(state, store, drivers, clipPlayer, T0 + 2_000);
+    simulateFrame(harness, clipPlayer, T0 + 2_000);
     const earlyDistance = worldArmOf(state.cameraRuntime.register.pose).distance;
 
     // Mid frame (11 s): distance continues to grow (log-dolly is monotonic).
-    simulateFrame(state, store, drivers, clipPlayer, T0 + 11_000);
+    simulateFrame(harness, clipPlayer, T0 + 11_000);
     const midDistance = worldArmOf(state.cameraRuntime.register.pose).distance;
 
     // --- ASSERTION 1: camera distance moves toward the target ----------------
@@ -197,14 +137,14 @@ describe('playClip — flyout seam', () => {
     // Drive from 12 s up through 21 s in coarse steps (no assertions needed
     // here; we just advance the clock so the saturation frame lands correctly).
     for (let t = T0 + 12_000; t < T0 + DURATION_SEC * 1_000; t += STEP_MS) {
-      simulateFrame(state, store, drivers, clipPlayer, t);
+      simulateFrame(harness, clipPlayer, t);
     }
 
     // Saturation frame (22 s): elapsed == durationSec. clipPlayer.tick sets
     // pendingEnd but does NOT dispatch endClip. The clip driver evaluates at
     // t=22s → saturated pose (distance ≈ 29 500). register.pose := saturated.
     // NO commit fires this frame (clip is still active).
-    const satFrame = simulateFrame(state, store, drivers, clipPlayer, T0 + DURATION_SEC * 1_000);
+    const satFrame = simulateFrame(harness, clipPlayer, T0 + DURATION_SEC * 1_000);
     expect(satFrame.activeId).toBe('clip'); // still active
     expect(satFrame.committed).toBe(false); // no commit yet
     const saturatedDistance = worldArmOf(state.cameraRuntime.register.pose).distance;
@@ -213,13 +153,7 @@ describe('playClip — flyout seam', () => {
     // the Promise resolver. The clip driver sees null → resting wins. The
     // commit-on-edge guard (prev='clip', commitsOnEdge=true) bakes register.pose
     // (the saturated pose) into camera.base.
-    const endFrame = simulateFrame(
-      state,
-      store,
-      drivers,
-      clipPlayer,
-      T0 + DURATION_SEC * 1_000 + STEP_MS,
-    );
+    const endFrame = simulateFrame(harness, clipPlayer, T0 + DURATION_SEC * 1_000 + STEP_MS);
     expect(endFrame.activeId).toBe('resting');
     expect(endFrame.committed).toBe(true);
 

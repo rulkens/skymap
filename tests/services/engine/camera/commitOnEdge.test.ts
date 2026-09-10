@@ -2,9 +2,8 @@
  * commitOnEdge — the per-frame commit-on-edge contract: on the frame the
  * active driver changes, if the departing driver declared `commitsOnEdge`
  * (tween, autoRotate, clip — not orbitDrag/resting), `commitCameraPose` of the
- * register fires exactly once. The real stage, driven against the driver table
- * + Redux store in `stepCameraRuntime`'s produce → tween-completion →
- * commit-on-edge → register-update order; no GPU, no `runFrame` body.
+ * register fires exactly once. Driven through the real `stepCameraRuntime`
+ * against the driver table + Redux store; no GPU, no `runFrame` body.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -21,17 +20,11 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
-import { elapsedForWinner, pickWinner } from '../../../../src/services/engine/camera/cameraDrivers';
-import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
-import { commitOnEdge } from '../../../../src/services/engine/camera/commitOnEdge';
-import {
-  advanceEpoch,
-  advanceEpochs,
-  elapsedMs,
-} from '../../../../src/services/engine/camera/cameraEpochs';
+import { pickWinner } from '../../../../src/services/engine/camera/cameraDrivers';
+import { advanceEpoch } from '../../../../src/services/engine/camera/cameraEpochs';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
-import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
-import { selectTimeState } from '../../../../src/state/time/selectors';
+import { simulateCameraFrame } from '../../../helpers/camera/simulateCameraFrame';
+import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
@@ -46,80 +39,23 @@ function makeHarness() {
   return makeCameraSimHarness({ focusBody: null, bootHR: null });
 }
 
-/**
- * Simulate one frame of the commit-on-edge logic, mirroring runFrame's guard.
- * Returns { pose, activeId, committed } so tests can inspect per-frame output.
- */
+/** One frame, with the clip row advanced here as the clip player would. */
 function simulateFrame(
-  engineState: ReturnType<typeof makeHarness>['state'],
-  store: ReturnType<typeof makeHarness>['store'],
-  drivers: ReturnType<typeof makeHarness>['deps']['drivers'],
+  harness: CameraSimHarness,
   nowMs: number,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
-  const rootState = store.getState();
-  const { register } = engineState.cameraRuntime;
-
-  // Step 1: the epoch advance at the winner (the clip row as the player would
-  // hand it over), then produce off the advanced rows.
-  const currWinner = pickWinner(drivers, rootState);
-  const currActiveId = currWinner.id;
-  const prevEpochs = engineState.cameraRuntime.epochs;
-  const epochs = advanceEpochs(prevEpochs, {
-    intent: rootState.camera,
-    focus: rootState.selectionRows.focus,
-    clip: advanceEpoch(prevEpochs.clip, rootState.camera.clip, nowMs),
-    winnerEpoch: currWinner.epoch,
+  const { clip } = harness.state.cameraRuntime.epochs;
+  return simulateCameraFrame(
+    harness,
     nowMs,
-  });
-  engineState.cameraRuntime = { ...engineState.cameraRuntime, epochs };
-  const { pose } = currWinner.pose(
-    makeDriverCtx({
-      state: rootState,
-      elapsedMs: elapsedForWinner(currWinner, epochs, nowMs),
-      register: register.pose,
-      winnerLastFrame: register.winner,
-      simDays: deriveSimDays(selectTimeState(rootState), nowMs),
-      projection: engineState.cameraRuntime.outputs.projection,
-    }),
-    engineState.cameraRuntime.follow,
+    advanceEpoch(clip, harness.store.getState().camera.clip, nowMs),
   );
-
-  // Step 2: Tween completion.
-  let committed = false;
-  if (
-    currActiveId === 'tween' &&
-    rootState.camera.tween !== null &&
-    elapsedMs(epochs.tween, nowMs) >= rootState.camera.tween.durationMs
-  ) {
-    store.dispatch(cancelCameraTween());
-  }
-
-  // Step 3: the real stage; every incoming driver here pivots, so the edge
-  // frame renders the just-committed register, not the stale-base produce.
-  const edge = commitOnEdge({
-    register: register.pose,
-    displayed: engineState.cameraRuntime.outputs.displayed,
-    produced: pose,
-    prevWinner: register.winner,
-    winner: currWinner,
-    drivers,
-  });
-  for (const action of edge.actions) store.dispatch(action);
-  committed = edge.actions.length > 0;
-
-  // Step 4: Update Resources.
-  engineState.cameraRuntime = {
-    ...engineState.cameraRuntime,
-    register: { pose: edge.render, winner: currActiveId },
-  };
-
-  return { pose: edge.render, activeId: currActiveId, committed };
 }
 
 describe('commitOnEdge — tween settles', () => {
   it('tween active: no commit fires while the tween is still the winner', () => {
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
 
     // Install a long-running tween (1000 ms).
     store.dispatch(
@@ -141,7 +77,7 @@ describe('commitOnEdge — tween settles', () => {
     // Run several frames in the middle of the tween.
     let anyCommit = false;
     for (let t = 100; t < 900; t += 100) {
-      const { committed } = simulateFrame(state, store, drivers, t);
+      const { committed } = simulateFrame(harness, t);
       if (committed) anyCommit = true;
     }
 
@@ -149,8 +85,8 @@ describe('commitOnEdge — tween settles', () => {
   });
 
   it('cancelCameraTween is dispatched exactly once when elapsed >= durationMs', () => {
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
     const dispatch = vi.spyOn(store, 'dispatch');
 
     store.dispatch(
@@ -168,9 +104,9 @@ describe('commitOnEdge — tween settles', () => {
     };
 
     // Arrival frame starts the epoch (elapsed 0); subsequent frames read off it.
-    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
-    simulateFrame(state, store, drivers, 100); // elapsed 100, mid-tween
-    simulateFrame(state, store, drivers, 200); // elapsed 200 >= durationMs → cancel
+    simulateFrame(harness, 0); // arrival: starts the epoch
+    simulateFrame(harness, 100); // elapsed 100, mid-tween
+    simulateFrame(harness, 200); // elapsed 200 >= durationMs → cancel
 
     const cancelActions = dispatch.mock.calls
       .map(([a]) => a)
@@ -184,8 +120,8 @@ describe('commitOnEdge — tween settles', () => {
   });
 
   it('commitCameraPose fires on the frame AFTER cancelCameraTween (deactivation edge)', () => {
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
 
     store.dispatch(
       startCameraTween({
@@ -201,21 +137,21 @@ describe('commitOnEdge — tween settles', () => {
       register: { ...state.cameraRuntime.register, winner: 'tween' },
     };
 
-    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
+    simulateFrame(harness, 0); // arrival: starts the epoch
     // Cancel frame: elapsed 200 >= durationMs, cancelCameraTween dispatched,
     // driver STILL shows as 'tween' this frame (cancel takes effect next frame).
-    const frame1 = simulateFrame(state, store, drivers, 200); // cancel frame
+    const frame1 = simulateFrame(harness, 200); // cancel frame
     expect(frame1.committed).toBe(false); // no commit on the cancel frame
 
     // Frame after cancel: tween is null → driver changes from 'tween' to 'resting'
     // → commit-on-edge fires.
-    const frame2 = simulateFrame(state, store, drivers, 220); // deactivation edge
+    const frame2 = simulateFrame(harness, 220); // deactivation edge
     expect(frame2.committed).toBe(true);
   });
 
   it('commit bakes the saturated `to` pose into base (register.pose on the cancel frame == to)', () => {
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
     const TO: CameraPose = { target: [5, 10, 15], yaw: 2.5, pitch: -0.3, distance: 40 };
 
     store.dispatch(
@@ -232,9 +168,9 @@ describe('commitOnEdge — tween settles', () => {
       register: { ...state.cameraRuntime.register, winner: 'tween' },
     };
 
-    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
-    simulateFrame(state, store, drivers, 200); // cancel frame: elapsed 200 >= durationMs, register.pose := saturated TO
-    simulateFrame(state, store, drivers, 220); // commit frame: base := register.pose == TO
+    simulateFrame(harness, 0); // arrival: starts the epoch
+    simulateFrame(harness, 200); // cancel frame: elapsed 200 >= durationMs, register.pose := saturated TO
+    simulateFrame(harness, 220); // commit frame: base := register.pose == TO
 
     const base = worldArmOf(store.getState().camera.base);
     expect(base.yaw).toBeCloseTo(TO.yaw, 6);
@@ -248,8 +184,8 @@ describe('commitOnEdge — tween settles', () => {
     // resting driver reads the pre-commit base. Without the renderPose
     // override the frame would flash the pre-tween pose (PRE) for one frame
     // before the next frame snaps to the target.
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
     const PRE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
     const TO: CameraPose = { target: [5, 10, 15], yaw: 2.5, pitch: -0.3, distance: 40 };
 
@@ -268,9 +204,9 @@ describe('commitOnEdge — tween settles', () => {
       register: { ...state.cameraRuntime.register, winner: 'tween' },
     };
 
-    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
-    simulateFrame(state, store, drivers, 200); // cancel frame: register.pose := saturated TO
-    const edge = simulateFrame(state, store, drivers, 220); // deactivation edge
+    simulateFrame(harness, 0); // arrival: starts the epoch
+    simulateFrame(harness, 200); // cancel frame: register.pose := saturated TO
+    const edge = simulateFrame(harness, 220); // deactivation edge
 
     expect(edge.activeId).toBe('resting');
     expect(edge.committed).toBe(true);
@@ -282,8 +218,8 @@ describe('commitOnEdge — tween settles', () => {
 
 describe('commitOnEdge — auto-rotate deactivation', () => {
   it('commitCameraPose fires exactly once when auto-rotate turns off', () => {
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
 
     // Activate auto-rotate.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
@@ -293,7 +229,7 @@ describe('commitOnEdge — auto-rotate deactivation', () => {
     };
 
     // Run one frame with auto-rotate still active.
-    const frame1 = simulateFrame(state, store, drivers, 1000);
+    const frame1 = simulateFrame(harness, 1000);
     expect(frame1.activeId).toBe('autoRotate');
     expect(frame1.committed).toBe(false);
 
@@ -301,12 +237,12 @@ describe('commitOnEdge — auto-rotate deactivation', () => {
     store.dispatch(setAutoRotate({ active: false, rate: 0.000873 }));
 
     // Next frame: driver changes away from 'autoRotate' → commit fires.
-    const frame2 = simulateFrame(state, store, drivers, 1016);
+    const frame2 = simulateFrame(harness, 1016);
     expect(frame2.activeId).toBe('resting');
     expect(frame2.committed).toBe(true);
 
     // Subsequent frame: no further commit (driver is already 'resting', no edge).
-    const frame3 = simulateFrame(state, store, drivers, 1032);
+    const frame3 = simulateFrame(harness, 1032);
     expect(frame3.committed).toBe(false);
   });
 });
@@ -316,8 +252,8 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     // If drag seeding reads `register.pose` (as it should), grabbing during
     // a tween never snaps to the stale `base`. This test verifies that after a
     // tween runs for a few frames, `register.pose` differs from `base`.
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
 
     const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
     store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
@@ -335,8 +271,8 @@ describe('commitOnEdge — no-jump-on-grab', () => {
       register: { ...state.cameraRuntime.register, winner: 'tween' },
     };
 
-    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch, elapsed 0, register.pose == from == base
-    simulateFrame(state, store, drivers, 500); // elapsed 500/1000 → yaw interpolated between 0 and 1
+    simulateFrame(harness, 0); // arrival: starts the epoch, elapsed 0, register.pose == from == base
+    simulateFrame(harness, 500); // elapsed 500/1000 → yaw interpolated between 0 and 1
 
     // `register.pose` must NOT equal the stale `base` (which is still
     // the pre-tween committed pose).
@@ -352,8 +288,8 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     // `base` so the drag seeds from `register.pose` and the final pose is jump-free.
     // orbitDrag is excluded from triggering a commit only as the PREV driver, not
     // as the incoming one — design §6 no-jump guarantee.
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
 
     store.dispatch(
       startCameraTween({
@@ -369,16 +305,16 @@ describe('commitOnEdge — no-jump-on-grab', () => {
       register: { ...state.cameraRuntime.register, winner: 'tween' },
     };
 
-    simulateFrame(state, store, drivers, 0); // arrival: starts the epoch
+    simulateFrame(harness, 0); // arrival: starts the epoch
     // Mid-tween frame.
-    simulateFrame(state, store, drivers, 300);
+    simulateFrame(harness, 300);
 
     // User grabs — orbitDrag (priority 80) takes over.
     store.dispatch(beginDrag());
 
     // Frame with drag active: prev driver was 'tween', new is 'orbitDrag'.
     // Commit-on-edge fires because prev === 'tween', baking the tween pose into base.
-    const { committed, activeId } = simulateFrame(state, store, drivers, 316);
+    const { committed, activeId } = simulateFrame(harness, 316);
 
     expect(activeId).toBe('orbitDrag');
     // commit-on-edge fires for tween→orbitDrag (prev is 'tween')
@@ -393,8 +329,8 @@ describe('commitOnEdge — clip deactivation', () => {
   it('commit fires when a clip deactivates (clip → null edge)', () => {
     // clip declares commitsOnEdge: true, so the frame after clipEnded() must
     // dispatch commitCameraPose exactly once.
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
 
     const START_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 80 };
     const clip: ClipData = { start: START_POSE, timeline: [] };
@@ -410,7 +346,7 @@ describe('commitOnEdge — clip deactivation', () => {
     };
 
     // Run one frame with the clip active — no commit expected.
-    const frame1 = simulateFrame(state, store, drivers, 0);
+    const frame1 = simulateFrame(harness, 0);
     expect(frame1.activeId).toBe('clip');
     expect(frame1.committed).toBe(false);
 
@@ -418,15 +354,15 @@ describe('commitOnEdge — clip deactivation', () => {
     store.dispatch(clipEnded());
 
     // Next frame: driver changes from 'clip' to 'resting' → commit fires.
-    const frame2 = simulateFrame(state, store, drivers, 16);
+    const frame2 = simulateFrame(harness, 16);
     expect(frame2.activeId).toBe('resting');
     expect(frame2.committed).toBe(true);
   });
 
   it('commit does NOT fire on an orbitDrag deactivation edge', () => {
     // orbitDrag has no commitsOnEdge; endDrag() commits via onGestureEnd instead.
-    const { store, state, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const harness = makeHarness();
+    const { store, state } = harness;
 
     store.dispatch(beginDrag());
     state.cameraRuntime = {
@@ -435,7 +371,7 @@ describe('commitOnEdge — clip deactivation', () => {
     };
 
     // Frame with drag active — no commit.
-    const frame1 = simulateFrame(state, store, drivers, 0);
+    const frame1 = simulateFrame(harness, 0);
     expect(frame1.activeId).toBe('orbitDrag');
     expect(frame1.committed).toBe(false);
 
@@ -444,7 +380,7 @@ describe('commitOnEdge — clip deactivation', () => {
 
     // Next frame: driver changes from 'orbitDrag' to 'resting' — no commit
     // because orbitDrag does not declare commitsOnEdge.
-    const frame2 = simulateFrame(state, store, drivers, 16);
+    const frame2 = simulateFrame(harness, 16);
     expect(frame2.activeId).toBe('resting');
     expect(frame2.committed).toBe(false);
   });
@@ -454,7 +390,7 @@ describe('commitOnEdge — clip deactivation', () => {
     // commit-on-edge bakes its OWN final pose would discard the gesture whole
     // at pointerup. The gesture row serves both arms at 80; the clip's 95
     // outranks it either way: a clip is not drag-interruptible.
-    const { store, state, deps } = makeHarness();
+    const { store, deps } = makeHarness();
     const drivers = deps.drivers;
 
     // The rows read `base.frame` only, so the pose value is irrelevant here.
