@@ -1,10 +1,12 @@
 /**
- * The per-frame uniform lidarPoint.wesl's `SceneCamera` reads — 112 bytes, the
- * layout that shader mirrors field for field (pinned by `sceneCamera.parity.test.ts`).
+ * The per-frame uniform every scene pass reads — 192 bytes, the layout
+ * `shaders/lib/sceneCamera.wesl` mirrors field for field (pinned by
+ * `sceneCamera.parity.test.ts`).
  *
  * `rightM`/`upM` come from `sceneCameraView`, the SAME basis pan drags along, so a
  * dragged point stays under the cursor. `metresPerPx` is metres per pixel per metre
- * of depth — the shader multiplies it by the clip `w`.
+ * of depth — the shader multiplies it by the clip `w`. `view` is the same look-at
+ * `viewProj` is built from, handed over unprojected for camera-space covariance.
  */
 import { mat4 } from 'wgpu-matrix';
 
@@ -14,17 +16,19 @@ import type { SceneCameraView } from './sceneCameraView';
 const NEAR_M = 0.5;
 const FAR_M = 5000;
 
-export const SCENE_CAMERA_BYTES = 112;
+export const SCENE_CAMERA_BYTES = 192;
 
 const viewScratch = new Float32Array(16);
 const projScratch = new Float32Array(16);
 const viewProjScratch = new Float32Array(16);
 
-/** Fill `out` (>= 28 floats) with the `SceneCamera` for `view`. */
+/** Fill `out` (>= 46 floats) with the `SceneCamera` for `view`. */
 export function writeSceneCamera(
   out: Float32Array,
   view: SceneCameraView,
   pointSizePx: number,
+  splatScale: number,
+  opacityScale: number,
 ): void {
   const [width, height] = view.viewportPx;
   // wgpu-matrix takes the destination LAST and returns it; `perspective` maps
@@ -40,4 +44,7 @@ export function writeSceneCamera(
   out[23] = height;
   out.set(view.eyeM, 24);
   out[27] = (2 * Math.tan(view.fovYRad * 0.5)) / height;
+  out.set(look, 28);
+  out[44] = splatScale;
+  out[45] = opacityScale;
 }

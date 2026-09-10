@@ -1,11 +1,12 @@
 /**
- * TS↔WESL parity: lidarPoint.wesl's `SceneCamera` struct vs. what
- * `writeSceneCamera` actually writes. The expected indices are PARSED from the
- * shader (WGSL alignment rules applied, so a reordered struct is modelled
- * correctly) and the writer is EXECUTED against them with a distinct sentinel
- * per field — a literal-vs-literal test would stay green while the two halves
- * drifted apart, and a drifted offset is invisible until the frame stops
- * presenting. Mirrors `tests/tools/mcpm-workbench/render/mcpmCamera.parity.test.ts`.
+ * TS↔WESL parity: `lib/sceneCamera.wesl`'s `SceneCamera` struct — the one every
+ * scene shader imports — vs. what `writeSceneCamera` actually writes. The
+ * expected indices are PARSED from the shader (WGSL alignment rules applied, so
+ * a reordered struct is modelled correctly) and the writer is EXECUTED against
+ * them with a distinct sentinel per field — a literal-vs-literal test would stay
+ * green while the two halves drifted apart, and a drifted offset is invisible
+ * until the frame stops presenting.
+ * Mirrors `tests/tools/mcpm-workbench/render/mcpmCamera.parity.test.ts`.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -67,6 +68,8 @@ const RIGHT_M = [11, 12, 13] as const;
 const UP_M = [21, -22, 23] as const;
 const EYE_M = [31, 32, 33] as const;
 const POINT_SIZE_PX = 42;
+const SPLAT_SCALE = 0.75;
+const OPACITY_SCALE = 0.375;
 const VIEWPORT_PX = [1600, 900] as const;
 const FOV_Y_RAD = Math.PI / 4;
 
@@ -79,19 +82,19 @@ const VIEW: SceneCameraView = {
   viewportPx: VIEWPORT_PX,
 };
 
-describe('SceneCamera TS↔WESL parity (lidarPoint.wesl ↔ writeSceneCamera.ts)', () => {
+describe('SceneCamera TS↔WESL parity (lib/sceneCamera.wesl ↔ writeSceneCamera.ts)', () => {
   const text = readFileSync(
-    join(process.cwd(), 'tools/scene-workbench/src/render/shaders/lidarPoint.wesl'),
+    join(process.cwd(), 'tools/scene-workbench/src/render/shaders/lib/sceneCamera.wesl'),
     'utf-8',
   );
   const { floatOffsets, sizeBytes } = layoutOf(parseWeslStructFields(text, 'SceneCamera'));
 
   const out = new Float32Array(SCENE_CAMERA_BYTES / 4);
-  writeSceneCamera(out, VIEW, POINT_SIZE_PX);
+  writeSceneCamera(out, VIEW, POINT_SIZE_PX, SPLAT_SCALE, OPACITY_SCALE);
 
   const at = (field: string): number => {
     const offset = floatOffsets.get(field);
-    if (offset === undefined) throw new Error(`lidarPoint.wesl has no field ${field}`);
+    if (offset === undefined) throw new Error(`sceneCamera.wesl has no field ${field}`);
     return offset;
   };
   const vec3At = (field: string): number[] => Array.from(out.subarray(at(field), at(field) + 3));
@@ -111,6 +114,8 @@ describe('SceneCamera TS↔WESL parity (lidarPoint.wesl ↔ writeSceneCamera.ts)
     expect(out[at('metresPerPx')]).toBe(
       Math.fround((2 * Math.tan(FOV_Y_RAD / 2)) / VIEWPORT_PX[1]),
     );
+    expect(out[at('splatScale')]).toBe(SPLAT_SCALE);
+    expect(out[at('opacityScale')]).toBe(OPACITY_SCALE);
   });
 
   it('viewProj occupies the 16 floats before the first sentinel', () => {
@@ -121,5 +126,14 @@ describe('SceneCamera TS↔WESL parity (lidarPoint.wesl ↔ writeSceneCamera.ts)
     const block = Array.from(out.subarray(0, 16));
     expect(block.every(Number.isFinite)).toBe(true);
     expect(block.some((v) => v !== 0)).toBe(true);
+  });
+
+  it('view is a projection-free matrix of its own, not a second copy of viewProj', () => {
+    const block = Array.from(out.subarray(at('view'), at('view') + 16));
+    expect(block.every(Number.isFinite)).toBe(true);
+    expect(block.some((v) => v !== 0)).toBe(true);
+    // The splat pass transports covariance into CAMERA space; writing viewProj
+    // here would fold the projection in twice and pass every other check.
+    expect(block).not.toEqual(Array.from(out.subarray(0, 16)));
   });
 });
