@@ -1,5 +1,5 @@
 /**
- * makeSurfaceDriver — `drainInput`'s memory edges as a test driver: it holds the
+ * makeSurfaceDriver — `replayInput`'s memory edges as a test driver: it holds the
  * `SurfaceMemory` the engine holds in `cameraRuntime.surface` and replays the
  * same three writes (the fold's returned memory, and the two `pointerDown`
  * boundaries), so gesture-sequence fixtures read as sequences instead of

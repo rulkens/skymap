@@ -65,7 +65,6 @@ export function replayInput(
   /** The last zoom step's factor; null when the drain held no zoom. */
   readonly lastZoomFactor: number | null;
   readonly followDistanceTarget: number | null;
-  readonly autoRotateEpoch: Epoch<FramedCameraPose>;
   readonly actions: readonly UnknownAction[];
 } {
   const { rootState, nowMs, canvasPx, projection, upBasis, poseBasis, bodies, winnerLastFrame } =
@@ -84,6 +83,8 @@ export function replayInput(
   let follow = prev.follow;
   let lastZoomFactor: number | null = null;
   let followDistanceTarget: number | null = null;
+  // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
+  // `advanceEpochs` would keep a fold-time reset when another driver wins.
   let autoRotateEpoch = ctx.autoRotateEpoch;
   let camera = rootState.camera;
   const actions: UnknownAction[] = [];
@@ -228,9 +229,8 @@ export function replayInput(
             emit(commitCameraPose(absoluteArm({ ...basePose, roll })));
           break;
         }
-        // The spin epoch as THIS frame's advance will see it: the one row touched
-        // outside `advanceEpochs`, safe because `advanceEpoch` is idempotent on an
-        // unchanged ref — the frame's advance can never be a second reset.
+        // The spin epoch as THIS frame's advance will see it (idempotent on an
+        // unchanged ref), not the stale row a switch-off between frames left.
         const { active, rate } = camera.autoRotate;
         autoRotateEpoch = advanceEpoch(autoRotateEpoch, active ? camera.base : null, nowMs);
         const zoomed = applyWheelZoom({
@@ -258,7 +258,6 @@ export function replayInput(
     follow,
     lastZoomFactor,
     followDistanceTarget,
-    autoRotateEpoch,
     actions,
   };
 }

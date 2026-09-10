@@ -26,8 +26,8 @@ export type CameraRuntime = {
   projection: CameraProjection;
   /**
    * The AUTHORED pose register, pre-projection, centre-looking while a body is
-   * focused. Writers disjoint in time: `drainInput` folds gesture steps at the
-   * top of the frame, `runFrame` step 4 stamps the post-pin pose. Authored,
+   * focused. `runFrame` is the only writer: the replay's register at the top
+   * of the frame, then step 4's post-pin pose. Authored,
    * not displayed, is what keeps the register loop dead — a projected pose
    * would walk ~8,500 km per frame (R12b-1).
    */
@@ -44,10 +44,10 @@ export type CameraRuntime = {
   /** This frame's resolved orientation basis B(t) — NOT the clip-authoring
    * `frameBasis` parameter. Single writer: `runFrame`, from `resolveFrameBasis`. */
   upBasis: { current: Mat3 };
-  /** The body arm's gesture memory (latch + remembered tilt); `drainInput` folds
+  /** The body arm's gesture memory (latch + remembered tilt); `replayInput` folds
    * the gesture steps and their boundaries, `runFrame` notes the body. */
   surface: SurfaceMemory;
   /** The last zoom step's factor, for the debug readout; null until the first
-   * notch. `drainInput` writes it. */
+   * notch. `runFrame` writes it from the replay. */
   lastZoomFactor: { current: number | null };
 };

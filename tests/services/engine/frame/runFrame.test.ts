@@ -125,6 +125,8 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
+import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
+import type { RootState } from '../../../../src/store/types';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -329,11 +331,10 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
 
 describe('runFrame — the input drain runs before the produce step', () => {
   it('applies this frame’s queued gesture to the pose this frame renders', () => {
-    // `drainInput` sits above the produce step AND above the `getState()` the
-    // driver table resolves against. Move it below either — a plausible reorder
-    // in any future runFrame edit — and every grab costs a frame: the first
-    // frame of a drag is produced from the pre-drag register (here) and an
-    // at-rest wheel commit lands a frame late. Nothing else in the suite sees it.
+    // The replay sits above the produce step. Move it below — a plausible
+    // reorder in any future runFrame edit — and every grab costs a frame: the
+    // first frame of a drag is produced from the pre-drag register. Nothing
+    // else in the suite sees it.
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -1026,5 +1027,89 @@ describe('runFrame — the label-director wake fold', () => {
     expect(state.subsystems.cosmoLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('runFrame — effective intent', () => {
+  it('the driver table sees a commit the same frame the drain made it', () => {
+    // An at-rest notch commits its base and the resting driver renders `base`:
+    // the driver must read the frame's OWN commits (folded through the
+    // reducer), not the snapshot taken before they were dispatched, or the
+    // notch shows a frame late.
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
+    h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
+
+    h.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+    h.frame();
+
+    const committed = worldArmOf(h.store.getState().camera.base).distance;
+    expect(committed).toBeGreaterThan(100);
+    expect(worldArmOf(h.state.cameraRuntime.lastPose.current).distance).toBe(committed);
+  });
+
+  it('a frame with no input reuses the store snapshot by identity', () => {
+    // The reducer fold must not allocate on steady frames — `toBe`, so a
+    // memoised selector keyed on the root object keeps its cache.
+    const h = makeCameraSimHarness({ focusBody: null });
+    let seen: RootState | null = null;
+    const probe: CameraDriver = {
+      id: 'probe',
+      priority: 1000,
+      isActive: () => true,
+      pose: (ctx, mem) => {
+        seen = ctx.state;
+        return { pose: ctx.register, memory: mem };
+      },
+    };
+    const deps = { ...h.deps, drivers: [probe, ...CAMERA_DRIVERS] };
+
+    const before = h.store.getState();
+    runFrame(h.state, deps, 16);
+
+    expect(seen).toBe(before);
+  });
+
+  it('the frame’s actions reach the store in the same order as before', () => {
+    // The `drag end` frame of the driver golden trace, reproduced: the
+    // replay's commit and `endDrag` dispatch first and in order, the scale
+    // dispatch after them. Recorded the way the fixture records.
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: 5 });
+    h.frame(4);
+    h.store.dispatch(beginDrag());
+    h.push({ kind: 'gestureStart' });
+    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 56, yPx: 50 });
+    h.frame();
+    h.push({ kind: 'gestureEnd' });
+
+    const recorded: string[] = [];
+    const inner = h.store.dispatch.bind(h.store);
+    h.store.dispatch = ((action: { type: string }) => {
+      recorded.push(action.type);
+      return inner(action as never);
+    }) as typeof h.store.dispatch;
+    h.frame();
+
+    const want = GOLDEN.find((step) => step.label === 'drag end')!.actions;
+    expect(want).toContain('camera/endDrag');
+    expect(recorded).toEqual(want);
+  });
+
+  it('commits the tail of a gesture that ended mid-frame', () => {
+    // The commit fires on the frame after pointerup, so the moves that
+    // preceded the release must land BEFORE it or the store bakes a pose one
+    // frame stale — and the drag flag clears in the same frame.
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
+    h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
+    h.store.dispatch(beginDrag());
+    h.push({ kind: 'gestureStart' });
+    h.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
+    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
+    h.push({ kind: 'gestureEnd' });
+
+    h.frame();
+
+    expect(worldArmOf(h.store.getState().camera.base).yaw).toBeCloseTo(-50 * 0.005, 6);
+    expect(h.store.getState().camera.dragging).toBe(false);
   });
 });

@@ -79,7 +79,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     priority: 95,
     // Holds the camera above orbitDrag in EITHER arm: a gesture handed back
     // to a clip whose commit-on-edge bakes its own final pose would be
-    // discarded at pointerup (`drainInput` swallows the steps too).
+    // discarded at pointerup (`replayInput` swallows the steps too).
     commitsOnEdge: true,
     isActive: (s) => s.camera.clip !== null,
     // `clip.frame` (pinned at dispatch) is the STEADY basis the path's

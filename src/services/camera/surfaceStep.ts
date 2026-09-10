@@ -73,7 +73,7 @@ export function surfaceStep(
       next: prev,
     };
   }
-  // The gesture boundaries reach the memory at `drainInput`'s two store edges,
+  // The gesture boundaries reach the memory at `replayInput`'s two gesture edges,
   // as the two `pointerDown` writes; nothing latches here with the pointer up.
   if (step.kind !== 'drag' || !prev.pointerDown) return { pose: arm, next: prev };
   const gesture = prev.gesture ?? latchSurfaceGesture(arm, step, viewportPx, fovYRad, bodyRadiusM);

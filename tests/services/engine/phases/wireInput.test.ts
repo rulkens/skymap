@@ -274,7 +274,7 @@ describe('wireInput', () => {
     // This four-line sink is the ONLY path from a DOM event to the camera. Wire
     // it to a locally-built aggregator, or drop the requestRender, and all input
     // dies with every other unit test still green — the halves either side of it
-    // (`orbitControls`, `inputAggregator`, `drainInput`) each test a fake.
+    // (`orbitControls`, `inputAggregator`, `replayInput`) each test a fake.
     const state = makeState();
     const deps = makeDeps();
     attachOrbitControlsSpy.mockClear();

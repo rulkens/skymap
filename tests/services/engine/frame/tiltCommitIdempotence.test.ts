@@ -105,7 +105,7 @@ describe('commit → re-derive idempotence (R12-1)', () => {
     }
     // The OTHER reachable commit path (b): a commit-on-edge. Rate 0 so the
     // spin authors no motion — a start/stop pair is a pure commit cycle
-    // through runFrame's edge bake rather than drainInput's gestureEnd.
+    // through runFrame's edge bake rather than replayInput's gestureEnd.
     for (let cycle = 0; cycle < 3; cycle += 1) {
       h.store.dispatch(setAutoRotate({ active: true, rate: 0 }));
       h.frame(10);

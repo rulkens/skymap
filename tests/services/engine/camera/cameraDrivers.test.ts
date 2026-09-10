@@ -78,7 +78,7 @@ const TWEEN_DESC: CameraTweenDescriptor = {
   frame: DEFAULT_ORIENTATION,
 };
 
-/** The live gesture register `orbitDrag` holds — drainInput's fold output. */
+/** The live gesture register `orbitDrag` holds — replayInput's fold output. */
 const REGISTER_POSE = absoluteArm({ target: [5, 5, 5], yaw: 0.7, pitch: -0.1, distance: 200 });
 
 /** Every row `winnerId` owns started at `nowMs`, as `runFrame`'s advance leaves them. */

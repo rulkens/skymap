@@ -18,7 +18,7 @@ import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
-import { drainInput } from './drainInput';
+import { replayInput } from '../camera/replayInput';
 import { noteBody } from '../../camera/surfaceStep';
 import { runCameraDrivers, elapsedForWinner } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
@@ -50,7 +50,7 @@ import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import {
+import cameraReducer, {
   commitCameraPose,
   cancelCameraTween,
   clearFrameTween,
@@ -113,29 +113,62 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
 
-  // (0) Above the `getState()` below so the gesture edges it dispatches are in
-  // the snapshot the driver table resolves against.
-  const { followDistanceTarget, follow: drainedFollow } = drainInput(state, deps, nowMs);
-  // The drain's pan strafe lands on the memory HERE — above the focus-edge drop
-  // below, which still overrides it, and above the driver adoption that reads
-  // it. Those two writes plus this one are the whole set (spec: single writer).
-  state.cameraRuntime.follow = drainedFollow;
-
-  // The camera steps run before `deriveFrameContext` so a camera-only-ready
-  // frame still makes motion progress before the missing-GPU early return.
-  const rootState = deps.cb.store.getState();
+  // (0) The frame's ONE store snapshot, taken before the replay's actions are
+  // dispatched. The camera steps run before `deriveFrameContext` so a
+  // camera-only-ready frame still makes motion progress before the
+  // missing-GPU early return.
+  const steps = state.subsystems.inputAggregator.drain();
+  const stored = deps.cb.store.getState();
 
   // The sim instant is derived BEFORE produce: the follow driver aims at where
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
   // this call primes the map every later reader gets by reference. Bound to a
   // local only because the fold needs it by value.
-  const simDays = deriveSimDays(selectTimeState(rootState), nowMs);
+  const simDays = deriveSimDays(selectTimeState(stored), nowMs);
   const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
 
   // Single-writer epoch the pick path reads — NOT the derive memo's key, which
   // a between-frames `deriveBodyStates(CONST_J2000)` (extractSelectionRow) can
   // repoint.
   state.cameraRuntime.lastRenderedSimDays.current = simDays;
+  // `poseBasis` is the COMMITTED frame — the saga writes the destination into
+  // `settings.orientation` when a switch starts, so the eye holds still through
+  // a roll and only up rotates (`upBasis`, the live B(t)).
+  const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
+
+  const runtime = state.cameraRuntime;
+  const drained = replayInput(
+    { register: runtime.lastPose.current, surface: runtime.surface, follow: runtime.follow },
+    steps,
+    {
+      rootState: stored,
+      nowMs,
+      canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
+      projection: runtime.projection,
+      upBasis: runtime.upBasis.current,
+      poseBasis,
+      bodies: bodyStates,
+      winnerLastFrame: runtime.prevActiveId.current,
+      autoRotateEpoch: runtime.epochs.autoRotate,
+    },
+  );
+  runtime.lastPose.current = drained.register;
+  runtime.surface = drained.surface;
+  // The pan strafe lands on the memory HERE — above the focus-edge drop below,
+  // which still overrides it, and above the driver adoption that reads it.
+  // Those two writes plus this one are the whole set (spec: single writer).
+  runtime.follow = drained.follow;
+  if (drained.lastZoomFactor !== null) runtime.lastZoomFactor.current = drained.lastZoomFactor;
+  // AFTER the runtime writes (ruled): a store listener fired by a commit sees
+  // this frame's register already installed, not last frame's.
+  for (const action of drained.actions) deps.cb.store.dispatch(action);
+  // The effective intent: the drivers must see this frame's commits (`endDrag`
+  // above all, or `orbitDrag` wins one frame too long), folded through the real
+  // reducer rather than re-read from the store. Identity on a steady frame.
+  const rootState =
+    drained.actions.length === 0
+      ? stored
+      : { ...stored, camera: drained.actions.reduce(cameraReducer, stored.camera) };
 
   // (1) The one epoch advance per frame, keyed on the winner; every elapsed
   // read below is off these rows at this `nowMs`.
@@ -153,10 +186,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // re-select included) drops it, and the driver re-captures against the new
   // target on its next produce.
   if (epochs.follow.ref !== prevEpochs.follow.ref) state.cameraRuntime.follow = null;
-  // `poseBasis` is the COMMITTED frame — the saga writes the destination into
-  // `settings.orientation` when a switch starts, so the eye holds still through
-  // a roll and only up rotates (`upBasis`, the live B(t)).
-  const poseBasis = ORIENTATION_FRAMES[rootState.settings.orientation];
 
   // The drivers read the frame only through this bag; the winner's memory is
   // adopted, the losers' discarded. `authoredWorld` is `authoredWorldPose`
@@ -178,7 +207,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       simDays,
       projection: state.cameraRuntime.projection,
       pivot: pivotFraming(rootState.selectionRows.focus),
-      followDistanceTarget,
+      followDistanceTarget: drained.followDistanceTarget,
     },
     state.cameraRuntime.follow,
   );
