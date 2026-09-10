@@ -26,6 +26,8 @@ import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 function followApproachEaseActive(state: EngineState): boolean {
   const { register, follow } = state.cameraRuntime;
   if (!isFollowDriverId(register.winner)) return false;
+  // A winning follow row always leaves memory (its null-guard arms are unreachable
+  // while `followActive` holds); a null here would park the loop mid-ease.
   return follow !== null && !follow.saturated;
 }
 

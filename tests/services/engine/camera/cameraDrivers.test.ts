@@ -109,13 +109,13 @@ function runAtWinner(
   nowMs: number,
   approachDone = false,
 ) {
+  const winner = pickWinner(drivers, s, approachDone);
   const ctx = makeDriverCtx({
     state: s,
-    elapsedMs: elapsedForWinner(pickWinner(drivers, s, approachDone), epochs, nowMs),
+    elapsedMs: elapsedForWinner(winner, epochs, nowMs),
     approachDone,
     register: REGISTER_POSE,
   });
-  const winner = pickWinner(drivers, s, approachDone);
   return { ...winner.pose(ctx, null), winner };
 }
 

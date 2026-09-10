@@ -13,6 +13,7 @@ export type DriverCtx = {
   readonly state: RootState;
   /** Elapsed on the winner's own `epoch` row (`CameraDriver`); 0 for the untimed rows. */
   readonly elapsedMs: number;
+  /** LAST frame's follow memory saturated — the approach row yields on it. */
   readonly approachDone: boolean;
   /** The AUTHORED register (`cameraRuntime.register.pose`), pre-projection — R12b-1. */
   readonly register: FramedCameraPose;
