@@ -1,41 +1,25 @@
 /**
- * drainInput — the single per-frame input-apply site and the only gesture writer of
- * the live register. Runs above the store read the drivers resolve against, so a
- * gesture begun between frames reaches this frame's produce. Each step chains from
- * the register it wrote; the store commits only at gesture end and per at-rest notch.
- * What a following camera swallows is neither — it rides the return instead.
+ * drainInput — the single per-frame input-apply site: drain the aggregator, fold
+ * the steps through `replayInput`, land the results on the runtime and dispatch
+ * the fold's actions in order. Runs above the store read the drivers resolve
+ * against, so a gesture begun between frames reaches this frame's produce and
+ * its commits are in the drivers' snapshot.
  *
  * `beginDrag` / `cancelCameraTween` are dispatched at DOM time by the emit sink, so a
  * cancel cannot outlive the tween a double-click starts in the gap.
  */
 
-import { applyInputToCamera } from '../../camera/applyInputToCamera';
-import { surfaceStep } from '../../camera/surfaceStep';
-import { applyWheelZoom } from '../camera/applyWheelZoom';
-import { advanceEpoch, elapsedMs } from '../camera/cameraEpochs';
-import { frameAlignedRoll } from '../camera/frameAlignedRoll';
-import { pivotFraming } from '../camera/pivotRadiusMpc';
-import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
-import { absoluteArm } from '../../../utils/camera/absoluteArm';
-import { authoredWorldPose } from '../helpers/authoredWorldPose';
-import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { frameUp } from '../../../utils/camera/frameUp';
-import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
+import { replayInput } from '../camera/replayInput';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
-import { selectFocusRow } from '../../../state/selection/selectors';
 import { selectTimeState } from '../../../state/time/selectors';
-import { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 import { deriveBodyStates } from './deriveBodyStates';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
-import type { InputStep } from '../../../@types/camera/InputStep';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
-import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function drainInput(
   state: EngineState,
@@ -45,264 +29,39 @@ export function drainInput(
   readonly followDistanceTarget: number | null;
   readonly follow: FollowMemory | null;
 } {
-  // Drain-local, and the ONLY read of the field: each strafe step REPLACES it,
-  // so several in one drain accumulate onto each other, and the caller assigns
-  // the result unconditionally — hence the no-input frame hands it straight
-  // back rather than nulling the memory.
-  let follow = state.cameraRuntime.follow;
+  const runtime = state.cameraRuntime;
   const steps = state.subsystems.inputAggregator.drain();
-  if (steps.length === 0) return { followDistanceTarget: null, follow };
+  // The caller assigns the returned memory unconditionally, so a no-input frame
+  // hands it straight back rather than nulling it.
+  if (steps.length === 0) return { followDistanceTarget: null, follow: runtime.follow };
 
   const store = deps.cb.store;
-  const cssHeight = deps.canvas.clientHeight || 1;
-  const register = state.cameraRuntime.lastPose;
+  const rootState = store.getState();
+  const next = replayInput(
+    { register: runtime.lastPose.current, surface: runtime.surface, follow: runtime.follow },
+    steps,
+    {
+      rootState,
+      nowMs,
+      canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
+      projection: runtime.projection,
+      upBasis: runtime.upBasis.current,
+      poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
+      // This frame's instant; `runFrame` re-derives the same one, memoised.
+      bodies: deriveBodyStates(deriveSimDays(selectTimeState(rootState), nowMs)) as ReadonlyMap<
+        BodyId,
+        BodyState
+      >,
+      winnerLastFrame: runtime.prevActiveId.current,
+      autoRotateEpoch: runtime.epochs.autoRotate,
+    },
+  );
 
-  /**
-   * The engaged arm's input owner (spec §6). The GATE is the stored regime
-   * (`base.frame`, T15); the POSE is the live register, because the fold commits on
-   * a regime EDGE only — mid-tween `base` holds the last crossing pose while the
-   * register tracks the animation, and a latch taken against a pose the user never
-   * saw sticks for the whole gesture (FW-G).
-   */
-  const routeToSurface = (step: InputStep): boolean => {
-    const root = store.getState();
-    const base = root.camera.base;
-    if (base.frame === 'absolute') return false;
-    // A playing clip owns the camera in both arms (the driver table's rule).
-    if (root.camera.clip !== null) return true;
-    // Unreachable: the fold only ever names a body it resolved.
-    const body = SCENE_BODIES.find((row) => row.id === base.frame.body);
-    if (body === undefined) return true;
-    const live = register.current;
-    const from =
-      live.frame !== 'absolute' && live.frame.body === base.frame.body ? live.pose : base.pose;
-    // The configured scene up, rotated into the body's fixed axes for the
-    // settle's band blend. A missing snapshot degrades to the pole: the
-    // blend collapses to the body ENU.
-    const bodyState = deriveBodyStates(deriveSimDays(selectTimeState(root), nowMs)).get(
-      base.frame.body,
-    );
-    const sceneUpLocal: Vec3 = bodyState
-      ? rotateVec3ByTightMat3T(frameUp(state.cameraRuntime.upBasis.current), bodyState.orientation)
-      : [0, 0, 1];
-    const { pose: next, next: memory } = surfaceStep(state.cameraRuntime.surface, from, step, {
-      viewportPx: [deps.canvas.clientWidth || 1, cssHeight],
-      fovYRad: state.cameraRuntime.projection.fovYRad,
-      bodyRadiusM: body.radiusM,
-      sceneUpLocal,
-    });
-    state.cameraRuntime.surface = memory;
-    // EVERY step writes the register — a later step in the same drain chains
-    // from it, so an at-rest notch left out of it would be folded over and
-    // silently discarded by a drag arriving in the same frame window.
-    register.current = { frame: base.frame, pose: next };
-    if (step.kind === 'zoom' && !step.duringGesture) {
-      // An at-rest notch is its own atomic gesture, so the commit is its
-      // gesture end — a register-only write would be invisible (the resting
-      // driver renders `base`). Identity, not equality: a declined step
-      // returns its input by reference. `frame` rides along BY REFERENCE:
-      // one fact in two fields, and the body never changes here.
-      if (next !== from) store.dispatch(commitCameraPose(register.current));
-    }
-    return true;
-  };
-
-  const applyWorldStep = (step: Extract<InputStep, { kind: 'drag' } | { kind: 'zoom' }>): void => {
-    const root = store.getState();
-    // Same rule as the body arm: a playing clip is not gesture-interruptible,
-    // so the step is swallowed rather than folded invisibly under the clip.
-    if (root.camera.clip !== null) return;
-    const focus = selectFocusRow(root);
-    // AUTHORED, not displayed: folding deltas over the projected pose and
-    // re-pinning it is the R12b-1 loop (8,519 km of eye walk per frame). The
-    // projection re-tilts the folded result at render, so the drag's mapping
-    // composes below the tilt — the round-12c disclosed feel change.
-    const world = authoredWorldPose(state);
-    const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
-    let next = applyInputToCamera(
-      world,
-      step,
-      cssHeight,
-      pivotFraming(focus),
-      state.cameraRuntime.projection.fovYRad,
-      poseBasis,
-      state.cameraRuntime.upBasis.current,
-    );
-    if (step.kind === 'zoom') {
-      // The roll ride runs on EVERY driven zoom path — a gesture-held wheel
-      // moves altitude exactly like the at-rest one.
-      const bodyStates = deriveBodyStates(
-        deriveSimDays(selectTimeState(root), nowMs),
-      ) as ReadonlyMap<BodyId, BodyState>;
-      const roll = frameAlignedRoll(
-        world,
-        next,
-        bodyStates,
-        poseBasis,
-        state.cameraRuntime.upBasis.current,
-      );
-      next = { ...next, roll };
-    }
-    if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
-      // Followed-body strafe: the pivot-pin owns the target
-      // (`bodyPosition + panOffset`), so the pan step's own delta goes to the
-      // follow memory's offset the pin reads. Folding it here — where the delta
-      // is in hand — is what lets the offset stay clean while the body moves.
-      const off = follow?.panOffset ?? [0, 0, 0];
-      follow = {
-        from: follow?.from ?? null,
-        distanceTarget: follow?.distanceTarget ?? null,
-        panOffset: [
-          off[0] + next.target[0] - world.target[0],
-          off[1] + next.target[1] - world.target[1],
-          off[2] + next.target[2] - world.target[2],
-        ],
-      };
-    }
-    register.current = absoluteArm(next);
-  };
-
-  let followDistanceTarget: number | null = null;
-
-  for (const step of steps) {
-    switch (step.kind) {
-      case 'gestureStart':
-        // The gesture boundaries are the memory's `pointerDown` edges; the latch
-        // itself is taken by the first drag step, which carries the press pixel.
-        state.cameraRuntime.surface = {
-          ...state.cameraRuntime.surface,
-          pointerDown: true,
-          gesture: null,
-        };
-        break;
-
-      case 'gestureEnd': {
-        // ONE commit site for both arms: bake the live register into `base`
-        // before `endDrag`, so the resting driver resumes from the pose the
-        // user released. Skipped while a clip owns the camera (the gesture was
-        // swallowed whole) and across an arm mismatch (a clip ended mid-hold;
-        // the fold owns regime edges, a commit here must never flip one).
-        const root = store.getState();
-        const live = register.current;
-        const sameArm =
-          live.frame === 'absolute'
-            ? root.camera.base.frame === 'absolute'
-            : root.camera.base.frame !== 'absolute' &&
-              live.frame.body === root.camera.base.frame.body;
-        // The register is AUTHORED (pre-projection, R12b-1), so it commits
-        // VERBATIM — see `commitCameraPose`'s centre-looking invariant.
-        if (root.camera.clip === null && sameArm) {
-          store.dispatch(commitCameraPose(live));
-        }
-        state.cameraRuntime.surface = {
-          ...state.cameraRuntime.surface,
-          pointerDown: false,
-          gesture: null,
-        };
-        store.dispatch(endDrag());
-        break;
-      }
-
-      case 'drag':
-        if (!routeToSurface(step)) applyWorldStep(step);
-        break;
-
-      case 'zoom': {
-        state.cameraRuntime.lastZoomFactor.current = step.factor; // debug readout
-        // Both zoom owners route to the anchored step in a body arm: it owns
-        // its range, so `applyWheelZoom` is never consulted there (§7).
-        if (routeToSurface(step)) break;
-        if (step.duringGesture) {
-          applyWorldStep(step);
-          break;
-        }
-        // At rest the register is not rendered, so the notch goes to whichever
-        // driver actually owns the distance this frame.
-        const root = store.getState();
-        const pivot = pivotFraming(selectFocusRow(root));
-        // Ruling 8: an at-rest notch also rides the roll target toward the
-        // nearest body's frame — pre AND post poses go in, so the notch's own
-        // target movement is ridden in full (a no-op outside the band —
-        // `frameAlignedRoll` is where the altitude keying lives). One-deep
-        // memo: `runFrame` re-derives the same instant, so this costs no
-        // second Kepler solve.
-        const bodyStates = deriveBodyStates(
-          deriveSimDays(selectTimeState(root), nowMs),
-        ) as ReadonlyMap<BodyId, BodyState>;
-        const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
-        const upBasis = state.cameraRuntime.upBasis.current;
-        // followBody re-asserts its own target every frame and would swallow a
-        // committed base, so its notch never reaches `applyWheelZoom`: it is
-        // resolved to a distance here and travels to the driver, which adopts
-        // it. A second notch in the same drain resolves off the first (the
-        // aggregator only splits a zoom run a drag interrupts).
-        const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
-        if (
-          root.camera.base.frame === 'absolute' &&
-          state.cameraRuntime.prevActiveId.current === 'followBody' &&
-          followTargetBefore !== null
-        ) {
-          followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);
-          // The ride's authored altitude move IS that target change; feeding
-          // the live pose twice gave it a zero delta and froze the band roll
-          // on the default (focused) path. It lands on `base.roll`, the term
-          // the follow pose lerps toward — and must be committed HERE, above
-          // the store snapshot the drivers resolve against, or the lerp reads
-          // it a frame late. Authored pair, like the branch below: the pre/post
-          // poses live below the projection, or the roll target chases a
-          // forward the commit path never holds.
-          const basePose = root.camera.base.pose;
-          const live = authoredWorldPose(state);
-          const roll = frameAlignedRoll(
-            { ...live, distance: followTargetBefore },
-            { ...live, distance: followDistanceTarget },
-            bodyStates,
-            poseBasis,
-            upBasis,
-          );
-          if (roll !== (basePose.roll ?? 0)) {
-            store.dispatch(commitCameraPose(absoluteArm({ ...basePose, roll })));
-          }
-          break;
-        }
-        // The spin epoch as THIS frame's advance will see it (same `nowMs`,
-        // same `active ? base : null` ref), read without storing: with
-        // auto-rotate switched off between frames the elapsed is 0 and the
-        // notch degrades to the plain zoomed base.
-        const { active, rate } = root.camera.autoRotate;
-        const spinEpoch = advanceEpoch(
-          state.cameraRuntime.epochs.autoRotate,
-          active ? root.camera.base : null,
-          nowMs,
-        );
-        const zoomed = applyWheelZoom({
-          base: root.camera.base,
-          factor: step.factor,
-          spin: { owns: state.cameraRuntime.prevActiveId.current === 'autoRotate', rate },
-          spinElapsedMs: elapsedMs(spinEpoch, nowMs),
-          pivot,
-        });
-        if (zoomed !== null && root.camera.base.frame === 'absolute') {
-          // `base` is centre-looking by wiring (R12-1), so this pre/post pair
-          // is self-consistent under an autoRotate-owned notch too: the
-          // DISPLAYED forward differs only by the render-side tilt projection
-          // — a pure function of altitude, never a committed pose to chase.
-          const roll = frameAlignedRoll(
-            root.camera.base.pose,
-            zoomed,
-            bodyStates,
-            poseBasis,
-            upBasis,
-          );
-          // Register too, not only the store: a drag later in this same drain
-          // folds from the live register (the body-arm branch's I1 twin).
-          register.current = absoluteArm({ ...zoomed, roll });
-          store.dispatch(commitCameraPose(register.current));
-        }
-        break;
-      }
-    }
-  }
-
-  return { followDistanceTarget, follow };
+  runtime.lastPose.current = next.register;
+  runtime.surface = next.surface;
+  if (next.lastZoomFactor !== null) runtime.lastZoomFactor.current = next.lastZoomFactor;
+  // The fold's spin-epoch advance is NOT stored: `advanceEpochs` re-derives the
+  // row against the post-dispatch base, which is what the incumbent read did.
+  for (const action of next.actions) store.dispatch(action);
+  return { followDistanceTarget: next.followDistanceTarget, follow: next.follow };
 }

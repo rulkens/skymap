@@ -22,15 +22,14 @@ import {
   setAutoRotate,
 } from '../../../../src/state/camera/cameraSlice';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { cursorRayBodyLocal } from '../../../../src/utils/camera/cursorRayBodyLocal';
 import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { earthArm } from '../../../fixtures/earthArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
@@ -53,27 +52,6 @@ function makeHarness(distance = 100) {
     canvasSize: 1000,
   });
   return { agg: { push: h.push }, state: h.state, deps: h.deps, store: h.store };
-}
-
-/** Earth's body arm, eye `radii` Earth-radii from the centre, looking at it. */
-function earthArm(radii: number): FramedCameraPose {
-  const earth = deriveBodyStates(CONST_J2000).get('earth')!;
-  const B = ORIENTATION_FRAMES.ecliptic;
-  return {
-    frame: { body: 'earth' },
-    pose: toBodyArm(
-      {
-        target: [...earth.positionMpc] as Vec3,
-        yaw: 0.7,
-        pitch: 0.3,
-        distance: radii * 6371000 * SCALE_UNITS.M_TO_MPC,
-      },
-      B,
-      B,
-      'earth',
-      earth,
-    ),
-  } as FramedCameraPose;
 }
 
 /** Geocentric range of a body arm, metres — the anchor is the body centre. */
