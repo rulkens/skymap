@@ -410,10 +410,11 @@ describe('drainInput', () => {
     expect(moved).toBeLessThan(0.09);
   });
 
-  it('a followed-body notch lands the frame alignment on base.roll', () => {
-    // While followBody owns the wheel (it eases its own distance target and
-    // `applyWheelZoom` commits nothing), the alignment must still ride the
-    // notch — committed via `base.roll`, the term the follow pose lerps toward.
+  it('the follow roll ride fires on the notch\u2019s target change', () => {
+    // While followBody owns the wheel (it eases its own distance target and the
+    // drain commits no base), the alignment must still ride the notch —
+    // committed via `base.roll`, the term the follow pose lerps toward. The
+    // ride's pre/post pair is the swallowed notch's own resolved distance.
     const { agg, state, deps, store } = makeHarness();
     const earth = deriveBodyStates(CONST_J2000).get('earth')!;
     const nearEarth = absoluteArm({
@@ -442,10 +443,12 @@ describe('drainInput', () => {
     state.cameraRuntime.follow = { from: null, distanceTarget: targetBefore, panOffset: [0, 0, 0] };
 
     agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
-    drainInput(state, deps, 0);
+    const { followDistanceTarget } = drainInput(state, deps, 0);
 
-    // The distance went to the follow's own slot, the roll to the base.
-    expect(readFollowMemory(state).distanceTarget).toBeGreaterThan(targetBefore);
+    // The distance comes back for the driver to adopt — the drain writes no
+    // follow memory itself — and the roll goes to the base.
+    expect(followDistanceTarget!).toBeGreaterThan(targetBefore);
+    expect(readFollowMemory(state).distanceTarget).toBe(targetBefore);
     const committed = worldArmOf(store.getState().camera.base);
     expect(committed.distance).toBeCloseTo(2.5 * 6371000 * SCALE_UNITS.M_TO_MPC, 12);
     const moved = Math.abs((committed.roll ?? 0) - 1.4);
@@ -453,9 +456,51 @@ describe('drainInput', () => {
     expect(moved).toBeLessThanOrEqual(0.1 + 1e-12);
   });
 
+  it('floors a swallowed notch at the focused body\u2019s surface', () => {
+    // The notch the follow driver adopts is resolved HERE, so the focused
+    // pivot has to reach that resolution or the wheel walks the driver's
+    // target inside the planet (the absolute floor is 0.048 Earth radii).
+    const { agg, state, deps, store } = makeHarness();
+    const earth = deriveBodyStates(CONST_J2000).get('earth')!;
+    const nearEarth = absoluteArm({
+      target: [...earth.positionMpc] as Vec3,
+      yaw: 0.7,
+      pitch: 0.3,
+      distance: EARTH_RADIUS_MPC * 4,
+    });
+    store.dispatch(commitCameraPose(nearEarth));
+    state.cameraRuntime.lastPose.current = nearEarth;
+    store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'earth',
+          label: 'Earth',
+          positionMpc: [0, 0, 0],
+          radiusM: 6371000,
+        },
+      }),
+    );
+    state.cameraRuntime.prevActiveId.current = 'followBody';
+    state.cameraRuntime.follow = {
+      from: null,
+      distanceTarget: EARTH_RADIUS_MPC * 4,
+      panOffset: [0, 0, 0],
+    };
+
+    // A dive steep enough to blow through the surface in one notch.
+    agg.push({ kind: 'wheel', deltaY: -10_000, duringGesture: false, xPx: 500, yPx: 500 });
+    const { followDistanceTarget } = drainInput(state, deps, 0);
+
+    const radii = followDistanceTarget! / EARTH_RADIUS_MPC;
+    expect(radii).toBeGreaterThan(1);
+    expect(radii).toBeLessThan(1.05);
+  });
+
   it('a FOCUSED zoom-out rides the roll back to the scene up (the default path)', () => {
     // The user's real configuration: Earth focused, followBody owns the wheel
-    // (`applyWheelZoom` scales the follow `distanceTarget`; the driver eases
+    // (the drain resolves the follow `distanceTarget`; the driver eases
     // to it). The notch's authored altitude change IS the `distanceTarget`
     // change, so the ride must run across it — feeding it identical pre/post
     // poses would zero the target delta and leave the in-band roll frozen
@@ -496,26 +541,25 @@ describe('drainInput', () => {
       if (base.frame !== 'absolute') throw new Error('expected absolute base');
       return (base.pose as { roll?: number }).roll ?? 0;
     };
-    const settle = (nowMs: number): void => {
+    // `runFrame`'s adoption played by hand: the drain resolves the swallowed
+    // notch to a distance, the follow driver takes it into its memory, and the
+    // next notch resolves off that.
+    let target = startDist;
+    const notch = (deltaY: number, nowMs: number): void => {
+      agg.push({ kind: 'wheel', deltaY, duringGesture: false, xPx: 500, yPx: 500 });
+      const { followDistanceTarget } = drainInput(state, deps, nowMs);
+      target = followDistanceTarget!;
+      state.cameraRuntime.follow = { from: null, distanceTarget: target, panOffset: [0, 0, 0] };
       // The saturated follow ease: register renders at the target distance
       // carrying base.roll (the follow pose lerps roll toward base).
-      state.cameraRuntime.lastPose.current = absoluteArm(
-        poseAt(readFollowMemory(state).distanceTarget!, rollOfBase()),
-      );
-      void nowMs;
+      state.cameraRuntime.lastPose.current = absoluteArm(poseAt(target, rollOfBase()));
     };
-    for (let i = 0; i < 60; i += 1) {
-      agg.push({ kind: 'wheel', deltaY: 0, duringGesture: false, xPx: 500, yPx: 500 });
-      drainInput(state, deps, i);
-      settle(i);
-    }
+    for (let i = 0; i < 60; i += 1) notch(0, i);
     expect(Math.abs(rollOfBase())).toBeGreaterThan(0.05); // in-band target held
 
     let guard = 0;
-    while (readFollowMemory(state).distanceTarget! / EARTH_RADIUS_MPC - 1 < 0.5 && guard < 30) {
-      agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
-      drainInput(state, deps, 1000 + guard);
-      settle(1000 + guard);
+    while (target / EARTH_RADIUS_MPC - 1 < 0.5 && guard < 30) {
+      notch(100, 1000 + guard);
       guard += 1;
     }
 

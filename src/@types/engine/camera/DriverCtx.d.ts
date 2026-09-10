@@ -21,6 +21,7 @@ export type DriverCtx = {
   readonly simDays: number;
   readonly projection: CameraProjection;
   readonly pivot: PivotFraming;
-  /** This frame's at-rest wheel notch, when the follow driver owns the distance. */
-  readonly zoomToFollow: number | null;
+  /** This frame's notch-resolved follow distance; the follow driver adopts it
+   * into its memory. Null on a frame with no swallowed notch. */
+  readonly followDistanceTarget: number | null;
 };

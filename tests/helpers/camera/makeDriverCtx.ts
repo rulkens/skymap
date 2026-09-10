@@ -32,6 +32,6 @@ export function makeDriverCtx(
     simDays: args.simDays ?? CONST_J2000,
     projection: args.projection ?? { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
     pivot: args.pivot ?? pivotFraming(null),
-    zoomToFollow: args.zoomToFollow ?? null,
+    followDistanceTarget: args.followDistanceTarget ?? null,
   };
 }

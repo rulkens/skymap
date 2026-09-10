@@ -174,12 +174,19 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       // only on this branch; follow re-winning after a drag committed a zoom
       // (`winnerLastFrame !== 'followBody'`, same focus ref) re-captures
       // `base.distance` so the zoom sticks.
+      // A third source is the wheel: `base` is invisible while this row wins
+      // (it re-asserts its own target every frame), so the notch a following
+      // camera swallows arrives already resolved to a distance and is simply
+      // adopted. The drain only routes one with a target already captured and
+      // this row winning last frame, so the three sources never compete.
       let distanceTarget = memory.distanceTarget;
       if (distanceTarget === null) {
         const radiusMpc = focus.radiusM * SCALE_UNITS.M_TO_MPC;
         distanceTarget = bodyFocusDistance(radiusMpc, ctx.projection.fovYRad);
       } else if (ctx.winnerLastFrame !== 'followBody') {
         distanceTarget = base.pose.distance;
+      } else if (ctx.followDistanceTarget !== null) {
+        distanceTarget = ctx.followDistanceTarget;
       }
 
       const t = easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);

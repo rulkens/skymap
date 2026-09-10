@@ -114,7 +114,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // (0) Above the `getState()` below so the gesture edges it dispatches are in
   // the snapshot the driver table resolves against.
-  drainInput(state, deps, nowMs);
+  const { followDistanceTarget } = drainInput(state, deps, nowMs);
 
   // The camera steps run before `deriveFrameContext` so a camera-only-ready
   // frame still makes motion progress before the missing-GPU early return.
@@ -173,8 +173,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       simDays,
       projection: state.cameraRuntime.projection,
       pivot: pivotFraming(rootState.selectionRows.focus),
-      // Task 8 routes the swallowed wheel notch here.
-      zoomToFollow: null,
+      followDistanceTarget,
     },
     state.cameraRuntime.follow,
   );

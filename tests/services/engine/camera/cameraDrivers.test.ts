@@ -503,6 +503,8 @@ describe('runCameraDrivers — elapsed dispatch', () => {
 
 const FOLLOW_SIM_DAYS = CONST_J2000 + 3652.5; // ~10 years past epoch (not J2000).
 const FOLLOW_FOV = 1.0;
+/** A committed base distance nothing else in these fixtures produces. */
+const BASE_DISTANCE = 500;
 
 /** A body focus row (radiusM drives framing; positionMpc is unused — the driver
  * targets the LIVE snapshot position, not the row's). */
@@ -524,6 +526,7 @@ function makeFollowProduce(opts: {
   from?: CameraPose | null;
   distanceTarget?: number | null;
   winnerLastFrame?: string;
+  followDistanceTarget?: number | null;
 }) {
   const follow = CAMERA_DRIVERS.find((d) => d.id === 'followBody')!;
   const mem: FollowMemory = {
@@ -540,6 +543,7 @@ function makeFollowProduce(opts: {
         projection: { fovYRad: FOLLOW_FOV, aspect: 1, near: 0.01, far: 50000 },
         register: absoluteArm(BASE_POSE),
         winnerLastFrame: opts.winnerLastFrame ?? 'followBody',
+        followDistanceTarget: opts.followDistanceTarget ?? null,
       }),
       mem,
     );
@@ -697,6 +701,37 @@ describe('CAMERA_DRIVERS — followBody', () => {
     // Guard the snap-back explicitly: the framing distance is tiny, so
     // 'equals framing' would be a hard failure if the driver re-asserted it.
     expect(result.distance).not.toBeCloseTo(framingDistance, 3);
+  });
+
+  it('a notch under follow lands in the driver\u2019s memory, not the base', () => {
+    // The wheel notch a following camera swallows: the drain resolves it to a
+    // distance and the driver ADOPTS it, because committing it into `base`
+    // would be invisible — this row re-asserts its own target every frame and
+    // the resting driver that renders `base` is not the winner.
+    const NOTCH_TARGET = 250;
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    store.dispatch(
+      commitCameraPose(
+        absoluteArm({ target: [0, 0, 0], yaw: 1.2, pitch: 0.3, distance: BASE_DISTANCE }),
+      ),
+    );
+    const s = store.getState() as unknown as RootState;
+
+    const produceFollow = makeFollowProduce({
+      state: s,
+      from: { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 },
+      distanceTarget: 100,
+      followDistanceTarget: NOTCH_TARGET,
+    });
+    const { pose, memory } = produceFollow(FOCUS_TWEEN_MS * 4);
+
+    // Carried into the memory, so the next frame eases to it rather than
+    // re-asserting the pre-notch target.
+    expect(memory!.distanceTarget).toBe(NOTCH_TARGET);
+    expect(worldArmOf(pose).distance).toBeCloseTo(NOTCH_TARGET, 9);
+    // The base is untouched — the notch never went near it.
+    expect(worldArmOf(store.getState().camera.base).distance).toBe(BASE_DISTANCE);
   });
 });
 
