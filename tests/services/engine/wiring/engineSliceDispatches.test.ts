@@ -393,6 +393,19 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
     const deps: BootstrapDeps = {
       canvas: {} as HTMLCanvasElement,
       cb: { store } as unknown as BootstrapDeps['cb'],
+      home: {
+        pose: () => ({
+          target: [0, 0, 0],
+          distance: 1,
+          yaw: 0,
+          pitch: 0,
+          fovYRad: 1,
+          near: 0.01,
+          far: 100,
+        }),
+        focus: null,
+        seedSelection: () => false,
+      },
       frameRef: { current: () => {} },
       detachControlsRef: { current: null },
       handleRef: { current: null },
@@ -415,6 +428,19 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
     const deps: BootstrapDeps = {
       canvas: {} as HTMLCanvasElement,
       cb: { store } as unknown as BootstrapDeps['cb'],
+      home: {
+        pose: () => ({
+          target: [0, 0, 0],
+          distance: 1,
+          yaw: 0,
+          pitch: 0,
+          fovYRad: 1,
+          near: 0.01,
+          far: 100,
+        }),
+        focus: null,
+        seedSelection: () => false,
+      },
       frameRef: { current: () => {} },
       detachControlsRef: { current: null },
       handleRef: { current: null },

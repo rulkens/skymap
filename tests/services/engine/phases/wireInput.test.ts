@@ -16,6 +16,7 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
+import { EARTH_HOME } from '../../../../src/compositions/earthHome';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 
@@ -204,6 +205,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb,
+    home: EARTH_HOME,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

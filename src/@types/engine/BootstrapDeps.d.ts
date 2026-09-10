@@ -1,5 +1,6 @@
 import type { EngineCallbacks } from './EngineCallbacks';
 import type { EngineHandle } from './EngineHandle';
+import type { EngineHomeConfig } from './EngineHomeConfig';
 import type { AssetSlot } from '../loading/AssetSlot';
 import type { PhaseLocals } from './PhaseLocals';
 
@@ -16,6 +17,9 @@ export type BootstrapDeps = {
   canvas: HTMLCanvasElement;
   /** createEngine arg — UI-callback sink. */
   cb: EngineCallbacks;
+
+  /** createEngine arg — the composition's boot-time home (Task 3 reads it in `wireInput`). */
+  readonly home: EngineHomeConfig;
 
   /**
    * Mutable: forward-declared `frame` binding from `engine.ts`.  The
