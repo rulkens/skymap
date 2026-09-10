@@ -1,14 +1,12 @@
 /**
  * clipFrameChannels — move a keyframe leg's START between frames, through the
  * §5.1 pair in `poseFrameConversion`. Called ONCE per leg, never per frame:
- * re-converting each frame would walk the start along with the body.
- *
- * The pair is lossless in the EYE and the camera basis but carries no orbit
- * pivot, so the target crosses as a POINT through provider A and the range
- * falls out of the two. Coming back, `toWorldArm`'s graze rule re-derives the
- * pivot, so a round trip keeps the eye and the aim exactly and may slide the
- * target along the unchanged sightline. Nothing here converts Mpc↔metres
- * itself — that stays the seam's alone (spec §10, `oneMpcSeam`).
+ * re-converting each frame would walk the start along with the body. The pair is
+ * lossless in the EYE and the basis but carries no orbit pivot, so the target
+ * crosses as a POINT and `toWorldArm`'s graze rule re-derives the pivot coming
+ * back: a round trip keeps eye and aim exactly, and may slide the target along
+ * the unchanged sightline. Nothing here converts Mpc↔metres — that stays the
+ * seam's alone (spec §10, `oneMpcSeam`).
  */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';

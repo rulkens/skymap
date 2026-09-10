@@ -1,9 +1,5 @@
-/**
- * mappedTiltRad — THE display-tilt mapping (rulings 12 + 13, one home):
- * `remembered × bodyUpWeight(h/R)`, reaching exactly 0 at disengage on the same
- * band record as every other orientation authority. Read by BOTH arms, so the
- * engage edge can change ownership but never the image.
- */
+/** THE display-tilt mapping (rulings 12 + 13, one home), read by BOTH arms so
+ * the engage edge changes ownership of the tilt but never the image. */
 
 import { bodyUpWeight } from './bodyUpWeight';
 

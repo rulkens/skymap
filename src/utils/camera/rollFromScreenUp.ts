@@ -1,12 +1,7 @@
-/**
- * rollFromScreenUp — the roll that reproduces `screenUp` through
- * `imagePlaneBasis`. That function rotates the frame pole about the view axis
- * into `up(θ) = e2·cosθ − e1·sinθ`, with `e1 = normalize(forward × upRef)` and
- * `e2 = e1 × forward` its θ=0 axes (the minus is its sinθ term crossing
- * `upRef × forward`), so θ is just the two projections. `forward ∥ upRef`
- * leaves `e1 ≈ 0` and yields 0 — the same pole-aligned degeneracy
- * `imagePlaneBasis` leaves to its callers.
- */
+/** The roll that reproduces `screenUp` through `imagePlaneBasis`, which rotates
+ * the pole into `up(θ) = e2·cosθ − e1·sinθ` about `e1 = normalize(forward ×
+ * upRef)`, `e2 = e1 × forward` — so θ is just the two projections. `forward ∥
+ * upRef` leaves `e1 ≈ 0` and returns 0, that function's own degeneracy. */
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import { normalize3 } from '../math/normalize3';

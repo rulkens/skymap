@@ -1,9 +1,5 @@
-/**
- * The inverse of `mappedTiltRad`, kept beside it so the map and its un-map
- * cannot silently diverge (R12-2) — the inverse writes the remembered-tilt
- * MEMORY, so a fork here would be sticky. Callers guard the degenerate weight
- * (w → 0), where the ratio diverges.
- */
+/** Inverse of `mappedTiltRad`, beside it so map and un-map cannot diverge
+ * (R12-2) — this one writes the MEMORY. Callers guard w → 0, where it blows up. */
 
 import { bodyUpWeight } from './bodyUpWeight';
 

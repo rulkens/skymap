@@ -1,13 +1,11 @@
 /**
  * blendedUpDir — THE reference-up field (ruling 10, one home): the normalized
- * blend of the pole's and the scene up's projections into the given plane,
- * `w·pole_⊥ + (1−w)·sceneUp_⊥`. Any continuous field between two fixed axes
- * has a singular locus (topology, not construction); where the terms are
- * present but CANCELLING, `carryUp` — the pose's own screen-up — stands in,
- * so the field is continuous along the path (hold-and-transport, round 7).
- * `null` = degenerate with nothing to carry; each caller owns its fallback.
- * Both arms read THIS — the engaged settle in the horizontal plane, the
- * world-arm roll target in the image plane — so their targets cannot diverge.
+ * `w·pole_⊥ + (1−w)·sceneUp_⊥` in the given plane. Any continuous field between
+ * two fixed axes has a singular locus (topology, not construction); where the
+ * terms CANCEL, `carryUp` — the pose's own screen-up — stands in, so the field
+ * stays continuous along the path (hold-and-transport, round 7). `null` =
+ * degenerate with nothing to carry; each caller owns its fallback. Both arms
+ * read THIS, so the engaged settle and the world-arm roll cannot diverge.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

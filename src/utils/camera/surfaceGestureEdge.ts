@@ -1,8 +1,5 @@
-/**
- * surfaceGestureEdge — the body arm's gesture boundary on its memory. The
- * pointer edge is the ONLY thing that latches or drops a surface gesture, so
- * `replayInput` and the gesture fixtures share this one spelling of it.
- */
+/** The body arm's gesture boundary on its memory: the pointer edge is the ONLY
+ * thing that latches or drops a surface gesture, so this is its one spelling. */
 
 import type { SurfaceMemory } from '../../@types/camera/SurfaceMemory';
 

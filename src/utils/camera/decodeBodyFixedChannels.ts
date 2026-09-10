@@ -1,13 +1,12 @@
 /**
- * decodeBodyFixedChannels — the four animation channels, read in one body's
- * FIXED axes, as a `BodyFixedPose`. `target` is a body-fixed point in metres,
- * `distance` a range in metres, `yaw`/`pitch` the orbit convention about the
- * body's own axes: `yawPitchToDir` points from the target TOWARD the eye, so
- * the aim is its negation (the same sign flip `reencodePose` documents).
+ * decodeBodyFixedChannels — the four animation channels read in one body's FIXED
+ * axes. `target` is a body-fixed point in METRES, `distance` a range in metres,
+ * `yaw`/`pitch` the orbit convention about the body's own axes: `yawPitchToDir`
+ * points from the target TOWARD the eye, so the aim is its negation (the sign
+ * flip `reencodePose` documents).
  *
- * DECODED, never accumulated (spec §8) — the pole degeneracy that rules angles
- * out as camera state never reaches an authored keyframe. A body-framed
- * keyframe cannot express roll: there is no fifth channel to carry it.
+ * DECODED, never accumulated (spec §8). A body-framed keyframe cannot express
+ * roll — there is no fifth channel to carry it.
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';

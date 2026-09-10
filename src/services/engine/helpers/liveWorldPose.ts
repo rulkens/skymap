@@ -1,11 +1,7 @@
-/**
- * liveWorldPose — the world arm of the DISPLAYED pose (tilt projection included),
- * the one on-screen resolution site. Authoring paths must not read it: the
- * folds resolve the register themselves (`stepCameraRuntime`'s `authoredWorld`),
- * because feeding a projected pose back in re-creates the R12b-1 register walk.
- * It always reads `outputs.simDays` — between frames that is the epoch the last
- * frame DREW at.
- */
+/** The world arm of the DISPLAYED pose (tilt projection included), the one
+ * on-screen resolution site. Authoring paths must NOT read it — feeding a
+ * projected pose back in re-creates the R12b-1 register walk; they resolve the
+ * register themselves. Always at `outputs.simDays`: the epoch last frame DREW. */
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';

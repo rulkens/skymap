@@ -1,12 +1,7 @@
-/**
- * eyeMpcOf — the world eye of an orbit pose, Mpc: `target + distance · dir`,
- * where `dir` is the frame-local `(yaw, pitch)` decode rotated by the STEADY
- * `poseBasis` (never `upBasis` — see `OrbitCameraInit.d.ts`).
- *
- * One derivation, two readers: `updatePosition` delegates here, and the regime
- * predicate reads the same eye (spec §4). `poseBasis === undefined` is the
- * identity frame, the convention `rotateVec3ByTightMat3` already carries.
- */
+/** eyeMpcOf — the world eye of an orbit pose, Mpc: `target + distance · dir`,
+ * `dir` being the frame-local `(yaw, pitch)` decode rotated by the STEADY
+ * `poseBasis` (never `upBasis` — see `OrbitCameraInit.d.ts`). One derivation for
+ * `updatePosition` and the regime predicate (spec §4); `undefined` = identity. */
 
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { Mat3 } from '../../@types/math/Mat3';
@@ -14,9 +9,8 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { yawPitchToDir } from './yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
 
-// Module scratch reused every call so the per-frame path never allocates. Two
-// buffers, not one: the matrix–vector product reads all three input components
-// while writing its output, so the decode and the rotation cannot share.
+// Module scratch so the per-frame path never allocates. TWO buffers: the
+// matrix-vector product reads all three inputs while writing its output.
 const scratchDir: Vec3 = [0, 0, 0];
 const scratchWorld: Vec3 = [0, 0, 0];
 

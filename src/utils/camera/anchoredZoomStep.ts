@@ -3,11 +3,10 @@
  * `eye′ = anchor + factor · (eye − anchor)`, no accumulator anywhere (FW-B).
  *
  * The anchor is the cursor's body-local pick in BOTH wheel directions (ruling
- * #7); a miss falls back to the surface point under the eye, which keeps the
- * step an altitude scale there. For any anchor `A` with `eye·Â ≥ |A|` — which
- * the floor below guarantees — `eye′·Â = |A| + f·(eye·Â − |A|) ≥ |A|` for all
- * `f ≥ 0`, so no tangent-plane overshoot guard is needed. The caller derives
- * `factor` from the centre-measured range, never from `|eye − anchor|`.
+ * #7); a miss falls back to the surface point under the eye, keeping the step
+ * an altitude scale. With `eye·Â ≥ |A|` — which the floor below guarantees —
+ * `eye′·Â = |A| + f·(eye·Â − |A|) ≥ |A|` for all `f ≥ 0`, so no tangent-plane
+ * overshoot guard is needed. `factor` is centre-measured, never `|eye − A|`.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';

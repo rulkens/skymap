@@ -1,15 +1,12 @@
 /**
- * cameraDebugSnapshotOf — pure projection for the DebugPanel's "Camera"
- * section. Takes the primitives `runFrame`'s fold already resolved (never
- * recomputes the regime) and derives the orientation pipeline through the same
- * helpers the live path uses (`bandRollTarget`, `blendedEnuAt`,
- * `bodyRelativePose`), so the readout cannot drift from the mechanism — the
- * heading is measured in the band-blended reference the engaged settle
- * converges against, never the raw pole frame.
- *
- * The epoch-mismatch floor is in `liveSimDays`'s own currency, so it scales
- * with the time-ladder rate: `deriveSimDays` is affine in `nowMs` for a fixed
- * `time`, so its slope over two seconds of poll jitter is the floor (I4).
+ * cameraDebugSnapshotOf — pure projection for the DebugPanel's "Camera" section.
+ * Takes the primitives `runFrame`'s fold already resolved (never recomputes the
+ * regime) and derives the orientation pipeline through the SAME helpers the live
+ * path uses, so the readout cannot drift from the mechanism: heading is measured
+ * in the band-blended reference the engaged settle converges against. The
+ * epoch-mismatch floor is in `liveSimDays`'s own currency: `deriveSimDays` is
+ * affine in `nowMs` for a fixed `time`, so its slope over two seconds of poll
+ * jitter is the floor (I4).
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';

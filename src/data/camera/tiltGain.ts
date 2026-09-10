@@ -1,7 +1,3 @@
-/**
- * The tilt handle's own rate multiplier (user feel ruling, 2026-09-03): tilting
- * spans ~90° of travel where orbit spans a hemisphere, so the shared
- * one-FOV-per-screen-height rate reads as sluggish there, and this breaks that
- * rate law for this handle only.
- */
+/** The tilt handle's own rate multiplier: it spans ~90° where orbit spans a
+ * hemisphere, so it alone breaks the one-FOV-per-screen-height rate law. */
 export const TILT_GAIN = 1.6;
