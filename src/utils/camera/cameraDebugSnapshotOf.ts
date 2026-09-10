@@ -32,7 +32,6 @@ import { bodyUpWeight } from './bodyUpWeight';
 import { refAzimuthOf } from './refAzimuthOf';
 import { rotateVec3ByTightMat3T } from '../math/rotateVec3ByTightMat3T';
 import { imagePlaneBasis } from './imagePlaneBasis';
-import { maxTiltRad } from './maxTiltRad';
 import { rollFromScreenUp } from './rollFromScreenUp';
 import { tiltFromNadirRad } from './tiltFromNadirRad';
 import { mat3FromColumns } from '../math/mat3FromColumns';
@@ -105,7 +104,6 @@ export function cameraDebugSnapshotOf(input: {
   const radiusM =
     bodyId !== null ? SCENE_BODIES.find((row) => row.id === bodyId)?.radiusM : undefined;
   const altitudeM = hr !== null && radiusM !== undefined ? hr * radiusM : null;
-  const ceilingRad = hr !== null ? maxTiltRad(hr) : null;
 
   const rollRad = worldPose.roll ?? 0;
   const forwardRaw: Vec3 = [
@@ -173,7 +171,6 @@ export function cameraDebugSnapshotOf(input: {
     altitudeM,
     distanceMpc: worldPose.distance,
     orientationFrame,
-    ceilingRad,
     bandUpWeight: hr !== null ? bodyUpWeight(hr) : null,
     rememberedTiltRad,
     headingRad,

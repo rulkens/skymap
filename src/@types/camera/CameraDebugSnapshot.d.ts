@@ -18,8 +18,6 @@ export type CameraDebugSnapshot = {
   readonly distanceMpc: number;
   /** `settings.orientation` — the configured scene frame. */
   readonly orientationFrame: string;
-  /** `maxTiltRad(hOverR)` — the tilt ceiling here; null with `hOverR`. */
-  readonly ceilingRad: number | null;
   /** `bodyUpWeight(hOverR)` — BOTH arms' pole↔scene-up blend weight (ruling 10). */
   readonly bandUpWeight: number | null;
   /** The session's Cesium-style remembered tilt (ruling 12), radians. */

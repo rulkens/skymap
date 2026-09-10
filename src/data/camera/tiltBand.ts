@@ -16,6 +16,8 @@ export const TILT_BAND = {
   fullHR: 0.06,
   /** h/R at or above which it is the scene up (zero tilt). */
   zeroHR: 0.6,
+  /** The only cap on the remembered tilt: π = zenith, altitude-free (Cesium's `maximumPitch`). */
+  maxRad: Math.PI,
 };
 
 /** Slider ranges + the same ×1.1 window floor the surface band keeps. */

@@ -242,10 +242,6 @@ export const SURFACE_REGIME = {
   engageHR: 0.45,
   /** h/R at which it hands back. 2× hysteresis, kept from Q6 (ruling 19). */
   disengageHR: 0.9,
-  /** Tilt ceiling at ground level: π = zenith, reached via look mode (Q5). */
-  tiltMaxRad: Math.PI,
-  /** h/R below which the full ceiling is open. Feel-tunable (Q5). */
-  tiltFullHR: 0.02,
 } as const;
 ```
 
@@ -447,8 +443,8 @@ force a fresh anchor pick after an overshoot past the anchor's tangent plane
 (C §6.7); gate the approach on _closing distance_, never on absolute altitude
 (C #11107 — an altitude gate cannot predict a collision).
 
-**(c) Tilt about a ground point, and (d) look about the eye.** Two routes under
-**one** ceiling (ruled, Q5). Tilt orbits the pose about the latched ground
+**(c) Tilt about a ground point, and (d) look about the eye.** Two routes into
+**one** tilt memory (ruled, Q5). Tilt orbits the pose about the latched ground
 anchor: heading about the anchor's local up, then tilt about the
 _already-yawed_ east — the intrinsic Z-X-Z order KML specifies, which the probe
 measured as load-bearing (tilting about a fixed screen axis dragged ~10° of
@@ -458,35 +454,19 @@ already forbids that. Look rotates the basis about the eye, which never moves �
 this is the only route to the sky, and the probe proved it out (eye and
 altitude held to the bit while heading stayed live at full tilt).
 
-**The ceiling.**
+**The ceiling.** There is none. A tilt drag may raise the view to the horizon
+and past it at any altitude; the remembered tilt's one cap is the constant
+`TILT_BAND.maxRad = π` (Cesium's altitude-free `maximumPitch`), applied where
+`surfaceStep` writes the memory. The invariant the Q4 identity was buying —
+`tilt = 0` at the disengage boundary, so the outbound pose's forward axis points
+at the body centre and survives the world arm's pivot pin — is now carried by
+`TILT_BAND.zeroHR ≤ SURFACE_REGIME.disengageHR`: display tilt is
+`remembered × bodyUpWeight(h/R)` (ruling 12) and that weight is already 0 at the
+flip. One altitude ramp over tilt, not two (ruling 10).
 
-```ts
-// src/utils/camera/maxTiltRad.ts
-export function maxTiltRad(hOverR: number): number; // = tiltMaxRad · smoothstep(disengageHR, tiltFullHR, hOverR)
-```
-
-180° at ground level closing smoothly to **exactly 0° at
-`SURFACE_REGIME.disengageHR`** — the Q4 identity, one shared constant, one
-assertion (`maxTiltRad(disengageHR) === 0`). With the shipped values the curve
-crosses 90° at `(disengage + full)/2 = 0.46 R ≈ 2,930 km`, i.e. the horizon is
-reachable right where the regime engages and the sky opens below that; both are
-feel-tunable, no published reference exists for either (M §3).
-
-**Enforcement is orientation-only, applied after every write to the body arm**:
-recompute the ENU at the new standpoint and turn the basis by each limit's
-residual — `tilt − min(tilt, maxTilt(h/R))` about the yawed east, and the
-heading residual about the local vertical (§12-R4b: by residual, never as an
-absolute rebuild, which would discard roll). The eye never moves. The same
-curve limits the **heading** on a receding zoom write — the north-up return of
-§12-R4b, one authority scalar for both angles; a drag's heading is unclamped,
-and an approach carries its own north-up rule instead (§12-R4b). This is Cesium's
-HPR-recapture-per-zoom-step generalized (C §3.4, PR #5603) and it buys three
-things at once: a zoom-out re-levels against the new local vertical instead of
-drifting toward the horizon; the camera converges to top-down with no untilt
-tween anywhere; and the pose reaching the disengage boundary has `tilt = 0`, so
-its forward axis points at the body centre and it survives the world regime's
-pivot pin unchanged. That last property is what the Q4 invariant actually buys,
-and it is why the ceiling's zero must sit exactly at the disengage threshold.
+A receding zoom write still walks heading north-up, priced per notch by
+`ORIENT_DECAY`, and the collision floor still bounds a lowering drag
+(`tiltFloorBudgetRad`) — neither reads an altitude ramp.
 
 **Written down now, zero LOC** (DESIGN-INPUT §8, C landmines #6, X §4 item 3):
 a coast, if one is ever added, replays in the body-fixed frame — ground-fixed,
@@ -650,8 +630,8 @@ Each is a requirement on the engaged arm, and each is one test:
   over a body with a **tilted pole** and a
   non-identity orientation (the FW-F reviewer's fixture shape; the
   quaternion-order landmine O §2.1 is what it catches).
-- `maxTiltRad(SURFACE_REGIME.disengageHR) === 0`, asserted against the record,
-  not a literal.
+- `TILT_BAND.zeroHR <= SURFACE_REGIME.disengageHR`, asserted against the
+  records, not literals.
 - Grep: no module stores a regime flag; the arm tag is the only discriminant
   (§4). Grep: the amended one-seam test (§10).
 - A gesture in flight cannot change the arm.
@@ -861,7 +841,6 @@ src/services/camera/surfaceController.ts          (gestures → new body arm)
 src/utils/camera/cursorRayBodyLocal.ts
 src/utils/camera/anchoredDragRotation.ts
 src/utils/camera/anchoredZoomStep.ts
-src/utils/camera/maxTiltRad.ts
 tests/** mirroring the above
 
 (`reanchoredPose.ts` and `surfaceReadoutOf.ts` shipped here and were deleted
@@ -905,8 +884,7 @@ Untouched: every slab, layer, shader and renderer file; the tile pipeline; the
 asserting pose exactness and provider A/B agreement at the flip; the anchored
 drag rotation against hand-computed two-ray fixtures at the equator, at 80°
 latitude, and across the pole; the zoom round trip (260 out, 260 in, cursor
-parked) asserting return-to-start; `maxTiltRad` against the invariant and the
-90°-crossing; the nadir escape (heading from the up vector inside ~0.08° of
+parked) asserting return-to-start; the nadir escape (heading from the up vector inside ~0.08° of
 vertical) and its pole escape, now pinned via `refAzimuthOf` /
 `tiltFromNadirRad`.
 

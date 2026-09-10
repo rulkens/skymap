@@ -1,7 +1,7 @@
 /**
  * engageFlipPop — a focused zoom-IN through the engage flip must hand the
- * orientation settle over seamlessly. A two-curve seam (world roll target
- * keyed to `maxTiltRad`, engaged reference to `bodyUpWeight`) would make the
+ * orientation settle over seamlessly. A two-curve seam (world roll target on
+ * one altitude ramp, engaged reference on another) would make the
  * target jump ~0.12 rad AT the flip, which the capped decay would then walk
  * out over ~8 notches — an end-of-dive roll pop. The measure is image turn per
  * unit of blend WEIGHT: the unified field spends a fixed angle per unit w, so

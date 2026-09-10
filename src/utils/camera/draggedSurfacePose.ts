@@ -120,8 +120,8 @@ export function draggedSurfacePose(
   // the lowering side (negative request) is bounded, and by the exact
   // through-zero rotation about this axis rather than by the tilt readout — an
   // unsigned acos cannot say which way is down and once bound the wrong side
-  // entirely (R13-1). The raising side stays owned by the ceiling wall; the
-  // heading factor is untouched, so a mixed drag keeps its yaw live.
+  // entirely (R13-1). The raising side is unbounded here; the heading factor
+  // is untouched, so a mixed drag keeps its yaw live.
   const tiltRequest = -pitchRad * TILT_GAIN;
   const fwdArm: Vec3 = [arm.basisLocal[6], arm.basisLocal[7], arm.basisLocal[8]];
   const tiltAngle =

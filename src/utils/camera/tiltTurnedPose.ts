@@ -10,7 +10,7 @@ import { quatFromAxisAngle } from '../math/quatFromAxisAngle';
  * The pose tilted by `dTiltRad` (+ raises the view toward the horizon) about
  * the east of forward's own heading — `forward × up̂`, the axis the tilt
  * handle drags about, so heading and roll are untouched. The one tilt
- * geometry for the zoom settle and the drag wall. At exact nadir the axis
+ * geometry the zoom settle turns by. At exact nadir the axis
  * vanishes: a raising turn tips about screen-right (the lerp-in toward a
  * remembered tilt); anything else returns the pose BY REFERENCE, which the
  * full-pose byte bars pin.

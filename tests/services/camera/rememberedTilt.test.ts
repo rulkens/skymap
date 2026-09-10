@@ -12,7 +12,6 @@ import { describe, it, expect, afterEach } from 'vitest';
 
 import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
-import { maxTiltRad } from '../../../src/utils/camera/maxTiltRad';
 import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
 import { setTiltBand, TILT_BAND } from '../../../src/data/camera/tiltBand';
@@ -218,40 +217,5 @@ describe('remembered tilt (ruling 12)', () => {
     // Loose against the anchored pair's own walk (~1e-3, F6), tight against
     // the erosion `remembered = display` would spend: devPre = display·(1−w).
     expect(Math.abs(tiltOf(pose) - display)).toBeLessThan(0.005);
-  });
-
-  it('the drag wall never erodes the band-mapped display (reconciliation 1)', () => {
-    ORIENT_TUNING.blendSpace = 'lin';
-    // The reconciliation only BITES where the mapped display outruns the drag
-    // ramp, and the ceiling ramp spans (tiltFullHR, disengageHR): a blend band
-    // strictly inside it — the 2026-09-10 defaults — is under the ceiling
-    // everywhere, so the wall is unreachable there. Widen the (session-tunable)
-    // band onto the regime edges, the widest the cap allows, to reach it.
-    setTiltBand({ fullHR: SURFACE_REGIME.engageHR, zeroHR: SURFACE_REGIME.disengageHR });
-    const c = makeSurfaceDriver();
-    let pose = raiseTiltTo(c, poseAt([0, 0, 1.1], NADIR), 2.8); // deep, ceiling slack
-    const remembered = c.rememberedTiltRad();
-    expect(remembered).toBeGreaterThan(2.8);
-
-    // Recede into the window until the mapped display exceeds the drag ramp.
-    // The ceiling ramp is wider than the up-weight ramp even at this band, so
-    // the premise below only holds close to engage, not mid-band.
-    let hr = 0;
-    const target = SURFACE_REGIME.engageHR * 1.1;
-    while (hr < target) {
-      pose = apply(c, pose, zoom(Math.exp(0.1)));
-      hr = hrOf(pose);
-    }
-    const display = tiltOf(pose);
-    expect(display).toBeCloseTo(remembered * bodyUpWeight(hr), 2);
-    expect(display).toBeGreaterThan(maxTiltRad(hr) + 0.2); // premise: above the ramp
-
-    // A tilt drag here may not ADD past the mapped ceiling — and the old
-    // wall's decay of "excess" must not eat the legitimate mapped display
-    // (that decay was a 0.25·excess ≈ 0.08 cut on this fixture).
-    c.onGestureStart();
-    pose = apply(c, pose, tiltDrag(1));
-    c.onGestureEnd();
-    expect(Math.abs(tiltOf(pose) - display)).toBeLessThan(0.01);
   });
 });

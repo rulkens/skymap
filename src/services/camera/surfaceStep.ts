@@ -16,7 +16,7 @@ import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
-import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
+import { TILT_BAND } from '../../data/camera/tiltBand';
 import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
 import { bodyUpWeight } from '../../utils/camera/bodyUpWeight';
 import { draggedSurfacePose } from '../../utils/camera/draggedSurfacePose';
@@ -26,7 +26,6 @@ import { latchSurfaceGesture } from '../../utils/camera/latchSurfaceGesture';
 import { levelledPose } from '../../utils/camera/levelledPose';
 import { surfaceZoomStep } from '../../utils/camera/surfaceZoomStep';
 import { unmappedTiltRad } from '../../utils/camera/unmappedTiltRad';
-import { walledTiltPose } from '../../utils/camera/walledTiltPose';
 
 type SurfaceStepCtx = {
   readonly viewportPx: Readonly<Vec2>;
@@ -78,22 +77,17 @@ export function surfaceStep(
   // as the two `pointerDown` writes; nothing latches here with the pointer up.
   if (step.kind !== 'drag' || !prev.pointerDown) return { pose: arm, next: prev };
   const gesture = prev.gesture ?? latchSurfaceGesture(arm, step, viewportPx, fovYRad, bodyRadiusM);
-  // The step's ENTRY orientation: the tilt the wall grandfathers, and the
-  // heading pan transports. Drags level against the PURE body ENU — the
-  // band blend is the zoom's authority; a drag-created deviation from the
-  // blend is "unauthored" and the next notch's decay settles it.
+  // The step's ENTRY heading, which pan transports. Drags level against the
+  // PURE body ENU — the band blend is the zoom's authority; a drag-created
+  // deviation from the blend is "unauthored" and the next notch's decay
+  // settles it.
   const preInPoleFrame = eyeFrameOf(arm, 1, BODY_LOCAL_FRAME.pole);
   const { pose, mode } = draggedSurfacePose(arm, gesture, step, viewportPx, fovYRad);
   // One floor site, after every position write — `anchoredZoomStep` owns
-  // its own, so the zoom arm above is already floored. The wall and the
-  // level run on the FLOORED pose: the floor moves the eye radially, and
-  // the ENU they settle against has to be the final standpoint.
-  const walled = walledTiltPose(
-    flooredBodyPose(pose, bodyRadiusM),
-    preInPoleFrame?.tiltRad ?? 0,
-    bodyRadiusM,
-    prev.rememberedTiltRad,
-  );
+  // its own, so the zoom arm above is already floored. The level runs on the
+  // FLOORED pose: the floor moves the eye radially, and the ENU it settles
+  // against has to be the final standpoint.
+  const floored = flooredBodyPose(pose, bodyRadiusM);
   // Drags stay heading-free (ruled) — only zoom walks north up — but no drag
   // may ROLL: pan and orbit hold their entry heading (the transport that makes
   // holonomy unrepresentable), look and tilt level around the heading they
@@ -102,8 +96,8 @@ export function surfaceStep(
   // the limb (~0.03 rad over 30 steps, measured), settled by the next notch.
   const final =
     mode === 'strafe' || preInPoleFrame === null
-      ? walled
-      : levelledPose(walled, {
+      ? floored
+      : levelledPose(floored, {
           blendW: 1,
           sceneUpLocal: BODY_LOCAL_FRAME.pole,
           heldAzimuthRad: mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
@@ -114,15 +108,15 @@ export function surfaceStep(
   // Ruling 12: tilt-authoring handles update the memory. Un-mapping
   // through the band weight keeps the just-set display a FIXED POINT of
   // the zoom mapping — a notch at the set altitude must not move it
-  // (zoom never authors tilt). Near w → 0 the ratio diverges: the
-  // tiltMaxRad clamp is the sane ceiling, and a degenerate weight leaves
-  // the memory untouched (no intent is readable there).
+  // (zoom never authors tilt). Near w → 0 the ratio diverges: `maxRad` is
+  // the only cap on the memory, and a degenerate weight leaves it
+  // untouched (no intent is readable there).
   let rememberedTiltRad = prev.rememberedTiltRad;
   if (mode === 'tilt' || mode === 'look') {
     const f = eyeFrameOf(final, 1, BODY_LOCAL_FRAME.pole);
     const hr = Math.hypot(...bodyFixedEyeM(final)) / bodyRadiusM - 1;
     if (f !== null && bodyUpWeight(hr) > 1e-6) {
-      rememberedTiltRad = Math.min(unmappedTiltRad(f.tiltRad, hr), SURFACE_REGIME.tiltMaxRad);
+      rememberedTiltRad = Math.min(unmappedTiltRad(f.tiltRad, hr), TILT_BAND.maxRad);
     }
   }
   return {

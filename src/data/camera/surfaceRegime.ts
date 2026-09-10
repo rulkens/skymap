@@ -1,7 +1,7 @@
 /**
  * Thresholds governing when the body-fixed surface camera arm engages. The band
  * edges are LIVE-TUNABLE (ruling 11) and session-only — every consumer (regime
- * hysteresis, `maxTiltRad` ramp, debug readout) reads THIS record at call time.
+ * hysteresis, debug readout) reads THIS record at call time.
  * The orientation blend moved to its own `TILT_BAND` (user ruling 2026-09-10,
  * revising ruling 10), which `setSurfaceBand` re-settles so its zero edge never
  * outlives disengage. Writes go through `setSurfaceBand`.
@@ -14,10 +14,6 @@ export const SURFACE_REGIME = {
   engageHR: 0.45,
   /** h/R at which it hands back: 2× hysteresis (ruling 19). */
   disengageHR: 0.9,
-  /** Tilt ceiling at ground level: π = zenith, reached via look mode (Q5). */
-  tiltMaxRad: Math.PI,
-  /** h/R below which the full ceiling is open. Feel-tunable (Q5). */
-  tiltFullHR: 0.02,
 };
 
 /** Slider ranges + the hysteresis floor (disengage ≥ engage × minRatio). */

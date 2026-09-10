@@ -302,9 +302,8 @@ describe('surfaceStep', () => {
   });
 
   it('leaves the eye bit-identical under free-look while the heading turns', () => {
-    // Pitched 30° up at 0.1 R (the ceiling is open there), so the camera's
-    // own up is NOT the local vertical: yawing about the wrong one of the two
-    // rolls the horizon.
+    // Pitched 30° up at 0.1 R, so the camera's own up is NOT the local
+    // vertical: yawing about the wrong one of the two rolls the horizon.
     const c = makeSurfaceDriver();
     const cos30 = Math.cos(Math.PI / 6);
     const start = poseAt([0, 0, 1.1], [1, 0, 0, 0, -0.5, cos30, 0, cos30, 0.5]);
@@ -419,8 +418,8 @@ describe('surfaceStep', () => {
     // Recession converges toward the canonical framing through the SAME
     // capped decay the approach uses — from 2.4 rad of held tilt no notch may
     // turn the view by more than the per-axis cap sum, and the staircase still
-    // lands on nadir. Clamping the whole excess to the altitude ceiling in one
-    // tick instead would produce a 153°-class snap from large residuals.
+    // lands on nadir. Clamping the whole excess in one tick instead would
+    // produce a 153°-class snap from large residuals.
     const c = makeSurfaceDriver();
     let pose = poseAt([0, 0, 2], basisAtTilt(2.4));
     let lastTilt = bodyAngle(pose);
@@ -682,10 +681,8 @@ describe('surfaceStep', () => {
     // remembered tilt is 0, so the band target is 0 at every altitude and the
     // notch moves it not at all — the decay is isolated even though the notch
     // must now carry real zoom to buy any. Heading 0 keeps the whole basis
-    // turn attributable to tilt. (The old
-    // ceiling-wall crossing invariant is superseded by ruling 12: driven
-    // recessions cross disengage at exactly 0 because the band weight does —
-    // pinned in rememberedTilt.test.ts.)
+    // turn attributable to tilt. (Driven recessions cross disengage at
+    // exactly 0 because the band weight does — pinned in rememberedTilt.test.ts.)
     const c = makeSurfaceDriver();
     const start = poseAt([0, 0, 3], basisAtTilt(1.4));
     const out = apply(c, start, zoom(1.5, false));
@@ -809,8 +806,8 @@ describe('surfaceStep', () => {
     // off screen-up. Nulling forward's takes this dive THROUGH north-up at
     // notch 14 and back out to 1.38 rad — the correction driving the error.
     // Starting at h/R 2 also keeps the recession-only guard honest: forward's
-    // azimuth reads π up here while the ceiling is 1.17, so a direction-blind
-    // heading clamp would fire on the way DOWN and unpin the cursor.
+    // azimuth reads π up here, so a direction-blind heading clamp would fire
+    // on the way DOWN and unpin the cursor.
     const c = makeSurfaceDriver();
     let pose = poseAt([0, 0, 3], NADIR);
     const anchor0 = pickThrough(pose, [58, 50])!;
@@ -828,9 +825,8 @@ describe('surfaceStep', () => {
   it('leaves a drag’s heading alone where a zoom notch would walk it north', () => {
     // Same pose, one write each: the zoom decays the heading toward north and
     // the drag does not (ruled: drags stay heading-free; only zoom writes
-    // re-orient). The drag's own wall and level must be near-exact no-ops on
-    // this roll-free, below-ceiling pose. Tilt 0.35 keeps the screen-centre
-    // ray off the body (limb 0.31 from up here): the zoom's anchor is then
+    // re-orient). The drag's own level must be a near-exact no-op on this
+    // roll-free pose. Tilt 0.35 keeps the screen-centre ray off the body (limb 0.31 from up here): the zoom's anchor is then
     // the sub-eye point, whose radial passes through the eye, making the
     // heading step the exact cap.
     const start = poseAt([0, 0, R * 3.25], basisAt(1.2, 0.35));
@@ -876,32 +872,6 @@ describe('surfaceStep', () => {
     expect(angleBetween(upCol, north)).toBeLessThan(0.01);
   });
 
-  it('the tilt wall denies a gesture’s own excess but eases an inherited one', () => {
-    // C1's tilt half, both sides of it. At the disengage altitude the ceiling
-    // is 0. A look drag pitching up from nadir is simply not granted the tilt
-    // (a wall the gesture presses against — continuous, proportional to the
-    // hand, eye untouched); a pose that ARRIVED above the ceiling loses at
-    // most one capped decay step per touch — never the 113°-in-one-tick snap.
-    const boundary = R * (1 + SURFACE_REGIME.disengageHR);
-
-    const walled = makeSurfaceDriver();
-    walled.onGestureStart();
-    const fromNadir = poseAt([0, 0, boundary], NADIR);
-    // From the boundary the disc fills the 90° view (limb at 1.02 tan units),
-    // so the sky press sits just past the top edge — pixels are only ray
-    // coordinates here — and latches free look.
-    const pitched = apply(walled, fromNadir, drag('orbit', [50, -10], [50, -60]));
-    expect(pitched.eyeRelAnchorM).toEqual(fromNadir.eyeRelAnchorM);
-    expect(bodyAngle(pitched)).toBeLessThan(1e-9);
-
-    const eased = makeSurfaceDriver();
-    eased.onGestureStart();
-    const arrived = poseAt([0, 0, boundary], basisAtTilt(1.0));
-    const touched = apply(eased, arrived, drag('orbit', [50, 10], [51, 10]));
-    expect(bodyAngle(touched)).toBeGreaterThan(1.0 - 0.1 - 0.02);
-    expect(bodyAngle(touched)).toBeLessThan(1.0);
-  });
-
   it('the tilt floor is DEAD: a lowering drag at tilt 0 moves nothing (rulings 14+17)', () => {
     // Drag-DOWN is the tilt-lowering direction (ruling 17). At tilt exactly 0
     // the through-zero budget is 0, so the whole gesture — TILT_GAIN, 200 px
@@ -923,7 +893,7 @@ describe('surfaceStep', () => {
     // NEAR side (eye y POSITIVE here), not through nadir to the far side.
     const c = makeSurfaceDriver();
     c.onGestureStart();
-    const h = TILT_BAND.fullHR; // the band's full edge: w = 1, ceiling open
+    const h = TILT_BAND.fullHR; // the band's full edge: w = 1
     const alpha = (10 / 100) * FOV * TILT_GAIN;
     const out = apply(c, poseAt([0, 0, 1 + h], NADIR), drag('pan', [50, 50], [50, 40]));
     const eye = eyeOf(out);
@@ -946,7 +916,7 @@ describe('surfaceStep', () => {
     // on repeated lowering drags instead of settling.
     const c = makeSurfaceDriver();
     c.onGestureStart();
-    const h = 0.1; // h/R 0.1: in-band, the ceiling is open for the raise
+    const h = 0.1; // h/R 0.1: in-band
     let pose = apply(c, poseAt([0, 0, 1 + h], NADIR), drag('pan', [50, 50], [50, 10]));
     c.onGestureEnd();
     expect(eyeOf(pose)[1]).toBeLessThan(0); // near side — the raise never crossed

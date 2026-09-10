@@ -1,6 +1,6 @@
 /** The view's polar angle off straight-down, [0, π]. Deliberately UNSIGNED: a
  * sign needs a rotation axis, which is `tiltFloorBudgetRad`'s question (R13-1).
- * One home for `eyeFrameOf` and the tilt wall. */
+ * One home for `eyeFrameOf` and the two arms' settles. */
 
 import type { Vec3 } from '../../@types/math/Vec3';
 
