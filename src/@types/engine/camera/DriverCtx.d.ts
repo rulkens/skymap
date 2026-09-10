@@ -9,6 +9,7 @@ import type { CameraPose } from '../../camera/CameraPose';
 import type { CameraProjection } from '../../camera/CameraProjection';
 import type { DriverId } from './DriverId';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { Mat3 } from '../../math/Mat3';
 import type { RootState } from '../../../store/types';
 
 export type DriverCtx = {
@@ -20,6 +21,9 @@ export type DriverCtx = {
   /** World arm of `register`; the follow capture reads its eye. */
   readonly authoredWorld: CameraPose;
   readonly winnerLastFrame: DriverId;
+  /** The frame's COMMITTED orientation basis (`stepCameraRuntime`); the live
+   * `upBasis` is the fold's, and no driver reads it. */
+  readonly poseBasis: Mat3;
   /** Julian days. */
   readonly simDays: number;
   readonly projection: CameraProjection;

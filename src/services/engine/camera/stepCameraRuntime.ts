@@ -123,6 +123,7 @@ export function stepCameraRuntime(
       // Against the PREVIOUS frame's up-basis: produce precedes the basis resolve.
       authoredWorld: resolveWorldArm(drained.register, bodies, poseBasis, prev.outputs.upBasis),
       winnerLastFrame: prev.register.winner,
+      poseBasis,
       simDays,
       projection,
       bodies,

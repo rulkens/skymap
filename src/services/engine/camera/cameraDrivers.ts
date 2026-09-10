@@ -112,7 +112,7 @@ function followPose(
   let from = memory.from;
   if (from === null) {
     const cur = ctx.authoredWorld;
-    const pb = ORIENTATION_FRAMES[s.settings.orientation];
+    const pb = ctx.poseBasis;
     const eye = eyeMpcOf(cur, pb);
     const rel: Vec3 = [livePos[0] - eye[0], livePos[1] - eye[1], livePos[2] - eye[2]];
     const ang = orbitAnglesLookingAlong(rel, pb);
@@ -201,7 +201,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         playback: clip,
       });
       return {
-        pose: framedClipArm(evaluated, pinned, ORIENTATION_FRAMES[s.settings.orientation]),
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis),
         memory: mem,
       };
     },
@@ -269,7 +269,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         playback: tween,
       });
       return {
-        pose: framedClipArm(evaluated, pinned, ORIENTATION_FRAMES[s.settings.orientation]),
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis),
         memory: mem,
       };
     },
