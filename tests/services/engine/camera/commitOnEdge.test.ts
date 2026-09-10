@@ -21,12 +21,8 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
-import {
-  elapsedForWinner,
-  runCameraDrivers,
-} from '../../../../src/services/engine/camera/cameraDrivers';
+import { elapsedForWinner, pickWinner } from '../../../../src/services/engine/camera/cameraDrivers';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
-import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
 import { commitOnEdge } from '../../../../src/services/engine/camera/commitOnEdge';
 import {
   advanceEpoch,
@@ -65,7 +61,8 @@ function simulateFrame(
 
   // Step 1: the epoch advance at the winner (the clip row as the player would
   // hand it over), then produce off the advanced rows.
-  const currActiveId = activeDriverId(drivers, rootState);
+  const currWinner = pickWinner(drivers, rootState);
+  const currActiveId = currWinner.id;
   const prevEpochs = engineState.cameraRuntime.epochs;
   const epochs = advanceEpochs(prevEpochs, {
     intent: rootState.camera,
@@ -75,8 +72,7 @@ function simulateFrame(
     nowMs,
   });
   engineState.cameraRuntime = { ...engineState.cameraRuntime, epochs };
-  const { pose, winner } = runCameraDrivers(
-    drivers,
+  const { pose } = currWinner.pose(
     makeDriverCtx({
       state: rootState,
       elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),
@@ -105,7 +101,7 @@ function simulateFrame(
     displayed: engineState.cameraRuntime.outputs.displayed,
     produced: pose,
     prevWinner: register.winner,
-    winner,
+    winner: currWinner,
     drivers,
   });
   for (const action of edge.actions) store.dispatch(action);
@@ -474,7 +470,7 @@ describe('commitOnEdge — clip deactivation', () => {
       }),
     );
     store.dispatch(beginDrag());
-    expect(activeDriverId(drivers, store.getState())).toBe('orbitDrag');
+    expect(pickWinner(drivers, store.getState()).id).toBe('orbitDrag');
 
     store.dispatch(
       clipStarted({
@@ -482,6 +478,6 @@ describe('commitOnEdge — clip deactivation', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    expect(activeDriverId(drivers, store.getState())).toBe('clip');
+    expect(pickWinner(drivers, store.getState()).id).toBe('clip');
   });
 });

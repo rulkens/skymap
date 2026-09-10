@@ -34,7 +34,7 @@ import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { lerp } from '../../../utils/math/lerp';
 
-/** Exported so `activeDriverId` resolves the SAME winner the produce step used. */
+/** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
   drivers: readonly CameraDriver[],
   s: RootState,
@@ -59,20 +59,6 @@ export function elapsedForWinner(winnerId: string, epochs: CameraEpochs, nowMs: 
   if (winnerId === 'autoRotate') return elapsedMs(epochs.autoRotate, nowMs);
   if (isFollowDriverId(winnerId)) return elapsedMs(epochs.follow, nowMs);
   return 0;
-}
-
-export function runCameraDrivers(
-  drivers: readonly CameraDriver[],
-  ctx: DriverCtx,
-  mem: FollowMemory | null,
-): {
-  readonly pose: FramedCameraPose;
-  readonly winner: CameraDriver;
-  readonly memory: FollowMemory | null;
-} {
-  const winner = pickWinner(drivers, ctx.state, ctx.approachDone);
-  const { pose, memory } = winner.pose(ctx, mem);
-  return { pose, winner, memory };
 }
 
 const NO_FOLLOW_MEMORY: FollowMemory = {

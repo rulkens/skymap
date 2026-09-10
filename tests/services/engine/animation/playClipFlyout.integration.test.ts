@@ -9,12 +9,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
-import {
-  elapsedForWinner,
-  runCameraDrivers,
-} from '../../../../src/services/engine/camera/cameraDrivers';
+import { elapsedForWinner, pickWinner } from '../../../../src/services/engine/camera/cameraDrivers';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
-import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
 import { advanceEpochs } from '../../../../src/services/engine/camera/cameraEpochs';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
@@ -61,7 +57,8 @@ function simulateFrame(
   // Step 2 — advance at the winner, then produce off the advanced rows (reads
   // fresh store state after tick).
   const freshState = store.getState();
-  const currActiveId = activeDriverId(drivers, freshState);
+  const currWinner = pickWinner(drivers, freshState);
+  const currActiveId = currWinner.id;
   const epochs = advanceEpochs(engineState.cameraRuntime.epochs, {
     intent: freshState.camera,
     focus: freshState.selectionRows.focus,
@@ -70,8 +67,7 @@ function simulateFrame(
     nowMs,
   });
   engineState.cameraRuntime = { ...engineState.cameraRuntime, epochs };
-  const { pose } = runCameraDrivers(
-    drivers,
+  const { pose } = currWinner.pose(
     makeDriverCtx({
       state: freshState,
       elapsedMs: elapsedForWinner(currActiveId, epochs, nowMs),

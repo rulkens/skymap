@@ -18,8 +18,7 @@ import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
 import { replayInput } from './replayInput';
-import { runCameraDrivers, elapsedForWinner } from './cameraDrivers';
-import { activeDriverId } from './activeDriverId';
+import { pickWinner, elapsedForWinner } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
@@ -101,7 +100,10 @@ export function stepCameraRuntime(
   // old memory said, so the two are one fact and cannot disagree on phase.
   const approachDone =
     focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false;
-  const winnerId = activeDriverId(drivers, rootState, approachDone);
+  // ONE pick per frame: the epoch advance, the commit gate and the produced pose
+  // read the same driver object, so they cannot disagree on who won.
+  const winner = pickWinner(drivers, rootState, approachDone);
+  const winnerId = winner.id;
   const epochs = advanceEpochs(prev.epochs, {
     intent: rootState.camera,
     focus,
@@ -114,8 +116,7 @@ export function stepCameraRuntime(
   // target on its next produce.
   const followIn = epochs.follow.ref !== prev.epochs.follow.ref ? null : drained.follow;
 
-  const { pose, winner, memory } = runCameraDrivers(
-    drivers,
+  const { pose, memory } = winner.pose(
     {
       state: rootState,
       elapsedMs: elapsedForWinner(winnerId, epochs, nowMs),

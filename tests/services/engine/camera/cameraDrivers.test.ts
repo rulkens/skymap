@@ -1,7 +1,7 @@
 /**
- * cameraDrivers — unit tests for the constant driver table and its resolver.
- * `pickWinner` and `activeDriverId` must always agree (invariant 1); the winner
- * produces off the `DriverCtx` it is handed and its memory is the one adopted.
+ * cameraDrivers — unit tests for the constant driver table and its resolver:
+ * `pickWinner` ranks by priority among the active rows, and the winner produces
+ * off the `DriverCtx` it is handed.
  * Fixtures use a real `RootState` via `configureStore({ reducer: rootReducer })`
  * so the shape stays in sync with the actual slices.
  */
@@ -20,11 +20,9 @@ import {
   CAMERA_DRIVERS,
   elapsedForWinner,
   pickWinner,
-  runCameraDrivers,
 } from '../../../../src/services/engine/camera/cameraDrivers';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import type { FollowMemory } from '../../../../src/@types/engine/camera/FollowMemory';
-import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
 import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
 import { spinAutoRotate } from '../../../../src/services/engine/camera/spinAutoRotate';
@@ -112,11 +110,12 @@ function runAtWinner(
 ) {
   const ctx = makeDriverCtx({
     state: s,
-    elapsedMs: elapsedForWinner(activeDriverId(drivers, s, approachDone), epochs, nowMs),
+    elapsedMs: elapsedForWinner(pickWinner(drivers, s, approachDone).id, epochs, nowMs),
     approachDone,
     register: REGISTER_POSE,
   });
-  return runCameraDrivers(drivers, ctx, null);
+  const winner = pickWinner(drivers, s, approachDone);
+  return { ...winner.pose(ctx, null), winner };
 }
 
 describe('CAMERA_DRIVERS — isActive reads the store', () => {
@@ -404,30 +403,19 @@ describe('pickWinner', () => {
   });
 });
 
-describe('pickWinner / activeDriverId invariant', () => {
-  it('pickWinner.id === activeDriverId (same scan, same result)', () => {
-    const store = makeStore();
-    store.dispatch(startCameraTween(TWEEN_DESC)); // tween active
-    const s = store.getState() as unknown as RootState;
-    const drivers = CAMERA_DRIVERS;
-    expect(pickWinner(drivers, s).id).toBe(activeDriverId(drivers, s));
-  });
-
-  it('agrees for all driver states: orbitDrag wins when dragging', () => {
+describe('pickWinner — precedence', () => {
+  it('orbitDrag wins when dragging (80 outranks the tween 60)', () => {
     const store = makeStore();
     store.dispatch(startCameraTween(TWEEN_DESC));
-    store.dispatch(beginDrag()); // orbitDrag priority 80 outranks tween 60
+    store.dispatch(beginDrag());
     const s = store.getState() as unknown as RootState;
-    const drivers = CAMERA_DRIVERS;
-    expect(pickWinner(drivers, s).id).toBe('orbitDrag');
-    expect(activeDriverId(drivers, s)).toBe('orbitDrag');
+    expect(pickWinner(CAMERA_DRIVERS, s).id).toBe('orbitDrag');
   });
 });
 
-describe('runCameraDrivers — elapsed dispatch', () => {
+describe("the winner's elapsed", () => {
   it('passes tween elapsed to the tween driver pose', () => {
     // The tween driver evaluates via evaluateClip(tweenToClip(desc), elapsedSec).
-    // Verify runCameraDrivers passes the right elapsed and the result matches.
     const store = makeStore();
     store.dispatch(startCameraTween(TWEEN_DESC));
     const s = store.getState() as unknown as RootState;
@@ -784,42 +772,6 @@ describe('CAMERA_DRIVERS — follow priority under body focus', () => {
     // autoRotate is authoring (not blocked by follow) → yaw advances with elapsed.
     expect(p0.yaw).toBeCloseTo(BASE_POSE.yaw, 9); // elapsed 0 on the arrival frame
     expect(p1.yaw).not.toBe(p0.yaw);
-  });
-});
-
-describe('runCameraDrivers — memory adoption', () => {
-  const POSE = absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 });
-  const memoryRow = (id: string, priority: number, memory: FollowMemory): CameraDriver => ({
-    id,
-    priority,
-    isActive: () => true,
-    pose: () => ({ pose: POSE, memory }),
-  });
-
-  it("adopts the winner's memory and discards the losers'", () => {
-    const winnerMem: FollowMemory = {
-      from: null,
-      distanceTarget: 2,
-      panOffset: [2, 2, 2],
-      saturated: false,
-    };
-    const loserMem: FollowMemory = {
-      from: null,
-      distanceTarget: 1,
-      panOffset: [1, 1, 1],
-      saturated: false,
-    };
-    const store = makeStore();
-    const ctx = makeDriverCtx({ state: store.getState() as unknown as RootState });
-
-    const result = runCameraDrivers(
-      [memoryRow('loser', 1, loserMem), memoryRow('winner', 2, winnerMem)],
-      ctx,
-      null,
-    );
-
-    expect(result.memory).toBe(winnerMem);
-    expect(result.winner.id).toBe('winner');
   });
 });
 

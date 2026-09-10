@@ -3,7 +3,7 @@
  *
  * `base` carries the committed resting pose AND the arm it lives in: the arm tag
  * IS the regime, so nothing stores a separate flag. The per-frame pose is DERIVED
- * from `base` by the CameraDriver table (`runCameraDrivers`) — never written
+ * from `base` by the CameraDriver table (`pickWinner`) — never written
  * directly by renderers. The `tween`, `clip` and `frameTween` descriptors are
  * wall-clock-free, so they stay valid across serialisation and replay.
  */
