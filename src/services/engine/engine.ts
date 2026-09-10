@@ -15,6 +15,7 @@ import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalo
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
+import type { EngineHomeConfig } from '../../@types/engine/EngineHomeConfig';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { createCameraClock } from './camera/cameraClock';
@@ -94,7 +95,11 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
  * @throws Never — errors are dispatched via `engineStatusChanged({ kind: 'error' })`.
  */
 
-export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
+export function createEngine(
+  canvas: HTMLCanvasElement,
+  cb: EngineCallbacks,
+  home: EngineHomeConfig,
+): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
   //
   // Everything lives as closure variables rather than a class because the
@@ -651,6 +656,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
+    home,
     frameRef,
     detachControlsRef,
     handleRef,

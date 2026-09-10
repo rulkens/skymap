@@ -2,7 +2,7 @@
  * wireImpostorSubsystems — unit tests for the impostor-subsystem wiring
  * extracted from wireSlots.
  *
- * Three invariants targeted:
+ * Two invariants targeted:
  *
  *   1. All five subsystem handles are assigned to `state.subsystems.*`
  *      after the call (galaxyAtlas, texturedDisks, proceduralDisks,
@@ -13,19 +13,13 @@
  *      `composeAtlasBindGroup()` gate never fires and the LOD-2/LOD-3
  *      pass is permanently dark.
  *
- *   3. The null-check precondition on the GPU renderers throws with the
- *      expected message when either disk renderer is absent — this is a
- *      phase-ordering assertion that protects against accidentally
- *      skipping or reordering `initGpu`.
- *
  * Mocking strategy: stub the five GPU-bearing factory functions so no
- * real GPUDevice is needed; inject a stub `state.gpu.texturedDiskRenderer`
- * with spied bind methods to verify the bind contract.
+ * real GPUDevice is needed; inject a stub `texturedDiskRenderer` with
+ * spied bind methods to verify the bind contract.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
@@ -89,26 +83,12 @@ import { wireImpostorSubsystems } from '../../../../src/services/engine/wiring/w
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-/** Build a minimal EngineState with the GPU renderers needed by wireImpostorSubsystems. */
-function makeState(
-  opts: {
-    texturedDiskRenderer?: object | null;
-    proceduralDiskRenderer?: object | null;
-  } = {},
-): EngineState {
-  const bindAtlas = vi.fn();
-  const bindHiResArray = vi.fn();
+/** Build a minimal EngineState for wireImpostorSubsystems (renderers arrive via the `disks` arg, not `state.gpu`). */
+function makeState(): EngineState {
   return {
     tier: 'medium',
     settings: {},
-    gpu: {
-      texturedDiskRenderer:
-        opts.texturedDiskRenderer !== undefined
-          ? opts.texturedDiskRenderer
-          : { bindAtlas, bindHiResArray },
-      proceduralDiskRenderer:
-        opts.proceduralDiskRenderer !== undefined ? opts.proceduralDiskRenderer : {},
-    },
+    gpu: {},
     subsystems: {
       scheduler: { requestRender: vi.fn() },
       galaxyAtlas: null,
@@ -121,21 +101,13 @@ function makeState(
   } as unknown as EngineState;
 }
 
-/** Build a minimal BootstrapDeps with the phaseLocals needed by wireImpostorSubsystems. */
-function makeDeps(): BootstrapDeps {
+/** Build the `disks` argument, with spied bind methods on the textured-disk renderer. */
+function makeDisks(texturedDiskRenderer?: { bindAtlas: () => void; bindHiResArray: () => void }) {
+  const bindAtlas = vi.fn();
+  const bindHiResArray = vi.fn();
   return {
-    canvas: {} as HTMLCanvasElement,
-    cb: {} as BootstrapDeps['cb'],
-    frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
-    handleRef: { current: null },
-    allSlots: new Map(),
-    phaseLocals: {
-      device: {} as GPUDevice,
-      context: {} as GPUCanvasContext,
-      unwatchHdrCapability: () => {},
-    },
-  };
+    texturedDiskRenderer: texturedDiskRenderer ?? { bindAtlas, bindHiResArray },
+  } as unknown as Parameters<typeof wireImpostorSubsystems>[2];
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -150,9 +122,8 @@ describe('wireImpostorSubsystems', () => {
     // The test verifies assignment without caring about the specific
     // objects returned by the (mocked) factories.
     const state = makeState();
-    const deps = makeDeps();
 
-    wireImpostorSubsystems(state, deps);
+    wireImpostorSubsystems(state, {} as GPUDevice, makeDisks());
 
     expect(state.subsystems.galaxyAtlas).not.toBeNull();
     expect(state.subsystems.texturedDisks).not.toBeNull();
@@ -168,31 +139,14 @@ describe('wireImpostorSubsystems', () => {
     // occurs.  Without this wire the LOD-2/LOD-3 pass is permanently dark.
     const bindAtlas = vi.fn();
     const bindHiResArray = vi.fn();
-    const state = makeState({
-      texturedDiskRenderer: { bindAtlas, bindHiResArray },
-    });
-    const deps = makeDeps();
+    const state = makeState();
 
-    wireImpostorSubsystems(state, deps);
+    wireImpostorSubsystems(state, {} as GPUDevice, makeDisks({ bindAtlas, bindHiResArray }));
 
     expect(bindAtlas).toHaveBeenCalledTimes(1);
     expect(bindHiResArray).toHaveBeenCalledTimes(1);
     // Each bind call receives the texture view from the matching factory.
     expect(bindAtlas).toHaveBeenCalledWith(expect.objectContaining({ __atlas: true }));
     expect(bindHiResArray).toHaveBeenCalledWith(expect.objectContaining({ __hiRes: true }));
-  });
-
-  it('throws when texturedDisk/proceduralDisk renderers are null', () => {
-    // Phase-ordering assertion: wireImpostorSubsystems reads both GPU
-    // renderers off state.gpu.  If initGpu was skipped or reordered,
-    // the explicit throws turn a confusing runtime NPE into a clear
-    // bootstrap-ordering error.
-    expect(() =>
-      wireImpostorSubsystems(makeState({ texturedDiskRenderer: null }), makeDeps()),
-    ).toThrow('wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu');
-
-    expect(() =>
-      wireImpostorSubsystems(makeState({ proceduralDiskRenderer: null }), makeDeps()),
-    ).toThrow('wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu');
   });
 });

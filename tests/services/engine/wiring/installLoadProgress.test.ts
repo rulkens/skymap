@@ -84,6 +84,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: {} as HTMLCanvasElement,
     cb: { store: { dispatch: vi.fn() } } as unknown as BootstrapDeps['cb'],
+    home: { focus: null, seedSelection: false },
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

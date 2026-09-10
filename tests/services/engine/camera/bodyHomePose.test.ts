@@ -1,5 +1,5 @@
 /**
- * earthHomePose — the home pose must land the eye on Earth's sunlit side, offset
+ * bodyHomePose — the home pose must land the eye on Earth's sunlit side, offset
  * from the pure-sunward axis by the terminator constant as a true 3D phase
  * angle, and frame Earth exactly as body focus does (so the tween→follow
  * handoff is seamless).
@@ -10,14 +10,15 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  earthHomePose,
+  bodyHomePose,
   HOME_TERMINATOR_OFFSET_RAD,
-} from '../../../../src/services/engine/camera/earthHomePose';
+} from '../../../../src/services/engine/camera/bodyHomePose';
 import { bodyLikeFraming } from '../../../../src/services/engine/camera/bodyLikeFraming';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { updatePosition } from '../../../../src/utils/camera/updatePosition';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -27,7 +28,7 @@ const FOV_Y_RAD = (Math.PI / 180) * 45;
 const SIM_DAYS = CONST_J2000 + 1234.5;
 
 const earthPos = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
-const pose = earthHomePose(SIM_DAYS, FOV_Y_RAD);
+const pose = bodyHomePose('earth', SIM_DAYS, FOV_Y_RAD);
 
 // The orbit convention places the eye at target + distance·dir with dir pointing
 // target→eye; reconstruct that eye-offset direction from the returned angles.
@@ -39,7 +40,7 @@ const dir: Vec3 = [
 const sunMag = Math.hypot(earthPos[0], earthPos[1], earthPos[2]);
 const sunward: Vec3 = [-earthPos[0] / sunMag, -earthPos[1] / sunMag, -earthPos[2] / sunMag];
 
-describe('earthHomePose', () => {
+describe('bodyHomePose', () => {
   it('places the eye on the sunlit side of Earth', () => {
     const dot = dir[0] * sunward[0] + dir[1] * sunward[1] + dir[2] * sunward[2];
     expect(dot).toBeGreaterThan(0);
@@ -57,7 +58,7 @@ describe('earthHomePose', () => {
     expect(pose.distance).toBe(framing.distance);
   });
 
-  // The intended world-space aim earthHomePose points along: the sunward axis
+  // The intended world-space aim bodyHomePose points along: the sunward axis
   // swung toward the horizontal perpendicular by the terminator offset.
   const sMag = Math.hypot(earthPos[0], earthPos[1], earthPos[2]);
   const s: Vec3 = [earthPos[0] / sMag, earthPos[1] / sMag, earthPos[2] / sMag];
@@ -70,7 +71,7 @@ describe('earthHomePose', () => {
 
   // Decode a pose the way the render path does — eye = target + distance·dir
   // through `poseBasis` — and return the camera's aim (target→...→ −dir, unit).
-  const decodeAim = (p: ReturnType<typeof earthHomePose>): Vec3 => {
+  const decodeAim = (p: ReturnType<typeof bodyHomePose>): Vec3 => {
     const cam = {
       yaw: p.yaw,
       pitch: p.pitch,
@@ -86,7 +87,7 @@ describe('earthHomePose', () => {
   };
 
   it('encoded through the ecliptic basis, decodes back to the sunlit aim under that same basis', () => {
-    const framed = earthHomePose(SIM_DAYS, FOV_Y_RAD, ORIENTATION_FRAMES.ecliptic);
+    const framed = bodyHomePose('earth', SIM_DAYS, FOV_Y_RAD, ORIENTATION_FRAMES.ecliptic);
     const decoded = decodeAim(framed);
     expect(decoded[0]).toBeCloseTo(aim[0]);
     expect(decoded[1]).toBeCloseTo(aim[1]);
@@ -94,12 +95,22 @@ describe('earthHomePose', () => {
 
     // Teeth: a legacy-identity encode (no basis) decoded through the ecliptic
     // basis misses the aim — proving the parameter is load-bearing, not inert.
-    const legacyDecoded = decodeAim(earthHomePose(SIM_DAYS, FOV_Y_RAD));
+    const legacyDecoded = decodeAim(bodyHomePose('earth', SIM_DAYS, FOV_Y_RAD));
     const err = Math.hypot(
       legacyDecoded[0] - aim[0],
       legacyDecoded[1] - aim[1],
       legacyDecoded[2] - aim[2],
     );
     expect(err).toBeGreaterThan(0.1);
+  });
+
+  it('frames the requested body, not Earth', () => {
+    const marsPos = deriveBodyStates(SIM_DAYS).get('mars')!.positionMpc;
+    const marsRadiusM = SCENE_BODIES.find((b) => b.id === 'mars')!.radiusM;
+    const marsPose = bodyHomePose('mars', SIM_DAYS, FOV_Y_RAD);
+    const marsFraming = bodyLikeFraming(marsPos, marsRadiusM, FOV_Y_RAD);
+
+    expect(marsPose.target).not.toEqual(pose.target);
+    expect(marsPose.target).toEqual(marsFraming.target);
   });
 });

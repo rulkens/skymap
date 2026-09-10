@@ -33,12 +33,11 @@ import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
-import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { poseOf } from '../camera/poseOf';
 import { projectionOf } from '../camera/projectionOf';
+import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import { EARTH_REF } from '../../../data/selection/earthRef';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import {
   updateSelectionSelect,
@@ -61,12 +60,8 @@ import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
  * handlers + input bindings + status-ready + settings seed.
  */
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
-  const { canvas } = deps;
+  const { canvas, home } = deps;
 
-  // The visual renderer must exist before we wire picking + the camera —
-  // `renderer` is the null-guard subject on the next line.
-  const renderer = state.gpu.galaxyPointRenderer;
-  if (!renderer) return;
   // The two GPU_HANDLE_ROWS rows marked `constructPhase: 'wireInput'`: they
   // read `state.gpu.focusUniform`, built by `initGpu`'s walker call, so they
   // wait for this phase. `ctx.context`/`ctx.format`/`ctx.hdrCapable` and
@@ -137,9 +132,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Camera auto-framing ──────────────────────────────────────────────
   //
-  // Boot straight into the Earth home pose — see `cameraFraming.ts`. The pose
-  // is a pure function of the boot sim instant (the ephemeris is analytic), so
-  // the camera is still built before any galaxy catalog has arrived.
+  // Boot straight into the composition's home pose — the recipe is a pure
+  // function of the boot sim instant (the ephemeris is analytic), so the
+  // camera is still built before any galaxy catalog has arrived.
   //
   // `simDays` is the live wall-clock instant `startLoop`'s `goLive` re-anchors
   // the sim clock to a moment later (`unixMsToJulianDays(Date.now())`). Reading
@@ -147,14 +142,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // would run against the still-placeholder J2000 anchor at this phase — frames
   // Earth where it will actually sit the instant the loop goes live, so there
   // is no jump on the first follow frame.
-  const fovYRad = DEFAULT_FOV_Y_RAD;
   const simDays = unixMsToJulianDays(Date.now());
   // The committed orientation basis the boot pose encodes through, so first-paint
   // yaw/pitch round-trip under the same frame the render path decodes with. A
   // `#orientation=<frame>` deep link is already committed by this async phase (see
   // the boot-ordering note below), so this reads the URL frame when present.
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
-  const initialCam = computeInitialCamera({ fovYRad, simDays, frameBasis });
+  const bodyId = home.focus === null ? null : home.focus.ref.id;
+  const initialCam = computeInitialCamera({
+    bodyId,
+    fovYRad: DEFAULT_FOV_Y_RAD,
+    simDays,
+    frameBasis,
+  });
 
   // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
   // live canvas ratio, not a captured one), so the camera is the framing
@@ -197,15 +197,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Home selection seed ──────────────────────────────────────────────────
   //
-  // Boot IS the home state: pose alone would drift. The sim clock boots live
-  // (`startLoop`'s `goLive`), so Earth moves from the first frame — a bare pose
-  // would let the globe slide out of frame. Seeding focus makes the follow-pivot
-  // driver track Earth's live position; seeding select pins the Earth InfoCard,
-  // which doubles as the "you are here" onboarding card.
-  //
-  // No tween is planted: `watchFocusTweenSaga` no-ops for follow-driver bodies,
-  // so this focus write never competes with a camera animation.
-  //
   // The seed only fires when there is no selection INTENT at all — resolved or
   // still in flight. This phase runs asynchronously after the store is built, and
   // a URL-hash focus with a statically-resolvable id (`body-*`, milkyWay,
@@ -232,15 +223,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // cannot tell "still resolving" from "never will" — and a junk deep link is
   // already a broken URL.
   const rootState = store.getState();
-  if (!selectHasSelectionIntent(rootState)) {
-    // Cinema seeds FOCUS only. `select` is what draws the selection ring
-    // (near0SelectionRingPass reads selectionRows.select), and it earns its
-    // place by explaining the info card — which cinema mode hides. Seeded in
-    // cinema it would instead sit around Earth in every recorded frame of
-    // every take that opens at home. Focus still has to be seeded, or the
-    // camera loses its home target.
-    if (!isCinemaMode()) store.dispatch(updateSelectionSelect(EARTH_REF));
-    store.dispatch(updateSelectionFocus(EARTH_REF));
+  if (home.focus !== null && !selectHasSelectionIntent(rootState)) {
+    // Cinema is an app mode gating what the composition asked for — the same
+    // class of override as the deep-link deference guard above — so it stays
+    // a phase-level gate rather than a composition knob.
+    if (home.seedSelection && !isCinemaMode()) {
+      store.dispatch(updateSelectionSelect(home.focus.ref));
+    }
+    store.dispatch(updateSelectionFocus(home.focus.ref));
   }
 
   // ── Pointer / keyboard / resize listeners ────────────────────────────

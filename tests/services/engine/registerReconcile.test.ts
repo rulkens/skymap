@@ -55,8 +55,10 @@ describe('createEngine — saga context registration', () => {
 
     // Call createEngine — runs the synchronous prefix, which calls setSagaContext,
     // then launches the async GPU bootstrap IIFE (which will fail in Node, caught
-    // internally and forwarded to onStatusChange above).
-    createEngine(canvas, cb);
+    // internally and forwarded to onStatusChange above). The synchronous prefix
+    // never reads `home` (that's `wireInput`, inside the async IIFE), so a minimal
+    // stub stands in for the real composition value.
+    createEngine(canvas, cb, { focus: null, seedSelection: false });
 
     // The registration is synchronous — assert immediately after the call.
     expect(setSagaContext).toHaveBeenCalledTimes(1);

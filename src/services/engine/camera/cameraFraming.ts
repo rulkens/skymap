@@ -7,11 +7,12 @@
  *
  * ### The boot pose IS the home pose
  *
- * The app boots into the same Earth home framing every home entry point
- * converges on: `earthHomePose(simDays, fovYRad)` supplies target / yaw / pitch
- * / distance, and this helper wraps it in the near/far/fov envelope the orbit
- * camera needs. Booting to the home pose means the Home pill / `h` key never
- * fly the camera away from where it already sits right after load.
+ * Given a `bodyId` the app boots into the same home framing every home entry
+ * point converges on: `bodyHomePose(bodyId, simDays, fovYRad)` supplies target
+ * / yaw / pitch / distance, and this helper wraps it in the near/far/fov
+ * envelope the orbit camera needs. Booting to the home pose means the Home
+ * pill / `h` key never fly the camera away from where it already sits right
+ * after load. A `null` `bodyId` (no home) falls back to the neutral pose below.
  *
  * ### Constants
  *
@@ -35,7 +36,8 @@
 import type { InitialCam } from '../../../@types/camera/InitialCam';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { earthHomePose } from './earthHomePose';
+import { bodyHomePose } from './bodyHomePose';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { DEFAULT_FOV_DEG } from '../../../data/defaults';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
@@ -58,35 +60,43 @@ export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * DEFAULT_FOV_DEG;
 export const GALACTIC_DISC_FORWARD: Vec3 = [0.973096, 0.064379, 0.221222];
 
 /**
- * Compute the initial camera snapshot: the Earth home pose at boot time wrapped
- * in the near/far/fov envelope. Pure function of `simDays` — the ephemeris is
- * analytic, so no dependency on loaded catalogs and the camera can be built
- * before any galaxy catalog arrives.
+ * Compute the initial camera snapshot: the home pose at boot time wrapped in
+ * the near/far/fov envelope. `bodyId: null` yields the engine's neutral pose
+ * (target the origin, `INITIAL_DISTANCE_MPC` out, looking along
+ * `GALACTIC_DISC_FORWARD`) rather than any composition's home. Pure function
+ * of `simDays` — the ephemeris is analytic, so no dependency on loaded
+ * catalogs and the camera can be built before any galaxy catalog arrives.
  *
+ * @param bodyId      The home body (`SCENE_BODIES` id), or `null` for no home.
  * @param fovYRad     Vertical field-of-view in radians (e.g. 60° → π/3).
- * @param simDays     Boot sim instant (Julian days) — where Earth is at load.
+ * @param simDays     Boot sim instant (Julian days) — where the body is at load.
  * @param frameBasis  The committed orientation basis
  *   (`ORIENTATION_FRAMES[settings.orientation]`) the boot pose encodes through,
  *   so first-paint yaw/pitch round-trip under the same frame the render path
- *   decodes with. Absent ⇒ identity (world-frame angles). See `earthHomePose`.
+ *   decodes with. Absent ⇒ identity (world-frame angles). See `bodyHomePose`.
  */
 export function computeInitialCamera({
+  bodyId,
   fovYRad,
   simDays,
   frameBasis,
 }: {
+  bodyId: string | null;
   fovYRad: number;
   simDays: number;
   frameBasis?: Mat3;
 }): InitialCam {
-  // The home distance is `bodyLikeFraming`'s deliberately UNCLAMPED Earth-scale
+  // The home distance is `bodyLikeFraming`'s deliberately UNCLAMPED body-scale
   // value — no `clampDistance` here: it takes a pivot radius the boot pose
   // hasn't resolved yet, and the absolute floor alone would swallow the framing
   // at ~2e-16 Mpc. The wheel-zoom clamps own the floor; see `bodyLikeFraming`.
-  return {
-    ...earthHomePose(simDays, fovYRad, frameBasis),
-    fovYRad,
-    near: 0.01,
-    far: FAR_CLIP_MPC,
-  };
+  const pose =
+    bodyId === null
+      ? {
+          target: [0, 0, 0] as Vec3,
+          distance: INITIAL_DISTANCE_MPC,
+          ...orbitAnglesLookingAlong(GALACTIC_DISC_FORWARD, frameBasis),
+        }
+      : bodyHomePose(bodyId, simDays, fovYRad, frameBasis);
+  return { ...pose, fovYRad, near: 0.01, far: FAR_CLIP_MPC };
 }
