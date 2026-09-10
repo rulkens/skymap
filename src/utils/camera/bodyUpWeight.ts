@@ -5,8 +5,17 @@
  * still lands at or before the arm flip. */
 
 import { ORIENT_TUNING } from '../../data/camera/orientTuning';
+import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
 import { TILT_BAND } from '../../data/camera/tiltBand';
 import { smoothstep } from '../math/smoothstep';
+
+// Two default literals in two files, and the regime's moved twice in nine days.
+// Asserted HERE: the records import each other, so neither body sees both.
+if (TILT_BAND.zeroHR > SURFACE_REGIME.disengageHR) {
+  throw new Error(
+    `TILT_BAND.zeroHR ${TILT_BAND.zeroHR} > SURFACE_REGIME.disengageHR ${SURFACE_REGIME.disengageHR}`,
+  );
+}
 
 export function bodyUpWeight(hOverR: number): number {
   // edge0 > edge1 is deliberate: the weight opens as h/R FALLS; max() guards log(0).

@@ -3,7 +3,8 @@
  * function `remembered × bodyUpWeight(h/R)`; zoom never authors tilt, the
  * tilt handle writes the memory (un-mapped through the band weight so a
  * just-set display is a FIXED POINT of the zoom mapping), and the weight
- * reaching 0 at disengage lands the crossing at tilt 0 by construction.
+ * reaching 0 at or before disengage lands the crossing at tilt 0 by
+ * construction.
  * Unit-radius closed-form fixtures, per the surfaceStep suite's convention.
  */
 
@@ -14,6 +15,7 @@ import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
 import { maxTiltRad } from '../../../src/utils/camera/maxTiltRad';
 import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
 import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
+import { TILT_BAND } from '../../../src/data/camera/tiltBand';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
@@ -63,6 +65,15 @@ function tiltOf(p: BodyFixedPose): number {
 
 function hrOf(p: BodyFixedPose): number {
   return Math.hypot(...eyeOf(p)) / R - 1;
+}
+
+/**
+ * Half-weight standpoint of the BLEND's own band — geometric, because the log
+ * mapping puts half weight there. Read live: narrowing `TILT_BAND` off the
+ * regime edges must move these fixtures, or they discriminate nothing.
+ */
+function midBandHR(): number {
+  return Math.sqrt(TILT_BAND.fullHR * TILT_BAND.zeroHR);
 }
 
 function apply(
@@ -147,10 +158,10 @@ describe('remembered tilt (ruling 12)', () => {
       const set = tiltOf(setTiltByDrag(c, poseAt([0, 0, 1.15], NADIR), 20));
       expect(set).toBeGreaterThan(0.1);
 
-      // Park at the window's geometric midpoint: the settle converges onto
+      // Park at the tilt band's geometric midpoint: the settle converges onto
       // the mapped display — the value DIFFERS between the two spaces, which
       // is what makes this a discriminating fixture, not a mirror.
-      const hrMid = Math.sqrt(SURFACE_REGIME.engageHR * SURFACE_REGIME.disengageHR);
+      const hrMid = midBandHR();
       let pose = poseAt([0, 0, 1 + hrMid], NADIR);
       for (let i = 0; i < 90; i += 1) pose = apply(c, pose, zoom(1));
       expect(tiltOf(pose)).toBeCloseTo(set * bodyUpWeight(hrMid), 6);
@@ -178,7 +189,7 @@ describe('remembered tilt (ruling 12)', () => {
     // leaves the tilt mapping live.
     ORIENT_TUNING.northUp = false;
     const c = makeSurfaceDriver();
-    const hr = (SURFACE_REGIME.engageHR + SURFACE_REGIME.disengageHR) / 2; // mid-window
+    const hr = midBandHR();
     let pose = setTiltByDrag(c, poseAt([0, 0, 1 + hr], NADIR), 10);
     const display = tiltOf(pose);
     expect(display).toBeGreaterThan(0.1);
