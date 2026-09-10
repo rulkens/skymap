@@ -1,18 +1,12 @@
 /**
  * wireImpostorSubsystems — constructs the galaxy-thumbnail GPU subsystems
- * and wires them into the textured-disk renderer.
+ * and wires them into the textured-disk renderer. Called from `wireSlots`,
+ * the one call site, which narrows the disk renderers non-null before
+ * calling — "both exist" is a compile-time fact here, not a runtime check.
  *
- * Called from `wireSlots` so each bootstrap concern lives in its own module.
- * The disk renderers arrive as typed, non-null parameters: `wireSlots` is
- * the one call site and skips the call when either is absent, so "both
- * exist" is a compile-time fact here, not a runtime check.
- *
- * ### Construction order
- *
- * The textured-disk planner depends on BOTH the atlas (slot allocation +
- * eviction subscription) AND the LOD-3 hi-res planner (per-frame crossfade
- * alpha lookup), so both must exist first.  The procedural-disk planner is
- * independent of the other two.
+ * Construction order: galaxyAtlas + the LOD-3 hi-res planner must exist
+ * before texturedDisks (which depends on both); proceduralDisks is
+ * independent.
  */
 
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
