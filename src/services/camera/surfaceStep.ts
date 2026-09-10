@@ -45,7 +45,7 @@ export const EMPTY_SURFACE_MEMORY: SurfaceMemory = {
 
 /** Once per frame with the camera's current body; a DIFFERENT body wipes the tilt (ruling 18), null keeps it. */
 export function noteBody(prev: SurfaceMemory, bodyId: string | null): SurfaceMemory {
-  if (bodyId === null) return prev;
+  if (bodyId === null || bodyId === prev.memoryBodyId) return prev;
   const wipe = prev.memoryBodyId !== null && prev.memoryBodyId !== bodyId;
   return { ...prev, rememberedTiltRad: wipe ? 0 : prev.rememberedTiltRad, memoryBodyId: bodyId };
 }

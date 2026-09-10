@@ -12,6 +12,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { CAMERA_DRIVERS } from '../../../src/services/engine/camera/cameraDrivers';
+import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../src/services/engine/camera/cameraFraming';
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { createInputAggregator } from '../../../src/services/engine/subsystems/inputAggregator';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
@@ -78,12 +79,12 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       position: new Float32Array(3),
       fovYRad,
       aspect: 1,
-      near: 0.01,
-      far: 1000,
+      near: NEAR_CLIP_MPC,
+      far: FAR_CLIP_MPC,
     } as unknown as OrbitCamera,
     cameraRuntime: seedCameraRuntime({
       committed: absoluteArm(neutralPose),
-      projection: { fovYRad, aspect: 1, near: 0.01, far: 50000 },
+      projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
     }),
     skyCubemapCapture: {
       lastBandActive: false,

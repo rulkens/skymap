@@ -18,6 +18,7 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
+import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/cameraFraming';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { SkyCubemapCaptureRuntime } from '../../@types/engine/state/SkyCubemapCaptureRuntime';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -107,7 +108,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // single home for the pre-bootstrap placeholder pose, arm tag included.
   const cameraRuntime = seedCameraRuntime({
     committed: cb.store.getState().camera.base,
-    projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
+    projection: { fovYRad: 0, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
   });
 
   // Sky-cubemap bake bookkeeping — false/infinity/null until the first frame

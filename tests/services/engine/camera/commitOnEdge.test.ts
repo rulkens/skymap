@@ -1,11 +1,10 @@
 /**
- * commitOnEdge — unit tests for the per-frame commit-on-edge contract: on the
- * frame the active driver changes, if the departing driver declared
- * `commitsOnEdge: true` (tween, autoRotate, clip — not orbitDrag/resting),
- * dispatch `commitCameraPose(register.pose)` exactly once, mirroring runFrame's
- * produce → tween-completion → commit-on-edge → Resource-update order.
- * Driven directly against the driver table + Redux store, no GPU or
- * `runFrame` body.
+ * commitOnEdge — the per-frame commit-on-edge contract: on the frame the
+ * active driver changes, if the departing driver declared `commitsOnEdge`
+ * (tween, autoRotate, clip — not orbitDrag/resting), `commitCameraPose` of the
+ * register fires exactly once. The real stage, driven against the driver table
+ * + Redux store in `stepCameraRuntime`'s produce → tween-completion →
+ * commit-on-edge → register-update order; no GPU, no `runFrame` body.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -28,6 +27,7 @@ import {
 } from '../../../../src/services/engine/camera/cameraDrivers';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
+import { commitOnEdge } from '../../../../src/services/engine/camera/commitOnEdge';
 import {
   advanceEpoch,
   advanceEpochs,
@@ -75,7 +75,7 @@ function simulateFrame(
     nowMs,
   });
   engineState.cameraRuntime = { ...engineState.cameraRuntime, epochs };
-  const { pose } = runCameraDrivers(
+  const { pose, winner } = runCameraDrivers(
     drivers,
     makeDriverCtx({
       state: rootState,
@@ -98,26 +98,26 @@ function simulateFrame(
     store.dispatch(cancelCameraTween());
   }
 
-  // Step 3: Commit-on-edge. On a deactivation edge the frame renders the
-  // just-committed pose (the register), not the stale-base produce result —
-  // mirrors runFrame's `renderPose` override that prevents the one-frame edge
-  // flicker. MIRROR: this guard must stay identical to runFrame's property-based
-  // guard so the clip case reflects real production behaviour.
-  const prev = register.winner;
-  let renderPose = pose;
-  if (prev !== currActiveId && drivers.find((d) => d.id === prev)?.commitsOnEdge) {
-    store.dispatch(commitCameraPose(register.pose));
-    committed = true;
-    renderPose = register.pose;
-  }
+  // Step 3: the real stage; every incoming driver here pivots, so the edge
+  // frame renders the just-committed register, not the stale-base produce.
+  const edge = commitOnEdge({
+    register: register.pose,
+    displayed: engineState.cameraRuntime.outputs.displayed,
+    produced: pose,
+    prevWinner: register.winner,
+    winner,
+    drivers,
+  });
+  for (const action of edge.actions) store.dispatch(action);
+  committed = edge.actions.length > 0;
 
   // Step 4: Update Resources.
   engineState.cameraRuntime = {
     ...engineState.cameraRuntime,
-    register: { pose: renderPose, winner: currActiveId },
+    register: { pose: edge.render, winner: currActiveId },
   };
 
-  return { pose: renderPose, activeId: currActiveId, committed };
+  return { pose: edge.render, activeId: currActiveId, committed };
 }
 
 describe('commitOnEdge — tween settles', () => {

@@ -1,12 +1,11 @@
 /**
  * runFrame — the per-frame body of the render loop; `engine.ts` constructs the
- * deps (`RunFrameDeps`), this module consumes them. The camera steps run in
- * this exact order: (0) drain input, (1) produce from the driver table, (2)
- * tween completion, (3) commit-on-edge, (3b) pivot-pin, (3c) THE FOLD (world
- * arm resolved once, regime normalised), (4) update the pose Resources —
- * AUTHORED pose to `register`, projected pose to `outputs.displayed`. The epochs
- * advance exactly once per frame, in step 1 once the winner is known. Then the
- * frame context, the planners, the GPU dispatch and the keep-ticking vote.
+ * deps (`RunFrameDeps`), this module consumes them. The clip tick is the FIRST
+ * statement by contract. Then: the sim instant and body snapshot →
+ * `stepCameraRuntime` (the camera as one pure step over the frame's ONE store
+ * snapshot) → THE one `state.cameraRuntime` assignment → the step's actions,
+ * in order → the frame context, the planners, the GPU dispatch and the
+ * keep-ticking vote. Non-camera dispatches (scale bar, body distance) stay here.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -14,25 +13,9 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
 
-import { replayInput } from '../camera/replayInput';
-import { noteBody } from '../../camera/surfaceStep';
-import { runCameraDrivers, elapsedForWinner } from '../camera/cameraDrivers';
-import { activeDriverId } from '../camera/activeDriverId';
-import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
-import { approachTiltedPose } from '../camera/approachTiltedPose';
-import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
-import { regimeArmFor } from '../camera/regimeArmFor';
-import { absoluteArm } from '../../../utils/camera/absoluteArm';
-import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { normalize3 } from '../../../utils/math/normalize3';
-import { pivotRadiusMpc, pivotFraming } from '../camera/pivotRadiusMpc';
-import { advanceEpochs, elapsedMs } from '../camera/cameraEpochs';
-import { resolveFrameBasis } from '../camera/resolveFrameBasis';
+import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { stepCameraRuntime } from '../camera/stepCameraRuntime';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
@@ -50,11 +33,6 @@ import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import cameraReducer, {
-  commitCameraPose,
-  cancelCameraTween,
-  clearFrameTween,
-} from '../../../state/camera/cameraSlice';
 import { computeScaleInfo } from '../helpers/scaleBar';
 import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/engine/engineSlice';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
@@ -83,9 +61,6 @@ const publishBodyDistanceGate = throttleByTime(250);
  */
 const LIVE_IDLE_TICK_MS = 500;
 
-/** The pin's strafe while no follow memory exists. */
-const NO_PAN: Vec3 = [0, 0, 0];
-
 /** `nowMs` is `performance.now()`-shaped, passed in so tests drive the timing. */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   // First statement, by contract: scene cues fired here (fade / show / hide /
@@ -100,20 +75,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // `reconcile` runs unconditionally (canvas size AND every state-driven scale
   // feed it) and reallocates only rows whose pixel size moved; `renderTargets`
-  // is null until initGpu.
-  // The FOV slider can change on any frame with no resize event.
-  const prevProjection = state.cameraRuntime.outputs.projection;
-  const projection = {
-    ...prevProjection,
-    aspect: resizeCanvasToDisplay(deps.canvas)
-      ? deps.canvas.width / deps.canvas.height
-      : prevProjection.aspect,
-    fovYRad: state.settings.camera.fovDeg * (Math.PI / 180),
-  };
-  state.cameraRuntime = {
-    ...state.cameraRuntime,
-    outputs: { ...state.cameraRuntime.outputs, projection },
-  };
+  // is null until initGpu. The resize is the backing store's side effect, not
+  // the camera's; the step is handed the aspect it produced.
+  resizeCanvasToDisplay(deps.canvas);
   state.gpu.renderTargets?.reconcile(state, {
     width: deps.canvas.width,
     height: deps.canvas.height,
@@ -121,295 +85,44 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
 
-  // (0) The frame's ONE store snapshot, taken before the replay's actions are
-  // dispatched. The camera steps run before `deriveFrameContext` so a
-  // camera-only-ready frame still makes motion progress before the
-  // missing-GPU early return.
+  // The frame's ONE store snapshot. The camera step runs before
+  // `deriveFrameContext` so a camera-only-ready frame still makes motion
+  // progress before the missing-GPU early return.
   const steps = state.subsystems.inputAggregator.drain();
   const stored = deps.cb.store.getState();
 
-  // The sim instant is derived BEFORE produce: the follow driver aims at where
+  // The sim instant is derived BEFORE the step: the follow driver aims at where
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
-  // this call primes the map every later reader gets by reference. Bound to a
-  // local only because the fold needs it by value.
+  // this call primes the map every later reader gets by reference.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
   const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
 
-  // Single-writer epoch the pick path reads — NOT the derive memo's key, which
-  // a between-frames `deriveBodyStates(CONST_J2000)` (extractSelectionRow) can
-  // repoint.
-  state.cameraRuntime = {
-    ...state.cameraRuntime,
-    outputs: { ...state.cameraRuntime.outputs, simDays },
-  };
-  // `poseBasis` is the COMMITTED frame — the saga writes the destination into
-  // `settings.orientation` when a switch starts, so the eye holds still through
-  // a roll and only up rotates (`upBasis`, the live B(t)).
-  const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
-
-  const runtime = state.cameraRuntime;
-  const drained = replayInput(
-    { register: runtime.register.pose, surface: runtime.surface, follow: runtime.follow },
-    steps,
-    {
-      rootState: stored,
-      nowMs,
-      canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
-      projection,
-      upBasis: runtime.outputs.upBasis,
-      poseBasis,
-      bodies: bodyStates,
-      winnerLastFrame: runtime.register.winner,
-      autoRotateEpoch: runtime.epochs.autoRotate,
-    },
-  );
-  // The pan strafe lands on the memory HERE — above the focus-edge drop below,
-  // which still overrides it, and above the driver adoption that reads it.
-  // Those two writes plus this one are the whole set (spec: single writer).
-  state.cameraRuntime = {
-    ...runtime,
-    register: { pose: drained.register, winner: runtime.register.winner },
-    surface: drained.surface,
-    follow: drained.follow,
-    outputs: {
-      ...runtime.outputs,
-      lastZoomFactor: drained.lastZoomFactor ?? runtime.outputs.lastZoomFactor,
-    },
-  };
-  // AFTER the runtime writes (ruled): a store listener fired by a commit sees
-  // this frame's register already installed, not last frame's.
-  for (const action of drained.actions) deps.cb.store.dispatch(action);
-  // The effective intent: the drivers must see this frame's commits (`endDrag`
-  // above all, or `orbitDrag` wins one frame too long), folded through the real
-  // reducer rather than re-read from the store. Identity on a steady frame.
-  const rootState =
-    drained.actions.length === 0
-      ? stored
-      : { ...stored, camera: drained.actions.reduce(cameraReducer, stored.camera) };
-
-  // (1) The one epoch advance per frame, keyed on the winner; every elapsed
-  // read below is off these rows at this `nowMs`.
-  const activeId = activeDriverId(deps.drivers, rootState);
-  const prevEpochs = state.cameraRuntime.epochs;
-  const epochs = advanceEpochs(prevEpochs, {
-    intent: rootState.camera,
-    focus: rootState.selectionRows.focus,
-    clip: clipEpoch,
-    winnerId: activeId,
+  const {
+    next,
+    actions,
+    requestRender,
+    world: worldPose,
+    rootState,
+  } = stepCameraRuntime(state.cameraRuntime, {
     nowMs,
+    simDays,
+    rootState: stored,
+    canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
+    aspect: deps.canvas.width / deps.canvas.height,
+    steps,
+    bodies: bodyStates,
+    clipEpoch,
+    drivers: deps.drivers,
   });
-  // The follow memory belongs to one focus row: a fresh row (a same-body
-  // re-select included) drops it, and the driver re-captures against the new
-  // target on its next produce.
-  state.cameraRuntime = {
-    ...state.cameraRuntime,
-    epochs,
-    follow: epochs.follow.ref !== prevEpochs.follow.ref ? null : state.cameraRuntime.follow,
-  };
+  // The runtime is installed BEFORE any action reaches the store (ruled): a
+  // listener fired by a commit sees this frame's register, not last frame's.
+  state.cameraRuntime = next;
+  for (const action of actions) deps.cb.store.dispatch(action);
+  if (requestRender) state.subsystems.scheduler.requestRender();
 
-  // The drivers read the frame only through this bag; the winner's memory is
-  // adopted, the losers' discarded. `authoredWorld` is `authoredWorldPose`
-  // spelled against values this frame already holds, and takes the PREVIOUS
-  // frame's `upBasis` — the write below is the produce step's successor.
-  const { register } = state.cameraRuntime;
-  const { pose, memory } = runCameraDrivers(
-    deps.drivers,
-    {
-      state: rootState,
-      elapsedMs: elapsedForWinner(activeId, epochs, nowMs),
-      register: register.pose,
-      authoredWorld: resolveWorldArm(
-        register.pose,
-        bodyStates,
-        poseBasis,
-        state.cameraRuntime.outputs.upBasis,
-      ),
-      winnerLastFrame: register.winner,
-      simDays,
-      projection,
-      pivot: pivotFraming(rootState.selectionRows.focus),
-      followDistanceTarget: drained.followDistanceTarget,
-    },
-    state.cameraRuntime.follow,
-  );
-  state.cameraRuntime = { ...state.cameraRuntime, follow: memory };
-
-  // The Resource gets `upBasis`, NOT `poseBasis`: it seeds the next switch's
-  // `fromQuat`, and a re-switch mid-roll must compose from the live pole.
-  const rollElapsed = elapsedMs(epochs.frameTween, nowMs);
-  const upBasis = resolveFrameBasis(
-    rootState.settings.orientation,
-    rootState.camera.frameTween,
-    rollElapsed,
-  );
-  state.cameraRuntime = {
-    ...state.cameraRuntime,
-    outputs: { ...state.cameraRuntime.outputs, upBasis },
-  };
-
-  // `EASE` clamps, so this frame's basis is already the destination; clearing
-  // only affects the next frame's getState.
-  if (
-    rootState.camera.frameTween !== null &&
-    rollElapsed >= rootState.camera.frameTween.durationMs
-  ) {
-    deps.cb.store.dispatch(clearFrameTween());
-  }
-
-  // (2) After produce (the pose is already saturated at `to`) and before
-  // commit-on-edge: the cancel lands next frame, when the tween deactivates and
-  // the edge commits the register — exactly one commit, exactly at `to`.
-  if (
-    activeId === 'tween' &&
-    rootState.camera.tween !== null &&
-    elapsedMs(epochs.tween, nowMs) >= rootState.camera.tween.durationMs
-  ) {
-    deps.cb.store.dispatch(cancelCameraTween());
-  }
-
-  // (3) The register still holds the PREVIOUS frame's pose here (step 4
-  // updates it), which is the saturated pose the departing driver must bake.
-  // `orbitDrag` commits via `onGestureEnd`; `resting`'s pose IS base.
-  const prev = register.winner;
-  // The SAME store snapshot the drivers resolved against, so the pin, the fold
-  // and the winner never disagree on what is focused.
-  const pivotFocus = rootState.selectionRows.focus;
-  let renderPose = pose;
-  // Non-null only on a non-pivoting edge: the register value for step 4 when
-  // `renderPose` had to be the displayed pose.
-  let authoredOverride: FramedCameraPose | null = null;
-  const pivotsOnFocusedBody =
-    deps.drivers.find((d) => d.id === activeId)?.pivotsOnFocusedBody ?? false;
-  const prevRow = deps.drivers.find((d) => d.id === prev);
-  if (prev !== activeId && prevRow?.commitsOnEdge) {
-    // The AUTHORED register is committed verbatim (R12b-1; see
-    // `commitCameraPose`'s invariant note).
-    deps.cb.store.dispatch(commitCameraPose(register.pose));
-    // Produce ran the INCOMING driver against the PRE-commit `base`, so a
-    // base-reading driver would flash the pre-animation pose for one frame.
-    // Which pose overrides depends on the incoming driver (R12c-1): a pivoting
-    // one re-derives the image below, so it gets the AUTHORED register (the
-    // displayed pose would be re-pinned — one frame of eye walk); a non-pivoting
-    // one (clip/tween) would flash the untilted register ~0.4 rad to nadir, so
-    // it renders the DISPLAYED pose and the register is pinned to its authored
-    // value.
-    renderPose = pivotsOnFocusedBody ? register.pose : state.cameraRuntime.outputs.displayed;
-    if (!pivotsOnFocusedBody) authoredOverride = register.pose;
-  }
-
-  // (3b) The pin SETS the target (never adds), so baking `renderPose` into
-  // `base` on the next edge cannot double-apply the body translation. A pan
-  // strafe rides the follow memory's `panOffset` (world frame) so the shifted
-  // pivot still translate-follows the body.
-  renderPose = applyFocusedBodyPivot(
-    renderPose,
-    pivotsOnFocusedBody,
-    pivotFocus,
-    simDays,
-    state.cameraRuntime.follow?.panOffset ?? NO_PAN,
-  );
-  // Post-pin, PRE-projection: the projection below reaches the register on no
-  // path (R12b-1).
-  let authoredPose = authoredOverride ?? renderPose;
-  // The body the tilt memory belongs to: the ENGAGED one while a body arm holds
-  // (a differing focus has already released it), else the FOCUSED one.
-  const regimeFrame = rootState.camera.base.frame;
-  state.cameraRuntime = {
-    ...state.cameraRuntime,
-    surface: noteBody(
-      state.cameraRuntime.surface,
-      regimeFrame !== 'absolute'
-        ? regimeFrame.body
-        : pivotFocus?.type === 'body'
-          ? pivotFocus.id
-          : null,
-    ),
-  };
-  // The tilt projection (ruling 13) sits between the pin and the fold, so the
-  // engage edge converts the image it already shows.
-  renderPose = approachTiltedPose(
-    renderPose,
-    pivotsOnFocusedBody,
-    pivotFocus,
-    simDays,
-    state.cameraRuntime.surface.rememberedTiltRad,
-    poseBasis,
-    upBasis,
-  );
-
-  // (3c) THE FOLD, below every pose writer (spec §7 steps 5-6): a fold above
-  // driver arbitration is discarded by whatever writes after it. The register
-  // stays FRAMED; every world-Mpc reader takes this value.
-  const worldPose = resolveWorldArm(renderPose, bodyStates, poseBasis, upBasis);
-
-  // No flip during a gesture (ruled, Q6): skipped WHOLE — not clamped, not
-  // latched — and re-evaluated at gesture end.
-  if (!rootState.camera.dragging) {
-    // `camera.base.frame` IS the regime (spec §4), not the arm this frame's
-    // winner authored: `tween` and `clip` are not arm-gated, so the produced
-    // pose would re-engage every frame of an animation inside the band.
-    const regime = rootState.camera.base.frame;
-    const eyeMpc = eyeMpcOf(worldPose, poseBasis);
-    // The focused body constrains the regime (round 10).
-    const arm = regimeArmFor(
-      regime,
-      eyeMpc,
-      bodyStates,
-      pivotFocus?.type === 'body' ? pivotFocus.id : null,
-    );
-    if (arm === 'absolute') {
-      if (renderPose.frame !== 'absolute') {
-        // Disengage commits target-at-centre, eye preserved: the pivot pin
-        // re-reads an absolute `target` as the body's centre one frame later
-        // and rebuilds the eye from `target + dir·distance`, so committing
-        // `worldPose`'s on-ray surface target verbatim teleported the eye one
-        // body radius inward (pop-2). Zoom-driven recessions cross at tilt 0,
-        // so this is view-exact; other crossings re-aim by at most the
-        // remaining tilt on the flip frame.
-        const centreMpc = bodyStates.get(renderPose.frame.body)!.positionMpc;
-        const toCentre: Vec3 = [
-          centreMpc[0] - eyeMpc[0],
-          centreMpc[1] - eyeMpc[1],
-          centreMpc[2] - eyeMpc[2],
-        ];
-        const { yaw, pitch } = orbitAnglesLookingAlong(normalize3(toCentre), poseBasis as Mat3);
-        renderPose = absoluteArm({
-          target: [centreMpc[0], centreMpc[1], centreMpc[2]],
-          yaw,
-          pitch,
-          distance: Math.hypot(toCentre[0], toCentre[1], toCentre[2]),
-          roll: worldPose.roll,
-        });
-        // Centre-looking, so authored and displayed coincide.
-        authoredPose = renderPose;
-      }
-    } else if (renderPose.frame === 'absolute') {
-      // Total: `regimeArmFor` only names a body it resolved out of THIS map.
-      const bodyState = bodyStates.get(arm.body)!;
-      renderPose = {
-        frame: arm,
-        pose: toBodyArm(worldPose, poseBasis, upBasis, arm.body, bodyState),
-      };
-      // Engage converts the DISPLAYED pose (ruling 13); on the body arm the
-      // tilt is geometry, not a projection, so the register holds it too.
-      authoredPose = renderPose;
-    }
-    // Once per crossing. The wake is the fold's own: `shouldKeepTicking` reads
-    // the pre-fold snapshot, so a flip that quiets the last live term would
-    // otherwise park the loop.
-    if ((arm === 'absolute' ? null : arm.body) !== (regime === 'absolute' ? null : regime.body)) {
-      deps.cb.store.dispatch(commitCameraPose(renderPose));
-      state.subsystems.scheduler.requestRender();
-    }
-  }
-
-  // (4) After the commit, which reads the previous frame's values. The
-  // authored/displayed split keeps the produce→pin→project loop dead (R12b-1).
-  state.cameraRuntime = {
-    ...state.cameraRuntime,
-    register: { pose: authoredPose, winner: activeId },
-    outputs: { ...state.cameraRuntime.outputs, displayed: renderPose },
-  };
+  const { displayed: renderPose, projection, upBasis } = next.outputs;
+  const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
+  const pivotFocus = stored.selectionRows.focus;
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
   // silently breaks the bar on retina. `state.cam` is the bootstrap-ready proxy.

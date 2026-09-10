@@ -23,7 +23,7 @@
  *     with no depth test, so depth precision is not a concern; the
  *     pick pass uses depth32float, which handles the 0.01 : 50 000
  *     ratio fine.
- *   - `near = 0.01` Mpc (10 kpc) — well inside the focus-on tween's
+ *   - `NEAR_CLIP_MPC = 0.01` (10 kpc) — well inside the focus-on tween's
  *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
  *   - `INITIAL_DISTANCE_MPC` — a Local-Group-scale distance the wheel-zoom
  *     envelope + the grand tour still reference; no longer the boot distance.
@@ -40,6 +40,9 @@ import { DEFAULT_FOV_DEG } from '../../../data/defaults';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
 export const INITIAL_DISTANCE_MPC = 0.14;
+
+/** Near-clip plane in Mpc; the one home for the literal every projection seed shares. */
+export const NEAR_CLIP_MPC = 0.01;
 
 /** Far-clip plane in Mpc — keeps the horizon shell in-frustum at max camera distance. */
 export const FAR_CLIP_MPC = 50000;
@@ -86,7 +89,7 @@ export function computeInitialCamera({
   return {
     ...earthHomePose(simDays, fovYRad, frameBasis),
     fovYRad,
-    near: 0.01,
+    near: NEAR_CLIP_MPC,
     far: FAR_CLIP_MPC,
   };
 }

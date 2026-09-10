@@ -13,6 +13,7 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { surfaceStep } from '../../camera/surfaceStep';
+import { surfaceGestureEdge } from '../../../utils/camera/surfaceGestureEdge';
 import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
@@ -174,7 +175,7 @@ export function replayInput(
       case 'gestureStart':
         // The gesture boundaries are the memory's `pointerDown` edges; the latch
         // is taken by the first drag step, which carries the press pixel.
-        surface = { ...surface, pointerDown: true, gesture: null };
+        surface = surfaceGestureEdge(surface, true);
         break;
 
       case 'gestureEnd': {
@@ -186,7 +187,7 @@ export function replayInput(
             ? camera.base.frame === 'absolute'
             : camera.base.frame !== 'absolute' && register.frame.body === camera.base.frame.body;
         if (camera.clip === null && sameArm) emit(commitCameraPose(register));
-        surface = { ...surface, pointerDown: false, gesture: null };
+        surface = surfaceGestureEdge(surface, false);
         emit(endDrag());
         break;
       }

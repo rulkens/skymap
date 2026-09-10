@@ -1,12 +1,14 @@
 /**
- * makeSurfaceDriver — `replayInput`'s memory edges as a test driver: it holds the
- * `SurfaceMemory` the engine holds in `cameraRuntime.surface` and replays the
- * same three writes (the fold's returned memory, and the two `pointerDown`
- * boundaries), so gesture-sequence fixtures read as sequences instead of
- * threading a value by hand through every step.
+ * makeSurfaceDriver — the body arm's gesture memory threaded for a fixture:
+ * `surfaceStep` for the steps, the production `surfaceGestureEdge` for the two
+ * pointer boundaries, so a gesture-sequence fixture reads as a sequence. It
+ * does not route through `replayInput` on purpose: the unit-radius closed-form
+ * fixtures here cannot pass a body radius that `replayInput` looks up in
+ * `SCENE_BODIES`.
  */
 
 import { surfaceStep, EMPTY_SURFACE_MEMORY } from '../../../src/services/camera/surfaceStep';
+import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { SurfaceMemory } from '../../../src/@types/camera/SurfaceMemory';
@@ -34,10 +36,10 @@ export function makeSurfaceDriver(seed: SurfaceMemory = EMPTY_SURFACE_MEMORY) {
       return out.pose;
     },
     onGestureStart: (): void => {
-      memory = { ...memory, pointerDown: true, gesture: null };
+      memory = surfaceGestureEdge(memory, true);
     },
     onGestureEnd: (): void => {
-      memory = { ...memory, pointerDown: false, gesture: null };
+      memory = surfaceGestureEdge(memory, false);
     },
     rememberedTiltRad: (): number => memory.rememberedTiltRad,
   };
