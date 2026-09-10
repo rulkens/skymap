@@ -14,7 +14,6 @@ import type { EnginePickingState } from './EnginePickingState';
 import type { EngineAssetSlots } from './EngineAssetSlots';
 import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
 import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
-import type { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';
 import type { SkyCubemapCaptureRuntime } from './SkyCubemapCaptureRuntime';
@@ -37,8 +36,9 @@ export type EngineState = {
   picking: EnginePickingState;
   gpu: EngineGpuHandles;
   subsystems: EngineSubsystemHandles;
-  /** The boot framing camera; non-null once `wireInput` ran. */
-  cam: ReturnType<typeof createOrbitCamera> | null;
+  /** True once `wireInput` seeded the first real camera pose. The gate every
+   * pre-bootstrap bail reads; there is no boot camera object to read from. */
+  booted: boolean;
   /**
    * Live camera Resources, seeded with placeholders in `engine.ts` and filled
    * by `wireInput`'s bootstrap seed once the initial camera exists.

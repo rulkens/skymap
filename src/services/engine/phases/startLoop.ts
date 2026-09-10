@@ -34,7 +34,7 @@
  *   - The renderers from `initGpu` (read off `state.gpu.*`).
  *   - The thumbnail subsystem from `wireSlots`
  *     (via `state.subsystems.thumbnails`).
- *   - The orbit camera from `wireInput` (via `state.cam`).
+ *   - The boot camera pose from `wireInput` (via `state.booted`).
  *
  * Firing `requestRender()` before any of those exist would either
  * crash on the first tick or render a black canvas.  Putting this

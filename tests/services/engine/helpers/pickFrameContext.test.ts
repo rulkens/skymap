@@ -26,7 +26,6 @@ import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -47,7 +46,7 @@ const LAST_SIM_DAYS = 2460000.0;
  */
 function makeState(
   overrides: {
-    cam?: OrbitCamera | null;
+    booted?: boolean;
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
@@ -56,16 +55,6 @@ function makeState(
     enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
   } = {},
 ): EngineState {
-  const cam =
-    overrides.cam === undefined
-      ? ({
-          target: [0, 0, 0],
-          yaw: 0,
-          pitch: 0,
-          distance: 100,
-          position: new Float32Array(3),
-        } as unknown as OrbitCamera)
-      : overrides.cam;
   const galaxyPointRenderer =
     overrides.galaxyPointRenderer === undefined ? ({} as unknown) : overrides.galaxyPointRenderer;
   const renderTargets =
@@ -85,7 +74,7 @@ function makeState(
   );
 
   return {
-    cam,
+    booted: overrides.booted ?? true,
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
@@ -126,7 +115,7 @@ describe('pickFrameContext', () => {
   it('returns null before the engine is ready', () => {
     // Any missing bootstrap-gate handle → `deriveFrameContext` reports
     // not-ready → `pickFrameContext` returns null (not a not-ready context).
-    expect(pickFrameContext(makeState({ cam: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ booted: false }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ galaxyPointRenderer: null }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ galaxyPickRenderer: null }), makeCanvas())).toBeNull();
   });

@@ -24,7 +24,6 @@ export function makeReconcileEffects(
     syncFades: (rows) => syncVisibilityFades(state, { animate: true, only: rows }),
     reseedFlow: () => state.gpu.flowFieldRenderer?.maybeReseed(),
     bakeBias: (mode) => void state.subsystems.biasCorrection.setMode(mode),
-    // The LIVE rendered pose, assembled fresh — never the stale `state.cam`.
     logCameraState: () => {
       const simDays = state.cameraRuntime.outputs.simDays;
       logCameraState(

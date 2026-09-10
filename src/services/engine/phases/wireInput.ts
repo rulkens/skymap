@@ -6,7 +6,6 @@
  * constants from `cameraFraming.ts`, so the loop can come up immediately.
  */
 
-import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
@@ -102,8 +101,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
   const initialCam = computeInitialCamera({ fovYRad, simDays, frameBasis });
 
-  const cam = createOrbitCamera({ ...initialCam, aspect: canvas.width / canvas.height });
-  state.cam = cam;
+  state.booted = true;
 
   // Without this seed the first resting frame returns the placeholder `base`
   // (yaw 0, distance 0.43) rather than the computed framing pose — a visible
@@ -115,17 +113,21 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // gap: moving `setSagaContext` into a bootstrap phase, or making bootstrap
   // synchronous with engine construction, silently regresses the boot frame to
   // the default orientation.
-  // `target` is COPIED: `cam.target` is mutable and this pose outlives the seed.
+  // `target` is COPIED: `initialCam.target` is mutable and this pose outlives the seed.
   const committed = absoluteArm({
-    target: [cam.target[0], cam.target[1], cam.target[2]],
-    yaw: cam.yaw,
-    pitch: cam.pitch,
-    distance: cam.distance,
-    roll: cam.roll,
+    target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
+    yaw: initialCam.yaw,
+    pitch: initialCam.pitch,
+    distance: initialCam.distance,
   });
   state.cameraRuntime = seedCameraRuntime({
     committed,
-    projection: { fovYRad: cam.fovYRad, aspect: cam.aspect, near: cam.near, far: cam.far },
+    projection: {
+      fovYRad: initialCam.fovYRad,
+      aspect: canvas.width / canvas.height,
+      near: initialCam.near,
+      far: initialCam.far,
+    },
   });
   store.dispatch(commitCameraPose(committed));
 

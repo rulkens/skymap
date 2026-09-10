@@ -45,9 +45,6 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByR
  * makes an orientation-frame switch roll the horizon instead of sweeping the
  * whole view.
  *
- * `state.cam` is only the boot framing camera, NOT the source of the rendered
- * pose; the produced `ctx.cam` is a fresh camera that does not alias it.
- *
  * `nowMs` is wall-clock ms (fades, ramps); `simDays` is scene time in Julian
  * days (where the planets are). The two decouple whenever the clock is paused
  * or scrubbed, and `nowMs` being threaded rather than sampled per consumer is

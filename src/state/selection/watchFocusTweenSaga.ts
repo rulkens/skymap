@@ -27,7 +27,7 @@
  *      `engineStatusChanged` pulse rather than dropping the tween: a deep-link
  *      focus whose id resolves statically (a scene body, the Milky Way, a star)
  *      fires `updateSelectionFocus` during bootstrap, before `initGpu` has built
- *      `state.cam`, so `cameraRuntime()` is momentarily null. Galaxy deep links
+ *      the camera, so `cameraRuntime()` is momentarily null. Galaxy deep links
  *      dodge this because their `updateSelectionFocus` is itself deferred on
  *      `catalogLoaded`, which only fires after the camera exists. `takeLatest`
  *      (not `takeEvery`) aborts a still-waiting worker if a newer focus arrives,
@@ -121,7 +121,7 @@ export function* watchFocusTweenSaga() {
       if (bodyMovesThisFrame(row)) return;
 
       // A focus that resolves during bootstrap can outrun the camera: the ref is
-      // known but `state.cam` (hence `cameraRuntime()`) isn't built until wireInput
+      // known but the camera (hence `cameraRuntime()`) isn't seeded until wireInput
       // runs. Defer on the engine-status pulse — the first one past bootstrap fires
       // after the camera exists — re-reading the live Resources each time, so the
       // tween lands once the camera is ready instead of being dropped. `takeLatest`

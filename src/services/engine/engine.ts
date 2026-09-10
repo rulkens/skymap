@@ -300,7 +300,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       inputBindings: null,
       loadProgress: null,
     },
-    cam: null,
+    booted: false,
     cameraRuntime,
     skyCubemapCapture,
     // The Maps are declared up-front so consumers can reach a slot without a null
@@ -432,7 +432,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // captures the live pole rather than snapping to the committed frame. Null
     // pre-bootstrap and post-destroy, so a saga no-ops rather than seeding stale.
     cameraRuntime: () =>
-      state.cam
+      state.booted
         ? {
             from: liveWorldPose(state),
             fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
@@ -551,7 +551,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     for (const source of [...state.data.galaxies.catalogs.keys()]) {
       state.data.galaxies.removeCatalog(source);
     }
-    state.cam = null;
+    state.booted = false;
   }
 
   // The engine's only public surface: imperative operations only — store writes go

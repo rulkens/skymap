@@ -471,7 +471,7 @@ function makeState(
         label: 'fadeRegistry',
       },
     } as never,
-    cam: null,
+    booted: false,
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set (boot-load expectations stay

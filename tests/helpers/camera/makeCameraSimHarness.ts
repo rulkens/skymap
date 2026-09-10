@@ -35,7 +35,6 @@ import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureEvent';
-import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
 import type { RunFrameDeps } from '../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 
@@ -72,17 +71,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },
       inputAggregator: createInputAggregator(),
     },
-    cam: {
-      yaw: 0,
-      pitch: 0,
-      distance: 1,
-      target: new Float32Array(3),
-      position: new Float32Array(3),
-      fovYRad,
-      aspect: 1,
-      near: NEAR_CLIP_MPC,
-      far: FAR_CLIP_MPC,
-    } as unknown as OrbitCamera,
+    booted: true,
     cameraRuntime: seedCameraRuntime({
       committed: absoluteArm(neutralPose),
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },

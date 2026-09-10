@@ -15,7 +15,6 @@ import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
@@ -45,7 +44,7 @@ const EXPECTED_AXIS: readonly Vec3[] = [
  */
 function makeState(
   overrides: {
-    cam?: OrbitCamera | null;
+    booted?: boolean;
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
@@ -53,16 +52,6 @@ function makeState(
     texturedDisks?: unknown;
   } = {},
 ): EngineState {
-  const cam =
-    overrides.cam === undefined
-      ? ({
-          target: [0, 0, 0],
-          yaw: 0,
-          pitch: 0,
-          distance: 100,
-          position: new Float32Array(3),
-        } as unknown as OrbitCamera)
-      : overrides.cam;
   const galaxyPointRenderer =
     overrides.galaxyPointRenderer === undefined ? ({} as unknown) : overrides.galaxyPointRenderer;
   const renderTargets =
@@ -81,7 +70,7 @@ function makeState(
   );
 
   return {
-    cam,
+    booted: overrides.booted ?? true,
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
@@ -141,7 +130,7 @@ describe('skyCubemapFaceContext', () => {
   it('returns null before bootstrap', () => {
     expect(
       skyCubemapFaceContext({
-        state: makeState({ cam: null }),
+        state: makeState({ booted: false }),
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,

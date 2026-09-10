@@ -18,10 +18,9 @@
  * ### Camera-driver regression (new architecture)
  *
  * The new camera architecture reads state from the Redux store (`cb.store`),
- * not from EngineState fields. Drivers do NOT mutate `state.cam`; instead
- * they return a `CameraPose` that is stored in `state.cameraRuntime.register.pose`.
- * The regression fixtures use a real Redux store and check
- * `state.cameraRuntime.register.pose` instead of `state.cam.yaw`.
+ * not from EngineState fields. A driver returns a `CameraPose` that is stored
+ * in `state.cameraRuntime.register.pose`; the regression fixtures use a real
+ * Redux store and read that register.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -112,7 +111,6 @@ import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
@@ -225,7 +223,7 @@ function makeState(): EngineState {
       inputAggregator: createInputAggregator(),
       loadProgress: null,
     },
-    cam: null,
+    booted: false,
     assetSlots: {
       points: new Map(),
       filaments: null,
@@ -280,31 +278,17 @@ function makeDeps(store = makeStore()): RunFrameDeps {
 /**
  * Camera-driver regression fixtures.
  *
- * Unlike `makeState()` (whose `cam: null` bails before the camera block),
- * these fixtures carry a real `OrbitCamera`-shaped `cam` so the per-frame
- * camera-driver resolver — which runs BEFORE `deriveFrameContext` — is
- * actually exercised. The renderer is still null, so `deriveFrameContext`
- * reports not-ready and the body early-returns right after the camera
- * block: exactly the slice we want to pin without standing up a GPU.
- *
- * The new camera architecture produces a `CameraPose` stored in
- * `state.cameraRuntime.register.pose`; tests read that, NOT `state.cam`.
+ * Unlike `makeState()` (whose `booted: false` bails before the camera block),
+ * these fixtures are booted, so the per-frame camera-driver resolver — which
+ * runs BEFORE `deriveFrameContext` — is actually exercised. The renderer is
+ * still null, so `deriveFrameContext` reports not-ready and the body
+ * early-returns right after the camera block: exactly the slice we want to pin
+ * without standing up a GPU. The produced pose lands in
+ * `state.cameraRuntime.register.pose`; tests read that.
  */
 function makeCamState(): EngineState {
-  const cam: OrbitCamera = {
-    yaw: 0,
-    pitch: 0,
-    distance: 100,
-    target: new Float32Array([0, 0, 0]),
-    position: new Float32Array([0, 0, 0]),
-    fovYRad: 0.8,
-    aspect: 1,
-    near: 0.01,
-    far: 1000,
-  } as unknown as OrbitCamera;
-
   const state = makeState();
-  (state as { cam: OrbitCamera }).cam = cam;
+  state.booted = true;
   return state;
 }
 
@@ -912,10 +896,10 @@ describe('runFrame — milky-way star count', () => {
 });
 
 describe('runFrame — engineScaleChanged dispatch', () => {
-  // The scale-dispatch block fires inside the `if (state.cam)` guard —
-  // the same guard that emits `onCameraChange`. `makeCamState()` seeds a
-  // non-null `cam`; `makeCamDeps` gives the canvas real clientWidth/Height
-  // (100×100) so `computeScaleInfo` returns a non-null result.
+  // The scale-dispatch block fires inside the `if (state.booted)` guard —
+  // the same guard that emits `onCameraChange`. `makeCamState()` is booted;
+  // `makeCamDeps` gives the canvas real clientWidth/Height (100×100) so
+  // `computeScaleInfo` returns a non-null result.
   it('dispatches engineScaleChanged when the camera is ready and the viewport is non-degenerate', () => {
     const store = makeStore();
     const spy = vi.spyOn(store, 'dispatch');
@@ -961,12 +945,12 @@ describe('runFrame — engineScaleChanged dispatch', () => {
     expect(scaleCalls).toHaveLength(0);
   });
 
-  it('does not dispatch engineScaleChanged when state.cam is null (pre-bootstrap)', () => {
-    // Without a camera the `if (state.cam)` guard is false and the scale
-    // block is unreachable — the test pins that it stays silent.
+  it('does not dispatch engineScaleChanged before boot', () => {
+    // Pre-boot the `if (state.booted)` guard is false and the scale block is
+    // unreachable — the test pins that it stays silent.
     const store = makeStore();
     const spy = vi.spyOn(store, 'dispatch');
-    const state = makeState(); // cam === null
+    const state = makeState(); // not booted
     const deps = makeDeps(store);
 
     runFrame(state, deps, 0);

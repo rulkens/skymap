@@ -2,8 +2,8 @@
  * wireInput — focused test for the highest-leverage invariant of the
  * third bootstrap phase: the initial camera framing call.
  *
- * `computeInitialCamera` is called with a 60° FOV and the result drives
- * `state.cam`. No bbox input — framing uses pure constants so the phase
+ * `computeInitialCamera` is called with a 60° FOV and the result drives the
+ * boot pose seed. No bbox input — framing uses pure constants so the phase
  * can run before any galaxy catalog arrives.
  */
 
@@ -36,19 +36,6 @@ vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
 
 vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
   buildGalaxyInfo: vi.fn(),
-}));
-
-vi.mock('../../../../src/utils/camera/createOrbitCamera', () => ({
-  createOrbitCamera: vi.fn(() => ({
-    target: [0, 0, 0],
-    distance: 0.43,
-    yaw: 3.0045,
-    pitch: 0.0609,
-    fovYRad: Math.PI / 3,
-    aspect: 1,
-    near: 0.01,
-    far: 6000,
-  })),
 }));
 
 const attachOrbitControlsSpy = vi.fn((..._args: unknown[]) => () => {});
@@ -181,7 +168,7 @@ function makeState(): EngineState {
       // recognizer's events actually reach the aggregator.
       inputAggregator: createInputAggregator(),
     } as never,
-    cam: null,
+    booted: false,
     cameraRuntime: {
       register: { pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }, winner: 'resting' },
       epochs: UNSTARTED_EPOCHS,
@@ -238,18 +225,18 @@ describe('wireInput', () => {
       simDays: expect.any(Number),
       frameBasis: ORIENTATION_FRAMES.ecliptic,
     });
-    expect(state.cam).not.toBeNull();
+    expect(state.booted).toBe(true);
   });
 
-  it('seeds the register with a COPY of the camera target, not the live array', async () => {
+  it('seeds the register with a COPY of the framing target, not the live array', async () => {
     const state = makeState();
     const deps = makeDeps();
 
     await wireInput(state, deps);
 
-    // `cam.target` is mutated in place by every drag; the seeded pose outlives the
-    // frame that made it, so a shared array would drag the boot commit along.
-    (state.cam!.target as number[])[0] = 99;
+    // The seeded pose outlives the framing result that made it, so a shared
+    // array would drag the boot commit along with whoever mutates it next.
+    computeInitialCameraSpy.mock.results[0]!.value.target[0] = 99;
 
     expect(worldArmOf(state.cameraRuntime.register.pose).target[0]).toBe(0);
   });

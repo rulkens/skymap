@@ -76,7 +76,7 @@ function makeState(overrides?: { flowFieldRenderer?: { maybeReseed: () => void }
       biasCorrection: { setMode },
     },
     gpu: { flowFieldRenderer },
-    cam: null,
+    booted: false,
     selectionRows: { hover: null, select: null, focus: null },
     cameraRuntime: { outputs: { simDays: 2461272.948547558, displayed: 'DISPLAYED_ARM' } },
   } as unknown as EngineState;

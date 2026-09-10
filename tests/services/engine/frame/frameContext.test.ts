@@ -6,9 +6,8 @@
  * pre-computes the view-projection matrix, camera position, and
  * pixel-per-radian scalar. Fixtures reuse one basis (`BASIS`) throughout —
  * the poseBasis/upBasis split is `runFrame.test.ts`'s orientation-frame-roll
- * suite's job. The ready context's `cam` is the ASSEMBLED camera, never
- * `state.cam`; the bootstrap gate (cam=null → not-ready) still holds even
- * though the rendered camera comes from the assembled pose, not `state.cam`.
+ * suite's job. The ready context's `cam` is the ASSEMBLED camera; the
+ * bootstrap gate (`booted: false` → not-ready) still holds independently.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -61,18 +60,16 @@ const BASIS: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
  * Build an `EngineState`-shaped fixture with the guard fields
- * (`cam`, `gpu.galaxyPointRenderer`, `gpu.renderTargets`, `gpu.galaxyPickRenderer`,
- * `gpu.compositor`, `subsystems.texturedDisks`) populated by default.
- * Each test can null any one to exercise the not-ready branch.
- *
- * `state.cam` is only used by the `isEngineReady` bootstrap gate (non-null
- * check); the rendered camera comes from
+ * (`booted`, `gpu.galaxyPointRenderer`, `gpu.renderTargets`,
+ * `gpu.galaxyPickRenderer`, `gpu.compositor`, `subsystems.texturedDisks`)
+ * populated by default. Each test can clear any one to exercise the not-ready
+ * branch. The rendered camera comes from
  * `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` passed as
  * arguments.
  */
 function makeState(
   overrides: {
-    cam?: OrbitCamera | null;
+    booted?: boolean;
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
@@ -80,16 +77,6 @@ function makeState(
     texturedDisks?: unknown;
   } = {},
 ): EngineState {
-  const cam =
-    overrides.cam === undefined
-      ? ({
-          target: [0, 0, 0],
-          yaw: 0,
-          pitch: 0,
-          distance: 100,
-          position: new Float32Array(3),
-        } as unknown as OrbitCamera)
-      : overrides.cam;
   const galaxyPointRenderer =
     overrides.galaxyPointRenderer === undefined ? ({} as unknown) : overrides.galaxyPointRenderer;
   const renderTargets =
@@ -100,7 +87,7 @@ function makeState(
   const texturedDisks =
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
-    cam,
+    booted: overrides.booted ?? true,
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: { texturedDisks },
     // No focused pivot in these fixtures — `deriveSlabs` gets `pivotRadiusMpc:
@@ -124,9 +111,9 @@ function makeCanvas(width = 1920, height = 1080): HTMLCanvasElement {
 }
 
 describe('deriveFrameContext — not-ready branch', () => {
-  it('returns isReady:false when state.cam is null', () => {
+  it('returns isReady:false before boot', () => {
     const ctx = deriveFrameContext(
-      makeState({ cam: null }),
+      makeState({ booted: false }),
       makeCanvas(),
       RESTING_POSE,
       RESTING_ARM,
@@ -190,7 +177,7 @@ describe('deriveFrameContext — not-ready branch', () => {
 });
 
 describe('deriveFrameContext — ready branch', () => {
-  it('assembles ctx.cam from pose + projection (not from state.cam)', () => {
+  it('assembles ctx.cam from pose + projection', () => {
     const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
     const projection: CameraProjection = { fovYRad: 1.2, aspect: 2, near: 0.01, far: 5000 };
     const ctx = deriveFrameContext(
@@ -215,9 +202,9 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.cam.pitch).toBeCloseTo(0.1);
   });
 
-  it('ctx.cam.fovYRad === projection.fovYRad (not from state.cam.fovYRad)', () => {
-    // The projection Resource is the source of fovYRad; state.cam.fovYRad is
-    // only the drag register bootstrap value and is never read for rendering.
+  it('ctx.cam.fovYRad === projection.fovYRad', () => {
+    // The projection Resource is the one source of fovYRad — the FOV slider
+    // writes it every frame with no resize event.
     const projection: CameraProjection = { fovYRad: 0.9, aspect: 1, near: 0.1, far: 1000 };
     const ctx = deriveFrameContext(
       makeState(),

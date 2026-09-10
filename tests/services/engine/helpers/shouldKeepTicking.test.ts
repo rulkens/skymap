@@ -89,7 +89,7 @@ function makeState(over: {
       galaxyPickRenderer: null,
       renderTargets: null,
     },
-    cam: null,
+    booted: false,
     // The follow-approach-ease term reads these two: the frame's winner id and
     // the follow memory's saturation. Default is at-rest (resting won, no memory).
     cameraRuntime: {
@@ -250,7 +250,7 @@ describe('shouldKeepTicking', () => {
     const state = {
       settings: { flow: { enabled: false } },
       gpu: { galaxyPointRenderer: null, galaxyPickRenderer: null, renderTargets: null },
-      cam: null,
+      booted: false,
       cameraRuntime: {
         register: { winner: 'resting' },
         follow: null,

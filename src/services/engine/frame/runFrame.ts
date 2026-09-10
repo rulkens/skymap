@@ -125,8 +125,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const pivotFocus = stored.selectionRows.focus;
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
-  // silently breaks the bar on retina. `state.cam` is the bootstrap-ready proxy.
-  if (state.cam) {
+  // silently breaks the bar on retina.
+  if (state.booted) {
     const snap = {
       distance: worldPose.distance,
       fovYRad: projection.fovYRad,

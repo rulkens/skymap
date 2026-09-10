@@ -322,13 +322,6 @@ describe('runFrame — the regime fold', () => {
     const { store, state, deps } = makeHarness();
     const ENGAGING = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1);
     seedPose(store, state, ENGAGING);
-    // The drag register is what `orbitDrag` renders, so it carries the same
-    // engaging pose — otherwise the arm would hold for want of altitude, not
-    // for want of the skip.
-    state.cam!.target = new Float32Array(ENGAGING.target) as unknown as Vec3;
-    state.cam!.yaw = ENGAGING.yaw;
-    state.cam!.pitch = ENGAGING.pitch;
-    state.cam!.distance = ENGAGING.distance;
     store.dispatch(beginDrag());
 
     runFrame(state, deps, 0);
