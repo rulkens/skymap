@@ -69,7 +69,7 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         max={limits.engageMax}
         step={0.05}
         readout={SURFACE_REGIME.engageHR.toFixed(2)}
-        title="h/R at which the body arm takes over (default 0.2; disengage kept > this × 1.1)"
+        title="h/R at which the body arm takes over (disengage kept > this × 1.1)"
         onChange={(v) => {
           const clamped = setSurfaceBand({ engageHR: v });
           dispatch({ clamped });
@@ -82,7 +82,7 @@ function OrientationTuning({ rememberedTiltReadout }: OrientationTuningProps): R
         max={limits.disengageMax}
         step={0.05}
         readout={SURFACE_REGIME.disengageHR.toFixed(2)}
-        title="h/R at which it hands back (default 0.4; kept > engage × 1.1)"
+        title="h/R at which it hands back (kept > engage × 1.1)"
         onChange={(v) => {
           const clamped = setSurfaceBand({ disengageHR: v });
           dispatch({ clamped });

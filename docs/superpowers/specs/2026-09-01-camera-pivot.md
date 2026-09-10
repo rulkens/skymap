@@ -235,12 +235,13 @@ export type SurfaceGesture = {
 export const SURFACE_REGIME = {
   /**
    * h/R at which the body arm takes over. Q6 ruled ~1.7 R ≈ 11,000 km;
-   * ruling 19 (2026-09-09) superseded it to 0.2 R ≈ 1,275 km over Earth —
-   * the user found the Q6 band engaged too far out.
+   * ruling 19 (2026-09-09) superseded it to 0.2 R, and the user's re-tune of
+   * 2026-09-10 to 0.45 R ≈ 2,870 km over Earth — the Q6 band engaged too far
+   * out, ruling 19's too close in.
    */
-  engageHR: 0.2,
+  engageHR: 0.45,
   /** h/R at which it hands back. 2× hysteresis, kept from Q6 (ruling 19). */
-  disengageHR: 0.4,
+  disengageHR: 0.9,
   /** Tilt ceiling at ground level: π = zenith, reached via look mode (Q5). */
   tiltMaxRad: Math.PI,
   /** h/R below which the full ceiling is open. Feel-tunable (Q5). */
@@ -250,13 +251,15 @@ export const SURFACE_REGIME = {
 
 **Ruling 19 (2026-09-09) superseded Q6's band edges** (~1.7 R / ~3.4 R →
 0.2 R / 0.4 R, 2× hysteresis unchanged): the user found the Q6 band engaged
-the body arm too far out. Every place below that cites "3.4 R", "1.71 R", or
-the Q6 figures is describing the band shape at the values in force at the
-time of writing; the live numbers are always `SURFACE_REGIME.engageHR` /
-`.disengageHR`, never restated. The retune also moved the engage edge to where
-the notch grid already puts `bodyUpWeight` at 1 to rounding, so the Δtilt
-across the abs→body flip measures 0.00042 rad at the default cadence (0.0134
-on the Q6 edges).
+the body arm too far out. **The user's re-tune of 2026-09-10 supersedes ruling
+19 in turn, to 0.45 R / 0.9 R**, again at 2× hysteresis. Every place below that
+cites "3.4 R", "1.71 R", or the Q6 figures is describing the band shape at the
+values in force at the time of writing; the live numbers are always
+`SURFACE_REGIME.engageHR` / `.disengageHR`, never restated. Ruling 19's engage
+edge landed where the notch grid already put `bodyUpWeight` at 1 to rounding,
+measuring a Δtilt of 0.00042 rad across the abs→body flip at the default
+cadence (0.0134 on the Q6 edges); the 2026-09-10 edges have not been
+re-measured — `engageFlipPop` is the standing guard either way.
 
 No change to `BodyRelativePose`, `BodyPoseProvider`, `Slab`, `SlabFrame`, or
 any layer type. The seam type does not move.
@@ -292,13 +295,14 @@ toward the rule.
 
 Only the last is observable: outside, the ground drifts under an inertially
 placed camera; inside, the ground is nailed and the sky sweeps. The band has
-two edges and they differ by 2×: at the RELEASE edge (0.4 R) the real-time
-ground-drift rate `ω⊕·R/h` is 1.8e-4 rad/s (0.010°/s), 8.5× the rate at Q6's
-old 3.4 R edge; at the ENGAGE edge (0.2 R) it is 3.6e-4 rad/s (0.021°/s), 17×
-Q6's figure and at the classical minimum-perceptible-velocity threshold. So
-the inbound flip is the one that has to be looked at, not argued away — it
-needs the T22 feel gate to attest it. **H1 ships; the measurement is an
-acceptance item under an
+two edges and they differ by 2×: at the RELEASE edge (0.9 R) the real-time
+ground-drift rate `ω⊕·R/h` is 8.1e-5 rad/s (0.0046°/s), 3.8× the rate at Q6's
+old 3.4 R edge; at the ENGAGE edge (0.45 R) it is 1.6e-4 rad/s (0.0093°/s),
+7.6× Q6's figure and about half the classical minimum-perceptible-velocity
+threshold. The 2026-09-10 re-tune therefore pulled the inbound edge back under
+that threshold (ruling 19's 0.2 R sat on it), but the flip is still the one
+that has to be looked at rather than argued away — it needs the T22 feel gate
+to attest it. **H1 ships; the measurement is an acceptance item under an
 accelerated clock (§11); H2 — smoothstepping the co-rotation rate over ~1 s —
 is the bounded escalation path and is spent only on adverse evidence**
 (ruled, Q7).
@@ -456,7 +460,7 @@ export function maxTiltRad(hOverR: number): number; // = tiltMaxRad · smoothste
 180° at ground level closing smoothly to **exactly 0° at
 `SURFACE_REGIME.disengageHR`** — the Q4 identity, one shared constant, one
 assertion (`maxTiltRad(disengageHR) === 0`). With the shipped values the curve
-crosses 90° at `(disengage + full)/2 = 0.21 R ≈ 1,338 km`, i.e. the horizon is
+crosses 90° at `(disengage + full)/2 = 0.46 R ≈ 2,930 km`, i.e. the horizon is
 reachable right where the regime engages and the sky opens below that; both are
 feel-tunable, no published reference exists for either (M §3).
 
@@ -613,12 +617,12 @@ Each is a requirement on the engaged arm, and each is one test:
 - **FW-D** a gesture's rate currency does not alternate frame-to-frame across
   the limb; per-event step magnitude is bounded on both signs.
 - **FW-E** ground drift at the flip, real-time rate, stated per edge: at the
-  release edge 0.4 R `ω⊕·R/h` = 1.8e-4 rad/s (0.010°/s), 8.5× the rate at Q6's
-  3.4 R edge and below perception; at the engage edge 0.2 R it is 3.6e-4 rad/s
-  (0.021°/s), 17× Q6's figure and at the classical minimum-perceptible-velocity
-  threshold. "Trivially true" therefore no longer holds on the inbound flip:
-  that one is attested by the T22 feel gate, not by this arithmetic. The
-  perceptual derivation no longer sets the band (ruled Q6).
+  release edge 0.9 R `ω⊕·R/h` = 8.1e-5 rad/s (0.0046°/s), 3.8× the rate at Q6's
+  3.4 R edge and below perception; at the engage edge 0.45 R it is 1.6e-4 rad/s
+  (0.0093°/s), 7.6× Q6's figure and about half the classical
+  minimum-perceptible-velocity threshold. "Trivially true" therefore no longer
+  holds on the inbound flip: that one is attested by the T22 feel gate, not by
+  this arithmetic. The perceptual derivation no longer sets the band (ruled Q6).
 - **FW-F** while engaged the tracked ground point does not slide under an
   accelerated clock: `ω × r` residual is exactly zero, not small.
 - **FW-G** the rendered sightline and the interaction register are the same

@@ -44,9 +44,8 @@ describe('OrientationTuning', () => {
     // ratio — without this an unconditional "AT FLOOR" would pass below.
     expect(container.textContent).not.toContain('AT FLOOR');
     expect(container.textContent).toContain('(floor ');
-    // Ruling 19's engage default (0.2) sits flush against disengageMin (0.2),
-    // so the window that clears the floor while still tripping the engage ×
-    // minRatio clamp (0.22) is narrow — 0.21.
+    // 0.21 clears disengageMin (0.2), so the range clamp does not fire first
+    // and the hysteresis floor is what drags engage down.
     fireEvent.change(getByLabelText('disengage h/R'), { target: { value: '0.21' } });
     expect(SURFACE_REGIME.engageHR).toBeCloseTo(0.21 / 1.1, 12);
     const engage = getByLabelText('engage h/R') as HTMLInputElement;

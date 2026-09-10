@@ -20,9 +20,8 @@ afterEach(() => {
 
 describe('setSurfaceBand', () => {
   it('pulling disengage down drags engage below it — hysteresis never collapses', () => {
-    // Ruling 19 dropped engageHR's default to 0.2, flush against disengageMin
-    // (0.2) — the window that still clears the disengage floor while landing
-    // inside engage × minRatio (0.22) is this narrow.
+    // 0.21 is above disengageMin (0.2), so the range clamp does not fire
+    // first and the hysteresis floor is what moves engage.
     const moved = setSurfaceBand({ disengageHR: 0.21 });
     expect(SURFACE_REGIME.disengageHR).toBe(0.21);
     expect(SURFACE_REGIME.engageHR).toBeCloseTo(0.21 / 1.1, 12);
