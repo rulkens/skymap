@@ -11,16 +11,29 @@ script or `/scene-workbench/` subpath.
 
 ## Prerequisites
 
-1. A Datafordeler API key in the login keychain (`skymap-datafordeler-apikey`
-   — the same key the GeoDanmark ortho harvest uses, see
-   `data/raw/geodanmark/README.md`), entitled to the DHM/Punktsky Fildownload
-   service.
+1. Two keychain credentials, not interchangeable:
+   `skymap-datafordeler-apikey` (DHM/Punktsky Fildownload — the same key the
+   GeoDanmark ortho harvest uses, see `data/raw/geodanmark/README.md`) and
+   `skymap-dataforsyningen-apikey` (skråfoto STAC search + JPEG COGs —
+   Dataforsyningen's own self-service token, see
+   `data/raw/skraafoto/README.md`). The skråfoto token travels only as a
+   `token:` request header or `GDAL_HTTP_HEADERS` — never in a URL.
 2. `npm run fetch-dhm` — downloads the `.las` tiles into `data/raw/dhm/`
    (the service serves them uncompressed, despite its `application/zip`
    `Content-Type` — see `data/raw/dhm/README.md`).
 3. `npm run bake-lidar` — runs the PDAL pipeline and writes
    `public/data/geo3d/`.
-4. `npm run scene-workbench`
+4. `npm run fetch-skraafoto` — downloads the skråfoto STAC items and their
+   downsampled JPEGs into `data/raw/skraafoto/` (see
+   `data/raw/skraafoto/README.md`).
+5. `npm run bake-splats` — trains a Gaussian splat and writes the `splats`
+   asset into `public/data/geo3d/`. Needs `bake-lidar` to have already run
+   for the group (its `points.bin` seeds the COLMAP model's `points3D`), and
+   `brush-cli` (Rust, `cargo install --git
+https://github.com/ArthurBrussee/brush brush-cli`) and PROJ's `cct` on
+   PATH.
+   <!-- bake numbers: splatCount / shDegree / wall time — filled after the first real bake -->
+6. `npm run scene-workbench`
 
 Then open <http://localhost:5600> (see `tools/utils/io/devPorts.ts` for the
 full port registry).
@@ -52,3 +65,13 @@ places it in the world.
 (`probeGpuErrors.ts`) against a `?probe` synthetic scene
 (`src/scene/syntheticProbeScene.ts`) generated in the browser, so it needs no
 baked data — see that file's own doc for the `Blob` mechanism.
+
+## Display panel
+
+The left panel's "Display" group holds one nested section per render layer.
+"Point cloud" has the point-size slider (`view.display.pointCloud.pointSizePx`,
+px). "Gaussian splats" sits beside it with two more: splat scale
+(`view.display.gaussianSplat.splatScale`) multiplies each splat's `3σ` quad
+half-extent; opacity scale (`view.display.gaussianSplat.opacityScale`)
+multiplies each splat's opacity. Both live in `DisplayPanel.tsx`, wired to
+`viewSlice`'s `setSplatScale`/`setOpacityScale`.
