@@ -343,8 +343,8 @@ parameterization re-derived from them — `target` on the forward axis at the
 range to the point under the screen centre, `yaw`/`pitch` from the eye
 direction, `distance = |eye − target|`, `roll` from the residual screen-up
 rotation. Exact for **any** pose, which is what makes §12-R1's field necessary
-and the tilt ceiling a _feel_ mechanism rather than a correctness crutch
-(ruled, Q4-iii, refined).
+and the tilt memory's blend band a _feel_ mechanism rather than a correctness
+crutch (ruled, Q4-iii, refined).
 
 `toWorldArm` is the second module permitted to import `MPC_TO_M` / `M_TO_MPC`
 (§10); `bodyRelativePose` remains the first.
@@ -457,12 +457,18 @@ altitude held to the bit while heading stayed live at full tilt).
 **The ceiling.** There is none. A tilt drag may raise the view to the horizon
 and past it at any altitude; the remembered tilt's one cap is the constant
 `TILT_BAND.maxRad = π` (Cesium's altitude-free `maximumPitch`), applied where
-`surfaceStep` writes the memory. The invariant the Q4 identity was buying —
-`tilt = 0` at the disengage boundary, so the outbound pose's forward axis points
-at the body centre and survives the world arm's pivot pin — is now carried by
-`TILT_BAND.zeroHR ≤ SURFACE_REGIME.disengageHR`: display tilt is
-`remembered × bodyUpWeight(h/R)` (ruling 12) and that weight is already 0 at the
-flip. One altitude ramp over tilt, not two (ruling 10).
+`surfaceStep` writes the memory. One altitude ramp over tilt, not two (ruling
+10). On the **zoom** path `TILT_BAND.zeroHR ≤ SURFACE_REGIME.disengageHR` carries
+the invariant Q4 names — `tilt = 0` at the disengage boundary, so the outbound
+pose's forward axis points at the body centre and survives the world arm's pivot
+pin — because display tilt is `remembered × bodyUpWeight(h/R)` (ruling 12) and
+that weight is already 0 at the flip. The **drag** path authors display tilt
+directly, at any altitude, and
+above `zeroHR` the memory cannot record it — `unmappedTiltRad`'s `w > 1e-6`
+guard skips the write where the un-map diverges — so that tilt is unbacked, and
+the next zoom notch settles it by the bounded decay rather than at once. A
+drag-authored tilt still held at the flip therefore crosses onto the absolute
+arm as roll/tilt (the B7 symptom's second route).
 
 A receding zoom write still walks heading north-up, priced per notch by
 `ORIENT_DECAY`, and the collision floor still bounds a lowering drag

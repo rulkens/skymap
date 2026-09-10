@@ -50,8 +50,8 @@ describe('tilt lerp round trip (ruling 13)', () => {
     // memory is session state and body-agnostic, so a unit-radius drag is
     // the same write path an engaged Earth drag takes — without hand-tuning
     // a metre-scale gesture through the whole input stack (the drag path
-    // itself is pinned in rememberedTilt.test.ts). h/R 0.15 keeps the tilt
-    // ceiling open under ruling 19's tighter band. 2 px look steps: the loop
+    // itself is pinned in rememberedTilt.test.ts). h/R 0.15 sits inside ruling
+    // 19's tighter band, so the drags reach the memory. 2 px look steps: the loop
     // exits on remembered ≥ 0.35, and the engaged bar below is calibrated
     // for landing NEAR 0.35 — the dive transient scales with the memory, so
     // a coarse last increment inflates it.

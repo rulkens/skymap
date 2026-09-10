@@ -872,6 +872,20 @@ describe('surfaceStep', () => {
     expect(angleBetween(upCol, north)).toBeLessThan(0.01);
   });
 
+  it('the tilt CEILING is DEAD: a look drag at the disengage altitude is granted its tilt (ruling B1)', () => {
+    // The deleted wall test's own fixture, inverted: `maxTiltRad` was exactly 0
+    // here, so this gesture was denied outright; one authority over tilt now
+    // (ruling 10) grants it in full, and this fails again the moment any
+    // altitude ramp returns to the drag path. From the boundary the disc fills
+    // the 90° view (limb at 1.02 tan units), so the sky press sits just past
+    // the top edge — pixels are only ray coordinates here — and latches look.
+    const boundary = R * (1 + SURFACE_REGIME.disengageHR);
+    const c = makeSurfaceDriver();
+    c.onGestureStart();
+    const pitched = apply(c, poseAt([0, 0, boundary], NADIR), drag('orbit', [50, -10], [50, -60]));
+    expect(bodyAngle(pitched)).toBeGreaterThan(0.5);
+  });
+
   it('the tilt floor is DEAD: a lowering drag at tilt 0 moves nothing (rulings 14+17)', () => {
     // Drag-DOWN is the tilt-lowering direction (ruling 17). At tilt exactly 0
     // the through-zero budget is 0, so the whole gesture — TILT_GAIN, 200 px

@@ -127,7 +127,7 @@ describe('singular-locus recession (round 7)', () => {
 
       // The bake carries the intrinsic remainder (measured ≈ 2.6–2.8 rad) —
       // which the fold hands to the world arm's above-band drain. The chain
-      // is honest: tilt is 0 at the crossing (the wall), so the engaged
+      // is honest: tilt is 0 at the crossing (`bodyUpWeight` is), so the engaged
       // azimuth-vs-sceneUp IS the scene roll the fold bakes.
       const bake = bakeResidual(pose);
       expect(bake).toBeLessThan(2.9);

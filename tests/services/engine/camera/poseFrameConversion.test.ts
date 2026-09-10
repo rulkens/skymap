@@ -127,8 +127,9 @@ const UP_FRAME: Mat3 = multiply3x3(rotYMat3(-1.05), rotXMat3(0.85));
 
 // Each pose's target sits INSIDE the body (offset ≪ radius) and its distance
 // puts the eye well outside it, so the screen-centre ray genuinely hits the
-// sphere — the case the tilt ceiling leaves reachable at the disengage
-// boundary, and the only one in which an orbit pose can carry the forward axis.
+// sphere — the case a zoom-driven disengage hands over, since `bodyUpWeight` has
+// already zeroed the display tilt at the boundary, and the only one in which an
+// orbit pose can carry the forward axis.
 const FIXTURES: readonly Fixture[] = [
   {
     bodyId: 'earth',
