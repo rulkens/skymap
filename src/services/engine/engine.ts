@@ -465,6 +465,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       liveFocusRow(state.selectionRows.focus, simDays),
       simDays,
       state.subsystems.earthTiles?.getDebugSnapshot().subCamera ?? null,
+      state.cameraRuntime.outputs.displayed,
     );
   }
 

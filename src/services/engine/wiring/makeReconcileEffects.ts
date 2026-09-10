@@ -33,6 +33,7 @@ export function makeReconcileEffects(
         liveFocusRow(state.selectionRows.focus, simDays),
         simDays,
         state.subsystems.earthTiles?.getDebugSnapshot().subCamera ?? null,
+        state.cameraRuntime.outputs.displayed,
       );
     },
     applySwapFormat: (desired) => applySwapFormat(state, desired),

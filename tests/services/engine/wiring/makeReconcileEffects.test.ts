@@ -78,7 +78,7 @@ function makeState(overrides?: { flowFieldRenderer?: { maybeReseed: () => void }
     gpu: { flowFieldRenderer },
     cam: null,
     selectionRows: { hover: null, select: null, focus: null },
-    cameraRuntime: { outputs: { simDays: 2461272.948547558 } },
+    cameraRuntime: { outputs: { simDays: 2461272.948547558, displayed: 'DISPLAYED_ARM' } },
   } as unknown as EngineState;
 
   return { state, requestRender, setMode, maybeReseed };
@@ -160,6 +160,7 @@ describe('makeReconcileEffects', () => {
       'LIVE_FOCUS_ROW',
       state.cameraRuntime.outputs.simDays,
       null,
+      'DISPLAYED_ARM',
     );
   });
 
@@ -180,6 +181,7 @@ describe('makeReconcileEffects', () => {
       'LIVE_FOCUS_ROW',
       state.cameraRuntime.outputs.simDays,
       { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
+      'DISPLAYED_ARM',
     );
   });
 });
