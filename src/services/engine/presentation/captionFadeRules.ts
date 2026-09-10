@@ -4,7 +4,7 @@
  * collision"): this table answers "should this caption be visible, and how
  * hard". Four facts hang off a caption's `kind` and always move together, so
  * they live as one row rather than parallel dispatches scattered through
- * `foregroundLabelsLayer.draw`:
+ * `foregroundLabelsPass.draw`:
  *
  *   1. `labelEnabled` — the caption axis of the kind's own settings row
  *      (muting is per-row, not one cross-cutting bag).

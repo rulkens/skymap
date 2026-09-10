@@ -19,7 +19,7 @@
  * The main camera projection is pinned at near = 0.01 Mpc.  At solar-system
  * zoom the bodies sit ~1e-13 Mpc from the camera — far inside that near
  * plane — so the normal label path (which projects with `ctx.vp`) would
- * clip them away.  `foregroundLabelsLayer` instead draws these through the
+ * clip them away.  `foregroundLabelsPass` instead draws these through the
  * NEAR0 slab view (`view.vp`), whose near plane is proportional to
  * `cam.distance` and so always contains the bodies.
  *
@@ -180,7 +180,7 @@ function bodyLabel(
  * so its caption sits still at every instant. The caller re-invokes this only
  * when the snapshot actually changes — a paused clock returns the same map by
  * reference, so a fresh instant is the only thing that rebuilds the captions
- * (see `foregroundLabelsLayer`'s memo).
+ * (see `foregroundLabelsPass`'s memo).
  */
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [

@@ -69,8 +69,8 @@
  * `camPosMpc` and `bodyPosMpc` are both origin-relative (heliocentric) Mpc; near
  * Earth their difference is a handful of Mpc riding on a ~kpc-to-Mpc pedestal,
  * so we take it in JS doubles where it resolves cleanly before narrowing to f32
- * — the same precision posture the `earthLayer` f64 seam documents
- * (`earthLayer.ts:16-30`). The shader then receives one already-local vector and
+ * — the same precision posture the `earthPass` f64 seam documents
+ * (`earthPass.ts:16-30`). The shader then receives one already-local vector and
  * skips a per-fragment matrix multiply.
  */
 

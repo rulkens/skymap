@@ -11,7 +11,7 @@
  * Pre-unification this bag also carried `milkyWayCloudRenderer`,
  * `horizonShellRenderer`, `filamentRenderer`, `texturedDiskRenderer`, and
  * `proceduralDiskRenderer` — but `runFrame` only ever forwarded them,
- * unread, into `RenderFrameInput`.  Now that every `ContentLayer` reads its
+ * unread, into `RenderFrameInput`.  Now that every `ContentPass` reads its
  * renderer straight off `state.gpu.*` (see `passes/index.ts`), those fields
  * were dead weight here; they're gone along with the matching
  * `RenderFrameInput` fields.

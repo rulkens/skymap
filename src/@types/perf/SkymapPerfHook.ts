@@ -43,7 +43,7 @@ export type SkymapPerfHook = {
   /**
    * Slot/layer name → its render-step groupKey (`'orbit-trails' → 'hdr·NEAR0'`;
    * a group-key row maps to itself). The Node harness can't import
-   * `frameProgram`/`CONTENT_LAYERS` — their transitive `.wesl?static` shader
+   * `frameProgram`/`CONTENT_PASSES` — their transitive `.wesl?static` shader
    * imports only resolve under Vite — so this snapshot carries the map across
    * the seam: the harness buckets its per-layer measurements into groups (for
    * the floor estimate) without ever loading a renderer module.

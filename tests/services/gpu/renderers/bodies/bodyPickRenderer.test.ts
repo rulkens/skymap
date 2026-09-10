@@ -194,8 +194,8 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
 
   it('reuses a slot across a stride change and reallocates to the wider byte size (byte-aware capacity)', () => {
     // Slots are keyed by CALL ORDER (pointCursor), not by caller: when
-    // starPointsLayer drops out of a submit (famous-stars toggle off / roster all
-    // spheres), bodyGlintsLayer becomes the FIRST point caller and inherits slot 0
+    // starPointsPass drops out of a submit (famous-stars toggle off / roster all
+    // spheres), bodyGlintsPass becomes the FIRST point caller and inherits slot 0
     // — a slot last sized for 16-byte scene-star instances. A count-only reuse
     // check keeps that 16-byte buffer for the wider 20-byte glints whenever the
     // count fits (n <= capacity), and writeBuffer then runs past the buffer end (a

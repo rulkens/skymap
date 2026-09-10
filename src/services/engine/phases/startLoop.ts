@@ -9,7 +9,7 @@
  *     capture the frame body needs: `canvas`, `cb`, the GPU device +
  *     context (from `phaseLocals`), the timing service, and the camera
  *     drivers.  Every renderer is read straight off `state.gpu.*` by the
- *     `ContentLayer` that draws with it, so none is threaded through this
+ *     `ContentPass` that draws with it, so none is threaded through this
  *     bag.  The pure `cssToTexPx` helper is imported directly in
  *     `runFrame.ts` rather than threaded through deps — it captures no
  *     per-engine state.  See `runFrame.ts`'s module header for the
@@ -77,10 +77,10 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // Renderers are owned by `state.gpu.*` (written by `initGpu`).  This
   // explicit null-check turns the phase-ordering assumption into a typed
   // runtime error if `initGpu` is ever skipped/reordered, failing loudly
-  // HERE at the construction site rather than deferring to a `ContentLayer`
+  // HERE at the construction site rather than deferring to a `ContentPass`
   // silently no-op'ing on a null renderer five frames later.  None of these
   // renderers are threaded through `RunFrameDeps` any more (every
-  // `ContentLayer.draw` reads its renderer straight off `state.gpu.*` — see
+  // `ContentPass.draw` reads its renderer straight off `state.gpu.*` — see
   // `passes/index.ts`), but the readiness guard itself is still worth
   // failing fast on: independent of whether the value gets forwarded
   // anywhere, "was GPU init actually finished before the loop starts?" is
@@ -104,7 +104,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // (`canvas`, `cb`, the raw device/context, the timing service, the
   // camera drivers) — every renderer (`milkyWayCloudRenderer`,
   // `texturedDiskRenderer`, …) is read off `state.gpu.*` directly by each
-  // `ContentLayer.draw` (see `passes/index.ts`), so mirroring them here
+  // `ContentPass.draw` (see `passes/index.ts`), so mirroring them here
   // would be redundant state.  See runFrame.ts's module header for the
   // dep-vs-state rationale.
   const frameDeps: RunFrameDeps = {

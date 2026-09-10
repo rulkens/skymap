@@ -1,7 +1,7 @@
 /**
  * selectionRingRenderer — per-galaxy selection halo overlay renderer.
  * Drawn as a swap-target layer (premultiplied-OVER, post-tone-map) by
- * `selectionRingLayer`.
+ * `selectionRingPass`.
  *
  * ## Why a separate renderer instead of folding into points
  *

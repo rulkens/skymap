@@ -22,7 +22,7 @@ The Sun is addressed two ways, and neither is the whole truth:
 | `SUN_ENTRY`, `Source.Sun = 26`, `bodies.items.sun` | the label gate, the visibility gate, the panel row | never appears in a pick    |
 | `id: 'sun'` in `famousStars.generated.ts`          | the drawn dot, the sphere, the pick                | cannot be gated on its own |
 
-`starPointsLayer` and `starSpheresLayer` stamp every seeded star — the Sun
+`starPointsPass` and `starSpheresPass` stamp every seeded star — the Sun
 included — with `packSelection(Source.FamousStar, …)`. A click on the Sun resolves
 through the `starCatalog` arm, so `Source.Sun` is a registry code no pick ever
 carries, and `PICK_SEEDS_BY_BODY_ID.sun` exists only to satisfy a

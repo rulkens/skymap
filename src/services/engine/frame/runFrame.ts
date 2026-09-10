@@ -25,8 +25,8 @@ import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { earthSurfaceTier } from './earthSurfaceTier';
-import { prepareStarCut } from './passes/starCatalogLayer';
-import { prepareBodySurfaceFrame, earthLayer } from './passes/earthLayer';
+import { prepareStarCut } from './passes/starCatalogPass';
+import { prepareBodySurfaceFrame, earthPass } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
@@ -232,9 +232,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === 'earth',
   );
   if (earthTiles !== null && earth !== null && earthSlab !== undefined) {
-    // The same slab view `earthLayer.draw` samples into.
+    // The same slab view `earthPass.draw` samples into.
     const earthTilesView = slabViewOf(ctx, earthSlab.index);
-    if (earthLayer.enabled(state, ctx, earthTilesView)) {
+    if (earthPass.enabled(state, ctx, earthTilesView)) {
       // The tier off the COMMITTED texture slot, so a swap in flight cannot make
       // the planner believe in detail that is not on the GPU yet.
       const params = earthTiles.plannerParams(earthSurfaceTier(state));
@@ -279,7 +279,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // when the star pass is not live.
   const starCut = prepareStarCut(state, ctx);
 
-  // Before the GPU dispatch: uploads the instance buffer `structureMarkersLayer` reads.
+  // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {
     state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));
   }

@@ -40,7 +40,7 @@ import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsys
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
-import { CONTENT_LAYERS } from './frame/passes';
+import { CONTENT_PASSES } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveWorldPose } from './helpers/liveWorldPose';
@@ -590,7 +590,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       }),
       // The volume-target raymarch has no user toggle, so it is excluded.
       passOverrides: {
-        allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
+        allNames: CONTENT_PASSES.filter((l) => l.target !== 'volume').map((p) => p.name),
       },
       // Re-derived per call, not snapshotted: the slots this joins against are
       // minted by the async bootstrap.

@@ -1,6 +1,6 @@
 # Multi-star sphere presence (resolved double systems)
 
-**Surfaced:** 2026-07-21, designing presence-by-proximity (`fieldStarSphereLayer`).
+**Surfaced:** 2026-07-21, designing presence-by-proximity (`fieldStarSpherePass`).
 Deliberately shipped single-sphere; this is the extension if a real double ever
 matters.
 

@@ -20,7 +20,7 @@
 //   offset 100 : flickerAmp               f32
 //   offset 104 : _pad0                    f32  — unread; flickerTimescaleS only
 //                                                 feeds the CPU-side flickerPhase
-//                                                 precompute (sgrAStarLensingLayer.ts),
+//                                                 precompute (sgrAStarLensingPass.ts),
 //                                                 never sampled by this shader
 //   offset 108 : flickerPhase             f32  — sim-clock-derived, per-frame
 //   offset 112 : lutMinImpactParamRs      f32  — SchwarzschildDeflectionLut.minImpactParamRs

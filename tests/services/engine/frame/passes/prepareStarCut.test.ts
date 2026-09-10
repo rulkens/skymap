@@ -22,7 +22,7 @@ import {
   prepareStarCut,
   type PreparedStarCut,
   type StarNodeStream,
-} from '../../../../../src/services/engine/frame/passes/starCatalogLayer';
+} from '../../../../../src/services/engine/frame/passes/starCatalogPass';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';

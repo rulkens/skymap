@@ -234,7 +234,7 @@ export type EngineSettingsState = {
    * orbit trails (Earth / Jupiter / Moon …). A flat `enabled` field, mirroring
    * the `milkyWay` / `filaments` / `flow` singleton overlays rather than the
    * per-record source-type clusters: the trails are one compile-time conic table,
-   * not a per-catalog fan-out. Read by `orbitTrailsLayer`, whose per-orbit
+   * not a per-catalog fan-out. Read by `orbitTrailsPass`, whose per-orbit
    * apparent-size fade is multiplied by this gate's fade opacity so the whole
    * layer dissolves on toggle rather than popping. Defaults on — the trails are
    * part of the baseline solar-system scene.
@@ -247,19 +247,19 @@ export type EngineSettingsState = {
    * Earth's per-body look dials. Three fields today:
    *   - `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
    *     shell's HDR output. Seeded from `ATMOSPHERE_PARAMS.earth.exposure` and
-   *     read live by `atmosphereShellLayer` each frame.
+   *     read live by `atmosphereShellPass` each frame.
    *   - `ambientLight`, the night-side ambient floor lifting Earth's unlit
    *     hemisphere off pure black (earthshine / moonlight, physically). Seeded
    *     from `EARTH_SURFACE_PARAMS.ambientLight` — the SAME value as the shared
    *     `AMBIENT` const in `bodyLighting.wesl`, but Earth-scoped: that const
    *     stays the floor for every OTHER lit body, this overrides it for Earth
-   *     alone. Read live by `earthLayer` + `cloudShellLayer` each frame.
+   *     alone. Read live by `earthPass` + `cloudShellPass` each frame.
    *   - `oceanRoughness`, the GGX perceptual roughness the material mask selects
    *     wholesale for open water — the dial that sets how broad the ocean sun
    *     glint reads. Seeded from `EARTH_SURFACE_PARAMS.oceanRoughness` — the SAME
    *     value as the `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`, but Earth-scoped:
    *     that const stays the seed / documentation home (and any future non-Earth
-   *     water), this overrides it for Earth alone. Read live by `earthLayer` each
+   *     water), this overrides it for Earth alone. Read live by `earthPass` each
    *     frame.
    * Each stays the data file's single source of truth for its default (the same
    * relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`).
@@ -286,8 +286,8 @@ export type EngineSettingsState = {
    *
    * `enabled` is TOTAL over the cluster — it governs every row, not just the
    * survey one. Each consumer therefore reads the pair: the asset-demand
-   * predicate, the survey draw path (`starCatalogLayer`), the seeded map's
-   * drawn set (`visibleStars`) and its captions (`foregroundLabelsLayer`) all
+   * predicate, the survey draw path (`starCatalogPass`), the seeded map's
+   * drawn set (`visibleStars`) and its captions (`foregroundLabelsPass`) all
    * require the master before consulting `items[id].enabled`. A master that
    * governed only some of its rows would put a checkbox on the Stars panel
    * header claiming authority over rows it could not hide.
@@ -379,8 +379,8 @@ export type EngineSettingsState = {
 
   /**
    * Scalar-volume overlay master gate and per-item params.  When
-   * `enabled` is false, `volumeUpsampleLayer.enabled` short-circuits
-   * before consulting the renderer at zero GPU cost, and `scalarVolumeLayer`
+   * `enabled` is false, `volumeUpsamplePass.enabled` short-circuits
+   * before consulting the renderer at zero GPU cost, and `scalarVolumePass`
    * never opens its half-res render pass.  Per-field params
    * (enabled / intensity / palette / …) live in `items` — one settings
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
@@ -432,7 +432,7 @@ export type EngineSettingsState = {
    *     when the name maps to `true`, so the override is one-way: it can
    *     hide a layer that would otherwise run but never force-enable one
    *     whose gate returned false.  An open-world membership record (any
-   *     layer name) against the closed-world `CONTENT_LAYERS` registry.  A
+   *     layer name) against the closed-world `CONTENT_PASSES` registry.  A
    *     plain object so the whole settings state stays JSON-serializable.
    *     Trap: `'disk-radius-ring'` names a row in BOTH this record and
    *     `overlays` above, with opposite defaults and opposite polarity —

@@ -4,8 +4,8 @@
  *
  * These tests isolate the program's orchestration from both the heavy
  * frame-context derivation and the real GPU: `pickFrameContext` is mocked to
- * a controlled `ReadyFrameContext | null`, the `layers` dep is a set of fake
- * `ContentLayer`s with `drawPick` / `enabled` spies, and the device is a fake
+ * a controlled `ReadyFrameContext | null`, the `passes` dep is a set of fake
+ * `ContentPass`es with `drawPick` / `enabled` spies, and the device is a fake
  * that records texture allocations, pass descriptors, and staging readbacks.
  * The per-slab draw work each `drawPick` delegates to (galaxyPickRenderer /
  * proceduralDiskRenderer / …) is covered by those renderers' own suites — the
@@ -32,7 +32,7 @@ import {
   SELECTION_SOURCE_SHIFT,
 } from '../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../fixtures/makeSlab';
-import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
+import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
@@ -78,15 +78,15 @@ function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
 /**
  * A fake layer. Omit `drawPick` to model a non-pickable layer. Pass
  * `pickEnabled` to model a layer whose pick gate diverges from its draw gate
- * (planetsLayer's flat ∪ textured, the Earth caption stamp).
+ * (planetsPass's flat ∪ textured, the Earth caption stamp).
  */
-function makeLayer(opts: {
+function makeContentPass(opts: {
   name: string;
   slab: number | 'body';
   enabled: boolean;
   pickEnabled?: boolean;
-  drawPick?: ContentLayer['drawPick'];
-}): ContentLayer {
+  drawPick?: ContentPass['drawPick'];
+}): ContentPass {
   return {
     name: opts.name,
     slab: opts.slab,
@@ -96,7 +96,7 @@ function makeLayer(opts: {
     draw: vi.fn(),
     ...(opts.pickEnabled !== undefined ? { pickEnabled: () => opts.pickEnabled } : {}),
     ...(opts.drawPick ? { drawPick: opts.drawPick } : {}),
-  } as ContentLayer;
+  } as ContentPass;
 }
 
 // A fake device: records texture allocations + pass descriptors, and drives
@@ -189,12 +189,12 @@ describe('createPickProgram', () => {
     const { device } = makeDevice({ mapAsyncImpl: () => firstMap });
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [makeLayer({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
+    const passes = [makeContentPass({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     const first = program.pick(10, 10); // hangs at mapAsync
@@ -212,15 +212,20 @@ describe('createPickProgram', () => {
     const { device, getCommandEncoderCount } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [
-      makeLayer({ name: 'disabled-pickable', slab: COSMO, enabled: false, drawPick: vi.fn() }),
-      makeLayer({ name: 'enabled-nonpickable', slab: COSMO, enabled: true }),
+    const passes = [
+      makeContentPass({
+        name: 'disabled-pickable',
+        slab: COSMO,
+        enabled: false,
+        drawPick: vi.fn(),
+      }),
+      makeContentPass({ name: 'enabled-nonpickable', slab: COSMO, enabled: true }),
     ];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     expect(await program.pick(10, 10)).toBeNull();
@@ -232,19 +237,24 @@ describe('createPickProgram', () => {
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
     const callLog: string[] = [];
-    const layers = [
-      makeLayer({ name: 'a', slab: COSMO, enabled: true, drawPick: () => callLog.push('a') }),
+    const passes = [
+      makeContentPass({ name: 'a', slab: COSMO, enabled: true, drawPick: () => callLog.push('a') }),
       // enabled but no drawPick — skipped.
-      makeLayer({ name: 'b', slab: COSMO, enabled: true }),
+      makeContentPass({ name: 'b', slab: COSMO, enabled: true }),
       // pickable but disabled — skipped.
-      makeLayer({ name: 'c', slab: COSMO, enabled: false, drawPick: () => callLog.push('c') }),
-      makeLayer({ name: 'd', slab: COSMO, enabled: true, drawPick: () => callLog.push('d') }),
+      makeContentPass({
+        name: 'c',
+        slab: COSMO,
+        enabled: false,
+        drawPick: () => callLog.push('c'),
+      }),
+      makeContentPass({ name: 'd', slab: COSMO, enabled: true, drawPick: () => callLog.push('d') }),
     ];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     await program.pick(10, 10);
@@ -253,23 +263,23 @@ describe('createPickProgram', () => {
 
   it('admits a layer whose pickEnabled widens its enabled gate (pick set ⊃ draw set)', async () => {
     // The Bug A seam: a layer disabled for DRAW (enabled:false) but pickEnabled:true
-    // must STILL be recorded into the pick pass — planetsLayer's textured-only frame
-    // is the real case (pick = flat ∪ textured, draw = flat), and bodyGlintsLayer's
+    // must STILL be recorded into the pick pass — planetsPass's textured-only frame
+    // is the real case (pick = flat ∪ textured, draw = flat), and bodyGlintsPass's
     // Earth-stamp-only frame the other. A layer with only enabled:false (no
     // pickEnabled) stays excluded, so the program falls back to `enabled` per layer.
     const { device } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
     const callLog: string[] = [];
-    const layers = [
-      makeLayer({
+    const passes = [
+      makeContentPass({
         name: 'pick-wider',
         slab: COSMO,
         enabled: false,
         pickEnabled: true,
         drawPick: () => callLog.push('pick-wider'),
       }),
-      makeLayer({
+      makeContentPass({
         name: 'draw-off',
         slab: COSMO,
         enabled: false,
@@ -280,7 +290,7 @@ describe('createPickProgram', () => {
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     await program.pick(10, 10);
@@ -295,12 +305,12 @@ describe('createPickProgram', () => {
     const { device } = makeDevice({ stagingValueForLabel: () => raw });
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [makeLayer({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
+    const passes = [makeContentPass({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     expect(await program.pick(10, 10)).toEqual({ sourceCode: 3, localIdx: 42 });
@@ -317,15 +327,15 @@ describe('createPickProgram', () => {
     });
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [
-      makeLayer({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
-      makeLayer({ name: 'near', slab: NEAR0, enabled: true, drawPick: vi.fn() }),
+    const passes = [
+      makeContentPass({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
+      makeContentPass({ name: 'near', slab: NEAR0, enabled: true, drawPick: vi.fn() }),
     ];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     expect(await program.pick(10, 10)).toEqual({ sourceCode: 5, localIdx: 10 });
@@ -343,8 +353,8 @@ describe('createPickProgram', () => {
     vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
 
     const callLog: string[] = [];
-    const layers = [
-      makeLayer({
+    const passes = [
+      makeContentPass({
         name: 'body-pick',
         slab: 'body',
         enabled: true,
@@ -355,7 +365,7 @@ describe('createPickProgram', () => {
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     await program.pick(10, 10);
@@ -370,8 +380,8 @@ describe('createPickProgram', () => {
       vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(bodyIds));
 
       const callLog: string[] = [];
-      const layers = [
-        makeLayer({
+      const passes = [
+        makeContentPass({
           name: 'body-pick',
           slab: 'body',
           enabled: true,
@@ -382,7 +392,7 @@ describe('createPickProgram', () => {
         device,
         canvas: CANVAS,
         state: makeState(() => undefined),
-        layers,
+        passes,
       });
 
       await program.pick(10, 10);
@@ -404,14 +414,14 @@ describe('createPickProgram', () => {
     it('destroy() releases the shared body target', async () => {
       const { device } = makeDevice();
       vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
-      const layers = [
-        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      const passes = [
+        makeContentPass({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
       ];
       const program = createPickProgram({
         device,
         canvas: CANVAS,
         state: makeState(() => undefined),
-        layers,
+        passes,
       });
 
       await program.pick(10, 10);
@@ -434,14 +444,14 @@ describe('createPickProgram', () => {
       // churn with the pick-buffer overlay on).
       const { device, createTextureCalls } = makeDevice();
       vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
-      const layers = [
-        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      const passes = [
+        makeContentPass({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
       ];
       const program = createPickProgram({
         device,
         canvas: CANVAS,
         state: makeState(() => undefined),
-        layers,
+        passes,
       });
 
       const first = program.renderForDebug() as unknown as ReadonlyArray<{
@@ -465,14 +475,14 @@ describe('createPickProgram', () => {
       // (its body left the frame, or its pick gate closed) must have its
       // texture pair destroyed rather than retained forever.
       const { device, createTextureCalls } = makeDevice();
-      const layers = [
-        makeLayer({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      const passes = [
+        makeContentPass({ name: 'body-pick', slab: 'body', enabled: true, drawPick: vi.fn() }),
       ];
       const program = createPickProgram({
         device,
         canvas: CANVAS,
         state: makeState(() => undefined),
-        layers,
+        passes,
       });
 
       vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
@@ -502,12 +512,12 @@ describe('createPickProgram', () => {
     const { device, createTextureCalls } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [makeLayer({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
+    const passes = [makeContentPass({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     await program.pick(10, 10);
@@ -523,8 +533,8 @@ describe('createPickProgram', () => {
     const { device, passDescriptors } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [makeLayer({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
-    const program = createPickProgram({ device, canvas: CANVAS, state, layers });
+    const passes = [makeContentPass({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
+    const program = createPickProgram({ device, canvas: CANVAS, state, passes });
 
     await program.pick(10, 10);
 
@@ -553,12 +563,12 @@ describe('createPickProgram', () => {
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
     const drawPick = vi.fn();
-    const layers = [makeLayer({ name: 'a', slab: COSMO, enabled: true, drawPick })];
+    const passes = [makeContentPass({ name: 'a', slab: COSMO, enabled: true, drawPick })];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     const inFlightPick = program.pick(10, 10); // hangs at mapAsync
@@ -583,12 +593,14 @@ describe('createPickProgram', () => {
     const { device } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [makeLayer({ name: 'star', slab: NEAR0, enabled: true, drawPick: vi.fn() })];
+    const passes = [
+      makeContentPass({ name: 'star', slab: NEAR0, enabled: true, drawPick: vi.fn() }),
+    ];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     const textures = program.renderForDebug() as ReadonlyArray<{ __label?: string }>;
@@ -605,15 +617,15 @@ describe('createPickProgram', () => {
     const { device } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [
-      makeLayer({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
-      makeLayer({ name: 'near', slab: NEAR0, enabled: true, drawPick: vi.fn() }),
+    const passes = [
+      makeContentPass({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
+      makeContentPass({ name: 'near', slab: NEAR0, enabled: true, drawPick: vi.fn() }),
     ];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     const textures = program.renderForDebug() as ReadonlyArray<{ __label?: string }>;
@@ -624,14 +636,14 @@ describe('createPickProgram', () => {
     const { device } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
 
-    const layers = [
-      makeLayer({ name: 'disabled', slab: COSMO, enabled: false, drawPick: vi.fn() }),
+    const passes = [
+      makeContentPass({ name: 'disabled', slab: COSMO, enabled: false, drawPick: vi.fn() }),
     ];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     expect(program.renderForDebug()).toEqual([]);
@@ -658,20 +670,20 @@ describe('createPickProgram', () => {
       vi.mocked(pickFrameContext).mockReturnValue(makeNearBodyCtx());
 
       const callLog: string[] = [];
-      const layers = [
-        makeLayer({
+      const passes = [
+        makeContentPass({
           name: 'near0',
           slab: NEAR0,
           enabled: true,
           drawPick: () => callLog.push('near0'),
         }),
-        makeLayer({
+        makeContentPass({
           name: 'cosmo',
           slab: COSMO,
           enabled: true,
           drawPick: () => callLog.push('cosmo'),
         }),
-        makeLayer({
+        makeContentPass({
           name: 'body',
           slab: 'body',
           enabled: true,
@@ -682,7 +694,7 @@ describe('createPickProgram', () => {
         device,
         canvas: CANVAS,
         state: makeState(() => undefined),
-        layers,
+        passes,
       });
 
       await program.pick(10, 10);
@@ -700,15 +712,15 @@ describe('createPickProgram', () => {
       });
       vi.mocked(pickFrameContext).mockReturnValue(makeNearBodyCtx());
 
-      const layers = [
-        makeLayer({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
-        makeLayer({ name: 'body', slab: 'body', enabled: true, drawPick: vi.fn() }),
+      const passes = [
+        makeContentPass({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
+        makeContentPass({ name: 'body', slab: 'body', enabled: true, drawPick: vi.fn() }),
       ];
       const program = createPickProgram({
         device,
         canvas: CANVAS,
         state: makeState(() => undefined),
-        layers,
+        passes,
       });
 
       expect(await program.pick(10, 10)).toEqual({ sourceCode: 5, localIdx: 10 });
@@ -727,14 +739,14 @@ describe('createPickProgram', () => {
       const { device } = makeDevice();
 
       const callLog: string[] = [];
-      const layers = [
-        makeLayer({
+      const passes = [
+        makeContentPass({
           name: 'near0',
           slab: NEAR0,
           enabled: true,
           drawPick: () => callLog.push('near0'),
         }),
-        makeLayer({
+        makeContentPass({
           name: 'body',
           slab: 'body',
           enabled: true,
@@ -745,7 +757,7 @@ describe('createPickProgram', () => {
         device,
         canvas: CANVAS,
         state: makeState(() => undefined),
-        layers,
+        passes,
       });
 
       await program.pick(10, 10);
@@ -764,8 +776,8 @@ describe('createPickProgram', () => {
 
     const callLog: string[] = [];
     const beginSubmit = vi.fn(() => callLog.push('beginSubmit'));
-    const layers = [
-      makeLayer({
+    const passes = [
+      makeContentPass({
         name: 'body-pick',
         slab: 'body',
         enabled: true,
@@ -778,7 +790,7 @@ describe('createPickProgram', () => {
         bodyPickRenderer: { beginSubmit },
       },
     } as unknown as EngineState;
-    const program = createPickProgram({ device, canvas: CANVAS, state, layers });
+    const program = createPickProgram({ device, canvas: CANVAS, state, passes });
 
     await program.pick(10, 10);
     expect(beginSubmit).toHaveBeenCalledTimes(1);
@@ -792,8 +804,8 @@ describe('createPickProgram', () => {
 
     const callLog: string[] = [];
     const beginSubmit = vi.fn(() => callLog.push('beginSubmit'));
-    const layers = [
-      makeLayer({
+    const passes = [
+      makeContentPass({
         name: 'body-pick',
         slab: 'body',
         enabled: true,
@@ -806,7 +818,7 @@ describe('createPickProgram', () => {
         bodyPickRenderer: { beginSubmit },
       },
     } as unknown as EngineState;
-    const program = createPickProgram({ device, canvas: CANVAS, state, layers });
+    const program = createPickProgram({ device, canvas: CANVAS, state, passes });
 
     program.renderForDebug();
     expect(beginSubmit).toHaveBeenCalledTimes(1);
@@ -817,12 +829,12 @@ describe('createPickProgram', () => {
     const { device, getCommandEncoderCount } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(null);
 
-    const layers = [makeLayer({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
+    const passes = [makeContentPass({ name: 'a', slab: COSMO, enabled: true, drawPick: vi.fn() })];
     const program = createPickProgram({
       device,
       canvas: CANVAS,
       state: makeState(() => undefined),
-      layers,
+      passes,
     });
 
     expect(await program.pick(10, 10)).toBeNull();

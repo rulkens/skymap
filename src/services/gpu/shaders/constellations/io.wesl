@@ -41,7 +41,7 @@ struct Uniforms {
   _pad0 : f32,             // offset 88 — carries lineColor to its 16-byte boundary
   _pad1 : f32,             // offset 92
   // The single dim steel-blue tone every figure emits (offset 96). One home for
-  // the layer's tint, defined CPU-side in 'constellationsLayer.ts' and written
+  // the layer's tint, defined CPU-side in 'constellationsPass.ts' and written
   // into this slot; the fragment reads it directly. vec3 needs 16-byte
   // alignment, hence the pad pair above.
   lineColor : vec3<f32>,

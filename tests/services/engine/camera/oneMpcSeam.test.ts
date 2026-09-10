@@ -71,7 +71,7 @@ const TS_FILES: readonly string[] = [
 // files and this whole test would vacuously pass — assert the sweep found
 // real content, and specifically the files each finding was written about.
 const KNOWN_ANCHOR_FILES: readonly string[] = [
-  'src/services/engine/frame/passes/earthLayer.ts',
+  'src/services/engine/frame/passes/earthPass.ts',
   'src/services/engine/frame/frameProgram.ts',
   'src/services/engine/frame/visibleSlabBodies.ts',
   'src/services/gpu/renderers/bodies/planetRenderer.ts',
@@ -90,15 +90,15 @@ const WESL_FILES: readonly string[] = walk('src/services/gpu/shaders/bodies', ['
 // keeping this a real (if per-file) gate, not a rubber stamp.
 const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
-    'src/services/engine/frame/passes/earthLayer.ts',
+    'src/services/engine/frame/passes/earthPass.ts',
     'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and baseGlobeFadeAlpha (both outside the body-slab path, both Mpc-shaped APIs)',
   ],
   [
-    'src/services/engine/frame/passes/cloudShellLayer.ts',
+    'src/services/engine/frame/passes/cloudShellPass.ts',
     'cull/fade precedent — bridges radiusM to Mpc for the same apparentSizePx cull and for cloudDeckFade (outside the body-slab path)',
   ],
   [
-    'src/services/engine/frame/passes/ringsLayer.ts',
+    'src/services/engine/frame/passes/ringsPass.ts',
     'cull/fade precedent — bridges the ring outer radius/distance to Mpc to call the shared apparentSizePx sub-pixel cull (outside the body-slab path)',
   ],
   [
@@ -111,10 +111,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   ],
   [
     'src/services/engine/frame/atmosphereDrawList.ts',
-    'cull precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull, same shape as earthLayer/cloudShellLayer',
+    'cull precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull, same shape as earthPass/cloudShellPass',
   ],
   [
-    'src/services/engine/frame/passes/starSpheresLayer.ts',
+    'src/services/engine/frame/passes/starSpheresPass.ts',
     "NEAR0 star-sphere precedent — scales a star's radiusM into the RENDER_ORIGIN_MPC-relative NEAR0 model matrix via composeBodyMvp, not the body-slab's composeBodySlabMvp",
   ],
   [

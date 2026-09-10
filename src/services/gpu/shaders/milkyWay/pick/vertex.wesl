@@ -16,7 +16,7 @@
 // pick-shaped, and the camera facts this projection reads (camPosWorld,
 // pxPerRad) are the same ones that sized the glow the user sees.  The CPU
 // keeps only the visibility gate — the pick program's 'enabled' filter,
-// i.e. 'milkyWayLayer.enabled' against the pick-time camera.  The
+// i.e. 'milkyWayPass.enabled' against the pick-time camera.  The
 // 'u.pointSizePx' floor is already the pick-widened value — the pick pack
 // bakes (sizePx + PICK_PADDING_PX) into that slot (pickUniformBytesOf) — so
 // the MW floor matches the padded floor every pick point gets.

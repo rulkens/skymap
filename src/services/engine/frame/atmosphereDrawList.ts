@@ -2,7 +2,7 @@
  * atmosphereDrawList — the ONE per-frame derivation of which seeded bodies draw an
  * atmosphere shell, each paired with its `ATMOSPHERE_PARAMS` row. Two consumers
  * need that answer: the sky-view LUT bake (`encodeAtmosphereSkyView`) and the shell
- * draw (`atmosphereShellLayer`). Derived separately they could disagree, and the
+ * draw (`atmosphereShellPass`). Derived separately they could disagree, and the
  * draw would render a body whose LUT the bake skipped — a stale table sampled with
  * no error anywhere. The sub-pixel cull below measures the body's SURFACE diameter,
  * NOT the atmosphere-TOP diameter: culling on the top holds the limb a hair past the

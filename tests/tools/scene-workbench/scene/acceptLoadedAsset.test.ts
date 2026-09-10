@@ -6,11 +6,11 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LidarGpuAsset } from '../../../../tools/scene-workbench/src/render/renderResources';
+import type { GpuAsset } from '../../../../tools/scene-workbench/src/render/renderResources';
 import { acceptLoadedAsset } from '../../../../tools/scene-workbench/src/scene/acceptLoadedAsset';
 
-function fakeAsset(): LidarGpuAsset {
-  return { vertexBuffer: { destroy: vi.fn() } as unknown as GPUBuffer, pointCount: 7 };
+function fakeAsset(): GpuAsset {
+  return { kind: 'pointCloud', dispose: vi.fn() } as unknown as GpuAsset;
 }
 
 describe('acceptLoadedAsset', () => {
@@ -20,7 +20,7 @@ describe('acceptLoadedAsset', () => {
     const result = acceptLoadedAsset(built, { epoch: 3 }, 3, { aborted: false });
 
     expect(result).toBe(built);
-    expect(built.vertexBuffer.destroy).not.toHaveBeenCalled();
+    expect(built.dispose).not.toHaveBeenCalled();
   });
 
   it('destroys and rejects an aborted build (the worker already unwound)', () => {
@@ -29,7 +29,7 @@ describe('acceptLoadedAsset', () => {
     const result = acceptLoadedAsset(built, { epoch: 3 }, 3, { aborted: true });
 
     expect(result).toBeNull();
-    expect(built.vertexBuffer.destroy).toHaveBeenCalledTimes(1);
+    expect(built.dispose).toHaveBeenCalledTimes(1);
   });
 
   it('destroys and rejects a build whose epoch moved, even without cancellation', () => {
@@ -38,6 +38,6 @@ describe('acceptLoadedAsset', () => {
     const result = acceptLoadedAsset(built, { epoch: 4 }, 3, { aborted: false });
 
     expect(result).toBeNull();
-    expect(built.vertexBuffer.destroy).toHaveBeenCalledTimes(1);
+    expect(built.dispose).toHaveBeenCalledTimes(1);
   });
 });

@@ -18,8 +18,8 @@ no `x`/`y`/`z`" — every consumer that needs to know re-derives the answer by
 hand. At least seven do: `ROW_FOCUSABLE`, `focusFraming`, `focusIdOf`
 (`src/services/url/focusIdOf.ts`), `urlHashFor`
 (`src/services/url/urlHashFor.ts`), `selectionHaloTable`
-(`src/services/engine/frame/passes/selectionRingLayer.ts` and
-`near0SelectionRingLayer.ts`), `detailCardTable`'s omitted `onFocus` arm, and
+(`src/services/engine/frame/passes/selectionRingPass.ts` and
+`near0SelectionRingPass.ts`), `detailCardTable`'s omitted `onFocus` arm, and
 `focusRecession` (`src/services/engine/presentation/focusRecession.ts`).
 
 Severity is bounded: every one of the seven sites is an exhaustive `Record`

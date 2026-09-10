@@ -45,7 +45,7 @@ was a symptom of that mismatch:
   clamps added to THREE shaders (`starPoints/vertex.wesl`,
   `labels/vertex.wesl`, `markerLines/vertex.wesl`).
 - The "which captions can be visible where the far plane bites" coupling
-  argument in `foregroundLabelsLayer`'s module header (rewritten twice as
+  argument in `foregroundLabelsPass`'s module header (rewritten twice as
   the fade semantics changed).
 - The ill-conditioned NEAR0 matrix at deep zoom (near ~1e-16 with parsec
   content) breaking the f32 CPU un-project in the caption placement chain
@@ -83,16 +83,16 @@ the clamps are the compensations.
 
 Two small knots live in the code this redesign rebuilds anyway; absorb them:
 
-- **Caption envelope state at module scope** — `foregroundLabelsLayer.ts`
+- **Caption envelope state at module scope** — `foregroundLabelsPass.ts`
   holds `captionAlpha: Map` + `captionClockMs` as module singletons, so the
   fade state survives engine destroy/recreate (latent, not live: a huge dt
   lands captions on target, and the app never re-creates the engine in one
   page). The un-braided shape is the label director's: hold the envelope in
-  a per-engine closure (`createForegroundLabelsLayer()`) or on
+  a per-engine closure (`createForegroundLabelsPass()`) or on
   `state.subsystems` — mutable time-coupled state does not belong at module
   scope even when immutable derived data (BASE_LABELS) does.
 - **Forward-projection formula duplicated four ways** — `labelLeaderLine`,
-  `foregroundLabelsLayer`'s `projectToScreenPx`, the director's declutter
+  `foregroundLabelsPass`'s `projectToScreenPx`, the director's declutter
   projection, and the shader-sizing sites each hand-roll column-major
   project-to-screen. Extract one `utils/camera/projectWorldToScreenPx.ts`
   when these call sites are reworked (mind the director loop's per-frame

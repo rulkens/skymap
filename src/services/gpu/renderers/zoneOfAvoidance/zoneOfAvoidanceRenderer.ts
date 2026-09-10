@@ -90,7 +90,7 @@ export function createZoneOfAvoidanceRenderer(
   // group(0) is never bound by this renderer, and no stage of the pick
   // pipeline reads it — it's the COSMO pick pass's shared point-pick camera
   // prefix, already bound by the time `drawPick` runs (see
-  // `ContentLayer.drawPick`'s postcondition). This BGL only exists so the
+  // `ContentPass.drawPick`'s postcondition). This BGL only exists so the
   // pipeline layout is structurally compatible with it.
   const pickCameraBgl = device.createBindGroupLayout({
     label: 'zoneOfAvoidance-pick-camera-bgl',

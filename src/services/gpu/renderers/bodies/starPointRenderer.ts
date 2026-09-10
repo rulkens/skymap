@@ -33,7 +33,7 @@
  * ### Precision — camera-relative inputs, then f32 narrowing
  *
  * Both the instance positions and the view-projection arrive already rebased
- * into the CAMERA-RELATIVE frame — the caller (`starPointsLayer`) subtracts the
+ * into the CAMERA-RELATIVE frame — the caller (`starPointsPass`) subtracts the
  * eye from each anchor and folds the eye offset into the vp via
  * `rebaseViewProj`, both in f64, before handing them here. That matters because
  * during the final approach to a local-map star the raw anchor (~1e-6 Mpc from
@@ -167,7 +167,7 @@ export function createStarPointRenderer(
 
   // ── Star instance buffers (late-bound via setStars) ───────────────────────
   //
-  // Grow-only reuse, NOT replace-on-upload. `starPointsLayer.draw` calls
+  // Grow-only reuse, NOT replace-on-upload. `starPointsPass.draw` calls
   // `setStars` EVERY frame — the camera-relative anchors it hands us change
   // per frame (the eye is subtracted in f64 before narrowing here). A
   // create/destroy of the GPU buffer per call would mean a fresh allocation

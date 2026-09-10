@@ -20,7 +20,7 @@ import { resolveLayerOpacity } from '../../../src/services/engine/presentation/f
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { galaxyPointSpritesLayer } from '../../../src/services/engine/frame/passes/galaxyPointSpritesLayer';
+import { galaxyPointSpritesPass } from '../../../src/services/engine/frame/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/services/engine/frame/milkyWayCloudLiveness';
 import { Source } from '../../../src/data/sources';
 
@@ -265,7 +265,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       viewportPx: [CANVAS.width, CANVAS.height],
       camPos: SURVEY_CAM_POS,
     } as unknown as SlabView;
-    galaxyPointSpritesLayer.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
+    galaxyPointSpritesPass.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
     const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
     return settings.fadeOpacityOf(Source.SDSS);
   }

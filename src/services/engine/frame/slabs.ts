@@ -58,11 +58,11 @@ export function groupKeyOf(target: string, slab: number): string {
   return `${target}·${slabName(slab)}`;
 }
 
-// Body rows and capture faces are appended because both draw the same layer more
+// Body rows and capture faces are appended because both draw the same pass more
 // than once per frame against one `(target, slab)` — without them the passes attach
 // the same query pair and the last silently overwrites the rest.
-export function layerTimingSlotName(layerName: string, slabIndex: number, face?: number): string {
-  const base = isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
+export function passTimingSlotName(passName: string, slabIndex: number, face?: number): string {
+  const base = isBodySlabIndex(slabIndex) ? `${passName}·${slabName(slabIndex)}` : passName;
   return face === undefined ? base : `${base}·FACE[${face}]`;
 }
 

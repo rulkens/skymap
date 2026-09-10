@@ -81,7 +81,7 @@ export function createTexturedDiskRenderer(
     // fade-to-black at thumbnail edges.
     blend: 'additive',
     targetFormat: init.targetFormat,
-    // Sky-cubemap capture roster (Task 13b, Ruling 6): texturedDisksLayer's
+    // Sky-cubemap capture roster (Task 13b, Ruling 6): texturedDisksPass's
     // draw() calls span the main view plus up to 6 captured faces, all
     // before one submit() — see `InstancedQuadConfig.viewSlotCount`'s doc.
     viewSlotCount: VIEW_SLOT_COUNT,

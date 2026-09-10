@@ -166,7 +166,7 @@ function makeRenderTargets(): any {
       scale: 3,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
-    // milkyWayAggregateLayer.draw reads this row's `scale` to size the
+    // milkyWayAggregatePass.draw reads this row's `scale` to size the
     // downscaled viewport it hands the cloud's star pass.
     {
       id: 'mw-aggregate',
@@ -190,7 +190,7 @@ function makeRenderTargets(): any {
       if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
       return spec;
     },
-    // scalarVolumeLayer / milkyWayAggregateLayer read this for their
+    // scalarVolumePass / milkyWayAggregatePass read this for their
     // downscaled viewport; the fixture canvas is the fixed 1280x720 the
     // `ctx` built below uses (`canvasWidth`/`FIXTURE_CANVAS_HEIGHT_PX`).
     sizeOf: (id: string) => {
@@ -244,7 +244,7 @@ const MW_ALIVE_DIST_MPC =
 
 function makeCam(): OrbitCamera {
   // Camera close enough that the Milky-Way disc sits safely above its FULL
-  // apparent size (MW_ALIVE_DIST_MPC), so milkyWayLayer.draw computes
+  // apparent size (MW_ALIVE_DIST_MPC), so milkyWayPass.draw computes
   // fadeAlpha > 0 and dispatches the impostor.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
@@ -279,7 +279,7 @@ describe('renderFrame visual baseline', () => {
       ...makeLoggingRenderer(records, 'milky-way-aggregate', 'drawStars'),
       ...makeLoggingRenderer(records, 'milky-way', 'drawDust'),
     };
-    // milkyWayAggregateUpsample is the state.gpu handle milkyWayUpsampleLayer.draw
+    // milkyWayAggregateUpsample is the state.gpu handle milkyWayUpsamplePass.draw
     // calls directly, the twin of volumeUpsample below — wired with a logging
     // draw so the snapshot captures the offscreen's merge back into HDR.
     const milkyWayAggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
@@ -297,7 +297,7 @@ describe('renderFrame visual baseline', () => {
         });
       }),
     };
-    // volumeUpsample is the state.gpu handle that volumeUpsampleLayer.draw
+    // volumeUpsample is the state.gpu handle that volumeUpsamplePass.draw
     // calls directly off `state.gpu.*`.  Wire it with a logging draw so
     // the snapshot captures the upsample step.
     const volumeUpsample = {
@@ -365,7 +365,7 @@ describe('renderFrame visual baseline', () => {
       focusBlend: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
       galaxyPointRenderer,
-      // The executor resolves hdr/volume attachments — and volumeUpsampleLayer
+      // The executor resolves hdr/volume attachments — and volumeUpsamplePass
       // its source texture — via ctx.renderTargets.viewOf(id).
       renderTargets,
       texturedDisks: texturedDisksSubsystem,
@@ -398,7 +398,7 @@ describe('renderFrame visual baseline', () => {
         gpu: {
           labelRenderer,
           markerLineRenderer,
-          // Null so clipPathDebugLayer stays disabled and the recorded
+          // Null so clipPathDebugPass stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
           // Null so the ZoA guide band stays out of the pinned sequence — it
@@ -406,7 +406,7 @@ describe('renderFrame visual baseline', () => {
           zoneOfAvoidanceRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
-          // Flow is CONTENT_LAYERS row 5 (see passes/index.ts); here it
+          // Flow is CONTENT_PASSES row 5 (see passes/index.ts); here it
           // stays off (null renderer + disabled below) so encodeFlowCompute
           // is a no-op and the recorded single-vs-split sequence is
           // unchanged.
@@ -423,7 +423,7 @@ describe('renderFrame visual baseline', () => {
           earthRenderer: null,
           starRenderer: null,
           planetRenderer: null,
-          // Near-field handle null → atmosphereShellLayer disabled AND the
+          // Near-field handle null → atmosphereShellPass disabled AND the
           // atmosphereSkyView compute step early-outs, so the recorded draw
           // sequence stays the pure cosmological shape this baseline pins.
           atmosphereShellRenderer: null,
@@ -431,11 +431,11 @@ describe('renderFrame visual baseline', () => {
           orbitTrailRenderer: null,
           starCatalogRenderer: null,
           foregroundLabelRenderer: null,
-          // milkyWayLayer.draw reads the generated cloud buffers off this handle.
+          // milkyWayPass.draw reads the generated cloud buffers off this handle.
           milkyWayCloud: {
             buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }),
           },
-          // Every `ContentLayer.draw` reads its renderer straight off
+          // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `renderFrame` input field duplication;
           // see `RenderFrameInput`'s slimmed shape). The local names below

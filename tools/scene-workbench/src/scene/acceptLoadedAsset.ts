@@ -1,4 +1,4 @@
-import type { LidarGpuAsset, RenderResources } from '../render/renderResources';
+import type { GpuAsset, RenderResources } from '../render/renderResources';
 
 /**
  * acceptLoadedAsset — where a completed upload decides whether it is still
@@ -11,13 +11,13 @@ import type { LidarGpuAsset, RenderResources } from '../render/renderResources';
  * `tools/mcpm-workbench/src/state/scene/acceptBuiltHarness.ts`.
  */
 export function acceptLoadedAsset(
-  built: LidarGpuAsset,
+  built: GpuAsset,
   resources: Pick<RenderResources, 'epoch'>,
   myEpoch: number,
   cancellation: { readonly aborted: boolean },
-): LidarGpuAsset | null {
+): GpuAsset | null {
   if (cancellation.aborted || resources.epoch !== myEpoch) {
-    built.vertexBuffer.destroy();
+    built.dispose();
     return null;
   }
   return built;

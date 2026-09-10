@@ -21,7 +21,7 @@
 //   @location(1) color:      vec3<f32>  — albedo tint (linear RGB), offset 12.
 //   @location(2) brightness: f32        — apparent-size x albedo x phase x fade, offset 24.
 //
-// Positions are f32, but the caller ('bodyGlintsLayer') hands them in already
+// Positions are f32, but the caller ('bodyGlintsPass') hands them in already
 // CAMERA-RELATIVE (anchor - eye, folded eye offset into 'viewProj' via
 // 'rebaseViewProj'), both in f64, before upload — the same catastrophic-
 // cancellation dodge 'starPoints' documents at length.

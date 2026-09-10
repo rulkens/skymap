@@ -10,7 +10,7 @@
  *     pass). A top-level step rather than something a render step invokes
  *     internally, so the compute-before-render ordering is visible as
  *     program order instead of being implicit in a renderer's draw call.
- *   - `'render'` — draw every enabled `ContentLayer` whose `(target, slab)`
+ *   - `'render'` — draw every enabled `ContentPass` whose `(target, slab)`
  *     matches this step's, in registry order. The `target`/`slab` pair
  *     selects a layer group out of data the layers already carry, so two
  *     `'render'` steps with different `(target, slab)` pairs draw disjoint
@@ -72,7 +72,7 @@ export type FrameStep =
        * `orbit-trails`/`body-glints` draw AFTER the lens rather than being
        * sampled by it. Absent ⇒ every layer matches, the pre-Task-14b
        * behaviour. `'pre'` admits every `(hdr, NEAR0)` layer EXCEPT those
-       * opted into `ContentLayer.hdrPostLensing`; `'post'` (emitted only
+       * opted into `ContentPass.hdrPostLensing`; `'post'` (emitted only
        * when the lens step fires) admits ONLY those. Two steps sharing one
        * `(target, slab)` would otherwise collide on one GPU-timing group
        * slot — `slabs.ts`'s `matchesLensPhase` is the single predicate both

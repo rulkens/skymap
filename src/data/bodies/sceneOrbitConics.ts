@@ -28,7 +28,7 @@
  * This table is the orbits frozen at J2000: it exists as a stable geometry
  * fixture (the `orbitTrails` renderer's compile-time shape reference and the
  * `composeOrbitConic` tests). The ANIMATED trails do NOT read it — once a clock
- * drives the scene, `orbitTrailsLayer` re-derives every conic per frame at the
+ * drives the scene, `orbitTrailsPass` re-derives every conic per frame at the
  * frame's `simDays`, reading each moon's parent centre and each body's mean
  * anomaly from the per-frame body snapshot (`sceneBodyStates`). That
  * snapshot-reading lives in the services layer BY DESIGN: this data-layer file
@@ -79,7 +79,7 @@ function worldPositionsMpc(
  * straight through from the element and its `keplerianEllipse` shape; only the
  * centre is lifted from focus-relative to absolute world. No propagation — the
  * elements are read at their tabulated J2000 mean values. The per-frame,
- * clock-driven derivation is `orbitTrailsLayer`'s (which reads the body
+ * clock-driven derivation is `orbitTrailsPass`'s (which reads the body
  * snapshot); this stays a data-layer builder of the fixed epoch geometry.
  *
  * `anchors`/`elements` default to the real tables; a test can inject a
@@ -108,7 +108,7 @@ export function deriveOrbitConics(
 /**
  * The static J2000 orbit conics — the compile-time geometry fixture the
  * `orbitTrails` renderer and the `composeOrbitConic` tests read. The animated
- * trails re-derive per frame in `orbitTrailsLayer`; this reproduces the epoch
+ * trails re-derive per frame in `orbitTrailsPass`; this reproduces the epoch
  * geometry value-for-value.
  */
 export const SCENE_ORBIT_CONICS: readonly OrbitConic[] = deriveOrbitConics();

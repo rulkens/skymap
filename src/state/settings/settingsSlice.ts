@@ -229,17 +229,17 @@ const settingsSlice = createSlice({
 
     // ── earth ───────────────────────────────────────────────────────────────
     // Exposure scale on the atmosphere shell's HDR output — read live by
-    // `atmosphereShellLayer` each frame. Twin of `setFilamentIntensity`.
+    // `atmosphereShellPass` each frame. Twin of `setFilamentIntensity`.
     setAtmosphereExposure: (settings, action: PayloadAction<number>) => {
       settings.earth.atmosphereExposure = action.payload;
     },
     // Night-side ambient floor on Earth's surface + cloud shell — read live by
-    // `earthLayer` / `cloudShellLayer` each frame. An Earth-scoped override of
+    // `earthPass` / `cloudShellPass` each frame. An Earth-scoped override of
     // the shared `AMBIENT` const (which stays every other lit body's floor).
     setAmbientLight: (settings, action: PayloadAction<number>) => {
       settings.earth.ambientLight = action.payload;
     },
-    // Open-water GGX roughness on Earth's surface — read live by `earthLayer`
+    // Open-water GGX roughness on Earth's surface — read live by `earthPass`
     // each frame. An Earth-scoped override of the `OCEAN_ROUGHNESS` const in
     // `lib/pbr.wesl` (which stays the seed / documentation home).
     setOceanRoughness: (settings, action: PayloadAction<number>) => {
@@ -307,7 +307,7 @@ const settingsSlice = createSlice({
     // ── bodies (fifth source-type cluster) ──────────────────────────────────
     // The caption axis is the only WRITABLE one: `bodies.items[id].enabled` is
     // seeded from the registry row and read by `visibleStars` (the Sun's dot)
-    // and `foregroundLabelsLayer` (the Sun's caption), but no product decision
+    // and `foregroundLabelsPass` (the Sun's caption), but no product decision
     // has been made to expose a "hide this body" control, so no setter exists
     // to turn it into a knob nothing turns. There is no cluster-level gate
     // either, for the same reason (see EngineSettingsState).

@@ -160,7 +160,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       quadPlaneRadiusRs,
     };
     // `_pad0` (byte 104) is unwritten — flickerTimescaleS moved CPU-side
-    // (sgrAStarLensingLayer.ts's flickerPhase precompute) and is never
+    // (sgrAStarLensingPass.ts's flickerPhase precompute) and is never
     // sampled by the shader, so its old uniform slot stays zero.
     const zeroPadFields = new Set<string>(['_pad0']);
 

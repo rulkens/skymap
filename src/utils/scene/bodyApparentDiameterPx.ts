@@ -5,7 +5,7 @@
  * This is the ONE place the "body record → apparent pixel size" composition
  * lives: the three LOD gates that decide a body's presentation each frame — the
  * star point↔sphere split (`partitionStarsByResolution`), the planet sub-pixel
- * cull (`planetsLayer`), and the body glint↔mesh split
+ * cull (`planetsPass`), and the body glint↔mesh split
  * (`partitionBodiesByPresentation`) — all read the same physical size the same
  * way. Before this helper each site re-spelled the identical
  * `hypot → diameterKm→kpc → apparentSizePx` block; a fix to any of them (a unit

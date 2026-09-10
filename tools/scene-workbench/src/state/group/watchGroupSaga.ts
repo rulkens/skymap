@@ -13,9 +13,8 @@ import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext'
 import type { SceneAsset } from '../../../@types/SceneAsset';
 import type { SceneManifest } from '../../../@types/SceneManifest';
 import { disposeScene, type RenderResources } from '../../render/renderResources';
-import { uploadPointCloud } from '../../render/uploadPointCloud';
 import { acceptLoadedAsset } from '../../scene/acceptLoadedAsset';
-import { parsePoints } from '../../scene/parsePoints';
+import { ASSET_LOADERS } from '../../scene/loaders/assetLoaders';
 import { resolveAssetUrl } from '../../scene/resolveAssetUrl';
 import type { SceneSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
@@ -39,8 +38,7 @@ function* loadAssetWorker(
           return res.arrayBuffer();
         })
         .then((buffer) => {
-          const { pointCount, records } = parsePoints(buffer);
-          const uploaded = uploadPointCloud(gpu, records, pointCount);
+          const uploaded = ASSET_LOADERS[asset.kind](gpu, buffer);
           return acceptLoadedAsset(uploaded, resources, myEpoch, cancellation);
         }),
     );

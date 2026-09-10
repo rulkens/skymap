@@ -26,7 +26,7 @@ via `RunFrameDeps.cb`), but the other two cannot:
 
 - `produceFamousLabels` implements `LabelProducer.produceLabels(state, ctx)`,
   the contract shared with the structure and Milky Way producers.
-- `diskRadiusRingLayer` is a `ContentLayer` on the same footing.
+- `diskRadiusRingPass` is a `ContentPass` on the same footing.
 
 Both are registry plugins whose entire input is `state`. Reaching the store
 from them means putting `store` on `EngineState` (worse — everything becomes

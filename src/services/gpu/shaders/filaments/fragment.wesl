@@ -90,7 +90,7 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   let densityBoost = mix(0.2, 1.0, pow(in.density, 0.6));
 
   // The tint-ramp endpoints are uniforms the CPU packs from 'FILAMENT_BASE_TINT'
-  // and 'FILAMENT_HOT_TINT' in 'filamentsLayer.ts' (the one home for the layer's
+  // and 'FILAMENT_HOT_TINT' in 'filamentsPass.ts' (the one home for the layer's
   // palette): 'u.baseTint' the dim cool-purple tendrils, 'u.hotTint' the bright
   // near-white-violet spine.
   let tint = mix(u.baseTint, u.hotTint, in.density);

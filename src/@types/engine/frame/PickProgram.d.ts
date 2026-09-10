@@ -13,7 +13,7 @@
  * cursor?" into "draw the next frame" — two concerns that vary independently
  * (a static scene still gets hovered; a moving scene may never be picked). So
  * the pick program is a sibling of the FRAME executor, sharing only the same
- * `ContentLayer` registry: it filters that registry by `drawPick` presence +
+ * `ContentPass` registry: it filters that registry by `drawPick` presence +
  * `enabled`, groups the survivors by slab, and re-rasterises each slab's
  * pickable geometry through the r32uint pick pipeline into its own pick
  * target. See the renderer-unification design's "Pick" section.

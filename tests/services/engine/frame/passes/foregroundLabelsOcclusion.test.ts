@@ -11,12 +11,12 @@
  * thread-through by object identity: `viewOf('foreground:0')` is called, and
  * its return reaches both the caption and the leader-line draws.
  *
- * The rest of the mock scaffolding mirrors `foregroundLabelsLayer.test.ts`.
+ * The rest of the mock scaffolding mirrors `foregroundLabelsPass.test.ts`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
+import { foregroundLabelsPass } from '../../../../../src/services/engine/frame/passes/foregroundLabelsPass';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -75,7 +75,7 @@ function makeState(renderer: LabelRenderer, lineRenderer: MarkerLineRenderer): E
 // `view` is unused by `draw` (the projection comes from `near0LabelProjection(ctx)`).
 const VIEW_STUB = {} as unknown as SlabView;
 
-describe('foregroundLabelsLayer.draw — coverage occlusion thread-through', () => {
+describe('foregroundLabelsPass.draw — coverage occlusion thread-through', () => {
   it('passes the foreground:0 colour view to both draws when the body pass ran this frame', () => {
     const renderer = makeRenderer();
     const lineRenderer = makeLineRenderer();
@@ -86,7 +86,7 @@ describe('foregroundLabelsLayer.draw — coverage occlusion thread-through', () 
     // so the colour is valid to sample.
     const ctx = makeCtx(new Set(['foreground:0']), viewOf);
 
-    foregroundLabelsLayer.draw(PASS_STUB, VIEW_STUB, ctx, state);
+    foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
     expect(viewOf).toHaveBeenCalledWith('foreground:0');
     const labelDraw = renderer.draw as unknown as ReturnType<typeof vi.fn>;
@@ -107,7 +107,7 @@ describe('foregroundLabelsLayer.draw — coverage occlusion thread-through', () 
     const viewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = makeCtx(new Set<string>(), viewOf);
 
-    foregroundLabelsLayer.draw(PASS_STUB, VIEW_STUB, ctx, state);
+    foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
     // The stale colour is never even read.
     expect(viewOf).not.toHaveBeenCalled();

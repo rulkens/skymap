@@ -27,7 +27,7 @@ export type PlanetRenderer = Renderer & {
    * floats 0..15 the body's column-major MVP (model T·R·S + view +
    * projection), 16..18 linear-RGB albedo (+ pad at 19), 20..22 the sun
    * direction in the body's local frame (+ pad at 23), 24..26 camPosLocal (+
-   * pad at 27). `planetsLayer` calls `draw` once per body-m slab row, all
+   * pad at 27). `planetsPass` calls `draw` once per body-m slab row, all
    * inside one submit, so each `bodyId` gets its OWN instance buffer (the
    * `texturedBodyRenderer` own-buffer-per-body precedent): two same-submit
    * calls for different ids never share a write target, so neither can

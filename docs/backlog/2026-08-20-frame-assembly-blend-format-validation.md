@@ -11,8 +11,8 @@ in `BACKLOG.md`.
 
 Two frame-assembly facts are asserted but never checked:
 
-- **`ContentLayer.blend` is advisory.** The field exists
-  (`ContentLayer.d.ts:52`) and its own docblock calls itself "the intended
+- **`ContentPass.blend` is advisory.** The field exists
+  (`ContentPass.d.ts:52`) and its own docblock calls itself "the intended
   guardrail, not yet built" — nothing verifies a layer's declared `blend`
   value actually matches the `GPUBlendState` baked into the pipeline its
   `draw()` calls.
@@ -25,7 +25,7 @@ Two frame-assembly facts are asserted but never checked:
   which narrows but doesn't close the gap this item is about.
 
 The adjacent half of this same loose-spot row — `layer.target ∈ specs` and
-the unique-`ContentLayer.name` check — **is already closed**: covered by
+the unique-`ContentPass.name` check — **is already closed**: covered by
 `tests/services/engine/frame/targetParity.test.ts`, shipped in rung 2. Only
 the blend-legality and format-parity halves remain open.
 
@@ -43,7 +43,7 @@ carry but doesn't yet.
 ## Related, but distinct
 
 [`docs/backlog/2026-07-31-layer-blend-declared-twice.md`](2026-07-31-layer-blend-declared-twice.md)
-is about the _authoring_ side of blend: `ContentLayer.blend` and the
+is about the _authoring_ side of blend: `ContentPass.blend` and the
 pipeline's `GPUBlendState` are declared twice with no single source
 (`blendStateOf(blend): GPUBlendState` is the proposed seam). This item is
 about the _validation_ side: even with a `blendStateOf` seam in place, or
@@ -57,7 +57,7 @@ narrows to "target-format parity only" — worth re-checking at pickup time.
 No design done. Starting points:
 
 - A `frameProgram`-adjacent walker (parallel to the already-shipped
-  `targetParity.test.ts` coverage check) that, for every `ContentLayer`,
+  `targetParity.test.ts` coverage check) that, for every `ContentPass`,
   resolves the renderer(s) its `draw()` touches and asserts declared `blend`
   matches the pipeline's `GPUBlendState`, and declared target format matches
   `RenderTargetSpec.format`.
@@ -66,5 +66,5 @@ No design done. Starting points:
   than every frame — closer to a boot-time assertion than a hot-path check.
 - Decide whether this rides an eventual `SubsystemBundle` walker (deferred
   per decisions.md #9/#17 until rungs 7 and 8 land) or ships standalone
-  against today's flat `CONTENT_LAYERS` registry — the check doesn't
+  against today's flat `CONTENT_PASSES` registry — the check doesn't
   obviously need the bundle contract to exist first.

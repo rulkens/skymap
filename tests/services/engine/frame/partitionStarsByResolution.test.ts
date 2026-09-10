@@ -2,8 +2,8 @@
  * partitionStarsByResolution — unit tests for the star LOD partition.
  *
  * The partition is the ONE branch point deciding whether a star draws as a
- * foreground sphere (`starSpheresLayer`) or an additive backdrop point
- * (`starPointsLayer`), so these tests pin the behaviours the layers lean
+ * foreground sphere (`starSpheresPass`) or an additive backdrop point
+ * (`starPointsPass`), so these tests pin the behaviours the layers lean
  * on: apparent size drives membership for EVERY star — the Sun included, so
  * a sub-resolve Sun demotes to a point instead of vanishing — with one
  * narrow degenerate guard: at zero camera distance (`apparentSizePx`'s

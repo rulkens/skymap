@@ -12,7 +12,7 @@
  * every anchor sits INSIDE that near plane and gets GPU-clipped. A director
  * label for these names could therefore never draw. This is the same reason the
  * scene-body captions (Earth, the planets, the star map) route through
- * `foregroundLabelsLayer` on the NEAR0 slab instead — see that layer's header
+ * `foregroundLabelsPass` on the NEAR0 slab instead — see that layer's header
  * and `sceneBodyLabels`. So these are built as `ForegroundCaption`s and merged
  * into the layer's near-field declutter + envelope pass beside the body
  * captions.
@@ -21,7 +21,7 @@
  *
  * This produces the STATIC caption set from the artifact: positions, name,
  * style, `kind`. It reads no camera and no toggle, so it has nothing to
- * recompute per frame. `foregroundLabelsLayer` memoizes the result on the
+ * recompute per frame. `foregroundLabelsPass` memoizes the result on the
  * artifact's identity (it is static once the slot lands), derives each
  * caption's per-frame fade TARGET from `constellationLayerOpacity`, and runs it
  * through the shared declutter + temporal envelope. Keeping the fade in the
