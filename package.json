@@ -86,6 +86,7 @@
     "fetch-gaia": "tsx tools/fetch/fetchGaia.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",
+    "fetch-skraafoto": "tsx tools/fetch/fetchSkraafoto.ts",
     "fetch-textures": "tsx tools/fetch/fetchTextures.ts",
     "fit-pluto-chroma": "tsx tools/textures/fitPlutoChroma.ts",
     "format": "prettier --write .",
