@@ -38,12 +38,16 @@ const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 const POLE: Vec3 = [0, 0, 1];
 const CTX = { viewportPx: VIEWPORT, fovYRad: FOV, bodyRadiusM: R, sceneUpLocal: POLE };
 
-/** h/R = 0.3 — inside the blend band, so `bodyUpWeight` is strictly in (0, 1)
- * and the un-map shows up in the numbers rather than as an identity. */
+/** The band's geometric midpoint: `bodyUpWeight` blends in LOG h/R, so this is
+ * where the weight is exactly ½ whatever the edges are set to. */
+const BAND_MID_HR = Math.sqrt(SURFACE_REGIME.engageHR * SURFACE_REGIME.disengageHR);
+
+/** Parked at the midpoint, so `bodyUpWeight` is strictly in (0, 1) and the
+ * un-map shows up in the numbers rather than as an identity. */
 const IN_BAND: BodyFixedPose = {
   bodyId: 'earth',
   anchorLocalM: [0, 0, 0],
-  eyeRelAnchorM: [0, 0, 1.3],
+  eyeRelAnchorM: [0, 0, R * (1 + BAND_MID_HR)],
   basisLocal: NADIR,
 };
 
@@ -533,8 +537,20 @@ describe('surfaceStep', () => {
     const basis: Mat3 = [...right, ...north, ...forward] as Mat3;
     const upOf = (p: BodyFixedPose): Vec3 => [p.basisLocal[3], p.basisLocal[4], p.basisLocal[5]];
 
+    // A sub-eye notch scales the ALTITUDE by its factor, so every leg below is
+    // a log-h/R span over the live band edges: start a fixed fraction under
+    // engage, ride to the upper half of the band, then cross out of it.
+    const LN_NOTCH = 0.03;
+    const startHR = SURFACE_REGIME.engageHR * 0.6;
+    const belowNotches = 4; // e^0.12 < 1/0.6 ⇒ still under engage when they end
+    const rideToHR = Math.sqrt(BAND_MID_HR * SURFACE_REGIME.disengageHR);
+    const bandNotches = Math.ceil(
+      Math.log(rideToHR / (startHR * Math.exp(LN_NOTCH * belowNotches))) / LN_NOTCH,
+    );
+
     const c = makeSurfaceDriver();
-    let pose = poseAt([lu[0] * 1.12, lu[1] * 1.12, lu[2] * 1.12], basis); // h/R 0.12
+    const d0 = 1 + startHR;
+    let pose = poseAt([lu[0] * d0, lu[1] * d0, lu[2] * d0], basis);
     let maxTurn = 0;
     // The pole's horizontal at this standpoint — anti-parallel to the scene
     // up's, which is what makes the locus a flip rather than a sweep.
@@ -542,7 +558,7 @@ describe('surfaceStep', () => {
     const poleHoriz: Vec3 = [-lu[0] * poleVert, -lu[1] * poleVert, 1 - lu[2] * poleVert];
     const notch = (): void => {
       const before = upOf(pose);
-      pose = apply(c, pose, zoom(Math.exp(0.03), false), sceneUp);
+      pose = apply(c, pose, zoom(Math.exp(LN_NOTCH), false), sceneUp);
       maxTurn = Math.max(maxTurn, angleBetween(before, upOf(pose)));
     };
 
@@ -550,13 +566,12 @@ describe('surfaceStep', () => {
     // pole's north and only swings off it inside the band. Pinning the weight
     // to the scene up instead walks away from the pole at a full decay cap per
     // notch from the first one.
-    for (let i = 0; i < 4; i += 1) notch();
+    for (let i = 0; i < belowNotches; i += 1) notch();
     expect(angleBetween(upOf(pose), poleHoriz)).toBeLessThan(0.01);
 
-    // Altitude scales by e^0.03 per sub-eye notch: 33 in all ⇒ h/R 0.323,
-    // through the w = 0.5 flip at the band's geometric midpoint √(0.2·0.4) ≈
-    // 0.283, stopping in-band (below disengage 0.4) for the park.
-    for (let i = 0; i < 29; i += 1) notch();
+    // Up to `rideToHR`, through the w = ½ flip at the band's geometric
+    // midpoint, stopping short of disengage so the park below has band left.
+    for (let i = 0; i < bandNotches; i += 1) notch();
 
     // The flip's excess is unauthored, so the ride bound alone caps the turn
     // here — the decay caps act on the deviation the ride leaves behind, and
@@ -566,8 +581,11 @@ describe('surfaceStep', () => {
 
     // Park in-band (factor-1 notches, target stable) ⇒ full convergence…
     for (let i = 0; i < 60; i += 1) pose = apply(c, pose, zoom(1, false), sceneUp);
-    // …then cross: the bake is on the scene up, the flip fully spent.
-    for (let i = 0; i < 3; i += 1) pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
+    // …then cross: the bake is on the scene up, the flip fully spent. One notch
+    // past the edge, so the assertion below is not sitting on it.
+    const crossNotches = Math.ceil(Math.log(SURFACE_REGIME.disengageHR / rideToHR) / 0.1) + 1;
+    for (let i = 0; i < crossNotches; i += 1)
+      pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
     const e = eyeOf(pose);
     expect(Math.hypot(...e) / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
     const luEnd: Vec3 = [e[0] / Math.hypot(...e), e[1] / Math.hypot(...e), e[2] / Math.hypot(...e)];
@@ -611,10 +629,15 @@ describe('surfaceStep', () => {
     const basis: Mat3 = [...right, ...north, ...forward] as Mat3;
 
     const c = makeSurfaceDriver();
-    let pose = poseAt([lun[0] * 1.1, lun[1] * 1.1, lun[2] * 1.1], basis); // h/R 0.1
-    let hr = 0.1;
+    // Start half an engage-edge down, so the recession rides the whole band;
+    // the guard is that ride's length in e^0.1 altitude notches, plus slack.
+    const startHR = SURFACE_REGIME.engageHR * 0.5;
+    const guardMax = Math.ceil(Math.log(SURFACE_REGIME.disengageHR / startHR) / 0.1) + 2;
+    const d0 = 1 + startHR;
+    let pose = poseAt([lun[0] * d0, lun[1] * d0, lun[2] * d0], basis);
+    let hr = startHR;
     let guard = 0;
-    while (hr <= SURFACE_REGIME.disengageHR && guard < 20) {
+    while (hr <= SURFACE_REGIME.disengageHR && guard < guardMax) {
       pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
       hr = Math.hypot(...eyeOf(pose)) / R - 1;
       guard += 1;
