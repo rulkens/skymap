@@ -28,7 +28,10 @@ describe('the whale and petunias orbit rows', () => {
       const dy = body.positionMpc[1] - earth.positionMpc[1];
       const dz = body.positionMpc[2] - earth.positionMpc[2];
       const dist = Math.hypot(dx, dy, dz);
-      expect(dist).toBeCloseTo(expectedRadiusMpc, 15);
+      // Relative, not absolute: expectedRadiusMpc is ~2.2e-16 Mpc, so an
+      // absolute toBeCloseTo tolerance at any usable digit count is bigger
+      // than the value itself and would pass dist = 0 (body on Earth).
+      expect(dist / expectedRadiusMpc).toBeCloseTo(1, 6);
     }
   });
 
