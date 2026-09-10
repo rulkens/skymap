@@ -82,7 +82,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     const visibleAssets = (hiddenAssetIds: readonly string[]): LidarGpuAsset[] => {
       const drawn: LidarGpuAsset[] = [];
       for (const [id, asset] of resources.gpuAssets) {
-        if (!hiddenAssetIds.includes(id)) drawn.push(asset);
+        if (asset.kind === 'pointCloud' && !hiddenAssetIds.includes(id)) drawn.push(asset);
       }
       return drawn;
     };
