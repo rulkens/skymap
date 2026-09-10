@@ -5,7 +5,9 @@
 Two pre-existing defects with one cause, and it is stage order: the replay runs
 BEFORE the winner is picked, so `replayInput` has nothing to route a notch by
 except `cameraRuntime.register.winner` — last frame's answer
-(`src/services/engine/camera/replayInput.ts:215`, `:242`).
+(`src/services/engine/camera/replayInput.ts:215`, `:242`). A third case (c) has
+the same shape one stage later: the replay routes by the STORED arm, not the arm
+the fold resolves this frame.
 
 ## (a) The notch on a follow→spin hand-off frame is dropped
 
@@ -25,6 +27,19 @@ focus a hand-off frame, so this went from rare to once per focus.
 autoRotate goes off, so the notch is applied to the pre-spin `base` the spin froze,
 and `commitOnEdge` (`src/services/engine/camera/commitOnEdge.ts`) bakes that stale
 pose on the same edge.
+
+## (c) The notch on a fly-to's pre-fold frame takes the other zoom
+
+Raised by T19's review (2026-09-10). `routeToSurface` gates on `camera.base.frame`
+(`replayInput.ts:104-106`), and the fly-to saga now commits a body arm from
+anywhere. Launched from OUTSIDE the band, `base` is a body arm for the one frame
+before `projectFramePose` disengages it, so an at-rest notch in that frame runs
+`surfaceStep`/`anchoredZoomStep` (and commits its own body arm) where the orbit
+zoom was due. Same when the body arm names a body other than the focused one
+(`regimeArmFor` rejects it). One notch's scaling in a ≤ 16 ms window, no pose
+discontinuity; the fix is routing on the RESOLVED regime, not the stored one —
+gating the saga on the band would put the band predicate back in the instrument
+(spec §9).
 
 ## Fix shape
 
