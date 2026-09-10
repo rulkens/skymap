@@ -9,7 +9,7 @@ import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
-export const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
+const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
 
 // The FRAMED base (spec §9): world-arm readers resolve it through
 // `resolveWorldArm` / `liveWorldPose` rather than assuming the absolute arm.
