@@ -101,8 +101,8 @@ export function groupKeyOf(target: string, slab: number): string {
  * both call this, so the allocated slot and the looked-up slot can never
  * drift apart.
  */
-export function passTimingSlotName(layerName: string, slabIndex: number, face?: number): string {
-  const base = isBodySlabIndex(slabIndex) ? `${layerName}·${slabName(slabIndex)}` : layerName;
+export function passTimingSlotName(passName: string, slabIndex: number, face?: number): string {
+  const base = isBodySlabIndex(slabIndex) ? `${passName}·${slabName(slabIndex)}` : passName;
   return face === undefined ? base : `${base}·FACE[${face}]`;
 }
 

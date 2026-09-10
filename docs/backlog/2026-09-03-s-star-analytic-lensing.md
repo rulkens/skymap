@@ -32,7 +32,7 @@ closed unmerged, branch kept). User ruling: not now.
   the numerical derivative, → 0 continuously at the shadow (no cull needed).
   Weak-field first version popped at the rim because 2/b keeps the secondary
   bright to the photon sphere.
-- `src/services/engine/frame/sStarLensedImages.ts` + `passes/sStarLensedImagesLayer.ts`
+- `src/services/engine/frame/sStarLensedImages.ts` + `passes/sStarLensedImagesPass.ts`
   — hdr / NEAR0 / additive / `hdrPostLensing: true` (must draw AFTER the lens
   `over` blend or the disc wipes it). Own `StarPointRenderer` instance: `setStars`
   is a `writeBuffer`, last write wins per submit. `starPointsPass` drops the

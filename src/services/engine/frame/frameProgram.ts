@@ -616,7 +616,7 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  * groupKey to the SAME title, so whichever row the last occurrence lands on
  * resolves to the identical display group.
  */
-function plainLayerGroupKeys(
+function plainPassGroupKeys(
   program: readonly FrameStep[],
   passes: readonly ContentPass[],
 ): ReadonlyMap<string, string> {
@@ -639,7 +639,7 @@ function plainLayerGroupKeys(
  * RenderTogglesSection, fed the engine handle's live togglable-pass list) can
  * project them into the same groups the timing list uses.
  */
-const PASS_GROUP_KEYS: ReadonlyMap<string, string> = plainLayerGroupKeys(
+const PASS_GROUP_KEYS: ReadonlyMap<string, string> = plainPassGroupKeys(
   frameProgram(
     PLACEHOLDER_TONE,
     true,

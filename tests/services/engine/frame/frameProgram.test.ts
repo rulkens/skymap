@@ -722,7 +722,7 @@ describe('groupPassNames', () => {
     // passes its PLAIN name (one entry regardless of body-row count), which
     // must still resolve to 'Foreground bodies · depth' even though
     // `passTimingSlotName` suffixes its TIMED_SLOTS row — `PASS_GROUP_KEYS`
-    // is built from the separate `plainLayerGroupKeys` walk for exactly this.
+    // is built from the separate `plainPassGroupKeys` walk for exactly this.
     const groups = groupPassNames(['labels', 'point-sprites', 'earth', 'star-aggregates']);
     expect(groups.map((g) => g.title)).toEqual([
       'Volumes & aggregates', // star-aggregates
