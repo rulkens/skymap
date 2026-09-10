@@ -225,6 +225,16 @@ function BodyDetailCard({
               <DescriptionBlock text={facts.description} />
             </div>
           )}
+          {/*
+            A THIRD, independent description path: a MeshBody's compiled-in
+            `BodyInfo.description`, snapshotted off SCENE_BODIES — never
+            BODY_FACTS or the famous-star sidecar.
+          */}
+          {target.description && (
+            <div className={styles.cardSection}>
+              <DescriptionBlock text={target.description} />
+            </div>
+          )}
         </>
       )}
 

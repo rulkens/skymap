@@ -38,6 +38,9 @@ export type SelectionRow =
       // A*'s ~30.4 r_s) — `focusFraming` reads it to override the default
       // screen-fill arrival distance.
       readonly focusDistanceRadii?: number;
+      // Carried through from `MeshBody.description` — a compiled-in field,
+      // independent of BODY_FACTS and the async famous-star sidecar.
+      readonly description?: string;
     }
   // Star arm — the self-contained display projection of a picked star, its
   // physical fields (`positionMpc`/`absMag`/`bpRp`) snapshotted off the loaded
