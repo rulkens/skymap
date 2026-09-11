@@ -5,8 +5,8 @@ import { readMeshGlb } from '../readMeshGlb';
 
 /**
  * The `mesh` row of `ASSET_LOADERS` — decode `mesh.glb`, decode its embedded
- * atlas, upload both. `image.bytes` views the whole GLB: keeping any of the
- * geometry past the upload would keep the download resident too.
+ * atlas, upload both. `image.bytes` views the whole GLB, so nothing here may
+ * outlive the upload: the download stays resident with it.
  */
 export async function loadTexturedMesh(
   gpu: GpuContext,
@@ -18,5 +18,7 @@ export async function loadTexturedMesh(
   const image = await createImageBitmap(
     new Blob([geometry.image.bytes as Uint8Array<ArrayBuffer>], { type: geometry.image.mimeType }),
   );
-  return uploadTexturedMesh(gpu, geometry, image);
+  const asset = uploadTexturedMesh(gpu, geometry, image);
+  image.close(); // copyExternalImageToTexture has already taken the pixels
+  return asset;
 }

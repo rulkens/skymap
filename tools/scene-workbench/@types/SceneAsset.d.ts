@@ -3,7 +3,7 @@ import type { PointCloudAsset } from './PointCloudAsset';
 import type { TexturedMeshAsset } from './TexturedMeshAsset';
 
 /**
- * SceneAsset — plan 4 adds `CameraPoseSetAsset` as a further case; every
+ * SceneAsset — plan 3b adds `CameraPoseSetAsset` as a further case; every
  * dispatch on `kind` is a table, never a branch (`assetCount`).
  */
 export type SceneAsset = PointCloudAsset | GaussianSplatAsset | TexturedMeshAsset;
