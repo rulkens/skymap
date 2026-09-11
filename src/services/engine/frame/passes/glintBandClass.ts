@@ -19,9 +19,10 @@
  *   - `1` (planet) — a heliocentric major planet (`focusId === 'sun'`).
  *   - `2` (moon)   — a satellite (`focusId` names its parent planet).
  *
- * Classified by `focusId` through the one `ORBITAL_ELEMENTS` table (the same
- * source the seeds derive from), NOT a hardcoded id list — a new moon added to
- * the table classifies correctly for free.
+ * Classified by the body's position-driver host (`bodyHostId`: an orbit's
+ * focus, a surface site's host), NOT a hardcoded id list — a new moon or a
+ * rover on Mars classifies correctly for free, and a body with no orbital row
+ * does not throw.
  *
  * ### Contract with the shader
  *
@@ -35,7 +36,7 @@
  * with no compile error).
  */
 
-import { elementsById } from '../../../../data/bodies/orbitalElements';
+import { bodyHostId } from '../../../../data/bodies/positionDrivers';
 
 /** Glint priority class — the Earth stamp (the descent's focus body). Shallowest band. */
 export const GLINT_CLASS_EARTH = 0;
@@ -47,6 +48,6 @@ export const GLINT_CLASS_MOON = 2;
 export function glintBandClass(bodyId: string): number {
   // the focus body — class earth, not derivable from elements
   if (bodyId === 'earth') return GLINT_CLASS_EARTH;
-  // heliocentric planet : satellite moon
-  return elementsById(bodyId).focusId === 'sun' ? GLINT_CLASS_PLANET : GLINT_CLASS_MOON;
+  // heliocentric (planet, probe) : hanging off a planet (moon, rover)
+  return bodyHostId(bodyId) === 'sun' ? GLINT_CLASS_PLANET : GLINT_CLASS_MOON;
 }
