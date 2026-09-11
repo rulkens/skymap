@@ -14,6 +14,7 @@ import os
 import sys
 import time
 
+import bmesh
 import bpy
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -23,6 +24,7 @@ ATLAS = os.path.join(REPO, "data/raw/meshes/petunias/petunias.prebaked.albedo.pn
 
 TRIANGLE_TARGET = 150_000  # buildMeshes' TRIANGLE_BUDGET
 ATLAS_SIZE = 2048
+DUPLICATE_SHELL_MATERIAL = "material"
 
 
 def log(msg):
@@ -37,6 +39,31 @@ def reset_scene():
 def import_source():
     bpy.ops.import_scene.gltf(filepath=SRC, merge_vertices=True)
     return [o for o in bpy.context.scene.objects]
+
+
+def drop_duplicate_shell():
+    """The basket ships as two exactly coincident shells — the textured
+    MarianneStonePot2 and an untextured white twin on `material`. The 11-material
+    source hides the tie, but once flatten_materials collapses the stack the
+    winner is triangle order, and the white twin wins: a flat white pot. The
+    raise is the point — a silent no-op here ships that pot again."""
+    dropped = 0
+    for obj in [o for o in bpy.context.scene.objects if o.type == "MESH"]:
+        slots = [i for i, s in enumerate(obj.material_slots)
+                 if s.material is not None and s.material.name == DUPLICATE_SHELL_MATERIAL]
+        if not slots:
+            continue
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        doomed = [f for f in bm.faces if f.material_index in slots]
+        dropped += len(doomed)
+        bmesh.ops.delete(bm, geom=doomed, context="FACES")
+        bm.to_mesh(obj.data)
+        bm.free()
+    if dropped == 0:
+        raise RuntimeError("prebake: no '%s' faces to drop — the duplicate pot shell was renamed or removed upstream"
+                           % DUPLICATE_SHELL_MATERIAL)
+    return dropped
 
 
 def drop_edge_geometry(objects):
@@ -117,7 +144,10 @@ def unwrap(obj):
     # no area to override with); EDIT mode passes it headless.
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=1.15192, island_margin=0.001)
+    # correct_aspect defaults to TRUE and squashes the whole layout by the aspect
+    # of whichever source image happens to be active — so the packing lurches
+    # whenever the material set changes. The atlas is square; opt out.
+    bpy.ops.uv.smart_project(angle_limit=1.15192, island_margin=0.001, correct_aspect=False)
     bpy.ops.object.mode_set(mode="OBJECT")
     return uv_name
 
@@ -217,6 +247,7 @@ def main():
     reset_scene()
     objects = import_source()
     log("imported %d objects from %s" % (len(objects), SRC))
+    log("dropped %d duplicate pot-shell faces" % drop_duplicate_shell())
     log("dropped %d edge/non-mesh objects" % drop_edge_geometry(objects))
     obj = join_meshes()
     log("joined -> %d tris, %d material slots, uv layers %s"
