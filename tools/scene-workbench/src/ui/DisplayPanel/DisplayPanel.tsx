@@ -80,10 +80,11 @@ function DisplayPanel(): ReactNode {
         onToggle={() => setMeshOpen((v) => !v)}
         variant="nested"
       >
-        <label className={styles.toggleRow}>
+        <label className={styles.toggleLabel}>
           <span>Wireframe</span>
           <input
             type="checkbox"
+            className={styles.checkbox}
             aria-label="Wireframe"
             checked={meshWireframe}
             onChange={(e) => dispatch(setMeshWireframe(e.target.checked))}

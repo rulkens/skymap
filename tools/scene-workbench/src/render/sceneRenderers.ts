@@ -28,9 +28,9 @@ export type SceneRenderers = {
   ): void;
 };
 
-// Every row takes the whole `display` record and reads its own key, so a
-// draw-time knob stays a field rather than a per-kind argument the dispatch
-// below would have to special-case.
+// Rows take the same `SceneDisplay` whether or not they read from it, so the
+// dispatch below stays a uniform table — a per-kind knob argument would make
+// it special-case the one row that needs one.
 type KindRenderers = {
   readonly [K in GpuAsset['kind']]: {
     draw(

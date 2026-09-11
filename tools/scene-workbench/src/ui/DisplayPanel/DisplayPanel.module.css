@@ -1,20 +1,7 @@
-/* Borrows the Slider pill's tokens so a checkbox row reads as the same
-   control family as the sliders stacked above it. */
-.toggleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-5);
-  width: 100%;
-  box-sizing: border-box;
-  padding: var(--space-2) var(--space-5);
-  border: 1px solid var(--border-control);
-  border-radius: var(--radius-lg);
-  background: var(--surface-control);
-  cursor: pointer;
-  user-select: none;
+.toggleLabel {
+  composes: toggleLabel from '../../../../../src/components/common/shared.module.css';
 }
 
-.toggleRow:hover {
-  border-color: var(--border-hover);
+.checkbox {
+  composes: checkbox from '../../../../../src/components/common/shared.module.css';
 }

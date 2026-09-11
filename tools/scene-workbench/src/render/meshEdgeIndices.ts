@@ -11,7 +11,13 @@ export function meshEdgeIndices(indices: Uint32Array): Uint32Array {
     const a = indices[t * 3]!;
     const b = indices[t * 3 + 1]!;
     const c = indices[t * 3 + 2]!;
-    edges.set([a, b, b, c, c, a], t * 6);
+    const e = t * 6;
+    edges[e] = a;
+    edges[e + 1] = b;
+    edges[e + 2] = b;
+    edges[e + 3] = c;
+    edges[e + 4] = c;
+    edges[e + 5] = a;
   }
   return edges;
 }
