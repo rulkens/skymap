@@ -44,7 +44,10 @@ import reducer, {
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,
+  settingsSlice,
+  CORE_REDUCERS,
 } from '../../../src/state/settings/settingsSlice';
+import { APP_SETTINGS_FRAGMENTS } from '../../../src/compositions/appSettingsFragments';
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
 import { settingsRoute } from '../../../src/store/constants';
@@ -319,6 +322,20 @@ describe('settingsSlice — mergeSnapshot', () => {
     // Mutating the patch after dispatch must not bleed into state.
     (patch.galaxyCatalogs as { brightness: number }).brightness = 999;
     expect(next.galaxyCatalogs.brightness).toBe(0.5);
+  });
+});
+
+describe('settingsSlice — composed action namespace', () => {
+  it('mints exactly the core reducers plus every listed fragment’s', () => {
+    // Two independently derived key sets: the core reducer map and the fragment
+    // tuple. Comparing their union to the slice catches a fragment listed but
+    // never spread into `reducers`, and one spread in but missing from the tuple.
+    expect(Object.keys(settingsSlice.actions).sort()).toEqual(
+      [
+        ...Object.keys(CORE_REDUCERS),
+        ...APP_SETTINGS_FRAGMENTS.flatMap((fragment) => Object.keys(fragment.reducers)),
+      ].sort(),
+    );
   });
 });
 
