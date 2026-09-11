@@ -124,7 +124,6 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     id: bodyId,
     label: body.label,
     positionMpc: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
-    radiusM: body.boundingRadiusM,
   } as SelectionRow;
   const meshDraw = vi.fn();
   const ringDraw = vi.fn();

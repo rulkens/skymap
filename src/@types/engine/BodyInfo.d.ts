@@ -14,9 +14,8 @@
  *
  * `positionMpc` stays a `Vec3` (never a raw tuple) so it speaks the one absolute
  * heliocentric, f64-valued frame every other position site uses, letting the
- * focus button pivot without re-deriving xyz. Size is NOT here: a body's radius
- * is a different KIND of number per arm (ground vs bake hull), so the card
- * resolves the seed by `id` and shows the row only where a radius is ground.
+ * focus button pivot without re-deriving xyz. Size is NOT here (see
+ * `MeshBody.boundingRadiusM`); the card resolves the seed by `id` instead.
  */
 
 import type { Vec3 } from '../math/Vec3';

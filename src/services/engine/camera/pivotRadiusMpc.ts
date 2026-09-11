@@ -1,7 +1,8 @@
 /**
  * pivotRadiusMpc — physical radius (Mpc) of the camera's orbit pivot, or
- * `null` when it has no surface (galaxy/structure/Milky Way — flown INTO,
- * never floored). `runFrame.ts`/`frameContext.ts`/`logCameraState.ts` import
+ * `null` when it has no surface (galaxy/structure/Milky Way, flown INTO and
+ * never floored; or a mesh body, whose hull is a floor but not a surface).
+ * `runFrame.ts`/`frameContext.ts`/`logCameraState.ts` import
  * this scalar directly, so `pivotFraming` (the orbit-controls zoom-floor
  * bundle) is built beside it below rather than displacing it.
  */
@@ -18,8 +19,7 @@ export function pivotRadiusMpc(row: SelectionRow | null): number | null {
   if (row === null) return null;
   if (row.type === 'star') return row.radiusM * SCALE_UNITS.M_TO_MPC;
   if (row.type !== 'body') return null;
-  // A mesh body has a hull, not ground, so it has nothing to report here — the
-  // taper anchor and the h/R readouts stay honest on a body with no surface.
+  // A mesh body has nothing to report here (see MeshBody.boundingRadiusM).
   const body = findByIdOrThrow(SCENE_BODIES, row.id, 'pivotRadiusMpc');
   return isMeshBody(body) ? null : body.radiusM * SCALE_UNITS.M_TO_MPC;
 }
@@ -37,9 +37,8 @@ export function pivotFraming(row: SelectionRow | null): PivotFraming {
     row !== null && row.type === 'body'
       ? findByIdOrThrow(SCENE_BODIES, row.id, 'pivotFraming')
       : null;
-  // A mesh body has no ground to taper against, yet its hull is a real obstacle,
-  // so the zoom still floors a standoff off it. A galaxy/structure has neither
-  // and is flown INTO.
+  // No ground to taper against (MeshBody.boundingRadiusM), but the hull is a
+  // real obstacle, so the zoom still floors a standoff off it.
   if (body !== null && isMeshBody(body)) {
     const boundingMpc = body.boundingRadiusM * SCALE_UNITS.M_TO_MPC;
     return {
@@ -47,7 +46,9 @@ export function pivotFraming(row: SelectionRow | null): PivotFraming {
       floorMpc: Math.max(MIN_DISTANCE_MPC, boundingMpc * body.standoffRadii),
     };
   }
-  const radiusMpc = pivotRadiusMpc(row);
+  // `body` is already resolved above for the body arm — reuse it instead of a
+  // second `findByIdOrThrow` scan; the star/null arms still go through `pivotRadiusMpc`.
+  const radiusMpc = body !== null ? body.radiusM * SCALE_UNITS.M_TO_MPC : pivotRadiusMpc(row);
   if (radiusMpc === null) return { radiusMpc, floorMpc: SURFACELESS_FLOOR_MPC };
   // Only `AnchorPointBody` opts out of the Earth-tuned default (Sgr A*'s Q10
   // floor); `in` alone widens the absent arms to `unknown`, hence the typeof.
