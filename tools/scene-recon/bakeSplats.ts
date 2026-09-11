@@ -12,31 +12,28 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { sceneGroupFromArgv } from './groups/sceneGroupFromArgv';
-import { frameWindow, frameWindowOutputPx } from './poses/frameWindow';
-import { photoPoseFromStacItem } from './poses/photoPoseFromStacItem';
+import { groupPhotoPoses } from './poses/groupPhotoPoses';
 import { spawnCct } from './poses/spawnCct';
-import { topocentricPositionsM, type CctRunner } from './poses/topocentricPositionsM';
 import { lidarFloorZM } from './lidar/lidarFloorZM';
 import { packSplats } from './pack/packSplats';
 import { readGaussianPly } from './splats/readGaussianPly';
 import { writeColmapModel } from './splats/writeColmapModel';
 import { assetArtifactUrl, groupAssetDir, groupManifestPath } from './manifest/geo3dLayout';
 import { publishAsset } from './manifest/publishAsset';
-import { jpegSizePx } from '../utils/io/jpegSizePx';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { lonLatBoundsToEnuM } from '../utils/scene/lonLatBoundsToEnuM';
+import { readStacItems } from '../utils/skraafoto/readStacItems';
 import { skraafotoHarvestDir } from '../utils/skraafoto/skraafotoHarvestDir';
+import type { CctRunner } from './poses/topocentricPositionsM';
 import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { SkraafotoStacItem } from './@types/SkraafotoStacItem';
 import type { GaussianSplatAsset } from '../scene-workbench/@types/GaussianSplatAsset';
-import type { PhotoPose } from '../scene-workbench/@types/PhotoPose';
 import type { SceneManifest } from '../scene-workbench/@types/SceneManifest';
-import type { Vec3 } from '../../src/@types/math/Vec3';
 
 /** Stable across re-runs, so a re-bake upserts the one asset rather than
  *  accumulating siblings under a fresh id. */
@@ -75,19 +72,14 @@ export async function bakeSplats(
   }
 
   const collectionDir = skraafotoHarvestDir(rawDataPath('skraafoto.dir'), group);
-  const items = await readStacItems(collectionDir);
-  if (items.length === 0) {
-    throw new Error(
-      `bakeSplats: no STAC items in ${collectionDir} — run ` +
-        `\`npm run fetch-skraafoto -- --group ${group.id}\` first.`,
-    );
-  }
-
   const colmapDir = join(collectionDir, `colmap-${group.id}`);
   const plyPath = join(colmapDir, PLY_NAME);
   const manifestPath = groupManifestPath(group.id);
 
   let brushVersion: string;
+  // Only the frames that produced a pose; a repack derives none, so it reads the
+  // harvest purely to date the asset below.
+  let items: readonly SkraafotoStacItem[];
   if (options.reusePly) {
     if (!existsSync(plyPath)) {
       throw new Error(`bakeSplats: --reuse-ply, but no export at ${plyPath} to pack.`);
@@ -95,46 +87,18 @@ export async function bakeSplats(
     // Nothing trained here, so the trainer's stamp carries forward; probing is
     // the fallback only, and lazy, so a repack works with brush-cli uninstalled.
     brushVersion = (await manifestBrushVersion(manifestPath)) ?? deps.brushVersion();
+    items = await readStacItems(collectionDir);
   } else {
     // Probed before the staging below copies every frame's JPEG, so a missing
     // brush-cli costs a second rather than the whole copy.
     brushVersion = deps.brushVersion();
 
-    const centresUtm: Vec3[] = items.map((item) => [...item.properties['pers:perspective_center']]);
-    const positions = await topocentricPositionsM(group.anchor, centresUtm, {
-      runCct: deps.runCct,
-    });
-
-    const poses: PhotoPose[] = [];
-    let maxResolutionPx = 0;
-    let skipped = 0;
-    for (const [i, item] of items.entries()) {
-      // Recomputed, not read from a sidecar: the harvest wrote whatever this
-      // same function said, so a group whose bounds or resolution moved since
-      // fails the dimension check below rather than training on stale pixels.
-      const window = frameWindow(item, group, positions[i]!);
-      if (window === null) {
-        skipped++;
-        continue;
-      }
-      const pose = photoPoseFromStacItem(item, group.anchor, positions[i]!, window);
-      // photoPoseFromStacItem names the JPEG bare and writeColmapModel hands
-      // `imageUrl` straight to `copyFile`, which resolves against cwd — so the
-      // harvest directory has to be folded in here or the copy misses.
-      const imageUrl = join(collectionDir, pose.imageUrl);
-      await assertJpegMatchesWindow(imageUrl, frameWindowOutputPx(window), group.id);
-      maxResolutionPx = Math.max(maxResolutionPx, pose.imageWidthPx, pose.imageHeightPx);
-      poses.push({ ...pose, imageUrl });
-    }
-    if (poses.length === 0) {
-      throw new Error(
-        `bakeSplats: none of the ${items.length} harvested frame(s) see group "${group.id}" — ` +
-          'its bounds moved since the harvest.',
-      );
-    }
-    if (skipped > 0) {
-      process.stderr.write(`bakeSplats: ${skipped} harvested frame(s) no longer see the bounds\n`);
-    }
+    const harvest = await groupPhotoPoses(group, { runCct: deps.runCct });
+    const poses = harvest.poses;
+    items = harvest.items;
+    const maxResolutionPx = Math.max(
+      ...poses.map((pose) => Math.max(pose.imageWidthPx, pose.imageHeightPx)),
+    );
 
     await writeColmapModel({
       poses,
@@ -234,29 +198,6 @@ export async function bakeSplats(
   return asset;
 }
 
-/** The harvest carries no record of the window it was cut with, so the JPEG's
- *  own dimensions are the check that it still matches the group. */
-async function assertJpegMatchesWindow(
-  jpegPath: string,
-  expectedPx: readonly [number, number],
-  groupId: string,
-): Promise<void> {
-  const bytes = await readFile(jpegPath).catch(() => {
-    throw new Error(
-      `bakeSplats: ${jpegPath} is missing — re-run \`npm run fetch-skraafoto -- --group ${groupId}\`.`,
-    );
-  });
-  const [width, height] = jpegSizePx(bytes);
-  if (width !== expectedPx[0] || height !== expectedPx[1]) {
-    throw new Error(
-      `bakeSplats: ${jpegPath} is ${width}×${height}, but group "${groupId}" now wants ` +
-        `${expectedPx[0]}×${expectedPx[1]} — its bounds or groundMmPerPx changed since the ` +
-        `harvest. Delete the harvest directory and re-run ` +
-        `\`npm run fetch-skraafoto -- --group ${groupId}\`.`,
-    );
-  }
-}
-
 /** The brush-cli version already stamped on this group's splats asset, if the
  *  manifest exists and carries one. */
 async function manifestBrushVersion(manifestPath: string): Promise<string | undefined> {
@@ -267,16 +208,6 @@ async function manifestBrushVersion(manifestPath: string): Promise<string | unde
   return manifest?.assets
     .find((asset) => asset.id === ASSET_ID)
     ?.provenance.pipeline.find((step) => step.step === 'brush-cli')?.version;
-}
-
-async function readStacItems(dir: string): Promise<SkraafotoStacItem[]> {
-  if (!existsSync(dir)) return [];
-  const names = (await readdir(dir)).filter((name) => name.endsWith('.json')).sort();
-  return Promise.all(
-    names.map(
-      async (name) => JSON.parse(await readFile(join(dir, name), 'utf8')) as SkraafotoStacItem,
-    ),
-  );
 }
 
 function spawnBrush(colmapDir: string, maxResolutionPx: number): Promise<void> {
