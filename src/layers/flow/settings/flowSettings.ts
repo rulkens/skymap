@@ -1,9 +1,4 @@
-/**
- * flow — the CF4++ flow-field singleton-overlay Layer's settings cluster: the
- * master gate plus look/motion knobs, and the case reducers that write them.
- * `liftClusterReducers` re-bases those reducers onto the settings root, so
- * their action type strings stay `settings/<key>`.
- */
+/** flow — the CF4++ flow-field singleton-overlay Layer's settings cluster. */
 
 import type { PayloadAction } from '@reduxjs/toolkit';
 
@@ -14,16 +9,12 @@ import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettin
 
 export const flowSettingsFragment = {
   key: 'flow',
-  // Flow is a singleton overlay layer: all its user-facing state (master
-  // gate + look/motion knobs) lives here, spread from the single
-  // `DEFAULT_FLOW` seed. Flow has no data-layer store — "loaded" is the asset
-  // slot's own `ready` state (`slotReady(assetSlots.flow)`).
+  // No data-layer store — "loaded" is the asset slot's own `ready` state
+  // (`slotReady(assetSlots.flow)`).
   seed: (): FlowSettings => ({ ...DEFAULT_FLOW }),
   reducers: {
-    // The master gate is its own scalar setter (like setMilkyWayEnabled /
-    // setVolumesEnabled), so `flow.enabled` has a single writer. `setFlow`
-    // patches only the look/motion knobs — its payload deliberately excludes
-    // `enabled`, keeping the visibility intent off the generic merge path.
+    // Its own single writer (like setMilkyWayEnabled / setVolumesEnabled);
+    // `setFlow` patches only the look/motion knobs, excluding `enabled` on purpose.
     setFlowEnabled: (cluster: FlowSettings, action: PayloadAction<boolean>) => {
       cluster.enabled = action.payload;
     },

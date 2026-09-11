@@ -1,9 +1,4 @@
-/**
- * bodies — the body Layer's near-field body-gate cluster: one item row per
- * body id and the one case reducer that writes it. `liftClusterReducers`
- * re-bases that reducer onto the settings root, so its action type string
- * stays `settings/<key>`.
- */
+/** bodies — the body Layer's near-field body-gate cluster: one item row per body id. */
 
 import type { PayloadAction } from '@reduxjs/toolkit';
 

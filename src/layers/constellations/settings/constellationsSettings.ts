@@ -1,9 +1,4 @@
-/**
- * constellations — the constellation stick-figure overlay Layer's settings
- * cluster: the master toggle + intensity scale, and the case reducers that
- * write them. `liftClusterReducers` re-bases those reducers onto the settings
- * root, so their action type strings stay `settings/<key>`.
- */
+/** constellations — the constellation stick-figure overlay Layer's settings cluster. */
 
 import type { PayloadAction } from '@reduxjs/toolkit';
 

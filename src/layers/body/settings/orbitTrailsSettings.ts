@@ -1,9 +1,4 @@
-/**
- * orbitTrails — the body Layer's near-field Keplerian orbit-trails singleton
- * overlay: the master gate and its one case reducer. `liftClusterReducers`
- * re-bases that reducer onto the settings root, so its action type string
- * stays `settings/<key>`.
- */
+/** orbitTrails — the body Layer's near-field Keplerian orbit-trails singleton overlay. */
 
 import type { PayloadAction } from '@reduxjs/toolkit';
 

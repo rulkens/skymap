@@ -1,9 +1,4 @@
-/**
- * milkyWay — the Milky-Way singleton-overlay Layer's settings cluster: the
- * two visibility axes plus the star-cloud look knobs, and the case reducers
- * that write them. `liftClusterReducers` re-bases those reducers onto the
- * settings root, so their action type strings stay `settings/<key>`.
- */
+/** milkyWay — the Milky-Way singleton-overlay Layer's settings cluster. */
 
 import type { PayloadAction } from '@reduxjs/toolkit';
 

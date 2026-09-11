@@ -1,9 +1,4 @@
-/**
- * sgrAStarLensingTuning — the body Layer's Sgr A* lens-pass tuning cluster:
- * the DebugPanel knobs and the one case reducer that writes them.
- * `liftClusterReducers` re-bases that reducer onto the settings root, so its
- * action type string stays `settings/<key>`.
- */
+/** sgrAStarLensingTuning — the body Layer's Sgr A* lens-pass DebugPanel tuning cluster. */
 
 import type { PayloadAction } from '@reduxjs/toolkit';
 
