@@ -38,6 +38,7 @@ import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { CaptionKind } from './captionPriority';
+import type { FadeBand } from '../../../@types/math/FadeBand';
 import type { ForegroundCaption } from './foregroundCaption';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
@@ -174,6 +175,17 @@ function bodyLabel(
 }
 
 /**
+ * Turn a seed's authored reveal distance into the caption's band: alpha 0 at
+ * twice it, 1 at it. The ×2 is the ONE place the band's width lives, so a seed
+ * tune stays a single number.
+ */
+function captionRevealBand(revealM: number | undefined): FadeBand | undefined {
+  if (revealM === undefined) return undefined;
+  const fullAt = revealM * SCALE_UNITS.M_TO_MPC;
+  return { fullAt, goneAt: 2 * fullAt };
+}
+
+/**
  * Build one name label per seeded scene body, positioned relative to
  * `RENDER_ORIGIN_MPC` for the foreground view-projection.
  *
@@ -212,13 +224,14 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
     // skin, or (petunias) an atlas averaging in black gaps — far below a
     // planet's, so it is scaled to full brightness first; the caption keeps
     // the hue, just not the darkness.
-    ...SCENE_MESH_BODIES.map((body) =>
-      bodyLabel(
+    ...SCENE_MESH_BODIES.map((body) => ({
+      ...bodyLabel(
         body,
         bodyStates.get(body.id)!.positionMpc,
         scaleToUnitMax(body.albedo),
         'meshBody',
       ),
-    ),
+      revealBand: captionRevealBand(body.captionRevealM),
+    })),
   ];
 }

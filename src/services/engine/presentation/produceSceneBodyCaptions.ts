@@ -23,6 +23,7 @@ import { sceneOccluderBodies } from '../frame/sceneOccluderBodies';
 import { CAPTION_FADE_RULES } from './captionFadeRules';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from './captionPriority';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { fadeBand } from '../../../utils/math/fadeBand';
 import { overflowFade } from '../../../utils/scene/overflowFade';
 import { subjectOccludedByBodies } from '../../../utils/scene/subjectOccludedByBodies';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -102,6 +103,10 @@ export function produceSceneBodyCaptions(
     // idiom). `subjectVisible` stays a hard gate — unrelated to this toggle.
     const ruleGate =
       rule.subjectVisible(settings) && (rule.labelEnabled(settings) || registryOpacity > 0) ? 1 : 0;
+    // A caption may narrow its kind's reach to its own approach band. The band
+    // is DATA on the caption, so nothing here knows which seeds author one.
+    const revealAlpha =
+      label.revealBand === undefined ? 1 : fadeBand(label.revealBand, distanceMpc);
     // Once the body fills the view its caption's own lift carries it off the
     // top edge, leader line and all, so it dissolves — the same rule, on the
     // same subject size, that dismisses the NEAR0 selection ring. Uniform
@@ -110,6 +115,7 @@ export function produceSceneBodyCaptions(
     const fadeAlpha =
       ruleGate *
       rule.fadeTarget(distanceMpc, camOrbitDistanceMpc) *
+      revealAlpha *
       overflowFade(subjectSizePx, viewportShortSidePx) *
       registryOpacity *
       clipFactor;

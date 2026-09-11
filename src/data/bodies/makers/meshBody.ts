@@ -19,6 +19,8 @@ export type MeshBodySeed = {
   readonly id: string;
   readonly label: string;
   readonly meshKey: string;
+  /** See `MeshBody.captionRevealM` — authored per seed, optional. */
+  readonly captionRevealM?: number;
 };
 
 export function meshBody(seed: MeshBodySeed): MeshBody {
@@ -31,5 +33,6 @@ export function meshBody(seed: MeshBodySeed): MeshBody {
     radiusM: asset.boundingRadiusM,
     albedo: asset.meanAlbedo,
     standoffRadii: MESH_BODY_STANDOFF_RADII,
+    captionRevealM: seed.captionRevealM,
   };
 }

@@ -354,6 +354,28 @@ describe('produceSceneBodyCaptions', () => {
     ).toBe(1);
   });
 
+  it('holds a seeded reveal caption dark until the approach, leaving an unbanded one lit', () => {
+    // The petunias author `captionRevealM`; the Sun — full alpha at 1 AU, and
+    // carrying no reveal band — is the control read from the SAME two poses, so
+    // only the band can explain a difference.
+    const pot = BASE.find((l) => l.id === PETUNIAS_LABEL_ID)!;
+    const revealMpc =
+      SCENE_MESH_BODIES.find((b) => b.id === 'petunias')!.captionRevealM! * SCALE_UNITS.M_TO_MPC;
+    const labelsAt = (distMpc: number): readonly Label2D[] =>
+      produceSceneBodyCaptions(
+        makeState(),
+        makeCtx([pot.worldPos[0] + distMpc, pot.worldPos[1], pot.worldPos[2]]),
+      ).labels;
+
+    // Past twice the reveal distance the pot's name is gone; at it, full.
+    const far = labelsAt(3 * revealMpc);
+    const near = labelsAt(revealMpc);
+    expect(fadeAlphaOf(far, PETUNIAS_LABEL_ID)).toBe(0);
+    expect(fadeAlphaOf(near, PETUNIAS_LABEL_ID)).toBe(1);
+    expect(fadeAlphaOf(far, SUN_LABEL_ID)).toBe(1);
+    expect(fadeAlphaOf(near, SUN_LABEL_ID)).toBe(1);
+  });
+
   it('emits a zero-target caption rather than omitting it', () => {
     const camPos = worldPosOf(EARTH_LABEL_ID);
     const out = produceSceneBodyCaptions(

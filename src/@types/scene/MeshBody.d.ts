@@ -17,4 +17,8 @@ export type MeshBody = {
    *  off a metre-scale hull). Not a per-body dial: the `meshBody` maker stamps
    *  every row with the same `MESH_BODY_STANDOFF_RADII`. */
   readonly standoffRadii: number;
+  /** Distance from the camera, in metres, at which this body's caption reaches
+   *  full alpha; it fades in from zero at twice that distance. Optional — a
+   *  mesh body that omits it keeps the `meshBody` fade row's default reach. */
+  readonly captionRevealM?: number;
 };
