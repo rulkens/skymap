@@ -23,6 +23,10 @@ export function nearestBodyHR(
 ): Nearest | null {
   let nearest: Nearest | null = null;
   for (const body of SCENE_BODIES) {
+    // A mesh body has no surface to walk: its sphere is a hull or a boom, and
+    // the body arm's surface camera is meaningless inside it. The eye stays in
+    // the absolute arm and orbits the pivot at whatever standoff the seed set.
+    if ('meshKey' in body) continue;
     const bodyId = body.id as BodyId;
     const bodyState = bodyStates.get(bodyId);
     if (bodyState === undefined) continue;

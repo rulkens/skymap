@@ -16,6 +16,7 @@ import { describe, it, expect } from 'vitest';
 import { regimeArmFor } from '../../../../src/services/engine/camera/regimeArmFor';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -211,5 +212,16 @@ describe('regimeArmFor', () => {
     ).toEqual({
       body: 'earth',
     });
+  });
+
+  it('a mesh body never engages, even with the eye inside its bounding sphere', () => {
+    // Voyager's sphere is set by a 13 m boom around a 4 m bus, and its seed
+    // parks the zoom floor inside it; the body arm's surface camera has no
+    // surface there, so the eye stays absolute and orbits the pivot.
+    const voyager = SCENE_BODIES.find((body) => body.id === 'voyager1')!;
+    const bodyStates = new Map<BodyId, BodyState>([[bodyId('voyager1'), bodyStateAtOrigin()]]);
+    expect(
+      regimeArmFor('absolute', eyeAt(voyager.radiusM, -0.5), bodyStates, 'voyager1', TUNING),
+    ).toBe('absolute');
   });
 });
