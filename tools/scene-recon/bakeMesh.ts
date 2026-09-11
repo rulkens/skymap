@@ -46,7 +46,15 @@ const POINT_SAMPLE_TARGET = 200_000;
  *  materials (`readMeshGlb` refuses that), and the re-pack must not undo the cap. */
 const MAX_TEXTURE_PX = 8192;
 
-type Stage = { readonly tool: string; readonly args: readonly string[]; readonly output?: string };
+type Stage = {
+  readonly tool: string;
+  readonly args: readonly string[];
+  readonly output?: string;
+  /** The tool opens `output` rather than creating it, so the loop has to
+   *  re-make the directory it just cleared (`point_triangulator` exits with
+   *  "`output_path` is not a directory" otherwise — on a first run too). */
+  readonly outputDirIsInput?: true;
+};
 
 const COLMAP_STAGES: readonly Stage[] = [
   {
@@ -80,6 +88,7 @@ const COLMAP_STAGES: readonly Stage[] = [
   {
     tool: 'colmap',
     output: 'sparse',
+    outputDirIsInput: true,
     args: [
       'point_triangulator',
       '--database_path',
@@ -190,7 +199,16 @@ export async function bakeMesh(
     // Lazy fallback only, so a re-pack works with neither toolchain installed.
     colmapVersion = (await manifestStepVersion(manifestPath, 'colmap')) ?? deps.colmapVersion();
     openMvsVersion = (await manifestStepVersion(manifestPath, 'openmvs')) ?? deps.openMvsVersion();
-    items = await readStacItems(skraafotoHarvestDir(rawDataPath('skraafoto.dir'), group));
+    // The reuse path derives no poses, so it reads the harvest purely to date
+    // the asset below — and `groupPhotoPoses` is not there to catch an empty one.
+    const harvestDir = skraafotoHarvestDir(rawDataPath('skraafoto.dir'), group);
+    items = await readStacItems(harvestDir);
+    if (items.length === 0) {
+      throw new Error(
+        `scene-recon: no STAC items in ${harvestDir} — run ` +
+          `\`npm run fetch-skraafoto -- --group ${group.id}\` first.`,
+      );
+    }
   } else {
     // Probed before the staging below copies every frame's JPEG, so a missing
     // binary costs a second rather than the whole copy.
@@ -218,7 +236,10 @@ export async function bakeMesh(
     for (const stage of [...COLMAP_STAGES, ...stages]) {
       // A stage that exits 0 without writing must fail the next stage's
       // missing-input check, never ship the previous run's file.
-      if (stage.output) await rm(join(workDir, stage.output), { recursive: true, force: true });
+      if (stage.output) {
+        await rm(join(workDir, stage.output), { recursive: true, force: true });
+        if (stage.outputDirIsInput) await mkdir(join(workDir, stage.output), { recursive: true });
+      }
       if (stage.tool === 'colmap') await deps.runColmap(stage.args);
       else await deps.runOpenMvs(stage.tool, stage.args);
     }
@@ -310,13 +331,16 @@ function spawnStage(command: string, args: readonly string[], cwd: string): Prom
 
 function colmapVersion(): string {
   const result = spawnSync('colmap', ['-h'], { encoding: 'utf8' });
-  if (result.status !== 0) {
+  // An empty first line would stamp the asset's provenance with `''`, which
+  // reads as "unknown COLMAP" forever after — so it fails like a missing binary.
+  const banner = result.status === 0 ? (result.stdout ?? '').split('\n')[0]?.trim() : undefined;
+  if (!banner) {
     throw new Error(
-      'bakeMesh: `colmap -h` failed — install COLMAP with `brew install colmap` ' +
+      'bakeMesh: `colmap -h` printed no version — install COLMAP with `brew install colmap` ' +
         '(4.2.0, without GPU support; see tools/scene-workbench/README.md).',
     );
   }
-  return result.stdout.split('\n')[0]!.trim();
+  return banner;
 }
 
 function openMvsVersion(): string {

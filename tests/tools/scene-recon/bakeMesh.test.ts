@@ -9,7 +9,7 @@
  * (`process.chdir` is undefined under `threads`; `vitest.config.ts` sets no
  * `pool` and v4 defaults to forks).
  */
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -172,6 +172,7 @@ let calls: string[][];
 
 beforeEach(() => {
   calls = [];
+  sparseDirWhenTriangulating = undefined;
   rmSync(join(root, 'public/data/geo3d/groups', SOENDERMARKEN.id, 'manifest.json'), {
     force: true,
   });
@@ -188,10 +189,18 @@ function fakeOpenMvs(glb: () => Promise<Uint8Array>) {
   };
 }
 
+/** `point_triangulator` opens `--output_path`, it does not create it. */
+let sparseDirWhenTriangulating: boolean | undefined;
+
 const DEPS = (glb: () => Promise<Uint8Array>) => ({
   runCct: RUN_CCT,
   runColmap: async (args: readonly string[]) => {
     calls.push(['colmap', ...args]);
+    if (args[0] === 'point_triangulator') {
+      sparseDirWhenTriangulating = statSync(join(workDir, 'sparse'), {
+        throwIfNoEntry: false,
+      })?.isDirectory();
+    }
   },
   runOpenMvs: fakeOpenMvs(glb),
   colmapVersion: () => 'COLMAP 4.2.0 (test)',
@@ -211,6 +220,7 @@ describe('bakeMesh', () => {
       ['ReconstructMesh', 'scene_dense.mvs'],
       ['TextureMesh', 'scene_dense_mesh.mvs', '--export-type', 'glb', '--max-texture-size', '8192'],
     ]);
+    expect(sparseDirWhenTriangulating).toBe(true);
   });
 
   it('--full-res selects resolution level 0', async () => {
