@@ -23,6 +23,11 @@ import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
+import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
+import { selectOccluderSpheresKm } from '../../../../utils/scene/selectOccluderSpheresKm';
+import { SCENE_BODIES } from '../../../../data/bodies/sceneBodies';
+import { MAX_ORBIT_OCCLUDERS } from '../../../../data/bodies/orbitTrailConstants';
+import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
@@ -40,6 +45,9 @@ const FULL_PX = 20;
 // Reused across frames so the hot path allocates nothing. Sized from the
 // compile-time elements table — a fixed size, not a cap.
 const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
+
+// Refilled each draw, for the same reason `staging` is: no hot-path allocation.
+const occluderSpheresKm = new Float32Array(MAX_ORBIT_OCCLUDERS * 4);
 
 // Farthest point from the focus is apoapsis a·(1+e); summing it along the focus
 // chain bounds every orbit point for every t. Derived from the static elements,
@@ -145,13 +153,14 @@ export const orbitTrailsPass: ContentPass = {
     // the layer rather than popping it.
     const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'orbitTrails' });
 
-    // One 34-float record per VISIBLE conic; byte offsets must mirror the
+    // One 46-float record per VISIBLE conic; byte offsets must mirror the
     // renderer's INSTANCE_ATTRIBUTES:
     //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32)
     //   floats 12..15 — colour.rgb + eccentricity (loc4 at byte 48)
     //   floats 16..19 — mean anomaly + fade alpha + viewportPx.xy (loc5 at byte 64)
     //   floats 20..31 — clip basis Cc/Ac/Bc (loc6/7/8 at byte 80/96/112)
     //   floats 32..33 — the visible arc eStart/eSpan (loc9 at byte 128)
+    //   floats 34..45 — eye-relative 3D basis, km (loc10/11/12 at byte 136/152/168)
     let count = 0;
     for (let i = 0; i < limit; i++) {
       const elements = ORBITAL_ELEMENTS[i]!;
@@ -208,9 +217,33 @@ export const orbitTrailsPass: ContentPass = {
       staging.set(clipBasis[2], base + 28); // clip basis Bc → floats 28..31
       staging[base + 32] = arc[0]; // visible arc eStart → float 32
       staging[base + 33] = arc[1]; // visible arc eSpan → float 33
+      eyeRelativeOrbitBasisKm(
+        { eyeMpc: camPos, centerMpc, semiMajorMpc, semiMinorMpc },
+        staging,
+        base + 34,
+      );
     }
     if (count > 0) {
-      renderer.draw(pass, staging, count, state.settings.debug.overlays['orbit-trail-impostor']);
+      // A body occludes iff it is drawn: the same sub-pixel floor the body
+      // rows use, so a trail never vanishes behind something not on screen.
+      const occluderCount = selectOccluderSpheresKm(
+        {
+          bodies: SCENE_BODIES,
+          bodyStates: states,
+          camPosMpc: camPos,
+          viewportHeightPx,
+          fovYRad: ctx.fovYRad,
+          minDiameterPx: SUB_PIXEL_BODY_CULL_PX,
+        },
+        occluderSpheresKm,
+      );
+      renderer.draw(
+        pass,
+        staging,
+        count,
+        { count: occluderCount, spheresKm: occluderSpheresKm },
+        state.settings.debug.overlays['orbit-trail-impostor'],
+      );
     }
   },
 };
