@@ -7,11 +7,13 @@ import { assertUniqueFragmentReducerKeys } from '../utils/settings/assertUniqueF
 import { galaxyCatalogsSettingsFragment } from '../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
 import { starCatalogsSettingsFragment } from '../layers/starCatalog/settings/starCatalogsSettings';
 import { structuresSettingsFragment } from '../layers/structure/settings/structuresSettings';
+import { volumesSettingsFragment } from '../layers/volume/settings/volumesSettings';
 
 export const APP_SETTINGS_FRAGMENTS = [
   galaxyCatalogsSettingsFragment,
   starCatalogsSettingsFragment,
   structuresSettingsFragment,
+  volumesSettingsFragment,
 ] as const;
 
 assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS);

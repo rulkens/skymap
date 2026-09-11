@@ -14,12 +14,12 @@ import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/t
 import { APP_SETTINGS_FRAGMENTS } from '../../compositions/appSettingsFragments';
 import { assertUniqueFragmentReducerKeys } from '../../utils/settings/assertUniqueFragmentReducerKeys';
 import { buildInitialSettings } from './initialState';
-import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
 import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
 import { liftClusterReducers } from '../../utils/settings/liftClusterReducers';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
 import { starCatalogsSettingsFragment } from '../../layers/starCatalog/settings/starCatalogsSettings';
 import { structuresSettingsFragment } from '../../layers/structure/settings/structuresSettings';
+import { volumesSettingsFragment } from '../../layers/volume/settings/volumesSettings';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
@@ -28,8 +28,6 @@ import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
-import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
-import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
@@ -201,36 +199,6 @@ export const CORE_REDUCERS = {
     settings.bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
   },
 
-  // ── volumes ─────────────────────────────────────────────────────────────
-  setVolumesEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.volumes.enabled = action.payload;
-  },
-  addVolumeField: (settings: SettingsDraft, action: PayloadAction<VolumeFieldId>) => {
-    // Re-registering a seeded field is a no-op: the early return keeps an
-    // existing row (and its tuned sliders) untouched. Only a genuinely-new id
-    // seeds a fresh row from registry defaults.
-    if (settings.volumes.items[action.payload]) return;
-    // Freshly built, stored as-is — sound to re-type as Immer's Draft (no
-    // clone needed), same posture as selectionRowsSlice's `setSelectionRow`.
-    // `bands`' readonly array is what trips the plain assignment.
-    settings.volumes.items[action.payload] = buildVolumeFieldSettings(
-      action.payload,
-    ) as Draft<VolumeFieldSettings>;
-  },
-  removeVolumeField: (settings: SettingsDraft, action: PayloadAction<VolumeFieldId>) => {
-    delete settings.volumes.items[action.payload];
-  },
-  writeVolumeField: (
-    settings: SettingsDraft,
-    action: PayloadAction<{ id: VolumeFieldId; patch: Partial<VolumeFieldSettings> }>,
-  ) => {
-    // Shallow per-field merge via Immer's `Object.assign`. An unknown id
-    // is a silent no-op.
-    const row = settings.volumes.items[action.payload.id];
-    if (!row) return;
-    Object.assign(row, action.payload.patch);
-  },
-
   // ── flow ────────────────────────────────────────────────────────────────
   // The master gate is its own scalar setter (like setMilkyWayEnabled /
   // setVolumesEnabled), so `flow.enabled` has a single writer. `setFlow`
@@ -386,6 +354,9 @@ export const settingsSlice = createSlice({
     ),
     ...liftClusterReducers<EngineSettingsState, typeof structuresSettingsFragment>(
       structuresSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof volumesSettingsFragment>(
+      volumesSettingsFragment,
     ),
   },
 });

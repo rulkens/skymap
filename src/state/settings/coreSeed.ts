@@ -27,7 +27,6 @@ import {
   DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
   DEFAULT_SGR_A_STAR_LENSING_TUNING,
   DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
   DEFAULT_ORIENTATION,
 } from '../../data/defaults';
@@ -46,7 +45,6 @@ import {
   DEFAULT_PASS_BY_OFFSET,
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
-import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import { ATMOSPHERE_PARAMS } from '../../data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../data/bodies/earthSurfaceParams';
@@ -55,7 +53,10 @@ import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
-type CoreSeedShape = Omit<EngineSettingsState, 'galaxyCatalogs' | 'starCatalogs' | 'structures'>;
+type CoreSeedShape = Omit<
+  EngineSettingsState,
+  'galaxyCatalogs' | 'starCatalogs' | 'structures' | 'volumes'
+>;
 
 export function coreSeed(): CoreSeedShape {
   return {
@@ -163,10 +164,6 @@ export function coreSeed(): CoreSeedShape {
           { enabled: e.visible, labelEnabled: true },
         ]),
       ) as Record<BodyId, BodyItemSettings>,
-    },
-    volumes: {
-      enabled: DEFAULT_VOLUMES_ENABLED,
-      items: seedVolumeFields(),
     },
     // Flow is a singleton overlay layer: all its user-facing state (master
     // gate + look/motion knobs) lives here, spread from the single
