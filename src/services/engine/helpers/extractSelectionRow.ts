@@ -59,10 +59,6 @@ const EXTRACT_ROW: {
       id: body.id,
       label: body.label,
       positionMpc: [p[0], p[1], p[2]],
-      radiusM: body.radiusM,
-      // The AnchorPointBody and MeshBody arms carry these; the rest do not.
-      standoffRadii: 'standoffRadii' in body ? body.standoffRadii : undefined,
-      focusDistanceRadii: 'focusDistanceRadii' in body ? body.focusDistanceRadii : undefined,
     };
   },
   // The star's physical fields are resolved off the LIVE catalog through the

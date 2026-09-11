@@ -30,6 +30,9 @@ import { decodeBodyFixedChannels } from '../../../utils/camera/decodeBodyFixedCh
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
@@ -137,7 +140,9 @@ function followPose(
   // a follow row winning last frame, so the three sources never compete.
   let distanceTarget = memory.distanceTarget;
   if (distanceTarget === null) {
-    const radiusMpc = focus.radiusM * SCALE_UNITS.M_TO_MPC;
+    const radiusMpc =
+      bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, focus.id, 'cameraDrivers')) *
+      SCALE_UNITS.M_TO_MPC;
     distanceTarget = bodyFocusDistance(radiusMpc, ctx.projection.fovYRad);
   } else if (!isFollowDriverId(ctx.winnerLastFrame)) {
     distanceTarget = base.pose.distance;

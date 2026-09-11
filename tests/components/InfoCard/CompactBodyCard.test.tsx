@@ -18,7 +18,6 @@ const proxima: BodyInfo = {
   id: 'proxima-centauri',
   label: 'Proxima Centauri',
   positionMpc: [0, 0, 0],
-  radiusM: 107000000,
 };
 
 describe('CompactBodyCard', () => {

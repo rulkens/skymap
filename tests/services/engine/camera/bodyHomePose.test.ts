@@ -18,7 +18,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { updatePosition } from '../../../../src/utils/camera/updatePosition';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelestialBodies';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -106,7 +106,7 @@ describe('bodyHomePose', () => {
 
   it('frames the requested body, not Earth', () => {
     const marsPos = deriveBodyStates(SIM_DAYS).get('mars')!.positionMpc;
-    const marsRadiusM = SCENE_BODIES.find((b) => b.id === 'mars')!.radiusM;
+    const marsRadiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!.radiusM;
     const marsPose = bodyHomePose('mars', SIM_DAYS, FOV_Y_RAD);
     const marsFraming = bodyLikeFraming(marsPos, marsRadiusM, FOV_Y_RAD);
 

@@ -22,7 +22,7 @@ import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
-import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { deepFreeze } from '../deepFreeze';
@@ -54,7 +54,8 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   store.dispatch(pause({ nowMs: 0 }));
 
   const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
-  const radiusM = (id: SimBodyId): number => SCENE_BODIES.find((b) => b.id === id)!.radiusM;
+  const radiusM = (id: SimBodyId): number =>
+    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.radiusM;
 
   const neutralPose: CameraPose = {
     target: [0, 0, 0],
@@ -129,7 +130,6 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
           id,
           label: id[0]!.toUpperCase() + id.slice(1),
           positionMpc: [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!],
-          radiusM: radiusM(id),
         },
       }),
     );

@@ -19,7 +19,7 @@ import type { OrientDeltas } from '../../@types/camera/OrientDeltas';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
 import type { TimeState } from '../../@types/time/TimeState';
-import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
 import { deriveSimDays } from '../time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
@@ -79,7 +79,7 @@ export function cameraDebugSnapshotOf(input: {
   });
   const { bodyId, hOverR: hr } = dofs;
   const radiusM =
-    bodyId !== null ? SCENE_BODIES.find((row) => row.id === bodyId)?.radiusM : undefined;
+    bodyId !== null ? SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId)?.radiusM : undefined;
 
   const engagedPose = renderedFrame !== 'absolute' ? renderedPose.pose : null;
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;

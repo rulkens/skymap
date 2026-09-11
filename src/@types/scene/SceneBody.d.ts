@@ -3,8 +3,11 @@
  *
  * Body-aware consumers that iterate the flat `SCENE_BODIES` registry (the
  * command-palette rows, the `body-<id>` focus resolver, the selection-row
- * extractor) only ever read the identity fields every shape shares — `id`,
- * `label`, `radiusM` — so the union is the honest type for the registry: it
+ * extractor) only ever read the identity fields every shape shares — `id` and
+ * `label`. Size is NOT among them: a `MeshBody` carries a `boundingRadiusM`
+ * where every other arm carries a surface `radiusM`, so an extent reader goes
+ * through `bodyFootprintRadiusM` and a surface reader takes `CelestialBody`. The
+ * union is the honest type for the registry: it
  * names what a registry entry can be without forcing every entry into Earth's
  * texture-carrying shape or inventing a fourth "common base" record that the
  * seeds would then have to be re-projected into. No arm carries a position:

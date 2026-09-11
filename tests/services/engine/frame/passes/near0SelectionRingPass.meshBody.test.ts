@@ -68,7 +68,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     target: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
     yaw: 0.7,
     pitch: 0.2,
-    distance: radiiFromCentre * body.radiusM * SCALE_UNITS.M_TO_MPC,
+    distance: radiiFromCentre * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
     fovYRad: 1,
     aspect: 1,
     near: 0.1,
@@ -91,7 +91,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   const slabs = deriveSlabs({
     cam,
     cosmoVp: computeViewProj(cam),
-    pivotRadiusMpc: body.radiusM * SCALE_UNITS.M_TO_MPC,
+    pivotRadiusMpc: body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
     pose: bodyPose,
     visibleBodies: [earth],
     viewportPx: VIEWPORT,
@@ -101,7 +101,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
         'earth',
         SCENE_MESH_BODIES.map((m) => ({
           posM: bodyStateInHostFrame(states.get(m.id)!, earthState).posM,
-          radiusM: m.radiusM,
+          radiusM: m.boundingRadiusM,
         })),
       ],
     ]),
@@ -124,7 +124,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     id: bodyId,
     label: body.label,
     positionMpc: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
-    radiusM: body.radiusM,
+    radiusM: body.boundingRadiusM,
   } as SelectionRow;
   const meshDraw = vi.fn();
   const ringDraw = vi.fn();

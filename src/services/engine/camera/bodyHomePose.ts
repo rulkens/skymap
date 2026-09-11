@@ -58,6 +58,7 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { bodyLikeFraming } from './bodyLikeFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 
@@ -73,7 +74,7 @@ export function bodyHomePose(
   fovYRad: number,
   frameBasis?: Mat3,
 ): CameraPose {
-  const { radiusM } = findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyHomePose');
+  const radiusM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyHomePose'));
   const state = deriveBodyStates(simDays).get(bodyId);
   if (!state) throw new Error(`bodyHomePose: no derived state for id '${bodyId}'`);
   const bodyPos = state.positionMpc;

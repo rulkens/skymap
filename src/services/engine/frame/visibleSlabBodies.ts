@@ -3,6 +3,7 @@ import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
@@ -38,7 +39,8 @@ const BAND_SLAB_FLOOR_MPC = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
  * frame finding 2). A missing `bodyStates` entry is dropped, not thrown
  * (feeds a slab COUNT the frame program pool-sizes from, spec §6). The
  * candidate list is the caller's to assemble — this gate treats every
- * `SceneBody` union arm identically, culling on its shared `radiusM`/`id`.
+ * `SceneBody` union arm identically, culling on `id` plus the arm-agnostic
+ * `bodyFootprintRadiusM`.
  */
 export function visibleSlabBodies(input: {
   readonly bodies: readonly SceneBody[];
@@ -82,9 +84,9 @@ export function visibleSlabBodies(input: {
 
     // The widest thing this row can draw — the same value the frustum cull
     // below needs, so both culls agree on the body's footprint (radar frame
-    // finding 2: they used to disagree, body.radiusM here vs. this same
+    // finding 2: they used to disagree, the bare body radius here vs. this same
     // ring/atmosphere-inclusive max there).
-    const rEffM = Math.max(PROXY_SCALE * body.radiusM, bodyDrawRadiusM(body));
+    const rEffM = Math.max(PROXY_SCALE * bodyFootprintRadiusM(body), bodyDrawRadiusM(body));
 
     const diameterPx = bodyApparentDiameterPx({
       positionMpc: state.positionMpc,

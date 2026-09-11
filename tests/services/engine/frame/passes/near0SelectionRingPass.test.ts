@@ -179,7 +179,6 @@ describe('near0SelectionRingPass.draw — live body position', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [1e-6, 0, 0],
-      radiusM: 6371000,
     };
 
     const renderer = makeRendererSpy();

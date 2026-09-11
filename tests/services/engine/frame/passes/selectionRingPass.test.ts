@@ -112,7 +112,6 @@ const BODY_ROW: SelectionRow = {
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [1e-9, 2e-9, -3e-9],
-  radiusM: 69911000,
 };
 
 // A survey-star row — its halo is NEAR0-tagged, so the COSMO layer must ignore

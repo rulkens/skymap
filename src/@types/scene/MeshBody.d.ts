@@ -9,7 +9,9 @@ import type { Vec3 } from '../math/Vec3';
 export type MeshBody = {
   readonly id: string;
   readonly label: string;
-  readonly radiusM: number;
+  /** Baked bounding sphere (hull + booms), metres — a footprint, NOT a surface:
+   *  nothing about it is ground the camera can stand on. */
+  readonly boundingRadiusM: number;
   readonly albedo: Vec3;
   readonly meshKey: string;
   /** Camera standoff floor, in body radii, replacing `clampDistance`'s

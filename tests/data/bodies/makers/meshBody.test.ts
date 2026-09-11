@@ -32,9 +32,10 @@ describe('meshBody()', () => {
       id: 'x',
       label: 'X',
       meshKey: 'test-mesh',
-      radiusM: 12345,
+      boundingRadiusM: 12345,
       albedo: [0.1, 0.2, 0.3],
       standoffRadii: 2,
+      captionRevealM: undefined,
     });
   });
 

@@ -52,6 +52,9 @@ import { formatRadiusM } from '../../../utils/format/formatRadiusM';
 import { formatScalar } from '../../../utils/format/formatScalar';
 import { FAMOUS_STAR_IDS } from '../../../data/bodies/famousStarsIndex';
 import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { isMeshBody } from '../../../utils/scene/isMeshBody';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
@@ -100,6 +103,9 @@ function BodyDetailCard({
   // A planet/moon's curated fact sheet — compiled in, no fetch. Absent ⇒ the
   // lean panel (radius alone). Never consulted on the famous-star branch.
   const facts = isFamousStar ? undefined : BODY_FACTS[target.id];
+  // The card is handed identity only, so the seed is resolved here: its arm
+  // decides whether a radius row means anything at all.
+  const seed = findByIdOrThrow(SCENE_BODIES, target.id, 'BodyDetailCard');
 
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
   const aliases = entry ? entry.names.slice(1) : [];
@@ -128,10 +134,14 @@ function BodyDetailCard({
       {!isFamousStar && (
         <>
           <div className={styles.cardSection}>
-            <CardRow
-              label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
-              value={formatRadiusM(target.radiusM)}
-            />
+            {/* A mesh body's only radius is its bake hull, not a physical
+                fact about the object — so it gets no radius row at all. */}
+            {!isMeshBody(seed) && (
+              <CardRow
+                label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
+                value={formatRadiusM(seed.radiusM)}
+              />
+            )}
             {distanceMpc != null && (
               <CardRow label="Distance" value={formatDistance(distanceMpc)} />
             )}

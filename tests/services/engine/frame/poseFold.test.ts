@@ -287,7 +287,6 @@ describe('runFrame — the regime fold', () => {
           id: 'earth',
           label: 'Earth',
           positionMpc: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
-          radiusM: SCENE_EARTH.radiusM,
         },
       }),
     );
@@ -379,7 +378,6 @@ describe('runFrame — the regime fold', () => {
           id: 'earth',
           label: 'Earth',
           positionMpc: [0, 0, 0],
-          radiusM: SCENE_EARTH.radiusM,
         },
       }),
     );

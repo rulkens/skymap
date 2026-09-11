@@ -37,7 +37,6 @@ const FOCUS_EARTH: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusM: SCENE_EARTH.radiusM,
 };
 
 function centredPoseAt(hr: number, roll = 0.2): FramedCameraPose {

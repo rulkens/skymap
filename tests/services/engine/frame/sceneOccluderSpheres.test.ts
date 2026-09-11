@@ -81,7 +81,7 @@ describe('sceneOccluderSpheres', () => {
   // whole sky from a 400 km orbit.
   it('includes a resolved mesh body, at its bake bounding radius', () => {
     const whaleRadiusKm =
-      findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test').radiusM * SCALE_UNITS.M_TO_KM;
+      findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test').boundingRadiusM * SCALE_UNITS.M_TO_KM;
     const hasWhale = (radiiKm: readonly number[]): boolean =>
       radiiKm.some((r) => Math.abs(r - whaleRadiusKm) < 1e-8);
 
