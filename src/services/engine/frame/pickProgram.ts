@@ -11,9 +11,10 @@
  * command encoder + `queue.submit` at a cadence set by pointer events, not the
  * render loop. Folding it into the FRAME would braid "which galaxy is under the
  * cursor?" into "draw the next frame" — two concerns that vary independently.
- * So this program is a sibling of the FRAME executor: it shares only the same
- * `ContentPass` registry, filters it by `drawPick` presence + the pick gate
- * `(pickEnabled ?? enabled)` — a layer's own pick gate wherever its pick set
+ * So this program is a sibling of the FRAME executor: it shares the same
+ * `ContentPass` registry and the same frame order (for a pass's slab, via
+ * `passSlabOf`), filters by `drawPick` presence + the pick gate
+ * `(pickEnabled ?? enabled)` — a pass's own pick gate wherever its pick set
  * differs from its draw set, else `enabled` (see `ContentPass.pickEnabled`) —
  * groups the survivors by slab, and re-rasterises each slab's pickable geometry
  * through the r32uint pick pipeline into its own pick target. See the
@@ -66,6 +67,8 @@ import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
 import { slabViewOf, foregroundChainOrder, isBodySlabIndex, COSMO } from './slabs';
+import { passSlabOf } from './passSlabOf';
+import { FRAME_ORDER } from './frameOrder';
 import { frontmostPick } from '../../../utils/picking/frontmostPick';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { unpackPick } from '../../../data/selectionEncoding';
@@ -76,6 +79,11 @@ import { unpackPick } from '../../../data/selectionEncoding';
 // pass must declare the matching depthStencil format: the points / ring / disk
 // picks declare depth24plus (COSMO), the Milky-Way pick declares depth32float
 // (NEAR0 — see milkyWayPickRenderer).
+// Which slab a pass rasterises through, read off the frame order once — the
+// pick pass must use the SAME projection the visual draw does, or a click
+// tests geometry the screen never showed at that depth.
+const PASS_SLABS = passSlabOf(FRAME_ORDER);
+
 const COSMO_DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 const NEAR0_DEPTH_FORMAT: GPUTextureFormat = 'depth32float';
 
@@ -313,8 +321,13 @@ export function createPickProgram(deps: {
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; view: SlabView; passes: ContentPass[] }[] {
-    const candidates = passes.filter((l) => l.drawPick);
-    // Every body-row slab index present this frame — a 'body' layer's
+    // A pass with no FRAME_ORDER line draws nowhere, so it picks nowhere —
+    // `checkFrameOrder` is what makes that unreachable for a real registry.
+    const candidates = passes.flatMap((pass) => {
+      const slab = pass.drawPick ? PASS_SLABS.get(pass.name) : undefined;
+      return slab === undefined ? [] : [{ pass, slab }];
+    });
+    // Every body-row slab index present this frame — a body-roster pass's
     // `drawPick` (`earthPass`, `planetsPass`) contributes to each one, the
     // same widening `executeFrame` applies. `ctx.slabs` holds full `Slab`s, so this
     // reads `frame.kind` directly (the index-only sibling, `isBodySlabIndex`
@@ -322,8 +335,8 @@ export function createPickProgram(deps: {
     const bodySlabIndices = ctx.slabs
       .filter((slab) => slab.frame.kind === 'body-m')
       .map((slab) => slab.index);
-    const numericSlabs = candidates.filter((l) => l.slab !== 'body').map((l) => l.slab as number);
-    const hasBodyCandidate = candidates.some((l) => l.slab === 'body');
+    const numericSlabs = candidates.filter((c) => c.slab !== 'body').map((c) => c.slab as number);
+    const hasBodyCandidate = candidates.some((c) => c.slab === 'body');
     const candidateSlabs = new Set(
       hasBodyCandidate ? [...numericSlabs, ...bodySlabIndices] : numericSlabs,
     );
@@ -339,11 +352,14 @@ export function createPickProgram(deps: {
         // the caption stamps, the Milky Way's narrower close-range gate), else
         // `enabled` (pick set == draw set, the common case). See
         // `ContentPass.pickEnabled`.
-        const slabPasses = candidates.filter(
-          (l) =>
-            (l.slab === slabIndex || (l.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
-            (l.pickEnabled ?? l.enabled)(state, ctx, view),
-        );
+        const slabPasses = candidates
+          .filter(
+            (c) =>
+              (c.slab === slabIndex ||
+                (c.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
+              (c.pass.pickEnabled ?? c.pass.enabled)(state, ctx, view),
+          )
+          .map((c) => c.pass);
         return { slabIndex, view, passes: slabPasses };
       })
       .filter((group) => group.passes.length > 0);

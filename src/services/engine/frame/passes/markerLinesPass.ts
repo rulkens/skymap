@@ -38,12 +38,9 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 
 export const markerLinesPass: ContentPass = {
   name: 'marker-lines',
-  slab: COSMO,
-  target: 'swap',
   blend: 'over',
 
   enabled(state, _ctx, _view) {

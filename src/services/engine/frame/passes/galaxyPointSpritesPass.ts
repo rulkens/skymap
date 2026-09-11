@@ -9,7 +9,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 import { Source } from '../../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
@@ -24,14 +23,7 @@ import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 export const galaxyPointSpritesPass: ContentPass = {
   name: 'point-sprites',
-  slab: COSMO,
-  target: 'hdr',
   blend: 'additive',
-  // Sky-cubemap capture roster (Task 13b, Ruling 6): the galaxy points are
-  // part of the black-hole lens's captured "sky". Draw-safe against a
-  // synthetic per-face ctx — every read below is `view`/`ctx`/`state`, none
-  // of it frame-real-camera-specific.
-  skyCapture: true,
 
   enabled(_state, _ctx, _view) {
     return true;

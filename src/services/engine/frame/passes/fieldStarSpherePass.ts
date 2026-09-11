@@ -214,8 +214,6 @@ function nextPresent(
 
 export const fieldStarSpherePass: ContentPass = {
   name: 'field-star-sphere',
-  slab: NEAR0,
-  target: 'foreground:0',
   blend: 'opaque',
 
   enabled(state, ctx, _view) {

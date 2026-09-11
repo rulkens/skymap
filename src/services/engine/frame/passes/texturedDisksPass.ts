@@ -33,14 +33,10 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 
 export const texturedDisksPass: ContentPass = {
   name: 'textured-disks',
-  slab: COSMO,
-  target: 'hdr',
   blend: 'additive',
-  skyCapture: true,
 
   enabled(state, _ctx, _view) {
     if (!state.settings.thumbnails.enabled) return false;

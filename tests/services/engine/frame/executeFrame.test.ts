@@ -113,18 +113,14 @@ type SpyPass = ContentPass & {
 
 function makeContentPass(init: {
   name: string;
-  target: string;
-  slab?: number | 'body';
   enabled?: boolean;
-  // Per-row gate for a 'body' layer: reads the resolved view (e.g. its
+  // Per-row gate for a body-roster pass: reads the resolved view (e.g. its
   // `slab.frame.bodyId`) instead of the constant `enabled` flag above.
   enabledFor?: (view: SlabView) => boolean;
   log?: string[];
 }): SpyPass {
   return {
     name: init.name,
-    slab: init.slab ?? COSMO,
-    target: init.target,
     blend: 'additive',
     enabled: vi.fn<ContentPass['enabled']>((_state, _ctx, view) =>
       init.enabledFor ? init.enabledFor(view) : (init.enabled ?? true),
@@ -320,8 +316,8 @@ function attachmentOfDraw(
 describe('executeFrame', () => {
   it('runs steps in program order into a single encoder', () => {
     const log: string[] = [];
-    const hdr = makeContentPass({ name: 'a', target: 'hdr', log });
-    const swap = makeContentPass({ name: 'b', target: 'swap', log });
+    const hdr = makeContentPass({ name: 'a', log });
+    const swap = makeContentPass({ name: 'b', log });
     const compositor = { draw: vi.fn(() => log.push('composite')) };
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
@@ -334,8 +330,8 @@ describe('executeFrame', () => {
   });
 
   it('threads one SlabView instance per render step into every layer in the group', () => {
-    const a = makeContentPass({ name: 'a', target: 'hdr' });
-    const b = makeContentPass({ name: 'b', target: 'hdr' });
+    const a = makeContentPass({ name: 'a' });
+    const b = makeContentPass({ name: 'b' });
     const program: FrameStep[] = [{ kind: 'render', target: 'hdr', slab: COSMO, passes: [a, b] }];
     const { args } = makeArgs({ program });
     executeFrame(args);
@@ -350,9 +346,9 @@ describe('executeFrame', () => {
     // second — target already touched — loads. A volume layer proves the
     // per-target clear value (a=0).
     const env = makeEncoderEnv();
-    const first = makeContentPass({ name: 'first', target: 'hdr' });
-    const second = makeContentPass({ name: 'second', target: 'hdr' });
-    const vol = makeContentPass({ name: 'vol', target: 'volume' });
+    const first = makeContentPass({ name: 'first' });
+    const second = makeContentPass({ name: 'second' });
+    const vol = makeContentPass({ name: 'vol' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'volume', slab: COSMO, passes: [vol] },
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [first, second] },
@@ -385,7 +381,7 @@ describe('executeFrame', () => {
 
   it('opens no pass for a render step with no enabled layers', () => {
     const env = makeEncoderEnv();
-    const off = makeContentPass({ name: 'off', target: 'hdr', enabled: false });
+    const off = makeContentPass({ name: 'off', enabled: false });
     const program: FrameStep[] = [{ kind: 'render', target: 'hdr', slab: COSMO, passes: [off] }];
     const { args } = makeArgs({ program, env });
     executeFrame(args);
@@ -405,7 +401,7 @@ describe('executeFrame', () => {
 
   it('runs a composite step when the source render step drew', () => {
     const draw = vi.fn();
-    const hdr = makeContentPass({ name: 'hdr', target: 'hdr' });
+    const hdr = makeContentPass({ name: 'hdr' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
       { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null } },
@@ -427,7 +423,7 @@ describe('executeFrame', () => {
     // (rgba16float for foreground:0) — proving the dstFormat comes from the
     // dest spec, not a swap-only special case.
     const draw = vi.fn();
-    const hdr = makeContentPass({ name: 'hdr', target: 'hdr' });
+    const hdr = makeContentPass({ name: 'hdr' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
       {
@@ -443,9 +439,9 @@ describe('executeFrame', () => {
 
   it('merged strategy opens exactly one pass per non-empty render step', () => {
     const env = makeEncoderEnv();
-    const a = makeContentPass({ name: 'a', target: 'hdr' });
-    const b = makeContentPass({ name: 'b', target: 'hdr' });
-    const c = makeContentPass({ name: 'c', target: 'hdr' });
+    const a = makeContentPass({ name: 'a' });
+    const b = makeContentPass({ name: 'b' });
+    const c = makeContentPass({ name: 'c' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [a, b, c] },
     ];
@@ -460,8 +456,8 @@ describe('executeFrame', () => {
   it('perLayerTimed opens one pass per enabled layer, each carrying descriptorFor(layer.name)', () => {
     const env = makeEncoderEnv();
     const { svc, descriptorFor } = makeTimingService();
-    const a = makeContentPass({ name: 'a', target: 'hdr' });
-    const b = makeContentPass({ name: 'b', target: 'hdr' });
+    const a = makeContentPass({ name: 'a' });
+    const b = makeContentPass({ name: 'b' });
     const program: FrameStep[] = [{ kind: 'render', target: 'hdr', slab: COSMO, passes: [a, b] }];
     const { args } = makeArgs({ program, strategy: 'perLayerTimed', timing: svc, env });
     executeFrame(args);
@@ -484,7 +480,7 @@ describe('executeFrame', () => {
     // the slot name, so each row's pass gets its OWN descriptor.
     const env = makeEncoderEnv();
     const { svc, descriptorFor } = makeTimingService();
-    const planets = makeContentPass({ name: 'planets', target: 'foreground:0', slab: 'body' });
+    const planets = makeContentPass({ name: 'planets' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'foreground:0', slab: 2, passes: [planets] },
       { kind: 'render', target: 'foreground:0', slab: 3, passes: [planets] },
@@ -505,7 +501,7 @@ describe('executeFrame', () => {
   it('composite passes carry the source→dest timing descriptor', () => {
     const env = makeEncoderEnv();
     const { svc, descriptorFor } = makeTimingService();
-    const hdr = makeContentPass({ name: 'hdr', target: 'hdr' });
+    const hdr = makeContentPass({ name: 'hdr' });
     const draw = vi.fn();
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
@@ -527,9 +523,9 @@ describe('executeFrame', () => {
   });
 
   it('disabledPasses[name] === true hides a layer; false/absent does not', () => {
-    const hidden = makeContentPass({ name: 'hidden', target: 'hdr' });
-    const shownFalse = makeContentPass({ name: 'shownFalse', target: 'hdr' });
-    const shownAbsent = makeContentPass({ name: 'shownAbsent', target: 'hdr' });
+    const hidden = makeContentPass({ name: 'hidden' });
+    const shownFalse = makeContentPass({ name: 'shownFalse' });
+    const shownAbsent = makeContentPass({ name: 'shownAbsent' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hidden, shownFalse, shownAbsent] },
     ];
@@ -565,8 +561,8 @@ describe('executeFrame', () => {
     // The first pass clears depth to the far plane (1.0); the second — target
     // already touched — loads, preserving the occlusion already written.
     const env = makeEncoderEnv();
-    const a = makeContentPass({ name: 'a', target: 'foreground:0' });
-    const b = makeContentPass({ name: 'b', target: 'foreground:0' });
+    const a = makeContentPass({ name: 'a' });
+    const b = makeContentPass({ name: 'b' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'foreground:0', slab: COSMO, passes: [a, b] },
       { kind: 'render', target: 'foreground:0', slab: COSMO, passes: [a, b] },
@@ -603,7 +599,7 @@ describe('executeFrame', () => {
     // first loads where the rule would clear, the second clears where the rule
     // would load (the restart a back-to-front slab run needs mid-frame).
     const env = makeEncoderEnv();
-    const a = makeContentPass({ name: 'a', target: 'foreground:0' });
+    const a = makeContentPass({ name: 'a' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'load', passes: [a] },
       { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'clear', passes: [a] },
@@ -624,8 +620,8 @@ describe('executeFrame', () => {
 
   it('opens no depthStencilAttachment for depthless targets', () => {
     const env = makeEncoderEnv();
-    const hdr = makeContentPass({ name: 'hdr', target: 'hdr' });
-    const swap = makeContentPass({ name: 'swap', target: 'swap' });
+    const hdr = makeContentPass({ name: 'hdr' });
+    const swap = makeContentPass({ name: 'swap' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
       { kind: 'render', target: 'swap', slab: COSMO, passes: [swap] },
@@ -644,11 +640,7 @@ describe('executeFrame', () => {
   // painter chain, each drawing the same roster against its OWN row.
 
   it('resolves each body-slab step against its own row', () => {
-    const contentPass = makeContentPass({
-      name: 'body-layer',
-      target: 'foreground:0',
-      slab: 'body',
-    });
+    const contentPass = makeContentPass({ name: 'body-layer' });
     const ctx = makeBodyCtx(['mars', 'venus']);
     const program: FrameStep[] = [
       { kind: 'render', target: 'foreground:0', slab: 2, passes: [contentPass] },
@@ -669,8 +661,6 @@ describe('executeFrame', () => {
   it("gates a 'body' layer per row", () => {
     const contentPass = makeContentPass({
       name: 'body-layer',
-      target: 'foreground:0',
-      slab: 'body',
       enabledFor: (view) =>
         (view.slab.frame as { kind: 'body-m'; bodyId: string }).bodyId === 'mars',
     });
@@ -687,11 +677,7 @@ describe('executeFrame', () => {
   it('passes the resolved view to enabled', () => {
     // Fails if a future change resolves the view twice (once for the filter,
     // once for the group) instead of threading the same object through both.
-    const contentPass = makeContentPass({
-      name: 'body-layer',
-      target: 'foreground:0',
-      slab: 'body',
-    });
+    const contentPass = makeContentPass({ name: 'body-layer' });
     const ctx = makeBodyCtx(['mars']);
     const program: FrameStep[] = [
       { kind: 'render', target: 'foreground:0', slab: 2, passes: [contentPass] },
@@ -711,7 +697,7 @@ describe('executeFrame', () => {
     // faces' synthetic cameras; identity (`toBe`), not content, is what proves
     // routing, since a real face ctx and the frame ctx share the same shape.
     it("resolves each capture step's own face ctx, never the frame-wide ctx", () => {
-      const contentPass = makeContentPass({ name: 'probe', target: 'hdr', slab: NEAR0 });
+      const contentPass = makeContentPass({ name: 'probe' });
       const face0Ctx = makeCtx();
       const face1Ctx = makeCtx();
       const program: FrameStep[] = [
@@ -738,7 +724,7 @@ describe('executeFrame', () => {
     });
 
     it('skips a capture step cleanly when its face has no context (skyCubemapFaceContext returned null)', () => {
-      const contentPass = makeContentPass({ name: 'probe', target: 'sky-cubemap', slab: NEAR0 });
+      const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
         { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 2, passes: [contentPass] },
       ];
@@ -751,7 +737,7 @@ describe('executeFrame', () => {
     });
 
     it('an ordinary (non-face) render step is unaffected by an absent skyCubemapFaceContexts map', () => {
-      const contentPass = makeContentPass({ name: 'a', target: 'hdr' });
+      const contentPass = makeContentPass({ name: 'a' });
       const program: FrameStep[] = [
         { kind: 'render', target: 'hdr', slab: COSMO, passes: [contentPass] },
       ];
@@ -764,7 +750,7 @@ describe('executeFrame', () => {
       // Pins the real bug: before the fix, every capture step resolved the
       // same multi-layer `viewOf('sky-cubemap')` regardless of `step.face`,
       // so all 6 faces wrote the same texture layer.
-      const contentPass = makeContentPass({ name: 'probe', target: 'hdr', slab: NEAR0 });
+      const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [0, 1, 2, 3, 4, 5].map(
         (face): FrameStep => ({
           kind: 'render',
@@ -795,8 +781,8 @@ describe('executeFrame', () => {
       // always-clear made the NEAR0 step clear the face the COSMO step had just
       // drawn the galaxy points and textured disks into, so no COSMO content
       // ever survived into the cubemap the lens samples.
-      const cosmoPass = makeContentPass({ name: 'textured-disks', target: 'hdr', slab: COSMO });
-      const near0Pass = makeContentPass({ name: 'star-points', target: 'hdr', slab: NEAR0 });
+      const cosmoPass = makeContentPass({ name: 'textured-disks' });
+      const near0Pass = makeContentPass({ name: 'star-points' });
       const program: FrameStep[] = [
         { kind: 'render', target: 'sky-cubemap', slab: COSMO, face: 0, passes: [cosmoPass] },
         { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0, passes: [near0Pass] },
@@ -818,7 +804,7 @@ describe('executeFrame', () => {
       // 'sky-cubemap' touched; face 1's pass then LOADED — against its own
       // stale prior-frame content, not face 0's — and stars drew additively
       // over it, flickering the cubemap bright/dim by capture order.
-      const contentPass = makeContentPass({ name: 'probe', target: 'hdr', slab: NEAR0 });
+      const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
         { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0, passes: [contentPass] },
         { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1, passes: [contentPass] },

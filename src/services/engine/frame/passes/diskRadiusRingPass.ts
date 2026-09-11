@@ -32,12 +32,9 @@ import { paddedRadiusMpc } from '../../../../utils/paddedRadiusMpc';
 import { effectiveTilt } from '../../../../utils/render/disk/effectiveTilt';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import { COSMO } from '../slabs';
 
 export const diskRadiusRingPass: ContentPass = {
   name: 'disk-radius-ring',
-  slab: COSMO,
-  target: 'swap',
   blend: 'over',
 
   enabled(state, _ctx, _view) {

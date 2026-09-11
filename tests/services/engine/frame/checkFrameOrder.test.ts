@@ -17,8 +17,6 @@ const TARGETS = ['hdr', 'sky-cubemap', 'foreground:0', 'swap'];
 function fakePass(name: string): ContentPass {
   return {
     name,
-    slab: COSMO,
-    target: 'hdr',
     blend: 'additive',
     enabled: vi.fn<ContentPass['enabled']>(() => true),
     draw: vi.fn<ContentPass['draw']>(),

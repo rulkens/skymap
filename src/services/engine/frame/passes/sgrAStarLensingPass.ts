@@ -1,8 +1,9 @@
 /**
  * sgrAStarLensingPass — the Sgr A* lens pass's `ContentPass` row.
  *
- * `slab: 'body'` expands into one render step per body-m row, so
- * `enabled`/`draw` run once per body and are narrowed here to Sgr A*'s.
+ * `FRAME_ORDER`'s `lens` line expands into one render step per body-m row in
+ * the frame's lensing list, so `enabled`/`draw` run once per body and are
+ * narrowed here to Sgr A*'s.
  * `blend: 'over'`, not the additive convention most `hdr` layers use: the
  * captured disc must truly OCCLUDE the starlight behind it, while per-pixel
  * alpha lets the earlier roster through where deflection is negligible.
@@ -52,8 +53,6 @@ function bandAlphaFor(state: EngineState, ctx: ReadyFrameContext): number {
 
 export const sgrAStarLensingPass: ContentPass = {
   name: 'sgr-a-star-lensing',
-  slab: 'body',
-  target: 'hdr',
   blend: 'over',
 
   enabled(state, ctx, view) {

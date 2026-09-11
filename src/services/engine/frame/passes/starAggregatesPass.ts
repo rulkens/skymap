@@ -35,15 +35,7 @@ import { starCatalogVisible, prepareStarCut, drawStream } from './starCatalogPas
 
 export const starAggregatesPass: ContentPass = {
   name: 'star-aggregates',
-  slab: NEAR0,
-  target: 'star-aggregates',
   blend: 'additive',
-  // Sky-cubemap capture roster: the survey AGGREGATE stream is part of the
-  // black-hole lens's captured "sky", drawn straight into the capture target
-  // (a capture step selects by this flag, not by `target` — see
-  // `executeFrame`'s capture-step branch) rather than through its usual
-  // half-res offscreen. Its knee moves to deposit time there — `drawStream`.
-  skyCapture: true,
 
   enabled: starCatalogVisible,
 
@@ -59,11 +51,11 @@ export const starAggregatesPass: ContentPass = {
     // texels here and land floor-clamped aggregates sub-texel (dropout and
     // flicker, not wrong brightness — `toRefPx` keeps the photometry
     // viewport-independent). `viewSlot !== 0` marks a sky-cubemap capture draw
-    // (this layer's `skyCapture` flag, see `ReadyFrameContext.viewSlot`'s
-    // doc), which targets the `sky-cubemap` face — its own declared size (a
-    // live setting), not this row's. The view is COPIED rather
-    // than mutated: one `SlabView` is shared by every layer in the render
-    // step.
+    // (this pass is on `FRAME_ORDER`'s capture roster — see
+    // `ReadyFrameContext.viewSlot`'s doc), which targets the `sky-cubemap`
+    // face — its own declared size (a live setting), not this row's. The view
+    // is COPIED rather than mutated: one `SlabView` is shared by every pass in
+    // the render step.
     const destTarget = ctx.viewSlot !== 0 ? 'sky-cubemap' : 'star-aggregates';
     const { width: vw, height: vh } = ctx.renderTargets.sizeOf(destTarget);
 

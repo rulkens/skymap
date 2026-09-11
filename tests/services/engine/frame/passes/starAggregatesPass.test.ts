@@ -12,7 +12,6 @@ import { starAggregatesPass } from '../../../../../src/services/engine/frame/pas
 import { starCatalogPass } from '../../../../../src/services/engine/frame/passes/starCatalogPass';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -105,10 +104,8 @@ function makeNear0View(camPos: Vec3): SlabView {
 }
 
 describe('starAggregatesPass', () => {
-  it('shares the star visibility gate (same enabled as star-catalog) and targets the offscreen', () => {
+  it('shares the star visibility gate (same enabled as star-catalog)', () => {
     expect(starAggregatesPass.enabled).toBe(starCatalogPass.enabled);
-    expect(starAggregatesPass.target).toBe('star-aggregates');
-    expect(starAggregatesPass.slab).toBe(NEAR0);
   });
 
   it('records the AGGREGATE stream (stream tag, isAggregate all 1) into its pass', () => {

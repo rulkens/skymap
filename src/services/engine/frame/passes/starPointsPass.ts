@@ -136,8 +136,6 @@ function sgrAStarCaptionPickable(state: EngineState, ctx: ReadyFrameContext): bo
 
 export const starPointsPass: ContentPass = {
   name: 'star-points',
-  slab: NEAR0,
-  target: 'hdr',
   blend: 'additive',
   // Deliberately OFF the sky-cubemap capture roster: the capture face pose
   // carries a placeholder `distance: 1` Mpc (`skyCubemapFaceContext.ts`)

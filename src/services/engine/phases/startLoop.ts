@@ -93,6 +93,9 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   checkFrameOrder(
     FRAME_ORDER,
     CONTENT_PASSES,
+    // Non-null because `runBootstrapPhases` awaits `initGpu` — which assigns
+    // `renderTargets` — before this phase (`bootstrap.ts`); the guard above
+    // pins `phaseLocals`, a different fact.
     state.gpu.renderTargets!.specs.map((spec) => spec.id),
   );
 

@@ -26,12 +26,9 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 
 export const proceduralDisksPass: ContentPass = {
   name: 'procedural-disks',
-  slab: COSMO,
-  target: 'hdr',
   blend: 'additive',
 
   enabled(state, _ctx, _view) {

@@ -61,11 +61,9 @@ function makeCam(): OrbitCamera {
 }
 
 /** A minimal `ContentPass` fixture — the derivations read only `name`. */
-function fakePass(name: string, target: string, slab: number): ContentPass {
+function fakePass(name: string): ContentPass {
   return {
     name,
-    slab,
-    target,
     blend: 'additive',
     enabled: vi.fn<ContentPass['enabled']>(() => true),
     draw: vi.fn<ContentPass['draw']>(),
@@ -446,7 +444,7 @@ describe('timedSlotGroupsOf', () => {
       },
     ];
     const groups = timedSlotGroupsOf(
-      expandFrameOrder(order, [fakePass('planets', 'foreground:0', 2)], {
+      expandFrameOrder(order, [fakePass('planets')], {
         tone: TONE,
         bloomEnabled: false,
         foregroundChain: [NEAR0, 2, 3],
@@ -470,7 +468,7 @@ describe('timedSlotGroupsOf', () => {
     // vanishing. Known titles hold their fixed positions; the unmapped fallback
     // appends after them (a nudge to give it a real title).
     const steps: readonly FrameStep[] = [
-      { kind: 'render', target: 'foo', slab: COSMO, passes: [fakePass('x', 'foo', COSMO)] },
+      { kind: 'render', target: 'foo', slab: COSMO, passes: [fakePass('x')] },
     ];
     const groups = timedSlotGroupsOf(steps);
     expect(groups.map((g) => g.title)).toEqual(['Composites & pick', 'foo·COSMO']);

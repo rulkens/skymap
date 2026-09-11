@@ -152,15 +152,6 @@ function makeRendererSpy() {
   return { draw: vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array) => void>() };
 }
 
-describe('ringsPass row profile', () => {
-  it('is a body-slab row over (foreground:0) with straight-alpha over', () => {
-    expect(ringsPass.name).toBe('rings');
-    expect(ringsPass.slab).toBe('body');
-    expect(ringsPass.target).toBe('foreground:0');
-    expect(ringsPass.blend).toBe('over');
-  });
-});
-
 describe('ringsPass.enabled', () => {
   it('is false while the ringRenderer handle is null (bare ctx short-circuits)', () => {
     const state = makeState(null, [], []);

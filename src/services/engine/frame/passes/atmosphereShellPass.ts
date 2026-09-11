@@ -77,8 +77,6 @@ import { atmosphereDrawList } from '../atmosphereDrawList';
 
 export const atmosphereShellPass: ContentPass = {
   name: 'atmosphere-shell',
-  slab: 'body',
-  target: 'foreground:0',
   blend: 'over',
 
   enabled(state, ctx, view) {

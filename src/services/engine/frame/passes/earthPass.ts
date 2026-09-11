@@ -154,8 +154,6 @@ function computeBodySurfaceFrame(
 
 export const earthPass: ContentPass = {
   name: 'earth',
-  slab: 'body',
-  target: 'foreground:0',
   blend: 'opaque',
 
   enabled(state, ctx, view) {

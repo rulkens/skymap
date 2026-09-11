@@ -43,6 +43,7 @@ import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
 import { CONTENT_PASSES } from './frame/passes';
+import { FRAME_ORDER } from './frame/frameOrder';
 import { logCameraState } from './helpers/logCameraState';
 import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveWorldPose } from './helpers/liveWorldPose';
@@ -596,9 +597,16 @@ export function createEngine(
         idle:
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
-      // The volume-target raymarch has no user toggle, so it is excluded.
+      // Every composed pass except the volume-target raymarch, which has no
+      // user toggle — the frame order is what says which pass that is.
       passOverrides: {
-        allNames: CONTENT_PASSES.filter((l) => l.target !== 'volume').map((p) => p.name),
+        allNames: CONTENT_PASSES.map((pass) => pass.name).filter(
+          (name) =>
+            !FRAME_ORDER.some(
+              (step) =>
+                step.kind === 'render' && step.target === 'volume' && step.passes.includes(name),
+            ),
+        ),
       },
       // Re-derived per call, not snapshotted: the slots this joins against are
       // minted by the async bootstrap.

@@ -96,8 +96,6 @@ import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFru
 
 export const near0SelectionRingPass: ContentPass = {
   name: 'near0-selection-ring',
-  slab: NEAR0,
-  target: 'swap',
   blend: 'over',
 
   enabled(state, _ctx, _view) {

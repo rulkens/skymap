@@ -143,8 +143,6 @@ function cloudShellDraw(
 
 export const cloudShellPass: ContentPass = {
   name: 'cloud-shell',
-  slab: 'body',
-  target: 'foreground:0',
   blend: 'over',
 
   enabled(state, ctx, view) {

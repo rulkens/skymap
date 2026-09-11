@@ -14,8 +14,6 @@ import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
 
 export const foregroundLabelsPass: ContentPass = {
   name: 'foreground-labels',
-  slab: NEAR0,
-  target: 'swap',
   blend: 'over',
 
   enabled(state, _ctx, _view) {

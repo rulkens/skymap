@@ -24,15 +24,12 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 
 export const structureMarkersPass: ContentPass = {
   name: 'structure-markers',
-  slab: COSMO,
-  target: 'hdr',
   blend: 'additive',
 
   enabled(state, ctx, _view) {

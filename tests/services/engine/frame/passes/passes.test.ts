@@ -1,8 +1,9 @@
 /**
- * passes — the per-layer `enabled` gates and the `CONTENT_PASSES` table shape,
- * against stub state + ctx with no GPU device. The spot-checked `draw` calls pin
- * that a layer threads the resolved `SlabView`'s `vp`/`viewportPx` rather than
- * reading `ctx.vp`/`ctx.canvasSize` directly.
+ * passes — the per-pass `enabled` gates and the one registry-wide invariant
+ * left on the row (blend against the target its `FRAME_ORDER` line names),
+ * against stub state + ctx with no GPU device. The spot-checked `draw` calls
+ * pin that a pass threads the resolved `SlabView`'s `vp`/`viewportPx` rather
+ * than reading `ctx.vp`/`ctx.canvasSize` directly.
  *
  * Encoder sequencing and the post-process chain live in `renderFrame.test.ts`.
  */
@@ -16,26 +17,18 @@ import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import {
   CONTENT_PASSES,
-  scalarVolumePass,
   galaxyPointSpritesPass,
   filamentsPass,
-  earthPass,
-  planetsPass,
-  texturedBodiesPass,
   milkyWayPass,
   horizonShellPass,
-  starPointsPass,
-  orbitTrailsPass,
-  starCatalogPass,
   starAggregatesPass,
   starAggregateUpsamplePass,
   sgrAStarLensingPass,
-  foregroundLabelsPass,
-  near0SelectionRingPass,
-  clipPathDebugPass,
   structureMarkersPass,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
+import { expandFrameOrder } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
@@ -185,390 +178,68 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-// The canonical hdr-group name order, pinned once and reused by every
-// registry-shape assertion below.
-const HDR_NAMES = [
-  'point-sprites',
-  'procedural-disks',
-  'textured-disks',
-  'filaments',
-  'flow',
-  'volume-upsample',
-  'horizon-shell',
-  'structure-markers',
-];
-
-// The canonical (swap, COSMO) group (post-tone-map, premultiplied-OVER) name
-// order — see the renderer-unification design's migration table (spec lines
-// 208-212). Selection ring leads so marker-lines and labels composite over its
-// stroke. The debug clip-path overlay is NOT here: it projects through NEAR0
-// (so a near-field route clears the cosmological near plane) — see
-// NEAR_SWAP_NAMES below.
-const SWAP_NAMES = ['selection-ring', 'disk-radius-ring', 'marker-lines', 'labels'];
-
-// The near-field foreground group: the true-scale bodies drawn into the
-// depth-bearing `foreground:0` target through the near0 slab — the Sun
-// sphere and the selection-gated focused field-star sphere. Opaque
-// (depth-tested), unlike the additive HDR group and the OVER swap group. The
-// focused-field-star sphere sits right after star-spheres — a selection-gated
-// sibling reusing the same star renderer.
-// Earth, the partition's `planets`/`textured-bodies` branches, and the
-// translucent `cloud-shell`/`rings`/`atmosphere-shell` overlays are NOT in
-// this list: all ride the 'body' slab sentinel (Tasks 9-11, body render
-// slabs) instead of a fixed NEAR0 index — their own registry-row tests below
-// pin them separately.
-const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere'];
-
-// The near-field hdr rows: the layers that pair the hdr target with the
-// near0 slab — additive like every hdr row, but projected through NEAR0 so
-// kpc-to-AU-scale anchors clear the near plane. One (hdr, NEAR0) render
-// group, driven by the program's dedicated step before the tone-map: the
-// Milky-Way cloud's UPSAMPLE composite first, then the cloud's dust pass (its
-// multiplicative transmittance must land on the upsampled starlight, and must
-// never darken the local starfield drawn after it), then the far-partition
-// star points, the survey star LEAF catalog, the survey aggregate UPSAMPLE
-// composite (adjacent to the leaf draw it composites), and the constellation
-// figures — that whole run is the "sky" roster the Sgr A* lens pass samples
-// from its OWN (hdr, BODY[k]) step (the `lens` line). `orbit-trails` and
-// `body-glints` trail LAST here (Task 14) so they draw unwarped over the lens
-// pass rather than sitting among the roster it samples. Neither aggregate
-// STREAM is here — the Milky Way's star billboards target 'mw-aggregate' and
-// the survey's target 'star-aggregates', so both sit outside the hdr group;
-// `sgrAStarLensingPass` itself is ALSO not here — its slab is 'body', not
-// NEAR0.
-const NEAR_HDR_NAMES = [
-  'milky-way-upsample',
-  'milky-way',
-  'star-points',
-  'star-catalog',
-  'star-upsample',
-  'constellations',
-  'orbit-trails',
-  'body-glints',
-];
-
-// The near-field swap group: the overlays that pair the swap target with the
-// near0 slab. Like the COSMO swap overlays they premultiply-OVER post-tone-map,
-// but they project through the near0 slab so their anchors track true-scale
-// near-field content rather than being clipped by the cosmological near plane.
-// Its own (swap, NEAR0) render group, distinct from the (swap, COSMO) overlays
-// above: the star selection ring first (so its stroke sits under the caption,
-// mirroring the COSMO ring→labels order), then the scene-body name captions,
-// then the clip-path inspector overlay LAST (so its debug route + gizmo draw on
-// top of everything). The clip-path overlay projects through NEAR0 so a
-// near-field clip's route — Earth-to-parsec, wholly inside COSMO's 10 kpc near
-// plane — is not clipped to nothing.
-const NEAR_SWAP_NAMES = ['near0-selection-ring', 'foreground-labels', 'clip-path-debug'];
-
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('CONTENT_PASSES migration table (hdr group)', () => {
-  it('every hdr content layer matches the migration table', () => {
-    // Every current layer projects through the cosmological slab into the
-    // HDR target with additive blending — see the renderer-unification
-    // design's migration table (spec lines 196-213). Pinning `{slab,
-    // target, blend}` here means a future layer with a different profile
-    // (e.g. the near-field debug bodies) fails loudly instead of silently
-    // drawing through the wrong slab/target.
-    const hdrLayers = CONTENT_PASSES.filter((layer) => HDR_NAMES.includes(layer.name));
-    expect(hdrLayers.map((layer) => layer.name)).toEqual(HDR_NAMES);
-    for (const layer of hdrLayers) {
-      expect(layer.slab).toBe(COSMO);
-      expect(layer.target).toBe('hdr');
-      expect(layer.blend).toBe('additive');
-    }
-  });
-});
-
-describe('CONTENT_PASSES migration table (near-field hdr group)', () => {
-  it('the (hdr, NEAR0) group holds the sky roster, then orbit-trails/body-glints LAST (Task 14), additive', () => {
-    // The hdr rows outside the cosmological slab: the Milky-Way cloud's
-    // upsample + dust, the far-partition neighbourhood stars, the survey
-    // catalog/upsample, and the constellation figures, projected through
-    // NEAR0 (COSMO's FIXED 0.01 Mpc near plane would clip their kpc-to-AU-scale
-    // anchors — for the Milky Way it clipped the disc mid-descent before the
-    // approach fade completed) but accumulating into the same HDR target so
-    // they ride the galaxies' tone-map. Drawn by the program's dedicated (hdr,
-    // NEAR0) step before the hdr→swap composite. The two Milky-Way rows MUST
-    // lead, in this order: the upsample adds the cloud's own starlight into
-    // HDR, then the multiplicative dust extincts it along with the
-    // cosmological accumulation behind it — and leading the group keeps the
-    // local starfield drawn after out of that multiply. `orbit-trails` and
-    // `body-glints` moved LAST here (Task 14, spec "Draw order") so they draw
-    // over the Sgr A* lens pass's OWN (hdr, BODY[k]) step rather than being
-    // sampled by it.
-    const nearHdr = CONTENT_PASSES.filter(
-      (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
-    );
-    expect(nearHdr.map((layer) => layer.name)).toEqual(NEAR_HDR_NAMES);
-    expect(nearHdr).toContain(milkyWayPass);
-    expect(nearHdr).toContain(starPointsPass);
-    expect(nearHdr).toContain(orbitTrailsPass);
-    expect(nearHdr).toContain(starCatalogPass);
-    expect(nearHdr).toContain(starAggregateUpsamplePass);
-    for (const layer of nearHdr) {
-      expect(layer.slab).toBe(NEAR0);
-      expect(layer.target).toBe('hdr');
-      expect(layer.blend).toBe(layer === milkyWayPass ? 'multiply' : 'additive');
-    }
-  });
-});
-
-describe('CONTENT_PASSES migration table (swap group)', () => {
-  it('every swap content layer matches the migration table', () => {
-    // The COSMO post-tone-map UI overlays project through the same
-    // cosmological slab as the HDR group but target the swap chain with
-    // premultiplied-OVER blending — see the renderer-unification design's
-    // migration table (spec lines 208-212).
-    const swapLayers = CONTENT_PASSES.filter((layer) => SWAP_NAMES.includes(layer.name));
-    expect(swapLayers.map((layer) => layer.name)).toEqual(SWAP_NAMES);
-    for (const layer of swapLayers) {
-      expect(layer.slab).toBe(COSMO);
-      expect(layer.target).toBe('swap');
-      expect(layer.blend).toBe('over');
-    }
-  });
-});
-
-describe('CONTENT_PASSES migration table (foreground group)', () => {
-  it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
-    // The near-field bodies still on a fixed NEAR0 index (the Sun sphere, the
-    // focused field star): project through NEAR0 into the depth-bearing
-    // `foreground:0` target and are opaque (depth-tested), not additive. See
-    // the renderer-unification design's migration table (spec line 215).
-    const fgLayers = CONTENT_PASSES.filter((layer) => FOREGROUND_NAMES.includes(layer.name));
-    expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
-    for (const layer of fgLayers) {
-      expect(layer.slab).toBe(NEAR0);
-      expect(layer.target).toBe('foreground:0');
-      expect(layer.blend).toBe('opaque');
-    }
-  });
-
-  it("earth, planets, and textured-bodies ride the 'body' slab sentinel into foreground:0, opaque", () => {
-    // Task 9 (earth) / Task 11 (planets, textured-bodies): each expands into
-    // one render step per body-m row instead of a fixed NEAR0 index — see
-    // the foreground line's body-roster expansion.
-    for (const layer of [earthPass, planetsPass, texturedBodiesPass]) {
-      expect(layer.slab).toBe('body');
-      expect(layer.target).toBe('foreground:0');
-      expect(layer.blend).toBe('opaque');
-    }
-  });
-});
-
-describe('CONTENT_PASSES migration table (near-field swap group)', () => {
-  it('the star selection ring, scene-body captions, and clip-path overlay draw into swap through the near0 slab, over', () => {
-    // The (swap, NEAR0) group: like the COSMO swap overlays these target the
-    // swap chain with premultiplied-OVER, but they project through NEAR0 so
-    // their anchors track true-scale near-field content (a picked star, a body
-    // caption, a near-field clip's route) rather than being clipped by the
-    // cosmological near plane. Drawn by the program's (swap, NEAR0) render step,
-    // filtered here by (target, slab) so a mis-registered member surfaces — the
-    // ring leads the caption, the clip-path overlay trails.
-    const nearSwap = CONTENT_PASSES.filter(
-      (layer) => layer.target === 'swap' && layer.slab === NEAR0,
-    );
-    expect(nearSwap.map((layer) => layer.name)).toEqual(NEAR_SWAP_NAMES);
-    expect(nearSwap).toContain(near0SelectionRingPass);
-    expect(nearSwap).toContain(foregroundLabelsPass);
-    expect(nearSwap).toContain(clipPathDebugPass);
-    for (const layer of nearSwap) {
-      expect(layer.slab).toBe(NEAR0);
-      expect(layer.target).toBe('swap');
-      expect(layer.blend).toBe('over');
-    }
+describe('starAggregatesPass registry row', () => {
+  it('shares ONE visibility gate with its upsample consumer', () => {
+    // Producer and consumer are the same function by identity, so a frame can
+    // never composite a stale offscreen the producer skipped clearing.
+    expect(starAggregateUpsamplePass.enabled).toBe(starAggregatesPass.enabled);
   });
 });
 
 describe('CONTENT_PASSES blend legality', () => {
-  it('every layer blends per its target — hdr/volume additive, foreground:0 opaque, swap over', () => {
+  it('every pass blends per the target its FRAME_ORDER line draws into', () => {
     // The registry half of the target<->blend invariant — the renderer half,
     // that the WebGPU pipeline's actual blend state matches, is covered
-    // elsewhere. A layer whose target/blend pair falls outside this table is
-    // a data-entry bug in its own file, not a new legal combination.
-    for (const layer of CONTENT_PASSES) {
-      if (
-        layer.target === 'volume' ||
-        layer.target === 'zoa' ||
-        layer.target === 'star-aggregates' ||
-        layer.target === 'mw-aggregate'
-      ) {
-        // These four reduced-resolution offscreens accumulate the same way
-        // their contents would have accumulated straight into HDR — the
-        // raymarched volume, the zone-of-avoidance band raymarch, the
-        // survey aggregate glow, and the Milky Way cloud's star
-        // billboards are all additive sums, which is what makes "render
-        // small, bilinearly upsample, add" equivalent to drawing them
-        // full-res. A non-additive row here would break that equivalence, so
-        // it's a correctness bug, not a new legal combination.
-        expect(layer.blend).toBe('additive');
-      } else if (layer.target === 'hdr') {
-        // hdr admits two exceptions to its additive default: the Milky Way
-        // dust pass extincts the emission already accumulated (its position
-        // in the near-hdr group is load-bearing for that), and the Sgr A*
-        // lens pass composites premultiplied-OVER so a captured ray truly
-        // occludes the additive light behind it instead of adding to it
-        // (Blend.d.ts's own doc names 'over' legal for any target, not just
-        // the swap-chain rows). A third non-additive hdr row should fail
-        // this test and be a deliberate decision.
-        const expected =
-          layer === milkyWayPass ? 'multiply' : layer === sgrAStarLensingPass ? 'over' : 'additive';
-        expect(layer.blend).toBe(expected);
-      } else if (layer.target === 'foreground:0') {
-        // The `foreground:0` group is opaque bodies EXCEPT the three translucent
-        // overlays — the ring, Earth's cloud shell, and Earth's in-scatter
-        // atmosphere — each drawn AFTER the opaque spheres, depth-tested against
-        // them but writing no depth, straight-alpha OVER (spec §8 / §8.3 / grill
-        // Q9). Their pipelines bake exactly that profile (foreground:0 formats,
-        // depth read / no write, over blend), so those rows legitimately carry
-        // `over` where their siblings carry `opaque` — one of two targets that
-        // admit two blends today (hdr's dust row is the other).
-        if (
-          layer.name === 'rings' ||
-          layer.name === 'cloud-shell' ||
-          layer.name === 'atmosphere-shell'
-        ) {
-          expect(layer.blend).toBe('over');
+    // elsewhere. A pass whose target/blend pair falls outside this table is a
+    // data-entry bug in its own file, not a new legal combination. The target
+    // is the frame order's to state, so the expansion is what supplies it.
+    const steps = expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+      tone: { exposure: 1, curve: 4, hdrKnee: 0, hdrHeadroom: 0 },
+      bloomEnabled: true,
+      foregroundChain: [NEAR0, 2],
+      skyCubemapFacesToCapture: [],
+      lensBodySlabs: [2],
+    });
+    const seen = new Set<string>();
+    for (const step of steps) {
+      if (step.kind !== 'render') continue;
+      for (const pass of step.passes) {
+        seen.add(pass.name);
+        if (step.target === 'hdr') {
+          // hdr admits two exceptions to its additive default: the Milky Way
+          // dust pass extincts the emission already accumulated, and the Sgr A*
+          // lens pass composites premultiplied-OVER so a captured ray truly
+          // occludes the additive light behind it instead of adding to it
+          // (Blend.d.ts's own doc names 'over' legal for any target, not just
+          // the swap-chain rows). A third non-additive hdr row should fail this
+          // test and be a deliberate decision.
+          const expected =
+            pass === milkyWayPass ? 'multiply' : pass === sgrAStarLensingPass ? 'over' : 'additive';
+          expect(pass.blend).toBe(expected);
+        } else if (step.target === 'foreground:0') {
+          // The foreground group is opaque bodies EXCEPT three translucent
+          // overlays — the ring, Earth's cloud shell, Earth's in-scatter
+          // atmosphere — each drawn AFTER the opaque spheres, depth-tested
+          // against them but writing no depth, straight-alpha OVER (spec §8 /
+          // §8.3 / grill Q9). Their pipelines bake exactly that profile.
+          const translucent = ['rings', 'cloud-shell', 'atmosphere-shell'].includes(pass.name);
+          expect(pass.blend).toBe(translucent ? 'over' : 'opaque');
+        } else if (step.target === 'swap') {
+          expect(pass.blend).toBe('over');
         } else {
-          expect(layer.blend).toBe('opaque');
+          // The four reduced-resolution offscreens (volume, zoa,
+          // star-aggregates, mw-aggregate) accumulate the way their contents
+          // would have accumulated straight into HDR — all additive sums, which
+          // is what makes "render small, bilinearly upsample, add" equivalent to
+          // drawing them full-res. A non-additive row breaks that equivalence.
+          expect(pass.blend).toBe('additive');
         }
-      } else if (layer.target === 'swap') {
-        expect(layer.blend).toBe('over');
-      } else if (/^bloom[0-4]$/.test(layer.target)) {
-        // The bloom mip pyramid rows: the bright prefilter and the four
-        // downsample folds OVERWRITE their target (opaque — each is its target's
-        // sole producer), while the four upsample folds accumulate ADDITIVELY
-        // onto the finer level. So a `bloomN` target legitimately admits both
-        // blends, split by which stage draws it: `bloom-up-*` is additive, the
-        // bright + `bloom-down-*` producers are opaque. (The final fold targets
-        // `hdr`, additive — covered by the `hdr` branch above.)
-        if (layer.name.startsWith('bloom-up-')) {
-          expect(layer.blend).toBe('additive');
-        } else {
-          expect(layer.blend).toBe('opaque');
-        }
-      } else {
-        throw new Error(
-          `CONTENT_PASSES: unexpected target '${layer.target}' on layer '${layer.name}'`,
-        );
       }
     }
-    // Eleven layers blend OVER: the four COSMO swap overlays, the three (swap,
-    // NEAR0) overlays (the near0 star selection ring, foreground-labels, and the
-    // clip-path inspector route — moved here from the COSMO swap group so a
-    // near-field clip's parsec-scale route is not clipped by the cosmological
-    // near plane), the three translucent foreground members — the ring,
-    // Earth's cloud shell, and Earth's in-scatter atmosphere (the three OVER
-    // members of the otherwise-opaque foreground group) — and the Sgr A* lens
-    // pass, the one 'body'-slab, 'hdr'-target OVER row (see the hdr branch
-    // above).
-    expect(CONTENT_PASSES.filter((layer) => layer.blend === 'over')).toHaveLength(11);
-  });
-});
-
-describe('ringsPass registry row', () => {
-  it("rides the 'body' slab sentinel into foreground:0 with over, AFTER the opaque bodies", () => {
-    // The ring is the translucent overlay half of Saturn's rings: it shares the
-    // opaque bodies' (foreground:0, 'body') render step but blends OVER, so it
-    // must be ordered after them to depth-test against their stamped z (far ring
-    // half occluded). Task 11 moved it off the fixed NEAR0 index onto the same
-    // 'body' expansion earth/planets/textured-bodies use. It is deliberately
-    // NOT in FOREGROUND_NAMES (that group's opaque assertion), it is the
-    // exception.
-    const rings = CONTENT_PASSES.find((layer) => layer.name === 'rings')!;
-    expect(rings).toBeDefined();
-    expect(rings.slab).toBe('body');
-    expect(rings.target).toBe('foreground:0');
-    expect(rings.blend).toBe('over');
-
-    const idxTextured = CONTENT_PASSES.findIndex((layer) => layer.name === 'textured-bodies');
-    const idxRings = CONTENT_PASSES.findIndex((layer) => layer.name === 'rings');
-    expect(idxRings).toBeGreaterThan(idxTextured);
-  });
-});
-
-describe('cloudShellPass registry row', () => {
-  it("rides the 'body' slab sentinel into foreground:0 with over, AFTER earth", () => {
-    // Earth's cloud deck is the second translucent overlay of the (foreground:0,
-    // 'body') group: it blends OVER, so it must be ordered after the opaque
-    // surface earthPass stamps, to depth-test against its z (far hemisphere
-    // occluded). Task 10 (body render slabs) moved it off the fixed NEAR0 index
-    // onto the same body-roster expansion earthPass uses. It
-    // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) —
-    // it is the exception, alongside the ring.
-    const cloud = CONTENT_PASSES.find((layer) => layer.name === 'cloud-shell')!;
-    expect(cloud).toBeDefined();
-    expect(cloud.slab).toBe('body');
-    expect(cloud.target).toBe('foreground:0');
-    expect(cloud.blend).toBe('over');
-
-    const idxEarth = CONTENT_PASSES.findIndex((layer) => layer.name === 'earth');
-    const idxCloud = CONTENT_PASSES.findIndex((layer) => layer.name === 'cloud-shell');
-    expect(idxCloud).toBeGreaterThan(idxEarth);
-  });
-});
-
-describe('atmosphereShellPass registry row', () => {
-  it("rides the 'body' slab sentinel into foreground:0 with over, LAST — after the rings overlay", () => {
-    // Earth's in-scatter atmosphere is the outermost translucent overlay of the
-    // (foreground:0, 'body') group (spec §8.3): it blends OVER and must be
-    // ordered AFTER every opaque sphere AND the ring overlay, so it depth-tests
-    // against their stamped z (over-disc occluded, limb over space passes).
-    // Task 10 moved it off the fixed NEAR0 index onto the same 'body' expansion
-    // earthPass uses. It is deliberately NOT in FOREGROUND_NAMES (that group's
-    // opaque assertion) — it is the third exception, alongside the ring and
-    // cloud shell. Non-pickable.
-    const atmosphere = CONTENT_PASSES.find((layer) => layer.name === 'atmosphere-shell')!;
-    expect(atmosphere).toBeDefined();
-    expect(atmosphere.slab).toBe('body');
-    expect(atmosphere.target).toBe('foreground:0');
-    expect(atmosphere.blend).toBe('over');
-    expect(atmosphere.drawPick).toBeUndefined();
-
-    // It is the LAST foreground:0 layer in registry order (after the ring), so
-    // its draw trails every opaque + translucent sibling in the group.
-    const idxRings = CONTENT_PASSES.findIndex((layer) => layer.name === 'rings');
-    const idxAtmosphere = CONTENT_PASSES.findIndex((layer) => layer.name === 'atmosphere-shell');
-    expect(idxAtmosphere).toBeGreaterThan(idxRings);
-    const fgIndices = CONTENT_PASSES.map((layer, i) => ({ layer, i })).filter(
-      ({ layer }) => layer.target === 'foreground:0',
-    );
-    expect(fgIndices[fgIndices.length - 1]!.layer).toBe(atmosphere);
-  });
-});
-
-describe('scalarVolumePass registry row', () => {
-  it('leads CONTENT_PASSES as the volume-target raymarch', () => {
-    // The half-res raymarch draws into its own 'volume' offscreen before the
-    // hdr group upsamples it, so it sits first in the registry — and its
-    // 'volume' target keeps it out of both the hdr and swap groups.
-    expect(CONTENT_PASSES[0]).toBe(scalarVolumePass);
-    expect(scalarVolumePass.name).toBe('scalar-volume');
-    expect(scalarVolumePass.target).toBe('volume');
-    expect(scalarVolumePass.slab).toBe(COSMO);
-    expect(scalarVolumePass.blend).toBe('additive');
-    expect(CONTENT_PASSES.filter((l) => l.target === 'hdr')).not.toContain(scalarVolumePass);
-    expect(CONTENT_PASSES.filter((l) => l.target === 'swap')).not.toContain(scalarVolumePass);
-  });
-});
-
-describe('starAggregatesPass registry row', () => {
-  it('draws into the star-aggregates offscreen through NEAR0, additive, and stays out of the hdr group', () => {
-    // The survey-star AGGREGATE stream draws LINEAR into its own half-res
-    // offscreen via a dedicated (star-aggregates, NEAR0) render step, so its
-    // 'star-aggregates' target keeps it out of both the hdr and swap groups —
-    // the same isolation `scalar-volume` gets from its 'volume' target.
-    expect(starAggregatesPass.name).toBe('star-aggregates');
-    expect(starAggregatesPass.target).toBe('star-aggregates');
-    expect(starAggregatesPass.slab).toBe(NEAR0);
-    expect(starAggregatesPass.blend).toBe('additive');
-    expect(CONTENT_PASSES.filter((l) => l.target === 'hdr')).not.toContain(starAggregatesPass);
-    expect(CONTENT_PASSES.filter((l) => l.target === 'swap')).not.toContain(starAggregatesPass);
-    // The upsample consumer and the aggregate producer share ONE visibility
-    // gate, so a frame can never composite a stale offscreen the producer
-    // skipped clearing.
-    expect(starAggregateUpsamplePass.enabled).toBe(starAggregatesPass.enabled);
+    // A pass no step drew would slip past the table above unexamined.
+    expect(seen.size).toBe(CONTENT_PASSES.length);
   });
 });
 
@@ -948,25 +619,15 @@ describe('drawPick migration-table rows', () => {
     // among them — plus the two label rows, whose text is a click target for
     // the subject it names. Order is registry order: the COSMO pick pass leads with
     // point-sprites (the @group(0) prefix contract); zone-of-avoidance sits
-    // right after it in the registry for exactly that reason — its own
-    // 'zoa' render target keeps it out of every VISUAL group regardless of
-    // array position, but the pick program groups by slab alone and needs
+    // right after it in the registry for exactly that reason — the pick
+    // program groups by slab alone (a pass's visual target is FRAME_ORDER's
+    // business, not the pick pass's) and needs
     // this row after the one that establishes the shared camera. Every NEAR0
     // body self-binds its own slot-0 camera in its own pass, so their
     // relative order carries no @group(0) dependence (it is depth-resolved,
-    // nearest-wins). The production code stays name-blind — the pick program
-    // filters by `drawPick` presence + `enabled`, never a hardcoded name
-    // list — so this test is the ONLY place the fourteen names are asserted.
-    //
-    // The two label rows are the exception to the ordering freedom above —
-    // not because their pick aspect needs a fixed slot (each restores the
-    // shared point-pick camera prefix before returning, same postcondition
-    // `proceduralDisksPass` already satisfies from mid-registry — see
-    // `ContentPass.drawPick`), but because CONTENT_PASSES is the ONE list
-    // both the visual and pick programs filter, and 'labels' visual row must
-    // sit last among the swap-target layers so its text composites over the
-    // marker-line stroke it sits over (`passes/index.ts`). The pick filter
-    // inherits that position for free rather than keeping a second order.
+    // nearest-wins). The pick program filters by `drawPick` presence + the
+    // pick gate, never a hardcoded name list — so this test is the ONLY place
+    // the fourteen names are asserted.
     expect(CONTENT_PASSES.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'zone-of-avoidance',

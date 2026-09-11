@@ -74,10 +74,6 @@ const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
 
 export const milkyWayPass: ContentPass = {
   name: 'milky-way',
-  // NEAR0, not COSMO: the fixed 10 kpc cosmological near plane clips the disc
-  // mid-descent before the approach fade completes — see the module header.
-  slab: NEAR0,
-  target: 'hdr',
   blend: 'multiply',
 
   // Shared with the aggregate producer and its upsample consumer — see

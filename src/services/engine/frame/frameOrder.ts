@@ -35,7 +35,9 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // slab per face is what makes both halves reachable — a NEAR0-only step
   // leaves the COSMO half permanently undrawn. COSMO before NEAR0 mirrors the
   // real `(hdr, COSMO)` → `(hdr, NEAR0)` sequence below, so the capture
-  // composites in the order the live frame would.
+  // composites in the order the live frame would. A pass joins these rosters
+  // only if its draw reads `view`/`ctx`/`state` alone: a capture step hands it
+  // a SYNTHETIC per-face ctx, never the frame's real camera.
   {
     kind: 'capture',
     target: 'sky-cubemap',

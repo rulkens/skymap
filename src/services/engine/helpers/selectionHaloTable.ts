@@ -30,8 +30,8 @@
  * rings through COSMO (Mpc scale); a survey star and the foreground scene bodies
  * (planet / famous star / Earth) ring through NEAR0 (their parsec/AU-scale
  * anchors fall inside COSMO's fixed near plane and outside its far plane once
- * rebased). The slab value reuses the `NEAR0`/`COSMO` index constants a layer's
- * `slab:` field already carries — not a parallel union.
+ * rebased). The slab value reuses the `NEAR0`/`COSMO` index constants
+ * `FRAME_ORDER`'s lines carry — not a parallel union.
  */
 import {
   MILKY_WAY_DISC_RADIUS_KPC,

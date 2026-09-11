@@ -43,8 +43,6 @@ import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 
 export const selectionRingPass: ContentPass = {
   name: 'selection-ring',
-  slab: COSMO,
-  target: 'swap',
   blend: 'over',
 
   enabled(state, _ctx, _view) {

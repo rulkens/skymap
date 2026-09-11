@@ -1,98 +1,48 @@
 /**
- * ContentPass — one point in the (slab, target, blend) space, plus a
- * renderer call and an enable gate. A layer states its projection slab,
- * render target, and blend mode as data fields on the row itself, so
- * grouping by `(target, slab)` — the executor's and `timedSlotsOf`'s
- * grouping key — is a `.filter()` over `CONTENT_PASSES` at the call site
- * rather than a hand-maintained split. See `passes/index.ts` for the
- * registry and the full layer catalog.
+ * ContentPass — one renderer call, its blend, and an enable gate. WHERE it
+ * draws is not here: `FRAME_ORDER` (`frameOrder.ts`) names the pass on the line
+ * that states the target, the slab and the draw order, so a row and the order
+ * cannot disagree.
  *
- * There is deliberately no `deps` bag argument: a layer reads its
- * renderer straight off `state.gpu.*`, which is the end-state the
- * gpu-handle-nullability backlog item wants.
+ * There is deliberately no `deps` bag argument: a pass reads its renderer
+ * straight off `state.gpu.*`, which is the end-state the gpu-handle-nullability
+ * backlog item wants.
  *
- * `draw` receives a `SlabView` — the executor's single per-render-step slab
- * resolution — instead of a `ctx` the layer would otherwise have to
- * re-derive its own slab from. `drawPick` is declared now as part of the
- * locked contract (pick is a parallel program over this same registry —
- * see the design's "Pick" section) but is implemented by no layer yet;
- * layers that don't participate in picking simply omit it.
- *
- * **Invariant:** a layer's `target.{format,depth}` and `blend` must match
- * the profile baked into the renderer pipeline its `draw` calls. Where they
- * differ, the layer needs a renderer variant — `drawPick` delegating to a
- * dedicated pick renderer (rather than reusing the main renderer) is the
- * canonical example, because `r32uint` + `depth24plus` is a second pipeline
- * over the same geometry.
+ * **Invariant:** `blend` must match the profile baked into the renderer
+ * pipeline `draw` calls, against the format + depth of the target its
+ * `FRAME_ORDER` line names. Where they differ the pass needs a renderer
+ * variant — `drawPick` delegating to a dedicated pick renderer (rather than
+ * reusing the main renderer) is the canonical example, because `r32uint` +
+ * `depth24plus` is a second pipeline over the same geometry.
  */
 
 import type { Blend } from './Blend';
 import type { SlabView } from './SlabView';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { EngineState } from '../state/EngineState';
-import type { HdrPhase } from './HdrPhase';
 
 export type ContentPass = {
-  /** Stable identifier for debugging, test assertions, and the derived timing-slot list. */
+  /** Stable identifier: what `FRAME_ORDER` names, and the timing-slot list derives. */
   readonly name: string;
   /**
-   * Index into the per-frame slab list this layer projects through, or
-   * `'body'` — the frame program expands a `'body'` layer into one render
-   * step per body-slab row, and `enabled`/`draw` read `view.slab.frame.bodyId`
-   * to know which body this call is for.
-   */
-  readonly slab: number | 'body';
-  /** The `RenderTargetSpec.id` this layer draws into. */
-  readonly target: string;
-  /**
-   * How this layer's fragments combine with what's already in its target.
-   * Declared now as part of the locked row shape: most layers sharing a
-   * `target` also share a `blend` (OVER across the five swap-chain
-   * overlays; the near-field fold kept its opaque bodies on
-   * `foreground:0` and its OVER captions on `swap`), but `hdr` already
-   * mixes two — additive emission across most HDR layers, and
-   * `milkyWayPass`'s genuinely multiplicative dust pass, order-dependent
-   * against the emission it darkens (see `Blend.d.ts`). This value must
-   * match the profile baked into the renderer pipeline its `draw` calls,
-   * but nothing enforces that today; a layer↔pipeline parity check across
-   * a target's mixed blends is the intended guardrail, not yet built.
+   * How this pass's fragments combine with what's already in its target. It
+   * stays on the row rather than moving to the order line because one
+   * `(target, slab)` group already mixes blends — additive emission across
+   * most HDR passes, and `milkyWayPass`'s genuinely multiplicative dust pass,
+   * order-dependent against the emission it darkens (see `Blend.d.ts`). So it
+   * is a property of the draw, not of the step.
    */
   readonly blend: Blend;
   /**
-   * Opt-in to the black-hole lens's sky-cubemap capture roster (Task 12/13).
-   * A capture step (`FrameStep.face` present) selects its group by
-   * THIS flag instead of `target` — the six capture steps all target
-   * `'sky-cubemap'`, not this layer's own `target`, so target-matching can't
-   * select the roster at all (see `executeFrame`'s capture-step branch).
-   * `slab` still gates normally: a capture step only picks up flagged layers
-   * whose `slab` matches the step's own slab. Absent (the default) on every
-   * layer that isn't part of the captured sky content. `true`-only (never
-   * `false`) so a layer either carries the flag or doesn't — no
-   * three-state confusion with `undefined`.
-   */
-  readonly skyCapture?: true;
-  /**
-   * When in the `(hdr, NEAR0)` roster this layer draws — see `HdrPhase`.
-   * Absent ⇒ `'pre-lens'`, the ordinary roster. `'post-lens'`: unwarped ON TOP
-   * of the black-hole lens rather than sampled by it (inert outside the lens
-   * band, where one step admits both phases). `'post-foreground'`: after the
-   * opaque body composite, so the layer can draw over a body — which also
-   * places it after the lens. `'pre-lens'` is unspellable here: it is the
-   * default, and a second way to say it would be a second thing to keep in
-   * step with the emitted `FrameStep.hdrPhases` sets.
-   */
-  readonly hdrPhase?: Exclude<HdrPhase, 'pre-lens'>;
-  /**
-   * Whether this layer should record draw commands this frame, given the
-   * step's already-resolved `SlabView` — a `'body'` layer reads
+   * Whether this pass should record draw commands this frame, given the
+   * step's already-resolved `SlabView` — a pass on a body roster reads
    * `view.slab.frame.bodyId` to gate its own row. Pure: no side effects.
    */
   enabled(state: EngineState, ctx: ReadyFrameContext, view: SlabView): boolean;
   /**
-   * Issue draw calls into the open render pass for this layer's
-   * (target, slab) group. Called only when `enabled` returned `true`.
-   * Must not call `pass.end()` — the pass lifetime is owned by the
-   * executor's render step.
+   * Issue draw calls into the open render pass for this step. Called only when
+   * `enabled` returned `true`. Must not call `pass.end()` — the pass lifetime
+   * is owned by the executor's render step.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -101,12 +51,12 @@ export type ContentPass = {
     state: EngineState,
   ): void;
   /**
-   * Whether this layer should record PICK draw commands this frame — the
+   * Whether this pass should record PICK draw commands this frame — the
    * gate the pick program filters `drawPick` by, in place of `enabled`.
    *
-   * Optional because for MOST layers the pick set equals the draw set: what
+   * Optional because for MOST passes the pick set equals the draw set: what
    * you can click is exactly what you can see, so a single `enabled` gate
-   * serves both and the layer omits this. A layer declares `pickEnabled` only
+   * serves both and the pass omits this. A pass declares `pickEnabled` only
    * where the two genuinely differ — usually because the pick set is WIDER:
    *
    *  - `planetsPass` draws only the partition's `flat` branch but is the
@@ -138,8 +88,8 @@ export type ContentPass = {
    */
   pickEnabled?(state: EngineState, ctx: ReadyFrameContext, view: SlabView): boolean;
   /**
-   * Issue pick-ID draw calls for this layer, into the parallel pick
-   * program's render pass. Optional: layers that don't participate in
+   * Issue pick-ID draw calls for this pass, into the parallel pick
+   * program's render pass. Optional: passes that don't participate in
    * picking simply omit it.
    */
   drawPick?(

@@ -124,8 +124,6 @@ function ringDrawForBody(
 
 export const ringsPass: ContentPass = {
   name: 'rings',
-  slab: 'body',
-  target: 'foreground:0',
   blend: 'over',
 
   enabled(state, ctx, view) {

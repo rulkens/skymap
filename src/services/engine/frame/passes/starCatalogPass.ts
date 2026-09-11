@@ -989,12 +989,7 @@ export { drawStream };
 
 export const starCatalogPass: ContentPass = {
   name: 'star-catalog',
-  slab: NEAR0,
-  target: 'hdr',
   blend: 'additive',
-  // Sky-cubemap capture roster (Task 13b): the survey LEAF stream is part of
-  // the black-hole lens's captured "sky".
-  skyCapture: true,
 
   enabled: starCatalogVisible,
 

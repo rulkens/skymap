@@ -39,14 +39,11 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 import { cosmoLabelProjection } from '../cosmoLabelProjection';
 import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
 
 export const labelsPass: ContentPass = {
   name: 'labels',
-  slab: COSMO,
-  target: 'swap',
   blend: 'over',
 
   enabled(state, _ctx, _view) {
