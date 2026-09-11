@@ -14,7 +14,8 @@ and plan 02 (boot de-coupling,
 Branch: `worktree-layer-contract` (off `62e3ac11c`). One PR, 14 tasks, every commit green.
 
 **Parallelism 2.** Settings chain 1→2→3→4→5, frame chain 7→8→9→10→11. Task 6 follows Task 1
-and nothing else; 12 and 13 are independent (13 describes the post-Task-9 state); 14 gates.
+and nothing else; 12 is independent; **13 runs after 9 and 6** (it documents `frameProgram`'s
+absence and `src/compositions/`), concurrent with 12; 14 gates.
 
 ## Goal
 
@@ -103,20 +104,21 @@ The spec's inventory was written against `8f8ae20fb`. Four unrelated PRs landed 
 (#647 camera-pivot, #683 star-cut un-braid, #676 scene-workbench splats, #682 orbit trails).
 Re-verified in this worktree at `62e3ac11c`; re-derive rather than trust:
 
-| File / fact                                               | What changed                                                                                                                                                                                                                                                                   | What it means for this plan                                                                                                                                                                                                                                            |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/@types/engine/frame/ContentPass.d.ts`                | **`hdrPostLensing` does not exist.** The field is `hdrPhase?: Exclude<HdrPhase, 'pre-lens'>` over a three-value `HdrPhase` (`'pre-lens' \| 'post-lens' \| 'post-foreground'`, `HdrPhase.d.ts`) — #682 moved `orbit-trails` to draw AFTER the `foreground:0 → hdr` composite.   | **Design change, not a line number.** `FRAME_ORDER` needs a THIRD `(hdr, NEAR0)` render line, placed after the composite line; the spec §5 draft list, which puts `orbit-trails` + `body-glints` in one pre-foreground line, is wrong on both counts. Amends §4.1, §5. |
-| `src/services/engine/frame/frameProgram.ts:246-320`       | in-band the roster is `['pre-lens']` → lens body steps → `['post-lens']`; out of band ONE step admitting `['pre-lens','post-lens']`; the `['post-foreground']` step is emitted every frame after the composite                                                                 | Task 8 authors four `(hdr, NEAR0)`-family lines; the step-merge rule (§5) is what keeps an out-of-band frame at today's pass count, and is exactly why perf is a gate.                                                                                                 |
-| `src/services/engine/frame/passes/index.ts`               | still **37 rows**, same order. `body-glints` is `'post-lens'`, `orbit-trails` is `'post-foreground'`. `zone-of-avoidance` sits third in the array for a PICK-order reason (`:278-284`)                                                                                         | that reason is a bind-group hand-off, not an ordering fact — Task 7 dissolves it so the registry really is unordered and Task 10 inherits no invariant.                                                                                                                |
-| `src/state/settings/initialState.ts` / `settingsSlice.ts` | 308 / 577 lines, as the spec says. 22 top-level clusters; 75 case reducers, **each writing exactly one cluster** (verified mechanically), plus `mergeSnapshot`, which writes many                                                                                              | the split is clean — no reducer straddles two clusters. `mergeSnapshot` stays core (Task 3).                                                                                                                                                                           |
-| `src/@types/settings/EngineSettingsState.d.ts`            | 523 lines; **9 of the 13 Layer clusters are inline object literals** (only `milkyWay`, `zoneOfAvoidance`, `sgrAStarLensingTuning`, `flow` have named types)                                                                                                                    | Task 2 extracts those nine before a seed can annotate its return type. Spec §4.3 assumed they were already named.                                                                                                                                                      |
-| `src/@types/engine/state/EngineState.d.ts`                | 14 top-level fields; the 37 passes read 8 of them (`gpu` 115×, `settings` 59×, `subsystems` 16×, `data` 12×, `selectionRows` 5×, `selection` 3×, `assetSlots` 3×, `famousGalaxiesMeta` 1×) and never `booted` / `requests` / `cameraRuntime` / `skyCubemapCapture` / `picking` | §4.1's cut is reachable only as the FRAME-VISIBLE one — which is why it lands as `PassState`, not `CoreFrameState` (Ruling 4, Task 11).                                                                                                                                |
-| pass method typing                                        | passes are contextually typed off `ContentPass`; only **9 files / 13 sites** name `EngineState` explicitly                                                                                                                                                                     | the narrowing is cheap: one new type plus 13 annotations, not a 37-file sweep.                                                                                                                                                                                         |
-| `engine.ts:600`                                           | the DebugPanel toggle-name list filters `CONTENT_PASSES` on `l.target !== 'volume'`                                                                                                                                                                                            | a `target` reader outside `frame/`; Task 10 re-expresses it off `FRAME_ORDER`.                                                                                                                                                                                         |
-| `engine.ts:91-95`, `wireInput.ts`, `earthHome.ts`         | (b) shipped `createEngine(canvas, cb, home)` + `BootstrapDeps.home`; `EngineHomeConfig` is pure data (`{ focus, seedSelection }`), `EARTH_HOME` lives at `src/data/selection/earthHome.ts`, and **`src/compositions/` does not exist**                                         | Task 6 creates `src/compositions/` (its first file) and folds `home` in at the one call site, `src/hooks/useEngine.ts:76`.                                                                                                                                             |
-| `tests/services/engine/**`                                | six test files carry a near-identical inline stub `home` literal (eight literals; `engineSliceDispatches` has two). `wireInput.test.ts` is the seventh `home` user and deliberately builds on the real `EARTH_HOME`. Plan 02's ledger deferred the de-duplication here         | Task 6 picks it up: one shared stub, ~90 lines out.                                                                                                                                                                                                                    |
-| `tests/services/engine/frame/targetParity.test.ts`        | 3 cases, as the spec says                                                                                                                                                                                                                                                      | legs 1–2 are subsumed by Task 8's boot check; leg 3 (id uniqueness) is re-homed, not deleted.                                                                                                                                                                          |
-| #647 / #683 / #676                                        | camera-pivot rewrote `runFrame` / `slabs` / `wireInput` internals; the star-cut un-braid gave `starCatalogPass` per-view streams; splats are workbench-local                                                                                                                   | none touches a contract this PR mints. `runFrame`'s `ctx.focus` write (spec §6.1) stays exactly as it is — that seam is (e)'s.                                                                                                                                         |
+| File / fact                                               | What changed                                                                                                                                                                                                                                                                                                                                                                                                                                      | What it means for this plan                                                                                                                                                                                                                                            |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/@types/engine/frame/ContentPass.d.ts`                | **`hdrPostLensing` does not exist.** The field is `hdrPhase?: Exclude<HdrPhase, 'pre-lens'>` over a three-value `HdrPhase` (`'pre-lens' \| 'post-lens' \| 'post-foreground'`, `HdrPhase.d.ts`) — #682 moved `orbit-trails` to draw AFTER the `foreground:0 → hdr` composite.                                                                                                                                                                      | **Design change, not a line number.** `FRAME_ORDER` needs a THIRD `(hdr, NEAR0)` render line, placed after the composite line; the spec §5 draft list, which puts `orbit-trails` + `body-glints` in one pre-foreground line, is wrong on both counts. Amends §4.1, §5. |
+| `src/services/engine/frame/frameProgram.ts:246-320`       | in-band the roster is `['pre-lens']` → lens body steps → `['post-lens']`; out of band ONE step admitting `['pre-lens','post-lens']`; the `['post-foreground']` step is emitted every frame after the composite                                                                                                                                                                                                                                    | Task 8 authors four `(hdr, NEAR0)`-family lines; the step-merge rule (§5) is what keeps an out-of-band frame at today's pass count, and is exactly why perf is a gate.                                                                                                 |
+| spec §5's `plainLayerGroupKeys`                           | renamed by plan 01: the function is `plainPassGroupKeys` (`frameProgram.ts:628`, consumed at `:651`)                                                                                                                                                                                                                                                                                                                                              | a name to re-derive, not to transcribe from §5 — Task 9 moves its call onto a step's own `passes`.                                                                                                                                                                     |
+| `src/services/engine/frame/passes/index.ts`               | still **37 rows**, same order. `body-glints` is `'post-lens'`, `orbit-trails` is `'post-foreground'`. `zone-of-avoidance` sits third in the array for a PICK-order reason (`:278-284`)                                                                                                                                                                                                                                                            | that reason is a bind-group hand-off, not an ordering fact — Task 7 dissolves it so the registry really is unordered and Task 10 inherits no invariant.                                                                                                                |
+| `src/state/settings/initialState.ts` / `settingsSlice.ts` | 308 / 577 lines, as the spec says. 22 top-level clusters; 75 case reducers, **each writing exactly one cluster** (verified mechanically), plus `mergeSnapshot`, which writes many                                                                                                                                                                                                                                                                 | the split is clean — no reducer straddles two clusters. `mergeSnapshot` stays core (Task 3).                                                                                                                                                                           |
+| `src/@types/settings/EngineSettingsState.d.ts`            | 523 lines; **9 of the 13 Layer clusters are inline object literals** (only `milkyWay`, `zoneOfAvoidance`, `sgrAStarLensingTuning`, `flow` have named types)                                                                                                                                                                                                                                                                                       | Task 2 extracts those nine before a seed can annotate its return type. Spec §4.3 assumed they were already named.                                                                                                                                                      |
+| `src/@types/engine/state/EngineState.d.ts`                | 14 top-level fields; the 37 passes read 9 of them — 8 directly (`gpu` 115×, `settings` 59×, `subsystems` 16×, `data` 12×, `selectionRows` 5×, `selection` 3×, `assetSlots` 3×, `famousGalaxiesMeta` 1×) plus `tier`, reached only through `earthSurfaceTier(state)` (`earthSurfaceTier.ts:21-25`) — and never `booted` / `requests` / `cameraRuntime` / `skyCubemapCapture` / `picking`                                                           | §4.1's cut is reachable only as the FRAME-VISIBLE one — which is why it lands as `PassState`, not `CoreFrameState` (Ruling 4, Task 11). `tier` is IN the cut: the frame helpers a pass calls narrow with it (Task 11).                                                 |
+| pass method typing                                        | passes are contextually typed off `ContentPass`; only **9 files / 13 sites** name `EngineState` explicitly (a 14th textual match, `atmosphereShellPass.ts:128`, is a comment)                                                                                                                                                                                                                                                                     | the narrowing is cheap: one new type, 13 annotations and the 9 frame helpers pass bodies call (Task 11), not a 37-file sweep.                                                                                                                                          |
+| `engine.ts:600`                                           | the DebugPanel toggle-name list filters `CONTENT_PASSES` on `l.target !== 'volume'`                                                                                                                                                                                                                                                                                                                                                               | a `target` reader outside `frame/`; Task 10 re-expresses it off `FRAME_ORDER`.                                                                                                                                                                                         |
+| `engine.ts:91-95`, `wireInput.ts`, `earthHome.ts`         | (b) shipped `createEngine(canvas, cb, home)` + `BootstrapDeps.home`; `EngineHomeConfig` is pure data (`{ focus, seedSelection }`), `EARTH_HOME` lives at `src/data/selection/earthHome.ts`, and **`src/compositions/` does not exist**                                                                                                                                                                                                            | Task 6 creates `src/compositions/` (its first file) and folds `home` in at the one call site, `src/hooks/useEngine.ts:77`.                                                                                                                                             |
+| `tests/services/engine/**`                                | six test files carry a near-identical inline stub `home` literal — **seven** literals (`engineSliceDispatches` has two), each ONE line. Six sit in a `home:` field; `registerReconcile.test.ts:60` passes its literal as `createEngine`'s THIRD ARGUMENT, so that site's rewrite is a different edit. `wireInput.test.ts` is the seventh file and deliberately builds on the real `EARTH_HOME`. Plan 02's ledger deferred the de-duplication here | Task 6 picks it up: one shared stub. The saving is ~7 lines, not ~90 — de-duplication is the point, not line count.                                                                                                                                                    |
+| `tests/services/engine/frame/targetParity.test.ts`        | 3 cases, as the spec says                                                                                                                                                                                                                                                                                                                                                                                                                         | legs 1–2 are subsumed by Task 8's boot check; leg 3 (id uniqueness) is re-homed, not deleted.                                                                                                                                                                          |
+| #647 / #683 / #676                                        | camera-pivot rewrote `runFrame` / `slabs` / `wireInput` internals; the star-cut un-braid gave `starCatalogPass` per-view streams; splats are workbench-local                                                                                                                                                                                                                                                                                      | none touches a contract this PR mints. `runFrame`'s `ctx.focus` write (spec §6.1) stays exactly as it is — that seam is (e)'s.                                                                                                                                         |
 
 ## Rulings
 
@@ -153,7 +155,9 @@ the `reducers` object gives TS a precise intersection for free, with no gymnasti
 spread lines that read as the composition they are. The tuple stays the single authority:
 Task 3's cross-check test asserts both directions (every listed fragment's reducer keys exist
 on `settingsSlice.actions`, and the slice mints nothing beyond core's keys plus the
-fragments').
+fragments'). That test needs a core key set derived independently of the slice, so Task 3
+also names the core reducer map: `CORE_REDUCERS`, exported from `settingsSlice.ts` and spread
+into `createSlice`.
 
 **Ruling 4 — the frame-visible cut lands as `PassState` (Task 11), not `CoreFrameState`.**
 §4.1's "a pass reads its own Layer's renderers through its closure" cut is not available
@@ -203,6 +207,28 @@ because nothing in the literal reads anything.
 visibility vocabulary, not by the Layer seam §11 anticipates.** Stated in full at Task 12,
 where it applies.
 
+**Ruling 9 — `LayerCoreDeps` is `GpuHandleConstructDeps` minus `fontAtlases`, plus `store`
+and `requestRender`.** Spec §4.2 names the type and leaves it open; a contract PR cannot
+ship a field list decided during execution, so it is decided here against what (d) actually
+moves. `create` inherits `GPU_HANDLE_ROWS`' construct job, and that bag
+(`GpuHandleConstructDeps.d.ts`) is already the verified answer to "what does core hand a
+renderer factory": `ctx` (bundling device — `device.queue` is reached through it, so no
+separate `queue` field — context, swap format, canvas, `hdrCapable`) plus the three shared
+BGLs `fadeBgl` / `sourceBgl` / `focusBgl`, which (d)'s `galaxyPointRenderer` and
+`galaxyPickRenderer` rows both take (`gpuHandleRegistry.ts:111-120`, `:485-495`).
+`fontAtlases` is dropped: §4.5 keeps the label / marker / selection renderers in core `gpu`,
+and a Layer contributes `Label2DProducer`s, not label renderers, so no `create` allocates
+against an atlas. Added: `store`, because a Layer's subsystems read core settings and
+dispatch (`biasCorrection`'s `getMode` reads `settings.bias`, a CORE cluster —
+`engine.ts:250-254`) and `createEngine` already holds it as `cb.store`; and `requestRender`,
+which `biasCorrection` and `structureFocus` both close over today. **Not** a field: an
+asset-slot registrar — `assets(runtime)` returns `AssetWiringRow[]` whose
+`factory: (deps: SlotDeps) => AssetSlot` is called by `wireSlots`, so a Layer never
+registers a slot itself. _Cost if wrong:_ (d) adds or drops one field on a type with one
+reader and one construction site (`createEngine`'s deps bag) — a one-line diff, no call-site
+churn. That is the cheapest thing in this plan to be wrong about, which is why it is ruled
+now rather than deferred.
+
 ## File structure
 
 **Created**
@@ -225,8 +251,10 @@ src/layers/<name>/settings/<cluster>Settings.ts    ×13 across ten Layer directo
 src/compositions/appSettingsFragments.ts           APP_SETTINGS_FRAGMENTS, `as const`
 src/compositions/app.ts                            APP_COMPOSITION: EngineComposition, a module literal
 src/@types/engine/layer/Layer.d.ts                 §4.2's umbrella type
-src/@types/engine/layer/LayerCoreDeps.d.ts         what `create` is handed
+src/@types/engine/layer/LayerCoreDeps.d.ts         the core prerequisites `create` is handed
 src/@types/engine/layer/LayerUiSection.d.ts        the SettingsPanel section a Layer contributes
+src/@types/engine/layer/SagaFactory.d.ts           a watcher saga as `rootSaga` forks it
+src/@types/engine/layer/PickResolverRow.d.ts       one RESOLVE_PICK entry, as a row
 src/services/engine/layer/defineLayer.ts           the inference-only identity function
 src/@types/engine/EngineComposition.d.ts           §4.4
 src/@types/engine/frame/FrameStepSpec.d.ts         the authored frame-order row (the union)
@@ -238,7 +266,7 @@ src/services/engine/frame/checkFrameOrder.ts       the boot check (§5's three i
 src/services/engine/frame/passSlabOf.ts            pass name → slab, derived from FRAME_ORDER (pick)
 src/@types/engine/frame/PassState.d.ts             the frame-visible cut of EngineState
 src/data/animation/visibilityLayerRows.ts          VISIBILITY_LAYER_ROWS, one row per key
-tests/helpers/engine/stubHome.ts                   the one shared BootstrapDeps `home` stub
+tests/helpers/engine/stubComposition.ts            the one shared `BootstrapDeps.composition` stub
 tests/…                                            mirrors, listed per task
 ```
 
@@ -256,9 +284,13 @@ src/hooks/useEngine.ts                         the one createEngine call site
 src/@types/engine/frame/ContentPass.d.ts       −target −slab −skyCapture −hdrPhase; EngineState → PassState
 src/@types/engine/frame/FrameStep.d.ts         a render/capture step carries its resolved passes; −hdrPhases
 src/services/engine/frame/passes/index.ts      CONTENT_PASSES survives as an UNORDERED contributed-pass list
+src/services/engine/frame/passes/galaxyPointSpritesPass.ts  −the "first among the cosmological pickables" note (T7)
 src/services/engine/frame/frameProgram.ts      frameProgram deleted; the slot derivations read a step's passes
 src/services/engine/frame/executeFrame.ts      group selection → the step's own list; −the four predicates
 src/services/engine/frame/pickProgram.ts       slab grouping reads passSlabOf
+src/services/engine/frame/{sceneBodyStates,sceneBodyPartition,positionedVisibleStars,
+  sceneOccluderSpheres,milkyWayCloudLiveness,volumeLiveness,zoneOfAvoidanceLiveness,
+  atmosphereDrawList,earthSurfaceTier}.ts      the 9 helpers a pass body calls: EngineState → PassState (T11)
 src/services/engine/frame/slabs.ts             −matchesHdrPhase, −the phase arm of renderStepTimingSlotName
 src/services/engine/frame/passes/createUpsamplePass.ts   −target −slab
 src/services/engine/phases/startLoop.ts        runs the boot check once
@@ -267,8 +299,8 @@ src/services/gpu/shaders/zoneOfAvoidance/fragmentPick.wesl   u moves to @group(0
 src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer.ts  −pickCameraBgl; drawPick binds slot 0
 src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts  own pick camera buffer + bind group
 src/services/gpu/renderers/galaxyCatalog/galaxyPickRenderer.ts         −bindCamera (no caller left)
-docs/BACKLOG.md                                one index line deleted (T11)
-CLAUDE.md, docs/RENDERER.md                    tree lines + the frame-order paragraph (T12)
+docs/BACKLOG.md                                one index line deleted (T12)
+CLAUDE.md, docs/RENDERER.md                    tree lines + the frame-order paragraph (T13)
 ```
 
 **Deleted**
@@ -292,7 +324,9 @@ tests/services/engine/frame/targetParity.test.ts    legs 1–2 subsumed by the b
 `tests/utils/settings/liftClusterReducers.test.ts`,
 `tests/utils/settings/assertUniqueFragmentReducerKeys.test.ts` (new).
 
-**Consumes:** `SliceCaseReducers`, `PayloadAction` from `@reduxjs/toolkit`.
+**Consumes:** `SliceCaseReducers`, `PayloadAction` and `Draft` — all three from
+`@reduxjs/toolkit` (`settingsSlice.ts:30` already imports `Draft` from there; do not reach
+into `immer`).
 **Produces:**
 
 ```ts
@@ -354,6 +388,10 @@ export function assertUniqueFragmentReducerKeys(fragments: readonly SettingsFrag
 `CoreSettingsState` does not exist yet (Task 5 mints it), so `ComposedSettings` takes the
 core half as a type parameter and Task 5 pins it. Keep the two apart; do not inline the core
 type into the derivation.
+
+`ClusterOf` and `ActionOf` stay UNEXPORTED in their consumer's file. The one-type-per-file
+convention counts exported types, and a two-line `infer` helper with one reader in its own
+file is worse than the rule protects against. Pre-ruled here so review does not re-litigate it.
 
 Two shapes the lift does NOT support, verified absent from `settingsSlice.ts` today and to
 be rejected rather than accommodated: RTK's `{ reducer, prepare }` reducer form, and a case
@@ -465,18 +503,24 @@ export function buildInitialSettings(): EngineSettingsState {
       at module scope, immediately after the tuple — so a collision throws at import, before
       a store exists to be silently wrong.
 - [ ] Tests — adapt, do not duplicate. The existing initial-state test already asserts every
-      cluster and item row is seeded; keep it pointed at `buildInitialSettings()`. Add
-      exactly one new test: `every fragment's seeded cluster is reachable under its key` in
-      `tests/state/settings/initialState.test.ts`, asserting for each entry of
-      `APP_SETTINGS_FRAGMENTS` that `buildInitialSettings()[f.key]` is defined. It fails the
-      day a fragment is added to the tuple but its key collides or its seed returns nothing,
-      and it is the test that grows with the tuple instead of restating it.
+      cluster and item row is seeded; keep it pointed at `buildInitialSettings()`. No new
+      initial-state test here: a key collision throws at import (above), and the
+      tuple-versus-type coverage is Task 5's composed-keys test (Ruling: one covering test,
+      not the same assertion at two strengths).
+- [ ] **The core reducer map becomes a named `const`** (Ruling 3's other half): today's
+      inline literal inside `createSlice({ reducers: { … } })` moves to
+      `export const CORE_REDUCERS = { … }` in the same file, spread back in as
+      `reducers: { ...CORE_REDUCERS, ...liftClusterReducers(f), … }`. Without it the
+      cross-check below has no independently derived core key set and can only compare the
+      slice to itself. One export, no new file, no behaviour change — `createSlice` infers
+      the same intersection either way.
 - [ ] Add one more, in `tests/state/settings/settingsSlice.test.ts`:
       `the slice mints exactly the core reducers plus every listed fragment's` — assert
-      `Object.keys(settingsSlice.actions).sort()` equals the sorted union of the core
-      reducer-map keys and `APP_SETTINGS_FRAGMENTS.flatMap((f) => Object.keys(f.reducers))`.
-      It closes both directions of the tuple-versus-spreads gap (listed but unspread, spread
-      but unlisted) from two independently derived key sets.
+      `Object.keys(settingsSlice.actions).sort()` equals the sorted union of
+      `Object.keys(CORE_REDUCERS)` and
+      `APP_SETTINGS_FRAGMENTS.flatMap((f) => Object.keys(f.reducers))`. It closes both
+      directions of the tuple-versus-spreads gap (listed but unspread, spread but unlisted)
+      from two independently derived key sets.
 - [ ] `npm run typecheck` + `npm test` green; `npm test -- settings` and the two container
       tests that dispatch literal action types must be green **without edits** — that is the
       proof Ruling 2 held.
@@ -496,7 +540,7 @@ Same shape as Task 3, once per row. Re-derive the line ranges; they move as each
 | Layer             | Cluster                 | Seed (initialState.ts) | Reducers                   |
 | ----------------- | ----------------------- | ---------------------- | -------------------------- |
 | `structure`       | `structures`            | `:302`                 | `settingsSlice.ts:471-484` |
-| `volume`          | `volumes`               | `:247`                 | `:318-347` (4)             |
+| `volume`          | `volumes`               | `:247`                 | `:318-346` (4)             |
 | `body`            | `bodies`                | `:239`                 | `:307-317` (1)             |
 | `body`            | `earth`                 | `:201`                 | `:230-248` (3)             |
 | `body`            | `orbitTrails`           | `:191`                 | `:223-229` (1)             |
@@ -505,7 +549,7 @@ Same shape as Task 3, once per row. Re-derive the line ranges; they move as each
 | `zoneOfAvoidance` | `zoneOfAvoidance`       | `:169`                 | `:191-200` (2)             |
 | `filaments`       | `filaments`             | `:176`                 | `:207-214` (2)             |
 | `constellations`  | `constellations`        | `:184`                 | `:215-222` (2)             |
-| `flow`            | `flow`                  | `:255`                 | `:348-360` (2)             |
+| `flow`            | `flow`                  | `:255`                 | `:348-359` (2)             |
 
 - [ ] Move all eleven, one commit per Layer directory (ten commits at most) so a reviewer can
       read each against its source. The `body` Layer's four clusters ride one commit.
@@ -575,14 +619,16 @@ export type EngineSettingsState = ComposedSettings<
 
 **Files:** `src/@types/engine/layer/Layer.d.ts`,
 `src/@types/engine/layer/LayerCoreDeps.d.ts`, `src/@types/engine/layer/LayerUiSection.d.ts`,
+`src/@types/engine/layer/SagaFactory.d.ts`, `src/@types/engine/layer/PickResolverRow.d.ts`,
 `src/services/engine/layer/defineLayer.ts`, `src/@types/engine/EngineComposition.d.ts`,
-`src/compositions/app.ts`, `tests/helpers/engine/stubHome.ts` (new);
+`src/compositions/app.ts`, `tests/helpers/engine/stubComposition.ts` (new);
 `src/@types/engine/BootstrapDeps.d.ts`, `src/services/engine/engine.ts`,
 `src/services/engine/phases/wireInput.ts`, `src/hooks/useEngine.ts` (modify);
 the seven test files carrying an inline `home` stub (modify) —
 `tests/services/engine/phases/{wireSlots,startLoop,initGpu.hdrCapabilityWiring}.test.ts`,
-`tests/services/engine/wiring/{installLoadProgress,engineSliceDispatches}.test.ts`,
-`tests/services/engine/registerReconcile.test.ts`,
+`tests/services/engine/wiring/{installLoadProgress,engineSliceDispatches}.test.ts`
+(two literals in that last one), `tests/services/engine/registerReconcile.test.ts` (its
+literal is `createEngine`'s THIRD ARGUMENT, `:60` — a different edit from the other five),
 `tests/services/engine/phases/wireInput.test.ts` (this one keeps using the real
 `EARTH_HOME`; it changes only where `home` sits).
 
@@ -615,6 +661,47 @@ export type Layer<Name extends string, Runtime> = {
   labels?(runtime: Runtime): readonly Label2DProducer[];
   pick?(runtime: Runtime): readonly PickResolverRow[];
 };
+
+// src/@types/engine/layer/LayerCoreDeps.d.ts
+// The core prerequisites a Layer's `create` is handed — no more (Ruling 9). It is
+// `GpuHandleConstructDeps` (the bag `GPU_HANDLE_ROWS`' `construct` already takes, whose job
+// `create` inherits) minus `fontAtlases`, plus the two core capabilities a Layer's
+// subsystems close over today (`engine.ts:250-263`).
+export type LayerCoreDeps = {
+  /** device / context / swap format / canvas / hdrCapable — every renderer factory's first argument. */
+  readonly ctx: GpuContext;
+  readonly fadeBgl: FadeUniformsBgl;
+  readonly sourceBgl: SourceUniformsBgl;
+  readonly focusBgl: FocusUniformsBgl;
+  /** Core settings reads and this Layer's own dispatches; already `createEngine`'s `cb.store`. */
+  readonly store: AppStore;
+  /** `state.subsystems.scheduler.requestRender` — core's render-wake, the one capability a Layer's subsystem needs. */
+  readonly requestRender: () => void;
+};
+
+// src/@types/engine/layer/LayerUiSection.d.ts
+/**
+ * The SettingsPanel section a Layer contributes: exactly the zero-prop container component
+ * `SettingsPanel.tsx` renders today (`GalaxiesSectionContainer` &c. — every selector and
+ * dispatch stays inside it). A component, never a schema (#4, ADR 0011).
+ */
+export type LayerUiSection = ComponentType;
+
+// src/@types/engine/layer/SagaFactory.d.ts — `SagaGenerator` from `typed-redux-saga`
+/** A watcher saga exactly as `rootSaga` forks it: called with no arguments, dropped into `all([…])`. */
+export type SagaFactory = () => SagaGenerator<void>;
+
+// src/@types/engine/layer/PickResolverRow.d.ts
+/**
+ * One `RESOLVE_PICK` entry as a row (`src/services/engine/helpers/resolvePickTable.ts:19-24`),
+ * so a Layer contributes its arm instead of core spelling every
+ * `SourceEntry['type']`. Tuple-shaped to match
+ * `Layer.sources`; (d) rebuilds `RESOLVE_PICK` from the concatenated rows.
+ */
+export type PickResolverRow = readonly [
+  SourceEntry['type'],
+  (entry: SourceEntry, pick: PickResult, deps: ResolvePickDeps) => SelectionRef | null,
+];
 
 // src/services/engine/layer/defineLayer.ts — identity; exists only for inference
 export function defineLayer<const Name extends string, Runtime>(
@@ -656,16 +743,25 @@ constructed here to make the field non-empty would be scaffolding with no reader
       is §9(c)'s stated job ("introduce §4.2's type … before any code moves"). Do NOT write
       a test for them: there is no behaviour to assert, and a type test is the anti-pattern
       `testing.md` names first.
+- [ ] The four sub-shapes above are real types, not placeholders — every field is decided
+      (Ruling 9 for `LayerCoreDeps`). Two checks the compiler can do for free, in a scratch
+      assignment you DELETE before committing: `watchFlowReseedSaga` satisfies `SagaFactory`,
+      and `RESOLVE_PICK.galaxyCatalog` satisfies `PickResolverRow[1]`. If either fails, the
+      contract is wrong — fix the type here, do not widen it to `unknown`.
 - [ ] Thread the composition: `BootstrapDeps.home` becomes `BootstrapDeps.composition`, and
       `wireInput` reads `deps.composition.home`. Nothing else in the phases changes.
-- [ ] `useEngine.ts:76` calls
+- [ ] `useEngine.ts:77` calls
       `createEngine(canvas, { store, setSagaContext }, APP_COMPOSITION)` — a plain import, no
       boot-value plumbing; the tier the engine's passes read stays a `state.tier` selector,
       unchanged by this PR.
-- [ ] Pick up plan 02's deferral: `tests/helpers/engine/stubHome.ts` exports the one stub the
-      seven fixtures share (`STUB_COMPOSITION`, carrying `home: { focus: null, seedSelection: false }`).
-      Fixtures that never read it import it; `wireInput.test.ts` keeps building a real
-      composition around `EARTH_HOME`.
+- [ ] Pick up plan 02's deferral: `tests/helpers/engine/stubComposition.ts` exports the one
+      stub the seven fixtures share (`STUB_COMPOSITION`, carrying
+      `layers: []` and `home: { focus: null, seedSelection: false }`) — filename = exported
+      symbol, which is why it is not `stubHome.ts`. Fixtures that never read it import it;
+      `wireInput.test.ts` keeps building a real composition around `EARTH_HOME`.
+- [ ] `startLoop.test.ts`'s fixture is shared with Task 9's boot check. Whichever of the two
+      lands SECOND owns making that fixture pass — see Task 9, which places the check so a
+      stub with no render targets does not execute it.
 - [ ] No new behaviour test. The existing `wireInput` tests already assert the seeded pose,
       the cinema branch and the deep-link deference through `home`; they keep passing through
       one more field hop, which is the whole claim.
@@ -686,8 +782,10 @@ URL or a store value; a fixture kept its inline `home` literal.
 `src/services/gpu/renderers/galaxyCatalog/galaxyPickRenderer.ts`,
 `src/@types/rendering/GalaxyPickRenderer.d.ts`,
 `src/services/engine/frame/passes/{proceduralDisks,labels}Pass.ts`,
+`src/@types/engine/frame/ContentPass.d.ts`,
+`src/services/engine/frame/passes/galaxyPointSpritesPass.ts`,
 `src/services/engine/frame/passes/index.ts`, `src/services/engine/frame/pickProgram.ts`
-(comments only) — all modify.
+(the last four comments only) — all modify.
 
 Two COSMO pick draws bind nothing at slot 0 and take whatever
 `galaxyPointSpritesPass.drawPick` left there, which is what makes `CONTENT_PASSES`' array
@@ -716,9 +814,16 @@ is the call shape).
       which would reintroduce the stale-snapshot bug that helper exists to prevent.
       `structureMarkersPass.drawPick` passes `pickUniformBytesOf(view, ctx, state)`.
 - [ ] **The proof**: `galaxyPickRenderer.bindCamera` now has no caller. Delete it, its
-      docblock, its `GalaxyPickRenderer` member, and the two restore calls
-      (`proceduralDisksPass.ts:85`, `labelsPass.ts:103`) with the prose explaining them.
-      Before deleting, sweep for a third inheritor:
+      docblock, its `GalaxyPickRenderer` member (`GalaxyPickRenderer.d.ts:60-76`), and the
+      two restore calls (`proceduralDisksPass.ts:85`, `labelsPass.ts:103`) with the prose
+      explaining them. Two more files document the dissolved invariant and must lose it in
+      this same commit, or the type file teaches it for two more PRs: the `drawPick`
+      **postcondition** paragraph in `ContentPass.d.ts:144-155` (the whole "every `drawPick`
+      must leave `@group(0)` bound…" block — the surrounding "issue pick-ID draw calls"
+      sentence stays), and `galaxyPointSpritesPass.ts:89-92`'s "@group(0) prefix contract:
+      this row is first among the cosmological pickables" note, which after this task states
+      an ordering claim about a registry the plan has just declared unordered.
+      Before deleting, sweep for a fourth inheritor:
       `rg -n "caller-bound|caller's @group|prefix contract" src/services/gpu/renderers src/services/engine/frame/passes`.
       Fix any hit the same way, or STOP and report.
 - [ ] Delete the PICK-order half of the PRODUCER note at `passes/index.ts:278-284` — the
@@ -735,8 +840,9 @@ is the call shape).
       here, the shader's `@group` changed) + `npm test` green. Commit.
 
 **Reject if:** a pick draw still relies on another row having bound slot 0; `bindCamera`
-survived with no caller; `pickRing` read the draw-time uniform buffer; the fix landed in the
-same commit as any other task.
+survived with no caller; a comment still teaches the inheritance (`ContentPass.d.ts`,
+`galaxyPointSpritesPass.ts`, `pickProgram.ts`, either renderer); `pickRing` read the
+draw-time uniform buffer; the fix landed in the same commit as any other task.
 
 ## Task 8 — `FRAME_ORDER` authored, with the boot check and an equivalence test
 
@@ -896,7 +1002,9 @@ skyCubemapFacesToCapture: [], lensBodySlabs: [])`, `expandFrameOrder(...)` equal
   - No test that the app's own `FRAME_ORDER` passes the check: Task 9 wires the check into
     boot, and `tests/services/engine/frame/frameOrderBoot.test.ts` (one case, added there)
     runs it over the real registry + real target rows.
-- [ ] Implement, then read the whole of `frameOrder.ts` back against `passes/index.ts:19-98`
+- [ ] Implement, then read the whole of `frameOrder.ts` back against `passes/index.ts:18-271`
+      (the draw-order prose runs in FOUR blocks all the way to `CONTENT_PASSES` at `:272`;
+      `:19-98` is only the first, and stopping there leaves most of the rationale behind)
       and `frameProgram.ts`'s header: every ordering rationale in those two headers must have
       landed beside the line it explains (why the Milky Way leads, why `rings` and
       `atmosphere-shell` trail the foreground group, why the multiplicative dust follows the
@@ -916,7 +1024,13 @@ the equivalence test compares fewer fields than listed; `expandFrameOrder` dispa
 `src/@types/engine/frame/FrameStep.d.ts`, `src/services/engine/phases/startLoop.ts`
 (modify); `tests/services/engine/frame/expandFrameOrder.test.ts` (delete the two
 equivalence cases), `tests/services/engine/frame/frameOrderBoot.test.ts` (new);
-`tests/services/engine/frame/{executeFrame,frameProgram}*.test.ts` (adapt).
+`tests/services/engine/frame/frameProgram.test.ts` (29 cases — adapt onto
+`expandFrameOrder`, or delete the ones the four behavioural cases already cover),
+`tests/services/engine/frame/executeFrame.test.ts` (adapt),
+`tests/services/engine/frame/timedSlotsGroupKeys.test.ts` (3 cases; `:20` and `:27` import
+and call `frameProgram` — re-point onto `expandFrameOrder(FRAME_ORDER, …)`, same assertion),
+`tests/services/engine/frame/targetParity.test.ts` (DELETE — it calls `frameProgram` at
+`:35`), `tests/services/gpu/renderTargets.test.ts` (gains `targetParity`'s leg 3).
 
 - [ ] `FrameStep`'s render and capture members gain `passes: readonly ContentPass[]` and lose
       `hdrPhases`. `renderFrame` calls `expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {...})`
@@ -931,16 +1045,36 @@ equivalence cases), `tests/services/engine/frame/frameOrderBoot.test.ts` (new);
 - [ ] `TIMED_SLOTS` / `TIMED_SLOT_GROUPS` expand `FRAME_ORDER` with the MAXIMAL inputs, as
       today (`MAX_FOREGROUND_CHAIN`, all six faces, `MAX_SGR_A_STAR_LENSING_BODY_SLABS`,
       `bloomEnabled: true`, `PLACEHOLDER_TONE`). Keep those constants and their rationale.
-- [ ] `startLoop` calls `checkFrameOrder(FRAME_ORDER, CONTENT_PASSES, renderTargetRows().map(r => r.id))`
-      once, before the first frame. Add `tests/services/engine/frame/frameOrderBoot.test.ts`
-      with one case, `the app's FRAME_ORDER passes the boot check` — it is the repo test spec
-      §5's file table calls for, and the one that catches a typo aimed at any Layer's pass.
+- [ ] `startLoop` calls `checkFrameOrder` once, before the first frame, with the target ids
+      taken from the ALREADY-ASSEMBLED rows — `renderTargetRows(swapFormat: GPUTextureFormat)`
+      takes a required argument (`renderTargets.ts:201`), so a bare `renderTargetRows()` does
+      not compile and a freshly derived list could be the wrong format's. Either thread
+      `phaseLocals`' swap format or read the ids off `state.gpu.renderTargets`; §5's check
+      item 3 is about the composition's assembled rows. Place the call **after** the
+      `phaseLocals` guard — Task 6's `startLoop.test.ts` fixture drives this phase with a
+      stub that has no render targets, and the check must not be that fixture's problem.
+- [ ] Add `tests/services/engine/frame/frameOrderBoot.test.ts` with one case,
+      `the app's FRAME_ORDER passes the boot check` — it is the repo test spec §5's file
+      table calls for, the one that catches a typo aimed at any Layer's pass, and the reason
+      the phase fixture does not need to exercise the check.
 - [ ] Delete the two equivalence cases from `expandFrameOrder.test.ts` in this commit —
       `frameProgram` no longer exists to mirror. The four behavioural cases stay.
+- [ ] **`frameProgram` cannot be deleted alone.** Two more test files call it and must move
+      in THIS commit or the branch lands red: `targetParity.test.ts` (3 cases) is deleted
+      here, not in Task 10 — its leg 1 has no `target` left to check once Task 10 lands,
+      leg 2 is the boot check's item 3, and leg 3 (`render-target row ids are unique`) moves
+      verbatim into `tests/services/gpu/renderTargets.test.ts`; `timedSlotsGroupKeys.test.ts`
+      (3 cases) is re-pointed onto `expandFrameOrder`, assertions unchanged.
+- [ ] `frameProgram.test.ts`'s 29 cases are the judgement call in this task. Adapt each onto
+      `expandFrameOrder` or delete it as covered by Task 8's four behavioural cases — and say
+      which, per case, in the task report: **name every assertion that moved and where it
+      moved to**. A case silently dropped here is the exact failure Task 14's delta exists to
+      catch.
 - [ ] `npm run typecheck` + `npm test` green. Commit.
 
 **Reject if:** `executeFrame` still filters `CONTENT_PASSES`; a step-level gate moved or was
-"simplified"; the boot check runs per frame; `TIMED_SLOTS` lost a capacity slot.
+"simplified"; the boot check runs per frame, or weakened so a stub fixture would pass it;
+`TIMED_SLOTS` lost a capacity slot; a file still imports `frameProgram`.
 
 ## Task 10 — the four fields leave the pass row
 
@@ -951,9 +1085,12 @@ equivalence cases), `tests/services/engine/frame/frameOrderBoot.test.ts` (new);
 `src/services/engine/frame/pickProgram.ts`, `src/services/engine/frame/passSlabOf.ts` (new),
 `src/services/engine/engine.ts`, `src/services/gpu/renderTargets.ts` (comment only);
 `src/@types/engine/frame/HdrPhase.d.ts` (delete);
-`tests/services/engine/frame/targetParity.test.ts` (delete),
-`tests/services/gpu/renderTargets.test.ts` (gains leg 3), the pass-row test mirrors that
-assert a deleted field (find them: `rg -n "\.target|\.slab|skyCapture|hdrPhase" tests/services/engine/frame`).
+`tests/services/engine/frame/executeFrame.test.ts` (33 cases, 27 `skyCapture` / `hdrPhase`
+sites — the largest adaptation in this task), `tests/services/engine/frame/passes/passes.test.ts`,
+and the other pass-row test mirrors that assert a deleted field (find them:
+`rg -n "\.target|\.slab|skyCapture|hdrPhase" tests/services/engine/frame`).
+`targetParity.test.ts` is NOT here: Task 9 deletes it, in the commit that deletes
+`frameProgram`, and re-homes its leg 3 (see Task 9).
 
 **Produces:**
 
@@ -1003,9 +1140,11 @@ property of the draw, not of the step (spec §4.1).
       Every slot name stays byte-identical to `main` — `hdr·NEAR0`, `hdr·NEAR0·POST_LENSING`,
       `hdr·NEAR0·POST_FOREGROUND` — which is what keeps Task 14's perf pairing like-for-like
       and the DebugPanel rows stable across the branch.
-- [ ] Delete `targetParity.test.ts`. Leg 1 has no `target` left to check and leg 2 is the
-      boot check's item 3; move leg 3 (`render-target row ids are unique`) into
-      `tests/services/gpu/renderTargets.test.ts` unchanged.
+- [ ] `executeFrame.test.ts` is where this task's test work is: 27 of its 33 cases' sites
+      assert a `skyCapture` or `hdrPhase` field that no longer exists. Re-point each onto the
+      step's own `passes` list, or delete it where Task 8's expansion cases already cover the
+      fact. Report **which assertions moved where** — same rule as Task 9, and the reason
+      Task 14 no longer carries a pre-committed number.
 - [ ] Add ONE test, `tests/services/engine/frame/passSlabOf.test.ts`:
       `a foreground line's body passes resolve to the body widening` — `passSlabOf(FRAME_ORDER)`
       maps `'earth'` to `'body'` and `'star-catalog'` to NEAR0. It fails the day a pass moves
@@ -1020,7 +1159,11 @@ changed; a slot name was derived from a line's ordinal.
 
 **Files:** `src/@types/engine/frame/PassState.d.ts` (new);
 `src/@types/engine/frame/ContentPass.d.ts`, the 9 pass files that annotate `EngineState`
-(13 sites), `src/services/engine/frame/executeFrame.ts`,
+(13 sites), the 9 frame helpers a pass body calls, all in
+`src/services/engine/frame/` — `sceneBodyStates.ts`, `sceneBodyPartition.ts`,
+`positionedVisibleStars.ts`, `sceneOccluderSpheres.ts`, `milkyWayCloudLiveness.ts`,
+`volumeLiveness.ts`, `zoneOfAvoidanceLiveness.ts`, `atmosphereDrawList.ts`,
+`earthSurfaceTier.ts` — plus `src/services/engine/frame/executeFrame.ts`,
 `src/services/engine/frame/pickProgram.ts` (modify).
 
 **Produces** (Ruling 4 — the frame-visible cut, which shrinks in (d)/(e)):
@@ -1049,6 +1192,13 @@ export type PassState = Pick<
 
 - [ ] The four `ContentPass` methods take `PassState`. Because the rows are
       contextually typed, only the 13 explicit annotations move; do not touch a pass body.
+- [ ] **The 9 helpers narrow too**, in the same commit. Each declares `state: EngineState`
+      and is called from a pass body with that body's `state`, so leaving them wide re-widens
+      the cut through the back door — the executor's pressure is then to widen `PassState`
+      or cast, which voids it. Verified: none of the nine reads an excluded field, so the
+      cut still closes. `earthSurfaceTier.ts:21-25` is why `PassState` Picks `tier`: it reads
+      `state.tier` as the fallback for the committed surface tier, and it is the only route
+      `tier` takes into a pass.
 - [ ] `executeFrame` and `pickProgram` keep passing the whole `EngineState` (a `Pick` accepts
       it). If either needed a cast, the Pick is missing a field the passes genuinely read —
       add the field, do not cast.
@@ -1057,7 +1207,8 @@ export type PassState = Pick<
 - [ ] `npm run typecheck` + `npm test` green. Commit.
 
 **Reject if:** `PassState` includes `booted`, `requests`, `cameraRuntime`,
-`skyCubemapCapture` or `picking`; any call site gained a cast; a pass body changed.
+`skyCubemapCapture` or `picking`; `tier` was dropped from it; a helper kept `EngineState`;
+any call site gained a cast; a pass body changed.
 
 ## Task 12 — `LAYER_GROUPS.labels` totality
 
@@ -1117,6 +1268,11 @@ new test re-lists the label keys.
 **Files:** `CLAUDE.md`, `docs/RENDERER.md`,
 `docs/superpowers/specs/2026-09-09-layer-composition-design.md` (§13 only).
 
+**Runs after Tasks 9 and 6**, not independently: it documents `frameProgram`'s absence (T9)
+and `src/compositions/` + `src/layers/` (T6/T4). If the frame chain halts — the perf gate can
+halt it — this task halts with it rather than shipping a `RENDERER.md` that describes a
+`frameProgram` still on the branch. Concurrent with Task 12.
+
 Per spec §15, the part of it this PR earns. Identifier and structure text only — no backlog
 strike-throughs, no `file:line` chasing, nothing under `docs/research/**`,
 `docs/grill-sessions/**`, `plans/completed/**` or `specs/completed/**` (plan 01, Task 5).
@@ -1130,11 +1286,12 @@ strike-throughs, no `file:line` chasing, nothing under `docs/research/**`,
       what a Layer forgot. Say where the file is; do not re-explain the step kinds, they are
       documented beside them.
 - [ ] Append the plan-time amendments to the spec's §13 decision log — same four-column
-      shape (`#` / Question / Ruling / Folded into), rows `A1`-`A6`, identifier-level text
+      shape (`#` / Question / Ruling / Folded into), rows `A1`-`A7`, identifier-level text
       only: the post-composite `(hdr, NEAR0)` line (#682); settings fragments keyed by
       CLUSTER, not by Layer; action types stay flat, guarded by
       `assertUniqueFragmentReducerKeys`; `PassState` now, `CoreFrameState` in (d); `tier`
-      stays in the store (not a composition field); `dataUrl` deferred to a PR with a reader.
+      stays in the store (not a composition field); `dataUrl` deferred to a PR with a reader;
+      `LayerCoreDeps`' field list pinned (Ruling 9), which §4.2 left open.
       One row each, no rationale prose — the Rulings section above is where that lives.
 - [ ] `npx prettier --write` on all three. Commit.
 
@@ -1145,13 +1302,15 @@ it to the PR that moves source rows, (d)).
 ## Task 14 — gate
 
 - [ ] `npm run typecheck` (both projects) — green.
-- [ ] `npm test` — green. **Expected delta: +14, or +15 if Task 12 adds its optional case.**
-      The arithmetic, to be reconciled against the real numbers: added 19 (T1 ×5, T3 ×2,
-      T5 ×1, T8 ×8, T9 ×1, T10 ×1, T12 ×0-1) less the 2 equivalence cases T9 deletes = 17
-      surviving; removed 3 (`targetParity`) of which 1 is re-homed to
-      `renderTargets.test.ts` = 2 net. 17 − 2 = +15, or +14 without T12's case. Report the
-      ACTUAL delta with a reason for every difference — a surprise here means a mirror test
-      was adapted where it should have been deleted.
+- [ ] `npm test` — green. **No pre-committed number.** Two large files are adapted rather
+      than added or deleted — `frameProgram.test.ts` (29 cases, Task 9) and
+      `executeFrame.test.ts` (33 cases, 27 of them asserting a deleted field, Task 10) — and
+      an arithmetic expectation over them would be a gate with a right answer nobody derived.
+      Instead: **report the ACTUAL delta with a reason for every difference**, reconciled
+      against Tasks 9 and 10's reports of which assertions moved where. The Global Constraint
+      is behaviour neutrality, not test-count neutrality; the reasons are the gate, and an
+      unexplained drop means a mirror test was adapted where it should have been deleted, or
+      coverage was dropped where it should have moved.
 - [ ] `npm run build` — green. Load-bearing: the only check that links WESL, so it proves the
       settings and frame moves disturbed no `package::` specifier or `?static` path.
 - [ ] **Paired `npm run perf`, REQUIRED** (spec §9(c)). Start this worktree's dev server and
@@ -1194,8 +1353,8 @@ it to the PR that moves source rows, (d)).
       File structure section.
 
 **Reject if:** the perf pairing was skipped, run without `--url`, or quoted from per-layer
-rows; a visual pose was attested without being looked at; the PR body claims a result that
-was not measured.
+rows; a visual pose was attested without being looked at; the test delta was reported as a
+number without its per-difference reasons; the PR body claims a result that was not measured.
 
 ---
 
@@ -1212,9 +1371,10 @@ was not measured.
       cluster literal.
 - [ ] Every settings action type string is byte-identical to `main` (the two container tests
       that dispatch literals pass unedited).
-- [ ] `src/@types/engine/layer/Layer.d.ts`, `defineLayer.ts` and
-      `src/@types/engine/EngineComposition.d.ts` exist; `createEngine` takes a composition;
-      `src/compositions/app.ts` is the only place the app's home is named.
+- [ ] `src/@types/engine/layer/Layer.d.ts`, its four sub-shape files (`LayerCoreDeps`,
+      `LayerUiSection`, `SagaFactory`, `PickResolverRow`), `defineLayer.ts` and
+      `src/@types/engine/EngineComposition.d.ts` exist, with no field left open; `createEngine`
+      takes a composition; `src/compositions/app.ts` is the only place the app's home is named.
 - [ ] No COSMO pick draw depends on an earlier row having bound `@group(0)`:
       `galaxyPickRenderer.bindCamera` is gone and `passes/index.ts` carries no ordering note.
 - [ ] `src/services/engine/frame/frameOrder.ts` is the ONE artifact stating both order and
@@ -1225,7 +1385,7 @@ was not measured.
       `tests/…/frameOrderBoot.test.ts` runs it over the real registry.
 - [ ] `docs/BACKLOG.md` no longer carries the `LAYER_GROUPS.labels` row, and ANY new
       `VisibilityLayerKey` fails to compile until it joins `VISIBILITY_LAYER_ROWS`.
-- [ ] Spec §13 carries the six amendment rows this plan ruled (Task 13).
+- [ ] Spec §13 carries the seven amendment rows this plan ruled (Task 13).
 
 **Named observable behaviours** (Task 14's smoke)
 
@@ -1270,9 +1430,10 @@ field, no `dataUrl` field at all.
   they move with their Layer, not with the fragment.
 - **`isEngineReady`** (`src/services/engine/helpers/engineReady.ts:118-140`) — the per-frame
   boot proxy plan 02 handed to (c) "as part of the `CoreFrameState` work" (now `PassState`).
-  It gates frames on
-  three named renderers; loosening it has no consumer until a composition without them
-  exists, and a frame gate changed without one is speculative. It moves with (d).
+  It gates frames on `booted` plus five named handles (`galaxyPointRenderer`,
+  `galaxyPickRenderer`, `renderTargets`, `compositor`, `subsystems.texturedDisks`); loosening
+  it has no consumer until a composition without them exists, and a frame gate changed
+  without one is speculative. It moves with (d).
 - **`scaleFadeBands` → `src/data/`** (§6.3) — already user-ruled its own PR, and it blocks
   (e)'s `milkyWay`, not this one.
 - **`.claude/skills/add-data-source/SKILL.md`** (§15) — its edit-surface map is superseded by
