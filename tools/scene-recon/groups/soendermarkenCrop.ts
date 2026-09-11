@@ -13,7 +13,7 @@ import type { SceneGroupDefinition } from '../@types/SceneGroupDefinition';
 
 export const SOENDERMARKEN_CROP: SceneGroupDefinition = {
   id: 'soendermarken-crop',
-  name: 'Søndermarken (crop)',
+  name: 'Søndermarken (crop, 2025)',
   anchor: {
     kind: 'geodetic',
     latDeg: 55.67,
