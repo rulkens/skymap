@@ -26,8 +26,10 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
   // real objects on the default caption reach, not easter eggs to stumble on.
   // Spirit and Opportunity are the same design, so they share one asset and
   // still get their own body rows, positions and GPU copies.
-  { id: 'voyager1', label: 'Voyager 1', meshKey: 'voyager' },
-  { id: 'voyager2', label: 'Voyager 2', meshKey: 'voyager' },
+  // Half a radius: the 13 m magnetometer boom sets the bounding sphere, so two
+  // radii would park the camera 29 m from a 4 m bus.
+  { id: 'voyager1', label: 'Voyager 1', meshKey: 'voyager', standoffRadii: 0.5 },
+  { id: 'voyager2', label: 'Voyager 2', meshKey: 'voyager', standoffRadii: 0.5 },
   { id: 'curiosity', label: 'Curiosity', meshKey: 'curiosity' },
   { id: 'perseverance', label: 'Perseverance', meshKey: 'perseverance' },
   { id: 'spirit', label: 'Spirit', meshKey: 'mer' },

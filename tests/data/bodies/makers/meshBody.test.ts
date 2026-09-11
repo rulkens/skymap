@@ -38,6 +38,12 @@ describe('meshBody()', () => {
     });
   });
 
+  it('a seed can override the standoff when a boom sets the bounding radius', () => {
+    expect(
+      meshBody({ id: 'x', label: 'X', meshKey: 'test-mesh', standoffRadii: 0.5 }).standoffRadii,
+    ).toBe(0.5);
+  });
+
   it('throws for an unknown meshKey', () => {
     expect(() => meshBody({ id: 'y', label: 'Y', meshKey: 'no-such-key' })).toThrow(/no-such-key/);
   });

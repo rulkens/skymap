@@ -21,6 +21,11 @@ export type MeshBodySeed = {
   readonly meshKey: string;
   /** See `MeshBody.captionRevealM` — authored per seed, optional. */
   readonly captionRevealM?: number;
+  /**
+   * Overrides `MESH_BODY_STANDOFF_RADII` when the bounding radius is set by a
+   * thin boom rather than the body: Voyager's is 14.5 m for a ~4 m bus.
+   */
+  readonly standoffRadii?: number;
 };
 
 export function meshBody(seed: MeshBodySeed): MeshBody {
@@ -32,7 +37,7 @@ export function meshBody(seed: MeshBodySeed): MeshBody {
     meshKey: seed.meshKey,
     radiusM: asset.boundingRadiusM,
     albedo: asset.meanAlbedo,
-    standoffRadii: MESH_BODY_STANDOFF_RADII,
+    standoffRadii: seed.standoffRadii ?? MESH_BODY_STANDOFF_RADII,
     captionRevealM: seed.captionRevealM,
   };
 }
