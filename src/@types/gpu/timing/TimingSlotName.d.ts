@@ -1,9 +1,9 @@
 /**
  * TimingSlotName — the kebab-case identifier of one timed render pass.
  *
- * The set of timing slots is DERIVED at runtime from the FRAME program +
- * the content-layer registry (`TIMED_SLOTS` in
- * `services/engine/frame/timedSlots.ts`): one slot per timed layer, a
+ * The set of timing slots is DERIVED at runtime from `FRAME_ORDER`'s
+ * expansion (`timedSlotsOf` in `services/engine/frame/timedSlots.ts`): one
+ * slot per timed layer, a
  * `'<source>→<dest>'` slot per composite, and a trailing `'pick'`.  Because
  * `ContentPass.name` is typed `string`, the slot set cannot be a closed
  * literal union — so this is a `string` alias rather than an enumerated type.
