@@ -15,6 +15,7 @@ describe('ROTATION_ELEMENTS', () => {
     // slip that no other check would catch (Uranus's legitimate −15.175° must
     // still pass; the sign is the IAU convention, not an error).
     for (const el of ROTATION_ELEMENTS) {
+      if (!('poleDecDeg' in el)) continue; // the aimed arms carry no pole
       expect(el.poleDecDeg).toBeGreaterThanOrEqual(-90);
       expect(el.poleDecDeg).toBeLessThanOrEqual(90);
     }
@@ -28,6 +29,7 @@ describe('ROTATION_ELEMENTS', () => {
     // copies agree — a real cross-table contract (spec §4.1/§10), broken the day
     // one table is retuned without the other.
     const saturn = rotationRowById('saturn')!;
+    if (!('poleRaDeg' in saturn)) throw new Error('saturn must be an IAU-pole row');
     const ra = degToRad(saturn.poleRaDeg);
     const dec = degToRad(saturn.poleDecDeg);
     const pole: Vec3 = [Math.cos(dec) * Math.cos(ra), Math.cos(dec) * Math.sin(ra), Math.sin(dec)];
@@ -50,6 +52,8 @@ describe('ROTATION_ELEMENTS', () => {
     // dM/dt = 2π · 36525 / P, so this inverts that and never hard-codes 6.387222.
     const charon = elementsById('charon');
     const orbitalPeriodDays = (2 * Math.PI * 36_525) / charon.meanAnomalyRateRadPerCty!;
+    const charonRotation = rotationRowById('charon')!;
+    if (!('spinRateDegPerDay' in charonRotation)) throw new Error('charon must be an IAU-pole row');
 
     // Tolerance from the two constants' published precision, not from taste.
     // d(360/P)/dP = 360/P² = 8.8 °/day per day of P, so P's last published place
@@ -57,8 +61,6 @@ describe('ROTATION_ELEMENTS', () => {
     // independently rounded numbers is exactly one such place, 8.8e-6. The bound
     // sits just above it: any edit that moves P beyond its published rounding
     // trips this, while the rounding itself does not.
-    expect(
-      Math.abs(rotationRowById('charon')!.spinRateDegPerDay - 360 / orbitalPeriodDays),
-    ).toBeLessThan(2e-5);
+    expect(Math.abs(charonRotation.spinRateDegPerDay - 360 / orbitalPeriodDays)).toBeLessThan(2e-5);
   });
 });

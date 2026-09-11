@@ -65,7 +65,9 @@ describe('SCENE_PLANETS', () => {
     // matrix. A textured body carries its baked IAU rotation; an irregular moon
     // with no registry row (Phobos) carries the identity, the honest "no facing
     // modelled" value.
-    expect(stateOf('saturn').orientation).toEqual(rotationFromIau(rotationRowById('saturn')!));
+    const saturnRow = rotationRowById('saturn')!;
+    if (!('poleRaDeg' in saturnRow)) throw new Error('saturn must be an IAU-pole row');
+    expect(stateOf('saturn').orientation).toEqual(rotationFromIau(saturnRow));
     expect(stateOf('phobos').orientation).toEqual([...IDENTITY_MAT3]);
   });
 });
