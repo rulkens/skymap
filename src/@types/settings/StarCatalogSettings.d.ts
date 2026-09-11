@@ -41,6 +41,8 @@ export type StarCatalogSettings = {
   /**
    * `famousStar.enabled` gates the SEEDED MAP, not the solar system: with it off
    * the star layers draw the Sun alone. `gaiaStars.labelEnabled` is inert.
+   * A catalog's "loaded" status is its asset slot's own readiness, never a
+   * store bit (the singleton-overlay convention).
    */
   items: Record<StarCatalogId, StarCatalogItemSettings>;
 };
