@@ -76,10 +76,13 @@ script or `/scene-workbench/` subpath.
    1,321,360 dense points, ReconstructMesh 323,985 vertices / 647,898
    triangles, TextureMesh into one atlas, published `mesh.glb` 19.9 MB.
    Same box off the 2019 flight (`soendermarken-crop-2019`, 2026-09-11, 106
-   frames): **16.5 min** — 2,186,705 dense points, 462,381 vertices / 924,720
-   triangles, one 4096 px atlas, `mesh.glb` 29.6 MB. More frames yet less wall
-   clock: the 2019 crops are smaller in pixels, since that flight's obliques
-   stand off much further from this box.
+   frames at the COGs' native 100 mm/px): **34.5 min** — DensifyPointCloud
+   25m1s for 3,412,071 dense points, ReconstructMesh 1m20s for 1,059,243
+   vertices / 2,118,416 triangles, TextureMesh 7m46s into one 8192 px atlas,
+   `mesh.glb` 66.3 MB. The same frames harvested at 200 mm/px took 16.5 min for
+   2,186,705 dense points and 924,720 triangles in a 4096 px atlas (29.6 MB) —
+   kept beside it as the `mesh-200mm` asset, so the two are comparable in the
+   viewer.
 7. `npm run scene-workbench`
 
 Every fetch/bake CLI above takes `--group <id>` (default `soendermarken`);
@@ -152,10 +155,12 @@ not four times as many.
 
 `soendermarken-crop-2019` is that same box and anchor over the `skraafotos2019`
 collection — a 23 June flight against 2025's 27 April one, so the two meshes
-differ in leaf-on canopy and nothing else. It flew a different camera (UltraCam
-Osprey; nadir frames 13470 x 8670, obliques 7700 x 10300, against 2025's
-14144 x 10560), which needs no code change: every intrinsic is read per item
-from its own `pers:interior_orientation`.
+differ in leaf-on canopy, and in harvest resolution: this group asks for
+100 mm/px, the ceiling the COGs themselves hold, against the 2025 crop's 200.
+It flew a different camera (UltraCam Osprey; nadir frames 13470 x 8670,
+obliques 7700 x 10300, against 2025's 14144 x 10560), which needs no code
+change: every intrinsic is read per item from its own
+`pers:interior_orientation`.
 
 ## Architecture
 

@@ -1,12 +1,13 @@
 /**
  * `SOENDERMARKEN_CROP`'s box and anchor over the **2019** flight instead of
- * 2025 — a 23 June midsummer capture against 27 April's bare-ish canopy, so
- * the two bakes differ only in leaf-on foliage and can be compared directly in
- * the same ENU metres.
+ * 2025 — a 23 June midsummer capture against 27 April's bare-ish canopy,
+ * directly comparable in the same ENU metres.
  *
  * A different camera flew it (UltraCam Osprey, ~0.10 m GSD, 7700 × 10300 px
  * sensor), which the pose code reads per-item from `pers:` rather than from
- * anything stated here.
+ * anything stated here. `groundMmPerPx` 100 asks for that GSD in full; since
+ * `frameWindow` clamps `scale` at 1 it is a ceiling, not a request, so the
+ * obliques land softer than the nadirs.
  */
 import type { SceneGroupDefinition } from '../@types/SceneGroupDefinition';
 
@@ -27,7 +28,7 @@ export const SOENDERMARKEN_CROP_2019: SceneGroupDefinition = {
     north: 55.67117280997111,
   },
   dhmTiles: ['punktsky_1km_6174_721', 'punktsky_1km_6175_721'],
-  skraafoto: { collection: 'skraafotos2019', groundMmPerPx: 200 },
+  skraafoto: { collection: 'skraafotos2019', groundMmPerPx: 100 },
   sourceSrs: 'EPSG:25832',
   minPointSpacingM: 0.5,
   dropClassifications: [7, 18],
