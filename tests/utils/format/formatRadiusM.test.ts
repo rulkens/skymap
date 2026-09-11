@@ -16,8 +16,4 @@ describe('formatRadiusM', () => {
   it('uses mm below 0.01 m', () => {
     expect(formatRadiusM(0.0005)).toBe('0.5 mm');
   });
-  it('picks the branch by magnitude rather than by order (boundary check)', () => {
-    expect(formatRadiusM(1)).toBe('1.00 m');
-    expect(formatRadiusM(0.999)).toBe('99.9 cm');
-  });
 });

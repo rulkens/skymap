@@ -1,16 +1,12 @@
 /**
  * MeshBodyRenderer — handle for the shared lit triangle-mesh renderer: real
- * authored geometry in metres (a spacecraft, a station), not a sphere and not a
- * ray-traced proxy shell. One pipeline, one `Map<string, …>` of per-mesh GPU
- * resources — vertex + index buffers, three material textures, a uniform buffer
- * and a bind group per mesh id — so `draw` can write a body's uniforms
- * immediately before that body's own draw and no shared buffer exists for a
- * later `writeBuffer` to race against the pending `submit`.
- *
- * There is no placeholder posture: a mesh body with no asset resident draws
- * NOTHING (`draw` is a no-op), so a body in range but not yet loaded is absent
- * rather than a wrong shape. `hasMesh` is the residency predicate the demand
- * row and the pass both ask.
+ * authored geometry in metres (the whale, the bowl of petunias), not a sphere
+ * and not a proxy shell. Per-mesh GPU resources are keyed by body id — vertex +
+ * index buffers, three material textures, a uniform buffer and a bind group
+ * each — so `draw` writes a body's uniforms immediately before its own draw,
+ * with no shared buffer for a later `writeBuffer` to race against the pending
+ * `submit`. No placeholder posture: an id with no asset resident draws NOTHING,
+ * so a body in range but not yet loaded is absent rather than a wrong shape.
  */
 
 import type { Renderer } from './Renderer';
@@ -36,8 +32,8 @@ export type MeshBodyRenderer = Renderer & {
   /**
    * Draw one mesh body into the current pass: the 44-float `MeshBodyUniforms`
    * block (176 bytes) from `packMeshBodyUniforms` is written to that id's own
-   * uniform buffer, then the mesh is drawn indexed with back-face culling. A
-   * no-op while the id has no asset. Draw each id at most once per frame.
+   * uniform buffer, then the mesh is drawn indexed and unculled. A no-op while
+   * the id has no asset. Draw each id at most once per frame.
    */
   draw(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array): void;
 };

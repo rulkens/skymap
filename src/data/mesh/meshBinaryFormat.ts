@@ -11,8 +11,7 @@
  * LANDMINE: the 18-byte header is not a multiple of 4, so the vertex and
  * index blocks start at unaligned byte offsets — `new Float32Array(buf,
  * 18, …)` throws `RangeError`. Every payload element is read through the
- * `DataView` instead; the encoder (`writeMeshBinary`, Task 10) writes the
- * same way.
+ * `DataView` instead; `tools/meshes/writeMeshBinary.ts` writes the same way.
  */
 
 import type { MeshAsset } from '../../@types/data/mesh/MeshAsset';

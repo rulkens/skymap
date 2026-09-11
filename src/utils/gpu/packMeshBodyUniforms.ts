@@ -14,19 +14,8 @@
  * body's own tumble rotation (host-local axes) for rotating normal/tangent; the
  * view rotation is folded into `mvp` alone.
  *
- * ## Byte layout (matches `MeshBodyUniforms`)
- *
- *   f32  0..15  (byte   0..63):  mvp (mat4x4<f32>, column-major)
- *   f32 16..18  (byte  64..75):  sunDirLocal (vec3, 16-byte aligned)
- *   f32 19      (byte  76..79):  sunVisibleFraction (fills the vec3's pad slot)
- *   f32 20..31  (byte  80..127): model (mat3x3<f32> — 3 columns × 16 bytes;
- *                                f32 23/27/31 are the columns' dead tails)
- *   f32 32..34  (byte 128..139): camPosLocal (vec3, 16-byte aligned)
- *   f32 35      (byte 140..143): earthshineStrength (fills camPosLocal's pad)
- *   f32 36..38  (byte 144..155): earthshineColor (vec3, 16-byte aligned)
- *   f32 39      (byte 156..159): _pad0
- *   f32 40..42  (byte 160..171): dirToHost (vec3, unit, body centre → host)
- *   f32 43      (byte 172..175): _pad1 (rounds the struct to 176 / 16)
+ * The 44-f32 byte layout lives ONCE, beside the struct it describes, in
+ * `io.wesl`'s header — read it there; the writes below are in that order.
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';

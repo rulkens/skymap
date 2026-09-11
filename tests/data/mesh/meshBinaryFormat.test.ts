@@ -22,10 +22,10 @@ const FIXTURE_VERTICES: FixtureVertex[] = [
 const FIXTURE_INDICES = [0, 1, 2];
 const FIXTURE_BOUNDING_RADIUS_M = 12.5;
 
-// Hand-built with a DataView — the same unaligned-offset discipline
-// `decodeMesh` itself must use (see the header-alignment landmine below).
-// No `writeMeshBinary` exists yet at this point in the plan's execution
-// order (Task 10), so this is the only source of truth for a valid buffer.
+// Hand-built with a DataView — the same unaligned-offset discipline `decodeMesh`
+// itself must use (see the header-alignment landmine below). Deliberately NOT
+// round-tripped through `writeMeshBinary`: a shared encoder would let the two
+// sides agree on a wrong layout.
 function buildFixtureBuffer(magic = MESH_MAGIC, version = MESH_VERSION): ArrayBuffer {
   const vertexCount = FIXTURE_VERTICES.length;
   const indexCount = FIXTURE_INDICES.length;

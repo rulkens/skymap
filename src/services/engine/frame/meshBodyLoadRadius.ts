@@ -1,13 +1,12 @@
 /**
  * meshBodyLoadRadius — the per-mesh-body camera distance (Mpc) at which a
  * `.mesh` asset is demanded. Mirrors `bodyTextureLoadRadius.ts`'s
- * `radiusM * M_TO_MPC * MULTIPLIER` shape, but simpler: a mesh body's id IS
- * its own `SCENE_MESH_BODIES` row (no ring-style host indirection).
+ * `radiusM * M_TO_MPC * MULTIPLIER` shape; a mesh body's id IS its own
+ * `SCENE_MESH_BODIES` row (no ring-style host indirection).
  *
- * `LOAD_RADIUS_BODY_RADII` sits one order above the planets' `1e4`
- * (`bodyTextureLoadRadius.ts:60`) — at `1e4`, a ~10 m body like the whale
- * demands inside 100 km, past the 3 px partition boundary; `1e5` puts the
- * edge at ~1000 km. Tune at the Task 18 visual pass if the handoff pops.
+ * `LOAD_RADIUS_BODY_RADII` sits one order above the planets' `1e4`: at `1e4` a
+ * ~10 m body like the whale demands inside 100 km, past the 3 px partition
+ * boundary, while `1e5` puts the edge at ~1000 km, well outside the handoff.
  */
 
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';

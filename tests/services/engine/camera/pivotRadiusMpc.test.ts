@@ -14,11 +14,13 @@ import { describe, it, expect } from 'vitest';
 import {
   pivotRadiusMpc,
   pivotFraming,
+  SURFACELESS_FLOOR_MPC,
 } from '../../../../src/services/engine/camera/pivotRadiusMpc';
 import {
   MIN_DISTANCE_MPC,
   SURFACE_STANDOFF_RADII,
 } from '../../../../src/utils/camera/clampDistance';
+import { MIN_NEAR_MPC } from '../../../../src/utils/camera/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
@@ -127,8 +129,17 @@ describe('pivotFraming', () => {
     );
     expect(pivotFraming(makeGalaxyRow({ diameterKpc: 30 }))).toEqual({
       radiusMpc: null,
-      floorMpc: MIN_DISTANCE_MPC,
+      floorMpc: SURFACELESS_FLOOR_MPC,
     });
-    expect(pivotFraming(null)).toEqual({ radiusMpc: null, floorMpc: MIN_DISTANCE_MPC });
+    expect(pivotFraming(null)).toEqual({ radiusMpc: null, floorMpc: SURFACELESS_FLOOR_MPC });
+  });
+
+  it('keeps a surfaceless pivot outside the near plane', () => {
+    // A galaxy has no radius to stand off from, so nothing but this floor stops
+    // the wheel pulling the target through `MIN_NEAR_MPC`, where it vanishes.
+    // The metre-scale mesh bodies dragged the absolute floor down to ~3 cm,
+    // which is BELOW the near plane — this is what keeps them apart.
+    expect(pivotFraming(makeGalaxyRow({ diameterKpc: 30 })).floorMpc).toBeGreaterThan(MIN_NEAR_MPC);
+    expect(pivotFraming(null).floorMpc).toBeGreaterThan(MIN_NEAR_MPC);
   });
 });

@@ -38,17 +38,11 @@ import { seedIndexOfBody } from './seedIndexOfBody';
 const SUN_RADIUS_M = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
 
 /**
- * Look knob, untuned — the Task 18 visual pass sets the shipping value. First
- * guess: the fragment's `SUN_IRRADIANCE` (3.0) times the ~0.4 of the sky the
- * host fills from low orbit, over the Lambert π its fill term (unlike
- * `pbrDirect`) does not carry. The albedo half lives in `earthshineColor`.
+ * Earthshine fill: the fragment's `SUN_IRRADIANCE` (3.0) times the ~0.4 of the
+ * sky the host fills from low orbit, over the Lambert π that this fill term
+ * (unlike `pbrDirect`) does not carry. The albedo half is `earthshineColor`.
  */
 const EARTHSHINE_STRENGTH = 0.4;
-
-/** A host with no `ATMOSPHERE_PARAMS` row has no authored ground albedo; an
- *  airless rocky body's bond albedo stands in. Unreachable while Earth is the
- *  only host — Earth's own 0.3 keeps its one home in that table. */
-const AIRLESS_HOST_ALBEDO: Vec3 = [0.1, 0.1, 0.1];
 
 /**
  * The mesh bodies this host row draws: attached to it, past the partition's
@@ -145,7 +139,9 @@ export const meshBodiesPass: ContentPass = {
     // `view.slab.vp` from — read, never re-derived.
     const hostPose = ctx.bodyPose(hostId);
     if (hostPose === null) return;
-    const earthshineColor = ATMOSPHERE_PARAMS[hostId]?.groundAlbedo ?? AIRLESS_HOST_ALBEDO;
+    // A host with no `ATMOSPHERE_PARAMS` row has no authored ground albedo, so
+    // it contributes no fill rather than an invented one.
+    const earthshineColor: Vec3 = ATMOSPHERE_PARAMS[hostId]?.groundAlbedo ?? [0, 0, 0];
 
     for (const body of bodies) {
       const bodyState = bodyStates.get(body.id)!;

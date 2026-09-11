@@ -1,16 +1,9 @@
 /**
- * Format a body radius given in metres with adaptive units.
- *
- * BodyInfo.radiusM spans planets (Earth: 6.371e6 m) down to hand-authored
- * mesh bodies sized at ordinary human scale (a few metres or less) — a
- * single km conversion reads as "0 km" for those, so the unit steps down
- * through m/cm/mm to stay legible at every scale, mirroring the ladder
- * `formatDistance` walks for camera distance.
- *
- * The km branch keeps `toLocaleString()` on the km value (no `formatScalar`)
- * so today's planetary output — "6,371 km" for Earth — is unchanged.
- *
- * @param radiusM  Radius in metres. Must be non-negative.
+ * Format a non-negative body radius, metres in, with adaptive units.
+ * `BodyInfo.radiusM` spans Earth (6.371e6 m) down to a metre-scale mesh body,
+ * which a single km conversion renders as "0 km" — hence the m/cm/mm ladder.
+ * The km branch keeps `toLocaleString()`, not `formatScalar`, so Earth still
+ * reads "6,371 km".
  */
 
 import { SCALE_UNITS } from '../../data/scaleUnits';

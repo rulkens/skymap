@@ -1,6 +1,6 @@
 /**
- * sceneBodyPartition — resolve THE per-frame `{ glints, flat, textured }` split
- * of the seeded non-Earth bodies from live engine state.
+ * sceneBodyPartition — resolve THE per-frame `{ glints, flat, textured, meshes }`
+ * split of the seeded non-Earth bodies from live engine state.
  *
  * `partitionBodiesByPresentation` is pure — it takes a body list, the per-frame
  * body-state snapshot (`sceneBodyStates`), a camera, a projection, and an

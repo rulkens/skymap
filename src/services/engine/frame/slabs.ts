@@ -238,7 +238,7 @@ export function bodySlabRow(input: {
   readonly aspect: number;
   readonly viewportPx: Readonly<Vec2>;
   /**
-   * Mesh bodies riding THIS row's slab (see `meshBodiesAttachedTo`, Task 13):
+   * Mesh bodies riding THIS row's slab (see `meshBodiesAttachedTo.ts`):
    * already resolved into this host's fixed-axis frame, in metres. Each
    * face is `|posM − eyeRelBodyM| − radiusM`; the row's `near` is lowered to
    * the nearest such face when it undercuts the host's own margin.
@@ -404,7 +404,7 @@ export function deriveSlabs(input: {
   readonly viewportPx: Readonly<Vec2>;
   readonly starSphereRangeM: readonly [number, number] | null;
   /** Host body id → its attached mesh bodies, already resolved into the
-   * host's frame — see `bodySlabRow`'s `attachedBodies` param (Task 13). Only
+   * host's frame — see `bodySlabRow`'s `attachedBodies` param. Only
    * Earth has an entry today; every other host's row is unaffected. */
   readonly attachedBodiesByHostId?: ReadonlyMap<
     string,

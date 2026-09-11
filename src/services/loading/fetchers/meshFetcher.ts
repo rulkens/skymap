@@ -1,15 +1,11 @@
 /**
- * meshFetcher — `Fetcher<MeshAsset, MeshReq>`: one `.mesh` geometry binary
- * plus its three baked PBR textures, all under `public/data/meshes/<key>.*`
- * (`docs/superpowers/specs/2026-09-10-mesh-bodies-design.md`, "Baked
- * outputs").
+ * meshFetcher — `Fetcher<MeshAsset, MeshReq>`: one `.mesh` geometry binary plus
+ * its three baked PBR textures, all under `public/data/meshes/<key>.*`. Three
+ * fixed roles, so no `TextureKind` dispatch the way `bodyTextureFetcher` needs.
  *
- * A mesh body has exactly these three fixed texture roles — no
- * `TextureKind` dispatch the way `bodyTextureFetcher` needs for its many
- * kinds. `_mr` and `_normal` carry numeric channels, not a picture, so both
- * decode with `colorSpaceConversion: 'none'`; `_albedo` is a colour map and
- * takes the default managed (sRGB) decode. See `bodyTextureFetcher.ts` for
- * the fuller landmine writeup.
+ * `_mr` and `_normal` carry numeric channels, not a picture, so both decode
+ * with `colorSpaceConversion: 'none'`; `_albedo` is a colour map and takes the
+ * default managed (sRGB) decode — `bodyTextureFetcher.ts` has the full writeup.
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';

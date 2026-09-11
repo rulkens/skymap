@@ -109,7 +109,6 @@ import { deriveSlabs } from './slabs';
 import { deriveBodyStates } from './deriveBodyStates';
 import { visibleSlabBodies } from './visibleSlabBodies';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
-import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { visibleStars } from './visibleStars';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 
@@ -248,26 +247,22 @@ export function deriveFrameContext(
   // with a slab row's own pose. Hosts with no mesh-body attachment (every
   // body but Earth, today) get no map entry, and `deriveSlabs` reads a
   // missing entry as `undefined` — see `bodySlabRow`'s `attachedBodies` doc.
-  // `SCENE_MESH_BODIES.length === 0` short-circuits the whole per-candidate
-  // scan (no mesh body can ever match) — load-bearing until Task 18 seeds it.
-  const attachedBodiesByHostId =
-    SCENE_MESH_BODIES.length === 0
-      ? undefined
-      : new Map<string, readonly { readonly posM: Vec3; readonly radiusM: number }[]>();
-  if (attachedBodiesByHostId !== undefined) {
-    for (const host of slabBodyCandidates) {
-      const attached = meshBodiesAttachedTo(host.id);
-      if (attached.length === 0) continue;
-      const hostState = bodyStates.get(host.id);
-      if (hostState === undefined) continue;
-      attachedBodiesByHostId.set(
-        host.id,
-        attached.map((meshBody) => {
-          const { posM } = bodyStateInHostFrame(bodyStates.get(meshBody.id)!, hostState);
-          return { posM, radiusM: meshBody.radiusM };
-        }),
-      );
-    }
+  const attachedBodiesByHostId = new Map<
+    string,
+    readonly { readonly posM: Vec3; readonly radiusM: number }[]
+  >();
+  for (const host of slabBodyCandidates) {
+    const attached = meshBodiesAttachedTo(host.id);
+    if (attached.length === 0) continue;
+    const hostState = bodyStates.get(host.id);
+    if (hostState === undefined) continue;
+    attachedBodiesByHostId.set(
+      host.id,
+      attached.map((meshBody) => {
+        const { posM } = bodyStateInHostFrame(bodyStates.get(meshBody.id)!, hostState);
+        return { posM, radiusM: meshBody.radiusM };
+      }),
+    );
   }
 
   // NEAR0's distanceRangeM (spec §7.1): the star spheres actually drawn this

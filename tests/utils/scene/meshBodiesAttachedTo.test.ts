@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// SCENE_MESH_BODIES is empty until Task 18, so a test run against the real
-// (empty) seed table would make both assertions below pass vacuously. Fixture
-// rows here use the real Task 6 `whale`/`petunias` ids so `elementsById`
-// (reading the real ORBITAL_ELEMENTS table) resolves their `focusId: 'earth'`.
+// The seed table is mocked so this tests the JOIN, not today's two rows: an
+// assertion over the real `SCENE_MESH_BODIES` would pass for a function that
+// ignored `focusId` entirely. The ids stay real so `elementsById` (reading the
+// real ORBITAL_ELEMENTS table) resolves their `focusId: 'earth'`.
 vi.mock('../../../src/data/bodies/sceneMeshBodies', () => ({
   SCENE_MESH_BODIES: [
     {

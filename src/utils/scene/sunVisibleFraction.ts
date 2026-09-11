@@ -4,12 +4,10 @@ import { SCALE_UNITS } from '../../data/scaleUnits';
 /**
  * sunVisibleFraction — fraction of the Sun's disc NOT occluded by the host
  * sphere, as seen from the body: 1 on the day side, 0 deep in umbra, ramping
- * **linearly** through the penumbra. No existing angular-overlap/eclipse-
- * fraction helper to build on (spec, "Umbra and Earthshine") — new,
- * self-contained. The true penumbra profile is the area-overlap integral of
- * two discs (neither linear nor smoothstep); at a 400 km orbit the whole
- * crossing takes about a second of sim time, so the cheaper linear ramp's
- * shape is not observable.
+ * **linearly** through the penumbra. The true profile is the area-overlap
+ * integral of two discs (neither linear nor smoothstep), but at a 400 km orbit
+ * the whole crossing takes about a second of sim time, so its shape is not
+ * observable.
  */
 export function sunVisibleFraction(input: {
   readonly bodyPosMpc: Readonly<Vec3>;
@@ -32,9 +30,8 @@ export function sunVisibleFraction(input: {
   if (separationRad <= lowThreshold && host.angRad >= sun.angRad) return 0;
   if (separationRad >= highThreshold) return 1;
   const ramp = (separationRad - lowThreshold) / (highThreshold - lowThreshold);
-  // Clamp: annular regime (Sun angularly larger than the host, never seen at a
-  // 400 km orbit) sends this negative — true value there is 1 − (hostAngRad /
-  // sunAngRad)² at alignment; the clamp overstates occlusion, accepted as unreachable.
+  // The annular regime (Sun angularly larger than the host) sends this negative;
+  // the clamp overstates occlusion there, accepted as unreachable at a 400 km orbit.
   return Math.min(1, Math.max(0, ramp));
 }
 
@@ -49,8 +46,7 @@ function angularRadiusAndDirection(
   const dz = posMpc[2] - bodyPosMpc[2];
   const distanceMpc = Math.hypot(dx, dy, dz);
   const distanceM = distanceMpc * SCALE_UNITS.MPC_TO_M;
-  // Defensive clamp: the body can in principle sit inside the disc at absurd
-  // test distances, not a real in-scene case, but the guard costs nothing.
+  // asin's domain: only reachable with the body inside the disc, at test distances.
   const angRad = Math.asin(Math.min(1, radiusM / distanceM));
   return { angRad, dir: [dx / distanceMpc, dy / distanceMpc, dz / distanceMpc] };
 }

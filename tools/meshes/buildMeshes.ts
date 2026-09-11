@@ -110,6 +110,15 @@ function soleMaterial(doc: Document, key: string): Material {
     if (prim.getMode() !== Primitive.Mode.TRIANGLES) {
       throw new Error(`buildMeshes: ${key} has a non-TRIANGLES primitive (mode ${prim.getMode()})`);
     }
+    // `mergeGeometry` walks the index run in strides of 3 and would read past
+    // the end of a ragged one, silently emitting NaN-derived indices.
+    const idx = prim.getIndices();
+    const vertexRunLength = idx ? idx.getCount() : (prim.getAttribute('POSITION')?.getCount() ?? 0);
+    if (vertexRunLength % 3 !== 0) {
+      throw new Error(
+        `buildMeshes: ${key} has a primitive with ${vertexRunLength} indices — not a multiple of 3`,
+      );
+    }
     const material = prim.getMaterial();
     if (material) materials.add(material);
   }
@@ -183,7 +192,13 @@ function basisDeterminant(m: readonly number[]): number {
  * the plain 3x3 skews them off the surface. Cofactors carry the determinant's
  * SIGN, though, so a mirrored node comes back inside-out and is flipped here.
  */
-function transformNormal(m: readonly number[], det: number, x: number, y: number, z: number): Vec3 {
+function transformNormal(
+  m: readonly number[],
+  mirrorSign: number,
+  x: number,
+  y: number,
+  z: number,
+): Vec3 {
   // Columns of the upper-left 3x3: (a,b,c), (d,e,f), (g,h,i).
   const a = m[0]!;
   const b = m[1]!;
@@ -194,11 +209,10 @@ function transformNormal(m: readonly number[], det: number, x: number, y: number
   const g = m[8]!;
   const h = m[9]!;
   const i = m[10]!;
-  const s = det < 0 ? -1 : 1;
   return normalize(
-    s * ((e * i - h * f) * x + (h * c - b * i) * y + (b * f - e * c) * z),
-    s * ((g * f - d * i) * x + (a * i - g * c) * y + (d * c - a * f) * z),
-    s * ((d * h - g * e) * x + (g * b - a * h) * y + (a * e - d * b) * z),
+    mirrorSign * ((e * i - h * f) * x + (h * c - b * i) * y + (b * f - e * c) * z),
+    mirrorSign * ((g * f - d * i) * x + (a * i - g * c) * y + (d * c - a * f) * z),
+    mirrorSign * ((d * h - g * e) * x + (g * b - a * h) * y + (a * e - d * b) * z),
   );
 }
 
@@ -213,7 +227,18 @@ function transformTangent(m: readonly number[], n: Vec3, x: number, y: number, z
   const vy = m[1]! * x + m[5]! * y + m[9]! * z;
   const vz = m[2]! * x + m[6]! * y + m[10]! * z;
   const dot = vx * n[0] + vy * n[1] + vz * n[2];
-  return normalize(vx - n[0] * dot, vy - n[1] * dot, vz - n[2] * dot);
+  const ox = vx - n[0] * dot;
+  const oy = vy - n[1] * dot;
+  const oz = vz - n[2] * dot;
+  // A tangent parallel to the normal leaves nothing behind, and `normalize`
+  // would hand the shader's Gram-Schmidt a zero vector (NaN). Same fallback as
+  // `generateTangents`: any unit vector perpendicular to the normal.
+  if (ox === 0 && oy === 0 && oz === 0) {
+    return Math.abs(n[0]) < 0.9
+      ? normalize(1 - n[0] * n[0], -n[0] * n[1], -n[0] * n[2])
+      : normalize(0, n[2], -n[1]);
+  }
+  return normalize(ox, oy, oz);
 }
 
 /**
@@ -274,7 +299,7 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
     const matrix = bodyFromSource ? premultiplyMat3(bodyFromSource, nodeMatrix) : nodeMatrix;
     const base = positions.length / 3;
     const mirrored = basisDeterminant(matrix) < 0;
-    const det = mirrored ? -1 : 1;
+    const mirrorSign = mirrored ? -1 : 1;
     const pos = prim.getAttribute('POSITION');
     const nrm = prim.getAttribute('NORMAL');
     const uv = prim.getAttribute('TEXCOORD_0');
@@ -287,7 +312,7 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
       positions.push(...world);
 
       const n = nrm ? nrm.getElement(v, [0, 0, 0]) : [0, 0, 1];
-      const normal = transformNormal(matrix, det, n[0]!, n[1]!, n[2]!);
+      const normal = transformNormal(matrix, mirrorSign, n[0]!, n[1]!, n[2]!);
       normals.push(...normal);
 
       const t = uv ? uv.getElement(v, [0, 0]) : [0, 0];

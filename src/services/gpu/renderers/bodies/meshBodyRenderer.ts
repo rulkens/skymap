@@ -1,12 +1,12 @@
 /**
  * meshBodyRenderer — one shared pipeline for lit triangle-mesh bodies, with
  * per-mesh buffers/textures/uniforms in a `Map`. Unlike the sphere bodies it
- * draws the AUTHORED surface, in metres: standard back-face culling, no proxy
- * inflation, no analytic silhouette recovery. Two module-level tables —
- * `VERTEX_SLOTS` and `TEXTURE_SLOTS` — are the single home for the vertex layout
- * and the material bindings, so the pipeline descriptor and the upload path
- * cannot disagree about a stride, a location or a format. No placeholder
- * posture: an id with no asset draws nothing (see the type).
+ * draws the AUTHORED surface, in metres: unculled (glTF `doubleSided` sheets —
+ * see the pipeline's `cullMode`), no proxy inflation, no analytic silhouette
+ * recovery. Two module-level tables — `VERTEX_SLOTS` and `TEXTURE_SLOTS` — are
+ * the single home for the vertex layout and the material bindings, so the
+ * pipeline descriptor and the upload path cannot disagree about a stride, a
+ * location or a format. An id with no asset draws nothing.
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
@@ -89,7 +89,7 @@ export function createMeshBodyRenderer(
         binding: 0,
         // The vertex stage reads mvp + model; the fragment reads the rest.
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
+        buffer: { type: 'uniform', minBindingSize: UNIFORM_BUFFER_SIZE },
       },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       ...TEXTURE_SLOTS.map((slot) => ({
@@ -177,10 +177,15 @@ export function createMeshBodyRenderer(
 
   function setMesh(id: string, asset: MeshAsset): void {
     const existing = meshes.get(id);
-    if (existing !== undefined) releaseResources(existing);
+    if (existing !== undefined) {
+      releaseResources(existing);
+      // Drop the entry BEFORE rebuilding: a throw below would otherwise leave
+      // `hasMesh` true over destroyed buffers.
+      meshes.delete(id);
+    }
 
     const vertexBuffers = VERTEX_SLOTS.map((slot) => {
-      const data = asset[slot.field] as Float32Array;
+      const data = asset[slot.field];
       const buffer = device.createBuffer({
         label: `meshBody-${slot.field}-${id}`,
         size: data.byteLength,
@@ -198,7 +203,7 @@ export function createMeshBodyRenderer(
     device.queue.writeBuffer(indexBuffer, 0, asset.indices);
 
     const textures = TEXTURE_SLOTS.map((slot) =>
-      uploadTexture(id, slot.field, slot.format, asset[slot.field] as ImageBitmap),
+      uploadTexture(id, slot.field, slot.format, asset[slot.field]),
     );
 
     const uniformBuffer = device.createBuffer({

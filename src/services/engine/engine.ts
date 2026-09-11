@@ -368,7 +368,7 @@ export function createEngine(
       // Shared textured-sphere renderer for every non-Earth textured body; the
       // bodyTextures family's commit/onRelease call its setMap/clearMap.
       texturedBodyRenderer: null,
-      // Lit triangle-mesh bodies (spacecraft) attached to a host body's slab;
+      // Lit triangle-mesh bodies attached to a host body's slab;
       // the mesh slot family's commit/onRelease call its setMesh/clearMesh.
       meshBodyRenderer: null,
       // Saturn's rings — the translucent overlay half of the ring system, drawn

@@ -509,7 +509,7 @@ export type EngineGpuHandles = {
   /**
    * The shared lit triangle-mesh renderer for every mesh body — real authored
    * geometry in metres, per-mesh buffers/textures/uniform behind a `Map` keyed by
-   * mesh id. `meshBodiesLayer` draws the resident mesh bodies attached to the
+   * mesh id. `meshBodiesPass` draws the resident mesh bodies attached to the
    * current body slab's host through it; the mesh slot family's commit routes a
    * decoded `MeshAsset` to `setMesh` and its onRelease to `clearMesh`. Same
    * `foreground:0` format invariant as the sphere bodies (see
