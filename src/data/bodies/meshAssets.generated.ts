@@ -8,6 +8,10 @@ export type MeshAssetRow = {
   readonly key: string;
   readonly path: string;
   readonly boundingRadiusM: number;
+  /** How far the lowest vertex sits BELOW the origin along the body frame's −Z,
+   *  metres, ≥ 0. A surface-locked body is lifted by this so it rests on the
+   *  host's sphere; meaningless (but harmless) for a free-flying one. */
+  readonly groundOffsetM: number;
   readonly meanAlbedo: Vec3;
   readonly triangleCount: number;
   readonly normalMapSubstituted: boolean;
@@ -21,6 +25,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     key: 'whale',
     path: 'meshes/whale.mesh',
     boundingRadiusM: 7.236827809308258,
+    groundOffsetM: 2.135997295379639,
     meanAlbedo: [0.09916, 0.092641, 0.087149],
     triangleCount: 5598,
     normalMapSubstituted: false,
@@ -33,6 +38,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     key: 'petunias',
     path: 'meshes/petunias.mesh',
     boundingRadiusM: 0.49782164777444815,
+    groundOffsetM: 0.26998730477355426,
     meanAlbedo: [0.094601, 0.106771, 0.066824],
     triangleCount: 150000,
     normalMapSubstituted: true,
