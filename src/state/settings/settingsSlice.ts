@@ -16,6 +16,7 @@ import { assertUniqueFragmentReducerKeys } from '../../utils/settings/assertUniq
 import { bodiesSettingsFragment } from '../../layers/body/settings/bodiesSettings';
 import { buildInitialSettings } from './initialState';
 import { earthSettingsFragment } from '../../layers/body/settings/earthSettings';
+import { filamentsSettingsFragment } from '../../layers/filaments/settings/filamentsSettings';
 import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
 import { liftClusterReducers } from '../../utils/settings/liftClusterReducers';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
@@ -106,14 +107,6 @@ export const CORE_REDUCERS = {
   // ── thumbnails ──────────────────────────────────────────────────────────
   setThumbnailsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
     settings.thumbnails.enabled = action.payload;
-  },
-
-  // ── filaments ───────────────────────────────────────────────────────────
-  setFilamentsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.filaments.enabled = action.payload;
-  },
-  setFilamentIntensity: (settings: SettingsDraft, action: PayloadAction<number>) => {
-    settings.filaments.intensity = action.payload;
   },
 
   // ── constellations ──────────────────────────────────────────────────────
@@ -300,6 +293,9 @@ export const settingsSlice = createSlice({
     ),
     ...liftClusterReducers<EngineSettingsState, typeof zoneOfAvoidanceSettingsFragment>(
       zoneOfAvoidanceSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof filamentsSettingsFragment>(
+      filamentsSettingsFragment,
     ),
   },
 });

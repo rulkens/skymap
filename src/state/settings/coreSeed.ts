@@ -50,6 +50,7 @@ type CoreSeedShape = Omit<
   | 'sgrAStarLensingTuning'
   | 'milkyWay'
   | 'zoneOfAvoidance'
+  | 'filaments'
 >;
 
 export function coreSeed(): CoreSeedShape {
@@ -94,10 +95,6 @@ export function coreSeed(): CoreSeedShape {
     },
     thumbnails: {
       enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-    },
-    filaments: {
-      enabled: SOURCE_REGISTRY[Source.Filaments].visible,
-      intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
     // Constellation stick-figure overlay, seeded from the registry constellations
     // row (same pattern as `filaments`) so that entry stays the single source of

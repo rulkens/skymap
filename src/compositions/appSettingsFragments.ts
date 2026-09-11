@@ -6,6 +6,7 @@
 import { assertUniqueFragmentReducerKeys } from '../utils/settings/assertUniqueFragmentReducerKeys';
 import { bodiesSettingsFragment } from '../layers/body/settings/bodiesSettings';
 import { earthSettingsFragment } from '../layers/body/settings/earthSettings';
+import { filamentsSettingsFragment } from '../layers/filaments/settings/filamentsSettings';
 import { galaxyCatalogsSettingsFragment } from '../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
 import { milkyWaySettingsFragment } from '../layers/milkyWay/settings/milkyWaySettings';
 import { orbitTrailsSettingsFragment } from '../layers/body/settings/orbitTrailsSettings';
@@ -26,6 +27,7 @@ export const APP_SETTINGS_FRAGMENTS = [
   sgrAStarLensingTuningSettingsFragment,
   milkyWaySettingsFragment,
   zoneOfAvoidanceSettingsFragment,
+  filamentsSettingsFragment,
 ] as const;
 
 assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS);
