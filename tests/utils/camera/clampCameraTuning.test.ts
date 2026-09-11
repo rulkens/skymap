@@ -39,7 +39,7 @@ describe('clampCameraTuning', () => {
   it('lowers tilt-full when tilt-zero is pulled under it', () => {
     const next = clampCameraTuning({ tiltZeroHR: 0.05 }, DEFAULT_CAMERA_TUNING);
     expect(next.tiltZeroHR).toBe(0.05);
-    expect(next.tiltFullHR).toBeCloseTo(0.05 / 1.1, 12);
+    expect(next.tiltFullHR).toBeCloseTo(0.045454545454545456, 12);
   });
 
   it('makes the disengage cap outrank a tilt-full patch', () => {
@@ -47,6 +47,6 @@ describe('clampCameraTuning', () => {
     // caller's own knob yields instead — the one asymmetry between the pairs.
     const next = clampCameraTuning({ tiltFullHR: 0.85 }, DEFAULT_CAMERA_TUNING);
     expect(next.tiltZeroHR).toBe(0.6);
-    expect(next.tiltFullHR).toBeCloseTo(0.6 / 1.1, 12);
+    expect(next.tiltFullHR).toBeCloseTo(0.5454545454545454, 12);
   });
 });

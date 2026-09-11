@@ -24,6 +24,7 @@ import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
 import { raySphereRoots } from '../../../src/utils/math/raySphereRoots';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
+import type { CameraTuning } from '../../../src/@types/camera/CameraTuning';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { SurfaceMemory } from '../../../src/@types/camera/SurfaceMemory';
@@ -215,8 +216,9 @@ function apply(
   pose: BodyFixedPose,
   step: InputStep,
   sceneUpLocal: Vec3 = [0, 0, 1],
+  tuning: CameraTuning = TUNING,
 ): BodyFixedPose {
-  return driver.apply(pose, step, VIEWPORT, FOV, R, sceneUpLocal);
+  return driver.apply(pose, step, VIEWPORT, FOV, R, sceneUpLocal, tuning);
 }
 
 describe('surfaceStep', () => {
@@ -1194,7 +1196,8 @@ describe('the zoom settle is priced per unit of zoom, not per step (F1, ruling 2
     const driver = makeSurfaceDriver();
     let pose = headedPose();
     const step: InputStep = { kind: 'zoom', factor, duringGesture: false, cursorPx: null };
-    for (let i = 0; i < steps; i += 1) pose = driver.apply(pose, step, VIEWPORT, FOV, R, POLE);
+    for (let i = 0; i < steps; i += 1)
+      pose = driver.apply(pose, step, VIEWPORT, FOV, R, POLE, TUNING);
     return headingOf(pose);
   }
 

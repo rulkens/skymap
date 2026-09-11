@@ -112,7 +112,7 @@ describe('singular-locus recession (round 7)', () => {
       let guard = 0;
       while (hr <= TUNING.disengageHR && guard < 60) {
         const before = upOf(pose);
-        pose = c.apply(pose, zoomStepOf(lnf), VIEWPORT, FOV, 1, SCENE_UP);
+        pose = c.apply(pose, zoomStepOf(lnf), VIEWPORT, FOV, 1, SCENE_UP, TUNING);
         const after = upOf(pose);
         const d = before[0] * after[0] + before[1] * after[1] + before[2] * after[2];
         maxTurn = Math.max(maxTurn, Math.acos(Math.max(-1, Math.min(1, d))));
@@ -184,7 +184,7 @@ describe('singular-locus recession (round 7)', () => {
       basisLocal: sceneSideBasis,
     };
     const before = upOf(pose);
-    pose = c.apply(pose, zoomStepOf(0.02), VIEWPORT, FOV, 1, SCENE_UP);
+    pose = c.apply(pose, zoomStepOf(0.02), VIEWPORT, FOV, 1, SCENE_UP, TUNING);
     const after = upOf(pose);
     const d = before[0] * after[0] + before[1] * after[1] + before[2] * after[2];
     // < the decay cap: the no-carry fallback would spend a full 0.1 capped

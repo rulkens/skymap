@@ -120,10 +120,11 @@ Copy the four declarations from spec §3 exactly — field names, units and the
 `BodyId` comes from `src/@types/data/body/BodyId`; `Vec3` / `Mat3` from
 `src/@types/math/`.
 
-`SURFACE_REGIME` (spec §3): `engageHR: 1.7`, `disengageHR: 3.4`,
-`tiltMaxRad: Math.PI`, `tiltFullHR: 0.02`. `engageHR` / `disengageHR` / `tiltMaxRad`
-are **ruled** (Q6, Q5). `tiltFullHR` is **open until the Task 22 feel gate** — say so
-in one line beside it, and nowhere else.
+`SURFACE_REGIME` (spec §3): `engageHR: 1.7`, `disengageHR: 3.4`, `tiltFullHR: 0.02`.
+`engageHR` / `disengageHR` are **ruled** (Q6, Q5). `tiltFullHR` is **open until the
+Task 22 feel gate** — say so in one line beside it, and nowhere else. The tilt
+ceiling is gone: display tilt is `remembered × bodyUpWeight(h/R, tuning)`, which is
+0 at and above `tuning.tiltZeroHR ≤ tuning.disengageHR`.
 
 - [ ] Write the four files. No tests: type declarations and a constant table are
       exactly what `testing.md` forbids restating at runtime.
@@ -219,16 +220,18 @@ Do not relax the existing three-file cull/fade allow-list (spec §10).
 `tests/utils/camera/maxTiltRad.test.ts`
 
 **Signature:** `maxTiltRad(hOverR: number): number`
-**Behaviour:** `SURFACE_REGIME.tiltMaxRad · smoothstep(disengageHR, tiltFullHR, hOverR)`
-(spec §6). Note the edge order — `smoothstep(edge0, edge1, x)` with `edge0 >
-edge1` is the descending ramp, and it looks like a transposed-argument bug to a
-reader who does not know it is deliberate. One comment line.
+**Behaviour:** the tilt ceiling is gone — display tilt is `remembered ×
+bodyUpWeight(h/R, tuning)`, which is 0 at and above `tuning.tiltZeroHR ≤
+tuning.disengageHR` (spec §6). Note the edge order — `smoothstep(edge0, edge1, x)`
+with `edge0 > edge1` is the descending ramp, and it looks like a
+transposed-argument bug to a reader who does not know it is deliberate. One
+comment line.
 
 **Tests:**
 
-- `maxTiltRad(SURFACE_REGIME.disengageHR) === 0` — asserted **against the record**
-  (`SURFACE_REGIME.disengageHR`), never a literal `3.4`. This is the Q4 identity and
-  a spec §11 acceptance criterion.
+- The tilt ceiling is gone: display tilt is `remembered × bodyUpWeight(h/R, tuning)`,
+  which is 0 at and above `tuning.tiltZeroHR ≤ tuning.disengageHR` — the Q4 identity
+  and a spec §11 acceptance criterion.
 - `maxTiltRad is π at and below tiltFullHR`
 - `maxTiltRad crosses 90° near 1.71 R` — the midpoint of the two edges (spec §6);
   assert the crossing lies between 1.6 and 1.8, not an exact value, so a feel-gate
@@ -1007,7 +1010,9 @@ deep-space behaviour.
       after a threshold crossing agrees to that same floor, in both directions.
 - [ ] **Grep: no stored regime flag** — `noStoredRegimeFlag.test.ts` green, and the
       one-seam importer test green with the camera path swept.
-- [ ] `maxTiltRad(SURFACE_REGIME.disengageHR) === 0`, asserted against the record.
+- [ ] `bodyUpWeight(tuning.disengageHR, tuning) === 0` for every `clampCameraTuning`
+      output — the Q4 identity, now structural via the `tiltZeroHR ≤ disengageHR`
+      cap rather than asserted against a record.
 - [ ] A gesture in flight cannot change the arm.
 - [ ] The nine fix waves carried forward as named tests: FW-A (T8), FW-B + FW-H
       (T11), FW-C + FW-D (T16), FW-E (subsumed — 3.4 R makes it trivially true,

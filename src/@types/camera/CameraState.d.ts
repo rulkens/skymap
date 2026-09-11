@@ -24,6 +24,6 @@ export type CameraState = {
   dragging: boolean;
   clip: { data: ClipData; frame: OrientationFrameId } | null;
   frameTween: FrameTween | null;
-  /** The band edges the camera math is threaded with; session-only, never serialized. */
+  /** The band edges the camera math is threaded with; session-only, never serialized. `readonly`: always replaced whole. */
   readonly tuning: CameraTuning;
 };

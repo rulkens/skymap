@@ -32,7 +32,6 @@ import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENT_DECAY } from '../../../../src/data/camera/orientDecay';
-import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -77,7 +76,6 @@ describe('engage-flip pop (round 8)', () => {
   it.each(['log', 'lin'] as const)(
     'a focused dive through engage settles monotonically — no post-flip burst (%s space)',
     (space) => {
-      const tuning = { ...DEFAULT_CAMERA_TUNING, blendSpace: space };
       const h = makeCameraSimHarness();
       h.store.dispatch(setCameraTuning({ blendSpace: space }));
       const events: { t: number; deltaY: number }[] = [];
@@ -86,7 +84,9 @@ describe('engage-flip pop (round 8)', () => {
       const endT = t + 2000;
 
       const samples: FrameSample[] = [];
-      driveWheelEvents(h, events, endT, { onFrame: () => samples.push(sampleOf(h.state, tuning)) });
+      driveWheelEvents(h, events, endT, {
+        onFrame: () => samples.push(sampleOf(h.state, h.store.getState().camera.tuning)),
+      });
 
       const flipIdx = samples.findIndex(
         (s, i) => i > 0 && s.arm === 'body' && samples[i - 1]!.arm === 'abs',

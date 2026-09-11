@@ -100,15 +100,21 @@ function raiseTiltTo(
   c: ReturnType<typeof makeSurfaceDriver>,
   pose: BodyFixedPose,
   wantRad: number,
+  tuning: CameraTuning = DEFAULT_CAMERA_TUNING,
 ): BodyFixedPose {
   c.onGestureStart();
-  let out = apply(c, pose, tiltDrag(20));
+  let out = apply(c, pose, tiltDrag(20), tuning);
   c.onGestureEnd();
   let guard = 0;
   while (tiltOf(out) < wantRad && guard < 6) {
     c.onGestureStart(); // fresh latch: the pixel walk restarts from the top
     for (let px = 5; px < 90 && tiltOf(out) < wantRad; px += 5) {
-      out = apply(c, out, { kind: 'drag', mode: 'orbit', startPx: [50, px], endPx: [50, px + 5] });
+      out = apply(
+        c,
+        out,
+        { kind: 'drag', mode: 'orbit', startPx: [50, px], endPx: [50, px + 5] },
+        tuning,
+      );
     }
     c.onGestureEnd();
     guard += 1;
