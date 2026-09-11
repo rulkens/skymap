@@ -33,27 +33,10 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
-import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
+import type { CoreSettingsState } from '../../@types/settings/CoreSettingsState';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
-type CoreSeedShape = Omit<
-  EngineSettingsState,
-  | 'galaxyCatalogs'
-  | 'starCatalogs'
-  | 'structures'
-  | 'volumes'
-  | 'bodies'
-  | 'earth'
-  | 'orbitTrails'
-  | 'sgrAStarLensingTuning'
-  | 'milkyWay'
-  | 'zoneOfAvoidance'
-  | 'filaments'
-  | 'constellations'
-  | 'flow'
->;
-
-export function coreSeed(): CoreSeedShape {
+export function coreSeed(): CoreSettingsState {
   return {
     // Camera orientation frame — the bare scalar "which pole is up" view
     // preference (spec §3.2). Seeded from `DEFAULT_ORIENTATION` so that file

@@ -10,7 +10,7 @@ export const sgrAStarLensingTuningSettingsFragment = {
   key: 'sgrAStarLensingTuning',
   // The Sgr A* lens knobs; see `SgrAStarLensingTuning` for the tier
   // breakdown and which module owns each default.
-  seed: (): SgrAStarLensingTuning => DEFAULT_SGR_A_STAR_LENSING_TUNING,
+  seed: (): SgrAStarLensingTuning => ({ ...DEFAULT_SGR_A_STAR_LENSING_TUNING }),
   reducers: {
     // Leaf-by-leaf patch, no visibility axis to protect (this cluster is
     // pure knobs, not a singleton overlay).

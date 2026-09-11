@@ -3,9 +3,8 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_MILKY_WAY_ENABLED, DEFAULT_MILKY_WAY_LABEL_ENABLED } from '../../../data/defaults';
-// Same relationship: the Milky-Way star-cloud look knobs are owned by the
-// renderer's calibration module, so seed them from there rather than restating
-// six numbers here.
+// The Milky-Way star-cloud look knobs are owned by the renderer's calibration
+// module, so seed them from there rather than restating six numbers here.
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 import type { MilkyWaySettings } from '../../../@types/settings/MilkyWaySettings';

@@ -13,8 +13,8 @@ export const flowSettingsFragment = {
   // (`slotReady(assetSlots.flow)`).
   seed: (): FlowSettings => ({ ...DEFAULT_FLOW }),
   reducers: {
-    // Its own single writer (like setMilkyWayEnabled / setVolumesEnabled);
-    // `setFlow` patches only the look/motion knobs, excluding `enabled` on purpose.
+    // Its own single writer (like setMilkyWayEnabled / setVolumesEnabled); `setFlow`'s
+    // payload excludes `enabled` so the visibility intent never rides the generic merge.
     setFlowEnabled: (cluster: FlowSettings, action: PayloadAction<boolean>) => {
       cluster.enabled = action.payload;
     },

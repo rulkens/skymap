@@ -11,6 +11,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { coreSeed } from '../../../src/state/settings/coreSeed';
+import { APP_SETTINGS_FRAGMENTS } from '../../../src/compositions/appSettingsFragments';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
@@ -24,6 +26,15 @@ import {
 import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 
 describe('buildInitialSettings', () => {
+  // Covers `composeSettingsSeed`'s one runtime assert: the composed VALUE against the
+  // composing INPUTS. A cluster claimed by both core and a fragment (or dropped by a
+  // mis-keyed fragment) shows up here, where the intersection type would silently narrow.
+  it('has exactly the composed type keys — the core clusters plus one per fragment', () => {
+    expect(Object.keys(buildInitialSettings()).sort()).toEqual(
+      [...Object.keys(coreSeed()), ...APP_SETTINGS_FRAGMENTS.map((f) => f.key)].sort(),
+    );
+  });
+
   it('derives one galaxy-catalog item row per id, enabled seeded from registry visible', () => {
     const { items } = buildInitialSettings().galaxyCatalogs;
     expect(Object.keys(items).sort()).toEqual([...GALAXY_CATALOG_IDS].sort());
