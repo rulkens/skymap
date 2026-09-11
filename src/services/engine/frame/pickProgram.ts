@@ -5,7 +5,7 @@
  * ### Why pick is NOT a FRAME member
  *
  * The visual FRAME is a linear `FrameStep[]` the executor walks once per
- * animation tick (`frameProgram.ts` / `executeFrame.ts`). Pick is deliberately
+ * animation tick (`frameOrder.ts` / `executeFrame.ts`). Pick is deliberately
  * NOT one of those steps: it is a demand-driven query (hover / click), it
  * produces a value rather than swap-chain pixels, and it runs on its OWN
  * command encoder + `queue.submit` at a cadence set by pointer events, not the

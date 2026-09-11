@@ -41,7 +41,7 @@
 
 import type { ReactElement } from 'react';
 import cx from 'classnames';
-import { groupPassNames } from '../../services/engine/frame/frameProgram';
+import { groupPassNames } from '../../services/engine/frame/timedSlots';
 import DebugSection from './DebugSection';
 import styles from './RenderTogglesSection.module.css';
 

@@ -10,13 +10,13 @@
  * the per-pass names — proving the group rows were ADDED, not substituted for
  * the pass rows. It fails exactly when the `rows.push({ name: groupKey, … })`
  * is dropped or its key format drifts from the executor's — which is the whole
- * point of the joint. The exhaustive ordered list lives in frameProgram.test.ts;
+ * point of the joint. The exhaustive ordered list lives in timedSlots.test.ts;
  * this file pins the invariant that survives any future pass addition.
  */
 
 import { describe, it, expect } from 'vitest';
 
-import { timedSlotsOf } from '../../../../src/services/engine/frame/frameProgram';
+import { timedSlotsOf } from '../../../../src/services/engine/frame/timedSlots';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';

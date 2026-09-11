@@ -17,7 +17,7 @@ import { clearSelection } from '../selection/selectionSlice';
 import { setRenderStrategy } from '../settings/settingsSlice';
 import { requestTier } from '../tier/requestTier';
 import { selectTier } from '../tier/selectors';
-import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/frameProgram';
+import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timedSlots';
 import type { AppStore } from '../../store/types';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { SkymapPerfHook } from '../../@types/perf/SkymapPerfHook';
@@ -39,7 +39,7 @@ export const PERF_WARMUP_FRAMES = 3;
 
 // Slot/layer name → render-step groupKey, handed across the `window.__skymapPerf`
 // seam so the Node harness can bucket per-layer timings WITHOUT importing
-// `frameProgram` — its transitive `.wesl?static` imports only resolve under Vite,
+// `timedSlots` — its transitive `.wesl?static` imports only resolve under Vite,
 // so a `tsx` process would throw. Group-key rows map to themselves, so a merged-run
 // group slot resolves through the same table as its per-layer children.
 const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(

@@ -3,7 +3,7 @@
  *
  * The set of timing slots is DERIVED at runtime from the FRAME program +
  * the content-layer registry (`TIMED_SLOTS` in
- * `services/engine/frame/frameProgram.ts`): one slot per timed layer, a
+ * `services/engine/frame/timedSlots.ts`): one slot per timed layer, a
  * `'<source>→<dest>'` slot per composite, and a trailing `'pick'`.  Because
  * `ContentPass.name` is typed `string`, the slot set cannot be a closed
  * literal union — so this is a `string` alias rather than an enumerated type.

@@ -1,5 +1,5 @@
 /**
- * frameProgram — the GPU-timing slot derivations over `FRAME_ORDER`'s
+ * timedSlots — the GPU-timing slot derivations over `FRAME_ORDER`'s
  * expansion, plus the expansion rules the four cases in
  * `expandFrameOrder.test.ts` don't reach (the capture/foreground/lens fan-outs
  * and the bloom gate).
@@ -19,7 +19,7 @@ import {
   TIMED_SLOTS,
   TIMED_SLOT_GROUPS,
   BODY_SLAB_CAPACITY,
-} from '../../../../src/services/engine/frame/frameProgram';
+} from '../../../../src/services/engine/frame/timedSlots';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';

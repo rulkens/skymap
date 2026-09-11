@@ -48,7 +48,7 @@ import cx from 'classnames';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
-import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/frameProgram';
+import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timedSlots';
 import { Sparkline } from './Sparkline';
 import DebugSection from './DebugSection';
 import styles from './GpuTimingsSection.module.css';
