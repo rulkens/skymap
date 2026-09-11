@@ -35,6 +35,7 @@ import { deriveSlabs } from './slabs';
 import { deriveBodyStates } from './deriveBodyStates';
 import { visibleSlabBodies } from './visibleSlabBodies';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
+import { elementsById } from '../../../data/bodies/orbitalElements';
 import { visibleStars } from './visibleStars';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 
@@ -97,15 +98,29 @@ export function deriveFrameContext(
       ? [...planets, ...SCENE_ANCHOR_POINT_BODIES]
       : [earth, ...planets, ...SCENE_ANCHOR_POINT_BODIES];
 
-  const visibleBodies = visibleSlabBodies({
-    bodies: slabBodyCandidates,
+  const slabGate = {
     bodyStates,
     camPosMpc: cam.position,
     camForwardMpc: camForward,
     viewportWidthPx: canvasSize.width,
     viewportHeightPx: canvasSize.height,
     fovYRad: cam.fovYRad,
-  });
+  };
+  const gatedBodies = visibleSlabBodies({ ...slabGate, bodies: slabBodyCandidates });
+  // A mesh body owns no slab row — it rides its host's (`meshBodiesPass`), so
+  // the host's roster entry is what keeps it drawable. From a 400 km orbit
+  // Earth's ~70° angular radius takes it out of the frustum gate around 126°
+  // off-axis, which would blank a mesh body sitting dead centre. The SAME gate
+  // run over the mesh bodies re-admits their hosts, so there is one cull
+  // applied twice rather than two culls to keep in step.
+  const meshHostIds = new Set(
+    visibleSlabBodies({ ...slabGate, bodies: state.data.bodies.meshBodies }).map(
+      (body) => elementsById(body.id).focusId,
+    ),
+  );
+  const visibleBodies = gatedBodies.concat(
+    slabBodyCandidates.filter((body) => meshHostIds.has(body.id) && !gatedBodies.includes(body)),
+  );
 
   // `camBasisWorld` reruns the SAME roll NEAR0's own vp derivation uses
   // (`imagePlaneBasis` is the shared seam both call, not a copy) so a body row's

@@ -992,7 +992,7 @@ describe('runFrame — the label-director wake fold', () => {
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
-      data: { bodies: { earth: null, planets: [], stars: [] } },
+      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       gpu: {
         ...base.gpu,
