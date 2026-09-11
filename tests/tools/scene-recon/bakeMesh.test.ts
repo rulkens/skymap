@@ -9,7 +9,15 @@
  * (`process.chdir` is undefined under `threads`; `vitest.config.ts` sets no
  * `pool` and v4 defaults to forks).
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -107,6 +115,8 @@ const RUN_CCT = async (_pipeline: string, lines: readonly string[]) => lines.map
 let root: string;
 let previousCwd: string;
 let collectionDir: string;
+/** What the stubbed `gdal_translate` writes: a plain 3-channel sRGB JPEG. */
+let rgbJpeg: Buffer;
 let workDir: string;
 let assetDir: string;
 
@@ -124,12 +134,10 @@ beforeAll(async () => {
   );
   // Real JPEGs, not header stubs: the staging step reads every frame with sharp.
   const canvas = { ...FRAME_PX, background: { r: 90, g: 120, b: 60, alpha: 1 } };
-  writeFileSync(
-    join(collectionDir, `${ITEM_ID}.jpg`),
-    await sharp({ create: { ...canvas, channels: 3 } })
-      .jpeg()
-      .toBuffer(),
-  );
+  rgbJpeg = await sharp({ create: { ...canvas, channels: 3 } })
+    .jpeg()
+    .toBuffer();
+  writeFileSync(join(collectionDir, `${ITEM_ID}.jpg`), rgbJpeg);
   writeFileSync(
     join(collectionDir, `${CMYK_ITEM_ID}.jpg`),
     await sharp({ create: { ...canvas, channels: 4 } })
@@ -160,12 +168,16 @@ afterAll(() => {
  *  toolchains is one sequence rather than two independent ones. */
 let calls: string[][];
 
+/** Every `gdal_translate` argv the staging transcode asked for. */
+let gdalCalls: string[][];
+
 /** A depth-map cache from a previous run, and whether it outlived the clear. */
 const STALE_DMAP = 'depth0000.dmap';
 let staleDmapAtDensify: boolean | undefined;
 
 beforeEach(() => {
   calls = [];
+  gdalCalls = [];
   staleDmapAtDensify = undefined;
   writeFileSync(join(workDir, STALE_DMAP), 'a previous run’s depth map');
   rmSync(join(root, 'public/data/geo3d/groups', SOENDERMARKEN.id, 'manifest.json'), {
@@ -193,6 +205,12 @@ const DEPS = (glb: () => Promise<Uint8Array>) => ({
   runCct: RUN_CCT,
   runColmap: async (args: readonly string[]) => {
     calls.push(['colmap', ...args]);
+  },
+  // Stands in for `gdal_translate`, output file included: the transcode renames
+  // it over the staged frame, so a stub that wrote nothing would hide the step.
+  runGdal: async (args: readonly string[]) => {
+    gdalCalls.push([...args]);
+    writeFileSync(args[args.length - 1]!, rgbJpeg);
   },
   runOpenMvs: fakeOpenMvs(glb),
   colmapVersion: () => 'COLMAP 4.2.0 (test)',
@@ -292,15 +310,40 @@ describe('bakeMesh', () => {
     expect(staleDmapAtDensify).toBe(false);
   });
 
-  it('re-encodes the staged CMYK frames and leaves the sRGB ones byte-identical', async () => {
+  it('re-reads the staged four-band frames band-wise and leaves the rest alone', async () => {
     await bakeMesh(SOENDERMARKEN, DEPS(boxGlb));
 
-    const staged = (id: string) => readFileSync(join(workDir, 'sparse-in/images', `${id}.jpg`));
-    expect(await sharp(staged(CMYK_ITEM_ID)).metadata()).toMatchObject({
-      channels: 3,
-      space: 'srgb',
-    });
-    expect(staged(ITEM_ID)).toEqual(readFileSync(join(collectionDir, `${ITEM_ID}.jpg`)));
+    // `-b 1 -b 2 -b 3` with the JPEG→RGB conversion off: the four components
+    // are raw bands, and converting them as CMYK is what muddied bake #3.
+    // `realpathSync`: the bake resolves the workdir against cwd, and macOS's
+    // tmpdir is a symlink, so the argv carries the `/private` spelling.
+    const stagedFrame = join(realpathSync(workDir), 'sparse-in/images', `${CMYK_ITEM_ID}.jpg`);
+    expect(gdalCalls).toEqual([
+      [
+        '--config',
+        'GDAL_JPEG_TO_RGB',
+        'NO',
+        '--config',
+        'GDAL_PAM_ENABLED',
+        'NO',
+        '-b',
+        '1',
+        '-b',
+        '2',
+        '-b',
+        '3',
+        '-of',
+        'JPEG',
+        '-co',
+        'QUALITY=95',
+        stagedFrame,
+        `${stagedFrame}.rgb.jpg`,
+      ],
+    ]);
+    expect(readFileSync(stagedFrame)).toEqual(rgbJpeg);
+    expect(readFileSync(join(workDir, 'sparse-in/images', `${ITEM_ID}.jpg`))).toEqual(
+      readFileSync(join(collectionDir, `${ITEM_ID}.jpg`)),
+    );
   });
 
   it('--reuse-glb runs no runner and keeps the manifest’s version stamps', async () => {

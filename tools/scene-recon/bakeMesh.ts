@@ -8,6 +8,7 @@
  * `-o`: v2.4.0 names an output after its *input's* stem, so `--refine` would
  * otherwise move the GLB the re-pack reads. The runners are injected so a
  * re-pack runs with neither toolchain installed; `main()` wires the real ones.
+ * The four-component staged frames are raw R,G,B + a fourth band, not CMYK.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -37,6 +38,7 @@ import type { TexturedMeshAsset } from '../scene-workbench/@types/TexturedMeshAs
 
 export type ColmapRunner = (args: readonly string[]) => Promise<void>;
 export type OpenMvsRunner = (tool: string, args: readonly string[]) => Promise<void>;
+export type GdalRunner = (args: readonly string[]) => Promise<void>;
 
 /** Stable across re-runs, so a re-bake upserts the one asset. */
 const ASSET_ID = 'mesh';
@@ -46,6 +48,30 @@ const POINT_SAMPLE_TARGET = 200_000;
 /** One number for the atlas ceiling: past it TextureMesh splits the mesh across
  *  materials (`meshGlbGeometry` refuses that), and the re-pack must not undo the cap. */
 const MAX_TEXTURE_PX = 8192;
+
+/** libjpeg tags the four components `gdal_translate` wrote from the 4-band COG
+ *  as CMYK, but they are raw R,G,B + a fourth band: converting the "CMYK" to
+ *  sRGB (what sharp would do) muddies the frame, and OpenMVS's seam levelling
+ *  between those and the correct frames then blows out across the atlas. Take
+ *  the first three components as they are. */
+const GDAL_RGB_ARGV = [
+  '--config',
+  'GDAL_JPEG_TO_RGB',
+  'NO',
+  '--config',
+  'GDAL_PAM_ENABLED',
+  'NO',
+  '-b',
+  '1',
+  '-b',
+  '2',
+  '-b',
+  '3',
+  '-of',
+  'JPEG',
+  '-co',
+  'QUALITY=95',
+];
 
 const MESH_PLY = 'scene_dense_mesh.ply';
 const REFINED_PLY = 'scene_dense_mesh_refine.ply';
@@ -147,6 +173,7 @@ export async function bakeMesh(
     readonly runCct: CctRunner;
     readonly runColmap: ColmapRunner;
     readonly runOpenMvs: OpenMvsRunner;
+    readonly runGdal: GdalRunner;
     readonly colmapVersion: () => string;
     readonly openMvsVersion: () => string;
   },
@@ -213,7 +240,7 @@ export async function bakeMesh(
       outDir: sparseIn,
       observations: true,
     });
-    const converted = await transcodeStagedJpegs(join(sparseIn, 'images'));
+    const converted = await transcodeStagedJpegs(join(sparseIn, 'images'), deps.runGdal);
     if (converted > 0) {
       process.stderr.write(`bakeMesh: re-encoded ${converted} non-sRGB frame(s) to sRGB\n`);
     }
@@ -286,23 +313,18 @@ export async function bakeMesh(
   return asset;
 }
 
-/** The 2025 nadir frames are CMYK JPEGs (`gdal_translate` on a 4-band COG) and
- *  OpenCV — so every OpenMVS stage — refuses them outright (spec §6.2). */
-async function transcodeStagedJpegs(imagesDir: string): Promise<number> {
+/** The 2025 nadir frames carry four components, which OpenCV — so every OpenMVS
+ *  stage — refuses outright. GDAL re-reads them band-wise (spec §6.2). */
+async function transcodeStagedJpegs(imagesDir: string, runGdal: GdalRunner): Promise<number> {
   const names = (await readdir(imagesDir)).filter((name) => name.endsWith('.jpg'));
   let converted = 0;
   for (const name of names) {
     const path = join(imagesDir, name);
     const { channels, space } = await sharp(path).metadata();
     if (channels === 3 && space === 'srgb') continue;
-    // sharp cannot read and write the same file, hence the temp + rename.
-    const srgbPath = `${path}.srgb`;
-    await sharp(path)
-      .toColourspace('srgb')
-      .removeAlpha()
-      .jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
-      .toFile(srgbPath);
-    await rename(srgbPath, path);
+    const rgbPath = `${path}.rgb.jpg`;
+    await runGdal([...GDAL_RGB_ARGV, path, rgbPath]);
+    await rename(rgbPath, path);
     converted++;
   }
   return converted;
@@ -381,6 +403,7 @@ async function main(): Promise<void> {
       runCct: spawnCct,
       runColmap: (args) => spawnStage('colmap', args, workDir),
       runOpenMvs: (tool, args) => spawnStage(openMvsCommand(tool), args, workDir),
+      runGdal: (args) => spawnStage('gdal_translate', args, workDir),
       colmapVersion,
       openMvsVersion,
     },

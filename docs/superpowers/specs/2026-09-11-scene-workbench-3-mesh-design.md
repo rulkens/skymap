@@ -296,8 +296,13 @@ CLI: `npm run bake-mesh -- [--group <id>] [--full-res] [--refine] [--reuse-glb]`
    neighbour views and depth ranges. COLMAP never matches a feature — its
    `Camera::HasBogusParams` check rejects our crops outright (§10 #2).
 3. **Staging transcode** — every `sparse-in/images/*.jpg` whose sharp metadata is not
-   3-channel sRGB is re-encoded in place (q95, 4:4:4). The 2025 nadir frames are CMYK
-   JPEGs (`gdal_translate` on a 4-band COG) and OpenCV refuses those outright.
+   3-channel sRGB is re-written in place by `gdal_translate --config GDAL_JPEG_TO_RGB
+NO -b 1 -b 2 -b 3 -of JPEG -co QUALITY=95` (plus `--config GDAL_PAM_ENABLED NO`, so no
+   `.aux.xml` lands beside it). The 2025 nadir frames carry four components — raw R, G,
+   B and a fourth band that libjpeg tags CMYK — which OpenCV refuses outright; sharp's
+   `toColourspace('srgb')` does a real CMYK→RGB conversion instead and muddies them,
+   which OpenMVS's seam levelling then blows out across the atlas. Harvests from
+   `fetchSkraafoto` after this change already write three bands.
 4. **COLMAP**, one `runColmap` call, as a format converter only:
    - `image_undistorter --image_path sparse-in/images --input_path sparse-in --output_path dense --output_type COLMAP`
      (PINHOLE cameras → a no-op resample, but it lays out the workspace

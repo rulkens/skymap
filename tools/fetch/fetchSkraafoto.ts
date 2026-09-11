@@ -76,6 +76,15 @@ function fetchItem(
     'gdal_translate',
     [
       `/vsicurl/${item.assets.data.href}`,
+      // The nadir COGs carry a fourth band; taking three writes a plain RGB
+      // JPEG, where all four make libjpeg tag the file CMYK and every reader
+      // downstream either refuses it or mis-converts it (spec §6.2).
+      '-b',
+      '1',
+      '-b',
+      '2',
+      '-b',
+      '3',
       // GDAL picks the overview level `-outsize` implies, so a cropped window
       // still reads the pyramid rather than the full-resolution raster.
       '-srcwin',
