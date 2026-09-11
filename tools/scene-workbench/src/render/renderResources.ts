@@ -26,6 +26,9 @@ export type SplatGpuAsset = {
   readonly order: GPUBuffer;
   readonly positionsM: Float32Array;
   readonly boundsM: BoundsM;
+  /** Instances the next frame draws — the depth sort shortens it to the
+   *  clip box's survivors, so it is NOT readonly and NOT `splatCount`. */
+  drawCount: number;
   readonly splatCount: number;
   readonly shDegree: 0 | 1;
   dispose(): void;

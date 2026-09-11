@@ -59,6 +59,7 @@ function preloadedStateWithManifest(manifest: SceneManifest = MANIFEST): Preload
       status: 'ready',
       manifest,
       assetStatus: { a1: 'ready' },
+      splatMetrics: {},
       error: null,
     },
   };

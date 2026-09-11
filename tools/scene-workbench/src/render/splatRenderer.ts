@@ -1,7 +1,8 @@
 /**
  * createSplatRenderer — Gaussian splats as covariance-projected quads
- * (splat.wesl), one instance per `order` entry, blended back-to-front over the
- * depth the lidar pass already wrote (depth-tested, never depth-writing).
+ * (splat.wesl), one instance per LIVE `order` entry — `drawCount`, which the
+ * depth sort shortens to the clip box's survivors — blended back-to-front over
+ * the depth the lidar pass already wrote (depth-tested, never depth-writing).
  *
  * Two pipelines from one module: the deg-1 variant binds `sh1` at group 1
  * binding 1, the deg-0 variant's layout omits it — WebGPU validates a layout
@@ -105,7 +106,7 @@ export function createSplatRenderer(
       pass.setPipeline(pipelines[asset.shDegree]);
       pass.setBindGroup(1, bindGroupFor(asset));
       pass.setVertexBuffer(0, asset.order);
-      pass.draw(VERTICES_PER_SPLAT, asset.splatCount);
+      pass.draw(VERTICES_PER_SPLAT, asset.drawCount);
     }
   }
 

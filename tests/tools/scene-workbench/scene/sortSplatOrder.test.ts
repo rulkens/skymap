@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import type { BoundsM } from '../../../../tools/scene-workbench/@types/BoundsM';
 import { sortSplatOrder } from '../../../../tools/scene-workbench/src/scene/sortSplatOrder';
 
 describe('sortSplatOrder', () => {
@@ -38,5 +39,35 @@ describe('sortSplatOrder', () => {
     const order = sortSplatOrder(positionsM, [0, 0, 0], [0, 0, 1]);
 
     expect(Array.from(order)).toEqual([2, 0, 1]);
+  });
+
+  it('sorts only the splats inside the clip box, and drops the rest from the count', () => {
+    // Depth runs along +Y. Indices 0 and 3 sit outside the box on X and Z;
+    // the survivors 1, 2, 4 must still come back farthest-first.
+    const positionsM = new Float32Array(
+      [
+        [100, 1, 0],
+        [0, 5, 0],
+        [0, 3, 0],
+        [0, 2, 40],
+        [0, 4, 0],
+      ].flat(),
+    );
+    const clipBoxM: BoundsM = { min: [-10, -10, -10], max: [10, 10, 10] };
+
+    const order = sortSplatOrder(positionsM, [0, 0, 0], [0, 1, 0], clipBoxM);
+
+    expect(Array.from(order)).toEqual([1, 4, 2]);
+  });
+
+  it('returns an empty order for a box nothing falls inside', () => {
+    const positionsM = new Float32Array([0, 0, 0, 1, 1, 1]);
+
+    const order = sortSplatOrder(positionsM, [0, 0, 0], [0, 1, 0], {
+      min: [100, 100, 100],
+      max: [200, 200, 200],
+    });
+
+    expect(order.length).toBe(0);
   });
 });
