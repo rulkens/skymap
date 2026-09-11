@@ -22,7 +22,7 @@ import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRo
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { cursorRayBodyLocal } from '../../../../src/utils/camera/cursorRayBodyLocal';
 import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelestialBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -51,7 +51,6 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusM: 6371000,
 };
 
 /** The replay's frame context with the store snapshot taken NOW. */
@@ -254,7 +253,7 @@ describe('replayInput', () => {
     const arm = earthArm(2);
     store.dispatch(commitCameraPose(arm));
     if (arm.frame === 'absolute') throw new Error('fixture: not a body arm');
-    const radiusM = SCENE_BODIES.find((b) => b.id === 'earth')!.radiusM;
+    const radiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'earth')!.radiusM;
     const anchorFor = (px: Vec2): Vec3 => {
       const ray = cursorRayBodyLocal(arm.pose, px, [1000, 1000], Math.PI / 3);
       const t = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], radiusM)![0];

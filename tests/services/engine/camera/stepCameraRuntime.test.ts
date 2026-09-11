@@ -52,7 +52,6 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
-  radiusM: SCENE_EARTH.radiusM,
 };
 
 /** The frame's inputs as `runFrame` would build them, off the harness's live store and aggregator. */

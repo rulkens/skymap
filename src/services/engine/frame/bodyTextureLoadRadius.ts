@@ -49,7 +49,7 @@
 
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -60,6 +60,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 const LOAD_RADIUS_BODY_RADII = 1e4;
 
 export function loadRadiusMpc(id: BodyTextureId | RingTextureId): number {
-  const body = findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureLoadRadius');
+  // Celestial roster: a mesh body's albedo is baked in, never a texture demand.
+  const body = findByIdOrThrow(SCENE_CELESTIAL_BODIES, hostBodyId(id), 'bodyTextureLoadRadius');
   return body.radiusM * SCALE_UNITS.M_TO_MPC * LOAD_RADIUS_BODY_RADII;
 }

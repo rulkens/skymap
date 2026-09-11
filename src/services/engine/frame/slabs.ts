@@ -29,6 +29,7 @@ import { frameUp } from '../../../utils/camera/frameUp';
 import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { chainOverlapViolations } from '../../../utils/scene/chainOverlapViolations';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { nearestSphereFaceM } from '../../../utils/scene/nearestSphereFaceM';
@@ -189,12 +190,13 @@ export function bodySlabRow(input: {
   );
   // Whichever drawn shell reaches furthest along the view axis: the
   // PROXY_SCALE-inflated mesh, or a wider un-inflated outer shell (rings, atmosphere).
-  const marginM = Math.max(PROXY_SCALE * body.radiusM, rMaxM) * (1 + NEAR_MARGIN_EPS);
-  // The altitude-above-SURFACE term stays radial: it only wins once the camera is
-  // inside the outermost shell, a close orbit/descent around THIS body where θ ≈ 0.
-  // Dropping it and falling straight to MIN_NEAR_M collapses the near-field label
-  // window at low altitude.
-  const hostNear = Math.max(viewZ - marginM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
+  const footprintM = bodyFootprintRadiusM(body);
+  const marginM = Math.max(PROXY_SCALE * footprintM, rMaxM) * (1 + NEAR_MARGIN_EPS);
+  // The altitude-above-the-body term stays radial: it only wins once the camera
+  // is inside the outermost shell, a close orbit/descent around THIS body where
+  // θ ≈ 0. Dropping it and falling straight to MIN_NEAR_M collapses the
+  // near-field label window at low altitude.
+  const hostNear = Math.max(viewZ - marginM, (dM - footprintM) * NEAR_RATIO, MIN_NEAR_M);
   // An attached mesh body (e.g. a whale riding Earth's row) can sit closer to
   // the eye than the host's own margin; its near face only ever LOWERS the
   // plane (never pushes it past the host's own MIN_NEAR_M floor).

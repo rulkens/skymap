@@ -221,7 +221,6 @@ describe('the register loop during an active drag (R12b-1)', () => {
           id: 'earth',
           label: 'Earth',
           positionMpc: [0, 0, 0],
-          radiusM: SCENE_EARTH.radiusM,
         },
       }),
     );

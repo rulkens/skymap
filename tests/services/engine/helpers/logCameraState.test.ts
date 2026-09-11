@@ -64,7 +64,6 @@ describe('logCameraState', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: cam.target,
-      radiusM: EARTH_RADIUS_M,
     };
 
     logCameraState(cam, fakeCanvas(1920, 1080), focus, SIM_DAYS);
@@ -109,7 +108,6 @@ describe('logCameraState', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [3, 4, 0],
-      radiusM: EARTH_RADIUS_M,
     };
 
     logCameraState(cam, fakeCanvas(800, 600), focus, SIM_DAYS);

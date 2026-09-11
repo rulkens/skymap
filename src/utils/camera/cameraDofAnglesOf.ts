@@ -18,7 +18,7 @@ import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
 import { hOverR } from '../../services/engine/camera/hOverR';
 import { nearestBodyHR } from '../../services/engine/camera/nearestBodyHR';
 import { bandRollTarget } from '../../services/engine/camera/frameAlignedRoll';
@@ -64,7 +64,7 @@ export function cameraDofAnglesOf(input: {
   let hr: number | null = null;
   if (bodyId !== null) {
     const engaged = bodyStates.get(bodyId);
-    const body = SCENE_BODIES.find((row) => row.id === bodyId);
+    const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId);
     if (engaged !== undefined && body !== undefined) hr = hOverR(eyeMpc, engaged, body.radiusM);
   } else {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);
