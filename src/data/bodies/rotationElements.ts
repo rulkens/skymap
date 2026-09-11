@@ -10,6 +10,7 @@
  */
 
 import type { RotationElements } from '../../@types/scene/RotationElements';
+import { MESH_BODY_PERIOD_DAYS } from './orbitalElements';
 
 export function rotationRowById(id: string): RotationElements | null {
   return ROTATION_ELEMENTS.find((el) => el.id === id) ?? null;
@@ -45,10 +46,11 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // 360°/6.387222 d, Charon's period in `orbitalElements.ts`; 56.3625225 × 6.387222 =
   // 359.99994°, the residual being their rounding).
   { id: 'charon', poleRaDeg: 132.993, poleDecDeg: -6.163, primeMeridianDeg: 122.695, spinRateDegPerDay: 56.3625225 },
-  // Whale and petunias (Hitchhiker's Guide easter egg): tumble poles are
-  // DECORATIVE, not measured — chosen off-axis so the tumble visibly wobbles
-  // rather than spinning about a screen-aligned axis. One turn per 3 minutes;
-  // the pot tumbles twice as fast.
-  { id: 'whale', poleRaDeg: 57.3, poleDecDeg: 24.8, primeMeridianDeg: 0.0, spinRateDegPerDay: 172800 },
+  // Whale and petunias (Hitchhiker's Guide easter egg). The whale is ORBIT-LOCKED: one turn
+  // per orbit about the orbit pole (Earth's own, so α₀/δ₀ match the 'earth' row), holding its
+  // head along the velocity and its belly Earthward in the body frame the bake's
+  // `bodyFromSource` remap sets (+X nose, -Y dorsal); W₀ phases that to the M = 0 epoch. The
+  // pot's pole stays DECORATIVE — off-axis and quick, a turn per 90 s, so its tumble wobbles.
+  { id: 'whale', poleRaDeg: 0.0, poleDecDeg: 90.0, primeMeridianDeg: 90.0, spinRateDegPerDay: 360 / MESH_BODY_PERIOD_DAYS },
   { id: 'petunias', poleRaDeg: 198.6, poleDecDeg: -37.2, primeMeridianDeg: 0.0, spinRateDegPerDay: 345600 },
 ];

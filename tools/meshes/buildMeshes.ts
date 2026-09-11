@@ -18,6 +18,7 @@ import { Document, NodeIO, Primitive, type Material, type Texture } from '@gltf-
 import sharp from 'sharp';
 
 import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
+import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
@@ -43,6 +44,7 @@ export type MeshBuildTarget = {
   readonly source: string;
   readonly licence: string;
   readonly attribution: string;
+  readonly bodyFromSource?: Mat3;
 };
 
 type Geometry = {
@@ -124,6 +126,28 @@ function countTriangles(doc: Document): number {
   let n = 0;
   for (const { prim } of listPrimitives(doc)) n += triangleCount(prim);
   return n;
+}
+
+/**
+ * Fold a source→body rotation in FRONT of a node's world matrix. Every
+ * attribute already rides that one matrix through its own correct rule, so
+ * composing here reorients positions, normals and tangents alike — and, being a
+ * proper rotation, leaves the mirrored-node and winding verdicts below unmoved.
+ */
+function premultiplyMat3(r: Mat3, m: readonly number[]): number[] {
+  const out: number[] = [];
+  for (let c = 0; c < 4; c++) {
+    const x = m[c * 4]!;
+    const y = m[c * 4 + 1]!;
+    const z = m[c * 4 + 2]!;
+    out.push(
+      r[0] * x + r[3] * y + r[6] * z,
+      r[1] * x + r[4] * y + r[7] * z,
+      r[2] * x + r[5] * y + r[8] * z,
+      m[c * 4 + 3]!,
+    );
+  }
+  return out;
 }
 
 /** Column-major mat4 point transform; glTF node matrices are column-major. */
@@ -226,17 +250,18 @@ function windingFollowsNormal(
 }
 
 /**
- * Merge every primitive into one vertex/index buffer with node transforms
- * baked in, then RECENTRE on the bbox centre. Scale passes through untouched —
- * both approved sources are modelled at real-world size — but an authored pivot
- * sitting off the model (a Sketchfab habit) would otherwise inflate
- * `boundingRadiusM`, which the runtime reads as a sphere about the body origin.
+ * Merge every primitive into one vertex/index buffer with node transforms — and
+ * the source's optional body-frame remap — baked in, then RECENTRE on the bbox
+ * centre. Scale passes through untouched (both approved sources are modelled at
+ * real-world size), but an authored pivot sitting off the model (a Sketchfab
+ * habit) would otherwise inflate `boundingRadiusM`, which the runtime reads as a
+ * sphere about the body origin.
  *
  * An authored `TANGENT` is used verbatim; `generateTangents` runs only when the
  * source has none on EVERY primitive, since regenerating over a good frame
  * silently breaks normal-mapped shading.
  */
-function mergeGeometry(doc: Document): Geometry {
+function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
   const prims = listPrimitives(doc);
   const positions: number[] = [];
   const normals: number[] = [];
@@ -247,7 +272,8 @@ function mergeGeometry(doc: Document): Geometry {
   const min: Vec3 = [Infinity, Infinity, Infinity];
   const max: Vec3 = [-Infinity, -Infinity, -Infinity];
 
-  for (const { prim, matrix } of prims) {
+  for (const { prim, matrix: nodeMatrix } of prims) {
+    const matrix = bodyFromSource ? premultiplyMat3(bodyFromSource, nodeMatrix) : nodeMatrix;
     const base = positions.length / 3;
     const mirrored = basisDeterminant(matrix) < 0;
     const det = mirrored ? -1 : 1;
@@ -369,7 +395,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     }
   }
 
-  const geometry = mergeGeometry(doc);
+  const geometry = mergeGeometry(doc, target.bodyFromSource);
   writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(writeMeshBinary(geometry)));
 
   const normalTexture = material.getNormalTexture();
@@ -530,6 +556,7 @@ async function main(): Promise<void> {
       source: raw.upstream ?? raw.path,
       licence: entry.licence,
       attribution: entry.attribution,
+      bodyFromSource: entry.bodyFromSource,
     };
   });
   await buildMeshes({

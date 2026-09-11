@@ -6,6 +6,7 @@ import { Document, NodeIO, type Material, type Primitive } from '@gltf-transform
 import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Mat3 } from '../../../src/@types/math/Mat3';
 import { decodeMesh } from '../../../src/data/mesh/meshBinaryFormat';
 import { buildMeshes } from '../../../tools/meshes/buildMeshes';
 
@@ -109,7 +110,7 @@ function readMesh(): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function run(glbPath: string) {
+function run(glbPath: string, bodyFromSource?: Mat3) {
   return buildMeshes({
     targets: [
       {
@@ -118,6 +119,7 @@ function run(glbPath: string) {
         source: 'https://example.invalid/model',
         licence: 'CC BY 4.0',
         attribution: 'A. Modeller — https://example.invalid/author',
+        bodyFromSource,
       },
     ],
     outDir: join(dir, 'out'),
@@ -232,6 +234,31 @@ describe('buildMeshes()', () => {
     near(decoded.tangents.slice(0, 4), [-0.83205, 0.5547, 0, 1]);
     // Half-diagonal of the 3x4x1 world bbox.
     expect(row.boundingRadiusM).toBeCloseTo(Math.hypot(1.5, 2, 0.5), 4);
+  });
+
+  it('reorients every attribute through the source-to-body remap', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const prim = addPrim(doc, material, {
+      // A normal off the triangle's own plane and a tangent across it, so a
+      // remap applied to positions alone — or transposed — cannot pass.
+      positions: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+      normals: [0, 0.6, 0.8, 0, 0.6, 0.8, 0, 0.6, 0.8],
+      tangents: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1],
+    });
+    doc
+      .createScene('s')
+      .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(prim)));
+
+    // 90 deg about Z: x -> +y, y -> -x.
+    await run(await writeGlb(doc), [0, 1, 0, -1, 0, 0, 0, 0, 1]);
+    const decoded = decodeMesh(readMesh());
+
+    // (1,0,0) -> (0,1,0) and (0,1,0) -> (-1,0,0), less the (-0.5,0.5,0) recentre.
+    near(decoded.positions.slice(0, 6), [0.5, 0.5, 0, -0.5, -0.5, 0]);
+    near(decoded.normals.slice(0, 3), [-0.6, 0, 0.8]);
+    near(decoded.tangents.slice(0, 4), [0, 1, 0, 1]);
   });
 
   it('flips normals, handedness and winding for a mirrored node', async () => {
