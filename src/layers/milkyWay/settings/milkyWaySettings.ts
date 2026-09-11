@@ -10,17 +10,19 @@ import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettin
 import type { MilkyWaySettings } from '../../../@types/settings/MilkyWaySettings';
 import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
 
+// Milky Way is a singleton overlay layer: the two visibility axes plus the
+// star-cloud look knobs all live here. The knobs spread in from
+// `MILKY_WAY_TUNING_DEFAULTS`, which stays their single source of truth for
+// where they start (the DebugPanel sliders own them from then on).
+const initialState: MilkyWaySettings = {
+  enabled: DEFAULT_MILKY_WAY_ENABLED,
+  labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
+  ...MILKY_WAY_TUNING_DEFAULTS,
+};
+
 export const milkyWaySettingsFragment = {
   key: 'milkyWay',
-  // Milky Way is a singleton overlay layer: the two visibility axes plus the
-  // star-cloud look knobs all live here. The knobs spread in from
-  // `MILKY_WAY_TUNING_DEFAULTS`, which stays their single source of truth for
-  // where they start (the DebugPanel sliders own them from then on).
-  seed: (): MilkyWaySettings => ({
-    enabled: DEFAULT_MILKY_WAY_ENABLED,
-    labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
-    ...MILKY_WAY_TUNING_DEFAULTS,
-  }),
+  initialState,
   reducers: {
     setMilkyWayEnabled: (cluster: MilkyWaySettings, action: PayloadAction<boolean>) => {
       cluster.enabled = action.payload;

@@ -25,33 +25,35 @@ import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalog
 import type { StarCatalogItemSettings } from '../../../@types/settings/StarCatalogItemSettings';
 import type { StarCatalogSettings } from '../../../@types/settings/StarCatalogSettings';
 
+// Rows are DERIVED from the star-catalog registry entries (mirroring
+// `galaxyCatalogs`), so they can't drift from the star-catalog set, and
+// each row's `enabled` comes from that entry's `visible` field —
+// SOURCE_REGISTRY stays the single source of truth for default visibility.
+// `labelEnabled` starts true for every row: it gates the famous-star map's
+// captions on the final descent, and rides inertly on the survey-wide Gaia
+// bin (the star renderer draws no per-star names). Per-row "loaded" is the
+// asset slot's own readiness — no data-layer store.
+const initialState: StarCatalogSettings = {
+  enabled: true,
+  sizePx: DEFAULT_STAR_SIZE_PX,
+  brightness: DEFAULT_STAR_BRIGHTNESS,
+  refineThreshold: DEFAULT_REFINE_THRESHOLD,
+  glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
+  exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
+  exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
+  exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
+  aggregateIntensityCap: DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
+  items: Object.fromEntries(
+    SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
+      e.id,
+      { enabled: e.visible, labelEnabled: true },
+    ]),
+  ) as Record<StarCatalogId, StarCatalogItemSettings>,
+};
+
 export const starCatalogsSettingsFragment = {
   key: 'starCatalogs',
-  // Rows are DERIVED from the star-catalog registry entries (mirroring
-  // `galaxyCatalogs`), so the seed can't drift from the star-catalog set, and
-  // each row's `enabled` is seeded from that entry's `visible` field —
-  // SOURCE_REGISTRY stays the single source of truth for default visibility.
-  // `labelEnabled` seeds true for every row: it gates the famous-star map's
-  // captions on the final descent, and rides inertly on the survey-wide Gaia
-  // bin (the star renderer draws no per-star names). Per-row "loaded" is the
-  // asset slot's own readiness — no data-layer store.
-  seed: (): StarCatalogSettings => ({
-    enabled: true,
-    sizePx: DEFAULT_STAR_SIZE_PX,
-    brightness: DEFAULT_STAR_BRIGHTNESS,
-    refineThreshold: DEFAULT_REFINE_THRESHOLD,
-    glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
-    exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
-    exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
-    exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
-    aggregateIntensityCap: DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
-    items: Object.fromEntries(
-      SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
-        e.id,
-        { enabled: e.visible, labelEnabled: true },
-      ]),
-    ) as Record<StarCatalogId, StarCatalogItemSettings>,
-  }),
+  initialState,
   reducers: {
     // Master gate + per-catalog items, mirroring the galaxy-catalog cluster:
     // `setStarCatalogEnabled` writes the coarse "hide all star catalogs" gate,

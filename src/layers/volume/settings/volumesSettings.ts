@@ -17,12 +17,14 @@ import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 import type { VolumeSettings } from '../../../@types/settings/VolumeSettings';
 
+const initialState: VolumeSettings = {
+  enabled: DEFAULT_VOLUMES_ENABLED,
+  items: seedVolumeFields(),
+};
+
 export const volumesSettingsFragment = {
   key: 'volumes',
-  seed: (): VolumeSettings => ({
-    enabled: DEFAULT_VOLUMES_ENABLED,
-    items: seedVolumeFields(),
-  }),
+  initialState,
   reducers: {
     setVolumesEnabled: (cluster: VolumeSettings, action: PayloadAction<boolean>) => {
       cluster.enabled = action.payload;

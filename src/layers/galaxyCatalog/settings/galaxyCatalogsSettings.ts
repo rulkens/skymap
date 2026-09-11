@@ -24,32 +24,34 @@ import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettin
 import type { ProvenanceAxisId } from '../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../../@types/settings/ProvenanceFilter';
 
+// Rows are DERIVED from the galaxy-catalog registry entries so they can't
+// drift from the galaxy catalog set — and, critically, each row's `enabled`
+// comes from that entry's `visible` field, making SOURCE_REGISTRY the single
+// source of truth for default visibility. The alternative — hardcoding
+// `enabled: true` — silently overrode a registry entry that asked to boot
+// hidden (DesiDeep's `visible: false`), so a default-off source came up drawn
+// anyway; reading `visible` closes that gap. `labelEnabled` is inert for
+// every galaxy catalog except famousGalaxy (the only one that renders a name
+// label) — uniformly true.
+const initialState: GalaxyCatalogSettings = {
+  sizePx: DEFAULT_POINT_SIZE_PX,
+  brightness: DEFAULT_BRIGHTNESS,
+  depthFade: DEFAULT_DEPTH_FADE_ENABLED,
+  provenance: DEFAULT_GALAXY_PROVENANCE,
+  sbScale: DEFAULT_GALAXY_SB_SCALE,
+  sbMax: DEFAULT_GALAXY_SB_MAX,
+  falloffStrength: DEFAULT_GALAXY_FALLOFF_STRENGTH,
+  items: Object.fromEntries(
+    SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
+      e.id,
+      { enabled: e.visible, labelEnabled: true },
+    ]),
+  ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
+};
+
 export const galaxyCatalogsSettingsFragment = {
   key: 'galaxyCatalogs',
-  // Rows are DERIVED from the galaxy-catalog registry entries so the seed can't
-  // drift from the galaxy catalog set — and, critically, each row's `enabled` is
-  // seeded from that entry's `visible` field, making SOURCE_REGISTRY the single
-  // source of truth for default visibility. The alternative — hardcoding
-  // `enabled: true` — silently overrode a registry entry that asked to boot
-  // hidden (DesiDeep's `visible: false`), so a default-off source came up drawn
-  // anyway; seeding from `visible` closes that gap. `labelEnabled` is inert for
-  // every galaxy catalog except famousGalaxy (the only one that renders a name
-  // label) — seeded uniformly true.
-  seed: (): GalaxyCatalogSettings => ({
-    sizePx: DEFAULT_POINT_SIZE_PX,
-    brightness: DEFAULT_BRIGHTNESS,
-    depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-    provenance: DEFAULT_GALAXY_PROVENANCE,
-    sbScale: DEFAULT_GALAXY_SB_SCALE,
-    sbMax: DEFAULT_GALAXY_SB_MAX,
-    falloffStrength: DEFAULT_GALAXY_FALLOFF_STRENGTH,
-    items: Object.fromEntries(
-      SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
-        e.id,
-        { enabled: e.visible, labelEnabled: true },
-      ]),
-    ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
-  }),
+  initialState,
   reducers: {
     setGalaxyCatalogSize: (cluster: GalaxyCatalogSettings, action: PayloadAction<number>) => {
       cluster.sizePx = action.payload;

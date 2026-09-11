@@ -15,15 +15,17 @@ import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettin
 import type { ZoneOfAvoidanceSettings } from '../../../@types/settings/ZoneOfAvoidanceSettings';
 import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
 
+// Zone of Avoidance is a singleton overlay layer like `milkyWay`: one
+// visibility toggle (band + lettering) plus the band's look knobs, read
+// from `DEFAULT_ZONE_OF_AVOIDANCE_TUNING`.
+const initialState: ZoneOfAvoidanceSettings = {
+  enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+  ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
+};
+
 export const zoneOfAvoidanceSettingsFragment = {
   key: 'zoneOfAvoidance',
-  // Zone of Avoidance is a singleton overlay layer like `milkyWay`: one
-  // visibility toggle (band + lettering) plus the band's look knobs, seeded
-  // from `DEFAULT_ZONE_OF_AVOIDANCE_TUNING`.
-  seed: (): ZoneOfAvoidanceSettings => ({
-    enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
-    ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
-  }),
+  initialState,
   reducers: {
     setZoneOfAvoidanceEnabled: (
       cluster: ZoneOfAvoidanceSettings,

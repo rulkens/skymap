@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
-import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import type { UiState } from '../../../src/@types/ui/UiState';
 import {
   selectPaletteOpen,
@@ -11,7 +11,7 @@ import {
   selectSplashDismissedVersion,
 } from '../../../src/state/ui/selectors';
 
-const baseSettings = buildInitialSettings();
+const baseSettings = INITIAL_SETTINGS;
 
 describe('ui selectors', () => {
   it('selectPaletteOpen returns ui.paletteOpen', () => {

@@ -8,21 +8,23 @@ import type { BodyItemSettings } from '../../../@types/settings/BodyItemSettings
 import type { BodySettings } from '../../../@types/settings/BodySettings';
 import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 
+// Body rows are DERIVED from the registry's body entries, so they can't drift
+// from the body set, and each row's `enabled` comes from that entry's
+// `visible` field — SOURCE_REGISTRY stays the single source of truth for
+// default visibility. `labelEnabled` starts true: the captions are the
+// descent's navigation aids and show until the user mutes them.
+const initialState: BodySettings = {
+  items: Object.fromEntries(
+    SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => [
+      e.id,
+      { enabled: e.visible, labelEnabled: true },
+    ]),
+  ) as Record<BodyId, BodyItemSettings>,
+};
+
 export const bodiesSettingsFragment = {
   key: 'bodies',
-  // Body rows are DERIVED from the registry's body entries, so the seed can't
-  // drift from the body set, and each row's `enabled` comes from that entry's
-  // `visible` field — SOURCE_REGISTRY stays the single source of truth for
-  // default visibility. `labelEnabled` seeds true: the captions are the
-  // descent's navigation aids and show until the user mutes them.
-  seed: (): BodySettings => ({
-    items: Object.fromEntries(
-      SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => [
-        e.id,
-        { enabled: e.visible, labelEnabled: true },
-      ]),
-    ) as Record<BodyId, BodyItemSettings>,
-  }),
+  initialState,
   reducers: {
     // The caption axis is the only WRITABLE one: `bodies.items[id].enabled` is
     // seeded from the registry row and read by `visibleStars` (the Sun's dot)

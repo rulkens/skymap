@@ -7,11 +7,13 @@ import type { FlowFieldDefaults } from '../../../@types/data/flow/FlowFieldDefau
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 
+// No data-layer store — "loaded" is the asset slot's own `ready` state
+// (`slotReady(assetSlots.flow)`).
+const initialState: FlowSettings = { ...DEFAULT_FLOW };
+
 export const flowSettingsFragment = {
   key: 'flow',
-  // No data-layer store — "loaded" is the asset slot's own `ready` state
-  // (`slotReady(assetSlots.flow)`).
-  seed: (): FlowSettings => ({ ...DEFAULT_FLOW }),
+  initialState,
   reducers: {
     // Its own single writer (like setMilkyWayEnabled / setVolumesEnabled); `setFlow`'s
     // payload excludes `enabled` so the visibility intent never rides the generic merge.

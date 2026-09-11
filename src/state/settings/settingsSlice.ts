@@ -14,7 +14,7 @@ import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/t
 import { APP_SETTINGS_FRAGMENTS } from '../../compositions/appSettingsFragments';
 import { assertUniqueFragmentReducerKeys } from '../../utils/settings/assertUniqueFragmentReducerKeys';
 import { bodiesSettingsFragment } from '../../layers/body/settings/bodiesSettings';
-import { buildInitialSettings } from './initialState';
+import { INITIAL_SETTINGS } from './initialSettings';
 import { constellationsSettingsFragment } from '../../layers/constellations/settings/constellationsSettings';
 import { earthSettingsFragment } from '../../layers/body/settings/earthSettings';
 import { filamentsSettingsFragment } from '../../layers/filaments/settings/filamentsSettings';
@@ -40,11 +40,6 @@ import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnap
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
-
-// The slice seeds the appearance knobs from `buildInitialSettings()`. The data
-// tier is NOT a settings field — it lives in its own root slice (seeded via the
-// store's `preloadedState`, written by the tier saga), so it never appears here.
-const initialState = buildInitialSettings();
 
 // Standing outside `createSlice` costs the contextual state type, so each core
 // reducer annotates the draft it writes.
@@ -241,7 +236,10 @@ assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS, Object.keys(CORE_REDUCER
 
 export const settingsSlice = createSlice({
   name: 'settings',
-  initialState,
+  // The data tier is NOT a settings field — it lives in its own root slice
+  // (seeded via the store's `preloadedState`, written by the tier saga), so it
+  // never appears in `INITIAL_SETTINGS`.
+  initialState: INITIAL_SETTINGS,
   reducers: {
     ...CORE_REDUCERS,
     ...liftClusterReducers<EngineSettingsState, typeof galaxyCatalogsSettingsFragment>(

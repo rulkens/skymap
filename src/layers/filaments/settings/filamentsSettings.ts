@@ -11,12 +11,14 @@ import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import type { FilamentsSettings } from '../../../@types/settings/FilamentsSettings';
 import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 
+const initialState: FilamentsSettings = {
+  enabled: SOURCE_REGISTRY[Source.Filaments].visible,
+  intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+};
+
 export const filamentsSettingsFragment = {
   key: 'filaments',
-  seed: (): FilamentsSettings => ({
-    enabled: SOURCE_REGISTRY[Source.Filaments].visible,
-    intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
-  }),
+  initialState,
   reducers: {
     setFilamentsEnabled: (cluster: FilamentsSettings, action: PayloadAction<boolean>) => {
       cluster.enabled = action.payload;

@@ -25,7 +25,7 @@ import { Provider } from 'react-redux';
 import { useSplash } from '../../src/hooks/useSplash';
 import { createAppStore } from '../../src/store/createAppStore';
 import { buildInitialUiState } from '../../src/state/ui/buildInitialUiState';
-import { buildInitialSettings } from '../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 import { dismissSplash, reopenSplash } from '../../src/state/ui/uiSlice';
 import { engineStatusChanged, engineLoadProgressChanged } from '../../src/state/engine/engineSlice';
 import { selectSplashVisible, selectSplashDismissedVersion } from '../../src/state/ui/selectors';
@@ -41,7 +41,7 @@ import { Source } from '../../src/data/sources';
  */
 function renderSplash(ui?: UiState) {
   const { store } = createAppStore({
-    settings: buildInitialSettings(),
+    settings: INITIAL_SETTINGS,
     ui: ui ?? buildInitialUiState(),
   });
   const wrapper = ({ children }: { children: ReactNode }) =>
@@ -171,7 +171,7 @@ describe('useSplash — blocked state', () => {
       debugPanelOpen: false,
       splash: { visible: true, dismissedVersion: null },
     };
-    const { store } = createAppStore({ settings: buildInitialSettings(), ui });
+    const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui });
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
 
@@ -197,7 +197,7 @@ describe('useSplash — blocked state', () => {
       debugPanelOpen: false,
       splash: { visible: true, dismissedVersion: null },
     };
-    const { store } = createAppStore({ settings: buildInitialSettings(), ui });
+    const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui });
     // Seed the engine slice: status=ready, loadProgress in-flight.
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
     store.dispatch(engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 2, inFlightCount: 1 }));
@@ -265,7 +265,7 @@ describe('useSplash error mapping', () => {
 
   /** Helper: render useSplash with an explicit engine `status` seeded in the store. */
   function renderWithStatus(statusPayload: Parameters<typeof engineStatusChanged>[0]) {
-    const { store } = createAppStore({ settings: buildInitialSettings(), ui: visibleUi });
+    const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui: visibleUi });
     store.dispatch(engineStatusChanged(statusPayload));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
@@ -307,7 +307,7 @@ describe('useSplash error mapping', () => {
   });
 
   it('returns null on the happy path', () => {
-    const { store } = createAppStore({ settings: buildInitialSettings(), ui: visibleUi });
+    const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui: visibleUi });
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
     store.dispatch(engineLoadProgressChanged(null));
     const wrapper = ({ children }: { children: ReactNode }) =>

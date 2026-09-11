@@ -4,8 +4,8 @@
  * uniform buffer.
  *
  * DERIVED, not authored: adding a cluster means adding a Layer settings fragment
- * (or a field to `CoreSettingsState`), never editing this file. The seed that
- * fills it is `buildInitialSettings`, composed from the same two inputs — so a
+ * (or a field to `CoreSettingsState`), never editing this file. The value that
+ * fills it is `INITIAL_SETTINGS`, composed from the same two inputs — so a
  * cluster cannot exist in the type without a value, or vice versa.
  */
 

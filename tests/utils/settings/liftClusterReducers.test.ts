@@ -7,11 +7,11 @@ import type { LayerSettingsFragment } from '../../../src/@types/settings/LayerSe
 type AlphaCluster = { n: number };
 type Root = { alpha: AlphaCluster; beta: { s: string } };
 
-const seedRoot = (): Root => ({ alpha: { n: 1 }, beta: { s: 'x' } });
+const rootInitialState = (): Root => ({ alpha: { n: 1 }, beta: { s: 'x' } });
 
 const alpha = {
   key: 'alpha',
-  seed: (): AlphaCluster => ({ n: 1 }),
+  initialState: { n: 1 },
   reducers: {
     setN: (cluster: AlphaCluster, action: PayloadAction<number>) => {
       cluster.n = action.payload;
@@ -28,7 +28,7 @@ describe('liftClusterReducers', () => {
   // Immer draft, and a bare object reducer call would not reach a draft-projection bug.
   const slice = createSlice({
     name: 'settings',
-    initialState: seedRoot,
+    initialState: rootInitialState,
     reducers: { ...liftClusterReducers<Root, typeof alpha>(alpha) },
   });
 
@@ -51,7 +51,7 @@ describe('liftClusterReducers', () => {
   it('throws on a { reducer, prepare } case reducer', () => {
     const prepared = {
       key: 'alpha',
-      seed: (): AlphaCluster => ({ n: 1 }),
+      initialState: { n: 1 },
       reducers: {
         bumpN: {
           reducer: (cluster: AlphaCluster, action: PayloadAction<number>) => {

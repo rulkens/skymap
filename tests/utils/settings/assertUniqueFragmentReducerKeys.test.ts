@@ -6,12 +6,12 @@ describe('assertUniqueFragmentReducerKeys', () => {
   it('throws naming a reducer key two fragments claim', () => {
     const alpha = {
       key: 'alpha',
-      seed: () => ({ enabled: false }),
+      initialState: { enabled: false },
       reducers: { setEnabled: () => {} },
     } as const;
     const beta = {
       key: 'beta',
-      seed: () => ({ enabled: true }),
+      initialState: { enabled: true },
       reducers: { setEnabled: () => {} },
     } as const;
 
@@ -25,7 +25,7 @@ describe('assertUniqueFragmentReducerKeys', () => {
   it('throws on a fragment reducer key that collides with a core reducer key', () => {
     const alpha = {
       key: 'alpha',
-      seed: () => ({ enabled: false }),
+      initialState: { enabled: false },
       reducers: { setEnabled: () => {} },
     } as const;
 

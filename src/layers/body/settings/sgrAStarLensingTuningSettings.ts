@@ -6,11 +6,13 @@ import { DEFAULT_SGR_A_STAR_LENSING_TUNING } from '../../../data/defaults';
 import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 import type { SgrAStarLensingTuning } from '../../../@types/settings/SgrAStarLensingTuning';
 
+// The Sgr A* lens knobs; see `SgrAStarLensingTuning` for the tier
+// breakdown and which module owns each default.
+const initialState: SgrAStarLensingTuning = { ...DEFAULT_SGR_A_STAR_LENSING_TUNING };
+
 export const sgrAStarLensingTuningSettingsFragment = {
   key: 'sgrAStarLensingTuning',
-  // The Sgr A* lens knobs; see `SgrAStarLensingTuning` for the tier
-  // breakdown and which module owns each default.
-  seed: (): SgrAStarLensingTuning => ({ ...DEFAULT_SGR_A_STAR_LENSING_TUNING }),
+  initialState,
   reducers: {
     // Leaf-by-leaf patch, no visibility axis to protect (this cluster is
     // pure knobs, not a singleton overlay).

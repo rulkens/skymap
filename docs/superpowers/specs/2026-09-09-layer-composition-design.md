@@ -160,7 +160,7 @@ allocation site, `destroy` a reverse walk) plus `EngineSubsystemHandles.d.ts`'s
 // src/@types/settings/LayerSettingsFragment.d.ts
 export type LayerSettingsFragment<Key extends string, Cluster> = {
   readonly key: Key;
-  readonly seed: () => Cluster;
+  readonly initialState: Cluster;
   /**
    * Case reducers over this cluster alone; `liftClusterReducers` re-bases them on the root,
    * keeping the FLAT `settings/<reducerName>` action types the containers already dispatch.
@@ -170,7 +170,7 @@ export type LayerSettingsFragment<Key extends string, Cluster> = {
 
 // src/@types/settings/ComposedSettings.d.ts
 type ClusterKeyOf<L> = L extends { settings: { key: infer K extends string } } ? K : never;
-type ClusterOf<L> = L extends { settings: { seed: () => infer C } } ? C : never;
+type ClusterOf<L> = L extends { settings: { initialState: infer C } } ? C : never;
 
 export type ComposedSettings<Layers extends readonly Layer<string, unknown, unknown>[]> =
   CoreSettingsState & { [L in Layers[number] as ClusterKeyOf<L>]: ClusterOf<L> };
