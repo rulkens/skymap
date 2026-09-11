@@ -31,7 +31,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   glintBandClass: 3,
   horizonShellPass: 1,
   labelPickQuads: 2,
-  meshBodiesPass: 4,
   milkyWayPass: 1,
   orbitTrailsPass: 1,
   planetsPass: 1,
