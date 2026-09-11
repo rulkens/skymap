@@ -95,4 +95,7 @@ multiplies each splat's opacity. Both live in `DisplayPanel.tsx`, wired to
 `viewSlice`'s `setSplatScale`/`setOpacityScale`. "Mesh" holds one checkbox,
 Wireframe (`view.display.mesh.wireframe`): a `line-list` pass over the mesh's
 own triangle edges, drawn over the textured pass so triangle quality can be
-inspected against the texture.
+inspected against the texture. Edges shared by exactly two triangles draw cyan;
+edges with one adjacent triangle (a hole's border) or three or more (a
+non-manifold junction) draw orange-red, so reconstruction damage reads at a
+glance.

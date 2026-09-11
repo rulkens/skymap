@@ -2,7 +2,8 @@
  * createTexturedMeshRenderer — the MVS mesh as an indexed, unlit, opaque pass
  * (texturedMesh.wesl) that writes depth for the splats to blend against, plus
  * the optional wireframe overlay (meshWireframe.wesl) — WebGPU has no wireframe
- * fill mode, so the edges are a second line-list draw over the same positions.
+ * fill mode, so the edges are line-list draws over the same positions, one per
+ * edge class (manifold, then open) off one shader with an override constant.
  *
  * 'cullMode: none' is deliberate: MVS triangle winding is not guaranteed
  * consistent, so backface culling drops real surface at random.
@@ -75,19 +76,30 @@ export function createTexturedMeshRenderer(
     'scene-mesh-wireframe',
   );
 
-  const wireframePipeline = device.createRenderPipeline({
-    label: 'scene-mesh-wireframe',
-    layout: device.createPipelineLayout({
-      label: 'scene-mesh-wireframe-layout',
-      bindGroupLayouts: [cameraLayout],
-    }),
-    vertex: { module: wireframeModule, entryPoint: 'vs', buffers: [POSITION_LAYOUT] },
-    fragment: { module: wireframeModule, entryPoint: 'fs', targets: [{ format: targetFormat }] },
-    primitive: { topology: 'line-list' },
-    // The lines are the triangles' own vertices, so they tie with the depth
-    // just written: 'less' alone would z-fight them away.
-    depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less-equal' },
+  const wireframeLayout = device.createPipelineLayout({
+    label: 'scene-mesh-wireframe-layout',
+    bindGroupLayouts: [cameraLayout],
   });
+
+  const wireframePipelineFor = (openEdge: 0 | 1): GPURenderPipeline =>
+    device.createRenderPipeline({
+      label: `scene-mesh-wireframe-${openEdge === 1 ? 'open' : 'manifold'}`,
+      layout: wireframeLayout,
+      vertex: { module: wireframeModule, entryPoint: 'vs', buffers: [POSITION_LAYOUT] },
+      fragment: {
+        module: wireframeModule,
+        entryPoint: 'fs',
+        targets: [{ format: targetFormat }],
+        constants: { openEdge },
+      },
+      primitive: { topology: 'line-list' },
+      // The lines are the triangles' own vertices, so they tie with the depth
+      // just written: 'less' alone would z-fight them away.
+      depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less-equal' },
+    });
+
+  const manifoldWireframePipeline = wireframePipelineFor(0);
+  const openWireframePipeline = wireframePipelineFor(1);
 
   // Bind groups only hold references: the asset's dispose() destroys the
   // texture and the entry becomes unreachable with the asset.
@@ -119,11 +131,18 @@ export function createTexturedMeshRenderer(
         pass.drawIndexed(asset.indexCount);
       }
       if (!display.mesh.wireframe) return;
-      pass.setPipeline(wireframePipeline);
+      pass.setPipeline(manifoldWireframePipeline);
       for (const asset of assets) {
         pass.setVertexBuffer(0, asset.positions);
-        pass.setIndexBuffer(asset.edges, 'uint32');
-        pass.drawIndexed(asset.edgeIndexCount);
+        pass.setIndexBuffer(asset.manifoldEdges, 'uint32');
+        pass.drawIndexed(asset.manifoldEdgeIndexCount);
+      }
+      // Second, so a vertex shared with a manifold edge resolves orange.
+      pass.setPipeline(openWireframePipeline);
+      for (const asset of assets) {
+        pass.setVertexBuffer(0, asset.positions);
+        pass.setIndexBuffer(asset.openEdges, 'uint32');
+        pass.drawIndexed(asset.openEdgeIndexCount);
       }
     },
   };
