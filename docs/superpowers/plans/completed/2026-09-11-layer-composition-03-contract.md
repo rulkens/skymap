@@ -398,7 +398,7 @@ be rejected rather than accommodated: RTK's `{ reducer, prepare }` reducer form,
 reducer that writes more than one cluster. `mergeSnapshot` is the latter and stays a core
 reducer for exactly that reason.
 
-- [ ] Write the failing tests first:
+- [x] Write the failing tests first:
   - `composeSettingsSeed places each fragment's cluster under its own key` — a core seed
     `{ labels: { focusedOnly: false } }` plus two toy fragments (`{ key: 'alpha', seed: () => ({ n: 1 }) }`,
     `{ key: 'beta', seed: () => ({ s: 'x' }) }`) yields `{ labels, alpha: { n: 1 }, beta: { s: 'x' } }`.
@@ -415,10 +415,10 @@ reducer for exactly that reason.
   - `assertUniqueFragmentReducerKeys throws naming a reducer key two fragments claim` — two
     toy fragments both declaring `setEnabled` throw with `'setEnabled'` and BOTH cluster keys
     in the message. It is the guard Ruling 2 wrongly expected from the compiler.
-- [ ] Implement. `liftClusterReducers` must work under an Immer draft — exercise it through
+- [x] Implement. `liftClusterReducers` must work under an Immer draft — exercise it through
       a real `createSlice` in the test, not a bare object, or the draft-projection bug it
       exists to prevent will not be reachable.
-- [ ] `npm run typecheck` + `npm test -- settings` green. Commit.
+- [x] `npm run typecheck` + `npm test -- settings` green. Commit.
 
 **Reject if:** a test asserts a type fact at runtime; `ComposedSettings` uses
 `UnionToIntersection`; `SettingsFragmentLike` grew a `Cluster` parameter.
@@ -445,14 +445,14 @@ type. The four that already exist (`MilkyWaySettings`, `ZoneOfAvoidanceSettings`
 | `filaments`      | `FilamentsSettings`      | `:212`                            |
 | `constellations` | `ConstellationsSettings` | `:227`                            |
 
-- [ ] Move each literal into its own file verbatim — same fields, same optionality, same
+- [x] Move each literal into its own file verbatim — same fields, same optionality, same
       docblocks (the field docs go with the fields; `EngineSettingsState`'s remaining
       per-cluster one-liners stay). `EngineSettingsState` then references the nine types.
-- [ ] Use `npm run refactor -- extract` where it fits the shape; otherwise hand-write the
+- [x] Use `npm run refactor -- extract` where it fits the shape; otherwise hand-write the
       file and re-point the one reference. **Never** `git mv`.
-- [ ] Sweep: `rg -n "settings\." src --type ts | rg "as unknown as"` must not grow — an
+- [x] Sweep: `rg -n "settings\." src --type ts | rg "as unknown as"` must not grow — an
       extraction that needed a cast changed a type and is wrong.
-- [ ] `npm run typecheck` green (this is the whole gate: a changed shape shows up as an
+- [x] `npm run typecheck` green (this is the whole gate: a changed shape shows up as an
       error at a selector or a seed). `npm test` green. Commit.
 
 **Reject if:** any field's type changed, widened or gained `?`; a cluster type landed
@@ -490,41 +490,41 @@ export function buildInitialSettings(): EngineSettingsState {
 }
 ```
 
-- [ ] `CORE_SEED` starts as "everything not yet moved": the nine core clusters plus the
+- [x] `CORE_SEED` starts as "everything not yet moved": the nine core clusters plus the
       eleven Layer clusters Task 4 will take. It shrinks to the nine in Task 4; do not
       pre-empt that split with a second constant.
-- [ ] Move each cluster's seed literal and case reducers **verbatim** — same defaults, same
+- [x] Move each cluster's seed literal and case reducers **verbatim** — same defaults, same
       imports, same comments. A reducer's body changes only in its first parameter
       (`settings.galaxyCatalogs.x` → `cluster.x`).
-- [ ] `settingsSlice.reducers` gains `...liftClusterReducers(galaxyCatalogsSettingsFragment)`
+- [x] `settingsSlice.reducers` gains `...liftClusterReducers(galaxyCatalogsSettingsFragment)`
       and the same for star catalogs, and loses the 21 moved definitions. Action creator
       names and exported symbols are unchanged (Ruling 2).
-- [ ] `appSettingsFragments.ts` calls `assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS)`
+- [x] `appSettingsFragments.ts` calls `assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS)`
       at module scope, immediately after the tuple — so a collision throws at import, before
       a store exists to be silently wrong.
-- [ ] Tests — adapt, do not duplicate. The existing initial-state test already asserts every
+- [x] Tests — adapt, do not duplicate. The existing initial-state test already asserts every
       cluster and item row is seeded; keep it pointed at `buildInitialSettings()`. No new
       initial-state test here: a key collision throws at import (above), and the
       tuple-versus-type coverage is Task 5's composed-keys test (Ruling: one covering test,
       not the same assertion at two strengths).
-- [ ] **The core reducer map becomes a named `const`** (Ruling 3's other half): today's
+- [x] **The core reducer map becomes a named `const`** (Ruling 3's other half): today's
       inline literal inside `createSlice({ reducers: { … } })` moves to
       `export const CORE_REDUCERS = { … }` in the same file, spread back in as
       `reducers: { ...CORE_REDUCERS, ...liftClusterReducers(f), … }`. Without it the
       cross-check below has no independently derived core key set and can only compare the
       slice to itself. One export, no new file, no behaviour change — `createSlice` infers
       the same intersection either way.
-- [ ] Add one more, in `tests/state/settings/settingsSlice.test.ts`:
+- [x] Add one more, in `tests/state/settings/settingsSlice.test.ts`:
       `the slice mints exactly the core reducers plus every listed fragment's` — assert
       `Object.keys(settingsSlice.actions).sort()` equals the sorted union of
       `Object.keys(CORE_REDUCERS)` and
       `APP_SETTINGS_FRAGMENTS.flatMap((f) => Object.keys(f.reducers))`. It closes both
       directions of the tuple-versus-spreads gap (listed but unspread, spread but unlisted)
       from two independently derived key sets.
-- [ ] `npm run typecheck` + `npm test` green; `npm test -- settings` and the two container
+- [x] `npm run typecheck` + `npm test` green; `npm test -- settings` and the two container
       tests that dispatch literal action types must be green **without edits** — that is the
       proof Ruling 2 held.
-- [ ] Commit.
+- [x] Commit.
 
 **Reject if:** an action type string changed; a default value changed; a moved reducer body
 changed beyond its parameter; `src/layers/galaxyCatalog/` gained anything but `settings/`.
@@ -551,14 +551,14 @@ Same shape as Task 3, once per row. Re-derive the line ranges; they move as each
 | `constellations`  | `constellations`        | `:184`                 | `:215-222` (2)             |
 | `flow`            | `flow`                  | `:255`                 | `:348-359` (2)             |
 
-- [ ] Move all eleven, one commit per Layer directory (ten commits at most) so a reviewer can
+- [x] Move all eleven, one commit per Layer directory (ten commits at most) so a reviewer can
       read each against its source. The `body` Layer's four clusters ride one commit.
-- [ ] `CORE_SEED` ends holding exactly the nine core clusters: `orientation`, `camera`,
+- [x] `CORE_SEED` ends holding exactly the nine core clusters: `orientation`, `camera`,
       `tonemap`, `hdr`, `bloom`, `bias`, `thumbnails`, `labels`, `debug`. `mergeSnapshot`
       stays in `settingsSlice` — it writes across clusters and belongs to the root.
-- [ ] No new tests. The initial-state test plus the compiler cover the move; a per-cluster
+- [x] No new tests. The initial-state test plus the compiler cover the move; a per-cluster
       "the seed seeds" test is a constant restatement.
-- [ ] `npm run typecheck` + `npm test` green after every commit. Test count must be
+- [x] `npm run typecheck` + `npm test` green after every commit. Test count must be
       unchanged from Task 3.
 
 **Reject if:** `initialState.ts` still carries a Layer cluster literal; a cluster landed in
@@ -594,23 +594,23 @@ export type EngineSettingsState = ComposedSettings<
 >;
 ```
 
-- [ ] `CoreSettingsState` is the surviving half of today's `EngineSettingsState.d.ts`,
+- [x] `CoreSettingsState` is the surviving half of today's `EngineSettingsState.d.ts`,
       moved verbatim with its docblocks. `EngineSettingsState.d.ts` keeps the name (every
       importer keeps compiling) and becomes the derived alias plus the module header that
       says so.
-- [ ] `CORE_SEED` is annotated `CoreSettingsState`, which is what makes a missing core
+- [x] `CORE_SEED` is annotated `CoreSettingsState`, which is what makes a missing core
       cluster a type error at the seed rather than at a selector.
-- [ ] Add ONE test, `tests/state/settings/initialState.test.ts`:
+- [x] Add ONE test, `tests/state/settings/initialState.test.ts`:
       `the seeded settings root has exactly the composed type's keys` — assert
       `Object.keys(buildInitialSettings()).sort()` equals
       `[...Object.keys(CORE_SEED), ...APP_SETTINGS_FRAGMENTS.map((f) => f.key)].sort()`.
       Spec §4.3 names this as the covering test for the one runtime assert in the
       composition; it is not a registry restatement, because both sides are derived from
       different expressions (the composed VALUE versus the composing INPUTS).
-- [ ] `npm run typecheck` is the load-bearing gate here: 500+ reads of `settings.<cluster>`
+- [x] `npm run typecheck` is the load-bearing gate here: 500+ reads of `settings.<cluster>`
       across `src/` and `tests/` now resolve through the derived type. A single error means
       a fragment's seed return type widened — fix the seed's annotation, never the reader.
-- [ ] `npm test` green. Commit.
+- [x] `npm test` green. Commit.
 
 **Reject if:** `EngineSettingsState` is still hand-authored; any reader gained a cast;
 `CoreSettingsState` contains a Layer cluster.
@@ -739,33 +739,33 @@ export function createEngine(
 constructed here to make the field non-empty would be scaffolding with no reader. Say so in
 `app.ts`'s header in one line; do not apologise for it in three.
 
-- [ ] `Layer` and `defineLayer` are minted and exercised by nothing. That is deliberate and
+- [x] `Layer` and `defineLayer` are minted and exercised by nothing. That is deliberate and
       is §9(c)'s stated job ("introduce §4.2's type … before any code moves"). Do NOT write
       a test for them: there is no behaviour to assert, and a type test is the anti-pattern
       `testing.md` names first.
-- [ ] The four sub-shapes above are real types, not placeholders — every field is decided
+- [x] The four sub-shapes above are real types, not placeholders — every field is decided
       (Ruling 9 for `LayerCoreDeps`). Two checks the compiler can do for free, in a scratch
       assignment you DELETE before committing: `watchFlowReseedSaga` satisfies `SagaFactory`,
       and `RESOLVE_PICK.galaxyCatalog` satisfies `PickResolverRow[1]`. If either fails, the
       contract is wrong — fix the type here, do not widen it to `unknown`.
-- [ ] Thread the composition: `BootstrapDeps.home` becomes `BootstrapDeps.composition`, and
+- [x] Thread the composition: `BootstrapDeps.home` becomes `BootstrapDeps.composition`, and
       `wireInput` reads `deps.composition.home`. Nothing else in the phases changes.
-- [ ] `useEngine.ts:77` calls
+- [x] `useEngine.ts:77` calls
       `createEngine(canvas, { store, setSagaContext }, APP_COMPOSITION)` — a plain import, no
       boot-value plumbing; the tier the engine's passes read stays a `state.tier` selector,
       unchanged by this PR.
-- [ ] Pick up plan 02's deferral: `tests/helpers/engine/stubComposition.ts` exports the one
+- [x] Pick up plan 02's deferral: `tests/helpers/engine/stubComposition.ts` exports the one
       stub the seven fixtures share (`STUB_COMPOSITION`, carrying
       `layers: []` and `home: { focus: null, seedSelection: false }`) — filename = exported
       symbol, which is why it is not `stubHome.ts`. Fixtures that never read it import it;
       `wireInput.test.ts` keeps building a real composition around `EARTH_HOME`.
-- [ ] `startLoop.test.ts`'s fixture is shared with Task 9's boot check. Whichever of the two
+- [x] `startLoop.test.ts`'s fixture is shared with Task 9's boot check. Whichever of the two
       lands SECOND owns making that fixture pass — see Task 9, which places the check so a
       stub with no render targets does not execute it.
-- [ ] No new behaviour test. The existing `wireInput` tests already assert the seeded pose,
+- [x] No new behaviour test. The existing `wireInput` tests already assert the seeded pose,
       the cinema branch and the deep-link deference through `home`; they keep passing through
       one more field hop, which is the whole claim.
-- [ ] `npm run typecheck` + `npm test` green. Commit (one commit for the types, one for the
+- [x] `npm run typecheck` + `npm test` green. Commit (one commit for the types, one for the
       threading + fixtures).
 
 **Reject if:** a Layer value was constructed; `EngineComposition` gained a field spec §4.4
@@ -799,13 +799,13 @@ Copy the NEAR0 pickables' pattern — each binds its OWN complete slot-0 camera
 (`pickProgram.ts:315-320`; `milkyWayPickRenderer.ts:11-27` says why, `milkyWayPass.ts:159-163`
 is the call shape).
 
-- [ ] **Zone of avoidance** — its pick pipeline reads nothing at slot 0 (the BGL exists only
+- [x] **Zone of avoidance** — its pick pipeline reads nothing at slot 0 (the BGL exists only
       for structural compatibility, `zoneOfAvoidanceRenderer.ts:88-116`), so this is a
       deletion: move `u` from `@group(1)` to `@group(0)` in `fragmentPick.wesl`, drop
       `pickCameraBgl`, make the pick pipeline layout `[bindGroupLayout]`, and have `drawPick`
       `setBindGroup(0, bindGroup)` — the same object `draw` binds. Delete the three comment
       blocks that taught the inheritance (renderer `:88-94` and `:252-255`, shader `:26-27`).
-- [ ] **Structure markers** — its pick VERTEX stage genuinely reads the shared camera
+- [x] **Structure markers** — its pick VERTEX stage genuinely reads the shared camera
       (`ringPick` compiles the visible ring's vertex source; the shared `pipelineLayout` is
       `[cameraBgl, fadeBgl, sourceBgl]`, `structureMarkerRenderer.ts:290-340`). Give it its
       OWN pick camera buffer + bind group and change the signature to
@@ -813,7 +813,7 @@ is the call shape).
       verbatim like `galaxyPickRenderer.drawPoints` — never the draw-time `uniformBuffer`,
       which would reintroduce the stale-snapshot bug that helper exists to prevent.
       `structureMarkersPass.drawPick` passes `pickUniformBytesOf(view, ctx, state)`.
-- [ ] **The proof**: `galaxyPickRenderer.bindCamera` now has no caller. Delete it, its
+- [x] **The proof**: `galaxyPickRenderer.bindCamera` now has no caller. Delete it, its
       docblock, its `GalaxyPickRenderer` member (`GalaxyPickRenderer.d.ts:60-76`), and the
       two restore calls (`proceduralDisksPass.ts:85`, `labelsPass.ts:103`) with the prose
       explaining them. Two more files document the dissolved invariant and must lose it in
@@ -826,7 +826,7 @@ is the call shape).
       Before deleting, sweep for a fourth inheritor:
       `rg -n "caller-bound|caller's @group|prefix contract" src/services/gpu/renderers src/services/engine/frame/passes`.
       Fix any hit the same way, or STOP and report.
-- [ ] Delete the PICK-order half of the PRODUCER note at `passes/index.ts:278-284` — the
+- [x] Delete the PICK-order half of the PRODUCER note at `passes/index.ts:278-284` — the
       clause from "but the PICK program groups by slab alone" to the end. Its first half (why
       the row's own `'zoa'` target keeps it out of every visual group) is about shape and
       survives, as does the CONSUMER note at `:291-293`. Strike the matching claim from
@@ -834,9 +834,9 @@ is the call shape).
       contract" paragraph; the near→far slab ordering above it is a different fact and
       stays). `CONTENT_PASSES` is then a set, and Tasks 8–10 must not re-introduce an order
       claim about it.
-- [ ] No new test. The pick path's existing tests cover the ids; this changes which bind group
+- [x] No new test. The pick path's existing tests cover the ids; this changes which bind group
       a draw sets, not what it writes. The real gate is Task 14's smoke, which adds a ZoA click.
-- [ ] `npm run typecheck` + `npm run build` (the only check that links WESL — load-bearing
+- [x] `npm run typecheck` + `npm run build` (the only check that links WESL — load-bearing
       here, the shader's `@group` changed) + `npm test` green. Commit.
 
 **Reject if:** a pick draw still relies on another row having bound slot 0; `bindCamera`
@@ -974,7 +974,7 @@ each `(hdr, NEAR0)` line's roster:
 - The merged step keeps the FIRST line's timing-slot name. Since line 9 authors no `slot`,
   the merged `(hdr, NEAR0)` step bills the bare group key — byte-identical to today.
 
-- [ ] Write the failing tests first, in `expandFrameOrder.test.ts`:
+- [x] Write the failing tests first, in `expandFrameOrder.test.ts`:
   - `expands to the same program frameProgram builds, out of the lensing band` — the
     equivalence test. For `(tone, bloomEnabled: true, foregroundChain: [NEAR0, 2, 3],
 skyCubemapFacesToCapture: [], lensBodySlabs: [])`, `expandFrameOrder(...)` equals
@@ -990,7 +990,7 @@ skyCubemapFacesToCapture: [], lensBodySlabs: [])`, `expandFrameOrder(...)` equal
   - `drops a render step whose every pass name is absent` — expand with a `passes` list that
     omits `filaments`/`flow`/&c. so the `(zoa, COSMO)` line empties: no step for it, and the
     steps around it are unchanged. This is the omission mechanism (d) depends on.
-- [ ] And in `checkFrameOrder.test.ts` (spec §5's three items):
+- [x] And in `checkFrameOrder.test.ts` (spec §5's three items):
   - `throws naming a contributed pass no FRAME_ORDER line draws` — a pass named
     `'ghost-pass'` in the registry, absent from the order, throws with `'ghost-pass'` in the
     message. This is the check that replaces the third leg the review called unchecked.
@@ -1002,7 +1002,7 @@ skyCubemapFacesToCapture: [], lensBodySlabs: [])`, `expandFrameOrder(...)` equal
   - No test that the app's own `FRAME_ORDER` passes the check: Task 9 wires the check into
     boot, and `tests/services/engine/frame/frameOrderBoot.test.ts` (one case, added there)
     runs it over the real registry + real target rows.
-- [ ] Implement, then read the whole of `frameOrder.ts` back against `passes/index.ts:18-271`
+- [x] Implement, then read the whole of `frameOrder.ts` back against `passes/index.ts:18-271`
       (the draw-order prose runs in FOUR blocks all the way to `CONTENT_PASSES` at `:272`;
       `:19-98` is only the first, and stopping there leaves most of the rationale behind)
       and `frameProgram.ts`'s header: every ordering rationale in those two headers must have
@@ -1010,7 +1010,7 @@ skyCubemapFacesToCapture: [], lensBodySlabs: [])`, `expandFrameOrder(...)` equal
       `atmosphere-shell` trail the foreground group, why the multiplicative dust follows the
       cloud's own upsample, why the capture roster spans both slabs). Move it; do not
       re-write it, and do not import a pick-order claim — Task 7 deleted the fact.
-- [ ] `npm run typecheck` + `npm test -- frame` green. Commit.
+- [x] `npm run typecheck` + `npm test -- frame` green. Commit.
 
 **Reject if:** a roster was transcribed from the spec rather than derived from the registry;
 the equivalence test compares fewer fields than listed; `expandFrameOrder` dispatches on
@@ -1032,20 +1032,20 @@ and call `frameProgram` — re-point onto `expandFrameOrder(FRAME_ORDER, …)`, 
 `tests/services/engine/frame/targetParity.test.ts` (DELETE — it calls `frameProgram` at
 `:35`), `tests/services/gpu/renderTargets.test.ts` (gains `targetParity`'s leg 3).
 
-- [ ] `FrameStep`'s render and capture members gain `passes: readonly ContentPass[]` and lose
+- [x] `FrameStep`'s render and capture members gain `passes: readonly ContentPass[]` and lose
       `hdrPhases`. `renderFrame` calls `expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {...})`
       where it called `frameProgram(...)`; `frameProgram` itself is deleted, and
       `timedSlotRowsOf` / `timedSlotGroupsOf` / `TIMED_SLOTS` / `TIMED_SLOT_GROUPS` move to
       reading a step's own `passes` (they keep their names and their homes for now).
-- [ ] `executeFrame`'s group selection (`:265-283`) becomes the step's own list. The four
+- [x] `executeFrame`'s group selection (`:265-283`) becomes the step's own list. The four
       predicates die with it: the `target`/`skyCapture` branch, the
       `slab === step.slab || 'body'` widening, and `matchesHdrPhase`. **The step-level gates
       stay exactly where they are**: `enabled`, the `disabledPasses` membership test, and the
       empty-group skip.
-- [ ] `TIMED_SLOTS` / `TIMED_SLOT_GROUPS` expand `FRAME_ORDER` with the MAXIMAL inputs, as
+- [x] `TIMED_SLOTS` / `TIMED_SLOT_GROUPS` expand `FRAME_ORDER` with the MAXIMAL inputs, as
       today (`MAX_FOREGROUND_CHAIN`, all six faces, `MAX_SGR_A_STAR_LENSING_BODY_SLABS`,
       `bloomEnabled: true`, `PLACEHOLDER_TONE`). Keep those constants and their rationale.
-- [ ] `startLoop` calls `checkFrameOrder` once, before the first frame, with the target ids
+- [x] `startLoop` calls `checkFrameOrder` once, before the first frame, with the target ids
       taken from the ALREADY-ASSEMBLED rows — `renderTargetRows(swapFormat: GPUTextureFormat)`
       takes a required argument (`renderTargets.ts:201`), so a bare `renderTargetRows()` does
       not compile and a freshly derived list could be the wrong format's. Either thread
@@ -1053,24 +1053,24 @@ and call `frameProgram` — re-point onto `expandFrameOrder(FRAME_ORDER, …)`, 
       item 3 is about the composition's assembled rows. Place the call **after** the
       `phaseLocals` guard — Task 6's `startLoop.test.ts` fixture drives this phase with a
       stub that has no render targets, and the check must not be that fixture's problem.
-- [ ] Add `tests/services/engine/frame/frameOrderBoot.test.ts` with one case,
+- [x] Add `tests/services/engine/frame/frameOrderBoot.test.ts` with one case,
       `the app's FRAME_ORDER passes the boot check` — it is the repo test spec §5's file
       table calls for, the one that catches a typo aimed at any Layer's pass, and the reason
       the phase fixture does not need to exercise the check.
-- [ ] Delete the two equivalence cases from `expandFrameOrder.test.ts` in this commit —
+- [x] Delete the two equivalence cases from `expandFrameOrder.test.ts` in this commit —
       `frameProgram` no longer exists to mirror. The four behavioural cases stay.
-- [ ] **`frameProgram` cannot be deleted alone.** Two more test files call it and must move
+- [x] **`frameProgram` cannot be deleted alone.** Two more test files call it and must move
       in THIS commit or the branch lands red: `targetParity.test.ts` (3 cases) is deleted
       here, not in Task 10 — its leg 1 has no `target` left to check once Task 10 lands,
       leg 2 is the boot check's item 3, and leg 3 (`render-target row ids are unique`) moves
       verbatim into `tests/services/gpu/renderTargets.test.ts`; `timedSlotsGroupKeys.test.ts`
       (3 cases) is re-pointed onto `expandFrameOrder`, assertions unchanged.
-- [ ] `frameProgram.test.ts`'s 29 cases are the judgement call in this task. Adapt each onto
+- [x] `frameProgram.test.ts`'s 29 cases are the judgement call in this task. Adapt each onto
       `expandFrameOrder` or delete it as covered by Task 8's four behavioural cases — and say
       which, per case, in the task report: **name every assertion that moved and where it
       moved to**. A case silently dropped here is the exact failure Task 14's delta exists to
       catch.
-- [ ] `npm run typecheck` + `npm test` green. Commit.
+- [x] `npm run typecheck` + `npm test` green. Commit.
 
 **Reject if:** `executeFrame` still filters `CONTENT_PASSES`; a step-level gate moved or was
 "simplified"; the boot check runs per frame, or weakened so a stub fixture would pass it;
@@ -1123,33 +1123,35 @@ export function passSlabOf(order: readonly FrameStepSpec[]): ReadonlyMap<string,
 `blend` stays on the row: one `(target, slab)` group already mixes blends, so it is a
 property of the draw, not of the step (spec §4.1).
 
-- [ ] Delete the four fields and their ~45 lines of docblock. The material that survives the
+- [x] Delete the four fields and their ~45 lines of docblock. The material that survives the
       deletion is the `blend`↔pipeline-profile invariant; the `target`/`slab`/capture/phase
       prose is already in `frameOrder.ts` from Task 8 and must NOT be pasted back.
-- [ ] `createUpsamplePass` loses `target: 'hdr'` and `row.slab`; `UpsamplePassRow` loses
+- [x] `createUpsamplePass` loses `target: 'hdr'` and `row.slab`; `UpsamplePassRow` loses
       `slab`. Check each of the four callers for a now-unused import.
-- [ ] `pickProgram` takes its slab from `passSlabOf(FRAME_ORDER)`, built once. A `foreground`
+- [x] `pickProgram` takes its slab from `passSlabOf(FRAME_ORDER)`, built once. A `foreground`
       line's `bodyPasses` and the `lens` line yield `'body'`, which is the widening it reads
       today. Its `.filter()` still preserves array order; after Task 7 that order carries no
       contract, so do not re-state one.
-- [ ] `engine.ts:600`'s toggle-name list stops reading `.target`: the names it wants are the
+- [x] `engine.ts:600`'s toggle-name list stops reading `.target`: the names it wants are the
       passes FRAME_ORDER draws into a target other than `'volume'` — derive it from the order
-      in one expression, beside the existing call.
-- [ ] `slabs.ts` loses `matchesHdrPhase`; `renderStepTimingSlotName`'s phase arm becomes the
+      in one expression, beside the existing call. — superseded: derivation direction inverted
+      from the literal wording above; Task 10 review accepted the inversion as the better (d)
+      semantics (ledger).
+- [x] `slabs.ts` loses `matchesHdrPhase`; `renderStepTimingSlotName`'s phase arm becomes the
       step's authored `slot` suffix, appended with the same middle dot `groupKeyOf` uses.
       Every slot name stays byte-identical to `main` — `hdr·NEAR0`, `hdr·NEAR0·POST_LENSING`,
       `hdr·NEAR0·POST_FOREGROUND` — which is what keeps Task 14's perf pairing like-for-like
       and the DebugPanel rows stable across the branch.
-- [ ] `executeFrame.test.ts` is where this task's test work is: 27 of its 33 cases' sites
+- [x] `executeFrame.test.ts` is where this task's test work is: 27 of its 33 cases' sites
       assert a `skyCapture` or `hdrPhase` field that no longer exists. Re-point each onto the
       step's own `passes` list, or delete it where Task 8's expansion cases already cover the
       fact. Report **which assertions moved where** — same rule as Task 9, and the reason
       Task 14 no longer carries a pre-committed number.
-- [ ] Add ONE test, `tests/services/engine/frame/passSlabOf.test.ts`:
+- [x] Add ONE test, `tests/services/engine/frame/passSlabOf.test.ts`:
       `a foreground line's body passes resolve to the body widening` — `passSlabOf(FRAME_ORDER)`
       maps `'earth'` to `'body'` and `'star-catalog'` to NEAR0. It fails the day a pass moves
       between rosters and picking silently starts testing the wrong slab's depth.
-- [ ] `npm run typecheck` + `npm test` green. Commit (one commit for the row fields, one for
+- [x] `npm run typecheck` + `npm test` green. Commit (one commit for the row fields, one for
       the pick/timing derivations).
 
 **Reject if:** a pass row kept a positional field; `HdrPhase` survived; a timing-slot name
@@ -1190,21 +1192,21 @@ export type PassState = Pick<
 >;
 ```
 
-- [ ] The four `ContentPass` methods take `PassState`. Because the rows are
+- [x] The four `ContentPass` methods take `PassState`. Because the rows are
       contextually typed, only the 13 explicit annotations move; do not touch a pass body.
-- [ ] **The 9 helpers narrow too**, in the same commit. Each declares `state: EngineState`
+- [x] **The 9 helpers narrow too**, in the same commit. Each declares `state: EngineState`
       and is called from a pass body with that body's `state`, so leaving them wide re-widens
       the cut through the back door — the executor's pressure is then to widen `PassState`
       or cast, which voids it. Verified: none of the nine reads an excluded field, so the
       cut still closes. `earthSurfaceTier.ts:21-25` is why `PassState` Picks `tier`: it reads
       `state.tier` as the fallback for the committed surface tier, and it is the only route
       `tier` takes into a pass.
-- [ ] `executeFrame` and `pickProgram` keep passing the whole `EngineState` (a `Pick` accepts
+- [x] `executeFrame` and `pickProgram` keep passing the whole `EngineState` (a `Pick` accepts
       it). If either needed a cast, the Pick is missing a field the passes genuinely read —
       add the field, do not cast.
-- [ ] No test. The narrowing is a compile-time fact and `tsc` is its enforcement
+- [x] No test. The narrowing is a compile-time fact and `tsc` is its enforcement
       (`testing.md`, first anti-pattern).
-- [ ] `npm run typecheck` + `npm test` green. Commit.
+- [x] `npm run typecheck` + `npm test` green. Commit.
 
 **Reject if:** `PassState` includes `booted`, `requests`, `cameraRuntime`,
 `skyCubemapCapture` or `picking`; `tier` was dropped from it; a helper kept `EngineState`;
@@ -1240,23 +1242,23 @@ export const VISIBILITY_LAYER_ROWS = {
 } as const satisfies Record<VisibilityLayerKey, { readonly aggregate?: 'labels' }>;
 ```
 
-- [ ] All 18 `VisibilityLayerKey` members get a row, the five label ones in today's reveal
+- [x] All 18 `VisibilityLayerKey` members get a row, the five label ones in today's reveal
       order relative to each other (`expandVisibilityLayers.ts:33-35`) — `LAYER_GROUPS` is now
       a filter, so record order IS aggregate order.
-- [ ] `LAYER_GROUPS` becomes that filter, keeping its
+- [x] `LAYER_GROUPS` becomes that filter, keeping its
       `Record<string, readonly VisibilityLayerKey[]>` shape and its docblock's promise, which
       the compiler now keeps. The `?? [arg]` fallthrough is unchanged.
-- [ ] Add no new test unless the existing file lacks it: totality is the compiler's job here
+- [x] Add no new test unless the existing file lacks it: totality is the compiler's job here
       (a test that re-lists the label keys is a registry restatement). Check whether
       `expandVisibilityLayers(['labels'])` is already covered; if it is not, add the one case
       `the labels aggregate expands to atomic keys only` — no `'labels'` in the output, no
       duplicates. Report which branch you took.
-- [ ] **Ruling 8 (this task's):** spec §11 assigns this row to (c) on the grounds that label
+- [x] **Ruling 8 (this task's):** spec §11 assigns this row to (c) on the grounds that label
       membership will derive from present Layers' `labels()`. That seam does not exist until
       (d)/(e), so the bug class is closed here by classifying in data; when a Layer owns its
       label producers its rows move into it and `LAYER_GROUPS` becomes the concatenation. No
       second authority — `LAYER_GROUPS` reads the rows, it does not restate them.
-- [ ] `npm run typecheck` + `npm test -- expandVisibilityLayers` green. Commit, with the
+- [x] `npm run typecheck` + `npm test -- expandVisibilityLayers` green. Commit, with the
       backlog deletion in the same commit.
 
 **Reject if:** the backlog line was struck through rather than deleted; the aggregate's key
@@ -1277,15 +1279,15 @@ Per spec §15, the part of it this PR earns. Identifier and structure text only 
 strike-throughs, no `file:line` chasing, nothing under `docs/research/**`,
 `docs/grill-sessions/**`, `plans/completed/**` or `specs/completed/**` (plan 01, Task 5).
 
-- [ ] `CLAUDE.md`'s "Where to look" tree gains two lines beside `components/`:
+- [x] `CLAUDE.md`'s "Where to look" tree gains two lines beside `components/`:
       `compositions/  build-time engine compositions (app; reference engines later)` and
       `layers/  per-Layer modules — settings clusters today, whole Layers from PR (d)`.
       Keep each to one line; the tree is a map, not a manual.
-- [ ] `docs/RENDERER.md`: the frame-order paragraph. `frameProgram` is gone — the frame is
+- [x] `docs/RENDERER.md`: the frame-order paragraph. `frameProgram` is gone — the frame is
       `FRAME_ORDER` (authored order + roster) expanded per frame, with the boot check naming
       what a Layer forgot. Say where the file is; do not re-explain the step kinds, they are
       documented beside them.
-- [ ] Append the plan-time amendments to the spec's §13 decision log — same four-column
+- [x] Append the plan-time amendments to the spec's §13 decision log — same four-column
       shape (`#` / Question / Ruling / Folded into), rows `A1`-`A7`, identifier-level text
       only: the post-composite `(hdr, NEAR0)` line (#682); settings fragments keyed by
       CLUSTER, not by Layer; action types stay flat, guarded by
@@ -1293,7 +1295,7 @@ strike-throughs, no `file:line` chasing, nothing under `docs/research/**`,
       stays in the store (not a composition field); `dataUrl` deferred to a PR with a reader;
       `LayerCoreDeps`' field list pinned (Ruling 9), which §4.2 left open.
       One row each, no rationale prose — the Rulings section above is where that lives.
-- [ ] `npx prettier --write` on all three. Commit.
+- [x] `npx prettier --write` on all three. Commit.
 
 **Reject if:** a dated record was edited; the tree grew a paragraph; a §13 row carries
 rationale instead of a ruling; `add-data-source`'s SKILL.md was rewritten (spec §15 assigns
@@ -1301,8 +1303,8 @@ it to the PR that moves source rows, (d)).
 
 ## Task 14 — gate
 
-- [ ] `npm run typecheck` (both projects) — green.
-- [ ] `npm test` — green. **No pre-committed number.** Two large files are adapted rather
+- [x] `npm run typecheck` (both projects) — green.
+- [x] `npm test` — green. **No pre-committed number.** Two large files are adapted rather
       than added or deleted — `frameProgram.test.ts` (29 cases, Task 9) and
       `executeFrame.test.ts` (33 cases, 27 of them asserting a deleted field, Task 10) — and
       an arithmetic expectation over them would be a gate with a right answer nobody derived.
@@ -1311,9 +1313,9 @@ it to the PR that moves source rows, (d)).
       is behaviour neutrality, not test-count neutrality; the reasons are the gate, and an
       unexplained drop means a mirror test was adapted where it should have been deleted, or
       coverage was dropped where it should have moved.
-- [ ] `npm run build` — green. Load-bearing: the only check that links WESL, so it proves the
+- [x] `npm run build` — green. Load-bearing: the only check that links WESL, so it proves the
       settings and frame moves disturbed no `package::` specifier or `?static` path.
-- [ ] **Paired `npm run perf`, REQUIRED** (spec §9(c)). Start this worktree's dev server and
+- [x] **Paired `npm run perf`, REQUIRED** (spec §9(c)). Start this worktree's dev server and
       read its `Local:` line — in a worktree Vite auto-increments past 5173, and omitting
       `--url` silently measures another branch's server. For each scenario, baseline on
       `main` (a scratch worktree at `62e3ac11c` + its own dev server, alternating A-B-A-B per
@@ -1347,10 +1349,13 @@ it to the PR that moves source rows, (d)).
     `@group(0)`: inside the band away from any galaxy selects the Zone of Avoidance (the
     InfoCard names it), a galaxy drawn over the band still wins, a structure ring still
     selects its structure.
-- [ ] `git diff main --stat` — expect ~40 new files under `src/layers/**` +
+- [x] `git diff main --stat` — expect ~40 new files under `src/layers/**` +
       `src/@types/settings/**`, a net-negative `src/state/settings/`, a net-negative
       `src/services/engine/frame/` once `frameProgram` is gone, and **no** file outside the
-      File structure section.
+      File structure section. — superseded: two riders/rulings after the File structure
+      section was written land outside it — `frameProgram.ts` renamed to `timedSlots.ts`
+      (Task 10 rider, `npm run move-files`) and `CoreSettingsState`'s `debug` cluster split
+      into `DebugSettings.d.ts` (user ruling N4) — both accepted (ledger).
 
 **Reject if:** the perf pairing was skipped, run without `--url`, or quoted from per-layer
 rows; a visual pose was attested without being looked at; the test delta was reported as a
@@ -1362,30 +1367,32 @@ number without its per-difference reasons; the PR body claims a result that was 
 
 **Deliverable inventory**
 
-- [ ] `src/@types/settings/EngineSettingsState.d.ts` is a derived alias over
+- [x] `src/@types/settings/EngineSettingsState.d.ts` is a derived alias over
       `APP_SETTINGS_FRAGMENTS`; `CoreSettingsState` holds exactly the nine core clusters, and
       `rg -n "galaxyCatalogs|starCatalogs|structures|volumes" src/@types/settings/CoreSettingsState.d.ts`
       is empty.
-- [ ] `src/layers/<name>/settings/` exists for all ten Layers and contains the thirteen
+- [x] `src/layers/<name>/settings/` exists for all ten Layers and contains the thirteen
       cluster files and nothing else; `src/state/settings/initialState.ts` carries no Layer
       cluster literal.
-- [ ] Every settings action type string is byte-identical to `main` (the two container tests
+- [x] Every settings action type string is byte-identical to `main` (the two container tests
       that dispatch literals pass unedited).
-- [ ] `src/@types/engine/layer/Layer.d.ts`, its four sub-shape files (`LayerCoreDeps`,
+- [x] `src/@types/engine/layer/Layer.d.ts`, its four sub-shape files (`LayerCoreDeps`,
       `LayerUiSection`, `SagaFactory`, `PickResolverRow`), `defineLayer.ts` and
       `src/@types/engine/EngineComposition.d.ts` exist, with no field left open; `createEngine`
       takes a composition; `src/compositions/app.ts` is the only place the app's home is named.
-- [ ] No COSMO pick draw depends on an earlier row having bound `@group(0)`:
+- [x] No COSMO pick draw depends on an earlier row having bound `@group(0)`:
       `galaxyPickRenderer.bindCamera` is gone and `passes/index.ts` carries no ordering note.
-- [ ] `src/services/engine/frame/frameOrder.ts` is the ONE artifact stating both order and
+- [x] `src/services/engine/frame/frameOrder.ts` is the ONE artifact stating both order and
       roster; `frameProgram` is gone; `CONTENT_PASSES` states no order and no target;
       `rg -n "target:|slab:|skyCapture|hdrPhase" src/services/engine/frame/passes/*Pass.ts`
       is empty.
-- [ ] The boot check runs once in `startLoop` and throws naming the offending pass or target;
+- [x] The boot check runs once in `startLoop` and throws naming the offending pass or target;
       `tests/…/frameOrderBoot.test.ts` runs it over the real registry.
-- [ ] `docs/BACKLOG.md` no longer carries the `LAYER_GROUPS.labels` row, and ANY new
+- [x] `docs/BACKLOG.md` no longer carries the `LAYER_GROUPS.labels` row, and ANY new
       `VisibilityLayerKey` fails to compile until it joins `VISIBILITY_LAYER_ROWS`.
-- [ ] Spec §13 carries the seven amendment rows this plan ruled (Task 13).
+- [x] Spec §13 carries the seven amendment rows this plan ruled (Task 13). — superseded: final
+      count is nine (A1–A9) — A8 added by the final fix pass (I1/I2 record) and A9 by the
+      blend-deletion ruling, both after Task 13 landed (ledger).
 
 **Named observable behaviours** (Task 14's smoke)
 
@@ -1395,7 +1402,7 @@ number without its per-difference reasons; the PR body claims a result that was 
       of the planet.
 - [ ] `/#focus=body-sgr-a-star` — capture, lens, post-lens and post-foreground steps all
       fire; entering and leaving the fade band changes nothing but the lens itself.
-- [ ] The GPU-timings DebugPanel lists the same groups in the same order under the same
+- [x] The GPU-timings DebugPanel lists the same groups in the same order under the same
       names — no row renamed, added or dropped.
 - [ ] `full-survey` — a click in the zone-of-avoidance band selects the band; a galaxy over
       it still wins; a structure ring still selects its structure.
