@@ -86,7 +86,6 @@ function limbParams(body: PlanetBody): { strength: number; exponent: number } {
 
 export const texturedBodiesPass: ContentPass = {
   name: 'textured-bodies',
-  blend: 'opaque',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;

@@ -10,7 +10,6 @@ import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 export const flowFieldPass: ContentPass = {
   name: 'flow',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     // No cube committed → nothing to draw, even mid-fade.

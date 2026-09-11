@@ -986,7 +986,6 @@ export { drawStream };
 
 export const starCatalogPass: ContentPass = {
   name: 'star-catalog',
-  blend: 'additive',
 
   enabled: starCatalogVisible,
 

@@ -41,7 +41,6 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 
 export const markerLinesPass: ContentPass = {
   name: 'marker-lines',
-  blend: 'over',
 
   enabled(state, _ctx, _view) {
     if (state.gpu.markerLineRenderer === null) return false;

@@ -214,7 +214,6 @@ function nextPresent(
 
 export const fieldStarSpherePass: ContentPass = {
   name: 'field-star-sphere',
-  blend: 'opaque',
 
   enabled(state, ctx, _view) {
     // The presence query needs the live catalog; null (pre-bootstrap / GPU

@@ -44,7 +44,6 @@ import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
 
 export const labelsPass: ContentPass = {
   name: 'labels',
-  blend: 'over',
 
   enabled(state, _ctx, _view) {
     if (state.gpu.labelRenderer === null) return false;

@@ -154,7 +154,6 @@ function computeBodySurfaceFrame(
 
 export const earthPass: ContentPass = {
   name: 'earth',
-  blend: 'opaque',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== 'earth') return false;

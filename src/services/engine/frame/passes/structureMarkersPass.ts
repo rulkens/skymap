@@ -30,7 +30,6 @@ import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 
 export const structureMarkersPass: ContentPass = {
   name: 'structure-markers',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     if (state.gpu.structureMarkerRenderer === null) return false;

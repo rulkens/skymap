@@ -76,7 +76,6 @@ import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
 export const starSpheresPass: ContentPass = {
   name: 'star-spheres',
-  blend: 'opaque',
 
   enabled(state, ctx, _view) {
     // Handle first, distance second, partition last — see the module

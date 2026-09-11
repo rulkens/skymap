@@ -1,9 +1,8 @@
 /**
- * passes — the per-pass `enabled` gates and the one registry-wide invariant
- * left on the row (blend against the target its `FRAME_ORDER` line names),
- * against stub state + ctx with no GPU device. The spot-checked `draw` calls
- * pin that a pass threads the resolved `SlabView`'s `vp`/`viewportPx` rather
- * than reading `ctx.vp`/`ctx.canvasSize` directly.
+ * passes — the per-pass `enabled` gates against stub state + ctx with no GPU
+ * device. The spot-checked `draw` calls pin that a pass threads the resolved
+ * `SlabView`'s `vp`/`viewportPx` rather than reading `ctx.vp`/`ctx.canvasSize`
+ * directly.
  *
  * Encoder sequencing and the post-process chain live in `renderFrame.test.ts`.
  */
@@ -22,11 +21,8 @@ import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/mi
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
 import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
 import { starAggregateUpsamplePass } from '../../../../../src/services/engine/frame/passes/starAggregateUpsamplePass';
-import { sgrAStarLensingPass } from '../../../../../src/services/engine/frame/passes/sgrAStarLensingPass';
 import { structureMarkersPass } from '../../../../../src/services/engine/frame/passes/structureMarkersPass';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
-import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
-import { expandFrameOrder } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
@@ -183,61 +179,6 @@ describe('starAggregatesPass registry row', () => {
     // Producer and consumer are the same function by identity, so a frame can
     // never composite a stale offscreen the producer skipped clearing.
     expect(starAggregateUpsamplePass.enabled).toBe(starAggregatesPass.enabled);
-  });
-});
-
-describe('CONTENT_PASSES blend legality', () => {
-  it('every pass blends per the target its FRAME_ORDER line draws into', () => {
-    // The registry half of the target<->blend invariant — the renderer half,
-    // that the WebGPU pipeline's actual blend state matches, is covered
-    // elsewhere. A pass whose target/blend pair falls outside this table is a
-    // data-entry bug in its own file, not a new legal combination. The target
-    // is the frame order's to state, so the expansion is what supplies it.
-    const steps = expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
-      tone: { exposure: 1, curve: 4, hdrKnee: 0, hdrHeadroom: 0 },
-      bloomEnabled: true,
-      foregroundChain: [NEAR0, 2],
-      skyCubemapFacesToCapture: [],
-      lensBodySlabs: [2],
-    });
-    const seen = new Set<string>();
-    for (const step of steps) {
-      if (step.kind !== 'render') continue;
-      for (const pass of step.passes) {
-        seen.add(pass.name);
-        if (step.target === 'hdr') {
-          // hdr admits two exceptions to its additive default: the Milky Way
-          // dust pass extincts the emission already accumulated, and the Sgr A*
-          // lens pass composites premultiplied-OVER so a captured ray truly
-          // occludes the additive light behind it instead of adding to it
-          // (Blend.d.ts's own doc names 'over' legal for any target, not just
-          // the swap-chain rows). A third non-additive hdr row should fail this
-          // test and be a deliberate decision.
-          const expected =
-            pass === milkyWayPass ? 'multiply' : pass === sgrAStarLensingPass ? 'over' : 'additive';
-          expect(pass.blend).toBe(expected);
-        } else if (step.target === 'foreground:0') {
-          // The foreground group is opaque bodies EXCEPT three translucent
-          // overlays — the ring, Earth's cloud shell, Earth's in-scatter
-          // atmosphere — each drawn AFTER the opaque spheres, depth-tested
-          // against them but writing no depth, straight-alpha OVER (spec §8 /
-          // §8.3 / grill Q9). Their pipelines bake exactly that profile.
-          const translucent = ['rings', 'cloud-shell', 'atmosphere-shell'].includes(pass.name);
-          expect(pass.blend).toBe(translucent ? 'over' : 'opaque');
-        } else if (step.target === 'swap') {
-          expect(pass.blend).toBe('over');
-        } else {
-          // The four reduced-resolution offscreens (volume, zoa,
-          // star-aggregates, mw-aggregate) accumulate the way their contents
-          // would have accumulated straight into HDR — all additive sums, which
-          // is what makes "render small, bilinearly upsample, add" equivalent to
-          // drawing them full-res. A non-additive row breaks that equivalence.
-          expect(pass.blend).toBe('additive');
-        }
-      }
-    }
-    // A pass no step drew would slip past the table above unexamined.
-    expect(seen.size).toBe(CONTENT_PASSES.length);
   });
 });
 

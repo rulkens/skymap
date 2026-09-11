@@ -12,10 +12,11 @@
  * first and lower-index slabs on top of them IS inter-slab occlusion — no
  * separate occlusion mechanism is needed.
  *
- * This is one of three independent axes a content layer is positioned on
- * (the other two are the render target and the blend mode — see
- * `ContentPass` and the "Core concepts" section of the renderer
- * unification design). A pass does not name its slab: the `FRAME_ORDER`
+ * This is one of two independent axes a content layer is positioned on; the
+ * other is the render target (see `RenderTargetSpec` and the "Core concepts"
+ * section of the renderer unification design). The blend profile is the
+ * renderer pipeline's, not the row's. A pass does not name its slab: the
+ * `FRAME_ORDER`
  * line that names the pass carries a plain `slab: number` index into the
  * per-frame slab list. There is deliberately no `ContentSpace` wrapper
  * type, because the slab table already holds every per-slab attribute and

@@ -143,7 +143,6 @@ function cloudShellDraw(
 
 export const cloudShellPass: ContentPass = {
   name: 'cloud-shell',
-  blend: 'over',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;

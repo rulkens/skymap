@@ -35,7 +35,6 @@ import { starCatalogVisible, prepareStarCut, drawStream } from './starCatalogPas
 
 export const starAggregatesPass: ContentPass = {
   name: 'star-aggregates',
-  blend: 'additive',
 
   enabled: starCatalogVisible,
 

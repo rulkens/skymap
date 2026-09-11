@@ -36,7 +36,6 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 
 export const texturedDisksPass: ContentPass = {
   name: 'textured-disks',
-  blend: 'additive',
 
   enabled(state, _ctx, _view) {
     if (!state.settings.thumbnails.enabled) return false;

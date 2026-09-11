@@ -36,7 +36,6 @@ import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCache
 
 export const milkyWayAggregatePass: ContentPass = {
   name: 'milky-way-aggregate',
-  blend: 'additive',
 
   // Shared with the upsample consumer and the dust row — see
   // `milkyWayCloudLiveness` on why all three must answer identically.

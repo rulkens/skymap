@@ -2,8 +2,8 @@
  * diskRadiusRingPass — developer overlay that rings the SELECTED galaxy
  * at its catalog procedural-disk radius, lying in the disk plane.
  *
- * Lives among the swap-target layers (the `blend: 'over'` group within
- * `CONTENT_PASSES`, drawn post-tone-map) like the selection ring: it is
+ * Lives among the swap-target layers (drawn post-tone-map) like the
+ * selection ring: it is
  * screen overlay, not emissive scene content. Gated on
  * `state.settings.debug.overlays['disk-radius-ring']` plus a galaxy
  * selection, so a default-off build pays one boolean per frame.
@@ -35,7 +35,6 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 
 export const diskRadiusRingPass: ContentPass = {
   name: 'disk-radius-ring',
-  blend: 'over',
 
   enabled(state, _ctx, _view) {
     // Handle check first: no ring renderer means nothing to draw, and

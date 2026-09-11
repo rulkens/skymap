@@ -14,7 +14,6 @@ import type { UpsamplePassRow } from '../../../../@types/engine/frame/UpsamplePa
 export function createUpsamplePass(row: UpsamplePassRow): ContentPass {
   return {
     name: row.name,
-    blend: 'additive',
     enabled: row.enabled,
     draw(pass, view, ctx, state) {
       const handle = row.handleOf(state);

@@ -20,7 +20,6 @@ const ANTICENTER_DEG = 3;
 
 export const zoneOfAvoidancePass: ContentPass = {
   name: 'zone-of-avoidance',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     return deriveZoneOfAvoidanceLiveness(state, ctx) !== null;

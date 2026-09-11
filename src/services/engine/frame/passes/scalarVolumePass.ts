@@ -36,7 +36,6 @@ import { deriveVolumeLiveness } from '../volumeLiveness';
 
 export const scalarVolumePass: ContentPass = {
   name: 'scalar-volume',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     return deriveVolumeLiveness(state, ctx) !== null;

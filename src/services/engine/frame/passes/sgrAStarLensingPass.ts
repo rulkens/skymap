@@ -4,9 +4,10 @@
  * `FRAME_ORDER`'s `lens` line expands into one render step per body-m row in
  * the frame's lensing list, so `enabled`/`draw` run once per body and are
  * narrowed here to Sgr A*'s.
- * `blend: 'over'`, not the additive convention most `hdr` layers use: the
- * captured disc must truly OCCLUDE the starlight behind it, while per-pixel
- * alpha lets the earlier roster through where deflection is negligible.
+ * Its pipeline blends OVER, not the additive convention most `hdr` layers
+ * use: the captured disc must truly OCCLUDE the starlight behind it, while
+ * per-pixel alpha lets the earlier roster through where deflection is
+ * negligible.
  * No `drawPick` — Sgr A*'s pick stamp lives in `starPointsPass`.
  */
 
@@ -53,7 +54,6 @@ function bandAlphaFor(state: PassState, ctx: ReadyFrameContext): number {
 
 export const sgrAStarLensingPass: ContentPass = {
   name: 'sgr-a-star-lensing',
-  blend: 'over',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== SGR_A_STAR.id) {

@@ -136,7 +136,6 @@ function sgrAStarCaptionPickable(state: PassState, ctx: ReadyFrameContext): bool
 
 export const starPointsPass: ContentPass = {
   name: 'star-points',
-  blend: 'additive',
   // Deliberately OFF the sky-cubemap capture roster: the capture face pose
   // carries a placeholder `distance: 1` Mpc (`skyCubemapFaceContext.ts`)
   // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew

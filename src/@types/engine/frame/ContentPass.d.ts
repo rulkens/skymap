@@ -1,22 +1,21 @@
 /**
- * ContentPass — one renderer call, its blend, and an enable gate. WHERE it
- * draws is not here: `FRAME_ORDER` (`frameOrder.ts`) names the pass on the line
- * that states the target, the slab and the draw order, so a row and the order
- * cannot disagree.
+ * ContentPass — one renderer call and its enable gate. WHERE it draws is not
+ * here: `FRAME_ORDER` (`frameOrder.ts`) names the pass on the line that states
+ * the target, the slab and the draw order, so a row and the order cannot
+ * disagree.
  *
  * There is deliberately no `deps` bag argument: a pass reads its renderer
  * straight off `state.gpu.*`, which is the end-state the gpu-handle-nullability
  * backlog item wants.
  *
- * **Invariant:** `blend` must match the profile baked into the renderer
- * pipeline `draw` calls, against the format + depth of the target its
- * `FRAME_ORDER` line names. Where they differ the pass needs a renderer
- * variant — `drawPick` delegating to a dedicated pick renderer (rather than
- * reusing the main renderer) is the canonical example, because `r32uint` +
- * `depth24plus` is a second pipeline over the same geometry.
+ * **Invariant:** the blend profile baked into the renderer pipeline a `draw`
+ * call uses must suit the format + depth of the target its `FRAME_ORDER` line
+ * names. Where they differ the pass needs a renderer variant — `drawPick`
+ * delegating to a dedicated pick renderer (rather than reusing the main one)
+ * is the canonical example, because `r32uint` + `depth24plus` is a second
+ * pipeline over the same geometry.
  */
 
-import type { Blend } from './Blend';
 import type { SlabView } from './SlabView';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { PassState } from './PassState';
@@ -24,15 +23,6 @@ import type { PassState } from './PassState';
 export type ContentPass = {
   /** Stable identifier: what `FRAME_ORDER` names, and the timing-slot list derives. */
   readonly name: string;
-  /**
-   * How this pass's fragments combine with what's already in its target. It
-   * stays on the row rather than moving to the order line because one
-   * `(target, slab)` group already mixes blends — additive emission across
-   * most HDR passes, and `milkyWayPass`'s genuinely multiplicative dust pass,
-   * order-dependent against the emission it darkens (see `Blend.d.ts`). So it
-   * is a property of the draw, not of the step.
-   */
-  readonly blend: Blend;
   /**
    * Whether this pass should record draw commands this frame, given the
    * step's already-resolved `SlabView` — a pass on a body roster reads

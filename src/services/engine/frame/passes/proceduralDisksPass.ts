@@ -29,7 +29,6 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 
 export const proceduralDisksPass: ContentPass = {
   name: 'procedural-disks',
-  blend: 'additive',
 
   enabled(state, _ctx, _view) {
     if (!state.settings.thumbnails.enabled) return false;

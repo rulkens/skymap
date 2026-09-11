@@ -124,7 +124,6 @@ function ringDrawForBody(
 
 export const ringsPass: ContentPass = {
   name: 'rings',
-  blend: 'over',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;

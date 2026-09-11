@@ -121,7 +121,6 @@ function makeContentPass(init: {
 }): SpyPass {
   return {
     name: init.name,
-    blend: 'additive',
     enabled: vi.fn<ContentPass['enabled']>((_state, _ctx, view) =>
       init.enabledFor ? init.enabledFor(view) : (init.enabled ?? true),
     ),

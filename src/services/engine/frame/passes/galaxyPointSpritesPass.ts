@@ -23,7 +23,6 @@ import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 export const galaxyPointSpritesPass: ContentPass = {
   name: 'point-sprites',
-  blend: 'additive',
 
   enabled(_state, _ctx, _view) {
     return true;

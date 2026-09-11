@@ -159,7 +159,6 @@ function sgrAStarGlintBrightness(
 
 export const bodyGlintsPass: ContentPass = {
   name: 'body-glints',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     // Handle first (short-circuits before any ctx / state.data read — matches

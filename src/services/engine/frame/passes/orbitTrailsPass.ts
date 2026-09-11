@@ -90,7 +90,6 @@ const ORBIT_REACH_BY_REGION = orbitReachByRegion(SCENE_ANCHORS, ORBITAL_ELEMENTS
 
 export const orbitTrailsPass: ContentPass = {
   name: 'orbit-trails',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;

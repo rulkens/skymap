@@ -14,7 +14,6 @@ import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
 
 export const foregroundLabelsPass: ContentPass = {
   name: 'foreground-labels',
-  blend: 'over',
 
   enabled(state, _ctx, _view) {
     const renderer = state.gpu.foregroundLabelRenderer;

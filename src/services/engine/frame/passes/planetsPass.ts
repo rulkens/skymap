@@ -62,7 +62,6 @@ const staging = new Float32Array(INSTANCE_FLOATS);
 
 export const planetsPass: ContentPass = {
   name: 'planets',
-  blend: 'opaque',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;

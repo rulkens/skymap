@@ -51,7 +51,6 @@ const HORIZON_RADIUS_MPC = HORIZON_RADIUS_GPC * 1000;
 
 export const horizonShellPass: ContentPass = {
   name: 'horizon-shell',
-  blend: 'additive',
 
   enabled(_state, ctx, _view) {
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);

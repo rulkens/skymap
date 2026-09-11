@@ -74,7 +74,6 @@ const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
 
 export const milkyWayPass: ContentPass = {
   name: 'milky-way',
-  blend: 'multiply',
 
   // Shared with the aggregate producer and its upsample consumer — see
   // `milkyWayCloudLiveness` on why all three must answer identically.

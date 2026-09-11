@@ -20,7 +20,6 @@ const FILAMENT_HOT_TINT: Vec3 = [0.85, 0.75, 1.0];
 
 export const filamentsPass: ContentPass = {
   name: 'filaments',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     // Either-or on purpose: the setting is intent, opacity is the visual state,

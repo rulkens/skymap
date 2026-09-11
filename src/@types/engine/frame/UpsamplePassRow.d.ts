@@ -3,9 +3,7 @@
  * today's four upsample `ContentPass`s vary on (name, which offscreen to blit,
  * how to fetch this frame's handle, the shared liveness gate), plus the one
  * optional escape hatch — `postBlit` — for a consumer that draws more than a
- * blit into the same pass (ZoA's full-res captions). `blend: 'additive'` is
- * NOT here: every row shares it, so the factory bakes it in rather than
- * repeating it per row.
+ * blit into the same pass (ZoA's full-res captions).
  */
 
 import type { Upsample } from '../../rendering/Upsample';

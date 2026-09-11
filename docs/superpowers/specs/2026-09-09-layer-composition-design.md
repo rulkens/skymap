@@ -47,7 +47,7 @@ schema-generated UI (#4), the store stays fade-free.
 | Word            | Means                                                                                                                                                                                                                                                                                                              |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Layer**       | One source-type family as one module: `galaxyCatalog`, `starCatalog`, `structure`, `volume`, `body`, plus the singletons `filaments`, `flow`, `milkyWay`, `constellations`, `zoneOfAvoidance`. The unit of composition. Lives at `src/layers/<name>/`.                                                             |
-| **ContentPass** | Today's `ContentLayer`, renamed and narrowed: a name, a blend, and a gated draw. WHERE it draws is `FRAME_ORDER`'s business (§5), not the row's. A Layer owns several; `galaxyCatalog` owns five.                                                                                                                  |
+| **ContentPass** | Today's `ContentLayer`, renamed and narrowed: a name and a gated draw. WHERE it draws is `FRAME_ORDER`'s business (§5), not the row's. A Layer owns several; `galaxyCatalog` owns five.                                                                                                                            |
 | **core**        | What an engine has before any Layer: device/context, camera and input, the frame executor and pass order, render targets, tone-map/bloom/compositor, the pick program and selection encoding, the fade registry, the render scheduler, the asset queue and demand loop, the label mechanisms, tour/clip machinery. |
 | **composition** | The build-time list of Layers plus the boot parameters an engine needs (home, tier, data URL). One per app: main app, reference engine, workbench.                                                                                                                                                                 |
 | **source row**  | One `SourceEntry`, living in its Layer's `sources/` folder (§4.7): a datum _inside_ a Layer, not a unit of composition. A fifth survey is a row; LiDAR is a Layer.                                                                                                                                                 |
@@ -78,7 +78,6 @@ authored, because the two halves are one contract:
 // src/@types/engine/frame/ContentPass.d.ts, after
 export type ContentPass = {
   readonly name: string;
-  readonly blend: Blend;
   enabled(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
   draw(pass: GPURenderPassEncoder, view: SlabView, ctx: ReadyFrameContext, state: PassState): void;
   pickEnabled?(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
@@ -91,8 +90,11 @@ export type ContentPass = {
 };
 ```
 
-`blend` stays on the row: one `(target, slab)` group already mixes blends (`hdr` carries additive
-emission plus `milky-way`'s multiplicative dust), so it is a property of the draw, not of the step.
+`blend` is NOT on the row. It was, and the argument ran: one `(target, slab)` group already mixes
+blends (`hdr` carries additive emission plus `milky-way`'s multiplicative dust), so it is a property
+of the draw, not of the step. True — but that argues about WHERE a blend would live, and no code
+ever read the field; the blend each pass actually uses is baked into the renderer pipeline its
+`draw` call binds. `CompositeStep.blend`, which the executor does read, is a different type. §13 A9.
 
 ### 4.2 `Layer` and `defineLayer`
 
@@ -689,7 +691,7 @@ mis-transcribed roster line silently changes what draws. The startup check (§5)
 
 | Touchpoint                                                                    | Verdict                     | Note                                                                                                                                                                                                                                              |
 | ----------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ContentPass` rows → `passes(runtime)`                                        | **growth**                  | The row already carries `target`/`slab`/`blend` as data; only the closure binding is new.                                                                                                                                                         |
+| `ContentPass` rows → `passes(runtime)`                                        | **growth**                  | The row's identity is already data; only the closure binding is new.                                                                                                                                                                              |
 | `ASSET_WIRING` rows                                                           | **growth**                  | Concatenation over Layers is the shape `FADE_LAYERS` already has.                                                                                                                                                                                 |
 | `FADE_LAYERS` rows                                                            | **growth**                  | #7 already specified `fades?: readonly FadeLayer[]` per bundle.                                                                                                                                                                                   |
 | `GPU_HANDLE_ROWS` → `create` / `destroy`                                      | **bolt-on if kept as rows** | Keeping the table and adding an `owner: LayerName` field is the re-added key #12 bans, and would not make the renderers private. The table is replaced, not annotated.                                                                            |
@@ -791,6 +793,7 @@ Plan-time amendments, ruled during (c)'s execution, 2026-09-11:
 | A6  | `dataUrl` on `EngineComposition`               | Not a field: deferred to the PR with a reader, (g) at the earliest.                                                                                                                                                                                                                                                                                                                                      | §4.4        |
 | A7  | `LayerCoreDeps`' field list, left open by §4.2 | Pinned: `GpuHandleConstructDeps` minus `fontAtlases`, plus `store` and `requestRender`.                                                                                                                                                                                                                                                                                                                  | §4.2        |
 | A8  | `Layer.settings` vs the fragment tuple         | `Layer.settings` is typed `readonly SettingsFragmentLike[]`, which erases the literal cluster keys `ComposedClusters` needs, so in (c) `APP_SETTINGS_FRAGMENTS` stays a parallel authority with no check tying it to `composition.layers`; (d) must close it (const `Settings` type parameter on `Layer`, or a boot assert that every Layer's fragments ⊆ the tuple) before the first Layer value lands. | §4.2, §4.3  |
+| A9  | `ContentPass.blend`                            | Deleted from the pass row: the executor never read it (it reads `CompositeStep.blend`); the §4.1 argument for keeping it described a field with no consumer.                                                                                                                                                                                                                                             | §4.1        |
 
 ## 14. Corrections to the review
 

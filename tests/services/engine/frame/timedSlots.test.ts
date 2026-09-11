@@ -46,7 +46,6 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
 function fakePass(name: string): ContentPass {
   return {
     name,
-    blend: 'additive',
     enabled: vi.fn<ContentPass['enabled']>(() => true),
     draw: vi.fn<ContentPass['draw']>(),
   };
