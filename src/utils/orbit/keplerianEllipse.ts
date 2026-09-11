@@ -31,21 +31,13 @@
  *
  * ### The rotations
  *
- * The perifocal→reference-plane rotation is `R = Rz(Ω)·Rx(i)·Rz(ω)`; its first
- * two columns are the unit perifocal axes in the reference plane's coordinates —
- * `P̂` (toward periapsis) and `Q̂` (90° ahead in the orbit plane). Those are then
- * mapped into the scene's equatorial-world frame through the orbit's reference
- * plane basis (`elements.plane`, default `ECLIPTIC_FRAME`): each perifocal
- * component scales the frame's matching world axis. With `b = a·√(1 − e²)`:
+ * Orientation comes from `perifocalAxesWorld` — `P̂w` (toward periapsis) and
+ * `Q̂w` (90° prograde), already in equatorial world. All that is left here is
+ * the ellipse's own size, with `b = a·√(1 − e²)`:
  *
  *     A     = a · P̂w            (semi-major, toward periapsis)
  *     B     = b · Q̂w            (semi-minor, prograde)
  *     C_off = −a·e · P̂w         (focus → ellipse centre)
- *
- * Plain scalar arithmetic on the six rotation-matrix entries we actually need is
- * clearer and cheaper than assembling two 3×3 matrices and multiplying — this is
- * a static, once-per-orbit derivation, not a hot path, and the closed forms for
- * `P̂`/`Q̂` are standard.
  *
  * @param elements  The body's J2000 classical elements (a, e, i, Ω, ω, …).
  * @returns The three constant equatorial-world vectors of the ellipse, with the
@@ -53,24 +45,8 @@
  */
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
-import type { OrbitPlaneFrame } from '../../@types/scene/OrbitPlaneFrame';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { ECLIPTIC_FRAME } from '../../data/bodies/orbitPlaneFrames';
-
-/**
- * Map a vector's reference-plane components into the scene's equatorial-world
- * frame: `vx·xAxis + vy·yAxis + vz·normal`. For the ecliptic frame `xAxis` is
- * the shared equinox `[1,0,0]`; for a planet's equatorial frame all three axes
- * are tilted, so the general three-axis combination is used.
- */
-function frameToWorld(frame: OrbitPlaneFrame, vx: number, vy: number, vz: number): Vec3 {
-  const { xAxis, yAxis, normal } = frame;
-  return [
-    vx * xAxis[0] + vy * yAxis[0] + vz * normal[0],
-    vx * xAxis[1] + vy * yAxis[1] + vz * normal[1],
-    vx * xAxis[2] + vy * yAxis[2] + vz * normal[2],
-  ];
-}
+import { perifocalAxesWorld } from './perifocalAxesWorld';
 
 export function keplerianEllipse(elements: OrbitalElements): {
   centerOffsetMpc: Vec3;
@@ -79,26 +55,7 @@ export function keplerianEllipse(elements: OrbitalElements): {
 } {
   const a = elements.semiMajorMpc;
   const e = elements.eccentricity;
-  const cosI = Math.cos(elements.inclinationRad);
-  const sinI = Math.sin(elements.inclinationRad);
-  const cosO = Math.cos(elements.ascendingNodeRad);
-  const sinO = Math.sin(elements.ascendingNodeRad);
-  const cosW = Math.cos(elements.argPeriapsisRad);
-  const sinW = Math.sin(elements.argPeriapsisRad);
-
-  // Columns of R = Rz(Ω)·Rx(i)·Rz(ω), in the reference plane's coordinates.
-  // P̂ — the periapsis direction.
-  const px = cosO * cosW - sinO * cosI * sinW;
-  const py = sinO * cosW + cosO * cosI * sinW;
-  const pz = sinI * sinW;
-  // Q̂ — 90° ahead of periapsis in the orbit plane (prograde).
-  const qx = -cosO * sinW - sinO * cosI * cosW;
-  const qy = -sinO * sinW + cosO * cosI * cosW;
-  const qz = sinI * cosW;
-
-  const frame = elements.plane ?? ECLIPTIC_FRAME;
-  const pWorld = frameToWorld(frame, px, py, pz);
-  const qWorld = frameToWorld(frame, qx, qy, qz);
+  const { pWorld, qWorld } = perifocalAxesWorld(elements);
 
   const b = a * Math.sqrt(1 - e * e);
   const aE = a * e;
