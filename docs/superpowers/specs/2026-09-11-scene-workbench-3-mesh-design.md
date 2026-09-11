@@ -107,10 +107,10 @@ kept incumbent, two baked groups exist on disk and a splat re-bake is hours).
 | —   | `SceneAsset`/`GpuAsset` unions, `ASSET_LOADERS`, `assetCount`, `syntheticProbeScene`, probe ready-count | growth                                | rows / members                                                                                                                                        | none                                                                                                                                                                                                                                                                                                                                                                                          |            |
 
 A fifth prep floated at the checkpoint — making `writeColmapModel`'s LiDAR
-`points3D` seed optional — was **dropped** after verifying COLMAP 4.2's
-`point_triangulator` defaults to `--clear_points 1`: it discards every input point
-and recomputes image ids by filename, so the seed is harmless and no id sync is
-needed. `bakeMesh` keeps `bakeSplats`'s LiDAR-first precondition unchanged.
+`points3D` seed optional — was **dropped**, and §6.2 settled it the other way
+round: the seed is not merely harmless, it is the whole sparse model, so
+`bakeMesh` keeps `bakeSplats`'s LiDAR-first precondition and adds observations
+on top of it.
 
 **Packaging (user ruling at the checkpoint):** P1+P2 as their own PR before 3a's
 feature PR; P3+P4 as their own PR immediately after #685 merges, before 3a's
@@ -223,9 +223,10 @@ overflow silently splits it into several materials. `packMeshGlb`'s reader side
 `--max-texture-size` as the fix — the same one-material refusal PR #678's `buildMeshes`
 makes.
 
-**Verified in the first bake (§10 #1):** `SaveGLTF` writes scene coordinates raw —
-the export's node matrix is identity and its bbox matched the LiDAR's, +Z up. No
-axis conversion in the re-pack; this table stays true.
+**Verified on the hand-run prototype export (§10 #1), before any bake completed:**
+`SaveGLTF` writes scene coordinates raw — read back with `NodeIO`, the node matrix
+is identity and the POSITION bbox matched the LiDAR's, +Z up. No axis conversion in
+the re-pack; this table stays true.
 
 ## 6. Offline pipeline
 
@@ -304,7 +305,9 @@ CLI: `npm run bake-mesh -- [--group <id>] [--full-res] [--refine] [--reuse-glb]`
 5. **OpenMVS**, `runOpenMvs(tool, args)` per stage, cwd = workdir:
    - `InterfaceCOLMAP -i dense -o scene.mvs --image-folder images` (`--image-folder`
      is joined onto `-i`, so `dense/images` would become `dense/dense/images`)
-   - `DensifyPointCloud scene.mvs --resolution-level <1 | 0 with --full-res> --number-views 0`
+   - `DensifyPointCloud scene.mvs --resolution-level <1 | 0 with --full-res> --number-views 0
+--remove-dmaps 1`, with every `*.dmap` in the workdir deleted first: OpenMVS caches
+     depth maps by image _index_ and silently reuses stale ones, aborting mid-fusion
    - `ReconstructMesh scene_dense.mvs` (defaults: `--decimate 1`,
      `--remove-spurious 20`, `--smooth 2`) → `scene_dense_mesh.ply`
    - `RefineMesh scene_dense.mvs --mesh-file scene_dense_mesh.ply --resolution-level 1
@@ -587,8 +590,8 @@ copied path.
 
 ## 10. Settled and open questions
 
-1. **OpenMVS GLB axis convention** (§5) — SETTLED: raw scene coordinates, identity
-   node matrix, +Z up. The re-pack converts nothing.
+1. **OpenMVS GLB axis convention** (§5) — SETTLED on the hand-run prototype export:
+   raw scene coordinates, identity node matrix, +Z up. The re-pack converts nothing.
 2. **COLMAP cannot match our crops** — SETTLED, and it is why §6.2 has no matching
    stages. `Camera::HasBogusParams` rejects any principal point outside `[0,w]×[0,h]`,
    and a crop is a window of a much larger frame, so `cx, cy` land thousands of px
@@ -609,6 +612,6 @@ copied path.
   OBJ reader or shipping OpenMVS's file as-is.
 - Unlit mesh, `cullMode: 'none'`, opaque, no DisplayPanel section.
 - Draw order as a table (`SCENE_DRAW_ORDER`), one renderer bag owned by `Viewport`.
-- Prep P5 (optional `points3D`) dropped after verifying `point_triangulator`'s
-  `--clear_points` default.
+- Prep P5 (optional `points3D`) dropped — the LiDAR seed is the sparse model
+  (§6.2), not an optional initialisation.
 - One spec, two plans (3a mesh, 3b overlay), 3b after 3a merges.

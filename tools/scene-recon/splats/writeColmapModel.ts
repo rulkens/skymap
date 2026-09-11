@@ -2,9 +2,8 @@
  * Stages a known-pose COLMAP **text** model: one PINHOLE camera per photo, the
  * poses as camera←world rigid transforms, and the LiDAR cloud as points3D.
  * Header-free — COLMAP's readers skip `#` lines but never require them, and
- * Brush inherits that reader. With `observations` the cloud is projected into
- * every camera so OpenMVS gets the tracks it picks neighbour views and depth
- * ranges from — the LiDAR seed replacing feature matching entirely (spec §6.2).
+ * Brush inherits that reader. `observations` projects the cloud into every
+ * camera, which is the whole sparse model for `bakeMesh` (spec §6.2).
  *
  * The frame flip is the landmine: `PhotoPose.rotation` is group←camera as
  * (x, y, z, w); COLMAP wants the inverse, scalar-first, with the translation

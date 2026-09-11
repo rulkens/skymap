@@ -9,7 +9,7 @@
  * (`process.chdir` is undefined under `threads`; `vitest.config.ts` sets no
  * `pool` and v4 defaults to forks).
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -160,8 +160,14 @@ afterAll(() => {
  *  toolchains is one sequence rather than two independent ones. */
 let calls: string[][];
 
+/** A depth-map cache from a previous run, and whether it outlived the clear. */
+const STALE_DMAP = 'depth0000.dmap';
+let staleDmapAtDensify: boolean | undefined;
+
 beforeEach(() => {
   calls = [];
+  staleDmapAtDensify = undefined;
+  writeFileSync(join(workDir, STALE_DMAP), 'a previous run’s depth map');
   rmSync(join(root, 'public/data/geo3d/groups', SOENDERMARKEN.id, 'manifest.json'), {
     force: true,
   });
@@ -172,6 +178,9 @@ beforeEach(() => {
 function fakeOpenMvs(glb: () => Promise<Uint8Array>) {
   return async (tool: string, args: readonly string[]): Promise<void> => {
     calls.push([tool, ...args]);
+    if (tool === 'DensifyPointCloud') {
+      staleDmapAtDensify = existsSync(join(workDir, STALE_DMAP));
+    }
     if (tool !== 'TextureMesh') return;
     const out = args[args.indexOf('-o') + 1]!;
     const [bytes, sidecars] = withSidecarTextures(await glb(), out.replace(/\.glb$/, ''));
@@ -191,6 +200,17 @@ const DEPS = (glb: () => Promise<Uint8Array>) => ({
 });
 
 const boxGlb = () => packMeshGlb(boxGeometry());
+
+const DENSIFY_ARGV = [
+  'DensifyPointCloud',
+  'scene.mvs',
+  '--resolution-level',
+  '1',
+  '--number-views',
+  '0',
+  '--remove-dmaps',
+  '1',
+];
 
 const TEXTURE_MESH_ARGV = [
   'TextureMesh',
@@ -223,7 +243,7 @@ describe('bakeMesh', () => {
         'COLMAP',
       ],
       ['InterfaceCOLMAP', '-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'images'],
-      ['DensifyPointCloud', 'scene.mvs', '--resolution-level', '1', '--number-views', '0'],
+      DENSIFY_ARGV,
       ['ReconstructMesh', 'scene_dense.mvs'],
       TEXTURE_MESH_ARGV,
     ]);
@@ -239,6 +259,8 @@ describe('bakeMesh', () => {
       '0',
       '--number-views',
       '0',
+      '--remove-dmaps',
+      '1',
     ]);
   });
 
@@ -260,6 +282,14 @@ describe('bakeMesh', () => {
         arg === 'scene_dense_mesh.ply' ? 'scene_dense_mesh_refine.ply' : arg,
       ),
     ]);
+  });
+
+  it('clears OpenMVS’s depth-map cache before densifying', async () => {
+    await bakeMesh(SOENDERMARKEN, DEPS(boxGlb));
+
+    // The caches are keyed by image index, so a stale one is silently fed to
+    // whatever frame now holds that index — bake #2 aborted mid-fusion on it.
+    expect(staleDmapAtDensify).toBe(false);
   });
 
   it('re-encodes the staged CMYK frames and leaves the sRGB ones byte-identical', async () => {
