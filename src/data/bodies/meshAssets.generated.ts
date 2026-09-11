@@ -47,4 +47,56 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     attribution:
       'This work is based on "Flowers Petunia White" (https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by Marianne Goudriaan (https://sketchfab.com/mariannegoudriaan) licensed under CC-BY-4.0',
   },
+  voyager: {
+    key: 'voyager',
+    path: 'meshes/voyager.mesh',
+    boundingRadiusM: 14.544853697326353,
+    groundOffsetM: 4.791086139044178,
+    meanAlbedo: [0.094881, 0.091128, 0.086404],
+    triangleCount: 20378,
+    normalMapSubstituted: true,
+    source: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
+    licence: 'Public domain (NASA)',
+    attribution:
+      'NASA / Michael D. Carbajal (NASA Headquarters), "Voyager Probe (B)" (https://science.nasa.gov/3d-resources/voyager-probe-b/)',
+  },
+  perseverance: {
+    key: 'perseverance',
+    path: 'meshes/perseverance.mesh',
+    boundingRadiusM: 1.9895822183466751,
+    groundOffsetM: 0.9125953290707832,
+    meanAlbedo: [0.029306, 0.028947, 0.02882],
+    triangleCount: 100000,
+    normalMapSubstituted: true,
+    source: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
+    licence: 'Public domain (NASA)',
+    attribution:
+      'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
+  },
+  curiosity: {
+    key: 'curiosity',
+    path: 'meshes/curiosity.mesh',
+    boundingRadiusM: 2.478983700137988,
+    groundOffsetM: 0.8980751155787591,
+    meanAlbedo: [0.07534, 0.073796, 0.072482],
+    triangleCount: 48384,
+    normalMapSubstituted: true,
+    source: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
+    licence: 'Public domain (NASA)',
+    attribution:
+      'Brian Kumanchik, NASA/JPL-Caltech, "Curiosity Rover (MSL) (Clean)" (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)',
+  },
+  mer: {
+    key: 'mer',
+    path: 'meshes/mer.mesh',
+    boundingRadiusM: 1.2008228521056163,
+    groundOffsetM: 0.574356440144803,
+    meanAlbedo: [0.109407, 0.091606, 0.06557],
+    triangleCount: 32562,
+    normalMapSubstituted: true,
+    source: 'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
+    licence: 'Public domain (NASA)',
+    attribution:
+      'NASA/JPL-Caltech, "Mars Exploration Rover - Spirit and Opportunity" (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)',
+  },
 };
