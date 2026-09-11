@@ -25,17 +25,15 @@ import { lidarFloorZM } from './lidar/lidarFloorZM';
 import { packSplats } from './pack/packSplats';
 import { readGaussianPly } from './splats/readGaussianPly';
 import { writeColmapModel } from './splats/writeColmapModel';
-import { nextManifest } from './manifest/nextManifest';
-import { upsertGroup } from './manifest/upsertGroup';
+import { assetArtifactUrl, groupAssetDir, groupManifestPath } from './manifest/geo3dLayout';
+import { publishAsset } from './manifest/publishAsset';
 import { jpegSizePx } from '../utils/io/jpegSizePx';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { lonLatBoundsToEnuM } from '../utils/scene/lonLatBoundsToEnuM';
 import { skraafotoHarvestDir } from '../utils/skraafoto/skraafotoHarvestDir';
-import { writeJsonAtomic } from '../utils/io/writeJsonAtomic';
 import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { SkraafotoStacItem } from './@types/SkraafotoStacItem';
 import type { GaussianSplatAsset } from '../scene-workbench/@types/GaussianSplatAsset';
-import type { GroupRegistry } from '../scene-workbench/@types/GroupRegistry';
 import type { PhotoPose } from '../scene-workbench/@types/PhotoPose';
 import type { SceneManifest } from '../scene-workbench/@types/SceneManifest';
 import type { Vec3 } from '../../src/@types/math/Vec3';
@@ -45,7 +43,6 @@ import type { Vec3 } from '../../src/@types/math/Vec3';
 const ASSET_ID = 'splats';
 /** `bakeLidar.ts`'s asset id — its `points.bin` is this bake's points3D seed. */
 const LIDAR_ASSET_ID = 'lidar';
-const GEO3D_DIR = 'public/data/geo3d';
 const PLY_NAME = 'final.ply';
 const POINT_SAMPLE_TARGET = 200_000;
 const TRAIN_ITERS = 30000;
@@ -69,7 +66,7 @@ export async function bakeSplats(
    *  never credits the geometry to whatever version happens to be installed. */
   options: { readonly reusePly?: boolean } = {},
 ): Promise<GaussianSplatAsset> {
-  const pointsBinPath = join(GEO3D_DIR, 'groups', group.id, 'assets', LIDAR_ASSET_ID, 'points.bin');
+  const pointsBinPath = join(groupAssetDir(group.id, LIDAR_ASSET_ID), 'points.bin');
   if (!existsSync(pointsBinPath)) {
     throw new Error(
       `bakeSplats: no LiDAR seed at ${pointsBinPath} — run \`npm run bake-lidar\` first; ` +
@@ -88,7 +85,7 @@ export async function bakeSplats(
 
   const colmapDir = join(collectionDir, `colmap-${group.id}`);
   const plyPath = join(colmapDir, PLY_NAME);
-  const manifestPath = join(GEO3D_DIR, 'groups', group.id, 'manifest.json');
+  const manifestPath = groupManifestPath(group.id);
 
   let brushVersion: string;
   if (options.reusePly) {
@@ -210,7 +207,7 @@ export async function bakeSplats(
     );
   }
 
-  const assetDir = join(GEO3D_DIR, 'groups', group.id, 'assets', ASSET_ID);
+  const assetDir = groupAssetDir(group.id, ASSET_ID);
   await mkdir(assetDir, { recursive: true });
   await writeFile(join(assetDir, 'splats.bin'), packSplats(kept, shDegree));
 
@@ -229,21 +226,10 @@ export async function bakeSplats(
       ],
     },
     splatCount: kept.length,
-    artifactUrl: `geo3d/groups/${group.id}/assets/${ASSET_ID}/splats.bin`,
+    artifactUrl: assetArtifactUrl(group.id, ASSET_ID, 'splats.bin'),
   };
 
-  await writeJsonAtomic<SceneManifest>(manifestPath, (current) =>
-    nextManifest(current, group, asset),
-  );
-
-  const registryPath = join(GEO3D_DIR, 'scenes.json');
-  await writeJsonAtomic<GroupRegistry>(registryPath, (current) =>
-    upsertGroup(current ?? { formatVersion: 1, groups: [] }, {
-      id: group.id,
-      name: group.name,
-      manifestUrl: `geo3d/groups/${group.id}/manifest.json`,
-    }),
-  );
+  await publishAsset(group, asset);
 
   return asset;
 }

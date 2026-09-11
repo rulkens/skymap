@@ -20,16 +20,13 @@ import { lidarPipelineStages } from './lidar/lidarPipelineStages';
 import { readPdalCsv } from './lidar/readPdalCsv';
 import { orthoVrtXml } from './ortho/orthoVrtXml';
 import { packPoints, type ScenePoint } from './pack/packPoints';
-import { nextManifest } from './manifest/nextManifest';
-import { upsertGroup } from './manifest/upsertGroup';
+import { assetArtifactUrl, groupAssetDir } from './manifest/geo3dLayout';
+import { publishAsset } from './manifest/publishAsset';
 import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { writeJsonAtomic } from '../utils/io/writeJsonAtomic';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { PointCloudAsset } from '../scene-workbench/@types/PointCloudAsset';
-import type { SceneManifest } from '../scene-workbench/@types/SceneManifest';
-import type { GroupRegistry } from '../scene-workbench/@types/GroupRegistry';
 
 /** The GeoDanmark harvest is z19-only (see `geodanmarkTileSource.ts`) — the
  *  only level with a tile tree to colorize from. */
@@ -37,7 +34,6 @@ const GEODANMARK_LEVEL = 19;
 /** Stable across re-runs, so a re-bake upserts the one asset rather than
  *  accumulating siblings under a fresh id. */
 const ASSET_ID = 'lidar';
-const GEO3D_DIR = 'public/data/geo3d';
 
 /**
  * DHM Punktsky flight date. The LAS headers' own `creation_year`/`creation_doy`
@@ -108,7 +104,7 @@ export async function bakeLidar(
     throw new Error(`bakeLidar: pdal pipeline produced zero points for group "${group.id}"`);
   }
 
-  const assetDir = join(GEO3D_DIR, 'groups', group.id, 'assets', ASSET_ID);
+  const assetDir = groupAssetDir(group.id, ASSET_ID);
   await mkdir(assetDir, { recursive: true });
   await writeFile(join(assetDir, 'points.bin'), packPoints(points));
 
@@ -123,22 +119,10 @@ export async function bakeLidar(
       pipeline: [{ step: 'pdal', version: deps.pdalVersion() }],
     },
     pointCount: points.length,
-    artifactUrl: `geo3d/groups/${group.id}/assets/${ASSET_ID}/points.bin`,
+    artifactUrl: assetArtifactUrl(group.id, ASSET_ID, 'points.bin'),
   };
 
-  const manifestPath = join(GEO3D_DIR, 'groups', group.id, 'manifest.json');
-  await writeJsonAtomic<SceneManifest>(manifestPath, (current) =>
-    nextManifest(current, group, asset),
-  );
-
-  const registryPath = join(GEO3D_DIR, 'scenes.json');
-  await writeJsonAtomic<GroupRegistry>(registryPath, (current) =>
-    upsertGroup(current ?? { formatVersion: 1, groups: [] }, {
-      id: group.id,
-      name: group.name,
-      manifestUrl: `geo3d/groups/${group.id}/manifest.json`,
-    }),
-  );
+  await publishAsset(group, asset);
 
   return asset;
 }
