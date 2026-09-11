@@ -3,64 +3,24 @@
  * per-mesh buffers/textures/uniforms in a `Map`. Unlike the sphere bodies it
  * draws the AUTHORED surface, in metres: unculled (glTF `doubleSided` sheets —
  * see the pipeline's `cullMode`), no proxy inflation, no analytic silhouette
- * recovery. Two module-level tables — `VERTEX_SLOTS` and `TEXTURE_SLOTS` — are
- * the single home for the vertex layout and the material bindings, so the
- * pipeline descriptor and the upload path cannot disagree about a stride, a
- * location or a format. An id with no asset draws nothing.
+ * recovery. The vertex layout and the material bindings come from
+ * `MESH_VERTEX_SLOTS` / `MESH_TEXTURE_SLOTS`, so the pipeline descriptor and
+ * the upload path cannot disagree about a stride, a location or a format. An id
+ * with no asset draws nothing.
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MeshBodyRenderer } from '../../../../@types/rendering/MeshBodyRenderer';
+import type { MeshResources } from '../../../../@types/rendering/MeshResources';
 import type { MeshAsset } from '../../../../@types/data/mesh/MeshAsset';
-import { MESH_BODY_UNIFORM_FLOATS } from '../../../../utils/gpu/packMeshBodyUniforms';
+import { MESH_BODY_UNIFORM_BYTES } from '../../../../data/mesh/meshBodyUniformLayout';
+import { MESH_TEXTURE_SLOTS } from '../../../../data/mesh/meshTextureSlots';
+import { MESH_VERTEX_SLOTS } from '../../../../data/mesh/meshVertexSlots';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/meshBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/meshBody/fragment.wesl?static';
-
-const UNIFORM_BUFFER_SIZE = MESH_BODY_UNIFORM_FLOATS * 4;
-
-/**
- * The vertex layout, one buffer slot per de-interleaved attribute array.
- *
- * `MeshAsset` arrives as SoA (`decodeMesh` splits the file's 48-byte interleaved
- * stride apart), and every other body renderer — earth, texturedBody,
- * cloudShell — binds one slot per attribute array. Re-interleaving here would
- * cost a CPU pass per upload purely to undo the decoder; the shader sees the
- * same `@location`s either way.
- */
-const VERTEX_SLOTS = [
-  { field: 'positions', bytes: 12, format: 'float32x3' },
-  { field: 'normals', bytes: 12, format: 'float32x3' },
-  { field: 'tangents', bytes: 16, format: 'float32x4' }, // w = handedness
-  { field: 'uvs', bytes: 8, format: 'float32x2' },
-] as const satisfies readonly {
-  field: keyof MeshAsset;
-  bytes: number;
-  format: GPUVertexFormat;
-}[];
-
-/** The three baked material maps. Only albedo is sRGB — a metal-rough or normal
- *  map decoded through sRGB returns wrong roughness and wrong slopes. */
-const TEXTURE_SLOTS = [
-  { field: 'albedo', binding: 2, format: 'rgba8unorm-srgb' },
-  { field: 'metalRough', binding: 3, format: 'rgba8unorm' },
-  { field: 'normalMap', binding: 4, format: 'rgba8unorm' },
-] as const satisfies readonly {
-  field: keyof MeshAsset;
-  binding: number;
-  format: GPUTextureFormat;
-}[];
-
-type MeshResources = {
-  vertexBuffers: GPUBuffer[];
-  indexBuffer: GPUBuffer;
-  indexCount: number;
-  textures: GPUTexture[];
-  uniformBuffer: GPUBuffer;
-  bindGroup: GPUBindGroup;
-};
 
 /**
  * @param reversedZ selects this slab's depth convention (single-sourced in
@@ -89,10 +49,10 @@ export function createMeshBodyRenderer(
         binding: 0,
         // The vertex stage reads mvp + model; the fragment reads the rest.
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform', minBindingSize: UNIFORM_BUFFER_SIZE },
+        buffer: { type: 'uniform', minBindingSize: MESH_BODY_UNIFORM_BYTES },
       },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-      ...TEXTURE_SLOTS.map((slot) => ({
+      ...MESH_TEXTURE_SLOTS.map((slot) => ({
         binding: slot.binding,
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' as const },
@@ -112,7 +72,7 @@ export function createMeshBodyRenderer(
     vertex: {
       module: vsModule,
       entryPoint: 'vs',
-      buffers: VERTEX_SLOTS.map((slot, location) => ({
+      buffers: MESH_VERTEX_SLOTS.map((slot, location) => ({
         arrayStride: slot.bytes,
         attributes: [{ shaderLocation: location, offset: 0, format: slot.format }],
       })),
@@ -184,7 +144,7 @@ export function createMeshBodyRenderer(
       meshes.delete(id);
     }
 
-    const vertexBuffers = VERTEX_SLOTS.map((slot) => {
+    const vertexBuffers = MESH_VERTEX_SLOTS.map((slot) => {
       const data = asset[slot.field];
       const buffer = device.createBuffer({
         label: `meshBody-${slot.field}-${id}`,
@@ -202,13 +162,13 @@ export function createMeshBodyRenderer(
     });
     device.queue.writeBuffer(indexBuffer, 0, asset.indices);
 
-    const textures = TEXTURE_SLOTS.map((slot) =>
+    const textures = MESH_TEXTURE_SLOTS.map((slot) =>
       uploadTexture(id, slot.field, slot.format, asset[slot.field]),
     );
 
     const uniformBuffer = device.createBuffer({
       label: `meshBody-uniform-${id}`,
-      size: UNIFORM_BUFFER_SIZE,
+      size: MESH_BODY_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -224,7 +184,7 @@ export function createMeshBodyRenderer(
         entries: [
           { binding: 0, resource: { buffer: uniformBuffer } },
           { binding: 1, resource: sampler },
-          ...TEXTURE_SLOTS.map((slot, i) => ({
+          ...MESH_TEXTURE_SLOTS.map((slot, i) => ({
             binding: slot.binding,
             resource: textures[i]!.createView(),
           })),

@@ -14,10 +14,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  packMeshBodyUniforms,
-  MESH_BODY_UNIFORM_FLOATS,
-} from '../../../src/utils/gpu/packMeshBodyUniforms';
+import { packMeshBodyUniforms } from '../../../src/utils/gpu/packMeshBodyUniforms';
+import { MESH_BODY_UNIFORM_FLOATS } from '../../../src/data/mesh/meshBodyUniformLayout';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 

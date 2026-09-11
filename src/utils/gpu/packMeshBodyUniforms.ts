@@ -9,9 +9,7 @@
 
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
-
-/** f32 count of `MeshBodyUniforms` — 176 bytes. */
-export const MESH_BODY_UNIFORM_FLOATS = 44;
+import { MESH_BODY_UNIFORM_FLOATS } from '../../data/mesh/meshBodyUniformLayout';
 
 export function packMeshBodyUniforms(args: {
   readonly mvp: Float32Array;
