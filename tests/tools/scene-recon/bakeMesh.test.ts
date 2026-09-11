@@ -35,9 +35,9 @@ import { readMeshGlb } from '../../../tools/scene-workbench/src/scene/readMeshGl
 import type { SceneManifest } from '../../../tools/scene-workbench/@types/SceneManifest';
 
 const ITEM_ID = '2025_84_40_1_0049_00002495_100mm';
-/** A second harvested frame, staged as a CMYK JPEG: 19 of the real 2025 nadir
- *  frames are, and OpenCV refuses those outright (spec §6.2). */
-const CMYK_ITEM_ID = '2025_84_40_1_0049_00002496_100mm';
+/** A second harvested frame with four components, as older harvests hold: libjpeg
+ *  tags those CMYK and OpenCV refuses them outright (spec §6.2). */
+const FOUR_BAND_ITEM_ID = '2025_84_40_1_0049_00002496_100mm';
 const FIXTURE = fileURLToPath(new URL(`../../fixtures/skraafoto/${ITEM_ID}.json`, import.meta.url));
 
 /** A real 1×1 PNG, because the re-pack hands the texture to sharp to encode. */
@@ -129,8 +129,8 @@ beforeAll(async () => {
   const item = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { id: string };
   writeFileSync(join(collectionDir, `${ITEM_ID}.json`), JSON.stringify(item));
   writeFileSync(
-    join(collectionDir, `${CMYK_ITEM_ID}.json`),
-    JSON.stringify({ ...item, id: CMYK_ITEM_ID }),
+    join(collectionDir, `${FOUR_BAND_ITEM_ID}.json`),
+    JSON.stringify({ ...item, id: FOUR_BAND_ITEM_ID }),
   );
   // Real JPEGs, not header stubs: the staging step reads every frame with sharp.
   const canvas = { ...FRAME_PX, background: { r: 90, g: 120, b: 60, alpha: 1 } };
@@ -139,7 +139,7 @@ beforeAll(async () => {
     .toBuffer();
   writeFileSync(join(collectionDir, `${ITEM_ID}.jpg`), rgbJpeg);
   writeFileSync(
-    join(collectionDir, `${CMYK_ITEM_ID}.jpg`),
+    join(collectionDir, `${FOUR_BAND_ITEM_ID}.jpg`),
     await sharp({ create: { ...canvas, channels: 4 } })
       .toColourspace('cmyk')
       .jpeg()
@@ -310,7 +310,7 @@ describe('bakeMesh', () => {
     await bakeMesh(SOENDERMARKEN, DEPS(boxGlb));
 
     // The caches are keyed by image index, so a stale one is silently fed to
-    // whatever frame now holds that index — bake #2 aborted mid-fusion on it.
+    // whatever frame now holds that index, aborting mid-fusion.
     expect(staleDmapAtDensify).toBe(false);
   });
 
@@ -318,10 +318,10 @@ describe('bakeMesh', () => {
     await bakeMesh(SOENDERMARKEN, DEPS(boxGlb));
 
     // `-b 1 -b 2 -b 3` with the JPEG→RGB conversion off: the four components
-    // are raw bands, and converting them as CMYK is what muddied bake #3.
+    // are raw bands, and converting them as CMYK muddies the frame.
     // `realpathSync`: the bake resolves the workdir against cwd, and macOS's
     // tmpdir is a symlink, so the argv carries the `/private` spelling.
-    const stagedFrame = join(realpathSync(workDir), 'sparse-in/images', `${CMYK_ITEM_ID}.jpg`);
+    const stagedFrame = join(realpathSync(workDir), 'sparse-in/images', `${FOUR_BAND_ITEM_ID}.jpg`);
     expect(gdalCalls).toEqual([
       [
         '--config',

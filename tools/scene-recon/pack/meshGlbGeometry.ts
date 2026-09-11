@@ -25,8 +25,8 @@ export function meshGlbGeometry(document: Document): TexturedMeshGeometry {
     );
   if (drawn.length !== 1) {
     throw new Error(
-      `meshGlbGeometry: expected exactly one primitive, found ${drawn.length} — re-bake with a ` +
-        `--max-texture-size the atlas fits in, so TextureMesh emits a single material`,
+      'meshGlbGeometry: expected exactly one primitive — re-bake with a ' +
+        '--max-texture-size the atlas fits in, so TextureMesh emits a single material',
     );
   }
   const { node, primitive } = drawn[0]!;

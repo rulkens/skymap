@@ -219,7 +219,7 @@ OpenMVS's own GLB (`TextureMesh --export-type glb`, `SaveGLTF` in `libs/MVS/Mesh
 is the _input_ to the re-pack, never shipped: its texture is PNG (4–10× larger for a
 photo atlas), its structure is whatever that version emits, and a `--max-texture-size`
 overflow silently splits it into several materials. `packMeshGlb`'s reader side
-(`readMeshGlb`, §7.1) **refuses** more than one primitive or texture, naming
+(`meshGlbGeometry`, §7.1) **refuses** more than one primitive or texture, naming
 `--max-texture-size` as the fix — the same one-material refusal PR #678's `buildMeshes`
 makes.
 
@@ -236,25 +236,14 @@ Mac-native, CPU-only, thin `tsx` wrappers shelling to installed binaries, the
 
 ### 6.1 Toolchain (installed 2026-09-11, Apple M1 Max, macOS 15.7)
 
-Recorded in `tools/scene-workbench/README.md` (a "Reconstruction toolchain" section)
-— the user-facing provenance note for the two tools, with versions and the exact
-build recipe:
+- **COLMAP 4.2.0** — brew bottle, built without GPU support, which costs nothing
+  here: the bake calls it only as `image_undistorter`.
+- **OpenMVS v2.4.0** (2026-01-20 release) — no formula, built from source against
+  VCG, which the tagged release does not vendor.
 
-- **COLMAP 4.2.0** — `brew install colmap` (bottle, "without GPU support": every
-  `colmap` call passes `--FeatureExtraction.use_gpu 0` / `--FeatureMatching.use_gpu 0`;
-  4.x renamed the `SiftExtraction`/`SiftMatching` option groups).
-- **OpenMVS v2.4.0** (2026-01-20 release) — no formula; built from source:
-  `git clone --branch v2.4.0 --depth 1 https://github.com/cdcseacave/openMVS.git`
-  plus `git clone https://github.com/cdcseacave/VCG.git` (VCG is **not** a submodule
-  of the tagged release, `-DVCG_ROOT` is mandatory); brew deps `boost cgal eigen
-nanoflann libomp opencv@4` (**OpenCV 5 does not build** — its `traits.hpp` already
-  specialises the `DataType<>` templates OpenMVS's `Types.inl` defines; `opencv@4`
-  keg via `-DOpenCV_DIR=/opt/homebrew/opt/opencv@4/lib/cmake/opencv4`); cmake flags
-  `-DOpenMVS_USE_CUDA=OFF -DOpenMVS_USE_OPENMP=ON -DOpenMVS_BUILD_VIEWER=OFF
--DCMAKE_INSTALL_PREFIX=$HOME/.local/opt/openmvs`; binaries on PATH from
-  `~/.local/opt/openmvs/bin`. The README records whatever further deviations the
-  build needed (Eigen 5.0.1 is installed; OpenMVS asks for ≥ 3.4 — if it fails, the
-  fix and its reason go in the README, not in a patched upstream tree).
+The build recipe, its brew deps and the deviations it needed live in
+`tools/scene-workbench/README.md`'s "Reconstruction toolchain" section — the
+user-facing provenance note, and the only copy.
 
 `bakeMesh` probes both before staging anything (`colmapVersion()` /
 `openMvsVersion()`, the `spawnSync`-probe-then-throw shape of `brushVersion()`,
@@ -263,8 +252,9 @@ nanoflann libomp opencv@4` (**OpenCV 5 does not build** — its `traits.hpp` alr
 ### 6.2 `tools/scene-recon/bakeMesh.ts`
 
 ```ts
-export type ColmapRunner = (args: readonly string[]) => Promise<void>;
-export type OpenMvsRunner = (tool: string, args: readonly string[]) => Promise<void>;
+type ColmapRunner = (args: readonly string[]) => Promise<void>;
+type OpenMvsRunner = (tool: string, args: readonly string[]) => Promise<void>;
+type GdalRunner = (args: readonly string[]) => Promise<void>;
 
 export async function bakeMesh(
   group: SceneGroupDefinition,
@@ -272,6 +262,7 @@ export async function bakeMesh(
     readonly runCct: CctRunner;
     readonly runColmap: ColmapRunner;
     readonly runOpenMvs: OpenMvsRunner;
+    readonly runGdal: GdalRunner;
     readonly colmapVersion: () => string;
     readonly openMvsVersion: () => string;
   },
@@ -372,16 +363,22 @@ export type TexturedMeshGeometry = {
 };
 export function packMeshGlb(geometry: TexturedMeshGeometry): Promise<Uint8Array>;
 
-// tools/scene-workbench/src/scene/readMeshGlb.ts — browser + Node (bakeMesh's re-pack input)
+// tools/scene-recon/pack/meshGlbGeometry.ts — the refusals and the accessor walk, IO-free
+export function meshGlbGeometry(document: Document): TexturedMeshGeometry;
+
+// tools/scene-workbench/src/scene/readMeshGlb.ts — the browser's WebIO wrapper
 export function readMeshGlb(buffer: ArrayBuffer): Promise<TexturedMeshGeometry>;
 ```
 
-Both are `@gltf-transform/core` (`WebIO` in the reader — it fetches nothing for a
-self-contained GLB, so it runs under vitest too; `NodeIO`-free by design so one
-reader serves the bake and the viewer). `readMeshGlb` throws on zero or more than one
-primitive, or more than one texture, or a missing `TEXCOORD_0`. Node transforms on
-the path to the primitive are **applied** to the positions on read (gltf-transform's
-`getWorldMatrix`), so OpenMVS's export and our own subset read the same way.
+All three are `@gltf-transform/core`. `meshGlbGeometry` takes an already-parsed
+document, which keeps the IO choice at the edge: `readMeshGlb` is the viewer's
+`WebIO` wrapper (it fetches nothing for a self-contained GLB, so it runs under
+vitest too), while the bake reads OpenMVS's export with `NodeIO` — the only IO that
+resolves the sidecar texture URI beside it. `meshGlbGeometry` throws on zero or more
+than one primitive, or more than one texture, or a missing `TEXCOORD_0`. Node
+transforms on the path to the primitive are **applied** to the positions on read
+(gltf-transform's `getWorldMatrix`), so OpenMVS's export and our own subset read the
+same way.
 
 `packMeshGlb` is `async` because gltf-transform's `writeBinary` is; it stamps the
 `extras.frame` note (§5).
@@ -574,12 +571,15 @@ Judged by `docs/superpowers/conventions/testing.md`'s one question.
 - **`readMeshGlb` applies a node transform** — a primitive under a node translated by
   `[10, 0, 0]` reads back with `+10` on every x (the OpenMVS-input contract).
 - **`bakeMesh` orchestration**, `tests/tools/scene-recon/bakeMesh.test.ts` mirroring
-  `bakeSplats.test.ts` (stubbed runners, tmpdir cwd, `forks` pool): the COLMAP stage
-  order and flags (`use_gpu 0`, `PINHOLE`, `single_camera_per_image`); `--full-res`
+  `bakeSplats.test.ts` (stubbed runners, tmpdir cwd, `forks` pool): the stage order
+  and pinned argv (both seam-levelling flags off, `--remove-dmaps 1`) and that the
+  `.dmap` cache is cleared before densifying; the four-band staging transcode's
+  `gdal_translate` argv, with the three-channel frames left alone; `--full-res`
   → `--resolution-level 0`; `--refine` inserts `RefineMesh` and texture reads its
-  output; `--reuse-glb` runs no runner and keeps the manifest's version stamps; a
-  fabricated OpenMVS GLB with two textures fails the bake with the flag hint; the
-  published asset's `triangleCount` matches the fabricated geometry.
+  output; the sidecar-URI export re-packs; a fabricated OpenMVS GLB with two textures
+  fails the bake with the flag hint; `--reuse-glb` runs no runner and keeps the
+  manifest's version stamps; the published asset's `triangleCount` matches the
+  fabricated geometry.
 - **`assetCount` mesh row** — extend the existing test with one `mesh` asset → `tris`.
 - **`SCENE_DRAW_ORDER` covers every `GpuAsset` kind exactly once** — the one table
   test that catches a kind added to the union but not to the order (`tsc` proves the
@@ -608,9 +608,9 @@ copied path.
    themselves are right — triangulating COLMAP's own verified matches by hand under
    the model's convention gave 0.15 px median reprojection, 100 % in front — so the
    LiDAR seed replaces the whole matching pipeline rather than working around it.
-3. **Time budget** (§6.3) — measured, then recorded in the README.
-4. **Eigen 5.0.1 against OpenMVS's Eigen ≥ 3.4 requirement** — resolved by the build
-   log before 3a's first bake; recorded either way.
+3. **Time budget** (§6.3) — measured; the README carries the first crop bake's record.
+4. **Eigen 5.0.1 against OpenMVS's Eigen ≥ 3.4 requirement** — a non-issue: OpenMVS
+   built unpatched against it.
 
 ## 11. Decisions this spec made
 

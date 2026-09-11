@@ -58,8 +58,9 @@ script or `/scene-workbench/` subpath.
    adds OpenMVS's RefineMesh, and `--reuse-glb` re-packs the last OpenMVS
    export instead of reconstructing, carrying the manifest's colmap/openmvs
    stamps forward exactly as `--reuse-ply` does. Needs COLMAP and OpenMVS (next
-   section), `gdal_translate` and PROJ's `cct` on PATH, the skråfoto harvest on
-   disk (no token is read), and `bake-lidar` to have run for the group: its
+   section) and PROJ's `cct` on PATH (plus `gdal_translate`, but only for harvests
+   older than the fetcher's three-band change), the skråfoto harvest on disk
+   (no token is read), and `bake-lidar` to have run for the group: its
    `points.bin` _is_ the sparse model, projected into every frame, so COLMAP
    never matches a feature — it refuses to triangulate crops whose principal
    point lies outside the image.
@@ -68,11 +69,12 @@ script or `/scene-workbench/` subpath.
    CMYK; OpenMVS's seam levelling is disabled, because on this data it clips
    every atlas patch to a solid colour; and OpenMVS's `depth*.dmap` cache in
    the workdir is cleared per run. OpenMVS writes the atlas as a sidecar PNG,
-   which the re-pack folds into the GLB as a JPEG (quality 90, at most 8192 px).
+   which the re-pack folds into the GLB as a JPEG (quality 90; TextureMesh caps
+   the atlas at 8192 px).
    First Søndermarken-crop bake (2026-09-11, 61 frames, Apple Silicon,
-   resolution level 1): **20.0 min end to end** — DensifyPointCloud ~11 min for
-   1,329,368 dense points, ReconstructMesh 323,251 vertices / 646,423 faces,
-   TextureMesh ~4 min into a 4096² atlas, published `mesh.glb` ≈ 20 MB.
+   resolution level 1): **23.3 min end to end** — DensifyPointCloud for
+   1,321,360 dense points, ReconstructMesh 323,985 vertices / 647,898
+   triangles, TextureMesh into one atlas, published `mesh.glb` 19.9 MB.
 7. `npm run scene-workbench`
 
 Every fetch/bake CLI above takes `--group <id>` (default `soendermarken`);

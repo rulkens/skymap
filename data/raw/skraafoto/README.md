@@ -97,8 +97,12 @@ One `gdal_translate` per frame, reading the COG's own overview pyramid over
 `/vsicurl/` — no whole-file download:
 
 ```
-gdal_translate /vsicurl/<assets.data.href> -srcwin <x0> <y0> <w> <h> -outsize <w'> <h'> -of JPEG <dest>
+gdal_translate /vsicurl/<assets.data.href> -srcwin <x0> <y0> <w> <h> -outsize <w'> <h'> -b 1 -b 2 -b 3 -of JPEG <dest>
 ```
+
+`-b 1 -b 2 -b 3` keeps only the colour bands: harvests taken before that flag
+went in hold four-band JPEGs, which `bake-mesh`'s staging transcode re-reads
+band-wise on the way into the reconstruction.
 
 `tools/scene-recon/poses/frameWindow.ts` computes `<x0> <y0> <w> <h>` and the
 output size, and is the **only** place that decides them — `bakeSplats`

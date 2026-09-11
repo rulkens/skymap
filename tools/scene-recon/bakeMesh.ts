@@ -8,7 +8,6 @@
  * `-o`: v2.4.0 names an output after its *input's* stem, so `--refine` would
  * otherwise move the GLB the re-pack reads. The runners are injected so a
  * re-pack runs with neither toolchain installed; `main()` wires the real ones.
- * The four-component staged frames are raw R,G,B + a fourth band, not CMYK.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -36,24 +35,23 @@ import type { SkraafotoStacItem } from './@types/SkraafotoStacItem';
 import type { SceneManifest } from '../scene-workbench/@types/SceneManifest';
 import type { TexturedMeshAsset } from '../scene-workbench/@types/TexturedMeshAsset';
 
-export type ColmapRunner = (args: readonly string[]) => Promise<void>;
-export type OpenMvsRunner = (tool: string, args: readonly string[]) => Promise<void>;
-export type GdalRunner = (args: readonly string[]) => Promise<void>;
+type ColmapRunner = (args: readonly string[]) => Promise<void>;
+type OpenMvsRunner = (tool: string, args: readonly string[]) => Promise<void>;
+type GdalRunner = (args: readonly string[]) => Promise<void>;
 
 /** Stable across re-runs, so a re-bake upserts the one asset. */
 const ASSET_ID = 'mesh';
 /** `bakeLidar.ts`'s asset id — its `points.bin` is this bake's sparse model. */
 const LIDAR_ASSET_ID = 'lidar';
 const POINT_SAMPLE_TARGET = 200_000;
-/** One number for the atlas ceiling: past it TextureMesh splits the mesh across
- *  materials (`meshGlbGeometry` refuses that), and the re-pack must not undo the cap. */
+/** The atlas ceiling: past it TextureMesh splits the mesh across materials,
+ *  which `meshGlbGeometry` refuses. */
 const MAX_TEXTURE_PX = 8192;
 
 /** libjpeg tags the four components `gdal_translate` wrote from the 4-band COG
  *  as CMYK, but they are raw R,G,B + a fourth band: converting the "CMYK" to
- *  sRGB (what sharp would do) muddies the frame, and OpenMVS's seam levelling
- *  between those and the correct frames then blows out across the atlas. Take
- *  the first three components as they are. */
+ *  sRGB (what sharp would do) muddies the frame. Take the first three
+ *  components as they are. */
 const GDAL_RGB_ARGV = [
   '--config',
   'GDAL_JPEG_TO_RGB',
@@ -89,7 +87,7 @@ type Stage = {
 };
 
 /** The workdir every stage runs in, `bakeMesh`'s and `main()`'s runners alike. */
-export function meshWorkDir(group: SceneGroupDefinition): string {
+function meshWorkDir(group: SceneGroupDefinition): string {
   return join(skraafotoHarvestDir(rawDataPath('skraafoto.dir'), group), `mvs-${group.id}`);
 }
 
@@ -280,15 +278,7 @@ export async function bakeMesh(
   // sidecar URI beside the GLB, and only NodeIO resolves one.
   const geometry = meshGlbGeometry(await new NodeIO().read(glbPath));
 
-  const atlas = sharp(geometry.image.bytes);
-  const { width = 0, height = 0 } = await atlas.metadata();
-  const jpeg =
-    Math.max(width, height) > MAX_TEXTURE_PX
-      ? await atlas
-          .resize({ width: MAX_TEXTURE_PX, height: MAX_TEXTURE_PX, fit: 'inside' })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      : await atlas.jpeg({ quality: 90 }).toBuffer();
+  const jpeg = await sharp(geometry.image.bytes).jpeg({ quality: 90 }).toBuffer();
 
   const assetDir = groupAssetDir(group.id, ASSET_ID);
   await mkdir(assetDir, { recursive: true });
