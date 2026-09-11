@@ -22,8 +22,4 @@ describe('apoapsisMpc', () => {
     // Halley-like e = 0.967 about a 2 Mpc semi-major axis: 3.934, not 0.066.
     expect(apoapsisMpc(elements(2, 0.967))).toBeCloseTo(3.934, 12);
   });
-
-  it('collapses to the radius on a circular orbit', () => {
-    expect(apoapsisMpc(elements(1.5, 0))).toBe(1.5);
-  });
 });

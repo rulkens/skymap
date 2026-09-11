@@ -3,13 +3,12 @@
  * TIME-INVARIANT outer envelope.
  *
  * Per region, not one scene-wide maximum, because a reach is only ever subtracted
- * from a camera distance measured against the SAME anchor. The two collapse into
- * one number only while every orbit hangs off the origin-anchored Sun; fold a
- * Galactic Centre orbit into a single maximum and the solar-system trails inherit
- * ITS envelope, so the orbit-trail cull stops firing for cameras nowhere near it.
+ * from a camera distance measured against the SAME anchor. Fold a Galactic Centre
+ * orbit into a single maximum and the solar-system trails inherit ITS envelope, so
+ * the orbit-trail cull stops firing for cameras nowhere near it.
  *
  * The tables are parameters so the far-anchored case is testable before such an
- * orbit is seeded; `focusResolveOrder` covers a focus chain of any depth.
+ * orbit is seeded.
  */
 
 import type { AnchorBody } from '../../@types/scene/AnchorBody';

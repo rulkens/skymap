@@ -5,8 +5,6 @@
  * `shaders/bodies/meshBody/io.wesl`'s header.
  */
 
-/** f32 count of `MeshBodyUniforms`. */
 export const MESH_BODY_UNIFORM_FLOATS = 44;
 
-/** Byte size of `MeshBodyUniforms` — 176 bytes. */
 export const MESH_BODY_UNIFORM_BYTES = MESH_BODY_UNIFORM_FLOATS * 4;

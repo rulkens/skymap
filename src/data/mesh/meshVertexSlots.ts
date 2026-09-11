@@ -3,10 +3,9 @@
  * de-interleaved attribute array, in `@location` order.
  *
  * `decodeMesh` splits the file's 48-byte interleaved stride into the SoA arrays
- * of `MeshAsset`, which is also what every other body renderer — earth,
- * texturedBody, cloudShell — binds. The renderer's pipeline descriptor and its
- * upload path both read this table, so they cannot disagree about a stride, a
- * location or a format.
+ * of `MeshAsset`. The renderer's pipeline descriptor and its upload path both
+ * read this table, so they cannot disagree about a stride, a location or a
+ * format.
  */
 
 import type { MeshAsset } from '../../@types/data/mesh/MeshAsset';

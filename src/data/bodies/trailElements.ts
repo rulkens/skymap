@@ -1,8 +1,7 @@
 /**
- * TRAIL_ELEMENTS — the orbital elements that draw a conic trail. A mesh body's
- * own 400 km ring around Earth is clutter at every zoom where the body itself
- * is invisible, so the mesh bodies draw no trail (ruling: none, not a thinned
- * one) while every other row keeps its conic.
+ * TRAIL_ELEMENTS — the orbital elements that draw a conic trail: every row but
+ * the mesh bodies', whose 400 km ring is clutter at every zoom where the body
+ * itself is invisible.
  */
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';

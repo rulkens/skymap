@@ -1,13 +1,8 @@
 /**
- * near0OverlayClip — the NEAR0 overlays (captions, leader lines, selection
- * ring) anchor in eye-relative Mpc, so a body 31 m away projects to clip
- * `w ≈ 1e-21`, and the rasterizer floors `w` near 1e-20 (≈ 309 m at these
- * units): the overlay then shrinks uniformly about the screen centre, worse
- * the closer you get. Clip is homogeneous, so scaling the whole matrix moves
- * `w` with `x/y/z` and leaves NDC exact — these matrices emit clip METRES.
- * Any world length divided by that `w` must carry the same factor: the label
- * em (`createLabelRenderer`'s `clipScale`, wired in `gpuHandleRegistry`) and
- * the ring's near-plane pin.
+ * near0OverlayClip — NEAR0 overlay matrices, rescaled to emit clip METRES.
+ * NDC and depth are invariant under a uniform clip scale; any world length a
+ * consumer divides by that `w` must carry the same factor.
+ * Derivation: docs/RENDERER.md, "NEAR0 overlay clip `w` must stay ≫ 1e-20".
  */
 
 import { SCALE_UNITS } from '../../../data/scaleUnits';

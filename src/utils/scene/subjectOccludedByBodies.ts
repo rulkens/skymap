@@ -1,15 +1,12 @@
 /**
  * subjectOccludedByBodies — does an opaque body stand between the eye and the
- * thing an overlay names?
- *
- * The overlay passes attenuate per PIXEL (shaders/lib/sceneDepth.wesl), which
- * blanks a caption whose subject is in FRONT of the body its text happens to
- * lie over. This is the per-subject gate deciding whether that per-pixel rule
- * applies at all: the CLOSED segment eye→subject against each body sphere,
- * eye-relative so the metre-scale geometry survives f64 in the Mpc frame.
- *
- * A sphere that CONTAINS the subject is skipped: that is the body's own
- * caption (anchored at its centre), which must never occlude itself.
+ * thing an overlay names? The per-SUBJECT gate deciding whether the overlay
+ * passes' per-PIXEL attenuation (shaders/lib/sceneDepth.wesl) applies at all,
+ * which is what keeps a caption whose subject is in FRONT of a body from being
+ * blanked by that body's disc. The test is the CLOSED segment eye→subject,
+ * eye-relative so metre-scale geometry survives f64 in the Mpc frame. A sphere
+ * CONTAINING the subject is skipped: a body's own caption, anchored at its
+ * centre, must never occlude itself.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -43,10 +40,9 @@ export function subjectOccludedByBodies(input: {
     const sz = pz - cz;
     if (sx * sx + sy * sy + sz * sz <= rr) continue;
 
-    // Closest approach of the segment to the centre. The projection parameter
-    // is clamped to [0, 1], which is what makes a subject NEARER than the body
-    // measure from the subject rather than from the infinite line — the whole
-    // point of the fix.
+    // Closest approach of the segment to the centre. Clamping the projection
+    // parameter to [0, 1] is what makes a subject NEARER than the body measure
+    // from the subject rather than from the infinite line.
     const t = Math.min(1, Math.max(0, (cx * px + cy * py + cz * pz) / pp));
     const dx = t * px - cx;
     const dy = t * py - cy;

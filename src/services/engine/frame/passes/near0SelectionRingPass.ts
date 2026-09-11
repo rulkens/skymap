@@ -145,12 +145,9 @@ export const near0SelectionRingPass: ContentPass = {
     if (alpha <= 0) return;
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
-    // centre. Uses the slab's f64 `vp`, rescaled to clip metres and narrowed
-    // HERE at the GPU-upload boundary (`rebaseViewProj` stays f64 Mpc for
-    // consumers that must invert it). The rescale is this pass's own because
-    // the ring renderer is shared with the COSMO sibling, which must not carry
-    // it. Everything below reads the ring's size in PIXELS, which the shader
-    // re-multiplies by `clip.w` — so only the near pin sees the unit change.
+    // centre, then rescale to clip metres (`near0OverlayClip`) and narrow HERE,
+    // at the GPU-upload boundary: the rescale is this pass's own because the
+    // ring renderer is shared with the COSMO sibling, which must not carry it.
     const rebasedVp = near0OverlayVpF32(rebaseViewProj(view.slab.vp, view.camPos));
 
     // Keep the centre between the slab's planes — BOTH can be crossed. The
