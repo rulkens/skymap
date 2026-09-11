@@ -98,7 +98,7 @@ function makeState(
     // read unconditionally past the ready gate now) get an empty registry, so
     // every fixture below stays a 2-row (NEAR0+COSMO) slab table, matching
     // what every assertion in this file was written against.
-    data: { bodies: { earth: null, planets: [], stars: [] } },
+    data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
     settings: {
       starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
       bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },

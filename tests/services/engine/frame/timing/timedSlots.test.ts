@@ -46,7 +46,7 @@ describe('the real registry slot list', () => {
     // This fixture passes no lensing row, so the `lens` line emits nothing and
     // the POST_LENSING line merges back into the roster above it — which is why
     // `body-glints` trails the roster under the bare `hdr·NEAR0` key rather than
-    // billing its own. The chain leads with a body row (index 2) so the six
+    // billing its own. The chain leads with a body row (index 2) so the seven
     // body-drawn foreground passes get a step of their own, ahead of the
     // still-NEAR0 star spheres.
     expect(timedSlotsOf(program({ bloomEnabled: true, foregroundChain: [2, NEAR0] }))).toEqual([
@@ -84,6 +84,7 @@ describe('the real registry slot list', () => {
       'cloud-shell·BODY[0]',
       'planets·BODY[0]',
       'textured-bodies·BODY[0]',
+      'mesh-bodies·BODY[0]',
       'rings·BODY[0]',
       'atmosphere-shell·BODY[0]',
       'foreground:0·BODY[0]',

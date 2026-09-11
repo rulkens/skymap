@@ -196,6 +196,7 @@ function makeProgressState(): EngineState {
       flow: stubSlot('flow'),
       // Empty keyed family: installLoadProgress walks it like points.
       bodyTextures: new Map(),
+      meshBodies: new Map(),
     },
     subsystems: { loadProgress: null },
   } as unknown as EngineState;
@@ -272,7 +273,7 @@ function makeSyntheticFallbackState(): {
     settings: { galaxyCatalogs: { items } } as never,
     requests: new Set<string>(),
     gpu: { galaxyPointRenderer: { totalCount: () => 99 } },
-    assetSlots: { points: assetSlotPoints, bodyTextures: new Map() },
+    assetSlots: { points: assetSlotPoints, bodyTextures: new Map(), meshBodies: new Map() },
     // `createSyntheticFallback` calls `reevaluateDemand`, which enqueues onto
     // this rather than calling `slot.load()` directly.
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },

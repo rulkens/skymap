@@ -35,11 +35,11 @@
  * ### Targets owned internally this phase
  *
  * The `RenderTargetSpec` / renderTargets table doesn't carry pick rows yet, so
- * this program allocates its own `pick:cosmo` (r32uint + depth24plus) and
- * `pick:near0` (r32uint + depth32float) targets, lazily and resize-aware, one
- * per slab that actually has an enabled pickable layer. A slab with no pickable
- * layer is never allocated — `pick:near0` exists only while a near-field
- * pickable (the Milky-Way impostor or the Gaia star catalog) passes its
+ * this program allocates its own `pick:cosmo` (r32uint + depth24plus),
+ * `pick:near0` and `pick:overlay` (r32uint + depth32float) targets, lazily and
+ * resize-aware, one per slab that actually has an enabled pickable layer. A slab
+ * with no pickable layer is never allocated — `pick:near0` exists only while a
+ * near-field pickable (the Milky-Way impostor or the Gaia star catalog) passes its
  * visibility gate; on a cosmic-zoom frame neither is enabled and it stays unallocated.
  *
  * ### Retained GPU memory is O(1) in body-row count, not O(rows ever seen)
@@ -49,8 +49,8 @@
  * row's texel is copied to its OWN staging buffer before the next row's pass
  * re-clears the shared texture — safe because one `GPUCommandEncoder`'s
  * commands execute in recorded order. Retained pick-texture memory is
- * therefore bounded at THREE viewport-sized pairs total (cosmo, near0,
- * body), not one per body row — the shape that regressed to ≈500 MB on a
+ * therefore bounded at FOUR viewport-sized pairs total (cosmo, near0,
+ * overlay, body), not one per body row — the shape that regressed to ≈500 MB on a
  * six-body Retina scene (branch-review B1). `renderForDebug()` instead needs
  * every active row's FULL raster alive at once, so it keeps one target PER
  * row in `debugBodyTargets`, keyed by slab index and reused/evicted per call
@@ -66,8 +66,9 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
-import { slabViewOf, foregroundChainOrder, isBodySlabIndex, COSMO } from './slabs';
+import { slabViewOf, foregroundChainOrder, isBodySlabIndex, COSMO, NEAR0 } from './slabs';
 import { passSlabOf } from './passSlabOf';
+import { OVERLAY_PICK_SLAB } from './overlayPickSlab';
 import { FRAME_ORDER } from './frameOrder';
 import { frontmostPick } from '../../../utils/picking/frontmostPick';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
@@ -89,6 +90,7 @@ const NEAR0_DEPTH_FORMAT: GPUTextureFormat = 'depth32float';
 
 /** Human-readable `RenderTargetSpec.id` for a slab's pick target. */
 function pickTargetId(slabIndex: number): string {
+  if (slabIndex === OVERLAY_PICK_SLAB) return 'pick:overlay';
   return slabIndex === COSMO ? 'pick:cosmo' : 'pick:near0';
 }
 
@@ -96,7 +98,9 @@ function pickTargetId(slabIndex: number): string {
  * Depth format for a slab's pick target — see the format constants above.
  * Exported because every pipeline drawing into that slab's pick pass must
  * declare the SAME format, so the target and its pipelines read one source
- * (`gpuHandleRegistry` sizes the label pick pipelines from it).
+ * (`gpuHandleRegistry` sizes the label pick pipelines from it). The overlay
+ * lands on the NEAR0 branch by construction: its one occupant is the NEAR0
+ * caption stamp, whose pipeline is built from `pickDepthFormat(NEAR0)`.
  */
 export function pickDepthFormat(slabIndex: number): GPUTextureFormat {
   return slabIndex === COSMO ? COSMO_DEPTH_FORMAT : NEAR0_DEPTH_FORMAT;
@@ -125,10 +129,10 @@ export function createPickProgram(deps: {
 }): PickProgram {
   const { device, canvas, state, passes } = deps;
 
-  // COSMO/NEAR0 pick targets + staging buffers, allocated lazily per slab and
-  // recreated on viewport change — body rows use `bodyPickTarget` instead, so
-  // this map stays capped at 2 entries. A slab with no pickable layer is
-  // never inserted, which is what keeps `pick:near0` unallocated at N=1.
+  // COSMO/NEAR0/overlay pick targets + staging buffers, allocated lazily per
+  // slab and recreated on viewport change — body rows use `bodyPickTarget`
+  // instead, so this map stays capped at 3 entries. A slab with no pickable
+  // layer is never inserted, which is what keeps `pick:near0` unallocated at N=1.
   const slabTargets = new Map<number, PickSlabTarget>();
   // Staging buffers are size-invariant (256 bytes, one texel) and keyed per
   // real slab index, including body rows — persisting across resizes (unlike
@@ -309,7 +313,10 @@ export function createPickProgram(deps: {
   }
 
   // Pickable layers grouped by slab, in the near→far order `frontmostPick`
-  // needs. Reuses `foregroundChainOrder`'s distance ordering (the key the
+  // needs, behind the overlay group: an overlay row's pixels composite after
+  // the whole slab chain (`ContentPass.pickTarget`), so its stamp reads first —
+  // a rank no distance key can carry, the caption's subject and the disc it
+  // covers being different rows. Reuses `foregroundChainOrder`'s ordering (the key the
   // colour chain already sorts NEAR0 + body rows by, slabs.ts — including its
   // unknown-far rule for a NEAR0 that resolved no sphere, which this path
   // relies on: the star catalog and MW impostor are pickable without one)
@@ -323,10 +330,16 @@ export function createPickProgram(deps: {
   ): { slabIndex: number; view: SlabView; passes: ContentPass[] }[] {
     // A pass with no FRAME_ORDER line draws nowhere, so it picks nowhere —
     // `checkFrameOrder` is what makes that unreachable for a real registry.
+    // An overlay row skips that derivation: its stamp composites ahead of every
+    // slab, so which slab it draws through tells you nothing about where it picks.
     const candidates = passes.flatMap((pass) => {
-      const slab = pass.drawPick ? PASS_SLABS.get(pass.name) : undefined;
+      if (!pass.drawPick || pass.pickTarget !== undefined) return [];
+      const slab = PASS_SLABS.get(pass.name);
       return slab === undefined ? [] : [{ pass, slab }];
     });
+    const overlayCandidates = passes.filter(
+      (pass) => pass.drawPick && pass.pickTarget === 'overlay',
+    );
     // Every body-row slab index present this frame — a body-roster pass's
     // `drawPick` (`earthPass`, `planetsPass`) contributes to each one, the
     // same widening `executeFrame` applies. `ctx.slabs` holds full `Slab`s, so this
@@ -344,25 +357,34 @@ export function createPickProgram(deps: {
       .reverse()
       .filter((index) => candidateSlabs.has(index));
     const slabIndices = candidateSlabs.has(COSMO) ? [...nearToFar, COSMO] : nearToFar;
-    return slabIndices
-      .map((slabIndex) => {
-        const view = slabViewOf(ctx, slabIndex);
-        // Filter by the PICK gate: `pickEnabled` when a layer declares one (its
-        // pick set differs from its draw set — planetsPass's flat ∪ textured,
-        // the caption stamps, the Milky Way's narrower close-range gate), else
-        // `enabled` (pick set == draw set, the common case). See
-        // `ContentPass.pickEnabled`.
-        const slabPasses = candidates
-          .filter(
-            (c) =>
-              (c.slab === slabIndex ||
-                (c.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
-              (c.pass.pickEnabled ?? c.pass.enabled)(state, ctx, view),
-          )
-          .map((c) => c.pass);
-        return { slabIndex, view, passes: slabPasses };
-      })
-      .filter((group) => group.passes.length > 0);
+    // Filter by the PICK gate: `pickEnabled` when a pass declares one (its
+    // pick set differs from its draw set — planetsPass's flat ∪ textured,
+    // the caption stamps, the Milky Way's narrower close-range gate), else
+    // `enabled` (pick set == draw set, the common case). See
+    // `ContentPass.pickEnabled`.
+    const pickGated = (pass: ContentPass, view: SlabView): boolean =>
+      (pass.pickEnabled ?? pass.enabled)(state, ctx, view);
+    // The overlay group borrows NEAR0's view for its depth clear (the
+    // convention its pipelines are built from), never its vp — an overlay
+    // stamp is screen-space geometry.
+    const overlayView = slabViewOf(ctx, NEAR0);
+    const overlayGroup = {
+      slabIndex: OVERLAY_PICK_SLAB,
+      view: overlayView,
+      passes: overlayCandidates.filter((pass) => pickGated(pass, overlayView)),
+    };
+    const slabGroups = slabIndices.map((slabIndex) => {
+      const view = slabViewOf(ctx, slabIndex);
+      const slabPasses = candidates
+        .filter(
+          (c) =>
+            (c.slab === slabIndex || (c.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
+            pickGated(c.pass, view),
+        )
+        .map((c) => c.pass);
+      return { slabIndex, view, passes: slabPasses };
+    });
+    return [overlayGroup, ...slabGroups].filter((group) => group.passes.length > 0);
   }
 
   async function pick(pickXPx: number, pickYPx: number): Promise<PickResult | null> {

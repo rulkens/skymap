@@ -45,6 +45,10 @@ import { computeForegroundViewProj } from '../../../../src/utils/camera/computeF
 import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
 import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -82,6 +86,16 @@ function makeLineStub(): MarkerLineRenderer {
 
 function makeState(): EngineState {
   return {
+    // The seed tables `sceneOccluderBodies` reads for the captions' depth gate.
+    gpu: { texturedBodyRenderer: null },
+    data: {
+      bodies: {
+        earth: SCENE_EARTH,
+        planets: SCENE_PLANETS,
+        stars: SCENE_STARS,
+        meshBodies: SCENE_MESH_BODIES,
+      },
+    },
     settings: {
       labels: { focusedOnly: false },
       bodies: { items: makeBodyItems() },

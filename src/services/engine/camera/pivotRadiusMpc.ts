@@ -18,18 +18,22 @@ export function pivotRadiusMpc(row: SelectionRow | null): number | null {
 }
 
 /**
- * pivotFraming — orbit-controls' single getter target: radius + precomputed
- * zoom floor. `radiusMpc ?? 0` collapses a surfaceless pivot's floor to
- * `MIN_DISTANCE_MPC`, matching the old null-radius clamp exactly.
+ * SURFACELESS_FLOOR_MPC — zoom floor (Mpc, ≈ 309 km) `pivotFraming` uses when
+ * the pivot has no surface: holds the target above `foregroundFrustum.ts`'s
+ * `MIN_NEAR_MPC` (~6 m), inside which it vanishes. Where the pivot DOES have a
+ * radius, `pivotFraming` floors on `MIN_DISTANCE_MPC` instead (a sub-3 cm body).
  */
+export const SURFACELESS_FLOOR_MPC = 1e-17;
+
 export function pivotFraming(row: SelectionRow | null): PivotFraming {
   const radiusMpc = pivotRadiusMpc(row);
+  if (radiusMpc === null) return { radiusMpc, floorMpc: SURFACELESS_FLOOR_MPC };
   const standoffRadii =
     row !== null && row.type === 'body'
       ? (row.standoffRadii ?? SURFACE_STANDOFF_RADII)
       : SURFACE_STANDOFF_RADII;
   return {
     radiusMpc,
-    floorMpc: Math.max(MIN_DISTANCE_MPC, (radiusMpc ?? 0) * standoffRadii),
+    floorMpc: Math.max(MIN_DISTANCE_MPC, radiusMpc * standoffRadii),
   };
 }

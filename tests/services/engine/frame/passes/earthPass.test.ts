@@ -233,7 +233,7 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
 function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState {
   return {
     gpu: { earthRenderer },
-    data: { bodies: { earth, planets: [], stars: [] } },
+    data: { bodies: { earth, planets: [], meshBodies: [], stars: [] } },
     // The tile subsystem is absent until `wireSlots` builds it, and a session
     // that never approaches Earth never engages it — so `null` here is the
     // shipped identity case, in which the packed page-table window is all-zero
@@ -363,7 +363,7 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
         // null-handle short-circuit keeps it out below and above the gate.
         atmosphereShellRenderer: null,
       },
-      data: { bodies: { earth: SEEDED_EARTH, planets: [], stars: [] } },
+      data: { bodies: { earth: SEEDED_EARTH, planets: [], meshBodies: [], stars: [] } },
     } as unknown as EngineState;
     // The group VIEW_STUB's body-m row resolves: the foreground line's BODY
     // roster, read off the order that draws it.
@@ -410,7 +410,7 @@ describe('prepareBodySurfaceFrame', () => {
     mvpMock.mockClear();
     const state: EngineState = {
       ...makeState({ draw: vi.fn() }, SEEDED_EARTH),
-      data: { bodies: { earth: SEEDED_EARTH, planets: [SEEDED_MARS], stars: [] } },
+      data: { bodies: { earth: SEEDED_EARTH, planets: [SEEDED_MARS], meshBodies: [], stars: [] } },
     } as unknown as EngineState;
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     const earthView = makeEarthBodyView('earth');

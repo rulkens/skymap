@@ -15,6 +15,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import {
   deriveSlabs,
+  bodySlabRow,
   slabViewOf,
   slabName,
   foregroundChainOrder,
@@ -487,6 +488,48 @@ describe('deriveSlabs', () => {
     const ndc = vec3d.transformMat4(bodyCentreRelEye, vp);
     expect(ndc[0]).toBeCloseTo(0, 9);
     expect(ndc[1]).toBeCloseTo(0, 9);
+  });
+});
+
+describe('bodySlabRow attachedBodies widening', () => {
+  // A tiny host (radiusM=10, no atmosphere/ring) at dM=1000 m on-axis, so
+  // marginM/hostNear follow the same "bracket a body row" derivation as the
+  // deriveSlabs tests above: hostNear ≈ 989.49 m, well clear of the < 50 m
+  // the attached-body cases below assert.
+  const HOST_RADIUS_M = 10;
+  const EYE_REL_BODY_M: Vec3 = [0, 0, -1000];
+  const BASIS_M: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+  function hostRow(attachedBodies?: Parameters<typeof bodySlabRow>[0]['attachedBodies']) {
+    const body = makePlanet({ id: 'host-body', radiusM: HOST_RADIUS_M });
+    const pose: BodyPoseProvider = () => ({ eyeRelBodyM: EYE_REL_BODY_M, basisM: BASIS_M });
+    return bodySlabRow({
+      body,
+      pose,
+      fovYRad: 1,
+      aspect: 16 / 9,
+      viewportPx: [1920, 1080] as Vec2,
+      attachedBodies,
+    })!;
+  }
+
+  it('lowers near for an attached body ahead of the host', () => {
+    // posM=[0,0,-955] sits 45 m from the eye ([0,0,-1000]) in this host-fixed
+    // frame; radiusM=5 puts its near face 40 m out — well inside the host's
+    // own ~989 m margin.
+    const baseline = hostRow();
+    const widened = hostRow([{ posM: [0, 0, -955], radiusM: 5 }]);
+    expect(widened.slab.near).toBeLessThan(50);
+    expect(widened.slab.near).toBeLessThan(baseline.slab.near);
+  });
+
+  it('leaves near unchanged for an attached body behind the host', () => {
+    // posM=[0,0,20] is past the host's own far surface (radiusM=10) along the
+    // view axis — its face sits farther from the eye than the host's own
+    // near margin, so it must not lower `near`.
+    const baseline = hostRow();
+    const unaffected = hostRow([{ posM: [0, 0, 20], radiusM: 5 }]);
+    expect(unaffected.slab.near).toBe(baseline.slab.near);
   });
 });
 

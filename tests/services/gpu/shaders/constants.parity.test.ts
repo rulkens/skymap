@@ -24,6 +24,7 @@ import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGe
 import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
+import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
 import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 
@@ -278,5 +279,24 @@ describe('PROXY_SCALE parity (proxyScale.ts ↔ analyticSphere.wesl)', () => {
       weslValue,
       `${file}: WESL PROXY_SCALE (${weslValue}) does not match TS PROXY_SCALE (${PROXY_SCALE})`,
     ).toBe(PROXY_SCALE);
+  });
+});
+
+/**
+ * The mesh bodies carry no `sunIrradiance` uniform — their 176-byte layout is
+ * full — so `pbrDirect`'s caller-applied irradiance scale (`pbr.wesl`'s
+ * contract) is a WESL const mirroring `EARTH_SURFACE_PARAMS.sunIrradiance`.
+ * That is what keeps the whale and the pot at the same brightness as every
+ * `litShade` body; a drift here silently darkens or blows them out.
+ */
+describe('SUN_IRRADIANCE parity (earthSurfaceParams.ts ↔ meshBody/fragment.wesl)', () => {
+  it("meshBody/fragment.wesl's SUN_IRRADIANCE equals EARTH_SURFACE_PARAMS.sunIrradiance", () => {
+    const file = 'src/services/gpu/shaders/bodies/meshBody/fragment.wesl';
+    const weslValue = readWeslConst(file, 'SUN_IRRADIANCE');
+    expect(weslValue, `SUN_IRRADIANCE is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL SUN_IRRADIANCE (${weslValue}) does not match TS EARTH_SURFACE_PARAMS.sunIrradiance (${EARTH_SURFACE_PARAMS.sunIrradiance})`,
+    ).toBe(EARTH_SURFACE_PARAMS.sunIrradiance);
   });
 });

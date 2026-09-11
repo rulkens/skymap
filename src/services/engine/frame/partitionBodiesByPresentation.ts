@@ -2,15 +2,16 @@
  * partitionBodiesByPresentation — the ONE branch point deciding which layer
  * draws each seeded body this frame.
  *
- * Three layers consume opposite branches of one result: `bodyGlintsPass` draws
+ * Four layers consume opposite branches of one result: `bodyGlintsPass` draws
  * the `glints` branch (sub-resolution additive point sprites in the HDR
  * accumulation), `planetsPass` the `flat` branch (flat-lit albedo spheres in
- * the depth-bearing foreground), and `texturedBodiesPass` the `textured` branch
- * (surface-mapped spheres in the same foreground). Because all three read THIS
- * partition and take one branch each, a body is a glint XOR flat XOR textured
+ * the depth-bearing foreground), `texturedBodiesPass` the `textured` branch
+ * (surface-mapped spheres in the same foreground), and a mesh layer the
+ * `meshes` branch (baked triangle meshes). Because all four read THIS
+ * partition and take one branch each, a body lands in exactly one branch
  * **by construction** — every input body lands in exactly one array (disjoint)
  * and none is dropped (covering). That structural invariant — one partition
- * consumed three times, rather than three per-layer gates that could drift
+ * consumed four times, rather than four per-layer gates that could drift
  * apart — is what makes the descent handoff seamless: no frame can double-draw a
  * body or drop it at a threshold crossing.
  *
@@ -32,6 +33,7 @@
  */
 
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
+import type { MeshBody } from '../../../@types/scene/MeshBody';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
@@ -48,11 +50,11 @@ import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
 export const BODY_GLINT_MAX_PX = 3;
 
 /**
- * Split `bodies` into the `{ glints, flat, textured }` presentations for the
- * current camera. Seed order is preserved within each branch and the returned
- * arrays reference the input identity records (no copies) — the mesh layers
- * resolve each body's live position/orientation from the same `bodyStates`
- * snapshot, keyed by id.
+ * Split `bodies` into the `{ glints, flat, textured, meshes }` presentations
+ * for the current camera. Seed order is preserved within each branch and the
+ * returned arrays reference the input identity records (no copies) — the
+ * consuming layers resolve each body's live position/orientation from the
+ * same `bodyStates` snapshot, keyed by id.
  *
  * `isTextureResident(id)` reports whether a real surface texture is BOUND for the
  * body — a rendering fact asked of the renderer, never inferred from the loading
@@ -70,21 +72,23 @@ export const BODY_GLINT_MAX_PX = 3;
  * plain `>= threshold` comparison and no per-site branch.
  */
 export function partitionBodiesByPresentation(input: {
-  bodies: readonly PlanetBody[];
+  bodies: readonly (PlanetBody | MeshBody)[];
   bodyStates: ReadonlyMap<string, BodyState>;
   camPosMpc: Readonly<Vec3>;
   viewportHeightPx: number;
   fovYRad: number;
   isTextureResident: (id: string) => boolean;
 }): {
-  glints: readonly PlanetBody[];
+  glints: readonly (PlanetBody | MeshBody)[];
   flat: readonly PlanetBody[];
   textured: readonly PlanetBody[];
+  meshes: readonly MeshBody[];
 } {
   const { bodies, bodyStates, camPosMpc, viewportHeightPx, fovYRad, isTextureResident } = input;
-  const glints: PlanetBody[] = [];
+  const glints: (PlanetBody | MeshBody)[] = [];
   const flat: PlanetBody[] = [];
   const textured: PlanetBody[] = [];
+  const meshes: MeshBody[] = [];
 
   for (const body of bodies) {
     // Shared projection: apparent diameter in px, Infinity when the camera sits
@@ -101,8 +105,14 @@ export function partitionBodiesByPresentation(input: {
     });
     const resolved = diameterPx >= BODY_GLINT_MAX_PX;
 
+    // A MeshBody carries no bodyTextureSpec entry, so it must route on TYPE
+    // before the texture-residency check — otherwise it silently falls to
+    // flat. 'meshKey' in body is the only valid discriminant: MeshBody is
+    // structurally assignable to PlanetBody in some field subsets.
     if (!resolved) {
       glints.push(body);
+    } else if ('meshKey' in body) {
+      meshes.push(body);
     } else if (bodyTextureSpec(body.id) !== null && isTextureResident(body.id)) {
       textured.push(body);
     } else {
@@ -110,5 +120,5 @@ export function partitionBodiesByPresentation(input: {
     }
   }
 
-  return { glints, flat, textured };
+  return { glints, flat, textured, meshes };
 }

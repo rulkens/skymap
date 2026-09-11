@@ -32,7 +32,11 @@ function DescriptionBlock({ text }: DescriptionBlockProps): ReactNode {
   return (
     <div className={styles.root}>
       <span
-        className={cx(chrome.cardValue, expanded ? chrome.descExpanded : chrome.descCollapsed)}
+        className={cx(
+          chrome.cardValue,
+          styles.text,
+          expanded ? chrome.descExpanded : chrome.descCollapsed,
+        )}
         style={{ fontStyle: 'italic' }}
       >
         {text}

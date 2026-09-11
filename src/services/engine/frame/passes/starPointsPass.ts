@@ -90,7 +90,7 @@ import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { starPickId } from './starPickId';
+import { starPickId } from '../../../../utils/picking/starPickId';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';

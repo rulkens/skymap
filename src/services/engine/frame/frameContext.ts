@@ -26,6 +26,9 @@ import { starSphereRangeM } from '../../../utils/scene/starSphereRangeM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
+import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
+import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
+import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
@@ -33,6 +36,7 @@ import { deriveSlabs } from './slabs';
 import { deriveBodyStates } from './deriveBodyStates';
 import { visibleSlabBodies } from './visibleSlabBodies';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
+import { elementsById } from '../../../data/bodies/orbitalElements';
 import { visibleStars } from './visibleStars';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 
@@ -95,15 +99,29 @@ export function deriveFrameContext(
       ? [...planets, ...SCENE_ANCHOR_POINT_BODIES]
       : [earth, ...planets, ...SCENE_ANCHOR_POINT_BODIES];
 
-  const visibleBodies = visibleSlabBodies({
-    bodies: slabBodyCandidates,
+  const slabGate = {
     bodyStates,
     camPosMpc: cam.position,
     camForwardMpc: camForward,
     viewportWidthPx: canvasSize.width,
     viewportHeightPx: canvasSize.height,
     fovYRad: cam.fovYRad,
-  });
+  };
+  const gatedBodies = visibleSlabBodies({ ...slabGate, bodies: slabBodyCandidates });
+  // A mesh body owns no slab row — it rides its host's (`meshBodiesPass`), so
+  // the host's roster entry is what keeps it drawable. From a 400 km orbit
+  // Earth's ~70° angular radius takes it out of the frustum gate around 126°
+  // off-axis, which would blank a mesh body sitting dead centre. The SAME gate
+  // run over the mesh bodies re-admits their hosts, so there is one cull
+  // applied twice rather than two culls to keep in step.
+  const meshHostIds = new Set(
+    visibleSlabBodies({ ...slabGate, bodies: state.data.bodies.meshBodies }).map(
+      (body) => elementsById(body.id).focusId,
+    ),
+  );
+  const visibleBodies = gatedBodies.concat(
+    slabBodyCandidates.filter((body) => meshHostIds.has(body.id) && !gatedBodies.includes(body)),
+  );
 
   // `camBasisWorld` reruns the SAME roll NEAR0's own vp derivation uses
   // (`imagePlaneBasis` is the shared seam both call, not a copy) so a body row's
@@ -130,6 +148,27 @@ export function deriveFrameContext(
     return bodyRelativePose({ camPosMpc: cam.position, camBasisWorld, bodyState });
   };
 
+  // Host body id → the mesh bodies riding its slab row (spec's fifth
+  // `SceneBody` arm), each resolved into the host's own frame — the SAME
+  // `bodyStates` snapshot `bodyPose` reads above, so this can never disagree
+  // with a slab row's own pose. Hosts with no mesh-body attachment (every
+  // body but Earth, today) get no map entry, and `deriveSlabs` reads a
+  // missing entry as `undefined` — see `bodySlabRow`'s `attachedBodies` doc.
+  const attachedBodiesByHostId = new Map<string, readonly HostFrameSphere[]>();
+  for (const host of slabBodyCandidates) {
+    const attached = meshBodiesAttachedTo(host.id);
+    if (attached.length === 0) continue;
+    const hostState = bodyStates.get(host.id);
+    if (hostState === undefined) continue;
+    attachedBodiesByHostId.set(
+      host.id,
+      attached.map((meshBody) => {
+        const { posM } = bodyStateInHostFrame(bodyStates.get(meshBody.id)!, hostState);
+        return { posM, radiusM: meshBody.radiusM };
+      }),
+    );
+  }
+
   // NEAR0's distanceRangeM (spec §7.1): the star spheres actually drawn this
   // frame, not `foregroundFrustum`'s bracket.
   const positionedStars = visibleStars(state).map((star) => ({
@@ -155,6 +194,7 @@ export function deriveFrameContext(
     visibleBodies,
     viewportPx: [canvasSize.width, canvasSize.height] as Vec2,
     starSphereRangeM: starRangeM,
+    attachedBodiesByHostId,
   });
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));

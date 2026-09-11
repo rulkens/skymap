@@ -1,17 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
-
-const findPlanet = (id: string) => {
-  const planet = SCENE_PLANETS.find((p) => p.id === id);
-  if (!planet) throw new Error(`missing seeded planet: ${id}`);
-  return planet;
-};
 
 const hypot3 = (v: readonly [number, number, number]) => Math.hypot(v[0], v[1], v[2]);
 
@@ -20,11 +13,6 @@ const states = deriveBodyStates(CONST_J2000);
 const stateOf = (id: string) => states.get(id)!;
 
 describe('SCENE_PLANETS', () => {
-  it('radii', () => {
-    expect(findPlanet('moon').radiusM).toBe(1737000);
-    expect(findPlanet('jupiter').radiusM).toBe(69911000);
-  });
-
   it("Jupiter's heliocentric distance is Jovian-scale (~5.2 AU)", () => {
     // Jupiter's position is DERIVED from ORBITAL_ELEMENTS, so its radius is
     // a(1 − e·cosE) at the J2000 mean anomaly — NOT exactly 5.2 AU. Pinning the

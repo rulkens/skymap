@@ -110,6 +110,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'candidacy-math precedent — converts a body radius to an Mpc load-distance threshold for the texture-demand gate, no slab MVP involved',
   ],
   [
+    'src/services/engine/frame/meshBodyLoadRadius.ts',
+    'candidacy-math precedent — same shape as bodyTextureLoadRadius.ts: converts a mesh body radius to an Mpc load-distance threshold for the mesh-demand gate, no slab MVP involved',
+  ],
+  [
     'src/services/engine/frame/atmosphereDrawList.ts',
     'cull precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull, same shape as earthPass/cloudShellPass',
   ],
@@ -132,6 +136,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
     'src/services/engine/camera/cameraDrivers.ts',
     "framing-bridge precedent (line 332) — the follow rows' initial-approach branch converts the focused body's radiusM to Mpc to seed bodyFocusDistance's framing target, the same radius->Mpc bridge as bodyLikeFraming, not pose math",
+  ],
+  [
+    'src/services/engine/frame/near0OverlayClipScale.ts',
+    'clip-unit precedent — the factor is a UNIFORM RESCALE of the NEAR0 overlay clip space (NDC-invariant, keeping clip w off the rasterizer floor); it converts no pose and no position, and the anchors it projects stay in Mpc',
   ],
   [
     'src/services/engine/camera/pivotRadiusMpc.ts',

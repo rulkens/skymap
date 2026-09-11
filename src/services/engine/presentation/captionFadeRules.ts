@@ -34,6 +34,7 @@ import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SGR_A_STAR_ENTRY } from '../../../data/sources/sgr-a-star';
+import { MESH_BODY_ENTRY } from '../../../data/sources/mesh-body';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
 
 /**
@@ -142,6 +143,19 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
     subjectVisible: UNGATED,
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc),
     fadeHandle: { kind: 'labelLayer', layer: 'body', item: SGR_A_STAR_ENTRY.id },
+  },
+
+  /**
+   * The whale and the petunias. They ride the planets' presentation partition
+   * and sit in Earth orbit, so they take the planets' row wholesale — same
+   * reach, and no visibility axis because nothing gates their geometry. Both
+   * bodies share the one registry row, hence one shared caption toggle.
+   */
+  meshBody: {
+    labelEnabled: (settings) => settings.bodies.items[MESH_BODY_ENTRY.id].labelEnabled,
+    subjectVisible: UNGATED,
+    fadeTarget: SOLAR_SYSTEM_REACH,
+    fadeHandle: { kind: 'labelLayer', layer: 'body', item: MESH_BODY_ENTRY.id },
   },
 
   /**

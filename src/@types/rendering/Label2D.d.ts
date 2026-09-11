@@ -89,6 +89,16 @@ export type Label2D = {
   /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Default 1. */
   readonly fadeAlpha?: number;
   /**
+   * How much of the occlusion-variant fragment stage's per-pixel scene
+   * attenuation this label takes: 1 (the default) dims it under whatever
+   * `foreground:0` drew there, 0 lets it paint over the bodies. The per-pixel
+   * rule cannot tell a subject IN FRONT of a body from one behind it, so a
+   * producer that knows its subject's depth answers that here — 0 for a
+   * caption whose subject nothing opaque hides. Ignored by the plain (non
+   * -occluding) pipeline.
+   */
+  readonly occludeWeight?: number;
+  /**
    * Horizontal alignment of the text relative to `worldPos`.
    * Default 'left' (text extends rightward from the anchor).
    * 'center' centers the text horizontally on the anchor — the

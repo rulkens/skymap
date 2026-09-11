@@ -22,7 +22,10 @@
  *     read as "this one" without ballooning.
  *
  * So this helper takes the TRUE apparent radius (`radiusMpc / camDist ·
- * pxPerRad`, no billboard-padding fudge) and scales it by 1.5.
+ * pxPerRad`, no billboard-padding fudge) and scales it by 1.5. That apparent
+ * radius comes back alongside the ring radius: the caller's overflow fade
+ * (`overflowFade`) keys on the SUBJECT's size, and deriving it a second time
+ * at the call site is how the two would drift apart.
  *
  * ## The far floor
  *
@@ -36,6 +39,7 @@
  */
 
 import { selectionRingRadiusPx } from './selectionRingRadiusPx';
+import { MIN_DISTANCE_MPC } from '../../../utils/camera/clampDistance';
 
 // Multiplier from the target's TRUE apparent radius to the halo radius, once
 // the resolved sphere is large enough to clear the far floor. Pinned at 1.5×:
@@ -48,23 +52,20 @@ export function near0RingRadiusPx(
   camDistMpc: number,
   pxPerRad: number,
   pointSizePx: number,
-): number {
+): { ringRadiusPx: number; apparentRadiusPx: number } {
   // Far floor = the galaxy ring's zero-radius size (`pointSizePx · 6`). Passing
   // radiusMpc 0 makes `selectionRingRadiusPx` ignore distance and return the
   // pure px floor, so the ×6 lives in exactly one place.
   const farFloorPx = selectionRingRadiusPx(0, camDistMpc, pxPerRad, pointSizePx);
-  // Divide-by-zero guard ONLY. NEAR0 camera distances legitimately span down to
-  // ~1e-16 Mpc (Earth from ~23,000 km altitude is ~7.4e-16 Mpc), so the far
-  // floor the galaxy helper uses (0.001 Mpc — fine for galaxy viewing distances)
-  // would swallow the ENTIRE near-field range: every real distance clamps up to
-  // 0.001, the apparent term collapses to ~1e-10 px, and the ring freezes at the
-  // far floor forever (a fixed-size halo that never wraps the body). This epsilon
-  // (1e-18 Mpc ≈ 3 cm — far below any reachable camera distance) exists solely to
-  // keep a camera parked exactly on the target from dividing by zero.
-  const safeDist = Math.max(camDistMpc, 1e-18);
+  // Divide-by-zero guard only — `MIN_DISTANCE_MPC` is a body's own sub-3 cm
+  // radius floor, not `pivotRadiusMpc.ts`'s surfaceless-pivot `SURFACELESS_FLOOR_MPC`.
+  const safeDist = Math.max(camDistMpc, MIN_DISTANCE_MPC);
   // TRUE apparent radius of the sphere: r/d radians × px-per-rad. This matches
   // how the body is actually drawn (`bodyApparentDiameterPx`) — no billboard
   // padding — so the ring meets the sphere at the resolve handoff.
   const apparentRadiusPx = (radiusMpc / safeDist) * pxPerRad;
-  return Math.max(farFloorPx, NEAR0_RING_APPARENT_SCALE * apparentRadiusPx);
+  return {
+    ringRadiusPx: Math.max(farFloorPx, NEAR0_RING_APPARENT_SCALE * apparentRadiusPx),
+    apparentRadiusPx,
+  };
 }

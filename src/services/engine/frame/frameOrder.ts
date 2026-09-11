@@ -163,12 +163,23 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // atmosphere are then occluded, while the limb over space passes.
   // `atmosphere-shell` trails `rings` because it is the outermost of the two.
   // `cloud-shell` is the same exception placed early, immediately after the
-  // `earth` surface it depth-tests against.
+  // `earth` surface it depth-tests against. `mesh-bodies` owns no slab of its
+  // own — the lit triangle meshes ride their HOST body's row, so they follow
+  // the opaque spheres to depth-test against the host's stamped z and precede
+  // those two translucent shells.
   {
     kind: 'foreground',
     target: 'foreground:0',
     near0Passes: ['star-spheres', 'field-star-sphere'],
-    bodyPasses: ['earth', 'cloud-shell', 'planets', 'textured-bodies', 'rings', 'atmosphere-shell'],
+    bodyPasses: [
+      'earth',
+      'cloud-shell',
+      'planets',
+      'textured-bodies',
+      'mesh-bodies',
+      'rings',
+      'atmosphere-shell',
+    ],
   },
   // The bodies join the HDR accumulator in LINEAR space, before the tone-map,
   // so they ride the SAME single tone curve as the stars and galaxies — there

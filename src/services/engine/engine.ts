@@ -220,6 +220,9 @@ export function createEngine(
       starRenderer: null,
       planetRenderer: null,
       texturedBodyRenderer: null,
+      // Lit triangle-mesh bodies attached to a host body's slab;
+      // the mesh slot family's commit/onRelease call its setMesh/clearMesh.
+      meshBodyRenderer: null,
       ringRenderer: null,
       cloudShellRenderer: null,
       atmosphereShellRenderer: null,
@@ -332,6 +335,9 @@ export function createEngine(
       mcpmWorkbench: null,
       constellations: null,
       bodyTextures: new Map(),
+      // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
+      // Empty map at construction — mirrors `bodyTextures`, un-keyed.
+      meshBodies: new Map(),
       // One boot fetch seeding every body's placeholder, so no body ever draws
       // untextured while its own map loads.
       bodyTextureAtlas: null,

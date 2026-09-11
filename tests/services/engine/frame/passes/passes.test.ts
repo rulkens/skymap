@@ -548,12 +548,12 @@ describe('galaxyPointSpritesPass.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly the fourteen pickables expose drawPick, in registry order', () => {
+  it('exactly the fifteen pickables expose drawPick, in registry order', () => {
     // Pins the spec's migration table: the six COSMO/near-field survey
     // pickables (pointSprites / zoneOfAvoidance / proceduralDisks /
-    // structureMarkers / milkyWay / starCatalog) PLUS the six NEAR0 true-scale
+    // structureMarkers / milkyWay / starCatalog) PLUS the seven NEAR0 true-scale
     // foreground bodies (starPoints / bodyGlints / earth / starSpheres /
-    // focusedFieldStarSphere / planets), the selection-gated
+    // focusedFieldStarSphere / planets / meshBodies), the selection-gated
     // focused-field-star sphere's pick and the sub-pixel body glints' pick
     // among them — plus the two label rows, whose text is a click target for
     // the subject it names. Order is registry order: the COSMO pick pass leads with
@@ -566,7 +566,7 @@ describe('drawPick migration-table rows', () => {
     // relative order carries no @group(0) dependence (it is depth-resolved,
     // nearest-wins). The pick program filters by `drawPick` presence + the
     // pick gate, never a hardcoded name list — so this test is the ONLY place
-    // the fourteen names are asserted.
+    // the fifteen names are asserted.
     expect(CONTENT_PASSES.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'zone-of-avoidance',
@@ -581,6 +581,7 @@ describe('drawPick migration-table rows', () => {
       'star-spheres',
       'field-star-sphere',
       'planets',
+      'mesh-bodies',
       'foreground-labels',
     ]);
   });

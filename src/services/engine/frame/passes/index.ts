@@ -32,6 +32,7 @@ import { starSpheresPass } from './starSpheresPass';
 import { fieldStarSpherePass } from './fieldStarSpherePass';
 import { planetsPass } from './planetsPass';
 import { texturedBodiesPass } from './texturedBodiesPass';
+import { meshBodiesPass } from './meshBodiesPass';
 import { ringsPass } from './ringsPass';
 import { starPointsPass } from './starPointsPass';
 import { bodyGlintsPass } from './bodyGlintsPass';
@@ -82,6 +83,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   fieldStarSpherePass,
   planetsPass,
   texturedBodiesPass,
+  meshBodiesPass,
   ringsPass,
   foregroundLabelsPass,
   clipPathDebugPass,

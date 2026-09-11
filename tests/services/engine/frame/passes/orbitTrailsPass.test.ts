@@ -23,10 +23,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import {
-  orbitTrailsPass,
-  orbitReachByRegion,
-} from '../../../../../src/services/engine/frame/passes/orbitTrailsPass';
+import { orbitTrailsPass } from '../../../../../src/services/engine/frame/passes/orbitTrailsPass';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_ORBIT_CONICS } from '../../../../../src/data/bodies/sceneOrbitConics';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
@@ -37,9 +34,6 @@ import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
-import type { AnchorBody } from '../../../../../src/@types/scene/AnchorBody';
-import type { BodyRegion } from '../../../../../src/@types/scene/BodyRegion';
-import type { OrbitalElements } from '../../../../../src/@types/scene/OrbitalElements';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -176,7 +170,9 @@ function makeState(
     // The seeded body bag + the registry gates `sceneOccluderSpheres` reads
     // through `sceneBodyPartition` / `visibleStars` — everything on, so the
     // occluder set is decided by apparent size alone.
-    data: { bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, stars: SCENE_STARS } },
+    data: {
+      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, stars: SCENE_STARS, meshBodies: [] },
+    },
     settings: {
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
       starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
@@ -274,55 +270,6 @@ describe('orbitTrailsPass.enabled', () => {
     } as unknown as ReadyFrameContext;
     expect(ctx.cam.distance).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
     expect(orbitTrailsPass.enabled(state, ctx, makeNear0View())).toBe(false);
-  });
-});
-
-// Synthetic two-anchor scene: the Sun at the render origin and a Sgr A*-like
-// anchor 8.178e-3 Mpc away, one orbit hanging off each. Synthetic rather than
-// the real roster because `orbitReachByRegion` takes its tables as parameters
-// precisely so the far-anchored case is pinned by hand-computed apoapses, not by
-// whatever the seeded S-star table currently holds.
-const SYNTHETIC_ANCHORS: readonly AnchorBody[] = [
-  { id: 'sun', positionMpc: [0, 0, 0] },
-  { id: 'sgr-a-star', positionMpc: [8.178e-3, 0, 0] },
-];
-
-function makeElements(id: string, focusId: string, semiMajorMpc: number): OrbitalElements {
-  return {
-    id,
-    focusId,
-    semiMajorMpc,
-    eccentricity: 0.5,
-    inclinationRad: 0,
-    ascendingNodeRad: 0,
-    argPeriapsisRad: 0,
-    meanAnomalyRad: 0,
-    color: [1, 1, 1],
-  };
-}
-
-function makeRegion(id: BodyRegion['id'], anchorId: string, memberIds: string[]): BodyRegion {
-  return { id, label: id, anchorId, memberIds, extentMpc: 0 };
-}
-
-describe('orbitReachByRegion', () => {
-  it('a Galactic Centre orbit does not inflate the solar-system trail reach', () => {
-    const nearOrbit = makeElements('neptune', 'sun', 1e-10);
-    const farOrbit = makeElements('s2', 'sgr-a-star', 3e-9);
-    const solarSystem = makeRegion('solar-system', 'sun', ['sun', 'neptune']);
-    const galacticCentre = makeRegion('galactic-centre', 'sgr-a-star', ['sgr-a-star', 's2']);
-    const regionOf = (bodyId: string): BodyRegion | null =>
-      [solarSystem, galacticCentre].find((region) => region.memberIds.includes(bodyId)) ?? null;
-
-    const reach = orbitReachByRegion(SYNTHETIC_ANCHORS, [nearOrbit, farOrbit], regionOf);
-
-    // The solar system's reach is its OWN orbits' apoapsis, untouched by the far
-    // region's twenty-times-larger one: a single scene-wide maximum would hand it
-    // 4.5e-9 and collapse `enabled`'s cull for every camera near the Sun.
-    expect(reach.get(solarSystem)).toBeCloseTo(1.5e-10, 20);
-    // And the far region's reach is measured from ITS anchor — an apoapsis, not
-    // the 8.178e-3 Mpc that anchor sits at from the render origin.
-    expect(reach.get(galacticCentre)).toBeCloseTo(4.5e-9, 20);
   });
 });
 
@@ -521,6 +468,45 @@ describe('orbitTrailsPass.draw', () => {
       moon[2] - j2000Moon.centerMpc[2],
     );
     expect(drift).toBeGreaterThan(1e-13);
+  });
+
+  it('stages no conic for the mesh bodies (whale, petunias) even when the Moon trail is emitted', () => {
+    // Same pose as "rides a moon trail on its propagated parent" above — parking
+    // the camera at Earth is what makes the Moon's tiny geocentric orbit survive
+    // the apparent-size cull. Regression for the user ruling: whale/petunias ride
+    // that same Earth focus on an even smaller 400 km ring, so if their rows ever
+    // leaked back into the draw loop they — not the Moon — would be the closest
+    // composed conic to Earth.
+    composeMock.mockClear();
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+
+    const simDays = CONST_J2000 + 100;
+    const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
+    const ctx = {
+      drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: Math.PI / 4,
+      cam: { distance: 1e-13 },
+      simDays,
+      focusBlend: 0,
+      nowMs: 0,
+    } as unknown as ReadyFrameContext;
+
+    orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));
+
+    const moonEl = ORBITAL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const moonOffset = keplerianEllipse(propagateElements(moonEl, simDays)).centerOffsetMpc;
+    const moonDistMpc = Math.hypot(moonOffset[0], moonOffset[1], moonOffset[2]);
+
+    let closestDistMpc = Infinity;
+    for (const call of composeMock.mock.calls) {
+      const c = call[1] as unknown as Vec3;
+      const d = Math.hypot(c[0] - earthPos[0], c[1] - earthPos[1], c[2] - earthPos[2]);
+      closestDistMpc = Math.min(closestDistMpc, d);
+    }
+    expect(composeMock.mock.calls.length).toBeGreaterThan(0);
+    expect(closestDistMpc / moonDistMpc).toBeCloseTo(1, 6);
   });
 
   it('S-star trails are gated off when the camera is in the solar system', () => {

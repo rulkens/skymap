@@ -146,7 +146,7 @@ function makePartitionFixtureState(): EngineState {
         hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface',
       },
     },
-    data: { bodies: { planets: [flat, textured, glint] } },
+    data: { bodies: { planets: [flat, textured, glint], meshBodies: [] } },
   } as unknown as EngineState;
 }
 
@@ -319,7 +319,7 @@ describe('planetsPass.drawPick', () => {
         },
         bodyPickRenderer: pickRenderer,
       },
-      data: { bodies: { planets: [flat, textured, glint] } },
+      data: { bodies: { planets: [flat, textured, glint], meshBodies: [] } },
     } as unknown as EngineState;
     const ctx = makeCtx();
 
@@ -344,7 +344,12 @@ describe('planetsPass.drawPick', () => {
         planetRenderer: makeRendererSpy(),
         bodyPickRenderer: { drawSphere: vi.fn() },
       },
-      data: { bodies: { planets: [{ ...bodyAt('mercury', radiusM), positionMpc: [0, 0, 0] }] } },
+      data: {
+        bodies: {
+          planets: [{ ...bodyAt('mercury', radiusM), positionMpc: [0, 0, 0] }],
+          meshBodies: [],
+        },
+      },
     } as unknown as EngineState;
     const ctx = {
       ...makeCtx(),
