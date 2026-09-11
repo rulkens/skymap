@@ -15,6 +15,7 @@ import { APP_SETTINGS_FRAGMENTS } from '../../compositions/appSettingsFragments'
 import { assertUniqueFragmentReducerKeys } from '../../utils/settings/assertUniqueFragmentReducerKeys';
 import { bodiesSettingsFragment } from '../../layers/body/settings/bodiesSettings';
 import { buildInitialSettings } from './initialState';
+import { constellationsSettingsFragment } from '../../layers/constellations/settings/constellationsSettings';
 import { earthSettingsFragment } from '../../layers/body/settings/earthSettings';
 import { filamentsSettingsFragment } from '../../layers/filaments/settings/filamentsSettings';
 import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
@@ -107,14 +108,6 @@ export const CORE_REDUCERS = {
   // ── thumbnails ──────────────────────────────────────────────────────────
   setThumbnailsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
     settings.thumbnails.enabled = action.payload;
-  },
-
-  // ── constellations ──────────────────────────────────────────────────────
-  setConstellationsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.constellations.enabled = action.payload;
-  },
-  setConstellationIntensity: (settings: SettingsDraft, action: PayloadAction<number>) => {
-    settings.constellations.intensity = action.payload;
   },
 
   // ── flow ────────────────────────────────────────────────────────────────
@@ -296,6 +289,9 @@ export const settingsSlice = createSlice({
     ),
     ...liftClusterReducers<EngineSettingsState, typeof filamentsSettingsFragment>(
       filamentsSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof constellationsSettingsFragment>(
+      constellationsSettingsFragment,
     ),
   },
 });

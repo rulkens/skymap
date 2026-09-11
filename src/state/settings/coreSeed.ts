@@ -6,7 +6,6 @@
  * composed on top of it.
  */
 
-import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
@@ -51,6 +50,7 @@ type CoreSeedShape = Omit<
   | 'milkyWay'
   | 'zoneOfAvoidance'
   | 'filaments'
+  | 'constellations'
 >;
 
 export function coreSeed(): CoreSeedShape {
@@ -95,14 +95,6 @@ export function coreSeed(): CoreSeedShape {
     },
     thumbnails: {
       enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-    },
-    // Constellation stick-figure overlay, seeded from the registry constellations
-    // row (same pattern as `filaments`) so that entry stays the single source of
-    // truth for the default-visible gate + intensity. The one `enabled` toggle
-    // governs both the lines and their name captions.
-    constellations: {
-      enabled: SOURCE_REGISTRY[Source.Constellations].visible,
-      intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
     },
     // Flow is a singleton overlay layer: all its user-facing state (master
     // gate + look/motion knobs) lives here, spread from the single
