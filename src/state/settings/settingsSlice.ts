@@ -19,11 +19,11 @@ import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/setti
 import { liftClusterReducers } from '../../utils/settings/liftClusterReducers';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
 import { starCatalogsSettingsFragment } from '../../layers/starCatalog/settings/starCatalogsSettings';
+import { structuresSettingsFragment } from '../../layers/structure/settings/structuresSettings';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { BodyId } from '../../@types/data/body/BodyId';
-import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
@@ -357,20 +357,6 @@ export const CORE_REDUCERS = {
     settings.debug.clipPathInspect.active[action.payload.knob] = action.payload.active;
   },
 
-  // ── structures ──────────────────────────────────────────────────────────
-  setStructureItemEnabled: (
-    settings: SettingsDraft,
-    action: PayloadAction<{ id: StructureId; enabled: boolean }>,
-  ) => {
-    settings.structures.items[action.payload.id].enabled = action.payload.enabled;
-  },
-  setStructureLabelEnabled: (
-    settings: SettingsDraft,
-    action: PayloadAction<{ id: StructureId; enabled: boolean }>,
-  ) => {
-    settings.structures.items[action.payload.id].labelEnabled = action.payload.enabled;
-  },
-
   // ── snapshot merge (tour restore / mid-playback effect) ─────────────────
   // The ONE return-new-state reducer. `mergeSettingsSnapshot` does
   // `{ ...state, ...structuredClone(patch) }`; inside a case reducer `settings`
@@ -397,6 +383,9 @@ export const settingsSlice = createSlice({
     ),
     ...liftClusterReducers<EngineSettingsState, typeof starCatalogsSettingsFragment>(
       starCatalogsSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof structuresSettingsFragment>(
+      structuresSettingsFragment,
     ),
   },
 });

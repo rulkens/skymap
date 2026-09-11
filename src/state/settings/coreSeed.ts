@@ -50,15 +50,12 @@ import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import { ATMOSPHERE_PARAMS } from '../../data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../data/bodies/earthSurfaceParams';
-import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
-import type { StructureId } from '../../@types/data/structure/StructureId';
-import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
-type CoreSeedShape = Omit<EngineSettingsState, 'galaxyCatalogs' | 'starCatalogs'>;
+type CoreSeedShape = Omit<EngineSettingsState, 'galaxyCatalogs' | 'starCatalogs' | 'structures'>;
 
 export function coreSeed(): CoreSeedShape {
   return {
@@ -217,15 +214,6 @@ export function coreSeed(): CoreSeedShape {
           passBy: false,
         },
       },
-    },
-    // Structure overlay: one item row per category, each ring + label
-    // default-on. Keys are DERIVED from `STRUCTURE_IDS` so the seed can't
-    // drift from the structure-id set (famous galaxies bear no ring and so
-    // have no row here).
-    structures: {
-      items: Object.fromEntries(
-        STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
-      ) as Record<StructureId, StructureItemSettings>,
     },
   };
 }
