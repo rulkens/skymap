@@ -113,7 +113,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
@@ -150,7 +150,7 @@ const OFF_FRACTION = 0.8;
 const presentByCatalog = new WeakMap<StarCatalog, PresentStar | null>();
 
 /** The sole loaded star catalog (first committed Gaia catalog), or null. */
-function currentCatalog(state: EngineState): StarCatalog | null {
+function currentCatalog(state: PassState): StarCatalog | null {
   const renderer = state.gpu.starCatalogRenderer;
   if (renderer === null) return null;
   for (const { catalog } of renderer.loadedCatalogs()) return catalog;

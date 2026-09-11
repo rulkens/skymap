@@ -60,7 +60,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { EarthBody } from '../../../../@types/scene/EarthBody';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
@@ -99,7 +99,7 @@ type CloudShellDraw = {
  * ring's residency gate.
  */
 function cloudShellDraw(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
   bodyId: BodyId,
 ): CloudShellDraw | null {

@@ -143,7 +143,7 @@ import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalo
 import type { SurveyStarCatalogSourceEntry } from '../../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRenderer';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatalogRenderer';
 import { NEAR0, slabViewOf } from '../slabs';
@@ -432,7 +432,7 @@ function crossfadeOpacity(entry: SurveyStarCatalogSourceEntry, camDistPc: number
  * upsample consumer never disagree — the same shared-projection discipline the
  * volume liveness gate uses.
  */
-export function starCatalogVisible(state: EngineState, ctx: ReadyFrameContext): boolean {
+export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): boolean {
   const renderer = state.gpu.starCatalogRenderer;
   if (renderer === null) return false;
   if (!state.settings.starCatalogs.enabled) return false;
@@ -667,7 +667,7 @@ const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
  * so this only walks fresh for a DIFFERENT ctx — a sky-cubemap capture face or
  * the pick path's post-frame ctx.
  */
-export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
+export function prepareStarCut(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
   if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
 
   const result = computeStarCut(state, ctx, false);
@@ -684,10 +684,7 @@ export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): Prep
  * case at the call sites. Returns the same shape as `prepareStarCut` (its
  * `anyNodeFading` is the frame's keep-ticking wake vote).
  */
-export function advanceStarFades(
-  state: EngineState,
-  ctx: ReadyFrameContext,
-): PreparedStarCut | null {
+export function advanceStarFades(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
   if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
 
   const result = computeStarCut(state, ctx, true);
@@ -696,7 +693,7 @@ export function advanceStarFades(
 }
 
 function computeStarCut(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
   advanceFades: boolean,
 ): PreparedStarCut | null {

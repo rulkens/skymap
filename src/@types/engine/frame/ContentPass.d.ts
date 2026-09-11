@@ -19,7 +19,7 @@
 import type { Blend } from './Blend';
 import type { SlabView } from './SlabView';
 import type { ReadyFrameContext } from './ReadyFrameContext';
-import type { EngineState } from '../state/EngineState';
+import type { PassState } from './PassState';
 
 export type ContentPass = {
   /** Stable identifier: what `FRAME_ORDER` names, and the timing-slot list derives. */
@@ -38,18 +38,13 @@ export type ContentPass = {
    * step's already-resolved `SlabView` — a pass on a body roster reads
    * `view.slab.frame.bodyId` to gate its own row. Pure: no side effects.
    */
-  enabled(state: EngineState, ctx: ReadyFrameContext, view: SlabView): boolean;
+  enabled(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
   /**
    * Issue draw calls into the open render pass for this step. Called only when
    * `enabled` returned `true`. Must not call `pass.end()` — the pass lifetime
    * is owned by the executor's render step.
    */
-  draw(
-    pass: GPURenderPassEncoder,
-    view: SlabView,
-    ctx: ReadyFrameContext,
-    state: EngineState,
-  ): void;
+  draw(pass: GPURenderPassEncoder, view: SlabView, ctx: ReadyFrameContext, state: PassState): void;
   /**
    * Whether this pass should record PICK draw commands this frame — the
    * gate the pick program filters `drawPick` by, in place of `enabled`.
@@ -86,7 +81,7 @@ export type ContentPass = {
    * When absent the pick program falls back to `enabled`. Pure: no side
    * effects.
    */
-  pickEnabled?(state: EngineState, ctx: ReadyFrameContext, view: SlabView): boolean;
+  pickEnabled?(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
   /**
    * Issue pick-ID draw calls for this pass, into the parallel pick
    * program's render pass. Optional: passes that don't participate in
@@ -96,6 +91,6 @@ export type ContentPass = {
     pass: GPURenderPassEncoder,
     view: SlabView,
     ctx: ReadyFrameContext,
-    state: EngineState,
+    state: PassState,
   ): void;
 };

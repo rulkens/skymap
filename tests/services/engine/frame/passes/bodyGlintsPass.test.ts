@@ -38,6 +38,7 @@ import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -48,7 +49,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // sees the exact fixture values (identity-equal), keeping the `toBe(...)`
 // assertions below intact while the reads move off the baked record fields.
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
+  sceneBodyStates: vi.fn((state: PassState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
     // The 'solar-system' region's anchor (sceneAnchors.ts authors the Sun at
     // [0, 0, 0]) — an absent entry reads as Infinity, not 0 (see
@@ -192,7 +193,7 @@ function makeState(bodyGlintRenderer: unknown, planets: readonly PlanetBody[]): 
  */
 function statesWithAnchorPinnedAt(
   anchorPositionMpc: Vec3,
-): (state: EngineState) => ReadonlyMap<string, BodyState> {
+): (state: PassState) => ReadonlyMap<string, BodyState> {
   return (state) => {
     const m = new Map<string, BodyState>();
     m.set('sun', { positionMpc: [0, 0, 0], orientation: IDENTITY, meanAnomalyRad: 0 });

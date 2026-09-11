@@ -3,8 +3,9 @@
  * its render target.
  *
  * This is the third of the three independent axes a `ContentPass` is
- * positioned on (alongside `slab` and `target` — see the renderer
- * unification design's "essential / accidental split"). Emissive point
+ * positioned on, and the only one the row itself carries — its slab and
+ * target come from the `FRAME_ORDER` line that names the pass (see the
+ * renderer unification design's "essential / accidental split"). Emissive point
  * clouds accumulate additively with no depth test; solid near-field bodies
  * are opaque and depth-tested; screen-space overlays (rings, labels) draw
  * Porter-Duff OVER on top of whatever is already composited. Those three

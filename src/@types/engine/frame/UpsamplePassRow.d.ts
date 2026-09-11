@@ -9,7 +9,7 @@
  */
 
 import type { Upsample } from '../../rendering/Upsample';
-import type { EngineState } from '../state/EngineState';
+import type { PassState } from './PassState';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { SlabView } from './SlabView';
 
@@ -19,9 +19,9 @@ export type UpsamplePassRow = {
   /** `RenderTargetSpec.id` of the reduced-res offscreen this row blits into HDR. */
   readonly sourceTargetId: string;
   /** This frame's blit handle, or null (pre-bootstrap, or a gate the row owns). */
-  handleOf(state: EngineState): Upsample | null;
+  handleOf(state: PassState): Upsample | null;
   /** Shared liveness gate; forwarded verbatim to `ContentPass.enabled`. */
-  enabled(state: EngineState, ctx: ReadyFrameContext): boolean;
+  enabled(state: PassState, ctx: ReadyFrameContext): boolean;
   /**
    * Extra draw work after the blit, into the same pass — e.g. ZoA's full-res
    * curved lettering. Runs regardless of whether `handleOf` returned a
@@ -33,6 +33,6 @@ export type UpsamplePassRow = {
     pass: GPURenderPassEncoder,
     view: SlabView,
     ctx: ReadyFrameContext,
-    state: EngineState,
+    state: PassState,
   ): void;
 };

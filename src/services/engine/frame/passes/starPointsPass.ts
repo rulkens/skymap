@@ -80,7 +80,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { BodyRegionId } from '../../../../@types/data/BodyRegionId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
@@ -129,7 +129,7 @@ const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
  * The shared foreground gate rides alongside it: past that the whole NEAR0 group
  * is skipped, so a stamp there could never be rasterised anyway.
  */
-function sgrAStarCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
+function sgrAStarCaptionPickable(state: PassState, ctx: ReadyFrameContext): boolean {
   if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
   return sgrAStarCaptionTarget(state.settings, ctx.drawCamPos, ctx.cam.distance) > 0;
 }

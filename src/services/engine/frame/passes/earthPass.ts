@@ -21,7 +21,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../../@types/scene/SceneBody';
@@ -65,7 +65,7 @@ function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext):
  * layers can seed a row from. Mirrors `sceneBodyStates`' own null-safety
  * (missing ⇒ `null`, never a crash) rather than assuming Earth.
  */
-function sceneBodyForId(state: EngineState, bodyId: BodyId): SceneBody | null {
+function sceneBodyForId(state: PassState, bodyId: BodyId): SceneBody | null {
   const { earth, planets, stars } = state.data.bodies;
   if (earth !== null && earth.id === bodyId) return earth;
   const planet = planets.find((p) => p.id === bodyId);
@@ -108,7 +108,7 @@ const preparedByCtx = new WeakMap<
 let earthFrameCounter = 0;
 
 export function prepareBodySurfaceFrame(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
   view: SlabView,
 ): PreparedBodySurfaceFrame | null {
@@ -128,7 +128,7 @@ export function prepareBodySurfaceFrame(
 }
 
 function computeBodySurfaceFrame(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
   view: SlabView,
   bodyId: BodyId,

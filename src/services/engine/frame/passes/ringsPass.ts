@@ -58,7 +58,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import type { RingSpec } from '../../../../@types/scene/RingSpec';
@@ -84,7 +84,7 @@ import { sceneBodyStates } from '../sceneBodyStates';
  * feeds both `enabled` and `draw`, so the gate and the draw can never disagree.
  */
 function ringDrawForBody(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
   bodyId: BodyId,
 ): { readonly ring: RingSpec; readonly body: PlanetBody; readonly pose: BodyRelativePose } | null {

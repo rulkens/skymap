@@ -29,7 +29,7 @@
  * seamless with no threshold-crossing double-draw or drop.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
@@ -37,7 +37,7 @@ import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function sceneBodyPartition(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): { glints: readonly PlanetBody[]; flat: readonly PlanetBody[]; textured: readonly PlanetBody[] } {
   return partitionBodiesByPresentation({

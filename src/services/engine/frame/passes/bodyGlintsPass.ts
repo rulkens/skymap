@@ -70,7 +70,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyState } from '../../../../@types/scene/BodyState';
@@ -136,7 +136,7 @@ const SGR_A_STAR_GLINT_BASE_INTENSITY = 0.8;
  * gate then can't make the two diverge (admit-the-row-but-emit-no-stamp, a dead
  * pick frame, or the reverse).
  */
-function earthCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
+function earthCaptionPickable(state: PassState, ctx: ReadyFrameContext): boolean {
   return state.data.bodies.earth !== null && ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
 }
 

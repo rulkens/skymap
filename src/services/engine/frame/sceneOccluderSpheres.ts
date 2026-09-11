@@ -10,7 +10,7 @@
  * are the bare `radiusM` — an atmosphere, ring or lens quad is not opaque.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { MAX_ORBIT_OCCLUDERS } from '../../../data/bodies/orbitTrailConstants';
@@ -27,7 +27,7 @@ import { sceneBodyStates } from './sceneBodyStates';
 const spheresKm = new Float32Array(MAX_ORBIT_OCCLUDERS * 4);
 
 export function sceneOccluderSpheres(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): { readonly count: number; readonly spheresKm: Float32Array } {
   const states = sceneBodyStates(state, ctx);

@@ -11,7 +11,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { BLACK_HOLES } from '../../../../data/blackHoles';
@@ -42,7 +42,7 @@ const SCHWARZSCHILD_RADIUS_M = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
 const SECONDS_PER_DAY = 86_400;
 
 /** This frame's fade-band alpha (Q6's zero-dispatch gate) — shared by `enabled` and `draw`. */
-function bandAlphaFor(state: EngineState, ctx: ReadyFrameContext): number {
+function bandAlphaFor(state: PassState, ctx: ReadyFrameContext): number {
   const distMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
     GALACTIC_CENTRE_REGION,
