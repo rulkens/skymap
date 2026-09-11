@@ -25,6 +25,7 @@ import { sgrAStarLensingTuningSettingsFragment } from '../../layers/body/setting
 import { starCatalogsSettingsFragment } from '../../layers/starCatalog/settings/starCatalogsSettings';
 import { structuresSettingsFragment } from '../../layers/structure/settings/structuresSettings';
 import { volumesSettingsFragment } from '../../layers/volume/settings/volumesSettings';
+import { zoneOfAvoidanceSettingsFragment } from '../../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSettings';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
@@ -33,7 +34,6 @@ import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
-import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
@@ -106,19 +106,6 @@ export const CORE_REDUCERS = {
   // ── thumbnails ──────────────────────────────────────────────────────────
   setThumbnailsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
     settings.thumbnails.enabled = action.payload;
-  },
-
-  // ── zone of avoidance ──────────────────────────────────────────────────
-  setZoneOfAvoidanceEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.zoneOfAvoidance.enabled = action.payload;
-  },
-  // Band look knobs, patched leaf-by-leaf — the same visibility/tuning split
-  // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
-  setZoneOfAvoidanceTuning: (
-    settings: SettingsDraft,
-    action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>,
-  ) => {
-    Object.assign(settings.zoneOfAvoidance, action.payload);
   },
 
   // ── filaments ───────────────────────────────────────────────────────────
@@ -310,6 +297,9 @@ export const settingsSlice = createSlice({
     ),
     ...liftClusterReducers<EngineSettingsState, typeof milkyWaySettingsFragment>(
       milkyWaySettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof zoneOfAvoidanceSettingsFragment>(
+      zoneOfAvoidanceSettingsFragment,
     ),
   },
 });

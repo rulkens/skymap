@@ -13,6 +13,7 @@ import { sgrAStarLensingTuningSettingsFragment } from '../layers/body/settings/s
 import { starCatalogsSettingsFragment } from '../layers/starCatalog/settings/starCatalogsSettings';
 import { structuresSettingsFragment } from '../layers/structure/settings/structuresSettings';
 import { volumesSettingsFragment } from '../layers/volume/settings/volumesSettings';
+import { zoneOfAvoidanceSettingsFragment } from '../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSettings';
 
 export const APP_SETTINGS_FRAGMENTS = [
   galaxyCatalogsSettingsFragment,
@@ -24,6 +25,7 @@ export const APP_SETTINGS_FRAGMENTS = [
   orbitTrailsSettingsFragment,
   sgrAStarLensingTuningSettingsFragment,
   milkyWaySettingsFragment,
+  zoneOfAvoidanceSettingsFragment,
 ] as const;
 
 assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS);

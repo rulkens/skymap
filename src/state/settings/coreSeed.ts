@@ -19,8 +19,6 @@ import {
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
-  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_FLOW,
   DEFAULT_ORIENTATION,
@@ -51,6 +49,7 @@ type CoreSeedShape = Omit<
   | 'orbitTrails'
   | 'sgrAStarLensingTuning'
   | 'milkyWay'
+  | 'zoneOfAvoidance'
 >;
 
 export function coreSeed(): CoreSeedShape {
@@ -95,13 +94,6 @@ export function coreSeed(): CoreSeedShape {
     },
     thumbnails: {
       enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-    },
-    // Zone of Avoidance is a singleton overlay layer like `milkyWay`: one
-    // visibility toggle (band + lettering) plus the band's look knobs, seeded
-    // from `DEFAULT_ZONE_OF_AVOIDANCE_TUNING`.
-    zoneOfAvoidance: {
-      enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
-      ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
