@@ -7,12 +7,12 @@
  * would release next frame must never be entered.
  */
 
+import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { PoseFrame } from '../../../@types/camera/PoseFrame';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { SURFACE_REGIME } from '../../../data/camera/surfaceRegime';
 import { hOverR } from './hOverR';
 import { nearestBodyHR } from './nearestBodyHR';
 
@@ -21,6 +21,7 @@ export function regimeArmFor(
   eyeMpc: Readonly<Vec3>,
   bodyStates: ReadonlyMap<BodyId, BodyState>,
   focusedBodyId: string | null,
+  tuning: CameraTuning,
 ): PoseFrame {
   if (current === 'absolute') {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);
@@ -28,7 +29,7 @@ export function regimeArmFor(
     // body's surface with a stale focus on another. No engage happens there, so
     // the first at-rest frame's pivot pin re-targets the FOCUSED body.
     return nearest !== null &&
-      nearest.hr < SURFACE_REGIME.engageHR &&
+      nearest.hr < tuning.engageHR &&
       (focusedBodyId === null || focusedBodyId === nearest.bodyId)
       ? { body: nearest.bodyId }
       : 'absolute';
@@ -41,5 +42,5 @@ export function regimeArmFor(
   const row = SCENE_BODIES.find((body) => body.id === current.body);
   const bodyState = bodyStates.get(current.body);
   if (row === undefined || bodyState === undefined) return current;
-  return hOverR(eyeMpc, bodyState, row.radiusM) > SURFACE_REGIME.disengageHR ? 'absolute' : current;
+  return hOverR(eyeMpc, bodyState, row.radiusM) > tuning.disengageHR ? 'absolute' : current;
 }

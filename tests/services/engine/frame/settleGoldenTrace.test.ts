@@ -7,7 +7,7 @@
  * for a RULED behaviour change, and say so in the commit.
  */
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -27,9 +27,8 @@ import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
 import { goldenSig } from '../../../helpers/camera/goldenSig';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { beginDrag } from '../../../../src/state/camera/cameraSlice';
+import { beginDrag, setCameraTuning } from '../../../../src/state/camera/cameraSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -106,9 +105,10 @@ function snapshot(state: EngineState, label: string): Step {
  * ride bound is exercised too), a tilt drag, a pan, a second tilt drag past
  * the horizon, a look at the sky, then a recession out past disengage.
  */
-function runScript(): Trace {
+function runScript(northUp: boolean): Trace {
   const harness = makeCameraSimHarness({ focusBody: 'earth', bootHR: BOOT_HR });
   const { store, state, frame, push, wheel } = harness;
+  store.dispatch(setCameraTuning({ northUp }));
   const trace: Step[] = [];
   const record = (label: string) => trace.push(snapshot(state, label));
 
@@ -198,11 +198,6 @@ function runScript(): Trace {
   return trace;
 }
 
-const TUNING_AT_LOAD = { ...ORIENT_TUNING };
-afterEach(() => {
-  Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
-});
-
 function expectTraceMatches(actual: Trace, golden: Trace): void {
   expect(actual.length).toBe(golden.length);
   actual.forEach((step, i) => {
@@ -232,8 +227,7 @@ describe('settle golden trace (byte bar for the orientation settles)', () => {
   const recorded: Record<string, Trace> = { ...(GOLDEN as Record<string, Trace>) };
   for (const [key, northUp] of states) {
     it(`matches the recorded trace with northUp = ${northUp}`, () => {
-      ORIENT_TUNING.northUp = northUp;
-      const trace = thin(runScript());
+      const trace = thin(runScript(northUp));
       if (process.env['SETTLE_GOLDEN_RECORD']) {
         recorded[key] = trace;
         writeFileSync(FIXTURE_PATH, `${JSON.stringify(recorded)}\n`);

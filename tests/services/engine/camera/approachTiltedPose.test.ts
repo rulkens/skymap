@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { approachTiltedPose } from '../../../../src/services/engine/camera/approachTiltedPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { mappedTiltRad } from '../../../../src/utils/camera/mappedTiltRad';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -71,13 +72,13 @@ describe('approachTiltedPose (ruling 13)', () => {
   it('expresses exactly the ONE mapping at every altitude, eye fixed, roll carried', () => {
     for (const hr of [0.5, 1.0, 1.75, 2.0, 2.4, 2.8, 3.2, 3.39]) {
       const framed = centredPoseAt(hr);
-      const out = approachTiltedPose(framed, true, FOCUS_EARTH, BODIES, 0.5, B, B);
+      const out = approachTiltedPose(framed, true, FOCUS_EARTH, BODIES, 0.5, B, B, TUNING);
       if (out.frame !== 'absolute' || framed.frame !== 'absolute') {
         throw new Error('absolute expected');
       }
       // 7 digits: the yaw/pitch decode round-trip carries ~1e-8 of float
       // noise at heliocentric magnitudes; the mapping itself is exact.
-      expect(tiltOf(out)).toBeCloseTo(mappedTiltRad(0.5, hr), 7);
+      expect(tiltOf(out)).toBeCloseTo(mappedTiltRad(0.5, hr, TUNING), 7);
       const eyeIn = eyeMpcOf(framed.pose, B);
       const eyeOut = eyeMpcOf(out.pose, B);
       const drift = Math.hypot(
@@ -92,14 +93,16 @@ describe('approachTiltedPose (ruling 13)', () => {
 
   it('never-engaged control: zero remembered returns the input BY REFERENCE', () => {
     const framed = centredPoseAt(2.0);
-    expect(approachTiltedPose(framed, true, FOCUS_EARTH, BODIES, 0, B, B)).toBe(framed);
+    expect(approachTiltedPose(framed, true, FOCUS_EARTH, BODIES, 0, B, B, TUNING)).toBe(framed);
   });
 
   it('inert above the band and for non-pivot drivers (clip/tween opt out)', () => {
     const above = centredPoseAt(5.0);
-    expect(approachTiltedPose(above, true, FOCUS_EARTH, BODIES, 0.5, B, B)).toBe(above);
+    expect(approachTiltedPose(above, true, FOCUS_EARTH, BODIES, 0.5, B, B, TUNING)).toBe(above);
     const inWindow = centredPoseAt(2.0);
-    expect(approachTiltedPose(inWindow, false, FOCUS_EARTH, BODIES, 0.5, B, B)).toBe(inWindow);
-    expect(approachTiltedPose(inWindow, true, null, BODIES, 0.5, B, B)).toBe(inWindow);
+    expect(approachTiltedPose(inWindow, false, FOCUS_EARTH, BODIES, 0.5, B, B, TUNING)).toBe(
+      inWindow,
+    );
+    expect(approachTiltedPose(inWindow, true, null, BODIES, 0.5, B, B, TUNING)).toBe(inWindow);
   });
 });

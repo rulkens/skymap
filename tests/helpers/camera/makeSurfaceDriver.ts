@@ -8,8 +8,10 @@
  */
 
 import { surfaceStep, EMPTY_SURFACE_MEMORY } from '../../../src/services/camera/surfaceStep';
+import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
+import type { CameraTuning } from '../../../src/@types/camera/CameraTuning';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { SurfaceMemory } from '../../../src/@types/camera/SurfaceMemory';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
@@ -25,12 +27,14 @@ export function makeSurfaceDriver(seed: SurfaceMemory = EMPTY_SURFACE_MEMORY) {
       fovYRad: number,
       bodyRadiusM: number,
       sceneUpLocal: Readonly<Vec3>,
+      tuning: CameraTuning = DEFAULT_CAMERA_TUNING,
     ): BodyFixedPose => {
       const out = surfaceStep(memory, arm, step, {
         viewportPx,
         fovYRad,
         bodyRadiusM,
         sceneUpLocal,
+        tuning,
       });
       memory = out.next;
       return out.pose;

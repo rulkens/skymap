@@ -8,13 +8,14 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { InputStep } from '../../@types/camera/InputStep';
 import type { SurfaceMemory } from '../../@types/camera/SurfaceMemory';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
+import { MAX_REMEMBERED_TILT_RAD } from '../../data/camera/cameraTuning';
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
-import { TILT_BAND } from '../../data/camera/tiltBand';
 import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
 import { bodyUpWeight } from '../../utils/camera/bodyUpWeight';
 import { draggedSurfacePose } from '../../utils/camera/draggedSurfacePose';
@@ -31,6 +32,7 @@ type SurfaceStepCtx = {
   readonly bodyRadiusM: number;
   /** Scene-frame up in BODY-FIXED axes (unit); the body rotates under it, so resample per drain. */
   readonly sceneUpLocal: Readonly<Vec3>;
+  readonly tuning: CameraTuning;
 };
 
 /** The engine's boot value; immutable, so one shared object is fine. */
@@ -53,7 +55,7 @@ export function surfaceStep(
   step: InputStep,
   ctx: SurfaceStepCtx,
 ): { readonly pose: BodyFixedPose; readonly next: SurfaceMemory } {
-  const { viewportPx, fovYRad, bodyRadiusM, sceneUpLocal } = ctx;
+  const { viewportPx, fovYRad, bodyRadiusM, sceneUpLocal, tuning } = ctx;
   if (step.kind === 'zoom') {
     return {
       pose: surfaceZoomStep(
@@ -66,6 +68,7 @@ export function surfaceStep(
         bodyRadiusM,
         sceneUpLocal,
         prev.rememberedTiltRad,
+        tuning,
       ),
       next: prev,
     };
@@ -107,15 +110,15 @@ export function surfaceStep(
   // Ruling 12: tilt-authoring handles update the memory. Un-mapping
   // through the band weight keeps the just-set display a FIXED POINT of
   // the zoom mapping — a notch at the set altitude must not move it
-  // (zoom never authors tilt). Near w → 0 the ratio diverges: `maxRad` is
-  // the only cap on the memory, and a degenerate weight leaves it
-  // untouched (no intent is readable there).
+  // (zoom never authors tilt). Near w → 0 the ratio diverges:
+  // `MAX_REMEMBERED_TILT_RAD` is the only cap on the memory, and a degenerate
+  // weight leaves it untouched (no intent is readable there).
   let rememberedTiltRad = prev.rememberedTiltRad;
   if (mode === 'tilt' || mode === 'look') {
     const f = eyeFrameOf(final, 1, BODY_LOCAL_FRAME.pole);
     const hr = Math.hypot(...bodyFixedEyeM(final)) / bodyRadiusM - 1;
-    if (f !== null && bodyUpWeight(hr) > 1e-6) {
-      rememberedTiltRad = Math.min(unmappedTiltRad(f.tiltRad, hr), TILT_BAND.maxRad);
+    if (f !== null && bodyUpWeight(hr, tuning) > 1e-6) {
+      rememberedTiltRad = Math.min(unmappedTiltRad(f.tiltRad, hr, tuning), MAX_REMEMBERED_TILT_RAD);
     }
   }
   return {

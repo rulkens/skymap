@@ -94,7 +94,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -268,7 +268,7 @@ describe('runFrame — the regime fold', () => {
     // Body arm just inside the band, tilt 0 (looking at the centre) — the pose
     // every driven recession reaches the boundary with. A tenth of the edge
     // below it, derived so a band re-tune keeps the premise.
-    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, SURFACE_REGIME.disengageHR * 0.9);
+    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, TUNING.disengageHR * 0.9);
     const arm = {
       frame: EARTH_ARM,
       pose: toBodyArm(NEAR_EDGE, B, B, EARTH_ARM.body, EARTH),

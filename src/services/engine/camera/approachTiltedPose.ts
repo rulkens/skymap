@@ -19,6 +19,7 @@ import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
@@ -32,6 +33,7 @@ export function approachTiltedPose(
   rememberedTiltRad: number,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
+  tuning: CameraTuning,
 ): FramedCameraPose {
   if (framed.frame !== 'absolute') return framed;
   if (!pivotsOnFocusedBody || rememberedTiltRad === 0) return framed;
@@ -48,7 +50,7 @@ export function approachTiltedPose(
   const rel: Vec3 = [eye[0] - centreMpc[0], eye[1] - centreMpc[1], eye[2] - centreMpc[2]];
   if (Math.hypot(...rel) === 0) return framed;
   const hr = hOverR(eye, bodyState, focusRow.radiusM);
-  const tau = mappedTiltRad(rememberedTiltRad, hr);
+  const tau = mappedTiltRad(rememberedTiltRad, hr, tuning);
   if (tau < 1e-12) return framed; // at/above the band top — inert, by reference
 
   const n = normalize3(rel);

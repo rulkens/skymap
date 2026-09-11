@@ -69,6 +69,9 @@ export function stepCameraRuntime(
   // `settings.orientation` when a switch starts, so the eye holds still through
   // a roll and only up rotates (`upBasis`, the live B(t)).
   const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
+  // `stored`, not the post-replay snapshot: the replay runs before that exists,
+  // and no action it emits writes `tuning`, so the two readings are identical.
+  const tuning = stored.camera.tuning;
 
   const drained = replayInput(
     { register: prev.register.pose, surface: prev.surface, follow: prev.follow },
@@ -83,6 +86,7 @@ export function stepCameraRuntime(
       bodies,
       winnerLastFrame: prev.register.winner,
       autoRotateEpoch: prev.epochs.autoRotate,
+      tuning,
     },
   );
   const actions: UnknownAction[] = [...drained.actions];
@@ -181,6 +185,7 @@ export function stepCameraRuntime(
     bodies,
     poseBasis,
     upBasis,
+    tuning,
   });
   actions.push(...projected.actions);
 

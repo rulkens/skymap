@@ -32,6 +32,7 @@ import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
+import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { Epoch } from '../../../@types/engine/camera/Epoch';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
@@ -60,6 +61,7 @@ export function replayInput(
     readonly bodies: ReadonlyMap<BodyId, BodyState>;
     readonly winnerLastFrame: DriverId;
     readonly autoRotateEpoch: Epoch<FramedCameraPose>;
+    readonly tuning: CameraTuning;
   },
 ): {
   readonly register: FramedCameraPose;
@@ -70,8 +72,17 @@ export function replayInput(
   readonly followDistanceTarget: number | null;
   readonly actions: readonly UnknownAction[];
 } {
-  const { rootState, nowMs, canvasPx, projection, upBasis, poseBasis, bodies, winnerLastFrame } =
-    ctx;
+  const {
+    rootState,
+    nowMs,
+    canvasPx,
+    projection,
+    upBasis,
+    poseBasis,
+    bodies,
+    winnerLastFrame,
+    tuning,
+  } = ctx;
   const cssHeight = canvasPx[1];
   // Only camera actions are emitted mid-drain, so every other slice is the
   // snapshot's; the focus row is read once.
@@ -124,6 +135,7 @@ export function replayInput(
       fovYRad: projection.fovYRad,
       bodyRadiusM: body.radiusM,
       sceneUpLocal,
+      tuning,
     });
     surface = memory;
     register = { frame: base.frame, pose: next };
@@ -159,6 +171,7 @@ export function replayInput(
         poseBasis,
         upBasis,
         Math.abs(Math.log(step.factor)),
+        tuning,
       );
       next = { ...next, roll };
     }
@@ -239,6 +252,7 @@ export function replayInput(
             poseBasis,
             upBasis,
             logZoom,
+            tuning,
           );
           if (roll !== (basePose.roll ?? 0))
             emit(commitCameraPose(absoluteArm({ ...basePose, roll })));
@@ -265,6 +279,7 @@ export function replayInput(
             poseBasis,
             upBasis,
             logZoom,
+            tuning,
           );
           register = absoluteArm({ ...zoomed, roll });
           emit(commitCameraPose(register));

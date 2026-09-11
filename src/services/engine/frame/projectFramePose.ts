@@ -15,6 +15,7 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraState } from '../../../@types/camera/CameraState';
+import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -48,6 +49,7 @@ export function projectFramePose(args: {
   readonly bodies: ReadonlyMap<BodyId, BodyState>;
   readonly poseBasis: Mat3;
   readonly upBasis: Mat3;
+  readonly tuning: CameraTuning;
 }): {
   readonly register: FramedCameraPose;
   readonly displayed: FramedCameraPose;
@@ -68,6 +70,7 @@ export function projectFramePose(args: {
     bodies,
     poseBasis,
     upBasis,
+    tuning,
   } = args;
 
   // The pin SETS the target (never adds), so baking the displayed pose into
@@ -98,6 +101,7 @@ export function projectFramePose(args: {
     noted.rememberedTiltRad,
     poseBasis,
     upBasis,
+    tuning,
   );
 
   // The register stays FRAMED; every world-Mpc reader takes this value.
@@ -113,7 +117,13 @@ export function projectFramePose(args: {
     // would re-engage every frame of an animation inside the band.
     const eyeMpc = eyeMpcOf(world, poseBasis);
     // The focused body constrains the regime (round 10).
-    const arm = regimeArmFor(regime, eyeMpc, bodies, focus?.type === 'body' ? focus.id : null);
+    const arm = regimeArmFor(
+      regime,
+      eyeMpc,
+      bodies,
+      focus?.type === 'body' ? focus.id : null,
+      tuning,
+    );
     if (arm === 'absolute') {
       if (displayed.frame !== 'absolute') {
         // Disengage commits target-at-centre, eye preserved: the pivot pin

@@ -12,6 +12,7 @@ import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyState } from '../../@types/scene/BodyState';
 import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
 import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { OrientDeltas } from '../../@types/camera/OrientDeltas';
@@ -45,6 +46,8 @@ export function cameraDebugSnapshotOf(input: {
   readonly gesture: SurfaceGesture | 'down' | null;
   readonly lastZoomFactor: number | null;
   readonly rememberedTiltRad: number;
+  /** Input only: the panel reads the live value through the selector, not off this snapshot. */
+  readonly tuning: CameraTuning;
   /** `readOrientDeltas()` — measured in the frame loop, never re-derived here. */
   readonly deltas: OrientDeltas;
 }): CameraDebugSnapshot {
@@ -63,6 +66,7 @@ export function cameraDebugSnapshotOf(input: {
     gesture,
     lastZoomFactor,
     rememberedTiltRad,
+    tuning,
     deltas,
   } = input;
   const renderedFrame = renderedPose.frame;
@@ -73,6 +77,7 @@ export function cameraDebugSnapshotOf(input: {
     upBasis,
     bodyStates,
     rememberedTiltRad,
+    tuning,
   });
   const { bodyId, hOverR: hr } = dofs;
   const radiusM =
@@ -93,7 +98,7 @@ export function cameraDebugSnapshotOf(input: {
     altitudeM: hr !== null && radiusM !== undefined ? hr * radiusM : null,
     distanceMpc: worldPose.distance,
     orientationFrame,
-    bandUpWeight: hr !== null ? bodyUpWeight(hr) : null,
+    bandUpWeight: hr !== null ? bodyUpWeight(hr, tuning) : null,
     rememberedTiltRad,
     dofs,
     deltas,

@@ -32,7 +32,7 @@ import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorld
 import { beginDrag, setAutoRotate } from '../../../../src/state/camera/cameraSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -77,7 +77,7 @@ function toMidWindow(h: CameraSimHarness): void {
   // standpoint that is both world armed and inside the tilt band: just above
   // engage, where the hysteresis still holds the arm absolute. Coarse notches
   // to the neighbourhood, then tenth notches so the last cannot overshoot.
-  const { disengageHR, engageHR } = SURFACE_REGIME;
+  const { disengageHR, engageHR } = TUNING;
   while (display(h.state).hr < disengageHR * 1.15) h.wheel(100);
   expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
   while (display(h.state).hr > engageHR * 1.5) h.wheel(-100);
@@ -90,7 +90,7 @@ function toMidWindow(h: CameraSimHarness): void {
   // Projection live: display is `remembered × w`, read off the band rather
   // than pinned to a rad literal that only held while the bands shared edges.
   const live = display(h.state);
-  expect(live.tilt).toBeGreaterThan(0.5 * remembered * bodyUpWeight(live.hr));
+  expect(live.tilt).toBeGreaterThan(0.5 * remembered * bodyUpWeight(live.hr, TUNING));
 }
 
 describe('commit → re-derive idempotence (R12-1)', () => {

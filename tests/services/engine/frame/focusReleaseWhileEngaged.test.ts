@@ -29,7 +29,7 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -63,7 +63,7 @@ describe('focus release while engaged (round 10)', () => {
     const eyeBefore = displayedEye(h.state);
     const marsBefore = distTo(eyeBefore, MARS);
     const hrBefore = distTo(eyeBefore, EARTH) / R_MPC - 1;
-    expect(hrBefore).toBeLessThan(SURFACE_REGIME.engageHR); // deep in the band
+    expect(hrBefore).toBeLessThan(TUNING.engageHR); // deep in the band
 
     // The user's action: search-focus Mars. Without the fix nothing happens
     // until a manual zoom-out past disengage.

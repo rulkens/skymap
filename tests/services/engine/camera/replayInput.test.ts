@@ -24,7 +24,7 @@ import { cursorRayBodyLocal } from '../../../../src/utils/camera/cursorRayBodyLo
 import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { earthArm } from '../../../fixtures/earthArm';
@@ -69,6 +69,7 @@ function ctxOf(
     bodies: BODIES,
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     autoRotateEpoch: { ref: null, startMs: null },
+    tuning: store.getState().camera.tuning,
   };
 }
 
@@ -523,7 +524,7 @@ describe('replayInput', () => {
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
     // Half an engage-edge down, so the in-band roll is fully authored (w = 1)
     // before the recession starts, wherever ruling 19's band is tuned to.
-    const startHR = SURFACE_REGIME.engageHR * 0.5;
+    const startHR = DEFAULT_CAMERA_TUNING.engageHR * 0.5;
     const startDist = EARTH_RADIUS_MPC * (1 + startHR);
     store.dispatch(commitCameraPose(poseAt(startDist, -0.26)));
     const rollOfBase = (): number => worldArmOf(store.getState().camera.base).roll ?? 0;
@@ -557,7 +558,7 @@ describe('replayInput', () => {
     // Ride clear of disengage — a quarter-band of overshoot, and a guard sized
     // to that ride's length in e^0.1 altitude notches so a wider band still
     // completes it rather than timing out mid-blend.
-    const rideToHR = SURFACE_REGIME.disengageHR * 1.25;
+    const rideToHR = DEFAULT_CAMERA_TUNING.disengageHR * 1.25;
     const guardMax = Math.ceil(Math.log(rideToHR / startHR) / 0.1) + 4;
     let guard = 0;
     while (target / EARTH_RADIUS_MPC - 1 < rideToHR && guard < guardMax) {

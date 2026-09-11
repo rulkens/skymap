@@ -6,12 +6,12 @@
  * fold retarget and is explicitly NOT gated).
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { frameAlignedRoll } from '../../../src/services/engine/camera/frameAlignedRoll';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
-import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
+import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
@@ -30,11 +30,7 @@ const VIEWPORT: Vec2 = [100, 100];
 const FOV = Math.PI / 2;
 const POLE: Vec3 = [0, 0, 1];
 
-const TUNING_AT_LOAD = { ...ORIENT_TUNING };
-
-afterEach(() => {
-  Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
-});
+const NORTH_UP_OFF = { ...DEFAULT_CAMERA_TUNING, northUp: false };
 
 /** Roll-free basis at heading ψ / tilt θ for an eye on +Z (see surfaceStep fixtures). */
 function basisAt(psi: number, theta: number): Mat3 {
@@ -67,26 +63,30 @@ describe('north-up toggle', () => {
   it('off: an engaged notch leaves heading and roll untouched (control: on moves them)', () => {
     const start = () => poseAt([0, 0, 2.2], basisAt(0.4, 0));
 
-    ORIENT_TUNING.northUp = false;
-    const off = makeSurfaceDriver().apply(start(), zoomOut(), VIEWPORT, FOV, 1, POLE);
+    const off = makeSurfaceDriver().apply(start(), zoomOut(), VIEWPORT, FOV, 1, POLE, NORTH_UP_OFF);
     expect([...off.basisLocal]).toEqual([...start().basisLocal]); // bit-untouched
 
-    ORIENT_TUNING.northUp = true;
-    const on = makeSurfaceDriver().apply(start(), zoomOut(), VIEWPORT, FOV, 1, POLE);
+    const on = makeSurfaceDriver().apply(
+      start(),
+      zoomOut(),
+      VIEWPORT,
+      FOV,
+      1,
+      POLE,
+      DEFAULT_CAMERA_TUNING,
+    );
     // At tilt 0 the heading lives in the UP column (forward is straight down).
     const headingOn = Math.atan2(on.basisLocal[3], on.basisLocal[4]);
     expect(headingOn).toBeCloseTo(0.3, 9); // one 0.25·0.4 decay step toward north
   });
 
   it('off: the tilt wall still squeezes an above-ceiling recession (C1 not gated)', () => {
-    ORIENT_TUNING.northUp = false;
     const pose = poseAt([0, 0, 3.0], basisAt(0, 1.5)); // h/R 2.0, tilt over the ceiling
-    const out = makeSurfaceDriver().apply(pose, zoomOut(), VIEWPORT, FOV, 1, POLE);
+    const out = makeSurfaceDriver().apply(pose, zoomOut(), VIEWPORT, FOV, 1, POLE, NORTH_UP_OFF);
     expect(tiltOf(out)).toBeLessThan(1.5 - 1e-4);
   });
 
   it('off: the world arm holds the roll verbatim', () => {
-    ORIENT_TUNING.northUp = false;
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
     const bodies = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
     const earth = bodies.get('earth')!;
@@ -97,6 +97,8 @@ describe('north-up toggle', () => {
       distance: SCENE_EARTH.radiusM * (1 + hr) * SCALE_UNITS.M_TO_MPC,
       roll: 0.7,
     });
-    expect(frameAlignedRoll(poseAtHR(2.0), poseAtHR(2.2), bodies, B, B, 0.1)).toBe(0.7);
+    expect(frameAlignedRoll(poseAtHR(2.0), poseAtHR(2.2), bodies, B, B, 0.1, NORTH_UP_OFF)).toBe(
+      0.7,
+    );
   });
 });

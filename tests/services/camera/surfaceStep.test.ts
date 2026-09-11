@@ -17,8 +17,7 @@ import {
 import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
 import { ORIENT_DECAY } from '../../../src/data/camera/orientDecay';
-import { TILT_BAND } from '../../../src/data/camera/tiltBand';
-import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../src/data/camera/cameraTuning';
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
 import { eyeFrameOf } from '../../../src/utils/camera/eyeFrameOf';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
@@ -39,7 +38,13 @@ const FOV = Math.PI / 2; // tan(FOV/2) = 1 — one NDC unit is one eye-distance
 /** Columns right | up | forward. Nadir: at +Z looking down, screen-up = +Y. */
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 const POLE: Vec3 = [0, 0, 1];
-const CTX = { viewportPx: VIEWPORT, fovYRad: FOV, bodyRadiusM: R, sceneUpLocal: POLE };
+const CTX = {
+  viewportPx: VIEWPORT,
+  fovYRad: FOV,
+  bodyRadiusM: R,
+  sceneUpLocal: POLE,
+  tuning: TUNING,
+};
 
 /** The settle's per-notch cap, priced in the notch's log-zoom (ruling 2026-09-10). */
 const capOf = (factor: number): number =>
@@ -47,7 +52,7 @@ const capOf = (factor: number): number =>
 
 /** The TILT band's geometric midpoint: `bodyUpWeight` blends in LOG h/R, so
  * this is where the weight is exactly ½ whatever the edges are set to. */
-const BAND_MID_HR = Math.sqrt(TILT_BAND.fullHR * TILT_BAND.zeroHR);
+const BAND_MID_HR = Math.sqrt(TUNING.tiltFullHR * TUNING.tiltZeroHR);
 
 /** Parked at the midpoint, so `bodyUpWeight` is strictly in (0, 1) and the
  * un-map shows up in the numbers rather than as an identity. */
@@ -505,7 +510,7 @@ describe('surfaceStep', () => {
       expect(Math.abs(azimuthVs(pose, [0, 0, 1]))).toBeLessThan(1e-12); // converged deep
       let hr = 0.1;
       let guard = 0;
-      while (hr <= SURFACE_REGIME.disengageHR && guard < 30) {
+      while (hr <= TUNING.disengageHR && guard < 30) {
         pose = apply(c, pose, zoom(Math.exp(lnf), false), sceneUp);
         hr = Math.hypot(...eyeOf(pose)) / R - 1;
         guard += 1;
@@ -551,9 +556,9 @@ describe('surfaceStep', () => {
     // a log-h/R span over the live band edges: start a fixed fraction under
     // engage, ride to the upper half of the band, then cross out of it.
     const LN_NOTCH = 0.03;
-    const startHR = TILT_BAND.fullHR * 0.6;
+    const startHR = TUNING.tiltFullHR * 0.6;
     const belowNotches = 4; // e^0.12 < 1/0.6 ⇒ still under fullHR when they end
-    const rideToHR = Math.sqrt(BAND_MID_HR * SURFACE_REGIME.disengageHR);
+    const rideToHR = Math.sqrt(BAND_MID_HR * TUNING.disengageHR);
     const bandNotches = Math.ceil(
       Math.log(rideToHR / (startHR * Math.exp(LN_NOTCH * belowNotches))) / LN_NOTCH,
     );
@@ -599,11 +604,11 @@ describe('surfaceStep', () => {
     }
     // …then cross: the bake is on the scene up, the flip fully spent. One notch
     // past the edge, so the assertion below is not sitting on it.
-    const crossNotches = Math.ceil(Math.log(SURFACE_REGIME.disengageHR / rideToHR) / 0.1) + 1;
+    const crossNotches = Math.ceil(Math.log(TUNING.disengageHR / rideToHR) / 0.1) + 1;
     for (let i = 0; i < crossNotches; i += 1)
       pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
     const e = eyeOf(pose);
-    expect(Math.hypot(...e) / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
+    expect(Math.hypot(...e) / R - 1).toBeGreaterThan(TUNING.disengageHR);
     const luEnd: Vec3 = [e[0] / Math.hypot(...e), e[1] / Math.hypot(...e), e[2] / Math.hypot(...e)];
     const sVert = sceneUp[0] * luEnd[0] + sceneUp[1] * luEnd[1] + sceneUp[2] * luEnd[2];
     const sHoriz: Vec3 = [
@@ -647,13 +652,13 @@ describe('surfaceStep', () => {
     const c = makeSurfaceDriver();
     // Start half an engage-edge down, so the recession rides the whole band;
     // the guard is that ride's length in e^0.1 altitude notches, plus slack.
-    const startHR = SURFACE_REGIME.engageHR * 0.5;
-    const guardMax = Math.ceil(Math.log(SURFACE_REGIME.disengageHR / startHR) / 0.1) + 2;
+    const startHR = TUNING.engageHR * 0.5;
+    const guardMax = Math.ceil(Math.log(TUNING.disengageHR / startHR) / 0.1) + 2;
     const d0 = 1 + startHR;
     let pose = poseAt([lun[0] * d0, lun[1] * d0, lun[2] * d0], basis);
     let hr = startHR;
     let guard = 0;
-    while (hr <= SURFACE_REGIME.disengageHR && guard < guardMax) {
+    while (hr <= TUNING.disengageHR && guard < guardMax) {
       pose = apply(c, pose, zoom(Math.exp(0.1), false), sceneUp);
       hr = Math.hypot(...eyeOf(pose)) / R - 1;
       guard += 1;
@@ -864,7 +869,7 @@ describe('surfaceStep', () => {
       localUp[0] * east[1] - localUp[1] * east[0],
     ];
 
-    expect(mag / R - 1).toBeGreaterThan(SURFACE_REGIME.disengageHR);
+    expect(mag / R - 1).toBeGreaterThan(TUNING.disengageHR);
     // The residual is the capped decay's geometric tail — under 0.6°, visually
     // nothing, but never exactly 0 the way a hard clamp would land it.
     expect(bodyAngle(pose)).toBeLessThan(0.01);
@@ -879,7 +884,7 @@ describe('surfaceStep', () => {
     // altitude ramp returns to the drag path. From the boundary the disc fills
     // the 90° view (limb at 1.02 tan units), so the sky press sits just past
     // the top edge — pixels are only ray coordinates here — and latches look.
-    const boundary = R * (1 + SURFACE_REGIME.disengageHR);
+    const boundary = R * (1 + TUNING.disengageHR);
     const c = makeSurfaceDriver();
     c.onGestureStart();
     const pitched = apply(c, poseAt([0, 0, boundary], NADIR), drag('orbit', [50, -10], [50, -60]));
@@ -907,7 +912,7 @@ describe('surfaceStep', () => {
     // NEAR side (eye y POSITIVE here), not through nadir to the far side.
     const c = makeSurfaceDriver();
     c.onGestureStart();
-    const h = TILT_BAND.fullHR; // the band's full edge: w = 1
+    const h = TUNING.tiltFullHR; // the band's full edge: w = 1
     const alpha = (10 / 100) * FOV * TILT_GAIN;
     const out = apply(c, poseAt([0, 0, 1 + h], NADIR), drag('pan', [50, 50], [50, 40]));
     const eye = eyeOf(out);
@@ -1069,7 +1074,7 @@ describe('surfaceStep', () => {
     // pass-through, the one path an entering pose could reach this file
     // through, does not smuggle enforcement in.
     const c = makeSurfaceDriver();
-    const entered = poseAt([0, 0, R * (1 + SURFACE_REGIME.disengageHR)], basisAtTilt(Math.PI / 2));
+    const entered = poseAt([0, 0, R * (1 + TUNING.disengageHR)], basisAtTilt(Math.PI / 2));
     const untouched = apply(c, entered, drag('orbit', [50, 50], [60, 50]));
 
     expect(untouched).toBe(entered);
@@ -1102,7 +1107,7 @@ describe('surfaceStep', () => {
     expect(prev.rememberedTiltRad).toBe(0);
     // Ruling 12: the memory is the display tilt un-mapped through the band
     // weight, so it is strictly LARGER than what the drag put on screen.
-    const w = bodyUpWeight(hrOf(pose));
+    const w = bodyUpWeight(hrOf(pose), TUNING);
     expect(w).toBeGreaterThan(0);
     expect(w).toBeLessThan(1);
     expect(next.rememberedTiltRad).toBeCloseTo(tiltOf(pose) / w, 9);

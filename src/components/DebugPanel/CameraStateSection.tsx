@@ -13,11 +13,11 @@ import { useEffect, useState, type ReactElement } from 'react';
 import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
 import type { CameraDofRow } from '../../@types/camera/CameraDofRow';
 import type { OrientDofDelta } from '../../@types/camera/OrientDofDelta';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
-import { ORIENT_TUNING } from '../../data/camera/orientTuning';
-import { SURFACE_REGIME } from '../../data/camera/surfaceRegime';
-import { TILT_BAND } from '../../data/camera/tiltBand';
 import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camera/orientDeltas';
+import { selectCameraTuning } from '../../state/camera/selectors';
+import { useAppSelector } from '../../store/hooks';
 import DebugSection from './DebugSection';
 import OrientationTuning from './OrientationTuning';
 import styles from './CameraStateSection.module.css';
@@ -62,9 +62,9 @@ function deg(rad: number | null): string {
   return rad === null ? '—' : `${(rad * RAD_TO_DEG).toFixed(1)}°`;
 }
 
-function modelOf(snap: CameraDebugSnapshot): PanelModel {
+function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
   const { dofs, deltas } = snap;
-  const off = !ORIENT_TUNING.northUp;
+  const off = !tuning.northUp;
   return {
     header: `${frameLabel(snap.renderedFrame)} · ${snap.activeDriverId} · gesture: ${snap.gestureMode ?? 'none'}`,
     badge: snap.armMismatch ? 'ARM MISMATCH' : snap.epochMismatch ? 'EPOCH MISMATCH' : null,
@@ -77,13 +77,10 @@ function modelOf(snap: CameraDebugSnapshot): PanelModel {
       { key: 'h_over_R', value: num(snap.hOverR) },
       { key: 'altitude_m', value: num(snap.altitudeM) },
       { key: 'band_up_weight', value: num(snap.bandUpWeight) },
-      {
-        key: 'engage/disengage_hr',
-        value: `${SURFACE_REGIME.engageHR} / ${SURFACE_REGIME.disengageHR}`,
-      },
-      { key: 'tilt_full/zero_hr', value: `${TILT_BAND.fullHR} / ${TILT_BAND.zeroHR}` },
-      { key: 'blend_space', value: ORIENT_TUNING.blendSpace },
-      { key: 'north_up', value: String(ORIENT_TUNING.northUp) },
+      { key: 'engage/disengage_hr', value: `${tuning.engageHR} / ${tuning.disengageHR}` },
+      { key: 'tilt_full/zero_hr', value: `${tuning.tiltFullHR} / ${tuning.tiltZeroHR}` },
+      { key: 'blend_space', value: tuning.blendSpace },
+      { key: 'north_up', value: String(tuning.northUp) },
       { key: 'remembered_tilt_rad', value: num(snap.rememberedTiltRad) },
     ],
     markerReadout:
@@ -144,6 +141,9 @@ function copyTextOf(model: PanelModel): string {
 function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElement {
   const [snap, setSnap] = useState<CameraDebugSnapshot>(cameraDebug);
   const [copied, setCopied] = useState(false);
+  // The ONE reader of the live tuning: two readers at two rates (here and the
+  // 4 Hz snapshot) would be a 250 ms mirror of the value the sliders write.
+  const tuning = useAppSelector(selectCameraTuning);
 
   useEffect(() => {
     // This mount is what turns the frame loop's Δ/peak record on.
@@ -155,7 +155,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
     };
   }, [cameraDebug]);
 
-  const model = modelOf(snap);
+  const model = modelOf(snap, tuning);
 
   return (
     <DebugSection title="Camera">
@@ -197,6 +197,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
       </button>
 
       <OrientationTuning
+        tuning={tuning}
         hOverR={snap.hOverR}
         markerReadout={model.markerReadout}
         weightReadout={model.weightReadout}
@@ -220,10 +221,12 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
         className={styles.copyButton}
         onClick={() => {
           // A fresh snapshot, not the 4 Hz-stale one, so the paste is current.
-          void navigator.clipboard.writeText(copyTextOf(modelOf(cameraDebug()))).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
-          });
+          void navigator.clipboard
+            .writeText(copyTextOf(modelOf(cameraDebug(), tuning)))
+            .then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1200);
+            });
         }}
       >
         {copied ? 'copied ✓' : 'copy all'}

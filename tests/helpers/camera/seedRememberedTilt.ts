@@ -9,6 +9,7 @@
 
 import { surfaceStep } from '../../../src/services/camera/surfaceStep';
 import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
+import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { CameraSimHarness } from './CameraSimHarness';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { SurfaceMemory } from '../../../src/@types/camera/SurfaceMemory';
@@ -20,6 +21,7 @@ const CTX = {
   fovYRad: Math.PI / 2,
   bodyRadiusM: 1,
   sceneUpLocal: [0, 0, 1] as const,
+  tuning: DEFAULT_CAMERA_TUNING,
 };
 
 export function seedRememberedTilt(

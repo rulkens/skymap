@@ -27,8 +27,7 @@ import { hrOverBody } from '../../../helpers/camera/hrOverBody';
 import { tiltOverBody } from '../../../helpers/camera/tiltOverBody';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { mappedTiltRad } from '../../../../src/utils/camera/mappedTiltRad';
-import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
-import { TILT_BAND } from '../../../../src/data/camera/tiltBand';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -43,7 +42,7 @@ describe('tilt lerp round trip (ruling 13)', () => {
     // Dive to the band's full edge — the blend, not the arm, is the subject,
     // and w = 1 only at or below `fullHR` (the two bands no longer share an
     // edge). Engaged well before that, so the arm is body here either way.
-    diveUntilEngaged(h, { factor: TILT_BAND.fullHR / SURFACE_REGIME.engageHR, guard: 90 });
+    diveUntilEngaged(h, { factor: TUNING.tiltFullHR / TUNING.engageHR, guard: 90 });
     expect(h.state.cameraRuntime.register.pose.frame).not.toBe('absolute');
 
     // Set the memory through surfaceStep's own tilt/look drag steps. The
@@ -85,12 +84,12 @@ describe('tilt lerp round trip (ruling 13)', () => {
     // span sets how many notches a crossing takes, so counts fork the moment
     // it is retuned.
     const lastHR = () => trace[trace.length - 1]!.hr;
-    for (let i = 0; i < 200 && (i === 0 || lastHR() <= SURFACE_REGIME.disengageHR * 2); i += 1) {
+    for (let i = 0; i < 200 && (i === 0 || lastHR() <= TUNING.disengageHR * 2); i += 1) {
       notch(100);
     }
-    expect(lastHR()).toBeGreaterThan(SURFACE_REGIME.disengageHR * 2); // genuinely out
-    for (let i = 0; i < 200 && lastHR() >= TILT_BAND.fullHR; i += 1) notch(-100);
-    expect(lastHR()).toBeLessThan(TILT_BAND.fullHR); // genuinely back to full weight
+    expect(lastHR()).toBeGreaterThan(TUNING.disengageHR * 2); // genuinely out
+    for (let i = 0; i < 200 && lastHR() >= TUNING.tiltFullHR; i += 1) notch(-100);
+    expect(lastHR()).toBeLessThan(TUNING.tiltFullHR); // genuinely back to full weight
 
     let prevTilt = trace[0]!.tilt;
     for (const s of trace) {
@@ -101,7 +100,7 @@ describe('tilt lerp round trip (ruling 13)', () => {
       // wider engaged bar. A world-armed zoom-in leg without this mapping
       // would deviate by up to 0.355 — remembered × w with nothing expressed.
       const bar = s.arm === 'abs' ? 0.01 : 0.09;
-      expect(Math.abs(s.tilt - mappedTiltRad(remembered, s.hr))).toBeLessThan(bar);
+      expect(Math.abs(s.tilt - mappedTiltRad(remembered, s.hr, TUNING))).toBeLessThan(bar);
       // No threshold step: a notch may move tilt by ~the map's own delta — a
       // per-notch fraction of the band's log span, so it shrinks as the band
       // widens. A mapping expressed on the engaged arm only would instead step

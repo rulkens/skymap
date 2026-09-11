@@ -17,7 +17,7 @@ import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
-import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../src/data/camera/cameraTuning';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
@@ -110,7 +110,7 @@ describe('singular-locus recession (round 7)', () => {
       let hr = startHR;
       let maxTurn = 0;
       let guard = 0;
-      while (hr <= SURFACE_REGIME.disengageHR && guard < 60) {
+      while (hr <= TUNING.disengageHR && guard < 60) {
         const before = upOf(pose);
         pose = c.apply(pose, zoomStepOf(lnf), VIEWPORT, FOV, 1, SCENE_UP);
         const after = upOf(pose);
@@ -133,7 +133,7 @@ describe('singular-locus recession (round 7)', () => {
       expect(bake).toBeLessThan(2.9);
 
       let roll = bake;
-      let whr = SURFACE_REGIME.disengageHR * 1.05; // just past disengage, where the fold hands off
+      let whr = TUNING.disengageHR * 1.05; // just past disengage, where the fold hands off
       let drain = 0;
       while (Math.abs(roll) >= 1e-2 && drain < 60) {
         const nextHR = whr * Math.exp(lnf);
@@ -144,6 +144,7 @@ describe('singular-locus recession (round 7)', () => {
           B,
           B,
           lnf,
+          TUNING,
         );
         whr = nextHR;
         drain += 1;

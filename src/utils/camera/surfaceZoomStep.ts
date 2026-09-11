@@ -1,4 +1,5 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -24,6 +25,7 @@ export function surfaceZoomStep(
   bodyRadiusM: number,
   sceneUpLocal: Readonly<Vec3>,
   rememberedTiltRad: number,
+  tuning: CameraTuning,
 ): BodyFixedPose {
   const latched = gesture?.anchorLocalM ?? null;
   // Past the anchor's own tangent plane the anchor is behind the horizon and
@@ -56,11 +58,11 @@ export function surfaceZoomStep(
   // tilt deviation from the band mapping (ruling 12) — what the zoom did NOT
   // author, for the capped decay to spend.
   const hrPre = Math.hypot(...bodyFixedEyeM(arm)) / bodyRadiusM - 1;
-  const preInBlendFrame = eyeFrameOf(arm, bodyUpWeight(hrPre), sceneUpLocal);
+  const preInBlendFrame = eyeFrameOf(arm, bodyUpWeight(hrPre, tuning), sceneUpLocal);
   const preTiltDevRad =
     preInBlendFrame === null
       ? null
-      : preInBlendFrame.tiltRad - mappedTiltRad(rememberedTiltRad, hrPre);
+      : preInBlendFrame.tiltRad - mappedTiltRad(rememberedTiltRad, hrPre, tuning);
   return settledZoomPose(
     stepped,
     factor < 1 ? cursorAnchorM : null,
@@ -72,5 +74,6 @@ export function surfaceZoomStep(
     // Priced in the zoom the step is allowed to SPEND, not the folded notch:
     // `anchoredZoomStep` moves the eye by the same clamped factor.
     Math.abs(Math.log(spentZoomFactor(factor))),
+    tuning,
   );
 }

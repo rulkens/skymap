@@ -40,7 +40,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
@@ -66,7 +66,7 @@ function stepKm(a: Vec3, b: Vec3): number {
 /**
  * The eye step a projected register would add here: the pivot chord
  * `d·2sin(τ/2)` for the displayed tilt. Every loose bar below is a fraction of
- * it — the tilt at a legal in-window standpoint scales with `TILT_BAND`'s
+ * it — the tilt at a legal in-window standpoint scales with the tilt band's
  * weight there, so a km literal stops discriminating the moment the band moves.
  */
 function projectedWalkKm(state: EngineState): number {
@@ -95,7 +95,7 @@ function toMidWindow(h: CameraSimHarness) {
   // armed and inside the tilt band: just above engage, where the hysteresis
   // still holds the arm absolute. Coarse notches to the neighbourhood, then
   // tenth notches so the last step cannot overshoot the flip.
-  const { disengageHR, engageHR } = SURFACE_REGIME;
+  const { disengageHR, engageHR } = TUNING;
   while (display(h.state).hr < disengageHR * 1.15) h.wheel(100);
   expect(h.state.cameraRuntime.register.pose.frame).toBe('absolute');
   while (display(h.state).hr > engageHR * 1.5) h.wheel(-100);
@@ -108,7 +108,7 @@ function toMidWindow(h: CameraSimHarness) {
   // than pinned to a rad literal that only held while the two bands shared
   // edges.
   const live = display(h.state);
-  expect(live.tilt).toBeGreaterThan(0.5 * remembered * bodyUpWeight(live.hr));
+  expect(live.tilt).toBeGreaterThan(0.5 * remembered * bodyUpWeight(live.hr, TUNING));
 }
 
 describe('the register loop during an active drag (R12b-1)', () => {

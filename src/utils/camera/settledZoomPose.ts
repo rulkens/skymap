@@ -1,8 +1,8 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
-import { ORIENT_TUNING } from '../../data/camera/orientTuning';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { bodyUpWeight } from './bodyUpWeight';
 import { eyeFrameOf } from './eyeFrameOf';
@@ -39,17 +39,18 @@ export function settledZoomPose(
   preBlendAzimuthRad: number | null,
   rememberedTiltRad: number,
   logZoom: number,
+  tuning: CameraTuning,
 ): BodyFixedPose {
   let out = pose;
   const eyeM0 = bodyFixedEyeM(out);
   if (Math.hypot(...eyeM0) === 0) return pose;
   // The reference is the band blend (round 5): body pole deep in, scene up at
   // disengage, so an engaged recession hands the fold a scene-aligned bake.
-  const blendW = bodyUpWeight(Math.hypot(...eyeM0) / bodyRadiusM - 1);
+  const blendW = bodyUpWeight(Math.hypot(...eyeM0) / bodyRadiusM - 1, tuning);
   const f0 = eyeFrameOf(out, blendW, sceneUpLocal);
   if (f0 === null) return pose;
 
-  if (ORIENT_TUNING.northUp) {
+  if (tuning.northUp) {
     // Dive: pure decay (rulings 5/7) about the anchor's radial through the
     // body centre — altitude untouched. Recession: the one discipline — the
     // reference's own band swing is notch-authored and rides; only deviation
@@ -84,7 +85,7 @@ export function settledZoomPose(
     const b = out.basisLocal;
     const devNew =
       tiltFromNadirRad([b[6], b[7], b[8]], eyeM1) -
-      mappedTiltRad(rememberedTiltRad, eyeMag1 / bodyRadiusM - 1);
+      mappedTiltRad(rememberedTiltRad, eyeMag1 / bodyRadiusM - 1, tuning);
     const devPre = preTiltDevRad ?? devNew;
     out = tiltTurnedPose(
       out,
@@ -93,7 +94,7 @@ export function settledZoomPose(
     );
   }
 
-  if (ORIENT_TUNING.northUp) {
+  if (tuning.northUp) {
     out = levelledPose(out, {
       blendW,
       sceneUpLocal,

@@ -139,6 +139,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         upBasis,
         bodyStates,
         rememberedTiltRad: next.surface.rememberedTiltRad,
+        tuning: rootState.camera.tuning,
       }),
       nowMs,
     );

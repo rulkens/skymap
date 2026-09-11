@@ -18,7 +18,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { TILT_BAND } from '../../../../src/data/camera/tiltBand';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
@@ -54,7 +54,7 @@ function poseAtHR(hr: number, roll: number, yaw = 0.7, pitch = 0.3): CameraPose 
 function convergedRoll(pose: CameraPose, frame: Readonly<Mat3>, iterations = 200): number {
   let p = pose;
   for (let i = 0; i < iterations; i += 1) {
-    p = { ...p, roll: frameAlignedRoll(p, p, BODIES, frame, frame, NOTCH) };
+    p = { ...p, roll: frameAlignedRoll(p, p, BODIES, frame, frame, NOTCH, TUNING) };
   }
   return p.roll ?? 0;
 }
@@ -85,7 +85,7 @@ describe('frameAlignedRoll', () => {
     // Under the tilt band's full edge the blend is the pure pole
     // (`bodyUpWeight` = 1 exactly, the same reference the engaged settle
     // norths toward).
-    const pose = poseAtHR(TILT_BAND.fullHR / 2, 1.4);
+    const pose = poseAtHR(TUNING.tiltFullHR / 2, 1.4);
     const misaligned = screenUpOffset(pose, B, EARTH_POLE);
     expect(misaligned).toBeGreaterThan(0.5); // the fixture really is off
     const settled = { ...pose, roll: convergedRoll(pose, B) };
@@ -98,7 +98,15 @@ describe('frameAlignedRoll', () => {
     // MUST spend itself up here — deviation-only capped decay toward roll 0,
     // never a ride (the target is static above the band). Ruled cost: a
     // deep-space arrival roll bleeds off on notches too.
-    const stepped = frameAlignedRoll(poseAtHR(5, 1.4), poseAtHR(5.5, 1.4), BODIES, B, B, NOTCH);
+    const stepped = frameAlignedRoll(
+      poseAtHR(5, 1.4),
+      poseAtHR(5.5, 1.4),
+      BODIES,
+      B,
+      B,
+      NOTCH,
+      TUNING,
+    );
     expect(stepped).toBeCloseTo(1.4 - NOTCH_CAP, 12);
 
     let roll = 2.0; // worst-cell-class residual
@@ -106,7 +114,15 @@ describe('frameAlignedRoll', () => {
     let notches = 0;
     while (Math.abs(roll) >= 1e-2 && notches < 40) {
       const nextHR = hr * 1.15;
-      roll = frameAlignedRoll(poseAtHR(hr, roll), poseAtHR(nextHR, roll), BODIES, B, B, NOTCH);
+      roll = frameAlignedRoll(
+        poseAtHR(hr, roll),
+        poseAtHR(nextHR, roll),
+        BODIES,
+        B,
+        B,
+        NOTCH,
+        TUNING,
+      );
       hr = nextHR;
       notches += 1;
     }
@@ -124,21 +140,21 @@ describe('frameAlignedRoll', () => {
     let hr = 0.1;
     let roll = convergedRoll(poseAtHR(hr, 0), B, 300);
     expect(Math.abs(roll)).toBeGreaterThan(0.1); // the band really bent it
-    while (hr <= TILT_BAND.zeroHR) {
+    while (hr <= TUNING.tiltZeroHR) {
       const nextHR = hr * 1.15;
       const pre = poseAtHR(hr, roll);
       const post = poseAtHR(nextHR, roll);
-      const next = frameAlignedRoll(pre, post, BODIES, B, B, NOTCH);
+      const next = frameAlignedRoll(pre, post, BODIES, B, B, NOTCH, TUNING);
       // The notch's own target delta, measured off the ride's fixed points —
       // above the band the target is 0 structurally (the probe is inert there).
       const targetPost =
-        nextHR > TILT_BAND.zeroHR ? 0 : convergedRoll(poseAtHR(nextHR, roll), B, 300);
+        nextHR > TUNING.tiltZeroHR ? 0 : convergedRoll(poseAtHR(nextHR, roll), B, 300);
       const targetDelta = Math.abs(targetPost - convergedRoll(pre, B, 300));
       expect(Math.abs(next - roll)).toBeLessThanOrEqual(targetDelta + 1e-9);
       roll = next;
       hr = nextHR;
     }
-    expect(hr).toBeGreaterThan(TILT_BAND.zeroHR);
+    expect(hr).toBeGreaterThan(TUNING.tiltZeroHR);
     expect(Math.abs(roll)).toBeLessThan(1e-9);
   });
 
@@ -154,9 +170,17 @@ describe('frameAlignedRoll', () => {
 
     let hr = 0.1;
     let roll = convergedRoll(poseAtHR(hr, 0), alt, 300);
-    while (hr <= TILT_BAND.zeroHR) {
+    while (hr <= TUNING.tiltZeroHR) {
       const nextHR = hr * 1.15;
-      roll = frameAlignedRoll(poseAtHR(hr, roll), poseAtHR(nextHR, roll), BODIES, alt, alt, NOTCH);
+      roll = frameAlignedRoll(
+        poseAtHR(hr, roll),
+        poseAtHR(nextHR, roll),
+        BODIES,
+        alt,
+        alt,
+        NOTCH,
+        TUNING,
+      );
       hr = nextHR;
     }
     expect(Math.abs(roll)).toBeLessThan(1e-9);
@@ -176,7 +200,7 @@ describe('frameAlignedRoll', () => {
     let roll = convergedRoll(poseAtHR(0.12, 0, 0, -1.4), B, 300);
     let hr = 0.12;
     let maxStep = 0;
-    while (hr < TILT_BAND.zeroHR * 0.9) {
+    while (hr < TUNING.tiltZeroHR * 0.9) {
       const nextHR = hr * 1.1;
       const next = frameAlignedRoll(
         poseAtHR(hr, roll, 0, -1.4),
@@ -185,6 +209,7 @@ describe('frameAlignedRoll', () => {
         B,
         B,
         NOTCH,
+        TUNING,
       );
       maxStep = Math.max(maxStep, Math.abs(next - roll));
       roll = next;
@@ -196,7 +221,7 @@ describe('frameAlignedRoll', () => {
     let pose = poseAtHR(hr, roll, 0, -1.4);
     const settled = convergedRoll(pose, B, 300);
     pose = { ...pose, roll: settled };
-    const drift = Math.abs(frameAlignedRoll(pose, pose, BODIES, B, B, NOTCH) - settled);
+    const drift = Math.abs(frameAlignedRoll(pose, pose, BODIES, B, B, NOTCH, TUNING) - settled);
     expect(drift).toBeLessThan(1e-9); // genuinely at the fixed point — converged
   });
 
@@ -221,11 +246,11 @@ describe('frameAlignedRoll', () => {
 
     // In-band settle: bounded and near the scene up (the raw-weighted pole
     // term is only sin 2° strong; a raw-weighted chase would converge 1.4 rad off).
-    const midHR = (TILT_BAND.fullHR + TILT_BAND.zeroHR) / 2;
+    const midHR = (TUNING.tiltFullHR + TUNING.tiltZeroHR) / 2;
     let pose = poseAtHR(midHR, 0, yaw, pitch);
     let maxStep = 0;
     for (let i = 0; i < 60; i += 1) {
-      const next = frameAlignedRoll(pose, pose, BODIES, B, B, NOTCH);
+      const next = frameAlignedRoll(pose, pose, BODIES, B, B, NOTCH, TUNING);
       maxStep = Math.max(maxStep, Math.abs(next - (pose.roll ?? 0)));
       pose = { ...pose, roll: next };
     }
@@ -235,7 +260,7 @@ describe('frameAlignedRoll', () => {
     // Recede past the band top: the ride lands screen-up on the configured
     // global up — not its negation, not a perpendicular.
     let hr = midHR;
-    while (hr <= TILT_BAND.zeroHR) {
+    while (hr <= TUNING.tiltZeroHR) {
       const nextHR = hr * 1.15;
       const next = frameAlignedRoll(
         poseAtHR(hr, pose.roll ?? 0, yaw, pitch),
@@ -244,6 +269,7 @@ describe('frameAlignedRoll', () => {
         B,
         B,
         NOTCH,
+        TUNING,
       );
       maxStep = Math.max(maxStep, Math.abs(next - (pose.roll ?? 0)));
       pose = poseAtHR(nextHR, next, yaw, pitch);

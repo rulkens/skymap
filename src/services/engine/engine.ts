@@ -621,6 +621,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           gesture: surface.gesture,
           lastZoomFactor: outputs.lastZoomFactor,
           rememberedTiltRad: surface.rememberedTiltRad,
+          tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
         });
       },

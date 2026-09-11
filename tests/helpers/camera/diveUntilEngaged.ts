@@ -6,7 +6,7 @@
  */
 
 import { hrOverBody } from './hrOverBody';
-import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { CameraSimHarness } from './CameraSimHarness';
 import type { SimBodyId } from './SimBodyId';
 
@@ -18,7 +18,10 @@ export function diveUntilEngaged(
   const bodyState = h.bodies.get(body)!;
   const radiusM = h.radiusM(body);
   let i = 0;
-  while (hrOverBody(h.state, bodyState, radiusM) > SURFACE_REGIME.engageHR * factor && i < guard) {
+  while (
+    hrOverBody(h.state, bodyState, radiusM) > DEFAULT_CAMERA_TUNING.engageHR * factor &&
+    i < guard
+  ) {
     h.wheel(-100);
     i += 1;
   }

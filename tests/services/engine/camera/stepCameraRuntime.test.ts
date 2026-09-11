@@ -137,6 +137,7 @@ describe('stepCameraRuntime', () => {
         bodies: BODIES,
         poseBasis: B,
         upBasis: B,
+        tuning: intent.tuning,
       });
 
     const flat = project(0);

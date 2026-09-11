@@ -1,9 +1,9 @@
 /**
  * The ONE producer of a legal `CameraTuning`: range-clamp each patched knob,
- * then settle the three cross-edge invariants. The knob the caller moved wins
- * and the other yields — except the `tiltZeroHR ≤ disengageHR` cap, which
- * outranks the caller, because the arm flips at disengage and the blend must
- * already be at scene up there (`engageFlipPop` guards the pop).
+ * then settle the three cross-edge invariants — disengageHR ≥ engageHR × 1.1,
+ * tiltZeroHR ≥ tiltFullHR × 1.1, tiltZeroHR ≤ disengageHR. The knob the caller
+ * moved wins and the other yields, EXCEPT against that last cap: the arm flips
+ * at disengage, so the blend must already be at scene up there.
  */
 
 import type { CameraTuning } from '../../@types/camera/CameraTuning';

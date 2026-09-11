@@ -10,15 +10,16 @@
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import { createElement } from 'react';
+import { configureStore } from '@reduxjs/toolkit';
+import { createElement, type ReactNode } from 'react';
+import { Provider } from 'react-redux';
 
 import CameraStateSection from '../../../src/components/DebugPanel/CameraStateSection';
-import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
+import { rootReducer } from '../../../src/store/rootReducer';
+import { setCameraTuning } from '../../../src/state/camera/cameraSlice';
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
 
-const NORTH_UP_AT_LOAD = ORIENT_TUNING.northUp;
 afterEach(() => {
-  ORIENT_TUNING.northUp = NORTH_UP_AT_LOAD;
   delete (navigator as { clipboard?: unknown }).clipboard;
 });
 
@@ -61,8 +62,13 @@ const SNAP: CameraDebugSnapshot = {
   lastZoomDirection: null,
 };
 
-function renderSection() {
-  return render(createElement(CameraStateSection, { cameraDebug: () => SNAP }));
+function renderSection(northUp = true) {
+  const store = configureStore({ reducer: rootReducer });
+  store.dispatch(setCameraTuning({ northUp }));
+  return render(createElement(CameraStateSection, { cameraDebug: () => SNAP }), {
+    wrapper: ({ children }: { children: ReactNode }) =>
+      createElement(Provider, { store, children }),
+  });
 }
 
 describe('CameraStateSection', () => {
@@ -83,8 +89,7 @@ describe('CameraStateSection', () => {
   });
 
   it('keeps the heading/roll targets on the row, marked, while north-up is off', () => {
-    ORIENT_TUNING.northUp = false;
-    const { container } = renderSection();
+    const { container } = renderSection(false);
     expect(container.textContent).toContain('(off)');
     // Q8: the target is a property of the field, not of whether it is applied —
     // the roll row keeps both its target and its residual, not an em-dash.

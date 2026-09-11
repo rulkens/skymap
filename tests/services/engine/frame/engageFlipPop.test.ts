@@ -9,7 +9,7 @@
  * shows up as a burst in it.
  */
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
@@ -32,16 +32,17 @@ import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENT_DECAY } from '../../../../src/data/camera/orientDecay';
-import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
+import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
+import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import type { CameraTuning } from '../../../../src/@types/camera/CameraTuning';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
 /** The script drives deltaY-100 notches — the settle's calibration point. */
@@ -49,7 +50,7 @@ const NOTCH_CAP = ORIENT_DECAY.capRadPerLogZoom * ORIENT_DECAY.notchLogZoom;
 
 type FrameSample = { readonly arm: string; readonly up: Vec3; readonly w: number };
 
-function sampleOf(state: EngineState): FrameSample {
+function sampleOf(state: EngineState, tuning: CameraTuning): FrameSample {
   const live = liveWorldPose(state);
   const eye = displayedEye(state);
   const forward = normalize3([
@@ -61,7 +62,7 @@ function sampleOf(state: EngineState): FrameSample {
   return {
     arm: state.cameraRuntime.register.pose.frame === 'absolute' ? 'abs' : 'body',
     up: [...up] as Vec3,
-    w: bodyUpWeight(hrOfPose(eye, EARTH, SCENE_EARTH.radiusM)),
+    w: bodyUpWeight(hrOfPose(eye, EARTH, SCENE_EARTH.radiusM), tuning),
   };
 }
 
@@ -71,24 +72,21 @@ function turnBetween(a: FrameSample, b: FrameSample): number {
 }
 
 describe('engage-flip pop (round 8)', () => {
-  afterEach(() => {
-    ORIENT_TUNING.blendSpace = TUNING_AT_LOAD.blendSpace;
-  });
-
   // Both blend spaces (ruling 11): the seam guard must hold whichever
   // parameter space the one-home weight runs in.
   it.each(['log', 'lin'] as const)(
     'a focused dive through engage settles monotonically — no post-flip burst (%s space)',
     (space) => {
-      ORIENT_TUNING.blendSpace = space;
+      const tuning = { ...DEFAULT_CAMERA_TUNING, blendSpace: space };
       const h = makeCameraSimHarness();
+      h.store.dispatch(setCameraTuning({ blendSpace: space }));
       const events: { t: number; deltaY: number }[] = [];
       let t = 1000; // the follow approach settles at the framing distance first
       for (let i = 0; i < 60; i += 1, t += 33) events.push({ t, deltaY: -100 });
       const endT = t + 2000;
 
       const samples: FrameSample[] = [];
-      driveWheelEvents(h, events, endT, { onFrame: () => samples.push(sampleOf(h.state)) });
+      driveWheelEvents(h, events, endT, { onFrame: () => samples.push(sampleOf(h.state, tuning)) });
 
       const flipIdx = samples.findIndex(
         (s, i) => i > 0 && s.arm === 'body' && samples[i - 1]!.arm === 'abs',

@@ -14,7 +14,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { regimeArmFor } from '../../../../src/services/engine/camera/regimeArmFor';
-import { SURFACE_REGIME } from '../../../../src/data/camera/surfaceRegime';
+import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
@@ -50,9 +50,10 @@ describe('regimeArmFor', () => {
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('earth'), bodyStateAtOrigin()]]);
     const next = regimeArmFor(
       'absolute',
-      eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 0.95),
+      eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 0.95),
       bodyStates,
       null,
+      TUNING,
     );
     expect(next).toEqual({ body: 'earth' });
   });
@@ -61,35 +62,42 @@ describe('regimeArmFor', () => {
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('earth'), bodyStateAtOrigin()]]);
     const next = regimeArmFor(
       'absolute',
-      eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 1.05),
+      eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 1.05),
       bodyStates,
       null,
+      TUNING,
     );
     expect(next).toBe('absolute');
   });
 
   it('holds an engaged body arm until disengage, from both directions', () => {
-    const { engageHR, disengageHR } = SURFACE_REGIME;
+    const { engageHR, disengageHR } = TUNING;
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('earth'), bodyStateAtOrigin()]]);
     const current = { body: bodyId('earth') };
 
     // Approaching disengage from below (h/R rising through the engaged band).
-    expect(regimeArmFor(current, eyeAt(EARTH_RADIUS_M, engageHR * 0.5), bodyStates, null)).toEqual(
-      current,
-    );
     expect(
-      regimeArmFor(current, eyeAt(EARTH_RADIUS_M, disengageHR * 0.97), bodyStates, null),
+      regimeArmFor(current, eyeAt(EARTH_RADIUS_M, engageHR * 0.5), bodyStates, null, TUNING),
+    ).toEqual(current);
+    expect(
+      regimeArmFor(current, eyeAt(EARTH_RADIUS_M, disengageHR * 0.97), bodyStates, null, TUNING),
     ).toEqual(current);
     // Crossing disengage releases the arm.
-    expect(regimeArmFor(current, eyeAt(EARTH_RADIUS_M, disengageHR * 1.03), bodyStates, null)).toBe(
-      'absolute',
-    );
+    expect(
+      regimeArmFor(current, eyeAt(EARTH_RADIUS_M, disengageHR * 1.03), bodyStates, null, TUNING),
+    ).toBe('absolute');
 
     // Symmetric check from a fresh high altitude directly (the "from both
     // directions" half — the predicate holds the SAME regardless of how the
     // pose arrived at that h/R, since it reads only current + geometry).
     expect(
-      regimeArmFor(current, eyeAt(EARTH_RADIUS_M, (engageHR + disengageHR) / 2), bodyStates, null),
+      regimeArmFor(
+        current,
+        eyeAt(EARTH_RADIUS_M, (engageHR + disengageHR) / 2),
+        bodyStates,
+        null,
+        TUNING,
+      ),
     ).toEqual(current);
   });
 
@@ -98,12 +106,12 @@ describe('regimeArmFor', () => {
     // Earth is parked far enough away that its own h/R stays large. Nothing
     // in regimeArmFor's signature names which body is focused, so an
     // unfocused flyby past the nearer body still engages it.
-    const eyeMpc: Vec3 = [m(MOON_RADIUS_M * (1 + SURFACE_REGIME.engageHR * 0.5)), 0, 0];
+    const eyeMpc: Vec3 = [m(MOON_RADIUS_M * (1 + TUNING.engageHR * 0.5)), 0, 0];
     const bodyStates = new Map<BodyId, BodyState>([
       [bodyId('earth'), bodyState([m(EARTH_RADIUS_M * 5), 0, 0])],
       [bodyId('moon'), bodyStateAtOrigin()],
     ]);
-    const next = regimeArmFor('absolute', eyeMpc, bodyStates, null);
+    const next = regimeArmFor('absolute', eyeMpc, bodyStates, null, TUNING);
     expect(next).toEqual({ body: 'moon' });
   });
 
@@ -117,9 +125,10 @@ describe('regimeArmFor', () => {
     ]);
     const next = regimeArmFor(
       'absolute',
-      eyeAt(DEIMOS_RADIUS_M, SURFACE_REGIME.engageHR * 0.5),
+      eyeAt(DEIMOS_RADIUS_M, TUNING.engageHR * 0.5),
       bodyStates,
       null,
+      TUNING,
     );
     expect(next).toEqual({ body: 'deimos' });
   });
@@ -132,17 +141,19 @@ describe('regimeArmFor', () => {
     expect(
       regimeArmFor(
         current,
-        eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 0.5),
+        eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 0.5),
         bodyStates,
         'mars',
+        TUNING,
       ),
     ).toBe('absolute');
     expect(
       regimeArmFor(
         current,
-        eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.disengageHR * 0.97),
+        eyeAt(EARTH_RADIUS_M, TUNING.disengageHR * 0.97),
         bodyStates,
         'mars',
+        TUNING,
       ),
     ).toBe('absolute');
   });
@@ -155,17 +166,19 @@ describe('regimeArmFor', () => {
     expect(
       regimeArmFor(
         current,
-        eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 0.5),
+        eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 0.5),
         bodyStates,
         'earth',
+        TUNING,
       ),
     ).toEqual(current);
     expect(
       regimeArmFor(
         current,
-        eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.disengageHR * 0.97),
+        eyeAt(EARTH_RADIUS_M, TUNING.disengageHR * 0.97),
         bodyStates,
         'earth',
+        TUNING,
       ),
     ).toEqual(current);
   });
@@ -179,9 +192,10 @@ describe('regimeArmFor', () => {
     expect(
       regimeArmFor(
         'absolute',
-        eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 0.5),
+        eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 0.5),
         bodyStates,
         'mars',
+        TUNING,
       ),
     ).toBe('absolute');
     // The focused body itself still engages normally (the common path:
@@ -189,9 +203,10 @@ describe('regimeArmFor', () => {
     expect(
       regimeArmFor(
         'absolute',
-        eyeAt(EARTH_RADIUS_M, SURFACE_REGIME.engageHR * 0.5),
+        eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 0.5),
         bodyStates,
         'earth',
+        TUNING,
       ),
     ).toEqual({
       body: 'earth',

@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 
 import { cameraDebugSnapshotOf } from '../../../src/utils/camera/cameraDebugSnapshotOf';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
@@ -53,6 +54,7 @@ const SNAP_COMMON = {
   gesture: null,
   lastZoomFactor: null,
   rememberedTiltRad: 0,
+  tuning: DEFAULT_CAMERA_TUNING,
   deltas: {
     heading: QUIET_DELTA,
     tilt: QUIET_DELTA,

@@ -9,9 +9,9 @@
  * engage flip) would show up as a ~0.12 rad pop walked out by the decay.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
-import { ORIENT_TUNING } from '../../../../src/data/camera/orientTuning';
+import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 
 import { bandRollTarget } from '../../../../src/services/engine/camera/frameAlignedRoll';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -33,7 +33,6 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-const TUNING_AT_LOAD = { ...ORIENT_TUNING };
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
 const EARTH = BODIES.get('earth')!;
@@ -71,17 +70,12 @@ const STANDPOINTS = [
 describe.each(['log', 'lin'] as const)(
   'orientation-target symmetry (ruling 10, %s space)',
   (space) => {
-    beforeEach(() => {
-      ORIENT_TUNING.blendSpace = space;
-    });
-    afterEach(() => {
-      ORIENT_TUNING.blendSpace = TUNING_AT_LOAD.blendSpace;
-    });
+    const tuning = { ...DEFAULT_CAMERA_TUNING, blendSpace: space };
 
     it.each(STANDPOINTS)('world and engaged targets agree at every altitude (yaw %j)', (sp) => {
       for (const hr of HRS) {
         const pose = poseAtHR(hr, sp.yaw, sp.pitch);
-        const target = bandRollTarget(pose, BODIES, B, B);
+        const target = bandRollTarget(pose, BODIES, B, B, tuning);
         expect(target).not.toBeNull();
 
         const eye = eyeMpcOf(pose, B);
@@ -97,7 +91,7 @@ describe.each(['log', 'lin'] as const)(
         const luWorld = normalize3([-forward[0]!, -forward[1]!, -forward[2]!] as Vec3);
         const luBody = rotateVec3ByTightMat3T(luWorld, EARTH.orientation);
         const sceneUpBody = rotateVec3ByTightMat3T(UP_REF, EARTH.orientation);
-        const { north } = blendedEnuAt(luBody, bodyUpWeight(hr), sceneUpBody, null);
+        const { north } = blendedEnuAt(luBody, bodyUpWeight(hr, tuning), sceneUpBody, null);
         const engagedUp = rotateVec3ByTightMat3(north, EARTH.orientation);
 
         expect(angleBetween(worldUp, engagedUp)).toBeLessThan(1e-6);

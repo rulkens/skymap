@@ -4,7 +4,7 @@
  * drift from the mechanism: heading in the band-blended reference the engaged
  * settle converges against (its target is 0 — north), tilt against ruling 12's
  * `remembered × w(h/R)` mapping, roll against the band's ride target. Targets
- * are field properties and stay derived while `ORIENT_TUNING.northUp` is off:
+ * are field properties and stay derived while `tuning.northUp` is off:
  * a target moving under a still pose is the reference-frame bug, visible only
  * if it is still on screen. ONE derivation home — the 4 Hz debug snapshot and
  * `runFrame`'s per-frame delta record both read THIS.
@@ -15,6 +15,7 @@ import type { BodyState } from '../../@types/scene/BodyState';
 import type { CameraDofAngles } from '../../@types/camera/CameraDofAngles';
 import type { CameraDofRow } from '../../@types/camera/CameraDofRow';
 import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -51,8 +52,10 @@ export function cameraDofAnglesOf(input: {
   readonly upBasis: Readonly<Mat3>;
   readonly bodyStates: ReadonlyMap<BodyId, BodyState>;
   readonly rememberedTiltRad: number;
+  readonly tuning: CameraTuning;
 }): CameraDofAngles {
-  const { storedFrame, worldPose, poseBasis, upBasis, bodyStates, rememberedTiltRad } = input;
+  const { storedFrame, worldPose, poseBasis, upBasis, bodyStates, rememberedTiltRad, tuning } =
+    input;
   const eyeMpc = eyeMpcOf(worldPose, poseBasis);
 
   // Engaged body wins outright (spec's own regime predicate: `storedFrame` IS
@@ -102,14 +105,14 @@ export function cameraDofAnglesOf(input: {
     const upLocal: Vec3 = [basisM[3], basisM[4], basisM[5]];
     const { east, north } = blendedEnuAt(
       localUp,
-      hr !== null ? bodyUpWeight(hr) : 1,
+      hr !== null ? bodyUpWeight(hr, tuning) : 1,
       sceneUpLocalBody,
       upLocal,
     );
     heading = rowOf(refAzimuthOf(localUp, forwardLocal, upLocal, east, north), 0);
     tilt = rowOf(
       tiltFromNadirRad(forwardLocal, eyeRelBodyM),
-      hr !== null ? mappedTiltRad(rememberedTiltRad, hr) : null,
+      hr !== null ? mappedTiltRad(rememberedTiltRad, hr, tuning) : null,
     );
   }
 
@@ -120,7 +123,7 @@ export function cameraDofAnglesOf(input: {
     tilt,
     roll: rowOf(
       rollRad,
-      degenerate ? null : bandRollTarget(worldPose, bodyStates, poseBasis, upBasis),
+      degenerate ? null : bandRollTarget(worldPose, bodyStates, poseBasis, upBasis, tuning),
     ),
   };
 }

@@ -1,8 +1,7 @@
 /** Live camera-band tuning (rulings 11 + 19): the two regime edges, the two
- * orientation-blend edges, and the two feel toggles, as ONE value threaded into
- * the camera math. Invariants (`clampCameraTuning` is the only producer):
- * disengageHR ≥ engageHR × 1.1, tiltZeroHR ≥ tiltFullHR × 1.1,
- * tiltZeroHR ≤ disengageHR — tilt must already be 0 where the arm flips. */
+ * orientation-blend edges and the two feel toggles, as ONE value threaded into
+ * the camera math. `clampCameraTuning` is the only producer of a legal one —
+ * the cross-edge invariants live there. */
 export type CameraTuning = {
   /** h/R at which the body arm takes over. */
   readonly engageHR: number;

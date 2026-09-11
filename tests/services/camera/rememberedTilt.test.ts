@@ -8,14 +8,13 @@
  * Unit-radius closed-form fixtures, per the surfaceStep suite's convention.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
-import { ORIENT_TUNING } from '../../../src/data/camera/orientTuning';
-import { SURFACE_REGIME } from '../../../src/data/camera/surfaceRegime';
-import { setTiltBand, TILT_BAND } from '../../../src/data/camera/tiltBand';
+import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
+import type { CameraTuning } from '../../../src/@types/camera/CameraTuning';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
@@ -27,14 +26,6 @@ const FOV = Math.PI / 2;
 const POLE: Vec3 = [0, 0, 1];
 /** Columns right | up | forward. Nadir: at +Z looking down, screen-up = +Y. */
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
-
-const TUNING_AT_LOAD = { ...ORIENT_TUNING };
-const BAND_AT_LOAD = { fullHR: TILT_BAND.fullHR, zeroHR: TILT_BAND.zeroHR };
-
-afterEach(() => {
-  Object.assign(ORIENT_TUNING, TUNING_AT_LOAD);
-  setTiltBand(BAND_AT_LOAD);
-});
 
 function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
   return { bodyId: 'earth', anchorLocalM: [0, 0, 0], eyeRelAnchorM: eyeM, basisLocal };
@@ -70,19 +61,20 @@ function hrOf(p: BodyFixedPose): number {
 
 /**
  * Half-weight standpoint of the BLEND's own band — geometric, because the log
- * mapping puts half weight there. Read live: narrowing `TILT_BAND` off the
- * regime edges must move these fixtures, or they discriminate nothing.
+ * mapping puts half weight there. Derived from the band edges, so narrowing
+ * them off the regime edges moves these fixtures with them.
  */
 function midBandHR(): number {
-  return Math.sqrt(TILT_BAND.fullHR * TILT_BAND.zeroHR);
+  return Math.sqrt(DEFAULT_CAMERA_TUNING.tiltFullHR * DEFAULT_CAMERA_TUNING.tiltZeroHR);
 }
 
 function apply(
   c: ReturnType<typeof makeSurfaceDriver>,
   pose: BodyFixedPose,
   step: InputStep,
+  tuning: CameraTuning = DEFAULT_CAMERA_TUNING,
 ): BodyFixedPose {
-  return c.apply(pose, step, VIEWPORT, FOV, R, POLE);
+  return c.apply(pose, step, VIEWPORT, FOV, R, POLE, tuning);
 }
 
 /** Drag the tilt handle once and return the pose (remembered updates inside). */
@@ -90,9 +82,10 @@ function setTiltByDrag(
   c: ReturnType<typeof makeSurfaceDriver>,
   pose: BodyFixedPose,
   px: number,
+  tuning: CameraTuning = DEFAULT_CAMERA_TUNING,
 ): BodyFixedPose {
   c.onGestureStart();
-  const out = apply(c, pose, tiltDrag(px));
+  const out = apply(c, pose, tiltDrag(px), tuning);
   c.onGestureEnd();
   return out;
 }
@@ -126,11 +119,11 @@ function raiseTiltTo(
 describe('remembered tilt (ruling 12)', () => {
   it('zoom-in never authors tilt: a user-set tilt survives a dive unchanged', () => {
     const c = makeSurfaceDriver();
-    let pose = raiseTiltTo(c, poseAt([0, 0, 1 + TILT_BAND.fullHR], NADIR), 0.35);
+    let pose = raiseTiltTo(c, poseAt([0, 0, 1 + DEFAULT_CAMERA_TUNING.tiltFullHR], NADIR), 0.35);
     const set = tiltOf(pose);
     expect(set).toBeGreaterThan(0.35); // the handles really tilted the view
     // …but the centre ray still hits ground: under the horizon angle asin(R/d).
-    expect(set).toBeLessThan(Math.asin(1 / (1 + TILT_BAND.fullHR)));
+    expect(set).toBeLessThan(Math.asin(1 / (1 + DEFAULT_CAMERA_TUNING.tiltFullHR)));
     expect(c.rememberedTiltRad()).toBeCloseTo(set, 9); // w = 1 at/below fullHR
 
     for (let i = 0; i < 8; i += 1) {
@@ -155,9 +148,14 @@ describe('remembered tilt (ruling 12)', () => {
 
   describe.each(['log', 'lin'] as const)('band mapping in %s space', (space) => {
     it('display tilt converges to remembered × w mid-window and crosses disengage at 0', () => {
-      ORIENT_TUNING.blendSpace = space;
+      const tuning = { ...DEFAULT_CAMERA_TUNING, blendSpace: space };
       const c = makeSurfaceDriver();
-      const tilted = setTiltByDrag(c, poseAt([0, 0, 1 + TILT_BAND.fullHR / 2], NADIR), 20);
+      const tilted = setTiltByDrag(
+        c,
+        poseAt([0, 0, 1 + DEFAULT_CAMERA_TUNING.tiltFullHR / 2], NADIR),
+        20,
+        tuning,
+      );
       const set = tiltOf(tilted);
       expect(set).toBeGreaterThan(0.1);
 
@@ -169,41 +167,40 @@ describe('remembered tilt (ruling 12)', () => {
       // this a discriminating fixture, not a mirror.
       const hrMid = midBandHR();
       let pose = tilted;
-      expect(bodyUpWeight(hrOf(pose))).toBeCloseTo(1, 12);
-      while (hrOf(pose) < hrMid) pose = apply(c, pose, zoom(Math.exp(0.02)));
-      expect(tiltOf(pose)).toBeCloseTo(set * bodyUpWeight(hrOf(pose)), 6);
+      expect(bodyUpWeight(hrOf(pose), tuning)).toBeCloseTo(1, 12);
+      while (hrOf(pose) < hrMid) pose = apply(c, pose, zoom(Math.exp(0.02)), tuning);
+      expect(tiltOf(pose)).toBeCloseTo(set * bodyUpWeight(hrOf(pose), tuning), 6);
 
       // Recede from the converged state: the ride tracks the mapping exactly,
       // so the first pose past disengage carries tilt 0 — the invariant the
       // scene-aligned bake and the fold retarget stand on.
       let hr = hrMid;
       let guard = 0;
-      while (hr <= SURFACE_REGIME.disengageHR && guard < 30) {
-        pose = apply(c, pose, zoom(Math.exp(0.1)));
+      while (hr <= DEFAULT_CAMERA_TUNING.disengageHR && guard < 30) {
+        pose = apply(c, pose, zoom(Math.exp(0.1)), tuning);
         hr = hrOf(pose);
         guard += 1;
       }
-      expect(hr).toBeGreaterThan(SURFACE_REGIME.disengageHR);
+      expect(hr).toBeGreaterThan(DEFAULT_CAMERA_TUNING.disengageHR);
       expect(tiltOf(pose)).toBeLessThan(1e-7);
     });
   });
 
   it('mid-window tilt-set un-maps through w — the just-set display is a fixed point', () => {
-    ORIENT_TUNING.blendSpace = 'lin';
     // Isolate the tilt authority: with north-up on, the heading/level
     // settles would rotate the basis on the notch and contaminate a 1e-9
     // tilt readout. The toggle gates exactly those two (ruling 11) and
     // leaves the tilt mapping live.
-    ORIENT_TUNING.northUp = false;
+    const tuning = { ...DEFAULT_CAMERA_TUNING, blendSpace: 'lin', northUp: false } as const;
     const c = makeSurfaceDriver();
     const hr = midBandHR();
-    let pose = setTiltByDrag(c, poseAt([0, 0, 1 + hr], NADIR), 10);
+    let pose = setTiltByDrag(c, poseAt([0, 0, 1 + hr], NADIR), 10, tuning);
     const display = tiltOf(pose);
     expect(display).toBeGreaterThan(0.1);
     // Un-mapped through w at the POST-drag standpoint (the drag orbits the
     // anchor, so the altitude moved with it) — and w is genuinely < 1 here,
     // so remembered > display: the discriminating half of the rule.
-    const w = bodyUpWeight(hrOf(pose));
+    const w = bodyUpWeight(hrOf(pose), tuning);
     expect(w).toBeGreaterThan(0.5);
     expect(w).toBeLessThan(0.9);
     expect(c.rememberedTiltRad()).toBeCloseTo(display / w, 6);
@@ -212,8 +209,8 @@ describe('remembered tilt (ruling 12)', () => {
     // remembered = display would erode the set value on the very next notch).
     // A ±notch DITHER, not a factor-1 notch: the settle spends only what the
     // zoom spends, so a notch that moves nowhere cannot erode anything.
-    pose = apply(c, pose, zoom(Math.exp(0.1)));
-    pose = apply(c, pose, zoom(Math.exp(-0.1)));
+    pose = apply(c, pose, zoom(Math.exp(0.1)), tuning);
+    pose = apply(c, pose, zoom(Math.exp(-0.1)), tuning);
     // Loose against the anchored pair's own walk (~1e-3, F6), tight against
     // the erosion `remembered = display` would spend: devPre = display·(1−w).
     expect(Math.abs(tiltOf(pose) - display)).toBeLessThan(0.005);

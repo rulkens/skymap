@@ -12,10 +12,10 @@
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { ORIENT_DECAY } from '../../../data/camera/orientDecay';
-import { ORIENT_TUNING } from '../../../data/camera/orientTuning';
 import { blendedUpDir } from '../../../utils/camera/blendedUpDir';
 import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
@@ -41,6 +41,7 @@ export function bandRollTarget(
   bodyStates: ReadonlyMap<BodyId, BodyState>,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
+  tuning: CameraTuning,
 ): number | null {
   const eyeMpc = eyeMpcOf(pose, poseBasis);
   const nearest = nearestBodyHR(eyeMpc, bodyStates);
@@ -58,7 +59,7 @@ export function bandRollTarget(
   if (upPlaneSq < 1e-18) return null; // forward ∥ frame pole: roll is undefined
   const pole = rotateVec3ByTightMat3([0, 0, 1], nearest.bodyState.orientation);
   const carry = imagePlaneBasis(forward, pose.roll ?? 0, upRef).up;
-  const dir = blendedUpDir(forward, pole, bodyUpWeight(nearest.hr), upRef, carry);
+  const dir = blendedUpDir(forward, pole, bodyUpWeight(nearest.hr, tuning), upRef, carry);
   if (dir === null) return null;
   return rollFromScreenUp(forward, dir, upRef);
 }
@@ -70,13 +71,14 @@ export function frameAlignedRoll(
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
   logZoom: number,
+  tuning: CameraTuning,
 ): number {
   const currentRoll = postPose.roll ?? 0;
   // Ruling 11 trial: north-up off switches the roll authority off whole —
   // same gate the engaged heading/level settles read (one home).
-  if (!ORIENT_TUNING.northUp) return currentRoll;
-  const tPre = bandRollTarget(prePose, bodyStates, poseBasis, upBasis);
-  const tNew = bandRollTarget(postPose, bodyStates, poseBasis, upBasis);
+  if (!tuning.northUp) return currentRoll;
+  const tPre = bandRollTarget(prePose, bodyStates, poseBasis, upBasis, tuning);
+  const tNew = bandRollTarget(postPose, bodyStates, poseBasis, upBasis, tuning);
   if (tPre === null || tNew === null) return currentRoll;
   // Deviation vs the PRE-notch target decays; the deviation's own movement
   // (the notch's authored target swing) rides — one shared discipline.
