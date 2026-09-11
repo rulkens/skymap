@@ -294,6 +294,35 @@ describe('prepareStarCut per-node LOD fades', () => {
   });
 });
 
+describe('prepareStarCut stream aliasing across views (regression)', () => {
+  // Up to six capture-face walks (viewSlot 1..6) run AFTER the main view's own
+  // prime but BEFORE its draw (see runFrame/frameProgram ordering). If the
+  // persistent leaf/aggregate streams were keyed by catalog alone, a capture
+  // face's walk would reset+refill the SAME stream objects the main view's
+  // already-cached `PreparedStarCut` still references, so the main view would
+  // draw the last capture face's cut instead of its own.
+
+  it("a capture walk for a different viewSlot does not corrupt the main view's already-prepared streams", () => {
+    const catalog = makeTwoLevelCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const state = makeState(renderer);
+
+    // Main view (viewSlot 0) close in → its cut is the leaf alone.
+    const main = onlySource(prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 0)));
+    expect(main.leaf.count).toBe(1);
+    expect(main.leaf.nodeIndex[0]).toBe(LEAF_INDEX);
+
+    // A capture face (viewSlot 1) walks the SAME catalog from far away → its
+    // cut is the root aggregate alone, a different partition entirely.
+    prepareStarCut(state, makeCtx(camAtPcVec(FAR_PC), 0, 1));
+
+    // The main view's already-prepared leaf stream must still hold ITS OWN
+    // node — not have been reset/refilled by the capture face's walk.
+    expect(main.leaf.count).toBe(1);
+    expect(main.leaf.nodeIndex[0]).toBe(LEAF_INDEX);
+  });
+});
+
 describe('prepareStarCut capture views (viewSlot !== 0)', () => {
   // A sky-cubemap capture face shares the catalog's fade state with the main
   // view (it's keyed per CATALOG, not per ctx) but must not participate in it —

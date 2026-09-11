@@ -471,10 +471,11 @@ export function starCatalogVisible(state: EngineState, ctx: ReadyFrameContext): 
  *
  * ── Reused across frames, INVALIDATED by the next `computeStarCut` (non-reentrant) ─
  *
- * These arrays PERSIST per catalog (see `streamsByCatalog`) and are `reset` +
- * refilled each frame rather than reallocated. So a `PreparedStarCut` is a VIEW
- * over them, invalidated by the next `computeStarCut` call — the same contract
- * `walkStarOctreeCut`'s snapshot already carries. It is safe because the leaf and
+ * These arrays PERSIST per (catalog, viewSlot) (see `streamsByCatalog`) and are
+ * `reset` + refilled each frame rather than reallocated. So a `PreparedStarCut`
+ * is a VIEW over them, invalidated by the next `computeStarCut` call FOR THAT
+ * SAME viewSlot — the same contract `walkStarOctreeCut`'s snapshot already
+ * carries. It is safe because the leaf and
  * aggregate layers both consume within the SAME frame's `ctx` (memoised, so the
  * walk runs once and both read one cached result before the next frame recomputes),
  * and the pick path recomputes on its own fresh `ctx` AFTER the visual frame drew.
@@ -618,22 +619,29 @@ function pushStreamNode(
 }
 
 /**
- * The two draw streams (leaf + aggregate) PERSIST per catalog across frames and
- * are reset+refilled each frame — never freshly allocated. Keyed by the CATALOG
- * object exactly like `fadeStateByCatalog`, for the same two free properties: a
- * replaced catalog (tier swap) is a new object, so it starts with fresh streams
- * and the old pair is GC'd with the WeakMap; and per-catalog IS per-source since
- * the renderer holds one catalog per source. The pair is what makes a
- * `PreparedStarCut` a reused view — see `StarNodeStream`'s non-reentrancy note.
+ * The two draw streams (leaf + aggregate) PERSIST per (catalog, viewSlot) pair
+ * across frames and are reset+refilled each frame — never freshly allocated.
+ * Keyed by viewSlot as well as the CATALOG object because up to seven distinct
+ * `ctx`s walk one catalog per real frame (the main view plus six sky-cubemap
+ * capture faces, the faces running before the main view's own draw — see the
+ * module header); a catalog-only key would have a capture face's walk
+ * reset+refill the same arrays the main view's already-prepared cut still
+ * references. A replaced catalog (tier swap) is a new object, so it starts
+ * fresh and the old map is GC'd with the WeakMap.
  */
 type CatalogStreams = { leaf: StarNodeStream; aggregate: StarNodeStream };
-const streamsByCatalog = new WeakMap<StarCatalog, CatalogStreams>();
+const streamsByCatalog = new WeakMap<StarCatalog, Map<number, CatalogStreams>>();
 
-function streamsFor(catalog: StarCatalog): CatalogStreams {
-  let streams = streamsByCatalog.get(catalog);
+function streamsFor(catalog: StarCatalog, viewSlot: number): CatalogStreams {
+  let byViewSlot = streamsByCatalog.get(catalog);
+  if (byViewSlot === undefined) {
+    byViewSlot = new Map();
+    streamsByCatalog.set(catalog, byViewSlot);
+  }
+  let streams = byViewSlot.get(viewSlot);
   if (streams === undefined) {
     streams = { leaf: createStream(1024), aggregate: createStream(1024) };
-    streamsByCatalog.set(catalog, streams);
+    byViewSlot.set(viewSlot, streams);
   }
   return streams;
 }
@@ -740,7 +748,7 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     // Reuse this catalog's persistent stream pair (reset, then refilled) rather
     // than allocating fresh arrays — the allocation fix. Both streams coexist for
     // the whole frame (leaf into HDR, aggregate into the half-res offscreen).
-    const { leaf, aggregate } = streamsFor(catalog);
+    const { leaf, aggregate } = streamsFor(catalog, ctx.viewSlot);
     resetStream(leaf);
     resetStream(aggregate);
 
