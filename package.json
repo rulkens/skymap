@@ -40,6 +40,7 @@
     "build-structures": "tsx tools/structures/buildStructures.ts && npm run build-data-manifest",
     "build-mcpm": "tsx tools/volumes/buildMcpmVolume.ts --all && npm run build-data-manifest",
     "prebake-petunias": "\"${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}\" --background --python tools/meshes/prebake/petuniasPrebake.py",
+    "prebake-mesh": "\"${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}\" --background --factory-startup --python tools/meshes/prebake/meshPrebake.py --",
     "build-meshes": "tsx tools/meshes/buildMeshes.ts && npm run build-data-manifest",
     "promote-mcpm-workbench": "tsx tools/volumes/promoteWorkbenchExport.ts",
     "build-dust": "tsx tools/volumes/buildDustVolume.ts --all && npm run build-data-manifest",

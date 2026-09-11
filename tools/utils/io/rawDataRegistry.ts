@@ -1079,12 +1079,127 @@ export const RAW_DATA = {
     description:
       'Provenance for the petunia model — author, model URL, CC BY 4.0, fetch date, checksum, the attribution string, and what the pre-bake does to it.',
   },
+  'meshes.voyagerSource': {
+    path: 'data/raw/meshes/voyager/Voyager Probe (B).glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA 3D Resources "Voyager Probe (B)" by Michael D. Carbajal (public domain) — the untouched download, registered so the provenance chain is complete. buildMeshes never reads it: three materials and a placeholder cube go through the Blender pre-bake first.',
+    upstream: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
+    readme: 'meshes.voyager.readme',
+  },
+  'meshes.voyager': {
+    path: 'data/raw/meshes/voyager/voyager.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The Voyager model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.voyager actually points at. Regenerate with `npm run prebake-mesh -- voyager` (Blender, not CI), never by hand.',
+    upstream: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.voyager.readme',
+  },
+  'meshes.voyager.readme': {
+    path: 'data/raw/meshes/voyager/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Voyager model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and what the pre-bake does to it.',
+  },
+  'meshes.perseveranceSource': {
+    path: 'data/raw/meshes/perseverance/Mars 2020 Perseverance Rover.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA 3D Resources "Mars 2020 Perseverance Rover" by Brian Kumanchik, NASA/JPL-Caltech (public domain) — the untouched download. buildMeshes never reads it: 47 materials, 199k tris and a mast that only deploys mid-animation go through the Blender pre-bake first.',
+    upstream: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
+    readme: 'meshes.perseverance.readme',
+  },
+  'meshes.perseverance': {
+    path: 'data/raw/meshes/perseverance/perseverance.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The Perseverance model posed mast-up, decimated to 100k tris and flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.perseverance actually points at. Regenerate with `npm run prebake-mesh -- perseverance` (Blender, not CI), never by hand.',
+    upstream: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.perseverance.readme',
+  },
+  'meshes.perseverance.readme': {
+    path: 'data/raw/meshes/perseverance/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Perseverance model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
+  },
+  'meshes.curiosityArchive': {
+    path: 'data/raw/meshes/curiosity/Curiosity Rover (MSL) (Clean).zip',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA 3D Resources "Curiosity Rover (MSL) (Clean)" by Brian Kumanchik, NASA/JPL-Caltech (public domain) — the download as served, a zip holding one .blend.',
+    upstream: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
+    readme: 'meshes.curiosity.readme',
+  },
+  'meshes.curiositySource': {
+    path: 'data/raw/meshes/curiosity/Curiosity Rover (MSL) (Clean).blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The Curiosity scene unzipped from the archive beside it — what the pre-bake opens. buildMeshes never reads it: 18 materials, cameras, lights and helper geometry go through the Blender pre-bake first.',
+    upstream: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
+    readme: 'meshes.curiosity.readme',
+  },
+  'meshes.curiosity': {
+    path: 'data/raw/meshes/curiosity/curiosity.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The Curiosity model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.curiosity actually points at. Regenerate with `npm run prebake-mesh -- curiosity` (Blender, not CI), never by hand.',
+    upstream: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.curiosity.readme',
+  },
+  'meshes.curiosity.readme': {
+    path: 'data/raw/meshes/curiosity/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Curiosity model — author, model URL, NASA public-domain terms, fetch date, checksums for both the zip and the .blend inside it, the attribution string, native units/axes, and the three source defects the pre-bake repairs.',
+  },
+  'meshes.merSource': {
+    path: 'data/raw/meshes/mer/Mars Exploration Rover - Spirit and Opportunity.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA 3D Resources "Mars Exploration Rover - Spirit and Opportunity" by NASA/JPL-Caltech (public domain) — one model serving both rover bodies. NASA\'s own download link 404s; the URL below is the page, the working fetch is the GitHub mirror named in the README.',
+    upstream:
+      'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
+    readme: 'meshes.mer.readme',
+  },
+  'meshes.mer': {
+    path: 'data/raw/meshes/mer/mer.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The MER model posed deployed (panels out, mast up) and flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.mer actually points at. Regenerate with `npm run prebake-mesh -- mer` (Blender, not CI), never by hand.',
+    upstream:
+      'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.mer.readme',
+  },
+  'meshes.mer.readme': {
+    path: 'data/raw/meshes/mer/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the MER model — author, model URL, the working GitHub-mirror fetch, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
+  },
   'meshes.sha256': {
     path: 'data/raw/meshes/meshes.sha256',
     kind: 'file',
     source: 'committed',
     description:
-      'SHA-256 sidecar for the two hand-downloaded mesh GLBs — the pre-baked output is excluded, being a rebuildable product rather than a fetch.',
+      'SHA-256 sidecar for the hand-downloaded mesh sources — the pre-baked outputs are excluded, being rebuildable products rather than fetches.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
