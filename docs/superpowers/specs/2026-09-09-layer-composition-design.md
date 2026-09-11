@@ -772,6 +772,18 @@ The spec's four open questions, ruled 2026-09-10. Transcript:
 | Q13 | `SOURCE_REGISTRY`                            | Rows split into each Layer's `sources/`; the append-only `Source` code enum stays global. The flat registry is reconstituted from the Layer tuple.                   | §4.7               |
 | Q14 | Frame order                                  | ONE hand-authored nested list. `ContentPass` loses `target`, `slab`, `skyCapture`, `hdrPostLensing`; the capture roster and the lens split become steps.             | §5, §4.1, §9(c)    |
 
+Plan-time amendments, ruled during (c)'s execution, 2026-09-11:
+
+| #   | Question                                       | Ruling                                                                                                                     | Folded into |
+| --- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| A1  | Orbit trails' place in `FRAME_ORDER`           | A post-composite `(hdr, NEAR0)` render line, not an `HdrPhase` value (#682).                                               | §5          |
+| A2  | Settings-fragment granularity                  | A Layer owns a LIST of settings fragments, one per CLUSTER, not one fragment per Layer.                                    | §4.2, §4.3  |
+| A3  | Fragment action-type namespacing               | Action types stay flat and byte-identical; cross-fragment key collisions are guarded by `assertUniqueFragmentReducerKeys`. | §4.3        |
+| A4  | The frame-visible `EngineState` cut            | `PassState` lands in this PR; `CoreFrameState` is minted in (d), once `gpu` leaves the pass contract.                      | §4.1, §5    |
+| A5  | `tier` on `EngineComposition`                  | Not a field: `tier` stays store state, written only through `requestTier` → `watchTierSaga` → `setTier`.                   | §4.4        |
+| A6  | `dataUrl` on `EngineComposition`               | Not a field: deferred to the PR with a reader, (g) at the earliest.                                                        | §4.4        |
+| A7  | `LayerCoreDeps`' field list, left open by §4.2 | Pinned: `GpuHandleConstructDeps` minus `fontAtlases`, plus `store` and `requestRender`.                                    | §4.2        |
+
 ## 14. Corrections to the review
 
 | Review says                                                    | The files say                                                                                                                                                                                                                                                                                                             |

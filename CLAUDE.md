@@ -12,8 +12,10 @@ A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at b
 src/
   @types/  one type per file; deep relative imports, no barrels
   components/  React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
+  compositions/  build-time engine compositions (app; reference engines later)
   data/  static data: sources enum, colourIndex spec, binary format
   hooks/  React hooks (useEngine, useSplash, alias/structure indexes, …)
+  layers/  per-Layer modules — settings clusters today, whole Layers from PR (d)
   services/
     camera/  OrbitCamera, OrbitControls, tweens
     engine/  engine orchestrator, autoLod, cloud loader
