@@ -6,12 +6,12 @@
  * means SKIP: an index packed from −1 would alias body 0.
  */
 
-import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
-import { BODY_PICK_ROWS } from '../../../../data/bodies/bodyPickRows';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { SOURCE_ENTRIES } from '../../data/sourceEntries';
+import { BODY_PICK_ROWS } from '../../data/bodies/bodyPickRows';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../data/selectionEncoding';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { starPickId } from './starPickId';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodyId } from '../../@types/data/body/BodyId';
 
 // Without this, 'sirius' would also match the sun row and pack Source.Sun —
 // wrong, and unreachable by the round-trip test, which reads that same row back.

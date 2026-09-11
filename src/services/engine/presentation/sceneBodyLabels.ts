@@ -53,7 +53,7 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { CONSTELLATION_COUNT } from './constellationCaptions';
-import { sceneBodyPickId } from '../frame/passes/sceneBodyPickId';
+import { sceneBodyPickId } from '../../../utils/picking/sceneBodyPickId';
 
 /**
  * GPU buffer capacity for the foreground caption renderer — the `maxLabels`

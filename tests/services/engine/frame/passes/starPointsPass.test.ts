@@ -35,7 +35,7 @@ import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { SGR_A_STAR_ANCHOR } from '../../../../../src/data/bodies/sceneSgrAStar';
 import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
-import { starPickId } from '../../../../../src/services/engine/frame/passes/starPickId';
+import { starPickId } from '../../../../../src/utils/picking/starPickId';
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/data/famousStarPickRadiusPx';

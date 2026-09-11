@@ -8,15 +8,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { sceneBodyPickId } from '../../../../../src/services/engine/frame/passes/sceneBodyPickId';
-import { resolvePick } from '../../../../../src/services/engine/helpers/resolvePick';
-import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
-import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
-import { SGR_A_STAR } from '../../../../../src/data/bodies/sceneSgrAStar';
-import { unpackPick } from '../../../../../src/data/selectionEncoding';
-import { Source } from '../../../../../src/data/sources';
-import type { ResolvePickDeps } from '../../../../../src/@types/engine/ResolvePickDeps';
+import { sceneBodyPickId } from '../../../src/utils/picking/sceneBodyPickId';
+import { resolvePick } from '../../../src/services/engine/helpers/resolvePick';
+import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
+import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
+import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { SGR_A_STAR } from '../../../src/data/bodies/sceneSgrAStar';
+import { unpackPick } from '../../../src/data/selectionEncoding';
+import { Source } from '../../../src/data/sources';
+import type { ResolvePickDeps } from '../../../src/@types/engine/ResolvePickDeps';
 
 const deps: ResolvePickDeps = { structures: { byCategory: () => [] } };
 

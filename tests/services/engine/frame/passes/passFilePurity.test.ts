@@ -18,9 +18,7 @@ const PASSES_DIR = fileURLToPath(
 // Pass files that still inline helpers, with their current count. Lower a row
 // when you extract; delete it at zero. `orbitTrailsPass`'s row is its
 // cross-frame `staging` scratch — sized from the elements table, owned by that
-// pass alone, so it has nowhere else to live. `glintBandClass`,
-// `labelPickQuads` and `sceneBodyPickId` are helpers misfiled in this folder
-// rather than passes; their rows clear when they move out of it.
+// pass alone, so it has nowhere else to live.
 const ALLOWED: Readonly<Record<string, number>> = {
   bodyGlintsPass: 8,
   cloudShellPass: 1,
@@ -28,14 +26,11 @@ const ALLOWED: Readonly<Record<string, number>> = {
   earthPass: 6,
   fieldStarSpherePass: 6,
   filamentsPass: 3,
-  glintBandClass: 3,
   horizonShellPass: 1,
-  labelPickQuads: 2,
   milkyWayPass: 1,
   orbitTrailsPass: 1,
   planetsPass: 1,
   ringsPass: 1,
-  sceneBodyPickId: 1,
   sgrAStarLensingPass: 5,
   starCatalogPass: 26,
   starPointsPass: 3,

@@ -8,11 +8,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { starPickId } from '../../../../../src/services/engine/frame/passes/starPickId';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
-import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
-import { unpackPick } from '../../../../../src/data/selectionEncoding';
-import { Source } from '../../../../../src/data/sources';
+import { starPickId } from '../../../src/utils/picking/starPickId';
+import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { SCENE_S_STARS } from '../../../src/data/bodies/sceneSStars';
+import { unpackPick } from '../../../src/data/selectionEncoding';
+import { Source } from '../../../src/data/sources';
 
 describe('starPickId', () => {
   it('stamps the source code of the table the star actually came from', () => {

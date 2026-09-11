@@ -70,7 +70,7 @@ import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';
-import { starPickId } from './starPickId';
+import { starPickId } from '../../../../utils/picking/starPickId';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 

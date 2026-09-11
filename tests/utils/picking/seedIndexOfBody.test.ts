@@ -22,9 +22,9 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { seedIndexOfBody } from '../../../../../src/services/engine/frame/passes/seedIndexOfBody';
-import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
+import { seedIndexOfBody } from '../../../src/utils/picking/seedIndexOfBody';
+import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
+import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 
 describe('seedIndexOfBody', () => {
   it('returns a planet id’s position in the SCENE_PLANETS seed table', () => {

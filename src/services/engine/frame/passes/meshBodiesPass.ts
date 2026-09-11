@@ -30,7 +30,7 @@ import { sunVisibleFraction } from '../../../../utils/scene/sunVisibleFraction';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { drawableMeshBodies } from '../drawableMeshBodies';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { seedIndexOfBody } from './seedIndexOfBody';
+import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 
 export const meshBodiesPass: ContentPass = {
   name: 'mesh-bodies',

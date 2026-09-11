@@ -6,15 +6,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  hasPickableLabel,
-  labelPickQuads,
-} from '../../../../../src/services/engine/frame/passes/labelPickQuads';
-import { LABEL_PICK_GRACE_PADDING_PX } from '../../../../../src/data/labels/labelPickGracePaddingPx';
-import { ATLAS_FONT_SIZE } from '../../../../../src/data/fonts';
-import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
-import type { LabelBBox } from '../../../../../src/@types/rendering/LabelBBox';
-import type { Label2DProjection } from '../../../../../src/@types/rendering/Label2DProjection';
+import { hasPickableLabel } from '../../../src/utils/labels/hasPickableLabel';
+import { labelPickQuads } from '../../../src/utils/labels/labelPickQuads';
+import { LABEL_PICK_GRACE_PADDING_PX } from '../../../src/data/labels/labelPickGracePaddingPx';
+import { ATLAS_FONT_SIZE } from '../../../src/data/fonts';
+import type { Label2D } from '../../../src/@types/rendering/Label2D';
+import type { LabelBBox } from '../../../src/@types/rendering/LabelBBox';
+import type { Label2DProjection } from '../../../src/@types/rendering/Label2DProjection';
 
 const BBOX: LabelBBox = { minX: -10, minY: -20, maxX: 30, maxY: 5 };
 

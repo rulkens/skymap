@@ -10,7 +10,8 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { near0LabelProjection } from '../near0LabelProjection';
-import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
+import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
+import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 
 export const foregroundLabelsPass: ContentPass = {
   name: 'foreground-labels',
