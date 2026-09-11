@@ -53,6 +53,19 @@ const SPLAT_MANIFEST: SceneManifest = {
   ],
 };
 
+const MESH_MANIFEST: SceneManifest = {
+  ...MANIFEST_COMMON,
+  assets: [
+    {
+      ...ASSET_COMMON,
+      label: 'Facade mesh',
+      kind: 'mesh',
+      triangleCount: 42_000,
+      artifactUrl: 'geo3d/g1/a1/mesh.glb',
+    },
+  ],
+};
+
 function preloadedStateWithManifest(manifest: SceneManifest = MANIFEST): PreloadedState {
   return {
     group: {
@@ -94,5 +107,17 @@ describe('LayerList', () => {
     );
 
     expect(container.textContent).toContain('42,000 splats');
+  });
+
+  it("shows a mesh asset's count in tris", () => {
+    const { store } = createSceneStore(preloadedStateWithManifest(MESH_MANIFEST));
+
+    const { container } = render(
+      <Provider store={store}>
+        <LayerList />
+      </Provider>,
+    );
+
+    expect(container.textContent).toContain('42,000 tris');
   });
 });

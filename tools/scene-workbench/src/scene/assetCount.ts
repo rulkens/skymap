@@ -13,6 +13,7 @@ const ASSET_COUNT: {
 } = {
   pointCloud: (asset) => ({ count: asset.pointCount, unit: 'pts' }),
   gaussianSplat: (asset) => ({ count: asset.splatCount, unit: 'splats' }),
+  mesh: (asset) => ({ count: asset.triangleCount, unit: 'tris' }),
 };
 
 export function assetCount(asset: SceneAsset): AssetCountDisplay {
