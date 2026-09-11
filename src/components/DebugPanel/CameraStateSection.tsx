@@ -107,7 +107,6 @@ function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
         value: snap.anchorLocalM === null ? '—' : `[${snap.anchorLocalM.map(String).join(', ')}]`,
       },
       { key: 'eye_rel_anchor_m', value: num(snap.eyeRelAnchorMagM) },
-      { key: 'last_zoom', value: snap.lastZoomDirection ?? '—' },
       { key: 'rendered_sim_days', value: num(snap.lastRenderedSimDays) },
       { key: 'live_sim_days', value: num(snap.liveSimDays) },
       { key: 'delta_s', value: String(snap.epochDeltaDays * 86_400) },
@@ -124,7 +123,7 @@ function copyTextOf(model: PanelModel): string {
     lines.push(
       `${dof.name}: current=${num(dof.row.currentRad)} target=${num(dof.row.targetRad)} ` +
         `residual=${num(dof.row.residualRad)} delta=${num(dof.delta.deltaRad)} ` +
-        `peak=${num(dof.delta.peakAbsRad)} peak_at_ms=${num(dof.delta.peakAtMs)}` +
+        `peak=${num(dof.delta.peakAbsRad)}` +
         (dof.off ? ' (north-up off)' : ''),
     );
   }

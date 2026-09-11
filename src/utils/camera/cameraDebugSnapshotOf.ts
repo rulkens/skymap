@@ -44,7 +44,6 @@ export function cameraDebugSnapshotOf(input: {
   readonly time: TimeState;
   readonly activeDriverId: string;
   readonly gesture: SurfaceGesture | 'down' | null;
-  readonly lastZoomFactor: number | null;
   readonly rememberedTiltRad: number;
   /** Input only: the panel reads the live value through the selector, not off this snapshot. */
   readonly tuning: CameraTuning;
@@ -64,7 +63,6 @@ export function cameraDebugSnapshotOf(input: {
     time,
     activeDriverId,
     gesture,
-    lastZoomFactor,
     rememberedTiltRad,
     tuning,
     deltas,
@@ -93,7 +91,6 @@ export function cameraDebugSnapshotOf(input: {
     storedFrame,
     renderedFrame,
     armMismatch: !sameFrame(storedFrame, renderedFrame),
-    engagedBodyId: bodyId,
     hOverR: hr,
     altitudeM: hr !== null && radiusM !== undefined ? hr * radiusM : null,
     distanceMpc: worldPose.distance,
@@ -111,6 +108,5 @@ export function cameraDebugSnapshotOf(input: {
     activeDriverId,
     gestureMode: gesture === null ? null : gesture === 'down' ? 'down (unlatched)' : gesture.mode,
     gestureCursorHit: gesture === null || gesture === 'down' ? null : gesture.anchorLocalM !== null,
-    lastZoomDirection: lastZoomFactor === null ? null : lastZoomFactor < 1 ? 'in' : 'out',
   };
 }

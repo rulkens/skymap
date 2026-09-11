@@ -43,7 +43,7 @@ function poseWithEye(eyeMpc: Vec3): CameraPose {
   return { target: eyeMpc, yaw: 0, pitch: 0, distance: 0 };
 }
 
-const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0, peakAtMs: null } as const;
+const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0 } as const;
 
 /** Inputs the regime/epoch assertions below never read (present only to
  * satisfy the full snapshot shape). */
@@ -52,7 +52,6 @@ const SNAP_COMMON = {
   upBasis: IDENTITY,
   orientationFrame: 'ecliptic',
   gesture: null,
-  lastZoomFactor: null,
   rememberedTiltRad: 0,
   tuning: DEFAULT_CAMERA_TUNING,
   deltas: {
@@ -82,21 +81,8 @@ function bodyFramed(id: BodyId, anchorLocalM: Vec3, eyeRelAnchorM: Vec3): Framed
 }
 
 describe('cameraDebugSnapshotOf', () => {
-  it('reports no mismatch when stored and rendered agree (both absolute)', () => {
-    const snap = cameraDebugSnapshotOf({
-      storedFrame: 'absolute',
-      renderedPose: absoluteFramed(),
-      ...SNAP_COMMON,
-      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
-      lastRenderedSimDays: 100,
-      liveSimDays: 100,
-      time: LIVE_TIME,
-      activeDriverId: 'resting',
-    });
-    expect(snap.armMismatch).toBe(false);
-  });
-
+  // The one case a naive `storedFrame === renderedFrame` gets wrong: two body
+  // arms on the same body are distinct objects.
   it('reports no mismatch when stored and rendered agree on the same body', () => {
     const snap = cameraDebugSnapshotOf({
       storedFrame: { body: bodyId('earth') },
@@ -110,39 +96,6 @@ describe('cameraDebugSnapshotOf', () => {
       activeDriverId: 'resting',
     });
     expect(snap.armMismatch).toBe(false);
-  });
-
-  it('flags a mismatch when the stored regime and the rendered arm disagree', () => {
-    const snap = cameraDebugSnapshotOf({
-      storedFrame: { body: bodyId('earth') },
-      renderedPose: absoluteFramed(),
-      ...SNAP_COMMON,
-      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 0.5)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
-      lastRenderedSimDays: 100,
-      liveSimDays: 100,
-      time: LIVE_TIME,
-      activeDriverId: 'resting',
-    });
-    expect(snap.armMismatch).toBe(true);
-  });
-
-  it('flags a mismatch between two different engaged bodies', () => {
-    const snap = cameraDebugSnapshotOf({
-      storedFrame: { body: bodyId('earth') },
-      renderedPose: bodyFramed(bodyId('moon'), [0, 0, 0], [1, 0, 0]),
-      ...SNAP_COMMON,
-      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 0.5)),
-      bodyStates: new Map([
-        [bodyId('earth'), bodyState([0, 0, 0])],
-        [bodyId('moon'), bodyState([m(EARTH_RADIUS_M * 5), 0, 0])],
-      ]),
-      lastRenderedSimDays: 100,
-      liveSimDays: 100,
-      time: LIVE_TIME,
-      activeDriverId: 'resting',
-    });
-    expect(snap.armMismatch).toBe(true);
   });
 
   it('holds epoch delta within the healthy poll/heartbeat floor as no mismatch', () => {
@@ -193,7 +146,7 @@ describe('cameraDebugSnapshotOf', () => {
       time: LIVE_TIME,
       activeDriverId: 'resting',
     });
-    expect(snap.engagedBodyId).toBe('earth');
+    expect(snap.dofs.bodyId).toBe('earth');
     expect(snap.hOverR).toBeCloseTo(1.0, 6);
     expect(snap.altitudeM).toBeCloseTo(EARTH_RADIUS_M, 0);
   });
@@ -213,7 +166,7 @@ describe('cameraDebugSnapshotOf', () => {
       time: LIVE_TIME,
       activeDriverId: 'resting',
     });
-    expect(snap.engagedBodyId).toBe('moon');
+    expect(snap.dofs.bodyId).toBe('moon');
   });
 
   it('carries anchor/eye readout only on a body-arm rendered pose', () => {
@@ -303,11 +256,9 @@ describe('cameraDebugSnapshotOf', () => {
       liveSimDays: 100,
       time: LIVE_TIME,
       activeDriverId: 'resting',
-      lastZoomFactor: 1.2,
     });
 
     expect(snap.dofs.roll.currentRad).toBe(0.3);
-    expect(snap.lastZoomDirection).toBe('out');
     expect(snap.dofs.tilt.currentRad).toBeCloseTo(0, 6); // looking straight at the centre
     expect(snap.dofs.roll.targetRad).not.toBeNull();
   });

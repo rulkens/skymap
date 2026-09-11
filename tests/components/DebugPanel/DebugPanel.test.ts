@@ -22,8 +22,8 @@ import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
-import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
 import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/earthTileSubsystem';
+import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 
 const PASS_NAMES = ['point-sprites', 'textured-quads'];
 
@@ -39,41 +39,6 @@ const stubTimingService: GpuTimingService = {
 
 const stubSlots = new Map();
 
-const ABSENT_DOF = { currentRad: null, targetRad: null, residualRad: null };
-const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0, peakAtMs: null };
-
-/** A quiet, self-consistent stub — armMismatch/epochMismatch both false. */
-const EMPTY_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
-  storedFrame: 'absolute',
-  renderedFrame: 'absolute',
-  armMismatch: false,
-  engagedBodyId: null,
-  hOverR: null,
-  altitudeM: null,
-  distanceMpc: 1,
-  orientationFrame: 'ecliptic',
-  bandUpWeight: null,
-  rememberedTiltRad: 0,
-  dofs: {
-    bodyId: null,
-    hOverR: null,
-    heading: ABSENT_DOF,
-    tilt: ABSENT_DOF,
-    roll: ABSENT_DOF,
-  },
-  deltas: { heading: QUIET_DELTA, tilt: QUIET_DELTA, roll: QUIET_DELTA },
-  lastRenderedSimDays: 0,
-  liveSimDays: 0,
-  epochDeltaDays: 0,
-  epochMismatch: false,
-  anchorLocalM: null,
-  eyeRelAnchorMagM: null,
-  activeDriverId: 'resting',
-  gestureMode: null,
-  gestureCursorHit: null,
-  lastZoomDirection: null,
-};
-
 // Only `debug.earthTiles` and `debug.cameraDebug` are reached — `flyToLonLat`
 // dispatches a store action rather than reading the handle — so the rest of
 // EngineHandle is unused here and it's cast rather than fully stubbed.
@@ -81,7 +46,7 @@ const stubEngineHandleRef = createRef<EngineHandle | null>();
 stubEngineHandleRef.current = {
   debug: {
     earthTiles: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
-    cameraDebug: () => EMPTY_CAMERA_DEBUG_SNAPSHOT,
+    cameraDebug: () => QUIET_CAMERA_DEBUG_SNAPSHOT,
   },
 } as unknown as EngineHandle;
 

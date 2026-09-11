@@ -200,7 +200,6 @@ export function stepCameraRuntime(
         simDays,
         upBasis,
         projection,
-        lastZoomFactor: drained.lastZoomFactor ?? prev.outputs.lastZoomFactor,
       },
     },
     actions,

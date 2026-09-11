@@ -19,11 +19,10 @@ type DofRecord = {
   prevRad: number | null;
   deltaRad: number;
   peakAbsRad: number;
-  peakAtMs: number | null;
 };
 
 function emptyDof(): DofRecord {
-  return { prevRad: null, deltaRad: 0, peakAbsRad: 0, peakAtMs: null };
+  return { prevRad: null, deltaRad: 0, peakAbsRad: 0 };
 }
 
 const RECORD: Record<keyof OrientDeltas, DofRecord> = {
@@ -54,7 +53,7 @@ export function orientDeltasWatched(): boolean {
   return watchers > 0;
 }
 
-function step(dof: DofRecord, currentRad: number | null, nowMs: number): void {
+function step(dof: DofRecord, currentRad: number | null): void {
   const prevRad = dof.prevRad;
   dof.prevRad = currentRad;
   // A gap (off-roster, degenerate forward) breaks the chain rather than
@@ -65,27 +64,21 @@ function step(dof: DofRecord, currentRad: number | null, nowMs: number): void {
   }
   dof.deltaRad = wrapRad(currentRad - prevRad);
   const absRad = Math.abs(dof.deltaRad);
-  if (absRad > dof.peakAbsRad) {
-    dof.peakAbsRad = absRad;
-    dof.peakAtMs = nowMs;
-  }
+  if (absRad > dof.peakAbsRad) dof.peakAbsRad = absRad;
 }
 
-export function recordOrientDeltas(angles: CameraDofAngles, nowMs: number): void {
-  step(RECORD.heading, angles.heading.currentRad, nowMs);
-  step(RECORD.tilt, angles.tilt.currentRad, nowMs);
-  step(RECORD.roll, angles.roll.currentRad, nowMs);
+export function recordOrientDeltas(angles: CameraDofAngles): void {
+  step(RECORD.heading, angles.heading.currentRad);
+  step(RECORD.tilt, angles.tilt.currentRad);
+  step(RECORD.roll, angles.roll.currentRad);
 }
 
 export function clearOrientPeaks(): void {
-  for (const dof of Object.values(RECORD)) {
-    dof.peakAbsRad = 0;
-    dof.peakAtMs = null;
-  }
+  for (const dof of Object.values(RECORD)) dof.peakAbsRad = 0;
 }
 
 function frozen(dof: DofRecord): OrientDofDelta {
-  return { deltaRad: dof.deltaRad, peakAbsRad: dof.peakAbsRad, peakAtMs: dof.peakAtMs };
+  return { deltaRad: dof.deltaRad, peakAbsRad: dof.peakAbsRad };
 }
 
 /** A value copy — the record keeps mutating under a panel that renders from it. */

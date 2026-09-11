@@ -1,4 +1,3 @@
-import type { BodyId } from '../data/body/BodyId';
 import type { CameraDofAngles } from './CameraDofAngles';
 import type { OrientDeltas } from './OrientDeltas';
 import type { PoseFrame } from './PoseFrame';
@@ -11,11 +10,9 @@ export type CameraDebugSnapshot = {
   /** `cameraRuntime.register.pose.frame` — the arm actually drawn last frame. */
   readonly renderedFrame: PoseFrame;
   readonly armMismatch: boolean;
-  /** The engaged body when `storedFrame` is a body arm, else the nearest roster body. */
-  readonly engagedBodyId: BodyId | null;
-  /** h/R for `engagedBodyId`; null when no scene body resolved this instant. */
+  /** h/R for `dofs.bodyId`; null when no scene body resolved this instant. */
   readonly hOverR: number | null;
-  /** Altitude above `engagedBodyId`'s surface, metres; null alongside `hOverR`. */
+  /** Altitude above `dofs.bodyId`'s surface, metres; null alongside `hOverR`. */
   readonly altitudeM: number | null;
   readonly distanceMpc: number;
   /** `settings.orientation` — the configured scene frame. */
@@ -45,6 +42,4 @@ export type CameraDebugSnapshot = {
   readonly gestureMode: string | null;
   /** Whether the latched gesture holds a cursor ground hit; null without a latch. */
   readonly gestureCursorHit: boolean | null;
-  /** From the last zoom step's factor; null before the first notch. */
-  readonly lastZoomDirection: 'in' | 'out' | null;
 };

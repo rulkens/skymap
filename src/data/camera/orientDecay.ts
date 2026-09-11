@@ -12,9 +12,7 @@ const NOTCH_LOG_ZOOM = 100 * WHEEL_ZOOM_K;
 export const ORIENT_DECAY = {
   perLogZoom: -Math.log(0.75) / NOTCH_LOG_ZOOM,
   capRadPerLogZoom: 0.1 / NOTCH_LOG_ZOOM,
-  /** The calibration notch both rates above are priced in: the log-zoom one
-   * deltaY-100 wheel step carries. No production reader — the tests spell
-   * "one notch" with it rather than re-deriving `100 × WHEEL_ZOOM_K`. */
+  /** The calibration notch both rates above are priced in; test-only reader. */
   notchLogZoom: NOTCH_LOG_ZOOM,
   /** A drag runs per STEP, not per log-zoom, so its level settle has its own cap (rad). */
   dragLevelCapRad: 0.1,

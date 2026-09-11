@@ -67,8 +67,6 @@ export function replayInput(
   readonly register: FramedCameraPose;
   readonly surface: SurfaceMemory;
   readonly follow: FollowMemory | null;
-  /** The last zoom step's factor; null when the drain held no zoom. */
-  readonly lastZoomFactor: number | null;
   readonly followDistanceTarget: number | null;
   readonly actions: readonly UnknownAction[];
 } {
@@ -95,7 +93,6 @@ export function replayInput(
   let register = prev.register;
   let surface = prev.surface;
   let follow = prev.follow;
-  let lastZoomFactor: number | null = null;
   let followDistanceTarget: number | null = null;
   // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
   // `advanceEpochs` would keep a fold-time reset when another driver wins.
@@ -220,7 +217,6 @@ export function replayInput(
         break;
 
       case 'zoom': {
-        lastZoomFactor = step.factor;
         // The settles are priced per unit of zoom, not per step (user ruling
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
         const logZoom = Math.abs(Math.log(step.factor));
@@ -293,7 +289,6 @@ export function replayInput(
     register,
     surface,
     follow,
-    lastZoomFactor,
     followDistanceTarget,
     actions,
   };

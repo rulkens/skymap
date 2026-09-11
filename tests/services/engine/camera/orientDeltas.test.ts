@@ -53,7 +53,6 @@ describe('the camera debug delta record', () => {
     const jumped = readOrientDeltas();
     expect(jumped.roll.deltaRad).toBeCloseTo(JUMP_RAD, 9);
     expect(jumped.roll.peakAbsRad).toBeCloseTo(JUMP_RAD, 9);
-    expect(jumped.roll.peakAtMs).toBe(1_000);
     // The three rows are separately derived: a roll swing is not tilt motion.
     expect(jumped.tilt.deltaRad).toBeCloseTo(0, 9);
 
@@ -66,7 +65,6 @@ describe('the camera debug delta record', () => {
 
     clearOrientPeaks();
     expect(readOrientDeltas().roll.peakAbsRad).toBe(0);
-    expect(readOrientDeltas().roll.peakAtMs).toBeNull();
   });
 
   it('records nothing while unwatched, and does not bill the closed period to the first frame back', () => {

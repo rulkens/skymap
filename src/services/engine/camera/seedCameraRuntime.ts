@@ -32,7 +32,6 @@ export function seedCameraRuntime(args: {
       // Copied, so the seed never aliases the shared registry entry.
       upBasis: [...ORIENTATION_FRAMES[DEFAULT_ORIENTATION]],
       projection: args.projection,
-      lastZoomFactor: null,
     },
   };
 }

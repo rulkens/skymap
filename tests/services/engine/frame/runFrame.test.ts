@@ -247,7 +247,6 @@ function makeState(): EngineState {
         // Seeded with the ecliptic (default) basis.
         upBasis: [...ORIENTATION_FRAMES.ecliptic],
         projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
-        lastZoomFactor: null,
       },
     },
   } as unknown as EngineState;

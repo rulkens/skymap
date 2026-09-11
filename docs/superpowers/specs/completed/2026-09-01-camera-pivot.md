@@ -976,7 +976,6 @@ type FrameOutputs = {
   readonly simDays: number;
   readonly upBasis: Mat3;
   readonly projection: CameraProjection;
-  readonly lastZoomFactor: number | null;
 };
 ```
 
@@ -1009,7 +1008,7 @@ not passed.
 Five pure stages, in this order (the fold stays last, spec §7):
 
 ```ts
-replayInput(prev: { register; surface; follow }, steps, ctx) → { register; surface; follow; lastZoomFactor; followDistanceTarget; actions }
+replayInput(prev: { register; surface; follow }, steps, ctx) → { register; surface; follow; followDistanceTarget; actions }
 advanceEpochs(prev.epochs, { intent; focus; clip; winnerEpoch; nowMs }) → CameraEpochs
 pickWinner(drivers, s, approachDone) → CameraDriver, then winner.pose(ctx, mem) → { pose; memory }
 commitOnEdge({ register; displayed; produced; prevWinner; winner; drivers }) → { render; authoredOverride; actions }

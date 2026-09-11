@@ -1,6 +1,6 @@
 /**
  * Earth's body arm at J2000: eye `radii` Earth-radii from the centre, looking at
- * it. The drain and replay fixtures seed a body-arm base from this.
+ * it. The replay fixtures seed a body-arm base from this.
  */
 
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';

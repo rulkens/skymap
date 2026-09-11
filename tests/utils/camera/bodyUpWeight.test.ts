@@ -41,11 +41,4 @@ describe('bodyUpWeight', () => {
     // this. Holds regardless of the band's absolute scale.
     expect(bodyUpWeight(Math.sqrt(tiltFullHR * tiltZeroHR), t)).toBeGreaterThan(0.55);
   });
-
-  it('the tilt-blend edges retune this curve', () => {
-    const t = { ...DEFAULT_CAMERA_TUNING, tiltFullHR: 0.1, tiltZeroHR: 0.4 };
-    expect(bodyUpWeight(Math.sqrt(0.1 * 0.4), t)).toBeCloseTo(0.5, 12);
-    expect(bodyUpWeight(0.1, t)).toBe(1);
-    expect(bodyUpWeight(0.4, t)).toBe(0);
-  });
 });

@@ -141,7 +141,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         rememberedTiltRad: next.surface.rememberedTiltRad,
         tuning: rootState.camera.tuning,
       }),
-      nowMs,
     );
   }
 

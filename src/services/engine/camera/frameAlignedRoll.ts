@@ -74,7 +74,7 @@ export function frameAlignedRoll(
   tuning: CameraTuning,
 ): number {
   const currentRoll = postPose.roll ?? 0;
-  // Ruling 11 trial: north-up off switches the roll authority off whole —
+  // Ruling 11: north-up off switches the roll authority off whole —
   // same gate the engaged heading/level settles read (one home).
   if (!tuning.northUp) return currentRoll;
   const tPre = bandRollTarget(prePose, bodyStates, poseBasis, upBasis, tuning);

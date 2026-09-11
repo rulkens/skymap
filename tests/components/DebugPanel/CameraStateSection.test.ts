@@ -18,6 +18,7 @@ import CameraStateSection from '../../../src/components/DebugPanel/CameraStateSe
 import { rootReducer } from '../../../src/store/rootReducer';
 import { setCameraTuning } from '../../../src/state/camera/cameraSlice';
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
+import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 
 afterEach(() => {
   delete (navigator as { clipboard?: unknown }).clipboard;
@@ -27,16 +28,10 @@ afterEach(() => {
 const HEADING_RAD = Math.PI / 6;
 
 const SNAP: CameraDebugSnapshot = {
-  storedFrame: 'absolute',
-  renderedFrame: 'absolute',
-  armMismatch: false,
-  engagedBodyId: null,
+  ...QUIET_CAMERA_DEBUG_SNAPSHOT,
   hOverR: 0.3,
   altitudeM: 1_911_300,
-  distanceMpc: 1,
-  orientationFrame: 'ecliptic',
   bandUpWeight: 0.5,
-  rememberedTiltRad: 0,
   dofs: {
     bodyId: null,
     hOverR: 0.3,
@@ -46,20 +41,9 @@ const SNAP: CameraDebugSnapshot = {
     roll: { currentRad: 0.1, targetRad: -0.2, residualRad: 0.3 },
   },
   deltas: {
-    heading: { deltaRad: 0, peakAbsRad: HEADING_RAD, peakAtMs: 42 },
-    tilt: { deltaRad: 0, peakAbsRad: 0, peakAtMs: null },
-    roll: { deltaRad: 0, peakAbsRad: 0, peakAtMs: null },
+    ...QUIET_CAMERA_DEBUG_SNAPSHOT.deltas,
+    heading: { deltaRad: 0, peakAbsRad: HEADING_RAD },
   },
-  lastRenderedSimDays: 0,
-  liveSimDays: 0,
-  epochDeltaDays: 0,
-  epochMismatch: false,
-  anchorLocalM: null,
-  eyeRelAnchorMagM: null,
-  activeDriverId: 'resting',
-  gestureMode: null,
-  gestureCursorHit: null,
-  lastZoomDirection: null,
 };
 
 function renderSection(northUp = true) {
