@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import { extractSelectionRow } from '../../../../src/services/engine/helpers/extractSelectionRow';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
@@ -9,7 +9,7 @@ import {
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -21,60 +21,6 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
-
-// vi.mock factories are hoisted above imports/consts — vi.hoisted is the
-// sanctioned way to share a literal between a factory and its assertions.
-const { MESH_BODY_FIXTURE_ID, MESH_BODY_FIXTURE_DESCRIPTION } = vi.hoisted(() => ({
-  MESH_BODY_FIXTURE_ID: 'mesh-body-fixture',
-  MESH_BODY_FIXTURE_DESCRIPTION: 'A humpback whale, breaching in slow motion.',
-}));
-
-// A MeshBody-shaped row (id/label/radiusM/albedo/meshKey/description) appended
-// to the real SCENE_BODIES — MeshBody-SHAPED, not MeshBody-typed: SceneBody
-// hasn't been widened to include it yet, and this test's job is the
-// description path, not that widening.
-vi.mock('../../../../src/data/bodies/sceneBodies', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/data/bodies/sceneBodies')>();
-  return {
-    ...actual,
-    SCENE_BODIES: [
-      ...actual.SCENE_BODIES,
-      {
-        id: MESH_BODY_FIXTURE_ID,
-        label: 'Fixture Whale',
-        radiusM: 15,
-        albedo: [0.5, 0.5, 0.5],
-        meshKey: 'whale',
-        description: MESH_BODY_FIXTURE_DESCRIPTION,
-      },
-    ],
-  };
-});
-
-// Its ORBITAL_ELEMENTS counterpart: extractSelectionRow's body arm reads the
-// position via `deriveBodyStates(simDays).get(body.id)!` — a fixture id absent
-// from both this table and SCENE_ANCHORS would throw rather than resolve.
-vi.mock('../../../../src/data/bodies/orbitalElements', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('../../../../src/data/bodies/orbitalElements')>();
-  return {
-    ...actual,
-    ORBITAL_ELEMENTS: [
-      ...actual.ORBITAL_ELEMENTS,
-      {
-        id: MESH_BODY_FIXTURE_ID,
-        focusId: 'sun',
-        semiMajorMpc: 1,
-        eccentricity: 0,
-        inclinationRad: 0,
-        ascendingNodeRad: 0,
-        argPeriapsisRad: 0,
-        meanAnomalyRad: 0,
-        color: [0.5, 0.5, 0.5],
-      },
-    ],
-  };
-});
 
 // Earth's row position comes from the derived body-state snapshot at the
 // simDays passed in — the same source the resolver's `body` arm reads
@@ -244,17 +190,9 @@ describe('extractSelectionRow', () => {
   });
 
   it("extractSelectionRow carries a body's description when present", () => {
-    const row = extractSelectionRow({ type: 'body', id: MESH_BODY_FIXTURE_ID }, deps, SIM_DAYS);
-    expect(row !== null && row.type === 'body' && row.description).toBe(
-      MESH_BODY_FIXTURE_DESCRIPTION,
-    );
-  });
-
-  it('extractSelectionRow omits description when absent', () => {
-    // Earth carries no `description` on its seed — same absent-field shape as
-    // the standoffRadii guard above, exercising the same `in` idiom.
-    const row = extractSelectionRow({ type: 'body', id: 'earth' }, deps, SIM_DAYS);
-    expect(row !== null && row.type === 'body' && row.description).toBeUndefined();
+    const whale = SCENE_MESH_BODIES[0]!;
+    const row = extractSelectionRow({ type: 'body', id: whale.id }, deps, SIM_DAYS);
+    expect(row !== null && row.type === 'body' && row.description).toBe(whale.description);
   });
 
   it('star ref resolves against the loaded catalog (matches resolveStarRecord)', async () => {

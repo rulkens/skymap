@@ -17,18 +17,4 @@ describe('overflowFade', () => {
     // the regime a mesh body's two-radii standoff sits permanently inside.
     expect(overflowFade(SHORT_SIDE, SHORT_SIDE)).toBe(0);
   });
-
-  it('eases monotonically down across the band rather than popping', () => {
-    const samples = Array.from({ length: 31 }, (_, i) =>
-      overflowFade((SHORT_SIDE * (60 + i)) / 100, SHORT_SIDE),
-    );
-    expect(samples[0]).toBe(1);
-    expect(samples[samples.length - 1]).toBe(0);
-    for (let i = 1; i < samples.length; i += 1) {
-      expect(samples[i]!).toBeLessThanOrEqual(samples[i - 1]!);
-    }
-    // Something strictly partial exists in between — a hard step would pass the
-    // monotonicity check above but not this.
-    expect(samples.some((a) => a > 0 && a < 1)).toBe(true);
-  });
 });

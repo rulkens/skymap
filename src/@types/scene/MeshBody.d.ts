@@ -1,10 +1,7 @@
 /**
  * MeshBody — a seeded scene body drawn from a baked triangle mesh, not a
- * flat/textured sphere. Sits alongside `PlanetBody` in the presentation
- * partition; `meshKey` names the baked asset the mesh layer loads, and
- * `albedo` tints it the way `PlanetBody.albedo` tints a flat sphere.
- * Identity only — position/orientation live in `BodyState`, as for
- * `PlanetBody`.
+ * flat/textured sphere. `meshKey` names the baked asset the mesh layer loads.
+ * Identity only — position/orientation live in `BodyState`, as for `PlanetBody`.
  */
 
 import type { Vec3 } from '../math/Vec3';

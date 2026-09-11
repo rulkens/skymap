@@ -1,5 +1,2 @@
-/**
- * The request shape a mesh-asset fetcher accepts: a mesh is a fixed
- * catalog entry (whale, petunias, …), not tiered or per-source.
- */
+/** The request shape a mesh-asset fetcher accepts: a fixed catalog entry (whale, petunias, …). */
 export type MeshReq = { readonly meshKey: string };

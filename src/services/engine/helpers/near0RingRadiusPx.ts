@@ -57,9 +57,8 @@ export function near0RingRadiusPx(
   // radiusMpc 0 makes `selectionRingRadiusPx` ignore distance and return the
   // pure px floor, so the ×6 lives in exactly one place.
   const farFloorPx = selectionRingRadiusPx(0, camDistMpc, pxPerRad, pointSizePx);
-  // Divide-by-zero guard ONLY, keyed to the same floor the wheel-zoom clamp
-  // enforces (`clampDistance`'s `MIN_DISTANCE_MPC`) — the ring and the camera
-  // can never disagree about the closest reachable approach.
+  // Divide-by-zero guard only — `MIN_DISTANCE_MPC` is a body's own sub-3 cm
+  // radius floor, not `pivotRadiusMpc.ts`'s surfaceless-pivot `SURFACELESS_FLOOR_MPC`.
   const safeDist = Math.max(camDistMpc, MIN_DISTANCE_MPC);
   // TRUE apparent radius of the sphere: r/d radians × px-per-rad. This matches
   // how the body is actually drawn (`bodyApparentDiameterPx`) — no billboard

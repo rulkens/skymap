@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   sceneBodyLabels,
   FOREGROUND_LABEL_CAPACITY,
@@ -128,40 +128,12 @@ describe('sceneBodyLabels', () => {
     expect(new Set(labels.map((label) => label.id)).size).toBe(labels.length);
   });
 
-  it('captions a seeded mesh body under its own kind', async () => {
-    // `SCENE_MESH_BODIES` is empty until the whale/petunias assets land, so a
-    // stood-up row is the only way to prove the mesh arm reaches the caption
-    // pipeline at all. Without it the `mesh-body` Labels & Guides row is a dead
-    // toggle and the kind never routes to `CAPTION_FADE_RULES.meshBody`.
-    vi.resetModules();
-    vi.doMock('../../../../src/data/bodies/sceneMeshBodies', () => ({
-      SCENE_MESH_BODIES: [
-        {
-          id: 'whale',
-          label: 'Whale',
-          radiusM: 8,
-          albedo: [0.62, 0.4, 0.44],
-          meshKey: 'whale',
-          description: '',
-        },
-      ],
-    }));
-    const { sceneBodyLabels: withMeshBody } =
-      await import('../../../../src/services/engine/presentation/sceneBodyLabels');
+  it('captions a seeded mesh body under its own kind', () => {
+    const body = SCENE_MESH_BODIES[0]!;
+    const label = labels.find((l) => l.id === `sceneBody-${body.id}`)!;
 
-    const states = new Map(J2000_STATES);
-    states.set('whale', {
-      positionMpc: [1e-13, 2e-13, 3e-13],
-      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-      meanAnomalyRad: 0,
-    });
-    const whale = withMeshBody(states).find((label) => label.id === 'sceneBody-whale')!;
-
-    expect(whale.kind).toBe('meshBody');
-    expect(whale.text).toBe('Whale');
-    expect(whale.color).toEqual([...scaleToUnitMax([0.62, 0.4, 0.44]), 1]);
-
-    vi.doUnmock('../../../../src/data/bodies/sceneMeshBodies');
-    vi.resetModules();
+    expect(label.kind).toBe('meshBody');
+    expect(label.text).toBe(body.label);
+    expect(label.color).toEqual([...scaleToUnitMax(body.albedo), 1]);
   });
 });

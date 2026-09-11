@@ -1,10 +1,8 @@
 /**
- * scaleToUnitMax — scale an RGB colour so its largest channel hits 1,
- * preserving hue and relative channel ratios (a uniform brightness lift).
- *
- * A black input `[0, 0, 0]` has no channel to scale by, so it returns
- * white rather than dividing by zero — a caption tinted from this must
- * never end up invisible.
+ * scaleToUnitMax — scale an RGB colour so its largest channel hits 1 (a
+ * uniform brightness lift). A black input `[0, 0, 0]` has no channel to scale
+ * by, so it returns white rather than dividing by zero — a caption tinted
+ * from this must never end up invisible.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

@@ -1,21 +1,10 @@
 /**
- * packMeshBodyUniforms — pure packer for the 176-byte `MeshBodyUniforms` struct
- * (`shaders/bodies/meshBody/io.wesl`).
- *
- * It does NOT call `packLitBodyUniforms`, but it MATCHES that packer's first 80
- * bytes byte-for-byte: `sunVisibleFraction` occupies the trailing pad slot the
- * lit packer leaves zeroed (the `RingUniforms.planetRadiusRatio` trick), so the
- * shared packer has nowhere to put a fifth argument. Keep the two prefixes in
- * step by hand.
- *
- * FRAME CONTRACT: `camPosLocal` and `dirToHost` are in the HOST body's fixed
- * axes, relative to this body's centre, in metres — the same axes the vertex
- * stage's `localPos = u.model * position` lands in. `model` carries only the
- * body's own tumble rotation (host-local axes) for rotating normal/tangent; the
- * view rotation is folded into `mvp` alone.
- *
- * The 44-f32 byte layout lives ONCE, beside the struct it describes, in
- * `io.wesl`'s header — read it there; the writes below are in that order.
+ * packMeshBodyUniforms — pure packer for the 176-byte `MeshBodyUniforms` struct.
+ * The layout lives ONCE, beside the struct, in `shaders/bodies/meshBody/io.wesl`'s
+ * header — read it there; the writes below are in that order. It MATCHES
+ * `packLitBodyUniforms`'s first 80 bytes byte-for-byte (keep the two in step by
+ * hand); `camPosLocal`/`dirToHost` are in the HOST body's fixed axes, not this
+ * body's own — the same axes `localPos = u.model * position` lands in.
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
