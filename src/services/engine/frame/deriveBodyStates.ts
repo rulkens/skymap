@@ -1,6 +1,7 @@
 /**
- * deriveBodyStates — derives every scene body's time-varying `BodyState`
- * from the anchor table and the Keplerian element table, keyed by id.
+ * deriveBodyStates — derives every scene body's time-varying `BodyState` from
+ * the three authored position tables — anchors, Keplerian elements, surface
+ * sites (`positionDrivers.ts` reads the same three as a union) — keyed by id.
  * `meanAnomalyRad` is the PROPAGATED `M` at `t` (not epoch) — the
  * orbit-trail falloff anchor, so a trail fading behind the body must
  * track where it actually is. Memoized on `simDays`: every pass (draw,
@@ -12,11 +13,17 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../data/bodies/sceneAnchors';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SURFACE_FIXED_SITES } from '../../../data/bodies/surfaceFixedSites';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
 import { propagateElements } from '../../../utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
+import { surfacePointBodyFixed } from '../../../utils/scene/surfacePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 
 // The focus graph is authored, static data, so its order is resolved once at
 // module load and replayed every instant: the per-frame cost stays one linear
@@ -57,6 +64,33 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     const propagated = propagateElements(el, simDays);
     positions.set(el.id, addVec3(focus, keplerianPositionMpc(propagated)));
     meanAnomalies.set(el.id, propagated.meanAnomalyRad);
+  }
+
+  // 1c — sites pinned to a host's surface: the host's own spin carries them, so
+  // the host's orientation is needed HERE, mid-phase-1. Safe because every such
+  // host is an IAU-pole body and that arm ignores `positions`. M = 0, as for an
+  // anchor: no orbit for a trail to fade along.
+  for (const site of SURFACE_FIXED_SITES) {
+    const hostPos = positions.get(site.hostId);
+    if (hostPos === undefined) {
+      throw new Error(
+        `deriveBodyStates: site '${site.id}' names unpositioned host '${site.hostId}'`,
+      );
+    }
+    const { radiusM } = findByIdOrThrow(SCENE_BODIES, site.hostId, 'deriveBodyStates');
+    const offsetM = rotateVec3ByTightMat3(
+      surfacePointBodyFixed(site.latDeg, site.lonDeg, radiusM + site.altitudeM),
+      orientationForBody(site.hostId, simDays, positions),
+    );
+    // Metres → Mpc BEFORE the host's heliocentric position joins in: adding
+    // first would round a few-thousand-km offset off an au-scale magnitude.
+    const offsetMpc: Vec3 = [
+      offsetM[0] * SCALE_UNITS.M_TO_MPC,
+      offsetM[1] * SCALE_UNITS.M_TO_MPC,
+      offsetM[2] * SCALE_UNITS.M_TO_MPC,
+    ];
+    positions.set(site.id, addVec3(hostPos, offsetMpc));
+    meanAnomalies.set(site.id, 0);
   }
 
   // Phase 2 — orientations over the finished position map. Anchors go through
