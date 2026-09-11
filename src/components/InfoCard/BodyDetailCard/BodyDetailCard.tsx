@@ -48,6 +48,7 @@ import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatRadiusM } from '../../../utils/format/formatRadiusM';
 import { formatScalar } from '../../../utils/format/formatScalar';
 import { FAMOUS_STAR_IDS } from '../../../data/bodies/famousStarsIndex';
 import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
@@ -129,7 +130,7 @@ function BodyDetailCard({
           <div className={styles.cardSection}>
             <CardRow
               label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
-              value={`${(target.radiusM * SCALE_UNITS.M_TO_KM).toLocaleString()} km`}
+              value={formatRadiusM(target.radiusM)}
             />
             {distanceMpc != null && (
               <CardRow label="Distance" value={formatDistance(distanceMpc)} />
