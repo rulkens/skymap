@@ -352,28 +352,32 @@ export function createPickProgram(deps: {
       .reverse()
       .filter((index) => candidateSlabs.has(index));
     const slabIndices = candidateSlabs.has(COSMO) ? [...nearToFar, COSMO] : nearToFar;
-    return [OVERLAY, ...slabIndices]
-      .map((slabIndex) => {
-        const isOverlay = slabIndex === OVERLAY;
-        // The overlay pass borrows NEAR0's view for its depth clear (the
-        // convention its pipelines are built from), never its vp — an overlay
-        // stamp is screen-space geometry.
-        const view = slabViewOf(ctx, isOverlay ? NEAR0 : slabIndex);
-        // Filter by the PICK gate: `pickEnabled` when a layer declares one (its
-        // pick set differs from its draw set — planetsPass's flat ∪ textured,
-        // the caption stamps, the Milky Way's narrower close-range gate), else
-        // `enabled` (pick set == draw set, the common case). See
-        // `ContentPass.pickEnabled`.
-        const slabPasses = (isOverlay ? overlayCandidates : candidates).filter(
-          (l) =>
-            (isOverlay ||
-              l.slab === slabIndex ||
-              (l.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
-            (l.pickEnabled ?? l.enabled)(state, ctx, view),
-        );
-        return { slabIndex, view, passes: slabPasses };
-      })
-      .filter((group) => group.passes.length > 0);
+    // Filter by the PICK gate: `pickEnabled` when a layer declares one (its
+    // pick set differs from its draw set — planetsPass's flat ∪ textured,
+    // the caption stamps, the Milky Way's narrower close-range gate), else
+    // `enabled` (pick set == draw set, the common case). See
+    // `ContentPass.pickEnabled`.
+    const pickGated = (l: ContentPass, view: SlabView): boolean =>
+      (l.pickEnabled ?? l.enabled)(state, ctx, view);
+    // The overlay group borrows NEAR0's view for its depth clear (the
+    // convention its pipelines are built from), never its vp — an overlay
+    // stamp is screen-space geometry.
+    const overlayView = slabViewOf(ctx, NEAR0);
+    const overlayGroup = {
+      slabIndex: OVERLAY,
+      view: overlayView,
+      passes: overlayCandidates.filter((l) => pickGated(l, overlayView)),
+    };
+    const slabGroups = slabIndices.map((slabIndex) => {
+      const view = slabViewOf(ctx, slabIndex);
+      const passes = candidates.filter(
+        (l) =>
+          (l.slab === slabIndex || (l.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
+          pickGated(l, view),
+      );
+      return { slabIndex, view, passes };
+    });
+    return [overlayGroup, ...slabGroups].filter((group) => group.passes.length > 0);
   }
 
   async function pick(pickXPx: number, pickYPx: number): Promise<PickResult | null> {
