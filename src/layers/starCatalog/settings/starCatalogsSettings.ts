@@ -18,7 +18,7 @@ import {
   DEFAULT_STAR_SIZE_PX,
 } from '../../../data/defaults';
 // The "Detail" knob's default is owned by the walk it feeds (single source of
-// truth), so seed the setting straight from it rather than restating 0.05.
+// truth), so seed the setting straight from it rather than restating that number here.
 import { DEFAULT_REFINE_THRESHOLD } from '../../../services/gpu/renderers/starCatalog/walkStarOctreeCut';
 import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';

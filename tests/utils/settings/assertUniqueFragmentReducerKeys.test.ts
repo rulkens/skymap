@@ -21,4 +21,17 @@ describe('assertUniqueFragmentReducerKeys', () => {
     expect(claim).toThrow(/alpha/);
     expect(claim).toThrow(/beta/);
   });
+
+  it('throws on a fragment reducer key that collides with a core reducer key', () => {
+    const alpha = {
+      key: 'alpha',
+      seed: () => ({ enabled: false }),
+      reducers: { setEnabled: () => {} },
+    } as const;
+
+    const claim = () => assertUniqueFragmentReducerKeys([alpha], ['setEnabled']);
+
+    expect(claim).toThrow(/setEnabled/);
+    expect(claim).toThrow(/core reducer/);
+  });
 });

@@ -11,6 +11,8 @@
 
 import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
+import { APP_SETTINGS_FRAGMENTS } from '../../compositions/appSettingsFragments';
+import { assertUniqueFragmentReducerKeys } from '../../utils/settings/assertUniqueFragmentReducerKeys';
 import { buildInitialSettings } from './initialState';
 import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
 import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
@@ -380,6 +382,10 @@ export const CORE_REDUCERS = {
   mergeSnapshot: (settings: SettingsDraft, action: PayloadAction<Partial<SettingsSnapshot>>) =>
     mergeSettingsSnapshot(current(settings), action.payload),
 };
+
+// A fragment reducer key that shadows a core one would silently win or lose
+// depending on spread order below — assert it can't happen, at import time.
+assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS, Object.keys(CORE_REDUCERS));
 
 export const settingsSlice = createSlice({
   name: 'settings',
