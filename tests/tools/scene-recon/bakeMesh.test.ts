@@ -239,6 +239,10 @@ const TEXTURE_MESH_ARGV = [
   'glb',
   '--max-texture-size',
   '8192',
+  '--global-seam-leveling',
+  '0',
+  '--local-seam-leveling',
+  '0',
   '-o',
   'scene_dense_texture.glb',
 ];

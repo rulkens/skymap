@@ -152,6 +152,10 @@ function bakeStages(options: { fullRes?: boolean; refine?: boolean }): readonly 
     {
       tool: 'TextureMesh',
       output: TEXTURED_GLB,
+      // Seam levelling off, both passes: on this scene it clips every patch
+      // interior to an RGB-cube corner and leaves photo pixels only in the
+      // margins. Global-off-local-on still clips, so neither comes back for
+      // nicer seams without a re-texture proving otherwise.
       args: [
         'scene_dense.mvs',
         '--mesh-file',
@@ -160,6 +164,10 @@ function bakeStages(options: { fullRes?: boolean; refine?: boolean }): readonly 
         'glb',
         '--max-texture-size',
         String(MAX_TEXTURE_PX),
+        '--global-seam-leveling',
+        '0',
+        '--local-seam-leveling',
+        '0',
         '-o',
         TEXTURED_GLB,
       ],
@@ -242,7 +250,7 @@ export async function bakeMesh(
     });
     const converted = await transcodeStagedJpegs(join(sparseIn, 'images'), deps.runGdal);
     if (converted > 0) {
-      process.stderr.write(`bakeMesh: re-encoded ${converted} non-sRGB frame(s) to sRGB\n`);
+      process.stderr.write(`bakeMesh: re-read ${converted} four-band frame(s) as RGB\n`);
     }
 
     process.stderr.write(

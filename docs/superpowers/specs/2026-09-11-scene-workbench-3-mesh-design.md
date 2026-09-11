@@ -301,8 +301,8 @@ NO -b 1 -b 2 -b 3 -of JPEG -co QUALITY=95` (plus `--config GDAL_PAM_ENABLED NO`,
    `.aux.xml` lands beside it). The 2025 nadir frames carry four components — raw R, G,
    B and a fourth band that libjpeg tags CMYK — which OpenCV refuses outright; sharp's
    `toColourspace('srgb')` does a real CMYK→RGB conversion instead and muddies them,
-   which OpenMVS's seam levelling then blows out across the atlas. Harvests from
-   `fetchSkraafoto` after this change already write three bands.
+   which OpenMVS then textures with. `fetchSkraafoto` writes three bands; older
+   harvests may hold four-band frames, which is what this step is for.
 4. **COLMAP**, one `runColmap` call, as a format converter only:
    - `image_undistorter --image_path sparse-in/images --input_path sparse-in --output_path dense --output_type COLMAP`
      (PINHOLE cameras → a no-op resample, but it lays out the workspace
@@ -319,8 +319,11 @@ NO -b 1 -b 2 -b 3 -of JPEG -co QUALITY=95` (plus `--config GDAL_PAM_ENABLED NO`,
 -o scene_dense_mesh_refine.ply` **only with `--refine`** (the texture stage then
      reads that mesh)
    - `TextureMesh scene_dense.mvs --mesh-file <mesh>.ply --export-type glb
---max-texture-size 8192 -o scene_dense_texture.glb` → that GLB **plus** a sidecar
-     `scene_dense_texture_0.png` it names by URI
+--max-texture-size 8192 --global-seam-leveling 0 --local-seam-leveling 0 -o
+scene_dense_texture.glb` → that GLB **plus** a sidecar `scene_dense_texture_0.png`
+     it names by URI. Both levelling passes are off because on this scene they clip
+     every patch interior to an RGB-cube corner, photo pixels surviving only in the
+     margins; global off with local on still clips
 
    Both `-o` are pinned because v2.4.0 names an output after its _input's_ stem, so
    `--refine` would otherwise move the GLB the re-pack reads.
