@@ -4,10 +4,15 @@
  */
 import { SOENDERMARKEN } from './soendermarken';
 import { SOENDERMARKEN_CROP } from './soendermarkenCrop';
+import { SOENDERMARKEN_CROP_2019 } from './soendermarkenCrop2019';
 import { argValue } from '../../utils/cli/argValue';
 import type { SceneGroupDefinition } from '../@types/SceneGroupDefinition';
 
-const GROUPS: readonly SceneGroupDefinition[] = [SOENDERMARKEN, SOENDERMARKEN_CROP];
+const GROUPS: readonly SceneGroupDefinition[] = [
+  SOENDERMARKEN,
+  SOENDERMARKEN_CROP,
+  SOENDERMARKEN_CROP_2019,
+];
 const DEFAULT_GROUP_ID = SOENDERMARKEN.id;
 
 export function sceneGroupFromArgv(argv: readonly string[]): SceneGroupDefinition {

@@ -75,6 +75,11 @@ script or `/scene-workbench/` subpath.
    resolution level 1): **23.3 min end to end** — DensifyPointCloud for
    1,321,360 dense points, ReconstructMesh 323,985 vertices / 647,898
    triangles, TextureMesh into one atlas, published `mesh.glb` 19.9 MB.
+   Same box off the 2019 flight (`soendermarken-crop-2019`, 2026-09-11, 106
+   frames): **16.5 min** — 2,186,705 dense points, 462,381 vertices / 924,720
+   triangles, one 4096 px atlas, `mesh.glb` 29.6 MB. More frames yet less wall
+   clock: the 2019 crops are smaller in pixels, since that flight's obliques
+   stand off much further from this box.
 7. `npm run scene-workbench`
 
 Every fetch/bake CLI above takes `--group <id>` (default `soendermarken`);
@@ -144,6 +149,13 @@ npm run bake-mesh      -- --group soendermarken-crop   # needs OPENMVS_BIN set
 Its LiDAR uses `minPointSpacingM` 0.5 rather than 1.0; the DHM 2011 cloud is
 only ~0.36 pts/m² here, so that buys 17,001 points against 14,560 (measured),
 not four times as many.
+
+`soendermarken-crop-2019` is that same box and anchor over the `skraafotos2019`
+collection — a 23 June flight against 2025's 27 April one, so the two meshes
+differ in leaf-on canopy and nothing else. It flew a different camera (UltraCam
+Osprey; nadir frames 13470 x 8670, obliques 7700 x 10300, against 2025's
+14144 x 10560), which needs no code change: every intrinsic is read per item
+from its own `pers:interior_orientation`.
 
 ## Architecture
 

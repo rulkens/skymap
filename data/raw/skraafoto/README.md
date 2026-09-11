@@ -47,7 +47,13 @@ colorization already uses. The search body is the group's own bbox:
 ```
 
 **306 items** over that bbox (measured 2026-09-10), all dated 2025-04-27:
-70 nadir, 62 north, 60 south, 59 east, 55 west. `limit` is a flat cap, not a
+70 nadir, 62 north, 60 south, 59 east, 55 west. The `soendermarken-crop-2019`
+group searches its own small crop box against **`skraafotos2019`** instead —
+**106 items**, all dated 2019-06-23 (harvested 2026-09-11): 20 nadir, 23 north,
+24 south, 18 east, 21 west. That flight is an UltraCam Osprey at 0.10 m GSD, so
+its frames are neither the same shape nor the same size as 2025's (nadir
+13470 x 8670, obliques 7700 x 10300 against 14144 x 10560); nothing reads a
+sensor dimension that isn't the item's own. `limit` is a flat cap, not a
 page size — the fetcher warns if the result count reaches it, because a
 truncated harvest would otherwise train silently on a partial frame set.
 
