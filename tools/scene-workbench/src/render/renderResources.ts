@@ -30,12 +30,8 @@ export type SplatGpuAsset = {
 };
 
 /**
- * The MVS mesh: one indexed primitive plus its atlas (spec §5's `mesh.glb`
- * subset). `texture` is plain `rgba8unorm`, not the `-srgb` twin: the
- * workbench's swapchain is the browser's preferred non-sRGB 8-bit format and
- * the lidar and splat layers write their stored colour through untouched, so
- * decoding the bake's JPEG to linear here would land the mesh visibly darker
- * than the splats beside it.
+ * MVS mesh: one indexed primitive plus its atlas (spec §5). `texture` is plain `rgba8unorm` — the
+ * swapchain is non-sRGB, siblings pass encoded colour through; `-srgb` looks right, renders dark.
  */
 export type MeshGpuAsset = {
   readonly kind: 'mesh';

@@ -22,7 +22,13 @@ export async function readMeshGlb(buffer: ArrayBuffer): Promise<TexturedMeshGeom
         .listPrimitives()
         .map((primitive) => ({ node, primitive })),
     );
-  if (drawn.length !== 1) {
+  if (drawn.length === 0) {
+    throw new Error(
+      `readMeshGlb: mesh.glb has no mesh primitive, found ${drawn.length} — the bake produced ` +
+        `nothing to draw`,
+    );
+  }
+  if (drawn.length > 1) {
     throw new Error(
       `readMeshGlb: expected exactly one primitive, found ${drawn.length} — re-bake with a ` +
         `--max-texture-size the atlas fits in, so TextureMesh emits a single material`,
