@@ -28,7 +28,10 @@ export function uploadTexturedMesh(
   ): GPUBuffer => {
     const buffer = device.createBuffer({
       label: `scene-workbench-mesh-${name}-${count}`,
-      size: source.byteLength,
+      // A closed mesh has an empty open-edge class, and WebGPU rejects a
+      // zero-size buffer; a 4-byte stub keeps the draw path branch-free
+      // (drawIndexed(0) is valid and draws nothing).
+      size: Math.max(source.byteLength, 4),
       usage: usage | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(buffer, 0, source);
@@ -44,7 +47,18 @@ export function uploadTexturedMesh(
   const uvs = uploadBuffer(geometry.uvs, GPUBufferUsage.VERTEX, 'uvs', vertexCount);
   const indices = uploadBuffer(geometry.indices, GPUBufferUsage.INDEX, 'indices', indexCount);
   const edgeIndices = meshEdgeIndices(geometry.indices);
-  const edges = uploadBuffer(edgeIndices, GPUBufferUsage.INDEX, 'edges', edgeIndices.length);
+  const manifoldEdges = uploadBuffer(
+    edgeIndices.manifold,
+    GPUBufferUsage.INDEX,
+    'manifold-edges',
+    edgeIndices.manifold.length,
+  );
+  const openEdges = uploadBuffer(
+    edgeIndices.open,
+    GPUBufferUsage.INDEX,
+    'open-edges',
+    edgeIndices.open.length,
+  );
 
   const texture = device.createTexture({
     label: `scene-workbench-mesh-atlas-${image.width}x${image.height}`,
@@ -68,14 +82,17 @@ export function uploadTexturedMesh(
     uvs,
     indices,
     indexCount,
-    edges,
-    edgeIndexCount: edgeIndices.length,
+    manifoldEdges,
+    manifoldEdgeIndexCount: edgeIndices.manifold.length,
+    openEdges,
+    openEdgeIndexCount: edgeIndices.open.length,
     texture,
     dispose: () => {
       positions.destroy();
       uvs.destroy();
       indices.destroy();
-      edges.destroy();
+      manifoldEdges.destroy();
+      openEdges.destroy();
       texture.destroy();
     },
   };
