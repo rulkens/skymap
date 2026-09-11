@@ -64,18 +64,19 @@ describe('createSceneRenderers', () => {
     ];
     const resources = { gpuAssets: new Map(assets) } as RenderResources;
     const pass = {} as GPURenderPassEncoder;
+    const display = { mesh: { wireframe: true } };
 
     drawn.length = 0;
     createSceneRenderers(
       {} as Parameters<typeof createSceneRenderers>[0],
       'rgba8unorm',
       {} as GPUBindGroupLayout,
-    ).draw(pass, resources, ['hidden-mesh']);
+    ).draw(pass, resources, ['hidden-mesh'], display);
 
     expect(drawn).toEqual([
-      ['pointCloud', [pass, [resources.gpuAssets.get('cloud')]]],
-      ['mesh', [pass, [resources.gpuAssets.get('mesh')]]],
-      ['gaussianSplat', [pass, [resources.gpuAssets.get('splats')]]],
+      ['pointCloud', [pass, [resources.gpuAssets.get('cloud')], display]],
+      ['mesh', [pass, [resources.gpuAssets.get('mesh')], display]],
+      ['gaussianSplat', [pass, [resources.gpuAssets.get('splats')], display]],
     ]);
   });
 });

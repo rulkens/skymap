@@ -198,5 +198,7 @@ moves; `null` (the default) takes the unclipped path with no filter pass at
 all. The extent and the survivor count reach the panel through
 `group.splatMetrics`, which the sort reports after every run.
 
-The mesh has no section of its own: it is drawn unlit and opaque from the baked
-atlas, so its visibility checkbox is the only control there is.
+The mesh is drawn unlit and opaque from the baked atlas, so "Mesh" holds one
+checkbox, Wireframe (`view.display.mesh.wireframe`): a `line-list` pass over the
+mesh's own triangle edges, drawn over the textured pass so triangle quality can
+be inspected against the texture.

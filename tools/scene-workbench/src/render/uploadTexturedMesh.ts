@@ -1,5 +1,6 @@
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import type { TexturedMeshGeometry } from '../../../scene-recon/pack/packMeshGlb';
+import { meshEdgeIndices } from './meshEdgeIndices';
 import type { MeshGpuAsset } from './renderResources';
 
 /**
@@ -42,6 +43,8 @@ export function uploadTexturedMesh(
   );
   const uvs = uploadBuffer(geometry.uvs, GPUBufferUsage.VERTEX, 'uvs', vertexCount);
   const indices = uploadBuffer(geometry.indices, GPUBufferUsage.INDEX, 'indices', indexCount);
+  const edgeIndices = meshEdgeIndices(geometry.indices);
+  const edges = uploadBuffer(edgeIndices, GPUBufferUsage.INDEX, 'edges', edgeIndices.length);
 
   const texture = device.createTexture({
     label: `scene-workbench-mesh-atlas-${image.width}x${image.height}`,
@@ -65,11 +68,14 @@ export function uploadTexturedMesh(
     uvs,
     indices,
     indexCount,
+    edges,
+    edgeIndexCount: edgeIndices.length,
     texture,
     dispose: () => {
       positions.destroy();
       uvs.destroy();
       indices.destroy();
+      edges.destroy();
       texture.destroy();
     },
   };

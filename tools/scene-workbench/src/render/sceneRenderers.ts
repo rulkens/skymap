@@ -7,6 +7,7 @@
  * blend over that depth last and never write it.
  */
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
+import type { SceneDisplay } from '../../@types/SceneDisplay';
 import { createLidarPointRenderer } from './lidarPointRenderer';
 import type { GpuAsset, RenderResources } from './renderResources';
 import { createSplatRenderer } from './splatRenderer';
@@ -23,12 +24,20 @@ export type SceneRenderers = {
     pass: GPURenderPassEncoder,
     resources: RenderResources,
     hiddenAssetIds: readonly string[],
+    display: SceneDisplay,
   ): void;
 };
 
+// Rows take the same `SceneDisplay` whether or not they read from it, so the
+// dispatch below stays a uniform table — a per-kind knob argument would make
+// it special-case the one row that needs one.
 type KindRenderers = {
   readonly [K in GpuAsset['kind']]: {
-    draw(pass: GPURenderPassEncoder, assets: readonly Extract<GpuAsset, { kind: K }>[]): void;
+    draw(
+      pass: GPURenderPassEncoder,
+      assets: readonly Extract<GpuAsset, { kind: K }>[],
+      display: SceneDisplay,
+    ): void;
   };
 };
 
@@ -58,14 +67,18 @@ export function createSceneRenderers(
   };
 
   return {
-    draw(pass, resources, hiddenAssetIds): void {
+    draw(pass, resources, hiddenAssetIds, display): void {
       for (const kind of SCENE_DRAW_ORDER) {
         // TS can't correlate the key with the row it selects; the table's own
         // type is what proves each row only ever draws its own kind's assets.
         const row = renderers[kind] as {
-          draw(pass: GPURenderPassEncoder, assets: readonly GpuAsset[]): void;
+          draw(
+            pass: GPURenderPassEncoder,
+            assets: readonly GpuAsset[],
+            display: SceneDisplay,
+          ): void;
         };
-        row.draw(pass, visibleAssetsOfKind(resources, kind, hiddenAssetIds));
+        row.draw(pass, visibleAssetsOfKind(resources, kind, hiddenAssetIds), display);
       }
     },
   };

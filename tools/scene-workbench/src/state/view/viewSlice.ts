@@ -20,6 +20,7 @@ export type ViewSlice = {
   display: {
     pointCloud: { pointSizePx: number };
     gaussianSplat: { splatScale: number; opacityScale: number; clipBoxM: BoundsM | null };
+    mesh: { wireframe: boolean };
   };
 };
 
@@ -35,6 +36,7 @@ export const defaultViewSlice: ViewSlice = {
   display: {
     pointCloud: { pointSizePx: 2 },
     gaussianSplat: { splatScale: 1, opacityScale: 1, clipBoxM: null },
+    mesh: { wireframe: false },
   },
 };
 
@@ -72,6 +74,9 @@ export const viewSlice = createSlice({
     setSplatClipBox: (state, action: PayloadAction<BoundsM | null>) => {
       state.display.gaussianSplat.clipBoxM = action.payload;
     },
+    setMeshWireframe: (state, action: PayloadAction<boolean>) => {
+      state.display.mesh.wireframe = action.payload;
+    },
   },
 });
 
@@ -83,4 +88,5 @@ export const {
   setSplatScale,
   setOpacityScale,
   setSplatClipBox,
+  setMeshWireframe,
 } = viewSlice.actions;
