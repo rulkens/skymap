@@ -3,11 +3,9 @@
  * column set (heliocentric, `REF_PLANE='ECLIPTIC'`, AU-D).
  *
  * Horizons publishes at the FETCH epoch and this table is authored at J2000, so
- * the epoch shift must not be hand-typed: M comes from `Tp` alone, leaving the
- * `MA` column unread and free as an external cross-check in the test.
- *
- * M is left UNWRAPPED (Voyager 1's is ~1249.8°) and a hyperbolic `A` keeps its
- * NEGATIVE sign: folding either "tidy" would move the probe off its trajectory.
+ * M comes from `Tp` alone, leaving the `MA` column unread as the test's external
+ * cross-check. M stays UNWRAPPED (Voyager 1's is ~1249.8°) and a hyperbolic `A`
+ * keeps its NEGATIVE sign: folding either "tidy" moves the probe off its path.
  */
 
 import { SCALE_UNITS } from '../../scaleUnits';
