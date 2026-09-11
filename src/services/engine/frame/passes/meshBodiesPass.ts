@@ -1,8 +1,9 @@
 /**
  * meshBodiesPass — the `meshes` branch of the per-frame body partition, as lit
- * triangle meshes in metres. A mesh body owns NO slab row: it rides its HOST's
- * body-m row the way `ringsPass` rides Saturn's, so `slabBodyCandidates` and
- * `BODY_SLAB_CAPACITY` stay untouched.
+ * triangle meshes in metres. A mesh body with a slab-owning host owns NO row of
+ * its own: it rides the host's body-m row the way `ringsPass` rides Saturn's.
+ * One hanging off something rowless (the Sun, or nothing) hosts itself —
+ * `meshBodySlabHostId` decides, and `BODY_SLAB_CAPACITY` counts those.
  *
  * FRAME CONTRACT (`shaders/bodies/meshBody/io.wesl`): every direction the
  * shader receives is in the HOST's fixed axes — the frame `posM`/`rotM` land
@@ -68,6 +69,10 @@ export const meshBodiesPass: ContentPass = {
       const { posM, rotM } = bodyStateInHostFrame(bodyState, hostState);
       const distToHostM = Math.hypot(posM[0], posM[1], posM[2]);
       const invDist = distToHostM > 0 ? 1 / distToHostM : 0;
+      // A hostless body is its own host, so both host-lighting terms degenerate
+      // at zero separation: `sunVisibleFraction` returns NaN and
+      // `hostSkyFraction` a half-sky. Unshadowed Sun, no fill, instead.
+      const hosted = body.id !== hostId;
       renderer.draw(
         pass,
         body.id,
@@ -75,13 +80,15 @@ export const meshBodiesPass: ContentPass = {
           // Narrow here, at the uniform write — the compose above is f64.
           mvp: narrowMat4(composeMeshMvp(view.slab.vp, posM, hostPose.eyeRelBodyM, rotM)),
           sunDirLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, hostState.orientation),
-          sunVisibleFraction: sunVisibleFraction({
-            bodyPosMpc: bodyState.positionMpc,
-            sunPosMpc: RENDER_ORIGIN_MPC,
-            hostPosMpc: hostState.positionMpc,
-            sunRadiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
-            hostRadiusM: host.radiusM,
-          }),
+          sunVisibleFraction: hosted
+            ? sunVisibleFraction({
+                bodyPosMpc: bodyState.positionMpc,
+                sunPosMpc: RENDER_ORIGIN_MPC,
+                hostPosMpc: hostState.positionMpc,
+                sunRadiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+                hostRadiusM: host.radiusM,
+              })
+            : 1,
           model: rotM,
           camPosLocal: [
             hostPose.eyeRelBodyM[0] - posM[0],
@@ -93,9 +100,10 @@ export const meshBodiesPass: ContentPass = {
           // Lambert π that this fill term — unlike `pbrDirect` — does not carry.
           // `sunIrradiance` is the fragment's own `SUN_IRRADIANCE`, mirrored
           // there under the parity test in `shaders/constants.parity.test.ts`.
-          hostShineStrength:
-            (EARTH_SURFACE_PARAMS.sunIrradiance / Math.PI) *
-            hostSkyFraction(host.radiusM, distToHostM),
+          hostShineStrength: hosted
+            ? (EARTH_SURFACE_PARAMS.sunIrradiance / Math.PI) *
+              hostSkyFraction(host.radiusM, distToHostM)
+            : 0,
           hostShineColor,
           dirToHost: [-posM[0] * invDist, -posM[1] * invDist, -posM[2] * invDist],
         }),
