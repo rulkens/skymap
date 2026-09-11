@@ -39,6 +39,7 @@
  */
 
 import type { CompositeStep } from './CompositeStep';
+import type { ContentPass } from './ContentPass';
 import type { CubeFace } from '../../rendering/CubeFace';
 import type { HdrPhase } from './HdrPhase';
 
@@ -79,6 +80,18 @@ export type FrameStep =
        * from the set so they don't collide on one.
        */
       hdrPhases?: readonly HdrPhase[];
+      /**
+       * The layers this step draws, in draw order — set by `expandFrameOrder`
+       * from its `FRAME_ORDER` line and absent on a `frameProgram` step, which
+       * still leaves the selection to the executor's filter. Task 9 flips that
+       * round: this becomes the selection and `hdrPhases` goes.
+       */
+      passes?: readonly ContentPass[];
+      /**
+       * Authored GPU-timing slot suffix (`RenderStepSpec.slot`), carried through
+       * expansion so a merged step keeps the FIRST line's slot name.
+       */
+      slot?: string;
     }
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };
