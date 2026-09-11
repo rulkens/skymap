@@ -22,10 +22,9 @@ const FIXTURE_VERTICES: FixtureVertex[] = [
 const FIXTURE_INDICES = [0, 1, 2];
 const FIXTURE_BOUNDING_RADIUS_M = 12.5;
 
-// Hand-built with a DataView — the same unaligned-offset discipline `decodeMesh`
-// itself must use (see the header-alignment landmine below). Deliberately NOT
-// round-tripped through `writeMeshBinary`: a shared encoder would let the two
-// sides agree on a wrong layout.
+// Hand-built field by field with a DataView, deliberately NOT round-tripped
+// through `writeMeshBinary`: a shared encoder would let the two sides agree on
+// a wrong layout.
 function buildFixtureBuffer(magic = MESH_MAGIC, version = MESH_VERSION): ArrayBuffer {
   const vertexCount = FIXTURE_VERTICES.length;
   const indexCount = FIXTURE_INDICES.length;
@@ -35,8 +34,8 @@ function buildFixtureBuffer(magic = MESH_MAGIC, version = MESH_VERSION): ArrayBu
 
   let o = 0;
   for (let i = 0; i < 4; i++) dv.setUint8(o++, magic.charCodeAt(i));
-  dv.setUint16(o, version, true);
-  o += 2;
+  dv.setUint32(o, version, true);
+  o += 4;
   dv.setUint32(o, vertexCount, true);
   o += 4;
   dv.setUint32(o, indexCount, true);
@@ -58,7 +57,7 @@ function buildFixtureBuffer(magic = MESH_MAGIC, version = MESH_VERSION): ArrayBu
   return buf;
 }
 
-describe('mesh binary format (SKMH v1)', () => {
+describe('mesh binary format (SKMH v2)', () => {
   it('rejects a bad magic', () => {
     const buf = new ArrayBuffer(MESH_HEADER_BYTES);
     expect(() => decodeMesh(buf)).toThrow(/magic/);

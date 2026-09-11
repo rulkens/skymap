@@ -7,7 +7,9 @@ describe('writeMeshBinary()', () => {
   it('round-trips through decodeMesh', () => {
     // Writer and reader are pinned by one another, the posture
     // decodeFilaments/filamentFetcher share: a header-offset slip on either
-    // side has nowhere to hide.
+    // side has nowhere to hide. It doubles as the alignment check — both sides
+    // build typed-array views over the file buffer, and a payload block landing
+    // on a non-multiple-of-4 offset throws `RangeError` here.
     const geometry = {
       positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0]),
       normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0]),

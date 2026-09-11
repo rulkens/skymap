@@ -265,14 +265,17 @@ Little-endian. Header:
 | field           | type | bytes |
 | --------------- | ---- | ----- |
 | magic `'SKMH'`  | u8×4 | 4     |
-| version         | u16  | 2     |
+| version         | u32  | 4     |
 | vertexCount     | u32  | 4     |
 | indexCount      | u32  | 4     |
 | boundingRadiusM | f32  | 4     |
 
 Then `vertexCount` interleaved vertices, stride 48 bytes: position (f32×3),
 normal (f32×3), tangent (f32×4, `w` = handedness), uv (f32×2). Then
-`indexCount` u32 indices. Geometry is authored in metres and passes through at
+`indexCount` u32 indices. The 20-byte header and the 48-byte stride are both
+multiples of 4, so both payload blocks start 4-byte aligned and decode as
+typed-array views over the file buffer rather than per-element `DataView`
+reads. Geometry is authored in metres and passes through at
 native scale: both chosen sources turned out to be modelled at real-world size
 (the whale's bbox spans 12.9 m), so the tool has no `--length-m` knob to
 rescale them with.
