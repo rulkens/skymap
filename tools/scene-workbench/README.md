@@ -83,6 +83,15 @@ script or `/scene-workbench/` subpath.
    2,186,705 dense points and 924,720 triangles in a 4096 px atlas (29.6 MB) —
    kept beside it as the `mesh-200mm` asset, so the two are comparable in the
    viewer.
+   `--full-res --refine` over that same 2019 crop (2026-09-11): **142.9 min** —
+   DensifyPointCloud 1h43m12s for 11,901,244 dense points (3.5x the level-1
+   run), ReconstructMesh 14m45s for 2,054,545 vertices / 4,107,225 faces,
+   RefineMesh 17m17s, TextureMesh 5m57s into one 8192 px atlas, `mesh.glb`
+   26.8 MB. RefineMesh is the catch: it decimates its input down to what its
+   own `--resolution-level` can support — 4,098,829 faces in, 660,051 out — so
+   a full-res refined bake publishes a _coarser_ mesh than the plain level-1
+   one. That level-1 result (2,118,416 triangles, 66.3 MB) is kept beside it as
+   the `mesh-halfres` asset for the comparison.
 7. `npm run scene-workbench`
 
 Every fetch/bake CLI above takes `--group <id>` (default `soendermarken`);
