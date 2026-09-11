@@ -9,12 +9,14 @@
 //   + viewportPx + 2 reserved pads).  Drives world-space to clip projection
 //   and the px to clip-space conversion for corner expansion.
 //
-// @group(0) @binding(1): SelectionRingUniforms (16 bytes):
+// @group(0) @binding(1): SelectionRingUniforms (32 bytes):
 //   bytes  0..11  worldPos       vec3<f32> — the selected galaxy's world Mpc
 //   bytes 12..15  ringRadiusPx   f32       — CPU-computed pixel radius
+//   bytes 16..19  alpha          f32       — CPU-computed stroke opacity
+//   bytes 20..31  (implicit pad to the struct's 16-byte alignment)
 //
 // Two uniform bindings rather than one concatenated struct so the per-frame
-// upload writes only the 16-byte selection tail when the camera hasn't
+// upload writes only the 32-byte selection tail when the camera hasn't
 // changed, while the camera prefix re-uploads at its own cadence.
 //
 // ## Why no per-instance attributes
@@ -33,17 +35,21 @@ struct SelectionRingUniforms {
   // Final on-screen ring radius in CSS pixels.  CPU-computed as
   // 'max(pointSizePx, apparentPxRadius) * 8'.
   ringRadiusPx: f32,
+  // Stroke opacity, 1 = opaque.  The layer dims the ring as its subject grows
+  // past the viewport ('overflowFade'); the annulus itself has no opinion.
+  alpha: f32,
 };
 
 // ── vertex-to-fragment interface ──────────────────────────────────
 //
 // 'uv' is the unit-quad corner in [-1, +1]² — the fragment stage uses
-// 'dot(uv, uv)' for the radial annulus mask.  'ringRadiusPx' is
-// forward-flat so the fragment can compute the band fraction without
-// re-binding the uniform.
+// 'dot(uv, uv)' for the radial annulus mask.  'ringRadiusPx' and 'alpha' are
+// forward-flat so the fragment can compute the band fraction, and dim the
+// result, without re-binding the uniform — which it has no group for.
 
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) @interpolate(flat) ringRadiusPx: f32,
+  @location(2) @interpolate(flat) alpha: f32,
 };

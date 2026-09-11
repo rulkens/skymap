@@ -75,6 +75,7 @@ import { NEAR0 } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
 import { liveBodyPosition } from '../../camera/liveBodyPosition';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
+import { overflowFade } from '../../../../utils/scene/overflowFade';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
@@ -137,7 +138,7 @@ export const near0SelectionRingPass: ContentPass = {
       centreWorld[2] - view.camPos[2],
     ];
     const camDist = Math.hypot(centre[0], centre[1], centre[2]);
-    const ringRadiusPx = near0RingRadiusPx(
+    const { ringRadiusPx, apparentRadiusPx } = near0RingRadiusPx(
       radiusMpc,
       // The TRUE camera distance — NOT the far-plane-clamped length below. The
       // ring's apparent size (the 1.5×-apparent term) must stay physical, so it
@@ -150,6 +151,12 @@ export const near0SelectionRingPass: ContentPass = {
       ctx.drawPxPerRad,
       state.settings.galaxyCatalogs.sizePx,
     );
+
+    // A ring wider than the screen is a stray arc beside the body, not a "this
+    // one" affordance, so it dissolves as the subject outgrows the viewport —
+    // the same rule the lifted caption rides. At zero, skip the draw entirely.
+    const alpha = overflowFade(2 * apparentRadiusPx, Math.min(...view.viewportPx));
+    if (alpha <= 0) return;
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // centre. Uses the slab's f64 `vp`, narrowed HERE at the GPU-upload
@@ -175,6 +182,7 @@ export const near0SelectionRingPass: ContentPass = {
     state.gpu.selectionRingRenderer!.draw(pass, rebasedVp, view.viewportPx, {
       worldPos: clampedCentre,
       ringRadiusPx,
+      alpha,
     });
   },
 };

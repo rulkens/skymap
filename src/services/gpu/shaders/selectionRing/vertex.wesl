@@ -35,5 +35,6 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   out.pos = center + vec4<f32>(offset, 0.0, 0.0);
   out.uv = corner;
   out.ringRadiusPx = sel.ringRadiusPx;
+  out.alpha = sel.alpha;
   return out;
 }

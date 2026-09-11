@@ -1,9 +1,10 @@
 /**
  * A mesh body is DRAWN through its host's metre-unit body row while the things
  * that point at it — the NEAR0 selection ring, the caption — project through
- * the NEAR0 slab in heliocentric Mpc. The three must land on one pixel, and the
- * ring must survive NEAR0's near-plane floor, which a mesh body's two-radii
- * standoff (0.92 m for the bowl of petunias) sits well inside.
+ * the NEAR0 slab in heliocentric Mpc. The three must land on one pixel wherever
+ * the ring draws at all, it must survive NEAR0's near-plane floor (~6.2 m,
+ * which these bodies never get outside of), and it must stand down once the
+ * body overflows the screen — as it does at its own two-radii standoff.
  *
  * Built from the real seams (`deriveBodyStates` → `createOrbitCamera` →
  * `deriveSlabs` → each pass's own `draw`), so a change to any of them that
@@ -50,11 +51,13 @@ function clipOf(m: Float32Array, p: Readonly<Vec3>): [number, number, number, nu
 }
 
 /**
- * The camera parked at the body's own standoff (`standoffRadii` = 2), looking
- * at it, with Earth's body row present — the pose the visual pass reported
- * from. Returns what each pass handed its renderer.
+ * The camera parked `radiiFromCentre` body radii out, looking at it, with
+ * Earth's body row present. Two poses matter: the body's own standoff
+ * (`standoffRadii` = 2), where the subject overflows the viewport, and
+ * `RING_VISIBLE_RADII`, where it does not. Returns what each pass handed its
+ * renderer — `ringCall` undefined when the ring pass drew nothing.
  */
-function drawAtStandoff(bodyId: string) {
+function drawAt(bodyId: string, radiiFromCentre: number) {
   const states = deriveBodyStates(SIM_DAYS);
   const body = SCENE_MESH_BODIES.find((b) => b.id === bodyId)!;
   const bodyState = states.get(bodyId)!;
@@ -65,7 +68,7 @@ function drawAtStandoff(bodyId: string) {
     target: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
     yaw: 0.7,
     pitch: 0.2,
-    distance: body.standoffRadii * body.radiusM * SCALE_UNITS.M_TO_MPC,
+    distance: radiiFromCentre * body.radiusM * SCALE_UNITS.M_TO_MPC,
     fovYRad: 1,
     aspect: 1,
     near: 0.1,
@@ -138,7 +141,7 @@ function drawAtStandoff(bodyId: string) {
   near0SelectionRingPass.draw({} as never, slabViewOf(ctx, NEAR0), ctx, state);
 
   const meshCall = meshDraw.mock.calls.find((c) => c[1] === bodyId)!;
-  const [, ringVp, , ringArgs] = ringDraw.mock.calls[0]!;
+  const ringCall = ringDraw.mock.calls[0];
 
   // The caption's own seam: `sceneBodyLabels`'s world position made
   // camera-relative (`produceSceneBodyCaptions`'s two lines, which need the
@@ -156,7 +159,7 @@ function drawAtStandoff(bodyId: string) {
     // The mesh's origin under its own MVP (the first 16 floats of the packed
     // uniforms) — where the body is actually drawn.
     meshClip: clipOf((meshCall[2] as Float32Array).subarray(0, 16), [0, 0, 0]),
-    ringClip: clipOf(ringVp as Float32Array, (ringArgs as { worldPos: Vec3 }).worldPos),
+    ringCall: ringCall as [unknown, Float32Array, unknown, { worldPos: Vec3; alpha: number }],
     captionClip: clipOf(near0LabelProjection(ctx).vpF32, camRelAnchor),
   };
 }
@@ -169,6 +172,14 @@ function offsetPx(a: readonly number[], b: readonly number[]): number {
   );
 }
 
+/**
+ * Far enough out that the 1.5×-apparent ring fits the viewport (so the pass
+ * draws at all), still inside NEAR0's MIN_NEAR_MPC floor for the pot — the
+ * only window where both the projection agreement and the near pin are
+ * observable at once.
+ */
+const RING_VISIBLE_RADII = 6;
+
 describe('near0SelectionRingPass over a mesh body', () => {
   for (const id of ['petunias', 'whale']) {
     // The ring and the caption reach the screen through the NEAR0 slab in
@@ -176,18 +187,30 @@ describe('near0SelectionRingPass over a mesh body', () => {
     // row. Both must land on the same pixel — at 1 AU an f64 ulp is 25 µm, so
     // any real divergence here is a broken seam, not rounding.
     it(`centres the ${id}'s ring and caption on the pixel the mesh draws its origin at`, () => {
-      const { meshClip, ringClip, captionClip } = drawAtStandoff(id);
-      expect(offsetPx(ringClip, meshClip)).toBeLessThan(1);
+      const { meshClip, ringCall, captionClip } = drawAt(id, RING_VISIBLE_RADII);
+      expect(offsetPx(clipOf(ringCall[1], ringCall[3].worldPos), meshClip)).toBeLessThan(1);
       expect(offsetPx(captionClip, meshClip)).toBeLessThan(1);
     });
 
-    // NEAR0's near plane is floored at MIN_NEAR_MPC (~6.2 m), which the pot's
-    // 0.92 m standoff sits deep inside: without the pass's near pin the quad's
-    // single clip z/w fails `z <= w` and the whole ring is discarded.
+    // NEAR0's near plane is floored at MIN_NEAR_MPC (~6.2 m), which the pot
+    // sits deep inside at every distance it is approachable from: without the
+    // pass's near pin the quad's single clip z/w fails `z <= w` and the whole
+    // ring is discarded.
     it(`keeps the ${id}'s ring centre inside the NEAR0 frustum`, () => {
-      const { ringClip } = drawAtStandoff(id);
+      const { ringCall } = drawAt(id, RING_VISIBLE_RADII);
+      const ringClip = clipOf(ringCall[1], ringCall[3].worldPos);
       expect(ringClip[2]).toBeGreaterThanOrEqual(0);
       expect(ringClip[2]).toBeLessThanOrEqual(ringClip[3]);
+    });
+
+    // At the standoff the body's apparent diameter is 915 px on a 1000 px
+    // viewport, so the 1.5× ring is a stray arc crossing two screen edges
+    // rather than a halo. The pass drops it entirely instead of uploading
+    // uniforms for a fully transparent draw.
+    it(`draws no ring at the ${id}'s own standoff, where the body overflows the screen`, () => {
+      const body = SCENE_MESH_BODIES.find((b) => b.id === id)!;
+      expect(drawAt(id, body.standoffRadii).ringCall).toBeUndefined();
+      expect(drawAt(id, RING_VISIBLE_RADII).ringCall[3].alpha).toBe(1);
     });
   }
 });

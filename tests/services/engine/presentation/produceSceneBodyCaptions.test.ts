@@ -46,6 +46,7 @@ const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
   SCENE_PLANETS.map((p) => sceneBodyLabelId(p.id)),
 );
 const SGR_A_STAR_LABEL_ID = sceneBodyLabelId(SGR_A_STAR_ENTRY.id);
+const PETUNIAS_LABEL_ID = sceneBodyLabelId('petunias');
 
 function worldPosOf(id: string): Vec3 {
   return [...BASE.find((l) => l.id === id)!.worldPos] as Vec3;
@@ -309,6 +310,33 @@ describe('produceSceneBodyCaptions', () => {
     const sunProminence = out.labels.find((l) => l.id === SUN_LABEL_ID)!.prominencePx!;
     const proximaProminence = out.labels.find((l) => l.id === PROXIMA_LABEL_ID)!.prominencePx!;
     expect(sunProminence).toBeGreaterThan(proximaProminence);
+  });
+
+  it('drops a caption once its subject outgrows the viewport', () => {
+    // `worldEmMpc` is the body's radius, so a camera this far out sees the pot
+    // subtend the full frame height — and its caption's own 1.5× lift would
+    // carry it clean off the top edge, leader line and all.
+    const pot = BASE.find((l) => l.id === PETUNIAS_LABEL_ID)!;
+    const camAt = (radii: number): Vec3 => [
+      pot.worldPos[0] + radii * pot.worldEmMpc,
+      pot.worldPos[1],
+      pot.worldPos[2],
+    ];
+
+    // At the mesh body's own 2-radii standoff — the pose an approach parks at.
+    expect(
+      fadeAlphaOf(
+        produceSceneBodyCaptions(makeState(), makeCtx(camAt(2))).labels,
+        PETUNIAS_LABEL_ID,
+      ),
+    ).toBe(0);
+    // Backed off, the same caption is untouched by the rule.
+    expect(
+      fadeAlphaOf(
+        produceSceneBodyCaptions(makeState(), makeCtx(camAt(100))).labels,
+        PETUNIAS_LABEL_ID,
+      ),
+    ).toBe(1);
   });
 
   it('emits a zero-target caption rather than omitting it', () => {

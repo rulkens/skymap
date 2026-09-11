@@ -22,7 +22,10 @@
  *     read as "this one" without ballooning.
  *
  * So this helper takes the TRUE apparent radius (`radiusMpc / camDist ·
- * pxPerRad`, no billboard-padding fudge) and scales it by 1.5.
+ * pxPerRad`, no billboard-padding fudge) and scales it by 1.5. That apparent
+ * radius comes back alongside the ring radius: the caller's overflow fade
+ * (`overflowFade`) keys on the SUBJECT's size, and deriving it a second time
+ * at the call site is how the two would drift apart.
  *
  * ## The far floor
  *
@@ -49,7 +52,7 @@ export function near0RingRadiusPx(
   camDistMpc: number,
   pxPerRad: number,
   pointSizePx: number,
-): number {
+): { ringRadiusPx: number; apparentRadiusPx: number } {
   // Far floor = the galaxy ring's zero-radius size (`pointSizePx · 6`). Passing
   // radiusMpc 0 makes `selectionRingRadiusPx` ignore distance and return the
   // pure px floor, so the ×6 lives in exactly one place.
@@ -62,5 +65,8 @@ export function near0RingRadiusPx(
   // how the body is actually drawn (`bodyApparentDiameterPx`) — no billboard
   // padding — so the ring meets the sphere at the resolve handoff.
   const apparentRadiusPx = (radiusMpc / safeDist) * pxPerRad;
-  return Math.max(farFloorPx, NEAR0_RING_APPARENT_SCALE * apparentRadiusPx);
+  return {
+    ringRadiusPx: Math.max(farFloorPx, NEAR0_RING_APPARENT_SCALE * apparentRadiusPx),
+    apparentRadiusPx,
+  };
 }

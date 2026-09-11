@@ -152,7 +152,7 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
       trueCamDist,
       1000,
       state.settings.galaxyCatalogs.sizePx,
-    );
+    ).ringRadiusPx;
     expect(opts.ringRadiusPx).toBeCloseTo(expectedPx, 12);
   });
 });

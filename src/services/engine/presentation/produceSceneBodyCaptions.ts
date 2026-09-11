@@ -22,6 +22,7 @@ import { sceneBodyStates } from '../frame/sceneBodyStates';
 import { CAPTION_FADE_RULES } from './captionFadeRules';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from './captionPriority';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { overflowFade } from '../../../utils/scene/overflowFade';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { LEADER_LINE_BOTTOM_GAP_PX } from './leaderLineStyle';
 
@@ -50,6 +51,7 @@ export function produceSceneBodyCaptions(
   // ride, which diverges from origin distance once focus leaves the origin.
   const camOrbitDistanceMpc = ctx.cam.distance;
   const viewportHeightPx = ctx.canvasSize.height;
+  const viewportShortSidePx = Math.min(ctx.canvasSize.width, viewportHeightPx);
   const fovYRad = ctx.fovYRad;
 
   const fades = state.subsystems.fades;
@@ -92,8 +94,17 @@ export function produceSceneBodyCaptions(
     // idiom). `subjectVisible` stays a hard gate — unrelated to this toggle.
     const ruleGate =
       rule.subjectVisible(settings) && (rule.labelEnabled(settings) || registryOpacity > 0) ? 1 : 0;
+    // Once the body fills the view its caption's own lift carries it off the
+    // top edge, leader line and all, so it dissolves — the same rule, on the
+    // same subject size, that dismisses the NEAR0 selection ring. Uniform
+    // across kinds on purpose: `CAPTION_FADE_RULES` bands read DISTANCE, which
+    // says nothing about apparent size, so no row makes this redundant.
     const fadeAlpha =
-      ruleGate * rule.fadeTarget(distanceMpc, camOrbitDistanceMpc) * registryOpacity * clipFactor;
+      ruleGate *
+      rule.fadeTarget(distanceMpc, camOrbitDistanceMpc) *
+      overflowFade(subjectSizePx, viewportShortSidePx) *
+      registryOpacity *
+      clipFactor;
 
     const prominencePx =
       CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +

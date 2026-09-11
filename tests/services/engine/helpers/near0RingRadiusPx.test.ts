@@ -12,7 +12,7 @@ describe('near0RingRadiusPx', () => {
     // A Sun-radius (~2.06e-16 Mpc) star at 1 Mpc: apparentRadiusPx ≈ 0, so the
     // floor pointSizePx(4) · 6 = 24 wins.
     const radiusMpc = 2.06e-16;
-    expect(near0RingRadiusPx(radiusMpc, 1, 720, 4)).toBeCloseTo(24, 6);
+    expect(near0RingRadiusPx(radiusMpc, 1, 720, 4).ringRadiusPx).toBeCloseTo(24, 6);
   });
 
   it('tracks 1.5× the apparent radius once the sphere resolves past the floor', () => {
@@ -21,16 +21,16 @@ describe('near0RingRadiusPx', () => {
     const camDist = 0.72;
     const radiusMpc = (100 / 720) * camDist;
     // apparentRadiusPx = 100; 1.5 × 100 = 150 > floor (24).
-    expect(near0RingRadiusPx(radiusMpc, camDist, 720, 4)).toBeCloseTo(150, 4);
+    expect(near0RingRadiusPx(radiusMpc, camDist, 720, 4).ringRadiusPx).toBeCloseTo(150, 4);
   });
 
   it('grows as the camera approaches while both distances resolve past the floor', () => {
     const radiusMpc = 0.01;
     const floor = 4 * 6;
     // far: apparent = (0.01/0.1)*720 = 72; 1.5× = 108.
-    const far = near0RingRadiusPx(radiusMpc, 0.1, 720, 4);
+    const far = near0RingRadiusPx(radiusMpc, 0.1, 720, 4).ringRadiusPx;
     // near: apparent = (0.01/0.05)*720 = 144; 1.5× = 216.
-    const near = near0RingRadiusPx(radiusMpc, 0.05, 720, 4);
+    const near = near0RingRadiusPx(radiusMpc, 0.05, 720, 4).ringRadiusPx;
     expect(far).toBeCloseTo(108, 4);
     expect(near).toBeCloseTo(216, 4);
     expect(near).toBeGreaterThan(far);
@@ -53,7 +53,7 @@ describe('near0RingRadiusPx', () => {
     // body. The 1e-18 divide-by-zero epsilon lets the true distance through.
     const radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC; // ≈ 2.0647e-16 Mpc
     const camDist = 7.4e-16;
-    expect(near0RingRadiusPx(radiusMpc, camDist, 1078, 2.5)).toBeCloseTo(451.16, 1);
+    expect(near0RingRadiusPx(radiusMpc, camDist, 1078, 2.5).ringRadiusPx).toBeCloseTo(451.16, 1);
   });
 
   it('tracks the sphere at metre range instead of the old 31 km distance floor', () => {
@@ -66,6 +66,9 @@ describe('near0RingRadiusPx', () => {
     const radiusMpc = 6.8 * SCALE_UNITS.M_TO_MPC;
     const camDist = 20 * SCALE_UNITS.M_TO_MPC;
     const apparentRadiusPx = (radiusMpc / camDist) * 720; // = 244.8
-    expect(near0RingRadiusPx(radiusMpc, camDist, 720, 4)).toBeCloseTo(1.5 * apparentRadiusPx, 6);
+    expect(near0RingRadiusPx(radiusMpc, camDist, 720, 4).ringRadiusPx).toBeCloseTo(
+      1.5 * apparentRadiusPx,
+      6,
+    );
   });
 });
