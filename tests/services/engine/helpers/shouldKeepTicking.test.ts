@@ -213,7 +213,7 @@ describe('shouldKeepTicking', () => {
   });
 
   it('a star LOD fade in flight → true even with everything else at rest', () => {
-    // The star-cut planner (prepareStarCut) reports a node mid-dissolve for this
+    // The star-cut planner (advanceStarFades) reports a node mid-dissolve for this
     // frame; the loop must keep ticking to finish the ramp even though the camera
     // is still, no thumbnails are loading, and nothing else animates. This is the
     // vote the star pass used to fire as its own requestRender — now decided here.
@@ -238,9 +238,9 @@ describe('shouldKeepTicking', () => {
     // The label director's appear/disappear envelope used to fire its own
     // requestRender; now it returns the vote and this predicate decides.
     const state = makeState({});
-    expect(
-      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, labelsAnimating: true }),
-    ).toBe(true);
+    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, labelsAnimating: true })).toBe(
+      true,
+    );
   });
 
   it('passes nowMs through to the time-dependent fade/focus terms', () => {

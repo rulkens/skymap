@@ -20,7 +20,7 @@
  * the proof the predicate depends on nothing else. The one exception is `anim`,
  * an explicit bag of IN-FRAME animation votes collected by the planners runFrame
  * has already run this frame: the star LOD-fade `anyNodeFading` from
- * `prepareStarCut`, the Earth tile subsystem's `isAnimating()`, and the two
+ * `advanceStarFades`, the Earth tile subsystem's `isAnimating()`, and the two
  * label directors' runFrame votes, folded together before the call. It is
  * threaded as a PARAMETER rather than read off EngineState precisely because it
  * is gathered per frame at the drive sites: passing it in keeps the predicate a
