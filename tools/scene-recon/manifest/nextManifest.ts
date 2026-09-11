@@ -6,7 +6,7 @@
  * had — `upsertAsset` alone only ever touches `assets[]`.
  */
 import { upsertAsset } from './upsertAsset';
-import type { SceneGroupDefinition } from '../groups/soendermarken';
+import type { SceneGroupDefinition } from '../@types/SceneGroupDefinition';
 import type { SceneAsset } from '../../scene-workbench/@types/SceneAsset';
 import type { SceneManifest } from '../../scene-workbench/@types/SceneManifest';
 

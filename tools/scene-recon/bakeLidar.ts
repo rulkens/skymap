@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * bakeLidar — orchestrates the Søndermarken LiDAR bake: DHM tiles + the
- * GeoDanmark ortho → one `pdal pipeline` run → `points.bin` + the group's
- * `manifest.json` + the `scenes.json` registry (spec §§4-6).
+ * bakeLidar — orchestrates one scene group's LiDAR bake (`--group <id>`,
+ * default `soendermarken`): DHM tiles + the GeoDanmark ortho → one
+ * `pdal pipeline` run → `points.bin` + the group's `manifest.json` + the
+ * `scenes.json` registry (spec §§4-6).
  *
  * `runPdal` is injected so `bakeLidar()` is exercisable without PDAL
  * installed (the stage graph, the CSV reader and the packer are tested in
@@ -14,7 +15,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { SOENDERMARKEN, type SceneGroupDefinition } from './groups/soendermarken';
+import { sceneGroupFromArgv } from './groups/sceneGroupFromArgv';
 import { lidarPipelineStages } from './lidar/lidarPipelineStages';
 import { readPdalCsv } from './lidar/readPdalCsv';
 import { orthoVrtXml } from './ortho/orthoVrtXml';
@@ -25,6 +26,7 @@ import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBou
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeJsonAtomic } from '../utils/io/writeJsonAtomic';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { PointCloudAsset } from '../scene-workbench/@types/PointCloudAsset';
 import type { SceneManifest } from '../scene-workbench/@types/SceneManifest';
 import type { GroupRegistry } from '../scene-workbench/@types/GroupRegistry';
@@ -171,7 +173,10 @@ function pdalVersion(): string {
 
 async function main(): Promise<void> {
   const start = Date.now();
-  const asset = await bakeLidar(SOENDERMARKEN, { runPdal: spawnPdal, pdalVersion });
+  const asset = await bakeLidar(sceneGroupFromArgv(process.argv), {
+    runPdal: spawnPdal,
+    pdalVersion,
+  });
   const seconds = ((Date.now() - start) / 1000).toFixed(1);
   process.stderr.write(
     `bakeLidar: done in ${seconds}s — ${asset.pointCount.toLocaleString()} points → ${asset.artifactUrl}\n`,
