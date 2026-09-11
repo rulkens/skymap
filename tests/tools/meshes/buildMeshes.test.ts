@@ -226,14 +226,17 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
     const decoded = decodeMesh(readMesh());
 
-    // (1,0,0) -> (0,2,0) and (0,1,0) -> (-3,0,0), less the (-1.5,2,0.5) recentre.
-    near(decoded.positions.slice(0, 6), [1.5, 0, -0.5, -1.5, -2, -0.5]);
+    // (1,0,0) -> (0,2,0) and (0,1,0) -> (-3,0,0); third vertex of each triangle
+    // stays (0,0,0). Triangle A = (0,2,0),(-3,0,0),(0,0,0), area 3, own centroid
+    // (-1, 2/3, 0). Triangle B = (0,4,0),(0,0,0),(0,0,1), area 2, own centroid
+    // (0, 4/3, 1/3). Area-weighted: (3*A + 2*B) / 5 = (-3/5, 14/15, 2/15).
+    near(decoded.positions.slice(0, 6), [0.6, 16 / 15, -2 / 15, -2.4, -14 / 15, -2 / 15]);
     near(decoded.normals.slice(0, 3), [0, 0, 1]);
     // The tangent takes the PLAIN 3x3 — (1,1,0) -> (-3,2,0) normalised. Running
     // it through the cofactor matrix normals use would give (-2,3,0) instead.
     near(decoded.tangents.slice(0, 4), [-0.83205, 0.5547, 0, 1]);
-    // Half-diagonal of the 3x4x1 world bbox.
-    expect(row.boundingRadiusM).toBeCloseTo(Math.hypot(1.5, 2, 0.5), 4);
+    // Farthest vertex from the centroid is (0,4,0), at distance sqrt(2201)/15.
+    expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(2201) / 15, 4);
   });
 
   it('reorients every attribute through the source-to-body remap', async () => {
@@ -255,8 +258,9 @@ describe('buildMeshes()', () => {
     await run(await writeGlb(doc), [0, 1, 0, -1, 0, 0, 0, 0, 1]);
     const decoded = decodeMesh(readMesh());
 
-    // (1,0,0) -> (0,1,0) and (0,1,0) -> (-1,0,0), less the (-0.5,0.5,0) recentre.
-    near(decoded.positions.slice(0, 6), [0.5, 0.5, 0, -0.5, -0.5, 0]);
+    // (1,0,0) -> (0,1,0), (0,1,0) -> (-1,0,0), (0,0,0) -> (0,0,0). One triangle,
+    // so its area-weighted centroid is just the plain vertex average: (-1/3, 1/3, 0).
+    near(decoded.positions.slice(0, 6), [1 / 3, 2 / 3, 0, -2 / 3, -1 / 3, 0]);
     near(decoded.normals.slice(0, 3), [-0.6, 0, 0.8]);
     near(decoded.tangents.slice(0, 4), [0, 1, 0, 1]);
   });
@@ -280,8 +284,9 @@ describe('buildMeshes()', () => {
     await run(await writeGlb(doc));
     const decoded = decodeMesh(readMesh());
 
-    // (1,0,0) -> (-1,0,0), less the (-0.5,0.5,0) recentre.
-    near(decoded.positions.slice(0, 3), [-0.5, -0.5, 0]);
+    // (1,0,0) -> (-1,0,0), (0,1,0) -> (0,1,0), (0,0,0) -> (0,0,0). One triangle,
+    // so its area-weighted centroid is the plain vertex average: (-1/3, 1/3, 0).
+    near(decoded.positions.slice(0, 3), [-2 / 3, -1 / 3, 0]);
     // The cofactor matrix alone hands back (0,0,-1) here — a mirrored node needs
     // the determinant's sign put back, or every normal points into the surface.
     near(decoded.normals.slice(0, 3), [0, 0, 1]);
@@ -318,9 +323,39 @@ describe('buildMeshes()', () => {
 
     const row = (await run(await writeGlb(doc)))[0]!;
 
-    // Half-diagonal of the 1x1 triangle's bbox, not its ~1000 m from the origin.
-    expect(row.boundingRadiusM).toBeCloseTo(Math.SQRT1_2, 4);
-    near(decodeMesh(readMesh()).positions.slice(0, 3), [-0.5, -0.5, 0]);
+    // The triangle's own centroid — (1000+1001+1000)/3, (0+0+1)/3 — not its
+    // ~1000 m distance from the origin.
+    near(decodeMesh(readMesh()).positions.slice(0, 3), [-1 / 3, -1 / 3, 0]);
+    expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(5) / 3, 4);
+  });
+
+  it('weights the recentre by triangle area, not by the bbox extremes', async () => {
+    // A body (area 8) plus a sliver (area 0.5) placed far away. A bbox centre
+    // is dragged toward the sliver's ~100 m coordinate — exactly the whale's-
+    // tail failure mode; the area-weighted centroid barely moves for it.
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const body = addPrim(doc, material, {
+      positions: [0, 0, 0, 4, 0, 0, 0, 4, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    const sliver = addPrim(doc, material, {
+      positions: [100, 0, 0, 101, 0, 0, 100, 1, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    const mesh = doc.createMesh('m').addPrimitive(body).addPrimitive(sliver);
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+
+    await run(await writeGlb(doc));
+    const decoded = decodeMesh(readMesh());
+
+    // Body centroid (4/3, 4/3, 0) at area 8; sliver centroid (301/3, 1/3, 0) at
+    // area 0.5. Weighted: (8*(4/3) + 0.5*(301/3)) / 8.5 = 365/51, and
+    // (8*(4/3) + 0.5*(1/3)) / 8.5 = 65/51 — nowhere near the bbox centre of
+    // (50.5, 2, 0) a naive min/max midpoint would give.
+    near(decoded.positions.slice(0, 3), [-365 / 51, -65 / 51, 0]);
+    near(decoded.positions.slice(9, 12), [100 - 365 / 51, -65 / 51, 0]);
   });
 
   it('ignores geometry orphaned off the scene graph', async () => {

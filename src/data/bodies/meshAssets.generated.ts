@@ -20,7 +20,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   whale: {
     key: 'whale',
     path: 'meshes/whale.mesh',
-    boundingRadiusM: 6.77349779893339,
+    boundingRadiusM: 7.236827809308258,
     meanAlbedo: [0.09916, 0.092641, 0.087149],
     triangleCount: 5598,
     normalMapSubstituted: false,
@@ -32,7 +32,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   petunias: {
     key: 'petunias',
     path: 'meshes/petunias.mesh',
-    boundingRadiusM: 0.4610371216917222,
+    boundingRadiusM: 0.49782164777444815,
     meanAlbedo: [0.094601, 0.106771, 0.066824],
     triangleCount: 150000,
     normalMapSubstituted: true,

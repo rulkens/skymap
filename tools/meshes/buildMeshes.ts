@@ -251,11 +251,11 @@ function windingFollowsNormal(
 
 /**
  * Merge every primitive into one vertex/index buffer with node transforms — and
- * the source's optional body-frame remap — baked in, then RECENTRE on the bbox
- * centre. Scale passes through untouched (both approved sources are modelled at
- * real-world size), but an authored pivot sitting off the model (a Sketchfab
- * habit) would otherwise inflate `boundingRadiusM`, which the runtime reads as a
- * sphere about the body origin.
+ * the source's optional body-frame remap — baked in, then RECENTRE on the
+ * AREA-WEIGHTED SURFACE CENTROID of its triangles. A bbox centre would let a
+ * long thin appendage (the whale's tail) drag the origin — and with it the
+ * selection ring, pick sphere and caption anchor it all shares — off the
+ * visible mass; weighting by triangle area keeps it on the surface instead.
  *
  * An authored `TANGENT` is used verbatim; `generateTangents` runs only when the
  * source has none on EVERY primitive, since regenerating over a good frame
@@ -269,8 +269,6 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
   const tangents: number[] = [];
   const indices: number[] = [];
   const authoredTangents = prims.every(({ prim }) => prim.getAttribute('TANGENT') !== null);
-  const min: Vec3 = [Infinity, Infinity, Infinity];
-  const max: Vec3 = [-Infinity, -Infinity, -Infinity];
 
   for (const { prim, matrix: nodeMatrix } of prims) {
     const matrix = bodyFromSource ? premultiplyMat3(bodyFromSource, nodeMatrix) : nodeMatrix;
@@ -287,10 +285,6 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
       const p = pos.getElement(v, [0, 0, 0]);
       const world = transformPoint(matrix, p[0]!, p[1]!, p[2]!);
       positions.push(...world);
-      for (let a = 0; a < 3; a++) {
-        min[a] = Math.min(min[a]!, world[a]!);
-        max[a] = Math.max(max[a]!, world[a]!);
-      }
 
       const n = nrm ? nrm.getElement(v, [0, 0, 0]) : [0, 0, 1];
       const normal = transformNormal(matrix, det, n[0]!, n[1]!, n[2]!);
@@ -323,12 +317,38 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
     }
   }
 
+  // sum(triangleArea * triangleCentroid) / sum(triangleArea) — see the docblock
+  // above for why this beats a bbox centre.
+  let cx = 0;
+  let cy = 0;
+  let cz = 0;
+  let totalArea = 0;
+  for (let i = 0; i < indices.length; i += 3) {
+    const a = indices[i]! * 3;
+    const b = indices[i + 1]! * 3;
+    const c = indices[i + 2]! * 3;
+    const ux = positions[b]! - positions[a]!;
+    const uy = positions[b + 1]! - positions[a + 1]!;
+    const uz = positions[b + 2]! - positions[a + 2]!;
+    const vx = positions[c]! - positions[a]!;
+    const vy = positions[c + 1]! - positions[a + 1]!;
+    const vz = positions[c + 2]! - positions[a + 2]!;
+    const area = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+    cx += (area * (positions[a]! + positions[b]! + positions[c]!)) / 3;
+    cy += (area * (positions[a + 1]! + positions[b + 1]! + positions[c + 1]!)) / 3;
+    cz += (area * (positions[a + 2]! + positions[b + 2]! + positions[c + 2]!)) / 3;
+    totalArea += area;
+  }
+  cx /= totalArea;
+  cy /= totalArea;
+  cz /= totalArea;
+
   const centred = new Float32Array(positions.length);
   let radiusSq = 0;
   for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i]! - (min[0]! + max[0]!) / 2;
-    const y = positions[i + 1]! - (min[1]! + max[1]!) / 2;
-    const z = positions[i + 2]! - (min[2]! + max[2]!) / 2;
+    const x = positions[i]! - cx;
+    const y = positions[i + 1]! - cy;
+    const z = positions[i + 2]! - cz;
     centred[i] = x;
     centred[i + 1] = y;
     centred[i + 2] = z;
