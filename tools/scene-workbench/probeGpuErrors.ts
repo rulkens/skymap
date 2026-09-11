@@ -207,10 +207,10 @@ async function settleFrames(page: Page, count: number): Promise<void> {
  * The exercise: boot into the `?probe` synthetic scene, orbit-drag, dolly to
  * the near clamp, toggle the point-cloud layer off then on, then resize.
  * `LayerList.tsx` renders one `role="checkbox"` per manifest asset and the
- * probe scene carries two, so every locator here is name-scoped or
+ * probe scene carries three, so every locator here is name-scoped or
  * count-asserted — a bare one trips Playwright's strict mode. Only the point
- * cloud toggles: the splats staying visible across a sibling's visibility
- * change is itself coverage of their buffers surviving the rebuild.
+ * cloud toggles: the splats and the mesh staying visible across a sibling's
+ * visibility change is itself coverage of their buffers surviving the rebuild.
  */
 function buildSteps(url: string): readonly ExerciseStep[] {
   return [
@@ -218,14 +218,14 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       name: 'boot',
       run: async (page) => {
         await page.goto(`${url}/?probe`, { waitUntil: 'load', timeout: BOOT_TIMEOUT_MS });
-        // The checkbox appearing proves the synthetic manifest loaded; BOTH
-        // status columns reaching 'ready' proves the points.bin and
-        // splats.bin blob round trips (fetch shim → parse → GPU upload)
+        // The checkbox appearing proves the synthetic manifest loaded; ALL
+        // status columns reaching 'ready' proves the points.bin, splats.bin
+        // and mesh.glb blob round trips (fetch shim → parse → GPU upload)
         // actually completed.
         await page
           .getByRole('checkbox', { name: /point cloud/i })
           .waitFor({ state: 'visible', timeout: BOOT_TIMEOUT_MS });
-        await expect(page.getByText('ready', { exact: true })).toHaveCount(2, {
+        await expect(page.getByText('ready', { exact: true })).toHaveCount(3, {
           timeout: BOOT_TIMEOUT_MS,
         });
         await settleFrames(page, SETTLE_FRAMES);

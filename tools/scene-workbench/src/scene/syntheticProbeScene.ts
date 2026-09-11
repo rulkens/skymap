@@ -1,11 +1,11 @@
 /**
  * syntheticProbeScene — the `?probe` gate's in-tool stand-in for a baked
  * group (mirrors mcpm-workbench's `syntheticCatalog.ts`): a ground plane
- * plus a raised box at ~10k points, and a few hundred Gaussian splats
- * above them, all deterministic. Manifest and artifacts ride a `Blob` +
- * `URL.createObjectURL`, so the probe needs no baked data;
- * `resolveAssetUrl.ts` is what lets the resulting blob: URLs through the
- * saga's fetches unprefixed.
+ * plus a raised box at ~10k points, a few hundred Gaussian splats above
+ * them, and a textured box mesh beside them, all deterministic. Manifest
+ * and artifacts ride a `Blob` + `URL.createObjectURL`, so the probe needs
+ * no baked data; `resolveAssetUrl.ts` is what lets the resulting blob:
+ * URLs through the saga's fetches unprefixed.
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
@@ -15,6 +15,8 @@ import type { GroupAnchor } from '../../@types/GroupAnchor';
 import type { GroupRegistryEntry } from '../../@types/GroupRegistryEntry';
 import type { PointCloudAsset } from '../../@types/PointCloudAsset';
 import type { SceneManifest } from '../../@types/SceneManifest';
+import type { TexturedMeshAsset } from '../../@types/TexturedMeshAsset';
+import { packMeshGlb, type TexturedMeshGeometry } from '../../../scene-recon/pack/packMeshGlb';
 import { packPoints, type ScenePoint } from '../../../scene-recon/pack/packPoints';
 import { packSplats, type GaussianSplatRecord } from '../../../scene-recon/pack/packSplats';
 
@@ -127,6 +129,56 @@ function probeSplats(): GaussianSplatRecord[] {
   return splats;
 }
 
+const MESH_HALF_EXTENT_M = 3;
+const MESH_CENTRE_M: Vec3 = [14, 0, 4]; // clear of the point box, well inside the ground plane
+
+// Signature, IHDR (2x2, 8-bit, colour type 2), IDAT wrapping a zlib stream whose
+// one deflate block is STORED, IEND — a 2x2 checker with no encoder on the page.
+const MESH_ATLAS_PNG = new Uint8Array([
+  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 2, 0, 0, 0, 2, 8, 2, 0, 0,
+  0, 253, 212, 154, 115, 0, 0, 0, 25, 73, 68, 65, 84, 120, 1, 1, 14, 0, 241, 255, 0, 235, 235, 235,
+  214, 122, 48, 0, 214, 122, 48, 235, 235, 235, 60, 232, 8, 131, 245, 176, 20, 213, 0, 0, 0, 0, 73,
+  69, 78, 68, 174, 66, 96, 130,
+]);
+
+/**
+ * 24 vertices rather than the 8 the subset also allows: per-face uvs put the
+ * whole atlas on every face, so a mis-bound uv buffer or a flipped upload
+ * shows as a wrong-coloured face instead of a plausible gradient. Winding is
+ * arbitrary — the mesh pipeline runs `cullMode: 'none'` (MVS output is not
+ * consistently wound).
+ */
+function probeMeshGeometry(): TexturedMeshGeometry {
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  for (let axis = 0; axis < 3; axis++) {
+    for (const side of [-1, 1]) {
+      const first = positions.length / 3;
+      for (const [u, v] of [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [1, 1],
+      ] as const) {
+        const corner: Vec3 = [0, 0, 0];
+        corner[axis] = side * MESH_HALF_EXTENT_M;
+        corner[(axis + 1) % 3] = (2 * u - 1) * MESH_HALF_EXTENT_M;
+        corner[(axis + 2) % 3] = (2 * v - 1) * MESH_HALF_EXTENT_M;
+        positions.push(...corner.map((c, k) => MESH_CENTRE_M[k]! + c));
+        uvs.push(u, v);
+      }
+      indices.push(first, first + 1, first + 2, first + 2, first + 1, first + 3);
+    }
+  }
+  return {
+    positions: new Float32Array(positions),
+    uvs: new Float32Array(uvs),
+    indices: new Uint32Array(indices),
+    image: { bytes: MESH_ATLAS_PNG, mimeType: 'image/png' },
+  };
+}
+
 const PROBE_ANCHOR: GroupAnchor = {
   kind: 'geodetic',
   latDeg: 55.6761,
@@ -142,7 +194,7 @@ const artifactBlobUrl = (bytes: Uint8Array): string =>
     new Blob([bytes.buffer as ArrayBuffer], { type: 'application/octet-stream' }),
   );
 
-export function syntheticProbeScene(): GroupRegistryEntry {
+export async function syntheticProbeScene(): Promise<GroupRegistryEntry> {
   const points = [...groundPoints(), ...boxPoints()];
   const pointAsset: PointCloudAsset = {
     id: 'probe-points',
@@ -173,12 +225,27 @@ export function syntheticProbeScene(): GroupRegistryEntry {
     },
   };
 
+  const mesh = probeMeshGeometry();
+  const meshAsset: TexturedMeshAsset = {
+    id: 'probe-mesh',
+    label: 'Probe mesh',
+    kind: 'mesh',
+    triangleCount: mesh.indices.length / 3,
+    artifactUrl: artifactBlobUrl(await packMeshGlb(mesh)),
+    transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
+    provenance: {
+      source: 'userPhotoCapture',
+      sourceVintage: '2026-01-01',
+      pipeline: [{ step: 'syntheticProbeScene', version: '1' }],
+    },
+  };
+
   const manifest: SceneManifest = {
     formatVersion: 1,
     groupId: 'probe',
     groupName: 'Probe scene',
     anchor: PROBE_ANCHOR,
-    assets: [pointAsset, splatAsset],
+    assets: [pointAsset, splatAsset, meshAsset],
   };
   const manifestUrl = URL.createObjectURL(
     new Blob([JSON.stringify(manifest)], { type: 'application/json' }),
