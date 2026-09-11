@@ -1,8 +1,7 @@
 /**
  * Both branches read the REAL driver tables, so the fixtures borrow ids that
  * already have a driver row: the whale's `earth` focus owns a slab row, while
- * a Sun-focused body's does not. Task 11's Voyagers are the first real rows of
- * the second kind; `pluto`'s driver stands in for them until then.
+ * a Sun-focused body's does not; `pluto`'s driver stands in for any of them.
  */
 
 import { describe, expect, it } from 'vitest';

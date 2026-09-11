@@ -30,8 +30,7 @@ export const TITAN_ORANGE: Vec3 = [0.5, 0.38, 0.2];
 export const WHALE_GREY: Vec3 = [0.28, 0.32, 0.38];
 export const PETUNIA_PINK: Vec3 = [0.5, 0.22, 0.36];
 
-// The Voyagers' thermal-blanket gold, warm and cool so the two stay apart. The
-// only reader of an element row's colour is the trail pass, and the mesh bodies
-// draw no trail (`trailElements.ts`) — so these sit unread until one does.
+// Thermal-blanket gold, warm and cool so the two probes stay apart; unread
+// today — mesh bodies draw no trail.
 export const VOYAGER_1_GOLD: Vec3 = [0.5, 0.42, 0.2];
 export const VOYAGER_2_AMBER: Vec3 = [0.5, 0.36, 0.16];

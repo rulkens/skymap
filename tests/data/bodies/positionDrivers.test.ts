@@ -1,7 +1,7 @@
 /**
  * `bodyHostId` reads a different field per driver arm, so one real row per arm
- * is what catches an arm wired to the wrong one. The `surfaceFixed` arm has no
- * row until the sites land, and is covered by their own traverse test.
+ * is what catches an arm wired to the wrong one. The `surfaceFixed` arm is
+ * covered by the landing sites' own traverse test.
  */
 
 import { describe, expect, it } from 'vitest';

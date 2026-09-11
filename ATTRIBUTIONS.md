@@ -511,12 +511,11 @@ All public domain; NASA asks that credit go to the named observatory / program.
 
 - **Use:** The Voyager 1 and Voyager 2 mesh bodies (both `meshKey: 'voyager'`).
   Shipped as a derivative: a headless Blender pre-bake
-  (`npm run prebake-mesh -- voyager`) drops the exporter's placeholder cube,
-  joins the three parts, and bakes the three source materials into one 2048²
+  (`npm run prebake-mesh -- voyager`) flattens the scene to one mesh and one
   albedo atlas, which `npm run build-meshes` then bakes to
   `public/data/meshes/voyager.*`. The raw GLB and the pre-bake output are
-  gitignored; per-file provenance lives in `tools/utils/io/rawDataRegistry.ts`
-  (the `meshes.*` rows) and `data/raw/meshes/voyager/README.md`.
+  gitignored; provenance and the pre-bake's own steps live in
+  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/voyager/README.md`.
 - **Source:** NASA 3D Resources,
   <https://science.nasa.gov/3d-resources/voyager-probe-b/> (download served
   from `assets.science.nasa.gov`).
@@ -527,13 +526,11 @@ All public domain; NASA asks that credit go to the named observatory / program.
 ### "Mars 2020 Perseverance Rover" — Brian Kumanchik, NASA/JPL-Caltech
 
 - **Use:** The Perseverance mesh body. Shipped as a derivative: a headless
-  Blender pre-bake (`npm run prebake-mesh -- perseverance`) evaluates the
-  animated rig at frame 120 (mast deployed — the file's saved pose ships
-  headless), drops a ground helper, joins 68 parts, decimates 199,482 →
-  100,000 tris, and bakes 47 materials into one 2048² albedo atlas, which
-  `npm run build-meshes` then bakes to `public/data/meshes/perseverance.*`.
-  The raw GLB and the pre-bake output are gitignored; per-file provenance
-  lives in `tools/utils/io/rawDataRegistry.ts` (the `meshes.*` rows) and
+  Blender pre-bake (`npm run prebake-mesh -- perseverance`) flattens the
+  deployed rig to one mesh and one albedo atlas, which `npm run build-meshes`
+  then bakes to `public/data/meshes/perseverance.*`. The raw GLB and the
+  pre-bake output are gitignored; provenance and the pre-bake's own steps live
+  in `tools/utils/io/rawDataRegistry.ts` and
   `data/raw/meshes/perseverance/README.md`.
 - **Source:** NASA 3D Resources,
   <https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/>
@@ -545,15 +542,11 @@ All public domain; NASA asks that credit go to the named observatory / program.
 ### "Curiosity Rover (MSL) (Clean)" — Brian Kumanchik, NASA/JPL-Caltech
 
 - **Use:** The Curiosity mesh body. Shipped as a derivative: a headless
-  Blender pre-bake (`npm run prebake-mesh -- curiosity`) evaluates the scene
-  at frame 206, drops camera markers and helper geometry by material name
-  (two of them carry a material and would otherwise bake in), repairs two
-  Non-Color-flagged colour maps and one dangling texture reference, joins 73
-  parts, and bakes 16 materials into one 2048² albedo atlas, which
-  `npm run build-meshes` then bakes to `public/data/meshes/curiosity.*`. The
-  raw archive and the pre-bake output are gitignored; per-file provenance
-  lives in `tools/utils/io/rawDataRegistry.ts` (the `meshes.*` rows) and
-  `data/raw/meshes/curiosity/README.md`.
+  Blender pre-bake (`npm run prebake-mesh -- curiosity`) flattens the deployed
+  rig to one mesh and one albedo atlas, which `npm run build-meshes` then bakes
+  to `public/data/meshes/curiosity.*`. The raw archive and the pre-bake output
+  are gitignored; provenance and the pre-bake's own steps live in
+  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/curiosity/README.md`.
 - **Source:** NASA 3D Resources,
   <https://science.nasa.gov/3d-resources/curiosity-rover-msl/> (download
   served from `assets.science.nasa.gov`, a zip archive holding one `.blend`
@@ -567,14 +560,11 @@ All public domain; NASA asks that credit go to the named observatory / program.
 - **Use:** The Spirit and Opportunity mesh bodies (both `meshKey: 'mer'`) —
   the same vehicle design, so both bodies draw this one model. Shipped as a
   derivative: a headless Blender pre-bake (`npm run prebake-mesh -- mer`)
-  evaluates the scene at frame 1325 (deployed configuration — the animation
-  starts folded for landing), leaves 21 material-less marker cubes in place
-  as joint parents while omitting them from the join, repairs seven
-  Non-Color-flagged colour maps, and bakes nine materials into one 2048²
-  albedo atlas, which `npm run build-meshes` then bakes to
-  `public/data/meshes/mer.*`. The raw `.blend` and the pre-bake output are
-  gitignored; per-file provenance lives in `tools/utils/io/rawDataRegistry.ts`
-  (the `meshes.*` rows) and `data/raw/meshes/mer/README.md`.
+  flattens the deployed rig to one mesh and one albedo atlas, which
+  `npm run build-meshes` then bakes to `public/data/meshes/mer.*`. The raw
+  `.blend` and the pre-bake output are gitignored; provenance and the
+  pre-bake's own steps live in `tools/utils/io/rawDataRegistry.ts` and
+  `data/raw/meshes/mer/README.md`.
 - **Source:** NASA 3D Resources page
   <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/>;
   the page's own download link 404s (verified 2026-09-11), so the file is

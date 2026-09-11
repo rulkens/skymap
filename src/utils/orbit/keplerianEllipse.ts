@@ -1,47 +1,17 @@
 /**
- * keplerianEllipse — turn a body's classical orbital elements into the three
- * CONSTANT world vectors that describe its orbit as an affine image of the unit
- * circle (spec §3.1).
+ * keplerianEllipse — a body's classical elements → the three CONSTANT world
+ * vectors that make its orbit an affine image of the unit circle (spec §3.1).
  *
- * ### The one structural fact this rests on
- *
- * A bound Keplerian orbit, evaluated at eccentric anomaly `E`, is
- *
- *     X(E) = C + A·cos E + B·sin E
- *
- * with `A`, `B`, `C` fixed once the elements (and parent position) are fixed.
- * So in the plane basis `(A, B)` about the centre `C`, the orbit is exactly the
- * **unit circle** `s² + t² = 1`, and the plane angle IS the eccentric anomaly.
- * All of the real orbit geometry — eccentricity, inclination, node, periapsis —
- * lives in these three vectors; the curve itself is always the unit circle. The
- * whole trail feature (CPU position seeding + the screen-space conic fragment)
- * rides on this: derive `A`, `B`, `C` once, and both the body and its trail are
- * points/curves of the same affine map. (A perfect circle ring is the special
- * case `A ⟂ B`, `|A| = |B|`, `C` at the focus; ellipses relax all three.)
- *
- * ### Why focus-relative (centre-OFFSET, not absolute centre)
- *
- * This returns `centerOffsetMpc = C − focus`, the vector from the orbit's focus
- * to its geometric centre, NOT the absolute-world centre. Adding the focus is
- * left to the caller (Task 7) so the same math serves BOTH a heliocentric orbit
- * (focus = the Sun at the origin) and a geocentric one (the Moon, focus =
- * Earth's derived world position). Baking a specific focus in here would fork
- * the function per parent; keeping it focus-relative keeps it one pure map from
- * elements to shape.
- *
- * ### The rotations
- *
- * Orientation comes from `perifocalAxesWorld` — `P̂w` (toward periapsis) and
- * `Q̂w` (90° prograde), already in equatorial world. All that is left here is
- * the ellipse's own size, with `b = a·√(1 − e²)`:
+ * `X(E) = C + A·cos E + B·sin E`, with `A`, `B`, `C` fixed once the elements
+ * are: in the basis `(A, B)` about `C` the curve is exactly the unit circle and
+ * the plane angle IS the eccentric anomaly, so all of e/i/Ω/ω lives in the three
+ * vectors. Position and trail are points of that same map, which is what makes
+ * a body sitting on its own trail structural, not a sync invariant.
  *
  *     A     = a · P̂w            (semi-major, toward periapsis)
- *     B     = b · Q̂w            (semi-minor, prograde)
- *     C_off = −a·e · P̂w         (focus → ellipse centre)
- *
- * @param elements  The body's J2000 classical elements (a, e, i, Ω, ω, …).
- * @returns The three constant equatorial-world vectors of the ellipse, with the
- *          focus at the origin — the caller adds the parent's world position.
+ *     B     = b · Q̂w            (semi-minor, prograde; b = a·√(1 − e²))
+ *     C_off = −a·e · P̂w         (focus → centre, focus-RELATIVE so one map
+ *                                serves a heliocentric planet and the Moon)
  */
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';

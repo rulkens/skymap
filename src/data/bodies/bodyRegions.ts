@@ -21,8 +21,6 @@ import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 
 const SUN_ID = 'sun';
 
-// Named ahead of its seed: the feature plan adds the anchor and the S-star
-// rows, and the walk below claims them without this table being edited.
 const SGR_A_STAR_ID = 'sgr-a-star';
 
 // The rate-less J2000 snapshot `foregroundMaxDistance` already reads. Extents
@@ -43,9 +41,9 @@ const orbitalIdsRootedAt = (anchorId: string): readonly string[] =>
   ORBITAL_ELEMENTS.filter((el) => focusRootId(el) === anchorId).map((el) => el.id);
 
 // A body sits in the regime it anchors: an anchor joins its own subtree, so the Sun sits in
-// the solar system while merely anchoring the neighbourhood's distances. The filter is
-// `galactic-centre`'s alone — its anchor id is authored ahead of the feature plan's seed, so
-// until then it is empty and must resolve no position. A dangling FOCUS id throws instead.
+// the solar system while merely anchoring the neighbourhood's distances. Members are filtered
+// to ids the snapshot holds, so an anchor seeded ahead of its rows reads as an empty region
+// rather than resolving a position that does not exist. A dangling FOCUS id throws instead.
 const anchoredMemberIds = (anchorId: string): readonly string[] => {
   const orbiting = [anchorId, ...orbitalIdsRootedAt(anchorId)];
   // A landing site joins the region its HOST sits in — a rover is in the solar
