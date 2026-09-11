@@ -86,11 +86,6 @@ export const galaxyPointSpritesPass: ContentPass = {
     });
   },
 
-  // @group(0) prefix contract: this row is first among the cosmological pickables,
-  // and `drawPoints` uploads + binds the pick CameraUniforms even with zero
-  // sources — the ring / disk pick pipelines read that same @group(0) prefix. So
-  // running first, and calling `drawPoints` even on an empty list, is load-bearing.
-  //
   // `ctx.visibleSourceMask` is the PICK mask here (`deriveSourceMasks(state).pick`),
   // and the opacity filter extends the mask on the INTENT fade only — picking
   // follows intent, not pixels (`deriveSourceMasks.ts:25-27`, #18 D8), so a clip

@@ -27,6 +27,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 
 export const structureMarkersPass: ContentPass = {
   name: 'structure-markers',
@@ -66,19 +67,15 @@ export const structureMarkersPass: ContentPass = {
 
   // Pick aspect — one ring-pick draw per structure category (cluster / SC
   // / void / group). The renderer ORs each category's `sourceCode` into
-  // the packed identity via its own @group(2), and deliberately reuses the
-  // caller-bound @group(0) pick camera (it doesn't bind slot 0). Sizing +
-  // camera are the shared pick uniform's concern; this row just fires the
-  // draws. Same non-null shape as `draw` — the pick program's `enabled`
-  // gate (`markerCount() > 0`) already narrowed the renderer.
-  drawPick(pass, view, _ctx, state) {
+  // the packed identity via its own @group(2). Same non-null shape as
+  // `draw` — the pick program's `enabled` gate (`markerCount() > 0`) already
+  // narrowed the renderer.
+  drawPick(pass, view, ctx, state) {
     // Invisible → unpickable: past the surveyDeepZoom band's goneAt edge
     // the rings no longer draw (see `draw`), so they must not claim pick
-    // hits either. Skipping pickRing outright is safe — it reuses the
-    // caller-bound @group(0) pick camera and binds nothing itself, so no
-    // downstream pick pipeline depends on this call having run.
+    // hits either.
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     if (fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc) === 0) return;
-    state.gpu.structureMarkerRenderer!.pickRing(pass);
+    state.gpu.structureMarkerRenderer!.pickRing(pass, pickUniformBytesOf(view, ctx, state));
   },
 };

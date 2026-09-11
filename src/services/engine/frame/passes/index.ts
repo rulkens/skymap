@@ -278,10 +278,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   // The zone-of-avoidance band's PRODUCER: its own reduced-res 'zoa'
   // target keeps it out of every VISUAL group's filter regardless of array
   // position (frameProgram.ts hand-orders render steps independently of
-  // this registry) — but the PICK program groups by slab alone and walks
-  // this array's order within a slab, so this row's `drawPick` DOES care:
-  // it must sit after `galaxyPointSpritesPass`, which establishes the COSMO pick
-  // pass's shared @group(0) camera every other COSMO drawPick relies on.
+  // this registry).
   zoneOfAvoidancePass,
   proceduralDisksPass,
   texturedDisksPass,

@@ -12,11 +12,7 @@
  * `(Source.MilkyWay << 26) | (0 + PICK_SENTINEL_OFFSET)`; the MW carries
  * no per-record `localIdx`, so it is always 0.
  *
- * Unlike the COSMO pickables (rings, disks — which inherit the `@group(0)`
- * pick camera the points pick draw binds first in their shared pass), this
- * renderer BINDS ITS OWN `@group(0)`: the MW is the sole pickable on the
- * NEAR0 slab, so its pick pass has no earlier draw to inherit from. The
- * caller hands the complete pick-uniform bytes per call (built via
+ * The caller hands the complete pick-uniform bytes per call (built via
  * `pickUniformBytesOf` against the NEAR0 slab view); the renderer uploads
  * them to its own buffer, binds `@group(0)` (camera) + `@group(1)` (a dummy
  * zeroed FadeUniforms) + `@group(2)` (the static MW pick uniform carrying

@@ -145,8 +145,7 @@ export const starSpheresPass: ContentPass = {
   // `oblateness` the same way `draw` does, so the pick silhouette matches.
   //
   // This row self-binds its own @group(0) pick camera inside `drawSphere` (the
-  // sphere pick's per-draw uniform); on NEAR0 there is no shared point-pick
-  // prefix to inherit or restore — that contract is a COSMO-pass fact.
+  // sphere pick's per-draw uniform), like every other pickable row.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;

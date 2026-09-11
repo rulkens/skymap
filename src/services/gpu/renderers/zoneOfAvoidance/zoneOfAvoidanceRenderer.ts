@@ -86,22 +86,6 @@ export function createZoneOfAvoidanceRenderer(
   });
 
   // ── Pick pipeline ───────────────────────────────────────────────────
-  //
-  // group(0) is never bound by this renderer, and no stage of the pick
-  // pipeline reads it — it's the COSMO pick pass's shared point-pick camera
-  // prefix, already bound by the time `drawPick` runs (see
-  // `ContentPass.drawPick`'s postcondition). This BGL only exists so the
-  // pipeline layout is structurally compatible with it.
-  const pickCameraBgl = device.createBindGroupLayout({
-    label: 'zoneOfAvoidance-pick-camera-bgl',
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
-    ],
-  });
   const pickFsModule = createShaderModuleWithDevLog(
     device,
     fsPickCode,
@@ -111,9 +95,7 @@ export function createZoneOfAvoidanceRenderer(
     label: 'zoneOfAvoidance-pick-pipeline',
     layout: device.createPipelineLayout({
       label: 'zoneOfAvoidance-pick-pipeline-layout',
-      // `bindGroupLayout` is the SAME BGL `draw` binds at group(0), landing
-      // at group(1) here.
-      bindGroupLayouts: [pickCameraBgl, bindGroupLayout],
+      bindGroupLayouts: [bindGroupLayout],
     }),
     vertex: { module: vsModule, entryPoint: 'vs' },
     fragment: {
@@ -249,10 +231,8 @@ export function createZoneOfAvoidanceRenderer(
     pass.draw(6, 1);
   }
 
-  // Pick twin of `draw`: same fullscreen-quad draw, same uniforms, against
-  // the r32uint pick pipeline. Never binds group(0) itself — see the pick
-  // pipeline's construction above for why. `bindGroup` is the SAME object
-  // `draw` binds at group(0), just landing at group(1) here.
+  // Pick twin of `draw`: same fullscreen-quad draw, same uniforms and the
+  // same `bindGroup`, against the r32uint pick pipeline.
   function drawPick(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
@@ -275,7 +255,7 @@ export function createZoneOfAvoidanceRenderer(
       fadeAlpha,
     );
     pass.setPipeline(pickPipeline);
-    pass.setBindGroup(1, bindGroup);
+    pass.setBindGroup(0, bindGroup);
     pass.draw(6, 1);
   }
 

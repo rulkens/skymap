@@ -1031,8 +1031,7 @@ export const starCatalogPass: ContentPass = {
   // camera uniform is one shared buffer, safe only under that invariant).
   //
   // This row self-binds its own @group(0) pick camera inside the renderer's
-  // `draw`, like the Milky-Way pick: on NEAR0 there is no shared point-pick
-  // prefix to inherit or restore (that contract is a COSMO-pass fact). Visibility
+  // `draw`, like every other pickable row. Visibility
   // is NOT re-checked here — the pick program filters by `enabled`
   // (`starCatalogVisible`, the foreground-distance + crossfade gate) against the
   // pick-time camera, the SAME gate the draw program runs, so a cosmic-zoom

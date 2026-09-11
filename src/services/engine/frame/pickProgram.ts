@@ -310,13 +310,6 @@ export function createPickProgram(deps: {
   // content. Fixes the regression where a raw numeric-ascending slab-index
   // sort let any NEAR0(0) star hit beat a genuinely nearer body/planet hit,
   // and even let COSMO(1) beat a body row(2+).
-  // Registry order is preserved WITHIN each slab (a `.filter()` keeps the
-  // array order), which is the @group(0) prefix contract: point-sprites runs
-  // first in the COSMO pass and leaves slot 0 bound to the shared pick camera
-  // for the ring / disk fold-ins. (The NEAR0 pickables — the Milky-Way
-  // impostor and the Gaia star catalog — share no such prefix: each binds its
-  // OWN complete slot-0 camera in its own draw, so their registry order
-  // carries no @group(0) dependence.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; view: SlabView; passes: ContentPass[] }[] {

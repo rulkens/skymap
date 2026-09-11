@@ -97,9 +97,5 @@ export const labelsPass: ContentPass = {
       measure: (label) => renderer.measure(label),
     });
     pickRenderer.draw(pass, quads, projection.viewportPx);
-    // Postcondition: this row bound its OWN @group(0), so put the shared
-    // point-pick camera prefix back for anything recorded after it in the
-    // COSMO pick pass (see `ContentPass.drawPick`).
-    state.gpu.galaxyPickRenderer?.bindCamera(pass);
   },
 };
