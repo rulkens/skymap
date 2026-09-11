@@ -184,24 +184,24 @@ private declaration; every one of its four call sites
 (`bodyRelativePose.ts:47, 49-53, 54, 55-59`) is unchanged syntactically (same
 name, same arg order).
 
-- [ ] Add the test `rotateByTranspose applies the inverse rotation` to
+- [x] Add the test `rotateByTranspose applies the inverse rotation` to
       `tests/utils/math/rotateByTranspose.test.ts`: hand-compute the expected
       vector for a non-identity `Mat3` (e.g. a 90° rotation about one axis)
       independently of the function under test (rotate by hand, don't call
       `multiply3x3`/the function itself to build the expectation). Add
       `rotateByTranspose returns v unchanged under the identity` as a second
       case.
-- [ ] Extract the function into `src/utils/math/rotateByTranspose.ts`.
-- [ ] Update `bodyRelativePose.ts` to import and drop the local declaration;
+- [x] Extract the function into `src/utils/math/rotateByTranspose.ts`.
+- [x] Update `bodyRelativePose.ts` to import and drop the local declaration;
       trim the module header's rotate-by-transpose parenthetical if it now
       duplicates the extracted file's own docblock.
-- [ ] `npm test -- rotateByTranspose bodyRelativePose` — new test green,
+- [x] `npm test -- rotateByTranspose bodyRelativePose` — new test green,
       `bodyRelativePose`'s existing suite (`tests/services/engine/camera/bodyRelativePose.test.ts`)
       unchanged and green (this IS the extraction's own regression proof —
       see spec's Testing section: "P5 is a pure extraction, so
       `bodyRelativePose`'s existing tests staying green is its test").
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit `src/utils/math/rotateByTranspose.ts`,
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit `src/utils/math/rotateByTranspose.ts`,
       `tests/utils/math/rotateByTranspose.test.ts`,
       `src/services/engine/camera/bodyRelativePose.ts`.
 
@@ -260,7 +260,7 @@ attached body: `faceM = hypot(posM − eyeRelBodyM) − radiusM`; the row's
 the host's own `near` already is. `eyeRelBodyM` is already in scope in this
 function (destructured from `relPose` at line 252).
 
-- [ ] Add the failing test `bodySlabRow lowers near for an attached body
+- [x] Add the failing test `bodySlabRow lowers near for an attached body
 ahead of the host` to `tests/services/engine/frame/slabs.test.ts`
       (model the fixture on this file's existing `bodySlabRow`/`deriveSlabs`
       cases — a camera pose at a known altitude, a host body, and an
@@ -268,17 +268,17 @@ ahead of the host` to `tests/services/engine/frame/slabs.test.ts`
       the host's own near margin) asserting the returned `near` is `< 50`
       (in metres) — strictly less than what the same fixture produces with
       `attachedBodies` omitted.
-- [ ] Add `bodySlabRow leaves near unchanged for an attached body behind the
+- [x] Add `bodySlabRow leaves near unchanged for an attached body behind the
 host` — same fixture, `posM` placed on the FAR side of the host
       (beyond the host's own drawn radius along view-axis), asserting `near`
       is unchanged from the no-`attachedBodies` case.
-- [ ] Run — both fail (current `bodySlabRow` has no `attachedBodies` param).
-- [ ] Implement the widening.
-- [ ] Run — both green; the rest of `slabs.test.ts` (every existing
+- [x] Run — both fail (current `bodySlabRow` has no `attachedBodies` param).
+- [x] Implement the widening.
+- [x] Run — both green; the rest of `slabs.test.ts` (every existing
       `bodySlabRow`/`deriveSlabs` case, called with no `attachedBodies`)
       stays green unmodified — the no-op proof.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit `src/services/engine/frame/slabs.ts`,
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit `src/services/engine/frame/slabs.ts`,
       `tests/services/engine/frame/slabs.test.ts`.
 
 ---
@@ -339,28 +339,28 @@ silently fall into `flat`; routing on type first is the fix). Discriminate
 or tag field, matching the file's existing "never an `if (id === …)` chain"
 discipline.
 
-- [ ] Add `MeshBody.d.ts`.
-- [ ] Add the failing test `partitionBodiesByPresentation routes a
+- [x] Add `MeshBody.d.ts`.
+- [x] Add the failing test `partitionBodiesByPresentation routes a
 sub-pixel MeshBody to glints` (fixture: one `MeshBody`, apparent
       diameter below `BODY_GLINT_MAX_PX`) to
       `tests/services/engine/frame/partitionBodiesByPresentation.test.ts`.
-- [ ] Add `partitionBodiesByPresentation routes a resolved MeshBody to
+- [x] Add `partitionBodiesByPresentation routes a resolved MeshBody to
 meshes, never textured or flat` (same body, apparent diameter at/above
       the threshold) — asserts it lands in `meshes` and is absent from
       `flat`/`textured`.
-- [ ] Add `partitionBodiesByPresentation keeps the four branches disjoint
+- [x] Add `partitionBodiesByPresentation keeps the four branches disjoint
 and covering` over a fixture mixing a resolved `PlanetBody`
       (textured), a resolved `PlanetBody` (flat), a sub-pixel `PlanetBody`
       (glint), and a resolved `MeshBody` (mesh) — assert every input body
       appears in exactly one output array.
-- [ ] Run — new cases fail.
-- [ ] Implement the widened `partitionBodiesByPresentation` + `MeshBody`
+- [x] Run — new cases fail.
+- [x] Implement the widened `partitionBodiesByPresentation` + `MeshBody`
       discriminant.
-- [ ] Run — all green; every existing case in
+- [x] Run — all green; every existing case in
       `partitionBodiesByPresentation.test.ts` stays green unmodified (a
       `PlanetBody`-only input still partitions three ways, `meshes` empty).
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit `src/@types/scene/MeshBody.d.ts`,
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit `src/@types/scene/MeshBody.d.ts`,
       `src/services/engine/frame/partitionBodiesByPresentation.ts`, the test
       file.
 
@@ -459,24 +459,24 @@ export function sceneBodyPartition(
 };
 ```
 
-- [ ] Add `meshAssets.generated.ts` (empty `MESH_ASSETS`).
-- [ ] Add `sceneMeshBodies.ts` (empty `SCENE_MESH_BODIES`).
-- [ ] Widen `SceneBody` union.
-- [ ] Widen `BodyStore` + its concrete implementation (grep for the factory
+- [x] Add `meshAssets.generated.ts` (empty `MESH_ASSETS`).
+- [x] Add `sceneMeshBodies.ts` (empty `SCENE_MESH_BODIES`).
+- [x] Widen `SceneBody` union.
+- [x] Widen `BodyStore` + its concrete implementation (grep for the factory
       that builds the `BodyStore` closure — mirror `setPlanets`'s shape for
       `setMeshBodies`).
-- [ ] Append `...SCENE_MESH_BODIES` to `SCENE_BODIES` (`sceneBodies.ts`).
-- [ ] Call `state.data.bodies.setMeshBodies(SCENE_MESH_BODIES)` at boot,
+- [x] Append `...SCENE_MESH_BODIES` to `SCENE_BODIES` (`sceneBodies.ts`).
+- [x] Call `state.data.bodies.setMeshBodies(SCENE_MESH_BODIES)` at boot,
       beside the existing `setPlanets(SCENE_PLANETS)` call.
-- [ ] Widen `sceneBodyPartition.ts` (Task 3's deferred half) now that
+- [x] Widen `sceneBodyPartition.ts` (Task 3's deferred half) now that
       `state.data.bodies.meshBodies` exists.
-- [ ] `npm test` — no existing test should break (an empty `SCENE_MESH_BODIES`
+- [x] `npm test` — no existing test should break (an empty `SCENE_MESH_BODIES`
       changes nothing observable: `SCENE_BODIES.length` is unchanged,
       `BodyStore.meshBodies` is `[]`). No NEW test is required by this task
       — it is pure plumbing with nothing to assert beyond "the app still
       builds and boots," which `npm run build` covers.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit all files above together (they are one coherent, indivisible
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit all files above together (they are one coherent, indivisible
       wiring change).
 
 ---
@@ -511,7 +511,7 @@ seed.description, radiusM: asset.boundingRadiusM, albedo: asset.meanAlbedo
 posture — an authoring mistake, or a seed added before its asset landed,
 belongs at the site that made the mistake, not silently downstream).
 
-- [ ] Add the failing test `meshBody joins a seed with its MESH_ASSETS row`
+- [x] Add the failing test `meshBody joins a seed with its MESH_ASSETS row`
       to `tests/data/bodies/makers/meshBody.test.ts`: `vi.mock` the
       `meshAssets.generated` module with a fixture `MESH_ASSETS` (one
       synthetic key, e.g. `'test-mesh'`, with a made-up `boundingRadiusM`/
@@ -520,13 +520,13 @@ belongs at the site that made the mistake, not silently downstream).
       `albedo` equal the fixture row's `boundingRadiusM`/`meanAlbedo`. The
       bug this catches is a crossed field mapping, which no compiler check
       sees (both sides are `number`/`Vec3`).
-- [ ] Add `meshBody throws for an unknown meshKey` — same mock, a seed
+- [x] Add `meshBody throws for an unknown meshKey` — same mock, a seed
       naming a key absent from the fixture table.
-- [ ] Run — fails (file doesn't exist).
-- [ ] Implement `meshBody.ts`.
-- [ ] Run — both green.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit `src/data/bodies/makers/meshBody.ts`,
+- [x] Run — fails (file doesn't exist).
+- [x] Implement `meshBody.ts`.
+- [x] Run — both green.
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit `src/data/bodies/makers/meshBody.ts`,
       `tests/data/bodies/makers/meshBody.test.ts`.
 
 ---
@@ -582,25 +582,25 @@ values that visibly tumble rather than spin about a screen-aligned axis),
 `spinRateDegPerDay` for roughly one turn per 3 minutes (whale:
 `360 / (3 / 1440)` deg/day) and faster for the pot.
 
-- [ ] Add the failing test `periodDaysFromSemiMajorKm matches a known LEO
+- [x] Add the failing test `periodDaysFromSemiMajorKm matches a known LEO
 period` to `tests/utils/orbit/periodDaysFromSemiMajorKm.test.ts`: a
       hand-computed expectation for a semi-major axis near Earth's radius +
       400 km (ISS-altitude), asserting the result is close to the
       well-known ~92.68-minute ISS period (converted to days) — an
       independent, textbook-value check, not a formula mirror.
-- [ ] Run — fails.
-- [ ] Implement `periodDaysFromSemiMajorKm`.
-- [ ] Run — green.
-- [ ] Append the two `ORBITAL_ELEMENTS` rows and two `ROTATION_ELEMENTS`
+- [x] Run — fails.
+- [x] Implement `periodDaysFromSemiMajorKm`.
+- [x] Run — green.
+- [x] Append the two `ORBITAL_ELEMENTS` rows and two `ROTATION_ELEMENTS`
       rows.
-- [ ] Confirm `tests/data/bodies/rotationElements.test.ts` no longer carries
+- [x] Confirm `tests/data/bodies/rotationElements.test.ts` no longer carries
       the `toHaveLength(15)` count restatement — the prep plan deletes it (its
       DoD says so). If it is somehow still there, delete it rather than
       bumping the number: it is the registry-count-restatement pattern
       `docs/superpowers/conventions/testing.md` says to remove. The same
       block's duplicate-id and declination-range checks are structural
       invariants and stay.
-- [ ] Add the failing test `the petunia pot trails the whale by the authored
+- [x] Add the failing test `the petunia pot trails the whale by the authored
 mean-anomaly offset at epoch` (spec's own Testing-section item):
       `deriveBodyStates(CONST_J2000)`, read both bodies' `meanAnomalyRad`,
       assert the difference equals the authored offset (radians), and that
@@ -608,7 +608,7 @@ mean-anomaly offset at epoch` (spec's own Testing-section item):
       `(SCENE_EARTH.radiusM + 400_000) * SCALE_UNITS.M_TO_MPC` in magnitude
       (a physical sanity check: they're both in a ~400 km orbit, not on top
       of Earth or off at some other radius).
-- [ ] Add the failing test `every SCENE_BODIES id resolves a BodyState` —
+- [x] Add the failing test `every SCENE_BODIES id resolves a BodyState` —
       the spec's own Testing-section item, guarding
       `extractSelectionRow.ts:56`'s non-null assertion
       (`deriveBodyStates(simDays).get(body.id)!`). Iterate `SCENE_BODIES`,
@@ -617,9 +617,9 @@ mean-anomaly offset at epoch` (spec's own Testing-section item):
       load-bearing the moment a seed row is added without its
       `ORBITAL_ELEMENTS` / `SCENE_ANCHORS` counterpart — exactly the mistake
       Task 18 could make. Home it beside the orbit-rows test.
-- [ ] Run — green.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit `src/utils/orbit/periodDaysFromSemiMajorKm.ts`,
+- [x] Run — green.
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit `src/utils/orbit/periodDaysFromSemiMajorKm.ts`,
       `tests/utils/orbit/periodDaysFromSemiMajorKm.test.ts`,
       `src/data/bodies/orbitalElements.ts`,
       `src/data/bodies/rotationElements.ts`, the orbit-rows test.
@@ -686,14 +686,14 @@ because `meshBodiesPass.drawPick` stamps its own picks rather than borrowing a
 star layer's code. `BODY_SEARCH_NAMES.AUTHORED` gains `['whale', ['whale']]` and
 `['petunias', ['petunias', 'bowl of petunias', 'oh no not again']]`.
 
-- [ ] Add `mesh-body.ts`.
-- [ ] Append `Source.MeshBody = 32` with a docblock line matching the
+- [x] Add `mesh-body.ts`.
+- [x] Append `Source.MeshBody = 32` with a docblock line matching the
       density of `McpmWorkbench`'s (`source.ts:240-250`) — note the budget:
       after this row, codes 33..62 remain.
-- [ ] Register `MESH_BODY_ENTRY` in `SOURCE_REGISTRY` (`src/data/sources.ts`).
-- [ ] Add the `'mesh-body'` row to `BODY_PICK_ROWS`.
-- [ ] Add the two `AUTHORED` tuples to `bodySearchNames.ts`.
-- [ ] No new test: `BODY_PICK_ROWS` is an exhaustively-typed
+- [x] Register `MESH_BODY_ENTRY` in `SOURCE_REGISTRY` (`src/data/sources.ts`).
+- [x] Add the `'mesh-body'` row to `BODY_PICK_ROWS`.
+- [x] Add the two `AUTHORED` tuples to `bodySearchNames.ts`.
+- [x] No new test: `BODY_PICK_ROWS` is an exhaustively-typed
       `Record<BodyId, readonly { id: string }[]>` — a missing `'mesh-body'`
       row is a `tsc`
       error the moment the registry row widens `BodyId`, not a runtime bug a
@@ -705,15 +705,15 @@ star layer's code. `BODY_SEARCH_NAMES.AUTHORED` gains `['whale', ['whale']]` and
       `resolvePickTable.test.ts` stay green unmodified — an empty
       `SCENE_MESH_BODIES` means the scan never matches, so the row is inert
       until Task 18.
-- [ ] `npx tsc --noEmit` clean — confirms `BodyId` widened and every
+- [x] `npx tsc --noEmit` clean — confirms `BodyId` widened and every
       `Record<BodyId, …>` table stayed total.
-- [ ] `npm test` — the settings-slice suite in particular: registering the row
+- [x] `npm test` — the settings-slice suite in particular: registering the row
       seeds a new `settings.bodies.items['mesh-body']` entry
       (`src/state/settings/initialState.ts:239-246`) and a new
       `LABEL_CATEGORIES` row. Any test that pins the full body-items key set
       or the category list is a registry restatement — DELETE it rather than
       updating the literal (`conventions/testing.md`).
-- [ ] Commit all five files.
+- [x] Commit all five files.
 
 ---
 
@@ -777,7 +777,7 @@ condition or `BODY_FACTS`/`famous_stars_meta.json` — it is synchronous,
 compiled-in `SceneBody` data, independent of both existing description
 paths (per the spec's explicit "a third, independent field" framing).
 
-- [ ] Add the failing test `extractSelectionRow carries a body's description
+- [x] Add the failing test `extractSelectionRow carries a body's description
 when present` to `tests/services/engine/helpers/extractSelectionRow.test.ts`
       — `vi.mock` `data/bodies/sceneBodies` with a `SCENE_BODIES` fixture
       carrying one `MeshBody`-shaped row (`description` set) plus its
@@ -786,18 +786,18 @@ when present` to `tests/services/engine/helpers/extractSelectionRow.test.ts`
 description when absent` against a real body with no `description`
       (Earth), asserting `undefined`. The `in`-operator narrowing is what is
       under test — a wrong idiom silently returns `undefined` for every body.
-- [ ] Add the failing test `buildFocusable carries description through to
+- [x] Add the failing test `buildFocusable carries description through to
 BodyInfo` to `tests/services/engine/helpers/buildFocusable.test.ts` —
       same fixture shape, asserting `BodyInfo.description` round-trips.
-- [ ] Run — both fail.
-- [ ] Implement the four type/logic deltas.
-- [ ] Run — both green.
-- [ ] Add the `target.description` block to `BodyDetailCard.tsx`. No new
+- [x] Run — both fail.
+- [x] Implement the four type/logic deltas.
+- [x] Run — both green.
+- [x] Add the `target.description` block to `BodyDetailCard.tsx`. No new
       component test — the spec's Testing section lists none for this block,
       and a "renders the text it was handed" assertion is a mirror. Confirm
       no existing `BodyDetailCard` test regresses.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit all files above.
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit all files above.
 
 ---
 
@@ -884,22 +884,22 @@ because `tools/` already imports from `src/` elsewhere (`textureSources.ts`
 does), and a tool-only encoder has no business shipping in the browser
 bundle.
 
-- [ ] Add the failing test `decodeMesh rejects a bad magic` and `decodeMesh
+- [x] Add the failing test `decodeMesh rejects a bad magic` and `decodeMesh
 rejects an unsupported version` to `tests/data/mesh/meshBinaryFormat.test.ts`
       — hand-built `ArrayBuffer`s with the wrong first 4 bytes / wrong
       version u16.
-- [ ] Add `decodeMesh recovers a hand-built fixture buffer` — construct a
+- [x] Add `decodeMesh recovers a hand-built fixture buffer` — construct a
       tiny (e.g. 3-vertex, 3-index) buffer BY HAND (not via a future
       `writeMeshBinary` — Task 10 doesn't exist yet at this point in
       execution order per the dependency table, so this is a literal
       `DataView`-written fixture), assert `vertexCount`/`indexCount`/
       `boundingRadiusM` and that every typed-array's `.length` matches the
       header fields.
-- [ ] Run — fails (module doesn't exist).
-- [ ] Implement `meshBinaryFormat.ts`, `MeshReq.d.ts`, `MeshAsset.d.ts`.
-- [ ] Run — green.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit all four files.
+- [x] Run — fails (module doesn't exist).
+- [x] Implement `meshBinaryFormat.ts`, `MeshReq.d.ts`, `MeshAsset.d.ts`.
+- [x] Run — green.
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit all four files.
 
 ---
 
@@ -1045,44 +1045,44 @@ a scratch path, runs `buildMeshes` against it, and asserts on the emitted
 NEVER against `data/raw/meshes/whale/` or `.../petunias/` — those do not
 exist until Task 18's human approval gate.
 
-- [ ] Add the failing test `writeMeshBinary round-trips through decodeMesh`
+- [x] Add the failing test `writeMeshBinary round-trips through decodeMesh`
       to `tests/tools/meshes/writeMeshBinary.test.ts` — a hand-built
       geometry fixture, `decodeMesh(writeMeshBinary(fixture))`, assert every
       typed array equals the input (this is the writer+reader pinning pair
       the spec's Testing section calls for — "writer and reader pinned
       together, the same posture `decodeFilaments`/`filamentFetcher`
       share").
-- [ ] Add `generateTangents produces a unit tangent with the expected
+- [x] Add `generateTangents produces a unit tangent with the expected
 handedness` — a hand-built two-triangle quad with a known UV layout,
       hand-computed expected tangent direction + `w` sign.
-- [ ] Add `meanAlbedo averages a synthetic image's pixels` — a small
+- [x] Add `meanAlbedo averages a synthetic image's pixels` — a small
       hand-built `Uint8ClampedArray` (e.g. half red, half blue), hand-computed
       expected mean.
-- [ ] Add `buildMeshes refuses a two-material GLB` — a synthetic
+- [x] Add `buildMeshes refuses a two-material GLB` — a synthetic
       `@gltf-transform` document with two materials, assert the tool throws
       (or exits non-zero) rather than picking one.
-- [ ] Add `buildMeshes merges several primitives sharing one material` — a
+- [x] Add `buildMeshes merges several primitives sharing one material` — a
       synthetic document with two `TRIANGLES` primitives on ONE material;
       assert it is accepted and the emitted header's `vertexCount`/
       `indexCount` cover both. This is the whale's actual shape (3
       primitives), and the case a "multi-mesh" refusal would wrongly reject.
-- [ ] Add `buildMeshes drops skin attributes and bakes the rest pose` — a
+- [x] Add `buildMeshes drops skin attributes and bakes the rest pose` — a
       synthetic skinned document; assert the emitted `.mesh` is written (not
       refused) and that its vertex count matches the source's, i.e. the
       joint/weight attributes left without taking geometry with them.
-- [ ] Add `buildMeshes substitutes a flat normal and a constant mr map when
+- [x] Add `buildMeshes substitutes a flat normal and a constant mr map when
 the source has neither` — a synthetic single-material, baseColor-only
       document; assert the emitted row has `normalMapSubstituted: true`, that
       `_normal.png` and `_mr.png` were both written, and that a warning was
       logged (spy on `console.warn`). This is the petunia asset's shape.
-- [ ] Run all seven — fail (files don't exist).
-- [ ] Implement `meanAlbedo.ts`, `generateTangents.ts`, `writeMeshBinary.ts`,
+- [x] Run all seven — fail (files don't exist).
+- [x] Implement `meanAlbedo.ts`, `generateTangents.ts`, `writeMeshBinary.ts`,
       `buildMeshes.ts`, `meshSources.ts`, the `RAW_DATA.meshes.dir` entry,
       the `@gltf-transform/core`(+`/functions`) devDependency, the
       `build-meshes` npm script.
-- [ ] Run — all green.
-- [ ] `npx tsc --noEmit` clean (both tsconfigs — `tools/` has its own).
-- [ ] Commit all files above, `package.json`, `package-lock.json`.
+- [x] Run — all green.
+- [x] `npx tsc --noEmit` clean (both tsconfigs — `tools/` has its own).
+- [x] Commit all files above, `package.json`, `package-lock.json`.
 
 ---
 
@@ -1116,15 +1116,15 @@ Non-2xx / non-image-content-type responses throw, matching
 for a mesh body the way a sphere does; see Task 12's residency-gated
 "invisible, not wrong-shape" behavior instead.
 
-- [ ] Implement `meshFetcher.ts` following the `filamentFetcher.ts` (single
+- [x] Implement `meshFetcher.ts` following the `filamentFetcher.ts` (single
       binary fetch) + `bodyTextureFetcher.ts` (image decode,
       `colorSpaceConversion`) patterns. No dedicated unit test — the spec's
       Testing section lists no fetcher-level test beyond the decoder's own
       (Task 9) and the tool's own (Task 10); a fetcher test would need a
       mocked `fetch`, and this codebase's precedent (`filamentFetcher.ts`,
       `bodyTextureFetcher.ts`) carries none either.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit `src/services/loading/fetchers/meshFetcher.ts`.
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit `src/services/loading/fetchers/meshFetcher.ts`.
 
 ---
 
@@ -1209,19 +1209,19 @@ than `bodyTextureRow`'s `bodyPosOf` (which resolves a texture's HOST via
 row, so its position comes straight off `deriveBodyStates`, no host
 indirection.
 
-- [ ] Widen `EngineAssetSlots.d.ts` with the `meshBodies` Map field.
-- [ ] Add `meshBodies: new Map()` to every fixture file listed above.
-- [ ] Implement `meshBodyLoadRadius.ts`, `meshSlotRegistry.ts`, the
+- [x] Widen `EngineAssetSlots.d.ts` with the `meshBodies` Map field.
+- [x] Add `meshBodies: new Map()` to every fixture file listed above.
+- [x] Implement `meshBodyLoadRadius.ts`, `meshSlotRegistry.ts`, the
       `assetWiring.ts` demand row(s), the `wireSlots.ts` call site. No new
       unit test — this mirrors `bodyTextureSlotRegistry.ts`/`bodyTextureRow`,
       neither of which carries a dedicated test in this codebase (asset-slot
       wiring is exercised by the loading-subsystem integration tests, if
       any exist — confirm none regress).
-- [ ] `npm test` — full suite green (confirms no import-time regression in
+- [x] `npm test` — full suite green (confirms no import-time regression in
       `assetWiring.ts`'s existing rows and that every widened fixture still
       satisfies `EngineAssetSlots`).
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit `EngineAssetSlots.d.ts`, `meshBodyLoadRadius.ts`,
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit `EngineAssetSlots.d.ts`, `meshBodyLoadRadius.ts`,
       `meshSlotRegistry.ts`, `assetWiring.ts`, `wireSlots.ts`, and every
       touched fixture file.
 
@@ -1314,7 +1314,7 @@ vertex placement, reading the SAME `bodyStates` snapshot, so the two cannot
 disagree — `deriveBodyStates` memoizes one deep on `simDays`
 (`frameContext.ts:189-192`).
 
-- [ ] Add the failing test `bodyStateInHostFrame places an attached body in
+- [x] Add the failing test `bodyStateInHostFrame places an attached body in
 the host's fixed axes` to `tests/utils/scene/bodyStateInHostFrame.test.ts`
       — a host at a known `positionMpc`/identity `orientation` and a body
       offset from it by a known small Mpc delta; hand-compute the expected
@@ -1323,7 +1323,7 @@ the host's fixed axes` to `tests/utils/scene/bodyStateInHostFrame.test.ts`
       host `orientation` (a 90° rotation) and hand-compute the rotated
       expectation independently (rotate the delta by hand, not via the
       function's own `rotateByTranspose` call).
-- [ ] Add the failing test `meshBodiesAttachedTo returns the mesh bodies
+- [x] Add the failing test `meshBodiesAttachedTo returns the mesh bodies
 whose focus matches the host id`. **`SCENE_MESH_BODIES` is EMPTY until
       Task 18**, so this test must `vi.mock('…/data/bodies/sceneMeshBodies')`
       with two fixture `MeshBody` rows whose ids match Task 6's real
@@ -1333,18 +1333,18 @@ whose focus matches the host id`. **`SCENE_MESH_BODIES` is EMPTY until
       `meshBodiesAttachedTo('mars')` returns `[]`. Running against the real
       (empty) seed table would make the first assertion vacuously wrong and
       the second vacuously right.
-- [ ] Run — both fail.
-- [ ] Implement `bodyStateInHostFrame.ts`, `meshBodiesAttachedTo.ts`.
-- [ ] Run — green.
-- [ ] Wire `deriveSlabs`/`frameContext.ts` per the shape above. No new test
+- [x] Run — both fail.
+- [x] Implement `bodyStateInHostFrame.ts`, `meshBodiesAttachedTo.ts`.
+- [x] Run — green.
+- [x] Wire `deriveSlabs`/`frameContext.ts` per the shape above. No new test
       for the wiring itself — Task 2's `bodySlabRow` tests already prove the
       near-plane maths; this step only proves data reaches it, which
       `slabs.test.ts`'s existing `deriveSlabs`-level cases (still passing,
       since `attachedBodiesByHostId` is empty for every host with no
       mesh-body match) cover as a no-regression check.
-- [ ] `npm test` — full suite green.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit all six files.
+- [x] `npm test` — full suite green.
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit all six files.
 
 ---
 
@@ -1390,23 +1390,23 @@ discs, which is neither; linear is the honest cheap approximation and, at a
 so the ramp shape is not observable. A smoothstep would be a second
 undocumented artistic constant with nothing to justify it.
 
-- [ ] Add the failing test `sunVisibleFraction is 1 on the day side` — a
+- [x] Add the failing test `sunVisibleFraction is 1 on the day side` — a
       body positioned such that the host is far off to one side (angular
       separation well beyond the sum of the two angular radii), assert
       `=== 1`.
-- [ ] Add `sunVisibleFraction is 0 deep in umbra` — body directly behind the
+- [x] Add `sunVisibleFraction is 0 deep in umbra` — body directly behind the
       host from the Sun's perspective, separation well under
       `|hostAngRad − sunAngRad|`, assert `=== 0`.
-- [ ] Add `sunVisibleFraction sits strictly inside (0, 1) at a
+- [x] Add `sunVisibleFraction sits strictly inside (0, 1) at a
 penumbra-edge point` — a hand-computed geometry where the separation
       sits exactly between the two thresholds, assert `0 < result < 1`
       (spec's own Testing-section wording — the three cases named there
       exactly).
-- [ ] Run — fail (file doesn't exist).
-- [ ] Implement `sunVisibleFraction.ts`.
-- [ ] Run — all three green.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] Commit both files.
+- [x] Run — fail (file doesn't exist).
+- [x] Implement `sunVisibleFraction.ts`.
+- [x] Run — all three green.
+- [x] `npx tsc --noEmit` clean.
+- [x] Commit both files.
 
 ---
 
@@ -1498,9 +1498,9 @@ in both the `.wesl` struct's header (Task 16) and this packer's docblock, so a
 future reader doesn't try to call `packLitBodyUniforms` here and find a fifth
 argument with nowhere to go.
 
-- [ ] Implement `MeshBodyRenderer.d.ts`, `meshBodyRenderer.ts`,
+- [x] Implement `MeshBodyRenderer.d.ts`, `meshBodyRenderer.ts`,
       `packMeshBodyUniforms.ts`, and the `EngineState.gpu` field.
-- [ ] Add `tests/utils/gpu/packMeshBodyUniforms.test.ts` pinning the byte
+- [x] Add `tests/utils/gpu/packMeshBodyUniforms.test.ts` pinning the byte
       layout above: one call with distinguishable values per field, asserting
       each lands at its documented float index (16 → `sunDirLocal.x`, 19 →
       `sunVisibleFraction`, 35 → `earthshineStrength`, …) and that the array
@@ -1510,13 +1510,13 @@ argument with nowhere to go.
       drops the whole frame on WebKit. **`packTexturedBodyUniforms` carries
       exactly this test today** (`tests/utils/gpu/packTexturedBodyUniforms.test.ts`)
       — follow it.
-- [ ] No renderer unit test — construction needs a GPU device and the spec
+- [x] No renderer unit test — construction needs a GPU device and the spec
       excludes it ("No renderer or shader unit tests").
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npm test -- packMeshBodyUniforms` green.
-- [ ] `npm run build` clean (confirms the renderer file at least compiles
+- [x] `npx tsc --noEmit` clean.
+- [x] `npm test -- packMeshBodyUniforms` green.
+- [x] `npm run build` clean (confirms the renderer file at least compiles
       against real WebGPU types, even though it can't run headlessly here).
-- [ ] Commit `MeshBodyRenderer.d.ts`, `meshBodyRenderer.ts`,
+- [x] Commit `MeshBodyRenderer.d.ts`, `meshBodyRenderer.ts`,
       `packMeshBodyUniforms.ts`, its test, and the `EngineState.gpu` file.
 
 ---
@@ -1603,16 +1603,16 @@ a few metres out, `localPos` genuinely matters there.
 light-space matrix, no self-shadowing term. Every other body-lighting effect
 in this codebase is analytic for the same reason.
 
-- [ ] Write `io.wesl`, `vertex.wesl`, `fragment.wesl` per the contracts
+- [x] Write `io.wesl`, `vertex.wesl`, `fragment.wesl` per the contracts
       above.
-- [ ] `npm run dev` (already running per CLAUDE.md convention) — confirm no
+- [x] `npm run dev` (already running per CLAUDE.md convention) — confirm no
       WESL parse error in the console the moment `meshBodiesPass` first
       compiles its pipeline (Task 17 is what actually wires the pipeline
       construction; this task's own verification is limited to `npm run
 build`'s WESL relink succeeding, since nothing calls these shaders
       yet).
-- [ ] `npm run build` clean (WESL relinks).
-- [ ] Commit all three `.wesl` files.
+- [x] `npm run build` clean (WESL relinks).
+- [x] Commit all three `.wesl` files.
 
 ---
 
@@ -1722,21 +1722,21 @@ SCENE_MESH_BODIES) + PICK_SENTINEL_OFFSET)`. The proxy sphere sits at the
 mesh body's own position while riding the host's slab row; that is exactly
 what the `hostPose.eyeRelBodyM − posM` argument encodes.
 
-- [ ] Implement `meshBodiesPass.ts`.
-- [ ] Register it in `passes/index.ts`, immediately after `texturedBodiesPass`.
-- [ ] Construct `meshBodyRenderer` at boot and register the GPU handle (the
+- [x] Implement `meshBodiesPass.ts`.
+- [x] Register it in `passes/index.ts`, immediately after `texturedBodiesPass`.
+- [x] Construct `meshBodyRenderer` at boot and register the GPU handle (the
       `EngineState.gpu` field itself landed in Task 15).
-- [ ] Call `wireMeshBodySlots(state)` in `wireSlots.ts`.
-- [ ] Update `passes.test.ts` per the note above (body-sentinel array + its
+- [x] Call `wireMeshBodySlots(state)` in `wireSlots.ts`.
+- [x] Update `passes.test.ts` per the note above (body-sentinel array + its
       `it` title; leave the `foreground:0` ordering pin alone).
-- [ ] No new unit test for the pass itself (spec's Testing section: "No
+- [x] No new unit test for the pass itself (spec's Testing section: "No
       renderer or shader unit tests" covers this pass too — it is pure GPU
       wiring, exercised by the visual pass in Task 18); `passes.test.ts`'s
       update above is a structural-registry fix, not new coverage.
-- [ ] `npm test -- passes` green.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npm run build` clean.
-- [ ] Commit all files above, including `passes.test.ts`.
+- [x] `npm test -- passes` green.
+- [x] `npx tsc --noEmit` clean.
+- [x] `npm run build` clean.
+- [x] Commit all files above, including `passes.test.ts`.
 
 ---
 
@@ -1873,16 +1873,16 @@ established once, by eye, at the verification step below.
 
 **Steps:**
 
-- [ ] Record provenance for both assets in
+- [x] Record provenance for both assets in
       `data/raw/meshes/<key>/README.md` + `LICENSE` — model name, author +
       profile URL, model URL, CC BY 4.0, fetch date, sha256 of the downloaded
       file — using the identities in "The two approved assets" above.
-- [ ] Add the `RAW_DATA`/`MESH_SOURCES` entries. `meshes.whale` points at the
+- [x] Add the `RAW_DATA`/`MESH_SOURCES` entries. `meshes.whale` points at the
       Sketchfab download; `meshes.petunias` points at
       `petunias.prebaked.glb`, with a second `RAW_DATA` row for the untouched
       Sketchfab source so the provenance chain is complete. Both
       `source: 'gitignored'`.
-- [ ] **Pre-bake the petunia model.** Write
+- [x] **Pre-bake the petunia model.** Write
       `tools/meshes/prebake/petuniasPrebake.py` + the `prebake-petunias` npm
       script, then run it. Verify the output before going further:
       `npx gltf-transform inspect data/raw/meshes/petunias/petunias.prebaked.glb`
@@ -1892,43 +1892,43 @@ established once, by eye, at the verification step below.
       textures / 399,895 tris. More than one material means the bake did not
       swap the stack and the tool will (correctly) refuse it at the next step;
       surviving `LINES` mean step 2 did not run.
-- [ ] Run `npm run build-meshes` for real — confirms the tool (Task 10)
+- [x] Run `npm run build-meshes` for real — confirms the tool (Task 10)
       handles the actual assets (triangle/texture budgets, tangent generation,
       and — since the baked petunia atlas is colour-only — the 1×1 flat-normal
       substitution plus its warning on that key) and writes real
       `meshAssets.generated.ts` rows + `public/data/meshes/*`. Expect
       `normalMapSubstituted: true` on `petunias`; the whale's 3 textures should
       include a real normal map.
-- [ ] Rewrite `sceneMeshBodies.ts`: introduce a module-private
+- [x] Rewrite `sceneMeshBodies.ts`: introduce a module-private
       `SEED_MESH_BODIES: readonly MeshBodySeed[]` with the two real
       `{ id, label, meshKey, description }` rows, and make the exported
       `SCENE_MESH_BODIES` be `SEED_MESH_BODIES.map(meshBody)` (Task 5's
       maker). Until now the file exported a bare `[]`; this is the first and
       only task that gives it content.
-- [ ] Update the credit surface — all four places listed under **Files**
+- [x] Update the credit surface — all four places listed under **Files**
       above (Splash credits paragraph, `ATTRIBUTIONS.md`, `README.md`'s
       imagery table, the per-key raw README) — carrying each asset's
       `attribution` string from its generated `MESH_ASSETS` row. Both assets
       are CC BY 4.0; shipping either uncredited is a licence violation.
-- [ ] `npm test` — full suite green. This is the first point the real
+- [x] `npm test` — full suite green. This is the first point the real
       `SCENE_MESH_BODIES` is non-empty, so it is where Task 6's `every
 SCENE_BODIES id resolves a BodyState` invariant actually earns its
       keep: it fails here if a seed row landed without its `ORBITAL_ELEMENTS`
       counterpart.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npm run perf -- --url http://localhost:<this-worktree's-port>
+- [x] `npx tsc --noEmit` clean.
+- [x] `npm run perf -- --url http://localhost:<this-worktree's-port>
 --scenario earth-surface --frames 30` BEFORE this task's changes are
       visible in a running dev server, saved to a scratchpad file, then
       AFTER, same flags — per the `perf` skill. A neutral-or-negative
       measurement halts the landing pipeline; report the numbers and let
       the user rule on land/park.
-- [ ] Visual pass (ask the user — dev server stays running, do not
+- [x] Visual pass (ask the user — dev server stays running, do not
       restart/kill it): fly-to from search ("whale", "petunias"/"bowl of
       petunias"/"oh no not again"); orbital sunrise crossing the whale
       (Earthshine + umbra visible); glint-to-mesh handoff on approach across
       the 3 px boundary; the pot visible beside the whale, ~40 m behind
       along the orbit; InfoCard description renders for both.
-- [ ] **DECISION POINT — the two orbit-trail rings.** `orbitTrailsPass.draw`
+- [x] **DECISION POINT — the two orbit-trail rings.** `orbitTrailsPass.draw`
       iterates every `ORBITAL_ELEMENTS` row unconditionally
       (`orbitTrailsPass.ts:141-158`, gated only by an apparent-size fade), so
       the whale's and the pot's ~400 km circular rings draw around Earth the
@@ -1939,7 +1939,7 @@ SCENE_BODIES id resolves a BodyState` invariant actually earns its
       **Suppress** → filter `orbitTrailsPass.draw`'s loop to skip ids present
       in `SCENE_MESH_BODIES`, roughly three lines plus a test that the trail
       count excludes them; that fix rides THIS PR, it is not a follow-up.
-- [ ] Confirm the Earthshine tone against Earth's real limb. Task 17 reads
+- [x] Confirm the Earthshine tone against Earth's real limb. Task 17 reads
       `ATMOSPHERE_PARAMS.earth.groundAlbedo` (`[0.3, 0.3, 0.3]`,
       `atmosphereParams.ts:59`) for the colour, because `EarthBody` carries
       no `albedo` field of its own (`EarthBody.d.ts:17-21`) — a neutral grey
@@ -1947,14 +1947,14 @@ SCENE_BODIES id resolves a BodyState` invariant actually earns its
       approach, tune `earthshineStrength` (the local knob) first; changing
       the COLOUR means editing a shared atmosphere constant, which is a
       user-facing decision, not a shader tweak.
-- [ ] R2 sync of `public/data/meshes/` noted as a deploy step in
+- [x] R2 sync of `public/data/meshes/` noted as a deploy step in
       `docs/DEPLOY.md` (not performed here — a deploy-time action).
-- [ ] Write the three backlog detail files for the spec's "Adjacent
+- [x] Write the three backlog detail files for the spec's "Adjacent
       findings" (rotation-table tagged union; hyperbolic Kepler branch;
       surface-fixed position driver) and add their index lines to
       `docs/BACKLOG.md`, per the backlog-hygiene convention.
-- [ ] Update the auto-memory file for this effort.
-- [ ] Commit.
+- [x] Update the auto-memory file for this effort.
+- [x] Commit.
 
 ## Definition of Done
 
