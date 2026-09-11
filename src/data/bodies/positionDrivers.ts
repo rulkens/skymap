@@ -32,7 +32,10 @@ export function positionDriverById(id: string): PositionDriver {
   return findByIdOrThrow(POSITION_DRIVERS, id, 'positionDrivers');
 }
 
-/** The body this one hangs off: an orbit's focus, a site's host. Anchors hang off nothing. */
+/**
+ * The body this one hangs off: an orbit's focus, a site's host. Anchors hang
+ * off nothing. Not `utils/scene/hostBodyId`, which resolves a TEXTURE key's host.
+ */
 export function bodyHostId(id: string): string | null {
   const driver = positionDriverById(id);
   switch (driver.kind) {
