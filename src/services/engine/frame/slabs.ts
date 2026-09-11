@@ -31,6 +31,8 @@ import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiamete
 import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
 import { chainOverlapViolations } from '../../../utils/scene/chainOverlapViolations';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
+import { nearestSphereFaceM } from '../../../utils/scene/nearestSphereFaceM';
+import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
@@ -158,10 +160,7 @@ export function bodySlabRow(input: {
    * face is `|posM − eyeRelBodyM| − radiusM`; the row's `near` is lowered to
    * the nearest such face when it undercuts the host's own margin.
    */
-  readonly attachedBodies?: readonly {
-    readonly posM: Readonly<Vec3>;
-    readonly radiusM: number;
-  }[];
+  readonly attachedBodies?: readonly HostFrameSphere[];
 }): {
   // Narrowed back to non-null: nullability on `Slab` exists for NEAR0 alone.
   readonly slab: Omit<Slab, 'index' | 'distanceRangeM'> & {
@@ -199,23 +198,10 @@ export function bodySlabRow(input: {
   // An attached mesh body (e.g. a whale riding Earth's row) can sit closer to
   // the eye than the host's own margin; its near face only ever LOWERS the
   // plane (never pushes it past the host's own MIN_NEAR_M floor).
-  const near =
-    attachedBodies && attachedBodies.length > 0
-      ? Math.max(
-          Math.min(
-            hostNear,
-            ...attachedBodies.map(
-              (b) =>
-                Math.hypot(
-                  b.posM[0] - eyeRelBodyM[0],
-                  b.posM[1] - eyeRelBodyM[1],
-                  b.posM[2] - eyeRelBodyM[2],
-                ) - b.radiusM,
-            ),
-          ),
-          MIN_NEAR_M,
-        )
-      : hostNear;
+  const near = Math.max(
+    Math.min(hostNear, nearestSphereFaceM(eyeRelBodyM, attachedBodies ?? [])),
+    MIN_NEAR_M,
+  );
   // STAYS RADIAL — the painter sort and pick ordering key off actual distance.
   const distanceRangeM: readonly [number, number] = [Math.max(dM - rMaxM, 0), dM + rMaxM];
 
@@ -277,10 +263,7 @@ export function deriveSlabs(input: {
   /** Host body id → its attached mesh bodies, already resolved into the
    * host's frame — see `bodySlabRow`'s `attachedBodies` param. Only
    * Earth has an entry today; every other host's row is unaffected. */
-  readonly attachedBodiesByHostId?: ReadonlyMap<
-    string,
-    readonly { readonly posM: Readonly<Vec3>; readonly radiusM: number }[]
-  >;
+  readonly attachedBodiesByHostId?: ReadonlyMap<string, readonly HostFrameSphere[]>;
 }): readonly Slab[] {
   const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
     input;

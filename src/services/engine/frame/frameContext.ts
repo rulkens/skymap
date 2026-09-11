@@ -28,6 +28,7 @@ import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
+import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
@@ -153,10 +154,7 @@ export function deriveFrameContext(
   // with a slab row's own pose. Hosts with no mesh-body attachment (every
   // body but Earth, today) get no map entry, and `deriveSlabs` reads a
   // missing entry as `undefined` — see `bodySlabRow`'s `attachedBodies` doc.
-  const attachedBodiesByHostId = new Map<
-    string,
-    readonly { readonly posM: Vec3; readonly radiusM: number }[]
-  >();
+  const attachedBodiesByHostId = new Map<string, readonly HostFrameSphere[]>();
   for (const host of slabBodyCandidates) {
     const attached = meshBodiesAttachedTo(host.id);
     if (attached.length === 0) continue;
