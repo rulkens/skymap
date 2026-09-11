@@ -1,4 +1,5 @@
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
+import type { BoundsM } from '../../@types/BoundsM';
 
 /**
  * RenderResources — the engine-side objects a scene rebuild owns, held in
@@ -16,7 +17,7 @@ export type LidarGpuAsset = {
  * `data`/`sh1` are read as `array<u32>` (7 and 3 words per record, spec §5);
  * `order` is the per-instance draw order the depth sort rewrites, so the
  * renderer steps it as a vertex buffer. `positionsM` stays CPU-side — the
- * sort re-reads it every frame.
+ * sort re-reads it every frame, and `boundsM` is its extent.
  */
 export type SplatGpuAsset = {
   readonly kind: 'gaussianSplat';
@@ -24,6 +25,7 @@ export type SplatGpuAsset = {
   readonly sh1: GPUBuffer | null;
   readonly order: GPUBuffer;
   readonly positionsM: Float32Array;
+  readonly boundsM: BoundsM;
   readonly splatCount: number;
   readonly shDegree: 0 | 1;
   dispose(): void;

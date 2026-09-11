@@ -34,6 +34,7 @@ describe('DisplayPanel', () => {
     expect(store.getState().view.display.gaussianSplat).toEqual({
       splatScale: 1.05,
       opacityScale: 1,
+      clipBoxM: null,
     });
 
     fireEvent.keyDown(screen.getByRole('slider', { name: /opacity scale/i }), {
@@ -42,6 +43,7 @@ describe('DisplayPanel', () => {
     expect(store.getState().view.display.gaussianSplat).toEqual({
       splatScale: 1.05,
       opacityScale: 1.05,
+      clipBoxM: null,
     });
   });
 });

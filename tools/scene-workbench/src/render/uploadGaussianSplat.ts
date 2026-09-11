@@ -10,7 +10,7 @@ import type { SplatGpuAsset } from './renderResources';
  * nothing, before the depth sort has ever run.
  */
 export function uploadGaussianSplat(gpu: GpuContext, parsed: ParsedGaussianSplats): SplatGpuAsset {
-  const { splatCount, shDegree, records, positionsM } = parsed;
+  const { splatCount, shDegree, records, positionsM, boundsM } = parsed;
 
   const data = gpu.device.createBuffer({
     label: `scene-workbench-splats-${splatCount}`,
@@ -45,6 +45,7 @@ export function uploadGaussianSplat(gpu: GpuContext, parsed: ParsedGaussianSplat
     sh1,
     order,
     positionsM,
+    boundsM,
     splatCount,
     shDegree,
     dispose: () => {
