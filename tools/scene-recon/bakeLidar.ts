@@ -65,6 +65,13 @@ export async function bakeLidar(
 
   const rect = earthTileIndicesForBounds(group.bounds, GEODANMARK_LEVEL, EARTH_TILE_PX);
   const levelDir = join(rawDataPath('geodanmark.dir'), String(GEODANMARK_LEVEL));
+  // GDAL reads a VRT whose sources are missing as all-zero, so without this
+  // check an absent tile tree bakes every point black and reports success.
+  if (!existsSync(levelDir)) {
+    throw new Error(
+      `bakeLidar: GeoDanmark ortho tree missing at ${levelDir} — see data/raw/geodanmark/README.md for the harvest`,
+    );
+  }
   const vrtPath = join(workDir, `${group.id}-ortho.vrt`);
   await writeFile(
     vrtPath,
