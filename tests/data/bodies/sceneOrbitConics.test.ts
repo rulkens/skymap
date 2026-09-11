@@ -1,7 +1,7 @@
 /**
  * sceneOrbitConics — structural tests for the absolute-world orbit ellipse table.
  *
- * The table is DERIVED from `ORBITAL_ELEMENTS` + `keplerianEllipse` + parent
+ * The table is DERIVED from `TRAIL_ELEMENTS` + `keplerianEllipse` + parent
  * resolution, so these tests pin INVARIANTS of that derivation, not re-typed
  * decimals:
  *
@@ -70,6 +70,12 @@ describe('SCENE_ORBIT_CONICS', () => {
       const t = dot(rel, conic.semiMinorMpc) / b2;
       expect(s * s + t * t, `${conic.id} on its ellipse`).toBeCloseTo(1, 6);
     }
+  });
+
+  it('the conic table excludes mesh bodies', () => {
+    // Guards the default table: walking ORBITAL_ELEMENTS instead of
+    // TRAIL_ELEMENTS would grow a conic for a row that draws no trail.
+    expect(SCENE_ORBIT_CONICS.some((c) => c.id === 'whale')).toBe(false);
   });
 
   it("resolves the Moon's centre to Earth (within the lunar a·e offset)", () => {

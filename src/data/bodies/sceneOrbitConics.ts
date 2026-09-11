@@ -1,6 +1,7 @@
 /**
  * sceneOrbitConics — the per-orbit absolute-world ellipse table the trail layer
- * draws, DERIVED from `ORBITAL_ELEMENTS` (spec §5).
+ * draws, DERIVED from `TRAIL_ELEMENTS` (spec §5): the one table deciding which
+ * rows draw a conic, so a non-elliptical row never reaches `keplerianEllipse`.
  *
  * ### Single source of truth: elements → shape, not body → ring
  *
@@ -42,7 +43,7 @@
  * fail at derive time, not silently place the orbit at the origin.
  */
 
-import { ORBITAL_ELEMENTS } from './orbitalElements';
+import { TRAIL_ELEMENTS } from './trailElements';
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { focusResolveOrder } from '../../utils/scene/focusResolveOrder';
 import { keplerianEllipse } from '../../utils/orbit/keplerianEllipse';
@@ -88,7 +89,7 @@ function worldPositionsMpc(
  */
 export function deriveOrbitConics(
   anchors: readonly AnchorBody[] = SCENE_ANCHORS,
-  elements: readonly OrbitalElements[] = ORBITAL_ELEMENTS,
+  elements: readonly OrbitalElements[] = TRAIL_ELEMENTS,
 ): readonly OrbitConic[] {
   const worldPositions = worldPositionsMpc(anchors, elements);
   return elements.map((el) => {
