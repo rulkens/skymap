@@ -93,3 +93,14 @@ covariance by `s²` (the standard 3DGS scaling modifier); opacity scale
 (`view.display.gaussianSplat.opacityScale`)
 multiplies each splat's opacity. Both live in `DisplayPanel.tsx`, wired to
 `viewSlice`'s `setSplatScale`/`setOpacityScale`.
+
+Under them sits the clip box (`view.display.gaussianSplat.clipBoxM`,
+group-frame metres): a checkbox that opens at the asset's full extent and six
+min/max sliders, one per axis, with a `drawn / total splats` readout. It is a
+performance control, not a masking one — `sortSplatOrder` only admits the
+splats inside the box, so the box shortens both the CPU depth sort and the
+instance count `splatRenderer` draws, rather than discarding fragments that
+were sorted and issued anyway. `watchSplatSortSaga` re-sorts whenever the box
+moves; `null` (the default) takes the unclipped path with no filter pass at
+all. The extent and the survivor count reach the panel through
+`group.splatMetrics`, which the sort reports after every run.
