@@ -52,8 +52,34 @@ script or `/scene-workbench/` subpath.
    about 20 s.
 6. `npm run scene-workbench`
 
+Every fetch/bake CLI above takes `--group <id>` (default `soendermarken`);
+the registry is `tools/scene-recon/groups/sceneGroupFromArgv.ts` and each
+group writes to its own `public/data/geo3d/groups/<id>/`, so `scenes.json`
+grows an entry the first time one of its manifests is written.
+
 Then open <http://localhost:5600> (see `tools/utils/io/devPorts.ts` for the
 full port registry).
+
+## Groups
+
+`soendermarken` covers the whole park from whole 1920-px frames — ~740 mm/px on
+the ground, which is why its splats are soft. `soendermarken-crop` shares its
+anchor (so the two are directly comparable in ENU metres) over a 258 x 183 m box
+in the western half of the park, harvested at **200 mm/px**: `fetchSkraafoto` crops
+each COG to the box before downsampling, which is the only way to spend the
+COG's native ~100 mm/px on a scene this size (`data/raw/skraafoto/README.md`,
+"Window recipes"). Baking it:
+
+```
+npm run fetch-dhm      -- --group soendermarken-crop   # 2 of the 8 LAS tiles
+npm run bake-lidar     -- --group soendermarken-crop   # 17,001 points, 272 KB
+npm run fetch-skraafoto -- --group soendermarken-crop  # into <collection>/soendermarken-crop/
+npm run bake-splats    -- --group soendermarken-crop
+```
+
+Its LiDAR uses `minPointSpacingM` 0.5 rather than 1.0; the DHM 2011 cloud is
+only ~0.36 pts/m² here, so that buys 17,001 points against 14,560 (measured),
+not four times as many.
 
 ## Architecture
 
