@@ -77,11 +77,13 @@ describe('pass files declare only the pass', () => {
     const budget = ALLOWED[fileName.replace(/\.ts$/, '')] ?? 0;
     expect(
       stray.length,
-      `${fileName} declares ${stray.join(', ')} beside its ContentPass. Each ` +
-        'belongs in its own file — a helper under src/utils/ or ' +
+      `${fileName} declares ${stray.length} symbol(s) beside its ContentPass ` +
+        `(${stray.join(', ') || 'none'}); its ALLOWED row says ${budget}. Over ` +
+        'the row: move each to its own file — a helper under src/utils/ or ' +
         'src/services/engine/frame/, a constant under src/data/ — one symbol per ' +
-        `file, filename = symbol. Budget here is ${budget}: if you just lowered ` +
-        'it, lower this file’s ALLOWED row to match (rows never go up).',
-    ).toBeLessThanOrEqual(budget);
+        'file, filename = symbol. Under it: you just extracted one, so lower the ' +
+        `row to ${stray.length} in the same commit (delete it at 0). Exact, not a ` +
+        'ceiling — a stale-high row silently re-permits the slot you freed.',
+    ).toBe(budget);
   });
 });

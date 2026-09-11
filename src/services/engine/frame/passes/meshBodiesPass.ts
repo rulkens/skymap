@@ -88,9 +88,9 @@ export const meshBodiesPass: ContentPass = {
             hostPose.eyeRelBodyM[1] - posM[1],
             hostPose.eyeRelBodyM[2] - posM[2],
           ],
-          // Sunlight off the host's ground (`hostShineColor` is its albedo),
-          // over the share of this body's sky the host actually fills, over the
-          // Lambert π that this fill term — unlike `pbrDirect` — does not carry.
+          // A tuned fill, not a radiometric earthshine: the SHAPE follows the
+          // host's solid angle times its albedo (`hostShineColor`), the scale
+          // is art-directed — don't "correct" it toward a Lambertian value.
           // `sunIrradiance` is the fragment's own `SUN_IRRADIANCE`, mirrored
           // there under the parity test in `shaders/constants.parity.test.ts`.
           hostShineStrength:

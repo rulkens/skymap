@@ -17,6 +17,15 @@ the overlay target the body won; now the invisible caption does. Pick wider
 than draw is the safe direction for a click affordance (the direction
 `labelsPass` and `bodyGlintsPass` already lean), which is why it was accepted.
 
+## The draw-side twin
+
+`occludeWeight` is decided per SUBJECT (`produceSceneBodyCaptions.ts`) but
+applied per PIXEL, so the exemption is all-or-nothing across the caption: one
+whose subject is unoccluded paints at full strength over any body NEARER than
+that subject its lifted text happens to cross — which the per-pixel rule used to
+hide. The same trade in the other direction (draw wider than truth), and the
+same split below fixes both.
+
 ## The faithful fix
 
 Split the caption stamps by `occludeWeight`: weight-0 captions (subject in

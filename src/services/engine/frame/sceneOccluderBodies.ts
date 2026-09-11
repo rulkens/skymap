@@ -43,7 +43,12 @@ export function sceneOccluderBodies(
   for (const body of textured) {
     occluders.push({ positionMpc: states.get(body.id)!.positionMpc, radiusM: body.radiusM });
   }
+  // Mesh bodies carry a second gate `drawableMeshBodies` also applies: inside
+  // the load radius but not yet decoded, the body draws nothing, and an
+  // occluder that draws nothing punches a hole in whatever crosses it.
+  const meshRenderer = state.gpu.meshBodyRenderer;
   for (const body of meshes) {
+    if (!(meshRenderer?.hasMesh(body.id) ?? false)) continue;
     occluders.push({ positionMpc: states.get(body.id)!.positionMpc, radiusM: body.radiusM });
   }
   for (const star of spheres) {
