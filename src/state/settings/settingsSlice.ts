@@ -18,6 +18,7 @@ import { buildInitialSettings } from './initialState';
 import { constellationsSettingsFragment } from '../../layers/constellations/settings/constellationsSettings';
 import { earthSettingsFragment } from '../../layers/body/settings/earthSettings';
 import { filamentsSettingsFragment } from '../../layers/filaments/settings/filamentsSettings';
+import { flowSettingsFragment } from '../../layers/flow/settings/flowSettings';
 import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
 import { liftClusterReducers } from '../../utils/settings/liftClusterReducers';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
@@ -35,7 +36,6 @@ import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
-import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
@@ -108,19 +108,6 @@ export const CORE_REDUCERS = {
   // ── thumbnails ──────────────────────────────────────────────────────────
   setThumbnailsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
     settings.thumbnails.enabled = action.payload;
-  },
-
-  // ── flow ────────────────────────────────────────────────────────────────
-  // The master gate is its own scalar setter (like setMilkyWayEnabled /
-  // setVolumesEnabled), so `flow.enabled` has a single writer. `setFlow`
-  // patches only the look/motion knobs — its payload deliberately excludes
-  // `enabled`, keeping the visibility intent off the generic merge path.
-  setFlowEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.flow.enabled = action.payload;
-  },
-  setFlow: (settings: SettingsDraft, action: PayloadAction<Partial<FlowFieldDefaults>>) => {
-    // Leaf-by-leaf merge of the partial knob patch into the flow slice.
-    Object.assign(settings.flow, action.payload);
   },
 
   // ── labels (cross-cutting presentation) ─────────────────────────────────
@@ -293,6 +280,7 @@ export const settingsSlice = createSlice({
     ...liftClusterReducers<EngineSettingsState, typeof constellationsSettingsFragment>(
       constellationsSettingsFragment,
     ),
+    ...liftClusterReducers<EngineSettingsState, typeof flowSettingsFragment>(flowSettingsFragment),
   },
 });
 

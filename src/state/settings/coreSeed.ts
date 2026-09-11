@@ -19,7 +19,6 @@ import {
   DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_FLOW,
   DEFAULT_ORIENTATION,
 } from '../../data/defaults';
 import {
@@ -51,6 +50,7 @@ type CoreSeedShape = Omit<
   | 'zoneOfAvoidance'
   | 'filaments'
   | 'constellations'
+  | 'flow'
 >;
 
 export function coreSeed(): CoreSeedShape {
@@ -96,11 +96,6 @@ export function coreSeed(): CoreSeedShape {
     thumbnails: {
       enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
     },
-    // Flow is a singleton overlay layer: all its user-facing state (master
-    // gate + look/motion knobs) lives here, spread from the single
-    // `DEFAULT_FLOW` seed. Flow has no data-layer store — "loaded" is the asset
-    // slot's own `ready` state (`slotReady(assetSlots.flow)`).
-    flow: { ...DEFAULT_FLOW },
     // Cross-cutting label presentation: focusedOnly default OFF — all enabled
     // labels draw (the guided tour flips it on and its snapshot restores it).
     labels: { focusedOnly: false },
