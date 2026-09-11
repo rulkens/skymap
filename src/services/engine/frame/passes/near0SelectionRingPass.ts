@@ -46,25 +46,11 @@
  *
  * ## CPU-side ringRadiusPx
  *
- * A NEAR0 target (a survey star, a planet, Earth, a scene star) is drawn as a
- * real sphere, so its `selectionHalo` descriptor carries a REAL physical
- * radius (`radiusM` → Mpc) and `near0RingRadiusPx` sizes the halo like the
- * galaxy ring: `max(farFloor, 1.5 × apparentRadiusPx)`. Far away the sphere is
- * sub-pixel and the far floor wins — the same fixed-px `galaxyCatalogs.sizePx ·
- * 6` dot the COSMO helper produces at radius 0 — so nothing changes at
- * distance. Once the sphere resolves, the 1.5×-apparent term takes over and the
- * ring hugs the silhouette instead of sitting as a fixed dot lost inside it.
- *
- * For the apparent-size term it deliberately does NOT reuse the galaxy
- * `selectionRingRadiusPx` (the far floor DOES delegate to it — `selectionRingRadiusPx(0, …)`
- * reproduces the fixed-px dot): that helper bakes billboard provenance (a 2×
- * padded footprint input, a `× 0.5` padding-cancel, then a × 6 ring scale — a
- * NET × 3 on apparent radius) sized for a soft point glow, which would balloon
- * around a hard sphere. The 1.5×
- * apparent term matches how the sphere is actually drawn (r/d radians, see
- * `bodyApparentDiameterPx`), so the ring meets the sphere at the resolve
- * handoff. `camDist` is the camera-relative centre's length — the target's
- * distance from the eye in the origin-relative NEAR0 frame.
+ * A NEAR0 target carries a REAL physical radius, so `near0RingRadiusPx` sizes
+ * the halo from it — see that helper's header for the far floor and why the
+ * apparent-size term is not the galaxy ring's. The `camDist` it takes is the
+ * camera-relative centre's length: the target's distance from the eye in the
+ * origin-relative NEAR0 frame.
  *
  * ## Live-body centre — the ring tracks the animated body, not its pick pose
  *
@@ -93,6 +79,23 @@ import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
+
+/** Where the near pin lands, as a multiple of `near`: a hair inside the plane,
+ *  so f32 rounding of the narrowed vp cannot tip the boundary case back out. */
+const NEAR_PIN_MARGIN = 1.001;
+
+/**
+ * Push a camera-relative centre out until its clip `w` clears `nearMpc` —
+ * read off the rebased vp, not the centre's LENGTH, since the two differ by the
+ * off-axis cosine and clipping tests the depth. A centre behind the eye
+ * (`w <= 0`) is left alone: scaling by a negative ratio would fold it into view.
+ */
+function pinInsideNearPlane(centre: Vec3, vp: Float32Array, nearMpc: number): Vec3 {
+  const w = vp[3]! * centre[0] + vp[7]! * centre[1] + vp[11]! * centre[2] + vp[15]!;
+  if (w <= 0 || w >= nearMpc) return centre;
+  const s = (nearMpc * NEAR_PIN_MARGIN) / w;
+  return [centre[0] * s, centre[1] * s, centre[2] * s];
+}
 
 export const near0SelectionRingPass: ContentPass = {
   name: 'near0-selection-ring',
@@ -148,26 +151,26 @@ export const near0SelectionRingPass: ContentPass = {
       state.settings.galaxyCatalogs.sizePx,
     );
 
-    // Pull the centre inside the NEAR0 far plane when the pinned anchor sits
-    // beyond it. The adaptive far plane is `max(orbit·100, 3e-11)` Mpc
-    // (`foregroundFrustum`), so orbiting something much nearer than the pinned
-    // halo anchor drops the far plane below the anchor's distance and the ring
-    // quad — unlike the star SPRITE, which clamps clip-z inside the far plane
-    // (the sibling `CLIP_Z_EPS` far-clamp solves this same sweep) — has no clamp
-    // and gets frustum-clipped, so the halo vanishes mid-zoom. Scaling the
-    // camera-relative centre is EXACTLY correct here: with the rebased vp (view
-    // translation folded out) a uniform scale moves camera-space x/y/z together,
-    // so the projected NDC x/y (ratios against w ∝ z) are IDENTICAL — only depth
-    // moves inward — and the OVER-blended ring pass never depth-tests, so depth
-    // is otherwise unobserved. Far side only: in practice the orbit target is
-    // always at or beyond the anchor's scale when zoomed out, so the anchor can
-    // only ever exit the FAR plane, never the near — no symmetric near clamp.
-    const clampedCentre = clampVec3Length(centre, view.slab.far * NEAR0_FAR_CLAMP_FRACTION);
-
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // centre. Uses the slab's f64 `vp`, narrowed HERE at the GPU-upload
     // boundary (`rebaseViewProj` stays f64 for consumers that must invert it).
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+
+    // Keep the centre between the slab's planes — BOTH can be crossed. The
+    // adaptive far plane (`max(orbit·100, 3e-11)` Mpc, `foregroundFrustum`)
+    // drops below a pinned anchor when the orbit target is much nearer; the
+    // near plane is FLOORED at `MIN_NEAR_MPC` (~6.2 m) while a mesh body parks
+    // the camera at two of its own radii (0.9 m for the bowl of petunias). One
+    // clip z/w serves all six quad vertices, so outside either plane the whole
+    // primitive is discarded and the halo vanishes rather than clips. Scaling
+    // the centre is exactly screen-preserving (`clampVec3Length`'s header), the
+    // px radius rides `w` and divides it back out, and this OVER-blended pass
+    // never depth-tests — so only depth moves.
+    const clampedCentre = pinInsideNearPlane(
+      clampVec3Length(centre, view.slab.far * NEAR0_FAR_CLAMP_FRACTION),
+      rebasedVp,
+      view.slab.near,
+    );
 
     state.gpu.selectionRingRenderer!.draw(pass, rebasedVp, view.viewportPx, {
       worldPos: clampedCentre,
