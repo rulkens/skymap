@@ -30,6 +30,7 @@ import type { Blend } from './Blend';
 import type { SlabView } from './SlabView';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { EngineState } from '../state/EngineState';
+import type { HdrPhase } from './HdrPhase';
 
 export type ContentPass = {
   /** Stable identifier for debugging, test assertions, and the derived timing-slot list. */
@@ -71,16 +72,14 @@ export type ContentPass = {
    */
   readonly skyCapture?: true;
   /**
-   * Opt-in to the `'post'` half of the black-hole lens's `(hdr, NEAR0)`
-   * step split (Task 14b): set only by `orbitTrailsPass` and
-   * `bodyGlintsPass`, the two rows the spec keeps unwarped ON TOP of the
-   * lens rather than sampled by it. `frameProgram` only emits the split
-   * (and a `'post'` step) when the lens's own `(hdr, BODY[k])` step fires —
-   * outside the band this flag is inert and every `(hdr, NEAR0)` layer
-   * shares the one untagged step, exactly as before. `true`-only, same
-   * three-state-avoidance reasoning as `skyCapture` above.
+   * Which `(hdr, NEAR0)` step this layer draws in — see `HdrPhase`. Absent:
+   * the ordinary roster. `'post-lens'`: unwarped ON TOP of the black-hole
+   * lens rather than sampled by it (inert outside the lens band, where the
+   * roster is one untagged step). `'post-foreground'`: after the opaque body
+   * composite, so the layer can draw over a body — which also places it after
+   * the lens. A layer can't ask for `'pre-lens'`; that is the roster itself.
    */
-  readonly hdrPostLensing?: true;
+  readonly hdrPhase?: Exclude<HdrPhase, 'pre-lens'>;
   /**
    * Whether this layer should record draw commands this frame, given the
    * step's already-resolved `SlabView` — a `'body'` layer reads

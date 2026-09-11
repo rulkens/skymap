@@ -91,12 +91,11 @@ export const orbitTrailsPass: ContentPass = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
-  // 39 bound S-star trails orbit Sgr A* and cull in exactly when the
-  // black-hole lens's band is active (bodyRegions.ts's galactic-centre
-  // region) — this opts the layer into the lens's `'post'` split half so
-  // they draw unwarped ON TOP of it rather than being sampled by it
-  // (Task 14b, Ruling 9; see frameProgram.ts's step-split doc).
-  hdrPostLensing: true,
+  // After the opaque body composite, so a satellite's near arc draws OVER
+  // its host (the fragment hides the far arc itself). This is also after
+  // the black-hole lens, which keeps the S-star trails unwarped on top of
+  // it rather than sampled by it.
+  hdrPhase: 'post-foreground',
 
   enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;
