@@ -78,7 +78,7 @@ import { sceneOccluderBodies } from '../sceneOccluderBodies';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { overflowFade } from '../../../../utils/scene/overflowFade';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
-import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { NEAR0_OVERLAY_CLIP_SCALE, near0OverlayVpF32 } from '../near0OverlayClip';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
 import { subjectOccludedByBodies } from '../../../../utils/scene/subjectOccludedByBodies';
@@ -88,15 +88,17 @@ import { subjectOccludedByBodies } from '../../../../utils/scene/subjectOccluded
 const NEAR_PIN_MARGIN = 1.001;
 
 /**
- * Push a camera-relative centre out until its clip `w` clears `nearMpc` —
+ * Push a camera-relative centre out until its clip `w` clears `nearClipW` —
  * read off the rebased vp, not the centre's LENGTH, since the two differ by the
- * off-axis cosine and clipping tests the depth. A centre behind the eye
- * (`w <= 0`) is left alone: scaling by a negative ratio would fold it into view.
+ * off-axis cosine and clipping tests the depth. The threshold is the near plane
+ * expressed in THIS vp's clip units, which are metres (`near0OverlayClip`), not
+ * the slab's Mpc. A centre behind the eye (`w <= 0`) is left alone: scaling by
+ * a negative ratio would fold it into view.
  */
-function pinInsideNearPlane(centre: Vec3, vp: Float32Array, nearMpc: number): Vec3 {
+function pinInsideNearPlane(centre: Vec3, vp: Float32Array, nearClipW: number): Vec3 {
   const w = vp[3]! * centre[0] + vp[7]! * centre[1] + vp[11]! * centre[2] + vp[15]!;
-  if (w <= 0 || w >= nearMpc) return centre;
-  const s = (nearMpc * NEAR_PIN_MARGIN) / w;
+  if (w <= 0 || w >= nearClipW) return centre;
+  const s = (nearClipW * NEAR_PIN_MARGIN) / w;
   return [centre[0] * s, centre[1] * s, centre[2] * s];
 }
 
@@ -161,9 +163,13 @@ export const near0SelectionRingPass: ContentPass = {
     if (alpha <= 0) return;
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
-    // centre. Uses the slab's f64 `vp`, narrowed HERE at the GPU-upload
-    // boundary (`rebaseViewProj` stays f64 for consumers that must invert it).
-    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+    // centre. Uses the slab's f64 `vp`, rescaled to clip metres and narrowed
+    // HERE at the GPU-upload boundary (`rebaseViewProj` stays f64 Mpc for
+    // consumers that must invert it). The rescale is this pass's own because
+    // the ring renderer is shared with the COSMO sibling, which must not carry
+    // it. Everything below reads the ring's size in PIXELS, which the shader
+    // re-multiplies by `clip.w` — so only the near pin sees the unit change.
+    const rebasedVp = near0OverlayVpF32(rebaseViewProj(view.slab.vp, view.camPos));
 
     // Keep the centre between the slab's planes — BOTH can be crossed. The
     // adaptive far plane (`max(orbit·100, 3e-11)` Mpc, `foregroundFrustum`)
@@ -178,7 +184,7 @@ export const near0SelectionRingPass: ContentPass = {
     const clampedCentre = pinInsideNearPlane(
       clampVec3Length(centre, view.slab.far * NEAR0_FAR_CLAMP_FRACTION),
       rebasedVp,
-      view.slab.near,
+      view.slab.near * NEAR0_OVERLAY_CLIP_SCALE,
     );
 
     // The per-pixel occlusion variant is selected by HANDING the renderer a

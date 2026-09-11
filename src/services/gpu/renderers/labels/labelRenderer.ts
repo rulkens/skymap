@@ -162,6 +162,10 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
  * consumes a per-frame scene colour view.  The default (opts omitted) keeps
  * the plain single-BGL pipeline — byte-for-byte unchanged.
+ *
+ * `opts.clipScale` states the clip units of the matrices this instance will be
+ * drawn with, so the em it packs is divisible by their `clip.w` — the NEAR0
+ * overlays rescale theirs (`near0OverlayClip`). Default 1 = matrix in Mpc.
  */
 export function createLabelRenderer(
   ctx: GpuContext,
@@ -169,8 +173,9 @@ export function createLabelRenderer(
   atlases: LoadedFontAtlases,
   maxLabels = 64,
   maxGlyphsPerLabel = 64,
-  opts?: { occludeAgainstScene?: boolean },
+  opts?: { occludeAgainstScene?: boolean; clipScale?: number },
 ): LabelRenderer {
+  const clipScale = opts?.clipScale ?? 1;
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
   // factory's call site.  Runtime code below null-checks before each use.
@@ -500,7 +505,11 @@ export function createLabelRenderer(
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
       labelBuf[labelBase + 2] = label.worldPos[2];
-      labelBuf[labelBase + 3] = label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT;
+      // The em rides the same clip units as the matrix `draw` is handed: the
+      // vertex stage sizes glyphs as `worldEmMpc / clip.w`. `currentLabels`
+      // keeps the unscaled rows — the CPU pick path projects those through the
+      // unscaled `Label2DProjection.vp`.
+      labelBuf[labelBase + 3] = (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * clipScale;
 
       // Public colour API is STRAIGHT RGBA — producers write the natural
       // form (`[1, 0, 0, 0.5]` is "half-transparent red"); the fragment

@@ -138,6 +138,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "framing-bridge precedent (line 332) — the follow rows' initial-approach branch converts the focused body's radiusM to Mpc to seed bodyFocusDistance's framing target, the same radius->Mpc bridge as bodyLikeFraming, not pose math",
   ],
   [
+    'src/services/engine/frame/near0OverlayClip.ts',
+    'clip-unit precedent — the factor is a UNIFORM RESCALE of the NEAR0 overlay clip space (NDC-invariant, keeping clip w off the rasterizer floor); it converts no pose and no position, and the anchors it projects stay in Mpc',
+  ],
+  [
     'src/services/engine/camera/pivotRadiusMpc.ts',
     "framing-bridge precedent — the SelectionRow's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
   ],
