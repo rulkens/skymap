@@ -11,7 +11,6 @@
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { ORBITAL_ELEMENTS } from './orbitalElements';
 import { SURFACE_FIXED_SITES } from './surfaceFixedSites';
-import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { PositionDriver } from '../../@types/scene/PositionDriver';
 
 export const POSITION_DRIVERS: readonly PositionDriver[] = [
@@ -28,8 +27,14 @@ export const POSITION_DRIVERS: readonly PositionDriver[] = [
   ...SURFACE_FIXED_SITES.map((site): PositionDriver => ({ kind: 'surfaceFixed', ...site })),
 ];
 
+// Indexed, not walked: the per-frame callers (`frameContext`, `glintBandClass`)
+// would otherwise scan every anchor, S-star and site once per body per frame.
+const BY_ID = new Map(POSITION_DRIVERS.map((driver) => [driver.id, driver]));
+
 export function positionDriverById(id: string): PositionDriver {
-  return findByIdOrThrow(POSITION_DRIVERS, id, 'positionDrivers');
+  const driver = BY_ID.get(id);
+  if (!driver) throw new Error(`positionDrivers: no entry for id '${id}'`);
+  return driver;
 }
 
 /**

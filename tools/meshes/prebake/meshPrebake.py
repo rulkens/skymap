@@ -18,8 +18,10 @@ import bpy
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
+ATLAS_PX = 2048
 
-def source(key, filename, frame=None, triangles=None, atlas=2048, drop_materials=()):
+
+def source(key, filename, frame=None, triangles=None, drop_materials=()):
     d = os.path.join(REPO, "data/raw/meshes", key)
     return {
         "key": key,
@@ -31,7 +33,6 @@ def source(key, filename, frame=None, triangles=None, atlas=2048, drop_materials
         # source with actions must name a frame or risk baking a folded rover.
         "frame": frame,
         "triangles": triangles,
-        "atlas": atlas,
         # Materials that exist only to mark a rig pivot or fake a ground shadow.
         # An object whose materials are ALL in this set goes; the raise guards
         # against the name drifting upstream and the marker silently shipping.
@@ -345,7 +346,7 @@ def main():
 
     uv_name = unwrap(obj)
     log("smart-projected uv '%s' (%.0fs elapsed)" % (uv_name, time.time() - started))
-    image = bpy.data.images.new("%s_atlas" % key, cfg["atlas"], cfg["atlas"], alpha=False)
+    image = bpy.data.images.new("%s_atlas" % key, ATLAS_PX, ATLAS_PX, alpha=False)
     image.generated_color = (0, 0, 0, 1)
     arm_materials(obj, image)
     bake(obj, uv_name)
@@ -353,7 +354,7 @@ def main():
     image.file_format = "PNG"
     image.save()
     log("baked %d^2 albedo atlas -> %s (%.0fs elapsed)"
-        % (cfg["atlas"], cfg["atlas_path"], time.time() - started))
+        % (ATLAS_PX, cfg["atlas_path"], time.time() - started))
 
     flatten_materials(obj, key, image)
     keep_only_bake_uv(obj, uv_name)

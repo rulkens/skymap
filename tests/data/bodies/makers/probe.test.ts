@@ -15,7 +15,7 @@ const voyager1 = () => ({
   eccentricity: 3.703612020159509,
   inclinationDeg: 35.76697119202111,
   ascendingNodeDeg: 178.8798914884395,
-  argPeriapsisDeg: 338.25000336994,
+  argPeriapsisDeg: 338.250003369942,
   periapsisJd: 2444233.650346363429,
   meanMotionDegPerDay: 0.1709365587071547,
   color: [1, 1, 1] as Vec3,
