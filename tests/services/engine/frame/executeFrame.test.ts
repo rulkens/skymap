@@ -998,10 +998,10 @@ describe('executeFrame', () => {
   });
 
   describe('(hdr, NEAR0) roster slices by hdrPhase', () => {
-    // A step's `hdrPhase` narrows the (target, slab) group by
-    // `ContentPass.hdrPhase` — 'pre-lens' excludes every phased layer,
-    // 'post-lens' admits only that phase. This is the mechanism that keeps
-    // body-glints drawing AFTER the lens step instead of under it.
+    // A step admits the layers whose `ContentPass.hdrPhase` is in its
+    // `hdrPhases` set (a layer without one counting as 'pre-lens'). This is the
+    // mechanism that keeps body-glints drawing AFTER the lens step, and the
+    // orbit trails after the body composite, instead of under either.
     it("a 'pre-lens' step excludes post-lens layers; a 'post-lens' step draws only them", () => {
       const roster = makeContentPass({ name: 'roster', target: 'hdr', slab: NEAR0 });
       const glints = makeContentPass({
@@ -1011,8 +1011,8 @@ describe('executeFrame', () => {
         hdrPhase: 'post-lens',
       });
       const program: FrameStep[] = [
-        { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhase: 'pre-lens' },
-        { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhase: 'post-lens' },
+        { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['pre-lens'] },
+        { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['post-lens'] },
       ];
       const { args } = makeArgs({ program, passes: [roster, glints] });
       executeFrame(args);
@@ -1023,7 +1023,7 @@ describe('executeFrame', () => {
       expect(roster.draw.mock.calls[0]![0]).not.toBe(glints.draw.mock.calls[0]![0]);
     });
 
-    it('an untagged step draws post-lens layers with the roster — the outside-the-band shape', () => {
+    it('a step admitting both lens phases draws them in one pass — the outside-the-band shape', () => {
       const roster = makeContentPass({ name: 'roster', target: 'hdr', slab: NEAR0 });
       const glints = makeContentPass({
         name: 'body-glints',
@@ -1031,16 +1031,18 @@ describe('executeFrame', () => {
         slab: NEAR0,
         hdrPhase: 'post-lens',
       });
-      const program: FrameStep[] = [{ kind: 'render', target: 'hdr', slab: NEAR0 }];
+      const program: FrameStep[] = [
+        { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['pre-lens', 'post-lens'] },
+      ];
       const { args } = makeArgs({ program, passes: [roster, glints] });
       executeFrame(args);
       expect(roster.draw).toHaveBeenCalledTimes(1);
       expect(glints.draw).toHaveBeenCalledTimes(1);
-      // Both drew into the SAME single pass — one untagged step, one group.
+      // Both drew into the SAME pass — one step, one group.
       expect(roster.draw.mock.calls[0]![0]).toBe(glints.draw.mock.calls[0]![0]);
     });
 
-    it("a 'post-foreground' layer draws only in the 'post-foreground' step, never in the untagged roster step", () => {
+    it("a 'post-foreground' layer draws only in its own step, never in the roster step", () => {
       // The trail's near arc must land OVER the opaque bodies: drawing it in
       // the roster step too would put a copy under the body composite.
       const roster = makeContentPass({ name: 'roster', target: 'hdr', slab: NEAR0 });
@@ -1051,8 +1053,8 @@ describe('executeFrame', () => {
         hdrPhase: 'post-foreground',
       });
       const program: FrameStep[] = [
-        { kind: 'render', target: 'hdr', slab: NEAR0 },
-        { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhase: 'post-foreground' },
+        { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['pre-lens', 'post-lens'] },
+        { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['post-foreground'] },
       ];
       const { args } = makeArgs({ program, passes: [roster, trails] });
       executeFrame(args);

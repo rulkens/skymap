@@ -68,15 +68,17 @@ export type FrameStep =
        */
       face?: CubeFace;
       /**
-       * Which slice of the split `(hdr, NEAR0)` roster this step draws — see
-       * `HdrPhase`. Absent ⇒ the untagged step: every layer not reserved for
-       * `'post-foreground'`. Steps sharing one `(target, slab)` would
-       * otherwise collide on one GPU-timing group slot — `slabs.ts`'s
-       * `matchesHdrPhase` is the single predicate both `timedSlotRowsOf` and
-       * `executeFrame` read, and `renderStepTimingSlotName` gives each tagged
-       * step's group-total slot a distinct name.
+       * Which layer phases this step admits — see `HdrPhase`. Carried by the
+       * steps of the split `(hdr, NEAR0)` roster and nothing else; absent ⇒
+       * phase plays no part in selecting this step's group. A layer without a
+       * phase counts as `'pre-lens'`. The sets partition the roster, so its
+       * steps draw disjoint groups despite sharing one `(target, slab)`:
+       * `slabs.ts`'s `matchesHdrPhase` is the single predicate both
+       * `timedSlotRowsOf` and `executeFrame` read, and
+       * `renderStepTimingSlotName` names each step's group-total timing slot
+       * from the set so they don't collide on one.
        */
-      hdrPhase?: HdrPhase;
+      hdrPhases?: readonly HdrPhase[];
     }
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };

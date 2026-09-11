@@ -72,12 +72,14 @@ export type ContentPass = {
    */
   readonly skyCapture?: true;
   /**
-   * Which `(hdr, NEAR0)` step this layer draws in — see `HdrPhase`. Absent:
-   * the ordinary roster. `'post-lens'`: unwarped ON TOP of the black-hole
-   * lens rather than sampled by it (inert outside the lens band, where the
-   * roster is one untagged step). `'post-foreground'`: after the opaque body
-   * composite, so the layer can draw over a body — which also places it after
-   * the lens. A layer can't ask for `'pre-lens'`; that is the roster itself.
+   * When in the `(hdr, NEAR0)` roster this layer draws — see `HdrPhase`.
+   * Absent ⇒ `'pre-lens'`, the ordinary roster. `'post-lens'`: unwarped ON TOP
+   * of the black-hole lens rather than sampled by it (inert outside the lens
+   * band, where one step admits both phases). `'post-foreground'`: after the
+   * opaque body composite, so the layer can draw over a body — which also
+   * places it after the lens. `'pre-lens'` is unspellable here: it is the
+   * default, and a second way to say it would be a second thing to keep in
+   * step with the emitted `FrameStep.hdrPhases` sets.
    */
   readonly hdrPhase?: Exclude<HdrPhase, 'pre-lens'>;
   /**

@@ -103,13 +103,13 @@ describe('frameProgram', () => {
       { kind: 'render', target: 'hdr', slab: COSMO },
       { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
       { kind: 'render', target: 'mw-aggregate', slab: NEAR0 },
-      { kind: 'render', target: 'hdr', slab: NEAR0 },
+      { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['pre-lens', 'post-lens'] },
       { kind: 'render', target: 'foreground:0', slab: NEAR0, depthLoad: 'clear' },
       {
         kind: 'composite',
         step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
       },
-      { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhase: 'post-foreground' },
+      { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['post-foreground'] },
       { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } },
       { kind: 'render', target: 'swap', slab: COSMO },
       { kind: 'render', target: 'swap', slab: NEAR0 },
@@ -298,13 +298,27 @@ describe('frameProgram', () => {
   it('sgrAStarLensingBodySlabs omitted or empty: no extra step, program identical to the base list (zero-cost outside the band)', () => {
     const base = frameProgram(TONE, false, [NEAR0], [], undefined);
     expect(base.some((step) => step.kind === 'render' && step.slab >= 2)).toBe(false);
-    // Task 14b: the lens split must not leak outside the band either — the
-    // roster's (hdr, NEAR0) step stays the single untagged step it always was.
-    const lensSteps = base.filter(
-      (step) =>
-        step.kind === 'render' && (step.hdrPhase === 'pre-lens' || step.hdrPhase === 'post-lens'),
-    );
-    expect(lensSteps).toHaveLength(0);
+  });
+
+  it('the (hdr, NEAR0) roster steps admit every phase exactly once, in both lens states', () => {
+    // Outside the band one step absorbs the post-lens layers (there is no lens
+    // for them to stay on top of); inside it they get their own step after the
+    // lens's (hdr, BODY[k]) step. Either way the admitted sets partition the
+    // three phases — a phase in two sets would draw its layers twice, a phase
+    // in none would silently drop them.
+    const rosterPhases = (program: readonly FrameStep[]): unknown[] =>
+      program
+        .filter((step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0)
+        .map((step) => (step.kind === 'render' ? step.hdrPhases : undefined));
+    expect(rosterPhases(frameProgram(TONE, false, [NEAR0], []))).toEqual([
+      ['pre-lens', 'post-lens'],
+      ['post-foreground'],
+    ]);
+    expect(rosterPhases(frameProgram(TONE, false, [NEAR0], [], [4]))).toEqual([
+      ['pre-lens'],
+      ['post-lens'],
+      ['post-foreground'],
+    ]);
   });
 
   it('sgrAStarLensingBodySlabs active: orbit-trails/body-glints move to their own step AFTER the lens step (Task 14b)', () => {

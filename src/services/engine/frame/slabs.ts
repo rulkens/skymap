@@ -123,35 +123,35 @@ export function passTimingSlotName(passName: string, slabIndex: number, face?: n
 export function renderStepTimingSlotName(
   groupKey: string,
   face: number | undefined,
-  hdrPhase?: HdrPhase,
+  hdrPhases?: readonly HdrPhase[],
 ): string {
   if (face !== undefined) return `${groupKey}·FACE[${face}]`;
-  // 'pre-lens' keeps the bare groupKey: no frame emits an untagged
-  // (hdr, NEAR0) step alongside it (the lens split is all-or-nothing per
-  // frame — see frameProgram.ts), so the two can share one name.
-  if (hdrPhase === 'post-lens') return `${groupKey}·POST_LENSING`;
-  if (hdrPhase === 'post-foreground') return `${groupKey}·POST_FOREGROUND`;
-  return groupKey;
+  // The step admitting 'pre-lens' owns the bare groupKey, whether or not it
+  // also absorbs the later phases: exactly one step per frame draws the
+  // roster proper, so the bare name can never be claimed twice.
+  if (hdrPhases === undefined || hdrPhases.includes('pre-lens')) return groupKey;
+  return hdrPhases.includes('post-lens')
+    ? `${groupKey}·POST_LENSING`
+    : `${groupKey}·POST_FOREGROUND`;
 }
 
 /**
  * The hdr-phase gate: whether a layer belongs to a render step's group, given
- * the step's `hdrPhase` (FrameStep.d.ts). Single-sourced here because
+ * the phases that step admits (`FrameStep.hdrPhases`) and the layer's own
+ * (`ContentPass.hdrPhase`, absent ⇒ `'pre-lens'`). Single-sourced here because
  * `frameProgram.ts`'s `timedSlotRowsOf` (the derived timing-slot list) and
  * `executeFrame`'s group filter (the actual draw selection) must never
- * disagree on which layers a tagged step selects — a drift would either draw a
- * layer the timing list never billed, or bill a slot for a layer that never
- * drew. An untagged step is the whole roster minus the `'post-foreground'`
- * layers, which have their own step every frame; `'post-lens'` layers ride
- * the untagged step because that step only exists when the lens does not.
+ * disagree on which layers a step selects — a drift would either draw a layer
+ * the timing list never billed, or bill a slot for a layer that never drew.
+ * A step with no admitted set is not part of the split roster and lets phase
+ * play no part in its selection; the only phased layers live on `(hdr, NEAR0)`,
+ * where every emitted step states its set.
  */
 export function matchesHdrPhase(
   layerPhase: Exclude<HdrPhase, 'pre-lens'> | undefined,
-  stepPhase: HdrPhase | undefined,
+  stepPhases: readonly HdrPhase[] | undefined,
 ): boolean {
-  if (stepPhase === undefined) return layerPhase !== 'post-foreground';
-  if (stepPhase === 'pre-lens') return layerPhase === undefined;
-  return layerPhase === stepPhase;
+  return stepPhases === undefined || stepPhases.includes(layerPhase ?? 'pre-lens');
 }
 
 /**
