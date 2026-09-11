@@ -8,7 +8,8 @@
  * (`ctx.drawCamPos`, `ctx.canvasSize.height`, `ctx.fovYRad`). "Drawn" would be
  * the wrong fact: a 1–3 px planet is drawn, as an additive glint, and occludes
  * nothing. Radii are the bare `radiusM` — an atmosphere, ring or lens quad is
- * not opaque.
+ * not opaque. For a mesh body that radius is the bake's BOUNDING sphere, so an
+ * elongated silhouette (the whale) hides a little more than it covers.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -26,7 +27,7 @@ export function sceneOccluderBodies(
   ctx: ReadyFrameContext,
 ): readonly { readonly positionMpc: Readonly<Vec3>; readonly radiusM: number }[] {
   const states = sceneBodyStates(state, ctx);
-  const { flat, textured } = sceneBodyPartition(state, ctx);
+  const { flat, textured, meshes } = sceneBodyPartition(state, ctx);
   const { spheres } = partitionStarsByResolution({
     stars: positionedVisibleStars(state, ctx),
     camPosMpc: ctx.drawCamPos,
@@ -40,6 +41,9 @@ export function sceneOccluderBodies(
     occluders.push({ positionMpc: states.get(body.id)!.positionMpc, radiusM: body.radiusM });
   }
   for (const body of textured) {
+    occluders.push({ positionMpc: states.get(body.id)!.positionMpc, radiusM: body.radiusM });
+  }
+  for (const body of meshes) {
     occluders.push({ positionMpc: states.get(body.id)!.positionMpc, radiusM: body.radiusM });
   }
   for (const star of spheres) {
