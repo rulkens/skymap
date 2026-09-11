@@ -24,12 +24,9 @@ import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
 import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
-import { selectOccluderSpheresKm } from '../../../../utils/scene/selectOccluderSpheresKm';
-import { SCENE_BODIES } from '../../../../data/bodies/sceneBodies';
-import { MAX_ORBIT_OCCLUDERS } from '../../../../data/bodies/orbitTrailConstants';
-import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
+import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
@@ -45,9 +42,6 @@ const FULL_PX = 20;
 // Reused across frames so the hot path allocates nothing. Sized from the
 // compile-time elements table — a fixed size, not a cap.
 const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
-
-// Refilled each draw, for the same reason `staging` is: no hot-path allocation.
-const occluderSpheresKm = new Float32Array(MAX_ORBIT_OCCLUDERS * 4);
 
 // Farthest point from the focus is apoapsis a·(1+e); summing it along the focus
 // chain bounds every orbit point for every t. Derived from the static elements,
@@ -224,24 +218,11 @@ export const orbitTrailsPass: ContentPass = {
       );
     }
     if (count > 0) {
-      // A body occludes iff it is drawn: the same sub-pixel floor the body
-      // rows use, so a trail never vanishes behind something not on screen.
-      const occluderCount = selectOccluderSpheresKm(
-        {
-          bodies: SCENE_BODIES,
-          bodyStates: states,
-          camPosMpc: camPos,
-          viewportHeightPx,
-          fovYRad: ctx.fovYRad,
-          minDiameterPx: SUB_PIXEL_BODY_CULL_PX,
-        },
-        occluderSpheresKm,
-      );
       renderer.draw(
         pass,
         staging,
         count,
-        { count: occluderCount, spheresKm: occluderSpheresKm },
+        sceneOccluderSpheres(state, ctx),
         state.settings.debug.overlays['orbit-trail-impostor'],
       );
     }

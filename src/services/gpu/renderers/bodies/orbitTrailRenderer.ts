@@ -60,9 +60,16 @@ export const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 12, offset: 168, format: 'float32x4' }, // eye-relative semi-minor B (km)
 ];
 
-// The occluder uniform: `count` (u32) + three pad words, then MAX_ORBIT_OCCLUDERS
-// vec4s — mirrors `OcclusionUniforms` in orbitTrail/fragment.wesl.
-const OCCLUDER_UNIFORM_BYTES = 16 + MAX_ORBIT_OCCLUDERS * 16;
+/**
+ * The occluder uniform's layout: `count` (u32) + three pad words, then
+ * MAX_ORBIT_OCCLUDERS vec4s. The ONE TS home for the byte offsets, mirroring
+ * `OcclusionUniforms` in orbitTrail/fragment.wesl — pinned against that struct
+ * by orbitTrailConstants.parity.test.ts, since a silent drift here writes the
+ * spheres where the shader reads padding.
+ */
+export const OCCLUDER_COUNT_OFFSET = 0;
+export const OCCLUDER_SPHERES_OFFSET = 16;
+export const OCCLUDER_UNIFORM_BYTES = OCCLUDER_SPHERES_OFFSET + MAX_ORBIT_OCCLUDERS * 16;
 
 export function createOrbitTrailRenderer(
   device: GPUDevice,
@@ -80,8 +87,8 @@ export function createOrbitTrailRenderer(
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   const occluderScratch = new ArrayBuffer(OCCLUDER_UNIFORM_BYTES);
-  const occluderCount = new Uint32Array(occluderScratch, 0, 1);
-  const occluderSpheres = new Float32Array(occluderScratch, 16);
+  const occluderCount = new Uint32Array(occluderScratch, OCCLUDER_COUNT_OFFSET, 1);
+  const occluderSpheres = new Float32Array(occluderScratch, OCCLUDER_SPHERES_OFFSET);
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'orbit-trail-bgl',
     entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],

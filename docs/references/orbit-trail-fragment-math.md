@@ -81,15 +81,21 @@ fall through and paint at full brightness, because a NaN comparison is always
 false in EITHER direction — only requiring the KEEP condition true routes
 every non-finite path into the discard.
 
-## Why occlusion is an eye→point segment test against the resolved bodies
+## Why occlusion is an eye→point segment test against the opaque bodies
 
 There is no body depth to test against. Bodies here are analytic spheres, and
 the painter chain clears depth per row (spec §7.3), so by the time the trails
 draw — after the `foreground:0 → hdr` composite, `HdrPhase 'post-foreground'`
 — nothing of the bodies survives but their colour. The fragment therefore
 re-derives its own orbit point `x` from the eye-relative 3D basis
-(`eyeRelativeOrbitBasisKm`) and tests it against the frame's resolved bodies
-as spheres (`selectOccluderSpheresKm`).
+(`eyeRelativeOrbitBasisKm`) and tests it against the frame's OPAQUE bodies as
+spheres (`sceneOccluderSpheres`).
+
+Opaque, not drawn: the set is the flat ∪ textured branches of
+`sceneBodyPartition`, the resolved branch of `partitionStarsByResolution`, and
+Earth — the bodies the `foreground:0` sphere layers actually paint. A body in
+the 1–3 px glint band is drawn, as an additive sprite, and occludes nothing.
+Radii are the bare `radiusM`: an atmosphere, ring or lens quad is not opaque.
 
 The test is the SEGMENT eye→`x`, not the infinite ray: the closest-point
 parameter is clamped to `[0, 1]`. That clamp is the whole near/far split — a

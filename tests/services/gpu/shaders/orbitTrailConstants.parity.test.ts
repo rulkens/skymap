@@ -25,6 +25,9 @@ import {
   INSTANCE_ATTRIBUTES,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
+  OCCLUDER_COUNT_OFFSET,
+  OCCLUDER_SPHERES_OFFSET,
+  OCCLUDER_UNIFORM_BYTES,
 } from '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
 
 /**
@@ -171,5 +174,47 @@ describe('orbitTrail/io.wesl OrbitInstance ↔ orbitTrailRenderer INSTANCE_ATTRI
       ).toBe(runningFloats * 4);
       runningFloats += field.floats;
     }
+  });
+});
+
+/**
+ * Walk `fragment.wesl`'s `OcclusionUniforms` under WGSL's uniform-address-space
+ * layout rules (align up, place, advance by size; the struct rounds up to its
+ * widest member) and return each field's byte offset plus the struct size.
+ */
+function occlusionUniformLayout(): { offsets: Map<string, number>; size: number } {
+  const path = join(process.cwd(), 'src/services/gpu/shaders/bodies/orbitTrail/fragment.wesl');
+  const text = readFileSync(path, 'utf-8');
+  const structMatch = text.match(/struct OcclusionUniforms \{([\s\S]*?)\n\};/);
+  if (!structMatch) throw new Error('OcclusionUniforms struct not found in fragment.wesl');
+  const maxOccluders = parseWeslConstants().get('MAX_OCCLUDERS')!;
+
+  const offsets = new Map<string, number>();
+  let offset = 0;
+  let maxAlign = 1;
+  const re = /(\w+)\s*:\s*(u32|f32|vec4<f32>|array<vec4<f32>,\s*MAX_OCCLUDERS>)\s*,/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(structMatch[1]!)) !== null) {
+    const type = m[2]!;
+    const align = type === 'u32' || type === 'f32' ? 4 : 16;
+    const size = type.startsWith('array') ? 16 * maxOccluders : align;
+    offset = Math.ceil(offset / align) * align;
+    offsets.set(m[1]!, offset);
+    offset += size;
+    maxAlign = Math.max(maxAlign, align);
+  }
+  return { offsets, size: Math.ceil(offset / maxAlign) * maxAlign };
+}
+
+describe('orbitTrail/fragment.wesl OcclusionUniforms ↔ orbitTrailRenderer occluder offsets', () => {
+  // The renderer writes `count` and the sphere array into ONE ArrayBuffer at
+  // hand-written offsets. A drift — a field added, a pad word dropped — is
+  // invisible to both compilers and lands the spheres where the shader reads
+  // padding: every trail then draws unoccluded, or none draws at all.
+  it('the struct lays out where the TS offsets say it does', () => {
+    const { offsets, size } = occlusionUniformLayout();
+    expect(offsets.get('count')).toBe(OCCLUDER_COUNT_OFFSET);
+    expect(offsets.get('spheres')).toBe(OCCLUDER_SPHERES_OFFSET);
+    expect(size).toBe(OCCLUDER_UNIFORM_BYTES);
   });
 });

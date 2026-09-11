@@ -12,7 +12,8 @@ import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::TAU;
 
 // The frame's opaque bodies as eye-relative spheres (centre.xyz, radius.w, km),
-// 'count' live entries — orbitTrailRenderer.ts mirrors this layout.
+// 'count' live entries — orbitTrailRenderer.ts mirrors this layout, pinned by
+// orbitTrailConstants.parity.test.ts.
 struct OcclusionUniforms {
   count: u32,
   pad0: u32,
