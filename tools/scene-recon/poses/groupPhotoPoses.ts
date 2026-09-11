@@ -32,7 +32,7 @@ export async function groupPhotoPoses(
   const harvested = await readStacItems(harvestDir);
   if (harvested.length === 0) {
     throw new Error(
-      `bakeSplats: no STAC items in ${harvestDir} — run ` +
+      `scene-recon: no STAC items in ${harvestDir} — run ` +
         `\`npm run fetch-skraafoto -- --group ${group.id}\` first.`,
     );
   }
@@ -67,12 +67,12 @@ export async function groupPhotoPoses(
   }
   if (poses.length === 0) {
     throw new Error(
-      `bakeSplats: none of the ${harvested.length} harvested frame(s) see group "${group.id}" — ` +
+      `scene-recon: none of the ${harvested.length} harvested frame(s) see group "${group.id}" — ` +
         'its bounds moved since the harvest.',
     );
   }
   if (skipped > 0) {
-    process.stderr.write(`bakeSplats: ${skipped} harvested frame(s) no longer see the bounds\n`);
+    process.stderr.write(`scene-recon: ${skipped} harvested frame(s) no longer see the bounds\n`);
   }
 
   return { poses, items, harvestDir };
@@ -87,13 +87,13 @@ async function assertJpegMatchesWindow(
 ): Promise<void> {
   const bytes = await readFile(jpegPath).catch(() => {
     throw new Error(
-      `bakeSplats: ${jpegPath} is missing — re-run \`npm run fetch-skraafoto -- --group ${groupId}\`.`,
+      `scene-recon: ${jpegPath} is missing — re-run \`npm run fetch-skraafoto -- --group ${groupId}\`.`,
     );
   });
   const [width, height] = jpegSizePx(bytes);
   if (width !== expectedPx[0] || height !== expectedPx[1]) {
     throw new Error(
-      `bakeSplats: ${jpegPath} is ${width}×${height}, but group "${groupId}" now wants ` +
+      `scene-recon: ${jpegPath} is ${width}×${height}, but group "${groupId}" now wants ` +
         `${expectedPx[0]}×${expectedPx[1]} — its bounds or groundMmPerPx changed since the ` +
         `harvest. Delete the harvest directory and re-run ` +
         `\`npm run fetch-skraafoto -- --group ${groupId}\`.`,
