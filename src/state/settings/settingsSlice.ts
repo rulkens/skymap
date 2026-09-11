@@ -13,17 +13,20 @@ import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/t
 
 import { APP_SETTINGS_FRAGMENTS } from '../../compositions/appSettingsFragments';
 import { assertUniqueFragmentReducerKeys } from '../../utils/settings/assertUniqueFragmentReducerKeys';
+import { bodiesSettingsFragment } from '../../layers/body/settings/bodiesSettings';
 import { buildInitialSettings } from './initialState';
+import { earthSettingsFragment } from '../../layers/body/settings/earthSettings';
 import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
 import { liftClusterReducers } from '../../utils/settings/liftClusterReducers';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
+import { orbitTrailsSettingsFragment } from '../../layers/body/settings/orbitTrailsSettings';
+import { sgrAStarLensingTuningSettingsFragment } from '../../layers/body/settings/sgrAStarLensingTuningSettings';
 import { starCatalogsSettingsFragment } from '../../layers/starCatalog/settings/starCatalogsSettings';
 import { structuresSettingsFragment } from '../../layers/structure/settings/structuresSettings';
 import { volumesSettingsFragment } from '../../layers/volume/settings/volumesSettings';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
-import type { BodyId } from '../../@types/data/body/BodyId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
@@ -31,7 +34,6 @@ import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKno
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
-import type { SgrAStarLensingTuning } from '../../@types/settings/SgrAStarLensingTuning';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
@@ -134,15 +136,6 @@ export const CORE_REDUCERS = {
     Object.assign(settings.zoneOfAvoidance, action.payload);
   },
 
-  // ── Sgr A* lens tuning — leaf-by-leaf patch, no visibility axis to
-  // protect (this cluster is pure knobs, not a singleton overlay).
-  setSgrAStarLensingTuning: (
-    settings: SettingsDraft,
-    action: PayloadAction<Partial<SgrAStarLensingTuning>>,
-  ) => {
-    Object.assign(settings.sgrAStarLensingTuning, action.payload);
-  },
-
   // ── filaments ───────────────────────────────────────────────────────────
   setFilamentsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
     settings.filaments.enabled = action.payload;
@@ -157,46 +150,6 @@ export const CORE_REDUCERS = {
   },
   setConstellationIntensity: (settings: SettingsDraft, action: PayloadAction<number>) => {
     settings.constellations.intensity = action.payload;
-  },
-
-  // ── orbit trails ────────────────────────────────────────────────────────
-  // Singleton-overlay master gate on the near-field Keplerian orbit trails,
-  // its own single writer (like setMilkyWayEnabled / setFilamentsEnabled).
-  setOrbitTrailsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.orbitTrails.enabled = action.payload;
-  },
-
-  // ── earth ───────────────────────────────────────────────────────────────
-  // Exposure scale on the atmosphere shell's HDR output — read live by
-  // `atmosphereShellPass` each frame. Twin of `setFilamentIntensity`.
-  setAtmosphereExposure: (settings: SettingsDraft, action: PayloadAction<number>) => {
-    settings.earth.atmosphereExposure = action.payload;
-  },
-  // Night-side ambient floor on Earth's surface + cloud shell — read live by
-  // `earthPass` / `cloudShellPass` each frame. An Earth-scoped override of
-  // the shared `AMBIENT` const (which stays every other lit body's floor).
-  setAmbientLight: (settings: SettingsDraft, action: PayloadAction<number>) => {
-    settings.earth.ambientLight = action.payload;
-  },
-  // Open-water GGX roughness on Earth's surface — read live by `earthPass`
-  // each frame. An Earth-scoped override of the `OCEAN_ROUGHNESS` const in
-  // `lib/pbr.wesl` (which stays the seed / documentation home).
-  setOceanRoughness: (settings: SettingsDraft, action: PayloadAction<number>) => {
-    settings.earth.oceanRoughness = action.payload;
-  },
-
-  // ── bodies (fifth source-type cluster) ──────────────────────────────────
-  // The caption axis is the only WRITABLE one: `bodies.items[id].enabled` is
-  // seeded from the registry row and read by `visibleStars` (the Sun's dot)
-  // and `foregroundLabelsPass` (the Sun's caption), but no product decision
-  // has been made to expose a "hide this body" control, so no setter exists
-  // to turn it into a knob nothing turns. There is no cluster-level gate
-  // either, for the same reason (see EngineSettingsState).
-  setBodyLabelEnabled: (
-    settings: SettingsDraft,
-    action: PayloadAction<{ id: BodyId; enabled: boolean }>,
-  ) => {
-    settings.bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
   },
 
   // ── flow ────────────────────────────────────────────────────────────────
@@ -357,6 +310,18 @@ export const settingsSlice = createSlice({
     ),
     ...liftClusterReducers<EngineSettingsState, typeof volumesSettingsFragment>(
       volumesSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof bodiesSettingsFragment>(
+      bodiesSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof earthSettingsFragment>(
+      earthSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof orbitTrailsSettingsFragment>(
+      orbitTrailsSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof sgrAStarLensingTuningSettingsFragment>(
+      sgrAStarLensingTuningSettingsFragment,
     ),
   },
 });

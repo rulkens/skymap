@@ -7,7 +7,6 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
@@ -22,10 +21,8 @@ import {
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
-  DEFAULT_ORBIT_TRAILS_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
-  DEFAULT_SGR_A_STAR_LENSING_TUNING,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_FLOW,
   DEFAULT_ORIENTATION,
@@ -46,16 +43,19 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
-import { ATMOSPHERE_PARAMS } from '../../data/bodies/atmosphereParams';
-import { EARTH_SURFACE_PARAMS } from '../../data/bodies/earthSurfaceParams';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
-import type { BodyId } from '../../@types/data/body/BodyId';
-import type { BodyItemSettings } from '../../@types/settings/BodyItemSettings';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
 type CoreSeedShape = Omit<
   EngineSettingsState,
-  'galaxyCatalogs' | 'starCatalogs' | 'structures' | 'volumes'
+  | 'galaxyCatalogs'
+  | 'starCatalogs'
+  | 'structures'
+  | 'volumes'
+  | 'bodies'
+  | 'earth'
+  | 'orbitTrails'
+  | 'sgrAStarLensingTuning'
 >;
 
 export function coreSeed(): CoreSeedShape {
@@ -117,9 +117,6 @@ export function coreSeed(): CoreSeedShape {
       enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
       ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
-    // The Sgr A* lens knobs; see `SgrAStarLensingTuning` for the tier
-    // breakdown and which module owns each default.
-    sgrAStarLensingTuning: DEFAULT_SGR_A_STAR_LENSING_TUNING,
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
@@ -131,39 +128,6 @@ export function coreSeed(): CoreSeedShape {
     constellations: {
       enabled: SOURCE_REGISTRY[Source.Constellations].visible,
       intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
-    },
-    // Orbit-trails singleton overlay: the master gate on the near-field Keplerian
-    // orbit trails, defaulting on (the trails are part of the baseline
-    // solar-system scene). A flat `enabled` field like `milkyWay` / `filaments`.
-    orbitTrails: {
-      enabled: DEFAULT_ORBIT_TRAILS_ENABLED,
-    },
-    // Earth's per-body look dials. Each seeds from its authored data constant so
-    // that file stays the default's single source of truth (the same
-    // relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`):
-    // `atmosphereExposure` from the Earth atmosphere-params row, `ambientLight`
-    // (Earth's night-side floor) + `oceanRoughness` (the ocean glint's GGX
-    // roughness) from the surface params — where each matches the shared WESL
-    // const it mirrors so these Earth-scoped overrides are no-ops at the default.
-    earth: {
-      // `earth` is a definitional row in the atmosphere table, so the indexed
-      // read is non-null here (the `Record<string, …>` index signature widens it).
-      atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure,
-      ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
-      oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
-    },
-    // Body rows are DERIVED from the registry's body entries, so the seed can't
-    // drift from the body set, and each row's `enabled` comes from that entry's
-    // `visible` field — SOURCE_REGISTRY stays the single source of truth for
-    // default visibility. `labelEnabled` seeds true: the captions are the
-    // descent's navigation aids and show until the user mutes them.
-    bodies: {
-      items: Object.fromEntries(
-        SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => [
-          e.id,
-          { enabled: e.visible, labelEnabled: true },
-        ]),
-      ) as Record<BodyId, BodyItemSettings>,
     },
     // Flow is a singleton overlay layer: all its user-facing state (master
     // gate + look/motion knobs) lives here, spread from the single

@@ -4,7 +4,11 @@
  */
 
 import { assertUniqueFragmentReducerKeys } from '../utils/settings/assertUniqueFragmentReducerKeys';
+import { bodiesSettingsFragment } from '../layers/body/settings/bodiesSettings';
+import { earthSettingsFragment } from '../layers/body/settings/earthSettings';
 import { galaxyCatalogsSettingsFragment } from '../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
+import { orbitTrailsSettingsFragment } from '../layers/body/settings/orbitTrailsSettings';
+import { sgrAStarLensingTuningSettingsFragment } from '../layers/body/settings/sgrAStarLensingTuningSettings';
 import { starCatalogsSettingsFragment } from '../layers/starCatalog/settings/starCatalogsSettings';
 import { structuresSettingsFragment } from '../layers/structure/settings/structuresSettings';
 import { volumesSettingsFragment } from '../layers/volume/settings/volumesSettings';
@@ -14,6 +18,10 @@ export const APP_SETTINGS_FRAGMENTS = [
   starCatalogsSettingsFragment,
   structuresSettingsFragment,
   volumesSettingsFragment,
+  bodiesSettingsFragment,
+  earthSettingsFragment,
+  orbitTrailsSettingsFragment,
+  sgrAStarLensingTuningSettingsFragment,
 ] as const;
 
 assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS);
