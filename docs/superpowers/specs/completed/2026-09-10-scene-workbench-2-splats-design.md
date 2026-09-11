@@ -608,8 +608,9 @@ index `i` reads `order[i]` to get the splat index `idx`, then decodes `data[idx*
 offset `d`, × `opacity/255 × cam.opacityScale`, × the (possibly SH1-corrected)
 colour. Blend `src-alpha`/`one-minus-src-alpha`; `depthCompare: 'less'`,
 `depthWriteEnabled: false` — tests against the depth `lidarPointRenderer` already
-wrote in the same pass, never overwrites it. `cam.splatScale` multiplies the `3σ`
-half-extent (a size knob independent of `opacityScale`).
+wrote in the same pass, never overwrites it. `cam.splatScale` multiplies the projected
+covariance Σ2D by `s²` (the canonical 3DGS scaling modifier); the `3σ` quad half-extent
+follows from it. A size knob independent of `opacityScale`.
 
 The covariance-projection maths is cribbed from **Brush's Apache-2.0 WGSL kernels**
 (same substrate, compatible licence, the trainer that produced the data) — attribute

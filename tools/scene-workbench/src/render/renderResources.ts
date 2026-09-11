@@ -12,8 +12,24 @@ export type LidarGpuAsset = {
   dispose(): void;
 };
 
-/** One member today — a Gaussian-splat asset is the next addition. */
-export type GpuAsset = LidarGpuAsset;
+/**
+ * `data`/`sh1` are read as `array<u32>` (7 and 3 words per record, spec §5);
+ * `order` is the per-instance draw order the depth sort rewrites, so the
+ * renderer steps it as a vertex buffer. `positionsM` stays CPU-side — the
+ * sort re-reads it every frame.
+ */
+export type SplatGpuAsset = {
+  readonly kind: 'gaussianSplat';
+  readonly data: GPUBuffer;
+  readonly sh1: GPUBuffer | null;
+  readonly order: GPUBuffer;
+  readonly positionsM: Float32Array;
+  readonly splatCount: number;
+  readonly shDegree: 0 | 1;
+  dispose(): void;
+};
+
+export type GpuAsset = LidarGpuAsset | SplatGpuAsset;
 
 export type RenderResources = {
   gpu: GpuContext | null;

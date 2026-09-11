@@ -1,9 +1,30 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { orientationForBody } from '../../../src/data/bodies/orientationForBody';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+
+// A superset of the real table, plus one row with no BODY_TEXTURE_REGISTRY
+// counterpart — the shape a mesh body has, and the only way to exercise the
+// rotation-row gate: no real id today has a row without a texture entry.
+vi.mock('../../../src/data/bodies/rotationElements', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/data/bodies/rotationElements')>();
+  const rows = [
+    ...actual.ROTATION_ELEMENTS,
+    {
+      id: 'test-untextured-spinner',
+      poleRaDeg: 0,
+      poleDecDeg: 90,
+      primeMeridianDeg: 0,
+      spinRateDegPerDay: 360,
+    },
+  ];
+  return {
+    ...actual,
+    rotationRowById: (id: string) => rows.find((r) => r.id === id) ?? null,
+  };
+});
 
 // Apply a column-major Mat3 to a column vector: result[r] = Σ_c m[c*3 + r]·v[c].
 // Local restatement of the column-major contract so the test reads the built
@@ -37,18 +58,40 @@ describe('orientationForBody', () => {
   });
 
   it('leaves a non-textured body orientation-invariant across simDays', () => {
-    // Titan carries no rotation row (it is not in the textured set), so it has
-    // no meridian to spin — its orientation is the identity at every instant,
-    // never a fabricated pole that would drift as the clock advances.
+    // Titan carries no rotation row, so it has no meridian to spin — its
+    // orientation is the identity at every instant, never a fabricated pole
+    // that would drift as the clock advances.
     expect(orientationForBody('titan', CONST_J2000)).toEqual([...IDENTITY_MAT3]);
     expect(orientationForBody('titan', CONST_J2000 + 5000)).toEqual([...IDENTITY_MAT3]);
   });
 
   it('returns identity for the Sgr A* anchor', () => {
-    // Sgr A* is not in BODY_TEXTURE_REGISTRY, so the membership gate above
-    // already returns identity for it. This pins that fact so a future
-    // accidental texture-registry entry for 'sgr-a-star' can't silently
-    // rotate the body-slab basis bodyRelativePose builds from it.
+    // Sgr A* has no rotation row, so the gate above already returns identity
+    // for it. This pins that fact so a future accidental rotation-table entry
+    // for 'sgr-a-star' can't silently rotate the body-slab basis
+    // bodyRelativePose builds from it.
     expect(orientationForBody('sgr-a-star', CONST_J2000)).toEqual([...IDENTITY_MAT3]);
+  });
+
+  it('orients a body that has a rotation row but no texture entry', () => {
+    // The shape a mesh body has: a rotation row with no BODY_TEXTURE_REGISTRY
+    // counterpart. The gate must key off the row, not texture membership, or
+    // this body would silently never turn.
+    const before = orientationForBody('test-untextured-spinner', CONST_J2000);
+    expect(before).not.toEqual([...IDENTITY_MAT3]);
+
+    // Compare the whole direction rather than one axis: at 360°/day, a single
+    // component can coincidentally land near zero both before and after (as
+    // it does here — the fixture's pole puts +x's x-component through zero at
+    // both instants) without the direction itself having stood still.
+    const beforeDir = apply(before, [1, 0, 0]);
+    const after = orientationForBody('test-untextured-spinner', CONST_J2000 + 0.5);
+    const afterDir = apply(after, [1, 0, 0]);
+    const moved = Math.hypot(
+      afterDir[0] - beforeDir[0],
+      afterDir[1] - beforeDir[1],
+      afterDir[2] - beforeDir[2],
+    );
+    expect(moved).toBeGreaterThan(0.5);
   });
 });

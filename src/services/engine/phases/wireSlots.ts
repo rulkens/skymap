@@ -90,16 +90,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb } = deps;
 
-  // Fail-fast precondition: both disk renderers must be non-null before any
-  // slot construction touches EngineState.  The same check is repeated inside
-  // `wireImpostorSubsystems` co-located with the reads it guards — the
-  // redundancy is intentional and cheap.
-  if (state.gpu.texturedDiskRenderer === null || state.gpu.proceduralDiskRenderer === null) {
-    throw new Error(
-      'wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
-    );
-  }
-
   // Build every non-external slot from the wiring registry, then install them
   // in one mutation pass.  Point + body-texture slots are skipped here
   // (built: 'external' — minted below instead).
@@ -124,8 +114,15 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   // Build and wire the five impostor subsystems (galaxy atlas, textured
-  // disks, procedural disks, hi-res Famous texture + planner).
-  wireImpostorSubsystems(state, deps);
+  // disks, procedural disks, hi-res Famous texture + planner). Absent is
+  // legal: a composition that never runs `initGpu`'s disk renderers skips
+  // this cluster and `state.subsystems.texturedDisks` stays null.
+  const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
+  if (texturedDiskRenderer !== null && proceduralDiskRenderer !== null) {
+    wireImpostorSubsystems(state, deps.phaseLocals!.device, {
+      texturedDiskRenderer,
+    });
+  }
 
   // Earth's surface virtual texture. A subsystem, not a renderer — it owns
   // residency and streaming — so it's constructed here, not in `initGpu`.

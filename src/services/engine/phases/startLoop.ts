@@ -73,28 +73,12 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  * `frame` binding, fire the first render request.
  */
 export async function startLoop(state: EngineState, deps: BootstrapDeps): Promise<void> {
-  const phaseLocals = deps.phaseLocals!;
-  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  This
-  // explicit null-check turns the phase-ordering assumption into a typed
-  // runtime error if `initGpu` is ever skipped/reordered, failing loudly
-  // HERE at the construction site rather than deferring to a `ContentPass`
-  // silently no-op'ing on a null renderer five frames later.  None of these
-  // renderers are threaded through `RunFrameDeps` any more (every
-  // `ContentPass.draw` reads its renderer straight off `state.gpu.*` — see
-  // `passes/index.ts`), but the readiness guard itself is still worth
-  // failing fast on: independent of whether the value gets forwarded
-  // anywhere, "was GPU init actually finished before the loop starts?" is
-  // the invariant this phase exists to guarantee.
-  if (
-    state.gpu.milkyWayCloudRenderer === null ||
-    state.gpu.horizonShellRenderer === null ||
-    state.gpu.texturedDiskRenderer === null ||
-    state.gpu.proceduralDiskRenderer === null
-  ) {
-    throw new Error(
-      'startLoop: milkyWayCloud/horizonShell/texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
-    );
+  // `phaseLocals` is written only by `initGpu`; its absence here means
+  // `initGpu` was skipped or reordered ahead of this phase.
+  if (deps.phaseLocals === undefined) {
+    throw new Error('startLoop: initGpu must run before startLoop (phaseLocals is missing)');
   }
+  const phaseLocals = deps.phaseLocals;
 
   // ── Render loop ──────────────────────────────────────────────────────
 

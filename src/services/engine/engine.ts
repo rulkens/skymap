@@ -15,6 +15,7 @@ import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalo
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
+import type { EngineHomeConfig } from '../../@types/engine/EngineHomeConfig';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
@@ -87,7 +88,11 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
  * `engineStatusChanged` dispatches — including failures, so this never throws.
  */
 
-export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
+export function createEngine(
+  canvas: HTMLCanvasElement,
+  cb: EngineCallbacks,
+  home: EngineHomeConfig,
+): EngineHandle {
   // The scheduler needs an `onFrame` at construction time — here — but the real
   // frame body lives in `runFrame.ts` and only lands once `startLoop` runs. The
   // scheduler captures `frameRef` and calls through it, so assigning
@@ -380,6 +385,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
+    home,
     frameRef,
     detachControlsRef,
     handleRef,

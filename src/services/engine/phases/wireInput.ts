@@ -16,7 +16,6 @@ import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import { EARTH_REF } from '../../../data/selection/earthRef';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import {
@@ -36,10 +35,8 @@ import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuH
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
-  const { canvas } = deps;
+  const { canvas, home } = deps;
 
-  const renderer = state.gpu.galaxyPointRenderer;
-  if (!renderer) return;
   // `ctx.format` has no live source at this phase (no row here bakes a
   // swap-format pipeline); it throws rather than silently re-deriving a value
   // that could diverge from `initGpu`'s boot format.
@@ -90,16 +87,22 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     structures: state.data.structures,
   });
 
-  const fovYRad = DEFAULT_FOV_Y_RAD;
-  // The live wall-clock instant `startLoop`'s `goLive` re-anchors the sim clock
-  // to, NOT `deriveSimDays(state.time, …)` — that would run against the still-
-  // placeholder J2000 anchor at this phase and frame Earth where it isn't, giving
-  // a jump on the first follow frame.
+  // Boot straight into the composition's home pose. The live wall-clock instant
+  // `startLoop`'s `goLive` re-anchors the sim clock to, NOT
+  // `deriveSimDays(state.time, …)` — that would run against the still-placeholder
+  // J2000 anchor at this phase and frame the body where it isn't, giving a jump
+  // on the first follow frame.
   const simDays = unixMsToJulianDays(Date.now());
   // The committed orientation basis the boot pose encodes through, so first-paint
   // yaw/pitch round-trip under the same frame the render path decodes with.
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
-  const initialCam = computeInitialCamera({ fovYRad, simDays, frameBasis });
+  const bodyId = home.focus === null ? null : home.focus.ref.id;
+  const initialCam = computeInitialCamera({
+    bodyId,
+    fovYRad: DEFAULT_FOV_Y_RAD,
+    simDays,
+    frameBasis,
+  });
 
   state.booted = true;
 
@@ -137,16 +140,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // The guard is INTENT, not resolved refs: a galaxy/star id from `#focus=`
   // defers until its catalog pulse lands, so the resolved ref slot reads null
   // for the whole boot window this phase runs in. A ref-only guard would seed
-  // Earth over a deep link that is merely still resolving, and `resolveRef`
-  // would then clear the pending id along with it. Consequence accepted: a junk
-  // `#focus=zzz` parks forever and suppresses the Earth seed for that session.
+  // the home body over a deep link that is merely still resolving, and
+  // `resolveRef` would then clear the pending id along with it. Consequence
+  // accepted: a junk `#focus=zzz` parks forever and suppresses the seed for
+  // that session.
   const rootState = store.getState();
-  if (!selectHasSelectionIntent(rootState)) {
-    // Cinema seeds FOCUS only: `select` draws the selection ring, which earns its
-    // place by explaining the info card — and cinema mode hides that card, so the
-    // ring would just sit around Earth in every recorded frame.
-    if (!isCinemaMode()) store.dispatch(updateSelectionSelect(EARTH_REF));
-    store.dispatch(updateSelectionFocus(EARTH_REF));
+  if (home.focus !== null && !selectHasSelectionIntent(rootState)) {
+    // Cinema is an app mode gating what the composition asked for — the same
+    // class of override as the deep-link deference guard above — so it stays
+    // a phase-level gate rather than a composition knob.
+    if (home.seedSelection && !isCinemaMode()) {
+      store.dispatch(updateSelectionSelect(home.focus.ref));
+    }
+    store.dispatch(updateSelectionFocus(home.focus.ref));
   }
 
   // Callbacks are the semantic engine actions: `inputBindings` already converts

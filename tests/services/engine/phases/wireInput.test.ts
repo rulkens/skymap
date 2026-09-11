@@ -16,6 +16,7 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
+import { EARTH_HOME } from '../../../../src/data/selection/earthHome';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 
@@ -195,6 +196,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb,
+    home: EARTH_HOME,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },
@@ -221,6 +223,7 @@ describe('wireInput', () => {
     // that committed basis into the framing call (first-paint encodes through the
     // frame the render path decodes with).
     expect(computeInitialCameraSpy).toHaveBeenCalledWith({
+      bodyId: 'earth',
       fovYRad: (Math.PI / 180) * 60,
       simDays: expect.any(Number),
       frameBasis: ORIENTATION_FRAMES.ecliptic,
@@ -254,6 +257,31 @@ describe('wireInput', () => {
     expect(selectFocusRef(root)).toEqual(EARTH_REF);
   });
 
+  it('seeds focus but not select when the home config withholds the selection', async () => {
+    const state = makeState();
+    const deps = { ...makeDeps(), home: { ...EARTH_HOME, seedSelection: false } };
+
+    await wireInput(state, deps);
+
+    // Cinema behaviour: focus still tracks Earth so the camera has a home
+    // target, but no selection ring/InfoCard is seeded.
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toBeNull();
+    expect(selectFocusRef(root)).toEqual(EARTH_REF);
+  });
+
+  it('dispatches no selection at all for a composition with no home target', async () => {
+    const state = makeState();
+    const deps = { ...makeDeps(), home: { ...EARTH_HOME, focus: null } };
+
+    await wireInput(state, deps);
+
+    const root = deps.cb.store.getState();
+    expect(selectSelectedRef(root)).toBeNull();
+    expect(selectFocusRef(root)).toBeNull();
+    expect(computeInitialCameraSpy).toHaveBeenCalledWith(expect.objectContaining({ bodyId: null }));
+  });
+
   it('leaves an existing selection alone — a URL-hash focus restored before bootstrap wins', async () => {
     const state = makeState();
     const deps = makeDeps();
@@ -270,6 +298,20 @@ describe('wireInput', () => {
     const root = deps.cb.store.getState();
     expect(selectSelectedRef(root)).toEqual(jupiter);
     expect(selectFocusRef(root)).toEqual(jupiter);
+  });
+
+  it('wires the camera and the input bindings when galaxyPointRenderer is null', async () => {
+    // No renderer must never mean no input and no error.
+    const state = makeState();
+    state.gpu.galaxyPointRenderer = null;
+    const deps = makeDeps();
+    attachOrbitControlsSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    expect(state.booted).toBe(true);
+    expect(state.subsystems.inputBindings).not.toBeNull();
+    expect(attachOrbitControlsSpy).toHaveBeenCalled();
   });
 
   it('wires the recognizer’s emit sink to the aggregator and the render wake', async () => {

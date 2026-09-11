@@ -214,7 +214,7 @@ describe('shouldKeepTicking', () => {
   });
 
   it('a star LOD fade in flight → true even with everything else at rest', () => {
-    // The star-cut planner (prepareStarCut) reports a node mid-dissolve for this
+    // The star-cut planner (advanceStarFades) reports a node mid-dissolve for this
     // frame; the loop must keep ticking to finish the ramp even though the camera
     // is still, no thumbnails are loading, and nothing else animates. This is the
     // vote read here instead of the star pass firing its own requestRender.
