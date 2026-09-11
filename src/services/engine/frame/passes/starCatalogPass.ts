@@ -21,16 +21,16 @@
  *     LOD compression asymmetry (a stack of sub-knee aggregate quads now
  *     compresses like a concentrated bright leaf does).
  *
- * All three share ONE per-frame CPU pass — `prepareStarCut` — which runs the
- * octree walk, advances the LOD fades, and PARTITIONS each drawn node into the
- * leaf or aggregate stream by its `childMask` (0 ⇒ leaf). It is memoised on the
- * frame's `ctx` so whichever of the two consuming layers draws first triggers
- * the walk + fade advance exactly once, and the other reads the cache — the
- * walk is the pass's dominant CPU cost and the fade advance MUST tick once per
- * frame (a second dt-step would double-advance the ramps). All three layers
- * gate on the SAME `starCatalogVisible` projection, so the aggregate producer
- * and its upsample consumer can never disagree (the stale-offscreen trap the
- * volume liveness projection also guards against).
+ * All three share ONE per-frame CPU pass — `prepareStarCut` — which walks the
+ * octree and PARTITIONS each drawn node into the leaf or aggregate stream by
+ * its `childMask` (0 ⇒ leaf), reading each node's CURRENT LOD-fade opacity.
+ * runFrame advances those fades separately, once per frame, via
+ * `advanceStarFades` (see its own doc); `prepareStarCut` itself never mutates
+ * a ramp, so whichever of the two consuming layers calls it first just walks
+ * read-only and the other reads the memoised cache. All three layers gate on
+ * the SAME `starCatalogVisible` projection, so the aggregate producer and its
+ * upsample consumer can never disagree (the stale-offscreen trap the volume
+ * liveness projection also guards against).
  *
  * ### Why NEAR0 + the f64 rebase seam (same trap as `starPointsPass`)
  *
@@ -82,7 +82,7 @@
  * on why linear conserves flux). A mid-ramp frame must keep the loop ticking so
  * the dissolve finishes; `computeStarCut` surfaces that as the `anyNodeFading`
  * flag on its result rather than firing a wake itself. runFrame runs
- * `prepareStarCut` as a per-frame planner and forwards the flag to
+ * `advanceStarFades` as a per-frame planner and forwards the flag to
  * `shouldKeepTicking` — the SINGLE authority on must-the-loop-tick. That is the
  * same gate-at-one-place discipline this pass already follows for the DRAW
  * decision via `starCatalogVisible`: the vote is computed here, decided there.
@@ -471,10 +471,11 @@ export function starCatalogVisible(state: EngineState, ctx: ReadyFrameContext): 
  *
  * ── Reused across frames, INVALIDATED by the next `computeStarCut` (non-reentrant) ─
  *
- * These arrays PERSIST per catalog (see `streamsByCatalog`) and are `reset` +
- * refilled each frame rather than reallocated. So a `PreparedStarCut` is a VIEW
- * over them, invalidated by the next `computeStarCut` call — the same contract
- * `walkStarOctreeCut`'s snapshot already carries. It is safe because the leaf and
+ * These arrays PERSIST per (catalog, viewSlot) (see `streamsByCatalog`) and are
+ * `reset` + refilled each frame rather than reallocated. So a `PreparedStarCut`
+ * is a VIEW over them, invalidated by the next `computeStarCut` call FOR THAT
+ * SAME viewSlot — the same contract `walkStarOctreeCut`'s snapshot already
+ * carries. It is safe because the leaf and
  * aggregate layers both consume within the SAME frame's `ctx` (memoised, so the
  * walk runs once and both read one cached result before the next frame recomputes),
  * and the pick path recomputes on its own fresh `ctx` AFTER the visual frame drew.
@@ -618,55 +619,87 @@ function pushStreamNode(
 }
 
 /**
- * The two draw streams (leaf + aggregate) PERSIST per catalog across frames and
- * are reset+refilled each frame — never freshly allocated. Keyed by the CATALOG
- * object exactly like `fadeStateByCatalog`, for the same two free properties: a
- * replaced catalog (tier swap) is a new object, so it starts with fresh streams
- * and the old pair is GC'd with the WeakMap; and per-catalog IS per-source since
- * the renderer holds one catalog per source. The pair is what makes a
- * `PreparedStarCut` a reused view — see `StarNodeStream`'s non-reentrancy note.
+ * The two draw streams (leaf + aggregate) PERSIST per (catalog, viewSlot) pair
+ * across frames and are reset+refilled each frame — never freshly allocated.
+ * Keyed by viewSlot as well as the CATALOG object because up to seven distinct
+ * `ctx`s walk one catalog per real frame (the main view plus six sky-cubemap
+ * capture faces, the faces running before the main view's own draw — see the
+ * module header); a catalog-only key would have a capture face's walk
+ * reset+refill the same arrays the main view's already-prepared cut still
+ * references. A replaced catalog (tier swap) is a new object, so it starts
+ * fresh and the old map is GC'd with the WeakMap.
  */
 type CatalogStreams = { leaf: StarNodeStream; aggregate: StarNodeStream };
-const streamsByCatalog = new WeakMap<StarCatalog, CatalogStreams>();
+const streamsByCatalog = new WeakMap<StarCatalog, Map<number, CatalogStreams>>();
 
-function streamsFor(catalog: StarCatalog): CatalogStreams {
-  let streams = streamsByCatalog.get(catalog);
+function streamsFor(catalog: StarCatalog, viewSlot: number): CatalogStreams {
+  let byViewSlot = streamsByCatalog.get(catalog);
+  if (byViewSlot === undefined) {
+    byViewSlot = new Map();
+    streamsByCatalog.set(catalog, byViewSlot);
+  }
+  let streams = byViewSlot.get(viewSlot);
   if (streams === undefined) {
     streams = { leaf: createStream(1024), aggregate: createStream(1024) };
-    streamsByCatalog.set(catalog, streams);
+    byViewSlot.set(viewSlot, streams);
   }
   return streams;
 }
 
 /**
- * Per-frame memo: `prepareStarCut` runs the walk + fade advance exactly once
- * per frame even though both the aggregate and leaf layers call it. Keyed on
- * the frame's `ctx` object — `deriveFrameContext` mints a fresh one each frame —
- * so a new frame recomputes and the previous entry is GC'd with its `ctx`. The
- * fade advance mutating `fadeStateByCatalog` is what makes the once-per-frame
- * guarantee load-bearing: a second dt-step would double-advance the ramps.
+ * Per-frame memo, shared by `prepareStarCut` and `advanceStarFades`: whichever
+ * runs first for a `ctx` object caches the result, so a repeat call for that
+ * SAME ctx never re-walks. `deriveFrameContext` mints a fresh `ctx` each real
+ * frame, so the previous entry is GC'd with it. `advanceStarFades` is the ONLY
+ * writer of `fadeStateByCatalog`; the memo is what stops a second call for the
+ * same ctx from double-advancing the ramps.
  */
 const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
 
 /**
- * Walk every loaded catalog's octree, advance its per-node LOD fades, and
- * PARTITION the resulting cut into a leaf stream (childless real-star nodes)
- * and an aggregate stream (interior flux-mip nodes) by `childMask`. Returns the
- * per-source streams plus the shared shader scalars and the `anyNodeFading`
- * wake vote, or `null` when the star pass is not live (no renderer, master
- * off). Memoised on `ctx` (see `preparedByCtx`); the fade advance runs on the
- * first call for a frame only. The wake vote is DATA on the result — runFrame
- * forwards it to `shouldKeepTicking`, the single authority (see module header).
+ * Walk every loaded catalog's octree and PARTITION the resulting cut into a
+ * leaf stream (childless real-star nodes) and an aggregate stream (interior
+ * flux-mip nodes) by `childMask`, reading each node's CURRENT LOD-fade opacity
+ * — pure over the fade state, it never advances a ramp (see `advanceStarFades`,
+ * the one function that does). `null` when the star pass is not live (no
+ * renderer, master off). Memoised on `ctx` (see `preparedByCtx`): the frame's
+ * main-view `ctx` normally hits the entry `advanceStarFades` already populated,
+ * so this only walks fresh for a DIFFERENT ctx — a sky-cubemap capture face or
+ * the pick path's post-frame ctx.
  */
 export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
   if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
 
-  const result = computeStarCut(state, ctx);
+  const result = computeStarCut(state, ctx, false);
   preparedByCtx.set(ctx, result);
   return result;
 }
 
-function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
+/**
+ * Advance every loaded catalog's per-node LOD fade by one frame step (see
+ * `NODE_FADE_MS`) for the main view's `ctx`, and cache the resulting cut under
+ * it. Called exactly once per real frame by runFrame, BEFORE any layer calls
+ * `prepareStarCut` — that ordering plus the shared `preparedByCtx` memo is what
+ * makes "advance runs once" hold without a viewSlot or ctx-identity special
+ * case at the call sites. Returns the same shape as `prepareStarCut` (its
+ * `anyNodeFading` is the frame's keep-ticking wake vote).
+ */
+export function advanceStarFades(
+  state: EngineState,
+  ctx: ReadyFrameContext,
+): PreparedStarCut | null {
+  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
+
+  const result = computeStarCut(state, ctx, true);
+  preparedByCtx.set(ctx, result);
+  return result;
+}
+
+function computeStarCut(
+  state: EngineState,
+  ctx: ReadyFrameContext,
+  advanceFades: boolean,
+): PreparedStarCut | null {
   const renderer = state.gpu.starCatalogRenderer;
   if (renderer === null) return null;
   if (!state.settings.starCatalogs.enabled) return null;
@@ -740,7 +773,7 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     // Reuse this catalog's persistent stream pair (reset, then refilled) rather
     // than allocating fresh arrays — the allocation fix. Both streams coexist for
     // the whole frame (leaf into HDR, aggregate into the half-res offscreen).
-    const { leaf, aggregate } = streamsFor(catalog);
+    const { leaf, aggregate } = streamsFor(catalog, ctx.viewSlot);
     resetStream(leaf);
     resetStream(aggregate);
 
@@ -798,8 +831,24 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
       continue;
     }
 
-    // ── Advance this catalog's per-node LOD fades ──────────────────────────
     const fadeState = fadeStateFor(catalog);
+
+    if (!advanceFades) {
+      // Read-only partition: emit each cut node at whatever opacity the
+      // frame's ONE `advanceStarFades` call left it at (0 for a node it has
+      // never seen — a NEWCOMER only becomes visible once that call reaches
+      // it). No mutation here, so the pick path's fresh post-frame ctx can
+      // recompute the cut without perturbing the ramps.
+      const { opacity } = fadeState;
+      for (let i = 0; i < cut.count; i++) {
+        const idx = cut.nodeIndex[i]!;
+        emitNode(idx, opacity[idx]!);
+      }
+      sources.push({ source, leaf, aggregate });
+      continue;
+    }
+
+    // ── Advance this catalog's per-node LOD fades ──────────────────────────
     const dtMs =
       fadeState.clockMs === null
         ? Number.POSITIVE_INFINITY
@@ -964,15 +1013,15 @@ export const starCatalogPass: ContentPass = {
   // the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
   // (`preparedByCtx`) MISSES and recomputes the leaf cut here — a second octree
   // walk, but against that same last-rendered camera, so the pick lands exactly
-  // where the sprite drew. The alternative — threading the visual frame's cached
-  // cut into the pick path — would braid pick into frame ordering (the pick pass
-  // could only run if a visual frame had cached first); recomputing keeps the
-  // pick a pure function of the last-rendered pose. The cost is one extra
-  // traversal on a PICKED frame, which is acceptable because picks are
-  // event-driven, not per-frame. The recompute also re-advances the per-node LOD
-  // fades, but that stays monotonic — the fade `clockMs` clamps `dt ≥ 0`, so the
-  // second walk can only nudge a ramp forward, never rewind it. Aggregates and
-  // opacity-0 leaves are filtered out by `starPickLeafDraws` (leaf-only,
+  // where the sprite drew, reading each node's CURRENT LOD-fade opacity
+  // read-only (`prepareStarCut` never advances a ramp — see `advanceStarFades`).
+  // The alternative — threading the visual frame's cached cut into the pick
+  // path — would braid pick into frame ordering (the pick pass could only run
+  // if a visual frame had cached first); recomputing keeps the pick a pure
+  // function of the last-rendered pose. The cost is one extra traversal on a
+  // PICKED frame, which is acceptable because picks are event-driven, not
+  // per-frame. Aggregates and opacity-0 leaves are filtered out by
+  // `starPickLeafDraws` (leaf-only,
   // visible-only): an aggregate glow names no single star, and an invisible
   // newcomer / fully-faded leaf must not claim the cursor.
   //
