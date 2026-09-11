@@ -11,8 +11,11 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
+import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
+import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
 import type { CameraState } from '../../@types/camera/CameraState';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
@@ -35,6 +38,7 @@ const initialState: CameraState = {
   dragging: false,
   clip: null,
   frameTween: null,
+  tuning: DEFAULT_CAMERA_TUNING,
 };
 
 const cameraSlice = createSlice({
@@ -95,6 +99,12 @@ const cameraSlice = createSlice({
     setAutoRotate: (camera, action: PayloadAction<{ active: boolean; rate: number }>) => {
       camera.autoRotate = action.payload;
     },
+
+    // A WHOLE new record, never a leaf write: the panel's sliders read it back
+    // through a selector, and an in-place edit leaves that render stale.
+    setCameraTuning: (camera, action: PayloadAction<Partial<CameraTuning>>) => {
+      camera.tuning = clampCameraTuning(action.payload, camera.tuning);
+    },
   },
 });
 
@@ -105,6 +115,7 @@ export const {
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,
+  setCameraTuning,
   clipStarted,
   clipEnded,
   startFrameTween,

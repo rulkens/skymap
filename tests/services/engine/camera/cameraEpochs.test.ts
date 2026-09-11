@@ -12,6 +12,7 @@ import {
   advanceEpochs,
   elapsedMs,
 } from '../../../../src/services/engine/camera/cameraEpochs';
+import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 import type { Epoch } from '../../../../src/@types/engine/camera/Epoch';
 import type { CameraState } from '../../../../src/@types/camera/CameraState';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
@@ -73,6 +74,7 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     dragging: false,
     clip: null,
     frameTween: null,
+    tuning: DEFAULT_CAMERA_TUNING,
     ...overrides,
   };
 }

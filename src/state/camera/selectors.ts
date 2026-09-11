@@ -7,6 +7,7 @@
 import { cameraRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
 const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
@@ -15,6 +16,9 @@ const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute]
 // `resolveWorldArm` / `liveWorldPose` rather than assuming the absolute arm.
 export const selectCameraBase = (state: RootState): FramedCameraPose =>
   selectCameraIntent(state).base;
+
+export const selectCameraTuning = (state: RootState): CameraTuning =>
+  selectCameraIntent(state).tuning;
 
 export const selectAutoRotate = (state: RootState): boolean =>
   selectCameraIntent(state).autoRotate.active;
