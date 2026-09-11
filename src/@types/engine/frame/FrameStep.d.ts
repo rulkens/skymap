@@ -40,6 +40,7 @@
 
 import type { CompositeStep } from './CompositeStep';
 import type { CubeFace } from '../../rendering/CubeFace';
+import type { HdrPhase } from './HdrPhase';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
@@ -67,20 +68,17 @@ export type FrameStep =
        */
       face?: CubeFace;
       /**
-       * Splits the shared `(hdr, NEAR0)` roster step around the black-hole
-       * lens's own `(hdr, BODY[k])` step (Task 14b), so
-       * `orbit-trails`/`body-glints` draw AFTER the lens rather than being
-       * sampled by it. Absent ⇒ every layer matches, the pre-Task-14b
-       * behaviour. `'pre'` admits every `(hdr, NEAR0)` layer EXCEPT those
-       * opted into `ContentPass.hdrPostLensing`; `'post'` (emitted only
-       * when the lens step fires) admits ONLY those. Two steps sharing one
-       * `(target, slab)` would otherwise collide on one GPU-timing group
-       * slot — `slabs.ts`'s `matchesLensPhase` is the single predicate both
+       * Which layer phases this step admits — see `HdrPhase`. Carried by the
+       * steps of the split `(hdr, NEAR0)` roster and nothing else; absent ⇒
+       * phase plays no part in selecting this step's group. A layer without a
+       * phase counts as `'pre-lens'`. The sets partition the roster, so its
+       * steps draw disjoint groups despite sharing one `(target, slab)`:
+       * `slabs.ts`'s `matchesHdrPhase` is the single predicate both
        * `timedSlotRowsOf` and `executeFrame` read, and
-       * `renderStepTimingSlotName` gives the `'post'` step's group-total
-       * slot a distinct name so it can't collide with `'pre'`'s.
+       * `renderStepTimingSlotName` names each step's group-total timing slot
+       * from the set so they don't collide on one.
        */
-      lensPhase?: 'pre' | 'post';
+      hdrPhases?: readonly HdrPhase[];
     }
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };

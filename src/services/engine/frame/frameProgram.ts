@@ -70,7 +70,7 @@ import {
   groupKeyOf,
   isBodySlabIndex,
   passTimingSlotName,
-  matchesLensPhase,
+  matchesHdrPhase,
   renderStepTimingSlotName,
   slabName,
 } from './slabs';
@@ -142,11 +142,12 @@ export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_
  * placed after the `(hdr, NEAR0)` roster step so the lens's OVER blend
  * occludes the roster light already accumulated there. A non-empty list also
  * means the band is active, so the `(hdr, NEAR0)` roster step ABOVE this one
- * splits into `'pre'`/`'post'` halves around it:
- * `orbit-trails`/`body-glints` opt into the `'post'` half via
- * `ContentPass.hdrPostLensing`, so they draw AFTER the lens rather than
- * being sampled by it, while an inactive band leaves the roster as the one
- * untagged step it always was. See `slabs.ts`'s `matchesLensPhase`.
+ * splits into `'pre-lens'`/`'post-lens'` halves around it: `body-glints`
+ * opts into the `'post-lens'` half via `ContentPass.hdrPhase`, so it draws
+ * AFTER the lens rather than being sampled by it, while an inactive band
+ * emits one step admitting both halves. A third slice, `'post-foreground'`
+ * (`orbit-trails`), follows the body composite every frame. See `slabs.ts`'s
+ * `matchesHdrPhase`.
  */
 export function frameProgram(
   tone: ToneMap,
@@ -206,18 +207,24 @@ export function frameProgram(
   // still accumulating into HDR BEFORE the tone-map composite below — one
   // tone curve for stars and galaxies. The hdr target is already touched
   // by the COSMO step above, so this pass loads rather than clears.
-  // Outside the band this is one untagged step. Inside it, the roster
-  // splits around the lens's own (hdr, BODY[k]) step(s) below so
-  // `orbit-trails`/`body-glints` (ContentPass.hdrPostLensing) draw AFTER
-  // the lens instead of being sampled by it — see this function's doc.
+  // Outside the band one step absorbs both pre- and post-lens layers. Inside
+  // it, the roster splits around the lens's own (hdr, BODY[k]) step(s) below so
+  // `body-glints` (ContentPass.hdrPhase 'post-lens') draw AFTER the lens
+  // instead of being sampled by it — see this function's doc. The
+  // 'post-foreground' slice sits further down, after the body composite.
   if (sgrAStarLensingBodySlabs.length > 0) {
-    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'pre' });
+    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['pre-lens'] });
     for (const slab of sgrAStarLensingBodySlabs) {
       steps.push({ kind: 'render', target: 'hdr', slab });
     }
-    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, lensPhase: 'post' });
+    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['post-lens'] });
   } else {
-    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0 });
+    steps.push({
+      kind: 'render',
+      target: 'hdr',
+      slab: NEAR0,
+      hdrPhases: ['pre-lens', 'post-lens'],
+    });
   }
 
   // Near-field foreground bodies (zoom-to-earth fold). Rendered into their
@@ -245,6 +252,12 @@ export function frameProgram(
     kind: 'composite',
     step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
   });
+  // The roster slice that draws OVER the opaque bodies (`orbit-trails`: a
+  // satellite's near arc passes in front of its host). Still HDR, still ahead
+  // of bloom and the one tone-map, so these layers ride the same curve as
+  // everything else in hdr. Emitted every frame; the executor opens no pass
+  // when nothing in the slice is enabled.
+  steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['post-foreground'] });
   // Screen-space bloom, gated on the master toggle. ONE step, not N render
   // steps: `runBloom` opens the pyramid's ten passes (bright prefilter
   // hdr → bloom0, a DESCENDING downsample chain bloom0 → bloom4, an ASCENDING
@@ -386,11 +399,11 @@ function timedSlotRowsOf(
       // Every layer matched by this step shares the step's `(target, slab)`, so
       // one groupKey covers the whole run. The key comes from the shared
       // `groupKeyOf` helper (slabs.ts) — the same definition the merged executor
-      // resolves against, so the two can't drift. Two render steps can now
-      // share one `(target, slab)` — the black-hole lens's `'pre'`/`'post'`
-      // roster split — but never share a LAYER (`matchesLensPhase`
-      // partitions the registry between them), so no per-layer dedup is
-      // needed; only the group-TOTAL row below needs the split disambiguated.
+      // resolves against, so the two can't drift. Several render steps can
+      // share one `(target, slab)` — the `(hdr, NEAR0)` roster's hdr-phase
+      // slices — but never share a LAYER (`matchesHdrPhase` partitions the
+      // registry between them), so no per-layer dedup is needed; only the
+      // group-TOTAL row below needs the slice disambiguated.
       const groupKey = groupKeyOf(step.target, step.slab);
       // A capture step selects its group by the `skyCapture` opt-in, not by
       // `target` — the same discriminant `executeFrame` applies, so the slots
@@ -409,11 +422,7 @@ function timedSlotRowsOf(
         const matchesTarget = isCaptureStep
           ? contentPass.skyCapture === true
           : contentPass.target === step.target;
-        if (
-          matchesTarget &&
-          matchesStep &&
-          matchesLensPhase(contentPass.hdrPostLensing, step.lensPhase)
-        ) {
+        if (matchesTarget && matchesStep && matchesHdrPhase(contentPass.hdrPhase, step.hdrPhases)) {
           // `passTimingSlotName` carries the body row and the capture face
           // into the slot NAME, so two body rows sharing one layer (Jupiter +
           // a moon, both drawn by `planetsPass`) — or one roster layer drawn
@@ -437,12 +446,12 @@ function timedSlotRowsOf(
       // for every ordinary render step (each has a distinct `(target, slab)`)
       // and never collides with a layer name — EXCEPT the sky-cubemap capture
       // steps (share `('sky-cubemap', NEAR0)` across all 6 faces) and the
-      // lens's `'pre'`/`'post'` roster split (share `('hdr', NEAR0)`);
-      // `renderStepTimingSlotName` appends the face or the `'post'` phase
-      // there so each still earns its own slot (see its doc, slabs.ts). The
-      // DebugPanel bucket still uses the shared `groupKey`, so all 6 capture
-      // faces — and both split halves — land under one title each.
-      rows.push({ name: renderStepTimingSlotName(groupKey, step.face, step.lensPhase), groupKey });
+      // `(hdr, NEAR0)` roster's hdr-phase slices; `renderStepTimingSlotName`
+      // appends the face, or a suffix derived from the admitted phases, so
+      // each still earns its own slot (see its doc, slabs.ts). The DebugPanel
+      // bucket still uses the shared `groupKey`, so all 6 capture faces — and
+      // every roster slice — land under one title each.
+      rows.push({ name: renderStepTimingSlotName(groupKey, step.face, step.hdrPhases), groupKey });
     } else if (step.kind === 'composite') {
       // A composite merges whole textures rather than projecting geometry — it
       // belongs to no slab, and all composites share the one infra group.

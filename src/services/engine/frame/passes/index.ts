@@ -44,8 +44,8 @@
  * `sgr-a-star-lensing` has its OWN `(hdr, BODY[k])` render step. Its
  * position below is registry-order documentation for items 10-15 — but for
  * orbit-trails/body-glints (17/17b) the ordering IS enforced, by
- * `ContentPass.hdrPostLensing` splitting the shared `(hdr, NEAR0)` step
- * around the lens step whenever the band is active; see
+ * `ContentPass.hdrPhase` slicing the shared `(hdr, NEAR0)` step around the
+ * lens step (and, for orbit-trails, around the body composite); see
  * `frameProgram.ts`:
  *
  *  10. milky-way           — star/dust point cloud at the galactic centre
@@ -85,10 +85,10 @@
  *                            Moon, and the 39 bound S-stars orbiting Sgr A*
  *                            itself) as screen-space conics with a brightness
  *                            lobe at the body's position (f64 compose seam);
- *                            opts into the lens's `'post'` split half
- *                            (`hdrPostLensing`) so it draws unwarped over the
- *                            lens pass whenever the band is active, per spec
- *                            "Draw order"
+ *                            draws in the `'post-foreground'` hdr slice
+ *                            (`hdrPhase`) — over the opaque bodies, and so
+ *                            also unwarped over the lens pass whenever the
+ *                            band is active, per spec "Draw order"
  *  17b. body-glints        — the sub-pixel bodies (the glints branch of the body
  *                            partition) as brightness-scaled additive points
  *                            (size x albedo x phase, cross-fading with the mesh
@@ -346,12 +346,11 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   // below (so those stay unwarped on top, spec "Draw order", Q5). Registry
   // order alone can't enforce this against `orbit-trails`/`body-glints` — they
   // share this SAME (hdr, NEAR0) render step with the roster above. The real
-  // enforcement is `ContentPass.hdrPostLensing`: those
-  // two opt in, so `frameProgram` splits the shared step into `'pre'`/`'post'`
-  // halves around this row's own `(hdr, BODY[k])` step whenever the band is
-  // active (see its module header); this array position stays the
-  // documentation of the intent, registry order deciding each half's internal
-  // ordering.
+  // enforcement is `ContentPass.hdrPhase`: those two opt into later slices,
+  // so `frameProgram` splits the shared step around this row's own
+  // `(hdr, BODY[k])` step whenever the band is active (see its module
+  // header); this array position stays the documentation of the intent,
+  // registry order deciding each slice's internal ordering.
   sgrAStarLensingPass,
   orbitTrailsPass,
   // The sub-pixel bodies (the glints branch of the body partition) as

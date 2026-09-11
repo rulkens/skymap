@@ -6,15 +6,40 @@
 // Kepler, f32 safety, discard-vs-zero) live in
 // docs/references/orbit-trail-fragment-math.md.
 
+import package::bodies::orbitTrail::constants::MAX_OCCLUDERS;
 import package::bodies::orbitTrail::constants::STROKE_PX;
 import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::TAU;
+
+// The frame's opaque bodies as eye-relative spheres (centre.xyz, radius.w, km),
+// 'count' live entries — orbitTrailRenderer.ts mirrors this layout, pinned by
+// orbitTrailConstants.parity.test.ts.
+struct OcclusionUniforms {
+  count: u32,
+  pad0: u32,
+  pad1: u32,
+  pad2: u32,
+  spheres: array<vec4<f32>, MAX_OCCLUDERS>,
+};
+
+@group(0) @binding(0) var<uniform> occ: OcclusionUniforms;
 
 // TRAIL_FLOOR keeps the far arc legible instead of fading to black.
 const TRAIL_DECAY: f32 = 1.2;
 const TRAIL_FLOOR: f32 = 0.3;
 // Newton-consistency tolerance for the horizon rejection below.
 const REFINE_TOL: f32 = 0.25;
+
+// Visibility of the eye->x SEGMENT (eye at the origin) past one sphere
+// (centre.xyz, radius.w, km): 0 inside it, 1 clear of it, one-pixel limb ramp.
+// The [0,1] clamp is what keeps a near arc visible (doc: why occlusion is a segment test).
+fn sphereClearance(x: vec3<f32>, sphere: vec4<f32>) -> f32 {
+  let c = sphere.xyz;
+  let along = clamp(dot(c, x) / max(dot(x, x), 1e-30), 0.0, 1.0);
+  let gap = length(along * x - c) - sphere.w;
+  let aa = max(fwidth(gap), 1e-6);
+  return smoothstep(-aa, aa, gap);
+}
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
@@ -56,6 +81,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   let stroke = 1.0 - smoothstep(0.0, STROKE_PX, dist);
 
+  // The orbit point behind this fragment, eye-relative: hidden where a resolved
+  // body sits on the segment back to the eye, so a body's own trail stops at its limb.
+  let x = in.occCentre + (u.x / z) * in.occMajor + (u.y / z) * in.occMinor;
+  var clear = 1.0;
+  for (var i = 0u; i < occ.count; i++) {
+    clear *= sphereClearance(x, occ.spheres[i]);
+  }
+  if (clear <= 0.0) {
+    discard;
+  }
+
   // Forward Kepler M = E - e*sin(E): closed-form, no GPU root-find (doc: why forward Kepler).
   let m = ecc - in.eccentricity * sin(ecc);
   let raw = in.meanAnomaly - m;
@@ -63,7 +99,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let brightness = TRAIL_FLOOR + (1.0 - TRAIL_FLOOR) * exp(-TRAIL_DECAY * delta);
 
   // 'in.alpha': per-orbit apparent-size fade, ramping to 0 as the orbit nears the cull threshold.
-  return vec4<f32>(in.color * brightness * stroke * in.alpha, 1.0);
+  return vec4<f32>(in.color * brightness * stroke * clear * in.alpha, 1.0);
 }
 
 // Debug lens (debug.overlays['orbit-trail-impostor']): fills the impostor with the orbit's own colour, ignoring fade alpha so a faded-but-drawn orbit still shows its hull.
