@@ -2,7 +2,8 @@
  * Covers the decisions that live only in the orchestrator, each of which fails
  * silently: the bare `<id>.jpg` resolved against the harvest directory before
  * `writeColmapModel` copies it (assert on the staged `images/`, not the poses);
- * a stale `final.ply` cleared; sub-floor splats pruned; `--reuse-ply` neither
+ * a stale `final.ply` cleared; sub-floor and out-of-bounds splats pruned;
+ * `--reuse-ply` neither
  * training nor re-stamping; an empty export not shipped as a stub .bin.
  *
  * cct and brush-cli are stubbed and the bake runs against a tmpdir cwd, so
@@ -49,9 +50,10 @@ const PLY_PROPERTIES = [
   'f_dc_2',
 ];
 
-/** A Brush export at shDegree 0, one vertex per given z (metres) and every
- *  other property zero — the reader needs only the header to be honest. */
-function ply(zsM: readonly number[]): Uint8Array {
+/** A Brush export at shDegree 0, one vertex per given z (metres), with
+ *  optional index-matched x/y (default 0, 0 — the anchor, inside the crop) and
+ *  every other property zero — the reader needs only the header to be honest. */
+function ply(zsM: readonly number[], xyM: readonly (readonly [number, number])[] = []): Uint8Array {
   const header =
     'ply\nformat binary_little_endian 1.0\n' +
     `element vertex ${zsM.length}\n` +
@@ -62,7 +64,11 @@ function ply(zsM: readonly number[]): Uint8Array {
   bytes.set(headerBytes);
   const dv = new DataView(bytes.buffer);
   zsM.forEach((zM, i) => {
-    dv.setFloat32(headerBytes.length + i * stride + PLY_PROPERTIES.indexOf('z') * 4, zM, true);
+    const base = headerBytes.length + i * stride;
+    const [xM, yM] = xyM[i] ?? [0, 0];
+    dv.setFloat32(base + PLY_PROPERTIES.indexOf('x') * 4, xM, true);
+    dv.setFloat32(base + PLY_PROPERTIES.indexOf('y') * 4, yM, true);
+    dv.setFloat32(base + PLY_PROPERTIES.indexOf('z') * 4, zM, true);
   });
   return bytes;
 }
@@ -125,13 +131,15 @@ describe('bakeSplats', () => {
     expect(asset.provenance.sourceVintage).toBe('2025-04-27');
   });
 
-  it('prunes splats below the LiDAR floor and packs only the rest', async () => {
+  it('prunes splats below the LiDAR floor and outside the group bounds', async () => {
     const asset = await bakeSplats(SOENDERMARKEN, {
       runCct: RUN_CCT,
       runBrush: async (colmapDir) => {
         // The seed cloud's floor is 0 m: -40 is the sub-surface junk an
-        // airborne-only bake invents, -4 is inside the margin's slack.
-        writeFileSync(join(colmapDir, 'final.ply'), ply([12, -4, -40, -600]));
+        // airborne-only bake invents, -4 is inside the margin's slack. The
+        // first vertex clears the floor but sits 2 km east of the anchor, well
+        // past the group's ~1.25 km eastern edge.
+        writeFileSync(join(colmapDir, 'final.ply'), ply([3, 12, -4, -40, -600], [[2000, 0]]));
       },
       brushVersion: () => '0.1.0-test',
     });

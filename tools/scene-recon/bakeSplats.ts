@@ -25,6 +25,7 @@ import { writeColmapModel } from './splats/writeColmapModel';
 import { nextManifest } from './manifest/nextManifest';
 import { upsertGroup } from './manifest/upsertGroup';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { lonLatBoundsToEnuM } from '../utils/scene/lonLatBoundsToEnuM';
 import { writeJsonAtomic } from '../utils/io/writeJsonAtomic';
 import {
   LONG_EDGE_PX,
@@ -147,15 +148,37 @@ export async function bakeSplats(
   }
 
   const floorZM = (await lidarFloorZM(pointsBinPath)) - FLOOR_MARGIN_M;
-  const kept = splats.filter((splat) => splat.zM >= floorZM);
+  // Each frame sees ~1.4 × 1 km, so the trained model reaches far past the crop
+  // the LiDAR bake already applies (PDAL, same bounds) — without this the two
+  // assets disagree about where the scene ends.
+  const cropM = lonLatBoundsToEnuM(group.bounds, group.anchor.latDeg, group.anchor.lonDeg);
+  let belowFloor = 0;
+  let outsideCrop = 0;
+  const kept = splats.filter((splat) => {
+    if (splat.zM < floorZM) {
+      belowFloor++;
+      return false;
+    }
+    if (
+      splat.xM < cropM.minXM ||
+      splat.xM > cropM.maxXM ||
+      splat.yM < cropM.minYM ||
+      splat.yM > cropM.maxYM
+    ) {
+      outsideCrop++;
+      return false;
+    }
+    return true;
+  });
   process.stderr.write(
-    `bakeSplats: pruned ${(splats.length - kept.length).toLocaleString()} splat(s) below ` +
-      `${floorZM.toFixed(1)} m of ${splats.length.toLocaleString()}\n`,
+    `bakeSplats: pruned ${(splats.length - kept.length).toLocaleString()} of ` +
+      `${splats.length.toLocaleString()} splat(s) — ${belowFloor.toLocaleString()} below ` +
+      `${floorZM.toFixed(1)} m, ${outsideCrop.toLocaleString()} outside the group bounds\n`,
   );
   if (kept.length === 0) {
     throw new Error(
-      `bakeSplats: every splat sits below the ${floorZM.toFixed(1)} m floor — the export and ` +
-        'the LiDAR seed are in different frames.',
+      `bakeSplats: every splat sits below the ${floorZM.toFixed(1)} m floor or outside the ` +
+        'group bounds — the export and the LiDAR seed are in different frames.',
     );
   }
 

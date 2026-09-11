@@ -33,7 +33,8 @@ script or `/scene-workbench/` subpath.
    `cargo install --locked --git https://github.com/ArthurBrussee/brush brush-cli`
    (`--locked` is load-bearing: an unlocked build pulls a burn revision that
    panics in Brush's splat initialisation).
-   Splats below the LiDAR floor are pruned on the way into `splats.bin`:
+   Splats below the LiDAR floor, and those outside the group's `bounds` (the
+   same crop PDAL applies to the LiDAR), are pruned on the way into `splats.bin`:
    every frame is airborne, so training is free to park large ground-coloured
    Gaussians underground, where they are invisible from above and a wall of
    flat colour once the camera descends. Removing that layer is what stopped
