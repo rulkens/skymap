@@ -231,18 +231,25 @@ export type SurfaceGesture = {
 ```
 
 ```ts
-// src/data/camera/surfaceRegime.ts
-export const SURFACE_REGIME = {
-  /**
-   * h/R at which the body arm takes over. Q6 ruled ~1.7 R ≈ 11,000 km;
-   * ruling 19 (2026-09-09) superseded it to 0.2 R, and the user's re-tune of
-   * 2026-09-10 to 0.45 R ≈ 2,870 km over Earth — the Q6 band engaged too far
-   * out, ruling 19's too close in.
-   */
-  engageHR: 0.45,
-  /** h/R at which it hands back. 2× hysteresis, kept from Q6 (ruling 19). */
-  disengageHR: 0.9,
-} as const;
+// src/@types/camera/CameraTuning.d.ts — the band edges and feel toggles as ONE
+// value threaded into the camera math. Defaults live in
+// `src/data/camera/cameraTuning.ts`, the cross-edge invariants in
+// `clampCameraTuning`, and the live copy on the camera slice as
+// `camera.tuning`, written only by `setCameraTuning`.
+export type CameraTuning = {
+  /** h/R at which the body arm takes over. */
+  readonly engageHR: number;
+  /** h/R at which it hands back (hysteresis). */
+  readonly disengageHR: number;
+  /** h/R at or below which the reference up is the pure body ENU (full tilt). */
+  readonly tiltFullHR: number;
+  /** h/R at or above which it is the scene up (zero tilt). */
+  readonly tiltZeroHR: number;
+  /** 'log' because zoom is multiplicative: half weight at the geometric midpoint. */
+  readonly blendSpace: 'log' | 'lin';
+  /** Gates the heading+roll framing authority ONLY, never the tilt wall. */
+  readonly northUp: boolean;
+};
 ```
 
 **Ruling 19 (2026-09-09) superseded Q6's band edges** (~1.7 R / ~3.4 R →
@@ -251,19 +258,20 @@ the body arm too far out. **The user's re-tune of 2026-09-10 supersedes ruling
 19 in turn, to 0.45 R / 0.9 R**, again at 2× hysteresis. Every place below that
 cites "3.4 R", "1.71 R", or the Q6 figures is describing the band shape at the
 values in force at the time of writing; the live numbers are always
-`SURFACE_REGIME.engageHR` / `.disengageHR`, never restated. Ruling 19's engage
+`tuning.engageHR` / `.disengageHR`, never restated. Ruling 19's engage
 edge landed where the notch grid already put `bodyUpWeight` at 1 to rounding,
 measuring a Δtilt of 0.00042 rad across the abs→body flip at the default
 cadence (0.0134 on the Q6 edges); the 2026-09-10 edges have not been
 re-measured — `engageFlipPop` is the standing guard either way.
 
-**The orientation blend has its own band since 2026-09-10** (`TILT_BAND`,
-`fullHR` / `zeroHR`, session-tunable from the debug panel, capped at
-`disengageHR`): weight 1 at or below `fullHR`, 0 at or above `zeroHR`. It
-started at the regime's own edges and the same ruling re-tuned it to
-**0.06 R / 0.60 R** — so the flip no longer happens where the weight is 1, and
-the blend spends most of its band inside the body arm. Fixtures that need full
-weight key on `TILT_BAND.fullHR`; the arm flip stays on `SURFACE_REGIME`.
+**The orientation blend has its own band since 2026-09-10**
+(`tiltFullHR` / `tiltZeroHR` on the same record, tunable from the debug panel,
+capped at `disengageHR` by `clampCameraTuning`): weight 1 at or below
+`tiltFullHR`, 0 at or above `tiltZeroHR`. It started at the regime's own edges
+and the same ruling re-tuned it to **0.06 R / 0.60 R** — so the flip no longer
+happens where the weight is 1, and the blend spends most of its band inside the
+body arm. Fixtures that need full weight key on `tiltFullHR`; the arm flip stays
+on `engageHR` / `disengageHR`.
 
 No change to `BodyRelativePose`, `BodyPoseProvider`, `Slab`, `SlabFrame`, or
 any layer type. The seam type does not move.
@@ -456,9 +464,9 @@ altitude held to the bit while heading stayed live at full tilt).
 
 **The ceiling.** There is none. A tilt drag may raise the view to the horizon
 and past it at any altitude; the remembered tilt's one cap is the constant
-`TILT_BAND.maxRad = π` (Cesium's altitude-free `maximumPitch`), applied where
-`surfaceStep` writes the memory. One altitude ramp over tilt, not two (ruling
-10). On the **zoom** path `TILT_BAND.zeroHR ≤ SURFACE_REGIME.disengageHR` carries
+`MAX_REMEMBERED_TILT_RAD = π` (Cesium's altitude-free `maximumPitch`), applied
+where `surfaceStep` writes the memory. One altitude ramp over tilt, not two
+(ruling 10). On the **zoom** path `tiltZeroHR ≤ disengageHR` carries
 the invariant Q4 names — `tilt = 0` at the disengage boundary, so the outbound
 pose's forward axis points at the body centre and survives the world arm's pivot
 pin — because display tilt is `remembered × bodyUpWeight(h/R)` (ruling 12) and
@@ -636,8 +644,8 @@ Each is a requirement on the engaged arm, and each is one test:
   over a body with a **tilted pole** and a
   non-identity orientation (the FW-F reviewer's fixture shape; the
   quaternion-order landmine O §2.1 is what it catches).
-- `TILT_BAND.zeroHR <= SURFACE_REGIME.disengageHR`, asserted against the
-  records, not literals.
+- `tiltZeroHR <= disengageHR`, asserted as a `clampCameraTuning` invariant
+  against the tuning, not literals.
 - Grep: no module stores a regime flag; the arm tag is the only discriminant
   (§4). Grep: the amended one-seam test (§10).
 - A gesture in flight cannot change the arm.

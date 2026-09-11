@@ -115,7 +115,7 @@ describe('watchFlyToLonLatSaga', () => {
   });
 
   it('authors the body arm from outside the band too — the fold reconciles', async () => {
-    const altitudeM = 4 * R; // h/R = 4, an order above SURFACE_REGIME.disengageHR
+    const altitudeM = 4 * R; // h/R = 4, an order above the tuning's disengageHR
     commitOrbitAt(altitudeM);
 
     store.dispatch(flyToLonLat({ lonDeg: 10, latDeg: 20 }));

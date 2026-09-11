@@ -1,7 +1,7 @@
 /**
  * CameraBandBar — the regime band as one drawn object: a log-scale strip with
  * the four tunable edges as ticks and the camera's own h/R as a marker. Log,
- * because zoom is multiplicative — the same reason `ORIENT_TUNING.blendSpace`
+ * because zoom is multiplicative — the same reason `CameraTuning.blendSpace`
  * defaults there. The domain is pinned to the ticks (not to the marker) so the
  * edges hold still while the camera flies; a marker outside it clamps to the
  * end and points off-scale. Percent offsets, not SVG: text in a stretched

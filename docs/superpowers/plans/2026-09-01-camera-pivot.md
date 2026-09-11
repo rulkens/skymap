@@ -67,7 +67,7 @@ Binding on every task; do not restate them in commit messages.
 - `npm test` and `npm run typecheck` green **at the end of every task**. A task that
   cannot leave the suite green is mis-sized — stop and report.
 - **Behaviour outside the engage band is identical to `main`.** Anything a user can
-  observe above `SURFACE_REGIME.disengageHR` — framing, drag rates, wheel routing,
+  observe above the tuning's `disengageHR` — framing, drag rates, wheel routing,
   tour playback, boot pose — must not move. Phase 2 in particular is a mechanical
   migration: if a Phase 2 task changes a rendered pixel, it is wrong.
 - **No renderer diff.** No slab, layer, shader, tile-planner or `.wesl` file is
@@ -81,7 +81,7 @@ Binding on every task; do not restate them in commit messages.
   and cross-file contracts; link the spec instead of summarising it.
 - Tests per [`conventions/testing.md`](../conventions/testing.md). Specifically for
   this plan: **no** runtime tests of the new `.d.ts` shapes, **no** restatement of
-  `SURFACE_REGIME` values, and **no mirror tests** — every conversion/gesture
+  `CameraTuning` defaults, and **no mirror tests** — every conversion/gesture
   expectation is a hand-computed value, a round trip, or an independent invariant.
   The one permitted structural greps are the two the spec's acceptance criteria name
   (§11): no stored regime flag, and the amended one-seam importer list.
@@ -862,7 +862,7 @@ colour judgement**. Spec §11's list, verbatim:
    (smoothstepping the co-rotation rate over ~1 s).
 6. The same sequence over the Moon and over Mars: nothing in the path is Earth-typed.
 
-Feel constants are settled **here**, not before: `SURFACE_REGIME.tiltFullHR`, the
+Feel constants are settled **here**, not before: the tuning's `tiltFullHR`, the
 grazing-incidence threshold (Task 10), and the zoom step-magnitude clamp (Task 11).
 No published reference exists for any of them. Also flagged for this gate: **small
 bodies** — on a ~10 km moon the band engages at ~17 km altitude, which is correct but

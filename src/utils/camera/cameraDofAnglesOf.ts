@@ -4,10 +4,9 @@
  * drift from the mechanism: heading in the band-blended reference the engaged
  * settle converges against (its target is 0 — north), tilt against ruling 12's
  * `remembered × w(h/R)` mapping, roll against the band's ride target. Targets
- * are field properties and stay derived while `tuning.northUp` is off:
- * a target moving under a still pose is the reference-frame bug, visible only
- * if it is still on screen. ONE derivation home — the 4 Hz debug snapshot and
- * `runFrame`'s per-frame delta record both read THIS.
+ * are field properties and stay derived while `tuning.northUp` is off: a target
+ * moving under a still pose is the reference-frame bug. ONE derivation home —
+ * the 4 Hz debug snapshot and `runFrame`'s delta record both read THIS.
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';
