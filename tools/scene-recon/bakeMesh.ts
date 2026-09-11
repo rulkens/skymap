@@ -1,25 +1,27 @@
 #!/usr/bin/env node
 /**
- * bakeMesh — one scene group's textured MVS mesh (`--group <id>`): harvested
- * skråfoto frames + the LiDAR points3D seed → a known-pose COLMAP model →
- * triangulate/undistort → OpenMVS densify, mesh, [refine,] texture → a
- * re-packed `mesh.glb` + the manifest (spec §6.2). Each OpenMVS stage names
- * its output after its input's stem (`_dense`/`_mesh`/`_refine`/`_texture`,
- * confirmed against v2.4.0), so `--refine` shifts what the texture stage and
- * the re-pack read. The runners are injected so this runs with neither
- * toolchain installed; `main()` wires the real subprocesses.
+ * bakeMesh — one scene group's textured MVS mesh (`--group <id>`): the LiDAR
+ * cloud projected into the known poses *is* the sparse model, so COLMAP never
+ * matches a feature and only lays the workspace out for OpenMVS, which then
+ * densifies, meshes, [refines,] textures it into a re-packed `mesh.glb` + the
+ * manifest (spec §6.2). Both OpenMVS stages that write a file get an explicit
+ * `-o`: v2.4.0 names an output after its *input's* stem, so `--refine` would
+ * otherwise move the GLB the re-pack reads. The runners are injected so a
+ * re-pack runs with neither toolchain installed; `main()` wires the real ones.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { NodeIO } from '@gltf-transform/core';
 import sharp from 'sharp';
 
 import { sceneGroupFromArgv } from './groups/sceneGroupFromArgv';
 import { groupPhotoPoses } from './poses/groupPhotoPoses';
 import { spawnCct } from './poses/spawnCct';
+import { meshGlbGeometry } from './pack/meshGlbGeometry';
 import { packMeshGlb } from './pack/packMeshGlb';
 import { writeColmapModel } from './splats/writeColmapModel';
 import { assetArtifactUrl, groupAssetDir, groupManifestPath } from './manifest/geo3dLayout';
@@ -27,7 +29,6 @@ import { publishAsset } from './manifest/publishAsset';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { readStacItems } from '../utils/skraafoto/readStacItems';
 import { skraafotoHarvestDir } from '../utils/skraafoto/skraafotoHarvestDir';
-import { readMeshGlb } from '../scene-workbench/src/scene/readMeshGlb';
 import type { CctRunner } from './poses/topocentricPositionsM';
 import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { SkraafotoStacItem } from './@types/SkraafotoStacItem';
@@ -39,122 +40,91 @@ export type OpenMvsRunner = (tool: string, args: readonly string[]) => Promise<v
 
 /** Stable across re-runs, so a re-bake upserts the one asset. */
 const ASSET_ID = 'mesh';
-/** `bakeLidar.ts`'s asset id — its `points.bin` is this bake's points3D seed. */
+/** `bakeLidar.ts`'s asset id — its `points.bin` is this bake's sparse model. */
 const LIDAR_ASSET_ID = 'lidar';
 const POINT_SAMPLE_TARGET = 200_000;
 /** One number for the atlas ceiling: past it TextureMesh splits the mesh across
- *  materials (`readMeshGlb` refuses that), and the re-pack must not undo the cap. */
+ *  materials (`meshGlbGeometry` refuses that), and the re-pack must not undo the cap. */
 const MAX_TEXTURE_PX = 8192;
+
+const MESH_PLY = 'scene_dense_mesh.ply';
+const REFINED_PLY = 'scene_dense_mesh_refine.ply';
+const TEXTURED_GLB = 'scene_dense_texture.glb';
 
 type Stage = {
   readonly tool: string;
   readonly args: readonly string[];
-  readonly output?: string;
-  /** The tool opens `output` rather than creating it, so the loop has to
-   *  re-make the directory it just cleared (`point_triangulator` exits with
-   *  "`output_path` is not a directory" otherwise — on a first run too). */
-  readonly outputDirIsInput?: true;
+  readonly output: string;
 };
-
-const COLMAP_STAGES: readonly Stage[] = [
-  {
-    tool: 'colmap',
-    output: 'database.db',
-    args: [
-      'feature_extractor',
-      '--database_path',
-      'database.db',
-      '--image_path',
-      'sparse-in/images',
-      '--ImageReader.camera_model',
-      'PINHOLE',
-      '--ImageReader.single_camera_per_image',
-      '1',
-      '--FeatureExtraction.use_gpu',
-      '0',
-    ],
-  },
-  // No `output`: the matches land in the database the previous stage filled.
-  {
-    tool: 'colmap',
-    args: [
-      'exhaustive_matcher',
-      '--database_path',
-      'database.db',
-      '--FeatureMatching.use_gpu',
-      '0',
-    ],
-  },
-  {
-    tool: 'colmap',
-    output: 'sparse',
-    outputDirIsInput: true,
-    args: [
-      'point_triangulator',
-      '--database_path',
-      'database.db',
-      '--image_path',
-      'sparse-in/images',
-      '--input_path',
-      'sparse-in',
-      '--output_path',
-      'sparse',
-    ],
-  },
-  {
-    tool: 'colmap',
-    output: 'dense',
-    args: [
-      'image_undistorter',
-      '--image_path',
-      'sparse-in/images',
-      '--input_path',
-      'sparse',
-      '--output_path',
-      'dense',
-      '--output_type',
-      'COLMAP',
-    ],
-  },
-];
 
 /** The workdir every stage runs in, `bakeMesh`'s and `main()`'s runners alike. */
 export function meshWorkDir(group: SceneGroupDefinition): string {
   return join(skraafotoHarvestDir(rawDataPath('skraafoto.dir'), group), `mvs-${group.id}`);
 }
 
-function openMvsStages(options: { fullRes?: boolean; refine?: boolean }): {
-  readonly stages: readonly Stage[];
-  readonly texturedStem: string;
-} {
-  const stages: Stage[] = [
+function bakeStages(options: { fullRes?: boolean; refine?: boolean }): readonly Stage[] {
+  return [
+    {
+      tool: 'colmap',
+      output: 'dense',
+      args: [
+        'image_undistorter',
+        '--image_path',
+        'sparse-in/images',
+        '--input_path',
+        'sparse-in',
+        '--output_path',
+        'dense',
+        '--output_type',
+        'COLMAP',
+      ],
+    },
     {
       tool: 'InterfaceCOLMAP',
       output: 'scene.mvs',
-      args: ['-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'dense/images'],
+      // `--image-folder` is resolved against `-i`, so an absolute-looking
+      // `dense/images` here becomes `dense/dense/images`.
+      args: ['-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'images'],
     },
     {
       tool: 'DensifyPointCloud',
       output: 'scene_dense.mvs',
       args: ['scene.mvs', '--resolution-level', options.fullRes ? '0' : '1', '--number-views', '0'],
     },
-    { tool: 'ReconstructMesh', output: 'scene_dense_mesh.mvs', args: ['scene_dense.mvs'] },
+    { tool: 'ReconstructMesh', output: MESH_PLY, args: ['scene_dense.mvs'] },
+    ...(options.refine
+      ? [
+          {
+            tool: 'RefineMesh',
+            output: REFINED_PLY,
+            args: [
+              'scene_dense.mvs',
+              '--mesh-file',
+              MESH_PLY,
+              '--resolution-level',
+              '1',
+              '-o',
+              REFINED_PLY,
+            ],
+          },
+        ]
+      : []),
+    {
+      tool: 'TextureMesh',
+      output: TEXTURED_GLB,
+      args: [
+        'scene_dense.mvs',
+        '--mesh-file',
+        options.refine ? REFINED_PLY : MESH_PLY,
+        '--export-type',
+        'glb',
+        '--max-texture-size',
+        String(MAX_TEXTURE_PX),
+        '-o',
+        TEXTURED_GLB,
+      ],
+    },
   ];
-  let stem = 'scene_dense_mesh';
-  if (options.refine) {
-    stages.push({
-      tool: 'RefineMesh',
-      output: 'scene_dense_mesh_refine.mvs',
-      args: ['scene_dense_mesh.mvs', '--resolution-level', '1'],
-    });
-    stem = 'scene_dense_mesh_refine';
-  }
-  stages.push({
-    tool: 'TextureMesh',
-    output: `${stem}_texture.glb`,
-    args: [`${stem}.mvs`, '--export-type', 'glb', '--max-texture-size', String(MAX_TEXTURE_PX)],
-  });
-  return { stages, texturedStem: stem };
 }
 
 export async function bakeMesh(
@@ -180,14 +150,13 @@ export async function bakeMesh(
   if (!existsSync(pointsBinPath)) {
     throw new Error(
       `bakeMesh: no LiDAR seed at ${pointsBinPath} — run \`npm run bake-lidar\` first; ` +
-        "it is the COLMAP model's points3D initialisation.",
+        "it is the reconstruction's entire sparse model.",
     );
   }
 
   const workDir = meshWorkDir(group);
   const manifestPath = groupManifestPath(group.id);
-  const { stages, texturedStem } = openMvsStages(options);
-  const glbPath = join(workDir, `${texturedStem}_texture.glb`);
+  const glbPath = join(workDir, TEXTURED_GLB);
 
   let colmapVersion: string;
   let openMvsVersion: string;
@@ -219,8 +188,8 @@ export async function bakeMesh(
     items = harvest.items;
 
     // Cleared, not overwritten: a frame the group's bounds no longer see is
-    // dropped from the model but its staged JPEG would survive, and COLMAP
-    // reconstructs from the directory rather than from `images.txt`.
+    // dropped from the model but its staged JPEG would survive, and the
+    // undistorter reconstructs from the directory rather than from images.txt.
     const sparseIn = join(workDir, 'sparse-in');
     await rm(sparseIn, { recursive: true, force: true });
     await writeColmapModel({
@@ -228,33 +197,34 @@ export async function bakeMesh(
       pointsBinPath,
       pointSampleTarget: POINT_SAMPLE_TARGET,
       outDir: sparseIn,
+      observations: true,
     });
+    const converted = await transcodeStagedJpegs(join(sparseIn, 'images'));
+    if (converted > 0) {
+      process.stderr.write(`bakeMesh: re-encoded ${converted} non-sRGB frame(s) to sRGB\n`);
+    }
 
     process.stderr.write(
       `bakeMesh: reconstructing ${harvest.poses.length} frame(s) in ${workDir}…\n`,
     );
-    for (const stage of [...COLMAP_STAGES, ...stages]) {
+    for (const stage of bakeStages(options)) {
       // A stage that exits 0 without writing must fail the next stage's
       // missing-input check, never ship the previous run's file.
-      if (stage.output) {
-        await rm(join(workDir, stage.output), { recursive: true, force: true });
-        if (stage.outputDirIsInput) await mkdir(join(workDir, stage.output), { recursive: true });
-      }
+      await rm(join(workDir, stage.output), { recursive: true, force: true });
       if (stage.tool === 'colmap') await deps.runColmap(stage.args);
       else await deps.runOpenMvs(stage.tool, stage.args);
     }
   }
 
-  const exported = await readFile(glbPath).catch(() => {
+  if (!existsSync(glbPath)) {
     throw new Error(
       `bakeMesh: TextureMesh exited 0 but wrote no ${glbPath} — check its ` +
         '`--export-type` flag against the installed OpenMVS.',
     );
-  });
-  const geometry = await readMeshGlb(
-    // Node pools small Buffers, so slice out this file's own bytes first.
-    exported.buffer.slice(exported.byteOffset, exported.byteOffset + exported.byteLength),
-  );
+  }
+  // `NodeIO`, not the viewer's `readMeshGlb`: OpenMVS references its atlas as a
+  // sidecar URI beside the GLB, and only NodeIO resolves one.
+  const geometry = meshGlbGeometry(await new NodeIO().read(glbPath));
 
   const atlas = sharp(geometry.image.bytes);
   const { width = 0, height = 0 } = await atlas.metadata();
@@ -295,6 +265,28 @@ export async function bakeMesh(
   await publishAsset(group, asset);
 
   return asset;
+}
+
+/** The 2025 nadir frames are CMYK JPEGs (`gdal_translate` on a 4-band COG) and
+ *  OpenCV — so every OpenMVS stage — refuses them outright (spec §6.2). */
+async function transcodeStagedJpegs(imagesDir: string): Promise<number> {
+  const names = (await readdir(imagesDir)).filter((name) => name.endsWith('.jpg'));
+  let converted = 0;
+  for (const name of names) {
+    const path = join(imagesDir, name);
+    const { channels, space } = await sharp(path).metadata();
+    if (channels === 3 && space === 'srgb') continue;
+    // sharp cannot read and write the same file, hence the temp + rename.
+    const srgbPath = `${path}.srgb`;
+    await sharp(path)
+      .toColourspace('srgb')
+      .removeAlpha()
+      .jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
+      .toFile(srgbPath);
+    await rename(srgbPath, path);
+    converted++;
+  }
+  return converted;
 }
 
 /** The version already stamped on this group's mesh asset for `step`, if any. */

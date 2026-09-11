@@ -323,9 +323,9 @@ Errors keep their current messages (no harvest → the `fetch-skraafoto --group`
 
 **Files:**
 
-- Create: `tools/scene-recon/bakeMesh.ts`
-- Modify: `package.json` (`"bake-mesh": "tsx tools/scene-recon/bakeMesh.ts"`, beside `bake-splats`)
-- Test: `tests/tools/scene-recon/bakeMesh.test.ts`
+- Create: `tools/scene-recon/bakeMesh.ts`, `tools/scene-recon/pack/meshGlbGeometry.ts` (the reader half `readMeshGlb` and the bake share)
+- Modify: `package.json` (`"bake-mesh": "tsx tools/scene-recon/bakeMesh.ts"`, beside `bake-splats`), `tools/scene-recon/splats/writeColmapModel.ts` (opt-in `observations`), `tools/scene-workbench/src/scene/readMeshGlb.ts`
+- Test: `tests/tools/scene-recon/bakeMesh.test.ts`, `tests/tools/scene-recon/splats/writeColmapModel.test.ts`
 
 **Interfaces (spec §6.2, verbatim):**
 
@@ -353,21 +353,23 @@ export async function bakeMesh(
 Stages, in order, cwd-relative to `workDir = join(harvestDir, 'mvs-<group.id>')` (spec §5 layout, §6.2 steps — the argv lists are the contract):
 
 1. Preconditions: `points.bin` exists (`bakeSplats`'s message); both version probes.
-2. `groupPhotoPoses` → `writeColmapModel({ poses, pointsBinPath, pointSampleTarget: 200_000, outDir: 'sparse-in' })`.
-3. `runColmap` ×4: `['feature_extractor', '--database_path', 'database.db', '--image_path', 'sparse-in/images', '--ImageReader.camera_model', 'PINHOLE', '--ImageReader.single_camera_per_image', '1', '--FeatureExtraction.use_gpu', '0']`; `['exhaustive_matcher', '--database_path', 'database.db', '--FeatureMatching.use_gpu', '0']`; `['point_triangulator', '--database_path', 'database.db', '--image_path', 'sparse-in/images', '--input_path', 'sparse-in', '--output_path', 'sparse']`; `['image_undistorter', '--image_path', 'sparse-in/images', '--input_path', 'sparse', '--output_path', 'dense', '--output_type', 'COLMAP']`.
-4. `runOpenMvs`: `('InterfaceCOLMAP', ['-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'dense/images'])`; `('DensifyPointCloud', ['scene.mvs', '--resolution-level', fullRes ? '0' : '1', '--number-views', '0'])`; `('ReconstructMesh', ['scene_dense.mvs'])`; with `refine`: `('RefineMesh', ['scene_dense_mesh.mvs', '--resolution-level', '1'])`; `('TextureMesh', [refine ? 'scene_dense_mesh_refine.mvs' : 'scene_dense_mesh.mvs', '--export-type', 'glb', '--max-texture-size', '8192'])` → `scene_dense_mesh_texture.glb` (OpenMVS names outputs `<input stem>_texture.<ext>`; the implementer confirms the refine stem against the installed binary's `-h` and notes it in the header if it differs).
-5. Re-pack: `readMeshGlb` (refuses > 1 texture, hint carried through) → `sharp(image.bytes).jpeg({ quality: 90 }).toBuffer()` (resize to 8192 longest edge only if larger) → `packMeshGlb` → `groupAssetDir(group.id, 'mesh')/mesh.glb`. `--reuse-glb` starts here from the existing `scene_dense_mesh_texture.glb`, carrying the manifest's stored `colmap`/`openmvs` stamps forward (the `manifestBrushVersion` idiom, `bakeSplats.ts`).
-6. `publishAsset(group, asset)`: `id: 'mesh'`, label `${group.name} — skråfoto MVS mesh`, identity transform, provenance `{ source: 'nationalGeodataApi', sourceVintage: items[0].properties.datetime.slice(0,10), pipeline: [{ step: 'fetchSkraafoto', version: group.skraafoto.collection }, { step: 'colmap', version }, { step: 'openmvs', version }] }`, `triangleCount = indices.length / 3`, `artifactUrl = assetArtifactUrl(group.id, 'mesh', 'mesh.glb')`.
+2. `groupPhotoPoses` → `writeColmapModel({ poses, pointsBinPath, pointSampleTarget: 200_000, outDir: 'sparse-in', observations: true })` — the LiDAR cloud projected into every camera is the sparse model; COLMAP never matches (spec §10 #2).
+3. Staging transcode: every `sparse-in/images/*.jpg` that sharp reports as not 3-channel sRGB is re-encoded in place (q95, 4:4:4) — the 2025 nadir frames are CMYK JPEGs OpenCV refuses.
+4. `runColmap` ×1: `['image_undistorter', '--image_path', 'sparse-in/images', '--input_path', 'sparse-in', '--output_path', 'dense', '--output_type', 'COLMAP']`.
+5. `runOpenMvs`: `('InterfaceCOLMAP', ['-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'images'])`; `('DensifyPointCloud', ['scene.mvs', '--resolution-level', fullRes ? '0' : '1', '--number-views', '0'])`; `('ReconstructMesh', ['scene_dense.mvs'])` → `scene_dense_mesh.ply`; with `refine`: `('RefineMesh', ['scene_dense.mvs', '--mesh-file', 'scene_dense_mesh.ply', '--resolution-level', '1', '-o', 'scene_dense_mesh_refine.ply'])`; `('TextureMesh', ['scene_dense.mvs', '--mesh-file', refine ? 'scene_dense_mesh_refine.ply' : 'scene_dense_mesh.ply', '--export-type', 'glb', '--max-texture-size', '8192', '-o', 'scene_dense_texture.glb'])` → that GLB plus its sidecar `scene_dense_texture_0.png`. Both `-o` are pinned: v2.4.0 names an output after its _input's_ stem.
+6. Re-pack: `meshGlbGeometry` over a `NodeIO` document (only NodeIO resolves the sidecar URI; it refuses > 1 primitive/texture) → `sharp(image.bytes).jpeg({ quality: 90 }).toBuffer()` (resize to 8192 longest edge only if larger) → `packMeshGlb` → `groupAssetDir(group.id, 'mesh')/mesh.glb`. `--reuse-glb` starts here from the existing `scene_dense_texture.glb`, carrying the manifest's stored `colmap`/`openmvs` stamps forward (the `manifestBrushVersion` idiom, `bakeSplats.ts`).
+7. `publishAsset(group, asset)`: `id: 'mesh'`, label `${group.name} — skråfoto MVS mesh`, identity transform, provenance `{ source: 'nationalGeodataApi', sourceVintage: items[0].properties.datetime.slice(0,10), pipeline: [{ step: 'fetchSkraafoto', version: group.skraafoto.collection }, { step: 'colmap', version }, { step: 'openmvs', version }] }`, `triangleCount = indices.length / 3`, `artifactUrl = assetArtifactUrl(group.id, 'mesh', 'mesh.glb')`.
 
 Every stage `rm -f`s its own output before running (the `bakeSplats.ts` `rm(plyPath)` idiom). `main()` wires `spawnCct` (#685), a `spawn('colmap', args, { cwd: workDir })` runner, a `spawn(tool, args, { cwd: workDir })` runner with `PATH` untouched (the README says where OpenMVS installs), and the two version probes (`colmap -h` first line, `DensifyPointCloud -h` banner) with install hints quoting spec §6.1. Flags: `--group` via `sceneGroupFromArgv`, `--full-res`, `--refine`, `--reuse-glb`.
 
-- [ ] Test `bakeMesh runs the COLMAP and OpenMVS stages in order with the pinned flags` — stubbed runners recording `(tool, args)`; fake `runOpenMvs` writes a `packMeshGlb`-built GLB (with a real 1×1 PNG so `sharp` can encode it) as `scene_dense_mesh_texture.glb` when `tool === 'TextureMesh'`; assert the exact argv sequence above, level `1`, no `RefineMesh`.
+- [ ] Test `bakeMesh runs the COLMAP and OpenMVS stages in order with the pinned flags` — stubbed runners recording `(tool, args)`; fake `runOpenMvs` writes, under the `-o` it was given, a `packMeshGlb`-built GLB whose atlas is an **external** `scene_dense_texture_0.png` (so the re-pack's URI resolution is exercised); assert the exact argv sequence above, level `1`, no `RefineMesh`.
 - [ ] Test `--full-res selects resolution level 0` and `--refine inserts RefineMesh and textures its output` — same stubs, assert the two differing argv entries.
-- [ ] Test `--reuse-glb runs no runner and keeps the manifest's version stamps` — pre-seed the workdir GLB and a manifest with `openmvs: 'x.y.z'`; assert zero runner calls and the published pipeline still says `x.y.z`.
+- [ ] Test `re-encodes the staged CMYK frames and leaves the sRGB ones byte-identical` — one CMYK and one sRGB harvest JPEG built with `sharp`; assert the staged CMYK copy comes back 3-channel sRGB and the sRGB copy's bytes are untouched.
+- [ ] Test `--reuse-glb runs no runner and keeps the manifest's version stamps` — pre-seed the workdir GLB + sidecar and a manifest with `openmvs: 'x.y.z'`; assert zero runner calls and the published pipeline still says `x.y.z`.
 - [ ] Test `a two-texture OpenMVS export fails the bake naming --max-texture-size` — the fake writes a two-material GLB; assert rejection message.
 - [ ] Test `the published asset's triangleCount matches the exported geometry` — 12-triangle fake → `triangleCount === 12`, `artifactUrl === 'geo3d/groups/<id>/assets/mesh/mesh.glb'`, `mesh.glb` exists and `readMeshGlb` reads it back with `image.mimeType === 'image/jpeg'`.
 - [ ] Implement `bakeMesh.ts` + the script.
-- [ ] `npx vitest run tests/tools/scene-recon`; `npm run typecheck`; `npm run format`; commit as `feat(scene-recon): bakeMesh — COLMAP known-pose triangulation, OpenMVS, mesh.glb`.
+- [ ] `npx vitest run tests/tools/scene-recon`; `npm run typecheck`; `npm run format`; commit as `feat(scene-recon): bakeMesh — LiDAR-seeded sparse model, OpenMVS without COLMAP matching`.
 
 ### Task 10 (OPERATOR): toolchain record, first crop-group bake, visual check
 
@@ -375,7 +377,7 @@ Every stage `rm -f`s its own output before running (the `bakeSplats.ts` `rm(plyP
 
 - [ ] Confirm `colmap -h` and `DensifyPointCloud -h` run; record both versions and the exact build recipe (spec §6.1 plus whatever the build log needed — nanoflann, VCG clone, `opencv@4`, the `out/` build dir) in a "Reconstruction toolchain" section of `tools/scene-workbench/README.md`, with the PATH line.
 - [ ] Confirm #685's crop harvest is complete (`data/raw/skraafoto/skraafotos2025/soendermarken-crop/` — ~100 `.json`/`.jpg` pairs, the fetcher's own `ok/total` line) and the crop group's `points.bin` exists (`npm run bake-lidar -- --group soendermarken-crop` if not — minutes).
-- [ ] `npm run bake-mesh -- --group soendermarken-crop`. Record wall-clock per stage, `triangleCount`, texture size, and `mesh.glb` size in the README (spec §6.3's estimates are replaced by measurements). If COLMAP's matcher reports poor inlier counts, spec §10 #2's `sqlite3` intrinsics sync is the follow-up — report, don't improvise.
+- [ ] `npm run bake-mesh -- --group soendermarken-crop`. Record wall-clock per stage, `triangleCount`, texture size, and `mesh.glb` size in the README (spec §6.3's estimates are replaced by measurements). Nothing matches features any more, so a thin or holed mesh is a densify/seed question — report, don't improvise.
 - [ ] Open the workbench on a free port (never kill a running `:5600`), select `soendermarken-crop`. Named observable behaviours, attested by the user:
   - The mesh lands on the LiDAR cloud — same ground, same facades — not on its side (spec §10 #1; if rotated, apply the inverse in the re-pack, one commit, re-attest).
   - Textured, unlit: the atlas reads as the photos, no shading gradient.

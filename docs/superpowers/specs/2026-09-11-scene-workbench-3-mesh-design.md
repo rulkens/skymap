@@ -188,11 +188,9 @@ data/raw/skraafoto/<collection>[/<groupId>]/       harvest (plan 2 / #685)
   mvs-<groupId>/                                    gitignored bake workdir (3a)
     sparse-in/{cameras,images,points3D}.txt         writeColmapModel — poses injected
     sparse-in/images/<id>.jpg                       copied frames
-    database.db                                     COLMAP features + matches
-    sparse/{cameras,images,points3D}.bin            point_triangulator output
     dense/                                          image_undistorter workspace
-    scene.mvs  scene_dense.mvs  scene_dense_mesh.mvs [scene_dense_mesh_refine.mvs]
-    scene_dense_mesh_texture.glb                    OpenMVS's own export (PNG texture)
+    scene.mvs  scene_dense.mvs  scene_dense_mesh.ply [scene_dense_mesh_refine.ply]
+    scene_dense_texture.glb + scene_dense_texture_0.png   OpenMVS's own export
 
 public/data/geo3d/groups/<groupId>/assets/mesh/
   mesh.glb                                          the re-packed subset below
@@ -225,10 +223,9 @@ overflow silently splits it into several materials. `packMeshGlb`'s reader side
 `--max-texture-size` as the fix — the same one-material refusal PR #678's `buildMeshes`
 makes.
 
-**Open verification (§10 #1):** whether `SaveGLTF` writes scene coordinates raw or
-applies a Y-up conversion. The first real bake settles it (the mesh either lands on
-the LiDAR or lies on its side); if converted, `bakeMesh` applies the inverse rotation
-to the positions during the re-pack, and this table stays true.
+**Verified in the first bake (§10 #1):** `SaveGLTF` writes scene coordinates raw —
+the export's node matrix is identity and its bbox matched the LiDAR's, +Z up. No
+axis conversion in the re-pack; this table stays true.
 
 ## 6. Offline pipeline
 
@@ -291,34 +288,42 @@ CLI: `npm run bake-mesh -- [--group <id>] [--full-res] [--refine] [--reuse-glb]`
 1. **Preconditions** — the group's `points.bin` exists (`bakeSplats.ts:68-75`'s
    check, same message); the harvest has frames. Both version probes run before
    step 2 (a missing tool costs a second, not a frame copy).
-2. **Poses** — `groupPhotoPoses(group, { runCct })` (P4). `writeColmapModel({ poses,
-pointsBinPath, pointSampleTarget: 200_000, outDir: 'mvs-<id>/sparse-in' })` —
-   reused unchanged; `point_triangulator` clears the seed (§3).
-3. **COLMAP**, four `runColmap` calls in the workdir, poses never re-solved:
-   - `feature_extractor --database_path database.db --image_path sparse-in/images --ImageReader.camera_model PINHOLE --ImageReader.single_camera_per_image 1 --FeatureExtraction.use_gpu 0`
-   - `exhaustive_matcher --database_path database.db --FeatureMatching.use_gpu 0`
-     (~100 frames → ~5k pairs, minutes on CPU; `sequential`/`spatial` are premature)
-   - `point_triangulator --database_path database.db --image_path sparse-in/images --input_path sparse-in --output_path sparse`
-     (default `--clear_points 1`, `--refine_intrinsics 0`: poses and intrinsics are
-     the injected truth, only the sparse points are new)
-   - `image_undistorter --image_path sparse-in/images --input_path sparse --output_path dense --output_type COLMAP`
+2. **Sparse model** — `groupPhotoPoses(group, { runCct })` (P4), then
+   `writeColmapModel({ poses, pointsBinPath, pointSampleTarget: 200_000, outDir:
+'mvs-<id>/sparse-in', observations: true })`: the LiDAR cloud projected into every
+   camera **is** the sparse model, with POINTS2D + TRACKs so OpenMVS can pick
+   neighbour views and depth ranges. COLMAP never matches a feature — its
+   `Camera::HasBogusParams` check rejects our crops outright (§10 #2).
+3. **Staging transcode** — every `sparse-in/images/*.jpg` whose sharp metadata is not
+   3-channel sRGB is re-encoded in place (q95, 4:4:4). The 2025 nadir frames are CMYK
+   JPEGs (`gdal_translate` on a 4-band COG) and OpenCV refuses those outright.
+4. **COLMAP**, one `runColmap` call, as a format converter only:
+   - `image_undistorter --image_path sparse-in/images --input_path sparse-in --output_path dense --output_type COLMAP`
      (PINHOLE cameras → a no-op resample, but it lays out the workspace
-     `InterfaceCOLMAP` reads)
-4. **OpenMVS**, `runOpenMvs(tool, args)` per stage, cwd = workdir:
-   - `InterfaceCOLMAP -i dense -o scene.mvs --image-folder dense/images`
+     `InterfaceCOLMAP` reads, and it applies no bogus-params check)
+5. **OpenMVS**, `runOpenMvs(tool, args)` per stage, cwd = workdir:
+   - `InterfaceCOLMAP -i dense -o scene.mvs --image-folder images` (`--image-folder`
+     is joined onto `-i`, so `dense/images` would become `dense/dense/images`)
    - `DensifyPointCloud scene.mvs --resolution-level <1 | 0 with --full-res> --number-views 0`
    - `ReconstructMesh scene_dense.mvs` (defaults: `--decimate 1`,
-     `--remove-spurious 20`, `--smooth 2`) → `scene_dense_mesh.mvs`
-   - `RefineMesh scene_dense_mesh.mvs --resolution-level 1` **only with `--refine`**
-     → `scene_dense_mesh_refine.mvs` (the texture stage then reads this one)
-   - `TextureMesh <mesh>.mvs --export-type glb --max-texture-size 8192` →
-     `scene_dense_mesh_texture.glb`
-5. **Re-pack** — `readMeshGlb` (refuses > 1 primitive/texture) → `sharp` JPEG q90 on
-   the texture → `packMeshGlb` → `public/data/geo3d/groups/<id>/assets/mesh/mesh.glb`.
-   `--reuse-glb` starts here from the last `scene_dense_mesh_texture.glb`, carrying
-   the manifest's existing `colmap`/`openmvs` version stamps forward — exactly
+     `--remove-spurious 20`, `--smooth 2`) → `scene_dense_mesh.ply`
+   - `RefineMesh scene_dense.mvs --mesh-file scene_dense_mesh.ply --resolution-level 1
+-o scene_dense_mesh_refine.ply` **only with `--refine`** (the texture stage then
+     reads that mesh)
+   - `TextureMesh scene_dense.mvs --mesh-file <mesh>.ply --export-type glb
+--max-texture-size 8192 -o scene_dense_texture.glb` → that GLB **plus** a sidecar
+     `scene_dense_texture_0.png` it names by URI
+
+   Both `-o` are pinned because v2.4.0 names an output after its _input's_ stem, so
+   `--refine` would otherwise move the GLB the re-pack reads.
+
+6. **Re-pack** — `meshGlbGeometry` over a `NodeIO` document (the only IO that resolves
+   the sidecar URI; it refuses > 1 primitive/texture) → `sharp` JPEG q90 on the
+   texture → `packMeshGlb` → `public/data/geo3d/groups/<id>/assets/mesh/mesh.glb`.
+   `--reuse-glb` starts here from the last `scene_dense_texture.glb`, carrying the
+   manifest's existing `colmap`/`openmvs` version stamps forward — exactly
    `--reuse-ply`'s contract (`bakeSplats.ts:89-100`).
-6. **Publish** — `publishAsset(group, asset)` (P3); asset `id: 'mesh'`, label
+7. **Publish** — `publishAsset(group, asset)` (P3); asset `id: 'mesh'`, label
    `${group.name} — skråfoto MVS mesh`, `triangleCount` from the re-packed index
    count / 3, provenance per §4.
 
@@ -580,17 +585,18 @@ assets ready).
 `cy`, `W`, `H`, `d`); `bakePoses` writes `poses.json` with `imageUrl` rewritten to the
 copied path.
 
-## 10. Open questions
+## 10. Settled and open questions
 
-1. **OpenMVS GLB axis convention** (§5) — raw scene coordinates or Y-up converted;
-   settled by the first real bake landing on (or beside) the LiDAR.
-2. **Feature-matching intrinsics** — `feature_extractor` seeds `database.db` with a
-   default prior focal (1.25 × max dimension) while the injected cameras are ~10× that
-   (a 79.6 mm lens at 3.76 µm pixels, crop-scaled). `point_triangulator` uses the
-   input model's cameras, so triangulation is right regardless; only the matcher's
-   calibrated-model verification sees the wrong prior. If the first bake's inlier
-   counts are poor, the fix is a `sqlite3` `UPDATE cameras` step after extraction
-   (COLMAP FAQ's "copy the intrinsics to the database"), not a different pipeline.
+1. **OpenMVS GLB axis convention** (§5) — SETTLED: raw scene coordinates, identity
+   node matrix, +Z up. The re-pack converts nothing.
+2. **COLMAP cannot match our crops** — SETTLED, and it is why §6.2 has no matching
+   stages. `Camera::HasBogusParams` rejects any principal point outside `[0,w]×[0,h]`,
+   and a crop is a window of a much larger frame, so `cx, cy` land thousands of px
+   outside it (e.g. `-3000.8, -2938.1` on a 989×180 crop). `point_triangulator` then
+   skips every image and writes 0 points; no option disables the check. The poses
+   themselves are right — triangulating COLMAP's own verified matches by hand under
+   the model's convention gave 0.15 px median reprojection, 100 % in front — so the
+   LiDAR seed replaces the whole matching pipeline rather than working around it.
 3. **Time budget** (§6.3) — measured, then recorded in the README.
 4. **Eigen 5.0.1 against OpenMVS's Eigen ≥ 3.4 requirement** — resolved by the build
    log before 3a's first bake; recorded either way.

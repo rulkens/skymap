@@ -1,21 +1,22 @@
 /**
- * The argv lists are the contract: COLMAP 4.x renamed the option groups the
- * CPU-only flags live in, and every OpenMVS stage reads the stem the previous
- * one invented, so a single wrong string turns into a missing-input error an
- * hour into a bake — the stages are asserted verbatim, in order, against
+ * The argv lists are the contract: every OpenMVS stage names its output after
+ * its *input's* stem unless `-o` pins it, and `--image-folder` is resolved
+ * against `-i` — so a single wrong string turns into a missing-input error an
+ * hour into a bake. The stages are asserted verbatim, in order, against
  * stubbed runners (spec §6.2).
  *
  * The bake runs against a tmpdir cwd, so this file needs vitest's `forks` pool
  * (`process.chdir` is undefined under `threads`; `vitest.config.ts` sets no
  * `pool` and v4 defaults to forks).
  */
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { Document, WebIO } from '@gltf-transform/core';
+import sharp from 'sharp';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { bakeMesh } from '../../../tools/scene-recon/bakeMesh';
@@ -26,6 +27,9 @@ import { readMeshGlb } from '../../../tools/scene-workbench/src/scene/readMeshGl
 import type { SceneManifest } from '../../../tools/scene-workbench/@types/SceneManifest';
 
 const ITEM_ID = '2025_84_40_1_0049_00002495_100mm';
+/** A second harvested frame, staged as a CMYK JPEG: 19 of the real 2025 nadir
+ *  frames are, and OpenCV refuses those outright (spec §6.2). */
+const CMYK_ITEM_ID = '2025_84_40_1_0049_00002496_100mm';
 const FIXTURE = fileURLToPath(new URL(`../../fixtures/skraafoto/${ITEM_ID}.json`, import.meta.url));
 
 /** A real 1×1 PNG, because the re-pack hands the texture to sharp to encode. */
@@ -66,87 +70,73 @@ function boxGeometry(): Parameters<typeof packMeshGlb>[0] {
   };
 }
 
-/** SOI + a minimal SOF0 + EOI — `jpegSizePx` walks the header, never decodes. */
-function jpegStub(widthPx: number, heightPx: number): Uint8Array {
-  const sof = [
-    0x00,
-    0x11,
-    0x08,
-    heightPx >> 8,
-    heightPx & 0xff,
-    widthPx >> 8,
-    widthPx & 0xff,
-    0x03,
-    1,
-    0x11,
-    0,
-    2,
-    0x11,
-    1,
-    3,
-    0x11,
-    1,
-  ];
-  return new Uint8Array([0xff, 0xd8, 0xff, 0xc0, ...sof, 0xff, 0xd9]);
+/**
+ * OpenMVS's export shape: the atlas is a sidecar PNG the GLB names by URI, not
+ * an embedded bufferView. gltf-transform's writers always embed, so the
+ * container is patched by hand — one `{ uri }` image per texture.
+ */
+function withSidecarTextures(glb: Uint8Array, stem: string): [Uint8Array, string[]] {
+  const header = new DataView(glb.buffer, glb.byteOffset, glb.byteLength);
+  const jsonLength = header.getUint32(12, true);
+  const json = JSON.parse(new TextDecoder().decode(glb.subarray(20, 20 + jsonLength))) as {
+    images: unknown[];
+  };
+  const sidecars = json.images.map((_, i) => `${stem}_${i}.png`);
+  json.images = sidecars.map((uri) => ({ uri }));
+
+  const encoded = new TextEncoder().encode(JSON.stringify(json));
+  const padded = new Uint8Array(Math.ceil(encoded.length / 4) * 4).fill(0x20);
+  padded.set(encoded);
+
+  const rest = glb.subarray(20 + jsonLength); // the BIN chunk, unchanged
+  const out = new Uint8Array(20 + padded.length + rest.length);
+  out.set(glb.subarray(0, 20));
+  out.set(padded, 20);
+  out.set(rest, 20 + padded.length);
+  const view = new DataView(out.buffer);
+  view.setUint32(8, out.length, true);
+  view.setUint32(12, padded.length, true);
+  return [out, sidecars];
 }
 
 /** The whole-frame window for the fixture: 20544 × 14016 at the 1920 long edge. */
-const FRAME_PX = [1920, 1310] as const;
+const FRAME_PX = { width: 1920, height: 1310 } as const;
 
 const RUN_CCT = async (_pipeline: string, lines: readonly string[]) => lines.map(() => '0 0 0 inf');
 
-const COLMAP_ARGV = [
-  [
-    'feature_extractor',
-    '--database_path',
-    'database.db',
-    '--image_path',
-    'sparse-in/images',
-    '--ImageReader.camera_model',
-    'PINHOLE',
-    '--ImageReader.single_camera_per_image',
-    '1',
-    '--FeatureExtraction.use_gpu',
-    '0',
-  ],
-  ['exhaustive_matcher', '--database_path', 'database.db', '--FeatureMatching.use_gpu', '0'],
-  [
-    'point_triangulator',
-    '--database_path',
-    'database.db',
-    '--image_path',
-    'sparse-in/images',
-    '--input_path',
-    'sparse-in',
-    '--output_path',
-    'sparse',
-  ],
-  [
-    'image_undistorter',
-    '--image_path',
-    'sparse-in/images',
-    '--input_path',
-    'sparse',
-    '--output_path',
-    'dense',
-    '--output_type',
-    'COLMAP',
-  ],
-];
-
 let root: string;
 let previousCwd: string;
+let collectionDir: string;
 let workDir: string;
 let assetDir: string;
 
-beforeAll(() => {
+beforeAll(async () => {
   previousCwd = process.cwd();
   root = mkdtempSync(join(tmpdir(), 'bake-mesh-'));
 
-  const collectionDir = join(root, 'data/raw/skraafoto', SOENDERMARKEN.skraafoto.collection);
+  collectionDir = join(root, 'data/raw/skraafoto', SOENDERMARKEN.skraafoto.collection);
   mkdirSync(collectionDir, { recursive: true });
-  copyFileSync(FIXTURE, join(collectionDir, `${ITEM_ID}.json`));
-  writeFileSync(join(collectionDir, `${ITEM_ID}.jpg`), jpegStub(...FRAME_PX));
+  const item = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { id: string };
+  writeFileSync(join(collectionDir, `${ITEM_ID}.json`), JSON.stringify(item));
+  writeFileSync(
+    join(collectionDir, `${CMYK_ITEM_ID}.json`),
+    JSON.stringify({ ...item, id: CMYK_ITEM_ID }),
+  );
+  // Real JPEGs, not header stubs: the staging step reads every frame with sharp.
+  const canvas = { ...FRAME_PX, background: { r: 90, g: 120, b: 60, alpha: 1 } };
+  writeFileSync(
+    join(collectionDir, `${ITEM_ID}.jpg`),
+    await sharp({ create: { ...canvas, channels: 3 } })
+      .jpeg()
+      .toBuffer(),
+  );
+  writeFileSync(
+    join(collectionDir, `${CMYK_ITEM_ID}.jpg`),
+    await sharp({ create: { ...canvas, channels: 4 } })
+      .toColourspace('cmyk')
+      .jpeg()
+      .toBuffer(),
+  );
   workDir = join(collectionDir, `mvs-${SOENDERMARKEN.id}`);
   mkdirSync(workDir, { recursive: true });
 
@@ -172,35 +162,28 @@ let calls: string[][];
 
 beforeEach(() => {
   calls = [];
-  sparseDirWhenTriangulating = undefined;
   rmSync(join(root, 'public/data/geo3d/groups', SOENDERMARKEN.id, 'manifest.json'), {
     force: true,
   });
 });
 
 /** Stands in for OpenMVS: records the call and, at the texture stage, writes
- *  the GLB that stage would export beside its input. */
+ *  the GLB + sidecar atlas that stage would export under its pinned `-o`. */
 function fakeOpenMvs(glb: () => Promise<Uint8Array>) {
   return async (tool: string, args: readonly string[]): Promise<void> => {
     calls.push([tool, ...args]);
     if (tool !== 'TextureMesh') return;
-    const stem = args[0]!.replace(/\.mvs$/, '');
-    writeFileSync(join(workDir, `${stem}_texture.glb`), await glb());
+    const out = args[args.indexOf('-o') + 1]!;
+    const [bytes, sidecars] = withSidecarTextures(await glb(), out.replace(/\.glb$/, ''));
+    for (const sidecar of sidecars) writeFileSync(join(workDir, sidecar), PNG_1X1);
+    writeFileSync(join(workDir, out), bytes);
   };
 }
-
-/** `point_triangulator` opens `--output_path`, it does not create it. */
-let sparseDirWhenTriangulating: boolean | undefined;
 
 const DEPS = (glb: () => Promise<Uint8Array>) => ({
   runCct: RUN_CCT,
   runColmap: async (args: readonly string[]) => {
     calls.push(['colmap', ...args]);
-    if (args[0] === 'point_triangulator') {
-      sparseDirWhenTriangulating = statSync(join(workDir, 'sparse'), {
-        throwIfNoEntry: false,
-      })?.isDirectory();
-    }
   },
   runOpenMvs: fakeOpenMvs(glb),
   colmapVersion: () => 'COLMAP 4.2.0 (test)',
@@ -209,18 +192,41 @@ const DEPS = (glb: () => Promise<Uint8Array>) => ({
 
 const boxGlb = () => packMeshGlb(boxGeometry());
 
+const TEXTURE_MESH_ARGV = [
+  'TextureMesh',
+  'scene_dense.mvs',
+  '--mesh-file',
+  'scene_dense_mesh.ply',
+  '--export-type',
+  'glb',
+  '--max-texture-size',
+  '8192',
+  '-o',
+  'scene_dense_texture.glb',
+];
+
 describe('bakeMesh', () => {
   it('runs the COLMAP and OpenMVS stages in order with the pinned flags', async () => {
     await bakeMesh(SOENDERMARKEN, DEPS(boxGlb));
 
     expect(calls).toEqual([
-      ...COLMAP_ARGV.map((args) => ['colmap', ...args]),
-      ['InterfaceCOLMAP', '-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'dense/images'],
+      [
+        'colmap',
+        'image_undistorter',
+        '--image_path',
+        'sparse-in/images',
+        '--input_path',
+        'sparse-in',
+        '--output_path',
+        'dense',
+        '--output_type',
+        'COLMAP',
+      ],
+      ['InterfaceCOLMAP', '-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'images'],
       ['DensifyPointCloud', 'scene.mvs', '--resolution-level', '1', '--number-views', '0'],
       ['ReconstructMesh', 'scene_dense.mvs'],
-      ['TextureMesh', 'scene_dense_mesh.mvs', '--export-type', 'glb', '--max-texture-size', '8192'],
+      TEXTURE_MESH_ARGV,
     ]);
-    expect(sparseDirWhenTriangulating).toBe(true);
   });
 
   it('--full-res selects resolution level 0', async () => {
@@ -240,20 +246,37 @@ describe('bakeMesh', () => {
     await bakeMesh(SOENDERMARKEN, DEPS(boxGlb), { refine: true });
 
     expect(calls.slice(-2)).toEqual([
-      ['RefineMesh', 'scene_dense_mesh.mvs', '--resolution-level', '1'],
       [
-        'TextureMesh',
-        'scene_dense_mesh_refine.mvs',
-        '--export-type',
-        'glb',
-        '--max-texture-size',
-        '8192',
+        'RefineMesh',
+        'scene_dense.mvs',
+        '--mesh-file',
+        'scene_dense_mesh.ply',
+        '--resolution-level',
+        '1',
+        '-o',
+        'scene_dense_mesh_refine.ply',
       ],
+      TEXTURE_MESH_ARGV.map((arg) =>
+        arg === 'scene_dense_mesh.ply' ? 'scene_dense_mesh_refine.ply' : arg,
+      ),
     ]);
   });
 
+  it('re-encodes the staged CMYK frames and leaves the sRGB ones byte-identical', async () => {
+    await bakeMesh(SOENDERMARKEN, DEPS(boxGlb));
+
+    const staged = (id: string) => readFileSync(join(workDir, 'sparse-in/images', `${id}.jpg`));
+    expect(await sharp(staged(CMYK_ITEM_ID)).metadata()).toMatchObject({
+      channels: 3,
+      space: 'srgb',
+    });
+    expect(staged(ITEM_ID)).toEqual(readFileSync(join(collectionDir, `${ITEM_ID}.jpg`)));
+  });
+
   it('--reuse-glb runs no runner and keeps the manifest’s version stamps', async () => {
-    writeFileSync(join(workDir, 'scene_dense_mesh_texture.glb'), await boxGlb());
+    const [bytes, sidecars] = withSidecarTextures(await boxGlb(), 'scene_dense_texture');
+    for (const sidecar of sidecars) writeFileSync(join(workDir, sidecar), PNG_1X1);
+    writeFileSync(join(workDir, 'scene_dense_texture.glb'), bytes);
     writeFileSync(
       join(root, 'public/data/geo3d/groups', SOENDERMARKEN.id, 'manifest.json'),
       JSON.stringify({
@@ -322,7 +345,7 @@ describe('bakeMesh', () => {
       shipped.buffer.slice(shipped.byteOffset, shipped.byteOffset + shipped.byteLength),
     );
     expect(geometry.indices.length).toBe(36);
-    // The re-pack re-encodes OpenMVS's PNG atlas, which is 4-10x larger.
+    // The re-pack re-encodes OpenMVS's sidecar PNG atlas, which is 4-10x larger.
     expect(geometry.image.mimeType).toBe('image/jpeg');
   });
 });
