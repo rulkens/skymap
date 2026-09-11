@@ -1,10 +1,7 @@
 /**
- * OrbitTrailsSettings — near-field Keplerian orbit-trails singleton overlay
- * (Earth / Jupiter / Moon …). A flat `enabled` field, mirroring `milkyWay` /
- * `filaments` / `flow` rather than the per-record source-type clusters: one
- * compile-time conic table, not a per-catalog fan-out. Read by
- * `orbitTrailsPass`, whose per-orbit fade multiplies this gate's fade
- * opacity so the layer dissolves on toggle rather than popping. Defaults on.
+ * OrbitTrailsSettings — near-field Keplerian orbit trails. Defaults on;
+ * `orbitTrailsPass` multiplies its per-orbit fade by this gate's fade opacity,
+ * so toggling dissolves rather than pops.
  */
 
 export type OrbitTrailsSettings = {

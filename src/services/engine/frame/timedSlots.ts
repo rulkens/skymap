@@ -1,12 +1,12 @@
 /**
  * The engine's ordered GPU-timing slots, derived from the SAME `FRAME_ORDER`
- * expansion the executor walks, so the query-set allocation and the DebugPanel
- * can never see a slot list the frame does not run. Expanded with MAXIMAL
- * inputs (every capture face, the longest foreground chain, every lensing row)
- * because the query set is sized once at boot while a real frame's lists are
- * shorter — an unused slot simply reads zero. The grouped projections are
- * further projections of that one walk, so a slot's display group cannot drift
- * from its position in draw order.
+ * expansion the executor walks, so neither the query-set allocation nor the
+ * DebugPanel can see a slot list the frame does not run. The grouped lists are
+ * further projections of that one walk, so a slot's display group cannot drift.
+ *
+ * Every `MAX_*` below is a MAXIMUM, not a real frame: the query set is sized
+ * once at boot, so a bound must cover every slot a frame could ever emit or that
+ * DebugPanel / perf-harness row will not exist. Unused slots read zero.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -221,45 +221,22 @@ export function timedSlotGroupsOf(program: readonly FrameStep[]): readonly Timed
  */
 const PLACEHOLDER_TONE: ToneMap = { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 };
 
-/**
- * The MAXIMUM foreground chain — NEAR0 plus every capacity body row — so the
- * slot pool below is sized off the registry (`BODY_SLAB_CAPACITY`), never a
- * hand-picked chain length. A real frame's chain is almost always shorter
- * (most bodies are culled); the unused slots simply read zero, same as any
- * other empty group (see `GpuTimingsSection`).
- */
+/** NEAR0 plus every capacity body row — sized off the registry, never by hand. */
 const MAX_FOREGROUND_CHAIN: readonly number[] = [
   NEAR0,
   ...Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
 ];
 
-/**
- * All 6 `CubeFace` values — the same "maximum, not a real frame's shorter
- * list" sizing rationale `MAX_FOREGROUND_CHAIN` documents above, so the
- * DebugPanel's GPU-timing groups include the sky-cubemap capture rows even
- * on a frame where the lensing band is inactive and the real capture list
- * would be empty.
- */
+/** All 6 faces, so the capture rows exist even when the lensing band is off. */
 const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
-/**
- * The MAXIMUM sgrAStarLensing body-slab list — every capacity index (Task
- * 14), the same "maximum, not a real frame" sizing `MAX_FOREGROUND_CHAIN`
- * documents above: Sgr A*'s painter-order row moves with whichever OTHER
- * bodies are visible, so the query-set pool must cover every capacity slot
- * it could land on, not just today's live value.
- */
+/** Every capacity index: Sgr A*'s painter-order row moves with the live bodies. */
 const MAX_SGR_A_STAR_LENSING_BODY_SLABS: readonly number[] = Array.from(
   { length: BODY_SLAB_CAPACITY },
   (_, k) => k + 2,
 );
 
-/**
- * `bloomEnabled: true` so the query-set allocation always includes the
- * `'bloom'` slot. It costs nothing on frames where bloom is off — the master
- * toggle omits the step and `runBloom` also no-ops on a null `bloomPyramid`, so
- * the pre-allocated slot simply goes unused, like any empty group's slot.
- */
+/** `bloomEnabled: true` so the `'bloom'` slot is always allocated. */
 const MAX_FRAME_INPUTS: FrameInputs = {
   tone: PLACEHOLDER_TONE,
   bloomEnabled: true,

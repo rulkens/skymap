@@ -1,10 +1,7 @@
 /**
- * ConstellationsSettings — constellation stick-figure overlay controls. A
- * singleton overlay like `filaments` / `milkyWay` / `flow`: master toggle +
- * intensity scale, seeded from the `SOURCE_REGISTRY` constellations row. The
- * one `enabled` toggle governs BOTH the stick figures and their name
- * captions — no separate names gate. `intensity` has no panel control; a
- * store-only dial the line-brightness math reads.
+ * ConstellationsSettings — constellation stick figures. The one `enabled` gate
+ * governs BOTH the figures and their name captions. `intensity` has no panel
+ * control — a store-only dial the line-brightness math reads.
  */
 
 export type ConstellationsSettings = {

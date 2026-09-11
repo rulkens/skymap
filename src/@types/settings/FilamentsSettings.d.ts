@@ -1,7 +1,6 @@
 /**
- * FilamentsSettings — filament-skeleton overlay controls. Master toggle +
- * intensity scale paired because the intensity slider is meaningless when
- * the master toggle is off.
+ * FilamentsSettings — filament-skeleton overlay: master toggle plus an
+ * intensity scale that is meaningless while the toggle is off.
  */
 
 export type FilamentsSettings = {

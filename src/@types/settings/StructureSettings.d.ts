@@ -1,11 +1,7 @@
 /**
- * StructureSettings — structure-overlay per-category settings. `items` — one
- * row per `StructureId` — carries the ring/marker axis (`enabled`) and the
- * text-label axis (`labelEnabled`) co-located, so a reader walks one
- * `items[cat]` entry instead of cross-indexing two parallel records. The
- * same per-item accessor galaxy catalogs / volumes / star catalogs / bodies
- * expose. No cluster-level master gate — like `galaxyCatalogs`, nothing
- * turns a "hide all structures" knob. Defaults to every category visible.
+ * StructureSettings — per-category structure overlays: one `items` row per
+ * `StructureId`, ring/marker and caption axes co-located. No cluster master
+ * gate — nothing turns a "hide all structures" knob. All categories default on.
  */
 
 import type { StructureId } from '../data/structure/StructureId';
