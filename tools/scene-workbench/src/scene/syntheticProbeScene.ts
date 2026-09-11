@@ -152,6 +152,7 @@ function probeMeshGeometry(): TexturedMeshGeometry {
   const positions: number[] = [];
   const uvs: number[] = [];
   const indices: number[] = [];
+  const [cx, cy, cz] = MESH_CENTRE_M;
   for (let axis = 0; axis < 3; axis++) {
     for (const side of [-1, 1]) {
       const first = positions.length / 3;
@@ -165,7 +166,7 @@ function probeMeshGeometry(): TexturedMeshGeometry {
         corner[axis] = side * MESH_HALF_EXTENT_M;
         corner[(axis + 1) % 3] = (2 * u - 1) * MESH_HALF_EXTENT_M;
         corner[(axis + 2) % 3] = (2 * v - 1) * MESH_HALF_EXTENT_M;
-        positions.push(...corner.map((c, k) => MESH_CENTRE_M[k]! + c));
+        positions.push(corner[0] + cx, corner[1] + cy, corner[2] + cz);
         uvs.push(u, v);
       }
       indices.push(first, first + 1, first + 2, first + 2, first + 1, first + 3);
@@ -187,11 +188,12 @@ const PROBE_ANCHOR: GroupAnchor = {
   headingDeg: 0,
 };
 
-// `BlobPart` wants an ArrayBuffer-backed view; `Uint8Array`'s declared
-// `.buffer` is the wider, SharedArrayBuffer-including `ArrayBufferLike`.
+// The cast is `BlobPart` only accepting ArrayBuffer-backed views while the
+// packers' `Uint8Array` is the wider `ArrayBufferLike`; cast the view, never
+// `.buffer`, which would drop byteOffset/byteLength.
 const artifactBlobUrl = (bytes: Uint8Array): string =>
   URL.createObjectURL(
-    new Blob([bytes.buffer as ArrayBuffer], { type: 'application/octet-stream' }),
+    new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' }),
   );
 
 export async function syntheticProbeScene(): Promise<GroupRegistryEntry> {
