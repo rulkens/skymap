@@ -14,14 +14,14 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
     label: 'Whale',
     meshKey: 'whale',
     description:
-      "A sperm whale, called into existence 400 km above the Earth by an Infinite Improbability Drive and left to work out what it was. In Douglas Adams' telling it had just long enough to name the wind before meeting the ground; here it keeps the view and skips the landing.",
+      "Ah … ! What's happening? it thought. Er, excuse me, who am I? Hello? Why am I here? What's my purpose in life? … And wow! Hey! What's this thing suddenly coming towards me very fast? So big and flat and round, it needs a big wide sounding name like … ow … ound … round … ground! That's it! That's a good name – ground! I wonder if it will be friends with me? — Douglas Adams, The Hitchhiker's Guide to the Galaxy, ch. 18",
   },
   {
     id: 'petunias',
     label: 'Bowl of Petunias',
     meshKey: 'petunias',
     description:
-      'The bowl of petunias that appeared alongside the whale, and whose only thought on the way down was "Oh no, not again." It trails the whale by about forty metres around the same orbit.',
+      "Curiously enough, the only thing that went through the mind of the bowl of petunias as it fell was Oh no, not again. Many people have speculated that if we knew exactly why the bowl of petunias had thought that we would know a lot more about the nature of the Universe than we do now. — Douglas Adams, The Hitchhiker's Guide to the Galaxy, ch. 18",
   },
 ];
 
