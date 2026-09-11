@@ -19,6 +19,7 @@ import { earthSettingsFragment } from '../../layers/body/settings/earthSettings'
 import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
 import { liftClusterReducers } from '../../utils/settings/liftClusterReducers';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
+import { milkyWaySettingsFragment } from '../../layers/milkyWay/settings/milkyWaySettings';
 import { orbitTrailsSettingsFragment } from '../../layers/body/settings/orbitTrailsSettings';
 import { sgrAStarLensingTuningSettingsFragment } from '../../layers/body/settings/sgrAStarLensingTuningSettings';
 import { starCatalogsSettingsFragment } from '../../layers/starCatalog/settings/starCatalogsSettings';
@@ -32,7 +33,6 @@ import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
-import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
@@ -106,21 +106,6 @@ export const CORE_REDUCERS = {
   // ── thumbnails ──────────────────────────────────────────────────────────
   setThumbnailsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
     settings.thumbnails.enabled = action.payload;
-  },
-
-  // ── milky way ───────────────────────────────────────────────────────────
-  setMilkyWayEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.milkyWay.enabled = action.payload;
-  },
-  setMilkyWayLabelEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.milkyWay.labelEnabled = action.payload;
-  },
-  // Star-cloud look knobs, patched leaf-by-leaf from the DebugPanel sliders.
-  // The payload is `MilkyWayTuning`, not `MilkyWaySettings`, so the two
-  // visibility axes keep their own single writers above and can never be
-  // flipped by a knob patch — the same split `setFlow` makes.
-  setMilkyWayTuning: (settings: SettingsDraft, action: PayloadAction<Partial<MilkyWayTuning>>) => {
-    Object.assign(settings.milkyWay, action.payload);
   },
 
   // ── zone of avoidance ──────────────────────────────────────────────────
@@ -322,6 +307,9 @@ export const settingsSlice = createSlice({
     ),
     ...liftClusterReducers<EngineSettingsState, typeof sgrAStarLensingTuningSettingsFragment>(
       sgrAStarLensingTuningSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof milkyWaySettingsFragment>(
+      milkyWaySettingsFragment,
     ),
   },
 });

@@ -19,18 +19,12 @@ import {
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_MILKY_WAY_ENABLED,
-  DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_FLOW,
   DEFAULT_ORIENTATION,
 } from '../../data/defaults';
-// Same relationship: the Milky-Way star-cloud look knobs are owned by the
-// renderer's calibration module, so seed them from there rather than restating
-// six numbers here.
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
@@ -56,6 +50,7 @@ type CoreSeedShape = Omit<
   | 'earth'
   | 'orbitTrails'
   | 'sgrAStarLensingTuning'
+  | 'milkyWay'
 >;
 
 export function coreSeed(): CoreSeedShape {
@@ -100,15 +95,6 @@ export function coreSeed(): CoreSeedShape {
     },
     thumbnails: {
       enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-    },
-    // Milky Way is a singleton overlay layer: the two visibility axes plus the
-    // star-cloud look knobs all live here. The knobs spread in from
-    // `MILKY_WAY_TUNING_DEFAULTS`, which stays their single source of truth for
-    // where they start (the DebugPanel sliders own them from then on).
-    milkyWay: {
-      enabled: DEFAULT_MILKY_WAY_ENABLED,
-      labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
-      ...MILKY_WAY_TUNING_DEFAULTS,
     },
     // Zone of Avoidance is a singleton overlay layer like `milkyWay`: one
     // visibility toggle (band + lettering) plus the band's look knobs, seeded
