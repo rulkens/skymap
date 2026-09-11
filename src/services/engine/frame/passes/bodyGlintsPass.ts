@@ -165,7 +165,7 @@ export const bodyGlintsPass: ContentPass = {
   // After the black-hole lens so this layer's own Sgr A* far-field marker
   // (and any solar-system glint that happens to overlap it on screen) draws
   // unwarped ON TOP of the lens rather than being sampled by it — see
-  // frameProgram.ts's step-split doc.
+  // `FRAME_ORDER`'s POST_LENSING line.
   hdrPhase: 'post-lens',
 
   enabled(state, ctx, _view) {

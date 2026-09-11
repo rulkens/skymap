@@ -1,15 +1,12 @@
 /**
  * FRAME_ORDER — the frame, hand-authored: what draws, in what order, into what.
+ * A name no present Layer owns is dropped; `checkFrameOrder` catches the
+ * inverse. `expandFrameOrder` turns this plus the frame's own lists into the
+ * steps the executor walks.
  *
- * Order and roster are the same artifact. A line names the passes it draws, in
- * draw order, so there is no second table for it to disagree with; a name no
- * present Layer owns is dropped, and `checkFrameOrder` catches the inverse (a
- * contributed pass no line draws). The ordering rationale below is the file's
- * real value — none of it is derivable from the list, and a reader who reorders
- * without it will break something that only shows up as pixels.
- *
- * `expandFrameOrder` turns this plus the frame's own lists into the steps the
- * executor walks; see it for the expansion and step-merge rules.
+ * The per-line rationale below is this file's real value — none of it is
+ * derivable from the list, and a reader who reorders without it will break
+ * something that only shows up as pixels.
  */
 
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';

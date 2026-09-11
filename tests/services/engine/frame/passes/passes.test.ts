@@ -229,7 +229,7 @@ const FOREGROUND_NAMES = ['star-spheres', 'field-star-sphere'];
 // star points, the survey star LEAF catalog, the survey aggregate UPSAMPLE
 // composite (adjacent to the leaf draw it composites), and the constellation
 // figures — that whole run is the "sky" roster the Sgr A* lens pass samples
-// from its OWN (hdr, BODY[k]) step (frameProgram.ts). `orbit-trails` and
+// from its OWN (hdr, BODY[k]) step (the `lens` line). `orbit-trails` and
 // `body-glints` trail LAST here (Task 14) so they draw unwarped over the lens
 // pass rather than sitting among the roster it samples. Neither aggregate
 // STREAM is here — the Milky Way's star billboards target 'mw-aggregate' and
@@ -348,7 +348,7 @@ describe('CONTENT_PASSES migration table (foreground group)', () => {
   it("earth, planets, and textured-bodies ride the 'body' slab sentinel into foreground:0, opaque", () => {
     // Task 9 (earth) / Task 11 (planets, textured-bodies): each expands into
     // one render step per body-m row instead of a fixed NEAR0 index — see
-    // frameProgram.ts's 'body' expansion.
+    // the foreground line's body-roster expansion.
     for (const layer of [earthPass, planetsPass, texturedBodiesPass]) {
       expect(layer.slab).toBe('body');
       expect(layer.target).toBe('foreground:0');
@@ -494,7 +494,7 @@ describe('cloudShellPass registry row', () => {
     // 'body') group: it blends OVER, so it must be ordered after the opaque
     // surface earthPass stamps, to depth-test against its z (far hemisphere
     // occluded). Task 10 (body render slabs) moved it off the fixed NEAR0 index
-    // onto the same 'body' expansion earthPass uses — see frameProgram.ts. It
+    // onto the same body-roster expansion earthPass uses. It
     // is deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) —
     // it is the exception, alongside the ring.
     const cloud = CONTENT_PASSES.find((layer) => layer.name === 'cloud-shell')!;

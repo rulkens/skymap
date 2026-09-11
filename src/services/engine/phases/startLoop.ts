@@ -5,6 +5,8 @@
  *
  * ### What this phase does
  *
+ *   - Runs `checkFrameOrder` once, before the first frame — see the
+ *     call site for what it catches.
  *   - Constructs the `RunFrameDeps` object, threading every closure
  *     capture the frame body needs: `canvas`, `cb`, the GPU device +
  *     context (from `phaseLocals`), the timing service, and the camera
@@ -60,6 +62,9 @@
  */
 
 import { runFrame } from '../frame/runFrame';
+import { checkFrameOrder } from '../frame/checkFrameOrder';
+import { FRAME_ORDER } from '../frame/frameOrder';
+import { CONTENT_PASSES } from '../frame/passes';
 import { CAMERA_DRIVERS } from '../camera/cameraDrivers';
 import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
 import { selectTimeState } from '../../../state/time/selectors';
@@ -79,6 +84,17 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     throw new Error('startLoop: initGpu must run before startLoop (phaseLocals is missing)');
   }
   const phaseLocals = deps.phaseLocals;
+
+  // Nothing type-checks a `FRAME_ORDER` pass name or target string, so every
+  // mismatch it catches is otherwise silent — a contributed pass no line draws
+  // never renders, a mistyped target draws into nothing. Once, here, against the
+  // ASSEMBLED rows (this composition's, at this swap format), because a freshly
+  // derived table would be a second answer to the same question.
+  checkFrameOrder(
+    FRAME_ORDER,
+    CONTENT_PASSES,
+    state.gpu.renderTargets!.specs.map((spec) => spec.id),
+  );
 
   // ── Render loop ──────────────────────────────────────────────────────
 

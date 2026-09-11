@@ -13,7 +13,6 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
-import type { HdrPhase } from '../../../@types/engine/frame/HdrPhase';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyId } from '../../../@types/data/body/BodyId';
@@ -69,39 +68,16 @@ export function passTimingSlotName(passName: string, slabIndex: number, face?: n
 
 // The same disambiguation one level up, for the STEP's own slot: six capture steps
 // share one `(target, slab)` — the array layer they write is not part of that key —
-// so `groupKeyOf` alone collides across faces.
+// so `groupKeyOf` alone collides across faces. `slot` is the authored suffix
+// (`RenderStepSpec.slot`) that separates several `FRAME_ORDER` lines sharing one
+// group; the line without one owns the bare key.
 export function renderStepTimingSlotName(
   groupKey: string,
   face: number | undefined,
-  hdrPhases?: readonly HdrPhase[],
+  slot?: string,
 ): string {
   if (face !== undefined) return `${groupKey}·FACE[${face}]`;
-  // The step admitting 'pre-lens' owns the bare groupKey, whether or not it
-  // also absorbs the later phases: exactly one step per frame draws the
-  // roster proper, so the bare name can never be claimed twice.
-  if (hdrPhases === undefined || hdrPhases.includes('pre-lens')) return groupKey;
-  return hdrPhases.includes('post-lens')
-    ? `${groupKey}·POST_LENSING`
-    : `${groupKey}·POST_FOREGROUND`;
-}
-
-/**
- * The hdr-phase gate: whether a layer belongs to a render step's group, given
- * the phases that step admits (`FrameStep.hdrPhases`) and the layer's own
- * (`ContentPass.hdrPhase`, absent ⇒ `'pre-lens'`). Single-sourced here because
- * `frameProgram.ts`'s `timedSlotRowsOf` (the derived timing-slot list) and
- * `executeFrame`'s group filter (the actual draw selection) must never
- * disagree on which layers a step selects — a drift would either draw a layer
- * the timing list never billed, or bill a slot for a layer that never drew.
- * A step with no admitted set is not part of the split roster and lets phase
- * play no part in its selection; the only phased layers live on `(hdr, NEAR0)`,
- * where every emitted step states its set.
- */
-export function matchesHdrPhase(
-  layerPhase: Exclude<HdrPhase, 'pre-lens'> | undefined,
-  stepPhases: readonly HdrPhase[] | undefined,
-): boolean {
-  return stepPhases === undefined || stepPhases.includes(layerPhase ?? 'pre-lens');
+  return slot === undefined ? groupKey : `${groupKey}·${slot}`;
 }
 
 /**

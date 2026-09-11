@@ -1,47 +1,16 @@
 /**
- * FrameStep — the frame as data: one entry in the ordered program the
- * executor walks each frame, replacing the imperative call sequence in
- * `renderFrame`.
+ * FrameStep — one entry in the ordered program `executeFrame` walks, expanded
+ * from a `FRAME_ORDER` line plus this frame's own lists. A render step carries
+ * the passes it draws, so the executor selects nothing.
  *
- * Three kinds cover everything a frame currently does:
- *
- *   - `'compute'` — a pre-render compute dispatch, looked up by `name` in a
- *     COMPUTE name→fn table (e.g. the flow-field particle seed/integrate
- *     pass). A top-level step rather than something a render step invokes
- *     internally, so the compute-before-render ordering is visible as
- *     program order instead of being implicit in a renderer's draw call.
- *   - `'render'` — draw every enabled `ContentPass` whose `(target, slab)`
- *     matches this step's, in registry order. The `target`/`slab` pair
- *     selects a layer group out of data the layers already carry, so two
- *     `'render'` steps with different `(target, slab)` pairs draw disjoint
- *     sets by construction — no separate bookkeeping needed for e.g. the
- *     cosmological-over group vs. the near-field-over group both targeting
- *     `swap`.
- *   - `'composite'` — merge one target into another via the Compositor,
- *     per the embedded `CompositeStep`.
- *   - `'bloom'` — a self-contained screen-space bloom sub-pipeline (bright →
- *     downsample×4 → upsample×4 → fold into HDR) run by `runBloom`. It is one
- *     step rather than N reused-target render steps because a ping-pong mip
- *     pyramid writes the same target twice with different ops (a downsample that
- *     clears, then an additive upsample that loads), which the `(target, slab)`
- *     render-step model cannot express: the executor re-fires every layer
- *     matching a step's `(target, slab)`, so a reused-target upsample layer
- *     would fire prematurely at its target's downsample step and read a
- *     not-yet-cleared (stale, last-frame) level. `runBloom` opens its ten passes
- *     in strict order instead, so every source is written earlier in the same
- *     sequence.
- *
- * A `FrameStep[]` array (the concrete `FRAME` program) is therefore a
- * complete, inspectable, order-sensitive description of a frame — where
- * today's ordering decisions (e.g. "captions draw after the foreground
- * composite so they land on top of the bodies") are visible as step order
- * in one array, not implicit in which function calls which.
+ * `'bloom'` is one step rather than N render steps because a ping-pong mip
+ * pyramid writes the same target twice with different ops, which the one-pass-
+ * per-step model cannot express — `runBloom` opens its ten in strict order.
  */
 
 import type { CompositeStep } from './CompositeStep';
 import type { ContentPass } from './ContentPass';
 import type { CubeFace } from '../../rendering/CubeFace';
-import type { HdrPhase } from './HdrPhase';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
@@ -49,6 +18,8 @@ export type FrameStep =
       kind: 'render';
       target: string;
       slab: number;
+      /** The passes this step draws, in draw order. */
+      passes: readonly ContentPass[];
       /**
        * Depth load-op for this step's pass. Absent ⇒ the same first-touch rule
        * the colour attachment follows (clear on the frame's first pass against
@@ -59,37 +30,17 @@ export type FrameStep =
       depthLoad?: 'clear' | 'load';
       /**
        * Which array layer of a `fixedSizePx` target this step writes — today
-       * only the black-hole lens's 6-face sky-cubemap capture (Task 12).
-       * Absent for every ordinary render step. Its sole job is disambiguating
-       * several `(target, slab)` steps that would otherwise collide: all six
-       * faces share `('sky-cubemap', NEAR0)`, unlike a body row (which gets
-       * its own `slab` index and so is unique without help) — see
-       * `timedSlotRowsOf`'s per-step naming and `executeFrame`'s matching
-       * timing-slot lookup, frameProgram.ts / executeFrame.ts.
+       * only the black-hole lens's 6-face sky-cubemap capture. Absent for every
+       * ordinary render step. Its sole job is disambiguating several
+       * `(target, slab)` steps that would otherwise collide: all six faces
+       * share `('sky-cubemap', NEAR0)`, unlike a body row (which gets its own
+       * `slab` index and so is unique without help).
        */
       face?: CubeFace;
       /**
-       * Which layer phases this step admits — see `HdrPhase`. Carried by the
-       * steps of the split `(hdr, NEAR0)` roster and nothing else; absent ⇒
-       * phase plays no part in selecting this step's group. A layer without a
-       * phase counts as `'pre-lens'`. The sets partition the roster, so its
-       * steps draw disjoint groups despite sharing one `(target, slab)`:
-       * `slabs.ts`'s `matchesHdrPhase` is the single predicate both
-       * `timedSlotRowsOf` and `executeFrame` read, and
-       * `renderStepTimingSlotName` names each step's group-total timing slot
-       * from the set so they don't collide on one.
-       */
-      hdrPhases?: readonly HdrPhase[];
-      /**
-       * The layers this step draws, in draw order — set by `expandFrameOrder`
-       * from its `FRAME_ORDER` line and absent on a `frameProgram` step, which
-       * still leaves the selection to the executor's filter. Task 9 flips that
-       * round: this becomes the selection and `hdrPhases` goes.
-       */
-      passes?: readonly ContentPass[];
-      /**
-       * Authored GPU-timing slot suffix (`RenderStepSpec.slot`), carried through
-       * expansion so a merged step keeps the FIRST line's slot name.
+       * Authored GPU-timing slot suffix (`RenderStepSpec.slot`), carried
+       * through expansion so a merged step keeps the FIRST line's slot name.
+       * Absent ⇒ this step bills the bare `groupKeyOf(target, slab)`.
        */
       slot?: string;
     }

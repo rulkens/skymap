@@ -7,10 +7,9 @@
  * reached out of `state`, so the frame's one imperative loop reads as a pure
  * function of its inputs:
  *
- *   - `program` is the ordered step list (`frameProgram(tone)`), the frame as
- *     data — the executor is the only code that walks it.
- *   - `passes` is the content-layer registry; each `'render'` step selects its
- *     group out of this list by `(target, slab)` plus the layer's own gate.
+ *   - `program` is the ordered step list (`expandFrameOrder(FRAME_ORDER, …)`),
+ *     the frame as data — the executor is the only code that walks it, and each
+ *     `'render'` step already carries the passes it draws.
  *   - `strategy` is how a render step's group becomes GPU passes ('merged' in
  *     production, 'perLayerTimed' under `?gpuTimings`) — a property of *how* a
  *     render step executes, applied uniformly, not a fork per render step.
@@ -21,7 +20,7 @@
  *     override, its runtime hand-off: a step carrying `face`
  *     resolves its `SlabView`/`ctx` from THIS map instead of the frame-wide
  *     `ctx` above. `renderFrame` derives it on a bake (one
- *     `skyCubemapFaceContext` call per face); `frameProgram`
+ *     `skyCubemapFaceContext` call per face); `FRAME_ORDER`
  *     stays static and never sees it. Absent/missing-face ⇒ that step is
  *     skipped cleanly (no throw) — the same outcome as
  *     `skyCubemapFaceContext` itself returning `null` for a pre-bootstrap
@@ -30,7 +29,6 @@
 
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { FrameStep } from './FrameStep';
-import type { ContentPass } from './ContentPass';
 import type { RenderStrategy } from './RenderStrategy';
 import type { EngineState } from '../state/EngineState';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
@@ -43,10 +41,8 @@ export type ExecuteFrameArgs = {
   ctx: ReadyFrameContext;
   /** Live engine state — layers read their renderers/gates off `state.*`. */
   state: EngineState;
-  /** The ordered step program to walk (`frameProgram(tone)`). */
+  /** The ordered step program to walk (`expandFrameOrder(FRAME_ORDER, …)`). */
   program: readonly FrameStep[];
-  /** The content-layer registry each render step selects its group from. */
-  passes: readonly ContentPass[];
   /** How each render step's layer group becomes GPU passes. */
   strategy: RenderStrategy;
   /** Per-pass GPU-timing descriptor source (no-op when timing is disabled). */

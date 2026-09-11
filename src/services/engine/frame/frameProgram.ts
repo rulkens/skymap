@@ -1,322 +1,58 @@
 /**
- * frameProgram — the FRAME as data, and the timing slots derived from it.
- *
- * A frame is an ordered sequence of steps: the compute prelude (the flow
- * integrate + the atmosphere sky-view LUT bake), a volume render, a
- * zone-of-avoidance band render (its own reduced-res offscreen, same family
- * as the volume render), an HDR render, two reduced-resolution aggregate
- * renders into their own offscreens
- * (survey stars, then the Milky-Way cloud), a near-field star-point render into
- * that same HDR accumulation (which also composites both aggregate offscreens
- * back in), a near-field foreground-body
- * render, that body composite OVER the HDR accumulator in linear space, the
- * single tone-mapping composite, then the swap-chain overlay renders (the
- * cosmological overlays, then the near-field captions). Pre-unification that
- * sequence lived as an imperative call chain spread across `renderFrame` and
- * two hand-wired HDR encoders — the order was implicit in which function
- * called which, and untestable without a GPU device. `frameProgram` returns
- * that same sequence as a plain `FrameStep[]`: the order is now inspectable
- * data one array deep, and the executor is the single imperative site that
- * walks it. See the renderer unification design
- * (`docs/superpowers/specs/2026-06-29-renderer-unification-design.md`) for the
- * essential/accidental split this data model rests on.
- *
- * The near-field foreground bodies (the zoom-to-earth fold) accumulate into
- * HDR before tone-mapping: a `foreground:0` render draws the true-scale bodies
- * (Sun, Earth) through the NEAR0 slab into the depth-bearing foreground target,
- * then a `foreground:0→hdr` composite lays them OVER the HDR accumulator in
- * LINEAR space (`tone: null`). Because their pixels join HDR before the single
- * tone-map, the bodies ride the SAME tone curve as the stars and galaxies —
- * there is one tone curve across the whole frame, and no seam where the Sun's
- * limb meets the cosmological scene. The lone `hdr→swap` replace-composite that
- * follows is the frame's ONLY tone-map.
- *
- * The swap-chain overlays draw AFTER that single tone-map, on top of the
- * tonemapped scene: the cosmological overlays (labels, marker-lines,
- * selection-ring) first, then the near-field captions. The opaque Sun/Earth
- * still occlude the cosmological labels behind them, but that occlusion is now
- * carried by the Prep A COVERAGE test (the COSMO overlays test against the
- * `foreground:0` depth) rather than by draw order — the foreground bodies no
- * longer composite after the cosmological swap render, so `frameProgram` no
- * longer depends on step order for that. The near-field captions still render
- * last so they land on top of the bodies.
- *
- * There is no `volume→hdr` composite — the volume offscreen is merged into
- * HDR by the `volume-upsample` *layer* inside the HDR render step, not a
- * separate whole-texture composite (plan-time decision 3). The `zoa`
- * offscreen (the zone-of-avoidance band raymarch) is merged the same way, by
- * `zoneOfAvoidanceUpsamplePass` inside the same hdr COSMO step — so there is
- * no `zoa→hdr` composite step either; that layer also draws the band's
- * full-res curved lettering straight into HDR, since MSDF text can't ride a
- * reduced-res offscreen without blurring. The `star-aggregates` offscreen is
- * merged the same way — by the `star-upsample` layer inside the hdr NEAR0
- * render step, adjacent to the `star-catalog` leaf draw — so there is no
- * `star-aggregates→hdr` composite step either. The `mw-aggregate` offscreen
- * is the fourth of that family: merged by the `milky-way-upsample` layer
- * inside the same hdr NEAR0 step, so there is no `mw-aggregate→hdr` composite
- * step. Every offscreen-into-HDR merge in this program is a layer, never a
- * `'composite'` step; the two `'composite'` steps that DO exist
- * (`foreground:0→hdr`, `hdr→swap`) merge whole textures that no layer could,
- * because they carry depth or the tone curve.
+ * The engine's ordered GPU-timing slots, derived from the SAME `FRAME_ORDER`
+ * expansion the executor walks, so the query-set allocation and the DebugPanel
+ * can never see a slot list the frame does not run. Expanded with MAXIMAL
+ * inputs (every capture face, the longest foreground chain, every lensing row)
+ * because the query set is sized once at boot while a real frame's lists are
+ * shorter — an unused slot simply reads zero. The grouped projections are
+ * further projections of that one walk, so a slot's display group cannot drift
+ * from its position in draw order.
  */
 
-import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { ToneMap } from '../../../@types/rendering/ToneMap';
+import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
+import type { FrameInputs } from './expandFrameOrder';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import {
   COSMO,
   NEAR0,
   groupKeyOf,
-  isBodySlabIndex,
   passTimingSlotName,
-  matchesHdrPhase,
   renderStepTimingSlotName,
   slabName,
 } from './slabs';
+import { expandFrameOrder } from './expandFrameOrder';
+import { FRAME_ORDER } from './frameOrder';
 import { CONTENT_PASSES } from './passes';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
 
 /**
  * Upper bound on body rows `deriveSlabs` can emit in one frame: Earth (the
- * NEAR0-adjacent body baked into `earthPass`, not a `SCENE_PLANETS` row)
- * plus every `SCENE_PLANETS` entry plus every `SCENE_ANCHOR_POINT_BODIES`
- * entry. `TIMED_SLOTS` allocates one slot per capacity row (not per row
- * actually drawn this frame) so the query-set size is a compile-time
- * constant — see `createGpuTimingService`.
+ * NEAR0-adjacent body baked into `earthPass`, not a `SCENE_PLANETS` row) plus
+ * every `SCENE_PLANETS` and `SCENE_ANCHOR_POINT_BODIES` entry. One slot is
+ * allocated per capacity row, not per row actually drawn, so the query-set size
+ * is a compile-time constant — see `createGpuTimingService`.
  */
 export const BODY_SLAB_CAPACITY = 1 + SCENE_PLANETS.length + SCENE_ANCHOR_POINT_BODIES.length;
 
 /**
- * Build this frame's step program. `tone` is threaded into the LONE tone-map —
- * the `hdr→swap` replace-composite — which is the only place the HDR scene is
- * compressed to display range. The foreground-body composite runs in linear
- * space (`tone: null`) and rides that same single curve because it merges into
- * HDR before the tone-map, not after. The cosmological body (compute → volume
- * → hdr → tone-map → swap) projects through the COSMO slab; the near-field star
- * points and the near-field bodies + captions project through the NEAR0 slab.
- *
- * `bloomEnabled` (the `settings.bloom.enabled` master toggle) is the ONLY bloom
- * value that shapes the program: it decides whether the bloom step is emitted
- * between the linear body composite and the tone-map. The look knobs
- * (`strength`/`threshold`) are NOT threaded here — `runBloom` reads them live
- * from `state.settings.bloom` each draw, exactly as `earth`/`starCatalogs` knobs
- * do, because the step carries no uniform payload (unlike the `tone` a
- * `'composite'` step carries). So only `enabled` can change the step LIST;
- * strength/threshold change pixels without changing the frame's shape.
- *
- * `foregroundChain` (`foregroundChainOrder(ctx.slabs)`, painter-ordered
- * back-to-front) expands the ONE `foreground:0` render into one step per
- * entry, each `depthLoad: 'clear'` so a nearer body row doesn't test against
- * a farther row's depth — see the push loop below.
- *
- * `skyCubemapFacesToCapture` (computed by `renderFrame`, gated on the
- * band plus a settings-reference change or a settling roster — empty
- * outside the band, and empty in-band on every frame except the one that
- * (re)bakes) is the black-hole lens's sky-cubemap bake list: empty most
- * frames, so NO capture steps are emitted at all (Q6's zero-dispatch
- * guarantee — this is the capture side of that contract, not just the
- * lensing draw itself). Placed in the compute prelude's wake, ahead of
- * every other render step, so a same-frame lensing draw can sample a
- * cubemap this frame actually wrote. TWO steps per requested face — COSMO
- * then NEAR0 — because
- * the fixed opt-in roster (`ContentPass.skyCapture`) spans both
- * slabs: `point-sprites` / `textured-disks` project through COSMO;
- * `star-catalog` / `star-aggregates` through NEAR0. A
- * capture step selects its group by the flag rather than by `target`
- * (`executeFrame`'s capture-step branch), but `slab` still gates normally —
- * one step per slab is what makes BOTH halves of the roster reachable (a
- * single NEAR0-only step leaves the COSMO half permanently unselected, the
- * flag having no effect). Order (COSMO before NEAR0)
- * mirrors the real `(hdr, COSMO)` → `(hdr, NEAR0)` sequence below, so the
- * capture composites in the same order the live frame would.
- *
- * `sgrAStarLensingBodySlabs` is the black-hole lens's OWN step: without it
- * nothing here matches `sgrAStarLensingPass` (`slab: 'body'`, `target:
- * 'hdr'`), which registers and compiles but never draws. `renderFrame`
- * resolves Sgr
- * A*'s body-m row each frame and passes it here ONLY inside the fade band, so
- * an inactive band emits no step at all (same zero-dispatch guarantee as
- * `skyCubemapFacesToCapture`). One `(hdr, slab)` render step per entry,
- * placed after the `(hdr, NEAR0)` roster step so the lens's OVER blend
- * occludes the roster light already accumulated there. A non-empty list also
- * means the band is active, so the `(hdr, NEAR0)` roster step ABOVE this one
- * splits into `'pre-lens'`/`'post-lens'` halves around it: `body-glints`
- * opts into the `'post-lens'` half via `ContentPass.hdrPhase`, so it draws
- * AFTER the lens rather than being sampled by it, while an inactive band
- * emits one step admitting both halves. A third slice, `'post-foreground'`
- * (`orbit-trails`), follows the body composite every frame. See `slabs.ts`'s
- * `matchesHdrPhase`.
+ * The ordered slot names: per render step one slot per pass it draws then the
+ * step's group total; per composite a `'<source>→<dest>'` slot (the unicode
+ * arrow); one `'bloom'`; nothing for a compute. `'pick'` is appended last,
+ * matching the frame's execution order.
  */
-export function frameProgram(
-  tone: ToneMap,
-  bloomEnabled: boolean,
-  foregroundChain: readonly number[],
-  skyCubemapFacesToCapture: readonly CubeFace[],
-  sgrAStarLensingBodySlabs: readonly number[] = [],
-): readonly FrameStep[] {
-  const steps: FrameStep[] = [];
-
-  steps.push({ kind: 'compute', name: 'flow' });
-  // Atmosphere sky-view LUT bake — folds in this frame's camera altitude + sun
-  // direction, so it re-bakes every frame (unlike the once-baked transmittance
-  // + multi-scatter LUTs). In the compute prelude with `flow`, well ahead of the
-  // `foreground:0` render step, so the atmosphere shell samples this frame's
-  // table (WebGPU orders the compute write before the later fragment read).
-  // Like `flow`, a `'compute'` step contributes no timing slot, so TIMED_SLOTS
-  // is unaffected.
-  steps.push({ kind: 'compute', name: 'atmosphereSkyView' });
-
-  for (const face of skyCubemapFacesToCapture) {
-    steps.push({ kind: 'render', target: 'sky-cubemap', slab: COSMO, face });
-    steps.push({ kind: 'render', target: 'sky-cubemap', slab: NEAR0, face });
-  }
-
-  steps.push({ kind: 'render', target: 'volume', slab: COSMO });
-  // Zone-of-avoidance band raymarch into its own reduced-res offscreen —
-  // the twin of the volume render immediately above. Precedes the hdr
-  // COSMO step so `zoneOfAvoidanceUpsamplePass` inside it can composite
-  // this offscreen back in; merged by a LAYER, never a `'composite'` step,
-  // so there is no `zoa→hdr` step either (same reasoning as `volume`).
-  steps.push({ kind: 'render', target: 'zoa', slab: COSMO });
-  steps.push({ kind: 'render', target: 'hdr', slab: COSMO });
-  // Survey-star AGGREGATE stream into its own half-res offscreen, projected
-  // through NEAR0 (the same parsec-scale anchors as the star catalog). Drawn
-  // BEFORE the hdr NEAR0 step so the `star-upsample` layer inside that step
-  // can composite this offscreen — the twin of the volume render preceding
-  // its `volume-upsample` layer. The aggregate glow field is the fill-bound
-  // half of the star pass; half-res quarters its fragment cost.
-  steps.push({ kind: 'render', target: 'star-aggregates', slab: NEAR0 });
-  // The Milky-Way twin of the star-aggregate offscreen: the procedural
-  // cloud's additive star billboards into their own reduced-resolution
-  // `mw-aggregate` target, projected through the same NEAR0 slab as the dust
-  // pass that follows them in HDR. Same reason as its sibling — a summed
-  // additive glow field is low-frequency, so rendering it at 1/scale drops
-  // fragment cost by the square of the divisor and costs only bilinear
-  // interpolation of something already smooth. Like `star-aggregates` it is
-  // merged into HDR by a *layer* (`milky-way-upsample`, inside the hdr NEAR0
-  // step below), not by a whole-texture `'composite'` step, so no
-  // `mw-aggregate→hdr` step exists. It must precede that hdr NEAR0 step: the
-  // consumer lives there, and it in turn must precede `milky-way`'s
-  // multiplicative dust draw so the dust extincts the cloud's own starlight.
-  steps.push({ kind: 'render', target: 'mw-aggregate', slab: NEAR0 });
-  // Near-field star points into the SAME hdr accumulation, but projected
-  // through NEAR0: COSMO's near plane (0.01 Mpc — slabs.ts) would clip the
-  // parsec-scale star anchors, so the points ride their own slab while
-  // still accumulating into HDR BEFORE the tone-map composite below — one
-  // tone curve for stars and galaxies. The hdr target is already touched
-  // by the COSMO step above, so this pass loads rather than clears.
-  // Outside the band one step absorbs both pre- and post-lens layers. Inside
-  // it, the roster splits around the lens's own (hdr, BODY[k]) step(s) below so
-  // `body-glints` (ContentPass.hdrPhase 'post-lens') draw AFTER the lens
-  // instead of being sampled by it — see this function's doc. The
-  // 'post-foreground' slice sits further down, after the body composite.
-  if (sgrAStarLensingBodySlabs.length > 0) {
-    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['pre-lens'] });
-    for (const slab of sgrAStarLensingBodySlabs) {
-      steps.push({ kind: 'render', target: 'hdr', slab });
-    }
-    steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['post-lens'] });
-  } else {
-    steps.push({
-      kind: 'render',
-      target: 'hdr',
-      slab: NEAR0,
-      hdrPhases: ['pre-lens', 'post-lens'],
-    });
-  }
-
-  // Near-field foreground bodies (zoom-to-earth fold). Rendered into their
-  // depth-bearing foreground target, then composited OVER hdr in LINEAR
-  // space (tone: null) so the Sun/Earth pixels join the HDR accumulator
-  // BEFORE tone-mapping and ride the SAME single tone curve as the stars and
-  // galaxies. No second tone-map: the lone hdr→swap replace-composite below
-  // is the frame's only tone-map, so there is one tone curve across the
-  // whole frame — no seam where the Sun's limb meets the cosmological scene.
-  //
-  // Assembled as a RUN in painter order (far → near) rather than one literal
-  // entry: `foregroundChain` expands it into one depth-bearing step per row
-  // (NEAR0 — the Sun's slab — plus each body row), sharing this one target.
-  // Each row's `depthLoad: 'clear'` restarts depth so a nearer row's opaque
-  // pixels aren't test-rejected against a farther row's depth — painter order
-  // is the occlusion mechanism, not the depth test. An empty chain (no star
-  // sphere resolved, no bodies visible) emits no render step here at all, but
-  // the composite below still runs — see its own no-op-on-untouched guard in
-  // `executeFrame`.
-  for (const slab of foregroundChain) {
-    steps.push({ kind: 'render', target: 'foreground:0', slab, depthLoad: 'clear' });
-  }
-
-  steps.push({
-    kind: 'composite',
-    step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
-  });
-  // The roster slice that draws OVER the opaque bodies (`orbit-trails`: a
-  // satellite's near arc passes in front of its host). Still HDR, still ahead
-  // of bloom and the one tone-map, so these layers ride the same curve as
-  // everything else in hdr. Emitted every frame; the executor opens no pass
-  // when nothing in the slice is enabled.
-  steps.push({ kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['post-foreground'] });
-  // Screen-space bloom, gated on the master toggle. ONE step, not N render
-  // steps: `runBloom` opens the pyramid's ten passes (bright prefilter
-  // hdr → bloom0, a DESCENDING downsample chain bloom0 → bloom4, an ASCENDING
-  // additive upsample fold bloom4 → bloom0, and the strength-scaled fold back
-  // into HDR) in strict order. A ping-pong mip pyramid writes the same target
-  // twice with different ops (a downsample that clears, then an additive
-  // upsample that loads), which the executor's `(target, slab)` render-step
-  // model cannot express: it re-fires every layer matching a step's group, so
-  // a reused-target upsample would fire at its downsample step and read a
-  // stale, last-frame level. The single sequential step sidesteps that — see
-  // runBloom for the strict-order rationale. Placed after the foreground:0→hdr
-  // composite (the bright prefilter samples the composited HDR scene) and
-  // before the lone hdr→swap tone-map (the fold rides that one curve).
-  if (bloomEnabled) steps.push({ kind: 'bloom' });
-  steps.push({ kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } });
-
-  // Cosmological + near-field swap overlays now draw AFTER the tone-map, on
-  // top of the tonemapped scene. The COSMO overlays (labels, marker-lines,
-  // selection-ring) occlude against the foreground bodies via the Prep A
-  // coverage test — frameProgram no longer relies on draw order to keep the
-  // opaque Sun/Earth in front of the cosmological labels. The NEAR0 swap
-  // render (Sun/Earth captions) follows so captions land on top of the bodies.
-  steps.push({ kind: 'render', target: 'swap', slab: COSMO });
-  steps.push({ kind: 'render', target: 'swap', slab: NEAR0 });
-
-  return steps;
-}
-
-/**
- * Derive the ordered GPU-timing slot names from a program + the content-layer
- * registry (plan-time decision 5). Each step contributes:
- *
- *   - `'render'`   → the names of its matching layers (same `target` and
- *     `slab`), in registry order — one timing slot billed per layer.
- *   - `'composite'`→ a single `'<source>→<dest>'` slot (the unicode arrow),
- *     e.g. the tone-map's `'hdr→swap'`.
- *   - `'bloom'`    → a single `'bloom'` slot spanning the whole sub-pipeline.
- *   - `'compute'`  → nothing; compute dispatches aren't timed as content slots.
- *
- * `'pick'` (the parallel r32uint pick pass) is appended last, matching the
- * frame's execution order. Deriving the slot order this way rather than
- * hand-maintaining a list means it's a pure function of the same program the
- * executor walks, so it can't drift from what actually runs.
- */
-export function timedSlotsOf(
-  program: readonly FrameStep[],
-  passes: readonly ContentPass[],
-): readonly string[] {
-  return timedSlotRowsOf(program, passes).map((row) => row.name);
+export function timedSlotsOf(program: readonly FrameStep[]): readonly string[] {
+  return timedSlotRowsOf(program).map((row) => row.name);
 }
 
 /**
  * One derived timing slot: its `name` (what the timing service allocates a
- * query pair for and the DebugPanel rows on) plus the `groupKey` of the step
- * that produced it — `'<target>·<SLAB>'` for a render slot (e.g. `'hdr·COSMO'`,
- * `'foreground:0·NEAR0'`), the literal `'composite'` for a whole-texture
- * merge, and `'pick'` for the parallel pick program. The groupKey is what the
- * two DebugPanel lists bucket on, so a new layer lands in the right visual
- * group automatically via its `(target, slab)`.
+ * query pair for) plus the `groupKey` of the step that produced it —
+ * `'<target>·<SLAB>'` for a render slot, the literal `'composite'` for a
+ * whole-texture merge, `'pick'` for the pick program. The DebugPanel buckets on
+ * the groupKey, so a new pass lands in the right group via its step.
  */
 export type TimedSlotRow = { readonly name: string; readonly groupKey: string };
 
@@ -328,17 +64,12 @@ export type TimedSlotRow = { readonly name: string; readonly groupKey: string };
 export type TimedSlotGroup = { readonly title: string; readonly rows: readonly TimedSlotRow[] };
 
 /**
- * groupKey → human group title, in the order the DebugPanel renders the
- * groups. Several producing steps deliberately share one title — the
- * cosmological scalar-volume raymarch and the two reduced-resolution aggregate
- * offscreens (survey stars, Milky-Way cloud) are all "volumes & aggregates";
- * the two whole-texture composites and the pick
- * pass are all infra "composites & pick"; the COSMO and NEAR0 swap overlays
- * are both "overlays" — so grouping-by-title merges those (non-adjacent in
- * execution order) into one scannable seam. A groupKey with no entry here
- * degrades to its raw key as the title (self-maintaining: a genuinely new
- * target/slab step still gets its own group rather than vanishing). The value
- * order fixes the group display order — see `groupRows`.
+ * groupKey → human group title, the value order fixing the display order (see
+ * `groupRows`). Steps sharing a title merge into one scannable seam even when
+ * non-adjacent in execution order — that is why the volume raymarch and the two
+ * aggregate offscreens, or the two composites and pick, each collapse to one
+ * group. A groupKey with no entry here degrades to its raw key as the title, so
+ * a genuinely new target/slab step still gets a group rather than vanishing.
  */
 export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'volume·COSMO': 'Volumes & aggregates',
@@ -387,71 +118,39 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
  * (`timedSlotsOf`), the grouped lists (`timedSlotGroupsOf` / `groupPassNames`),
  * and the name→groupKey map (`PASS_GROUP_KEYS`) are each a projection of this
  * one derivation, so a slot's group can't drift from its position in the row
- * order — a new layer joins them all at once.
+ * order — a new pass joins them all at once.
  */
-function timedSlotRowsOf(
-  program: readonly FrameStep[],
-  passes: readonly ContentPass[],
-): readonly TimedSlotRow[] {
+function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSlotRow[] {
   const rows: TimedSlotRow[] = [];
   for (const step of program) {
     if (step.kind === 'render') {
-      // Every layer matched by this step shares the step's `(target, slab)`, so
-      // one groupKey covers the whole run. The key comes from the shared
-      // `groupKeyOf` helper (slabs.ts) — the same definition the merged executor
-      // resolves against, so the two can't drift. Several render steps can
-      // share one `(target, slab)` — the `(hdr, NEAR0)` roster's hdr-phase
-      // slices — but never share a LAYER (`matchesHdrPhase` partitions the
-      // registry between them), so no per-layer dedup is needed; only the
-      // group-TOTAL row below needs the slice disambiguated.
+      // Every pass this step draws shares the step's `(target, slab)`, so one
+      // groupKey covers the whole run. The key comes from the shared
+      // `groupKeyOf` helper (slabs.ts) — the same definition the executor
+      // resolves against, so the two can't drift.
       const groupKey = groupKeyOf(step.target, step.slab);
-      // A capture step selects its group by the `skyCapture` opt-in, not by
-      // `target` — the same discriminant `executeFrame` applies, so the slots
-      // allocated here are exactly the ones its per-layer passes look up.
-      const isCaptureStep = step.face !== undefined;
-      for (const contentPass of passes) {
-        // A 'body' layer has no fixed slab index — it matches every body-row
-        // step, the same widening `executeFrame` applies via
-        // `view.slab.frame.kind === 'body-m'`. This derivation has no `ctx` to
-        // resolve a frame kind from, so it reads the index layout directly
-        // through `isBodySlabIndex` — the one other legitimate reading of the
-        // same fact (slabs.ts).
-        const matchesStep =
-          contentPass.slab === step.slab ||
-          (contentPass.slab === 'body' && isBodySlabIndex(step.slab));
-        const matchesTarget = isCaptureStep
-          ? contentPass.skyCapture === true
-          : contentPass.target === step.target;
-        if (matchesTarget && matchesStep && matchesHdrPhase(contentPass.hdrPhase, step.hdrPhases)) {
-          // `passTimingSlotName` carries the body row and the capture face
-          // into the slot NAME, so two body rows sharing one layer (Jupiter +
-          // a moon, both drawn by `planetsPass`) — or one roster layer drawn
-          // once per captured face and once for the real view — each get their
-          // own query-set slot instead of colliding on the same two indices
-          // (see its doc, slabs.ts).
-          rows.push({
-            name: passTimingSlotName(contentPass.name, step.slab, step.face),
-            groupKey,
-          });
-        }
+      for (const contentPass of step.passes) {
+        // `passTimingSlotName` carries the body row and the capture face into
+        // the slot NAME, so two body rows sharing one pass (Jupiter + a moon,
+        // both drawn by `planetsPass`) — or one roster pass drawn once per
+        // captured face and once for the real view — each get their own
+        // query-set slot instead of colliding on the same two indices (see its
+        // doc, slabs.ts).
+        rows.push({
+          name: passTimingSlotName(contentPass.name, step.slab, step.face),
+          groupKey,
+        });
       }
-      // One extra slot per render STEP whose NAME is the groupKey itself, so
-      // the `merged` executor — which draws the whole group in one pass — has a
-      // slot to attach `timestampWrites` to (a merged pass can't bill the
-      // per-layer slots; those exist only for the `perLayerTimed` shape). Pushed
-      // AFTER the layer loop so the group total trails its layers in draw order.
-      // Emitted unconditionally for shape-stability; simply unused when the
-      // group is empty (the executor's `if (group.length === 0) break;` opens no
-      // pass, so no timing is billed against it). `groupKey` is unique per step
-      // for every ordinary render step (each has a distinct `(target, slab)`)
-      // and never collides with a layer name — EXCEPT the sky-cubemap capture
-      // steps (share `('sky-cubemap', NEAR0)` across all 6 faces) and the
-      // `(hdr, NEAR0)` roster's hdr-phase slices; `renderStepTimingSlotName`
-      // appends the face, or a suffix derived from the admitted phases, so
-      // each still earns its own slot (see its doc, slabs.ts). The DebugPanel
-      // bucket still uses the shared `groupKey`, so all 6 capture faces — and
-      // every roster slice — land under one title each.
-      rows.push({ name: renderStepTimingSlotName(groupKey, step.face, step.hdrPhases), groupKey });
+      // One extra slot per render STEP named for the groupKey itself, so the
+      // `merged` executor — one pass for the whole group — has a slot to attach
+      // `timestampWrites` to; the per-pass slots are the `perLayerTimed` shape's
+      // alone. Pushed AFTER the pass loop so the total trails its passes.
+      // `groupKey` alone is NOT unique across steps — all 6 capture faces share
+      // `('sky-cubemap', NEAR0)`, and several `FRAME_ORDER` lines share
+      // `(hdr, NEAR0)` — so `renderStepTimingSlotName` appends the face or the
+      // line's authored `slot`. The DebugPanel still buckets on the bare
+      // `groupKey`, so those all land under one title each.
+      rows.push({ name: renderStepTimingSlotName(groupKey, step.face, step.slot), groupKey });
     } else if (step.kind === 'composite') {
       // A composite merges whole textures rather than projecting geometry — it
       // belongs to no slab, and all composites share the one infra group.
@@ -527,29 +226,13 @@ function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
  * lists consume. A projection of the same program + registry walk that orders
  * `timedSlotsOf`, so the grouping can't drift from the executed frame.
  */
-export function timedSlotGroupsOf(
-  program: readonly FrameStep[],
-  passes: readonly ContentPass[],
-): readonly TimedSlotGroup[] {
-  return groupRows(timedSlotRowsOf(program, passes));
+export function timedSlotGroupsOf(program: readonly FrameStep[]): readonly TimedSlotGroup[] {
+  return groupRows(timedSlotRowsOf(program));
 }
 
 /**
- * The engine's ordered GPU-timing slots — the single source of truth for both
- * query-set slot allocation (`createGpuTimingService`) and DebugPanel display
- * order (`GpuTimingsSection`). Derived from the real FRAME program + the
- * content-layer registry rather than hand-maintained, so the two consumers
- * can never see a different slot list than what the frame actually runs.
- *
- * The tone values are placeholders: `timedSlotsOf` only reads step kinds and
- * `(target, slab)` — the composite's `tone` never affects a slot NAME — so a
- * fixed `PLACEHOLDER_TONE` yields the same list every real frame's
- * `frameProgram(tone)` would.
- *
- * `bloomEnabled = true` so the query-set allocation always includes the `'bloom'`
- * slot. It costs nothing on frames where bloom is off — the master toggle omits
- * the `'bloom'` step, and `runBloom` also no-ops on a null `bloomPyramid`, so the
- * pre-allocated slot simply goes unused, like any empty group's slot.
+ * A placeholder tone: a slot NAME never reads the composite's `tone`, so a
+ * fixed value yields the same list every real frame's expansion would.
  */
 const PLACEHOLDER_TONE: ToneMap = { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 };
 
@@ -586,32 +269,43 @@ const MAX_SGR_A_STAR_LENSING_BODY_SLABS: readonly number[] = Array.from(
   (_, k) => k + 2,
 );
 
-export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
-  frameProgram(
-    PLACEHOLDER_TONE,
-    true,
-    MAX_FOREGROUND_CHAIN,
-    ALL_CUBE_FACES,
-    MAX_SGR_A_STAR_LENSING_BODY_SLABS,
-  ),
+/**
+ * `bloomEnabled: true` so the query-set allocation always includes the
+ * `'bloom'` slot. It costs nothing on frames where bloom is off — the master
+ * toggle omits the step and `runBloom` also no-ops on a null `bloomPyramid`, so
+ * the pre-allocated slot simply goes unused, like any empty group's slot.
+ */
+const MAX_FRAME_INPUTS: FrameInputs = {
+  tone: PLACEHOLDER_TONE,
+  bloomEnabled: true,
+  foregroundChain: MAX_FOREGROUND_CHAIN,
+  skyCubemapFacesToCapture: ALL_CUBE_FACES,
+  lensBodySlabs: MAX_SGR_A_STAR_LENSING_BODY_SLABS,
+};
+
+/**
+ * The maximal expansion all three projections below walk — one expansion, so
+ * they cannot disagree about which steps exist.
+ */
+const MAX_PROGRAM: readonly FrameStep[] = expandFrameOrder(
+  FRAME_ORDER,
   CONTENT_PASSES,
+  MAX_FRAME_INPUTS,
 );
 
 /**
- * The real timing slots grouped for the GpuTimingsSection. Same program +
- * registry walk that orders `TIMED_SLOTS`, so a renderer that joins
- * `CONTENT_PASSES` gets a grouped row here with zero DebugPanel edits.
+ * The engine's ordered GPU-timing slots — the single source of truth for both
+ * query-set slot allocation (`createGpuTimingService`) and DebugPanel display
+ * order (`GpuTimingsSection`).
  */
-export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
-  frameProgram(
-    PLACEHOLDER_TONE,
-    true,
-    MAX_FOREGROUND_CHAIN,
-    ALL_CUBE_FACES,
-    MAX_SGR_A_STAR_LENSING_BODY_SLABS,
-  ),
-  CONTENT_PASSES,
-);
+export const TIMED_SLOTS: readonly string[] = timedSlotsOf(MAX_PROGRAM);
+
+/**
+ * The real timing slots grouped for the GpuTimingsSection. Same walk that
+ * orders `TIMED_SLOTS`, so a pass that joins `CONTENT_PASSES` and its
+ * `FRAME_ORDER` line gets a grouped row here with zero DebugPanel edits.
+ */
+export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(MAX_PROGRAM);
 
 /**
  * Plain `contentPass.name` → groupKey — a SEPARATE walk from `timedSlotRowsOf`,
@@ -625,20 +319,12 @@ export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
  * groupKey to the SAME title, so whichever row the last occurrence lands on
  * resolves to the identical display group.
  */
-function plainPassGroupKeys(
-  program: readonly FrameStep[],
-  passes: readonly ContentPass[],
-): ReadonlyMap<string, string> {
+function plainPassGroupKeys(program: readonly FrameStep[]): ReadonlyMap<string, string> {
   const map = new Map<string, string>();
   for (const step of program) {
     if (step.kind !== 'render') continue;
     const groupKey = groupKeyOf(step.target, step.slab);
-    for (const contentPass of passes) {
-      const matchesStep =
-        contentPass.slab === step.slab ||
-        (contentPass.slab === 'body' && isBodySlabIndex(step.slab));
-      if (contentPass.target === step.target && matchesStep) map.set(contentPass.name, groupKey);
-    }
+    for (const contentPass of step.passes) map.set(contentPass.name, groupKey);
   }
   return map;
 }
@@ -648,16 +334,7 @@ function plainPassGroupKeys(
  * RenderTogglesSection, fed the engine handle's live togglable-pass list) can
  * project them into the same groups the timing list uses.
  */
-const PASS_GROUP_KEYS: ReadonlyMap<string, string> = plainPassGroupKeys(
-  frameProgram(
-    PLACEHOLDER_TONE,
-    true,
-    MAX_FOREGROUND_CHAIN,
-    ALL_CUBE_FACES,
-    MAX_SGR_A_STAR_LENSING_BODY_SLABS,
-  ),
-  CONTENT_PASSES,
-);
+const PASS_GROUP_KEYS: ReadonlyMap<string, string> = plainPassGroupKeys(MAX_PROGRAM);
 
 /**
  * Group an arbitrary ordered name list (the DebugPanel toggles' live pass

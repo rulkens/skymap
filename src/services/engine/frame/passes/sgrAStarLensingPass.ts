@@ -74,8 +74,8 @@ export const sgrAStarLensingPass: ContentPass = {
     const pose = ctx.bodyPose(view.slab.frame.bodyId);
     if (pose === null) return;
 
-    // `> 0` by construction: `enabled` gates on it, and `frameProgram` only
-    // emits this step at all while the band is open.
+    // `> 0` by construction: `enabled` gates on it, and the `lens` line only
+    // expands to a step at all while the band is open.
     const bandAlpha = bandAlphaFor(state, ctx);
 
     // Sgr A*'s position relative to the camera, in the SAME body-local frame

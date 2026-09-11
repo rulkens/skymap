@@ -98,7 +98,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
 
 /** A render step with nothing left to draw never opens a pass. */
 function draws(step: FrameStep): boolean {
-  return step.kind !== 'render' || (step.passes?.length ?? 0) > 0;
+  return step.kind !== 'render' || step.passes.length > 0;
 }
 
 /**
@@ -136,7 +136,7 @@ function mergeAdjacent(steps: readonly FrameStep[]): readonly FrameStep[] {
     ) {
       merged[merged.length - 1] = {
         ...previous,
-        passes: [...(previous.passes ?? []), ...(step.passes ?? [])],
+        passes: [...previous.passes, ...step.passes],
       };
       continue;
     }
@@ -154,7 +154,7 @@ export function expandFrameOrder(
   for (const spec of order) {
     // The table's rows self-narrow; the lookup itself cannot, so it is cast once.
     const expand = EXPAND_STEP[spec.kind] as ExpandStep<FrameStepSpec['kind']>;
-    steps.push(...expand(spec as never, passes, frame));
+    steps.push(...expand(spec, passes, frame));
   }
   return mergeAdjacent(steps.filter(draws));
 }
