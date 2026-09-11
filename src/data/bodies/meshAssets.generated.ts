@@ -32,8 +32,8 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   petunias: {
     key: 'petunias',
     path: 'meshes/petunias.mesh',
-    boundingRadiusM: 0.4610371227394756,
-    meanAlbedo: [0.165297, 0.172384, 0.147393],
+    boundingRadiusM: 0.4610371216917222,
+    meanAlbedo: [0.100183, 0.115451, 0.081535],
     triangleCount: 149999,
     normalMapSubstituted: true,
     source: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',

@@ -4,14 +4,10 @@ The Sketchfab source is a SketchUp export: 781 primitives, 11 materials, 79
 LINES (edge geometry). `buildMeshes` refuses multi-material input by design —
 the .mesh format and the shaders are single-material end to end — so the
 flattening happens HERE, once, by hand, and MESH_SOURCES points at the OUTPUT.
+Decimate BEFORE the unwrap+bake: baking into UVs that decimation then moves
+mis-registers the atlas against the triangles that survive.
 
 Run:  npm run prebake-petunias   (Blender 5.2 LTS; not run in CI)
-
-Deviation from the plan's step order, deliberate: geometry is decimated BEFORE
-the unwrap+bake, not after. Baking into UVs that decimation then moves leaves
-the atlas mis-registered and bleeding across island seams; unwrapping the final
-triangle count instead keeps texel and triangle in agreement (and is minutes
-faster).
 """
 
 import os
@@ -107,10 +103,11 @@ def unwrap(obj):
     """A second UV set: the source UVs stay put so the bake can still read the
     11 original materials through them."""
     uv = obj.data.uv_layers.new(name="bake")
-    # Both flags, and the name read NOW: `active` is what smart_project writes
-    # into, `active_render` is what the bake reads, and the layer reference goes
-    # stale across the edit-mode round trip below.
-    uv.active_render = True
+    # `active` is what smart_project writes into; the bake's `uv_layer=` names
+    # its own target. `active_render` must stay on the SOURCE layer — it is
+    # what the source materials sample their textures through, so flipping it
+    # here paints the atlas through the wrong UVs. The name is read NOW: the
+    # layer reference goes stale across the edit-mode round trip below.
     obj.data.uv_layers.active = uv
     uv_name = uv.name
     bpy.ops.object.select_all(action="DESELECT")
@@ -193,22 +190,6 @@ def keep_only_bake_uv(obj, uv_name):
     obj.data.uv_layers[0].active_render = True
 
 
-def centre_on_origin(obj):
-    """The authored pivot sits ~1.4 m away from a 0.87 m basket, and
-    `boundingRadiusM` is measured from the ORIGIN — so shipping the pivot as-is
-    hands the renderer a radius 3x the prop's real size (glint scale, fly-to
-    framing and the mesh handoff all read it). Zeroing `location` after the
-    origin move is what actually bakes the shift in: left set, the exporter
-    writes it back out as a node translation and the tool re-applies it."""
-    bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
-    obj.location = (0.0, 0.0, 0.0)
-    bpy.context.view_layer.update()
-    return max(v.co.length for v in obj.data.vertices)
-
-
 def export(obj):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
@@ -251,7 +232,6 @@ def main():
     log("baked %d^2 albedo atlas -> %s (%.0fs elapsed)" % (ATLAS_SIZE, ATLAS, time.time() - started))
     flatten_materials(obj, image)
     keep_only_bake_uv(obj, uv_name)
-    log("centred on origin -> bounding radius %.3f m" % centre_on_origin(obj))
     export(obj)
     log("wrote %s (%d tris, %.0fs total)" % (OUT, triangles(obj), time.time() - started))
 
