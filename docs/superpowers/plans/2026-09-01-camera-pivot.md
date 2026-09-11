@@ -1,5 +1,7 @@
 # Camera pivot (spec 2) — implementation plan
 
+Shipped 2026-09-11 via PR #647 (squash). Ledger: [`plans/completed/2026-09-01-camera-pivot.ledger.md`](2026-09-01-camera-pivot.ledger.md).
+
 > **Spec.** [`specs/2026-09-01-camera-pivot.md`](../specs/2026-09-01-camera-pivot.md) — the
 > binding authority. Every ruling in it is settled; the plan implements, it does not
 > re-open. Rationale for any decision lives in the ruling record
@@ -99,11 +101,11 @@ take the `Local:` port from **its** output — running `npm run perf` without
 `--url http://localhost:<port>` silently measures whatever other branch's server is
 up, which is the standing trap.
 
-- [ ] `npm run perf -- --url http://localhost:<this worktree's port>`, default poses.
-- [ ] Record the full MERGED / PER-LAYER / FLOOR output verbatim in the SDD ledger
+- [x] `npm run perf -- --url http://localhost:<this worktree's port>`, default poses.
+- [x] Record the full MERGED / PER-LAYER / FLOOR output verbatim in the SDD ledger
       under `Task 1 baseline` (Task 21 diffs against it; a summarised baseline is
       not comparable).
-- [ ] No commit.
+- [x] No commit.
 
 ## Phase 1 — data delta and pure primitives
 
@@ -126,10 +128,10 @@ Task 22 feel gate** — say so in one line beside it, and nowhere else. The tilt
 ceiling is gone: display tilt is `remembered × bodyUpWeight(h/R, tuning)`, which is
 0 at and above `tuning.tiltZeroHR ≤ tuning.disengageHR`.
 
-- [ ] Write the four files. No tests: type declarations and a constant table are
+- [x] Write the four files. No tests: type declarations and a constant table are
       exactly what `testing.md` forbids restating at runtime.
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ### Task 3: the two conversions
 
@@ -188,8 +190,8 @@ This module and `bodyRelativePose.ts` are the only two permitted importers of
   `anchorLocalM + eyeRelAnchorM === eyeRelBodyM` and `basisLocal === basisM` from
   `bodyRelativePose` for the same inputs, to that same floor (spec §5.2).
 
-- [ ] Write the tests, watch them fail, implement, `npm test -- poseFrameConversion`.
-- [ ] Commit.
+- [x] Write the tests, watch them fail, implement, `npm test -- poseFrameConversion`.
+- [x] Commit.
 
 ### Task 4: amend the one-seam importer test
 
@@ -207,19 +209,20 @@ radius→Mpc **framing-bridge** category, not pose math. `bodyRelativePose.ts` a
 
 Do not relax the existing three-file cull/fade allow-list (spec §10).
 
-- [ ] Extend the sweep + allow-list; add `poseFrameConversion.ts` to
+- [x] Extend the sweep + allow-list; add `poseFrameConversion.ts` to
       `KNOWN_ANCHOR_FILES`'s spirit (assert the new dirs found real files, or the
       glob can silently sweep zero and pass vacuously).
-- [ ] `npm test -- oneMpcSeam` — green, and demonstrably failing if you temporarily
+- [x] `npm test -- oneMpcSeam` — green, and demonstrably failing if you temporarily
       add a `SCALE_UNITS.M_TO_MPC` use to an un-listed camera-path file.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: the tilt ceiling
 
-**Files (new):** `src/utils/camera/maxTiltRad.ts`,
-`tests/utils/camera/maxTiltRad.test.ts`
+**Files (new):** `src/utils/camera/bodyUpWeight.ts`,
+`tests/utils/camera/bodyUpWeight.test.ts` — the un-braid ruled the standalone
+`maxTiltRad` away, so the weight ramp is the shipped subject of this task.
 
-**Signature:** `maxTiltRad(hOverR: number): number`
+**Signature:** `bodyUpWeight(hOverR: number, tuning: CameraTuning): number`
 **Behaviour:** the tilt ceiling is gone — display tilt is `remembered ×
 bodyUpWeight(h/R, tuning)`, which is 0 at and above `tuning.tiltZeroHR ≤
 tuning.disengageHR` (spec §6). Note the edge order — `smoothstep(edge0, edge1, x)`
@@ -232,13 +235,13 @@ comment line.
 - The tilt ceiling is gone: display tilt is `remembered × bodyUpWeight(h/R, tuning)`,
   which is 0 at and above `tuning.tiltZeroHR ≤ tuning.disengageHR` — the Q4 identity
   and a spec §11 acceptance criterion.
-- `maxTiltRad is π at and below tiltFullHR`
-- `maxTiltRad crosses 90° near 1.71 R` — the midpoint of the two edges (spec §6);
+- `bodyUpWeight is 1 at and below tiltFullHR` — full remembered tilt survives.
+- `bodyUpWeight crosses 0.5 near 1.71 R` — the midpoint of the two edges (spec §6);
   assert the crossing lies between 1.6 and 1.8, not an exact value, so a feel-gate
   tweak to `tiltFullHR` does not make this a tollbooth.
-- `maxTiltRad is monotonically non-increasing in h/R` over a sampled sweep.
+- `bodyUpWeight is monotonically non-increasing in h/R` over a sampled sweep.
 
-- [ ] TDD, `npm test -- maxTiltRad`, commit.
+- [x] TDD, `npm test -- bodyUpWeight`, commit.
 
 ### Task 6: re-anchoring
 
@@ -264,7 +267,7 @@ redone later. Say that in one header line; do not explain the floor here.
 - `reanchoredPose shrinks |eyeRelAnchorM|` for a pose past the trigger.
 - `reanchoredPose returns the input unchanged below the trigger` (reference equality).
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 7: the cursor ray
 
@@ -294,7 +297,7 @@ eye in body-fixed metres (`anchorLocalM + eyeRelAnchorM`); `dir` is unit.
   aspect term being applied to the wrong axis, the classic form of this bug.
 - `dir is unit for an off-axis corner pixel`
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 8: the surface readout
 
@@ -321,7 +324,7 @@ target-derived** (FW-A, spec §11).
 - `readout is finite and continuous stepping across the pole` — the pole escape.
 - `tiltRad is 0 looking straight down and π looking at the zenith` — pins the datum.
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 9: the descent floor in metres
 
@@ -342,7 +345,7 @@ owns only the value.
 `surfaceFloorM(R) / R === SURFACE_STANDOFF_RADII` for two different radii. (Not a
 constant restatement: the fact under test is that the two arms read one declaration.)
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 10: anchored drag rotation
 
@@ -383,7 +386,7 @@ path hiding drift. The grazing threshold is feel-open until Task 22.
 - `a grazing ray returns null` (|ray·normal| under the threshold).
 - `a ray that misses the frozen sphere returns null`.
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 11: anchored zoom step
 
@@ -424,7 +427,7 @@ the approach on **closing distance**, never absolute altitude. Floor the result 
 - `an approach step never goes below the surface floor`.
 - `an oversized factor is clamped on both signs` (**FW-D**'s bounded-step half).
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 12: the regime predicate
 
@@ -469,7 +472,7 @@ The gesture-in-flight rule (spec §4: no flip during an active gesture) belongs 
   arm tag is the only discriminant, and an inconsistent pair must stay
   unrepresentable.
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ## Phase 2 — the union, provider B, and the fold
 
@@ -568,8 +571,8 @@ Update existing tests only where the type forces it (wrap fixtures in
 `absoluteArm`). A test whose **assertion** changes in this task is a signal the
 migration moved behaviour — stop and report.
 
-- [ ] Migrate, `npm test` (full suite), `npm run typecheck`.
-- [ ] Commit.
+- [x] Migrate, `npm test` (full suite), `npm run typecheck`.
+- [x] Commit.
 
 ### Task 14: provider B behind the pose seam
 
@@ -599,7 +602,7 @@ inert so the fold's task is a one-concern change.
   frame with one arm engaged.
 - `poseFromBodyArm folds the anchor exactly` — a non-zero anchor, hand-computed.
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 15: the fold
 
@@ -636,7 +639,7 @@ resolution per frame, no second call.
 - `the pivot pin and the follow driver are inert in a body arm` (spec §14).
 - `the wheel does not route through applyWheelZoom in a body arm`.
 
-- [ ] TDD, full suite, commit.
+- [x] TDD, full suite, commit.
 
 ## Phase 3 — gestures
 
@@ -706,7 +709,7 @@ view` (**FW-C**).
 - `look leaves the eye and altitude bit-identical while heading stays live`.
 - `an overshoot past the anchor tangent plane forces a fresh anchor pick`.
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 17: ceiling enforcement on driven writes
 
@@ -715,7 +718,9 @@ view` (**FW-C**).
 
 Enforcement is **orientation-only, applied after every write to the body arm**
 (spec §6, §12-R3): recompute the ENU at the new standpoint and rebuild the basis from
-`(heading, min(tilt, maxTiltRad(h/R)))`. **The eye never moves.**
+`(heading, tilt)` — the tilt ceiling is gone; display tilt = remembered ×
+`bodyUpWeight(h/R, tuning)`, zero at and above `tuning.tiltZeroHR ≤
+tuning.disengageHR`. **The eye never moves.**
 
 Not an entry clamp (spec §12-R3): enforcing on arm entry would snap a pose that
 arrives above the ceiling — a flyby aimed away from the body, a tour keyframe. Since
@@ -734,7 +739,7 @@ must sit exactly at `disengageHR`.
 - `enforcement never moves the eye` — bit-identical eye before and after.
 - `a pose entering the arm above the ceiling is not clamped` (spec §12-R3).
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 18: clock and frame-loop integration
 
@@ -783,7 +788,7 @@ range in metres via the resolved arm. Keep the instant-commit (a snap, not a fly
 - `…at the requested range and at tilt 0`.
 - `the fly-to saga commits a body arm` and `…the fold converts it when out of band`.
 
-- [ ] TDD, commit.
+- [x] TDD, commit.
 
 ### Task 20: frames for keyframes, tours, and serialization
 
@@ -828,7 +833,7 @@ blob names the frame and prints **metres** in a body arm.
 - `no existing clip's evaluated pose changes` — run a registry clip before/after.
 - `logCameraState names the frame and prints metres in a body arm`.
 
-- [ ] TDD, full suite, commit.
+- [x] TDD, full suite, commit.
 
 ## Phase 5 — measurement and the gate
 
@@ -839,10 +844,10 @@ blob names the frame and prints **metres** in a body arm.
 Re-run the Task 1 measurement, same flags, same poses, **same worktree URL trap**.
 The work is CPU-side and small; **neutral is the expectation and the bar**.
 
-- [ ] `npm run perf -- --url http://localhost:<this worktree's port>`.
-- [ ] Diff against the Task 1 baseline verbatim in the ledger. Interpret per the
+- [x] `npm run perf -- --url http://localhost:<this worktree's port>`.
+- [x] Diff against the Task 1 baseline verbatim in the ledger. Interpret per the
       `perf` skill (MERGED vs PER-LAYER vs FLOOR; Apple Silicon slot-sum inflation).
-- [ ] **A neutral-or-negative measurement halts the landing pipeline.** Land or park
+- [x] **A neutral-or-negative measurement halts the landing pipeline.** Land or park
       is the user's ruling, never process momentum (spec §11).
 
 ### Task 22: USER GATE — visual and feel pass
@@ -872,7 +877,7 @@ bodies** — on a ~10 km moon the band engages at ~17 km altitude, which is corr
 may feel abrupt. If the gate objects, the remedy is a per-row engage floor — a
 registry parameter, **never a second regime**.
 
-- [ ] Record the verdict per item in the ledger. Any adverse finding is a fix loop
+- [x] Record the verdict per item in the ledger. Any adverse finding is a fix loop
       before `/feature-done`, not a follow-up.
 
 ## File structure
@@ -890,7 +895,7 @@ src/services/engine/camera/poseFrameConversion.ts   T3  (+ resolveWorldArm, T13)
 src/services/engine/camera/regimeArmFor.ts          T12
 src/services/engine/helpers/liveWorldPose.ts        T13
 src/services/camera/surfaceController.ts            T16  deleted by the prep → surfaceStep.ts
-src/utils/camera/maxTiltRad.ts                      T5
+src/utils/camera/bodyUpWeight.ts                    T5  (the ceiling is gone; this ramps the remembered tilt)
 src/utils/camera/reanchoredPose.ts                  T6
 src/utils/camera/cursorRayBodyLocal.ts              T7
 src/utils/camera/surfaceReadoutOf.ts                T8
@@ -988,33 +993,33 @@ deep-space behaviour.
 
 **Deliverable inventory**
 
-- [ ] `FramedCameraPose` is the store's camera currency; `camera.base.frame` is the
+- [x] `FramedCameraPose` is the store's camera currency; `camera.base.frame` is the
       only regime discriminant in the tree.
-- [ ] `poseFrameConversion` exports `toBodyArm` / `toWorldArm` / `resolveWorldArm`,
+- [x] `poseFrameConversion` exports `toBodyArm` / `toWorldArm` / `resolveWorldArm`,
       and is the second and last permitted importer of `MPC_TO_M` / `M_TO_MPC` in the
       camera path.
-- [ ] Provider B is selected at the existing `frameContext` seam; provider A still
+- [x] Provider B is selected at the existing `frameContext` seam; provider A still
       serves every other body.
-- [ ] The surface controller holds the priority-100 driver slot and is active only
+- [x] The surface controller holds the priority-100 driver slot and is active only
       while a gesture is in flight in a body arm.
-- [ ] `lonLatFocusPose` authors a body arm with no Mpc in it.
-- [ ] `set` / `setVec` endpoints carry an optional `PoseFrame`; `logCameraState`
+- [x] `lonLatFocusPose` authors a body arm with no Mpc in it.
+- [x] `set` / `setVec` endpoints carry an optional `PoseFrame`; `logCameraState`
       names the frame and prints metres in a body arm.
 
 **Acceptance criteria from spec §11**
 
-- [ ] **Pose exactness at engage and disengage** — eye, forward and screen-up
+- [x] **Pose exactness at engage and disengage** — eye, forward and screen-up
       round-trip to within provider A's ~14 µm floor, over a body with a **tilted
       pole** and a non-identity orientation.
-- [ ] **No-snap crossing** — the rendered camera on the frame before and the frame
+- [x] **No-snap crossing** — the rendered camera on the frame before and the frame
       after a threshold crossing agrees to that same floor, in both directions.
-- [ ] **Grep: no stored regime flag** — `noStoredRegimeFlag.test.ts` green, and the
+- [x] **Grep: no stored regime flag** — `noStoredRegimeFlag.test.ts` green, and the
       one-seam importer test green with the camera path swept.
-- [ ] `bodyUpWeight(tuning.disengageHR, tuning) === 0` for every `clampCameraTuning`
+- [x] `bodyUpWeight(tuning.disengageHR, tuning) === 0` for every `clampCameraTuning`
       output — the Q4 identity, now structural via the `tiltZeroHR ≤ disengageHR`
       cap rather than asserted against a record.
-- [ ] A gesture in flight cannot change the arm.
-- [ ] The nine fix waves carried forward as named tests: FW-A (T8), FW-B + FW-H
+- [x] A gesture in flight cannot change the arm.
+- [x] The nine fix waves carried forward as named tests: FW-A (T8), FW-B + FW-H
       (T11), FW-C + FW-D (T16), FW-E (subsumed — 3.4 R makes it trivially true,
       ruled Q6), FW-F (T18), FW-G (T15), FW-I (T10).
 
