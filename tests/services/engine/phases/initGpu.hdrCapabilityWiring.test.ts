@@ -364,6 +364,7 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 // phase-split assertion below, rather than a hand-written key list that
 // could drift from GPU_HANDLE_ROWS.
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
+import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -449,7 +450,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb: { store: { dispatch: vi.fn() } } as unknown as EngineCallbacks,
-    home: { focus: null, seedSelection: false },
+    composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

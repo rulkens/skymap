@@ -54,6 +54,7 @@ vi.mock('../../../../src/services/engine/frame/runFrame', () => ({
 import { startLoop } from '../../../../src/services/engine/phases/startLoop';
 import { goLive } from '../../../../src/state/time/timeSlice';
 import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
+import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -102,7 +103,7 @@ function makeDeps({ timeMode = 'live' }: { timeMode?: 'live' | 'manual' } = {}):
     cb: {
       store: { dispatch: vi.fn(), getState: () => ({ time: { mode: timeMode } }) },
     } as never,
-    home: { focus: null, seedSelection: false },
+    composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

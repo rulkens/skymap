@@ -242,6 +242,7 @@ import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAl
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -514,7 +515,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb,
-    home: { focus: null, seedSelection: false },
+    composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

@@ -15,7 +15,8 @@ import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalo
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
-import type { EngineHomeConfig } from '../../@types/engine/EngineHomeConfig';
+import type { EngineComposition } from '../../@types/engine/EngineComposition';
+import type { Layer } from '../../@types/engine/layer/Layer';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
@@ -91,7 +92,7 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 export function createEngine(
   canvas: HTMLCanvasElement,
   cb: EngineCallbacks,
-  home: EngineHomeConfig,
+  composition: EngineComposition<readonly Layer<string, unknown>[]>,
 ): EngineHandle {
   // The scheduler needs an `onFrame` at construction time — here — but the real
   // frame body lives in `runFrame.ts` and only lands once `startLoop` runs. The
@@ -385,7 +386,7 @@ export function createEngine(
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
-    home,
+    composition,
     frameRef,
     detachControlsRef,
     handleRef,
