@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * bakeSplats — orchestrates the Søndermarken Gaussian-splat bake: the fetched
- * skråfoto frames + the LiDAR cloud as a points3D seed → a known-pose COLMAP
- * model → one `brush-cli` train → `splats.bin` + the group's `manifest.json`
- * + the `scenes.json` registry (spec §§4-6).
+ * bakeSplats — orchestrates one scene group's Gaussian-splat bake (`--group
+ * <id>`, default `soendermarken`): the fetched skråfoto frames + the LiDAR
+ * cloud as a points3D seed → a known-pose COLMAP model → one `brush-cli` train
+ * → `splats.bin` + the group's `manifest.json` + the `scenes.json` registry
+ * (spec §§4-6).
  *
  * `runCct`/`runBrush` are injected so the orchestration runs without PROJ or
  * Brush installed (the pose maths, the COLMAP writer, the PLY reader and the
@@ -15,8 +16,10 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { SOENDERMARKEN, type SceneGroupDefinition } from './groups/soendermarken';
+import { sceneGroupFromArgv } from './groups/sceneGroupFromArgv';
+import { frameWindow, frameWindowOutputPx } from './poses/frameWindow';
 import { photoPoseFromStacItem } from './poses/photoPoseFromStacItem';
+import { spawnCct } from './poses/spawnCct';
 import { topocentricPositionsM, type CctRunner } from './poses/topocentricPositionsM';
 import { lidarFloorZM } from './lidar/lidarFloorZM';
 import { packSplats } from './pack/packSplats';
@@ -24,13 +27,12 @@ import { readGaussianPly } from './splats/readGaussianPly';
 import { writeColmapModel } from './splats/writeColmapModel';
 import { nextManifest } from './manifest/nextManifest';
 import { upsertGroup } from './manifest/upsertGroup';
+import { jpegSizePx } from '../utils/io/jpegSizePx';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { lonLatBoundsToEnuM } from '../utils/scene/lonLatBoundsToEnuM';
+import { skraafotoHarvestDir } from '../utils/skraafoto/skraafotoHarvestDir';
 import { writeJsonAtomic } from '../utils/io/writeJsonAtomic';
-import {
-  LONG_EDGE_PX,
-  skraafotoDownsampleScale,
-} from '../utils/skraafoto/skraafotoDownsampleScale';
+import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { SkraafotoStacItem } from './@types/SkraafotoStacItem';
 import type { GaussianSplatAsset } from '../scene-workbench/@types/GaussianSplatAsset';
 import type { GroupRegistry } from '../scene-workbench/@types/GroupRegistry';
@@ -52,7 +54,7 @@ const TRAIN_ITERS = 30000;
  *  `bake-splats` step. */
 const FLOOR_MARGIN_M = 5;
 
-export type BrushRunner = (colmapDir: string) => Promise<void>;
+export type BrushRunner = (colmapDir: string, maxResolutionPx: number) => Promise<void>;
 
 export async function bakeSplats(
   group: SceneGroupDefinition,
@@ -75,11 +77,12 @@ export async function bakeSplats(
     );
   }
 
-  const collectionDir = join(rawDataPath('skraafoto.dir'), group.skraafoto.collection);
+  const collectionDir = skraafotoHarvestDir(rawDataPath('skraafoto.dir'), group);
   const items = await readStacItems(collectionDir);
   if (items.length === 0) {
     throw new Error(
-      `bakeSplats: no STAC items in ${collectionDir} — run \`npm run fetch-skraafoto\` first.`,
+      `bakeSplats: no STAC items in ${collectionDir} — run ` +
+        `\`npm run fetch-skraafoto -- --group ${group.id}\` first.`,
     );
   }
 
@@ -105,14 +108,36 @@ export async function bakeSplats(
       runCct: deps.runCct,
     });
 
-    const poses: PhotoPose[] = items.map((item, i) => {
-      const scale = skraafotoDownsampleScale(item.properties['proj:shape']);
-      const pose = photoPoseFromStacItem(item, group.anchor, positions[i]!, scale);
+    const poses: PhotoPose[] = [];
+    let maxResolutionPx = 0;
+    let skipped = 0;
+    for (const [i, item] of items.entries()) {
+      // Recomputed, not read from a sidecar: the harvest wrote whatever this
+      // same function said, so a group whose bounds or resolution moved since
+      // fails the dimension check below rather than training on stale pixels.
+      const window = frameWindow(item, group, positions[i]!);
+      if (window === null) {
+        skipped++;
+        continue;
+      }
+      const pose = photoPoseFromStacItem(item, group.anchor, positions[i]!, window);
       // photoPoseFromStacItem names the JPEG bare and writeColmapModel hands
       // `imageUrl` straight to `copyFile`, which resolves against cwd — so the
       // harvest directory has to be folded in here or the copy misses.
-      return { ...pose, imageUrl: join(collectionDir, pose.imageUrl) };
-    });
+      const imageUrl = join(collectionDir, pose.imageUrl);
+      await assertJpegMatchesWindow(imageUrl, frameWindowOutputPx(window), group.id);
+      maxResolutionPx = Math.max(maxResolutionPx, pose.imageWidthPx, pose.imageHeightPx);
+      poses.push({ ...pose, imageUrl });
+    }
+    if (poses.length === 0) {
+      throw new Error(
+        `bakeSplats: none of the ${items.length} harvested frame(s) see group "${group.id}" — ` +
+          'its bounds moved since the harvest.',
+      );
+    }
+    if (skipped > 0) {
+      process.stderr.write(`bakeSplats: ${skipped} harvested frame(s) no longer see the bounds\n`);
+    }
 
     await writeColmapModel({
       poses,
@@ -128,8 +153,11 @@ export async function bakeSplats(
     // repack packs an older one, under that run's stamp.
     await rm(plyPath, { force: true });
 
-    process.stderr.write(`bakeSplats: training ${poses.length} frame(s) with brush-cli…\n`);
-    await deps.runBrush(colmapDir);
+    process.stderr.write(
+      `bakeSplats: training ${poses.length} frame(s) with brush-cli, ` +
+        `max resolution ${maxResolutionPx} px…\n`,
+    );
+    await deps.runBrush(colmapDir, maxResolutionPx);
   }
 
   const ply = await readFile(plyPath).catch(() => {
@@ -220,6 +248,29 @@ export async function bakeSplats(
   return asset;
 }
 
+/** The harvest carries no record of the window it was cut with, so the JPEG's
+ *  own dimensions are the check that it still matches the group. */
+async function assertJpegMatchesWindow(
+  jpegPath: string,
+  expectedPx: readonly [number, number],
+  groupId: string,
+): Promise<void> {
+  const bytes = await readFile(jpegPath).catch(() => {
+    throw new Error(
+      `bakeSplats: ${jpegPath} is missing — re-run \`npm run fetch-skraafoto -- --group ${groupId}\`.`,
+    );
+  });
+  const [width, height] = jpegSizePx(bytes);
+  if (width !== expectedPx[0] || height !== expectedPx[1]) {
+    throw new Error(
+      `bakeSplats: ${jpegPath} is ${width}×${height}, but group "${groupId}" now wants ` +
+        `${expectedPx[0]}×${expectedPx[1]} — its bounds or groundMmPerPx changed since the ` +
+        `harvest. Delete the harvest directory and re-run ` +
+        `\`npm run fetch-skraafoto -- --group ${groupId}\`.`,
+    );
+  }
+}
+
 /** The brush-cli version already stamped on this group's splats asset, if the
  *  manifest exists and carries one. */
 async function manifestBrushVersion(manifestPath: string): Promise<string | undefined> {
@@ -242,31 +293,7 @@ async function readStacItems(dir: string): Promise<SkraafotoStacItem[]> {
   );
 }
 
-function spawnCct(pipeline: string, inputLines: readonly string[]): Promise<readonly string[]> {
-  return new Promise((resolvePromise, reject) => {
-    // The pipeline is `cct`'s argv, one `+key=value` token per argument.
-    const child = spawn('cct', pipeline.split(' '), { stdio: ['pipe', 'pipe', 'inherit'] });
-    let stdout = '';
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (chunk: string) => {
-      stdout += chunk;
-    });
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`bakeSplats: \`cct\` exited with code ${code}`));
-        return;
-      }
-      resolvePromise(stdout.split('\n').filter((line) => line.trim() !== ''));
-    });
-    // An EPIPE from a `cct` that died before draining lands on the stream, not
-    // on the child — uncaught unless it is routed to the same rejection.
-    child.stdin.on('error', reject);
-    child.stdin.end(`${inputLines.join('\n')}\n`);
-  });
-}
-
-function spawnBrush(colmapDir: string): Promise<void> {
+function spawnBrush(colmapDir: string, maxResolutionPx: number): Promise<void> {
   return new Promise((resolvePromise, reject) => {
     // `--with-viewer` defaults false once a source path is given, so no flag.
     const child = spawn(
@@ -281,8 +308,10 @@ function spawnBrush(colmapDir: string): Promise<void> {
         colmapDir,
         '--export-name',
         PLY_NAME,
+        // Brush silently re-downsamples past this, undoing the harvest's own
+        // resolution choice — so it follows the largest frame actually staged.
         '--max-resolution',
-        String(LONG_EDGE_PX),
+        String(maxResolutionPx),
       ],
       { stdio: ['ignore', 'inherit', 'inherit'] },
     );
@@ -315,7 +344,7 @@ function brushVersion(): string {
 async function main(): Promise<void> {
   const start = Date.now();
   const asset = await bakeSplats(
-    SOENDERMARKEN,
+    sceneGroupFromArgv(process.argv),
     { runCct: spawnCct, runBrush: spawnBrush, brushVersion },
     { reusePly: process.argv.includes('--reuse-ply') },
   );
