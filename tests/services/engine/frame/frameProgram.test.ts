@@ -92,9 +92,9 @@ describe('frameProgram', () => {
     // prelude carries TWO steps — the flow integrate and the atmosphere
     // sky-view LUT bake — both ahead of the foreground render so the atmosphere
     // shell samples this frame's LUT.
-    // Bloom OFF — the base thirteen-step shape (the bloom-enabled program splices
-    // one bloom step between the foreground composite and the tone-map; see the
-    // bloom-gating tests below).
+    // Bloom OFF — the base fourteen-step shape (the bloom-enabled program splices
+    // one bloom step between the post-foreground hdr step and the tone-map; see
+    // the bloom-gating tests below).
     expect(frameProgram(TONE, false, [NEAR0], [])).toEqual([
       { kind: 'compute', name: 'flow' },
       { kind: 'compute', name: 'atmosphereSkyView' },
@@ -103,12 +103,13 @@ describe('frameProgram', () => {
       { kind: 'render', target: 'hdr', slab: COSMO },
       { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
       { kind: 'render', target: 'mw-aggregate', slab: NEAR0 },
-      { kind: 'render', target: 'hdr', slab: NEAR0 },
+      { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['pre-lens', 'post-lens'] },
       { kind: 'render', target: 'foreground:0', slab: NEAR0, depthLoad: 'clear' },
       {
         kind: 'composite',
         step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
       },
+      { kind: 'render', target: 'hdr', slab: NEAR0, hdrPhases: ['post-foreground'] },
       { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } },
       { kind: 'render', target: 'swap', slab: COSMO },
       { kind: 'render', target: 'swap', slab: NEAR0 },
@@ -297,25 +298,55 @@ describe('frameProgram', () => {
   it('sgrAStarLensingBodySlabs omitted or empty: no extra step, program identical to the base list (zero-cost outside the band)', () => {
     const base = frameProgram(TONE, false, [NEAR0], [], undefined);
     expect(base.some((step) => step.kind === 'render' && step.slab >= 2)).toBe(false);
-    // Task 14b: the split discriminant must not leak outside the
-    // band either — the (hdr, NEAR0) step stays the single untagged step it
-    // always was, byte-identical to pre-Task-14b.
-    expect(base.some((step) => step.kind === 'render' && 'lensPhase' in step)).toBe(false);
+  });
+
+  it('the (hdr, NEAR0) roster steps admit every phase exactly once, in both lens states', () => {
+    // Outside the band one step absorbs the post-lens layers (there is no lens
+    // for them to stay on top of); inside it they get their own step after the
+    // lens's (hdr, BODY[k]) step. Either way the admitted sets partition the
+    // three phases — a phase in two sets would draw its layers twice, a phase
+    // in none would silently drop them.
+    const rosterPhases = (program: readonly FrameStep[]): unknown[] =>
+      program
+        .filter((step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0)
+        .map((step) => (step.kind === 'render' ? step.hdrPhases : undefined));
+    expect(rosterPhases(frameProgram(TONE, false, [NEAR0], []))).toEqual([
+      ['pre-lens', 'post-lens'],
+      ['post-foreground'],
+    ]);
+    expect(rosterPhases(frameProgram(TONE, false, [NEAR0], [], [4]))).toEqual([
+      ['pre-lens'],
+      ['post-lens'],
+      ['post-foreground'],
+    ]);
   });
 
   it('sgrAStarLensingBodySlabs active: orbit-trails/body-glints move to their own step AFTER the lens step (Task 14b)', () => {
     // The evidenced gap: orbit-trails and body-glints (the S-star
     // trails and the Sgr A* far-field glint among them) used to share the
     // pre-lens (hdr, NEAR0) roster step and so drew UNDER the lens's OVER
-    // blend. `ContentPass.hdrPostLensing` moves them into a step that runs
-    // after the lens's own (hdr, BODY[k]) step instead — checked here
-    // against the REAL registry, so a missing flag on either layer (they'd
-    // stay in 'pre', ahead of the lens) fails this.
+    // blend. `ContentPass.hdrPhase` moves them into steps that run after
+    // the lens's own (hdr, BODY[k]) step instead — checked here against the
+    // REAL registry, so a missing phase on either layer (they'd stay in the
+    // roster, ahead of the lens) fails this.
     const slots = timedSlotsOf(frameProgram(TONE, false, [NEAR0], [], [4]), CONTENT_PASSES);
     const lensLayerIdx = slots.indexOf('sgr-a-star-lensing·BODY[2]');
     expect(lensLayerIdx).toBeGreaterThanOrEqual(0);
     expect(slots.indexOf('orbit-trails')).toBeGreaterThan(lensLayerIdx);
     expect(slots.indexOf('body-glints')).toBeGreaterThan(lensLayerIdx);
+  });
+
+  it('orbit-trails draws AFTER the foreground:0→hdr body composite and before the tone-map', () => {
+    // A satellite trail's near arc passes in front of its host; drawn before
+    // the opaque body composite it would be covered along with the far arc.
+    // Checked against the REAL registry, so dropping the layer's phase (it
+    // would rejoin the roster step, ahead of the composite) fails this.
+    const slots = timedSlotsOf(frameProgram(TONE, false, [NEAR0], []), CONTENT_PASSES);
+    const compositeIdx = slots.indexOf('foreground:0→hdr');
+    const toneMapIdx = slots.indexOf('hdr→swap');
+    expect(compositeIdx).toBeGreaterThanOrEqual(0);
+    expect(slots.indexOf('orbit-trails')).toBeGreaterThan(compositeIdx);
+    expect(slots.indexOf('orbit-trails')).toBeLessThan(toneMapIdx);
   });
 
   it('bloom disabled: no bloom step emitted and program otherwise identical', () => {
@@ -372,6 +403,7 @@ describe('timedSlotsOf', () => {
       'hdr·NEAR0',
       'foreground:0·NEAR0',
       'foreground:0→hdr',
+      'hdr·NEAR0·POST_FOREGROUND',
       'hdr→swap',
       'selection-ring',
       'labels',
@@ -407,8 +439,9 @@ describe('timedSlotsOf', () => {
     // precedes milky-way so the dust extincts the cloud's own starlight, that
     // pair leads the group so the multiplicative dust never darkens the local
     // starfield, and star-upsample sits adjacent to the star-catalog leaf draw
-    // it composites. orbit-trails + body-glints trail LAST in this group
-    // (Task 14) — this fixture passes no sgrAStarLensingBodySlabs, so its
+    // it composites. body-glints trails LAST in this group (Task 14;
+    // orbit-trails now has its own post-foreground slice further down) —
+    // this fixture passes no sgrAStarLensingBodySlabs, so its
     // own (hdr, BODY[k]) step (which would otherwise sit between this group
     // and the foreground:0 step) is absent, zero-cost. The
     // foreground:0 body render now comes NEXT (before the composites) — one
@@ -451,7 +484,6 @@ describe('timedSlotsOf', () => {
       'star-catalog',
       'star-upsample',
       'constellations',
-      'orbit-trails',
       'body-glints',
       'hdr·NEAR0',
       // The body-m step (Task 9-11): every 'body'-slab layer matches EVERY
@@ -473,6 +505,10 @@ describe('timedSlotsOf', () => {
       'field-star-sphere',
       'foreground:0·NEAR0',
       'foreground:0→hdr',
+      // orbit-trails alone in the post-foreground hdr slice: over the opaque
+      // bodies, still ahead of bloom and the tone-map.
+      'orbit-trails',
+      'hdr·NEAR0·POST_FOREGROUND',
       // The bloom sub-pipeline, spliced between the linear foreground merge and
       // the tone-map, bills ONE `'bloom'` slot spanning its whole pass sequence
       // (runBloom opens the ten passes itself — the executor sees a single step).
@@ -593,7 +629,7 @@ describe('timedSlotGroupsOf', () => {
     expect(groups.map((g) => g.rows.map((r) => r.name))).toEqual([
       ['volume·COSMO', 'zoa·COSMO', 'star-aggregates·NEAR0', 'mw-aggregate·NEAR0'],
       ['point-sprites', 'milky-way', 'hdr·COSMO'],
-      ['hdr·NEAR0'],
+      ['hdr·NEAR0', 'hdr·NEAR0·POST_FOREGROUND'],
       ['earth', 'foreground:0·NEAR0'],
       ['labels', 'swap·COSMO', 'swap·NEAR0'],
       ['foreground:0→hdr', 'hdr→swap', 'pick'],

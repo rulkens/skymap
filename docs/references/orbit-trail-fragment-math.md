@@ -80,3 +80,33 @@ reject-form test (`abs(rStep - 1.0) >= REFINE_TOL`) let a non-finite `rStep`
 fall through and paint at full brightness, because a NaN comparison is always
 false in EITHER direction — only requiring the KEEP condition true routes
 every non-finite path into the discard.
+
+## Why occlusion is an eye→point segment test against the opaque bodies
+
+There is no body depth to test against. Bodies here are analytic spheres, and
+the painter chain clears depth per row (spec §7.3), so by the time the trails
+draw — after the `foreground:0 → hdr` composite, `HdrPhase 'post-foreground'`
+— nothing of the bodies survives but their colour. The fragment therefore
+re-derives its own orbit point `x` from the eye-relative 3D basis
+(`eyeRelativeOrbitBasisKm`) and tests it against the frame's OPAQUE bodies as
+spheres (`sceneOccluderSpheres`).
+
+Opaque, not drawn: the set is the flat ∪ textured branches of
+`sceneBodyPartition`, the resolved branch of `partitionStarsByResolution`, and
+Earth — the bodies the `foreground:0` sphere layers actually paint. A body in
+the 1–3 px glint band is drawn, as an additive sprite, and occludes nothing.
+Radii are the bare `radiusM`: an atmosphere, ring or lens quad is not opaque.
+
+The test is the SEGMENT eye→`x`, not the infinite ray: the closest-point
+parameter is clamped to `[0, 1]`. That clamp is the whole near/far split — a
+near-arc point's closest approach is `x` itself, outside every sphere it
+passes in front of, while a far-arc point's lands mid-segment, inside the
+sphere it hides behind. A body's own trail runs INTO its sphere, so the head
+fades out at the limb rather than crossing the disc.
+
+Kilometres, because eye-relative Mpc magnitudes are denormal in f32 and some
+GPUs flush them to zero (the same landmine that painted a black nadir disc).
+The f32 error is sub-pixel at every distance the trails span: everything in
+the test is eye-relative, so absolute error grows as `eps · |x|` while the
+sphere radius it is compared against grows the same way — the ratio is `eps`
+per radian of angular size, i.e. ~6e-8 rad, ~6e-5 px on a 1000-px viewport.

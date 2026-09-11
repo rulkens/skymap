@@ -22,6 +22,7 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
+import type { HdrPhase } from '../../../@types/engine/frame/HdrPhase';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyId } from '../../../@types/data/body/BodyId';
@@ -122,31 +123,35 @@ export function passTimingSlotName(passName: string, slabIndex: number, face?: n
 export function renderStepTimingSlotName(
   groupKey: string,
   face: number | undefined,
-  lensPhase?: 'pre' | 'post',
+  hdrPhases?: readonly HdrPhase[],
 ): string {
   if (face !== undefined) return `${groupKey}·FACE[${face}]`;
-  // Only 'post' needs disambiguating: 'pre' keeps the bare groupKey because
-  // no frame ever emits an untagged (hdr, NEAR0) step alongside it (the
-  // split is all-or-nothing per frame — see frameProgram.ts) — so 'pre' and
-  // the untagged single-step case can safely share one name.
-  return lensPhase === 'post' ? `${groupKey}·POST_LENSING` : groupKey;
+  // The step admitting 'pre-lens' owns the bare groupKey, whether or not it
+  // also absorbs the later phases: exactly one step per frame draws the
+  // roster proper, so the bare name can never be claimed twice.
+  if (hdrPhases === undefined || hdrPhases.includes('pre-lens')) return groupKey;
+  return hdrPhases.includes('post-lens')
+    ? `${groupKey}·POST_LENSING`
+    : `${groupKey}·POST_FOREGROUND`;
 }
 
 /**
- * The lens-phase gate: whether a layer belongs to a
- * render step's group, given the step's `lensPhase` (FrameStep.d.ts). Single-
- * sourced here because `frameProgram.ts`'s `timedSlotRowsOf` (the derived
- * timing-slot list) and `executeFrame`'s group filter (the actual draw
- * selection) must never disagree on which layers a `'pre'`/`'post'` step
- * selects — a drift would either draw a layer the timing list never billed,
- * or bill a slot for a layer that never drew.
+ * The hdr-phase gate: whether a layer belongs to a render step's group, given
+ * the phases that step admits (`FrameStep.hdrPhases`) and the layer's own
+ * (`ContentPass.hdrPhase`, absent ⇒ `'pre-lens'`). Single-sourced here because
+ * `frameProgram.ts`'s `timedSlotRowsOf` (the derived timing-slot list) and
+ * `executeFrame`'s group filter (the actual draw selection) must never
+ * disagree on which layers a step selects — a drift would either draw a layer
+ * the timing list never billed, or bill a slot for a layer that never drew.
+ * A step with no admitted set is not part of the split roster and lets phase
+ * play no part in its selection; the only phased layers live on `(hdr, NEAR0)`,
+ * where every emitted step states its set.
  */
-export function matchesLensPhase(
-  hdrPostLensing: true | undefined,
-  stepLensPhase: 'pre' | 'post' | undefined,
+export function matchesHdrPhase(
+  layerPhase: Exclude<HdrPhase, 'pre-lens'> | undefined,
+  stepPhases: readonly HdrPhase[] | undefined,
 ): boolean {
-  if (stepLensPhase === undefined) return true;
-  return stepLensPhase === 'post' ? hdrPostLensing === true : hdrPostLensing !== true;
+  return stepPhases === undefined || stepPhases.includes(layerPhase ?? 'pre-lens');
 }
 
 /**

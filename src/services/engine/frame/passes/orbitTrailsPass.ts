@@ -23,8 +23,10 @@ import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
+import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
+import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
@@ -91,12 +93,11 @@ export const orbitTrailsPass: ContentPass = {
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
-  // 39 bound S-star trails orbit Sgr A* and cull in exactly when the
-  // black-hole lens's band is active (bodyRegions.ts's galactic-centre
-  // region) — this opts the layer into the lens's `'post'` split half so
-  // they draw unwarped ON TOP of it rather than being sampled by it
-  // (Task 14b, Ruling 9; see frameProgram.ts's step-split doc).
-  hdrPostLensing: true,
+  // After the opaque body composite, so a satellite's near arc draws OVER
+  // its host (the fragment hides the far arc itself). This is also after
+  // the black-hole lens, which keeps the S-star trails unwarped on top of
+  // it rather than sampled by it.
+  hdrPhase: 'post-foreground',
 
   enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;
@@ -146,13 +147,14 @@ export const orbitTrailsPass: ContentPass = {
     // the layer rather than popping it.
     const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'orbitTrails' });
 
-    // One 34-float record per VISIBLE conic; byte offsets must mirror the
+    // One 46-float record per VISIBLE conic; byte offsets must mirror the
     // renderer's INSTANCE_ATTRIBUTES:
     //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32)
     //   floats 12..15 — colour.rgb + eccentricity (loc4 at byte 48)
     //   floats 16..19 — mean anomaly + fade alpha + viewportPx.xy (loc5 at byte 64)
     //   floats 20..31 — clip basis Cc/Ac/Bc (loc6/7/8 at byte 80/96/112)
     //   floats 32..33 — the visible arc eStart/eSpan (loc9 at byte 128)
+    //   floats 34..45 — eye-relative 3D basis, km (loc10/11/12 at byte 136/152/168)
     let count = 0;
     for (let i = 0; i < limit; i++) {
       const elements = ORBITAL_ELEMENTS[i]!;
@@ -209,9 +211,20 @@ export const orbitTrailsPass: ContentPass = {
       staging.set(clipBasis[2], base + 28); // clip basis Bc → floats 28..31
       staging[base + 32] = arc[0]; // visible arc eStart → float 32
       staging[base + 33] = arc[1]; // visible arc eSpan → float 33
+      eyeRelativeOrbitBasisKm(
+        { eyeMpc: camPos, centerMpc, semiMajorMpc, semiMinorMpc },
+        staging,
+        base + 34,
+      );
     }
     if (count > 0) {
-      renderer.draw(pass, staging, count, state.settings.debug.overlays['orbit-trail-impostor']);
+      renderer.draw(
+        pass,
+        staging,
+        count,
+        sceneOccluderSpheres(state, ctx),
+        state.settings.debug.overlays['orbit-trail-impostor'],
+      );
     }
   },
 };

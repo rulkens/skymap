@@ -83,7 +83,7 @@ import {
   groupKeyOf,
   passTimingSlotName,
   renderStepTimingSlotName,
-  matchesLensPhase,
+  matchesHdrPhase,
 } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
@@ -274,10 +274,9 @@ export function executeFrame(args: ExecuteFrameArgs): void {
             // going through `isBodySlabIndex` (slabs.ts) — the index-only
             // sibling check `frameProgram.ts` uses where no `Slab` is in hand.
             (l.slab === step.slab || (l.slab === 'body' && view.slab.frame.kind === 'body-m')) &&
-            // The black-hole lens's (hdr, NEAR0) split: a step
-            // carrying `lensPhase` further narrows the group to the layers
-            // that opted into `hdrPostLensing` accordingly — see slabs.ts.
-            matchesLensPhase(l.hdrPostLensing, step.lensPhase) &&
+            // The (hdr, NEAR0) roster split: a step admits the layers whose
+            // own phase is in its `hdrPhases` set — see slabs.ts.
+            matchesHdrPhase(l.hdrPhase, step.hdrPhases) &&
             l.enabled(state, stepCtx, view) &&
             disabledPasses[l.name] !== true,
         );
@@ -290,13 +289,13 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // sky-cubemap capture's 6 faces all share `('sky-cubemap', NEAR0)`, so
         // the bare groupKey would look up the SAME slot for all 6 (see its doc,
         // slabs.ts); for every other step `step.face` is absent and this is a
-        // no-op passthrough of `groupKey`. It appends a `'post'` lens-phase
-        // suffix the same way, so the split roster's two halves don't collide
-        // on one query-set slot.
+        // no-op passthrough of `groupKey`. The admitted hdr phases name the
+        // slot the same way, so the split roster's slices don't collide on one
+        // query-set slot.
         const groupKey = renderStepTimingSlotName(
           groupKeyOf(step.target, step.slab),
           step.face,
-          step.lensPhase,
+          step.hdrPhases,
         );
         renderGroup(strategy, {
           encoder,
