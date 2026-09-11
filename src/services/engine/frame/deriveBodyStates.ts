@@ -9,6 +9,7 @@
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../data/bodies/sceneAnchors';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
@@ -34,31 +35,38 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     return cachedStates;
   }
 
-  const states = new Map<string, BodyState>();
+  // Phase 1 — positions only, so phase 2 can orient a body against where the
+  // *other* bodies ended up rather than against iteration order.
+  const positions = new Map<string, Vec3>();
+  const meanAnomalies = new Map<string, number>();
 
-  // The roots: position authored, not orbited. They still go through
-  // `orientationForBody` so the rotation-row gate stays one gate for every
-  // body, and carry M = 0 — an anchor has no orbit for a trail to fade
-  // along. The authored position is shared by reference rather than copied: it
-  // is never mutated, and a copy would allocate per instant for nothing.
+  // 1a — the roots: position authored, not orbited, and M = 0: an anchor has
+  // no orbit for a trail to fade along. The authored position is shared by
+  // reference rather than copied: it is never mutated, and a copy would
+  // allocate per instant for nothing.
   for (const anchor of SCENE_ANCHORS) {
-    states.set(anchor.id, {
-      positionMpc: anchor.positionMpc,
-      orientation: orientationForBody(anchor.id, simDays),
-      meanAnomalyRad: 0,
-    });
+    positions.set(anchor.id, anchor.positionMpc);
+    meanAnomalies.set(anchor.id, 0);
   }
 
-  // Every element row, focus before dependant. The focus is already in the map
-  // by construction of `FOCUS_ORDER`, which is also where an unknown focus id
-  // throws — so the lookup here is total.
+  // 1b — every element row, focus before dependant. The focus is already in
+  // the map by construction of `FOCUS_ORDER`, which is also where an unknown
+  // focus id throws — so the lookup here is total.
   for (const el of FOCUS_ORDER) {
-    const focus = states.get(el.focusId)!;
+    const focus = positions.get(el.focusId)!;
     const propagated = propagateElements(el, simDays);
-    states.set(el.id, {
-      positionMpc: addVec3(focus.positionMpc, keplerianPositionMpc(propagated)),
-      orientation: orientationForBody(el.id, simDays),
-      meanAnomalyRad: propagated.meanAnomalyRad,
+    positions.set(el.id, addVec3(focus, keplerianPositionMpc(propagated)));
+    meanAnomalies.set(el.id, propagated.meanAnomalyRad);
+  }
+
+  // Phase 2 — orientations over the finished position map. Anchors go through
+  // `orientationForBody` too, so the rotation-row gate stays one gate.
+  const states = new Map<string, BodyState>();
+  for (const [id, positionMpc] of positions) {
+    states.set(id, {
+      positionMpc,
+      orientation: orientationForBody(id, simDays, positions),
+      meanAnomalyRad: meanAnomalies.get(id)!,
     });
   }
 
