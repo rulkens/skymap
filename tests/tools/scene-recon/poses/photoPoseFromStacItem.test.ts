@@ -13,7 +13,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { photoPoseFromStacItem } from '../../../../tools/scene-recon/poses/photoPoseFromStacItem';
-import { frameWindow } from '../../../../tools/scene-recon/poses/frameWindow';
+import { frameWindow, frameWindowOutputPx } from '../../../../tools/scene-recon/poses/frameWindow';
+import { frameProjection } from '../../../../tools/scene-recon/poses/frameProjection';
 import { SOENDERMARKEN } from '../../../../tools/scene-recon/groups/soendermarken';
 import { SOENDERMARKEN_CROP } from '../../../../tools/scene-recon/groups/soendermarkenCrop';
 import type { SkraafotoStacItem } from '../../../../tools/scene-recon/@types/SkraafotoStacItem';
@@ -132,5 +133,25 @@ describe('photoPoseFromStacItem', () => {
         }
       }
     }
+  });
+
+  // frameWindowOutputPx rounds widthPx*scale to an integer JPEG width, so the
+  // ratio GDAL actually wrote (outW/widthPx) differs from window.scale by a
+  // few 1e-4 here — small, but enough to place the box's edge off by ~0.25 px.
+  // A pose built from the requested scale instead would miss both checks below.
+  it('scales the pose by the window it actually wrote, not the requested one', () => {
+    const window = frameWindow(ITEM, SOENDERMARKEN_CROP, POSITION_M)!;
+    const [outputWidthPx] = frameWindowOutputPx(window);
+    const realisedScale = outputWidthPx / window.widthPx;
+    expect(Math.abs(realisedScale - window.scale)).toBeGreaterThan(1e-6);
+
+    const pose = photoPoseFromStacItem(ITEM, SOENDERMARKEN_CROP.anchor, POSITION_M, window);
+    const projection = frameProjection(ITEM, SOENDERMARKEN_CROP.anchor);
+
+    expect(pose.focalLengthPx).toBeCloseTo(projection.focalLengthPx * realisedScale, 6);
+    expect(pose.principalPointPx[0]).toBeCloseTo(
+      (projection.principalPointPx[0] - window.x0) * realisedScale,
+      6,
+    );
   });
 });

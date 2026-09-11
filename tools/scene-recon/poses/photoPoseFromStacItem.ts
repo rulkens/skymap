@@ -25,6 +25,9 @@ export function photoPoseFromStacItem(
 ): PhotoPose {
   const projection = frameProjection(item, anchor);
   const [imageWidthPx, imageHeightPx] = frameWindowOutputPx(window);
+  // frameWindowOutputPx rounds; the JPEG's true scale is what that rounding
+  // actually realised, not the window's requested scale (off by ≤0.25 px).
+  const scale = imageWidthPx / window.widthPx;
 
   // PhotoPose.rotation is the inverse (group ← camera) and matrixToQuaternion
   // reads column-major, so the camera ← group rows are already its columns.
@@ -38,10 +41,10 @@ export function photoPoseFromStacItem(
     id: item.id,
     positionM,
     rotation: matrixToQuaternion(groupFromCam),
-    focalLengthPx: projection.focalLengthPx * window.scale,
+    focalLengthPx: projection.focalLengthPx * scale,
     principalPointPx: [
-      (projection.principalPointPx[0] - window.x0) * window.scale,
-      (projection.principalPointPx[1] - window.y0) * window.scale,
+      (projection.principalPointPx[0] - window.x0) * scale,
+      (projection.principalPointPx[1] - window.y0) * scale,
     ],
     imageWidthPx,
     imageHeightPx,

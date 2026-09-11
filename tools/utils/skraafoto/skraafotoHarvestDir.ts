@@ -1,10 +1,6 @@
 /**
- * Where a group's fetched frames live under `data/raw/skraafoto/`.
- *
- * A whole-frame harvest is keyed by collection alone — its pixels depend on
- * nothing but the flight, so every whole-frame group shares one download. A
- * cropped harvest is keyed by the group as well: two groups' crops of one item
- * hold different pixels under the same item id, and would overwrite each other.
+ * Where a group's fetched frames live under `data/raw/skraafoto/` — layout
+ * rules: `data/raw/skraafoto/README.md`.
  */
 import { join } from 'node:path';
 

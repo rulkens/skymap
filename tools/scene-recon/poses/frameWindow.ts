@@ -77,14 +77,19 @@ export function frameWindow(
   const y0 = Math.max(0, Math.floor(minV - padV));
   const widthPx = Math.min(colsPx, Math.ceil(maxU + padU)) - x0;
   const heightPx = Math.min(rowsPx, Math.ceil(maxV + padV)) - y0;
-  if (widthPx < MIN_WINDOW_PX || heightPx < MIN_WINDOW_PX) return null;
 
   // Ground diagonal over projected diagonal, rather than the frame's nominal
   // GSD: an oblique's pixels cover more ground than a nadir's, and this box is
   // what both are being asked to resolve.
   const groundDiagM = Math.hypot(box.maxXM - box.minXM, box.maxYM - box.minYM);
   const nativeMmPerPx = (groundDiagM * 1000) / Math.hypot(maxU - minU, maxV - minV);
-  return { x0, y0, widthPx, heightPx, scale: Math.min(1, nativeMmPerPx / groundMmPerPx) };
+  const window = { x0, y0, widthPx, heightPx, scale: Math.min(1, nativeMmPerPx / groundMmPerPx) };
+
+  // Checked on the written JPEG, not the native crop: a wide native window
+  // downsampled below MIN_WINDOW_PX still leaves Brush nothing to match.
+  const [outputWidthPx, outputHeightPx] = frameWindowOutputPx(window);
+  if (outputWidthPx < MIN_WINDOW_PX || outputHeightPx < MIN_WINDOW_PX) return null;
+  return window;
 }
 
 /** `[width, height]` of the JPEG a window produces — the one rounding rule the

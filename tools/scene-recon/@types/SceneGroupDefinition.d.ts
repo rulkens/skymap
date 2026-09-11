@@ -1,6 +1,6 @@
 /**
  * One scene group the fetch/bake CLIs work on, selected by `--group <id>`
- * (`groups/sceneGroupById.ts`). Every output path is keyed by `id`, so two
+ * (`groups/sceneGroupFromArgv.ts`). Every output path is keyed by `id`, so two
  * groups over one collection never share a harvest or an asset directory.
  */
 import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';

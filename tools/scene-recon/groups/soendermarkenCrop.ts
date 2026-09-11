@@ -1,7 +1,7 @@
 /**
- * Søndermarken at full frame resolution — the same anchor as `SOENDERMARKEN`,
- * so the two groups' ENU coordinates are directly comparable, over a ~258 ×
- * 183 m box ~340 m west of the anchor.
+ * Søndermarken at the frames' native resolution — the same anchor as
+ * `SOENDERMARKEN`, so the two groups' ENU coordinates are directly comparable,
+ * over a ~258 × 183 m box ~340 m west of the anchor.
  *
  * Its reason to exist is `groundMmPerPx`: the whole-frame harvest lands at
  * ~740 mm/px, which is what makes those splats blurry. Cropping each frame to
