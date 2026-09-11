@@ -75,7 +75,7 @@ import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { earthSurfaceTier } from './earthSurfaceTier';
-import { prepareStarCut } from './passes/starCatalogPass';
+import { advanceStarFades } from './passes/starCatalogPass';
 import { prepareBodySurfaceFrame, earthPass } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
@@ -664,21 +664,22 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const label3DAnimating = runLabel3DProducers(state, ctx);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
-  // ── Star-cut planner (primes the per-ctx memo, surfaces the wake vote) ────
+  // ── Star-cut planner (advances the LOD fades, primes the per-ctx memo) ────
   //
-  // Run the survey-star octree walk + LOD-fade advance ONCE here, as a planner
-  // peer of the disk/label planners above. Two reasons it lives at frame-body
-  // level rather than only inside the star draw:
-  //   1. The three star layers (leaf / aggregate / upsample) hit the per-ctx
-  //      memo during the GPU dispatch, so this call primes it — the walk still
-  //      runs exactly once for the frame.
+  // Advance the survey-star per-node LOD fades ONCE here, as a planner peer of
+  // the disk/label planners above — the ONLY call in a real frame that mutates
+  // the fade ramps (see `advanceStarFades`'s own doc). Two reasons it lives at
+  // frame-body level rather than only inside the star draw:
+  //   1. The three star layers (leaf / aggregate / upsample) call the READ-ONLY
+  //      `prepareStarCut` during the GPU dispatch, which hits the per-ctx memo
+  //      this primes — so the walk still runs exactly once for the frame.
   //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
   //      wake vote used to fire from inside the pass (a `requestRender` scattered
   //      away from the single authority); now the pass computes the vote and
   //      `shouldKeepTicking` decides.
-  // `prepareStarCut` is a no-op returning null when the star pass isn't live
+  // `advanceStarFades` is a no-op returning null when the star pass isn't live
   // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
-  const starCut = prepareStarCut(state, ctx);
+  const starCut = advanceStarFades(state, ctx);
 
   // ── Per-frame marker upload ───────────────────────────────────────────────
   //
