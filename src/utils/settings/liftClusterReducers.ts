@@ -1,23 +1,28 @@
 import type { LiftedCaseReducers } from '../../@types/settings/LiftedCaseReducers';
 import type { SettingsFragmentLike } from '../../@types/settings/SettingsFragmentLike';
 
-/**
- * Re-bases one fragment's case reducers from its cluster onto the settings root,
- * so they can be spread straight into `createSlice`.
- *
- * The cluster is resolved per dispatch, off the live root draft — projecting or
- * copying it anywhere else hands the reducer an undrafted object and Immer
- * silently drops the write.
- */
+/** Re-bases one fragment's case reducers from its cluster onto the settings root. */
 export function liftClusterReducers<Root, F extends SettingsFragmentLike>(
   fragment: F,
 ): LiftedCaseReducers<Root, F> {
   const lifted: Record<string, (state: unknown, action: unknown) => void> = {};
 
   for (const [name, reducer] of Object.entries(fragment.reducers)) {
-    const write = reducer as (cluster: unknown, action: unknown) => void;
+    // `SliceCaseReducers` also admits RTK's `{ reducer, prepare }` objects, which have no
+    // single cluster-scoped function to re-base.
+    if (typeof reducer !== 'function') {
+      throw new Error(
+        `liftClusterReducers: "${fragment.key}" reducer "${name}" uses the { reducer, prepare } form, which settings fragments do not support`,
+      );
+    }
+    const write = reducer as (cluster: unknown, action: unknown) => unknown;
+
     lifted[name] = (state, action) => {
-      write((state as Record<string, unknown>)[fragment.key], action);
+      // Cluster resolved per dispatch off the live root draft; a copy is undrafted and Immer
+      // drops the write. A RETURNED replacement (RTK allows it) must be written back.
+      const root = state as Record<string, unknown>;
+      const next = write(root[fragment.key], action);
+      if (next !== undefined) root[fragment.key] = next;
     };
   }
 

@@ -1,8 +1,5 @@
-/**
- * ComposedSettings — the seeded settings root: the core clusters plus one
- * cluster per Layer settings fragment. `Core` stays a parameter because the
- * core/Layer cut is drawn later in this plan.
- */
+/** The seeded settings root: core clusters plus one cluster per Layer settings fragment. */
+// `Core` stays a parameter — the core/Layer cut is drawn later in this plan.
 
 import type { ComposedClusters } from './ComposedClusters';
 import type { SettingsFragmentLike } from './SettingsFragmentLike';

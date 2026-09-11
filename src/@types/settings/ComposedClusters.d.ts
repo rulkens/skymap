@@ -1,11 +1,6 @@
-/**
- * ComposedClusters — each fragment's literal `key` mapped to the cluster its
- * `seed` returns.
- *
- * Split from `ComposedSettings` so the core half stays a plain intersection. A
- * key that is not a string literal remaps to `never` and drops out, which is
- * what lets a fragment-free Layer contribute nothing without a branch.
- */
+/** Each settings fragment's literal `key` mapped to the cluster its `seed` returns. */
+// A key that is not a string literal remaps to `never` and drops out — that is what lets a
+// fragment-free Layer contribute nothing without a branch.
 
 import type { SettingsFragmentLike } from './SettingsFragmentLike';
 

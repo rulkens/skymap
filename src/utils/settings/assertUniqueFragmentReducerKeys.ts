@@ -3,10 +3,9 @@ import type { SettingsFragmentLike } from '../../@types/settings/SettingsFragmen
 /**
  * Throws if two settings fragments declare the same reducer key.
  *
- * Reducer keys share one flat namespace (so action type strings stay
- * byte-identical) and nothing in the language guards it: two object spreads
- * sharing a key are not a TS error — the later silently wins, and `createSlice`
- * mints one action whose reducer writes the other cluster.
+ * Reducer keys share one flat namespace (so action type strings stay byte-identical) and
+ * nothing in the language guards it: two spreads sharing a key are not a TS error — the
+ * later silently wins, and `createSlice` mints one action that writes the other cluster.
  */
 export function assertUniqueFragmentReducerKeys(fragments: readonly SettingsFragmentLike[]): void {
   const claimedBy = new Map<string, string>();

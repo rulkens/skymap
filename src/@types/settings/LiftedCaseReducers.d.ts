@@ -1,10 +1,5 @@
-/**
- * LiftedCaseReducers — one fragment's case reducers as `createSlice` sees them
- * once `liftClusterReducers` has re-based them from the cluster onto the root.
- *
- * The reducer KEYS survive verbatim, so RTK derives the same action type strings
- * it does today. Only the state parameter widens.
- */
+/** One fragment's case reducers, re-based from its cluster onto the settings root. */
+// The reducer KEYS survive verbatim, so RTK derives the same action type strings as today.
 
 import type { Draft } from '@reduxjs/toolkit';
 

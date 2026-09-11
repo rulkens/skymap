@@ -19,12 +19,16 @@ describe('composeSettingsSeed', () => {
   it('throws when a fragment key shadows a core cluster', () => {
     const shadow = { key: 'labels', seed: () => ({ n: 1 }), reducers: {} } as const;
 
-    expect(() => composeSettingsSeed(core, [alpha, shadow])).toThrow(/labels/);
+    expect(() => composeSettingsSeed(core, [alpha, shadow])).toThrow(
+      /"labels" is claimed by a fragment and by the core seed/,
+    );
   });
 
   it('throws when two fragments share a key', () => {
     const rival = { key: 'alpha', seed: () => ({ n: 2 }), reducers: {} } as const;
 
-    expect(() => composeSettingsSeed(core, [alpha, rival])).toThrow(/alpha/);
+    expect(() => composeSettingsSeed(core, [alpha, rival])).toThrow(
+      /"alpha" is claimed by two fragments/,
+    );
   });
 });
