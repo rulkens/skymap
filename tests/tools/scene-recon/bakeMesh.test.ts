@@ -243,6 +243,8 @@ const TEXTURE_MESH_ARGV = [
   '0',
   '--local-seam-leveling',
   '0',
+  '--empty-color',
+  '4210752',
   '-o',
   'scene_dense_texture.glb',
 ];

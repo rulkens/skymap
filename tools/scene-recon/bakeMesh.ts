@@ -154,6 +154,8 @@ function bakeStages(options: { fullRes?: boolean; refine?: boolean }): readonly 
       // interior to an RGB-cube corner and leaves photo pixels only in the
       // margins. Global-off-local-on still clips, so neither comes back for
       // nicer seams without a re-texture proving otherwise.
+      // `--empty-color` 0x404040: faces no view covers default to orange
+      // (0xFF7F27), which reads as data beside the LiDAR and splat layers.
       args: [
         'scene_dense.mvs',
         '--mesh-file',
@@ -166,6 +168,8 @@ function bakeStages(options: { fullRes?: boolean; refine?: boolean }): readonly 
         '0',
         '--local-seam-leveling',
         '0',
+        '--empty-color',
+        '4210752',
         '-o',
         TEXTURED_GLB,
       ],

@@ -310,11 +310,14 @@ NO -b 1 -b 2 -b 3 -of JPEG -co QUALITY=95` (plus `--config GDAL_PAM_ENABLED NO`,
 -o scene_dense_mesh_refine.ply` **only with `--refine`** (the texture stage then
      reads that mesh)
    - `TextureMesh scene_dense.mvs --mesh-file <mesh>.ply --export-type glb
---max-texture-size 8192 --global-seam-leveling 0 --local-seam-leveling 0 -o
-scene_dense_texture.glb` → that GLB **plus** a sidecar `scene_dense_texture_0.png`
+--max-texture-size 8192 --global-seam-leveling 0 --local-seam-leveling 0
+--empty-color 4210752 -o scene_dense_texture.glb` → that GLB **plus** a sidecar
+     `scene_dense_texture_0.png`
      it names by URI. Both levelling passes are off because on this scene they clip
      every patch interior to an RGB-cube corner, photo pixels surviving only in the
-     margins; global off with local on still clips
+     margins; global off with local on still clips. `--empty-color` 0x404040 pins
+     faces no view covers to dark grey — the default 0xFF7F27 orange reads as data
+     beside the LiDAR and splat layers
 
    Both `-o` are pinned because v2.4.0 names an output after its _input's_ stem, so
    `--refine` would otherwise move the GLB the re-pack reads.
