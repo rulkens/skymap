@@ -21,6 +21,16 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
     meshKey: 'petunias',
     captionRevealM: 60,
   },
+  // The two Voyagers and the four Mars rovers. No `captionRevealM`: these are
+  // real objects on the default caption reach, not easter eggs to stumble on.
+  // Spirit and Opportunity are the same spacecraft, so they share one asset and
+  // still get their own body rows, positions and GPU copies.
+  { id: 'voyager1', label: 'Voyager 1', meshKey: 'voyager' },
+  { id: 'voyager2', label: 'Voyager 2', meshKey: 'voyager' },
+  { id: 'curiosity', label: 'Curiosity', meshKey: 'curiosity' },
+  { id: 'perseverance', label: 'Perseverance', meshKey: 'perseverance' },
+  { id: 'spirit', label: 'Spirit', meshKey: 'mer' },
+  { id: 'opportunity', label: 'Opportunity', meshKey: 'mer' },
 ];
 
 export const SCENE_MESH_BODIES: readonly MeshBody[] = SEED_MESH_BODIES.map(meshBody);

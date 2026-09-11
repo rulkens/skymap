@@ -4,6 +4,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
@@ -13,15 +14,21 @@ const states = deriveBodyStates(CONST_J2000);
 const ANCHOR_IDS = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
 
 describe('deriveBodyStates', () => {
-  it('returns a state for every anchor and every ORBITAL_ELEMENTS id, and nothing else', () => {
+  it('returns a state for every driver id, and nothing else', () => {
     // Structural: catches a dropped moon (short map) or a star that is not an
-    // anchor drifting in — the local star map is not clock-driven state.
-    expect(states.size).toBe(SCENE_ANCHORS.length + ORBITAL_ELEMENTS.length);
+    // anchor drifting in — the local star map is not clock-driven state. The
+    // three summands are the three position tables `positionDrivers` unions.
+    expect(states.size).toBe(
+      SCENE_ANCHORS.length + ORBITAL_ELEMENTS.length + SURFACE_FIXED_SITES.length,
+    );
     for (const el of ORBITAL_ELEMENTS) {
       expect(states.has(el.id)).toBe(true);
     }
     for (const anchor of SCENE_ANCHORS) {
       expect(states.has(anchor.id)).toBe(true);
+    }
+    for (const site of SURFACE_FIXED_SITES) {
+      expect(states.has(site.id)).toBe(true);
     }
     for (const s of SCENE_STARS) {
       expect(states.has(s.id)).toBe(ANCHOR_IDS.has(s.id));
