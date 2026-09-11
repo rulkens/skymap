@@ -19,6 +19,9 @@ export type SceneGroupDefinition = {
   readonly bounds: LonLatBounds;
   /** DHM 1 km tile names to fetch (listed in data/raw/dhm/README.md). */
   readonly dhmTiles: readonly string[];
+  /** Skråfoto STAC collection the splat bake's frames come from
+   *  (data/raw/skraafoto/README.md) — one flight vintage per collection. */
+  readonly skraafoto: { readonly collection: string };
   /** The tiles' CRS. Punktsky LAS files embed none, so the pipeline's
    *  `readers.las` stages must state it or `filters.reprojection` refuses. */
   readonly sourceSrs: string;
@@ -54,6 +57,7 @@ export const SOENDERMARKEN: SceneGroupDefinition = {
     'punktsky_1km_6175_722',
     'punktsky_1km_6175_723',
   ],
+  skraafoto: { collection: 'skraafotos2025' },
   sourceSrs: 'EPSG:25832',
   minPointSpacingM: 1.0,
   dropClassifications: [7, 18],
