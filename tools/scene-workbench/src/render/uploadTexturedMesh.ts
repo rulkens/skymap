@@ -38,7 +38,7 @@ export function uploadTexturedMesh(
   const texture = device.createTexture({
     label: `scene-workbench-mesh-atlas-${image.width}x${image.height}`,
     size: [image.width, image.height],
-    format: 'rgba8unorm-srgb',
+    format: 'rgba8unorm',
     // RENDER_ATTACHMENT looks surplus on a sampled-only texture; WebGPU
     // validates copyExternalImageToTexture destinations for it.
     usage:
