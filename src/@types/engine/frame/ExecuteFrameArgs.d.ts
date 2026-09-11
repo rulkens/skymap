@@ -3,28 +3,11 @@
  * strategy-parameterized site that walks a `FrameStep[]` program into one
  * GPU command encoder.
  *
- * Every value the executor needs rides in on this struct rather than being
- * reached out of `state`, so the frame's one imperative loop reads as a pure
- * function of its inputs:
- *
- *   - `program` is the ordered step list (`expandFrameOrder(FRAME_ORDER, …)`),
- *     the frame as data — the executor is the only code that walks it, and each
- *     `'render'` step already carries the passes it draws.
- *   - `strategy` is how a render step's group becomes GPU passes ('merged' in
- *     production, 'perLayerTimed' under `?gpuTimings`) — a property of *how* a
- *     render step executes, applied uniformly, not a fork per render step.
- *   - `timing` supplies the per-pass `timestampWrites` descriptor (a no-op in
- *     production); `swapView` is this frame's acquired swap-chain view, the
- *     one render target that is not an allocated offscreen texture.
- *   - `skyCubemapFaceContexts` is the black-hole lens's per-face camera
- *     override, its runtime hand-off: a step carrying `face`
- *     resolves its `SlabView`/`ctx` from THIS map instead of the frame-wide
- *     `ctx` above. `renderFrame` derives it on a bake (one
- *     `skyCubemapFaceContext` call per face); `FRAME_ORDER`
- *     stays static and never sees it. Absent/missing-face ⇒ that step is
- *     skipped cleanly (no throw) — the same outcome as
- *     `skyCubemapFaceContext` itself returning `null` for a pre-bootstrap
- *     frame.
+ * `skyCubemapFaceContexts` is the black-hole lens's per-face camera override:
+ * a step carrying `face` resolves its `SlabView`/`ctx` from THIS map, not the
+ * frame-wide `ctx`. `renderFrame` derives it on a bake; `FRAME_ORDER` stays
+ * static and never sees it. Absent/missing-face ⇒ the step is skipped cleanly,
+ * as when `skyCubemapFaceContext` itself returns `null` pre-bootstrap.
  */
 
 import type { ReadyFrameContext } from './ReadyFrameContext';

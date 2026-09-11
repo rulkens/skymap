@@ -175,13 +175,6 @@ function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSlotRow[]
  * in first-appearance order. Rows keep their draw order within a group, and an
  * empty group is dropped — that's how the toggles list omits the "composites &
  * pick" group whose rows aren't togglable.
- *
- * `namesSeen` still guards against a genuine same-title duplicate (two
- * distinct groupKeys sharing a display title, e.g. every `foreground:0·BODY[k]`
- * bucketing under "Foreground bodies · depth") landing the same row NAME
- * twice — no such collision exists today (`passTimingSlotName` keys a
- * `slab: 'body'` layer's per-row name by its own `BODY[k]`), but the guard
- * stays as the cheap belt for that shape rather than assuming it can't recur.
  */
 function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
   const titleOf = (groupKey: string): string => PASS_GROUP_TITLES[groupKey] ?? groupKey;
@@ -198,16 +191,8 @@ function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
   for (const row of rows) remember(titleOf(row.groupKey));
 
   const byTitle = new Map<string, TimedSlotRow[]>();
-  const namesSeenByTitle = new Map<string, Set<string>>();
   for (const row of rows) {
     const title = titleOf(row.groupKey);
-    let namesSeen = namesSeenByTitle.get(title);
-    if (namesSeen === undefined) {
-      namesSeen = new Set<string>();
-      namesSeenByTitle.set(title, namesSeen);
-    }
-    if (namesSeen.has(row.name)) continue;
-    namesSeen.add(row.name);
     const bucket = byTitle.get(title);
     if (bucket) bucket.push(row);
     else byTitle.set(title, [row]);

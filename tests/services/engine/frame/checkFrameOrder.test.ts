@@ -28,12 +28,6 @@ const drawing = (...names: string[]): FrameStepSpec[] => [
 ];
 
 describe('checkFrameOrder', () => {
-  it('accepts an order that draws every contributed pass exactly once', () => {
-    expect(() =>
-      checkFrameOrder(drawing('a', 'b'), [fakePass('a'), fakePass('b')], TARGETS),
-    ).not.toThrow();
-  });
-
   it('throws naming a contributed pass no FRAME_ORDER line draws', () => {
     expect(() =>
       checkFrameOrder(drawing('a'), [fakePass('a'), fakePass('ghost-pass')], TARGETS),

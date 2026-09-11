@@ -9,6 +9,7 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
+import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
@@ -32,6 +33,16 @@ function resolve(names: readonly string[], passes: readonly ContentPass[]): read
   return names
     .map((name) => passes.find((pass) => pass.name === name))
     .filter((pass): pass is ContentPass => pass !== undefined);
+}
+
+/** `composite` and `tonemap` differ only in blend and whether a tone curve rides. */
+function merge(
+  source: string,
+  dest: string,
+  blend: CompositeBlend,
+  tone: ToneMap | null,
+): FrameStep {
+  return { kind: 'composite', step: { source, dest, blend, tone } };
 }
 
 /**
@@ -81,19 +92,9 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
       slab,
       passes: resolve(spec.passes, passes),
     })),
-  composite: (spec) => [
-    {
-      kind: 'composite',
-      step: { source: spec.source, dest: spec.dest, blend: 'over', tone: null },
-    },
-  ],
+  composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
-  tonemap: (spec, _passes, frame) => [
-    {
-      kind: 'composite',
-      step: { source: spec.source, dest: spec.dest, blend: 'replace', tone: frame.tone },
-    },
-  ],
+  tonemap: (spec, _passes, frame) => [merge(spec.source, spec.dest, 'replace', frame.tone)],
 };
 
 /** A render step with nothing left to draw never opens a pass. */

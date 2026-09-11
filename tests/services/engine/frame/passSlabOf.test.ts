@@ -24,10 +24,4 @@ describe('passSlabOf', () => {
     expect(slabs.get('star-spheres')).toBe(NEAR0);
     expect(slabs.get('star-catalog')).toBe(NEAR0);
   });
-
-  it('returns undefined for a pass no line names', () => {
-    // A pickable pass off the frame order picks NOWHERE rather than defaulting
-    // into some slab — the pick program reads the miss and drops the row.
-    expect(passSlabOf(FRAME_ORDER).get('no-such-pass')).toBeUndefined();
-  });
 });

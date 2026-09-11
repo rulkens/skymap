@@ -15,17 +15,15 @@ import { Source } from '../../../../../src/data/sources';
 import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
-import {
-  CONTENT_PASSES,
-  galaxyPointSpritesPass,
-  filamentsPass,
-  milkyWayPass,
-  horizonShellPass,
-  starAggregatesPass,
-  starAggregateUpsamplePass,
-  sgrAStarLensingPass,
-  structureMarkersPass,
-} from '../../../../../src/services/engine/frame/passes';
+import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
+import { galaxyPointSpritesPass } from '../../../../../src/services/engine/frame/passes/galaxyPointSpritesPass';
+import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
+import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
+import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
+import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
+import { starAggregateUpsamplePass } from '../../../../../src/services/engine/frame/passes/starAggregateUpsamplePass';
+import { sgrAStarLensingPass } from '../../../../../src/services/engine/frame/passes/sgrAStarLensingPass';
+import { structureMarkersPass } from '../../../../../src/services/engine/frame/passes/structureMarkersPass';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
 import { expandFrameOrder } from '../../../../../src/services/engine/frame/expandFrameOrder';
