@@ -37,10 +37,8 @@ function* loadAssetWorker(
           if (!res.ok) throw new Error(`HTTP ${res.status} for ${asset.artifactUrl}`);
           return res.arrayBuffer();
         })
-        .then((buffer) => {
-          const uploaded = ASSET_LOADERS[asset.kind](gpu, buffer);
-          return acceptLoadedAsset(uploaded, resources, myEpoch, cancellation);
-        }),
+        .then((buffer) => ASSET_LOADERS[asset.kind](gpu, buffer))
+        .then((uploaded) => acceptLoadedAsset(uploaded, resources, myEpoch, cancellation)),
     );
     if (!built) return; // superseded while in flight — already destroyed
     resources.gpuAssets.set(asset.id, built);
