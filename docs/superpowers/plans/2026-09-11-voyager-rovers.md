@@ -110,14 +110,14 @@ export function perifocalAxesWorld(elements: OrbitalElements): {
 };
 ```
 
-- [ ] Move the `px…qz` derivation and the private `frameToWorld` into the new
+- [x] Move the `px…qz` derivation and the private `frameToWorld` into the new
       file; `keplerianEllipse` imports it and keeps its own `a`/`e`/`b`/`aE`
       arithmetic.
-- [ ] No new test. `tests/utils/orbit/keplerianEllipse.test.ts`,
+- [x] No new test. `tests/utils/orbit/keplerianEllipse.test.ts`,
       `skyInclinationToFrameInclination.test.ts`, `sStar.test.ts` and
       `sceneOrbitConics.test.ts` staying green IS the test for a pure extraction.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test -- orbit` green, `npx tsc --noEmit` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test -- orbit` green, `npx tsc --noEmit` green. Commit.
 
 ---
 
@@ -133,18 +133,18 @@ would reach `keplerianEllipse` and fill `SCENE_ORBIT_CONICS` with `NaN`
 (landmine 1). Observable change today: the whale's and the petunias' rows leave
 `SCENE_ORBIT_CONICS`, which draws no trail for them anyway.
 
-- [ ] Change `deriveOrbitConics`'s `elements` default from `ORBITAL_ELEMENTS` to
+- [x] Change `deriveOrbitConics`'s `elements` default from `ORBITAL_ELEMENTS` to
       `TRAIL_ELEMENTS`. The explicit-argument form (used by the anchor-focus
       test) is unchanged.
-- [ ] Update the module docblock to say which table it walks and why — one
+- [x] Update the module docblock to say which table it walks and why — one
       sentence, not a history note.
-- [ ] Add the test `the conic table excludes mesh bodies` asserting
+- [x] Add the test `the conic table excludes mesh bodies` asserting
       `SCENE_ORBIT_CONICS.some(c => c.id === 'whale')` is false. It fails if the
       default ever drifts back.
-- [ ] The existing `places each body on its own ellipse` test must stay green
+- [x] The existing `places each body on its own ellipse` test must stay green
       unchanged.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test -- sceneOrbitConics orbitTrails` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test -- sceneOrbitConics orbitTrails` green. Commit.
 
 ---
 
@@ -178,19 +178,19 @@ export function orientationForBody(
 ): Mat3;
 ```
 
-- [ ] Split the loops. The one-deep `simDays` memo, the `FOCUS_ORDER` module
+- [x] Split the loops. The one-deep `simDays` memo, the `FOCUS_ORDER` module
       constant, and the `meanAnomalyRad` carried onto each state are unchanged.
-- [ ] Add `positions` to `orientationForBody`; the single existing arm ignores
+- [x] Add `positions` to `orientationForBody`; the single existing arm ignores
       it. Document in one line **why** it takes a map it does not read: the
       `lookAt` arm (Task 6) will, and phase 1c (Task 5) calls this function
       mid-phase with a partial map, which is safe precisely because the
       `iau-pole` arm is position-independent.
-- [ ] Update every call site (`grep -rn orientationForBody src tests`).
-- [ ] No new test: the existing `deriveBodyStates` / `sceneOrbitConics` /
+- [x] Update every call site (`grep -rn orientationForBody src tests`).
+- [x] No new test: the existing `deriveBodyStates` / `sceneOrbitConics` /
       `orbitTrailsPass` suites pin the values, and a phase split that changed one
       would break them.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test` green (full suite — this touches the body snapshot every pass
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test` green (full suite — this touches the body snapshot every pass
       reads), `npx tsc --noEmit` green. Commit.
 
 ---
@@ -234,18 +234,18 @@ Newton seed `H₀ = asinh(M / e)`; `MAX_ITERATIONS = 40`, `TOLERANCE = 1e-14`
 (same tolerance as the elliptic solver; the higher cap covers a near-parabolic
 `e`, which neither Voyager is).
 
-- [ ] Test `hyperbolicAnomalyFromMean inverts the forward equation`: for
+- [x] Test `hyperbolicAnomalyFromMean inverts the forward equation`: for
       `H ∈ {−3, −0.5, 0, 0.5, 3.4}` × `e ∈ {1.5, 3.7, 6.28}`, assert
       `hyperbolicAnomalyFromMean(e*Math.sinh(H) - H, e)` is close to `H` to 1e-10.
       A round-trip against the forward equation, not against the solver's own
       iteration — a wrong formula fails it, a mirror would not.
-- [ ] Test `periapsis sits at QR along the periapsis direction`: a fixture row
+- [x] Test `periapsis sits at QR along the periapsis direction`: a fixture row
       with `meanAnomalyRad: 0`, `e = 3.7`, `a = −3.2153` au (in Mpc) →
       `|hyperbolicPositionMpc(row)|` equals `a·(1 − e)` in Mpc to 1e-12 relative.
       Hand-derived from the conic, not from the code.
-- [ ] **Do not normalise the mean anomaly** (landmine 7).
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test -- orbit` green. Commit.
+- [x] **Do not normalise the mean anomaly** (landmine 7).
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test -- orbit` green. Commit.
 
 ---
 
@@ -297,21 +297,21 @@ positions) · surfacePointBodyFixed(lat, lon, hostRadiusM + altitudeM)`, and
 host radius comes from `SCENE_BODIES` — the same home `bodyHomePose` and
 `bodyTextureLoadRadius` read it from.
 
-- [ ] Test `surfacePointBodyFixed places the cardinal points` — hand-computed:
+- [x] Test `surfacePointBodyFixed places the cardinal points` — hand-computed:
       `(0, 0, r)` → `[r, 0, 0]`; `(0, 90, r)` → `[0, r, 0]`; `(90, 137, r)` →
       `[0, 0, r]`. This is where an east/west sign error dies (landmine 5).
-- [ ] Test `bodyHostId answers per driver kind` — `'moon'` → `'earth'`,
+- [x] Test `bodyHostId answers per driver kind` — `'moon'` → `'earth'`,
       `'earth'` → `'sun'`, `'sun'` → `null`. Three real rows, one per arm; the
       `surfaceFixed` arm is covered by Task 11's traverse test, since no row
       exists yet.
-- [ ] The phase-1c loop over an empty `SURFACE_FIXED_SITES` is a no-op, so the
+- [x] The phase-1c loop over an empty `SURFACE_FIXED_SITES` is a no-op, so the
       full suite must stay green with no value changes.
-- [ ] **Cancel in Mpc, then scale** (landmine 4): `surfacePointBodyFixed` returns
+- [x] **Cancel in Mpc, then scale** (landmine 4): `surfacePointBodyFixed` returns
       metres and is converted with `SCALE_UNITS.M_TO_MPC` before being added to
       the host's Mpc position, which is the only order that keeps the host's
       heliocentric magnitude out of the metre arithmetic.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test` green, `npx tsc --noEmit` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test` green, `npx tsc --noEmit` green. Commit.
 
 ---
 
@@ -350,21 +350,21 @@ export function rotationSurfaceLocked(
 ): Mat3;
 ```
 
-- [ ] Test `rotationLookAt aims +X at the target`: with the body at the origin
+- [x] Test `rotationLookAt aims +X at the target`: with the body at the origin
       and the target on world `+Y`, column 0 is `[0, 1, 0]`; and for an
       off-axis fixture, `det === +1` and all three columns are orthonormal to
       1e-12. Orthonormality is what catches a botched Gram-Schmidt.
-- [ ] Test `rotationLookAt survives a boresight along the ecliptic pole`: target
+- [x] Test `rotationLookAt survives a boresight along the ecliptic pole`: target
       directly above the body — the result is still orthonormal with `det +1`
       (the fallback up-reference), not `NaN`.
-- [ ] Test `rotationSurfaceLocked builds the local ENU triad`: host at the
+- [x] Test `rotationSurfaceLocked builds the local ENU triad`: host at the
       origin with pole `+Z`, body on `+X` at radius `r`. `headingDeg: 0` →
       column 2 (up) is `[1, 0, 0]` and column 0 (forward) is `[0, 0, 1]` (north);
       `headingDeg: 90` → column 0 is `[0, 1, 0]` (east). Hand-computed; `det +1`.
-- [ ] No test for the `iau-pole` arm: the existing `rotationElements` /
+- [x] No test for the `iau-pole` arm: the existing `rotationElements` /
       `orientationForBody` suites already pin it and must stay green untouched.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test` green, `npx tsc --noEmit` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test` green, `npx tsc --noEmit` green. Commit.
 
 ---
 
@@ -406,16 +406,16 @@ periapsisJd))`, `meanAnomalyRateRadPerCty = degToRad(meanMotionDegPerDay) *
 through `degToRad`, no `plane` (ecliptic, which is what `REF_PLANE='ECLIPTIC'`
 returns). No other rates.
 
-- [ ] Test `probe reproduces the published mean anomaly at the fetch epoch`:
+- [x] Test `probe reproduces the published mean anomaly at the fetch epoch`:
       feed Voyager 1's columns (spec's data table), then
       `propagateElements(row, 2461294.5).meanAnomalyRad` equals
       `degToRad(2916.322928412766)` to 1e-9 rad. The expectation is JPL's own
       published `MA`, computed from a column the maker does not read — an
       external cross-check, not a mirror.
-- [ ] **Do not normalise the mean anomaly** (landmine 7); assert the raw,
+- [x] **Do not normalise the mean anomaly** (landmine 7); assert the raw,
       unwrapped value.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test -- probe` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test -- probe` green. Commit.
 
 ---
 
@@ -441,14 +441,14 @@ readonly groundOffsetM: number;
 computed in `mergeGeometry` as `-min(centred z)`, clamped at 0, and printed
 beside `r=` in the tool's per-asset report line.
 
-- [ ] Test `groundOffsetM measures the lowest vertex`: over the existing
+- [x] Test `groundOffsetM measures the lowest vertex`: over the existing
       synthetic-GLB fixture, a unit cube centred on its own centroid spanning
       `z ∈ [−1, 1]` reports `1`.
-- [ ] Re-run `npm run build-meshes` so `whale`/`petunias` pick up the field;
+- [x] Re-run `npm run build-meshes` so `whale`/`petunias` pick up the field;
       commit the regenerated file. No other value in it may change — check the
       diff.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test -- buildMeshes` green, `npx tsc --noEmit` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test -- buildMeshes` green, `npx tsc --noEmit` green. Commit.
 
 ---
 
@@ -498,15 +498,15 @@ SCENE_ANCHOR_POINT_BODIES.length + HOSTLESS_MESH_BODIES.length` (25 → 27 once
   **no new top-level declaration in that file**, or `passFilePurity.test.ts`
   fails.
 
-- [ ] Test `meshBodySlabHostId routes to the host's row, or the body's own`: a
+- [x] Test `meshBodySlabHostId routes to the host's row, or the body's own`: a
       mesh body whose driver host is `'earth'` returns `'earth'`; one whose
       driver host is `'sun'` (no slab row) returns its own id. Use the real
       `SCENE_MESH_BODIES` whale for the first and a synthetic fixture for the
       second until Task 11 lands a Voyager.
-- [ ] No test for the pass edit: no renderer or shader unit tests (spec). The
+- [x] No test for the pass edit: no renderer or shader unit tests (spec). The
       `NaN` it prevents is caught in the visual pass, Task 15.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test` green, `npx tsc --noEmit` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test` green, `npx tsc --noEmit` green. Commit.
 
 ---
 
@@ -542,21 +542,21 @@ and what `MESH_SOURCES` names. Per-source README records author, URL, licence,
 fetch date, checksum, and — for `voyager` — the **verbatim Horizons refresh
 query** from the spec.
 
-- [ ] Run each prebake, then `npm run build-meshes`.
-- [ ] **Budget gate (user ruling):** for each of the four keys, report
+- [x] Run each prebake, then `npm run build-meshes`.
+- [x] **Budget gate (user ruling):** for each of the four keys, report
       `.mesh` + `_albedo.png` + `_mr.png` + `_normal.png` total bytes, and it
       must be **under 10 MB**. If `mer` or `curiosity` is over, decimate further
       in the prebake — never by raising `TRIANGLE_BUDGET`/`TEXTURE_SIZE_BUDGET`,
       which are renderer-affordance constants, not per-asset dials.
-- [ ] Commit the regenerated `meshAssets.generated.ts` (four new rows; the
+- [x] Commit the regenerated `meshAssets.generated.ts` (four new rows; the
       whale's and the petunias' values must not change — check the diff) and the
       `public/data/meshes/` outputs.
-- [ ] Report each asset's `triangleCount`, `boundingRadiusM`, `groundOffsetM`,
+- [x] Report each asset's `triangleCount`, `boundingRadiusM`, `groundOffsetM`,
       `normalMapSubstituted` and total size.
-- [ ] No new tool test: the bake path is already covered by Task 8's fixture test
+- [x] No new tool test: the bake path is already covered by Task 8's fixture test
       and the existing `buildMeshes` suite.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] Commit.
 
 ---
 
@@ -596,25 +596,25 @@ for the four rovers, headings authored and confirmed in Task 15.
 `['Perseverance', 'Percy', 'Mars 2020']`, `spirit` → `['Spirit', 'MER-A']`,
 `opportunity` → `['Opportunity', 'Oppy', 'MER-B']`.
 
-- [ ] Test `the Voyager rows reproduce JPL's ephemeris`: through the real
+- [x] Test `the Voyager rows reproduce JPL's ephemeris`: through the real
       `deriveBodyStates` at `simDays = 2461294.5`, `|voyager1Pos − sunPos|`
       equals **171.722 au** and `voyager2`'s **143.912 au**, each to 1e-4 au.
       External data, independently computed — the spec's derived-values table.
-- [ ] Test `a rover turns with Mars`: the angle between `curiosity`'s offset from
+- [x] Test `a rover turns with Mars`: the angle between `curiosity`'s offset from
       Mars at `t` and at `t + 360/350.89198226` days is under 0.05°, and at a
       quarter of that is within 0.05° of 90°. This is the test that fails on a
       west-positive longitude, a dropped host spin, or the wrong body frame.
-- [ ] Test `a rover stands on the surface`: `|curiosityPos − marsPos|` equals
+- [x] Test `a rover stands on the surface`: `|curiosityPos − marsPos|` equals
       `SCENE_MARS.radiusM + altitudeM` to 1e-6 m.
-- [ ] Test `every surface-fixed site is lifted by its asset's ground offset`:
+- [x] Test `every surface-fixed site is lifted by its asset's ground offset`:
       each row's `altitudeM` equals `MESH_ASSETS[body.meshKey].groundOffsetM`.
       An invariant across two independently-edited files.
-- [ ] The existing `every SCENE_BODIES id resolves a BodyState` test now covers
+- [x] The existing `every SCENE_BODIES id resolves a BodyState` test now covers
       all six; it must stay green with no edit.
-- [ ] Confirm `BODY_SLAB_CAPACITY` is now **27** (2 hostless mesh bodies) — read
+- [x] Confirm `BODY_SLAB_CAPACITY` is now **27** (2 hostless mesh bodies) — read
       it, do not re-type it.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test` green (full suite), `npx tsc --noEmit` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test` green (full suite), `npx tsc --noEmit` green. Commit.
 
 ---
 
@@ -634,12 +634,12 @@ landing site and says plainly that the model marks where it touched down
 "escape trajectory, no orbital period") and omit the rest — the card drops an
 absent row.
 
-- [ ] Regenerate with `npm run build-planet-facts` and commit the generated file;
+- [x] Regenerate with `npm run build-planet-facts` and commit the generated file;
       no other row may change.
-- [ ] No test: `parsePlanetFactsSeed` already fails loudly on a duplicate id or a
+- [x] No test: `parsePlanetFactsSeed` already fails loudly on a duplicate id or a
       non-string field, and a description is prose.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] `npm test -- planetFacts` green. Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] `npm test -- planetFacts` green. Commit.
 
 ---
 
@@ -649,21 +649,21 @@ absent row.
 `src/data/sources/mesh-body.ts` (docblock only), `docs/DEPLOY.md` (only if the
 check below finds a gap).
 
-- [ ] Four `ATTRIBUTIONS.md` entries in the existing mesh-asset section's shape
+- [x] Four `ATTRIBUTIONS.md` entries in the existing mesh-asset section's shape
       (`### "<title>" — <author>`, **Use** / **Source** / **Licence** /
       **Credit**), naming NASA 3D Resources, the author, the public-domain status
       under NASA's media-usage guidelines, and what the prebake does to each.
-- [ ] `MESH_BODY_ENTRY`'s docblock currently says the row is "the whale and the
+- [x] `MESH_BODY_ENTRY`'s docblock currently says the row is "the whale and the
       basket of petunias". Rewrite it to describe the **category** and state that
       the one checkbox mutes every mesh body together (ruling 21). Do not change
       any field.
-- [ ] Confirm `docs/DEPLOY.md`'s R2 step covers `public/data/meshes/` as a
+- [x] Confirm `docs/DEPLOY.md`'s R2 step covers `public/data/meshes/` as a
       directory (not a file list). Edit only if it does not.
-- [ ] Confirm the Splash credits paragraph needs no edit: NASA public-domain
+- [x] Confirm the Splash credits paragraph needs no edit: NASA public-domain
       assets carry no attribution obligation, unlike the two CC BY models already
       credited there. State the finding either way.
-- [ ] **One symbol per file; pass files declare only the pass.**
-- [ ] Commit.
+- [x] **One symbol per file; pass files declare only the pass.**
+- [x] Commit.
 
 ---
 
@@ -671,16 +671,16 @@ check below finds a gap).
 
 **Wave 4**, depends on Task 11. Read `.claude/skills/perf/SKILL.md` first.
 
-- [ ] `npm run perf` on the merge-base, then on this branch's HEAD. **In this
+- [x] `npm run perf` on the merge-base, then on this branch's HEAD. **In this
       worktree pass `--url http://localhost:<port>`** from _this_ worktree's
       `npm run dev` `Local:` line, or the run silently measures another branch's
       server.
-- [ ] Report MERGED, PER-LAYER and FLOOR, at a pose that has a Voyager on screen
+- [x] Report MERGED, PER-LAYER and FLOOR, at a pose that has a Voyager on screen
       and one that has a rover on Mars, plus the existing Earth-orbit pose so the
       slab-capacity widening is visible if it costs anything.
-- [ ] **A neutral-or-negative measurement HALTS the pipeline.** Report and stop;
+- [x] **A neutral-or-negative measurement HALTS the pipeline.** Report and stop;
       land or park is the user's ruling, not process momentum.
-- [ ] Commit nothing unless a finding requires a fix.
+- [x] Commit nothing unless a finding requires a fix.
 
 ---
 
