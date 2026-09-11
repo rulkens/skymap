@@ -19,10 +19,12 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { sceneBodyLabels } from './sceneBodyLabels';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
+import { sceneOccluderBodies } from '../frame/sceneOccluderBodies';
 import { CAPTION_FADE_RULES } from './captionFadeRules';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from './captionPriority';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { overflowFade } from '../../../utils/scene/overflowFade';
+import { subjectOccludedByBodies } from '../../../utils/scene/subjectOccludedByBodies';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { LEADER_LINE_BOTTOM_GAP_PX } from './leaderLineStyle';
 
@@ -62,6 +64,12 @@ export function produceSceneBodyCaptions(
   // `produceFamousGalaxyLabels.ts:218` idiom).
   const clipFactorBody = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
   const clipFactorStarCatalog = state.subsystems.clipPlayer.clipOpacityOf('starCatalogLabel', now);
+
+  // The overlay shaders attenuate per PIXEL, which cannot tell a subject in
+  // FRONT of a body from one behind it. Deciding that per caption here is what
+  // keeps the whale's name legible over Earth's disc while the Moon's still
+  // sinks behind the limb.
+  const occluders = sceneOccluderBodies(state, ctx);
 
   const labels: Label2D[] = [];
   for (const label of baseLabelsFor(sceneBodyStates(state, ctx))) {
@@ -114,6 +122,13 @@ export function produceSceneBodyCaptions(
       ...label,
       worldPos: anchor,
       fadeAlpha,
+      occludeWeight: subjectOccludedByBodies({
+        subjectMpc: label.worldPos,
+        camPosMpc: camPos,
+        bodies: occluders,
+      })
+        ? 1
+        : 0,
       prominencePx,
       lift: {
         subjectSizePx,

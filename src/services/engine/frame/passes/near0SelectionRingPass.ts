@@ -74,12 +74,14 @@ import { NEAR0 } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
 import { liveBodyPosition } from '../../camera/liveBodyPosition';
 import { sceneBodyStates } from '../sceneBodyStates';
+import { sceneOccluderBodies } from '../sceneOccluderBodies';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { overflowFade } from '../../../../utils/scene/overflowFade';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
+import { subjectOccludedByBodies } from '../../../../utils/scene/subjectOccludedByBodies';
 
 /** Where the near pin lands, as a multiple of `near`: a hair inside the plane,
  *  so f32 rounding of the narrowed vp cannot tip the boundary case back out. */
@@ -179,10 +181,25 @@ export const near0SelectionRingPass: ContentPass = {
       view.slab.near,
     );
 
-    state.gpu.selectionRingRenderer!.draw(pass, rebasedVp, view.viewportPx, {
-      worldPos: clampedCentre,
-      ringRadiusPx,
-      alpha,
-    });
+    // The per-pixel occlusion variant is selected by HANDING the renderer a
+    // scene colour view, so the depth verdict is made here: only a ring whose
+    // subject an opaque body actually hides gets attenuated, and then only
+    // while the body pass has written this frame's `foreground:0` (else the
+    // colour is stale and would blank the whole ring).
+    const occluded =
+      ctx.renderedTargets.has('foreground:0') &&
+      subjectOccludedByBodies({
+        subjectMpc: centreWorld,
+        camPosMpc: view.camPos,
+        bodies: sceneOccluderBodies(state, ctx),
+      });
+
+    state.gpu.selectionRingRenderer!.draw(
+      pass,
+      rebasedVp,
+      view.viewportPx,
+      { worldPos: clampedCentre, ringRadiusPx, alpha },
+      occluded ? ctx.renderTargets.viewOf('foreground:0') : undefined,
+    );
   },
 };

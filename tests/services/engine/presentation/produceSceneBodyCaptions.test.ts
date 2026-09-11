@@ -24,7 +24,10 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -93,6 +96,18 @@ function makeState(
     labelEnabled: named[id] ?? unnamed,
   }));
   return {
+    // `sceneOccluderBodies` (the per-caption depth gate) reads the real seed
+    // tables off the state, so the fixture carries them rather than a stub:
+    // the captions' occlude weights are then the genuine J2000 geometry.
+    gpu: { texturedBodyRenderer: null },
+    data: {
+      bodies: {
+        earth: SCENE_EARTH,
+        planets: SCENE_PLANETS,
+        stars: SCENE_STARS,
+        meshBodies: SCENE_MESH_BODIES,
+      },
+    },
     settings: {
       bodies: { items: bodyItems },
       starCatalogs: {
@@ -432,5 +447,54 @@ describe('produceSceneBodyCaptions', () => {
     const out = produceConstellationCaptions(state, ctx);
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(constellationLayerOpacity(camDistMpc, layerFade));
+  });
+});
+
+/**
+ * The per-caption depth gate. The overlay shaders attenuate per PIXEL, which
+ * cannot tell a subject in FRONT of a body from one behind it; `occludeWeight`
+ * is the producer's verdict on that, and these are its two real poses.
+ */
+describe('produceSceneBodyCaptions occlude weight', () => {
+  const WHALE_LABEL_ID = sceneBodyLabelId('whale');
+  const MOON_LABEL_ID = sceneBodyLabelId('moon');
+  const EARTH_POS = worldPosOf(EARTH_LABEL_ID);
+
+  /** Unit vector from `a` to `b`, in the Mpc frame the captions live in. */
+  function direction(a: Vec3, b: Vec3): Vec3 {
+    const d: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const n = Math.hypot(d[0], d[1], d[2]);
+    return [d[0] / n, d[1] / n, d[2] / n];
+  }
+
+  function step(from: Vec3, dir: Vec3, km: number): Vec3 {
+    const d = km * SCALE_UNITS.KM_TO_MPC;
+    return [from[0] + dir[0] * d, from[1] + dir[1] * d, from[2] + dir[2] * d];
+  }
+
+  function occludeWeightOf(camPos: Vec3, id: string): number | undefined {
+    return produceSceneBodyCaptions(makeState(), makeCtx(camPos)).labels.find((l) => l.id === id)
+      ?.occludeWeight;
+  }
+
+  it('exempts a caption whose subject floats in FRONT of Earth', () => {
+    // The reported bug: the whale orbits 400 km up and draws over Earth, but
+    // its name vanished wherever the text crossed the disc. Eye 200 km further
+    // out along the same ray — Earth fills the background, nothing stands
+    // between the eye and the whale.
+    const whale = worldPosOf(WHALE_LABEL_ID);
+    const camPos = step(whale, direction(EARTH_POS, whale), 200);
+    expect(occludeWeightOf(camPos, WHALE_LABEL_ID)).toBe(0);
+  });
+
+  it('keeps the per-pixel rule for a subject Earth really hides', () => {
+    // Eye on the anti-Moon side of Earth, well clear of the surface: the Moon
+    // is behind the disc and must still sink into the limb.
+    const moon = worldPosOf(MOON_LABEL_ID);
+    const camPos = step(EARTH_POS, direction(moon, EARTH_POS), 20000);
+    expect(occludeWeightOf(camPos, MOON_LABEL_ID)).toBe(1);
+    // Earth's own caption is anchored at Earth's centre — it must never be
+    // occluded by the body it names.
+    expect(occludeWeightOf(camPos, EARTH_LABEL_ID)).toBe(0);
   });
 });

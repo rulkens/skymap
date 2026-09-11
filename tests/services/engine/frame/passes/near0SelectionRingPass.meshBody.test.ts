@@ -114,6 +114,9 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     drawCamPos: [cam.position[0], cam.position[1], cam.position[2]] as Vec3,
     drawPxPerRad: VIEWPORT[1] / (2 * Math.tan(cam.fovYRad / 2)),
     fovYRad: cam.fovYRad,
+    // No body row has drawn into `foreground:0` in this fixture, so the ring
+    // takes its un-occluded pipeline — the axis these cases are about.
+    renderedTargets: new Set<string>(),
   } as unknown as ReadyFrameContext;
 
   const row = {

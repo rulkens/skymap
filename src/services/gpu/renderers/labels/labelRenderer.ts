@@ -105,13 +105,15 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
  *   bytes 16..31  color         vec4<f32>  — premultiplied rgba (fill)
  *   bytes 32..47  sizing        vec4<f32>  — outlineEmFrac, minPx, maxPx, fadeAlpha
  *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)
+ *   bytes 64..67  occludeWeight f32        — share of the scene attenuation
  *
- * 4 × 16 bytes = 64 bytes/label.  `sizing.x` repurposes the legacy
- * `pixelSize` slot (ignored by the shader since the worldEmMpc
- * migration) to carry `outlineEmFrac`, sparing a fresh vec4 for one
- * scalar.
+ * The struct's vec4 members give it 16-byte alignment, so the array element
+ * stride rounds 68 UP to 80 — the 12 trailing bytes are padding the CPU never
+ * writes.  `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the
+ * shader since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a
+ * fresh vec4 for one scalar.
  */
-const LABEL_DATA_BYTES = 64;
+const LABEL_DATA_BYTES = 80;
 
 /**
  * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
@@ -481,8 +483,8 @@ export function createLabelRenderer(
         label.alignY ?? 'baseline',
       );
 
-      // Write per-label storage record (96 bytes, 24 floats) unconditionally
-      // — even when `quads` is empty.  Keeping the per-label index stable
+      // Write the per-label storage record unconditionally — even when
+      // `quads` is empty.  Keeping the per-label index stable
       // across the outer loop matters because each glyph carries its
       // labelIndex by position; if we skipped a label whose text produced
       // no known glyphs, every subsequent glyph would point to the wrong
@@ -493,6 +495,7 @@ export function createLabelRenderer(
       //   [4..7]   color        (r*a, g*a, b*a, a — premultiplied)
       //   [8..11]  sizing       (outlineEmFrac, minPx, maxPx, fadeAlpha)
       //   [12..15] outlineColor (r*a, g*a, b*a, a)
+      //   [16]     occludeWeight        ([17..19] are struct padding)
       const labelBase = li * (LABEL_DATA_BYTES / 4);
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
@@ -523,6 +526,10 @@ export function createLabelRenderer(
       labelBuf[labelBase + 13] = outlineColor[1]! * oa;
       labelBuf[labelBase + 14] = outlineColor[2]! * oa;
       labelBuf[labelBase + 15] = oa;
+
+      // Default 1 = today's per-pixel rule, so a producer that says nothing
+      // about its subject's depth keeps the behaviour it had.
+      labelBuf[labelBase + 16] = label.occludeWeight ?? 1;
 
       // Resolve the label's font to its GPU texture-array layer index
       // ONCE per label, outside the inner glyph loop — every glyph in
