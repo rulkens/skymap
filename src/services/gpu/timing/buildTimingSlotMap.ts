@@ -7,7 +7,7 @@
  *
  * The set of timed passes is data-driven, not compile-time-fixed: it's DERIVED
  * from the FRAME program + content-layer registry (`TIMED_SLOTS` in
- * `services/engine/frame/timedSlots.ts`).  Adding a layer to the registry
+ * `services/engine/frame/timing/timedSlots.ts`).  Adding a layer to the registry
  * is the only edit needed — its timing slot is allocated
  * here automatically, and it appears in the DebugPanel without touching
  * any timing-layer file.  Keeping the allocation *mechanism* here (a

@@ -69,7 +69,7 @@ const GLINT_CAPACITY_MARGIN = 4;
  * frame (the glints branch is a SUBSET of `SCENE_PLANETS` in practice — the
  * flat/textured branches take the rest — so this is a safe over-count, not a
  * tight one), plus `GLINT_CAPACITY_MARGIN` headroom. Mirrors
- * `BODY_SLAB_CAPACITY`'s derivation in `timedSlots.ts` — sized off the
+ * `BODY_SLAB_CAPACITY`'s derivation in `timing/bodySlabCapacity.ts` — sized off the
  * registries, not a hand-picked number that silently goes stale as the seed
  * tables grow. Both pack loops in `bodyGlintsPass` `break` on `count >=
  * MAX_GLINTS` with no error, so zero margin would let the next seeded body

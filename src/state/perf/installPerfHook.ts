@@ -17,7 +17,7 @@ import { clearSelection } from '../selection/selectionSlice';
 import { setRenderStrategy } from '../settings/settingsSlice';
 import { requestTier } from '../tier/requestTier';
 import { selectTier } from '../tier/selectors';
-import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timedSlots';
+import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timing/timedSlotGroups';
 import type { AppStore } from '../../store/types';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { SkymapPerfHook } from '../../@types/perf/SkymapPerfHook';

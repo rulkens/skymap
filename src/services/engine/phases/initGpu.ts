@@ -11,7 +11,7 @@
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
-import { TIMED_SLOTS } from '../frame/timedSlots';
+import { TIMED_SLOTS } from '../frame/timing/timedSlots';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
 import { engineHdrCapabilityChanged } from '../../../state/engine/engineSlice';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';

@@ -72,7 +72,7 @@ const TS_FILES: readonly string[] = [
 // real content, and specifically the files each finding was written about.
 const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/frame/passes/earthPass.ts',
-  'src/services/engine/frame/timedSlots.ts',
+  'src/services/engine/frame/timing/timedSlots.ts',
   'src/services/engine/frame/visibleSlabBodies.ts',
   'src/services/gpu/renderers/bodies/planetRenderer.ts',
   'src/services/engine/camera/cameraDrivers.ts',
