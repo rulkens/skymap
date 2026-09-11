@@ -185,7 +185,7 @@ describe('playClip', () => {
     expect(payload.frame).toBe(FRAME);
 
     // The payload's `data` must be a FRESH object — not the same reference as
-    // originalClip. This is the clock-reset trigger: clipElapsed keys on
+    // originalClip. This is the epoch-restart trigger: the clip epoch keys on
     // reference identity.
     expect(payload.data).not.toBe(originalClip);
   });

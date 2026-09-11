@@ -34,7 +34,7 @@
  *   - The renderers from `initGpu` (read off `state.gpu.*`).
  *   - The thumbnail subsystem from `wireSlots`
  *     (via `state.subsystems.thumbnails`).
- *   - The orbit camera from `wireInput` (via `state.cam`).
+ *   - The boot camera pose from `wireInput` (via `state.booted`).
  *
  * Firing `requestRender()` before any of those exist would either
  * crash on the first tick or render a black canvas.  Putting this
@@ -60,7 +60,7 @@
  */
 
 import { runFrame } from '../frame/runFrame';
-import { buildCameraDrivers } from '../camera/cameraDrivers';
+import { CAMERA_DRIVERS } from '../camera/cameraDrivers';
 import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
 import { selectTimeState } from '../../../state/time/selectors';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
@@ -99,11 +99,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     // Forward the timing service hung off `state.gpu` by initGpu.
     // Always non-null; `renderFrame` gates work behind `.enabled`.
     timingService: state.gpu.timingService,
-    // Wrap the engine's camera movers as drivers once, here. The
-    // wrappers close over the live `state`, so the list never needs
-    // rebuilding — toggled settings and subsystem state are read fresh
-    // each frame through the closures.
-    drivers: buildCameraDrivers(state),
+    drivers: CAMERA_DRIVERS,
   };
 
   // Assign the real frame body to the forward-declared `frame`

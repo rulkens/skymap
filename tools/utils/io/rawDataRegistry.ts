@@ -973,6 +973,25 @@ export const RAW_DATA = {
       'Provenance for the DHM Punktsky harvest — endpoint, licence, anchor height derivation, tile list, fetch landmines.',
   },
 
+  // ─── Skråfoto — Dataforsyningen oblique aerial frames over Søndermarken ─
+
+  'skraafoto.dir': {
+    path: 'data/raw/skraafoto',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      "Skråfoto STAC harvest, one subdir per collection (flight vintage) holding `<itemId>.json` verbatim plus a 1920-long-edge `<itemId>.jpg` per frame — the Gaussian-splat trainer's input set (see README).",
+    fetcher: 'tools/fetch/fetchSkraafoto.ts',
+    readme: 'skraafoto.readme',
+  },
+  'skraafoto.readme': {
+    path: 'data/raw/skraafoto/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the skråfoto harvest — STAC endpoint, collection, keychain credential, licence, downsample recipe, fetch landmines.',
+  },
+
   // ─── Constellations (d3-celestial stick-figure lines) ─────────────────
 
   'constellations.lines': {

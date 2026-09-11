@@ -45,6 +45,11 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
+import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
+import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 
 // Mock composeOrbitConic so the test can (a) assert which vp it consumed by
 // object identity and (b) hand each conic recognisable Float32Arrays. The real
@@ -110,6 +115,9 @@ function makeCtx(distance: number): ReadyFrameContext {
 function makeDrawCtx(): ReadyFrameContext {
   return {
     drawCamPos: [1e-13, 0, 0],
+    // Matches makeNear0View's viewportPx: the occluder binder reads the canvas
+    // (like its sibling body binders) while the per-orbit cull reads the view.
+    canvasSize: { width: 1280, height: 720 },
     fovYRad: Math.PI / 4,
     cam: { distance: 1e-13 },
     simDays: CONST_J2000,
@@ -142,6 +150,7 @@ function makeRendererSpy() {
         pass: GPURenderPassEncoder,
         instances: Float32Array,
         count: number,
+        occluders: { readonly count: number; readonly spheresKm: Float32Array },
         showImpostor?: boolean,
       ) => void
     >(),
@@ -163,9 +172,17 @@ function makeState(
 ): EngineState {
   const layerOpacity = opts.layerOpacity ?? 1;
   return {
-    gpu: { orbitTrailRenderer },
+    gpu: { orbitTrailRenderer, texturedBodyRenderer: null },
+    // The seeded body bag + the registry gates `sceneOccluderSpheres` reads
+    // through `sceneBodyPartition` / `visibleStars` — everything on, so the
+    // occluder set is decided by apparent size alone.
+    data: {
+      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, stars: SCENE_STARS, meshBodies: [] },
+    },
     settings: {
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
+      starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
+      bodies: { items: { sun: { enabled: true }, 's-star': { enabled: true } } },
       debug: {
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
       },
@@ -402,6 +419,31 @@ describe('orbitTrailsPass.draw', () => {
     expect(staging[33]).toBe(602);
   });
 
+  it('packs the eye-relative basis and hands the renderer the opaque bodies as occluders', () => {
+    // Mercury (conic 0): floats 34..36 are its ellipse centre relative to the
+    // camera, in km. The occluder set is per FRAME (`sceneOccluderSpheres`):
+    // from a hair off the Sun only the Sun is an opaque sphere — every planet
+    // is deep in the glint band — so it is the one sphere, centre −camPos in
+    // km and radius its own. A wrong frame or unit fails one of these.
+    const renderer = makeRendererSpy();
+    const ctx = makeDrawCtx();
+    orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, makeState(renderer));
+    const [, staging, , occluders] = renderer.draw.mock.calls[0]!;
+    const first = SCENE_ORBIT_CONICS[0]!;
+    const cam = ctx.drawCamPos;
+    const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
+    expect(staging[34]).toBeCloseTo((first.centerMpc[0] - cam[0]) * kmPerMpc, 0);
+    expect(staging[35]).toBeCloseTo((first.centerMpc[1] - cam[1]) * kmPerMpc, 0);
+    expect(staging[36]).toBeCloseTo((first.centerMpc[2] - cam[2]) * kmPerMpc, 0);
+
+    expect(occluders.count).toBe(1);
+    const sunRadiusM = findByIdOrThrow(SCENE_STARS, 'sun', 'test').radiusM;
+    expect(occluders.spheresKm[0]).toBeCloseTo(-cam[0] * kmPerMpc, 0);
+    expect(occluders.spheresKm[1]).toBeCloseTo(0, 3);
+    expect(occluders.spheresKm[2]).toBeCloseTo(0, 3);
+    expect(occluders.spheresKm[3]).toBeCloseTo(sunRadiusM * SCALE_UNITS.M_TO_KM, 0);
+  });
+
   it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {
     // A mid-fade hide (layer opacity 0.5) scales every packed per-orbit alpha:
     // Mercury's apparent-size alpha saturates at 1 from the Sun, so its packed
@@ -435,6 +477,7 @@ describe('orbitTrailsPass.draw', () => {
     // the one conic whose centre rides ~1 AU out on Earth.
     const ctx = {
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
+      canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
       cam: { distance: 1e-13 },
       simDays,
@@ -506,6 +549,7 @@ describe('orbitTrailsPass.draw', () => {
     const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
     const ctx = {
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
+      canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
       cam: { distance: 1e-13 },
       simDays,
@@ -609,12 +653,12 @@ describe('orbitTrailsPass.draw', () => {
   it('the layer forwards the debug flag to the renderer', () => {
     // `enabled()` never forces the layer on for this flag — draw() just reads
     // it alongside settings.orbitTrails.enabled and passes it straight through
-    // as renderer.draw's fourth argument.
+    // as renderer.draw's fifth argument.
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
     orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer, { impostorOn: true }));
-    expect(renderer.draw.mock.calls[0]![3]).toBe(true);
+    expect(renderer.draw.mock.calls[0]![4]).toBe(true);
 
     renderer.draw.mockClear();
     orbitTrailsPass.draw(
@@ -623,6 +667,6 @@ describe('orbitTrailsPass.draw', () => {
       makeDrawCtx(),
       makeState(renderer, { impostorOn: false }),
     );
-    expect(renderer.draw.mock.calls[0]![3]).toBe(false);
+    expect(renderer.draw.mock.calls[0]![4]).toBe(false);
   });
 });

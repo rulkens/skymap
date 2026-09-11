@@ -1,19 +1,10 @@
 /**
- * milkyWayVisible — is the Milky Way point cloud drawn for a given camera?
- * THE single home of the MW visibility predicate. Two gates: the user toggle
- * (or its fade-out tail: `settings.milkyWay.enabled` OR
- * `fades.opacityOf({kind:'milkyWay'}) > 0`, so the cloud stays alive and
- * pickable through the ~100 ms toggle ramp), AND the apparent-size fade band
- * (`milkyWayFadeAlpha(camDist, fovY, viewportH) > 0`).
- *
- * The camera and clock come in as parameters rather than read off state
- * because the draw and pick programs evaluate this SAME gate against
- * DIFFERENT cameras — draw passes the frame-frozen `ctx.drawCamPos` /
- * `ctx.fovYRad` / `ctx.nowMs`, pick passes its own pick-time replay. Sharing
- * one gate (not a mirrored pair) means the pick answer can't drift from the
- * draw answer for that camera; reading the live drag register instead would
- * lag a wheel-zoom/tween between frames and let a vanished disc claim a
- * click, or a visible one miss.
+ * milkyWayVisible — THE single home of the MW visibility predicate: the user
+ * toggle OR its fade-out tail (so the cloud stays pickable through the ~100 ms
+ * ramp), AND the apparent-size fade band. Camera and clock arrive as parameters
+ * because draw and pick evaluate this same gate against DIFFERENT cameras;
+ * reading the live pose instead would lag a wheel-zoom between frames and let a
+ * vanished disc claim a click.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

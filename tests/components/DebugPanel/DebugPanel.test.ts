@@ -1,22 +1,9 @@
 // @vitest-environment jsdom
 
 /**
- * DebugPanel — store-backed integration test.
- *
- * Verifies that the sections DebugPanel mounts (each via its own container)
- * round-trip through the store:
- *   - reads the `pick-buffer` overlay out of the store and reflects it on the matching checkbox;
- *   - dispatches `setDebugOverlay({ key: 'pick-buffer', enabled })` when the checkbox is toggled;
- *   - routes a RenderTogglesSection checkbox click through `onTogglePass` → `setPassDisabled`;
- *   - routes the galaxy-provenance table's highlight checkbox and cull `<select>`
- *     through `setProvenanceHighlight` / `setProvenanceFilter`.
- *
- * Stub engine props — a `new Map()` for `slots`, a minimal `timingService` stub
- * (enabled=false, all methods are no-ops), and a `passNames` array — satisfy the
- * engine-prop types without needing a live GPU context.
- *
- * Pattern mirrors `AutoRotateToggleContainer.test.ts`: `createAppStore()` +
- * `<Provider>` wrapper + `createElement` (no JSX).
+ * DebugPanel — store-backed integration test. Stub engine props (a `new Map()`
+ * for `slots`, a no-op `timingService`) satisfy EngineHandle's prop types
+ * without a live GPU context.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -36,10 +23,7 @@ import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/earthTileSubsystem';
-
-// ---------------------------------------------------------------------------
-// Stub engine props
-// ---------------------------------------------------------------------------
+import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 
 const PASS_NAMES = ['point-sprites', 'textured-quads'];
 
@@ -55,20 +39,16 @@ const stubTimingService: GpuTimingService = {
 
 const stubSlots = new Map();
 
-// Only `debug.earthTiles` is reached (via EarthTileAtlasSectionContainer) —
-// `flyToLonLat` now dispatches a store action rather than reading the handle
-// — the rest of EngineHandle is unused by DebugPanel's tree, so it's cast
-// rather than fully stubbed.
+// Only `debug.earthTiles` and `debug.cameraDebug` are reached — `flyToLonLat`
+// dispatches a store action rather than reading the handle — so the rest of
+// EngineHandle is unused here and it's cast rather than fully stubbed.
 const stubEngineHandleRef = createRef<EngineHandle | null>();
 stubEngineHandleRef.current = {
   debug: {
     earthTiles: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+    cameraDebug: () => QUIET_CAMERA_DEBUG_SNAPSHOT,
   },
 } as unknown as EngineHandle;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
@@ -88,17 +68,11 @@ function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe('DebugPanel', () => {
   it('reflects the pick-buffer overlay from the store', () => {
     const { store } = createAppStore();
-    // Seed pick-buffer=true by dispatching before render.
     store.dispatch(setDebugOverlay({ key: 'pick-buffer', enabled: true }));
     const { container } = renderContainer(store);
-    // The "Show pick buffer" label contains a checkbox.
     const labels = Array.from(container.querySelectorAll('label'));
     const pickLabel = labels.find((l) => l.textContent?.includes('Show pick buffer'));
     expect(pickLabel).not.toBeUndefined();
@@ -109,7 +83,6 @@ describe('DebugPanel', () => {
 
   it('dispatches setDebugOverlay on checkbox toggle', () => {
     const { store } = createAppStore();
-    // Default store has pick-buffer=false.
     expect(selectDebugOverlays(store.getState())['pick-buffer']).toBe(false);
     const { container } = renderContainer(store);
     const labels = Array.from(container.querySelectorAll('label'));
@@ -131,7 +104,6 @@ describe('DebugPanel', () => {
     // All passes start enabled (no disabledPasses entries).
     const boxes = details.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
     expect(boxes.length).toBeGreaterThan(0);
-    // Click the first box ('point-sprites') to disable it.
     fireEvent.click(boxes[0]!);
     expect(selectDisabledPasses(store.getState())['point-sprites']).toBe(true);
   });

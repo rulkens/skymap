@@ -81,7 +81,7 @@ export type EngineSubsystemHandles = {
   inputBindings: InputBindings | null;
   /**
    * Queue between the orbit-controls gesture recognizer (which only emits) and
-   * `drainInput`, the frame's one input-apply site. Eager — the recognizer is
+   * `runFrame`'s replay, the frame's one input-apply site. Eager — the recognizer is
    * attached in `wireInput`, but `runFrame` drains from its first tick, which
    * can precede that async phase.
    */

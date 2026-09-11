@@ -1,8 +1,9 @@
 /**
  * starAggregatesPass — the survey-star AGGREGATE stream into the half-res
- * offscreen. Its walk/fade/partition is `prepareStarCut` (tested in
- * `prepareStarCut.test.ts`); here we pin only that it shares the star gate and
- * records the AGGREGATE sub-stream (never the leaf one) into its pass.
+ * offscreen. Its walk/partition is `prepareStarCut`, fed by `advanceStarFades`
+ * (both tested in `prepareStarCut.test.ts`); here we pin only that it shares
+ * the star gate and records the AGGREGATE sub-stream (never the leaf one)
+ * into its pass.
  */
 
 import { describe, it, expect, vi } from 'vitest';

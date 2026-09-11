@@ -1,11 +1,12 @@
 /**
  * LayerList — one row per asset in the selected group's manifest: a
- * visibility checkbox, a kind badge, the point count, and the load status.
+ * visibility checkbox, a kind badge, the asset count, and the load status.
  * The count stays visible while hidden — a bake that produced a tenth of
  * what it should have is visible at a glance regardless of the toggle.
  */
 import type { ReactNode } from 'react';
 
+import { assetCount } from '../../scene/assetCount';
 import { toggleAssetVisibility } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import styles from './LayerList.module.css';
@@ -36,7 +37,9 @@ function LayerList(): ReactNode {
             </label>
             <div className={styles.meta}>
               <span className={styles.badge}>{asset.kind}</span>
-              <span className={styles.count}>{asset.pointCount.toLocaleString()} pts</span>
+              <span className={styles.count}>
+                {assetCount(asset).count.toLocaleString()} {assetCount(asset).unit}
+              </span>
               <span className={styles.status}>{assetStatus[asset.id] ?? 'pending'}</span>
             </div>
           </li>

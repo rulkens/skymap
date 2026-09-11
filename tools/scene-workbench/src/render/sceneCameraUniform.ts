@@ -10,7 +10,7 @@ import { SCENE_CAMERA_BYTES, writeSceneCamera } from './writeSceneCamera';
 export type SceneCameraUniform = {
   readonly layout: GPUBindGroupLayout;
   readonly bindGroup: GPUBindGroup;
-  write(view: SceneCameraView, pointSizePx: number): void;
+  write(view: SceneCameraView, pointSizePx: number, splatScale: number, opacityScale: number): void;
   dispose(): void;
 };
 
@@ -34,8 +34,8 @@ export function createSceneCameraUniform(device: GPUDevice): SceneCameraUniform 
   return {
     layout,
     bindGroup,
-    write(view, pointSizePx): void {
-      writeSceneCamera(scratch, view, pointSizePx);
+    write(view, pointSizePx, splatScale, opacityScale): void {
+      writeSceneCamera(scratch, view, pointSizePx, splatScale, opacityScale);
       device.queue.writeBuffer(buffer, 0, scratch);
     },
     dispose(): void {

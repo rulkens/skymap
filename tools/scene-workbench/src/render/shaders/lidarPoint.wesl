@@ -9,15 +9,7 @@
 // size as a central one. 'eyeM' is in the layout for the later passes (falloff,
 // sorting); sizing from 'w' means this shader never reads it.
 
-struct SceneCamera {
-  viewProj: mat4x4<f32>,
-  rightM: vec3<f32>,
-  pointSizePx: f32,
-  upM: vec3<f32>,
-  viewportH: f32,
-  eyeM: vec3<f32>,
-  metresPerPx: f32,
-};
+import package::lib::sceneCamera::SceneCamera;
 
 @group(0) @binding(0) var<uniform> cam: SceneCamera;
 
