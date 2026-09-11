@@ -13,6 +13,7 @@ import { publishAsset } from '../../../../tools/scene-recon/manifest/publishAsse
 import { SOENDERMARKEN } from '../../../../tools/scene-recon/groups/soendermarken';
 import type { PointCloudAsset } from '../../../../tools/scene-workbench/@types/PointCloudAsset';
 import type { GroupRegistry } from '../../../../tools/scene-workbench/@types/GroupRegistry';
+import type { BoundsM } from '../../../../tools/scene-workbench/@types/BoundsM';
 import type { SceneManifest } from '../../../../tools/scene-workbench/@types/SceneManifest';
 
 const ASSET: PointCloudAsset = {
@@ -28,6 +29,8 @@ const ASSET: PointCloudAsset = {
   pointCount: 3,
   artifactUrl: `geo3d/groups/${SOENDERMARKEN.id}/assets/lidar/points.bin`,
 };
+
+const BOUNDS: BoundsM = { min: [-129, -91, -18], max: [129, 91, 22] };
 
 let root: string;
 let previousCwd: string;
@@ -73,5 +76,16 @@ describe('publishAsset', () => {
     expect(manifest.assets).toHaveLength(1);
     expect(manifest.assets[0]!.label).toBe('second');
     expect(readJson<GroupRegistry>('public/data/geo3d/scenes.json').groups).toHaveLength(1);
+  });
+
+  it("keeps the LiDAR bake's boundsM when a later bake publishes without one", async () => {
+    await publishAsset(SOENDERMARKEN, ASSET, BOUNDS);
+    await publishAsset(SOENDERMARKEN, { ...ASSET, id: 'splats' });
+
+    const manifest = readJson<SceneManifest>(
+      `public/data/geo3d/groups/${SOENDERMARKEN.id}/manifest.json`,
+    );
+    expect(manifest.boundsM).toEqual(BOUNDS);
+    expect(manifest.assets).toHaveLength(2);
   });
 });

@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { BoundsM } from '../../../@types/BoundsM';
+import { clampSceneDistanceM } from '../../scene/clampSceneDistanceM';
 
 export type SceneCamera = { yaw: number; pitch: number; distanceM: number; targetM: Vec3 };
 
@@ -52,6 +53,16 @@ export const viewSlice = createSlice({
       state.camera.distanceM = action.payload.distanceM;
       state.camera.targetM = action.payload.targetM;
     },
+    /** Opens a group on its baked extent rather than its anchor, which for the
+     *  crop groups sits a few hundred metres outside the box. 0.9 x the wider
+     *  horizontal extent frames it with margin at the default pitch. */
+    frameCamera: (state, action: PayloadAction<BoundsM>) => {
+      const { min, max } = action.payload;
+      state.camera.targetM = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
+      state.camera.distanceM = clampSceneDistanceM(
+        Math.max(max[0] - min[0], max[1] - min[1]) * 0.9,
+      );
+    },
     toggleAssetVisibility: (state, action: PayloadAction<string>) => {
       const hidden = new Set(state.hiddenAssetIds);
       if (hidden.has(action.payload)) hidden.delete(action.payload);
@@ -82,6 +93,7 @@ export const viewSlice = createSlice({
 
 export const {
   commitCameraPose,
+  frameCamera,
   toggleAssetVisibility,
   deviceLost,
   setPointCloudPointSize,

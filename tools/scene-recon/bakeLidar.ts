@@ -25,6 +25,7 @@ import { publishAsset } from './manifest/publishAsset';
 import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import type { BoundsM } from '../scene-workbench/@types/BoundsM';
 import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { PointCloudAsset } from '../scene-workbench/@types/PointCloudAsset';
 
@@ -122,9 +123,29 @@ export async function bakeLidar(
     artifactUrl: assetArtifactUrl(group.id, ASSET_ID, 'points.bin'),
   };
 
-  await publishAsset(group, asset);
+  await publishAsset(group, asset, pointsBoundsM(points));
 
   return asset;
+}
+
+/** The group frame's extent as actually cut — `group.bounds` is geodetic and
+ *  pre-thinning, so only the written points answer where the scene is. */
+function pointsBoundsM(points: readonly ScenePoint[]): BoundsM {
+  let minX = Infinity;
+  let minY = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxZ = -Infinity;
+  for (const point of points) {
+    minX = Math.min(minX, point.xM);
+    minY = Math.min(minY, point.yM);
+    minZ = Math.min(minZ, point.zM);
+    maxX = Math.max(maxX, point.xM);
+    maxY = Math.max(maxY, point.yM);
+    maxZ = Math.max(maxZ, point.zM);
+  }
+  return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
 }
 
 function spawnPdal(pipelineJsonPath: string): Promise<void> {

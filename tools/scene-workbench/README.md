@@ -173,6 +173,11 @@ objects — `gpu`, `gpuAssets`, the renderer, the depth texture — through
 once via `registerSagaContext`; `Viewport.tsx` stays a dumb frame driver that
 only reads it.
 
+Selecting a group opens the camera framed on the manifest's `boundsM` — the
+extent `bake-lidar` measured over the points it wrote, since a group's anchor
+can sit hundreds of metres outside its box; a group baked before `boundsM`
+existed opens on the anchor until `bake-lidar` runs for it again.
+
 The bake CLIs (`npm run bake-lidar`, `npm run bake-splats`, `npm run bake-mesh`)
 write `public/data/geo3d/scenes.json` (the registry) and
 `public/data/geo3d/groups/<id>/manifest.json` alongside one artifact per asset —

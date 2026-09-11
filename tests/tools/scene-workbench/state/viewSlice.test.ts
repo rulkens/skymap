@@ -1,13 +1,13 @@
 /**
- * viewSlice — the splat clip box. `null` is the no-clipping path the sort
- * and the renderer both key on, so setting and clearing it must round-trip
- * without disturbing the sibling display knobs the same nested object holds.
+ * viewSlice — the splat clip box, whose `null` is the no-clipping path the
+ * sort and the renderer both key on, and the opening camera frame.
  */
 import { describe, expect, it } from 'vitest';
 
 import type { BoundsM } from '../../../../tools/scene-workbench/@types/BoundsM';
 import {
   defaultViewSlice,
+  frameCamera,
   setSplatClipBox,
   viewSlice,
 } from '../../../../tools/scene-workbench/src/state/view/viewSlice';
@@ -29,5 +29,18 @@ describe('viewSlice.setSplatClipBox', () => {
       opacityScale: 1,
       clipBoxM: null,
     });
+  });
+});
+
+describe('viewSlice.frameCamera', () => {
+  it('centres an off-origin asymmetric box and backs off its wider horizontal extent', () => {
+    const boxM: BoundsM = { min: [10, -30, 0], max: [110, 20, 40] };
+
+    const framed = viewSlice.reducer(defaultViewSlice, frameCamera(boxM));
+
+    expect(framed.camera.targetM).toEqual([60, -5, 20]);
+    expect(framed.camera.distanceM).toBe(90);
+    expect(framed.camera.yaw).toBe(defaultViewSlice.camera.yaw);
+    expect(framed.camera.pitch).toBe(defaultViewSlice.camera.pitch);
   });
 });

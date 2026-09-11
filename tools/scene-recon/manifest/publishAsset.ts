@@ -10,12 +10,17 @@ import { upsertGroup } from './upsertGroup';
 import { writeJsonAtomic } from '../../utils/io/writeJsonAtomic';
 import type { SceneGroupDefinition } from '../@types/SceneGroupDefinition';
 import type { GroupRegistry } from '../../scene-workbench/@types/GroupRegistry';
+import type { BoundsM } from '../../scene-workbench/@types/BoundsM';
 import type { SceneAsset } from '../../scene-workbench/@types/SceneAsset';
 import type { SceneManifest } from '../../scene-workbench/@types/SceneManifest';
 
-export async function publishAsset(group: SceneGroupDefinition, asset: SceneAsset): Promise<void> {
+export async function publishAsset(
+  group: SceneGroupDefinition,
+  asset: SceneAsset,
+  boundsM?: BoundsM,
+): Promise<void> {
   await writeJsonAtomic<SceneManifest>(groupManifestPath(group.id), (current) =>
-    nextManifest(current, group, asset),
+    nextManifest(current, group, asset, boundsM),
   );
 
   await writeJsonAtomic<GroupRegistry>(registryPath(), (current) =>

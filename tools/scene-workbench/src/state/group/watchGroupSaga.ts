@@ -19,6 +19,7 @@ import { resolveAssetUrl } from '../../scene/resolveAssetUrl';
 import type { SceneSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
 import { groupSelected } from '../registry/registrySlice';
+import { frameCamera } from '../view/viewSlice';
 import { assetStatusChanged, manifestFailed, manifestLoaded } from './groupSlice';
 
 function* loadAssetWorker(
@@ -77,6 +78,9 @@ function* loadGroupWorker(action: ReturnType<typeof groupSelected>) {
       }),
     );
     yield* put(manifestLoaded(manifest));
+    // Explicit put, not viewSlice extraReducers on manifestLoaded: cross-slice
+    // extraReducers have silently dropped in this project before.
+    if (manifest.boundsM) yield* put(frameCamera(manifest.boundsM));
 
     // Viewport registers the saga context only once `initGpu` has resolved, so
     // a null device here means the device was never acquired (no WebGPU).
