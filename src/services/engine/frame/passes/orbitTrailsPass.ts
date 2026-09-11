@@ -14,6 +14,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { ORBITAL_ELEMENTS } from '../../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../../data/bodies/sceneAnchors';
+import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
 import { focusResolveOrder } from '../../../../utils/scene/focusResolveOrder';
 import { regionOfBody } from '../../../../utils/scene/regionOfBody';
 import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
@@ -37,9 +38,15 @@ import { resolveLayerOpacity } from '../../presentation/focusRecession';
 const CULL_PX = 10;
 const FULL_PX = 20;
 
+// A mesh body's own 400 km ring around Earth is clutter at every zoom where
+// the body itself is invisible, so the mesh bodies draw no trail (ruling: none,
+// not a thinned one) while every other row keeps its conic.
+const MESH_BODY_IDS = new Set(SCENE_MESH_BODIES.map((body) => body.id));
+const TRAIL_ELEMENTS = ORBITAL_ELEMENTS.filter((el) => !MESH_BODY_IDS.has(el.id));
+
 // Reused across frames so the hot path allocates nothing. Sized from the
 // compile-time elements table — a fixed size, not a cap.
-const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
+const staging = new Float32Array(TRAIL_ELEMENTS.length * INSTANCE_FLOATS);
 
 // Farthest point from the focus is apoapsis a·(1+e); summing it along the focus
 // chain bounds every orbit point for every t. Derived from the static elements,
@@ -138,7 +145,7 @@ export const orbitTrailsPass: ContentPass = {
     // Reading the shared snapshot — never re-deriving — is what welds each trail
     // to the exact instant its body is drawn at.
     const states = sceneBodyStates(state, ctx);
-    const limit = ORBITAL_ELEMENTS.length;
+    const limit = TRAIL_ELEMENTS.length;
     const camPos = ctx.drawCamPos;
     const viewportHeightPx = view.viewportPx[1];
 
@@ -155,7 +162,7 @@ export const orbitTrailsPass: ContentPass = {
     //   floats 32..33 — the visible arc eStart/eSpan (loc9 at byte 128)
     let count = 0;
     for (let i = 0; i < limit; i++) {
-      const elements = ORBITAL_ELEMENTS[i]!;
+      const elements = TRAIL_ELEMENTS[i]!;
       // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
       // FRESH vectors per call, so the in-place focus fold below cannot alias a
       // shared scratch across orbits.

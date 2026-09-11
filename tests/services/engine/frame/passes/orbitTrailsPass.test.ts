@@ -491,6 +491,44 @@ describe('orbitTrailsPass.draw', () => {
     expect(drift).toBeGreaterThan(1e-13);
   });
 
+  it('stages no conic for the mesh bodies (whale, petunias) even when the Moon trail is emitted', () => {
+    // Same pose as "rides a moon trail on its propagated parent" above — parking
+    // the camera at Earth is what makes the Moon's tiny geocentric orbit survive
+    // the apparent-size cull. Regression for the user ruling: whale/petunias ride
+    // that same Earth focus on an even smaller 400 km ring, so if their rows ever
+    // leaked back into the draw loop they — not the Moon — would be the closest
+    // composed conic to Earth.
+    composeMock.mockClear();
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+
+    const simDays = CONST_J2000 + 100;
+    const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
+    const ctx = {
+      drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
+      fovYRad: Math.PI / 4,
+      cam: { distance: 1e-13 },
+      simDays,
+      focusBlend: 0,
+      nowMs: 0,
+    } as unknown as ReadyFrameContext;
+
+    orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));
+
+    const moonEl = ORBITAL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const moonOffset = keplerianEllipse(propagateElements(moonEl, simDays)).centerOffsetMpc;
+    const moonDistMpc = Math.hypot(moonOffset[0], moonOffset[1], moonOffset[2]);
+
+    let closestDistMpc = Infinity;
+    for (const call of composeMock.mock.calls) {
+      const c = call[1] as unknown as Vec3;
+      const d = Math.hypot(c[0] - earthPos[0], c[1] - earthPos[1], c[2] - earthPos[2]);
+      closestDistMpc = Math.min(closestDistMpc, d);
+    }
+    expect(composeMock.mock.calls.length).toBeGreaterThan(0);
+    expect(closestDistMpc / moonDistMpc).toBeCloseTo(1, 6);
+  });
+
   it('S-star trails are gated off when the camera is in the solar system', () => {
     // The payoff of the per-region reach. A camera at the Sun draws the planet
     // trails and must pack none of the 39 S-star conics: they sit 8.178e-3 Mpc
