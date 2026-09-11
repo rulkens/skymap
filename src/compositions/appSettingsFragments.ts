@@ -1,9 +1,9 @@
 /**
  * The Layer settings clusters this app composes in — authority for the seed and
- * the slice's spreads. Asserted at import: a duplicate reducer key throws first.
+ * the slice's spreads. `settingsSlice` asserts the reducer keys are unique, against
+ * the core namespace too.
  */
 
-import { assertUniqueFragmentReducerKeys } from '../utils/settings/assertUniqueFragmentReducerKeys';
 import { bodiesSettingsFragment } from '../layers/body/settings/bodiesSettings';
 import { constellationsSettingsFragment } from '../layers/constellations/settings/constellationsSettings';
 import { earthSettingsFragment } from '../layers/body/settings/earthSettings';
@@ -33,5 +33,3 @@ export const APP_SETTINGS_FRAGMENTS = [
   constellationsSettingsFragment,
   flowSettingsFragment,
 ] as const;
-
-assertUniqueFragmentReducerKeys(APP_SETTINGS_FRAGMENTS);

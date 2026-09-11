@@ -66,10 +66,12 @@ authored, because the two halves are one contract:
 
 - **Fields out.** `target`, `slab`, `skyCapture` and `hdrPostLensing` are deleted (§5): a pass no
   longer states where it draws, so the row and the order cannot disagree.
-- **Signature in.** `enabled` / `draw` / `pickEnabled` / `drawPick` take `CoreFrameState` (camera,
-  ctx, fades, selection, tier) instead of the whole `EngineState`. A pass reaches its own Layer's
-  renderers through the closure it was constructed in (§4.2), not through a global bag. That
-  answers the review's finding that "every method takes the whole `EngineState`, so a layer can
+- **Signature in.** `enabled` / `draw` / `pickEnabled` / `drawPick` take `PassState` — a `Pick` of
+  `EngineState` that refuses `booted`, `requests`, `cameraRuntime`, `skyCubemapCapture` and
+  `picking` — instead of the whole `EngineState`. (`CoreFrameState`, the narrower cut that also
+  drops `gpu`, is minted in (d) once each Layer holds its own renderers; §13 A4.) A pass reaches
+  its own Layer's renderers through the closure it was constructed in (§4.2), not through a global
+  bag. That answers the review's finding that "every method takes the whole `EngineState`, so a layer can
   read anything; nothing scopes it".
 
 ```ts
@@ -77,19 +79,14 @@ authored, because the two halves are one contract:
 export type ContentPass = {
   readonly name: string;
   readonly blend: Blend;
-  enabled(state: CoreFrameState, ctx: ReadyFrameContext, view: SlabView): boolean;
-  draw(
-    pass: GPURenderPassEncoder,
-    view: SlabView,
-    ctx: ReadyFrameContext,
-    state: CoreFrameState,
-  ): void;
-  pickEnabled?(state: CoreFrameState, ctx: ReadyFrameContext, view: SlabView): boolean;
+  enabled(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
+  draw(pass: GPURenderPassEncoder, view: SlabView, ctx: ReadyFrameContext, state: PassState): void;
+  pickEnabled?(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
   drawPick?(
     pass: GPURenderPassEncoder,
     view: SlabView,
     ctx: ReadyFrameContext,
-    state: CoreFrameState,
+    state: PassState,
   ): void;
 };
 ```
@@ -101,11 +98,11 @@ emission plus `milky-way`'s multiplicative dust), so it is a property of the dra
 
 ```ts
 // src/@types/engine/layer/Layer.d.ts   (sub-shapes each get their own file)
-export type Layer<Name extends string, Cluster, Runtime> = {
+export type Layer<Name extends string, Runtime> = {
   readonly name: Name;
 
-  /** Absent = no knobs. Present = this Layer owns a settings cluster (§4.3). */
-  readonly settings?: LayerSettingsFragment<Name, Cluster>;
+  /** This Layer's settings clusters. Absent = no knobs (§4.3). */
+  readonly settings?: readonly SettingsFragmentLike[];
 
   // Static contributions: plain data, readable without booting anything.
   readonly targets?: readonly RenderTargetSpec[];
@@ -128,15 +125,17 @@ export type Layer<Name extends string, Cluster, Runtime> = {
 };
 
 // src/services/engine/layer/defineLayer.ts
-export function defineLayer<const Name extends string, Cluster, Runtime>(
-  layer: Layer<Name, Cluster, Runtime>,
-): Layer<Name, Cluster, Runtime>;
+export function defineLayer<const Name extends string, Runtime>(
+  layer: Layer<Name, Runtime>,
+): Layer<Name, Runtime>;
 ```
 
 `defineLayer` is an identity function whose only job is inference: `const Name` pins the name as a
-literal (const type parameters, TS 5.0+; the repo is on 6.0.3) and `Cluster` is inferred from
-`settings.seed`'s return type, which §4.3 needs. `as const satisfies` cannot do this; it widens
-`seed`'s return.
+literal (const type parameters, TS 5.0+; the repo is on 6.0.3) and `Runtime` is inferred from
+`create`'s return type. A Layer may own several clusters, so `settings` is a LIST bounded by
+`SettingsFragmentLike` rather than one `Cluster` type parameter — which means the field erases the
+literal keys `ComposedClusters` needs, and `APP_SETTINGS_FRAGMENTS` stays the settings authority
+until (d) closes that (§13 A8).
 
 **Data versus closure.** `targets` / `sagas` / `sources` / `ui` have no dependency on the Layer's own
 allocations, so they stay plain data, per #14 D4's standing form. The rest cannot: their whole point
@@ -160,7 +159,10 @@ allocation site, `destroy` a reverse walk) plus `EngineSubsystemHandles.d.ts`'s
 export type LayerSettingsFragment<Key extends string, Cluster> = {
   readonly key: Key;
   readonly seed: () => Cluster;
-  /** Case reducers over this cluster alone; action types namespaced `settings/<Key>/…`. */
+  /**
+   * Case reducers over this cluster alone; `liftClusterReducers` re-bases them on the root,
+   * keeping the FLAT `settings/<reducerName>` action types the containers already dispatch.
+   */
   readonly reducers: LayerCaseReducers<Cluster>;
 };
 
@@ -218,16 +220,16 @@ sagas move into their Layers: `watchFlowReseedSaga` to `flow`, `watchBiasBakeSag
 
 ```ts
 // src/@types/engine/EngineComposition.d.ts
-export type EngineComposition<Layers extends readonly Layer<string, unknown, unknown>[]> = {
+export type EngineComposition<Layers extends readonly Layer<string, unknown>[]> = {
   readonly layers: Layers;
   /** Boot camera + home target + whether to seed selection. Leaves `wireInput`; §9(b). */
   readonly home: EngineHomeConfig;
-  readonly tier: Tier;
-  readonly dataUrl: string;
 };
 ```
 
-`createEngine` takes one. There is deliberately no frame-order field: `FRAME_ORDER` is global and
+`createEngine` takes one. `tier` and `dataUrl` are deliberately absent (§13 A5, A6): `tier` stays
+store state the autoLod loop writes, and `dataUrl` is read from the environment, so neither is a
+property of the composition. There is likewise no frame-order field: `FRAME_ORDER` is global and
 hand-authored in core (§5, ruling #7), and a composition drops what it does not contribute rather
 than restating an order.
 
@@ -401,7 +403,11 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     ],
   },
   { kind: 'lens', target: 'hdr', passes: ['sgr-a-star-lensing'] },
-  { kind: 'render', target: 'hdr', slab: NEAR0, passes: ['orbit-trails', 'body-glints'] },
+  // Shipped as THREE (hdr, NEAR0) lines, not one (§13 A1): the glints sit after
+  // the lens and merge back into the roster above when it emits nothing, while
+  // the trails must draw AFTER the foreground composite to pass in front of
+  // their host body. Same target and slab, so each carries its own `slot`.
+  { kind: 'render', target: 'hdr', slab: NEAR0, passes: ['body-glints'], slot: 'POST_LENSING' },
   {
     kind: 'foreground',
     target: 'foreground:0',
@@ -409,6 +415,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     bodyPasses: ['earth', 'cloud-shell', 'planets', 'textured-bodies', 'rings', 'atmosphere-shell'],
   },
   { kind: 'composite', source: 'foreground:0', dest: 'hdr' },
+  { kind: 'render', target: 'hdr', slab: NEAR0, passes: ['orbit-trails'], slot: 'POST_FOREGROUND' },
   { kind: 'bloom' },
   { kind: 'tonemap', source: 'hdr', dest: 'swap' },
   {
@@ -489,7 +496,7 @@ an error.
 
 | File                                               | Loses                                                                                                                                                                            | Gains                                                                                                                   |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `src/@types/engine/frame/ContentLayer.d.ts`        | `target`, `slab`, `skyCapture`, `hdrPostLensing` and their ~45 lines of docblock; `EngineState` in four signatures                                                               | the name `ContentPass.d.ts`; `CoreFrameState`; a row that cannot name a target that does not exist                      |
+| `src/@types/engine/frame/ContentLayer.d.ts`        | `target`, `slab`, `skyCapture`, `hdrPostLensing` and their ~45 lines of docblock; `EngineState` in four signatures                                                               | the name `ContentPass.d.ts`; `PassState`; a row that cannot name a target that does not exist                           |
 | `src/services/engine/frame/passes/index.ts`        | the whole file: the 37-row array, the 37 imports, the 37 re-exports, and the draw-order header, which moves to `frameOrder.ts`                                                   | nothing; passes live in their Layers                                                                                    |
 | `src/services/engine/frame/frameProgram.ts`        | `frameProgram` itself (the five parameters become step kinds), the `(target, slab)` matching in `timedSlotRowsOf` and `plainLayerGroupKeys`, and `matchesLensPhase`'s call sites | slot lists read straight off a step's `passes`; `PASS_GROUP_TITLES` and the grouping walks are untouched                |
 | `tests/services/engine/frame/targetParity.test.ts` | both parity cases: leg one has no `target` to check, leg two is the boot check's item 3                                                                                          | subsumed; what stays is the row-id uniqueness assert plus one repo test running the boot check over the app composition |
@@ -634,7 +641,7 @@ that folder; `frameProgram.ts`, `executeFrame.ts`, `pickProgram.ts`, `gpuHandleR
 move-files -- --manifest` for the files. Guard is the existing suite plus `npm run typecheck`.
 
 **No contract change rides it.** Both halves of §4.1's contract change (the four deleted fields, the
-`CoreFrameState` signature) land in (c) instead: they are one contract with `FRAME_ORDER`, they are
+`PassState` signature) land in (c) instead: they are one contract with `FRAME_ORDER`, they are
 not mechanical, and a rename diff touching 80 files must stay reviewable by inspection.
 
 ### (b) Boot de-coupling
@@ -670,7 +677,7 @@ app engine still passing every Layer.
   `settingsSlice`'s reducers split the same way.
 - **Frame order.** Author `FRAME_ORDER` (§5), rewrite the executor's group selection as a name
   lookup, delete `target` / `slab` / `skyCapture` / `hdrPostLensing` from the pass row, and narrow
-  the four method signatures to `CoreFrameState`. `CONTENT_LAYERS` survives this PR as the app
+  the four method signatures to `PassState`. `CONTENT_LAYERS` survives this PR as the app
   composition's contributed-pass list, one array of objects that no longer states an order.
 
 The frame-order half is the larger review surface and the one to read closely: it is where a
@@ -774,15 +781,16 @@ The spec's four open questions, ruled 2026-09-10. Transcript:
 
 Plan-time amendments, ruled during (c)'s execution, 2026-09-11:
 
-| #   | Question                                       | Ruling                                                                                                                     | Folded into |
-| --- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| A1  | Orbit trails' place in `FRAME_ORDER`           | A post-composite `(hdr, NEAR0)` render line, not an `HdrPhase` value (#682).                                               | §5          |
-| A2  | Settings-fragment granularity                  | A Layer owns a LIST of settings fragments, one per CLUSTER, not one fragment per Layer.                                    | §4.2, §4.3  |
-| A3  | Fragment action-type namespacing               | Action types stay flat and byte-identical; cross-fragment key collisions are guarded by `assertUniqueFragmentReducerKeys`. | §4.3        |
-| A4  | The frame-visible `EngineState` cut            | `PassState` lands in this PR; `CoreFrameState` is minted in (d), once `gpu` leaves the pass contract.                      | §4.1, §5    |
-| A5  | `tier` on `EngineComposition`                  | Not a field: `tier` stays store state, written only through `requestTier` → `watchTierSaga` → `setTier`.                   | §4.4        |
-| A6  | `dataUrl` on `EngineComposition`               | Not a field: deferred to the PR with a reader, (g) at the earliest.                                                        | §4.4        |
-| A7  | `LayerCoreDeps`' field list, left open by §4.2 | Pinned: `GpuHandleConstructDeps` minus `fontAtlases`, plus `store` and `requestRender`.                                    | §4.2        |
+| #   | Question                                       | Ruling                                                                                                                                                                                                                                                                                                                                                                                                   | Folded into |
+| --- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| A1  | Orbit trails' place in `FRAME_ORDER`           | A post-composite `(hdr, NEAR0)` render line, not an `HdrPhase` value (#682).                                                                                                                                                                                                                                                                                                                             | §5          |
+| A2  | Settings-fragment granularity                  | A Layer owns a LIST of settings fragments, one per CLUSTER, not one fragment per Layer.                                                                                                                                                                                                                                                                                                                  | §4.2, §4.3  |
+| A3  | Fragment action-type namespacing               | Action types stay flat and byte-identical; cross-fragment key collisions are guarded by `assertUniqueFragmentReducerKeys`.                                                                                                                                                                                                                                                                               | §4.3        |
+| A4  | The frame-visible `EngineState` cut            | `PassState` lands in this PR; `CoreFrameState` is minted in (d), once `gpu` leaves the pass contract.                                                                                                                                                                                                                                                                                                    | §4.1, §5    |
+| A5  | `tier` on `EngineComposition`                  | Not a field: `tier` stays store state, written only through `requestTier` → `watchTierSaga` → `setTier`.                                                                                                                                                                                                                                                                                                 | §4.4        |
+| A6  | `dataUrl` on `EngineComposition`               | Not a field: deferred to the PR with a reader, (g) at the earliest.                                                                                                                                                                                                                                                                                                                                      | §4.4        |
+| A7  | `LayerCoreDeps`' field list, left open by §4.2 | Pinned: `GpuHandleConstructDeps` minus `fontAtlases`, plus `store` and `requestRender`.                                                                                                                                                                                                                                                                                                                  | §4.2        |
+| A8  | `Layer.settings` vs the fragment tuple         | `Layer.settings` is typed `readonly SettingsFragmentLike[]`, which erases the literal cluster keys `ComposedClusters` needs, so in (c) `APP_SETTINGS_FRAGMENTS` stays a parallel authority with no check tying it to `composition.layers`; (d) must close it (const `Settings` type parameter on `Layer`, or a boot assert that every Layer's fragments ⊆ the tuple) before the first Layer value lands. | §4.2, §4.3  |
 
 ## 14. Corrections to the review
 
