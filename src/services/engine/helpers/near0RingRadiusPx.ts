@@ -36,6 +36,7 @@
  */
 
 import { selectionRingRadiusPx } from './selectionRingRadiusPx';
+import { MIN_DISTANCE_MPC } from '../../../utils/camera/clampDistance';
 
 // Multiplier from the target's TRUE apparent radius to the halo radius, once
 // the resolved sphere is large enough to clear the far floor. Pinned at 1.5×:
@@ -53,15 +54,10 @@ export function near0RingRadiusPx(
   // radiusMpc 0 makes `selectionRingRadiusPx` ignore distance and return the
   // pure px floor, so the ×6 lives in exactly one place.
   const farFloorPx = selectionRingRadiusPx(0, camDistMpc, pxPerRad, pointSizePx);
-  // Divide-by-zero guard ONLY. NEAR0 camera distances legitimately span down to
-  // ~1e-16 Mpc (Earth from ~23,000 km altitude is ~7.4e-16 Mpc), so the far
-  // floor the galaxy helper uses (0.001 Mpc — fine for galaxy viewing distances)
-  // would swallow the ENTIRE near-field range: every real distance clamps up to
-  // 0.001, the apparent term collapses to ~1e-10 px, and the ring freezes at the
-  // far floor forever (a fixed-size halo that never wraps the body). This epsilon
-  // (1e-18 Mpc ≈ 3 cm — far below any reachable camera distance) exists solely to
-  // keep a camera parked exactly on the target from dividing by zero.
-  const safeDist = Math.max(camDistMpc, 1e-18);
+  // Divide-by-zero guard ONLY, keyed to the same floor the wheel-zoom clamp
+  // enforces (`clampDistance`'s `MIN_DISTANCE_MPC`) — the ring and the camera
+  // can never disagree about the closest reachable approach.
+  const safeDist = Math.max(camDistMpc, MIN_DISTANCE_MPC);
   // TRUE apparent radius of the sphere: r/d radians × px-per-rad. This matches
   // how the body is actually drawn (`bodyApparentDiameterPx`) — no billboard
   // padding — so the ring meets the sphere at the resolve handoff.

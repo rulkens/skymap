@@ -55,4 +55,17 @@ describe('near0RingRadiusPx', () => {
     const camDist = 7.4e-16;
     expect(near0RingRadiusPx(radiusMpc, camDist, 1078, 2.5)).toBeCloseTo(451.16, 1);
   });
+
+  it('tracks the sphere at metre range instead of the old 31 km distance floor', () => {
+    // Regression for the 1e-18 Mpc divide-by-zero epsilon, which the header
+    // comment claimed was "≈ 3 cm" but is actually ≈ 31 km: a mesh body (the
+    // whale, 6.8 m radius) viewed from 20 m away had its camera distance
+    // floored up to 31 km, freezing the ring at the far floor instead of
+    // wrapping the body. The real floor (`MIN_DISTANCE_MPC`, ≈ 3 cm) is far
+    // below 20 m, so the true apparent radius passes through untouched.
+    const radiusMpc = 6.8 * SCALE_UNITS.M_TO_MPC;
+    const camDist = 20 * SCALE_UNITS.M_TO_MPC;
+    const apparentRadiusPx = (radiusMpc / camDist) * 720; // = 244.8
+    expect(near0RingRadiusPx(radiusMpc, camDist, 720, 4)).toBeCloseTo(1.5 * apparentRadiusPx, 6);
+  });
 });
