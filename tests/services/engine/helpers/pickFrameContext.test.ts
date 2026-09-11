@@ -2,7 +2,7 @@
  * pickFrameContext — unit tests for the pick-time camera as a value.
  *
  * `pickFrameContext` re-derives a `ReadyFrameContext` from the last RENDERED
- * pose (`state.cameraRuntime.lastPose.current`) and the live projection, using
+ * pose (`state.cameraRuntime.register.pose`) and the live projection, using
  * the PICK source mask so `ctx.visibleSourceMask` means "pickable sources". It
  * returns `null` before the engine is ready. These tests pin all three
  * properties.
@@ -24,8 +24,8 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -46,7 +46,7 @@ const LAST_SIM_DAYS = 2460000.0;
  */
 function makeState(
   overrides: {
-    cam?: OrbitCamera | null;
+    booted?: boolean;
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
@@ -55,16 +55,6 @@ function makeState(
     enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
   } = {},
 ): EngineState {
-  const cam =
-    overrides.cam === undefined
-      ? ({
-          target: [0, 0, 0],
-          yaw: 0,
-          pitch: 0,
-          distance: 100,
-          position: new Float32Array(3),
-        } as unknown as OrbitCamera)
-      : overrides.cam;
   const galaxyPointRenderer =
     overrides.galaxyPointRenderer === undefined ? ({} as unknown) : overrides.galaxyPointRenderer;
   const renderTargets =
@@ -84,7 +74,7 @@ function makeState(
   );
 
   return {
-    cam,
+    booted: overrides.booted ?? true,
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
@@ -106,9 +96,13 @@ function makeState(
     // `deriveFrameContext` needs this now.
     data: { bodies: { earth: null, planets: [], stars: [] } },
     cameraRuntime: {
-      lastPose: { current: LAST_POSE },
-      projection: PROJECTION,
-      lastRenderedSimDays: { current: LAST_SIM_DAYS },
+      register: { pose: absoluteArm(LAST_POSE) },
+      outputs: {
+        displayed: absoluteArm(LAST_POSE),
+        projection: PROJECTION,
+        simDays: LAST_SIM_DAYS,
+        upBasis: ORIENTATION_FRAMES.equatorial,
+      },
     },
   } as unknown as EngineState;
 }
@@ -121,12 +115,12 @@ describe('pickFrameContext', () => {
   it('returns null before the engine is ready', () => {
     // Any missing bootstrap-gate handle → `deriveFrameContext` reports
     // not-ready → `pickFrameContext` returns null (not a not-ready context).
-    expect(pickFrameContext(makeState({ cam: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ booted: false }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ galaxyPointRenderer: null }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ galaxyPickRenderer: null }), makeCanvas())).toBeNull();
   });
 
-  it('reproduces the frame’s camera from lastPose + projection', () => {
+  it('reproduces the frame’s camera from register.pose + projection', () => {
     const state = makeState();
     const canvas = makeCanvas();
     const ctx = pickFrameContext(state, canvas);
@@ -134,12 +128,13 @@ describe('pickFrameContext', () => {
     if (ctx === null) return;
 
     // The camera the pick pass draws from must equal the one `deriveFrameContext`
-    // produces for the SAME lastPose + projection the last frame rendered.
+    // produces for the SAME register.pose + projection the last frame rendered.
     const expected = deriveFrameContext(
       state,
       canvas,
-      state.cameraRuntime.lastPose.current,
-      state.cameraRuntime.projection,
+      LAST_POSE,
+      absoluteArm(LAST_POSE),
+      state.cameraRuntime.outputs.projection,
       // Same steady basis `pickFrameContext` resolves internally for BOTH
       // halves, so the two cameras decode position and screen-up through the
       // same pole and their vp matches.
@@ -162,7 +157,7 @@ describe('pickFrameContext', () => {
     // pick (e.g. `extractSelectionRow`). If the pick read the derive memo's
     // cached key it would re-derive pickable bodies at J2000 while the screen
     // still shows LAST_SIM_DAYS — a pick/draw epoch desync. Single-writer state
-    // (`cameraRuntime.lastRenderedSimDays`, written only by runFrame) is immune:
+    // (`cameraRuntime.outputs.simDays`, written only by runFrame) is immune:
     // the memo write does not touch it, so the pick stays at the frame instant.
     const state = makeState();
     deriveBodyStates(CONST_J2000);

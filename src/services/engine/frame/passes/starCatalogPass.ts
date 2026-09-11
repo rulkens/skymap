@@ -1009,8 +1009,8 @@ export const starCatalogPass: ContentPass = {
 
   // Pick aspect — stamps every visible LEAF star's packed identity into the
   // NEAR0 r32uint pick pass. The pick pass runs on a FRESH `ctx` minted by
-  // `pickFrameContext` (→ `deriveFrameContext` from `lastPose.current`, the pose
-  // the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
+  // `pickFrameContext` (→ `deriveFrameContext` from `outputs.displayed`,
+  // the pose the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
   // (`preparedByCtx`) MISSES and recomputes the leaf cut here — a second octree
   // walk, but against that same last-rendered camera, so the pick lands exactly
   // where the sprite drew, reading each node's CURRENT LOD-fade opacity

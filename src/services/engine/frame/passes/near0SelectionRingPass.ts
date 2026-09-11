@@ -72,10 +72,9 @@
  * selection time, but the sim clock keeps moving planets and moons along their
  * orbits every frame. Centring on the stale snapshot leaves the ring where the
  * body WAS when picked while the sphere drifts away. So a body row re-resolves
- * its position at THIS frame's `ctx.simDays` through `liveBodyPosition` — the
- * single live-body resolution site (it reads the same one-deep-memoized
- * `deriveBodyStates(simDays)` map the body draw pass already built this frame, so
- * the re-read is free and the ring shares the bodies' exact epoch). It returns
+ * its position out of this frame's `sceneBodyStates` snapshot through
+ * `liveBodyPosition` — the single live-body resolution site, and the same map
+ * the body draw pass reads, so the ring shares the bodies' exact epoch. It returns
  * null for a non-body row AND for a body-typed row absent from the orbital
  * snapshot; the `?? worldPos` fallback covers both, and is right rather than
  * defensive because a row's baked `worldPos` and its snapshot position are the
@@ -88,6 +87,7 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
 import { liveBodyPosition } from '../../camera/liveBodyPosition';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -121,7 +121,7 @@ export const near0SelectionRingPass: ContentPass = {
     // tracks the animated planet/moon instead of its stale pick-time snapshot
     // (see the module header). A row the snapshot cannot place falls back to the
     // baked `worldPos`, which is the same value for anything static.
-    const centreWorld = liveBodyPosition(row, ctx.simDays) ?? worldPos;
+    const centreWorld = liveBodyPosition(row, sceneBodyStates(state, ctx)) ?? worldPos;
 
     // Re-express the ring centre as a small camera-relative vector in f64
     // BEFORE the renderer narrows to f32 — see the module header's rebase seam.

@@ -12,7 +12,7 @@
  * any consumer of `CHANNEL_SPACE` that does interpolation would be incomplete
  * without `lerpInSpace`. The cohesion is tighter than the one-export-per-file
  * rule requires, so this is an intentional exception (the same reasoning that
- * keeps, say, `cameraClock.ts`'s factory + helpers in one file).
+ * keeps, say, `cameraEpochs.ts`'s primitives in one file).
  *
  * ### Why is CHANNEL_SPACE in exactly one place?
  *

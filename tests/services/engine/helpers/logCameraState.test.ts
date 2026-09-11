@@ -17,6 +17,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 
 const EARTH_RADIUS_M = 6_371_000;
@@ -174,6 +175,45 @@ describe('logCameraState', () => {
     logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
     const [, withoutReadout] = logSpy.mock.calls[0] as [string, string];
     expect(JSON.parse(withoutReadout).earthSubCamera).toBeNull();
+  });
+
+  it('names the frame and prints metres in a body arm', () => {
+    vi.stubGlobal('window', { devicePixelRatio: 1 });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const cam = createOrbitCamera({
+      target: [0, 0, 0],
+      distance: 10,
+      yaw: 0,
+      pitch: 0,
+      fovYRad: 0.9,
+      aspect: 1,
+      near: 0.01,
+      far: 100,
+    });
+    const bodyArm: FramedCameraPose = {
+      frame: { body: 'earth' },
+      pose: {
+        bodyId: 'earth',
+        anchorLocalM: [0, 0, 0],
+        eyeRelAnchorM: [0, 0, EARTH_RADIUS_M + 50],
+        basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1],
+      },
+    };
+
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, bodyArm);
+    const [, engaged] = logSpy.mock.calls[0] as [string, string];
+    const out = JSON.parse(engaged);
+    expect(out.frame).toBe('earth');
+    // Metres, at full precision: the 50 m standoff must survive the print.
+    expect(out.bodyArmMetres.eyeRelAnchorM).toEqual([0, 0, EARTH_RADIUS_M + 50]);
+    expect(out.bodyArmMetres.eyeFromCentreM).toBe(EARTH_RADIUS_M + 50);
+
+    // Untagged input (and every world-arm frame) reads as absolute.
+    logSpy.mockClear();
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
+    const [, world] = logSpy.mock.calls[0] as [string, string];
+    expect(JSON.parse(world).frame).toBe('absolute');
+    expect(JSON.parse(world).bodyArmMetres).toBeNull();
   });
 
   it('prints a single not-ready line and touches neither canvas nor window when the camera is null', () => {

@@ -2,42 +2,18 @@
  * wireSlots — focused tests for the highest-leverage invariants of the
  * second bootstrap phase, the demand-driven asset orchestrator.
  *
- * `bootstrap.test.ts` mocks this phase at module scope, so the orchestrator's
- * observable effects otherwise have no direct asserts — yet they gate "loading
- * screen ⇒ stars on canvas". The phase's internals (the synthetic-fallback
- * gate, the structure projection, the demand loop) each have their own unit tests
- * (`createSyntheticFallback.test.ts`, `wireStructureProjection.test.ts`,
- * `reevaluateDemand.test.ts` / `demandTable.test.ts`); this file pins that
- * wireSlots composes them into the right boot behaviour:
+ * `bootstrap.test.ts` mocks this phase at module scope, so its composition
+ * has no direct asserts elsewhere; this file pins that wireSlots: (1) returns
+ * synchronously and fires one `loading` status; (2) the demand loop loads the
+ * default boot set, real-catalog `ready` echoes fire, and the synthetic
+ * backstop loads when every catalog errors; (3) the loadProgress emitter is
+ * wired against EVERY installed slot in `deps.allSlots`; (4) every subsystem/
+ * fade wire is present after boot, including structures-visibility gating
+ * structureCatalog.
  *
- *   1. wireSlots returns synchronously (no await on galaxy catalog arrivals) and fires
- *      `onStatusChange({ kind: 'loading' })` once.
- *
- *   2. The demand loop loads the default boot set — the visible galaxy catalogs load
- *      via their point rows; per-arrival `ready` echoes still fire (via the
- *      synthetic-fallback gate's status subscriber), and the synthetic backstop
- *      still loads when every real galaxy catalog errors.
- *
- *   3. The loadProgress emitter is wired against EVERY installed slot.
- *      `deps.allSlots` is the single registry both the loading bar AND the dev
- *      panel read from, so a missed slot makes the dev panel quietly lie.
- *
- *   4. The composition wires are all present after boot: every impostor
- *      subsystem is assigned onto `state.subsystems.*`, every overlay /
- *      volume-master / label-layer fade handle is registered at its frame-1
- *      opacity, and the structures-visibility predicate threads through to the
- *      demand loop (structureCatalog loads at the visible default, skips when all
- *      structure categories are hidden).
- *
- * Mocking strategy: real `AssetSlot` instances are kept (pure CPU state
- * machines, easy to drive); fetchers are mocked so loads don't network;
- * thumbnail-subsystem factory is mocked so no real GPU device is needed;
- * load-progress emitter factory is spied so we can intercept the `allSlots`
- * Map. Per-source point slots are injected via a fake-slot helper — the
- * `galaxyCatalogSourceRegistry` module is mocked (see below) so wireSlots's
- * own mint loop is a no-op and the test's pre-seeded `state.assetSlots.points`
- * fakes survive untouched, which is the seam that makes the demand loop's
- * loads observable.
+ * Mocking: `AssetSlot`s are real (pure CPU state machines); fetchers,
+ * thumbnail factory and GPU device are mocked; point slots are pre-seeded
+ * fakes since `galaxyCatalogSourceRegistry`'s mint loop is mocked to a no-op.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -264,6 +240,8 @@ import { filamentFetcher } from '../../../../src/services/loading/fetchers/filam
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
 import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -493,15 +471,21 @@ function makeState(
         label: 'fadeRegistry',
       },
     } as never,
-    cam: null,
+    booted: false,
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set (boot-load expectations stay
     // sdss/2mrs/glade/…, no Blue Marble fetch).
     cameraRuntime: {
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
-      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
-      lastRenderedSimDays: { current: CONST_J2000 },
+      register: {
+        pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+      },
+      outputs: {
+        displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+        simDays: CONST_J2000,
+        upBasis: ORIENTATION_FRAMES.ecliptic,
+      },
     },
     assetSlots: {
       points: points as Map<SourceType, never>,
@@ -720,20 +704,19 @@ describe('wireSlots', () => {
     };
     expect(opacityFor({ kind: 'milkyWay' })).toBe(1);
     expect(opacityFor({ kind: 'volumesMaster' })).toBe(1);
-    // The milkyWay label layer is now seeded from settings.milkyWay.labelEnabled
-    // (default true), not registered at 0 for a producer to ramp.
+    // The milkyWay label layer is seeded from settings.milkyWay.labelEnabled
+    // (default true), rather than registered at 0 for a producer to ramp.
     expect(opacityFor({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(1);
     expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
   it('demand loop loads the default boot sidecar set (mcpm + structureCatalog + famousGalaxiesMeta) and not the off-by-default ones', async () => {
-    // Boot parity: the old imperative boot loop loaded MCPM (default-on volume)
-    // + the cluster catalog (structures visible) + famous-galaxies-meta but left
-    // filaments (off), CF-4 density (off) and the lazy PGC alias idle.  After
-    // the refactor those loads come from reevaluateDemand reading the
-    // construction-seeded state — same outcome.  Each sidecar's load is
-    // observable through its (mocked) fetcher; clear them first since the
-    // module-scoped mocks persist across tests.
+    // Boot parity: MCPM (default-on volume), the cluster catalog (structures
+    // visible), and famous-galaxies-meta load at boot; filaments (off), CF-4
+    // density (off), and the lazy PGC alias stay idle. These loads come from
+    // reevaluateDemand reading the construction-seeded state. Each sidecar's
+    // load is observable through its (mocked) fetcher; clear them first
+    // since the module-scoped mocks persist across tests.
     vi.mocked(mcpmFetcher).mockClear();
     vi.mocked(structureCatalogFetcher).mockClear();
     vi.mocked(famousGalaxiesMetaFetcher).mockClear();
@@ -761,8 +744,8 @@ describe('wireSlots', () => {
   it('does not load structureCatalog when every structure category is hidden (bug-fix integration pin)', async () => {
     // demandTable.test.ts pins the cluster predicate in isolation; this pins
     // that wireSlots actually threads the visibility records THROUGH to the
-    // demand loop end-to-end.  Old code loaded the .ccat unconditionally; the
-    // fix gates it on any structure category being visible.  With both marker
+    // demand loop end-to-end. structureCatalog loads only when at least one
+    // structure category is visible — not unconditionally. With both marker
     // and label visibility all-false the predicate is false, so the boot
     // demand pass must skip structureCatalog entirely.
     vi.mocked(structureCatalogFetcher).mockClear();

@@ -21,7 +21,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
  * step. Exponential rather than additive so the proportional step is the same
  * whether the camera sits 0.1 Mpc or 1000 Mpc out.
  */
-const WHEEL_ZOOM_K = 0.001;
+export const WHEEL_ZOOM_K = 0.001;
 
 export function createInputAggregator(): InputAggregator {
   const steps: InputStep[] = [];
@@ -33,14 +33,19 @@ export function createInputAggregator(): InputAggregator {
   let lastPx: Vec2 | null = null;
   let lastPinchDist = 0;
 
-  /** Extend the trailing zoom run when it has the same owner, else open one. */
-  const foldZoom = (factor: number, duringGesture: boolean): void => {
+  /**
+   * Extend the trailing zoom run when it has the same owner, else open one.
+   * A run keeps the LAST event's cursor — the same "where the pointer ended
+   * up" rule the drag runs use for `endPx`.
+   */
+  const foldZoom = (factor: number, duringGesture: boolean, cursorPx: Vec2 | null): void => {
     const tail = steps[steps.length - 1];
     if (tail !== undefined && tail.kind === 'zoom' && tail.duringGesture === duringGesture) {
       tail.factor *= factor;
+      tail.cursorPx = cursorPx;
       return;
     }
-    steps.push({ kind: 'zoom', factor, duringGesture });
+    steps.push({ kind: 'zoom', factor, duringGesture, cursorPx });
   };
 
   return {
@@ -78,12 +83,15 @@ export function createInputAggregator(): InputAggregator {
           // Fingers spreading (distance grows) gives a ratio < 1 → the camera
           // distance shrinks → zoom in, the "stretch the world" model.
           if (lastPinchDist <= 0 || event.distPx <= 0) return;
-          foldZoom(lastPinchDist / event.distPx, true);
+          foldZoom(lastPinchDist / event.distPx, true, null);
           lastPinchDist = event.distPx;
           return;
 
         case 'wheel':
-          foldZoom(Math.exp(event.deltaY * WHEEL_ZOOM_K), event.duringGesture);
+          foldZoom(Math.exp(event.deltaY * WHEEL_ZOOM_K), event.duringGesture, [
+            event.xPx,
+            event.yPx,
+          ]);
           return;
       }
     },

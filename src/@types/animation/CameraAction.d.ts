@@ -53,6 +53,7 @@
 import type { Channel } from './Channel';
 import type { Ease } from './Ease';
 import type { Space } from './Space';
+import type { PoseFrame } from '../camera/PoseFrame';
 import type { Vec3 } from '../math/Vec3';
 
 export type CameraAction =
@@ -63,6 +64,12 @@ export type CameraAction =
       readonly over: number;
       readonly ease: Ease;
       readonly space: Space;
+      /**
+       * The frame `to` is read in; absent ⇒ `'absolute'` (Mpc, orientation-frame
+       * angles). A body frame makes `to` body-FIXED: `distance` a range in
+       * metres, `yaw`/`pitch` angles about the body's own axes.
+       */
+      readonly frame?: PoseFrame;
     }
   | {
       readonly kind: 'setVec';
@@ -71,6 +78,8 @@ export type CameraAction =
       readonly over: number;
       readonly ease: Ease;
       readonly space: 'lin';
+      /** Absent ⇒ `'absolute'` (Mpc); a body frame makes `to` body-fixed metres. */
+      readonly frame?: PoseFrame;
     }
   | {
       readonly kind: 'spin';

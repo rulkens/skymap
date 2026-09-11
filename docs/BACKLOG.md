@@ -66,6 +66,13 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Fades pop instead of ramping after the render loop idles** `ready` — `fadeRegistry.fadeTo` stamps the ramp's start from the stale last-_rendered_-frame time, not a live clock. → [details](backlog/2026-08-20-fade-pop-after-idle.md)
 - [ ] **Liveness guards accept `undefined`; `NaN` alpha class in fixtures** `ready` — `zoneOfAvoidanceLiveness.ts`'s `=== null` guard lets `undefined` slip through, and `focusBlend`-omitting fixtures produce silent `NaN` alphas. → [details](backlog/2026-08-20-liveness-undefined-guards.md)
 - [ ] **`createTieredScfdFetcher` factory** `ready` — the Edenhofer dust fetcher will be the third hand-copied tiered-SCFD fetcher (after `mcpmFetcher` and polyphorm's); collapse the three into one `createTieredScfdFetcher(baseName)` factory on next touch.
+- [ ] **Body-arm entry doesn't adopt the arriving pose's tilt** `deferred` — disengage can pop up to 37°. → [details](backlog/2026-09-11-camera-arm-entry-adopts-arriving-tilt.md)
+- [ ] **World-arm wheel burst has no per-frame turn clamp** `awaiting-decision` — a 20-notch burst can roll 115° in one frame. → [details](backlog/2026-09-11-camera-absolute-arm-wheel-burst-unclamped.md)
+- [ ] **`deriveBodyStates`' key type is a pre-existing lie (14 casts)** `needs-design` — callers cast to an unrelated `BodyId` union. → [details](backlog/2026-09-11-derive-body-states-scene-body-id-type.md)
+- [ ] **Frame-tagged clip keyframes have no per-endpoint authoring validation** `needs-design` — a straddling channel tween silently freezes. → [details](backlog/2026-09-11-clip-per-endpoint-tag-authoring-validation.md)
+- [ ] **f32 half-ulp sightline nudge at the body-arm flip** `needs-verification` — ~4 mas, in two narrow `h/R` windows. → [details](backlog/2026-09-11-camera-f32-half-ulp-sightline-nudge-at-arm-flip.md)
+- [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
+- [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
 
 ## Rendering
 
@@ -179,6 +186,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Earth caption stamp out-picks occluders** `ready` — the forced-band 18 px Earth pick point punches through a transiting Moon. → [details](backlog/2026-07-29-earth-caption-stamp-outpicks-occluders.md)
 - [ ] **Touch picking selects the wrong galaxy** `needs-design` — the pick pad is in device px, so the clickable disc halves on retina/phone. → [details](backlog/2026-07-29-touch-pick-accuracy.md)
 - [ ] **Windows touchscreen pinch-zoom dead** `needs-repro` — works on mobile; gesture code is platform-uniform PointerEvents, so event delivery on Windows is the suspect; needs an on-device event log. → [details](backlog/2026-08-16-windows-touchscreen-pinch-zoom.md)
+- [ ] **Camera smooth wheel zoom + flick coast** `awaiting-decision` — Google Maps / Cesium feel via synthetic `InputStep`s in the aggregator; revises grill Q8 (no inertia), shape pre-ruled. Follow-up to #647. → [details](backlog/2026-09-09-camera-smooth-zoom-and-flick-coast.md)
+- [ ] **Wheel notch routed by last frame's winner** `needs-design` — the replay routes a notch before the frame has picked its winner; four defects follow. → [details](backlog/2026-09-10-wheel-notch-route-by-last-winner.md)
 - [ ] **Autorotate + mouse-move jitter** `needs-repro` — intermittent frame jitter seen on `refactor/debug-derivation`, diff-clean per investigation; falsify against base commit from a second worktree. → [details](backlog/2026-08-20-autorotate-mousemove-jitter.md)
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
 - [ ] **SettingsPanel polish** `needs-design` — visual cleanup + section re-ordering + per-section icons; 2.3k lines of hand-coded text-only rows today. → [details](backlog/2026-07-22-settings-panel-polish.md)

@@ -81,7 +81,7 @@ export type EngineSettingsState = {
 
   /**
    * Camera lens control — the vertical field of view in degrees. The engine
-   * converts this to radians and writes it onto `cameraRuntime.projection.fovYRad`
+   * converts this to radians and writes it onto `cameraRuntime.outputs.projection.fovYRad`
    * once per frame (`runFrame`), which every downstream consumer (view-proj,
    * screen-space pixel math, the WGSL camera uniform) already reads live off
    * the projection Resource. Default `DEFAULT_FOV_DEG` (60°).

@@ -24,6 +24,7 @@ import {
 } from '../../../../src/services/engine/frame/slabs';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
+import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import {
   foregroundFrustum,
   MIN_NEAR_M,
@@ -256,17 +257,17 @@ describe('deriveSlabs', () => {
   });
 
   it("keys a body row's reversedZ + projection off SLAB_REVERSED_Z[NEAR0], not a hard-coded literal (M3 fix)", () => {
-    // Regression: `bodySlabRow` used to hard-code `reversedZ: true` and always
-    // build the reversed-Z projection, independent of `SLAB_REVERSED_Z` — the
-    // very constant every body-row PIPELINE (`gpuHandleRegistry`) already
-    // reads for its `depthCompare`. Mutating the shared constant (it's a
-    // plain object at runtime, only `Readonly` at the type level) and
-    // re-deriving must flip BOTH the `reversedZ` field and the projection
-    // SHAPE together, or the module header's "partial flip impossible" claim
-    // is false. `computeForegroundViewProj` pins the identical NEAR0-side
-    // coupling by rebuilding the expected matrix from the same util this
-    // test rebuilds by hand for the body row (no shared "foreground" util
-    // exists for body rows, so the two mat4d calls are inlined here).
+    // `bodySlabRow` must key both `reversedZ` and the projection SHAPE off
+    // `SLAB_REVERSED_Z[NEAR0]` together — the same constant every body-row
+    // PIPELINE (`gpuHandleRegistry`) already reads for its `depthCompare`.
+    // Mutating the shared constant (it's a plain object at runtime, only
+    // `Readonly` at the type level) and re-deriving must flip BOTH the
+    // `reversedZ` field and the projection SHAPE together, or the module
+    // header's "partial flip impossible" claim is false. `computeForegroundViewProj`
+    // pins the identical NEAR0-side coupling by rebuilding the expected
+    // matrix from the same util this test rebuilds by hand for the body row
+    // (no shared "foreground" util exists for body rows, so the two mat4d
+    // calls are inlined here).
     const body = makePlanet({ id: 'flip-body', radiusM: 1e5 });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [0, 0, -1e9],
@@ -332,10 +333,10 @@ describe('deriveSlabs', () => {
   });
 
   it("keys a body row's near plane off view-axis depth for a RINGLESS off-axis body — the margin was NEGATIVE under the old radial formula", () => {
-    // Scope note from the investigation: a body whose outermost shell IS its
-    // surface has rMaxM === radiusM while the rasterised proxy is
-    // PROXY_SCALE × radiusM — a negative budget under the old `dM - rMaxM`
-    // formula, so this bites every ringless body, not just Saturn.
+    // A body whose outermost shell IS its surface has rMaxM === radiusM
+    // while the rasterised proxy is PROXY_SCALE × radiusM — a negative
+    // budget under a naive `dM - rMaxM` formula, so this would bite every
+    // ringless body, not just Saturn.
     const dM = 2e8;
     const thetaRad = (20 * Math.PI) / 180;
     const radiusM = 5e6;
@@ -373,7 +374,7 @@ describe('deriveSlabs', () => {
     // ~100 km above the surface — the exact regression this guards
     // (.superpowers/sdd/2026-08-26-body-render-slabs/label-window-investigation.md).
     // Camera at 78 km altitude: inside the atmosphere shell (dM < rMaxM), so
-    // the old `max(dM - rMaxM, MIN_NEAR_M)` formula collapsed near to 1e-6 m.
+    // a naive `max(dM - rMaxM, MIN_NEAR_M)` formula would collapse near to 1e-6 m.
     const radiusM = 6.371e6;
     const dM = 6.449e6; // altitude = dM - radiusM = 78,000 m
     const body = makePlanet({ id: 'earth', radiusM });
@@ -387,6 +388,64 @@ describe('deriveSlabs', () => {
     expect(row.near).toBeCloseTo(expectedNear, 6);
     expect(row.near).not.toBe(MIN_NEAR_M);
     expect(row.near).toBeGreaterThan(1); // metres-scale, not the 1e-6 m floor
+  });
+
+  it('NEAR0 honours a non-zero camera roll identically to COSMO (roll parity)', () => {
+    // Regression for the layer-shear bug: `deriveSlabs` hard-coded roll 0 in
+    // its `imagePlaneBasis` call while COSMO's `computeViewProj` honoured
+    // `cam.roll` — so the moment `toWorldArm` produced a non-zero roll (the
+    // body arm engaging), stars/MW/orbit-trails (NEAR0) rotated about the
+    // screen centre against galaxies (COSMO). Cross-derivation agreement:
+    // project one off-axis world point through both slabs' vps and require
+    // the same screen position. Nothing exercised a non-zero roll across two
+    // slabs before, which is how the parity gap shipped.
+    const roll = 0.3;
+    const cam = createOrbitCamera({
+      target: [0, 0, 0],
+      yaw: 0.3,
+      pitch: 0.1,
+      distance: 100,
+      fovYRad: 1,
+      aspect: 16 / 9,
+      near: 0.1,
+      far: 10000,
+      roll,
+    });
+    const cosmoVp = computeViewProj(cam);
+    const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
+
+    // An off-axis point: 20 Mpc lateral of the target at 100 Mpc range
+    // (~11° off forward, several hundred px out at fovY 1 rad). The lateral
+    // direction is hand-derived (forward × world-up), not taken from
+    // `imagePlaneBasis` — the assertion compares two projections of the same
+    // point, so the point's construction must not lean on the code under test.
+    const f: Vec3 = [-cam.position[0] / 100, -cam.position[1] / 100, -cam.position[2] / 100];
+    const rx = f[1] * 0 - f[2] * 1;
+    const ry = f[2] * 0 - f[0] * 0;
+    const rz = f[0] * 1 - f[1] * 0;
+    const rlen = Math.hypot(rx, ry, rz);
+    const point: Vec3 = [(rx / rlen) * 20, (ry / rlen) * 20, (rz / rlen) * 20];
+
+    const cosmoNdc = vec3d.transformMat4(point, cosmoVp);
+    const near0Ndc = vec3d.transformMat4(
+      [
+        point[0] - RENDER_ORIGIN_MPC[0],
+        point[1] - RENDER_ORIGIN_MPC[1],
+        point[2] - RENDER_ORIGIN_MPC[2],
+      ],
+      slabs[0]!.vp,
+    );
+    // Sub-pixel on a 1920-wide viewport: |Δndc| · 960 < 0.5. Under the bug
+    // the point rotates about the screen centre by the full roll (0.3 rad),
+    // several to hundreds of px depending on axis.
+    expect(Math.abs(cosmoNdc[0]! - near0Ndc[0]!) * 960).toBeLessThan(0.5);
+    expect(Math.abs(cosmoNdc[1]! - near0Ndc[1]!) * 540).toBeLessThan(0.5);
+
+    // Anti-vacuity: the roll parameter must be live in the NEAR0 derivation —
+    // the same camera with roll 0 has to produce a different NEAR0 vp, or the
+    // parity above would pass with roll dead on both sides.
+    const flat = deriveSlabs(baseInput({ cam: { ...cam, roll: 0 }, cosmoVp }));
+    expect(Array.from(slabs[0]!.vp)).not.toEqual(Array.from(flat[0]!.vp));
   });
 
   it("builds a body row's vp about the eye — RTC-native, no translation, body centre projects to screen centre", () => {

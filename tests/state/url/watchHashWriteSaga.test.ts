@@ -1,32 +1,19 @@
 /**
- * watchHashWriteSaga — integration over a real store + saga middleware, with the
- * `services/url` write seam mocked so no `window` is touched (the suite runs
- * under `environment: 'node'`). Only this saga is forked, not `mainSaga`: the
- * subject is the trigger wiring, and a full root fork would drag in every other
- * watcher's engine context for nothing.
+ * watchHashWriteSaga — integration over a real store + saga middleware, with
+ * the `services/url` write seam mocked so no `window` is touched
+ * (`environment: 'node'`). Only this saga is forked, not `mainSaga`, since
+ * the subject is the trigger wiring.
  *
- * ### What these cases are for
+ * The `writesOn` lists are prose-guarded — nothing at runtime checks that a
+ * row named every action that can move its value — so each case here
+ * dispatches the REAL action for a declared trigger and asserts the write
+ * followed; `commitCameraPose` must NOT write, standing for the whole 60 Hz
+ * frame stream (the reason `writesOn` is enumerated rather than the saga
+ * taking `'*'`).
  *
- * The `writesOn` lists are prose-guarded — nothing at runtime checks that a row
- * named every action that can move its value — so the residual risk is a typo'd
- * or forgotten trigger, which shows up as a URL that quietly stops updating.
- * These cases dispatch the REAL action for each declared trigger and assert the
- * body that reached the seam. Body composition itself is `hashBodyFor`'s test
- * and per-row serialization is `hashParamSources`'s; what only this file can
- * catch is "the action fired and no write followed".
- *
- * The last case is the inverse and the most load-bearing: `commitCameraPose`
- * must NOT write. It stands for the whole 60 Hz frame stream, and it is the
- * reason `writesOn` is enumerated at all rather than the saga taking `'*'`.
- *
- * ### Why every case awaits a tick
- *
- * The saga publishes on the TRAILING EDGE of a burst of triggers, not on each
- * one (`debounce(0, …)`), so nothing has reached the seam at the instant
- * `dispatch` returns. `settle()` is that macrotask. It is also what keeps each
- * case honest about which trigger it is pinning: two dispatches with no settle
- * between them coalesce into a single write, and a case that asserted only the
- * final body would then pass whether or not its own trigger fired at all.
+ * The saga publishes on the TRAILING EDGE of a debounced burst, not on each
+ * trigger, so every case awaits a settle tick before asserting — two
+ * dispatches with no settle between them coalesce into one write.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -44,6 +31,7 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { setOrientation } from '../../../src/state/settings/settingsSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { timeRoute } from '../../../src/store/constants';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
@@ -167,7 +155,7 @@ describe('watchHashWriteSaga', () => {
     // Widening any row's `writesOn` to a slice prefix over camera, or to `'*'`,
     // fails here and nowhere else.
     buildHarness().dispatch(
-      commitCameraPose({ target: [1, 2, 3], yaw: 0.5, pitch: 0.2, distance: 12 }),
+      commitCameraPose(absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: 0.2, distance: 12 })),
     );
     await settle();
 

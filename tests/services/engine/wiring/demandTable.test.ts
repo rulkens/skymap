@@ -62,6 +62,8 @@ import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefault
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
@@ -267,9 +269,15 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set.
     cameraRuntime: {
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
-      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
-      lastRenderedSimDays: { current: CONST_J2000 },
+      register: {
+        pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+      },
+      outputs: {
+        displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+        simDays: CONST_J2000,
+        upBasis: ORIENTATION_FRAMES.ecliptic,
+      },
     },
     assetSlots: {
       points,
@@ -332,9 +340,9 @@ function collectFired(state: EngineState): Set<AssetKey> {
 /**
  * Drive `reevaluateDemand(state)` to a fixpoint and report which rows fired.
  *
- * Two things this has to do that a single synchronous call no longer does.
+ * Two things this has to do that a naive single synchronous call would miss.
  *
- * **Drain.** `reevaluateDemand` doesn't call `slot.load()` itself any more; it
+ * **Drain.** `reevaluateDemand` doesn't call `slot.load()` itself; it
  * enqueues, and the queue starts at most `ASSET_QUEUE_CONCURRENCY` fetchers
  * before the call returns. Reading the spies straight after one call would
  * report only the first two rows and turn this demand table into a concurrency
