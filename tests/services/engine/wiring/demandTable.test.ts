@@ -296,6 +296,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       // Empty keyed family: the body-texture rows resolve to undefined slots
       // (far resting pose ⇒ none demanded anyway), so none fires.
       bodyTextures: new Map(),
+      meshBodies: new Map(),
     },
     // `evaluateRows` enqueues onto this rather than calling `slot.load()`
     // directly. Per state so no pending entry survives into the next case, and

@@ -60,7 +60,7 @@ const EXTRACT_ROW: {
       label: body.label,
       positionMpc: [p[0], p[1], p[2]],
       radiusM: body.radiusM,
-      // Only the AnchorPointBody arm of the SceneBody union carries these fields.
+      // The AnchorPointBody and MeshBody arms carry these; the rest do not.
       standoffRadii: 'standoffRadii' in body ? body.standoffRadii : undefined,
       focusDistanceRadii: 'focusDistanceRadii' in body ? body.focusDistanceRadii : undefined,
     };

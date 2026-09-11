@@ -60,11 +60,15 @@ function makeState(): EngineState {
   const bodyTextures = new Map<string, AssetSlot<unknown, unknown>>([
     ['earth', stubSlot('earth-texture')],
   ]);
+  const meshBodies = new Map<string, AssetSlot<unknown, unknown>>([
+    ['whale', stubSlot('whale-mesh')],
+  ]);
   return {
     assetSlots: {
       points,
       starCatalogs,
       bodyTextures,
+      meshBodies,
       filaments: stubSlot('filaments'),
       famousGalaxiesMeta: stubSlot('famous-galaxies-meta'),
       structureCatalog: stubSlot('structure-catalog'),
@@ -114,6 +118,9 @@ describe('installLoadProgress', () => {
     // Body-texture family slots ride the same registry (gathered from the keyed
     // bodyTextures map, not a named field).
     expect(names.has('earth-texture')).toBe(true);
+    // Mesh-body family slots ride the same registry (gathered from the keyed
+    // meshBodies map, not a named field).
+    expect(names.has('whale-mesh')).toBe(true);
     expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);

@@ -16,5 +16,6 @@ import type { EarthBody } from './EarthBody';
 import type { StarBody } from './StarBody';
 import type { PlanetBody } from './PlanetBody';
 import type { AnchorPointBody } from './AnchorPointBody';
+import type { MeshBody } from './MeshBody';
 
-export type SceneBody = EarthBody | StarBody | PlanetBody | AnchorPointBody;
+export type SceneBody = EarthBody | StarBody | PlanetBody | AnchorPointBody | MeshBody;

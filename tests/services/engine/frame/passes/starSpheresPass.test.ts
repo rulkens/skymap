@@ -24,7 +24,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { starSpheresPass } from '../../../../../src/services/engine/frame/passes/starSpheresPass';
-import { seedIndexOfBody } from '../../../../../src/services/engine/frame/passes/seedIndexOfBody';
+import { seedIndexOfBody } from '../../../../../src/utils/picking/seedIndexOfBody';
 import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';

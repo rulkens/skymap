@@ -501,6 +501,7 @@ function makeState(
       // Real (empty) map: installLoadProgress walks it, and the body-texture
       // rows are `built: 'external'` so the construction pass skips them.
       bodyTextures: new Map(),
+      meshBodies: new Map(),
     },
   } as unknown as EngineState;
 }

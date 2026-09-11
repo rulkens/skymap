@@ -59,5 +59,6 @@ fn vs(input: VsIn) -> VsOut {
   // outputs a single premultiplied color * (edge-falloff) without an
   // extra varying for the alpha gate.
   out.color = input.color * fadeAlpha;
+  out.occludeWeight = input.occludeWeight;
   return out;
 }

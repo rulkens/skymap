@@ -31,6 +31,8 @@ import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiamete
 import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
 import { chainOverlapViolations } from '../../../utils/scene/chainOverlapViolations';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
+import { nearestSphereFaceM } from '../../../utils/scene/nearestSphereFaceM';
+import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
@@ -146,12 +148,19 @@ const NEAR_MARGIN_EPS = 1e-3;
  * sort, not by this projection. A body with no screen position (`clipW <= 0`) gets
  * `[Infinity, Infinity]` for `centrePx`, so it never registers a false overlap.
  */
-function bodySlabRow(input: {
+export function bodySlabRow(input: {
   readonly body: SceneBody;
   readonly pose: BodyPoseProvider;
   readonly fovYRad: number;
   readonly aspect: number;
   readonly viewportPx: Readonly<Vec2>;
+  /**
+   * Mesh bodies riding THIS row's slab (see `meshBodiesAttachedTo.ts`):
+   * already resolved into this host's fixed-axis frame, in metres. Each
+   * face is `|posM − eyeRelBodyM| − radiusM`; the row's `near` is lowered to
+   * the nearest such face when it undercuts the host's own margin.
+   */
+  readonly attachedBodies?: readonly HostFrameSphere[];
 }): {
   // Narrowed back to non-null: nullability on `Slab` exists for NEAR0 alone.
   readonly slab: Omit<Slab, 'index' | 'distanceRangeM'> & {
@@ -159,7 +168,7 @@ function bodySlabRow(input: {
   };
   readonly chainRow: Omit<ChainRow, 'index'>;
 } | null {
-  const { body, pose, fovYRad, aspect, viewportPx } = input;
+  const { body, pose, fovYRad, aspect, viewportPx, attachedBodies } = input;
   const relPose = pose(body.id as BodyId);
   if (relPose === null) return null;
   const { eyeRelBodyM, basisM } = relPose;
@@ -185,7 +194,14 @@ function bodySlabRow(input: {
   // inside the outermost shell, a close orbit/descent around THIS body where θ ≈ 0.
   // Dropping it and falling straight to MIN_NEAR_M collapses the near-field label
   // window at low altitude.
-  const near = Math.max(viewZ - marginM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
+  const hostNear = Math.max(viewZ - marginM, (dM - body.radiusM) * NEAR_RATIO, MIN_NEAR_M);
+  // An attached mesh body (e.g. a whale riding Earth's row) can sit closer to
+  // the eye than the host's own margin; its near face only ever LOWERS the
+  // plane (never pushes it past the host's own MIN_NEAR_M floor).
+  const near = Math.max(
+    Math.min(hostNear, nearestSphereFaceM(eyeRelBodyM, attachedBodies ?? [])),
+    MIN_NEAR_M,
+  );
   // STAYS RADIAL — the painter sort and pick ordering key off actual distance.
   const distanceRangeM: readonly [number, number] = [Math.max(dM - rMaxM, 0), dM + rMaxM];
 
@@ -244,8 +260,13 @@ export function deriveSlabs(input: {
   readonly visibleBodies: readonly SceneBody[];
   readonly viewportPx: Readonly<Vec2>;
   readonly starSphereRangeM: readonly [number, number] | null;
+  /** Host body id → its attached mesh bodies, already resolved into the
+   * host's frame — see `bodySlabRow`'s `attachedBodies` param. Only
+   * Earth has an entry today; every other host's row is unaffected. */
+  readonly attachedBodiesByHostId?: ReadonlyMap<string, readonly HostFrameSphere[]>;
 }): readonly Slab[] {
-  const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies, viewportPx } = input;
+  const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
+    input;
   // NEAR0's bracket is adaptive, sized from ALTITUDE above a known pivot (else raw
   // orbit distance), so depth precision holds from galaxy scale down to standing on
   // a surface — with raw distance a large body's radius dominated the bracket.
@@ -305,7 +326,14 @@ export function deriveSlabs(input: {
   // Sorted BEFORE indices are assigned, so index === painter ordinal.
   const sortedBodyRows = visibleBodies
     .map((body) =>
-      bodySlabRow({ body, pose, fovYRad: cam.fovYRad, aspect: cam.aspect, viewportPx }),
+      bodySlabRow({
+        body,
+        pose,
+        fovYRad: cam.fovYRad,
+        aspect: cam.aspect,
+        viewportPx,
+        attachedBodies: attachedBodiesByHostId?.get(body.id),
+      }),
     )
     .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) => b.slab.distanceRangeM[0] - a.slab.distanceRangeM[0]);

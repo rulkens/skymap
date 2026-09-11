@@ -94,7 +94,7 @@ function makeState(
     selectionRows: { hover: null, select: null, focus: null },
     // No seeded bodies/stars — see frameContext.test.ts's makeState for why
     // `deriveFrameContext` needs this now.
-    data: { bodies: { earth: null, planets: [], stars: [] } },
+    data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
     cameraRuntime: {
       register: { pose: absoluteArm(LAST_POSE) },
       outputs: {

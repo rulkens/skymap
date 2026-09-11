@@ -83,7 +83,7 @@ function makeState(
       bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
     },
     selectionRows: { hover: null, select: null, focus: null },
-    data: { bodies: { earth: null, planets: [], stars: [] } },
+    data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
     cameraRuntime: {
       register: { pose: LAST_POSE },
       outputs: { projection: PROJECTION, simDays: LAST_SIM_DAYS },

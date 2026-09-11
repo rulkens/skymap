@@ -8,6 +8,11 @@
 // itself is the plain 'fs' entry's: both reuse 'shadeMsdf' (lib/msdf.wesl) so
 // glyph colour has one source of truth.
 //
+// That per-pixel rule cannot tell a subject in FRONT of a body from one behind
+// it, so 'occludeWeight' (per label, decided on the CPU against the body
+// spheres) mixes it in: 1 keeps it, 0 lets the caption paint over the disc its
+// subject floats in front of.
+//
 // Because 'shadeMsdf' returns PREMULTIPLIED rgba, one scalar multiply dims the
 // colour and drops the coverage together — no separate alpha handling.
 //
@@ -21,5 +26,5 @@ import package::lib::sceneDepth::sceneTransmittance;
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let shaded = shadeMsdf(input.uv, input.fontIndex, input.color, input.outlineColor, input.outlineSdf);
-  return shaded * sceneTransmittance(input.pos.xy);
+  return shaded * mix(1.0, sceneTransmittance(input.pos.xy), input.occludeWeight);
 }

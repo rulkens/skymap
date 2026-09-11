@@ -18,8 +18,8 @@
  * WHY near stays strictly positive: a depth buffer's precision is dominated by
  * the near plane, and `near = 0` is a degenerate perspective matrix (the
  * projection divides by the near distance). At the wheel-zoom distance floor
- * of 1e-17 Mpc (`clampDistance.ts: MIN_DISTANCE_MPC`) the pure ratio
- * `distance·1e-4` would be 1e-21 — still positive in f64, but we floor near
+ * of 1e-24 Mpc (`clampDistance.ts: MIN_DISTANCE_MPC`) the pure ratio
+ * `distance·1e-4` would be 1e-28 — still positive in f64, but we floor near
  * at `MIN_NEAR_MPC` to keep it robustly above zero and out of the
  * denormal/underflow neighbourhood regardless of how far the distance clamp
  * is ever lowered.
@@ -39,10 +39,10 @@
  */
 
 /**
- * Floor for the near plane, in Mpc — the wheel-zoom distance floor's own
- * implied minimum (`1e-17·1e-4`, `clampDistance.ts: MIN_DISTANCE_MPC`), so the
- * ratio governs everywhere a body can actually be approached and the floor
- * only guards the perspective matrix against a zero near. It must stay BELOW
+ * Floor for the near plane, in Mpc — ~6 m, a denormal dodge that only guards
+ * the perspective matrix against a zero near. It is NOT derived from the
+ * wheel-zoom distance floor (`clampDistance.ts: MIN_DISTANCE_MPC`, ~3 cm) and
+ * must not be re-derived from it. It must stay BELOW
  * the camera's minimum ALTITUDE over a focused body — `deriveSlabs` (`slabs.ts`)
  * passes altitude (`cam.distance - pivotRadiusMpc`) here in place of raw
  * distance once a pivot is known, so a large body's own radius no longer

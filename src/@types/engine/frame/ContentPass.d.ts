@@ -101,6 +101,15 @@ export type ContentPass = {
     state: EngineState,
   ): void;
   /**
+   * Where this layer's pick stamp composites, when that is NOT the pick
+   * target its `slab` derives. `'overlay'` is the pick-side twin of drawing
+   * into `'swap'` after the body composite: the stamp lands in a pass the
+   * fold reads AHEAD of every scene slab, so a caption drawn on top of a
+   * body's disc takes the click there too. Absent on every other row ⇒ the
+   * slab's own pick target, folded by distance.
+   */
+  readonly pickTarget?: 'overlay';
+  /**
    * Whether this layer should record PICK draw commands this frame — the
    * gate the pick program filters `drawPick` by, in place of `enabled`.
    *

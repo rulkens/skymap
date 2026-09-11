@@ -1,6 +1,6 @@
 /**
- * sceneBodyPartition — resolve THE per-frame `{ glints, flat, textured }` split
- * of the seeded non-Earth bodies from live engine state.
+ * sceneBodyPartition — resolve THE per-frame `{ glints, flat, textured, meshes }`
+ * split of the seeded non-Earth bodies from live engine state.
  *
  * `partitionBodiesByPresentation` is pure — it takes a body list, the per-frame
  * body-state snapshot (`sceneBodyStates`), a camera, a projection, and an
@@ -32,6 +32,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
+import type { MeshBody } from '../../../@types/scene/MeshBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -39,9 +40,14 @@ import { sceneBodyStates } from './sceneBodyStates';
 export function sceneBodyPartition(
   state: EngineState,
   ctx: ReadyFrameContext,
-): { glints: readonly PlanetBody[]; flat: readonly PlanetBody[]; textured: readonly PlanetBody[] } {
+): {
+  glints: readonly (PlanetBody | MeshBody)[];
+  flat: readonly PlanetBody[];
+  textured: readonly PlanetBody[];
+  meshes: readonly MeshBody[];
+} {
   return partitionBodiesByPresentation({
-    bodies: state.data.bodies.planets,
+    bodies: [...state.data.bodies.planets, ...state.data.bodies.meshBodies],
     bodyStates: sceneBodyStates(state, ctx),
     camPosMpc: ctx.drawCamPos,
     viewportHeightPx: ctx.canvasSize.height,

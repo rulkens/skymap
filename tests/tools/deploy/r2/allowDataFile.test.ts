@@ -71,4 +71,20 @@ describe('allowDataFile', () => {
   it('rejects anything under images/, regardless of basename', () => {
     expect(allowDataFile('images/famous/x.webp')).toBe(false);
   });
+
+  it('accepts the four baked mesh files under meshes/', () => {
+    expect(allowDataFile('meshes/whale.mesh')).toBe(true);
+    expect(allowDataFile('meshes/whale_albedo.png')).toBe(true);
+    expect(allowDataFile('meshes/whale_mr.png')).toBe(true);
+    expect(allowDataFile('meshes/whale_normal.png')).toBe(true);
+  });
+
+  it('rejects a mesh file with the same basename outside meshes/', () => {
+    expect(allowDataFile('whale.mesh')).toBe(false);
+    expect(allowDataFile('other/whale_albedo.png')).toBe(false);
+  });
+
+  it('rejects an unrelated png under meshes/', () => {
+    expect(allowDataFile('meshes/whale_thumbnail.png')).toBe(false);
+  });
 });

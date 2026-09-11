@@ -446,10 +446,10 @@ describe('timedSlotsOf', () => {
     // and the foreground:0 step) is absent, zero-cost. The
     // foreground:0 body render now comes NEXT (before the composites) — one
     // render STEP per foregroundChain entry (Task 9-11: earth, cloud-shell,
-    // planets, textured-bodies, rings, and atmosphere-shell all ride the
-    // 'body' slab sentinel, a SEPARATE step from the still-NEAR0 rest, so the
-    // fixture below passes a body row (index 2) ahead of NEAR0 in the
-    // chain): all six together in the body step (registry order), then a
+    // planets, textured-bodies, mesh-bodies, rings, and atmosphere-shell all
+    // ride the 'body' slab sentinel, a SEPARATE step from the still-NEAR0 rest,
+    // so the fixture below passes a body row (index 2) ahead of NEAR0 in the
+    // chain): all seven together in the body step (registry order), then a
     // NEAR0 step carrying only star-spheres and field-star-sphere — so the
     // bodies merge into HDR before the tone-map. The foreground:0→hdr LINEAR composite
     // then precedes the hdr→swap tone-map (the frame's only tone-map), and
@@ -487,8 +487,8 @@ describe('timedSlotsOf', () => {
       'body-glints',
       'hdr·NEAR0',
       // The body-m step (Task 9-11): every 'body'-slab layer matches EVERY
-      // body row, so earth, cloud-shell, planets, textured-bodies, rings, and
-      // atmosphere-shell all land here, in registry order — star-spheres and
+      // body row, so earth, cloud-shell, planets, textured-bodies, mesh-bodies,
+      // rings and atmosphere-shell all land here, in registry order — star-spheres and
       // field-star-sphere are the only foreground layers still literal NEAR0,
       // so they sit alone in the NEXT (NEAR0) step instead. Each name carries
       // its row (`·BODY[0]`, this fixture's one body slab) — `passTimingSlotName`
@@ -498,6 +498,7 @@ describe('timedSlotsOf', () => {
       'cloud-shell·BODY[0]',
       'planets·BODY[0]',
       'textured-bodies·BODY[0]',
+      'mesh-bodies·BODY[0]',
       'rings·BODY[0]',
       'atmosphere-shell·BODY[0]',
       'foreground:0·BODY[0]',

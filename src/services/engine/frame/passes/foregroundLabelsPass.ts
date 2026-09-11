@@ -10,13 +10,16 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { near0LabelProjection } from '../near0LabelProjection';
-import { hasPickableLabel, labelPickQuads } from './labelPickQuads';
+import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
+import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 
 export const foregroundLabelsPass: ContentPass = {
   name: 'foreground-labels',
   slab: NEAR0,
   target: 'swap',
   blend: 'over',
+  // Ranks a caption over the body disc it draws on — `ContentPass.pickTarget`.
+  pickTarget: 'overlay',
 
   enabled(state, _ctx, _view) {
     const renderer = state.gpu.foregroundLabelRenderer;
@@ -25,7 +28,7 @@ export const foregroundLabelsPass: ContentPass = {
 
   // Pick gate — NARROWER than `enabled`: the constellation captions carry no
   // `pickId` (they name no selectable object), so a constellations-only frame
-  // must not allocate the `pick:near0` target for a draw that stamps nothing.
+  // must not allocate the `pick:overlay` target for a draw that stamps nothing.
   pickEnabled(state) {
     const renderer = state.gpu.foregroundLabelRenderer;
     if (renderer === null || renderer.glyphCount() === 0) return false;

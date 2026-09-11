@@ -9,7 +9,6 @@ import {
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';

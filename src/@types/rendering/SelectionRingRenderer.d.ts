@@ -21,7 +21,10 @@ export type SelectionRingRenderer = {
    * Draw the selection halo for `selection` into an in-flight render pass.
    * `selection === null` is a no-op (nothing selected this frame).
    * `ringRadiusPx` is the final CSS-pixel radius — the caller has already
-   * baked in the halo factor. Must be called inside a `beginRenderPass`
+   * baked in the halo factor. `alpha` scales the whole stroke (1 = opaque);
+   * it is the caller's, not the renderer's, because the reason a ring dims
+   * is a layer-level fact about its subject, not about the annulus.
+   * Must be called inside a `beginRenderPass`
    * block on the swap-chain texture (premultiplied-OVER expects an LDR target).
    *
    * `sceneColorView` is consumed only by an instance created with
@@ -34,7 +37,7 @@ export type SelectionRingRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number } | null,
+    selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number; alpha: number } | null,
     sceneColorView?: GPUTextureView,
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */

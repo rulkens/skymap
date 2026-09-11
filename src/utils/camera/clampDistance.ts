@@ -12,14 +12,15 @@
 // ─── Distance limits ──────────────────────────────────────────────────────────
 
 /**
- * Absolute floor for `cam.distance` in Mpc — 1e-17 Mpc ≈ 309 km. A degeneracy
- * backstop, NOT a surface stop (`SURFACE_STANDOFF_RADII` handles that): this
- * only keeps distance strictly positive with no pivot radius to stand off
- * from, and floors bodies smaller than ~309 km. Sits below the galaxy-focus
- * tween's minimum end distance (0.15 Mpc), so `clampDistance` never ratchets
- * a focus-on tween back outward.
+ * Absolute floor for `cam.distance` in Mpc — 1e-24 Mpc ≈ 3 cm. A degeneracy
+ * backstop, NOT a surface stop (`SURFACE_STANDOFF_RADII` handles that): it
+ * keeps distance strictly positive under a pivot whose own radius standoff is
+ * smaller than 3 cm, and doubles as `near0RingRadiusPx`'s divide guard so the
+ * ring can size itself at a metre-scale body's true approach. A surfaceless
+ * pivot does NOT floor here — `pivotRadiusMpc.ts: SURFACELESS_FLOOR_MPC`
+ * keeps galaxy/structure/no-focus zoom outside the near plane.
  */
-export const MIN_DISTANCE_MPC = 1e-17;
+export const MIN_DISTANCE_MPC = 1e-24;
 
 /**
  * Where the camera stops relative to the pivot's surface, as a multiple of its
@@ -62,9 +63,9 @@ export const MAX_DISTANCE_MPC = 30000;
  * floor `floorMpc`.
  *
  * `floorMpc` is precomputed by the caller (`PivotFraming.floorMpc`, built in
- * `pivotRadiusMpc.ts`'s `pivotFraming`) as `max(MIN_DISTANCE_MPC,
- * (radiusMpc ?? 0) * standoffRadii)` — this function no longer knows about a
- * pivot radius or a standoff ratio, only the resulting number.
+ * `pivotRadiusMpc.ts`'s `pivotFraming`) from the pivot's radius and standoff —
+ * this function no longer knows about a pivot radius or a standoff ratio, only
+ * the resulting number.
  *
  * @param d         Candidate `cam.distance`, Mpc.
  * @param floorMpc  Precomputed distance floor, Mpc.

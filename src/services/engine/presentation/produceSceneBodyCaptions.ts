@@ -19,9 +19,13 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { sceneBodyLabels } from './sceneBodyLabels';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
+import { sceneOccluderBodies } from '../frame/sceneOccluderBodies';
 import { CAPTION_FADE_RULES } from './captionFadeRules';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from './captionPriority';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { fadeBand } from '../../../utils/math/fadeBand';
+import { overflowFade } from '../../../utils/scene/overflowFade';
+import { subjectOccludedByBodies } from '../../../utils/scene/subjectOccludedByBodies';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { LEADER_LINE_BOTTOM_GAP_PX } from './leaderLineStyle';
 
@@ -50,6 +54,7 @@ export function produceSceneBodyCaptions(
   // ride, which diverges from origin distance once focus leaves the origin.
   const camOrbitDistanceMpc = ctx.cam.distance;
   const viewportHeightPx = ctx.canvasSize.height;
+  const viewportShortSidePx = Math.min(ctx.canvasSize.width, viewportHeightPx);
   const fovYRad = ctx.fovYRad;
 
   const fades = state.subsystems.fades;
@@ -60,6 +65,12 @@ export function produceSceneBodyCaptions(
   // `produceFamousGalaxyLabels.ts:218` idiom).
   const clipFactorBody = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
   const clipFactorStarCatalog = state.subsystems.clipPlayer.clipOpacityOf('starCatalogLabel', now);
+
+  // The overlay shaders attenuate per PIXEL, which cannot tell a subject in
+  // FRONT of a body from one behind it. Deciding that per caption here is what
+  // keeps the whale's name legible over Earth's disc while the Moon's still
+  // sinks behind the limb.
+  const occluders = sceneOccluderBodies(state, ctx);
 
   const labels: Label2D[] = [];
   for (const label of baseLabelsFor(sceneBodyStates(state, ctx))) {
@@ -92,8 +103,22 @@ export function produceSceneBodyCaptions(
     // idiom). `subjectVisible` stays a hard gate — unrelated to this toggle.
     const ruleGate =
       rule.subjectVisible(settings) && (rule.labelEnabled(settings) || registryOpacity > 0) ? 1 : 0;
+    // A caption may narrow its kind's reach to its own approach band. The band
+    // is DATA on the caption, so nothing here knows which seeds author one.
+    const revealAlpha =
+      label.revealBand === undefined ? 1 : fadeBand(label.revealBand, distanceMpc);
+    // Once the body fills the view its caption's own lift carries it off the
+    // top edge, leader line and all, so it dissolves — the same rule, on the
+    // same subject size, that dismisses the NEAR0 selection ring. Uniform
+    // across kinds on purpose: `CAPTION_FADE_RULES` bands read DISTANCE, which
+    // says nothing about apparent size, so no row makes this redundant.
     const fadeAlpha =
-      ruleGate * rule.fadeTarget(distanceMpc, camOrbitDistanceMpc) * registryOpacity * clipFactor;
+      ruleGate *
+      rule.fadeTarget(distanceMpc, camOrbitDistanceMpc) *
+      revealAlpha *
+      overflowFade(subjectSizePx, viewportShortSidePx) *
+      registryOpacity *
+      clipFactor;
 
     const prominencePx =
       CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +
@@ -103,6 +128,13 @@ export function produceSceneBodyCaptions(
       ...label,
       worldPos: anchor,
       fadeAlpha,
+      occludeWeight: subjectOccludedByBodies({
+        subjectMpc: label.worldPos,
+        camPosMpc: camPos,
+        bodies: occluders,
+      })
+        ? 1
+        : 0,
       prominencePx,
       lift: {
         subjectSizePx,

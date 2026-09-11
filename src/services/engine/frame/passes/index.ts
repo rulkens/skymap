@@ -250,6 +250,7 @@ import { starSpheresPass } from './starSpheresPass';
 import { fieldStarSpherePass } from './fieldStarSpherePass';
 import { planetsPass } from './planetsPass';
 import { texturedBodiesPass } from './texturedBodiesPass';
+import { meshBodiesPass } from './meshBodiesPass';
 import { ringsPass } from './ringsPass';
 import { starPointsPass } from './starPointsPass';
 import { bodyGlintsPass } from './bodyGlintsPass';
@@ -395,6 +396,10 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   fieldStarSpherePass,
   planetsPass,
   texturedBodiesPass,
+  // Lit triangle meshes riding their HOST body's row (they own none): after the
+  // opaque spheres so they depth-test against the host's stamped z, before the
+  // translucent ring and atmosphere shell so those composite over them.
+  meshBodiesPass,
   // Saturn's rings: the translucent overlay half of the ring system, drawn LAST
   // in the (foreground:0, NEAR0) group so it depth-tests against the opaque
   // spheres already stamped there (far ring half occluded), writing no depth and
@@ -451,6 +456,7 @@ export { starSpheresPass } from './starSpheresPass';
 export { fieldStarSpherePass } from './fieldStarSpherePass';
 export { planetsPass } from './planetsPass';
 export { texturedBodiesPass } from './texturedBodiesPass';
+export { meshBodiesPass } from './meshBodiesPass';
 export { ringsPass } from './ringsPass';
 export { starPointsPass } from './starPointsPass';
 export { bodyGlintsPass } from './bodyGlintsPass';
