@@ -205,7 +205,8 @@ async function settleFrames(page: Page, count: number): Promise<void> {
 
 /**
  * The exercise: boot into the `?probe` synthetic scene, orbit-drag, dolly to
- * the near clamp, toggle the point-cloud layer off then on, then resize.
+ * the near clamp, toggle the point-cloud layer off then on, flick the mesh
+ * wireframe overlay, then resize.
  * `LayerList.tsx` renders one `role="checkbox"` per manifest asset and the
  * probe scene carries three, so every locator here is name-scoped or
  * count-asserted — a bare one trips Playwright's strict mode. Only the point
@@ -270,6 +271,17 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       name: 'layer:on',
       run: async (page) => {
         await page.getByRole('checkbox', { name: /point cloud/i }).check();
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // The line-list overlay pipeline compiles lazily on first use, so only a
+      // frame drawn with the box checked proves it links and validates.
+      name: 'mesh:wireframe',
+      run: async (page) => {
+        await page.getByRole('checkbox', { name: 'Wireframe' }).check();
+        await settleFrames(page, SETTLE_FRAMES);
+        await page.getByRole('checkbox', { name: 'Wireframe' }).uncheck();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

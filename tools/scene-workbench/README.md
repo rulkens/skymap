@@ -92,4 +92,7 @@ px). "Gaussian splats" sits beside it with two more: splat scale
 covariance by `s²` (the standard 3DGS scaling modifier); opacity scale
 (`view.display.gaussianSplat.opacityScale`)
 multiplies each splat's opacity. Both live in `DisplayPanel.tsx`, wired to
-`viewSlice`'s `setSplatScale`/`setOpacityScale`.
+`viewSlice`'s `setSplatScale`/`setOpacityScale`. "Mesh" holds one checkbox,
+Wireframe (`view.display.mesh.wireframe`): a `line-list` pass over the mesh's
+own triangle edges, drawn over the textured pass so triangle quality can be
+inspected against the texture.

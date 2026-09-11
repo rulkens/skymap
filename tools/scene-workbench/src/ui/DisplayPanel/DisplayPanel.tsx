@@ -1,25 +1,32 @@
 /**
  * DisplayPanel — the "Display" group in the left panel. Each child
- * CollapsibleSection is one render layer's display knobs (mesh sections
- * land later as that renderer exists).
+ * CollapsibleSection is one render layer's display knobs.
  */
 import { useState, type ReactNode } from 'react';
 
 import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
 import Slider from '../../../../../src/components/common/Slider/Slider';
-import { setPointCloudPointSize, setSplatScale, setOpacityScale } from '../../state/view/viewSlice';
+import {
+  setPointCloudPointSize,
+  setSplatScale,
+  setOpacityScale,
+  setMeshWireframe,
+} from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import styles from './DisplayPanel.module.css';
 
 function DisplayPanel(): ReactNode {
   const dispatch = useAppDispatch();
   const pointSizePx = useAppSelector((s) => s.view.display.pointCloud.pointSizePx);
   const splatScale = useAppSelector((s) => s.view.display.gaussianSplat.splatScale);
   const opacityScale = useAppSelector((s) => s.view.display.gaussianSplat.opacityScale);
+  const meshWireframe = useAppSelector((s) => s.view.display.mesh.wireframe);
   // No open/close slice for panel sections yet (see mcpm-workbench's ControlsPanel) —
   // local flags are enough until a section's state must persist.
   const [displayOpen, setDisplayOpen] = useState(true);
   const [pointCloudOpen, setPointCloudOpen] = useState(true);
   const [gaussianSplatOpen, setGaussianSplatOpen] = useState(true);
+  const [meshOpen, setMeshOpen] = useState(true);
 
   return (
     <CollapsibleSection
@@ -66,6 +73,22 @@ function DisplayPanel(): ReactNode {
           value={opacityScale}
           onChange={(v) => dispatch(setOpacityScale(v))}
         />
+      </CollapsibleSection>
+      <CollapsibleSection
+        title="Mesh"
+        open={meshOpen}
+        onToggle={() => setMeshOpen((v) => !v)}
+        variant="nested"
+      >
+        <label className={styles.toggleRow}>
+          <span>Wireframe</span>
+          <input
+            type="checkbox"
+            aria-label="Wireframe"
+            checked={meshWireframe}
+            onChange={(e) => dispatch(setMeshWireframe(e.target.checked))}
+          />
+        </label>
       </CollapsibleSection>
     </CollapsibleSection>
   );

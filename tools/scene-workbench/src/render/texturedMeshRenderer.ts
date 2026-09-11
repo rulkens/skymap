@@ -1,17 +1,26 @@
 /**
  * createTexturedMeshRenderer — the MVS mesh as an indexed, unlit, opaque pass
- * (texturedMesh.wesl) that writes depth for the splats to blend against.
+ * (texturedMesh.wesl) that writes depth for the splats to blend against, plus
+ * the optional wireframe overlay (meshWireframe.wesl) — WebGPU has no wireframe
+ * fill mode, so the edges are a second line-list draw over the same positions.
  *
  * 'cullMode: none' is deliberate: MVS triangle winding is not guaranteed
  * consistent, so backface culling drops real surface at random.
  */
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
+import type { SceneDisplay } from '../../@types/SceneDisplay';
 import type { MeshGpuAsset } from './renderResources';
+import meshWireframeWgsl from './shaders/meshWireframe.wesl?static';
 import texturedMeshWgsl from './shaders/texturedMesh.wesl?static';
 
+const POSITION_LAYOUT: GPUVertexBufferLayout = {
+  arrayStride: 12,
+  attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+};
+
 export type TexturedMeshRenderer = {
-  draw(pass: GPURenderPassEncoder, assets: readonly MeshGpuAsset[]): void;
+  draw(pass: GPURenderPassEncoder, assets: readonly MeshGpuAsset[], display: SceneDisplay): void;
 };
 
 export function createTexturedMeshRenderer(
@@ -48,10 +57,7 @@ export function createTexturedMeshRenderer(
       module,
       entryPoint: 'vs',
       buffers: [
-        {
-          arrayStride: 12,
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        },
+        POSITION_LAYOUT,
         {
           arrayStride: 8,
           attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }],
@@ -61,6 +67,26 @@ export function createTexturedMeshRenderer(
     fragment: { module, entryPoint: 'fs', targets: [{ format: targetFormat }] },
     primitive: { topology: 'triangle-list', cullMode: 'none' },
     depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+  });
+
+  const wireframeModule = createShaderModuleWithDevLog(
+    device,
+    meshWireframeWgsl,
+    'scene-mesh-wireframe',
+  );
+
+  const wireframePipeline = device.createRenderPipeline({
+    label: 'scene-mesh-wireframe',
+    layout: device.createPipelineLayout({
+      label: 'scene-mesh-wireframe-layout',
+      bindGroupLayouts: [cameraLayout],
+    }),
+    vertex: { module: wireframeModule, entryPoint: 'vs', buffers: [POSITION_LAYOUT] },
+    fragment: { module: wireframeModule, entryPoint: 'fs', targets: [{ format: targetFormat }] },
+    primitive: { topology: 'line-list' },
+    // The lines are the triangles' own vertices, so they tie with the depth
+    // just written: 'less' alone would z-fight them away.
+    depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less-equal' },
   });
 
   // Bind groups only hold references: the asset's dispose() destroys the
@@ -83,7 +109,7 @@ export function createTexturedMeshRenderer(
   }
 
   return {
-    draw(pass, assets): void {
+    draw(pass, assets, display): void {
       pass.setPipeline(pipeline);
       for (const asset of assets) {
         pass.setBindGroup(1, bindGroupFor(asset));
@@ -91,6 +117,13 @@ export function createTexturedMeshRenderer(
         pass.setVertexBuffer(1, asset.uvs);
         pass.setIndexBuffer(asset.indices, 'uint32');
         pass.drawIndexed(asset.indexCount);
+      }
+      if (!display.mesh.wireframe) return;
+      pass.setPipeline(wireframePipeline);
+      for (const asset of assets) {
+        pass.setVertexBuffer(0, asset.positions);
+        pass.setIndexBuffer(asset.edges, 'uint32');
+        pass.drawIndexed(asset.edgeIndexCount);
       }
     },
   };
