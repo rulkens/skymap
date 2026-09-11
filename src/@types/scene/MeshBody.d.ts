@@ -12,7 +12,6 @@ export type MeshBody = {
   readonly radiusM: number;
   readonly albedo: Vec3;
   readonly meshKey: string;
-  readonly description: string;
   /** Camera standoff floor, in body radii, replacing `clampDistance`'s
    *  Earth-tuned `SURFACE_STANDOFF_RADII` (which would park the camera microns
    *  off a metre-scale hull). Not a per-body dial: the `meshBody` maker stamps

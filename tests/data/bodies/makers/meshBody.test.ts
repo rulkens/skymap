@@ -26,14 +26,12 @@ describe('meshBody()', () => {
       id: 'x',
       label: 'X',
       meshKey: 'test-mesh',
-      description: 'a test body',
     });
 
     expect(body).toEqual({
       id: 'x',
       label: 'X',
       meshKey: 'test-mesh',
-      description: 'a test body',
       radiusM: 12345,
       albedo: [0.1, 0.2, 0.3],
       standoffRadii: 2,
@@ -41,8 +39,6 @@ describe('meshBody()', () => {
   });
 
   it('throws for an unknown meshKey', () => {
-    expect(() =>
-      meshBody({ id: 'y', label: 'Y', meshKey: 'no-such-key', description: 'orphan seed' }),
-    ).toThrow(/no-such-key/);
+    expect(() => meshBody({ id: 'y', label: 'Y', meshKey: 'no-such-key' })).toThrow(/no-such-key/);
   });
 });

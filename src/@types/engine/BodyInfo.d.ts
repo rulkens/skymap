@@ -28,8 +28,4 @@ export type BodyInfo = {
   readonly positionMpc: Vec3;
   readonly radiusM: number;
   readonly orbit?: BodyOrbitInfo;
-  // A MeshBody's compiled-in description — a THIRD, independent description
-  // path alongside `orbit`'s S-star elements and BODY_FACTS/the famous-star
-  // sidecar (BodyDetailCard). No loading state, same reasoning as `orbit`.
-  readonly description?: string;
 };

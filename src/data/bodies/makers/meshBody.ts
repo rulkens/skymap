@@ -1,6 +1,6 @@
 /**
  * meshBody — row maker for a `MeshBody`: joins an authored seed (id/label/
- * meshKey/description) against `MESH_ASSETS`, the tool-generated table
+ * meshKey) against `MESH_ASSETS`, the tool-generated table
  * (`npm run build-meshes`). `radiusM`/`albedo` come ONLY from the generated
  * row — never re-authored at the seed site — so the baked asset stays the
  * single source of truth for both. Throws at the call site on a miss, same
@@ -19,7 +19,6 @@ export type MeshBodySeed = {
   readonly id: string;
   readonly label: string;
   readonly meshKey: string;
-  readonly description: string;
 };
 
 export function meshBody(seed: MeshBodySeed): MeshBody {
@@ -29,7 +28,6 @@ export function meshBody(seed: MeshBodySeed): MeshBody {
     id: seed.id,
     label: seed.label,
     meshKey: seed.meshKey,
-    description: seed.description,
     radiusM: asset.boundingRadiusM,
     albedo: asset.meanAlbedo,
     standoffRadii: MESH_BODY_STANDOFF_RADII,

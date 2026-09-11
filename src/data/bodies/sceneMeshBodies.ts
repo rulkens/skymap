@@ -13,15 +13,11 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
     id: 'whale',
     label: 'Whale',
     meshKey: 'whale',
-    description:
-      "Ah … ! What's happening? it thought.\nEr, excuse me, who am I? Hello? Why am I here? What's my purpose in life?\n…\nAnd wow! Hey! What's this thing suddenly coming towards me very fast? So big and flat and round, it needs a big wide sounding name like … ow … ound … round … ground! That's it! That's a good name – ground! I wonder if it will be friends with me?\n— Douglas Adams, The Hitchhiker's Guide to the Galaxy, ch. 18",
   },
   {
     id: 'petunias',
     label: 'Bowl of Petunias',
     meshKey: 'petunias',
-    description:
-      "Curiously enough, the only thing that went through the mind of the bowl of petunias as it fell was Oh no, not again.\nMany people have speculated that if we knew exactly why the bowl of petunias had thought that we would know a lot more about the nature of the Universe than we do now.\n— Douglas Adams, The Hitchhiker's Guide to the Galaxy, ch. 18",
   },
 ];
 

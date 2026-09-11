@@ -67,17 +67,6 @@ const jupiterRow: SelectionRow = {
   radiusM: 69911000,
 };
 
-// MeshBody-shaped (not MeshBody-typed) — the description is a third,
-// independent field carried straight off the row, never derived here.
-const meshBodyRow: SelectionRow = {
-  type: 'body',
-  id: 'mesh-body-fixture',
-  label: 'Fixture Whale',
-  positionMpc: [1e-6, 2e-6, 3e-6],
-  radiusM: 15,
-  description: 'A humpback whale, breaching in slow motion.',
-};
-
 describe('buildFocusable', () => {
   it('null → null', () => expect(buildFocusable(null)).toBeNull());
   it('galaxy row → GalaxyInfo', () => {
@@ -117,17 +106,6 @@ describe('buildFocusable', () => {
       label: 'Jupiter',
       positionMpc: [4e-14, 0, 0],
       radiusM: 69911000,
-    });
-  });
-
-  it('buildFocusable carries description through to BodyInfo', () => {
-    expect(buildFocusable(meshBodyRow)).toEqual({
-      type: 'body',
-      id: 'mesh-body-fixture',
-      label: 'Fixture Whale',
-      positionMpc: [1e-6, 2e-6, 3e-6],
-      radiusM: 15,
-      description: 'A humpback whale, breaching in slow motion.',
     });
   });
 

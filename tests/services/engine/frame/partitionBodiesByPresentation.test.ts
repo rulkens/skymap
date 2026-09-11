@@ -55,7 +55,7 @@ const CLOSE = (radiusM: number) => radiusM * 5; // resolved (~hundreds of px)
 const AU_M = SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.M_TO_MPC; // 1 AU in m → deep sub-pixel
 
 // A MeshBody counterpart to `bodyAt`, same distance-subtends-angle fixture
-// shape, carrying the mesh-only fields (`meshKey`, `description`).
+// shape, carrying the mesh-only fields (`meshKey`, `standoffRadii`).
 function meshAt(id: string, radiusM: number, distanceM: number): SeededMesh {
   return {
     id,
@@ -64,7 +64,6 @@ function meshAt(id: string, radiusM: number, distanceM: number): SeededMesh {
     radiusM,
     albedo: [0.5, 0.5, 0.5],
     meshKey: `${id}-mesh`,
-    description: id,
     standoffRadii: 2,
     orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   };

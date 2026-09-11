@@ -46,7 +46,6 @@ const BUILD_FOCUSABLE: {
     // carried on the stored row: five derived numbers off a compiled-in table
     // would be re-serialized into RTK state on every selection for no gain.
     orbit: sStarOrbitInfo(row.id),
-    description: row.description,
   }),
   // A picked star has no per-star identity on the bin (SKST v1 quantises
   // position + Gaia photometry only), so the card is a small self-derived

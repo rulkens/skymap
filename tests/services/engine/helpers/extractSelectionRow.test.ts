@@ -9,7 +9,6 @@ import {
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
-import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -187,12 +186,6 @@ describe('extractSelectionRow', () => {
 
   it('body ref with an unknown seed id → null (garbage, not "loading")', () => {
     expect(extractSelectionRow({ type: 'body', id: 'krypton' }, deps, SIM_DAYS)).toBeNull();
-  });
-
-  it("extractSelectionRow carries a body's description when present", () => {
-    const whale = SCENE_MESH_BODIES[0]!;
-    const row = extractSelectionRow({ type: 'body', id: whale.id }, deps, SIM_DAYS);
-    expect(row !== null && row.type === 'body' && row.description).toBe(whale.description);
   });
 
   it('star ref resolves against the loaded catalog (matches resolveStarRecord)', async () => {
