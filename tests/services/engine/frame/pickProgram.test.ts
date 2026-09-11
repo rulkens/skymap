@@ -85,6 +85,7 @@ function makeContentPass(opts: {
   slab: number | 'body';
   enabled: boolean;
   pickEnabled?: boolean;
+  pickTarget?: 'overlay';
   drawPick?: ContentPass['drawPick'];
 }): ContentPass {
   return {
@@ -95,6 +96,7 @@ function makeContentPass(opts: {
     enabled: () => opts.enabled,
     draw: vi.fn(),
     ...(opts.pickEnabled !== undefined ? { pickEnabled: () => opts.pickEnabled } : {}),
+    ...(opts.pickTarget !== undefined ? { pickTarget: opts.pickTarget } : {}),
     ...(opts.drawPick ? { drawPick: opts.drawPick } : {}),
   } as ContentPass;
 }
@@ -762,6 +764,52 @@ describe('createPickProgram', () => {
 
       await program.pick(10, 10);
       expect(callLog).toEqual(['body', 'near0']);
+    });
+
+    it('folds an overlay stamp ahead of a body row, while a NEAR0 hit still loses to it', async () => {
+      // A body caption composites onto the swap chain after the body rows are
+      // resolved, so where it draws over another body's disc it must take the
+      // click — no distance key can say that, since the caption's subject and
+      // the disc it covers are different rows. The NEAR0 star/MW picks keep
+      // losing to the nearer body row in the same fold.
+      const captionRaw = ((9 << SELECTION_SOURCE_SHIFT) | (3 + PICK_SENTINEL_OFFSET)) >>> 0;
+      const bodyRaw = ((5 << SELECTION_SOURCE_SHIFT) | (10 + PICK_SENTINEL_OFFSET)) >>> 0;
+      const { device } = makeDevice({
+        stagingValueForLabel: (label) => (label.includes('overlay') ? captionRaw : bodyRaw),
+      });
+      vi.mocked(pickFrameContext).mockReturnValue(makeNearBodyCtx());
+
+      const callLog: string[] = [];
+      const passes = [
+        makeContentPass({
+          name: 'foreground-labels',
+          slab: NEAR0,
+          enabled: true,
+          pickTarget: 'overlay',
+          drawPick: () => callLog.push('caption'),
+        }),
+        makeContentPass({
+          name: 'near0',
+          slab: NEAR0,
+          enabled: true,
+          drawPick: () => callLog.push('near0'),
+        }),
+        makeContentPass({
+          name: 'body',
+          slab: 'body',
+          enabled: true,
+          drawPick: () => callLog.push('body'),
+        }),
+      ];
+      const program = createPickProgram({
+        device,
+        canvas: CANVAS,
+        state: makeState(() => undefined),
+        passes,
+      });
+
+      expect(await program.pick(10, 10)).toEqual({ sourceCode: 9, localIdx: 3 });
+      expect(callLog).toEqual(['caption', 'body', 'near0']);
     });
   });
 
