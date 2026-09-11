@@ -29,7 +29,22 @@ export type SplatGpuAsset = {
   dispose(): void;
 };
 
-export type GpuAsset = LidarGpuAsset | SplatGpuAsset;
+/**
+ * The MVS mesh: one indexed primitive plus its atlas (spec §5's `mesh.glb`
+ * subset). `texture` is `rgba8unorm-srgb` so the sample decodes to linear —
+ * the bake's JPEG/PNG is sRGB-encoded.
+ */
+export type MeshGpuAsset = {
+  readonly kind: 'mesh';
+  readonly positions: GPUBuffer;
+  readonly uvs: GPUBuffer;
+  readonly indices: GPUBuffer;
+  readonly indexCount: number;
+  readonly texture: GPUTexture;
+  dispose(): void;
+};
+
+export type GpuAsset = LidarGpuAsset | SplatGpuAsset | MeshGpuAsset;
 
 export type RenderResources = {
   gpu: GpuContext | null;

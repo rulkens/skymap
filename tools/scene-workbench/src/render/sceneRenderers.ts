@@ -10,8 +10,13 @@ import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { createLidarPointRenderer } from './lidarPointRenderer';
 import type { GpuAsset, RenderResources } from './renderResources';
 import { createSplatRenderer } from './splatRenderer';
+import { createTexturedMeshRenderer } from './texturedMeshRenderer';
 
-export const SCENE_DRAW_ORDER: readonly GpuAsset['kind'][] = ['pointCloud', 'gaussianSplat'];
+export const SCENE_DRAW_ORDER: readonly GpuAsset['kind'][] = [
+  'pointCloud',
+  'mesh',
+  'gaussianSplat',
+];
 
 export type SceneRenderers = {
   draw(
@@ -48,6 +53,7 @@ export function createSceneRenderers(
 ): SceneRenderers {
   const renderers: KindRenderers = {
     pointCloud: createLidarPointRenderer(gpu, targetFormat, cameraLayout),
+    mesh: createTexturedMeshRenderer(gpu, targetFormat, cameraLayout),
     gaussianSplat: createSplatRenderer(gpu, targetFormat, cameraLayout),
   };
 
