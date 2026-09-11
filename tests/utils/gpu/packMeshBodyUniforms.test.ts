@@ -32,8 +32,8 @@ const SUN_VISIBLE = 0.375;
 // block is unmistakable.
 const MODEL: Mat3 = [101, 102, 103, 104, 105, 106, 107, 108, 109];
 const CAM_LOCAL: Vec3 = [3.5, -4.25, 6.75];
-const EARTHSHINE_STRENGTH = 0.625;
-const EARTHSHINE_COLOUR: Vec3 = [0.125, 0.1875, 0.8125];
+const HOST_SHINE_STRENGTH = 0.625;
+const HOST_SHINE_COLOUR: Vec3 = [0.125, 0.1875, 0.8125];
 const DIR_TO_HOST: Vec3 = [-0.5, 0.25, -0.875];
 
 describe('MeshBodyUniforms byte offsets', () => {
@@ -44,8 +44,8 @@ describe('MeshBodyUniforms byte offsets', () => {
       sunVisibleFraction: SUN_VISIBLE,
       model: MODEL,
       camPosLocal: CAM_LOCAL,
-      earthshineStrength: EARTHSHINE_STRENGTH,
-      earthshineColor: EARTHSHINE_COLOUR,
+      hostShineStrength: HOST_SHINE_STRENGTH,
+      hostShineColor: HOST_SHINE_COLOUR,
       dirToHost: DIR_TO_HOST,
     });
 
@@ -66,7 +66,7 @@ describe('MeshBodyUniforms byte offsets', () => {
     expect(out[31]).toBe(0);
 
     expect([out[32], out[33], out[34]]).toEqual([3.5, -4.25, 6.75]); // bytes 128..139
-    expect(out[35]).toBe(EARTHSHINE_STRENGTH); // byte 140 — camPosLocal's pad slot
+    expect(out[35]).toBe(HOST_SHINE_STRENGTH); // byte 140 — camPosLocal's pad slot
 
     expect([out[36], out[37], out[38]]).toEqual([0.125, 0.1875, 0.8125]); // bytes 144..155
     expect(out[39]).toBe(0); // byte 156 — _pad0
@@ -86,8 +86,8 @@ describe('MeshBodyUniforms byte offsets', () => {
       sunVisibleFraction: SUN_VISIBLE,
       model: MODEL,
       camPosLocal: CAM_LOCAL,
-      earthshineStrength: EARTHSHINE_STRENGTH,
-      earthshineColor: EARTHSHINE_COLOUR,
+      hostShineStrength: HOST_SHINE_STRENGTH,
+      hostShineColor: HOST_SHINE_COLOUR,
       dirToHost: DIR_TO_HOST,
     });
     expect([out[16], out[17], out[18]]).toEqual([0.5, 0.25, 0.75]);

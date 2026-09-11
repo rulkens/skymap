@@ -1,5 +1,5 @@
 // meshBody/fragment.wesl — the mesh body's material: baked TBN relief over
-// 'lib/pbr.wesl's microfacet core, plus the host's Earthshine fill.
+// 'lib/pbr.wesl's microfacet core, plus the fill bounced off the host below.
 //
 // LANDMINE -- there is no shadow map and no self-shadowing term. Occlusion of
 // the sun by the host is the CPU-side scalar 'u.sunVisibleFraction' and nothing
@@ -51,8 +51,8 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
 
   // 'u.dirToHost' is a uniform, not a varying: derived per fragment it would be
   // 'normalize(-(posM + localPos))' -- |posM| dwarfs |localPos| a millionfold.
-  let earthshine =
-    albedo * u.earthshineColor * u.earthshineStrength * saturate(dot(n, u.dirToHost));
+  let hostShine =
+    albedo * u.hostShineColor * u.hostShineStrength * saturate(dot(n, u.dirToHost));
 
-  return vec4<f32>(direct + earthshine, 1.0);
+  return vec4<f32>(direct + hostShine, 1.0);
 }

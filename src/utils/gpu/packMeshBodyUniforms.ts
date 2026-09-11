@@ -19,8 +19,8 @@ export function packMeshBodyUniforms(args: {
   readonly sunVisibleFraction: number;
   readonly model: Readonly<Mat3>;
   readonly camPosLocal: Readonly<Vec3>;
-  readonly earthshineStrength: number;
-  readonly earthshineColor: Readonly<Vec3>;
+  readonly hostShineStrength: number;
+  readonly hostShineColor: Readonly<Vec3>;
   readonly dirToHost: Readonly<Vec3>;
 }): Float32Array {
   const out = new Float32Array(MESH_BODY_UNIFORM_FLOATS);
@@ -44,10 +44,10 @@ export function packMeshBodyUniforms(args: {
   out[32] = args.camPosLocal[0];
   out[33] = args.camPosLocal[1];
   out[34] = args.camPosLocal[2];
-  out[35] = args.earthshineStrength;
-  out[36] = args.earthshineColor[0];
-  out[37] = args.earthshineColor[1];
-  out[38] = args.earthshineColor[2];
+  out[35] = args.hostShineStrength;
+  out[36] = args.hostShineColor[0];
+  out[37] = args.hostShineColor[1];
+  out[38] = args.hostShineColor[2];
   out[40] = args.dirToHost[0];
   out[41] = args.dirToHost[1];
   out[42] = args.dirToHost[2];

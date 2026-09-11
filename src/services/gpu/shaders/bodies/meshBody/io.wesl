@@ -21,8 +21,8 @@
 //                                        'RingUniforms.planetRadiusRatio' trick)
 //   offset  80..127: model              (mat3x3<f32> -- 3 columns x 16 bytes)
 //   offset 128..139: camPosLocal        (vec3<f32> -- 16-byte aligned)
-//   offset 140..143: earthshineStrength (f32 -- fills camPosLocal's 4th slot)
-//   offset 144..155: earthshineColor    (vec3<f32> -- 16-byte aligned)
+//   offset 140..143: hostShineStrength  (f32 -- fills camPosLocal's 4th slot)
+//   offset 144..155: hostShineColor     (vec3<f32> -- 16-byte aligned)
 //   offset 156..159: _pad0              (f32)
 //   offset 160..171: dirToHost          (vec3<f32> -- unit, body centre -> host)
 //   offset 172..175: _pad1              (f32 -- rounds the struct to 176 / 16)
@@ -37,8 +37,8 @@ struct MeshBodyUniforms {
   sunVisibleFraction: f32,
   model: mat3x3<f32>,
   camPosLocal: vec3<f32>,
-  earthshineStrength: f32,
-  earthshineColor: vec3<f32>,
+  hostShineStrength: f32,
+  hostShineColor: vec3<f32>,
   _pad0: f32,
   dirToHost: vec3<f32>,
   _pad1: f32,
