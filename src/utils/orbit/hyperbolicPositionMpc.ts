@@ -14,7 +14,8 @@ import { hyperbolicAnomalyFromMean } from './hyperbolicAnomalyFromMean';
 
 export function hyperbolicPositionMpc(elements: OrbitalElements): Vec3 {
   // a is NEGATIVE for a hyperbola: that is what keeps the periapsis distance
-  // a·(1 − e) positive and flips Q̂w's sign against the ellipse's +a·√(1 − e²).
+  // a·(1 − e) positive. The explicit minus on the Q̂w term cancels it, so the
+  // coefficient stays positive and prograde, like the ellipse's +a·√(1 − e²).
   const a = elements.semiMajorMpc;
   const e = elements.eccentricity;
   const { pWorld, qWorld } = perifocalAxesWorld(elements);

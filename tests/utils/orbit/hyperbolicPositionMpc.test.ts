@@ -43,9 +43,13 @@ describe('hyperbolicPositionMpc', () => {
       meanAnomalyRad: ECCENTRICITY * Math.sinh(h) - h,
     });
 
-    const { qWorld } = perifocalAxesWorld(row);
+    const { pWorld, qWorld } = perifocalAxesWorld(row);
     const prograde = position[0] * qWorld[0] + position[1] * qWorld[1] + position[2] * qWorld[2];
     expect(prograde).toBeGreaterThan(0);
+    // a·(cosh 1.3 − e) > 0 for a < 0, e = 3.7: the body stays on the periapsis
+    // side of the focus. A mirrored branch passes both magnitude checks.
+    const alongP = position[0] * pWorld[0] + position[1] * pWorld[1] + position[2] * pWorld[2];
+    expect(alongP).toBeGreaterThan(0);
 
     const distanceMpc = Math.hypot(position[0], position[1], position[2]);
     const expectedMpc = SEMI_MAJOR_AU * (1 - ECCENTRICITY * Math.cosh(h)) * SCALE_UNITS.AU_TO_MPC;
