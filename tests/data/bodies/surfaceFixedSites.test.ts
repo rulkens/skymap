@@ -10,7 +10,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 
 const marsRow = rotationRowById('mars');
-if (marsRow === null || marsRow.kind !== undefined) {
+if (marsRow === null || (marsRow.kind !== undefined && marsRow.kind !== 'iau-pole')) {
   throw new Error('surfaceFixedSites.test: the mars rotation row is no longer an IAU-pole row');
 }
 /** Mars's SIDEREAL day, from its own Ẇ — never the orbital period (spec ruling 24). */

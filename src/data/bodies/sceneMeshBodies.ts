@@ -23,7 +23,7 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
   },
   // The two Voyagers and the four Mars rovers. No `captionRevealM`: these are
   // real objects on the default caption reach, not easter eggs to stumble on.
-  // Spirit and Opportunity are the same spacecraft, so they share one asset and
+  // Spirit and Opportunity are the same design, so they share one asset and
   // still get their own body rows, positions and GPU copies.
   { id: 'voyager1', label: 'Voyager 1', meshKey: 'voyager' },
   { id: 'voyager2', label: 'Voyager 2', meshKey: 'voyager' },

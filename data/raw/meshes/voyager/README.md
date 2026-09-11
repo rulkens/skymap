@@ -73,3 +73,14 @@ Axes **in the pre-baked GLB** (glTF Y-up, which is also the download's frame):
 | Science boom / instrument scan     | −Z                   |
 | Magnetometer boom                  | +Z, tilted toward +Y |
 | Planetary-radio-astronomy antennas | ±X                   |
+
+## Orbital elements — refresh query
+
+The `voyager1`/`voyager2` rows in `src/data/bodies/orbitalElements.ts` transcribe
+JPL Horizons osculating elements (heliocentric, ecliptic J2000, AU-D) at JDTDB
+2461294.5. To refresh, fetch and transcribe `EC A IN OM W Tp N` (swap `-31` for
+`-32` for Voyager 2), then update the epoch comment beside the rows:
+
+```
+https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='-31'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='ELEMENTS'&CENTER='500@10'&START_TIME='2026-09-11'&STOP_TIME='2026-09-12'&STEP_SIZE='1d'&REF_PLANE='ECLIPTIC'&OUT_UNITS='AU-D'
+```
