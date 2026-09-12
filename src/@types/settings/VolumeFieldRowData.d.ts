@@ -2,12 +2,10 @@
  * VolumeFieldRowData — the data the SettingsPanel needs to render a
  * single volume-field row.
  *
- * Projected from `state.settings.volumes.items` by `projectVolumeFieldRows`
- * (and its `EngineState` adapter `buildVolumeFieldsSnapshot`).  App reads the
- * items Record off the engine-owned store via `selectVolumeFieldItems` and runs
- * that projection in a `useMemo`, so the panel always reflects the live field
- * registry.  Also returned by `engineHandle.volumes.getState()` for one-shot
- * reads (dev console, tests).
+ * Projected from `state.settings.volumes.items` by `projectVolumeFieldRows`.
+ * App reads the items Record off the engine-owned store via
+ * `selectVolumeFieldItems` and runs that projection in a `useMemo`, so the
+ * panel always reflects the live field registry.
  *
  * The `label` field defaults to the `id` string: `addVolumeField`'s payload
  * is just the id, so no field is registered with an explicit human-readable
@@ -18,8 +16,8 @@
  * The `.tsx` carve-out (component-only types stay co-located with
  * their `.tsx`) does NOT apply here because `projectVolumeFieldRows`
  * — outside `components/` — also produces this type.  Living in
- * `@types/settings/` lets the SettingsPanel, the projection, and the
- * engine snapshot deep-import a single source of truth.
+ * `@types/settings/` lets the SettingsPanel and the projection
+ * deep-import a single source of truth.
  */
 
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
