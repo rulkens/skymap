@@ -29,6 +29,7 @@ import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import {
   foregroundFrustum,
   MIN_NEAR_M,
+  MIN_NEAR_MPC,
   NEAR_RATIO,
 } from '../../../../src/utils/camera/foregroundFrustum';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
@@ -66,14 +67,19 @@ function makePlanet(overrides: Partial<PlanetBody> = {}): PlanetBody {
   return { id: 'test-planet', label: 'Test Planet', radiusM: 1e5, albedo: [1, 1, 1], ...overrides };
 }
 
-/** Every `deriveSlabs` input, defaulted to "no bodies" so each test overrides only what it exercises. */
+/**
+ * Every `deriveSlabs` input, defaulted to "no bodies" so each test overrides
+ * only what it exercises. `altitudeMpc` defaults to the camera's own distance —
+ * the surfaceless case — and tests that care override it.
+ */
 function baseInput(
   overrides: Partial<Parameters<typeof deriveSlabs>[0]> = {},
 ): Parameters<typeof deriveSlabs>[0] {
+  const cam = overrides.cam ?? makeCam(100);
   return {
-    cam: makeCam(100),
+    cam,
     cosmoVp: makeCosmoVp(),
-    pivotRadiusMpc: null,
+    altitudeMpc: cam.distance,
     pose: NO_POSE,
     visibleBodies: [],
     viewportPx: [1920, 1080] as Vec2,
@@ -163,37 +169,25 @@ describe('deriveSlabs', () => {
     expect(Array.from(Float32Array.from(slabs[1]!.vp))).toEqual(Array.from(cosmoVp));
   });
 
-  it('with a pivot radius, keys the near-field bracket off ALTITUDE, not raw distance', () => {
-    // At a realistic close-approach altitude (50 m, comfortably above the
-    // ~15 m descent floor) the pivot's own radius utterly dominates raw
-    // `cam.distance`, so this is the actual regime the bug lived in: two very
-    // differently sized pivots at the SAME altitude must still get the same
-    // near/far.
-    const altitudeMpc = 0.05 * SCALE_UNITS.KM_TO_MPC; // 50 m
-    const moonletRadiusMpc = 10 * SCALE_UNITS.KM_TO_MPC;
+  it('keys the near-field bracket off `altitudeMpc`, never the camera distance', () => {
+    // A low orbit, where the pivot's radius dominates raw `cam.distance` and
+    // the ratio still clears `MIN_NEAR_MPC` (~6 m) so the bracket, not the
+    // floor, is what the assertion reads.
+    const altitudeMpc = 500 * SCALE_UNITS.KM_TO_MPC;
     const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;
-    const a = deriveSlabs(
-      baseInput({
-        cam: makeCam(moonletRadiusMpc + altitudeMpc),
-        pivotRadiusMpc: moonletRadiusMpc,
-      }),
+    const slabs = deriveSlabs(
+      baseInput({ cam: makeCam(earthRadiusMpc + altitudeMpc), altitudeMpc }),
     );
-    const b = deriveSlabs(
-      baseInput({ cam: makeCam(earthRadiusMpc + altitudeMpc), pivotRadiusMpc: earthRadiusMpc }),
-    );
-    const relDiff = Math.abs(a[0]!.near - b[0]!.near) / a[0]!.near;
-    expect(relDiff).toBeLessThan(1e-9);
-    expect(a[0]!.far).toBe(b[0]!.far);
+    expect(slabs[0]!.near).toBe(altitudeMpc * NEAR_RATIO);
+    expect(slabs[0]!.near).toBeGreaterThan(MIN_NEAR_MPC);
 
-    // Without the fix (keying off raw `cam.distance`), Earth's pivot would get
-    // a near plane over an order of magnitude farther out than the
-    // altitude-keyed one — comfortably past the 50 m altitude, i.e. the
-    // ground-clipping bug.
+    // Keying off raw `cam.distance` instead puts the near plane over an order
+    // of magnitude farther out — comfortably past the 500 km altitude.
     const rawDistanceBracket = foregroundFrustum(earthRadiusMpc + altitudeMpc);
-    expect(rawDistanceBracket.near / b[0]!.near).toBeGreaterThan(10);
+    expect(rawDistanceBracket.near / slabs[0]!.near).toBeGreaterThan(10);
   });
 
-  it('with no pivot radius, behaves exactly as before — raw distance', () => {
+  it('with a surfaceless pivot, the altitude IS the raw distance', () => {
     const distance = 250;
     const slabs = deriveSlabs(baseInput({ cam: makeCam(distance) }));
     const { near, far } = foregroundFrustum(distance);

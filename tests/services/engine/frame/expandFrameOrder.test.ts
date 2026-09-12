@@ -276,10 +276,11 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   it('every render step references only slabs present in deriveSlabs’ table', () => {
     // A render step naming an index outside that table throws in `slabViewOf`
     // the moment it runs, so a typo'd `slab` in FRAME_ORDER is a frame-1 crash.
+    const cam = makeCam();
     const slabs = deriveSlabs({
-      cam: makeCam(),
+      cam,
       cosmoVp: new Float32Array(16) as unknown as Mat4,
-      pivotRadiusMpc: null,
+      altitudeMpc: cam.distance,
       pose: () => null,
       visibleBodies: [],
       viewportPx: [1920, 1080],

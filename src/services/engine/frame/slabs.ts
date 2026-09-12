@@ -233,7 +233,13 @@ export function bodySlabRow(input: {
 export function deriveSlabs(input: {
   readonly cam: OrbitCamera;
   readonly cosmoVp: Mat4;
-  readonly pivotRadiusMpc: number | null;
+  /**
+   * Range from the eye to the pivot's surface, or raw orbit distance when the
+   * pivot is surfaceless (`pivotSurfaceRangeMpc`). NEAR0's bracket is sized
+   * from it so depth precision holds from galaxy scale down to standing on a
+   * surface — raw distance let a large body's radius dominate the bracket.
+   */
+  readonly altitudeMpc: number;
   readonly pose: BodyPoseProvider;
   readonly visibleBodies: readonly SceneBody[];
   readonly viewportPx: Readonly<Vec2>;
@@ -243,12 +249,8 @@ export function deriveSlabs(input: {
    * Earth has an entry today; every other host's row is unaffected. */
   readonly attachedBodiesByHostId?: ReadonlyMap<string, readonly HostFrameSphere[]>;
 }): readonly Slab[] {
-  const { cam, cosmoVp, pivotRadiusMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
+  const { cam, cosmoVp, altitudeMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
     input;
-  // NEAR0's bracket is adaptive, sized from ALTITUDE above a known pivot (else raw
-  // orbit distance), so depth precision holds from galaxy scale down to standing on
-  // a surface — with raw distance a large body's radius dominated the bracket.
-  const altitudeMpc = pivotRadiusMpc !== null ? cam.distance - pivotRadiusMpc : cam.distance;
   const { near, far } = foregroundFrustum(altitudeMpc);
   const fx = cam.target[0] - cam.position[0];
   const fy = cam.target[1] - cam.position[1];

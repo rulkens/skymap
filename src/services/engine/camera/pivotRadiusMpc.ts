@@ -2,9 +2,9 @@
  * pivotRadiusMpc — physical radius (Mpc) of the camera's orbit pivot, or
  * `null` when it has no surface (galaxy/structure/Milky Way, flown INTO and
  * never floored; or a mesh body, whose hull is a floor but not a surface).
- * `runFrame.ts`/`frameContext.ts`/`logCameraState.ts` import
- * this scalar directly, so `pivotFraming` (the orbit-controls zoom-floor
- * bundle) is built beside it below rather than displacing it.
+ * `pivotSurfaceRangeMpc.ts`/`logCameraState.ts` import this scalar directly, so
+ * `pivotFraming` (the orbit-controls zoom-floor bundle) is built beside it
+ * below rather than displacing it.
  */
 
 import { SCALE_UNITS } from '../../../data/scaleUnits';

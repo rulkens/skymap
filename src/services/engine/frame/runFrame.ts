@@ -14,7 +14,7 @@ import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
 import { cameraDofAnglesOf } from '../../../utils/camera/cameraDofAnglesOf';
@@ -148,14 +148,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // silently breaks the bar on retina.
   if (state.booted) {
     const snap = {
-      distance: worldPose.distance,
+      distance: pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus),
       fovYRad: projection.fovYRad,
     };
     const scaleInfo = computeScaleInfo({
       cam: snap,
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
-      pivotRadiusMpc: pivotRadiusMpc(pivotFocus),
     });
     if (scaleInfo !== null) {
       deps.cb.store.dispatch(engineScaleChanged(scaleInfo));

@@ -44,9 +44,9 @@
  * wheel-zoom distance floor (`clampDistance.ts: MIN_DISTANCE_MPC`, ~3 cm) and
  * must not be re-derived from it. It must stay BELOW
  * the camera's minimum ALTITUDE over a focused body — `deriveSlabs` (`slabs.ts`)
- * passes altitude (`cam.distance - pivotRadiusMpc`) here in place of raw
- * distance once a pivot is known, so a large body's own radius no longer
- * dominates the bracket. At Earth's ~15 m standoff floor
+ * passes its `altitudeMpc` input here in place of raw distance once a pivot is
+ * known, so a large body's own radius no longer dominates the bracket. At
+ * Earth's ~15 m standoff floor
  * (`clampDistance.ts: SURFACE_STANDOFF_RADII`) the ratio underflows and this
  * floor governs: ~6 m of near against ~15 m of altitude — a wide margin is
  * affordable because NEAR0 is reversed-Z with an infinite far plane

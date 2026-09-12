@@ -25,10 +25,11 @@
  *
  *     pxPerMpc(d) = viewportHeightPx / h_world(d)
  *
- * pixels at distance d.  We measure at the GROUND when the pivot is a body
- * or star — `cam.distance` is to its CENTRE, which saturates at ~1 radius
- * near the surface and would otherwise pin the legend there — and at the
- * pivot itself otherwise (empty space, galaxy, structure).
+ * pixels at distance d.  `cam.distance` is the range the bar measures at,
+ * resolved by the caller (`pivotSurfaceRangeMpc`): the GROUND when the pivot
+ * is a body or star, since a centre range saturates at ~1 radius near the
+ * surface and would pin the legend there, and the pivot itself otherwise
+ * (empty space, galaxy, structure).
  *
  * Given a `targetPx` (the rough pixel width we'd like the legend to
  * occupy — currently 150 px), we want to render a "nice" round number
@@ -81,27 +82,20 @@ import type { ScaleBarCamera } from '../../../@types/camera/ScaleBarCamera';
  * @param targetPx        Desired legend bar width in CSS pixels.  The
  *                        returned `widthPx` will be ≤ `targetPx` thanks to
  *                        `niceRound`'s floor behaviour.
- * @param pivotRadiusMpc  Physical radius of whatever sits at the orbit pivot,
- *                        or `null` when it has no surface. Required, not
- *                        optional: an optional param lets a call site
- *                        silently fall back to measuring at the pivot.
  */
 export function computeScaleInfo({
   cam,
   canvasSize,
   targetPx,
-  pivotRadiusMpc,
 }: {
   cam: ScaleBarCamera;
   canvasSize: { width: number; height: number };
   targetPx: number;
-  pivotRadiusMpc: number | null;
 }): ScaleInfo | null {
   const viewportCssHeight = canvasSize.height;
   if (viewportCssHeight === 0) return null;
 
-  const effectiveDistance = cam.distance - (pivotRadiusMpc ?? 0);
-  const pxPerMpc = viewportCssHeight / (2 * effectiveDistance * Math.tan(cam.fovYRad / 2));
+  const pxPerMpc = viewportCssHeight / (2 * cam.distance * Math.tan(cam.fovYRad / 2));
   if (!isFinite(pxPerMpc) || pxPerMpc <= 0) return null;
 
   const desiredMpc = targetPx / pxPerMpc;

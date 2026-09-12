@@ -31,7 +31,7 @@ import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo'
 import { meshBodySlabHostId } from '../../../utils/scene/meshBodySlabHostId';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
 import { deriveBodyStates } from './deriveBodyStates';
@@ -187,12 +187,12 @@ export function deriveFrameContext(
   });
   const starRangeM = starSphereRangeM({ spheres, camPosMpc: cam.position });
 
-  // The focused pivot's radius (or null) lets the near-field row key its near
-  // plane off ALTITUDE rather than raw distance — see `slabs.ts: deriveSlabs`.
+  // Frame-aware, so an engaged body arm's eye→ground range is not decremented a
+  // second time — see `slabs.ts: deriveSlabs`.
   const slabs = deriveSlabs({
     cam,
     cosmoVp: vp,
-    pivotRadiusMpc: pivotRadiusMpc(state.selectionRows.focus),
+    altitudeMpc: pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
     pose: bodyPose,
     visibleBodies,
     viewportPx: [canvasSize.width, canvasSize.height] as Vec2,
