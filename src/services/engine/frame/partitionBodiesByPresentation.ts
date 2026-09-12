@@ -37,6 +37,8 @@ import type { MeshBody } from '../../../@types/scene/MeshBody';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
+import { isMeshBody } from '../../../utils/scene/isMeshBody';
 import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
 
 /**
@@ -98,7 +100,7 @@ export function partitionBodiesByPresentation(input: {
       // Live position from the per-frame snapshot (keyed by id), not a baked
       // record field. Every seeded body has a snapshot state, so the lookup holds.
       positionMpc: bodyStates.get(body.id)!.positionMpc,
-      radiusM: body.radiusM,
+      radiusM: bodyFootprintRadiusM(body),
       camPosMpc,
       viewportHeightPx,
       fovYRad,
@@ -106,12 +108,10 @@ export function partitionBodiesByPresentation(input: {
     const resolved = diameterPx >= BODY_GLINT_MAX_PX;
 
     // A MeshBody carries no bodyTextureSpec entry, so it must route on TYPE
-    // before the texture-residency check — otherwise it silently falls to
-    // flat. 'meshKey' in body is the only valid discriminant: MeshBody is
-    // structurally assignable to PlanetBody in some field subsets.
+    // before the texture-residency check — otherwise it silently falls to flat.
     if (!resolved) {
       glints.push(body);
-    } else if ('meshKey' in body) {
+    } else if (isMeshBody(body)) {
       meshes.push(body);
     } else if (bodyTextureSpec(body.id) !== null && isTextureResident(body.id)) {
       textured.push(body);

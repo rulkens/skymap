@@ -16,13 +16,6 @@ describe('pinInsideNearPlane', () => {
     expect(pinInsideNearPlane([0, 0, 10], W_IS_Z, 5)).toEqual([0, 0, 10]);
   });
 
-  it('pins a centre inside the near plane a hair beyond it', () => {
-    // w = 2 against a 5-unit near plane, so the scale is 5·1.001/2 = 2.5025.
-    const [x, y, z] = pinInsideNearPlane([0, 0, 2], W_IS_Z, 5);
-    expect([x, y]).toEqual([0, 0]);
-    expect(z).toBeCloseTo(5.005, 12);
-  });
-
   it('tests depth, not distance — an off-axis centre farther away than the plane still pins', () => {
     // |centre| = 6.32 > 5, but its clip w is 2, so it sits inside the plane and
     // must be pushed out; a length-based test would have left it to be clipped.

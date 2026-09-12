@@ -61,7 +61,7 @@ function meshAt(id: string, radiusM: number, distanceM: number): SeededMesh {
     id,
     label: id,
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
-    radiusM,
+    boundingRadiusM: radiusM,
     albedo: [0.5, 0.5, 0.5],
     meshKey: `${id}-mesh`,
     standoffRadii: 2,

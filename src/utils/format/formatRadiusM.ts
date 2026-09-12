@@ -1,6 +1,6 @@
 /**
  * Format a non-negative body radius, metres in, with adaptive units.
- * `BodyInfo.radiusM` spans Earth (6.371e6 m) down to a metre-scale mesh body,
+ * A seeded body's radius spans Earth (6.371e6 m) down to a moon-scale rock,
  * which a single km conversion renders as "0 km" — hence the m/cm/mm ladder.
  * The km branch keeps `toLocaleString()`, not `formatScalar`, so Earth still
  * reads "6,371 km".

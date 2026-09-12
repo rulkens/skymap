@@ -16,7 +16,7 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -156,7 +156,7 @@ export function resolveWorldArm(
   if (framed.frame === 'absolute') return framed.pose;
   const bodyId = framed.frame.body;
   const bodyState = bodyStates.get(bodyId);
-  const body = SCENE_BODIES.find((row) => row.id === bodyId);
+  const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId);
   if (bodyState === undefined || body === undefined) {
     throw new Error(`resolveWorldArm: engaged body '${bodyId}' is unresolved this instant`);
   }

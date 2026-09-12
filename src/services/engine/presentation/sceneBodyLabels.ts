@@ -53,7 +53,8 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { CONSTELLATION_COUNT } from './constellationCaptions';
-import { sceneBodyPickId } from '../frame/passes/sceneBodyPickId';
+import { sceneBodyPickId } from '../../../utils/picking/sceneBodyPickId';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 
 /**
  * GPU buffer capacity for the foreground caption renderer — the `maxLabels`
@@ -166,7 +167,7 @@ function bodyLabel(
     // a scene-body caption reads at the same size as a nearby famous-galaxy
     // label — the "adopt the famous treatment" parity — and a future retune of
     // the famous band carries here automatically instead of silently drifting.
-    worldEmMpc: body.radiusM * SCALE_UNITS.M_TO_MPC,
+    worldEmMpc: bodyFootprintRadiusM(body) * SCALE_UNITS.M_TO_MPC,
     minPixelSize: FAMOUS_LABEL_STYLE.minPixelSize,
     maxPixelSize: FAMOUS_LABEL_STYLE.maxPixelSize,
     alignX: 'center',

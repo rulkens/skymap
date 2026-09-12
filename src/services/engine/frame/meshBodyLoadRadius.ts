@@ -14,5 +14,5 @@ const LOAD_RADIUS_BODY_RADII = 1e5;
 
 export function loadRadiusMpc(id: string): number {
   const body = findByIdOrThrow(SCENE_MESH_BODIES, id, 'meshBodyLoadRadius');
-  return body.radiusM * SCALE_UNITS.M_TO_MPC * LOAD_RADIUS_BODY_RADII;
+  return body.boundingRadiusM * SCALE_UNITS.M_TO_MPC * LOAD_RADIUS_BODY_RADII;
 }

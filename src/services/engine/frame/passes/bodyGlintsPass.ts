@@ -83,9 +83,10 @@ import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { seedIndexOfBody } from './seedIndexOfBody';
-import { glintBandClass } from './glintBandClass';
+import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
+import { glintBandClass } from '../../../../utils/picking/glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
+import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
 import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { regionById } from '../../../../utils/scene/regionById';
@@ -253,7 +254,7 @@ export const bodyGlintsPass: ContentPass = {
       const positionMpc = states.get(body.id)!.positionMpc;
       const diameterPx = bodyApparentDiameterPx({
         positionMpc,
-        radiusM: body.radiusM,
+        radiusM: bodyFootprintRadiusM(body),
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
         fovYRad: ctx.fovYRad,
@@ -447,7 +448,7 @@ export const bodyGlintsPass: ContentPass = {
       // drawn set and beyond it they match.
       const diameterPx = bodyApparentDiameterPx({
         positionMpc,
-        radiusM: body.radiusM,
+        radiusM: bodyFootprintRadiusM(body),
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
         fovYRad: ctx.fovYRad,

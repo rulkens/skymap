@@ -18,7 +18,7 @@ import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { ATMOSPHERE_PARAMS } from '../../../../data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
-import { SCENE_BODIES } from '../../../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
 import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
 import { composeMeshMvp } from '../../../../utils/camera/composeMeshMvp';
@@ -31,7 +31,7 @@ import { sunVisibleFraction } from '../../../../utils/scene/sunVisibleFraction';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { drawableMeshBodies } from '../drawableMeshBodies';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { seedIndexOfBody } from './seedIndexOfBody';
+import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 
 export const meshBodiesPass: ContentPass = {
   name: 'mesh-bodies',
@@ -52,9 +52,10 @@ export const meshBodiesPass: ContentPass = {
     if (bodies.length === 0) return;
     const bodyStates = sceneBodyStates(state, ctx);
     const hostState = bodyStates.get(hostId);
-    // Radius for the umbra geometry: the seed registry, the same home
-    // `bodyHomePose` and `bodyTextureLoadRadius` read it from.
-    const host = SCENE_BODIES.find((body) => body.id === hostId);
+    // The umbra and the host-shine solid angle are both ground geometry, so the
+    // host comes from the CELESTIAL roster — a mesh body hosting another has no
+    // ground to cast from and resolves as a miss rather than a hull.
+    const host = SCENE_CELESTIAL_BODIES.find((body) => body.id === hostId);
     if (hostState === undefined || host === undefined) return;
     // The SAME pose-provider closure `deriveSlabs` built this row's
     // `view.slab.vp` from — read, never re-derived.
@@ -95,9 +96,9 @@ export const meshBodiesPass: ContentPass = {
             hostPose.eyeRelBodyM[1] - posM[1],
             hostPose.eyeRelBodyM[2] - posM[2],
           ],
-          // Sunlight off the host's ground (`hostShineColor` is its albedo),
-          // over the share of this body's sky the host actually fills, over the
-          // Lambert π that this fill term — unlike `pbrDirect` — does not carry.
+          // A tuned fill, not a radiometric earthshine: the SHAPE follows the
+          // host's solid angle times its albedo (`hostShineColor`), the scale
+          // is art-directed — don't "correct" it toward a Lambertian value.
           // `sunIrradiance` is the fragment's own `SUN_IRRADIANCE`, mirrored
           // there under the parity test in `shaders/constants.parity.test.ts`.
           hostShineStrength: hosted
@@ -138,7 +139,7 @@ export const meshBodiesPass: ContentPass = {
           hostPose.eyeRelBodyM[1] - posM[1],
           hostPose.eyeRelBodyM[2] - posM[2],
         ],
-        body.radiusM,
+        body.boundingRadiusM,
         ctx.drawPxPerRad,
       );
       pickRenderer.drawSphere(pass, {

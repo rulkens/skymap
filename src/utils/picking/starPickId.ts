@@ -9,10 +9,10 @@
  * through the matching one. `null` = SKIP; see `seedIndexOfBody`'s −1 contract.
  */
 
-import { Source } from '../../../../data/sources';
-import { SCENE_STARS } from '../../../../data/bodies/sceneStars';
-import { SCENE_S_STARS } from '../../../../data/bodies/sceneSStars';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { Source } from '../../data/sources';
+import { SCENE_STARS } from '../../data/bodies/sceneStars';
+import { SCENE_S_STARS } from '../../data/bodies/sceneSStars';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../data/selectionEncoding';
 import { seedIndexOfBody } from './seedIndexOfBody';
 
 export function starPickId(id: string): number | null {

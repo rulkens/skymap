@@ -10,9 +10,8 @@
 export const RIBBON_SEGMENTS = 96; // MUST equal SEGMENTS in orbitTrail/constants.wesl
 export const MAX_ORBIT_OCCLUDERS = 16; // MUST equal MAX_OCCLUDERS in orbitTrail/constants.wesl
 
-// Apparent-size fade band, in on-screen orbit DIAMETER pixels — CPU-side only,
-// no WESL twin. Below CULL_PX an orbit is deep sub-pixel noise (aliasing, not a
-// legible path), so it is dropped from the draw entirely; from CULL_PX up to
-// FULL_PX its brightness ramps in, so it does not pop into existence.
+// Apparent-size fade band, in on-screen orbit DIAMETER pixels (no WESL twin):
+// below CULL_PX an orbit is sub-pixel aliasing rather than a legible path and
+// is dropped, then ramps in over CULL_PX→FULL_PX so it does not pop.
 export const CULL_PX = 10;
 export const FULL_PX = 20;

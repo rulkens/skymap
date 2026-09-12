@@ -3,34 +3,16 @@
  * by both label layers so a COSMO label and a NEAR0 caption become pick
  * geometry by the same rules. Input is already the post-declutter set the
  * renderer packed, so nothing here re-decides visibility.
- *
- * `hasPickableLabel` (the `pickEnabled` gate) is deliberately the CHEAP half
- * — identity + alpha, no projection: a gate that rejects a frame the emit
- * would fill is a silently dead pick, worse than an empty draw.
  */
 
-import type { Label2D } from '../../../../@types/rendering/Label2D';
-import type { Label2DProjection } from '../../../../@types/rendering/Label2DProjection';
-import type { LabelBBox } from '../../../../@types/rendering/LabelBBox';
-import type { LabelPickQuad } from '../../../../@types/rendering/LabelPickQuad';
-import { labelScreenRect } from '../../../../utils/labels/labelScreenRect';
-import { projectLabels } from '../../../../utils/labels/projectLabels';
-import { LABEL_PICK_GRACE_PADDING_PX } from '../../../../data/labels/labelPickGracePaddingPx';
-
-/**
- * Whether a label could take a click: it names a selectable subject
- * (`pickId`) and has opacity left. An invisible label is never pickable —
- * the fade is the affordance, so a label mid-fade-out stays clickable
- * exactly as long as it stays readable. The one predicate both the cheap
- * `hasPickableLabel` gate and the quad-emit loop below test.
- */
-function isPickableLabel(label: Label2D): boolean {
-  return label.pickId !== undefined && (label.fadeAlpha ?? 1) > 0;
-}
-
-export function hasPickableLabel(labels: readonly Label2D[]): boolean {
-  return labels.some(isPickableLabel);
-}
+import type { Label2D } from '../../@types/rendering/Label2D';
+import type { Label2DProjection } from '../../@types/rendering/Label2DProjection';
+import type { LabelBBox } from '../../@types/rendering/LabelBBox';
+import type { LabelPickQuad } from '../../@types/rendering/LabelPickQuad';
+import { isPickableLabel } from './isPickableLabel';
+import { labelScreenRect } from './labelScreenRect';
+import { projectLabels } from './projectLabels';
+import { LABEL_PICK_GRACE_PADDING_PX } from '../../data/labels/labelPickGracePaddingPx';
 
 /**
  * Screen rectangles for every label of `labels` that can take a click, in the

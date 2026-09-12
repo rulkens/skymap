@@ -31,7 +31,6 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusM: 6371000,
 };
 
 // A drag-style pose whose target is a FROZEN point (what orbitDrag produced from

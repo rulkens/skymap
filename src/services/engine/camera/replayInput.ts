@@ -27,7 +27,7 @@ import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
@@ -115,7 +115,7 @@ export function replayInput(
     if (base.frame === 'absolute') return false;
     // A playing clip owns the camera in both arms (the driver table's rule).
     if (camera.clip !== null) return true;
-    const body = SCENE_BODIES.find((row) => row.id === base.frame.body);
+    const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === base.frame.body);
     if (body === undefined) return true;
     const from =
       register.frame !== 'absolute' && register.frame.body === base.frame.body

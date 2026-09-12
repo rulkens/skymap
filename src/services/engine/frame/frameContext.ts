@@ -167,7 +167,7 @@ export function deriveFrameContext(
       host.id,
       attached.map((meshBody) => {
         const { posM } = bodyStateInHostFrame(bodyStates.get(meshBody.id)!, hostState);
-        return { posM, radiusM: meshBody.radiusM };
+        return { posM, radiusM: meshBody.boundingRadiusM };
       }),
     );
   }

@@ -18,9 +18,7 @@ const PASSES_DIR = fileURLToPath(
 // Pass files that still inline helpers, with their current count. Lower a row
 // when you extract; delete it at zero. `orbitTrailsPass`'s row is its
 // cross-frame `staging` scratch — sized from the elements table, owned by that
-// pass alone, so it has nowhere else to live. `glintBandClass`,
-// `labelPickQuads` and `sceneBodyPickId` are helpers misfiled in this folder
-// rather than passes; their rows clear when they move out of it.
+// pass alone, so it has nowhere else to live.
 const ALLOWED: Readonly<Record<string, number>> = {
   bodyGlintsPass: 8,
   cloudShellPass: 1,
@@ -28,14 +26,11 @@ const ALLOWED: Readonly<Record<string, number>> = {
   earthPass: 6,
   fieldStarSpherePass: 6,
   filamentsPass: 3,
-  glintBandClass: 3,
   horizonShellPass: 1,
-  labelPickQuads: 2,
   milkyWayPass: 1,
   orbitTrailsPass: 1,
   planetsPass: 1,
   ringsPass: 1,
-  sceneBodyPickId: 1,
   sgrAStarLensingPass: 5,
   starCatalogPass: 26,
   starPointsPass: 3,
@@ -82,11 +77,13 @@ describe('pass files declare only the pass', () => {
     const budget = ALLOWED[fileName.replace(/\.ts$/, '')] ?? 0;
     expect(
       stray.length,
-      `${fileName} declares ${stray.join(', ')} beside its ContentPass. Each ` +
-        'belongs in its own file — a helper under src/utils/ or ' +
+      `${fileName} declares ${stray.length} symbol(s) beside its ContentPass ` +
+        `(${stray.join(', ') || 'none'}); its ALLOWED row says ${budget}. Over ` +
+        'the row: move each to its own file — a helper under src/utils/ or ' +
         'src/services/engine/frame/, a constant under src/data/ — one symbol per ' +
-        `file, filename = symbol. Budget here is ${budget}: if you just lowered ` +
-        'it, lower this file’s ALLOWED row to match (rows never go up).',
-    ).toBeLessThanOrEqual(budget);
+        'file, filename = symbol. Under it: you just extracted one, so lower the ' +
+        `row to ${stray.length} in the same commit (delete it at 0). Exact, not a ` +
+        'ceiling — a stale-high row silently re-permits the slot you freed.',
+    ).toBe(budget);
   });
 });

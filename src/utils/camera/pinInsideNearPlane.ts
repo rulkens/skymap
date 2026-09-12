@@ -1,10 +1,9 @@
 /**
  * Push a camera-relative centre out until its clip `w` clears `nearClipW` —
  * read off the given vp, not the centre's LENGTH, since the two differ by the
- * off-axis cosine and clipping tests the depth. The threshold is the near plane
- * expressed in THAT vp's clip units, which for the NEAR0 overlays are metres
- * (`near0OverlayClip`), not the slab's Mpc. A centre behind the eye (`w <= 0`)
- * is left alone: scaling by a negative ratio would fold it into view.
+ * off-axis cosine and clipping tests the depth. `nearClipW` is in THAT vp's
+ * clip units (`near0OverlayClip`). A centre behind the eye (`w <= 0`) is left
+ * alone: scaling by a negative ratio would fold it into view.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

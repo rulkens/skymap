@@ -13,7 +13,7 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../data/bodies/sceneAnchors';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { SURFACE_FIXED_SITES } from '../../../data/bodies/surfaceFixedSites';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
@@ -77,7 +77,9 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
         `deriveBodyStates: site '${site.id}' names unpositioned host '${site.hostId}'`,
       );
     }
-    const { radiusM } = findByIdOrThrow(SCENE_BODIES, site.hostId, 'deriveBodyStates');
+    // The ground radius, so `SCENE_CELESTIAL_BODIES`: a site is pinned to a
+    // surface, which is exactly what a mesh body's hull is not.
+    const { radiusM } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
     const offsetM = rotateVec3ByTightMat3(
       surfacePointBodyFixed(site.latDeg, site.lonDeg, radiusM + site.altitudeM),
       orientationForBody(site.hostId, simDays, positions),

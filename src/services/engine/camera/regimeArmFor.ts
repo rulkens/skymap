@@ -12,7 +12,7 @@ import type { PoseFrame } from '../../../@types/camera/PoseFrame';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { hOverR } from './hOverR';
 import { nearestBodyHR } from './nearestBodyHR';
 
@@ -39,7 +39,7 @@ export function regimeArmFor(
   if (focusedBodyId !== null && focusedBodyId !== current.body) return 'absolute';
 
   // Unresolved this frame: hold rather than guess — the caller's next frame retries.
-  const row = SCENE_BODIES.find((body) => body.id === current.body);
+  const row = SCENE_CELESTIAL_BODIES.find((body) => body.id === current.body);
   const bodyState = bodyStates.get(current.body);
   if (row === undefined || bodyState === undefined) return current;
   return hOverR(eyeMpc, bodyState, row.radiusM) > tuning.disengageHR ? 'absolute' : current;

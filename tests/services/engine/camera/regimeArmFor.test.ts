@@ -16,7 +16,8 @@ import { describe, it, expect } from 'vitest';
 import { regimeArmFor } from '../../../../src/services/engine/camera/regimeArmFor';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -215,13 +216,16 @@ describe('regimeArmFor', () => {
   });
 
   it('a mesh body never engages, even with the eye inside its bounding sphere', () => {
-    // Voyager's sphere is set by a 13 m boom around a 4 m bus, and its seed
-    // parks the zoom floor inside it; the body arm's surface camera has no
-    // surface there, so the eye stays absolute and orbits the pivot.
-    const voyager = SCENE_BODIES.find((body) => body.id === 'voyager1')!;
-    const bodyStates = new Map<BodyId, BodyState>([[bodyId('voyager1'), bodyStateAtOrigin()]]);
-    expect(
-      regimeArmFor('absolute', eyeAt(voyager.radiusM, -0.5), bodyStates, 'voyager1', TUNING),
-    ).toBe('absolute');
+    // The regression the `boundingRadiusM` rename exists to prevent: a mesh
+    // body's radius is a hull-plus-boom sphere, mostly empty space. Reading it
+    // as ground put the eye at a huge NEGATIVE h/R — the deepest "altitude" in
+    // the scene — so the surface arm engaged beside a boom and the orbit drag
+    // snapped to surface damping.
+    const petunias = findByIdOrThrow(SCENE_MESH_BODIES, 'petunias', 'test');
+    const bodyStates = new Map<BodyId, BodyState>([[bodyId('petunias'), bodyStateAtOrigin()]]);
+    const insideM = m(petunias.boundingRadiusM * 0.5);
+    expect(regimeArmFor('absolute', [insideM, 0, 0], bodyStates, 'petunias', TUNING)).toBe(
+      'absolute',
+    );
   });
 });

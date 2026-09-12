@@ -15,12 +15,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
+import { glintBandClass } from '../../../src/utils/picking/glintBandClass';
 import {
-  glintBandClass,
   GLINT_CLASS_EARTH,
   GLINT_CLASS_PLANET,
   GLINT_CLASS_MOON,
-} from '../../../../../src/services/engine/frame/passes/glintBandClass';
+} from '../../../src/data/bodies/glintPickClasses';
 
 describe('glintBandClass — id → priority class', () => {
   it('maps the focus body, a heliocentric planet, and a moon to distinct classes', () => {
