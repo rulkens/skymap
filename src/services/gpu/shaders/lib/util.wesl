@@ -151,8 +151,8 @@ fn hueToRgb(h: f32) -> vec3<f32> {
 //   b = dot(m, rd)
 //   c = dot(m, m) - r²
 //
-// and roots are '-b ± sqrt(b² - c)'. The early-exit checks save the
-// sqrt cost when the ray clearly misses.
+// and the roots are the stable pair below. The early-exit checks save
+// the sqrt cost when the ray clearly misses.
 //
 // CPU twin: 'utils/math/raySphereRoots.ts'. It omits the behind-origin
 // 'c > 0 && b > 0' sentinel — callers there inspect the returned root
@@ -170,7 +170,12 @@ fn raySphere(ro: vec3<f32>, rd: vec3<f32>, center: vec3<f32>, radius: f32) -> ve
   let discr = b * b - c;
   if (discr < 0.0) { return vec2<f32>(-1.0, -1.0); }
   let s = sqrt(discr);
-  return vec2<f32>(-b - s, -b + s);
+  // Stable pair 'q = -(b + sign(b)*s)' and 'c / q': neither root cancels,
+  // where '-b - s' loses every digit once b² >> c — a ray leaving ground level.
+  let q = -(b + select(-s, s, b >= 0.0));
+  // q == 0 needs b = s = 0, hence c = 0: a tangent ray leaving the surface.
+  let other = select(c / q, 0.0, q == 0.0);
+  return vec2<f32>(min(q, other), max(q, other));
 }
 
 // rayPlaneY0 — ray intersection with the horizontal plane y=0 (a disc's own
