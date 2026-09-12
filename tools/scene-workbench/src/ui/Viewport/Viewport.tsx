@@ -121,7 +121,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         },
       });
       pass.setBindGroup(0, cameraUniform.bindGroup);
-      renderers.draw(pass, resources, state.view.hiddenAssetIds);
+      renderers.draw(pass, resources, state.view.hiddenAssetIds, state.view.display);
       pass.end();
       gpu.device.queue.submit([encoder.finish()]);
     };

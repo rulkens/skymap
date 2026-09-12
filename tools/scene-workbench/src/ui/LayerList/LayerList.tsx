@@ -25,7 +25,7 @@ function LayerList(): ReactNode {
         const hidden = hiddenAssetIds.includes(asset.id);
         return (
           <li key={asset.id} className={styles.row}>
-            <label className={styles.toggleLabel}>
+            <label className={styles.toggleLabel} title={asset.label}>
               <span className={styles.assetLabel}>{asset.label}</span>
               <input
                 type="checkbox"

@@ -29,7 +29,27 @@ export type SplatGpuAsset = {
   dispose(): void;
 };
 
-export type GpuAsset = LidarGpuAsset | SplatGpuAsset;
+/**
+ * MVS mesh: one indexed primitive plus its atlas (spec §5). `texture` is plain `rgba8unorm` — the
+ * swapchain is non-sRGB, siblings pass encoded colour through; `-srgb` looks right, renders dark.
+ * The two edge buffers index the same `positions` as line lists, for the wireframe overlay's
+ * manifold and open (border / non-manifold) classes — see `meshEdgeIndices`.
+ */
+export type MeshGpuAsset = {
+  readonly kind: 'mesh';
+  readonly positions: GPUBuffer;
+  readonly uvs: GPUBuffer;
+  readonly indices: GPUBuffer;
+  readonly indexCount: number;
+  readonly manifoldEdges: GPUBuffer;
+  readonly manifoldEdgeIndexCount: number;
+  readonly openEdges: GPUBuffer;
+  readonly openEdgeIndexCount: number;
+  readonly texture: GPUTexture;
+  dispose(): void;
+};
+
+export type GpuAsset = LidarGpuAsset | SplatGpuAsset | MeshGpuAsset;
 
 export type RenderResources = {
   gpu: GpuContext | null;

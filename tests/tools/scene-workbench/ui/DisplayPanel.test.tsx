@@ -44,4 +44,18 @@ describe('DisplayPanel', () => {
       opacityScale: 1.05,
     });
   });
+
+  it('drives the mesh wireframe flag through its checkbox', () => {
+    const { store } = createSceneStore();
+
+    render(
+      <Provider store={store}>
+        <DisplayPanel />
+      </Provider>,
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /wireframe/i }));
+
+    expect(store.getState().view.display.mesh.wireframe).toBe(true);
+  });
 });

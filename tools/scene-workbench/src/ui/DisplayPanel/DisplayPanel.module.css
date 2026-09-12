@@ -1,0 +1,7 @@
+.toggleLabel {
+  composes: toggleLabel from '../../../../../src/components/common/shared.module.css';
+}
+
+.checkbox {
+  composes: checkbox from '../../../../../src/components/common/shared.module.css';
+}
