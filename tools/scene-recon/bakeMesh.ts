@@ -79,11 +79,6 @@ type Stage = {
   readonly tool: string;
   readonly args: readonly string[];
   readonly output: string;
-  /** Cleared alongside `output`: every workdir file with this extension.
-   *  OpenMVS caches depth maps as `depth####.dmap` keyed by image *index*, and
-   *  silently reuses any it finds — a rerun whose frame set or order moved
-   *  feeds stale maps to the wrong images and aborts mid-fusion. */
-  readonly clears?: string;
 };
 
 /** The workdir every stage runs in, `bakeMesh`'s and `main()`'s runners alike. */
@@ -118,7 +113,6 @@ function bakeStages(): readonly Stage[] {
     {
       tool: 'DensifyPointCloud',
       output: 'scene_dense.mvs',
-      clears: '.dmap',
       args: ['scene.mvs', '--resolution-level', '0', '--number-views', '0', '--remove-dmaps', '1'],
     },
     { tool: 'ReconstructMesh', output: MESH_PLY, args: ['scene_dense.mvs'] },
@@ -239,6 +233,12 @@ export async function bakeMesh(
       process.stderr.write(`bakeMesh: re-read ${converted} four-band frame(s) as RGB\n`);
     }
 
+    // OpenMVS caches depth maps as `depth####.dmap` keyed by image *index*, and
+    // silently reuses any it finds — a rerun whose frame set or order moved
+    // feeds stale maps to the wrong images and aborts mid-fusion.
+    const staleDmaps = (await readdir(workDir)).filter((name) => name.endsWith('.dmap'));
+    await Promise.all(staleDmaps.map((name) => rm(join(workDir, name))));
+
     process.stderr.write(
       `bakeMesh: reconstructing ${harvest.poses.length} frame(s) in ${workDir}…\n`,
     );
@@ -246,11 +246,6 @@ export async function bakeMesh(
       // A stage that exits 0 without writing must fail the next stage's
       // missing-input check, never ship the previous run's file.
       await rm(join(workDir, stage.output), { recursive: true, force: true });
-      const { clears } = stage;
-      if (clears) {
-        const stale = (await readdir(workDir)).filter((name) => name.endsWith(clears));
-        await Promise.all(stale.map((name) => rm(join(workDir, name))));
-      }
       if (stage.tool === 'colmap') await deps.runColmap(stage.args);
       else await deps.runOpenMvs(stage.tool, stage.args);
     }
