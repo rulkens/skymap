@@ -23,6 +23,9 @@ import {
 import { MIN_NEAR_MPC } from '../../../../src/utils/camera/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
+import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 
 const EARTH_ROW: SelectionRow = {
@@ -30,7 +33,6 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusM: 6371000,
 };
 
 describe('pivotRadiusMpc', () => {
@@ -78,39 +80,33 @@ describe('pivotFraming', () => {
       id: 'sgr-a-star',
       label: 'Sagittarius A*',
       positionMpc: [0, 0, 0],
-      radiusM: 1.269e10,
-      standoffRadii: 2.0,
     };
-    const radiusMpc = 1.269e10 * SCALE_UNITS.M_TO_MPC;
-    expect(pivotFraming(sgrAStar)).toEqual({ radiusMpc, floorMpc: radiusMpc * 2.0 });
+    const radiusMpc = SGR_A_STAR.radiusM * SCALE_UNITS.M_TO_MPC;
+    expect(pivotFraming(sgrAStar)).toEqual({
+      radiusMpc,
+      floorMpc: radiusMpc * SGR_A_STAR.standoffRadii!,
+    });
+    expect(SGR_A_STAR.standoffRadii).toBe(2.0); // the override, not the shared constant
   });
 
-  it('a body smaller than the absolute floor still gets the absolute floor', () => {
-    // A 1 cm pebble's own standoff is below MIN_DISTANCE_MPC (~3 cm), the
-    // degeneracy backstop. The floor is a max of the two, so the absolute
-    // floor wins for pivots that small.
-    const pebble: SelectionRow = {
-      type: 'body',
-      id: 'pebble',
-      label: 'Pebble',
-      positionMpc: [0, 0, 0],
-      radiusM: 0.01,
-    };
-    expect(pivotFraming(pebble).floorMpc).toBe(MIN_DISTANCE_MPC);
-  });
-
-  it('a metre-scale mesh body is floored at its own two-radii standoff, not the absolute floor', () => {
-    // Regression for the wheel-zoom snap: the 6.8 m whale must keep the floor
-    // the fly-to landed against instead of being flung out to the backstop.
+  it('a mesh body reports NO surface radius, and floors on its bounding sphere', () => {
+    // Two halves of one rule. The null is the currency fix: the zoom taper and
+    // the h/R readouts anchor on `radiusMpc`, and a bake hull is not ground to
+    // measure an altitude over. The floor is the wheel-zoom snap regression:
+    // the whale must keep the standoff the fly-to landed against instead of
+    // being flung out to the backstop.
     const whale: SelectionRow = {
       type: 'body',
       id: 'whale',
       label: 'Whale',
       positionMpc: [0, 0, 0],
-      radiusM: 6.8,
-      standoffRadii: 2,
     };
-    expect(pivotFraming(whale).floorMpc).toBeCloseTo(13.6 * SCALE_UNITS.M_TO_MPC, 30);
+    const seed = findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test');
+    expect(pivotFraming(whale).radiusMpc).toBeNull();
+    expect(pivotFraming(whale).floorMpc).toBeCloseTo(
+      seed.boundingRadiusM * seed.standoffRadii * SCALE_UNITS.M_TO_MPC,
+      30,
+    );
     expect(pivotFraming(whale).floorMpc).toBeGreaterThan(MIN_DISTANCE_MPC);
   });
 

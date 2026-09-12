@@ -38,6 +38,9 @@ import {
   MILKY_WAY_CENTER_WORLD,
 } from '../../../data/milkyWay/galacticCenter';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { NEAR0, COSMO } from '../frame/slabs';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
@@ -94,7 +97,9 @@ const SELECTION_HALO_TABLE: {
   // it through `near0SelectionRingPass` (not the COSMO layer), so the two
   // layers stay slab-exclusive on the shared renderer.
   body: (row) => ({
-    radiusMpc: row.radiusM * SCALE_UNITS.M_TO_MPC,
+    radiusMpc:
+      bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, row.id, 'selectionHaloTable')) *
+      SCALE_UNITS.M_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
     slab: NEAR0,
   }),

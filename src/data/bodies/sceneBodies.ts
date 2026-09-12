@@ -8,8 +8,8 @@
  * is what makes a body searchable, focusable and selectable AT ALL: all three
  * consumers return null on a miss, so an omitted body fails silently rather than
  * loudly. Consumers only touch the
- * fields the `SceneBody` union shares (`id`, `label`, `radiusM`); a body's
- * position is not among them, and comes from the `deriveBodyStates` snapshot.
+ * fields the `SceneBody` union shares (`id`, `label`); a body's size and
+ * position are not among them — see `SceneBody.d.ts` and `deriveBodyStates`.
  */
 
 import { SCENE_EARTH } from './sceneEarth';

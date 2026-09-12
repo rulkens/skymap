@@ -49,7 +49,10 @@ export function sceneOccluderBodies(
   const meshRenderer = state.gpu.meshBodyRenderer;
   for (const body of meshes) {
     if (!(meshRenderer?.hasMesh(body.id) ?? false)) continue;
-    occluders.push({ positionMpc: states.get(body.id)!.positionMpc, radiusM: body.radiusM });
+    occluders.push({
+      positionMpc: states.get(body.id)!.positionMpc,
+      radiusM: body.boundingRadiusM,
+    });
   }
   for (const star of spheres) {
     occluders.push({ positionMpc: star.positionMpc, radiusM: star.radiusM });
