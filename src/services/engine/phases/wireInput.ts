@@ -35,7 +35,8 @@ import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuH
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
-  const { canvas, home } = deps;
+  const { canvas } = deps;
+  const home = deps.composition.home;
 
   // `ctx.format` has no live source at this phase (no row here bakes a
   // swap-format pipeline); it throws rather than silently re-deriving a value

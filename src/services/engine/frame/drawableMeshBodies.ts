@@ -9,14 +9,14 @@
  * yet decoded draws nothing — invisible rather than a wrong shape (spec).
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
 import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
 import { sceneBodyPartition } from './sceneBodyPartition';
 
 export function drawableMeshBodies(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
   hostId: string,
 ): readonly MeshBody[] {

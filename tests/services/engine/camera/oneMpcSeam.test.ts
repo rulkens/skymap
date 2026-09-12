@@ -72,7 +72,7 @@ const TS_FILES: readonly string[] = [
 // real content, and specifically the files each finding was written about.
 const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/frame/passes/earthPass.ts',
-  'src/services/engine/frame/frameProgram.ts',
+  'src/services/engine/frame/timing/timedSlots.ts',
   'src/services/engine/frame/visibleSlabBodies.ts',
   'src/services/gpu/renderers/bodies/planetRenderer.ts',
   'src/services/engine/camera/cameraDrivers.ts',
@@ -138,7 +138,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "framing-bridge precedent (line 332) — the follow rows' initial-approach branch converts the focused body's radiusM to Mpc to seed bodyFocusDistance's framing target, the same radius->Mpc bridge as bodyLikeFraming, not pose math",
   ],
   [
-    'src/services/engine/frame/near0OverlayClip.ts',
+    'src/services/engine/frame/near0OverlayClipScale.ts',
     'clip-unit precedent — the factor is a UNIFORM RESCALE of the NEAR0 overlay clip space (NDC-invariant, keeping clip w off the rasterizer floor); it converts no pose and no position, and the anchors it projects stay in Mpc',
   ],
   [

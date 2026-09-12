@@ -20,8 +20,7 @@
 //
 //   @group(0) Uniforms — a prefix mirror of the points pick uniform
 //             image (points/io.wesl::Uniforms).  pickMilkyWay binds its
-//             OWN buffer here: the MW is the sole pickable in the NEAR0
-//             pick pass, so there is no caller-bound slot 0 to inherit.
+//             OWN buffer here.
 //             The BYTES are still the full points pick image — the layer
 //             builds them with pickUniformBytesOf, the same packer the
 //             points pick uses — so the mirrored struct below must

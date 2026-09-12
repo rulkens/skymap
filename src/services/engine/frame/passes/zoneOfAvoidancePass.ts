@@ -10,7 +10,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 import { deriveZoneOfAvoidanceLiveness } from '../zoneOfAvoidanceLiveness';
 
 // Shell shape — visual-pass placeholders, Mpc / degrees.
@@ -21,9 +20,6 @@ const ANTICENTER_DEG = 3;
 
 export const zoneOfAvoidancePass: ContentPass = {
   name: 'zone-of-avoidance',
-  slab: COSMO,
-  target: 'zoa',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     return deriveZoneOfAvoidanceLiveness(state, ctx) !== null;

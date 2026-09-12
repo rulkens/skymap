@@ -7,12 +7,12 @@
  * vanished disc claim a click.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 
 export function milkyWayVisible(
-  state: EngineState,
+  state: PassState,
   camPos: Readonly<Vec3>,
   fovYRad: number,
   viewportHeightPx: number,

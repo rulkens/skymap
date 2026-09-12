@@ -7,14 +7,14 @@
  * coordinate agree to only ~4 f32 digits (see `rebaseViewProj`'s module
  * header). `vp` stays f64 in Mpc for the lift stage's inverse-projection math;
  * `vpF32` is rescaled to clip metres and narrowed once for the renderer upload
- * (`near0OverlayClip` — the rasterizer's `w` floor). Memoised per `ctx`, like
+ * (`near0OverlayVpF32` — the rasterizer's `w` floor). Memoised per `ctx`, like
  * its COSMO sibling.
  */
 
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
-import { near0OverlayVpF32 } from './near0OverlayClip';
+import { near0OverlayVpF32 } from './near0OverlayVpF32';
 import { NEAR0 } from './slabs';
 
 const cache = new WeakMap<ReadyFrameContext, Label2DProjection>();

@@ -8,16 +8,12 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { NEAR0 } from '../slabs';
 import { near0LabelProjection } from '../near0LabelProjection';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 
 export const foregroundLabelsPass: ContentPass = {
   name: 'foreground-labels',
-  slab: NEAR0,
-  target: 'swap',
-  blend: 'over',
   // Ranks a caption over the body disc it draws on — `ContentPass.pickTarget`.
   pickTarget: 'overlay',
 

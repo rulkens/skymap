@@ -186,13 +186,6 @@ export function createGalaxyPickRenderer(
    * patching.  The caller owns the pass lifecycle (`beginRenderPass` /
    * `pass.end()`).
    *
-   * `@group(0)` prefix contract: any sibling pick pipeline that reads the
-   * point pick uniform via the caller-bound `@group(0)` CameraUniforms
-   * prefix relies on the upload + bind happening unconditionally — a
-   * galaxy-empty scene (every catalog toggled off) must still leave slot 0
-   * pointing at the freshly-uploaded pick camera buffer; the per-source loop
-   * simply issues no draws.
-   *
    * The `@group(2)` bind-group cache is keyed by GPUBuffer identity, so
    * a tier swap that destroys an old sourceBuffer invalidates the
    * cached bind group via GC.
@@ -235,21 +228,6 @@ export function createGalaxyPickRenderer(
     }
   }
 
-  /**
-   * Re-bind `@group(0)` to the point-pick camera uniform bind group (built
-   * once at construction against `pickUniformBuffer`, whose bytes `drawPoints`
-   * last uploaded).
-   *
-   * This exists so any `drawPick` that binds its own slot-0 uniform — the
-   * procedural-disk pick binds the disk camera at `@group(0)` — can restore
-   * the shared camera prefix before sibling fold-ins that read that prefix but
-   * bind nothing themselves. Without the restore they read the disk's leftover
-   * uniform (and fail validation once a mirror's read extent exceeds it).
-   */
-  function bindCamera(pass: GPURenderPassEncoder): void {
-    pass.setBindGroup(0, pickUniformBindGroup);
-  }
-
   function destroy(): void {
     dummyFadeBuffer.destroy();
     pickUniformBuffer.destroy();
@@ -260,7 +238,6 @@ export function createGalaxyPickRenderer(
   const renderer: GalaxyPickRenderer = {
     label: 'galaxyPickRenderer',
     drawPoints,
-    bindCamera,
     destroy,
   };
   renderer satisfies Renderer;

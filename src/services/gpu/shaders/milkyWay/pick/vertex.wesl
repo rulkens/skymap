@@ -39,10 +39,8 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::pickDepthBands::PICK_BAND_BACKDROP_EPS;
 
 // @group(0) points-pick uniform mirror — bound by pickMilkyWay itself
-// from its own buffer (the MW is the sole pickable in the NEAR0 pick
-// pass, so there is no prior draw to inherit a camera from). Reads extend
-// through 'pxPerRad' at byte 108 of the points pick image — see io.wesl
-// for the mirrored prefix layout.
+// from its own buffer. Reads extend through 'pxPerRad' at byte 108 of the
+// points pick image — see io.wesl for the mirrored prefix layout.
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 // @group(2) MilkyWayPickUniforms — world centre + source code + disc

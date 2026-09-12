@@ -9,7 +9,7 @@
  * teardown by call count.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createRenderTargets } from '../../../src/services/gpu/renderTargets';
+import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 
@@ -56,6 +56,17 @@ function stateWithDivisor(
     skyCubemapCapture: { lastBandActive, lastGcDistanceMpc },
   } as unknown as EngineState;
 }
+
+describe('renderTargetRows', () => {
+  it('render-target row ids are unique', () => {
+    // Ids are the wire between three independently maintained artifacts —
+    // `FRAME_ORDER`'s target strings, `checkFrameOrder`'s declared set, and the
+    // per-id texture maps inside `createRenderTargets`. A duplicate would make
+    // the later row silently shadow the earlier one in every one of them.
+    const rows = renderTargetRows(SWAP_FORMAT);
+    expect(new Set(rows.map((row) => row.id)).size).toBe(rows.length);
+  });
+});
 
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {

@@ -78,7 +78,8 @@ import { sceneOccluderBodies } from '../sceneOccluderBodies';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { overflowFade } from '../../../../utils/scene/overflowFade';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
-import { NEAR0_OVERLAY_CLIP_SCALE, near0OverlayVpF32 } from '../near0OverlayClip';
+import { NEAR0_OVERLAY_CLIP_SCALE } from '../near0OverlayClipScale';
+import { near0OverlayVpF32 } from '../near0OverlayVpF32';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
 import { subjectOccludedByBodies } from '../../../../utils/scene/subjectOccludedByBodies';
@@ -86,9 +87,6 @@ import { pinInsideNearPlane } from '../../../../utils/camera/pinInsideNearPlane'
 
 export const near0SelectionRingPass: ContentPass = {
   name: 'near0-selection-ring',
-  slab: NEAR0,
-  target: 'swap',
-  blend: 'over',
 
   enabled(state, _ctx, _view) {
     if (state.gpu.selectionRingRenderer === null) return false;
@@ -145,7 +143,7 @@ export const near0SelectionRingPass: ContentPass = {
     if (alpha <= 0) return;
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
-    // centre, then rescale to clip metres (`near0OverlayClip`) and narrow HERE,
+    // centre, then rescale to clip metres (`near0OverlayVpF32`) and narrow HERE,
     // at the GPU-upload boundary: the rescale is this pass's own because the
     // ring renderer is shared with the COSMO sibling, which must not carry it.
     const rebasedVp = near0OverlayVpF32(rebaseViewProj(view.slab.vp, view.camPos));

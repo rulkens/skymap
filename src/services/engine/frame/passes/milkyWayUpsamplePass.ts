@@ -13,12 +13,10 @@
  */
 
 import { createUpsamplePass } from './createUpsamplePass';
-import { NEAR0 } from '../slabs';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 
 export const milkyWayUpsamplePass = createUpsamplePass({
   name: 'milky-way-upsample',
-  slab: NEAR0,
   sourceTargetId: 'mw-aggregate',
   handleOf: (state) => state.gpu.milkyWayAggregateUpsample,
   enabled(state, ctx) {

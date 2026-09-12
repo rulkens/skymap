@@ -53,6 +53,8 @@ vi.mock('../../../../src/services/engine/frame/runFrame', () => ({
 // Imported AFTER the mocks so startLoop picks them up.
 import { startLoop } from '../../../../src/services/engine/phases/startLoop';
 import { goLive } from '../../../../src/state/time/timeSlice';
+import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
+import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -61,7 +63,10 @@ import { goLive } from '../../../../src/state/time/timeSlice';
  * what the phase reads:
  *   - `state.sources.catalogs` for the early-return guard;
  *   - `state.subsystems.scheduler.requestRender` for the rAF kick;
- *   - `state.gpu.timingService` omitted (the fixture keeps `gpu: {}`).
+ *   - `state.gpu.renderTargets.specs` for the `checkFrameOrder` boot call —
+ *     the REAL rows, so the check runs for real here rather than being
+ *     defanged by a stub (its own coverage is `frameOrderBoot.test.ts`);
+ *   - `state.gpu.timingService` omitted.
  *
  * `cloudCount` controls how many entries `catalogs` carries; the values
  * don't matter (only `.size` is read in this phase).
@@ -73,7 +78,7 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
   }
   return {
     sources: { catalogs },
-    gpu: {},
+    gpu: { renderTargets: { specs: renderTargetRows('bgra8unorm') } },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
     },
@@ -98,7 +103,7 @@ function makeDeps({ timeMode = 'live' }: { timeMode?: 'live' | 'manual' } = {}):
     cb: {
       store: { dispatch: vi.fn(), getState: () => ({ time: { mode: timeMode } }) },
     } as never,
-    home: { focus: null, seedSelection: false },
+    composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

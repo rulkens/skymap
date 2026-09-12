@@ -196,7 +196,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb,
-    home: EARTH_HOME,
+    composition: { layers: [], home: EARTH_HOME },
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },
@@ -259,7 +259,10 @@ describe('wireInput', () => {
 
   it('seeds focus but not select when the home config withholds the selection', async () => {
     const state = makeState();
-    const deps = { ...makeDeps(), home: { ...EARTH_HOME, seedSelection: false } };
+    const deps = {
+      ...makeDeps(),
+      composition: { layers: [], home: { ...EARTH_HOME, seedSelection: false } },
+    };
 
     await wireInput(state, deps);
 
@@ -272,7 +275,10 @@ describe('wireInput', () => {
 
   it('dispatches no selection at all for a composition with no home target', async () => {
     const state = makeState();
-    const deps = { ...makeDeps(), home: { ...EARTH_HOME, focus: null } };
+    const deps = {
+      ...makeDeps(),
+      composition: { layers: [], home: { ...EARTH_HOME, focus: null } },
+    };
 
     await wireInput(state, deps);
 

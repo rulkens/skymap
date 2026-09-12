@@ -103,6 +103,7 @@ import { installLoadProgress } from '../../../../src/services/engine/wiring/inst
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -393,7 +394,7 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
     const deps: BootstrapDeps = {
       canvas: {} as HTMLCanvasElement,
       cb: { store } as unknown as BootstrapDeps['cb'],
-      home: { focus: null, seedSelection: false },
+      composition: STUB_COMPOSITION,
       frameRef: { current: () => {} },
       detachControlsRef: { current: null },
       handleRef: { current: null },
@@ -416,7 +417,7 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
     const deps: BootstrapDeps = {
       canvas: {} as HTMLCanvasElement,
       cb: { store } as unknown as BootstrapDeps['cb'],
-      home: { focus: null, seedSelection: false },
+      composition: STUB_COMPOSITION,
       frameRef: { current: () => {} },
       detachControlsRef: { current: null },
       handleRef: { current: null },

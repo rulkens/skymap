@@ -5,15 +5,16 @@
  * ### Why pick is NOT a FRAME member
  *
  * The visual FRAME is a linear `FrameStep[]` the executor walks once per
- * animation tick (`frameProgram.ts` / `executeFrame.ts`). Pick is deliberately
+ * animation tick (`frameOrder.ts` / `executeFrame.ts`). Pick is deliberately
  * NOT one of those steps: it is a demand-driven query (hover / click), it
  * produces a value rather than swap-chain pixels, and it runs on its OWN
  * command encoder + `queue.submit` at a cadence set by pointer events, not the
  * render loop. Folding it into the FRAME would braid "which galaxy is under the
  * cursor?" into "draw the next frame" — two concerns that vary independently.
- * So this program is a sibling of the FRAME executor: it shares only the same
- * `ContentPass` registry, filters it by `drawPick` presence + the pick gate
- * `(pickEnabled ?? enabled)` — a layer's own pick gate wherever its pick set
+ * So this program is a sibling of the FRAME executor: it shares the same
+ * `ContentPass` registry and the same frame order (for a pass's slab, via
+ * `passSlabOf`), filters by `drawPick` presence + the pick gate
+ * `(pickEnabled ?? enabled)` — a pass's own pick gate wherever its pick set
  * differs from its draw set, else `enabled` (see `ContentPass.pickEnabled`) —
  * groups the survivors by slab, and re-rasterises each slab's pickable geometry
  * through the r32uint pick pipeline into its own pick target. See the
@@ -66,6 +67,9 @@ import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
 import { slabViewOf, foregroundChainOrder, isBodySlabIndex, COSMO, NEAR0 } from './slabs';
+import { passSlabOf } from './passSlabOf';
+import { OVERLAY_PICK_SLAB } from './overlayPickSlab';
+import { FRAME_ORDER } from './frameOrder';
 import { frontmostPick } from '../../../utils/picking/frontmostPick';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { unpackPick } from '../../../data/selectionEncoding';
@@ -76,19 +80,17 @@ import { unpackPick } from '../../../data/selectionEncoding';
 // pass must declare the matching depthStencil format: the points / ring / disk
 // picks declare depth24plus (COSMO), the Milky-Way pick declares depth32float
 // (NEAR0 — see milkyWayPickRenderer).
+// Which slab a pass rasterises through, read off the frame order once — the
+// pick pass must use the SAME projection the visual draw does, or a click
+// tests geometry the screen never showed at that depth.
+const PASS_SLABS = passSlabOf(FRAME_ORDER);
+
 const COSMO_DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 const NEAR0_DEPTH_FORMAT: GPUTextureFormat = 'depth32float';
 
-/**
- * The overlay pick pass, folded ahead of every slab — see `pickablesBySlab`.
- * Negative so it can never collide with a real `Slab.index` (0, 1, 2…), and
- * so `isBodySlabIndex` keeps it out of the shared body target.
- */
-const OVERLAY = -1;
-
 /** Human-readable `RenderTargetSpec.id` for a slab's pick target. */
 function pickTargetId(slabIndex: number): string {
-  if (slabIndex === OVERLAY) return 'pick:overlay';
+  if (slabIndex === OVERLAY_PICK_SLAB) return 'pick:overlay';
   return slabIndex === COSMO ? 'pick:cosmo' : 'pick:near0';
 }
 
@@ -96,7 +98,7 @@ function pickTargetId(slabIndex: number): string {
  * Depth format for a slab's pick target — see the format constants above.
  * Exported because every pipeline drawing into that slab's pick pass must
  * declare the SAME format, so the target and its pipelines read one source
- * (`gpuHandleRegistry` sizes the label pick pipelines from it). `OVERLAY`
+ * (`gpuHandleRegistry` sizes the label pick pipelines from it). The overlay
  * lands on the NEAR0 branch by construction: its one occupant is the NEAR0
  * caption stamp, whose pipeline is built from `pickDepthFormat(NEAR0)`.
  */
@@ -323,19 +325,22 @@ export function createPickProgram(deps: {
   // content. Fixes the regression where a raw numeric-ascending slab-index
   // sort let any NEAR0(0) star hit beat a genuinely nearer body/planet hit,
   // and even let COSMO(1) beat a body row(2+).
-  // Registry order is preserved WITHIN each slab (a `.filter()` keeps the
-  // array order), which is the @group(0) prefix contract: point-sprites runs
-  // first in the COSMO pass and leaves slot 0 bound to the shared pick camera
-  // for the ring / disk fold-ins. (The NEAR0 pickables — the Milky-Way
-  // impostor and the Gaia star catalog — share no such prefix: each binds its
-  // OWN complete slot-0 camera in its own draw, so their registry order
-  // carries no @group(0) dependence.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; view: SlabView; passes: ContentPass[] }[] {
-    const candidates = passes.filter((l) => l.drawPick && l.pickTarget === undefined);
-    const overlayCandidates = passes.filter((l) => l.drawPick && l.pickTarget === 'overlay');
-    // Every body-row slab index present this frame — a 'body' layer's
+    // A pass with no FRAME_ORDER line draws nowhere, so it picks nowhere —
+    // `checkFrameOrder` is what makes that unreachable for a real registry.
+    // An overlay row skips that derivation: its stamp composites ahead of every
+    // slab, so which slab it draws through tells you nothing about where it picks.
+    const candidates = passes.flatMap((pass) => {
+      if (!pass.drawPick || pass.pickTarget !== undefined) return [];
+      const slab = PASS_SLABS.get(pass.name);
+      return slab === undefined ? [] : [{ pass, slab }];
+    });
+    const overlayCandidates = passes.filter(
+      (pass) => pass.drawPick && pass.pickTarget === 'overlay',
+    );
+    // Every body-row slab index present this frame — a body-roster pass's
     // `drawPick` (`earthPass`, `planetsPass`) contributes to each one, the
     // same widening `executeFrame` applies. `ctx.slabs` holds full `Slab`s, so this
     // reads `frame.kind` directly (the index-only sibling, `isBodySlabIndex`
@@ -343,8 +348,8 @@ export function createPickProgram(deps: {
     const bodySlabIndices = ctx.slabs
       .filter((slab) => slab.frame.kind === 'body-m')
       .map((slab) => slab.index);
-    const numericSlabs = candidates.filter((l) => l.slab !== 'body').map((l) => l.slab as number);
-    const hasBodyCandidate = candidates.some((l) => l.slab === 'body');
+    const numericSlabs = candidates.filter((c) => c.slab !== 'body').map((c) => c.slab as number);
+    const hasBodyCandidate = candidates.some((c) => c.slab === 'body');
     const candidateSlabs = new Set(
       hasBodyCandidate ? [...numericSlabs, ...bodySlabIndices] : numericSlabs,
     );
@@ -352,30 +357,32 @@ export function createPickProgram(deps: {
       .reverse()
       .filter((index) => candidateSlabs.has(index));
     const slabIndices = candidateSlabs.has(COSMO) ? [...nearToFar, COSMO] : nearToFar;
-    // Filter by the PICK gate: `pickEnabled` when a layer declares one (its
+    // Filter by the PICK gate: `pickEnabled` when a pass declares one (its
     // pick set differs from its draw set — planetsPass's flat ∪ textured,
     // the caption stamps, the Milky Way's narrower close-range gate), else
     // `enabled` (pick set == draw set, the common case). See
     // `ContentPass.pickEnabled`.
-    const pickGated = (l: ContentPass, view: SlabView): boolean =>
-      (l.pickEnabled ?? l.enabled)(state, ctx, view);
+    const pickGated = (pass: ContentPass, view: SlabView): boolean =>
+      (pass.pickEnabled ?? pass.enabled)(state, ctx, view);
     // The overlay group borrows NEAR0's view for its depth clear (the
     // convention its pipelines are built from), never its vp — an overlay
     // stamp is screen-space geometry.
     const overlayView = slabViewOf(ctx, NEAR0);
     const overlayGroup = {
-      slabIndex: OVERLAY,
+      slabIndex: OVERLAY_PICK_SLAB,
       view: overlayView,
-      passes: overlayCandidates.filter((l) => pickGated(l, overlayView)),
+      passes: overlayCandidates.filter((pass) => pickGated(pass, overlayView)),
     };
     const slabGroups = slabIndices.map((slabIndex) => {
       const view = slabViewOf(ctx, slabIndex);
-      const passes = candidates.filter(
-        (l) =>
-          (l.slab === slabIndex || (l.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
-          pickGated(l, view),
-      );
-      return { slabIndex, view, passes };
+      const slabPasses = candidates
+        .filter(
+          (c) =>
+            (c.slab === slabIndex || (c.slab === 'body' && bodySlabIndices.includes(slabIndex))) &&
+            pickGated(c.pass, view),
+        )
+        .map((c) => c.pass);
+      return { slabIndex, view, passes: slabPasses };
     });
     return [overlayGroup, ...slabGroups].filter((group) => group.passes.length > 0);
   }

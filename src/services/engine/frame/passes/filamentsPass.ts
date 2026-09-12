@@ -8,7 +8,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import { COSMO } from '../slabs';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 // Halfwidth: the shader expands each segment to a 2 × this quad, so 1.5 → ~3-px lines.
@@ -21,9 +20,6 @@ const FILAMENT_HOT_TINT: Vec3 = [0.85, 0.75, 1.0];
 
 export const filamentsPass: ContentPass = {
   name: 'filaments',
-  slab: COSMO,
-  target: 'hdr',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     // Either-or on purpose: the setting is intent, opacity is the visual state,

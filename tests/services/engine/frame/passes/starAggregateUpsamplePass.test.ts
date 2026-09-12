@@ -83,9 +83,8 @@ function makeState(upsample: unknown, renderer: unknown = makeRenderer()): Engin
 const inBand: Vec3 = [0, 0, (inner + (outer - inner) * 0.5) * PC_TO_MPC];
 
 describe('starAggregateUpsamplePass', () => {
-  it('shares the star visibility gate and targets HDR', () => {
+  it('shares the star visibility gate', () => {
     expect(starAggregateUpsamplePass.enabled).toBe(starCatalogPass.enabled);
-    expect(starAggregateUpsamplePass.target).toBe('hdr');
   });
 
   it('calls starAggregateUpsample.draw with the HDR pass and the offscreen view', () => {

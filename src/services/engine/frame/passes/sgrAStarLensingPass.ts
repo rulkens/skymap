@@ -1,16 +1,18 @@
 /**
  * sgrAStarLensingPass — the Sgr A* lens pass's `ContentPass` row.
  *
- * `slab: 'body'` expands into one render step per body-m row, so
- * `enabled`/`draw` run once per body and are narrowed here to Sgr A*'s.
- * `blend: 'over'`, not the additive convention most `hdr` layers use: the
- * captured disc must truly OCCLUDE the starlight behind it, while per-pixel
- * alpha lets the earlier roster through where deflection is negligible.
+ * `FRAME_ORDER`'s `lens` line expands into one render step per body-m row in
+ * the frame's lensing list, so `enabled`/`draw` run once per body and are
+ * narrowed here to Sgr A*'s.
+ * Its pipeline blends OVER, not the additive convention most `hdr` layers
+ * use: the captured disc must truly OCCLUDE the starlight behind it, while
+ * per-pixel alpha lets the earlier roster through where deflection is
+ * negligible.
  * No `drawPick` — Sgr A*'s pick stamp lives in `starPointsPass`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { BLACK_HOLES } from '../../../../data/blackHoles';
@@ -41,7 +43,7 @@ const SCHWARZSCHILD_RADIUS_M = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
 const SECONDS_PER_DAY = 86_400;
 
 /** This frame's fade-band alpha (Q6's zero-dispatch gate) — shared by `enabled` and `draw`. */
-function bandAlphaFor(state: EngineState, ctx: ReadyFrameContext): number {
+function bandAlphaFor(state: PassState, ctx: ReadyFrameContext): number {
   const distMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
     GALACTIC_CENTRE_REGION,
@@ -52,9 +54,6 @@ function bandAlphaFor(state: EngineState, ctx: ReadyFrameContext): number {
 
 export const sgrAStarLensingPass: ContentPass = {
   name: 'sgr-a-star-lensing',
-  slab: 'body',
-  target: 'hdr',
-  blend: 'over',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== SGR_A_STAR.id) {
@@ -74,8 +73,8 @@ export const sgrAStarLensingPass: ContentPass = {
     const pose = ctx.bodyPose(view.slab.frame.bodyId);
     if (pose === null) return;
 
-    // `> 0` by construction: `enabled` gates on it, and `frameProgram` only
-    // emits this step at all while the band is open.
+    // `> 0` by construction: `enabled` gates on it, and the `lens` line only
+    // expands to a step at all while the band is open.
     const bandAlpha = bandAlphaFor(state, ctx);
 
     // Sgr A*'s position relative to the camera, in the SAME body-local frame

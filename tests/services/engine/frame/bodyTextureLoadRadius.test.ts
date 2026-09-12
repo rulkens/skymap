@@ -38,11 +38,7 @@ describe('loadRadiusMpc', () => {
     const states = deriveBodyStates(CONST_J2000);
     const earth = states.get('earth')!.positionMpc;
     const mars = states.get('mars')!.positionMpc;
-    const earthMarsMpc = Math.hypot(
-      earth[0] - mars[0],
-      earth[1] - mars[1],
-      earth[2] - mars[2],
-    );
+    const earthMarsMpc = Math.hypot(earth[0] - mars[0], earth[1] - mars[1], earth[2] - mars[2]);
 
     expect(loadRadiusMpc('earth')).toBeLessThan(earthMarsMpc);
   });

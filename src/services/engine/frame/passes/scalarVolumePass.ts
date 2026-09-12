@@ -2,8 +2,9 @@
  * scalarVolumePass — the half-resolution scalar-volume raymarch, as a
  * ContentPass that draws into the volume offscreen target.
  *
- * The raymarch is a `render` step over the `(target: 'volume', slab: COSMO)`
- * group. The executor owns the pass and the additive-identity `(0, 0, 0, 0)`
+ * `FRAME_ORDER` draws it on its own `volume` line, ahead of the hdr COSMO step
+ * that upsamples it in. The executor owns the pass and the additive-identity
+ * `(0, 0, 0, 0)`
  * clear (alpha=0 so the upsample's additive blend adds nothing for any
  * fragment the volumes didn't reach); this layer only issues the draw. The
  * `volume-upsample` HDR layer then
@@ -35,9 +36,6 @@ import { deriveVolumeLiveness } from '../volumeLiveness';
 
 export const scalarVolumePass: ContentPass = {
   name: 'scalar-volume',
-  slab: COSMO,
-  target: 'volume',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     return deriveVolumeLiveness(state, ctx) !== null;

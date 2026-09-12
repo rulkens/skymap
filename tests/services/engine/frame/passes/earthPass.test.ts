@@ -31,6 +31,7 @@ import {
   prepareBodySurfaceFrame,
 } from '../../../../../src/services/engine/frame/passes/earthPass';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
+import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
@@ -364,12 +365,14 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
       },
       data: { bodies: { earth: SEEDED_EARTH, planets: [], meshBodies: [], stars: [] } },
     } as unknown as EngineState;
+    // The group VIEW_STUB's body-m row resolves: the foreground line's BODY
+    // roster, read off the order that draws it.
+    const bodyRoster = FRAME_ORDER.flatMap((step) =>
+      step.kind === 'foreground' ? step.bodyPasses : [],
+    );
     const groupAt = (ctx: ReadyFrameContext) =>
       CONTENT_PASSES.filter(
-        (l) =>
-          l.target === 'foreground:0' &&
-          (l.slab === 'body' || l.slab === VIEW_STUB.slab.index) &&
-          l.enabled(state, ctx, VIEW_STUB),
+        (pass) => bodyRoster.includes(pass.name) && pass.enabled(state, ctx, VIEW_STUB),
       );
 
     // Below the gate: earth draws (its gates pass), so the group is

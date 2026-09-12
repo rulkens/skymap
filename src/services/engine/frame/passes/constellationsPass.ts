@@ -24,9 +24,6 @@ const CONSTELLATION_LINE_COLOR: Vec3 = [0.42, 0.58, 0.9];
 
 export const constellationsPass: ContentPass = {
   name: 'constellations',
-  slab: NEAR0,
-  target: 'hdr',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     // Hard distance cull, keyed on heliocentric-origin distance in Mpc: once the

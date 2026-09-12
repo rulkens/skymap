@@ -188,15 +188,6 @@ function makeState(
   } as unknown as EngineState;
 }
 
-describe('orbitTrailsPass registry row', () => {
-  it('declares the (hdr, NEAR0, additive) row shape', () => {
-    expect(orbitTrailsPass.name).toBe('orbit-trails');
-    expect(orbitTrailsPass.slab).toBe(NEAR0);
-    expect(orbitTrailsPass.target).toBe('hdr');
-    expect(orbitTrailsPass.blend).toBe('additive');
-  });
-});
-
 describe('orbitTrailsPass.enabled', () => {
   it('gates on the renderer handle + the foreground distance — conics are static seeds', () => {
     const state = makeState(makeRendererSpy());
