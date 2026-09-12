@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * fetchDhm — download the Søndermarken DHM/Punktsky LAS tiles from the
+ * fetchDhm — download a scene group's DHM/Punktsky LAS tiles (`--group <id>`,
+ * default `soendermarken`) from the
  * Datafordeler Fildownload REST endpoint into `data/raw/dhm/` (see
  * `data/raw/dhm/README.md` for endpoint shape, licence, and landmines).
  * The server ignores `Range` (a ranged GET still returns `200`, never
@@ -23,7 +24,7 @@ import {
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { SOENDERMARKEN } from '../scene-recon/groups/soendermarken';
+import { sceneGroupFromArgv } from '../scene-recon/groups/sceneGroupFromArgv';
 import {
   validateLasHeader,
   type LasValidationResult,
@@ -179,13 +180,14 @@ async function main(): Promise<void> {
   const apiKey = readKeychainSecret(KEYCHAIN_SERVICE);
   capturedApiKey = apiKey;
 
+  const group = sceneGroupFromArgv(process.argv);
   const destDir = rawDataPath('dhm.dir');
   mkdirSync(destDir, { recursive: true });
 
-  process.stderr.write(`fetchDhm: ${SOENDERMARKEN.dhmTiles.length} tile(s) → ${destDir}\n`);
+  process.stderr.write(`fetchDhm: ${group.dhmTiles.length} tile(s) → ${destDir}\n`);
 
   const outcomes: TileOutcome[] = [];
-  for (const tile of SOENDERMARKEN.dhmTiles) {
+  for (const tile of group.dhmTiles) {
     try {
       const outcome = await downloadTile(tile, destDir, apiKey);
       outcomes.push(outcome);

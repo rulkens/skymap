@@ -6,6 +6,8 @@
  * decoded: the 28-byte stride leaves the xyz floats non-contiguous, and
  * the depth sort re-reads them every frame. No Node imports.
  */
+import type { BoundsM } from '../../@types/BoundsM';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import {
   SPLATS_MAGIC,
   SPLATS_FORMAT_VERSION,
@@ -22,6 +24,8 @@ export type ParsedGaussianSplats = {
   /** The trailing SH degree-1 block, stride 12; null at shDegree 0. */
   readonly sh1: Uint8Array | null;
   readonly positionsM: Float32Array;
+  /** Extent of `positionsM` — what bounds the clip box's sliders. */
+  readonly boundsM: BoundsM;
 };
 
 export function parseSplats(buffer: ArrayBuffer): ParsedGaussianSplats {
@@ -68,12 +72,19 @@ export function parseSplats(buffer: ArrayBuffer): ParsedGaussianSplats {
     shDegree === 1 ? new Uint8Array(buffer, SPLATS_HEADER_BYTES + coreBytes, sh1Bytes) : null;
 
   const positionsM = new Float32Array(3 * splatCount);
+  const min: Vec3 = [Infinity, Infinity, Infinity];
+  const max: Vec3 = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < splatCount; i++) {
     const offset = SPLATS_HEADER_BYTES + i * SPLATS_RECORD_BYTES;
-    positionsM[i * 3 + 0] = dv.getFloat32(offset + 0, true);
-    positionsM[i * 3 + 1] = dv.getFloat32(offset + 4, true);
-    positionsM[i * 3 + 2] = dv.getFloat32(offset + 8, true);
+    for (let axis = 0; axis < 3; axis++) {
+      const valueM = dv.getFloat32(offset + 4 * axis, true);
+      positionsM[i * 3 + axis] = valueM;
+      if (valueM < min[axis]!) min[axis] = valueM;
+      if (valueM > max[axis]!) max[axis] = valueM;
+    }
   }
+  // An empty bake would otherwise hand the UI an inverted ±Infinity box.
+  const boundsM: BoundsM = splatCount === 0 ? { min: [0, 0, 0], max: [0, 0, 0] } : { min, max };
 
-  return { splatCount, shDegree, records, sh1, positionsM };
+  return { splatCount, shDegree, records, sh1, positionsM, boundsM };
 }

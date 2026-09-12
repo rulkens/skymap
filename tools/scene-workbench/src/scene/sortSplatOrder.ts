@@ -5,20 +5,32 @@
  * depth quantised to 16 bits — three linear passes, no comparisons.
  * Splats behind the eye carry negative depths and land in the low buckets
  * like any other; the [min, max] rescale needs no sign special-case.
+ * A clip box cuts before all of that: only the splats inside it are sorted,
+ * so the returned length is also the instance count the renderer draws.
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { BoundsM } from '../../@types/BoundsM';
 
 const BUCKETS = 1 << 16;
 
-export function sortSplatOrder(positionsM: Float32Array, eyeM: Vec3, forwardM: Vec3): Uint32Array {
+export function sortSplatOrder(
+  positionsM: Float32Array,
+  eyeM: Vec3,
+  forwardM: Vec3,
+  clipBoxM: BoundsM | null = null,
+): Uint32Array {
   const count = Math.floor(positionsM.length / 3);
-  const order = new Uint32Array(count);
-  if (count === 0) return order;
+  // The splats entering the sort. `null` is the unclipped path — no filter
+  // pass and no second index array exist unless a box is actually set.
+  const members = clipBoxM === null ? null : membersInside(positionsM, count, clipBoxM);
+  const drawn = members === null ? count : members.length;
+  const order = new Uint32Array(drawn);
+  if (drawn === 0) return order;
 
   let min = Infinity;
   let max = -Infinity;
-  for (let i = 0; i < count; i++) {
-    const depth = depthOf(positionsM, i, eyeM, forwardM);
+  for (let k = 0; k < drawn; k++) {
+    const depth = depthOf(positionsM, members === null ? k : members[k]!, eyeM, forwardM);
     if (depth < min) min = depth;
     if (depth > max) max = depth;
   }
@@ -29,11 +41,15 @@ export function sortSplatOrder(positionsM: Float32Array, eyeM: Vec3, forwardM: V
   const counts = new Uint32Array(BUCKETS);
   // The keys, not the depths: 2 bytes a splat instead of 8, and the scatter
   // below re-reads them rather than re-quantising.
-  const keys = new Uint16Array(count);
-  for (let i = 0; i < count; i++) {
+  const keys = new Uint16Array(drawn);
+  for (let k = 0; k < drawn; k++) {
+    const index = members === null ? k : members[k]!;
     // Clamped: `(max − min) * (65535 / (max − min))` can round above 65535.
-    const key = Math.min(BUCKETS - 1, ((depthOf(positionsM, i, eyeM, forwardM) - min) * scale) | 0);
-    keys[i] = key;
+    const key = Math.min(
+      BUCKETS - 1,
+      ((depthOf(positionsM, index, eyeM, forwardM) - min) * scale) | 0,
+    );
+    keys[k] = key;
     counts[key]! += 1;
   }
 
@@ -46,12 +62,29 @@ export function sortSplatOrder(positionsM: Float32Array, eyeM: Vec3, forwardM: V
     cursor += inBucket;
   }
 
-  for (let i = 0; i < count; i++) {
-    const bucket = keys[i]!;
-    order[counts[bucket]!] = i;
+  for (let k = 0; k < drawn; k++) {
+    const bucket = keys[k]!;
+    order[counts[bucket]!] = members === null ? k : members[k]!;
     counts[bucket]! += 1;
   }
   return order;
+}
+
+/** The indices inside the box, ascending — a view onto an over-allocated
+ *  buffer, so the filter stays one pass rather than a count then a fill. */
+function membersInside(positionsM: Float32Array, count: number, box: BoundsM): Uint32Array {
+  const { min, max } = box;
+  const members = new Uint32Array(count);
+  let inside = 0;
+  for (let i = 0; i < count; i++) {
+    const base = i * 3;
+    const x = positionsM[base]!;
+    const y = positionsM[base + 1]!;
+    const z = positionsM[base + 2]!;
+    if (x < min[0] || x > max[0] || y < min[1] || y > max[1] || z < min[2] || z > max[2]) continue;
+    members[inside++] = i;
+  }
+  return members.subarray(0, inside);
 }
 
 /** Both passes above quantise through this one expression: a `min` rounded any

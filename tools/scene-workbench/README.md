@@ -33,7 +33,8 @@ script or `/scene-workbench/` subpath.
    `cargo install --locked --git https://github.com/ArthurBrussee/brush brush-cli`
    (`--locked` is load-bearing: an unlocked build pulls a burn revision that
    panics in Brush's splat initialisation).
-   Splats below the LiDAR floor are pruned on the way into `splats.bin`:
+   Splats below the LiDAR floor, and those outside the group's `bounds` (the
+   same crop PDAL applies to the LiDAR), are pruned on the way into `splats.bin`:
    every frame is airborne, so training is free to park large ground-coloured
    Gaussians underground, where they are invisible from above and a wall of
    flat colour once the camera descends. Removing that layer is what stopped
@@ -49,10 +50,115 @@ script or `/scene-workbench/` subpath.
    −17.1 m, less the 5 m margin) dropped 1,773,702, leaving **5,998,053
    splats, SH degree 1, 240 MB `splats.bin`**. A `--reuse-ply` repack takes
    about 20 s.
-6. `npm run scene-workbench`
+6. `OPENMVS_BIN=$HOME/.local/opt/openmvs/bin/OpenMVS npm run bake-mesh -- --group <id>`
+   — reconstructs a textured mesh from the same frames and writes the `mesh`
+   asset into `public/data/geo3d/`. The stages and their flags are spec §6 of
+   `docs/superpowers/specs/completed/2026-09-11-scene-workbench-3-mesh-design.md`; in
+   short, the bake densifies at full resolution and runs RefineMesh, and
+   `--reuse-glb` re-packs the last OpenMVS
+   export instead of reconstructing, carrying the manifest's colmap/openmvs
+   stamps forward exactly as `--reuse-ply` does. Needs COLMAP and OpenMVS (next
+   section) and PROJ's `cct` on PATH (plus `gdal_translate`, but only for harvests
+   older than the fetcher's three-band change), the skråfoto harvest on disk
+   (no token is read), and `bake-lidar` to have run for the group: its
+   `points.bin` _is_ the sparse model, projected into every frame, so COLMAP
+   never matches a feature — it refuses to triangulate crops whose principal
+   point lies outside the image.
+   Three things the bake does that the tool logs do not explain: four-band
+   harvest JPEGs (older harvests only) are re-read as raw RGB bands rather than
+   CMYK; OpenMVS's seam levelling is disabled, because on this data it clips
+   every atlas patch to a solid colour; and OpenMVS's `depth*.dmap` cache in
+   the workdir is cleared per run. OpenMVS writes the atlas as a sidecar PNG,
+   which the re-pack folds into the GLB as a JPEG (quality 90; TextureMesh caps
+   the atlas at 8192 px).
+   Measured bakes (Apple Silicon), both crops at the COGs' native 100 mm/px:
+   `soendermarken-crop` (2026-09-12, 61 frames) **54.6 min** — DensifyPointCloud
+   48m0s for 7,749,874 dense points, ReconstructMesh 1m48s for 2,997,611 faces,
+   RefineMesh 3m34s, TextureMesh 51s into one 4096 px atlas, `mesh.glb`
+   17.8 MB. `soendermarken-crop-2019` (2026-09-11, 106 frames) **142.9 min** —
+   DensifyPointCloud 1h43m for 11,901,244 dense points, ReconstructMesh 14m45s
+   for 4,107,225 faces, RefineMesh 17m17s, TextureMesh 5m57s into one 8192 px
+   atlas, `mesh.glb` 26.8 MB. RefineMesh is the catch: it decimates its input
+   to what its own `--resolution-level` can support before refining —
+   2,997,611 faces in, 482,384 out; 4,098,829 in, 660,051 out — so the
+   published mesh has far fewer triangles than the raw reconstruction.
+7. `npm run scene-workbench`
+
+Every fetch/bake CLI above takes `--group <id>` (default `soendermarken`);
+the registry is `tools/scene-recon/groups/sceneGroupFromArgv.ts` and each
+group writes to its own `public/data/geo3d/groups/<id>/`, so `scenes.json`
+grows an entry the first time one of its manifests is written.
 
 Then open <http://localhost:5600> (see `tools/utils/io/devPorts.ts` for the
 full port registry).
+
+## Reconstruction toolchain
+
+`bake-mesh` shells out to two binaries that skymap does not vendor.
+
+**COLMAP 4.2.0** — `brew install colmap`. The bottle is built "without GPU
+support", which costs nothing here: the bake calls COLMAP only as
+`image_undistorter`, to convert the model it wrote into the workspace layout
+OpenMVS reads.
+
+**OpenMVS v2.4.0** — no formula; built from source (2026-09-11, Apple Silicon):
+
+```
+git clone --branch v2.4.0 https://github.com/cdcseacave/openMVS ~/.local/src/openMVS-2.4.0
+git clone https://github.com/cdcseacave/VCG ~/.local/src/VCG
+brew install nanoflann eigen boost opencv@4 cgal jpeg-xl
+brew link --overwrite jpeg-xl
+mkdir ~/.local/src/openMVS-2.4.0/out
+cd ~/.local/src/openMVS-2.4.0/out
+LIBRARY_PATH=/opt/homebrew/lib cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DOpenMVS_USE_CUDA=OFF -DOpenMVS_USE_PYTHON=OFF -DOpenMVS_USE_OPENMP=ON \
+  -DOpenMVS_BUILD_VIEWER=OFF \
+  -DOpenCV_DIR=/opt/homebrew/opt/opencv@4/lib/cmake/opencv4 \
+  -DVCG_ROOT=$HOME/.local/src/VCG \
+  -DCMAKE_INSTALL_PREFIX=$HOME/.local/opt/openmvs \
+  -DCMAKE_CXX_FLAGS="-Wno-missing-template-arg-list-after-template-kw -Wno-error=missing-template-arg-list-after-template-kw"
+LIBRARY_PATH=/opt/homebrew/lib cmake --build . -j10 && cmake --install .
+```
+
+Configure in `out/`; the source tree's own `build/` directory holds CMake
+modules the configure step needs, so it is not scratch space to clear.
+`-DOpenMVS_USE_PYTHON=OFF` is load-bearing: with the bindings on, the binaries
+link a conda `libpython3.13` by `@rpath` and refuse to launch. So is
+`LIBRARY_PATH` — the link line asks for a bare `-ljxl`.
+
+The binaries land in `~/.local/opt/openmvs/bin/OpenMVS/`. `bake-mesh` looks for
+them under `$OPENMVS_BIN`, falling back to bare names on PATH.
+
+## Groups
+
+`soendermarken` covers the whole park from whole 1920-px frames — ~740 mm/px on
+the ground, which is why its splats are soft. `soendermarken-crop` shares its
+anchor (so the two are directly comparable in ENU metres) over a 258 x 183 m box
+in the western half of the park, harvested at **100 mm/px**: `fetchSkraafoto` crops
+each COG to the box before downsampling, which is the only way to spend the
+COG's native ~100 mm/px on a scene this size (`data/raw/skraafoto/README.md`,
+"Window recipes"). Baking it:
+
+```
+npm run fetch-dhm      -- --group soendermarken-crop   # 2 of the 8 LAS tiles
+npm run bake-lidar     -- --group soendermarken-crop   # 17,001 points, 272 KB
+npm run fetch-skraafoto -- --group soendermarken-crop  # into <collection>/soendermarken-crop/
+npm run bake-splats    -- --group soendermarken-crop
+npm run bake-mesh      -- --group soendermarken-crop   # needs OPENMVS_BIN set
+```
+
+Its LiDAR uses `minPointSpacingM` 0.5 rather than 1.0; the DHM 2011 cloud is
+only ~0.36 pts/m² here, so that buys 17,001 points against 14,560 (measured),
+not four times as many.
+
+`soendermarken-crop-2019` is that same box and anchor over the `skraafotos2019`
+collection — a 23 June flight against 2025's 27 April one, so the two meshes
+differ in leaf-on canopy. Both ask for 100 mm/px, the ceiling the COGs
+themselves hold. It flew a different camera (UltraCam Osprey; nadir frames 13470 x 8670,
+obliques 7700 x 10300, against 2025's 14144 x 10560), which needs no code
+change: every intrinsic is read per item from its own
+`pers:interior_orientation`.
 
 ## Architecture
 
@@ -70,13 +176,20 @@ objects — `gpu`, `gpuAssets`, the renderer, the depth texture — through
 once via `registerSagaContext`; `Viewport.tsx` stays a dumb frame driver that
 only reads it.
 
-The bake CLIs (`npm run bake-lidar`, `npm run bake-splats`) write
-`public/data/geo3d/scenes.json` (the registry) and
-`public/data/geo3d/groups/<id>/manifest.json` alongside one
-`groups/<id>/assets/<assetId>/{points,splats}.bin` per asset (gitignored, not
-part of the deployed static bundle). A group's local frame is ENU, +Z up,
+Selecting a group opens the camera framed on the manifest's `boundsM` — the
+extent `bake-lidar` measured over the points it wrote, since a group's anchor
+can sit hundreds of metres outside its box; a group baked before `boundsM`
+existed opens on the anchor until `bake-lidar` runs for it again.
+
+The bake CLIs (`npm run bake-lidar`, `npm run bake-splats`, `npm run bake-mesh`)
+write `public/data/geo3d/scenes.json` (the registry) and
+`public/data/geo3d/groups/<id>/manifest.json` alongside one artifact per asset —
+`groups/<id>/assets/<assetId>/{points,splats}.bin` or `mesh.glb` (gitignored,
+not part of the deployed static bundle). A group's local frame is ENU, +Z up,
 metres — `GroupAnchor` (`@types/GroupAnchor.d.ts`) is the geodetic anchor that
-places it in the world.
+places it in the world. The viewport draws them point cloud, then mesh, then
+splats: `SCENE_DRAW_ORDER` (`src/render/sceneRenderers.ts`) is the blend
+contract, opaque kinds writing depth before the splats blend over it.
 
 `npm run scene-workbench:probe` runs a headless WebGPU error probe
 (`probeGpuErrors.ts`) against a `?probe` synthetic scene
@@ -92,10 +205,23 @@ px). "Gaussian splats" sits beside it with two more: splat scale
 covariance by `s²` (the standard 3DGS scaling modifier); opacity scale
 (`view.display.gaussianSplat.opacityScale`)
 multiplies each splat's opacity. Both live in `DisplayPanel.tsx`, wired to
-`viewSlice`'s `setSplatScale`/`setOpacityScale`. "Mesh" holds one checkbox,
-Wireframe (`view.display.mesh.wireframe`): a `line-list` pass over the mesh's
-own triangle edges, drawn over the textured pass so triangle quality can be
-inspected against the texture. Edges shared by exactly two triangles draw cyan;
-edges with one adjacent triangle (a hole's border) or three or more (a
+`viewSlice`'s `setSplatScale`/`setOpacityScale`.
+
+Under them sits the clip box (`view.display.gaussianSplat.clipBoxM`,
+group-frame metres): a checkbox that opens at the asset's full extent and six
+min/max sliders, one per axis, with a `drawn / total splats` readout. It is a
+performance control, not a masking one — `sortSplatOrder` only admits the
+splats inside the box, so the box shortens both the CPU depth sort and the
+instance count `splatRenderer` draws, rather than discarding fragments that
+were sorted and issued anyway. `watchSplatSortSaga` re-sorts whenever the box
+moves; `null` (the default) takes the unclipped path with no filter pass at
+all. The extent and the survivor count reach the panel through
+`group.splatMetrics`, which the sort reports after every run.
+
+The mesh is drawn unlit and opaque from the baked atlas, so "Mesh" holds one
+checkbox, Wireframe (`view.display.mesh.wireframe`): a `line-list` pass over the
+mesh's own triangle edges, drawn over the textured pass so triangle quality can
+be inspected against the texture. Edges shared by exactly two triangles draw
+cyan; edges with one adjacent triangle (a hole's border) or three or more (a
 non-manifold junction) draw orange-red, so reconstruction damage reads at a
 glance.

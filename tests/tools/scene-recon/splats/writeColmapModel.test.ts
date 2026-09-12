@@ -162,3 +162,64 @@ describe('writeColmapModel', () => {
     expect(lstatSync(join(outDir, 'images', 'photo_a.jpg')).isSymbolicLink()).toBe(false);
   });
 });
+
+/**
+ * Two cameras with identity rotation 10 m apart along +X, f = 100 px and
+ * 100 × 80 frames, so the half-width is `|x_cam / z| < 0.5` and every
+ * projection below is exact in binary floating point.
+ */
+describe('writeColmapModel with observations', () => {
+  const OBSERVED_POINTS: readonly ScenePoint[] = [
+    { xM: 4, yM: 0, zM: 40, r: 10, g: 20, b: 30, classification: 2 },
+    { xM: 8, yM: 8, zM: 40, r: 40, g: 50, b: 60, classification: 2 },
+    // 12 m to −X: inside camera A (u = 20), 22 m off camera B's axis (u = −5).
+    { xM: -12, yM: 0, zM: 40, r: 70, g: 80, b: 90, classification: 2 },
+  ];
+
+  let outDir: string;
+
+  beforeAll(async () => {
+    const binPath = join(root, 'observed.bin');
+    writeFileSync(binPath, packPoints(OBSERVED_POINTS));
+    writeFileSync(join(root, 'cam_a.jpg'), 'jpeg-cam-a');
+    writeFileSync(join(root, 'cam_b.jpg'), 'jpeg-cam-b');
+    const camera = {
+      rotation: [0, 0, 0, 1],
+      focalLengthPx: 100,
+      principalPointPx: [50, 40],
+      imageWidthPx: 100,
+      imageHeightPx: 80,
+    } satisfies Omit<PhotoPose, 'id' | 'positionM' | 'imageUrl'>;
+
+    outDir = join(root, 'observations');
+    await writeColmapModel({
+      poses: [
+        { ...camera, id: 'cam_a', positionM: [0, 0, 0], imageUrl: join(root, 'cam_a.jpg') },
+        { ...camera, id: 'cam_b', positionM: [10, 0, 0], imageUrl: join(root, 'cam_b.jpg') },
+      ],
+      pointsBinPath: binPath,
+      pointSampleTarget: 10,
+      outDir,
+      observations: true,
+    });
+  });
+
+  it('writes each image’s POINTS2D as u v point3d_id triples', () => {
+    // Camera A is at the origin looking along +Z: u = 100·x/40 + 50, v = 100·y/40 + 40.
+    // Camera B subtracts 10 from x first, and never sees the third point.
+    expect(readFileSync(join(outDir, 'images.txt'), 'utf8')).toBe(
+      '1 1 0 0 0 0 0 0 1 cam_a.jpg\n' +
+        '60.00 40.00 1 70.00 60.00 2 20.00 40.00 -1\n' +
+        '2 1 0 0 0 -10 0 0 2 cam_b.jpg\n' +
+        '35.00 40.00 1 45.00 60.00 2\n',
+    );
+  });
+
+  it('writes points3D.txt with a TRACK, dropping the single-view point', () => {
+    // TRACK pairs are (image_id, that image's POINTS2D index), and the third
+    // point — one view only — triangulates nothing, so it is not a point.
+    expect(readFileSync(join(outDir, 'points3D.txt'), 'utf8')).toBe(
+      '1 4 0 40 10 20 30 0.5 1 0 2 0\n' + '2 8 8 40 40 50 60 0.5 1 1 2 1\n',
+    );
+  });
+});

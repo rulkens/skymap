@@ -48,7 +48,7 @@ and the draw-order table (§3, P2), and the overlay's design is what fixes the
 
 - The reconstruction toolchain install and its provenance record (§6.1).
 - `bakeMesh.ts` and its stages: COLMAP known-pose triangulation, OpenMVS densify →
-  mesh → (optional) refine → texture, the GLB re-pack, `manifest.json` upsert
+  mesh → refine → texture, the GLB re-pack, `manifest.json` upsert
   (§6.2–6.4).
 - `TexturedMeshAsset`, `MeshGpuAsset`, `readMeshGlb`/`packMeshGlb`, the
   `loadTexturedMesh` loader row, `assetCount`'s row, `texturedMeshRenderer` +
@@ -107,10 +107,10 @@ kept incumbent, two baked groups exist on disk and a splat re-bake is hours).
 | —   | `SceneAsset`/`GpuAsset` unions, `ASSET_LOADERS`, `assetCount`, `syntheticProbeScene`, probe ready-count | growth                                | rows / members                                                                                                                                        | none                                                                                                                                                                                                                                                                                                                                                                                          |            |
 
 A fifth prep floated at the checkpoint — making `writeColmapModel`'s LiDAR
-`points3D` seed optional — was **dropped** after verifying COLMAP 4.2's
-`point_triangulator` defaults to `--clear_points 1`: it discards every input point
-and recomputes image ids by filename, so the seed is harmless and no id sync is
-needed. `bakeMesh` keeps `bakeSplats`'s LiDAR-first precondition unchanged.
+`points3D` seed optional — was **dropped**, and §6.2 settled it the other way
+round: the seed is not merely harmless, it is the whole sparse model, so
+`bakeMesh` keeps `bakeSplats`'s LiDAR-first precondition and adds observations
+on top of it.
 
 **Packaging (user ruling at the checkpoint):** P1+P2 as their own PR before 3a's
 feature PR; P3+P4 as their own PR immediately after #685 merges, before 3a's
@@ -188,11 +188,9 @@ data/raw/skraafoto/<collection>[/<groupId>]/       harvest (plan 2 / #685)
   mvs-<groupId>/                                    gitignored bake workdir (3a)
     sparse-in/{cameras,images,points3D}.txt         writeColmapModel — poses injected
     sparse-in/images/<id>.jpg                       copied frames
-    database.db                                     COLMAP features + matches
-    sparse/{cameras,images,points3D}.bin            point_triangulator output
     dense/                                          image_undistorter workspace
-    scene.mvs  scene_dense.mvs  scene_dense_mesh.mvs [scene_dense_mesh_refine.mvs]
-    scene_dense_mesh_texture.glb                    OpenMVS's own export (PNG texture)
+    scene.mvs  scene_dense.mvs  scene_dense_mesh.ply [scene_dense_mesh_refine.ply]
+    scene_dense_texture.glb + scene_dense_texture_0.png   OpenMVS's own export
 
 public/data/geo3d/groups/<groupId>/assets/mesh/
   mesh.glb                                          the re-packed subset below
@@ -221,14 +219,14 @@ OpenMVS's own GLB (`TextureMesh --export-type glb`, `SaveGLTF` in `libs/MVS/Mesh
 is the _input_ to the re-pack, never shipped: its texture is PNG (4–10× larger for a
 photo atlas), its structure is whatever that version emits, and a `--max-texture-size`
 overflow silently splits it into several materials. `packMeshGlb`'s reader side
-(`readMeshGlb`, §7.1) **refuses** more than one primitive or texture, naming
+(`meshGlbGeometry`, §7.1) **refuses** more than one primitive or texture, naming
 `--max-texture-size` as the fix — the same one-material refusal PR #678's `buildMeshes`
 makes.
 
-**Open verification (§10 #1):** whether `SaveGLTF` writes scene coordinates raw or
-applies a Y-up conversion. The first real bake settles it (the mesh either lands on
-the LiDAR or lies on its side); if converted, `bakeMesh` applies the inverse rotation
-to the positions during the re-pack, and this table stays true.
+**Verified on the hand-run prototype export (§10 #1), before any bake completed:**
+`SaveGLTF` writes scene coordinates raw — read back with `NodeIO`, the node matrix
+is identity and the POSITION bbox matched the LiDAR's, +Z up. No axis conversion in
+the re-pack; this table stays true.
 
 ## 6. Offline pipeline
 
@@ -238,25 +236,14 @@ Mac-native, CPU-only, thin `tsx` wrappers shelling to installed binaries, the
 
 ### 6.1 Toolchain (installed 2026-09-11, Apple M1 Max, macOS 15.7)
 
-Recorded in `tools/scene-workbench/README.md` (a "Reconstruction toolchain" section)
-— the user-facing provenance note for the two tools, with versions and the exact
-build recipe:
+- **COLMAP 4.2.0** — brew bottle, built without GPU support, which costs nothing
+  here: the bake calls it only as `image_undistorter`.
+- **OpenMVS v2.4.0** (2026-01-20 release) — no formula, built from source against
+  VCG, which the tagged release does not vendor.
 
-- **COLMAP 4.2.0** — `brew install colmap` (bottle, "without GPU support": every
-  `colmap` call passes `--FeatureExtraction.use_gpu 0` / `--FeatureMatching.use_gpu 0`;
-  4.x renamed the `SiftExtraction`/`SiftMatching` option groups).
-- **OpenMVS v2.4.0** (2026-01-20 release) — no formula; built from source:
-  `git clone --branch v2.4.0 --depth 1 https://github.com/cdcseacave/openMVS.git`
-  plus `git clone https://github.com/cdcseacave/VCG.git` (VCG is **not** a submodule
-  of the tagged release, `-DVCG_ROOT` is mandatory); brew deps `boost cgal eigen
-nanoflann libomp opencv@4` (**OpenCV 5 does not build** — its `traits.hpp` already
-  specialises the `DataType<>` templates OpenMVS's `Types.inl` defines; `opencv@4`
-  keg via `-DOpenCV_DIR=/opt/homebrew/opt/opencv@4/lib/cmake/opencv4`); cmake flags
-  `-DOpenMVS_USE_CUDA=OFF -DOpenMVS_USE_OPENMP=ON -DOpenMVS_BUILD_VIEWER=OFF
--DCMAKE_INSTALL_PREFIX=$HOME/.local/opt/openmvs`; binaries on PATH from
-  `~/.local/opt/openmvs/bin`. The README records whatever further deviations the
-  build needed (Eigen 5.0.1 is installed; OpenMVS asks for ≥ 3.4 — if it fails, the
-  fix and its reason go in the README, not in a patched upstream tree).
+The build recipe, its brew deps and the deviations it needed live in
+`tools/scene-workbench/README.md`'s "Reconstruction toolchain" section — the
+user-facing provenance note, and the only copy.
 
 `bakeMesh` probes both before staging anything (`colmapVersion()` /
 `openMvsVersion()`, the `spawnSync`-probe-then-throw shape of `brushVersion()`,
@@ -265,8 +252,9 @@ nanoflann libomp opencv@4` (**OpenCV 5 does not build** — its `traits.hpp` alr
 ### 6.2 `tools/scene-recon/bakeMesh.ts`
 
 ```ts
-export type ColmapRunner = (args: readonly string[]) => Promise<void>;
-export type OpenMvsRunner = (tool: string, args: readonly string[]) => Promise<void>;
+type ColmapRunner = (args: readonly string[]) => Promise<void>;
+type OpenMvsRunner = (tool: string, args: readonly string[]) => Promise<void>;
+type GdalRunner = (args: readonly string[]) => Promise<void>;
 
 export async function bakeMesh(
   group: SceneGroupDefinition,
@@ -274,51 +262,68 @@ export async function bakeMesh(
     readonly runCct: CctRunner;
     readonly runColmap: ColmapRunner;
     readonly runOpenMvs: OpenMvsRunner;
+    readonly runGdal: GdalRunner;
     readonly colmapVersion: () => string;
     readonly openMvsVersion: () => string;
   },
-  options: {
-    readonly fullRes?: boolean;
-    readonly refine?: boolean;
-    readonly reuseGlb?: boolean;
-  } = {},
+  options: { readonly reuseGlb?: boolean } = {},
 ): Promise<TexturedMeshAsset>;
 ```
 
-CLI: `npm run bake-mesh -- [--group <id>] [--full-res] [--refine] [--reuse-glb]`,
+CLI: `npm run bake-mesh -- [--group <id>] [--reuse-glb]`,
 `sceneGroupFromArgv` (#685) picking the group.
 
 1. **Preconditions** — the group's `points.bin` exists (`bakeSplats.ts:68-75`'s
    check, same message); the harvest has frames. Both version probes run before
    step 2 (a missing tool costs a second, not a frame copy).
-2. **Poses** — `groupPhotoPoses(group, { runCct })` (P4). `writeColmapModel({ poses,
-pointsBinPath, pointSampleTarget: 200_000, outDir: 'mvs-<id>/sparse-in' })` —
-   reused unchanged; `point_triangulator` clears the seed (§3).
-3. **COLMAP**, four `runColmap` calls in the workdir, poses never re-solved:
-   - `feature_extractor --database_path database.db --image_path sparse-in/images --ImageReader.camera_model PINHOLE --ImageReader.single_camera_per_image 1 --FeatureExtraction.use_gpu 0`
-   - `exhaustive_matcher --database_path database.db --FeatureMatching.use_gpu 0`
-     (~100 frames → ~5k pairs, minutes on CPU; `sequential`/`spatial` are premature)
-   - `point_triangulator --database_path database.db --image_path sparse-in/images --input_path sparse-in --output_path sparse`
-     (default `--clear_points 1`, `--refine_intrinsics 0`: poses and intrinsics are
-     the injected truth, only the sparse points are new)
-   - `image_undistorter --image_path sparse-in/images --input_path sparse --output_path dense --output_type COLMAP`
+2. **Sparse model** — `groupPhotoPoses(group, { runCct })` (P4), then
+   `writeColmapModel({ poses, pointsBinPath, pointSampleTarget: 200_000, outDir:
+'mvs-<id>/sparse-in', observations: true })`: the LiDAR cloud projected into every
+   camera **is** the sparse model, with POINTS2D + TRACKs so OpenMVS can pick
+   neighbour views and depth ranges. COLMAP never matches a feature — its
+   `Camera::HasBogusParams` check rejects our crops outright (§10 #2).
+3. **Staging transcode** — every `sparse-in/images/*.jpg` whose sharp metadata is not
+   3-channel sRGB is re-written in place by `gdal_translate --config GDAL_JPEG_TO_RGB
+NO -b 1 -b 2 -b 3 -of JPEG -co QUALITY=95` (plus `--config GDAL_PAM_ENABLED NO`, so no
+   `.aux.xml` lands beside it). The 2025 nadir frames carry four components — raw R, G,
+   B and a fourth band that libjpeg tags CMYK — which OpenCV refuses outright; sharp's
+   `toColourspace('srgb')` does a real CMYK→RGB conversion instead and muddies them,
+   which OpenMVS then textures with. `fetchSkraafoto` writes three bands; older
+   harvests may hold four-band frames, which is what this step is for.
+4. **COLMAP**, one `runColmap` call, as a format converter only:
+   - `image_undistorter --image_path sparse-in/images --input_path sparse-in --output_path dense --output_type COLMAP`
      (PINHOLE cameras → a no-op resample, but it lays out the workspace
-     `InterfaceCOLMAP` reads)
-4. **OpenMVS**, `runOpenMvs(tool, args)` per stage, cwd = workdir:
-   - `InterfaceCOLMAP -i dense -o scene.mvs --image-folder dense/images`
-   - `DensifyPointCloud scene.mvs --resolution-level <1 | 0 with --full-res> --number-views 0`
+     `InterfaceCOLMAP` reads, and it applies no bogus-params check)
+5. **OpenMVS**, `runOpenMvs(tool, args)` per stage, cwd = workdir:
+   - `InterfaceCOLMAP -i dense -o scene.mvs --image-folder images` (`--image-folder`
+     is joined onto `-i`, so `dense/images` would become `dense/dense/images`)
+   - `DensifyPointCloud scene.mvs --resolution-level 0 --number-views 0
+--remove-dmaps 1`, with every `*.dmap` in the workdir deleted first: OpenMVS caches
+     depth maps by image _index_ and silently reuses stale ones, aborting mid-fusion
    - `ReconstructMesh scene_dense.mvs` (defaults: `--decimate 1`,
-     `--remove-spurious 20`, `--smooth 2`) → `scene_dense_mesh.mvs`
-   - `RefineMesh scene_dense_mesh.mvs --resolution-level 1` **only with `--refine`**
-     → `scene_dense_mesh_refine.mvs` (the texture stage then reads this one)
-   - `TextureMesh <mesh>.mvs --export-type glb --max-texture-size 8192` →
-     `scene_dense_mesh_texture.glb`
-5. **Re-pack** — `readMeshGlb` (refuses > 1 primitive/texture) → `sharp` JPEG q90 on
-   the texture → `packMeshGlb` → `public/data/geo3d/groups/<id>/assets/mesh/mesh.glb`.
-   `--reuse-glb` starts here from the last `scene_dense_mesh_texture.glb`, carrying
-   the manifest's existing `colmap`/`openmvs` version stamps forward — exactly
+     `--remove-spurious 20`, `--smooth 2`) → `scene_dense_mesh.ply`
+   - `RefineMesh scene_dense.mvs --mesh-file scene_dense_mesh.ply --resolution-level 1
+-o scene_dense_mesh_refine.ply` (the texture stage reads that mesh)
+   - `TextureMesh scene_dense.mvs --mesh-file scene_dense_mesh_refine.ply --export-type glb
+--max-texture-size 8192 --global-seam-leveling 0 --local-seam-leveling 0
+--empty-color 4210752 -o scene_dense_texture.glb` → that GLB **plus** a sidecar
+     `scene_dense_texture_0.png`
+     it names by URI. Both levelling passes are off because on this scene they clip
+     every patch interior to an RGB-cube corner, photo pixels surviving only in the
+     margins; global off with local on still clips. `--empty-color` 0x404040 pins
+     faces no view covers to dark grey — the default 0xFF7F27 orange reads as data
+     beside the LiDAR and splat layers
+
+   Both `-o` are pinned because v2.4.0 names an output after its _input's_ stem, so
+   RefineMesh would otherwise move the GLB the re-pack reads.
+
+6. **Re-pack** — `meshGlbGeometry` over a `NodeIO` document (the only IO that resolves
+   the sidecar URI; it refuses > 1 primitive/texture) → `sharp` JPEG q90 on the
+   texture → `packMeshGlb` → `public/data/geo3d/groups/<id>/assets/mesh/mesh.glb`.
+   `--reuse-glb` starts here from the last `scene_dense_texture.glb`, carrying the
+   manifest's existing `colmap`/`openmvs` version stamps forward — exactly
    `--reuse-ply`'s contract (`bakeSplats.ts:89-100`).
-6. **Publish** — `publishAsset(group, asset)` (P3); asset `id: 'mesh'`, label
+7. **Publish** — `publishAsset(group, asset)` (P3); asset `id: 'mesh'`, label
    `${group.name} — skråfoto MVS mesh`, `triangleCount` from the re-packed index
    count / 3, provenance per §4.
 
@@ -328,12 +333,11 @@ next stage's missing-input error, never by shipping a previous run's file.
 
 ### 6.3 Resolution and time budget
 
-`--resolution-level 1` is the first-bake default: OpenMVS's own default, and ~650 ×
-450 px per view is where a CPU densify of ~100 crop frames is an afternoon, not a day.
-Estimates for the crop group on the M1 Max (10 cores), **to be measured in 3a's
-operator task and recorded in the README, not asserted**: COLMAP ≈ 10 min, densify
-≈ 30–60 min, mesh ≈ 5 min, texture ≈ 15 min; `--full-res` ≈ 3–5 h; `--refine` at
-level 1 adds hours and is judged only against a first bake's visible defects.
+`--resolution-level 0` densifies every view at its full harvested size, and RefineMesh
+follows it: that is the only bake worth producing, so it is the only path. Expect the
+measured cost — the 2019 crop group (106 frames) on the M1 Max (10 cores) took
+**142.9 min** end to end, densify dominating at 1h43m; the per-stage numbers are in
+`tools/scene-workbench/README.md`.
 
 ### 6.4 `package.json`
 
@@ -356,16 +360,22 @@ export type TexturedMeshGeometry = {
 };
 export function packMeshGlb(geometry: TexturedMeshGeometry): Promise<Uint8Array>;
 
-// tools/scene-workbench/src/scene/readMeshGlb.ts — browser + Node (bakeMesh's re-pack input)
+// tools/scene-recon/pack/meshGlbGeometry.ts — the refusals and the accessor walk, IO-free
+export function meshGlbGeometry(document: Document): TexturedMeshGeometry;
+
+// tools/scene-workbench/src/scene/readMeshGlb.ts — the browser's WebIO wrapper
 export function readMeshGlb(buffer: ArrayBuffer): Promise<TexturedMeshGeometry>;
 ```
 
-Both are `@gltf-transform/core` (`WebIO` in the reader — it fetches nothing for a
-self-contained GLB, so it runs under vitest too; `NodeIO`-free by design so one
-reader serves the bake and the viewer). `readMeshGlb` throws on zero or more than one
-primitive, or more than one texture, or a missing `TEXCOORD_0`. Node transforms on
-the path to the primitive are **applied** to the positions on read (gltf-transform's
-`getWorldMatrix`), so OpenMVS's export and our own subset read the same way.
+All three are `@gltf-transform/core`. `meshGlbGeometry` takes an already-parsed
+document, which keeps the IO choice at the edge: `readMeshGlb` is the viewer's
+`WebIO` wrapper (it fetches nothing for a self-contained GLB, so it runs under
+vitest too), while the bake reads OpenMVS's export with `NodeIO` — the only IO that
+resolves the sidecar texture URI beside it. `meshGlbGeometry` throws on zero or more
+than one primitive, or more than one texture, or a missing `TEXCOORD_0`. Node
+transforms on the path to the primitive are **applied** to the positions on read
+(gltf-transform's `getWorldMatrix`), so OpenMVS's export and our own subset read the
+same way.
 
 `packMeshGlb` is `async` because gltf-transform's `writeBinary` is; it stamps the
 `extras.frame` note (§5).
@@ -558,12 +568,14 @@ Judged by `docs/superpowers/conventions/testing.md`'s one question.
 - **`readMeshGlb` applies a node transform** — a primitive under a node translated by
   `[10, 0, 0]` reads back with `+10` on every x (the OpenMVS-input contract).
 - **`bakeMesh` orchestration**, `tests/tools/scene-recon/bakeMesh.test.ts` mirroring
-  `bakeSplats.test.ts` (stubbed runners, tmpdir cwd, `forks` pool): the COLMAP stage
-  order and flags (`use_gpu 0`, `PINHOLE`, `single_camera_per_image`); `--full-res`
-  → `--resolution-level 0`; `--refine` inserts `RefineMesh` and texture reads its
-  output; `--reuse-glb` runs no runner and keeps the manifest's version stamps; a
-  fabricated OpenMVS GLB with two textures fails the bake with the flag hint; the
-  published asset's `triangleCount` matches the fabricated geometry.
+  `bakeSplats.test.ts` (stubbed runners, tmpdir cwd, `forks` pool): the stage order
+  and pinned argv (both seam-levelling flags off, `--remove-dmaps 1`) and that the
+  `.dmap` cache is cleared before densifying; the four-band staging transcode's
+  `gdal_translate` argv, with the three-channel frames left alone; the sidecar-URI
+  export re-packs; a fabricated OpenMVS GLB with two textures
+  fails the bake with the flag hint; `--reuse-glb` runs no runner and keeps the
+  manifest's version stamps; the published asset's `triangleCount` matches the
+  fabricated geometry.
 - **`assetCount` mesh row** — extend the existing test with one `mesh` asset → `tris`.
 - **`SCENE_DRAW_ORDER` covers every `GpuAsset` kind exactly once** — the one table
   test that catches a kind added to the union but not to the order (`tsc` proves the
@@ -580,20 +592,21 @@ assets ready).
 `cy`, `W`, `H`, `d`); `bakePoses` writes `poses.json` with `imageUrl` rewritten to the
 copied path.
 
-## 10. Open questions
+## 10. Settled and open questions
 
-1. **OpenMVS GLB axis convention** (§5) — raw scene coordinates or Y-up converted;
-   settled by the first real bake landing on (or beside) the LiDAR.
-2. **Feature-matching intrinsics** — `feature_extractor` seeds `database.db` with a
-   default prior focal (1.25 × max dimension) while the injected cameras are ~10× that
-   (a 79.6 mm lens at 3.76 µm pixels, crop-scaled). `point_triangulator` uses the
-   input model's cameras, so triangulation is right regardless; only the matcher's
-   calibrated-model verification sees the wrong prior. If the first bake's inlier
-   counts are poor, the fix is a `sqlite3` `UPDATE cameras` step after extraction
-   (COLMAP FAQ's "copy the intrinsics to the database"), not a different pipeline.
-3. **Time budget** (§6.3) — measured, then recorded in the README.
-4. **Eigen 5.0.1 against OpenMVS's Eigen ≥ 3.4 requirement** — resolved by the build
-   log before 3a's first bake; recorded either way.
+1. **OpenMVS GLB axis convention** (§5) — SETTLED on the hand-run prototype export:
+   raw scene coordinates, identity node matrix, +Z up. The re-pack converts nothing.
+2. **COLMAP cannot match our crops** — SETTLED, and it is why §6.2 has no matching
+   stages. `Camera::HasBogusParams` rejects any principal point outside `[0,w]×[0,h]`,
+   and a crop is a window of a much larger frame, so `cx, cy` land thousands of px
+   outside it (e.g. `-3000.8, -2938.1` on a 989×180 crop). `point_triangulator` then
+   skips every image and writes 0 points; no option disables the check. The poses
+   themselves are right — triangulating COLMAP's own verified matches by hand under
+   the model's convention gave 0.15 px median reprojection, 100 % in front — so the
+   LiDAR seed replaces the whole matching pipeline rather than working around it.
+3. **Time budget** (§6.3) — measured; the README carries the first crop bake's record.
+4. **Eigen 5.0.1 against OpenMVS's Eigen ≥ 3.4 requirement** — a non-issue: OpenMVS
+   built unpatched against it.
 
 ## 11. Decisions this spec made
 
@@ -603,6 +616,6 @@ copied path.
   OBJ reader or shipping OpenMVS's file as-is.
 - Unlit mesh, `cullMode: 'none'`, opaque, no DisplayPanel section.
 - Draw order as a table (`SCENE_DRAW_ORDER`), one renderer bag owned by `Viewport`.
-- Prep P5 (optional `points3D`) dropped after verifying `point_triangulator`'s
-  `--clear_points` default.
+- Prep P5 (optional `points3D`) dropped — the LiDAR seed is the sparse model
+  (§6.2), not an optional initialisation.
 - One spec, two plans (3a mesh, 3b overlay), 3b after 3a merges.

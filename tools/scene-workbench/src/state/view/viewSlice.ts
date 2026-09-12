@@ -1,5 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { BoundsM } from '../../../@types/BoundsM';
+import { clampSceneDistanceM } from '../../scene/clampSceneDistanceM';
 
 export type SceneCamera = { yaw: number; pitch: number; distanceM: number; targetM: Vec3 };
 
@@ -12,10 +14,13 @@ export type ViewSlice = {
   camera: SceneCamera;
   hiddenAssetIds: readonly string[];
   deviceLost: boolean;
-  /** Per-render-layer display knobs. `pointSizePx` is device pixels (quad edge). */
+  /** Per-render-layer display knobs. `pointSizePx` is device pixels (quad edge).
+   *  `clipBoxM` is group-frame metres; `null` means no clipping, and it is a
+   *  zero-cost path — a box makes the sort skip the splats outside it, so it
+   *  cuts CPU sort work and drawn instances both, not just fragments. */
   display: {
     pointCloud: { pointSizePx: number };
-    gaussianSplat: { splatScale: number; opacityScale: number };
+    gaussianSplat: { splatScale: number; opacityScale: number; clipBoxM: BoundsM | null };
     mesh: { wireframe: boolean };
   };
 };
@@ -31,7 +36,7 @@ export const defaultViewSlice: ViewSlice = {
   // 2px: closes the gaps a 5cm cloud leaves at building scale without fattening the ground.
   display: {
     pointCloud: { pointSizePx: 2 },
-    gaussianSplat: { splatScale: 1, opacityScale: 1 },
+    gaussianSplat: { splatScale: 1, opacityScale: 1, clipBoxM: null },
     mesh: { wireframe: false },
   },
 };
@@ -47,6 +52,16 @@ export const viewSlice = createSlice({
       state.camera.pitch = Math.min(PITCH_LIMIT, Math.max(-PITCH_LIMIT, action.payload.pitch));
       state.camera.distanceM = action.payload.distanceM;
       state.camera.targetM = action.payload.targetM;
+    },
+    /** Opens a group on its baked extent rather than its anchor, which for the
+     *  crop groups sits a few hundred metres outside the box. 0.9 x the wider
+     *  horizontal extent frames it with margin at the default pitch. */
+    frameCamera: (state, action: PayloadAction<BoundsM>) => {
+      const { min, max } = action.payload;
+      state.camera.targetM = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
+      state.camera.distanceM = clampSceneDistanceM(
+        Math.max(max[0] - min[0], max[1] - min[1]) * 0.9,
+      );
     },
     toggleAssetVisibility: (state, action: PayloadAction<string>) => {
       const hidden = new Set(state.hiddenAssetIds);
@@ -67,6 +82,9 @@ export const viewSlice = createSlice({
     setOpacityScale: (state, action: PayloadAction<number>) => {
       state.display.gaussianSplat.opacityScale = action.payload;
     },
+    setSplatClipBox: (state, action: PayloadAction<BoundsM | null>) => {
+      state.display.gaussianSplat.clipBoxM = action.payload;
+    },
     setMeshWireframe: (state, action: PayloadAction<boolean>) => {
       state.display.mesh.wireframe = action.payload;
     },
@@ -75,10 +93,12 @@ export const viewSlice = createSlice({
 
 export const {
   commitCameraPose,
+  frameCamera,
   toggleAssetVisibility,
   deviceLost,
   setPointCloudPointSize,
   setSplatScale,
   setOpacityScale,
+  setSplatClipBox,
   setMeshWireframe,
 } = viewSlice.actions;

@@ -1,7 +1,15 @@
 .toggleLabel {
   composes: toggleLabel from '../../../../../src/components/common/shared.module.css';
+  margin-top: 6px;
 }
 
 .checkbox {
   composes: checkbox from '../../../../../src/components/common/shared.module.css';
+}
+
+.readout {
+  margin-top: 4px;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
 }

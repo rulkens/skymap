@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { nextManifest } from '../../../../tools/scene-recon/manifest/nextManifest';
-import type { SceneGroupDefinition } from '../../../../tools/scene-recon/groups/soendermarken';
+import type { SceneGroupDefinition } from '../../../../tools/scene-recon/@types/SceneGroupDefinition';
 import type { SceneManifest } from '../../../../tools/scene-workbench/@types/SceneManifest';
 import type { PointCloudAsset } from '../../../../tools/scene-workbench/@types/PointCloudAsset';
 

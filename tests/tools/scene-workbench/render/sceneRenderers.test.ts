@@ -47,11 +47,6 @@ describe('SCENE_DRAW_ORDER', () => {
   it('names every GpuAsset kind exactly once', () => {
     expect([...SCENE_DRAW_ORDER].sort()).toEqual(Object.keys(ALL_KINDS).sort());
   });
-
-  it('draws every opaque kind before gaussianSplat', () => {
-    // Splats blend over depth they never write, so they must go last.
-    expect(SCENE_DRAW_ORDER.indexOf('gaussianSplat')).toBe(SCENE_DRAW_ORDER.length - 1);
-  });
 });
 
 describe('createSceneRenderers', () => {

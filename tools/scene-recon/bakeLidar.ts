@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * bakeLidar — orchestrates the Søndermarken LiDAR bake: DHM tiles + the
- * GeoDanmark ortho → one `pdal pipeline` run → `points.bin` + the group's
- * `manifest.json` + the `scenes.json` registry (spec §§4-6).
+ * bakeLidar — orchestrates one scene group's LiDAR bake (`--group <id>`,
+ * default `soendermarken`): DHM tiles + the GeoDanmark ortho → one
+ * `pdal pipeline` run → `points.bin` + the group's `manifest.json` + the
+ * `scenes.json` registry (spec §§4-6).
  *
  * `runPdal` is injected so `bakeLidar()` is exercisable without PDAL
  * installed (the stage graph, the CSV reader and the packer are tested in
@@ -14,20 +15,19 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { SOENDERMARKEN, type SceneGroupDefinition } from './groups/soendermarken';
+import { sceneGroupFromArgv } from './groups/sceneGroupFromArgv';
 import { lidarPipelineStages } from './lidar/lidarPipelineStages';
 import { readPdalCsv } from './lidar/readPdalCsv';
 import { orthoVrtXml } from './ortho/orthoVrtXml';
 import { packPoints, type ScenePoint } from './pack/packPoints';
-import { nextManifest } from './manifest/nextManifest';
-import { upsertGroup } from './manifest/upsertGroup';
+import { assetArtifactUrl, groupAssetDir } from './manifest/geo3dLayout';
+import { publishAsset } from './manifest/publishAsset';
 import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { writeJsonAtomic } from '../utils/io/writeJsonAtomic';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import type { BoundsM } from '../scene-workbench/@types/BoundsM';
+import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { PointCloudAsset } from '../scene-workbench/@types/PointCloudAsset';
-import type { SceneManifest } from '../scene-workbench/@types/SceneManifest';
-import type { GroupRegistry } from '../scene-workbench/@types/GroupRegistry';
 
 /** The GeoDanmark harvest is z19-only (see `geodanmarkTileSource.ts`) — the
  *  only level with a tile tree to colorize from. */
@@ -35,7 +35,6 @@ const GEODANMARK_LEVEL = 19;
 /** Stable across re-runs, so a re-bake upserts the one asset rather than
  *  accumulating siblings under a fresh id. */
 const ASSET_ID = 'lidar';
-const GEO3D_DIR = 'public/data/geo3d';
 
 /**
  * DHM Punktsky flight date. The LAS headers' own `creation_year`/`creation_doy`
@@ -66,6 +65,13 @@ export async function bakeLidar(
 
   const rect = earthTileIndicesForBounds(group.bounds, GEODANMARK_LEVEL, EARTH_TILE_PX);
   const levelDir = join(rawDataPath('geodanmark.dir'), String(GEODANMARK_LEVEL));
+  // GDAL reads a VRT whose sources are missing as all-zero, so without this
+  // check an absent tile tree bakes every point black and reports success.
+  if (!existsSync(levelDir)) {
+    throw new Error(
+      `bakeLidar: GeoDanmark ortho tree missing at ${levelDir} — see data/raw/geodanmark/README.md for the harvest`,
+    );
+  }
   const vrtPath = join(workDir, `${group.id}-ortho.vrt`);
   await writeFile(
     vrtPath,
@@ -106,7 +112,7 @@ export async function bakeLidar(
     throw new Error(`bakeLidar: pdal pipeline produced zero points for group "${group.id}"`);
   }
 
-  const assetDir = join(GEO3D_DIR, 'groups', group.id, 'assets', ASSET_ID);
+  const assetDir = groupAssetDir(group.id, ASSET_ID);
   await mkdir(assetDir, { recursive: true });
   await writeFile(join(assetDir, 'points.bin'), packPoints(points));
 
@@ -121,24 +127,32 @@ export async function bakeLidar(
       pipeline: [{ step: 'pdal', version: deps.pdalVersion() }],
     },
     pointCount: points.length,
-    artifactUrl: `geo3d/groups/${group.id}/assets/${ASSET_ID}/points.bin`,
+    artifactUrl: assetArtifactUrl(group.id, ASSET_ID, 'points.bin'),
   };
 
-  const manifestPath = join(GEO3D_DIR, 'groups', group.id, 'manifest.json');
-  await writeJsonAtomic<SceneManifest>(manifestPath, (current) =>
-    nextManifest(current, group, asset),
-  );
-
-  const registryPath = join(GEO3D_DIR, 'scenes.json');
-  await writeJsonAtomic<GroupRegistry>(registryPath, (current) =>
-    upsertGroup(current ?? { formatVersion: 1, groups: [] }, {
-      id: group.id,
-      name: group.name,
-      manifestUrl: `geo3d/groups/${group.id}/manifest.json`,
-    }),
-  );
+  await publishAsset(group, asset, pointsBoundsM(points));
 
   return asset;
+}
+
+/** The group frame's extent as actually cut — `group.bounds` is geodetic and
+ *  pre-thinning, so only the written points answer where the scene is. */
+function pointsBoundsM(points: readonly ScenePoint[]): BoundsM {
+  let minX = Infinity;
+  let minY = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxZ = -Infinity;
+  for (const point of points) {
+    minX = Math.min(minX, point.xM);
+    minY = Math.min(minY, point.yM);
+    minZ = Math.min(minZ, point.zM);
+    maxX = Math.max(maxX, point.xM);
+    maxY = Math.max(maxY, point.yM);
+    maxZ = Math.max(maxZ, point.zM);
+  }
+  return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
 }
 
 function spawnPdal(pipelineJsonPath: string): Promise<void> {
@@ -171,7 +185,10 @@ function pdalVersion(): string {
 
 async function main(): Promise<void> {
   const start = Date.now();
-  const asset = await bakeLidar(SOENDERMARKEN, { runPdal: spawnPdal, pdalVersion });
+  const asset = await bakeLidar(sceneGroupFromArgv(process.argv), {
+    runPdal: spawnPdal,
+    pdalVersion,
+  });
   const seconds = ((Date.now() - start) / 1000).toFixed(1);
   process.stderr.write(
     `bakeLidar: done in ${seconds}s — ${asset.pointCount.toLocaleString()} points → ${asset.artifactUrl}\n`,

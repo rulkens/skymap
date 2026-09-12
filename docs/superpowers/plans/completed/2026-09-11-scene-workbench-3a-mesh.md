@@ -1,6 +1,6 @@
 # Scene Workbench 3a/4 — MVS textured mesh layer
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** an opaque, textured triangle mesh reconstructed by OpenMVS from the skråfoto frames draws between the LiDAR points and the blended splats, in the same metre frame — the whole path from a COLMAP known-pose model through OpenMVS to a re-packed `mesh.glb`, loaded through the existing per-kind loader table and drawn from an ordered renderer table.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** as plans 1–2, plus `@gltf-transform/core` 4.5.0 (devDependency, shared with PR #678), COLMAP 4.2.0 (brew, no GPU) and OpenMVS v2.4.0 (built from source — spec §6.1), PROJ's `cct`.
 
-**Spec:** [`docs/superpowers/specs/2026-09-11-scene-workbench-3-mesh-design.md`](../specs/2026-09-11-scene-workbench-3-mesh-design.md) §§1–7, 9–11 (§8 is plan 3b). Parent: [`specs/completed/2026-09-02-scene-workbench-design.md`](../specs/completed/2026-09-02-scene-workbench-design.md). As-built precedent: [`plans/completed/2026-09-10-scene-workbench-2-splats.md`](completed/2026-09-10-scene-workbench-2-splats.md).
+**Spec:** [`docs/superpowers/specs/completed/2026-09-11-scene-workbench-3-mesh-design.md`](../specs/2026-09-11-scene-workbench-3-mesh-design.md) §§1–7, 9–11 (§8 is plan 3b). Parent: [`specs/completed/2026-09-02-scene-workbench-design.md`](../specs/completed/2026-09-02-scene-workbench-design.md). As-built precedent: [`plans/completed/2026-09-10-scene-workbench-2-splats.md`](completed/2026-09-10-scene-workbench-2-splats.md).
 
 **Ground preparation:** spec §3 — four preps, **none landed yet**. P1+P2 are tasks 1–2 of this plan on their own branch/PR; P3+P4 are tasks 7–8 on a branch stacked on PR #685 (`splat-crop-group`), whose worktree this plan never touches. Packaging per the user's checkpoint ruling: prep as separate PRs.
 
@@ -69,8 +69,8 @@ Both existing loaders become `async` functions with unchanged bodies. `loadAsset
 
 **No new test** — the loaders' bodies are unchanged and the saga is an IO shell (parent spec §9's exclusion; plan 1 precedent). `tests/tools/scene-workbench/scene/acceptLoadedAsset.test.ts` still covers the staleness contract.
 
-- [ ] Change the type, the two loaders, and the saga chain.
-- [ ] `npx vitest run tests/tools/scene-workbench`; `npm run typecheck`; `npm run format` on the four files; commit as `refactor(scene-workbench): async AssetLoader contract`.
+- [x] Change the type, the two loaders, and the saga chain.
+- [x] `npx vitest run tests/tools/scene-workbench`; `npm run typecheck`; `npm run format` on the four files; commit as `refactor(scene-workbench): async AssetLoader contract`.
 
 ### Task 2: `sceneRenderers` — ordered renderer table (prep P2)
 
@@ -105,11 +105,11 @@ export function createSceneRenderers(
 
 Internally one `Record<GpuAsset['kind'], { draw(pass, assets) }>` (the `assetCount.ts` mapped-type idiom, `assetCount.ts:8-16`) built once from the two renderer factories; `draw` walks `SCENE_DRAW_ORDER`, filtering `resources.gpuAssets` per kind with the moved `visibleAssetsOfKind`. Opaque kinds first, blended last — task 4 inserts `'mesh'` between them. `Viewport` builds the bag right after `initGpu` beside `cameraUniform`, calls `renderers.draw(pass, resources, hidden)` after `setBindGroup(0, …)`, and no longer names any renderer.
 
-- [ ] Test `SCENE_DRAW_ORDER names every GpuAsset kind exactly once` — build a `Record<GpuAsset['kind'], true>` literal in the test (so `tsc` fails when the union grows without the test growing), assert `SCENE_DRAW_ORDER` sorted equals `Object.keys(record)` sorted and has no duplicates. This is the one thing `tsc` can't check: the array's coverage.
-- [ ] Test `SCENE_DRAW_ORDER draws every opaque kind before gaussianSplat` — assert `indexOf('gaussianSplat') === SCENE_DRAW_ORDER.length - 1` (the blend-over-depth contract; a future overlay kind appended after splats will need this test amended, on purpose).
-- [ ] Implement `sceneRenderers.ts`; rewire `Viewport.tsx`.
-- [ ] `npx vitest run tests/tools/scene-workbench`; `npm run typecheck`; `npm run format`; commit as `refactor(scene-workbench): sceneRenderers — one ordered renderer table`.
-- [ ] Executor: `npm run scene-workbench:probe` on the prep branch must still exit 0 (two assets) before the prep PR is marked ready.
+- [x] Test `SCENE_DRAW_ORDER names every GpuAsset kind exactly once` — build a `Record<GpuAsset['kind'], true>` literal in the test (so `tsc` fails when the union grows without the test growing), assert `SCENE_DRAW_ORDER` sorted equals `Object.keys(record)` sorted and has no duplicates. This is the one thing `tsc` can't check: the array's coverage.
+- [x] Test `SCENE_DRAW_ORDER draws every opaque kind before gaussianSplat` — assert `indexOf('gaussianSplat') === SCENE_DRAW_ORDER.length - 1` (the blend-over-depth contract; a future overlay kind appended after splats will need this test amended, on purpose).
+- [x] Implement `sceneRenderers.ts`; rewire `Viewport.tsx`.
+- [x] `npx vitest run tests/tools/scene-workbench`; `npm run typecheck`; `npm run format`; commit as `refactor(scene-workbench): sceneRenderers — one ordered renderer table`.
+- [x] Executor: `npm run scene-workbench:probe` on the prep branch must still exit 0 (two assets) before the prep PR is marked ready.
 
 ### Task 3: `packMeshGlb` / `readMeshGlb` + the gltf-transform devDependency
 
@@ -140,12 +140,12 @@ export function readMeshGlb(buffer: ArrayBuffer): Promise<TexturedMeshGeometry>;
 
 `packMeshGlb` writes the spec §5 subset with `Document` + `NodeIO.writeBinary`: one scene/node/mesh/primitive, `POSITION`/`TEXCOORD_0`/u32 indices, one material with `baseColorTexture`, one embedded image, linear/clamp sampler, and `root.getAsset().extras = { frame: 'group ENU metres, +Z up' }`. `readMeshGlb` uses `WebIO` (no fetch for a self-contained GLB — it runs under vitest and in the browser alike), applies the primitive's node world matrix to positions on read, and throws — naming `--max-texture-size` in the texture case — on 0 or > 1 primitives, > 1 texture, or a missing `TEXCOORD_0`. Both live where their siblings do (`packSplats.ts` / `parseSplats.ts`).
 
-- [ ] `npm install --save-dev @gltf-transform/core@4.5.0` (this worktree's `node_modules` is a symlink to the main checkout's, which already holds 4.5.0 from PR #678 — expect a lockfile diff only).
-- [ ] Test `packMeshGlb → readMeshGlb round-trips geometry, image bytes and the frame note` — a hand-built 4-vertex quad with distinct uvs per vertex, `indices = [0,1,2, 0,2,3]`, a 12-byte fake `image/png` byte array; assert `positions`/`uvs`/`indices` deep-equal, `image.bytes` byte-equal and `mimeType` preserved, and that the written GLB's `asset.extras.frame` is the spec string (read via gltf-transform in the test — a format-contract test, not a mirror).
-- [ ] Test `readMeshGlb applies a node transform` — build a document in the test with the quad under a node translated `[10, 0, 0]`; assert every read `x` is the source `x + 10`.
-- [ ] Test `readMeshGlb refuses two primitives`, `…refuses two textures` (assert the message contains `--max-texture-size`), `…refuses a primitive without TEXCOORD_0` — documents built with gltf-transform's API in the test.
-- [ ] Implement both.
-- [ ] `npx vitest run tests/tools/scene-recon/pack`; `npm run typecheck`; `npm run format`; commit `package.json`, `package-lock.json`, the two sources and the test as `feat(scene-recon): packMeshGlb + readMeshGlb — the mesh.glb subset`.
+- [x] `npm install --save-dev @gltf-transform/core@4.5.0` (this worktree's `node_modules` is a symlink to the main checkout's, which already holds 4.5.0 from PR #678 — expect a lockfile diff only).
+- [x] Test `packMeshGlb → readMeshGlb round-trips geometry, image bytes and the frame note` — a hand-built 4-vertex quad with distinct uvs per vertex, `indices = [0,1,2, 0,2,3]`, a 12-byte fake `image/png` byte array; assert `positions`/`uvs`/`indices` deep-equal, `image.bytes` byte-equal and `mimeType` preserved, and that the written GLB's `asset.extras.frame` is the spec string (read via gltf-transform in the test — a format-contract test, not a mirror).
+- [x] Test `readMeshGlb applies a node transform` — build a document in the test with the quad under a node translated `[10, 0, 0]`; assert every read `x` is the source `x + 10`.
+- [x] Test `readMeshGlb refuses two primitives`, `…refuses two textures` (assert the message contains `--max-texture-size`), `…refuses a primitive without TEXCOORD_0` — documents built with gltf-transform's API in the test.
+- [x] Implement both.
+- [x] `npx vitest run tests/tools/scene-recon/pack`; `npm run typecheck`; `npm run format`; commit `package.json`, `package-lock.json`, the two sources and the test as `feat(scene-recon): packMeshGlb + readMeshGlb — the mesh.glb subset`.
 
 ### Task 4: `MeshGpuAsset` + `texturedMeshRenderer` + `texturedMesh.wesl` + draw-order row
 
@@ -206,8 +206,8 @@ Vertex buffers: slot 0 `positions` (`float32x3`, stride 12), slot 1 `uvs` (`floa
 
 **No new automated test** beyond the `Record` growth — spec §9's WGSL exclusion; the probe (task 6) is the gate.
 
-- [ ] Grow `renderResources.ts`; write `uploadTexturedMesh.ts`, `texturedMesh.wesl` (header ≤ 10 lines: the unlit choice, the `flipY` contract), `texturedMeshRenderer.ts`; add the row and order entry; grow the test's `Record`.
-- [ ] `npx vitest run tests/tools/scene-workbench/render`; `npm run typecheck`; `npm run format`; commit as `feat(scene-workbench): texturedMeshRenderer — unlit, depth-writing mesh pass`.
+- [x] Grow `renderResources.ts`; write `uploadTexturedMesh.ts`, `texturedMesh.wesl` (header ≤ 10 lines: the unlit choice, the `flipY` contract), `texturedMeshRenderer.ts`; add the row and order entry; grow the test's `Record`.
+- [x] `npx vitest run tests/tools/scene-workbench/render`; `npm run typecheck`; `npm run format`; commit as `feat(scene-workbench): texturedMeshRenderer — unlit, depth-writing mesh pass`.
 
 ### Task 5: `TexturedMeshAsset` + loader row + `assetCount` row
 
@@ -237,10 +237,10 @@ export async function loadTexturedMesh(gpu: GpuContext, buffer: ArrayBuffer): Pr
 
 `ASSET_LOADERS` gains `mesh: loadTexturedMesh`; `ASSET_COUNT` gains `mesh: (asset) => ({ count: asset.triangleCount, unit: 'tris' })`. `SceneAsset.d.ts`'s header comment drops the "plans 3–4 add `MeshAsset`" line (it names a type that now has a different name).
 
-- [ ] Test `assetCount reports tris for a mesh asset` — one hand-built `TexturedMeshAsset` with `triangleCount: 1_234`, assert `{ count: 1234, unit: 'tris' }`.
-- [ ] Test `LayerList shows a mesh asset's count in tris` — manifest with one `mesh` asset (`triangleCount: 42_000`), assert the row text includes `42,000 tris`.
-- [ ] Implement.
-- [ ] `npx vitest run tests/tools/scene-workbench`; `npm run typecheck`; `npm run format`; commit as `feat(scene-workbench): TexturedMeshAsset — type, loader row, count row`.
+- [x] Test `assetCount reports tris for a mesh asset` — one hand-built `TexturedMeshAsset` with `triangleCount: 1_234`, assert `{ count: 1234, unit: 'tris' }`.
+- [x] Test `LayerList shows a mesh asset's count in tris` — manifest with one `mesh` asset (`triangleCount: 42_000`), assert the row text includes `42,000 tris`.
+- [x] Implement.
+- [x] `npx vitest run tests/tools/scene-workbench`; `npm run typecheck`; `npm run format`; commit as `feat(scene-workbench): TexturedMeshAsset — type, loader row, count row`.
 
 ### Task 6: probe scene mesh asset
 
@@ -252,9 +252,9 @@ export async function loadTexturedMesh(gpu: GpuContext, buffer: ArrayBuffer): Pr
 
 A third synthetic asset, label `'Probe mesh'`: a textured box (12 triangles, 8 vertices — or 24 if uvs must differ per face, implementer's call), uvs spanning `[0,1]²`, packed in-page by `packMeshGlb` (async — `syntheticProbeScene` grows an `await`; check its call site in `watchRegistrySaga`/the `?probe` gate and thread the promise, do not block) with a committed 2 × 2 PNG byte constant (a hand-written 4-pixel checker; ~70 bytes as a `Uint8Array` literal — cite the PNG chunk layout in one comment line). Served as a `blob:` URL like its siblings (`syntheticProbeScene.ts:85-89`). `probeGpuErrors.ts`'s boot readiness assertion becomes `toHaveCount(3)`; the name-scoped checkbox locators stay.
 
-- [ ] Add the asset; bump the count.
-- [ ] `npm run scene-workbench:probe` (start the dev server on a free port if 5600 is taken — `PORT`/`--port` per `probeGpuErrors.ts`'s own header; **never** kill a running `:5600`) — must exit 0 with three assets ready, no GPU/page/console errors.
-- [ ] `npm run format`; commit as `test(scene-workbench): synthetic textured mesh in the GPU probe scene`.
+- [x] Add the asset; bump the count.
+- [x] `npm run scene-workbench:probe` (start the dev server on a free port if 5600 is taken — `PORT`/`--port` per `probeGpuErrors.ts`'s own header; **never** kill a running `:5600`) — must exit 0 with three assets ready, no GPU/page/console errors.
+- [x] `npm run format`; commit as `test(scene-workbench): synthetic textured mesh in the GPU probe scene`.
 
 ### Task 7: `geo3dLayout` + `publishAsset` (prep P3)
 
@@ -284,9 +284,9 @@ export function publishAsset(group: SceneGroupDefinition, asset: SceneAsset): Pr
 
 Both bakes call these and lose their private copies. Behaviour is byte-identical — `tests/tools/scene-recon/bakeSplats.test.ts` must stay green untouched.
 
-- [ ] Test `publishAsset upserts the asset into the group manifest and the group into scenes.json` — tmpdir cwd (the `bakeSplats.test.ts` `forks`-pool pattern), a hand-built `pointCloud` asset, assert both files parse and carry it; call twice with a changed `label` and assert one asset, one group.
-- [ ] Implement; rewire both bakes.
-- [ ] `npx vitest run tests/tools/scene-recon`; `npm run typecheck`; `npm run format`; commit as `refactor(scene-recon): publishAsset + geo3dLayout — one manifest/registry write path`.
+- [x] Test `publishAsset upserts the asset into the group manifest and the group into scenes.json` — tmpdir cwd (the `bakeSplats.test.ts` `forks`-pool pattern), a hand-built `pointCloud` asset, assert both files parse and carry it; call twice with a changed `label` and assert one asset, one group.
+- [x] Implement; rewire both bakes.
+- [x] `npx vitest run tests/tools/scene-recon`; `npm run typecheck`; `npm run format`; commit as `refactor(scene-recon): publishAsset + geo3dLayout — one manifest/registry write path`.
 
 ### Task 8: `groupPhotoPoses` (prep P4)
 
@@ -314,8 +314,8 @@ Errors keep their current messages (no harvest → the `fetch-skraafoto --group`
 
 **No new unit test** — the block is moved, not changed; `bakeSplats.test.ts` (which exercises the staged `images/`, the frame filter and the JPEG check through `bakeSplats`) is the regression net and must stay green untouched.
 
-- [ ] Move the block; rewire `bakeSplats`.
-- [ ] `npx vitest run tests/tools/scene-recon`; `npm run typecheck`; `npm run format`; commit as `refactor(scene-recon): groupPhotoPoses — pose derivation out of bakeSplats`.
+- [x] Move the block; rewire `bakeSplats`.
+- [x] `npx vitest run tests/tools/scene-recon`; `npm run typecheck`; `npm run format`; commit as `refactor(scene-recon): groupPhotoPoses — pose derivation out of bakeSplats`.
 
 ### Task 9: `bakeMesh` orchestration + npm script
 
@@ -323,9 +323,9 @@ Errors keep their current messages (no harvest → the `fetch-skraafoto --group`
 
 **Files:**
 
-- Create: `tools/scene-recon/bakeMesh.ts`
-- Modify: `package.json` (`"bake-mesh": "tsx tools/scene-recon/bakeMesh.ts"`, beside `bake-splats`)
-- Test: `tests/tools/scene-recon/bakeMesh.test.ts`
+- Create: `tools/scene-recon/bakeMesh.ts`, `tools/scene-recon/pack/meshGlbGeometry.ts` (the reader half `readMeshGlb` and the bake share)
+- Modify: `package.json` (`"bake-mesh": "tsx tools/scene-recon/bakeMesh.ts"`, beside `bake-splats`), `tools/scene-recon/splats/writeColmapModel.ts` (opt-in `observations`), `tools/scene-workbench/src/scene/readMeshGlb.ts`
+- Test: `tests/tools/scene-recon/bakeMesh.test.ts`, `tests/tools/scene-recon/splats/writeColmapModel.test.ts`
 
 **Interfaces (spec §6.2, verbatim):**
 
@@ -353,40 +353,42 @@ export async function bakeMesh(
 Stages, in order, cwd-relative to `workDir = join(harvestDir, 'mvs-<group.id>')` (spec §5 layout, §6.2 steps — the argv lists are the contract):
 
 1. Preconditions: `points.bin` exists (`bakeSplats`'s message); both version probes.
-2. `groupPhotoPoses` → `writeColmapModel({ poses, pointsBinPath, pointSampleTarget: 200_000, outDir: 'sparse-in' })`.
-3. `runColmap` ×4: `['feature_extractor', '--database_path', 'database.db', '--image_path', 'sparse-in/images', '--ImageReader.camera_model', 'PINHOLE', '--ImageReader.single_camera_per_image', '1', '--FeatureExtraction.use_gpu', '0']`; `['exhaustive_matcher', '--database_path', 'database.db', '--FeatureMatching.use_gpu', '0']`; `['point_triangulator', '--database_path', 'database.db', '--image_path', 'sparse-in/images', '--input_path', 'sparse-in', '--output_path', 'sparse']`; `['image_undistorter', '--image_path', 'sparse-in/images', '--input_path', 'sparse', '--output_path', 'dense', '--output_type', 'COLMAP']`.
-4. `runOpenMvs`: `('InterfaceCOLMAP', ['-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'dense/images'])`; `('DensifyPointCloud', ['scene.mvs', '--resolution-level', fullRes ? '0' : '1', '--number-views', '0'])`; `('ReconstructMesh', ['scene_dense.mvs'])`; with `refine`: `('RefineMesh', ['scene_dense_mesh.mvs', '--resolution-level', '1'])`; `('TextureMesh', [refine ? 'scene_dense_mesh_refine.mvs' : 'scene_dense_mesh.mvs', '--export-type', 'glb', '--max-texture-size', '8192'])` → `scene_dense_mesh_texture.glb` (OpenMVS names outputs `<input stem>_texture.<ext>`; the implementer confirms the refine stem against the installed binary's `-h` and notes it in the header if it differs).
-5. Re-pack: `readMeshGlb` (refuses > 1 texture, hint carried through) → `sharp(image.bytes).jpeg({ quality: 90 }).toBuffer()` (resize to 8192 longest edge only if larger) → `packMeshGlb` → `groupAssetDir(group.id, 'mesh')/mesh.glb`. `--reuse-glb` starts here from the existing `scene_dense_mesh_texture.glb`, carrying the manifest's stored `colmap`/`openmvs` stamps forward (the `manifestBrushVersion` idiom, `bakeSplats.ts`).
-6. `publishAsset(group, asset)`: `id: 'mesh'`, label `${group.name} — skråfoto MVS mesh`, identity transform, provenance `{ source: 'nationalGeodataApi', sourceVintage: items[0].properties.datetime.slice(0,10), pipeline: [{ step: 'fetchSkraafoto', version: group.skraafoto.collection }, { step: 'colmap', version }, { step: 'openmvs', version }] }`, `triangleCount = indices.length / 3`, `artifactUrl = assetArtifactUrl(group.id, 'mesh', 'mesh.glb')`.
+2. `groupPhotoPoses` → `writeColmapModel({ poses, pointsBinPath, pointSampleTarget: 200_000, outDir: 'sparse-in', observations: true })` — the LiDAR cloud projected into every camera is the sparse model; COLMAP never matches (spec §10 #2).
+3. Staging transcode: every `sparse-in/images/*.jpg` that sharp reports as not 3-channel sRGB is re-written in place by `gdal_translate --config GDAL_JPEG_TO_RGB NO --config GDAL_PAM_ENABLED NO -b 1 -b 2 -b 3 -of JPEG -co QUALITY=95` — the 2025 nadir frames' four components are raw bands libjpeg tags CMYK, and converting them as CMYK (what sharp does) muddies the frame.
+4. `runColmap` ×1: `['image_undistorter', '--image_path', 'sparse-in/images', '--input_path', 'sparse-in', '--output_path', 'dense', '--output_type', 'COLMAP']`.
+5. `runOpenMvs`: `('InterfaceCOLMAP', ['-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'images'])`; `('DensifyPointCloud', ['scene.mvs', '--resolution-level', '0', '--number-views', '0', '--remove-dmaps', '1'])`, preceded by deleting every `*.dmap` in the workdir (OpenMVS reuses depth-map caches by image index); `('ReconstructMesh', ['scene_dense.mvs'])` → `scene_dense_mesh.ply`; `('RefineMesh', ['scene_dense.mvs', '--mesh-file', 'scene_dense_mesh.ply', '--resolution-level', '1', '-o', 'scene_dense_mesh_refine.ply'])`; `('TextureMesh', ['scene_dense.mvs', '--mesh-file', 'scene_dense_mesh_refine.ply', '--export-type', 'glb', '--max-texture-size', '8192', '--global-seam-leveling', '0', '--local-seam-leveling', '0', '--empty-color', '4210752', '-o', 'scene_dense_texture.glb'])` (seam levelling clips patch interiors to RGB-cube corners on this scene; `--empty-color` 0x404040 keeps uncovered faces from OpenMVS's default orange) → that GLB plus its sidecar `scene_dense_texture_0.png`. Both `-o` are pinned: v2.4.0 names an output after its _input's_ stem.
+6. Re-pack: `meshGlbGeometry` over a `NodeIO` document (only NodeIO resolves the sidecar URI; it refuses > 1 primitive/texture) → `sharp(image.bytes).jpeg({ quality: 90 }).toBuffer()` (resize to 8192 longest edge only if larger) → `packMeshGlb` → `groupAssetDir(group.id, 'mesh')/mesh.glb`. `--reuse-glb` starts here from the existing `scene_dense_texture.glb`, carrying the manifest's stored `colmap`/`openmvs` stamps forward (the `manifestBrushVersion` idiom, `bakeSplats.ts`).
+7. `publishAsset(group, asset)`: `id: 'mesh'`, label `${group.name} — skråfoto MVS mesh`, identity transform, provenance `{ source: 'nationalGeodataApi', sourceVintage: items[0].properties.datetime.slice(0,10), pipeline: [{ step: 'fetchSkraafoto', version: group.skraafoto.collection }, { step: 'colmap', version }, { step: 'openmvs', version }] }`, `triangleCount = indices.length / 3`, `artifactUrl = assetArtifactUrl(group.id, 'mesh', 'mesh.glb')`.
 
 Every stage `rm -f`s its own output before running (the `bakeSplats.ts` `rm(plyPath)` idiom). `main()` wires `spawnCct` (#685), a `spawn('colmap', args, { cwd: workDir })` runner, a `spawn(tool, args, { cwd: workDir })` runner with `PATH` untouched (the README says where OpenMVS installs), and the two version probes (`colmap -h` first line, `DensifyPointCloud -h` banner) with install hints quoting spec §6.1. Flags: `--group` via `sceneGroupFromArgv`, `--full-res`, `--refine`, `--reuse-glb`.
 
-- [ ] Test `bakeMesh runs the COLMAP and OpenMVS stages in order with the pinned flags` — stubbed runners recording `(tool, args)`; fake `runOpenMvs` writes a `packMeshGlb`-built GLB (with a real 1×1 PNG so `sharp` can encode it) as `scene_dense_mesh_texture.glb` when `tool === 'TextureMesh'`; assert the exact argv sequence above, level `1`, no `RefineMesh`.
-- [ ] Test `--full-res selects resolution level 0` and `--refine inserts RefineMesh and textures its output` — same stubs, assert the two differing argv entries.
-- [ ] Test `--reuse-glb runs no runner and keeps the manifest's version stamps` — pre-seed the workdir GLB and a manifest with `openmvs: 'x.y.z'`; assert zero runner calls and the published pipeline still says `x.y.z`.
-- [ ] Test `a two-texture OpenMVS export fails the bake naming --max-texture-size` — the fake writes a two-material GLB; assert rejection message.
-- [ ] Test `the published asset's triangleCount matches the exported geometry` — 12-triangle fake → `triangleCount === 12`, `artifactUrl === 'geo3d/groups/<id>/assets/mesh/mesh.glb'`, `mesh.glb` exists and `readMeshGlb` reads it back with `image.mimeType === 'image/jpeg'`.
-- [ ] Implement `bakeMesh.ts` + the script.
-- [ ] `npx vitest run tests/tools/scene-recon`; `npm run typecheck`; `npm run format`; commit as `feat(scene-recon): bakeMesh — COLMAP known-pose triangulation, OpenMVS, mesh.glb`.
+- [x] Test `bakeMesh runs the COLMAP and OpenMVS stages in order with the pinned flags` — stubbed runners recording `(tool, args)`; fake `runOpenMvs` writes, under the `-o` it was given, a `packMeshGlb`-built GLB whose atlas is an **external** `scene_dense_texture_0.png` (so the re-pack's URI resolution is exercised); assert the exact argv sequence above, level `1`, no `RefineMesh`.
+- [x] Test `runs the COLMAP and OpenMVS stages in order with the pinned flags` — the one argv-sequence assertion covers the level-0 densify, the `RefineMesh` stage and `TextureMesh` reading the refined ply.
+- [x] Test `re-reads the staged four-band frames band-wise and leaves the rest alone` — one four-band and one three-band harvest JPEG built with `sharp`; assert the `gdal_translate` argv for the four-band frame only, that its staged copy holds the tool's output, and that the three-band copy's bytes are untouched.
+- [x] Test `--reuse-glb runs no runner and keeps the manifest's version stamps` — pre-seed the workdir GLB + sidecar and a manifest with `openmvs: 'x.y.z'`; assert zero runner calls and the published pipeline still says `x.y.z`.
+- [x] Test `a two-texture OpenMVS export fails the bake naming --max-texture-size` — the fake writes a two-material GLB; assert rejection message.
+- [x] Test `the published asset's triangleCount matches the exported geometry` — 12-triangle fake → `triangleCount === 12`, `artifactUrl === 'geo3d/groups/<id>/assets/mesh/mesh.glb'`, `mesh.glb` exists and `readMeshGlb` reads it back with `image.mimeType === 'image/jpeg'`.
+- [x] Implement `bakeMesh.ts` + the script.
+- [x] `npx vitest run tests/tools/scene-recon`; `npm run typecheck`; `npm run format`; commit as `feat(scene-recon): bakeMesh — LiDAR-seeded sparse model, OpenMVS without COLMAP matching`.
 
 ### Task 10 (OPERATOR): toolchain record, first crop-group bake, visual check
 
 **Branch:** `scene-workbench-mesh-bake` (README commit) — no other code changes.
 
-- [ ] Confirm `colmap -h` and `DensifyPointCloud -h` run; record both versions and the exact build recipe (spec §6.1 plus whatever the build log needed — nanoflann, VCG clone, `opencv@4`, the `out/` build dir) in a "Reconstruction toolchain" section of `tools/scene-workbench/README.md`, with the PATH line.
-- [ ] Confirm #685's crop harvest is complete (`data/raw/skraafoto/skraafotos2025/soendermarken-crop/` — ~100 `.json`/`.jpg` pairs, the fetcher's own `ok/total` line) and the crop group's `points.bin` exists (`npm run bake-lidar -- --group soendermarken-crop` if not — minutes).
-- [ ] `npm run bake-mesh -- --group soendermarken-crop`. Record wall-clock per stage, `triangleCount`, texture size, and `mesh.glb` size in the README (spec §6.3's estimates are replaced by measurements). If COLMAP's matcher reports poor inlier counts, spec §10 #2's `sqlite3` intrinsics sync is the follow-up — report, don't improvise.
-- [ ] Open the workbench on a free port (never kill a running `:5600`), select `soendermarken-crop`. Named observable behaviours, attested by the user:
-  - The mesh lands on the LiDAR cloud — same ground, same facades — not on its side (spec §10 #1; if rotated, apply the inverse in the re-pack, one commit, re-attest).
+- [x] Confirm `colmap -h` and `DensifyPointCloud -h` run; record both versions and the exact build recipe (spec §6.1 plus whatever the build log needed — nanoflann, VCG clone, `opencv@4`, the `out/` build dir) in a "Reconstruction toolchain" section of `tools/scene-workbench/README.md`, with the PATH line.
+- [x] Confirm #685's crop harvest is complete (`data/raw/skraafoto/skraafotos2025/soendermarken-crop/` — ~100 `.json`/`.jpg` pairs, the fetcher's own `ok/total` line) and the crop group's `points.bin` exists (`npm run bake-lidar -- --group soendermarken-crop` if not — minutes).
+- [x] `npm run bake-mesh -- --group soendermarken-crop`. Record wall-clock per stage, `triangleCount`, texture size, and `mesh.glb` size in the README (spec §6.3's estimates are replaced by measurements). Nothing matches features any more, so a thin or holed mesh is a densify/seed question — report, don't improvise.
+- [x] Open the workbench on a free port (never kill a running `:5600`), select `soendermarken-crop`. Named observable behaviours, attested by the user:
+  - The mesh lands on the LiDAR cloud — same ground, same facades — not on its side (spec §10 #1).
   - Textured, unlit: the atlas reads as the photos, no shading gradient.
   - Toggling the mesh layer in `LayerList` removes/restores it; LiDAR and splats unaffected; splats behind mesh surfaces are clipped by its depth.
   - No console GPU validation errors.
-- [ ] Commit the README as `docs(scene-workbench): reconstruction toolchain + first mesh bake record`.
+- [x] Commit the README as `docs(scene-workbench): reconstruction toolchain + first mesh bake record`.
 
 ### Task 11: wrap-up
 
-- [ ] Executor: deletion audit over all four branches' diffs (`deletion-audit` skill), findings applied per `leanness.md`; `comment-audit` over touched code files.
-- [ ] Executor: `/feature-done` on the bake branch once the other three PRs are merged; ledger archived per `sdd-execution.md` Rule 3; plan + spec moved to `completed/` (spec stays until plan 3b ships — note that in the move commit).
+- [x] Executor: deletion audit over all four branches' diffs (`deletion-audit` skill), findings applied per `leanness.md`; `comment-audit` over touched code files.
+- [x] Executor: `/feature-done` on the bake branch once the other three PRs are merged; ledger archived per `sdd-execution.md` Rule 3; plan + spec moved to `completed/` (spec stays until plan 3b ships — note that in the move commit).
 
 ## Definition of Done
 
@@ -402,7 +404,7 @@ Every stage `rm -f`s its own output before running (the `bakeSplats.ts` `rm(plyP
 
 **Gates** — `npm run typecheck` + full `npm test` green on every branch; `npm run scene-workbench:probe` exits 0 with three assets; deletion-audit findings applied; `/feature-done` run.
 
-**Deferral boundary** — plan 3b (poses: `CameraPoseSetAsset`, `poses.json`, `bakePoses`, `poseOverlayRenderer`, the pick, the `poses` slice/panel); `AssetXform`/`quatToMat3`/any transform application; the nudge API; `sqlite3` intrinsics sync unless task 10 shows it is needed; any DisplayPanel section for the mesh; decimation knobs beyond `--full-res`/`--refine`.
+**Deferral boundary** — plan 3b (poses: `CameraPoseSetAsset`, `poses.json`, `bakePoses`, `poseOverlayRenderer`, the pick, the `poses` slice/panel); `AssetXform`/`quatToMat3`/any transform application; the nudge API; any DisplayPanel section for the mesh; decimation knobs beyond `--full-res`/`--refine`.
 
 ---
 

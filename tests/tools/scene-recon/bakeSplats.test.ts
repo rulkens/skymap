@@ -2,7 +2,8 @@
  * Covers the decisions that live only in the orchestrator, each of which fails
  * silently: the bare `<id>.jpg` resolved against the harvest directory before
  * `writeColmapModel` copies it (assert on the staged `images/`, not the poses);
- * a stale `final.ply` cleared; sub-floor splats pruned; `--reuse-ply` neither
+ * a stale `final.ply` cleared; sub-floor and out-of-bounds splats pruned;
+ * `--reuse-ply` neither
  * training nor re-stamping; an empty export not shipped as a stub .bin.
  *
  * cct and brush-cli are stubbed and the bake runs against a tmpdir cwd, so
@@ -49,9 +50,10 @@ const PLY_PROPERTIES = [
   'f_dc_2',
 ];
 
-/** A Brush export at shDegree 0, one vertex per given z (metres) and every
- *  other property zero — the reader needs only the header to be honest. */
-function ply(zsM: readonly number[]): Uint8Array {
+/** A Brush export at shDegree 0, one vertex per given z (metres), with
+ *  optional index-matched x/y (default 0, 0 — the anchor, inside the crop) and
+ *  every other property zero — the reader needs only the header to be honest. */
+function ply(zsM: readonly number[], xyM: readonly (readonly [number, number])[] = []): Uint8Array {
   const header =
     'ply\nformat binary_little_endian 1.0\n' +
     `element vertex ${zsM.length}\n` +
@@ -62,10 +64,41 @@ function ply(zsM: readonly number[]): Uint8Array {
   bytes.set(headerBytes);
   const dv = new DataView(bytes.buffer);
   zsM.forEach((zM, i) => {
-    dv.setFloat32(headerBytes.length + i * stride + PLY_PROPERTIES.indexOf('z') * 4, zM, true);
+    const base = headerBytes.length + i * stride;
+    const [xM, yM] = xyM[i] ?? [0, 0];
+    dv.setFloat32(base + PLY_PROPERTIES.indexOf('x') * 4, xM, true);
+    dv.setFloat32(base + PLY_PROPERTIES.indexOf('y') * 4, yM, true);
+    dv.setFloat32(base + PLY_PROPERTIES.indexOf('z') * 4, zM, true);
   });
   return bytes;
 }
+
+/** SOI + a minimal SOF0 + EOI — `jpegSizePx` walks the header, never decodes. */
+function jpegStub(widthPx: number, heightPx: number): Uint8Array {
+  const sof = [
+    0x00,
+    0x11,
+    0x08,
+    heightPx >> 8,
+    heightPx & 0xff,
+    widthPx >> 8,
+    widthPx & 0xff,
+    0x03,
+    1,
+    0x11,
+    0,
+    2,
+    0x11,
+    1,
+    3,
+    0x11,
+    1,
+  ];
+  return new Uint8Array([0xff, 0xd8, 0xff, 0xc0, ...sof, 0xff, 0xd9]);
+}
+
+/** The whole-frame window for the fixture: 20544 x 14016 at the 1920 long edge. */
+const FRAME_PX = [1920, 1310] as const;
 
 let root: string;
 let previousCwd: string;
@@ -84,7 +117,7 @@ beforeAll(() => {
   writeFileSync(stalePlyPath, ply(new Array<number>(9).fill(0)));
 
   copyFileSync(FIXTURE, join(collectionDir, `${ITEM_ID}.json`));
-  writeFileSync(join(collectionDir, `${ITEM_ID}.jpg`), 'jpeg-bytes');
+  writeFileSync(join(collectionDir, `${ITEM_ID}.jpg`), jpegStub(...FRAME_PX));
 
   const lidarDir = join(root, 'public/data/geo3d/groups', SOENDERMARKEN.id, 'assets/lidar');
   mkdirSync(lidarDir, { recursive: true });
@@ -125,13 +158,15 @@ describe('bakeSplats', () => {
     expect(asset.provenance.sourceVintage).toBe('2025-04-27');
   });
 
-  it('prunes splats below the LiDAR floor and packs only the rest', async () => {
+  it('prunes splats below the LiDAR floor and outside the group bounds', async () => {
     const asset = await bakeSplats(SOENDERMARKEN, {
       runCct: RUN_CCT,
       runBrush: async (colmapDir) => {
         // The seed cloud's floor is 0 m: -40 is the sub-surface junk an
-        // airborne-only bake invents, -4 is inside the margin's slack.
-        writeFileSync(join(colmapDir, 'final.ply'), ply([12, -4, -40, -600]));
+        // airborne-only bake invents, -4 is inside the margin's slack. The
+        // first vertex clears the floor but sits 2 km east of the anchor, well
+        // past the group's ~1.25 km eastern edge.
+        writeFileSync(join(colmapDir, 'final.ply'), ply([3, 12, -4, -40, -600], [[2000, 0]]));
       },
       brushVersion: () => '0.1.0-test',
     });
@@ -187,6 +222,31 @@ describe('bakeSplats', () => {
       step: 'brush-cli',
       version: 'trained-0.0.1',
     });
+  });
+
+  // The harvest keeps no record of the window it was cut with, so a group whose
+  // bounds or target resolution moved would otherwise train on stale pixels
+  // under intrinsics that describe a different crop.
+  it('refuses a frame whose JPEG no longer matches the recomputed window', async () => {
+    const jpgPath = join(
+      root,
+      'data/raw/skraafoto',
+      SOENDERMARKEN.skraafoto.collection,
+      `${ITEM_ID}.jpg`,
+    );
+    writeFileSync(jpgPath, jpegStub(960, 655));
+
+    await expect(
+      bakeSplats(SOENDERMARKEN, {
+        runCct: RUN_CCT,
+        runBrush: async () => {
+          throw new Error('brush must not run on a stale harvest');
+        },
+        brushVersion: () => '0.1.0-test',
+      }),
+    ).rejects.toThrow(/960×655.*1920×1310/s);
+
+    writeFileSync(jpgPath, jpegStub(...FRAME_PX));
   });
 
   it('refuses an export with no splats in it', async () => {

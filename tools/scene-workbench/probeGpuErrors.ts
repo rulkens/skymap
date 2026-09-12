@@ -205,8 +205,8 @@ async function settleFrames(page: Page, count: number): Promise<void> {
 
 /**
  * The exercise: boot into the `?probe` synthetic scene, orbit-drag, dolly to
- * the near clamp, toggle the point-cloud layer off then on, flick the mesh
- * wireframe overlay, then resize.
+ * the near clamp, toggle the point-cloud layer off then on, clip half the
+ * splats away, flick the mesh wireframe overlay, then resize.
  * `LayerList.tsx` renders one `role="checkbox"` per manifest asset and the
  * probe scene carries three, so every locator here is name-scoped or
  * count-asserted — a bare one trips Playwright's strict mode. Only the point
@@ -271,6 +271,22 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       name: 'layer:on',
       run: async (page) => {
         await page.getByRole('checkbox', { name: /point cloud/i }).check();
+        await settleFrames(page, SETTLE_FRAMES);
+      },
+    },
+    {
+      // A shortened instance count over an `order` buffer whose tail still
+      // holds the previous sort is exactly where an off-by-one would surface
+      // as a validation error. The synthetic splats span z 1–12 m, so six
+      // ArrowRight steps (1 m each) put the floor through the middle of them.
+      name: 'splat:clip-box',
+      run: async (page) => {
+        await page.getByRole('checkbox', { name: /clip box/i }).check();
+        await settleFrames(page, 1);
+        const zMin = page.getByRole('slider', { name: /z min/i });
+        for (let i = 0; i < 6; i++) await zMin.press('ArrowRight');
+        // Without this the step would pass on a box that culled nothing.
+        await expect(page.getByText(/\d+ \/ 320 splats/)).not.toHaveText('320 / 320 splats');
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
