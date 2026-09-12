@@ -1,14 +1,11 @@
 /**
- * plainPassGroupKeys — plain `contentPass.name` → groupKey, a SEPARATE walk
- * from `timedSlotRowsOf`, because the engine handle's `allNames` (what
- * `groupPassNames` actually receives) is `CONTENT_PASSES.map(l => l.name)`: one
- * entry per REGISTERED layer, never per-body-row (toggling a layer disables it
- * on every row it draws — see `RenderTogglesSection`'s one-way override doc).
- * A `slab: 'body'` layer's plain name therefore matches every body-row step
- * here; later occurrences simply overwrite earlier ones in the built map, which
- * is harmless — `PASS_GROUP_TITLES` maps every `<target>·BODY[k]` groupKey to
- * the SAME title, so whichever row the last occurrence lands on resolves to the
- * identical display group.
+ * plainPassGroupKeys — plain `contentPass.name` → groupKey, a walk SEPARATE
+ * from `timedSlotRowsOf` because `groupPassNames` receives the engine handle's
+ * `allNames` = `CONTENT_PASSES.map(l => l.name)`: one entry per REGISTERED
+ * layer, never per-body-row (a toggle disables the layer on every row it
+ * draws — see `RenderTogglesSection`). A `slab: 'body'` pass's name thus
+ * matches every body-row step here; the last occurrence wins, harmlessly —
+ * `PASS_GROUP_TITLES` gives every `<target>·BODY[k]` key the same title.
  */
 
 import type { FrameStep } from '../../../../@types/engine/frame/FrameStep';

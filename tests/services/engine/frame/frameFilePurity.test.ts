@@ -1,12 +1,11 @@
 /**
- * A file under `src/services/engine/frame/` (and its `timing/` subfolder)
- * declares ONE thing: the symbol it is named for. Helpers and constants inlined
- * beside it are invisible to the rest of the codebase and untestable alone, and
- * agents keep re-adding them — hence a ratchet rather than a review note.
- * `ALLOWED` carries today's debt; rows only ever go DOWN.
- *
- * `passes/` has its own sweep (`passes/passFilePurity.test.ts`); this one stops
- * at the two directories above so the two tables stay independently shrinkable.
+ * A file under `src/services/engine/frame/` — and its `timing/` and `passes/`
+ * subfolders — declares ONE thing: the symbol it is named for (for a pass file,
+ * its `ContentPass`). Helpers and constants inlined beside it are invisible to
+ * the rest of the codebase and untestable alone, and agents keep re-adding them
+ * — hence a ratchet rather than a review note. `ALLOWED` carries today's debt,
+ * keyed `<swept dir>/<file>` so the three sweeps can't borrow each other's
+ * budgets; rows only ever go DOWN.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -16,31 +15,48 @@ import { Node, Project, type Statement } from 'ts-morph';
 
 const FRAME_DIR = fileURLToPath(new URL('../../../../src/services/engine/frame/', import.meta.url));
 
-// Frame files that still inline helpers, with their current count. `slabs.ts`
-// is the slab vocabulary itself — a genuine multi-symbol module whose split is
-// its own piece of work, not a stray-helper row to trim in passing.
+// Files that still inline helpers, with their current count. `slabs.ts` is the
+// slab vocabulary itself — a genuine multi-symbol module whose split is its own
+// piece of work, not a stray-helper row to trim in passing. `orbitTrailsPass`'s
+// row is its cross-frame `staging` scratch — sized from the elements table,
+// owned by that pass alone, so it has nowhere else to live.
 const ALLOWED: Readonly<Record<string, number>> = {
-  bodyTextureLoadRadius: 1,
-  checkFrameOrder: 2,
-  cosmoLabelProjection: 1,
-  deriveBodyStates: 3,
-  executeFrame: 7,
-  expandFrameOrder: 6,
-  foregroundMaxDistance: 1,
-  milkyWayCloudLiveness: 1,
-  near0LabelProjection: 1,
-  partitionBodiesByPresentation: 1,
-  partitionStarsByResolution: 1,
-  pickProgram: 5,
-  projectFramePose: 1,
-  renderFrame: 2,
-  runBloom: 1,
-  runFrame: 3,
-  sceneOccluderSpheres: 1,
-  skyCubemapFaceContext: 5,
-  slabs: 18,
-  visibleSlabBodies: 3,
-  visibleStars: 1,
+  'frame/checkFrameOrder': 2,
+  'frame/cosmoLabelProjection': 1,
+  'frame/deriveBodyStates': 3,
+  'frame/executeFrame': 7,
+  'frame/expandFrameOrder': 6,
+  'frame/foregroundMaxDistance': 1,
+  'frame/milkyWayCloudLiveness': 1,
+  'frame/near0LabelProjection': 1,
+  'frame/partitionBodiesByPresentation': 1,
+  'frame/partitionStarsByResolution': 1,
+  'frame/pickProgram': 5,
+  'frame/projectFramePose': 1,
+  'frame/renderFrame': 2,
+  'frame/runBloom': 1,
+  'frame/runFrame': 3,
+  'frame/sceneOccluderSpheres': 1,
+  'frame/skyCubemapFaceContext': 5,
+  'frame/slabs': 18,
+  'frame/visibleSlabBodies': 3,
+  'frame/visibleStars': 1,
+  'frame/passes/bodyGlintsPass': 8,
+  'frame/passes/cloudShellPass': 1,
+  'frame/passes/constellationsPass': 2,
+  'frame/passes/earthPass': 6,
+  'frame/passes/fieldStarSpherePass': 6,
+  'frame/passes/filamentsPass': 3,
+  'frame/passes/horizonShellPass': 1,
+  'frame/passes/milkyWayPass': 1,
+  'frame/passes/orbitTrailsPass': 1,
+  'frame/passes/planetsPass': 1,
+  'frame/passes/ringsPass': 1,
+  'frame/passes/sgrAStarLensingPass': 5,
+  'frame/passes/starCatalogPass': 26,
+  'frame/passes/starPointsPass': 3,
+  'frame/passes/texturedBodiesPass': 2,
+  'frame/passes/zoneOfAvoidancePass': 4,
 };
 
 const project = new Project({
@@ -91,21 +107,28 @@ function strayDeclarations(path: string, base: string): readonly string[] {
 describe.each([
   ['frame', FRAME_DIR],
   ['frame/timing', FRAME_DIR + 'timing/'],
-])('%s files declare only their own symbol', (_label, dir) => {
-  const files = readdirSync(dir).filter((f) => f.endsWith('.ts'));
+  ['frame/passes', FRAME_DIR + 'passes/'],
+])('%s files declare only their own symbol', (label, dir) => {
+  // `passes/index.ts` is the registry barrel, not a pass; the other two dirs
+  // have no barrel and CLAUDE.md forbids adding one.
+  const files = readdirSync(dir).filter(
+    (f) => f.endsWith('.ts') && !(label === 'frame/passes' && f === 'index.ts'),
+  );
   expect(files.length).toBeGreaterThan(0);
 
   it.each(files)('%s', (fileName) => {
     const base = fileName.replace(/\.ts$/, '');
+    const key = `${label}/${base}`;
     const stray = strayDeclarations(dir + fileName, base);
-    const budget = ALLOWED[base] ?? 0;
+    const budget = ALLOWED[key] ?? 0;
     expect(
       stray.length,
       `${fileName} declares ${stray.length} symbol(s) beside its own ` +
-        `(${stray.join(', ') || 'none'}); its ALLOWED row says ${budget}. Over ` +
-        'the row: move each to its own file — one symbol per file, filename = ' +
-        'symbol. Under it: you just extracted one, so lower the row to ' +
-        `${stray.length} in the same commit (delete it at 0). Exact, not a ` +
+        `(${stray.join(', ') || 'none'}); its ALLOWED row '${key}' says ${budget}. ` +
+        'Over the row: move each to its own file — a helper under src/utils/ or ' +
+        'src/services/engine/frame/, a constant under src/data/ — one symbol per ' +
+        'file, filename = symbol. Under it: you just extracted one, so lower the ' +
+        `row to ${stray.length} in the same commit (delete it at 0). Exact, not a ` +
         'ceiling — a stale-high row silently re-permits the slot you freed.',
     ).toBe(budget);
   });

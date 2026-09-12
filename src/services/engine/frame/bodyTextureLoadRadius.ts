@@ -15,8 +15,8 @@
  *
  * ### The trade the multiplier balances
  *
- * `LOAD_RADIUS_BODY_RADII` counts body radii: the demand gate sits that many of
- * the body's own radii out from its centre. It balances two opposing pressures.
+ * The multiplier counts body radii: the demand gate sits `1e4` of the body's
+ * own radii out from its centre. It balances two opposing pressures.
  *
  *   - **Selectivity (keep it tight).** The per-body proximity design exists so
  *     that only the body being approached holds a resident texture. At the large
@@ -35,7 +35,7 @@
  *
  * At the chosen value Earth's gate lands near ~0.4 AU — selective against the
  * neighbouring planets, yet still ~4 orders of magnitude beyond the ~50 px
- * range where surface detail first reads. The const is the single tuning knob.
+ * range where surface detail first reads. It is the single tuning knob.
  * Because the gate scales with radius, gas giants are proportionally greedier
  * (a wider gate for a bigger body), which is acceptable: the outer system is
  * sparse, so a giant's wide gate rarely overlaps a neighbour.
@@ -54,12 +54,7 @@ import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
-// How many of the body's own radii out from its centre the texture demand
-// fires. Sized for selectivity between neighbouring planets — see the module
-// header's trade-off rationale.
-const LOAD_RADIUS_BODY_RADII = 1e4;
-
 export function loadRadiusMpc(id: BodyTextureId | RingTextureId): number {
   const body = findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureLoadRadius');
-  return body.radiusM * SCALE_UNITS.M_TO_MPC * LOAD_RADIUS_BODY_RADII;
+  return body.radiusM * SCALE_UNITS.M_TO_MPC * 1e4;
 }
