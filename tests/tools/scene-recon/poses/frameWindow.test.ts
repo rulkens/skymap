@@ -36,16 +36,19 @@ describe('frameWindow', () => {
     const window = frameWindow(NADIR, SOENDERMARKEN_CROP, NADIR_POSITION_M)!;
     const [outW, outH] = frameWindowOutputPx(window);
 
-    // 200 mm/px = 5 written px per ground metre over a 183 x 258 m box. The
-    // window covers more than the footprint — it is the box swept -10..50 m in
-    // z, plus 2% pad — so it overshoots, but must never undershoot.
-    expect(outW / 182.8).toBeGreaterThan(5);
-    expect(outW / 182.8).toBeLessThan(7);
-    expect(outH / 257.5).toBeGreaterThan(5);
-    expect(outH / 257.5).toBeLessThan(7);
-    // ~103 mm/px native at 2.18 km up through f = 79.6/0.00376 px.
-    expect(window.scale).toBeGreaterThan(0.4);
-    expect(window.scale).toBeLessThan(0.6);
+    // 100 mm/px asks for 10 written px per ground metre over a 183 x 258 m box,
+    // which the COG's ~103 mm/px native cannot quite give. The window covers
+    // more than the footprint — it is the box swept -10..50 m in z, plus 2% pad
+    // — so it overshoots, but must never undershoot.
+    expect(outW / 182.8).toBeGreaterThan(9);
+    expect(outW / 182.8).toBeLessThan(13);
+    expect(outH / 257.5).toBeGreaterThan(9);
+    expect(outH / 257.5).toBeLessThan(13);
+    // ~96 mm/px native over this box's projected diagonal (the -10..50 m sweep
+    // widens it past the frame's nominal 103 mm/px GSD), so the 100 mm/px
+    // request lands just short of reading the crop unscaled.
+    expect(window.scale).toBeGreaterThan(0.9);
+    expect(window.scale).toBeLessThanOrEqual(1);
   });
 
   // Two silent bugs move this window and nothing else catches them: transposing

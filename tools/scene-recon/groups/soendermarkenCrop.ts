@@ -5,7 +5,8 @@
  *
  * Its reason to exist is `groundMmPerPx`: the whole-frame harvest lands at
  * ~740 mm/px, which is what makes those splats blurry. Cropping each frame to
- * this box first buys back most of the ~100 mm/px the COGs actually hold.
+ * this box asks for the COGs' native ~100 mm/px instead — a ceiling, not a
+ * request, since `frameWindow` clamps `scale` at 1, so nothing finer exists.
  * `minPointSpacingM` drops to 0.5 m because a box this small can afford the
  * LiDAR at full density.
  */
@@ -30,7 +31,7 @@ export const SOENDERMARKEN_CROP: SceneGroupDefinition = {
   // The box spans UTM32 E 721543-721739, N 6174853-6175120 (`cct`), so only
   // the 721 easting column and both northing rows of the 1 km grid touch it.
   dhmTiles: ['punktsky_1km_6174_721', 'punktsky_1km_6175_721'],
-  skraafoto: { collection: 'skraafotos2025', groundMmPerPx: 200 },
+  skraafoto: { collection: 'skraafotos2025', groundMmPerPx: 100 },
   sourceSrs: 'EPSG:25832',
   minPointSpacingM: 0.5,
   dropClassifications: [7, 18],

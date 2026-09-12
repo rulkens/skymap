@@ -146,7 +146,7 @@ them under `$OPENMVS_BIN`, falling back to bare names on PATH.
 `soendermarken` covers the whole park from whole 1920-px frames — ~740 mm/px on
 the ground, which is why its splats are soft. `soendermarken-crop` shares its
 anchor (so the two are directly comparable in ENU metres) over a 258 x 183 m box
-in the western half of the park, harvested at **200 mm/px**: `fetchSkraafoto` crops
+in the western half of the park, harvested at **100 mm/px**: `fetchSkraafoto` crops
 each COG to the box before downsampling, which is the only way to spend the
 COG's native ~100 mm/px on a scene this size (`data/raw/skraafoto/README.md`,
 "Window recipes"). Baking it:
@@ -165,9 +165,8 @@ not four times as many.
 
 `soendermarken-crop-2019` is that same box and anchor over the `skraafotos2019`
 collection — a 23 June flight against 2025's 27 April one, so the two meshes
-differ in leaf-on canopy, and in harvest resolution: this group asks for
-100 mm/px, the ceiling the COGs themselves hold, against the 2025 crop's 200.
-It flew a different camera (UltraCam Osprey; nadir frames 13470 x 8670,
+differ in leaf-on canopy. Both ask for 100 mm/px, the ceiling the COGs
+themselves hold. It flew a different camera (UltraCam Osprey; nadir frames 13470 x 8670,
 obliques 7700 x 10300, against 2025's 14144 x 10560), which needs no code
 change: every intrinsic is read per item from its own
 `pers:interior_orientation`.
