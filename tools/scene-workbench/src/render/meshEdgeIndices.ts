@@ -18,9 +18,6 @@ export function meshEdgeIndices(indices: Uint32Array): {
   let maxIndex = 0;
   for (let i = 0; i < edgeCount; i++) if (indices[i]! > maxIndex) maxIndex = indices[i]!;
   const bound = maxIndex + 1;
-  if (bound * bound > Number.MAX_SAFE_INTEGER) {
-    throw new Error(`mesh has ${bound} vertices — packed edge keys would lose precision`);
-  }
 
   const keys = new Float64Array(edgeCount);
   for (let t = 0; t < triangles; t++) {

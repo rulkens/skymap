@@ -81,9 +81,7 @@ script or `/scene-workbench/` subpath.
    atlas, `mesh.glb` 26.8 MB. RefineMesh is the catch: it decimates its input
    to what its own `--resolution-level` can support before refining —
    2,997,611 faces in, 482,384 out; 4,098,829 in, 660,051 out — so the
-   published mesh has far fewer triangles than the raw reconstruction. The
-   level-1 densify, 200 mm/px harvest and ReconstructMesh-smoothing variants
-   this path was judged against are in the git log of this section.
+   published mesh has far fewer triangles than the raw reconstruction.
 7. `npm run scene-workbench`
 
 Every fetch/bake CLI above takes `--group <id>` (default `soendermarken`);

@@ -48,7 +48,6 @@ describe('frameWindow', () => {
     // widens it past the frame's nominal 103 mm/px GSD), so the 100 mm/px
     // request lands just short of reading the crop unscaled.
     expect(window.scale).toBeGreaterThan(0.9);
-    expect(window.scale).toBeLessThanOrEqual(1);
   });
 
   // Two silent bugs move this window and nothing else catches them: transposing

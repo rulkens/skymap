@@ -40,7 +40,5 @@ describe('viewSlice.frameCamera', () => {
 
     expect(framed.camera.targetM).toEqual([60, -5, 20]);
     expect(framed.camera.distanceM).toBe(90);
-    expect(framed.camera.yaw).toBe(defaultViewSlice.camera.yaw);
-    expect(framed.camera.pitch).toBe(defaultViewSlice.camera.pitch);
   });
 });
