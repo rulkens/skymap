@@ -33,11 +33,9 @@
  * cosine's camera) uses the SAME `planet.radiusM` the mvp used, so both share
  * one definition of "the frame where this body is the unit sphere".
  *
- * That seam is also why the contact-range depth pair is composed HERE rather
- * than in the shader: `vpCamRelLocal` and `camAltitudeSq` are the eye-offset
- * subtraction done in f64, so the fragment never has to attempt it in f32 (the
- * two utils carry the reasoning). A rover parked on Mars sinks into the ground
- * without them.
+ * That seam is also why the contact-range depth pair (`vpCamRelLocal` +
+ * `camAltitudeSq`) is composed HERE, in f64 — see `lib/analyticSphere.wesl`'s
+ * depth section.
  *
  * ### When it draws
  *

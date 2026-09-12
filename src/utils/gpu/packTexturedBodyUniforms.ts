@@ -18,10 +18,8 @@
  * is the body-local camera position the Minnaert emission-angle cosine needs
  * (view-dependent; the lit prefix carries no camera).
  *
- * `camAltitudeSq` and `vpCamRelLocal` are the contact-range depth pair: the
- * quantities the fragment's analytic sphere cannot form in f32 once the eye is
- * metres above a body-radius-scale surface (see `composeBodySlabCamRelVp` and
- * `bodySlabCamAltitudeSq`, and the depth section of `lib/analyticSphere.wesl`).
+ * `camAltitudeSq` and `vpCamRelLocal` are the contact-range depth pair — see
+ * `lib/analyticSphere.wesl`'s depth section.
  *
  * ## Byte layout (matches `TexturedBodyUniforms`)
  *

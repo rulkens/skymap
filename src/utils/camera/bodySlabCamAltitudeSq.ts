@@ -1,12 +1,11 @@
 /**
  * bodySlabCamAltitudeSq — `dot(camPosLocal, camPosLocal) − 1`, the constant term
- * of the analytic sphere's ray quadratic, computed in f64.
- *
- * The shader cannot form it: `camPosLocal` is f32, and 10 m above Mars its
- * components are 1 + 3e−6, where one ulp is already 0.4 m — subtracting 1 there
- * quantises the eye's altitude before the quadratic runs. The altitude form
- * below has only one subtraction, `|eyeRelBodyM| − radiusM`, between two f64
- * metre quantities, so the result is good to nanometres.
+ * of the analytic sphere's ray quadratic (see `lib/analyticSphere.wesl`'s depth
+ * section). Computed CPU-side because the SHADER cannot form it in f32:
+ * `camPosLocal` is f32, and 10 m above Mars its components are 1 + 3e−6, where
+ * one ulp is already 0.4 m — subtracting 1 there quantises the eye's altitude
+ * before the quadratic runs. f64 has no such trouble either way; this form just
+ * keeps the subtraction in metre units, `|eyeRelBodyM| − radiusM`.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

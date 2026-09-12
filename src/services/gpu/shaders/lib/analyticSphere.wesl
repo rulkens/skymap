@@ -66,16 +66,19 @@
 // return 'clip.z / clip.w' -- byte-for-byte what the rasteriser would have
 // produced had it drawn the true surface, on either depth convention.
 //
-// 'fragDepthFromLocal' projects the hit through the SAME mvp the vertex stage
-// used, which is exact only while the eye is far from the surface: that mvp's
-// translation column is the eye offset in metres, so on a planet (Mars: 3.39e6,
-// f32 ulp 0.25 m) a hit 10 m away is the difference of two huge numbers and the
-// written depth lands a metre out -- enough to swallow a mesh parked on the
-// ground. 'fragDepthFromCamRel' takes the CAMERA-RELATIVE hit ('rd * t', some
-// 3e-6 body radii) through a translation-free 'vp * scale(R)', so nothing large
-// is ever subtracted in f32. Same reason 'hitUnitSphere' is handed
-// 'dot(ro, ro) - 1' instead of forming it: at that scale it, and the textbook
-// near root, are both catastrophic cancellations.
+// Projecting a hit through the SAME mvp the vertex stage used is exact only
+// while the eye is far from the surface: that mvp's translation column is the
+// eye offset in metres, so on a planet (Mars: 3.39e6, f32 ulp 0.25 m) a hit
+// 10 m away is the difference of two huge numbers, and the written depth lands
+// 0.02-0.10 m out -- the metre-scale error this path used to show instead
+// traced to 'c''s ('originAltitudeSq') 0.4 m quantisation of the ray origin,
+// now computed in f64 (see 'bodySlabCamAltitudeSq'). Either error is enough to
+// swallow or float a mesh parked on the ground. Projecting a hit taken
+// CAMERA-RELATIVE instead ('rd * t', some 3e-6 body radii) through a
+// translation-free 'vp * scale(R)' avoids the cancellation outright, since
+// nothing large is ever subtracted in f32. Same reason 'hitUnitSphere' is
+// handed 'dot(ro, ro) - 1' instead of forming it: at that scale it, and the
+// textbook near root, are both catastrophic cancellations.
 //
 // NEAR0 is reversed-Z ('SLAB_REVERSED_Z[NEAR0] = true': infinite far, clear 0,
 // 'depthCompare: greater'), and reversed-Z lives entirely inside the projection
@@ -208,21 +211,13 @@ fn equirectUvGradients(uv: vec2<f32>) -> UvGradients {
   return out;
 }
 
-// fragDepthFromLocal — the '@builtin(frag_depth)' value for a point in the
-// body's local frame, projected through the SAME mvp the vertex stage used. No
-// reversed-Z branch: see the header.
-fn fragDepthFromLocal(mvp: mat4x4<f32>, pLocal: vec3<f32>) -> f32 {
-  let clip = clip_from_local(mvp, pLocal);
-  return clip.z / clip.w;
-}
-
-// fragDepthFromCamRel — the '@builtin(frag_depth)' value for a hit expressed
-// RELATIVE TO THE EYE, in local (body-radius) units: 'rd * SphereHit.t'.
-// 'vpCamRelLocal' is the slab's vp times the body's radius scale and carries NO
-// translation ('utils/camera/composeBodySlabCamRelVp.ts'), so the projection
-// never subtracts the eye offset in f32. Use this, not 'fragDepthFromLocal',
-// wherever the eye can come within metres of the surface -- see the header.
-fn fragDepthFromCamRel(vpCamRelLocal: mat4x4<f32>, pCamRelLocal: vec3<f32>) -> f32 {
-  let clip = clip_from_local(vpCamRelLocal, pCamRelLocal);
+// fragDepthFromClip — the '@builtin(frag_depth)' value for a point projected
+// through a clip matrix. No reversed-Z branch: see the header. 'm' and 'p' must
+// share one frame: either the body's absolute local frame with the vertex
+// stage's own mvp, or a hit taken RELATIVE TO THE EYE with the
+// translation-free 'vpCamRelLocal' (mandatory once the eye can come within
+// metres of the surface) -- each call site names which.
+fn fragDepthFromClip(m: mat4x4<f32>, p: vec3<f32>) -> f32 {
+  let clip = clip_from_local(m, p);
   return clip.z / clip.w;
 }

@@ -77,7 +77,7 @@
 // parameter does).
 
 import package::lib::analyticSphere::PROXY_SCALE;
-import package::lib::analyticSphere::fragDepthFromLocal;
+import package::lib::analyticSphere::fragDepthFromClip;
 import package::lib::analyticSphere::hitUnitSphere;
 import package::lib::sphere::clip_from_local;
 
@@ -136,7 +136,8 @@ fn fsPick(in: SpherePickVSOut) -> PickFSOut {
   // r-channel carries the identity; g/b/a stay 0 so the output is well-defined
   // (only the r channel is read back on the JS side).
   out.id = vec4<u32>(u.packedId, 0u, 0u, 0u);
-  // The SAME mvp the vertex stage used, applied to the real surface point.
-  out.depth = fragDepthFromLocal(u.mvp, surface.point);
+  // Absolute local frame: the SAME mvp the vertex stage used, applied to the
+  // real surface point.
+  out.depth = fragDepthFromClip(u.mvp, surface.point);
   return out;
 }

@@ -22,13 +22,14 @@ import {
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { TEXTURED_BODY_UNIFORM_FLOATS } from '../../../../utils/gpu/packTexturedBodyUniforms';
 import vsCode from '../../shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
 
-/** `TexturedBodyUniforms` is 176 bytes (44 f32): the 80-byte lit prefix + two
- *  ring ratios + two Minnaert limb params + camPosLocal vec3 + camAltitudeSq +
- *  the eye-relative vp. Written from `packTexturedBodyUniforms`. */
-const UNIFORM_BUFFER_SIZE = 176;
+/** `TexturedBodyUniforms` is 176 bytes (44 f32). Size derives from the
+ *  packer's f32 count so this can never drift from the layout it writes
+ *  (same pattern as `earthRenderer`/`cloudShellRenderer`). */
+const UNIFORM_BUFFER_SIZE = TEXTURED_BODY_UNIFORM_FLOATS * 4;
 
 /**
  * Per-kind sphere-map config — THE EXTENSION POINT. Each row names a

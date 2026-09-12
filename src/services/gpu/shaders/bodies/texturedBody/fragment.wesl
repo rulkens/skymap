@@ -44,7 +44,7 @@
 import package::bodies::texturedBody::io::TexturedBodyVSOut;
 import package::lib::analyticSphere::equirectUvFromDir;
 import package::lib::analyticSphere::equirectUvGradients;
-import package::lib::analyticSphere::fragDepthFromCamRel;
+import package::lib::analyticSphere::fragDepthFromClip;
 import package::lib::analyticSphere::hitUnitSphere;
 import package::lib::sphere::TexturedBodyUniforms;
 import package::lib::bodyLighting::litShade;
@@ -99,8 +99,7 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   // proxy, so neither it nor its interpolant is unit length.
   let rd = normalize(in.localPos - ro);
 
-  // 'u.camAltitudeSq' is the f64-computed 'dot(ro, ro) - 1' the f32 ray origin
-  // can no longer express this close to the surface (see 'lib/analyticSphere').
+  // 'u.camAltitudeSq' is f64-derived -- see 'lib/analyticSphere.wesl's depth section.
   let surface = hitUnitSphere(ro, rd, u.camAltitudeSq);
   // Unit length in both branches, so it is the exact geometric normal.
   let ng = surface.point;
@@ -122,17 +121,17 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   let sunVis = ringSunVisibility(ng, u.sunDirLocal, u.ringInnerRatio, u.ringOuterRatio);
   let shade = litShade(n, u.sunDirLocal * sunVis);
   let noL = max(dot(n, u.sunDirLocal), 0.0);
-  let v = normalize(u.camPosLocal - ng);
+  // 'ng - ro = rd * t' exactly, so 'v = -rd' -- no re-subtract, no renormalize.
+  let v = -rd;
   let noV = max(dot(n, v), 0.0);
   let limb = limbDarkening(noL, noV, u.limbStrength, u.limbExponent);
   let colour = albedo * shade * limb;
 
   var out: FSOut;
   out.colour = vec4<f32>(colour, 1.0);
-  // The hit RELATIVE TO THE EYE, through the translation-free vp: a body-slab
-  // eye can sit metres above the surface, where projecting the absolute hit
-  // through 'u.mvp' would quantise the ground's depth to ~1 m and swallow
-  // anything parked on it.
-  out.depth = fragDepthFromCamRel(u.vpCamRelLocal, rd * surface.t);
+  // Eye-relative frame: the hit relative to the eye, through the
+  // translation-free 'u.vpCamRelLocal' -- see 'lib/analyticSphere.wesl's depth
+  // section.
+  out.depth = fragDepthFromClip(u.vpCamRelLocal, rd * surface.t);
   return out;
 }

@@ -161,14 +161,12 @@ struct LitBodyUniforms {
 //
 // ## The contact-range depth pair: 'camAltitudeSq' + 'vpCamRelLocal'
 //
-// Both exist because f32 cannot express a surface 10 m away from an eye 3.4e6 m
-// from the body centre — 'lib/analyticSphere.wesl's depth section carries the
-// reasoning. 'camAltitudeSq' is 'dot(camPosLocal, camPosLocal) - 1' computed in
-// f64 CPU-side, and it takes over what was the trailing pad at byte 108 (the
-// pad-slot-becomes-real-field trick again). 'vpCamRelLocal' is the only field
-// costing a fresh row: 'mvp' WITHOUT its eye-offset translation, for projecting
-// a hit taken relative to the eye. 'mvp' stays — the vertex stage still
-// rasterises the proxy shell through it.
+// See 'lib/analyticSphere.wesl's depth section for why these exist. Byte 108
+// was 'LitBodyUniforms'' trailing pad; it becomes a real field here (the
+// pad-slot-becomes-real-field trick again):
+//
+//   offset 108..111: camAltitudeSq (f32 — dot(camPosLocal, camPosLocal) - 1, f64-derived)
+//   offset 112..175: vpCamRelLocal (mat4x4<f32> — mvp without its eye-offset translation)
 //
 // ## Byte layout (uniform address space)
 //
@@ -201,6 +199,7 @@ struct TexturedBodyUniforms {
   camAltitudeSq: f32,
   vpCamRelLocal: mat4x4<f32>,
 };
+
 // ── RingUniforms ─────────────────────────────────────────────────────
 //
 // The uniform layout for the ring renderer -- the OTHER half of Saturn's
