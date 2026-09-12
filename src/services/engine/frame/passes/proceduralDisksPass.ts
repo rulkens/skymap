@@ -26,13 +26,9 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 
 export const proceduralDisksPass: ContentPass = {
   name: 'procedural-disks',
-  slab: COSMO,
-  target: 'hdr',
-  blend: 'additive',
 
   enabled(state, _ctx, _view) {
     if (!state.settings.thumbnails.enabled) return false;
@@ -62,16 +58,6 @@ export const proceduralDisksPass: ContentPass = {
   // stash — the content replay is the renderer's own concern. Same
   // renderer-null guard as `draw`: the GPU handle is nullable pre-bootstrap
   // and the pick program's `enabled` gate never narrows it.
-  //
-  // ### @group(0) prefix restore
-  //
-  // `pickDisks` binds the disk camera at `@group(0)`, clobbering the shared
-  // point-pick camera prefix that the structure-marker row drawn after this
-  // one reads (it binds nothing at slot 0 itself). So this row calls
-  // `galaxyPickRenderer.bindCamera(pass)` before returning to put the shared
-  // prefix back — the postcondition every COSMO `drawPick` owes its
-  // successors (see `ContentPass.drawPick`). Null-guarded like the disk
-  // renderer.
   drawPick(pass, view, ctx, state) {
     if (state.gpu.proceduralDiskRenderer === null) return;
     state.gpu.proceduralDiskRenderer.pickDisks(
@@ -82,6 +68,5 @@ export const proceduralDisksPass: ContentPass = {
       ctx.drawPxPerRad,
       state.gpu.focusUniform!.bindGroup,
     );
-    state.gpu.galaxyPickRenderer?.bindCamera(pass);
   },
 };

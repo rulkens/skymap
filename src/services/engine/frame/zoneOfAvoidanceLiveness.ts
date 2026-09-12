@@ -6,13 +6,13 @@
  * caller can gate on `!== null` without risking `if (opacity)` on a real zero.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
 import { zoneOfAvoidanceLayerOpacity } from '../presentation/zoneOfAvoidanceLayerOpacity';
 
 export function deriveZoneOfAvoidanceLiveness(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): number | null {
   if (state.gpu.zoneOfAvoidanceRenderer === null) return null;

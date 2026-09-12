@@ -42,12 +42,18 @@ struct VSOut {
   // Per-orbit apparent-size fade (CPU-side): 1 well above the cull threshold,
   // ramping to 0 as the orbit shrinks toward it. Multiplies the final colour.
   @location(6) @interpolate(flat) alpha: f32,
+  // The 3D ellipse basis, eye at the origin, km — the fragment rebuilds its
+  // orbit point as occCentre + s*occMajor + t*occMinor to test for occlusion.
+  @location(7) @interpolate(flat) occCentre: vec3<f32>,
+  @location(8) @interpolate(flat) occMajor: vec3<f32>,
+  @location(9) @interpolate(flat) occMinor: vec3<f32>,
 };
 
 // Per-instance vertex input, matching the TS pipeline's instance-buffer
 // descriptor byte-for-byte (see orbitTrailRenderer.ts): 80 bytes of conic +
 // tint data, 48 bytes of clip-space conic basis 'vsRibbon' walks per sample
-// to trace the ellipse, then 8 bytes of visible-arc interval — 136 total.
+// to trace the ellipse, 8 bytes of visible-arc interval, then 48 bytes of
+// eye-relative 3D basis (eyeRelativeOrbitBasisKm.ts) — 184 total.
 struct OrbitInstance {
   // Ginv columns (.xyz used, .w pad) — see vertex.wesl's 'vsRibbon' doc.
   @location(1) ginv0: vec4<f32>,
@@ -64,4 +70,8 @@ struct OrbitInstance {
   // eStart, eSpan. vsRibbon samples ONLY inside it, so no sample is ever
   // behind the camera; eSpan == TAU means the whole orbit (wrap the strip).
   @location(9) arc: vec2<f32>,
+  // Eye-relative 3D basis in km, forwarded flat to the fragment (see VSOut).
+  @location(10) occCentre: vec4<f32>,  // ellipse centre (xyz, pad)
+  @location(11) occMajor: vec4<f32>,   // semi-major A (xyz, pad)
+  @location(12) occMinor: vec4<f32>,   // semi-minor B (xyz, pad)
 };

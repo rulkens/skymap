@@ -15,24 +15,20 @@
 // the ray ORIGIN is carried into the same frame ('camPosLocal' takes the
 // matching oblateness parameter for exactly this).
 //
-// Following the 'lib' convention ('lib/flow.wesl', 'atmosphere/scattering.wesl',
-// 'lib/sphere.wesl::clip_from_local'): every input arrives as a PARAMETER.
-// WESL has no global state -- a lib module cannot see a consumer's
-// '@group'/'@binding' declarations -- so the mvp, the ray and the uv are all
-// passed in, and this module declares no bindings, no entry points and no
+// Every input arrives as a PARAMETER, the 'lib' convention: WESL has no global
+// state, so a lib module cannot see a consumer's '@group'/'@binding'
+// declarations. This module declares no bindings, no entry points and no
 // '@builtin(position)'-bearing struct.
 //
 // ## The grazing fallback, and why derivatives run before 'discard'
 //
 // 'dpdx'/'dpdy' require UNIFORM control flow, so a fragment that samples with
-// hand-computed gradients must take them BEFORE it discards. That in turn means
-// the MISSED lanes of a limb quad still contribute to their neighbours'
-// derivatives, and a garbage uv in one lane poisons the whole 2x2 quad. Hence
-// 'hitUnitSphere' returns a plausible point on a miss rather than nothing: the
-// ray is clamped to its closest-approach parameter and normalized onto the
-// sphere, which is C0-continuous with the true hit as the limb is crossed. Limb
-// gradients therefore stay finite, and the caller drops the missed lanes once
-// every derivative has been taken.
+// hand-computed gradients must take them BEFORE it discards -- which means the
+// MISSED lanes of a limb quad still feed their neighbours' derivatives, and one
+// garbage uv poisons the whole 2x2 quad. So 'hitUnitSphere' returns a plausible
+// point on a miss: the ray clamped to its closest-approach parameter and
+// normalized onto the sphere, C0-continuous with the true hit across the limb.
+// Limb gradients stay finite, and the caller drops the missed lanes afterwards.
 //
 // ## The uv convention, and the (0, 1] vs [0.5, 1.5) non-difference
 //
@@ -44,37 +40,43 @@
 //   v = lat / PI + 0.5                          (south 0 -> north 1)
 //
 // 'atan2' returns (-PI, PI], so the raw u lands in (0, 1] rather than the mesh's
-// [0.5, 1.5). Those differ by exactly one whole turn on the far hemisphere and
-// the sampler addresses u as 'repeat', so the SAMPLED TEXEL is identical -- the
-// wrap is the hardware's job, and no extra branch is needed to reproduce the
-// mesh's unwrapped range.
+// [0.5, 1.5) -- one whole turn apart on the far hemisphere, and the sampler
+// addresses u as 'repeat', so the SAMPLED TEXEL is identical. No extra branch.
 //
 // ## The two-seam gradient trick
 //
 // What is NOT free is the derivative. Per-fragment u jumps by 1.0 across the
-// antimeridian, so a 2x2 quad straddling that meridian sees 'dpdx(u) ~ 1', asks
-// for a footprint an entire texture wide, and picks the coarsest mip -- a bright
-// blurred one-pixel line down the body. A mesh path never had this, because its
-// vertex u is monotonic across the whole sphere.
+// antimeridian, so a 2x2 quad straddling it sees 'dpdx(u) ~ 1', asks for a
+// footprint an entire texture wide and picks the coarsest mip -- a bright
+// blurred line down the body. A mesh path never had this: its vertex u is
+// monotonic across the whole sphere.
 //
-// The fix is 'textureSampleGrad' with WRAP-CORRECTED gradients. We build a
-// SECOND u shifted half a turn ('fract(u + 0.5)'), whose own discontinuity sits
-// on the prime meridian -- half a sphere away from the first. Any quad small
-// enough to matter straddles at most one of the two, so per axis we take
-// whichever of the two derivatives has the smaller magnitude: on the seam that
-// discards the spurious ~1.0 jump and keeps the honest one; everywhere else the
-// two are equal and the choice is a no-op. Every texture read of the same uv
-// reuses the one corrected gradient pair.
+// The fix is 'textureSampleGrad' with WRAP-CORRECTED gradients. A SECOND u
+// shifted half a turn ('fract(u + 0.5)') puts its own discontinuity on the prime
+// meridian, half a sphere from the first, so any quad small enough to matter
+// straddles at most one. Per axis, take the smaller-magnitude derivative: on the
+// seam that drops the spurious ~1.0 jump; elsewhere the two are equal and the
+// choice is a no-op. Every read of the same uv reuses the one corrected pair.
 //
-// ## Depth, and why there is NO reversed-Z flip
+// ## Depth: camera-relative at contact range, and NO reversed-Z flip
 //
 // Writing '@builtin(frag_depth)' is mandatory: the rasteriser's interpolated
 // depth belongs to the PROXY, which is nowhere near the surface, so leaving it
-// alone would put every body behind everything else. 'fragDepthFromLocal'
-// projects the analytic hit through the SAME mvp the vertex stage used and
-// returns 'clip.z / clip.w' -- byte-for-byte what the rasteriser would have
-// produced had it drawn the true surface, on either depth convention. NEAR0 is
-// reversed-Z ('SLAB_REVERSED_Z[NEAR0] = true': infinite far, clear 0,
+// alone would put every body behind everything else. Both depth functions
+// return 'clip.z / clip.w' -- byte-for-byte what the rasteriser would have
+// produced had it drawn the true surface, on either depth convention.
+//
+// Projecting a hit through the SAME mvp the vertex stage used is exact only
+// far from the surface: that mvp's translation column is the eye offset in
+// metres, so on a planet (Mars 3.39e6 m, f32 ulp 0.25 m) a hit 10 m away is a
+// difference of two huge numbers and the depth lands 0.02-0.10 m out -- enough
+// to swallow or float a mesh parked on the ground. A CAMERA-RELATIVE hit
+// ('rd * t', some 3e-6 body radii) through a translation-free 'vp * scale(R)'
+// subtracts nothing large in f32. Same reason 'hitUnitSphere' takes
+// 'dot(ro, ro) - 1' from f64 ('bodySlabCamAltitudeSq') rather than forming it:
+// at that scale it and the textbook near root both cancel catastrophically.
+//
+// NEAR0 is reversed-Z ('SLAB_REVERSED_Z[NEAR0] = true': infinite far, clear 0,
 // 'depthCompare: greater'), and reversed-Z lives entirely inside the projection
 // matrix -- clip.z/clip.w already comes out in [0, 1] with 1 at the near plane.
 // So there is NO flip to apply, and this stays correct if a slab's convention is
@@ -88,16 +90,12 @@
 import package::lib::math::PI;
 import package::lib::math::TAU;
 import package::lib::sphere::clip_from_local;
-import package::lib::util::raySphere;
 
 // The equirectangular map-centre registration offset. WESL cannot import the TS
 // 'TEXTURE_PRIME_MERIDIAN_U', so the 0.5 is re-encoded here -- the same
 // greppable-not-importable arrangement 'earth/fragment.wesl' documents. Source
 // of truth: 'src/data/bodies/texturePrimeMeridianU.ts'.
 const TEXTURE_PRIME_MERIDIAN_U: f32 = 0.5;
-
-// The sphere centre every test here uses: the body centre, at the local origin.
-const LOCAL_ORIGIN = vec3<f32>(0.0, 0.0, 0.0);
 
 // Radial blow-up of the coarse proxy shell, in body radii. It must exceed the
 // mesh's inscribed-silhouette deficit -- '1 - cos(half-step)' -- at the WORST
@@ -124,10 +122,13 @@ const PROXY_SCALE: f32 = 1.05;
 // The outcome of a ray cast at the unit sphere. 'point' is ALWAYS unit length --
 // the true entry point on a hit, the closest-approach direction on a miss (see
 // the header's grazing fallback). Callers shade from 'point' unconditionally and
-// consult 'hit' only when deciding whether to keep the fragment.
+// consult 'hit' only when deciding whether to keep the fragment. 't' is the ray
+// parameter behind it, so 'rd * t' is the same hit expressed RELATIVE TO THE
+// EYE -- the only form precise enough to write depth from at contact range.
 struct SphereHit {
   hit: bool,
   point: vec3<f32>,
+  t: f32,
 };
 
 // A wrap-corrected screen-space derivative pair for an equirectangular uv, ready
@@ -141,21 +142,31 @@ struct UvGradients {
 // origin. 'rd' must be unit length; on a proxy-shell fragment that means
 // normalizing the DIFFERENCE after interpolation, since the interpolated proxy
 // position is not itself unit length.
-fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>) -> SphereHit {
-  let roots = raySphere(ro, rd, LOCAL_ORIGIN, 1.0);
-  // 'raySphere' returns vec2(-1, -1) on a miss, so a positive exit root is the
-  // hit test. Take the NEAR positive root: the entry point when the camera is
-  // outside the body, the exit point in the degenerate camera-inside case.
-  let didHit = roots.y > 0.0;
-  let tSurface = select(roots.y, roots.x, roots.x > 0.0);
+//
+// 'originAltitudeSq' is 'dot(ro, ro) - 1', a parameter because near the surface
+// it is a cancellation f32 cannot do (header): the textured path supplies f64.
+fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>, originAltitudeSq: f32) -> SphereHit {
+  let b = dot(ro, rd);
+  let discr = b * b - originAltitudeSq;
+  let s = sqrt(max(discr, 0.0));
+  // The far root plainly; the near root as 'c / (-b + s)', which is the same
+  // number as '-b - s' without its cancellation -- and that cancellation is
+  // total exactly when the eye is near the surface (b -> -1, s -> 1).
+  let tFar = -b + s;
+  let tNear = originAltitudeSq / tFar;
+  // A positive exit root is the hit test. Take the NEAR root when it is in front
+  // of the eye, the exit root in the degenerate camera-inside case.
+  let didHit = discr >= 0.0 && tFar > 0.0;
+  let tSurface = select(tFar, tNear, tNear > 0.0);
   // Grazing fallback for the missed lanes of a limb quad (see the header): the
   // closest-approach parameter, whose point normalizes onto the limb tangent.
   // C0-continuous across the silhouette, so derivatives there stay finite.
-  let tGraze = max(dot(-ro, rd), 0.0);
+  let tGraze = max(-b, 0.0);
   let t = select(tGraze, tSurface, didHit);
 
   var out: SphereHit;
   out.hit = didHit;
+  out.t = t;
   // 'normalize' does double duty: it is the exact geometric normal for a real
   // hit, and it projects the grazing fallback onto the sphere for a miss.
   out.point = normalize(ro + rd * t);
@@ -194,10 +205,11 @@ fn equirectUvGradients(uv: vec2<f32>) -> UvGradients {
   return out;
 }
 
-// fragDepthFromLocal — the '@builtin(frag_depth)' value for a point in the
-// body's local frame, projected through the SAME mvp the vertex stage used. No
-// reversed-Z branch: see the header.
-fn fragDepthFromLocal(mvp: mat4x4<f32>, pLocal: vec3<f32>) -> f32 {
-  let clip = clip_from_local(mvp, pLocal);
+// fragDepthFromClip — the '@builtin(frag_depth)' value for a point projected through
+// a clip matrix. No reversed-Z branch: see the header. 'm' and 'p' must share one
+// frame: either the body's absolute local frame with the vertex stage's own mvp, or
+// a hit taken RELATIVE TO THE EYE with the translation-free 'vpCamRelLocal'.
+fn fragDepthFromClip(m: mat4x4<f32>, p: vec3<f32>) -> f32 {
+  let clip = clip_from_local(m, p);
   return clip.z / clip.w;
 }

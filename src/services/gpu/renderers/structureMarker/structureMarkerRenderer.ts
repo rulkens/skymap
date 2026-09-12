@@ -66,6 +66,7 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
+import { UNIFORM_BYTES } from '../galaxyCatalog/galaxyPointVertexLayout';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
@@ -163,9 +164,7 @@ export function createStructureMarkerRenderer(
   // swapped to ringPick.wesl's fsRingPick + colour target swapped to
   // r32uint + depth24plus added.  See the pick pipeline build below for
   // the full rationale; in short, this is the structure-marker sibling of the
-  // galaxy pick path in galaxyPickRenderer.ts.  The engine's pick pass will
-  // call `pickRing(pass)` immediately after the per-source galaxy
-  // draws, reusing the caller's @group(0) (CameraUniforms) binding.
+  // galaxy pick path in galaxyPickRenderer.ts.
   let ringPickPipeline: GPURenderPipeline | null = null;
   let uniformBuffer: GPUBuffer | null = null;
   let instanceBuffer: GPUBuffer | null = null;
@@ -179,6 +178,11 @@ export function createStructureMarkerRenderer(
   // groups remain layout-compatible across the encoder boundary.
   let pickDummyFadeBuffer: GPUBuffer | null = null;
   let pickDummyFadeBindGroup: GPUBindGroup | null = null;
+  // The pick path's OWN @group(0) camera — never the draw-time
+  // `uniformBuffer`, which holds the last VISUAL frame's camera and would hand
+  // the ring vertex stage a stale snapshot of the pose being picked.
+  let pickCameraBuffer: GPUBuffer | null = null;
+  let pickCameraBindGroup: GPUBindGroup | null = null;
   const sourceBuffers = byCategory<GPUBuffer | null>(null);
   let cameraBindGroup: GPUBindGroup | null = null;
   const sourceBindGroups = byCategory<GPUBindGroup | null>(null);
@@ -297,10 +301,9 @@ export function createStructureMarkerRenderer(
     // `auto` pipeline doesn't accidentally inherit a poisoned module.
     //
     // The pipeline layout is the same shared `pipelineLayout` the
-    // visible pipelines use ([cameraBgl, fadeBgl, sourceBgl]) — caller-
-    // bound @group(0) flows in from the engine's pick pass, our dummy
-    // fade group lands at @group(1), per-category SourceUniforms at
-    // @group(2).
+    // visible pipelines use ([cameraBgl, fadeBgl, sourceBgl]) — our own
+    // pick camera lands at @group(0), our dummy fade group at @group(1),
+    // per-category SourceUniforms at @group(2).
     //
     // Differences vs. the visible-ring pipeline:
     //   - Fragment target is `r32uint` (integer pick texture).
@@ -347,6 +350,20 @@ export function createStructureMarkerRenderer(
     const pickDummyFade = createDummyFadeBindGroup(device, fadeBgl, 'structure-marker-pick');
     pickDummyFadeBuffer = pickDummyFade.buffer;
     pickDummyFadeBindGroup = pickDummyFade.bindGroup;
+
+    // UNIFORM_BYTES, not CAMERA_UNIFORM_BYTES: the ring vertex stage reads only
+    // the 80-byte prefix, but `pickRing` uploads the whole 192-byte
+    // `pickUniformBytesOf` image verbatim, so the buffer must hold all of it.
+    pickCameraBuffer = device.createBuffer({
+      label: 'structure-marker-pick-camera',
+      size: UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    pickCameraBindGroup = device.createBindGroup({
+      label: 'structure-marker-pick-camera-bg',
+      layout: cameraBgl,
+      entries: [{ binding: 0, resource: { buffer: pickCameraBuffer } }],
+    });
 
     uniformBuffer = device.createBuffer({
       label: 'structure-marker-uniforms',
@@ -566,10 +583,10 @@ export function createStructureMarkerRenderer(
 
   /**
    * Issue per-category structure ring pick draws into the caller-supplied
-   * render pass.  See the docstring on StructureMarkerRenderer.pickRing
-   * for the binding contract — short version: caller bound @group(0),
-   * we bind @group(1) (dummy fade) + @group(2) (per-category source)
-   * and emit one `draw(6, count)` per non-empty bucket.
+   * render pass, binding every group the pick pipeline declares: @group(0)
+   * (our own pick camera, uploaded from `uniformBytes` verbatim), @group(1)
+   * (dummy fade) and @group(2) (per-category source), then one
+   * `draw(6, count)` per non-empty bucket.
    *
    * We reuse the same per-category bucketing the visible draw path
    * already produced in `setMarkers` (bucketOffsets + bucketCounts +
@@ -581,10 +598,13 @@ export function createStructureMarkerRenderer(
    * Voids ARE included in the pick path (unlike the halo draw, which
    * skips them) — a user should still be able to click a void's ring.
    */
-  function pickRing(passEncoder: GPURenderPassEncoder): void {
+  function pickRing(passEncoder: GPURenderPassEncoder, uniformBytes: ArrayBuffer): void {
     if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
+    if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
+    device.queue.writeBuffer(pickCameraBuffer, 0, uniformBytes);
     passEncoder.setPipeline(ringPickPipeline);
+    passEncoder.setBindGroup(0, pickCameraBindGroup);
     passEncoder.setBindGroup(1, pickDummyFadeBindGroup);
     for (const cat of STRUCTURE_IDS) {
       if (bucketCounts[cat] === 0) continue;
@@ -605,6 +625,7 @@ export function createStructureMarkerRenderer(
     instanceBuffer?.destroy();
     fadeBuffer?.destroy();
     pickDummyFadeBuffer?.destroy();
+    pickCameraBuffer?.destroy();
     for (const cat of STRUCTURE_IDS) {
       sourceBuffers[cat]?.destroy();
     }

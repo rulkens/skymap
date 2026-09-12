@@ -9,7 +9,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 import { Source } from '../../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
@@ -24,14 +23,6 @@ import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 export const galaxyPointSpritesPass: ContentPass = {
   name: 'point-sprites',
-  slab: COSMO,
-  target: 'hdr',
-  blend: 'additive',
-  // Sky-cubemap capture roster (Task 13b, Ruling 6): the galaxy points are
-  // part of the black-hole lens's captured "sky". Draw-safe against a
-  // synthetic per-face ctx — every read below is `view`/`ctx`/`state`, none
-  // of it frame-real-camera-specific.
-  skyCapture: true,
 
   enabled(_state, _ctx, _view) {
     return true;
@@ -86,11 +77,6 @@ export const galaxyPointSpritesPass: ContentPass = {
     });
   },
 
-  // @group(0) prefix contract: this row is first among the cosmological pickables,
-  // and `drawPoints` uploads + binds the pick CameraUniforms even with zero
-  // sources — the ring / disk pick pipelines read that same @group(0) prefix. So
-  // running first, and calling `drawPoints` even on an empty list, is load-bearing.
-  //
   // `ctx.visibleSourceMask` is the PICK mask here (`deriveSourceMasks(state).pick`),
   // and the opacity filter extends the mask on the INTENT fade only — picking
   // follows intent, not pixels (`deriveSourceMasks.ts:25-27`, #18 D8), so a clip

@@ -37,14 +37,6 @@ export type GalaxyPickRenderer = {
    * so this method uploads it as-is with no post-upload patching. The pick
    * byte-shaping lives in one place, the pick packer.
    *
-   * ### @group(0) prefix contract
-   *
-   * This method uploads the camera uniform and binds `@group(0)` **even with
-   * zero sources** — a galaxy-empty scene (every catalog toggled off) must
-   * still leave slot 0 pointing at the freshly-uploaded pick camera buffer
-   * for any sibling `drawPick` that reads the pick camera through that prefix.
-   * The per-source loop simply issues no draws.
-   *
    * @param pass         An already-begun `GPURenderPassEncoder`.
    * @param sources      Per-source draw records, one per visible galaxy
    *                     catalog, in `Source` enum order.  The caller filters
@@ -58,22 +50,6 @@ export type GalaxyPickRenderer = {
     sources: readonly PickSourceDraw[],
     uniformBytes: ArrayBuffer,
   ): void;
-
-  /**
-   * Re-bind `@group(0)` to the point-pick camera uniform (the buffer
-   * `drawPoints` last uploaded).
-   *
-   * This exists so any `drawPick` that must bind its OWN slot-0 uniform can
-   * restore the shared camera prefix before returning. A sibling pick
-   * pipeline may read the pick camera through the caller-bound `@group(0)`
-   * prefix while binding nothing itself; a `drawPick` that clobbers slot 0
-   * (the procedural-disk pick binds the disk camera there) would leave those
-   * fold-in draws reading the wrong buffer — and once a mirror's read extent
-   * exceeds the disk uniform, that is a hard validation error, not just a
-   * wrong hit. Call `bindCamera(pass)` at the end of such a `drawPick` to put
-   * slot 0 back.
-   */
-  bindCamera(pass: GPURenderPassEncoder): void;
 
   /**
    * Release all GPU resources owned by this renderer.

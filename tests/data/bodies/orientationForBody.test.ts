@@ -40,11 +40,15 @@ const apply = (m: Mat3, v: Vec3): Vec3 => [
 // this interval the prime meridian returns to the same sky-fixed direction.
 const SIDEREAL_DAY = 0.99726957;
 
+// Every body exercised here orients from its IAU pole row alone, so the position
+// map is genuinely unread — an empty one is the honest input, not a stub.
+const NO_POSITIONS = new Map<string, Vec3>();
+
 describe('orientationForBody', () => {
   it("advances Earth's prime meridian one full turn per sidereal day", () => {
     const jd = CONST_J2000 + 1234.5; // an arbitrary offset from the epoch
-    const before = orientationForBody('earth', jd);
-    const after = orientationForBody('earth', jd + SIDEREAL_DAY);
+    const before = orientationForBody('earth', jd, NO_POSITIONS);
+    const after = orientationForBody('earth', jd + SIDEREAL_DAY, NO_POSITIONS);
 
     // A body-fixed point on the equator at the prime meridian (local +x). One
     // sidereal day is one full rotation about the pole, so its sky-fixed image
@@ -61,8 +65,10 @@ describe('orientationForBody', () => {
     // Titan carries no rotation row, so it has no meridian to spin — its
     // orientation is the identity at every instant, never a fabricated pole
     // that would drift as the clock advances.
-    expect(orientationForBody('titan', CONST_J2000)).toEqual([...IDENTITY_MAT3]);
-    expect(orientationForBody('titan', CONST_J2000 + 5000)).toEqual([...IDENTITY_MAT3]);
+    expect(orientationForBody('titan', CONST_J2000, NO_POSITIONS)).toEqual([...IDENTITY_MAT3]);
+    expect(orientationForBody('titan', CONST_J2000 + 5000, NO_POSITIONS)).toEqual([
+      ...IDENTITY_MAT3,
+    ]);
   });
 
   it('returns identity for the Sgr A* anchor', () => {
@@ -70,14 +76,14 @@ describe('orientationForBody', () => {
     // for it. This pins that fact so a future accidental rotation-table entry
     // for 'sgr-a-star' can't silently rotate the body-slab basis
     // bodyRelativePose builds from it.
-    expect(orientationForBody('sgr-a-star', CONST_J2000)).toEqual([...IDENTITY_MAT3]);
+    expect(orientationForBody('sgr-a-star', CONST_J2000, NO_POSITIONS)).toEqual([...IDENTITY_MAT3]);
   });
 
   it('orients a body that has a rotation row but no texture entry', () => {
     // The shape a mesh body has: a rotation row with no BODY_TEXTURE_REGISTRY
     // counterpart. The gate must key off the row, not texture membership, or
     // this body would silently never turn.
-    const before = orientationForBody('test-untextured-spinner', CONST_J2000);
+    const before = orientationForBody('test-untextured-spinner', CONST_J2000, NO_POSITIONS);
     expect(before).not.toEqual([...IDENTITY_MAT3]);
 
     // Compare the whole direction rather than one axis: at 360°/day, a single
@@ -85,7 +91,7 @@ describe('orientationForBody', () => {
     // it does here — the fixture's pole puts +x's x-component through zero at
     // both instants) without the direction itself having stood still.
     const beforeDir = apply(before, [1, 0, 0]);
-    const after = orientationForBody('test-untextured-spinner', CONST_J2000 + 0.5);
+    const after = orientationForBody('test-untextured-spinner', CONST_J2000 + 0.5, NO_POSITIONS);
     const afterDir = apply(after, [1, 0, 0]);
     const moved = Math.hypot(
       afterDir[0] - beforeDir[0],

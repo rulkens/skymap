@@ -12,91 +12,27 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { ORBITAL_ELEMENTS } from '../../../../data/bodies/orbitalElements';
-import { SCENE_ANCHORS } from '../../../../data/bodies/sceneAnchors';
-import { focusResolveOrder } from '../../../../utils/scene/focusResolveOrder';
-import { regionOfBody } from '../../../../utils/scene/regionOfBody';
+import { TRAIL_ELEMENTS } from '../../../../data/bodies/trailElements';
+import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegion';
+import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
 import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
-import type { AnchorBody } from '../../../../@types/scene/AnchorBody';
-import type { BodyRegion } from '../../../../@types/scene/BodyRegion';
-import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
+import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
+import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
-// Apparent-size fade band, in on-screen orbit DIAMETER pixels. Below CULL_PX an
-// orbit is deep sub-pixel noise (aliasing, not a legible path), so it is dropped
-// from the draw entirely; from CULL_PX up to FULL_PX its brightness ramps in, so
-// it does not pop into existence. Kpc because apparentSizePx wants a kpc diameter
-// (1 Mpc = 1000 kpc).
-const CULL_PX = 10;
-const FULL_PX = 20;
-
 // Reused across frames so the hot path allocates nothing. Sized from the
 // compile-time elements table — a fixed size, not a cap.
-const staging = new Float32Array(ORBITAL_ELEMENTS.length * INSTANCE_FLOATS);
-
-// Farthest point from the focus is apoapsis a·(1+e); summing it along the focus
-// chain bounds every orbit point for every t. Derived from the static elements,
-// NOT the conic CENTRES — a moon centre rides its moving parent, so a
-// centre-derived bound goes stale the moment the clock runs.
-function apoapsisMpc(elements: OrbitalElements): number {
-  return elements.semiMajorMpc * (1 + elements.eccentricity);
-}
-
-/**
- * Each region's orbital reach FROM ITS OWN ANCHOR, over ALL clock times — a
- * TIME-INVARIANT outer envelope.
- *
- * Per region, not one scene-wide maximum, because a reach is only ever subtracted
- * from a camera distance measured against the SAME anchor. The two collapse into
- * one number only while every orbit hangs off the origin-anchored Sun; fold a
- * Galactic Centre orbit into a single maximum and the solar-system trails inherit
- * ITS envelope, so `enabled`'s cull stops firing for cameras nowhere near it.
- *
- * The tables are parameters so the far-anchored case is testable before such an
- * orbit is seeded; `focusResolveOrder` covers a focus chain of any depth.
- */
-export function orbitReachByRegion(
-  anchors: readonly AnchorBody[],
-  elements: readonly OrbitalElements[],
-  regionOf: (bodyId: string) => BodyRegion | null,
-): ReadonlyMap<BodyRegion, number> {
-  const reachMpc = new Map<string, number>();
-  // An anchor has no orbit of its own to extend the envelope.
-  for (const anchor of anchors) reachMpc.set(anchor.id, 0);
-  for (const el of focusResolveOrder(anchors, elements)) {
-    reachMpc.set(el.id, apoapsisMpc(el) + reachMpc.get(el.focusId)!);
-  }
-  const byRegion = new Map<BodyRegion, number>();
-  for (const el of elements) {
-    const region = regionOf(el.id);
-    if (region === null) continue;
-    byRegion.set(region, Math.max(byRegion.get(region) ?? 0, reachMpc.get(el.id)!));
-  }
-  return byRegion;
-}
-
-// Precomputed once so `enabled` costs one comparison per region rather than a
-// table walk per frame. Conservative: it never drops a visible orbit.
-const ORBIT_REACH_BY_REGION = orbitReachByRegion(SCENE_ANCHORS, ORBITAL_ELEMENTS, regionOfBody);
+const staging = new Float32Array(TRAIL_ELEMENTS.length * INSTANCE_FLOATS);
 
 export const orbitTrailsPass: ContentPass = {
   name: 'orbit-trails',
-  slab: NEAR0,
-  target: 'hdr',
-  blend: 'additive',
-  // 39 bound S-star trails orbit Sgr A* and cull in exactly when the
-  // black-hole lens's band is active (bodyRegions.ts's galactic-centre
-  // region) — this opts the layer into the lens's `'post'` split half so
-  // they draw unwarped ON TOP of it rather than being sampled by it
-  // (Task 14b, Ruling 9; see frameProgram.ts's step-split doc).
-  hdrPostLensing: true,
 
   enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;
@@ -138,7 +74,7 @@ export const orbitTrailsPass: ContentPass = {
     // Reading the shared snapshot — never re-deriving — is what welds each trail
     // to the exact instant its body is drawn at.
     const states = sceneBodyStates(state, ctx);
-    const limit = ORBITAL_ELEMENTS.length;
+    const limit = TRAIL_ELEMENTS.length;
     const camPos = ctx.drawCamPos;
     const viewportHeightPx = view.viewportPx[1];
 
@@ -146,16 +82,17 @@ export const orbitTrailsPass: ContentPass = {
     // the layer rather than popping it.
     const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'orbitTrails' });
 
-    // One 34-float record per VISIBLE conic; byte offsets must mirror the
+    // One 46-float record per VISIBLE conic; byte offsets must mirror the
     // renderer's INSTANCE_ATTRIBUTES:
     //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32)
     //   floats 12..15 — colour.rgb + eccentricity (loc4 at byte 48)
     //   floats 16..19 — mean anomaly + fade alpha + viewportPx.xy (loc5 at byte 64)
     //   floats 20..31 — clip basis Cc/Ac/Bc (loc6/7/8 at byte 80/96/112)
     //   floats 32..33 — the visible arc eStart/eSpan (loc9 at byte 128)
+    //   floats 34..45 — eye-relative 3D basis, km (loc10/11/12 at byte 136/152/168)
     let count = 0;
     for (let i = 0; i < limit; i++) {
-      const elements = ORBITAL_ELEMENTS[i]!;
+      const elements = TRAIL_ELEMENTS[i]!;
       // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
       // FRESH vectors per call, so the in-place focus fold below cannot alias a
       // shared scratch across orbits.
@@ -209,9 +146,20 @@ export const orbitTrailsPass: ContentPass = {
       staging.set(clipBasis[2], base + 28); // clip basis Bc → floats 28..31
       staging[base + 32] = arc[0]; // visible arc eStart → float 32
       staging[base + 33] = arc[1]; // visible arc eSpan → float 33
+      eyeRelativeOrbitBasisKm(
+        { eyeMpc: camPos, centerMpc, semiMajorMpc, semiMinorMpc },
+        staging,
+        base + 34,
+      );
     }
     if (count > 0) {
-      renderer.draw(pass, staging, count, state.settings.debug.overlays['orbit-trail-impostor']);
+      renderer.draw(
+        pass,
+        staging,
+        count,
+        sceneOccluderSpheres(state, ctx),
+        state.settings.debug.overlays['orbit-trail-impostor'],
+      );
     }
   },
 };

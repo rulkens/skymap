@@ -67,6 +67,7 @@
 import { mat4d } from 'wgpu-matrix';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
+import { mat4dFromMat3 } from '../math/mat4dFromMat3';
 
 /**
  * Compose a f64 proj·view·model matrix for a unit sphere centred at
@@ -110,33 +111,6 @@ export function composeBodyMvp(
     bodyPosMpc[2] - renderOrigin[2],
   ];
 
-  // Embed the body's baked rotation `R` into the top-left 3×3 block of a mat4d.
-  // `Mat3` is a tight 9-element column-major tuple (m[c*3+r]); each of its three
-  // columns becomes a mat4 column, with the homogeneous row/column left identity.
-  // This is a hand embed, NOT `mat4d.fromMat3` — wgpu-matrix's mat3 is a padded
-  // 12-element layout (columns at 0,4,8), so feeding it our tight tuple would
-  // read the wrong slots. Placing the columns wrong (a transpose) would mirror
-  // every textured body; the round-trip test discriminates that.
-  const r = orientation;
-  const rot = new Float64Array([
-    r[0],
-    r[1],
-    r[2],
-    0,
-    r[3],
-    r[4],
-    r[5],
-    0,
-    r[6],
-    r[7],
-    r[8],
-    0,
-    0,
-    0,
-    0,
-    1,
-  ]);
-
   // Model = T · R · S. A column vector v transforms as (T·R·S)·v — read
   // right-to-left: scale the unit sphere (equatorial axes X,Y by radiusMpc; the
   // polar axis Z shortened by 1 − oblateness so oblateness 0 is a true sphere),
@@ -148,7 +122,7 @@ export function composeBodyMvp(
   // the body around the render origin. mat4d.translation / scaling each return a
   // fresh Float64Array.
   const model = mat4d.multiply(
-    mat4d.multiply(mat4d.translation(delta), rot),
+    mat4d.multiply(mat4d.translation(delta), mat4dFromMat3(orientation)),
     mat4d.scaling([radiusMpc, radiusMpc, radiusMpc * (1 - oblateness)]),
   ) as Float64Array;
 

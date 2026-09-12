@@ -77,7 +77,7 @@
 // parameter does).
 
 import package::lib::analyticSphere::PROXY_SCALE;
-import package::lib::analyticSphere::fragDepthFromLocal;
+import package::lib::analyticSphere::fragDepthFromClip;
 import package::lib::analyticSphere::hitUnitSphere;
 import package::lib::sphere::clip_from_local;
 
@@ -124,7 +124,7 @@ fn fsPick(in: SpherePickVSOut) -> PickFSOut {
   // Renormalize AFTER interpolation: 'in.localPos' rides the scaled-up proxy, so
   // neither it nor its interpolant is unit length.
   let rd = normalize(in.localPos - ro);
-  let surface = hitUnitSphere(ro, rd);
+  let surface = hitUnitSphere(ro, rd, dot(ro, ro) - 1.0);
   // The missed lanes can go IMMEDIATELY here. The visual path has to carry them
   // as far as its 'dpdx'/'dpdy' calls, which demand uniform control flow; this
   // stage samples no texture, so it takes no derivatives and owes them nothing.
@@ -136,7 +136,8 @@ fn fsPick(in: SpherePickVSOut) -> PickFSOut {
   // r-channel carries the identity; g/b/a stay 0 so the output is well-defined
   // (only the r channel is read back on the JS side).
   out.id = vec4<u32>(u.packedId, 0u, 0u, 0u);
-  // The SAME mvp the vertex stage used, applied to the real surface point.
-  out.depth = fragDepthFromLocal(u.mvp, surface.point);
+  // Absolute local frame: the SAME mvp the vertex stage used, applied to the
+  // real surface point.
+  out.depth = fragDepthFromClip(u.mvp, surface.point);
   return out;
 }

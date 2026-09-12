@@ -7,7 +7,7 @@ Read this before any deploy, R2 sync, cache/CORS, or `.env` work.
 Two Cloudflare resources serve skymap, updated independently:
 
 - **The static shell** (HTML, JS, CSS, WGSL, `_headers`, famous WebPs) ships to **Workers Assets** automatically on every push to `main` (Cloudflare's GitHub integration builds and uploads `dist/`). No local CLI step — `npm run deploy` is just `git push origin main`.
-- **The `.bin` catalog files** (~280 MB across tiers + filaments), plus famous/hi-res images, planet textures, and the baked Earth virtual-texture tiles, live in **R2** at `skymap-data.rulkens.com`, synced manually via `npm run sync-r2-secure` after a `build-tiers` rerun, **not** on every push. (Large tiers exceed Workers Assets' per-file caps; R2 has no caps, zero egress fees, and decouples catalog refreshes from code deploys.)
+- **The `.bin` catalog files** (~280 MB across tiers + filaments), plus famous/hi-res images, planet textures, baked mesh-body assets, and the baked Earth virtual-texture tiles, live in **R2** at `skymap-data.rulkens.com`, synced manually via `npm run sync-r2-secure` after a `build-tiers` rerun, **not** on every push. (Large tiers exceed Workers Assets' per-file caps; R2 has no caps, zero egress fees, and decouples catalog refreshes from code deploys.)
 
 A full data-refreshing deploy:
 
@@ -17,7 +17,7 @@ A full data-refreshing deploy:
 4. `npm run sync-r2-secure` — uploads changed files across every group (see "R2 sync architecture" below), then purges matching CDN URLs for the groups that aren't immutable; idempotent, so rerunning only moves bytes that differ. The wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store; bare `sync-r2` (no-bash fallback) skips the purge without credentials, leaving stale CDN bytes until TTL expiry.
 5. `npm run deploy` — pushes `main`; Cloudflare rebuilds the shell (~30 s).
 
-Each `build-*` script above already tails with `npm run build-data-manifest`, which writes `public/data/manifest.json` **last**, after every file it names, so a run always leaves one coherent manifest. A hand-run `tsx tools/…` invocation skips that tail and must be followed by the pass manually — `sync-r2-secure`'s drift guard refuses to sync when the tracked set doesn't match the manifest.
+Each `build-*` script above already tails with `npm run build-data-manifest`, which writes `public/data/manifest.json` **last**, after every file it names, so a run always leaves one coherent manifest. Baked mesh-body assets (`npm run build-meshes` — `<key>.mesh` plus its three PBR PNGs under `public/data/meshes/`) follow the same rule: `allowDataFile` tracks them by name, so they ride the ordinary `public/data` group in `sync-r2-secure` alongside the catalog tiers, with no group of their own to configure. A hand-run `tsx tools/…` invocation skips that tail and must be followed by the pass manually — `sync-r2-secure`'s drift guard refuses to sync when the tracked set doesn't match the manifest.
 
 ### Dev-tool pages (/galaxy/, /mcpm/, /flow/)
 

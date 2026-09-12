@@ -10,12 +10,10 @@
  */
 
 import { createUpsamplePass } from './createUpsamplePass';
-import { COSMO } from '../slabs';
 import { deriveVolumeLiveness } from '../volumeLiveness';
 
 export const volumeUpsamplePass = createUpsamplePass({
   name: 'volume-upsample',
-  slab: COSMO,
   sourceTargetId: 'volume',
   handleOf: (state) => state.gpu.volumeUpsample,
   enabled(state, ctx) {

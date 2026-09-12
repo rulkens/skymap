@@ -4,11 +4,11 @@ import { bodyFollowsSimClock } from './bodyFollowsSimClock';
 
 /**
  * followedBodyHome — the `HomeFocusTarget` for a body-arm ref; throws if the
- * body has no `ORBITAL_ELEMENTS` row (home must be a body the follow driver tracks).
+ * sim clock does not move the body (home must be a body the follow driver tracks).
  */
 export function followedBodyHome(ref: Extract<SelectionRef, { type: 'body' }>): HomeFocusTarget {
   if (!bodyFollowsSimClock(ref.id)) {
-    throw new Error(`followedBodyHome: '${ref.id}' has no ORBITAL_ELEMENTS row to follow`);
+    throw new Error(`followedBodyHome: '${ref.id}' is static; the follow driver cannot track it`);
   }
   return { ref };
 }

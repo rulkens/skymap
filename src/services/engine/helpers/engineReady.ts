@@ -6,7 +6,7 @@
  * Pre-D.4, the codebase asked the question "did `initGpu` / `wireSlots` /
  * `wireInput` finish?" in five different shapes:
  *
- *   - `runFrame.ts` had a 5-way `||` chain across `state.cam`,
+ *   - `runFrame.ts` had a 5-way `||` chain across the boot flag,
  *     `state.gpu.galaxyPointRenderer`, `state.gpu.postProcess`,
  *     `state.gpu.galaxyPickRenderer`, and `state.subsystems.texturedDisks`
  *     (later consolidated by D.1's `FrameContext`, but minus
@@ -117,7 +117,7 @@ import type { ReadyEngineState } from '../../../@types/engine/ReadyEngineState';
  */
 export function isEngineReady(state: EngineState): state is ReadyEngineState {
   return (
-    state.cam !== null &&
+    state.booted &&
     state.gpu.galaxyPointRenderer !== null &&
     state.gpu.galaxyPickRenderer !== null &&
     // `renderTargets` owns every offscreen row (`hdr`, `volume`) the frame

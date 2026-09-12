@@ -143,7 +143,7 @@ import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalo
 import type { SurveyStarCatalogSourceEntry } from '../../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRenderer';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatalogRenderer';
 import { NEAR0, slabViewOf } from '../slabs';
@@ -432,7 +432,7 @@ function crossfadeOpacity(entry: SurveyStarCatalogSourceEntry, camDistPc: number
  * upsample consumer never disagree — the same shared-projection discipline the
  * volume liveness gate uses.
  */
-export function starCatalogVisible(state: EngineState, ctx: ReadyFrameContext): boolean {
+export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): boolean {
   const renderer = state.gpu.starCatalogRenderer;
   if (renderer === null) return false;
   if (!state.settings.starCatalogs.enabled) return false;
@@ -667,7 +667,7 @@ const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
  * so this only walks fresh for a DIFFERENT ctx — a sky-cubemap capture face or
  * the pick path's post-frame ctx.
  */
-export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
+export function prepareStarCut(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
   if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
 
   const result = computeStarCut(state, ctx, false);
@@ -684,10 +684,7 @@ export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): Prep
  * case at the call sites. Returns the same shape as `prepareStarCut` (its
  * `anyNodeFading` is the frame's keep-ticking wake vote).
  */
-export function advanceStarFades(
-  state: EngineState,
-  ctx: ReadyFrameContext,
-): PreparedStarCut | null {
+export function advanceStarFades(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
   if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
 
   const result = computeStarCut(state, ctx, true);
@@ -696,7 +693,7 @@ export function advanceStarFades(
 }
 
 function computeStarCut(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
   advanceFades: boolean,
 ): PreparedStarCut | null {
@@ -989,12 +986,6 @@ export { drawStream };
 
 export const starCatalogPass: ContentPass = {
   name: 'star-catalog',
-  slab: NEAR0,
-  target: 'hdr',
-  blend: 'additive',
-  // Sky-cubemap capture roster (Task 13b): the survey LEAF stream is part of
-  // the black-hole lens's captured "sky".
-  skyCapture: true,
 
   enabled: starCatalogVisible,
 
@@ -1009,8 +1000,8 @@ export const starCatalogPass: ContentPass = {
 
   // Pick aspect — stamps every visible LEAF star's packed identity into the
   // NEAR0 r32uint pick pass. The pick pass runs on a FRESH `ctx` minted by
-  // `pickFrameContext` (→ `deriveFrameContext` from `lastPose.current`, the pose
-  // the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
+  // `pickFrameContext` (→ `deriveFrameContext` from `outputs.displayed`,
+  // the pose the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
   // (`preparedByCtx`) MISSES and recomputes the leaf cut here — a second octree
   // walk, but against that same last-rendered camera, so the pick lands exactly
   // where the sprite drew, reading each node's CURRENT LOD-fade opacity
@@ -1031,8 +1022,7 @@ export const starCatalogPass: ContentPass = {
   // camera uniform is one shared buffer, safe only under that invariant).
   //
   // This row self-binds its own @group(0) pick camera inside the renderer's
-  // `draw`, like the Milky-Way pick: on NEAR0 there is no shared point-pick
-  // prefix to inherit or restore (that contract is a COSMO-pass fact). Visibility
+  // `draw`, like every other pickable row. Visibility
   // is NOT re-checked here — the pick program filters by `enabled`
   // (`starCatalogVisible`, the foreground-distance + crossfade gate) against the
   // pick-time camera, the SAME gate the draw program runs, so a cosmic-zoom

@@ -18,8 +18,14 @@ import {
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
 } from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
-import { RIBBON_SEGMENTS } from '../../../../../src/data/bodies/orbitTrailConstants';
+import {
+  MAX_ORBIT_OCCLUDERS,
+  RIBBON_SEGMENTS,
+} from '../../../../../src/data/bodies/orbitTrailConstants';
 import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
+
+// An empty per-frame occluder list — every draw below takes one.
+const NO_OCCLUDERS = { count: 0, spheresKm: new Float32Array(MAX_ORBIT_OCCLUDERS * 4) };
 
 type BufferDesc = { label?: string; size: number };
 
@@ -75,8 +81,8 @@ describe('createOrbitTrailRenderer', () => {
     const buffers: BufferDesc[] = [];
     createOrbitTrailRenderer(mockDevice({ buffers }), 'rgba16float');
     expect(buffers.find((b) => b.label === 'orbit-trail-instance-vbo')).toBeUndefined();
-    expect(INSTANCE_STRIDE).toBe(136);
-    expect(INSTANCE_FLOATS).toBe(34);
+    expect(INSTANCE_STRIDE).toBe(184);
+    expect(INSTANCE_FLOATS).toBe(46);
   });
 
   it('pins the FULL instance attribute layout — ONE instance buffer, no position VBO', () => {
@@ -104,6 +110,9 @@ describe('createOrbitTrailRenderer', () => {
       { shaderLocation: 7, offset: 96, format: 'float32x4' }, // clip basis semi-major Ac
       { shaderLocation: 8, offset: 112, format: 'float32x4' }, // clip basis semi-minor Bc
       { shaderLocation: 9, offset: 128, format: 'float32x2' }, // visible arc eStart, eSpan
+      { shaderLocation: 10, offset: 136, format: 'float32x4' }, // eye-relative centre (km)
+      { shaderLocation: 11, offset: 152, format: 'float32x4' }, // eye-relative A (km)
+      { shaderLocation: 12, offset: 168, format: 'float32x4' }, // eye-relative B (km)
     ];
 
     const desc = renderPipelines[0]!;
@@ -141,10 +150,10 @@ describe('createOrbitTrailRenderer', () => {
     expect(desc.primitive?.cullMode).toBe('none');
   });
 
-  it('draw is callable with (pass, instances, count)', () => {
+  it('draw is callable with (pass, instances, count, occluders)', () => {
     const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
     expect(typeof renderer.draw).toBe('function');
-    expect(renderer.draw.length).toBe(3);
+    expect(renderer.draw.length).toBe(4);
   });
 
   it('issues one ribbon draw for the whole count', () => {
@@ -154,7 +163,7 @@ describe('createOrbitTrailRenderer', () => {
     const instances = new Float32Array(slots * INSTANCE_FLOATS);
     const count = 7;
 
-    renderer.draw(pass, instances, count);
+    renderer.draw(pass, instances, count, NO_OCCLUDERS);
 
     const calls = (pass.draw as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
@@ -170,13 +179,13 @@ describe('createOrbitTrailRenderer', () => {
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear();
 
-    renderer.draw(pass, new Float32Array(slots * INSTANCE_FLOATS), 0);
+    renderer.draw(pass, new Float32Array(slots * INSTANCE_FLOATS), 0, NO_OCCLUDERS);
 
     expect(pass.draw).not.toHaveBeenCalled();
     expect(writeMock).not.toHaveBeenCalled();
   });
 
-  it('draw does exactly one writeBuffer covering every slot, and sets the vertex buffer once', () => {
+  it('draw uploads the instances in ONE writeBuffer covering every slot, and sets the vertex buffer once', () => {
     const device = mockDevice();
     const renderer = createOrbitTrailRenderer(device, 'rgba16float');
     const pass = mockPass();
@@ -185,9 +194,10 @@ describe('createOrbitTrailRenderer', () => {
 
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear();
-    renderer.draw(pass, instances, 4);
+    renderer.draw(pass, instances, 4, NO_OCCLUDERS);
 
-    expect(writeMock).toHaveBeenCalledTimes(1);
+    // One instance upload + one occluder-uniform upload, nothing per orbit.
+    expect(writeMock).toHaveBeenCalledTimes(2);
     const [, byteOffset, data, dataOffset, size] = writeMock.mock.calls[0]!;
     expect(byteOffset).toBe(0);
     expect(data).toBe(instances); // the caller's array, uploaded directly
@@ -195,11 +205,13 @@ describe('createOrbitTrailRenderer', () => {
     // The whole packed array uploads, including any unwritten tail slots.
     expect(size).toBe(instances.length);
 
-    expect((pass.setVertexBuffer as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual(
-      [0],
-    );
-    // No bind group — the pipeline reads nothing from the uniform space.
-    expect(pass.setBindGroup).not.toHaveBeenCalled();
+    expect((pass.setVertexBuffer as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual([
+      0,
+    ]);
+    // The one bind group: the frame's occluder spheres, set once per draw.
+    expect((pass.setBindGroup as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual([
+      0,
+    ]);
   });
 
   it('the trail buffer grows past the initial capacity, sized on total slots', () => {
@@ -213,14 +225,14 @@ describe('createOrbitTrailRenderer', () => {
     const pass = mockPass();
 
     // First draw establishes an initial capacity of 3 slots.
-    renderer.draw(pass, new Float32Array(3 * INSTANCE_FLOATS), 3);
+    renderer.draw(pass, new Float32Array(3 * INSTANCE_FLOATS), 3, NO_OCCLUDERS);
     const afterFirst = buffers.filter((b) => b.label === 'orbit-trail-instance-vbo');
     expect(afterFirst).toHaveLength(1);
     expect(afterFirst[0]!.size).toBe(3 * INSTANCE_STRIDE);
 
     // A later draw asking for more slots than that capacity must grow the
     // buffer (a second allocation), not truncate to the first one's size.
-    renderer.draw(pass, new Float32Array(7 * INSTANCE_FLOATS), 7);
+    renderer.draw(pass, new Float32Array(7 * INSTANCE_FLOATS), 7, NO_OCCLUDERS);
     const afterSecond = buffers.filter((b) => b.label === 'orbit-trail-instance-vbo');
     expect(afterSecond).toHaveLength(2);
     expect(afterSecond[1]!.size).toBe(7 * INSTANCE_STRIDE);
@@ -245,7 +257,7 @@ describe('createOrbitTrailRenderer', () => {
 
     // Flag omitted (defaults false) — only the one production pipeline
     // exists, and only the one production draw is issued.
-    renderer.draw(pass, instances, count);
+    renderer.draw(pass, instances, count, NO_OCCLUDERS);
     expect(renderPipelines).toHaveLength(1);
     expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
 
@@ -254,7 +266,7 @@ describe('createOrbitTrailRenderer', () => {
     // Flag true — the debug pipeline is built now (first enable), and
     // exactly one ADDITIONAL draw lands, matching the production draw's
     // vertex count exactly.
-    renderer.draw(pass, instances, count, true);
+    renderer.draw(pass, instances, count, NO_OCCLUDERS, true);
     expect(renderPipelines).toHaveLength(2);
     const calls = (pass.draw as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(2);
@@ -262,7 +274,7 @@ describe('createOrbitTrailRenderer', () => {
     expect(calls[1]).toEqual([RIBBON_SEGMENTS * 6, count, 0, 0]);
 
     // A later enabled call does not rebuild the debug pipeline again.
-    renderer.draw(pass, instances, count, true);
+    renderer.draw(pass, instances, count, NO_OCCLUDERS, true);
     expect(renderPipelines).toHaveLength(2);
   });
 
@@ -274,7 +286,7 @@ describe('createOrbitTrailRenderer', () => {
     const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
     const pass = mockPass();
     const instances = new Float32Array(4 * INSTANCE_FLOATS); // only 4 slots
-    expect(() => renderer.draw(pass, instances, 5)).toThrow(); // 5 > 4
-    expect(() => renderer.draw(pass, instances, -1)).toThrow(); // negative
+    expect(() => renderer.draw(pass, instances, 5, NO_OCCLUDERS)).toThrow(); // 5 > 4
+    expect(() => renderer.draw(pass, instances, -1, NO_OCCLUDERS)).toThrow(); // negative
   });
 });

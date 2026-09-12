@@ -44,9 +44,11 @@ const GENERATED_BANNER =
   '// Source of truth:  data/seeds/planet_facts.seed.json\n';
 
 /** Quote a string as a single-quoted TS literal; the final prettier pass in
- * `main` normalises quote style and long-string wrapping. */
+ * `main` normalises quote style and long-string wrapping. Escapes embedded
+ * newlines (a multi-paragraph `description`, e.g. a quoted passage) as `\n`
+ * — an unescaped literal newline would break out of the string literal. */
 function quote(s: string): string {
-  return `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+  return `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n')}'`;
 }
 
 /**

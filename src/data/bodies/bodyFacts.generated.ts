@@ -323,4 +323,52 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     description:
       "At half Pluto's diameter, Charon is the largest moon in the Solar System relative to the world it orbits, and the two are often called a double dwarf planet. Methane escaping Pluto freezes onto Charon's north pole, where sunlight darkens it to the deep red of Neverland Regio, the feature the New Horizons team nicknamed Mordor.",
   },
+  whale: {
+    wikiTitle: "The_Hitchhiker's_Guide_to_the_Galaxy",
+    description:
+      "Ah … ! What's happening? it thought.\nEr, excuse me, who am I? Hello? Why am I here? What's my purpose in life?\n…\nAnd wow! Hey! What's this thing suddenly coming towards me very fast? So big and flat and round, it needs a big wide sounding name like … ow … ound … round … ground! That's it! That's a good name – ground! I wonder if it will be friends with me?\n— Douglas Adams, The Hitchhiker's Guide to the Galaxy, ch. 18",
+  },
+  petunias: {
+    wikiTitle: "The_Hitchhiker's_Guide_to_the_Galaxy",
+    description:
+      "Curiously enough, the only thing that went through the mind of the bowl of petunias as it fell was Oh no, not again.\nMany people have speculated that if we knew exactly why the bowl of petunias had thought that we would know a lot more about the nature of the Universe than we do now.\n— Douglas Adams, The Hitchhiker's Guide to the Galaxy, ch. 18",
+  },
+  voyager1: {
+    yearLength: 'None (escape trajectory)',
+    distance: '171.7 AU (Sep 2026)',
+    wikiTitle: 'Voyager_1',
+    description:
+      'Launched on 5 September 1977, Voyager 1 surveyed Jupiter and Saturn and in 2012 became the first spacecraft to cross into interstellar space. It is now about 171.7 AU from the Sun, the most distant human-made object, on a path that will never bring it back.',
+  },
+  voyager2: {
+    yearLength: 'None (escape trajectory)',
+    distance: '143.9 AU (Sep 2026)',
+    wikiTitle: 'Voyager_2',
+    description:
+      'Launched on 20 August 1977, Voyager 2 is the only spacecraft to have visited Uranus and Neptune, finishing its tour of the four giant planets in 1989. It crossed into interstellar space in 2018 and is now about 143.9 AU from the Sun, leaving the Solar System on a different heading from its twin.',
+  },
+  curiosity: {
+    dayLength: '24 h 39 m 35 s (1 sol)',
+    wikiTitle: 'Curiosity_(rover)',
+    description:
+      'Curiosity landed at Bradbury Landing in Gale crater (4.59°S 137.44°E) on 6 August 2012, and its work on ancient lakebed mudstone showed the crater once held a lake that could have supported life. The marker shows the landing site, not the rover: Curiosity is still operating, tens of kilometres on from here, climbing Mount Sharp.',
+  },
+  perseverance: {
+    dayLength: '24 h 39 m 35 s (1 sol)',
+    wikiTitle: 'Perseverance_(rover)',
+    description:
+      'Perseverance landed at Octavia E. Butler Landing in Jezero crater (18.44°N 77.45°E) on 18 February 2021 to search an ancient river delta for traces of microbial life, sealing rock cores for a possible return to Earth. The marker shows the landing site, not the rover: Perseverance is still operating and has driven tens of kilometres beyond it.',
+  },
+  spirit: {
+    dayLength: '24 h 39 m 35 s (1 sol)',
+    wikiTitle: 'Spirit_(rover)',
+    description:
+      'Spirit landed at Columbia Memorial Station in Gusev crater (14.57°S 175.47°E) on 4 January 2004 for a mission planned to last 90 sols, and kept working for six years before its wheels sank into soft soil. The marker shows the landing site, not the rover, which sent its last signal in 2010 from several kilometres away.',
+  },
+  opportunity: {
+    dayLength: '24 h 39 m 35 s (1 sol)',
+    wikiTitle: 'Opportunity_(rover)',
+    description:
+      'Opportunity landed at Challenger Memorial Station on Meridiani Planum (1.95°S 354.47°E) on 25 January 2004 and drove more than 45 km over the following fourteen years, far past its 90-sol design life. The marker shows the landing site, not the rover, which fell silent in a planet-wide dust storm in 2018 at Perseverance Valley, on the rim of Endeavour crater.',
+  },
 };

@@ -3,18 +3,17 @@
  * program into one GPU command encoder. This is the heart of the renderer
  * unification: pre-unification the frame's order lived as an implicit call
  * chain spread across `renderFrame` and a hand-wired HDR-encode + tone-map +
- * UI-overlay sequence. `frameProgram` turned that order into data; this
- * executor is the one loop that consumes it.
+ * UI-overlay sequence. `FRAME_ORDER` holds that order as data; this executor is
+ * the one loop that consumes its expansion.
  *
  * ### The step-kind switch is the frame's only switch
  *
- * Every per-layer, per-target, per-blend decision is resolved from data the
- * `ContentPass`es and `FrameStep`s already carry — a render step selects its
- * group by matching `(target, slab)`, a composite names its blend/tone inline.
- * There are no layer-identity branches, no per-layer slab lookups (exactly one
- * `slabViewOf` per render step), and no membership-implies-blend logic. Adding a
- * near-field slab or a new composite is a new *row* in `frameProgram` / the
- * layer registry, not a new code path here.
+ * A render step arrives carrying the passes it draws, so nothing here selects:
+ * the executor opens one pass and draws that list, gated only by each pass's own
+ * `enabled` and the DebugPanel override. There are no pass-identity branches, no
+ * per-pass slab lookups (exactly one `slabViewOf` per render step), and no
+ * membership-implies-blend logic. Adding a near-field slab or a new composite is
+ * a new *line* in `FRAME_ORDER`, not a new code path here.
  *
  * ### Tile-local mega-pass vs. per-layer timed passes (the strategy fork)
  *
@@ -55,10 +54,10 @@
  * therefore take their first-touch fact from a private `(target, face)`-keyed
  * set instead, rather than growing the public `renderedTargets` surface to that
  * granularity. Per-face granularity is load-bearing in BOTH directions: the
- * roster spans two slabs, so `frameProgram` emits TWO steps per face (COSMO
- * then NEAR0) — a blanket always-clear made the NEAR0 step wipe the COSMO
- * step's galaxy points and textured disks off the face it had just drawn them
- * into.
+ * roster spans two slabs, so the capture line expands to TWO steps per face
+ * (COSMO then NEAR0) — a blanket always-clear made the NEAR0 step wipe the
+ * COSMO step's galaxy points and textured disks off the face it had just drawn
+ * them into.
  *
  * The same `touched` fact drives depth: a render step whose target row declares
  * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is
@@ -78,13 +77,7 @@ import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
-import {
-  slabViewOf,
-  groupKeyOf,
-  passTimingSlotName,
-  renderStepTimingSlotName,
-  matchesLensPhase,
-} from './slabs';
+import { slabViewOf, groupKeyOf, passTimingSlotName, renderStepTimingSlotName } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
@@ -198,17 +191,7 @@ function timestampSpread(
 }
 
 export function executeFrame(args: ExecuteFrameArgs): void {
-  const {
-    encoder,
-    ctx,
-    state,
-    program,
-    passes,
-    strategy,
-    timing,
-    swapView,
-    skyCubemapFaceContexts,
-  } = args;
+  const { encoder, ctx, state, program, strategy, timing, swapView, skyCubemapFaceContexts } = args;
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
   // first time a pass is opened against it, flipping subsequent passes from
@@ -245,41 +228,18 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // `stepCtx` is just `ctx` — a no-op passthrough.
         const stepCtx = step.face === undefined ? ctx : skyCubemapFaceContexts?.get(step.face);
         if (stepCtx === undefined) break;
-        // The DebugPanel renderer-toggle override is one-way: it hides a layer
+        // The DebugPanel renderer-toggle override is one-way: it hides a pass
         // whose own `enabled()` gate returned true, and can never force-enable
         // one whose gate returned false — hence the check follows the gate.
         // Empty in production, so the membership lookup is in the noise.
         const disabledPasses = state.settings.debug.disabledPasses;
         // The frame's ONLY slab resolution — one SlabView per render step,
-        // threaded into every layer in the group. Resolved BEFORE the filter
-        // (not after, as before body slabs): a 'body' layer's `enabled` needs
-        // the view to read `view.slab.frame.bodyId`, and a step whose slab is
-        // a body row still resolves cheaply even when its group ends up empty.
+        // threaded into every pass in the group. Resolved BEFORE the gate: a
+        // body-row pass's `enabled` reads `view.slab.frame.bodyId` off it.
         const view = slabViewOf(stepCtx, step.slab);
-        // A capture step (the sky-cubemap sweep) selects its group by
-        // the `skyCapture` opt-in flag, not `target`: every capture step
-        // targets 'sky-cubemap', but the roster's own layers keep their
-        // ordinary `target` ('hdr', typically) for their NORMAL per-frame
-        // draw — target-matching could never select them for a capture step
-        // (the capture roster is an opt-in list, not a target match). `step.face`
-        // is the same discriminant `stepCtx` above already reads.
-        const isCaptureStep = step.face !== undefined;
         const faceKey = step.face === undefined ? null : `${step.target}:${step.face}`;
-        const group = passes.filter(
-          (l) =>
-            (isCaptureStep ? l.skyCapture === true : l.target === step.target) &&
-            // A 'body' layer matches every body-slab step, not one fixed
-            // index. `view.slab` is
-            // in hand here, so this reads `frame.kind` directly rather than
-            // going through `isBodySlabIndex` (slabs.ts) — the index-only
-            // sibling check `frameProgram.ts` uses where no `Slab` is in hand.
-            (l.slab === step.slab || (l.slab === 'body' && view.slab.frame.kind === 'body-m')) &&
-            // The black-hole lens's (hdr, NEAR0) split: a step
-            // carrying `lensPhase` further narrows the group to the layers
-            // that opted into `hdrPostLensing` accordingly — see slabs.ts.
-            matchesLensPhase(l.hdrPostLensing, step.lensPhase) &&
-            l.enabled(state, stepCtx, view) &&
-            disabledPasses[l.name] !== true,
+        const group = step.passes.filter(
+          (l) => l.enabled(state, stepCtx, view) && disabledPasses[l.name] !== true,
         );
         if (group.length === 0) break;
         // The merged pass bills its whole group against this one slot. The key
@@ -289,14 +249,13 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // `renderStepTimingSlotName` appends `step.face` when present — the
         // sky-cubemap capture's 6 faces all share `('sky-cubemap', NEAR0)`, so
         // the bare groupKey would look up the SAME slot for all 6 (see its doc,
-        // slabs.ts); for every other step `step.face` is absent and this is a
-        // no-op passthrough of `groupKey`. It appends a `'post'` lens-phase
-        // suffix the same way, so the split roster's two halves don't collide
-        // on one query-set slot.
+        // slabs.ts). The authored `slot` separates the several `FRAME_ORDER`
+        // lines sharing `(hdr, NEAR0)` the same way; for a line with neither
+        // this is a no-op passthrough of `groupKey`.
         const groupKey = renderStepTimingSlotName(
           groupKeyOf(step.target, step.slab),
           step.face,
-          step.lensPhase,
+          step.slot,
         );
         renderGroup(strategy, {
           encoder,

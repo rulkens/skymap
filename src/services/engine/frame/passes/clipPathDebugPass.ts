@@ -57,9 +57,6 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 
 export const clipPathDebugPass: ContentPass = {
   name: 'clip-path-debug',
-  slab: NEAR0,
-  target: 'swap',
-  blend: 'over',
 
   enabled(state, _ctx, _view) {
     if (state.gpu.debugLineRenderer === null) return false;

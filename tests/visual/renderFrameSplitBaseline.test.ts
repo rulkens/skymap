@@ -520,7 +520,7 @@ describe('renderFrame visual baseline', () => {
     // were emitted.  Render-pass boundaries (beginRenderPass / passEnd),
     // encoder.finish, and queue.submit are deliberately filtered out, so
     // this test stays stable across encoder-shape changes (e.g. the
-    // `frameProgram`'s volume render step opening its own pass before the
+    // `FRAME_ORDER`'s volume render line opening its own pass before the
     // HDR render step).
     const drawSequence = records
       .filter((r): r is Extract<DrawRecord, { kind: 'rendererDraw' }> => r.kind === 'rendererDraw')

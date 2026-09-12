@@ -1,9 +1,8 @@
 /**
  * selectionRingPass — per-galaxy selection halo overlay.
  *
- * Lives at the HEAD of the swap-target layers (the `blend: 'over'` group
- * within `CONTENT_PASSES`, drawn post-tone-map) so marker-lines and labels
- * composite OVER the ring — labels carry information that should stay
+ * Lives at the HEAD of the swap-target layers (drawn post-tone-map) so
+ * marker-lines and labels composite OVER the ring — labels carry information that should stay
  * legible when they overlap the stroke.
  *
  * ## CPU-side ringRadiusPx
@@ -43,9 +42,6 @@ import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 
 export const selectionRingPass: ContentPass = {
   name: 'selection-ring',
-  slab: COSMO,
-  target: 'swap',
-  blend: 'over',
 
   enabled(state, _ctx, _view) {
     if (state.gpu.selectionRingRenderer === null) return false;
@@ -92,7 +88,9 @@ export const selectionRingPass: ContentPass = {
       pass,
       view.vp,
       view.viewportPx,
-      { worldPos, ringRadiusPx },
+      // Opaque: the overflow fade the NEAR0 sibling rides is about a subject
+      // that fills the viewport, which a COSMO galaxy at Mpc range never does.
+      { worldPos, ringRadiusPx, alpha: 1 },
       colorView,
     );
   },

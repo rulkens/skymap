@@ -24,4 +24,10 @@ export type MarkerLine = {
   readonly color: Vec4;
   /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Defaults to 1. */
   fadeAlpha?: number;
+  /**
+   * Share of the per-pixel scene attenuation this line takes (default 1) — the
+   * leader-line half of `Label2D.occludeWeight`, copied from the owning label
+   * by the director so a connector never dims where its caption does not.
+   */
+  occludeWeight?: number;
 };

@@ -2,15 +2,15 @@
  * wireInput — focused test for the highest-leverage invariant of the
  * third bootstrap phase: the initial camera framing call.
  *
- * `computeInitialCamera` is called with a 60° FOV and the result drives
- * `state.cam`. No bbox input — framing uses pure constants so the phase
+ * `computeInitialCamera` is called with a 60° FOV and the result drives the
+ * boot pose seed. No bbox input — framing uses pure constants so the phase
  * can run before any galaxy catalog arrives.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
+import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -37,19 +37,6 @@ vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
 
 vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
   buildGalaxyInfo: vi.fn(),
-}));
-
-vi.mock('../../../../src/utils/camera/createOrbitCamera', () => ({
-  createOrbitCamera: vi.fn(() => ({
-    target: [0, 0, 0],
-    distance: 0.43,
-    yaw: 3.0045,
-    pitch: 0.0609,
-    fovYRad: Math.PI / 3,
-    aspect: 1,
-    near: 0.01,
-    far: 6000,
-  })),
 }));
 
 const attachOrbitControlsSpy = vi.fn((..._args: unknown[]) => () => {});
@@ -106,6 +93,7 @@ import { createInputAggregator } from '../../../../src/services/engine/subsystem
 import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { worldArmOf } from '../../../fixtures/worldArmOf';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -181,12 +169,15 @@ function makeState(): EngineState {
       // recognizer's events actually reach the aggregator.
       inputAggregator: createInputAggregator(),
     } as never,
-    cam: null,
+    booted: false,
     cameraRuntime: {
-      clock: createCameraClock(),
-      projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
-      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
-      prevActiveId: { current: 'resting' },
+      register: { pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }, winner: 'resting' },
+      epochs: UNSTARTED_EPOCHS,
+      follow: null,
+      outputs: {
+        displayed: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+        projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
+      },
     },
     assetSlots: {
       points: new Map(),
@@ -205,7 +196,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb,
-    home: EARTH_HOME,
+    composition: { layers: [], home: EARTH_HOME },
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },
@@ -237,7 +228,20 @@ describe('wireInput', () => {
       simDays: expect.any(Number),
       frameBasis: ORIENTATION_FRAMES.ecliptic,
     });
-    expect(state.cam).not.toBeNull();
+    expect(state.booted).toBe(true);
+  });
+
+  it('seeds the register with a COPY of the framing target, not the live array', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+
+    await wireInput(state, deps);
+
+    // The seeded pose outlives the framing result that made it, so a shared
+    // array would drag the boot commit along with whoever mutates it next.
+    computeInitialCameraSpy.mock.results[0]!.value.target[0] = 99;
+
+    expect(worldArmOf(state.cameraRuntime.register.pose).target[0]).toBe(0);
   });
 
   it('seeds the home selection: select + focus pinned to Earth at boot', async () => {
@@ -255,7 +259,10 @@ describe('wireInput', () => {
 
   it('seeds focus but not select when the home config withholds the selection', async () => {
     const state = makeState();
-    const deps = { ...makeDeps(), home: { ...EARTH_HOME, seedSelection: false } };
+    const deps = {
+      ...makeDeps(),
+      composition: { layers: [], home: { ...EARTH_HOME, seedSelection: false } },
+    };
 
     await wireInput(state, deps);
 
@@ -268,7 +275,10 @@ describe('wireInput', () => {
 
   it('dispatches no selection at all for a composition with no home target', async () => {
     const state = makeState();
-    const deps = { ...makeDeps(), home: { ...EARTH_HOME, focus: null } };
+    const deps = {
+      ...makeDeps(),
+      composition: { layers: [], home: { ...EARTH_HOME, focus: null } },
+    };
 
     await wireInput(state, deps);
 
@@ -305,7 +315,7 @@ describe('wireInput', () => {
 
     await wireInput(state, deps);
 
-    expect(state.cam).not.toBeNull();
+    expect(state.booted).toBe(true);
     expect(state.subsystems.inputBindings).not.toBeNull();
     expect(attachOrbitControlsSpy).toHaveBeenCalled();
   });
@@ -314,7 +324,7 @@ describe('wireInput', () => {
     // This four-line sink is the ONLY path from a DOM event to the camera. Wire
     // it to a locally-built aggregator, or drop the requestRender, and all input
     // dies with every other unit test still green — the halves either side of it
-    // (`orbitControls`, `inputAggregator`, `drainInput`) each test a fake.
+    // (`orbitControls`, `inputAggregator`, `replayInput`) each test a fake.
     const state = makeState();
     const deps = makeDeps();
     attachOrbitControlsSpy.mockClear();
@@ -326,7 +336,7 @@ describe('wireInput', () => {
       | undefined;
     expect(emit).toBeTypeOf('function');
 
-    emit!({ kind: 'wheel', deltaY: 100, duringGesture: false });
+    emit!({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
 
     expect(state.subsystems.inputAggregator.drain()).toHaveLength(1);
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();

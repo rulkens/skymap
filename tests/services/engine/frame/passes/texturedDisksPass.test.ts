@@ -142,14 +142,6 @@ describe('texturedDisksPass', () => {
     ).not.toThrow();
   });
 
-  // Sky-cubemap capture roster (Task 13b, Ruling 6): the textured famous-
-  // galaxy thumbnails (LMC/SMC/M31 at close approach) were missing from the
-  // captured "sky", so the black-hole lens quad covered the real, textured
-  // originals with a capture that never had them.
-  it('is flagged skyCapture: true', () => {
-    expect(texturedDisksPass.skyCapture).toBe(true);
-  });
-
   it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 7th arg', () => {
     const disks = [{ x: 1 }];
     const texturedDiskRenderer = makeTexturedDiskRenderer();

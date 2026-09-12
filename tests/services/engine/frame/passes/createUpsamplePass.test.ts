@@ -96,7 +96,6 @@ const PASS_STUB = {
 function makeRow(overrides: Partial<UpsamplePassRow> = {}): UpsamplePassRow {
   return {
     name: 'test-upsample',
-    slab: 0,
     sourceTargetId: 'test-target',
     handleOf: () => null,
     enabled: () => true,

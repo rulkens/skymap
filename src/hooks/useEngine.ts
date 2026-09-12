@@ -52,7 +52,7 @@ import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
 import { installPerfHook } from '../state/perf/installPerfHook';
-import { EARTH_HOME } from '../data/selection/earthHome';
+import { APP_COMPOSITION } from '../compositions/app';
 
 export function useEngine(): UseEngineReturn {
   // The injected settings store — created in main.tsx, shared with React via
@@ -74,7 +74,7 @@ export function useEngine(): UseEngineReturn {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const handle = createEngine(canvas, { store, setSagaContext }, EARTH_HOME);
+    const handle = createEngine(canvas, { store, setSagaContext }, APP_COMPOSITION);
     handleRef.current = handle;
 
     // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed

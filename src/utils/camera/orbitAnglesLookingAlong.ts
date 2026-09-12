@@ -54,7 +54,7 @@ import type { Mat3 } from '../../@types/math/Mat3';
 
 export function orbitAnglesLookingAlong(
   forward: Vec3,
-  frameBasis?: Mat3,
+  frameBasis?: Readonly<Mat3>,
 ): { yaw: number; pitch: number } {
   const m = Math.hypot(forward[0], forward[1], forward[2]) || 1;
   // dir = -forward (normalised): the frame-agnostic world direction from target

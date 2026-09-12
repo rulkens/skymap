@@ -38,7 +38,7 @@ tile pyramid (own manifest, own versioning), fonts (fetched from app origin), PG
 Registry-like tables beside `SOURCE_REGISTRY` (18 found): `ASSET_WIRING`,
 `GALAXY_CATALOG_SOURCE_REGISTRY`, `GPU_HANDLE_ROWS`, `renderTargetRows`, `CONTENT_LAYERS`,
 `FADE_LAYERS`, `SCALE_FADE_BANDS`, `STRUCTURE_MARKER_STYLES`, `RESOLVE_PICK`,
-`PICK_SEEDS_BY_BODY_ID`, `LABEL_HOME_BY_SOURCE_TYPE`, `BLACK_HOLES`, `BODY_TEXTURE_REGISTRY`,
+`BODY_PICK_ROWS`, `LABEL_HOME_BY_SOURCE_TYPE`, `BLACK_HOLES`, `BODY_TEXTURE_REGISTRY`,
 `FONTS`, `DEBUG_OVERLAY_ROWS`, `allowDataFile`, `RAW_DATA`, `DESI_PATCHES`.
 
 ## 3. What a new layer touches today
@@ -66,7 +66,7 @@ Still hand-edited per family:
 | structure     | `BULK_CATALOG_CATEGORIES`, `structureCatalogToStructures.ts` branch, `structureFocusSubsystem.ts:82` chain, `emitCounts` | silent ×4              |
 | structure     | `STRUCTURE_MARKER_STYLES` row                                                                                            | tsc                    |
 | structure     | WESL `SOURCE_CODE_X` literal                                                                                             | parity test            |
-| body          | `PICK_SEEDS_BY_BODY_ID` row                                                                                              | tsc                    |
+| body          | `BODY_PICK_ROWS` row                                                                                                     | tsc                    |
 | body          | `sceneBodyPickId.ts` / `starPickId.ts` literal-id chains                                                                 | silent                 |
 | any           | `allowDataFile.ts` regex, `ATTRIBUTIONS.md`                                                                              | silent                 |
 
