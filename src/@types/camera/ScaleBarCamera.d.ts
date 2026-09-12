@@ -7,6 +7,7 @@
  */
 
 export type ScaleBarCamera = {
+  /** Range to what the bar measures at (the pivot surface when it has one). */
   distance: number;
   fovYRad: number;
 };
