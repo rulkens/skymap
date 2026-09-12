@@ -21,10 +21,7 @@ export type MeshBodySeed = {
   readonly meshKey: string;
   /** See `MeshBody.captionRevealM` — authored per seed, optional. */
   readonly captionRevealM?: number;
-  /**
-   * Overrides `MESH_BODY_STANDOFF_RADII` when the bounding radius is set by a
-   * thin boom rather than the body: Voyager's is 14.5 m for a ~4 m bus.
-   */
+  /** Overrides `MESH_BODY_STANDOFF_RADII` where a thin boom, not the body, sets the radius. */
   readonly standoffRadii?: number;
 };
 

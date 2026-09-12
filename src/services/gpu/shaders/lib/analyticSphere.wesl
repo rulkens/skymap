@@ -67,18 +67,14 @@
 // produced had it drawn the true surface, on either depth convention.
 //
 // Projecting a hit through the SAME mvp the vertex stage used is exact only
-// while the eye is far from the surface: that mvp's translation column is the
-// eye offset in metres, so on a planet (Mars: 3.39e6, f32 ulp 0.25 m) a hit
-// 10 m away is the difference of two huge numbers, and the written depth lands
-// 0.02-0.10 m out -- the metre-scale error this path used to show instead
-// traced to 'c''s ('originAltitudeSq') 0.4 m quantisation of the ray origin,
-// now computed in f64 (see 'bodySlabCamAltitudeSq'). Either error is enough to
-// swallow or float a mesh parked on the ground. Projecting a hit taken
-// CAMERA-RELATIVE instead ('rd * t', some 3e-6 body radii) through a
-// translation-free 'vp * scale(R)' avoids the cancellation outright, since
-// nothing large is ever subtracted in f32. Same reason 'hitUnitSphere' is
-// handed 'dot(ro, ro) - 1' instead of forming it: at that scale it, and the
-// textbook near root, are both catastrophic cancellations.
+// far from the surface: that mvp's translation column is the eye offset in
+// metres, so on a planet (Mars 3.39e6 m, f32 ulp 0.25 m) a hit 10 m away is a
+// difference of two huge numbers and the depth lands 0.02-0.10 m out -- enough
+// to swallow or float a mesh parked on the ground. A CAMERA-RELATIVE hit
+// ('rd * t', some 3e-6 body radii) through a translation-free 'vp * scale(R)'
+// subtracts nothing large in f32. Same reason 'hitUnitSphere' takes
+// 'dot(ro, ro) - 1' from f64 ('bodySlabCamAltitudeSq') rather than forming it:
+// at that scale it and the textbook near root both cancel catastrophically.
 //
 // NEAR0 is reversed-Z ('SLAB_REVERSED_Z[NEAR0] = true': infinite far, clear 0,
 // 'depthCompare: greater'), and reversed-Z lives entirely inside the projection
@@ -147,10 +143,8 @@ struct UvGradients {
 // normalizing the DIFFERENCE after interpolation, since the interpolated proxy
 // position is not itself unit length.
 //
-// 'originAltitudeSq' is 'dot(ro, ro) - 1'. It is a parameter rather than a
-// derivation because close to the surface it is a catastrophic cancellation
-// that f32 cannot do (header); the textured path supplies it from f64. A caller
-// far from the surface loses nothing by handing over the f32 expression.
+// 'originAltitudeSq' is 'dot(ro, ro) - 1', a parameter because near the surface
+// it is a cancellation f32 cannot do (header): the textured path supplies f64.
 fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>, originAltitudeSq: f32) -> SphereHit {
   let b = dot(ro, rd);
   let discr = b * b - originAltitudeSq;
@@ -211,12 +205,10 @@ fn equirectUvGradients(uv: vec2<f32>) -> UvGradients {
   return out;
 }
 
-// fragDepthFromClip — the '@builtin(frag_depth)' value for a point projected
-// through a clip matrix. No reversed-Z branch: see the header. 'm' and 'p' must
-// share one frame: either the body's absolute local frame with the vertex
-// stage's own mvp, or a hit taken RELATIVE TO THE EYE with the
-// translation-free 'vpCamRelLocal' (mandatory once the eye can come within
-// metres of the surface) -- each call site names which.
+// fragDepthFromClip — the '@builtin(frag_depth)' value for a point projected through
+// a clip matrix. No reversed-Z branch: see the header. 'm' and 'p' must share one
+// frame: either the body's absolute local frame with the vertex stage's own mvp, or
+// a hit taken RELATIVE TO THE EYE with the translation-free 'vpCamRelLocal'.
 fn fragDepthFromClip(m: mat4x4<f32>, p: vec3<f32>) -> f32 {
   let clip = clip_from_local(m, p);
   return clip.z / clip.w;

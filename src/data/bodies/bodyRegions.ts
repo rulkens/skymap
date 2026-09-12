@@ -69,8 +69,8 @@ const SOLAR_NEIGHBOURHOOD_IDS: readonly string[] = SCENE_ANCHORS.map((anchor) =>
   (id) => !CLAIMED_IDS.has(id),
 );
 
-// An escaping body has no envelope: Voyager 1 sat 76 au out at J2000 and is 172
-// au out today, against Pluto's 30 — so a snapshot max over a hyperbolic row
+// An escaping body has no envelope: Voyager 1 sat 76 au out at J2000 and recedes
+// ~3.6 au/yr, against Pluto's 30 — so a snapshot max over a hyperbolic row
 // measures the clock rather than the region, and `scaleFadeBands` sizes its
 // glint backdrop off this. Such rows stay MEMBERS; only the max drops them.
 const boundsExtent = (id: string): boolean => {

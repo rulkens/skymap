@@ -35,15 +35,6 @@
  * The ambient floor is not packed on either struct — `litShade` reads
  * `lib/bodyLighting.wesl`'s `AMBIENT` const directly (see `packLitBodyUniforms`).
  *
- * @param mvp            16-element column-major MVP (from `composeBodySlabMvp`).
- * @param sunDirLocal    Sun direction in the body's local frame.
- * @param ringInnerRatio Ring inner radius / planet radius (0 when no ring).
- * @param ringOuterRatio Ring outer radius / planet radius; 0 ⇒ no ring.
- * @param limbStrength   Minnaert blend weight (0 ⇒ plain Lambert; out[22]).
- * @param limbExponent   Minnaert exponent k (1 ⇒ plain Lambert; out[23]).
- * @param camPosLocal    Camera position in the body's local frame (out[24..26]).
- * @param camAltitudeSq  `dot(camPosLocal, camPosLocal) − 1`, f64-derived (out[27]).
- * @param vpCamRelLocal  16-element column-major eye-relative vp (out[28..43]).
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -74,7 +65,7 @@ export function packTexturedBodyUniforms(
   out[24] = camPosLocal[0]; // byte 96
   out[25] = camPosLocal[1]; // byte 100
   out[26] = camPosLocal[2]; // byte 104
-  out[27] = camAltitudeSq; // byte 108 — what used to be the tail pad
+  out[27] = camAltitudeSq; // byte 108
   out.set(vpCamRelLocal.subarray(0, 16), 28); // bytes 112..175
   return out;
 }

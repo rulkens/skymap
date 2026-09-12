@@ -5,8 +5,7 @@
  * `X(E) = C + A·cos E + B·sin E`, with `A`, `B`, `C` fixed once the elements
  * are: in the basis `(A, B)` about `C` the curve is exactly the unit circle and
  * the plane angle IS the eccentric anomaly, so all of e/i/Ω/ω lives in the three
- * vectors. Position and trail are points of that same map, which is what makes
- * a body sitting on its own trail structural, not a sync invariant.
+ * vectors.
  *
  *     A     = a · P̂w            (semi-major, toward periapsis)
  *     B     = b · Q̂w            (semi-minor, prograde; b = a·√(1 − e²))

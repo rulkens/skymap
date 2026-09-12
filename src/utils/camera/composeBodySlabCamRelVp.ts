@@ -1,10 +1,8 @@
 /**
  * composeBodySlabCamRelVp — `composeBodySlabMvp` without the translation: clip
- * from a point given RELATIVE TO THE EYE in body-radius units. Same f64 seam,
- * same `view.slab.vp`, same `radiusM` — only the model's `−eyeRelBodyM` column
- * is gone, and the caller subtracts the eye itself, avoiding the ~0.02–0.10 m
- * f32 cancellation error that column costs at contact range (see
- * `lib/analyticSphere.wesl`'s depth section).
+ * from a point given RELATIVE TO THE EYE in body-radius units. That missing
+ * `−eyeRelBodyM` column is the f32 cancellation at contact range — see
+ * `lib/analyticSphere.wesl`'s depth section.
  */
 
 import { mat4d } from 'wgpu-matrix';

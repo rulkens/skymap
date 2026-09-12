@@ -50,9 +50,7 @@ export const meshBodiesPass: ContentPass = {
     const bodyStates = sceneBodyStates(state, ctx);
     const hostState = bodyStates.get(hostId);
     // The umbra and the host-shine solid angle are both ground geometry, so the
-    // host comes from the CELESTIAL roster. A hostless body (a Voyager) owns
-    // its own row, so the lookup misses: it draws under an unshadowed Sun with
-    // no fill, not nothing at all.
+    // host comes from the CELESTIAL roster; a hostless body misses (see below).
     const host = SCENE_CELESTIAL_BODIES.find((body) => body.id === hostId);
     if (hostState === undefined) return;
     // The SAME pose-provider closure `deriveSlabs` built this row's

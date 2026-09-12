@@ -163,10 +163,7 @@ struct LitBodyUniforms {
 //
 // See 'lib/analyticSphere.wesl's depth section for why these exist. Byte 108
 // was 'LitBodyUniforms'' trailing pad; it becomes a real field here (the
-// pad-slot-becomes-real-field trick again):
-//
-//   offset 108..111: camAltitudeSq (f32 — dot(camPosLocal, camPosLocal) - 1, f64-derived)
-//   offset 112..175: vpCamRelLocal (mat4x4<f32> — mvp without its eye-offset translation)
+// pad-slot-becomes-real-field trick again).
 //
 // ## Byte layout (uniform address space)
 //

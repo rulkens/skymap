@@ -31,11 +31,9 @@
  * is the SAME closure `deriveSlabs` built this row's `view.slab.vp` from — see
  * `composeBodySlabMvp`'s module header. `camPosLocal` (the Minnaert view
  * cosine's camera) uses the SAME `planet.radiusM` the mvp used, so both share
- * one definition of "the frame where this body is the unit sphere".
- *
- * That seam is also why the contact-range depth pair (`vpCamRelLocal` +
- * `camAltitudeSq`) is composed HERE, in f64 — see `lib/analyticSphere.wesl`'s
- * depth section.
+ * one definition of "the frame where this body is the unit sphere" — and why
+ * the contact-range depth pair is composed here too (see
+ * `lib/analyticSphere.wesl`'s depth section).
  *
  * ### When it draws
  *
