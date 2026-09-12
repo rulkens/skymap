@@ -12,16 +12,14 @@ import { useEffect, useRef, type ReactNode } from 'react';
 
 import { initGpu, resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
 import { createSceneInput } from '../../input/createSceneInput';
-import { createLidarPointRenderer, type LidarPointRenderer } from '../../render/lidarPointRenderer';
 import {
   createRenderResources,
   disposeScene,
-  type GpuAsset,
   type RenderResources,
 } from '../../render/renderResources';
 import { createSceneCameraUniform, type SceneCameraUniform } from '../../render/sceneCameraUniform';
 import { sceneCameraView } from '../../render/sceneCameraView';
-import { createSplatRenderer, type SplatRenderer } from '../../render/splatRenderer';
+import { createSceneRenderers, type SceneRenderers } from '../../render/sceneRenderers';
 import { deviceLost } from '../../state/view/viewSlice';
 import type { RegisterSagaContext, SceneStore } from '../../store/types';
 import styles from './Viewport.module.css';
@@ -54,20 +52,6 @@ function depthViewFor(
   return texture.createView();
 }
 
-function visibleAssetsOfKind<K extends GpuAsset['kind']>(
-  resources: RenderResources,
-  kind: K,
-  hiddenAssetIds: readonly string[],
-): Extract<GpuAsset, { kind: K }>[] {
-  const drawn: Extract<GpuAsset, { kind: K }>[] = [];
-  for (const [id, asset] of resources.gpuAssets) {
-    if (asset.kind === kind && !hiddenAssetIds.includes(id)) {
-      drawn.push(asset as Extract<GpuAsset, { kind: K }>);
-    }
-  }
-  return drawn;
-}
-
 function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -80,8 +64,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
 
     const resources = createRenderResources();
     let cameraUniform: SceneCameraUniform | null = null;
-    let lidar: LidarPointRenderer | null = null;
-    let splat: SplatRenderer | null = null;
+    let renderers: SceneRenderers | null = null;
     let disposed = false;
     let rafHandle = 0;
     // Starts true so the first frame after the device lands always draws.
@@ -101,7 +84,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       if (state.view.deviceLost) return; // stop for good — the device is gone
       rafHandle = requestAnimationFrame(frame);
       const { gpu } = resources;
-      if (!gpu || !cameraUniform || !lidar || !splat) return;
+      if (!gpu || !cameraUniform || !renderers) return;
 
       // Ahead of the dirty gate: draining is what turns a gesture into one.
       input.drain();
@@ -137,11 +120,8 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
           depthStoreOp: 'store',
         },
       });
-      // Opaque lidar first (writes depth), then splats blended over it.
       pass.setBindGroup(0, cameraUniform.bindGroup);
-      const hidden = state.view.hiddenAssetIds;
-      lidar.draw(pass, visibleAssetsOfKind(resources, 'pointCloud', hidden));
-      splat.draw(pass, visibleAssetsOfKind(resources, 'gaussianSplat', hidden));
+      renderers.draw(pass, resources, state.view.hiddenAssetIds);
       pass.end();
       gpu.device.queue.submit([encoder.finish()]);
     };
@@ -162,8 +142,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         if (disposed) return;
         resources.gpu = gpu;
         cameraUniform = createSceneCameraUniform(gpu.device);
-        lidar = createLidarPointRenderer(gpu, gpu.format, cameraUniform.layout);
-        splat = createSplatRenderer(gpu, gpu.format, cameraUniform.layout);
+        renderers = createSceneRenderers(gpu, gpu.format, cameraUniform.layout);
         void gpu.device.lost.then((info) => {
           // 'destroyed' is our own teardown, not a failure.
           if (disposed || info.reason === 'destroyed') return;
