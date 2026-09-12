@@ -26,6 +26,7 @@ import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { LIMB_DARKENING_PARAMS } from '../../../../../src/data/bodies/limbDarkeningParams';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { bodySlabCamAltitudeSq } from '../../../../../src/utils/camera/bodySlabCamAltitudeSq';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -206,7 +207,7 @@ describe('texturedBodiesPass.draw', () => {
     expect(renderer.draw.mock.calls[1]![1]).toBe('jupiter');
   });
 
-  it('packs a length-28 uniform record with sunDirLocal@16..18 and Minnaert params@22..23', () => {
+  it('packs a length-44 uniform record with sunDirLocal@16..18 and Minnaert params@22..23', () => {
     const mars = bodyAt('mars', 3390000);
     const jupiter = bodyAt('jupiter', 69911000); // has a LIMB_DARKENING_PARAMS row
     const renderer = makeRendererSpy(['mars', 'jupiter']);
@@ -218,7 +219,7 @@ describe('texturedBodiesPass.draw', () => {
 
     const u0 = renderer.draw.mock.calls[0]![2];
     expect(u0).toBeInstanceOf(Float32Array);
-    expect(u0).toHaveLength(28);
+    expect(u0).toHaveLength(44);
     const expectedSun = sunDirLocal(mars.positionMpc, RENDER_ORIGIN_MPC, mars.orientation);
     expect(u0[16]).toBeCloseTo(expectedSun[0]);
     expect(u0[17]).toBeCloseTo(expectedSun[1]);
@@ -235,6 +236,15 @@ describe('texturedBodiesPass.draw', () => {
     expect(u0[24]).toBe(Math.fround(MOCK_CAM_LOCAL[0]));
     expect(u0[25]).toBe(Math.fround(MOCK_CAM_LOCAL[1]));
     expect(u0[26]).toBe(Math.fround(MOCK_CAM_LOCAL[2]));
+
+    // The contact-range depth pair. Neither util is mocked, so these assert the
+    // ARGUMENTS: the altitude term reads the pose's eyeRelBodyM at the body's
+    // own radius, and the eye-relative vp is `view.slab.vp` (the f64 one —
+    // `view.vp` is all zeros here) scaled by that radius, translation untouched.
+    expect(u0[27]).toBe(Math.fround(bodySlabCamAltitudeSq(STUB_POSE.eyeRelBodyM, mars.radiusM)));
+    expect(u0[28]).toBe(Math.fround(0.5 * mars.radiusM));
+    expect(u0[31]).toBe(Math.fround(3.5 * mars.radiusM));
+    expect([u0[40], u0[41], u0[42], u0[43]]).toEqual([12.5, 13.5, 14.5, 15.5]);
   });
 
   it('packs Saturn`s SCENE_RINGS radii as ring ratios and zeros for a ringless body', () => {

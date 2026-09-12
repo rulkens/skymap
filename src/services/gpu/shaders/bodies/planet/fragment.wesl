@@ -43,7 +43,7 @@ fn fs(in: VSOut) -> FSOut {
   // Renormalize AFTER interpolation: 'in.localPos' rides the PROXY_SCALE-scaled
   // shell, so neither it nor its interpolant is unit length.
   let rd = normalize(in.localPos - ro);
-  let surface = hitUnitSphere(ro, rd);
+  let surface = hitUnitSphere(ro, rd, dot(ro, ro) - 1.0);
   if (!surface.hit) {
     discard;
   }

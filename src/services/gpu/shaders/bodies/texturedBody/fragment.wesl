@@ -44,7 +44,7 @@
 import package::bodies::texturedBody::io::TexturedBodyVSOut;
 import package::lib::analyticSphere::equirectUvFromDir;
 import package::lib::analyticSphere::equirectUvGradients;
-import package::lib::analyticSphere::fragDepthFromLocal;
+import package::lib::analyticSphere::fragDepthFromCamRel;
 import package::lib::analyticSphere::hitUnitSphere;
 import package::lib::sphere::TexturedBodyUniforms;
 import package::lib::bodyLighting::litShade;
@@ -99,7 +99,9 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   // proxy, so neither it nor its interpolant is unit length.
   let rd = normalize(in.localPos - ro);
 
-  let surface = hitUnitSphere(ro, rd);
+  // 'u.camAltitudeSq' is the f64-computed 'dot(ro, ro) - 1' the f32 ray origin
+  // can no longer express this close to the surface (see 'lib/analyticSphere').
+  let surface = hitUnitSphere(ro, rd, u.camAltitudeSq);
   // Unit length in both branches, so it is the exact geometric normal.
   let ng = surface.point;
 
@@ -127,7 +129,10 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
 
   var out: FSOut;
   out.colour = vec4<f32>(colour, 1.0);
-  // The SAME mvp the vertex stage used, applied to the real surface point.
-  out.depth = fragDepthFromLocal(u.mvp, ng);
+  // The hit RELATIVE TO THE EYE, through the translation-free vp: a body-slab
+  // eye can sit metres above the surface, where projecting the absolute hit
+  // through 'u.mvp' would quantise the ground's depth to ~1 m and swallow
+  // anything parked on it.
+  out.depth = fragDepthFromCamRel(u.vpCamRelLocal, rd * surface.t);
   return out;
 }

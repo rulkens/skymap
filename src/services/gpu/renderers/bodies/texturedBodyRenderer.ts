@@ -25,10 +25,10 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
 
-/** `TexturedBodyUniforms` is 112 bytes (28 f32): the 80-byte lit prefix + two
- *  ring ratios + two Minnaert limb params + camPosLocal vec3 + one pad float.
- *  Written from `packTexturedBodyUniforms`. */
-const UNIFORM_BUFFER_SIZE = 112;
+/** `TexturedBodyUniforms` is 176 bytes (44 f32): the 80-byte lit prefix + two
+ *  ring ratios + two Minnaert limb params + camPosLocal vec3 + camAltitudeSq +
+ *  the eye-relative vp. Written from `packTexturedBodyUniforms`. */
+const UNIFORM_BUFFER_SIZE = 176;
 
 /**
  * Per-kind sphere-map config — THE EXTENSION POINT. Each row names a

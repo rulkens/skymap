@@ -112,10 +112,11 @@ export type TexturedBodyRenderer = Renderer & {
    */
   setRingTexture(bodyId: BodyTextureId, bitmap: ImageBitmap): void;
   /**
-   * Draw one body into the current pass. `uniforms` is the 28-float
-   * `TexturedBodyUniforms` block (112 bytes) from `packTexturedBodyUniforms`:
+   * Draw one body into the current pass. `uniforms` is the 44-float
+   * `TexturedBodyUniforms` block (176 bytes) from `packTexturedBodyUniforms`:
    * MVP + `sunDirLocal` + the two ring ratios + the two Minnaert limb params
-   * (`limbStrength`, `limbExponent`) + `camPosLocal`. Written to that body's
+   * (`limbStrength`, `limbExponent`) + `camPosLocal` + the contact-range depth
+   * pair (`camAltitudeSq`, `vpCamRelLocal`). Written to that body's
    * own uniform buffer, then drawn indexed. Draw each body at most once per
    * frame.
    */
