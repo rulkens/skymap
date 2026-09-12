@@ -1334,7 +1334,7 @@ it to the PR that moves source rows, (d)).
       claims a win; report the numbers and hand the land/park call to the user. It is their
       ruling, never process momentum.
 
-- [ ] Visual smoke on this worktree's dev server, five poses:
+- [x] Visual smoke on this worktree's dev server, five poses:
   - `/` — boots at Earth, globe framed as before, InfoCard pinned, selection ring present.
   - `/?cinema` — boots at Earth, focus follows the globe, no ring, no InfoCard.
   - `/#focus=body-jupiter` — the deep link wins over the home seed; Jupiter, its moons, the
@@ -1396,15 +1396,15 @@ number without its per-difference reasons; the PR body claims a result that was 
 
 **Named observable behaviours** (Task 14's smoke)
 
-- [ ] `/` — Earth home, ring + InfoCard, no camera jump on the first follow frame.
-- [ ] `/?cinema` — Earth home, no ring, no InfoCard.
-- [ ] `/#focus=body-jupiter` — deep link wins; rings and orbit trails draw, trails in front
+- [x] `/` — Earth home, ring + InfoCard, no camera jump on the first follow frame.
+- [x] `/?cinema` — Earth home, no ring, no InfoCard.
+- [x] `/#focus=body-jupiter` — deep link wins; rings and orbit trails draw, trails in front
       of the planet.
-- [ ] `/#focus=body-sgr-a-star` — capture, lens, post-lens and post-foreground steps all
+- [x] `/#focus=body-sgr-a-star` — capture, lens, post-lens and post-foreground steps all
       fire; entering and leaving the fade band changes nothing but the lens itself.
 - [x] The GPU-timings DebugPanel lists the same groups in the same order under the same
       names — no row renamed, added or dropped.
-- [ ] `full-survey` — a click in the zone-of-avoidance band selects the band; a galaxy over
+- [x] `full-survey` — a click in the zone-of-avoidance band selects the band; a galaxy over
       it still wins; a structure ring still selects its structure.
 
 **The deferral boundary** — nothing else. No Layer value constructed, no renderer moved, no
