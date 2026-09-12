@@ -28,5 +28,14 @@ feel is the host-radius regime's, not a metre-scale one.
 - Engaged by data: a `surfaceFixed` position-driver row selects the regime, no
   per-body flag (`PositionDriver` already discriminates it).
 
+## Also seen: the atmosphere draws over the rover
+
+From inside Mars's atmosphere the atmosphere shell composites over the rover
+mesh — the shell pass has no notion of an opaque surface-fixed body between the
+camera and the ground, so the rover reads as behind the haze rather than in it.
+Whatever the regime does for the camera, the same ground-level posture has to
+reach the atmosphere composite (occlusion against the mesh's depth, or the
+in-atmosphere path the Earth surface camera uses).
+
 Adjacent: `docs/backlog/2026-09-12-body-bounds-vs-surface.md` (the bounds/surface
 split this regime would read from).
