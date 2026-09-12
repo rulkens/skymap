@@ -140,5 +140,6 @@ Lambert term): the host planet is in the probe.
 
 ### Open at the checkpoint
 
-Sign-off on the shape and T1–T4; packaging: prep P1–P5 as separate PR(s) — P1 is
-independently valuable, it un-braids the lens bake — or everything on #693. No default.
+Sign-off on the shape and T1–T4. Packaging RULED 2026-09-12: #693 lands first
+without PBR; this spec becomes its own effort off main — P1 (keyed cubemap
+captures) as a standalone prep PR, P2–P5 plus the feature on the feature PR.
