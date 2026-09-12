@@ -1,8 +1,9 @@
-# Mesh-body PBR — design (DRAFT: ground pass done, rulings T1–T4 + packaging pending)
+# Mesh-body PBR — design (ground pass done, T1–T4 + packaging RULED 2026-09-13; plan pending)
 
-Lands inside PR #693 (Voyager 1/2 + Mars rovers) by user ruling 2026-09-12. Plan:
-`docs/superpowers/plans/2026-09-12-mesh-body-pbr.md` (not yet written — gated on the
-rulings below). Ledger: `.superpowers/sdd/2026-09-11-voyager-rovers/progress.md`.
+Own effort off main; #693 (Voyager 1/2 + Mars rovers) shipped without it. Plans: P1
+prep as its own PR, then P2–P5 + feature (neither written yet). The ground pass ran
+inside the #693 effort — ledger at
+`docs/superpowers/plans/completed/2026-09-11-voyager-rovers.ledger.md`.
 
 ## Problem
 
@@ -15,7 +16,7 @@ Sun highlight. Solar panels and metal surfaces cannot read as such.
 
 ## Decisions already ruled (user, 2026-09-12)
 
-- Proper PBR ships in #693, not as a follow-on.
+- Proper PBR is its own effort (packaging ruling below), not part of #693.
 - Material inputs: bake metallic, roughness and tangent-space normals from the NASA
   materials (metallic via the Metallic→Emission swap, Blender has no metallic bake type).
 - Shading: Cook–Torrance GGX with a metal/dielectric blend; environment specular via
@@ -78,19 +79,19 @@ type CaptureRuntime = Map<string, { baked: RefreshKey | null; pending: RefreshKe
 The feature DELETES the host-shine fill (colour, strength, `hostSkyFraction`, `dirToHost`
 Lambert term): the host planet is in the probe.
 
-### Shape options under compatibility tension (priced; rulings pending)
+### Shape options under compatibility tension (priced; RULED 2026-09-13)
 
 - **T1 material channels** — greenfield `texture | constant` union per channel vs the
-  #678 shape (always four textures, 1×1 substitutes, one runtime path). Recommend #678
-  shape: the union buys nothing at runtime and adds a shader/loader branch. Cost carried:
-  a provenance-only `substituted` list.
-- **T2 LUT shipping** — committed asset like the font atlas (~256 KB in git, zero
-  manifest/R2/generated-table edits) vs manifest + R2. Recommend committed.
+  #678 shape (always four textures, 1×1 substitutes, one runtime path). **Ruled: #678
+  shape** — the union buys nothing at runtime and adds a shader/loader branch. Cost
+  carried: a provenance-only `substituted` list.
+- **T2 LUT shipping** — committed asset like the font atlas vs manifest + R2. **Ruled:
+  committed, 128×128 rg16float (64 KB)**; zero manifest/R2/generated-table edits.
 - **T3 diffuse environment** — SH9 buffer vs sampling the probe's coarsest prefiltered
-  mip. Recommend the mip: no reduction pass, no second resource.
+  mip. **Ruled: the mip** — no reduction pass, no second resource.
 - **T4 Sun irradiance** — constant `SUN_IRRADIANCE` (expose for the subject) vs true
-  1/r² (Voyager at 170 au is 30,000× dimmer; needs frame exposure). Recommend the
-  constant, shared by probe and direct term so metal reflects the host in the same units.
+  1/r² (Voyager at 170 au is 30,000× dimmer; needs frame exposure). **Ruled: the
+  constant**, shared by probe and direct term so metal reflects the host in the same units.
 
 ### Missing joints (bolt-on verdicts, blockers)
 
@@ -138,8 +139,8 @@ Lambert term): the host planet is in the probe.
 - `sceneMeshBodies.ts` header still says `radiusM`; `rotationElements.ts` is
   prettier-dirty on main (fold into the feature commits).
 
-### Open at the checkpoint
+### Checkpoint rulings
 
-Sign-off on the shape and T1–T4. Packaging RULED 2026-09-12: #693 lands first
-without PBR; this spec becomes its own effort off main — P1 (keyed cubemap
+Shape signed off; T1–T4 ruled 2026-09-13 (above). Packaging RULED 2026-09-12: #693
+landed first without PBR; this spec is its own effort off main — P1 (keyed cubemap
 captures) as a standalone prep PR, P2–P5 plus the feature on the feature PR.
