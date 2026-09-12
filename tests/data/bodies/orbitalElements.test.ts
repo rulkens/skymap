@@ -39,19 +39,16 @@ describe('ORBITAL_ELEMENTS has a valid structure', () => {
     }
   });
 
-  it('keeps every eccentricity in the bound orbit range [0, 1)', () => {
-    // e < 1 is what makes the conic an ellipse; e = 1 (parabola) or e > 1
-    // (hyperbola) would break the unit-circle parameterisation the trail rests
-    // on and the a(1 − e) periapsis magnitude.
-    for (const e of ORBITAL_ELEMENTS) {
-      expect(e.eccentricity).toBeGreaterThanOrEqual(0);
-      expect(e.eccentricity).toBeLessThan(1);
-    }
-  });
-
-  it('gives every orbit a positive semi-major axis', () => {
-    for (const e of ORBITAL_ELEMENTS) {
-      expect(e.semiMajorMpc).toBeGreaterThan(0);
+  it('pairs every eccentricity with the sign of its semi-major axis', () => {
+    // The conic branch stated twice, so a transcription that "tidies" one half
+    // fails: an ellipse is e < 1 with a > 0, a hyperbola e > 1 with a < 0 —
+    // Horizons publishes the escaping rows' A negative and dropping that sign
+    // puts the probe on the wrong branch, visible nowhere else. e = 1
+    // (parabola) has no solver on either side.
+    for (const el of ORBITAL_ELEMENTS) {
+      expect(el.eccentricity, el.id).toBeGreaterThanOrEqual(0);
+      expect(el.eccentricity, el.id).not.toBe(1);
+      expect(Math.sign(el.semiMajorMpc), el.id).toBe(el.eccentricity < 1 ? 1 : -1);
     }
   });
 });

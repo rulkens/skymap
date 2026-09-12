@@ -168,8 +168,8 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
 /**
  * One demand+release row per mesh body. Same proximity hysteresis as
  * `bodyTextureRow` (demanded inside `loadRadiusMpc`, released past twice it),
- * SIMPLER: a mesh body has its own `ORBITAL_ELEMENTS` row, so its position
- * comes straight off `deriveBodyStates`, no `bodyPosOf`/`hostBodyId`
+ * SIMPLER: a mesh body is in the body-state snapshot whatever drives it, so its
+ * position comes straight off `deriveBodyStates`, no `bodyPosOf`/`hostBodyId`
  * indirection for a ring-style host.
  */
 function meshBodyRow(body: MeshBody): AssetWiringRow {

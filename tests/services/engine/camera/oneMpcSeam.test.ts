@@ -130,6 +130,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "deriveSlabs is the seam's CALLER, not a second compose site: bodySlabRow's near/far/vp consume bodyRelativePose's already-metre-native pose untouched; its own MPC_TO_M/M_TO_MPC uses are COSMO's fixed distanceRangeM bracket and a body row's screen-footprint (radiusPx) bridge into bodyApparentDiameterPx — cull/fade precedent again, not pose math",
   ],
   [
+    'src/services/engine/frame/deriveBodyStates.ts',
+    "world-position precedent — phase 1c folds a surface site's AUTHORED metre offset (host radius + altitude) into the host's world Mpc position, the metres-in/Mpc-out boundary the authored table demands; no slab, no pose, no MVP",
+  ],
+  [
     'src/services/engine/camera/bodyLikeFraming.ts',
     'framing-bridge precedent — converts a body radius to Mpc so bodyFocusDistance and the returned FocusFraming.radius can compose with Mpc-shaped framing math (camera-pivot controller verification, spec §10), not a pose re-derivation',
   ],

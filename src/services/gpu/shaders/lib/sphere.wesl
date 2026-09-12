@@ -157,23 +157,30 @@ struct LitBodyUniforms {
 // vector from the camera in the body's LOCAL frame (rotated CPU-side, same frame
 // as 'sunDirLocal'), so the dot product stays a plain per-fragment cosine even
 // under axial tilt. Byte 96 is already a vec3 boundary, so the tail costs one
-// fresh 16-byte row: 12 bytes of data + one trailing pad rounding to 112.
+// fresh 16-byte row.
+//
+// ## The contact-range depth pair: 'camAltitudeSq' + 'vpCamRelLocal'
+//
+// See 'lib/analyticSphere.wesl's depth section for why these exist. Byte 108
+// was 'LitBodyUniforms'' trailing pad; it becomes a real field here (the
+// pad-slot-becomes-real-field trick again).
 //
 // ## Byte layout (uniform address space)
 //
-//   offset  0..63:  mvp            (mat4x4<f32>, column-major, 64 bytes)
-//   offset 64..75:  sunDirLocal    (vec3<f32> — 16-byte aligned)
-//   offset 76..79:  _pad           (f32 — the vec3's trailing pad, as in
+//   offset  0..63:   mvp           (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75:   sunDirLocal   (vec3<f32> — 16-byte aligned)
+//   offset 76..79:   _pad          (f32 — the vec3's trailing pad, as in
 //                                   LitBodyUniforms; ambient lives in the const)
-//   offset 80..83:  ringInnerRatio (f32 — ring inner radius / planet radius)
-//   offset 84..87:  ringOuterRatio (f32 — ring outer / planet radius; 0 = none)
-//   offset 88..91:  limbStrength   (f32 — Minnaert blend, 0 = plain Lambert)
-//   offset 92..95:  limbExponent   (f32 — Minnaert k; 1 = plain Lambert)
-//   offset 96..107: camPosLocal    (vec3<f32> — 16-byte aligned at 96)
-//   offset 108..111: _pad0         (f32 — zeroed; rounds the struct to 112 / 16)
-//   total: 112 bytes.
+//   offset 80..83:   ringInnerRatio (f32 — ring inner radius / planet radius)
+//   offset 84..87:   ringOuterRatio (f32 — ring outer / planet radius; 0 = none)
+//   offset 88..91:   limbStrength  (f32 — Minnaert blend, 0 = plain Lambert)
+//   offset 92..95:   limbExponent  (f32 — Minnaert k; 1 = plain Lambert)
+//   offset 96..107:  camPosLocal   (vec3<f32> — 16-byte aligned at 96)
+//   offset 108..111: camAltitudeSq (f32 — fills camPosLocal's 4th slot)
+//   offset 112..175: vpCamRelLocal (mat4x4<f32> — 16-byte aligned at 112)
+//   total: 176 bytes.
 //
-// The CPU side uploads 28 f32s. The single source of truth for that packing is
+// The CPU side uploads 44 f32s. The single source of truth for that packing is
 // 'utils/gpu/packTexturedBodyUniforms.ts', which reuses 'packLitBodyUniforms'
 // for the shared 80-byte prefix so the two layouts can never drift.
 
@@ -186,7 +193,8 @@ struct TexturedBodyUniforms {
   limbStrength: f32,
   limbExponent: f32,
   camPosLocal: vec3<f32>,
-  _pad0: f32,
+  camAltitudeSq: f32,
+  vpCamRelLocal: mat4x4<f32>,
 };
 
 // ── RingUniforms ─────────────────────────────────────────────────────

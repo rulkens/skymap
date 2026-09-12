@@ -507,6 +507,73 @@ All public domain; NASA asks that credit go to the named observatory / program.
 
   > This work is based on "Flowers Petunia White" (https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by Marianne Goudriaan (https://sketchfab.com/mariannegoudriaan) licensed under CC-BY-4.0
 
+### "Voyager Probe (B)" — NASA / Michael D. Carbajal
+
+- **Use:** The Voyager 1 and Voyager 2 mesh bodies (both `meshKey: 'voyager'`).
+  Shipped as a derivative: a headless Blender pre-bake
+  (`npm run prebake-mesh -- voyager`) flattens the scene to one mesh and one
+  albedo atlas, which `npm run build-meshes` then bakes to
+  `public/data/meshes/voyager.*`. The raw GLB and the pre-bake output are
+  gitignored; provenance and the pre-bake's own steps live in
+  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/voyager/README.md`.
+- **Source:** NASA 3D Resources,
+  <https://science.nasa.gov/3d-resources/voyager-probe-b/> (download served
+  from `assets.science.nasa.gov`).
+- **Licence:** Public domain under NASA's media usage guidelines — see
+  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
+- **Credit:** NASA / Michael D. Carbajal (NASA Headquarters).
+
+### "Mars 2020 Perseverance Rover" — Brian Kumanchik, NASA/JPL-Caltech
+
+- **Use:** The Perseverance mesh body. Shipped as a derivative: a headless
+  Blender pre-bake (`npm run prebake-mesh -- perseverance`) flattens the
+  deployed rig to one mesh and one albedo atlas, which `npm run build-meshes`
+  then bakes to `public/data/meshes/perseverance.*`. The raw GLB and the
+  pre-bake output are gitignored; provenance and the pre-bake's own steps live
+  in `tools/utils/io/rawDataRegistry.ts` and
+  `data/raw/meshes/perseverance/README.md`.
+- **Source:** NASA 3D Resources,
+  <https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/>
+  (download served from `assets.science.nasa.gov`).
+- **Licence:** Public domain under NASA's media usage guidelines — see
+  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
+- **Credit:** Brian Kumanchik, NASA/JPL-Caltech.
+
+### "Curiosity Rover (MSL) (Clean)" — Brian Kumanchik, NASA/JPL-Caltech
+
+- **Use:** The Curiosity mesh body. Shipped as a derivative: a headless
+  Blender pre-bake (`npm run prebake-mesh -- curiosity`) flattens the deployed
+  rig to one mesh and one albedo atlas, which `npm run build-meshes` then bakes
+  to `public/data/meshes/curiosity.*`. The raw archive and the pre-bake output
+  are gitignored; provenance and the pre-bake's own steps live in
+  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/curiosity/README.md`.
+- **Source:** NASA 3D Resources,
+  <https://science.nasa.gov/3d-resources/curiosity-rover-msl/> (download
+  served from `assets.science.nasa.gov`, a zip archive holding one `.blend`
+  file).
+- **Licence:** Public domain under NASA's media usage guidelines — see
+  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
+- **Credit:** Brian Kumanchik, NASA/JPL-Caltech.
+
+### "Mars Exploration Rover - Spirit and Opportunity" — NASA/JPL-Caltech
+
+- **Use:** The Spirit and Opportunity mesh bodies (both `meshKey: 'mer'`) —
+  the same vehicle design, so both bodies draw this one model. Shipped as a
+  derivative: a headless Blender pre-bake (`npm run prebake-mesh -- mer`)
+  flattens the deployed rig to one mesh and one albedo atlas, which
+  `npm run build-meshes` then bakes to `public/data/meshes/mer.*`. The raw
+  `.blend` and the pre-bake output are gitignored; provenance and the
+  pre-bake's own steps live in `tools/utils/io/rawDataRegistry.ts` and
+  `data/raw/meshes/mer/README.md`.
+- **Source:** NASA 3D Resources page
+  <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/>;
+  the page's own download link 404s (verified 2026-09-11), so the file is
+  fetched from NASA's own GitHub mirror of the same collection,
+  <https://github.com/nasa/NASA-3D-Resources>.
+- **Licence:** Public domain under NASA's media usage guidelines — see
+  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
+- **Credit:** NASA/JPL-Caltech.
+
 ## Fonts
 
 ### Cormorant Garamond — display serif

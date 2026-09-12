@@ -28,6 +28,7 @@ import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
+import { meshBodySlabHostId } from '../../../utils/scene/meshBodySlabHostId';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
@@ -36,7 +37,6 @@ import { deriveSlabs } from './slabs';
 import { deriveBodyStates } from './deriveBodyStates';
 import { visibleSlabBodies } from './visibleSlabBodies';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
-import { elementsById } from '../../../data/bodies/orbitalElements';
 import { visibleStars } from './visibleStars';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 
@@ -93,11 +93,15 @@ export function deriveFrameContext(
     cam.target[2] - cam.position[2],
   ]);
 
-  const { earth, planets } = state.data.bodies;
+  const { earth, planets, meshBodies } = state.data.bodies;
+  // A mesh body whose driver hangs off something with no row of its own gets
+  // one here, off the STORE roster rather than the static table, so the two
+  // stay the same list.
+  const hostlessMeshBodies = meshBodies.filter((body) => meshBodySlabHostId(body) === body.id);
   const slabBodyCandidates: readonly SceneBody[] =
     earth === null
-      ? [...planets, ...SCENE_ANCHOR_POINT_BODIES]
-      : [earth, ...planets, ...SCENE_ANCHOR_POINT_BODIES];
+      ? [...planets, ...SCENE_ANCHOR_POINT_BODIES, ...hostlessMeshBodies]
+      : [earth, ...planets, ...SCENE_ANCHOR_POINT_BODIES, ...hostlessMeshBodies];
 
   const slabGate = {
     bodyStates,
@@ -108,16 +112,15 @@ export function deriveFrameContext(
     fovYRad: cam.fovYRad,
   };
   const gatedBodies = visibleSlabBodies({ ...slabGate, bodies: slabBodyCandidates });
-  // A mesh body owns no slab row — it rides its host's (`meshBodiesPass`), so
-  // the host's roster entry is what keeps it drawable. From a 400 km orbit
-  // Earth's ~70° angular radius takes it out of the frustum gate around 126°
-  // off-axis, which would blank a mesh body sitting dead centre. The SAME gate
-  // run over the mesh bodies re-admits their hosts, so there is one cull
+  // A hosted mesh body owns no slab row — it rides its host's
+  // (`meshBodiesPass`), so the host's roster entry is what keeps it drawable; a
+  // hostless one keys on itself and is already a candidate above. From a 400 km
+  // orbit Earth's ~70° angular radius takes it out of the frustum gate around
+  // 126° off-axis, which would blank a mesh body sitting dead centre. The SAME
+  // gate run over the mesh bodies re-admits their hosts, so there is one cull
   // applied twice rather than two culls to keep in step.
   const meshHostIds = new Set(
-    visibleSlabBodies({ ...slabGate, bodies: state.data.bodies.meshBodies }).map(
-      (body) => elementsById(body.id).focusId,
-    ),
+    visibleSlabBodies({ ...slabGate, bodies: meshBodies }).map(meshBodySlabHostId),
   );
   const visibleBodies = gatedBodies.concat(
     slabBodyCandidates.filter((body) => meshHostIds.has(body.id) && !gatedBodies.includes(body)),

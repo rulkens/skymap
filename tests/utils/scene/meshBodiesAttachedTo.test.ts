@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 
 // The seed table is mocked so this tests the JOIN, not today's two rows: an
 // assertion over the real `SCENE_MESH_BODIES` would pass for a function that
-// ignored `focusId` entirely. The ids stay real so `elementsById` (reading the
-// real ORBITAL_ELEMENTS table) resolves their `focusId: 'earth'`.
+// ignored the host entirely. The ids stay real so `meshBodySlabHostId` (reading
+// the real position-driver tables) resolves their host to `'earth'`.
 vi.mock('../../../src/data/bodies/sceneMeshBodies', () => ({
   SCENE_MESH_BODIES: [
     {

@@ -11,6 +11,7 @@
 
 import package::bodies::meshBody::io::MeshBodyUniforms;
 import package::bodies::meshBody::io::MeshBodyVSOut;
+import package::lib::bodyLighting::AMBIENT;
 import package::lib::math::saturate;
 import package::lib::pbr::pbrDirect;
 
@@ -54,5 +55,10 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let hostShine =
     albedo * u.hostShineColor * u.hostShineStrength * saturate(dot(n, u.dirToHost));
 
-  return vec4<f32>(direct + hostShine, 1.0);
+  // The planets' night-side floor ('lib/bodyLighting.wesl'), deliberately NOT
+  // scaled by 'sunVisibleFraction': a rover on Mars's night side and a Voyager's
+  // shadowed bus stay a readable shape rather than a hole in the star field.
+  let ambient = albedo * AMBIENT;
+
+  return vec4<f32>(direct + hostShine + ambient, 1.0);
 }

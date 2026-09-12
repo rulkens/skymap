@@ -43,7 +43,7 @@ function rotZ(rad: number): Mat3 {
 }
 
 export function rotationFromIau(
-  el: RotationElements,
+  el: Extract<RotationElements, { kind?: 'iau-pole' }>,
   primeMeridianDeg: number = el.primeMeridianDeg,
 ): Mat3 {
   const spinAboutPole = rotZ(degToRad(primeMeridianDeg));
