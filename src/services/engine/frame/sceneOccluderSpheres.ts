@@ -4,7 +4,7 @@
  * Capacity and the drop order over it are `selectOccluderSpheresKm`'s.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { MAX_ORBIT_OCCLUDERS } from '../../../data/bodies/orbitTrailConstants';
 import { selectOccluderSpheresKm } from '../../../utils/scene/selectOccluderSpheresKm';
@@ -15,7 +15,7 @@ import { sceneOccluderBodies } from './sceneOccluderBodies';
 const spheresKm = new Float32Array(MAX_ORBIT_OCCLUDERS * 4);
 
 export function sceneOccluderSpheres(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): { readonly count: number; readonly spheresKm: Float32Array } {
   return {

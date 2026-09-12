@@ -165,7 +165,7 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  *
  * `opts.clipScale` states the clip units of the matrices this instance will be
  * drawn with, so the em it packs is divisible by their `clip.w` — the NEAR0
- * overlays rescale theirs (`near0OverlayClip`). Default 1 = matrix in Mpc.
+ * overlays rescale theirs (`near0OverlayVpF32`). Default 1 = matrix in Mpc.
  */
 export function createLabelRenderer(
   ctx: GpuContext,

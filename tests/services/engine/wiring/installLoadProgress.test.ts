@@ -33,6 +33,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 }));
 
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
+import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
 function stubSlot(name: string): AssetSlot<unknown, unknown> {
   return {
@@ -88,7 +89,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: {} as HTMLCanvasElement,
     cb: { store: { dispatch: vi.fn() } } as unknown as BootstrapDeps['cb'],
-    home: { focus: null, seedSelection: false },
+    composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

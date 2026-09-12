@@ -74,11 +74,6 @@ const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
 
 export const milkyWayPass: ContentPass = {
   name: 'milky-way',
-  // NEAR0, not COSMO: the fixed 10 kpc cosmological near plane clips the disc
-  // mid-descent before the approach fade completes — see the module header.
-  slab: NEAR0,
-  target: 'hdr',
-  blend: 'multiply',
 
   // Shared with the aggregate producer and its upsample consumer — see
   // `milkyWayCloudLiveness` on why all three must answer identically.
@@ -139,17 +134,11 @@ export const milkyWayPass: ContentPass = {
   // galactic centre. `pickMilkyWay` sizes it on the GPU from the pick-camera
   // uniform, so there is no CPU size argument.
   //
-  // This row SELF-BINDS its @group(0) pick camera: the NEAR0 pick pass carries
-  // no shared point-sprites prefix (that @group(0) contract is a COSMO-pass
-  // fact), so this row cannot inherit a camera from an earlier draw. The Gaia
-  // star catalog — the other NEAR0 pickable — self-binds its own camera the same
-  // way, so the two are order-independent within the pass, immune to a registry
-  // reshuffle silently feeding this row a stale camera. The COSMO pickables
-  // instead inherit their camera, since their shared prefix is re-bound by
-  // point-sprites every pass. The bytes here are the SAME complete pick image
-  // point-sprites uploads — `pickUniformBytesOf` against THIS row's slab view —
-  // so the billboard's in-shader sizing reads the identical camera facts, just
-  // projected through NEAR0.
+  // This row SELF-BINDS its @group(0) pick camera, like every other pickable
+  // row, so pick rows are order-independent within a pass. The bytes here are
+  // the SAME complete pick image point-sprites uploads — `pickUniformBytesOf`
+  // against THIS row's slab view — so the billboard's in-shader sizing reads
+  // the identical camera facts, just projected through NEAR0.
   //
   // Visibility is NOT re-checked here: the pick program filters by this row's
   // `pickEnabled`, evaluated against the pick-time camera. That gate composes

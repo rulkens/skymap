@@ -39,16 +39,12 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 import { cosmoLabelProjection } from '../cosmoLabelProjection';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 
 export const labelsPass: ContentPass = {
   name: 'labels',
-  slab: COSMO,
-  target: 'swap',
-  blend: 'over',
 
   enabled(state, _ctx, _view) {
     if (state.gpu.labelRenderer === null) return false;
@@ -98,9 +94,5 @@ export const labelsPass: ContentPass = {
       measure: (label) => renderer.measure(label),
     });
     pickRenderer.draw(pass, quads, projection.viewportPx);
-    // Postcondition: this row bound its OWN @group(0), so put the shared
-    // point-pick camera prefix back for anything recorded after it in the
-    // COSMO pick pass (see `ContentPass.drawPick`).
-    state.gpu.galaxyPickRenderer?.bindCamera(pass);
   },
 };

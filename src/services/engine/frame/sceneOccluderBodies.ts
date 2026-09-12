@@ -12,7 +12,7 @@
  * elongated silhouette (the whale) hides a little more than it covers.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
@@ -23,7 +23,7 @@ import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function sceneOccluderBodies(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): readonly { readonly positionMpc: Readonly<Vec3>; readonly radiusM: number }[] {
   const states = sceneBodyStates(state, ctx);

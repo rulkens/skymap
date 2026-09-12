@@ -5,15 +5,11 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { COSMO } from '../slabs';
 import { slotReady } from '../../../loading/slotReady';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 export const flowFieldPass: ContentPass = {
   name: 'flow',
-  slab: COSMO,
-  target: 'hdr',
-  blend: 'additive',
 
   enabled(state, ctx, _view) {
     // No cube committed → nothing to draw, even mid-fade.

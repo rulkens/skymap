@@ -51,12 +51,14 @@ export type StructureMarkerRenderer = {
    *   - The pick-pass colour attachment (r32uint pick texture) bound.
    *   - A `depth24plus` depth attachment bound (this pipeline writes +
    *     tests depth so a galaxy in front of a ring claims the pixel).
-   *   - `@group(0)` (CameraUniforms) already set by the caller —
-   *     `pickRing` deliberately does NOT bind it.  The galaxy pick draws
-   *     bind the same canonical `@group(0)` immediately beforehand and
-   *     we reuse that bind so the per-frame uniforms aren't re-sent.
+   * `uniformBytes` is the COMPLETE pick-shaped camera image built at pick
+   * time from the slab view (see `pickUniformBytesOf`); it is uploaded
+   * VERBATIM to this renderer's OWN pick camera buffer and bound at
+   * `@group(0)`, of which the ring vertex stage reads the CameraUniforms
+   * prefix. Never the draw-time uniform buffer: that holds the last visual
+   * frame's camera, a stale snapshot of the pose being picked.
    *
-   * `pickRing` does bind `@group(1)` (a dummy zeroed FadeUniforms — the
+   * `pickRing` also binds `@group(1)` (a dummy zeroed FadeUniforms — the
    * pick fragment doesn't read fade.opacity) and `@group(2)` (the
    * per-category SourceUniforms whose `sourceCode` the fragment ORs
    * into the packed identity).
@@ -67,7 +69,7 @@ export type StructureMarkerRenderer = {
    * free function would widen the renderer's public surface for one
    * consumer (the engine's pick pass).
    */
-  pickRing(passEncoder: GPURenderPassEncoder): void;
+  pickRing(passEncoder: GPURenderPassEncoder, uniformBytes: ArrayBuffer): void;
   /** Release all GPU resources.  No-op if constructed with a null device. */
   destroy(): void;
 };

@@ -194,9 +194,9 @@ function resolveFixedSize(
  * (not a module constant) because the swap row's format is runtime-decided —
  * the live swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
  * Rows per the renderer-unification design's concrete target table; the pick
- * rows arrive in a later plan phase. Exported so `targetParity.test.ts` can
- * cross-check its ids against `CONTENT_PASSES` and `frameProgram` without a
- * GPU device — see that file's header for why those checks matter.
+ * rows arrive in a later plan phase. Exported so the boot check
+ * (`checkFrameOrder`) and its test can cross-check `FRAME_ORDER`'s target
+ * strings against the declared ids without a GPU device.
  */
 export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
   return [

@@ -163,7 +163,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     expect(surveyClipFactor).toBe(0);
 
     // "Untouched" is the registry entry per id, NOT a blanket `true`:
-    // buildInitialSettings seeds each catalog from SOURCE_REGISTRY's `visible`,
+    // INITIAL_SETTINGS takes each catalog's gate from SOURCE_REGISTRY's `visible`,
     // and DesiDeep boots false.
     const settings = store.getState().settings;
     const catalogItems = settings.galaxyCatalogs.items as Record<string, { enabled: boolean }>;

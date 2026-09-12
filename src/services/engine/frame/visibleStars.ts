@@ -38,7 +38,7 @@
  * today.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { StarBody } from '../../../@types/scene/StarBody';
 import { SUN_ENTRY } from '../../../data/sources/sun';
 import { S_STAR_ENTRY } from '../../../data/sources/s-star';
@@ -56,7 +56,7 @@ const GATE_BY_STAR_ID: ReadonlyMap<string, StarGate> = new Map<string, StarGate>
   ...SCENE_S_STARS.map((star) => [star.id, 'sStar' as const] as const),
 ]);
 
-export function visibleStars(state: EngineState): readonly StarBody[] {
+export function visibleStars(state: PassState): readonly StarBody[] {
   const starCatalogs = state.settings.starCatalogs;
   const mapOn = starCatalogs.enabled && starCatalogs.items.famousStar.enabled;
   const gateOn: Readonly<Record<StarGate, boolean>> = {

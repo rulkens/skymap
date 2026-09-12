@@ -33,14 +33,6 @@ const staging = new Float32Array(TRAIL_ELEMENTS.length * INSTANCE_FLOATS);
 
 export const orbitTrailsPass: ContentPass = {
   name: 'orbit-trails',
-  slab: NEAR0,
-  target: 'hdr',
-  blend: 'additive',
-  // After the opaque body composite, so a satellite's near arc draws OVER
-  // its host (the fragment hides the far arc itself). This is also after
-  // the black-hole lens, which keeps the S-star trails unwarped on top of
-  // it rather than sampled by it.
-  hdrPhase: 'post-foreground',
 
   enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;

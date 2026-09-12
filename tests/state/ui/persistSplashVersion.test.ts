@@ -10,13 +10,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
-import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { dismissSplash, reopenSplash } from '../../../src/state/ui/uiSlice';
 import { persistSplashVersion } from '../../../src/state/ui/persistSplashVersion';
 import { SPLASH_STORAGE_KEY } from '../../../src/state/ui/splashStorage';
 import type { UiState } from '../../../src/@types/ui/UiState';
 
-const settings = buildInitialSettings();
+const settings = INITIAL_SETTINGS;
 
 beforeEach(() => {
   window.localStorage.clear();

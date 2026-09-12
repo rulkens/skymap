@@ -53,7 +53,7 @@ import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailR
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
-import { NEAR0_OVERLAY_CLIP_SCALE } from '../frame/near0OverlayClip';
+import { NEAR0_OVERLAY_CLIP_SCALE } from '../frame/near0OverlayClipScale';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createLabelPickRenderer } from '../../gpu/renderers/labels/labelPickRenderer';
@@ -176,7 +176,7 @@ export const GPU_HANDLE_ROWS = [
         undefined,
         // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
         // packs must be in those clip units too — the pair the vertex stage
-        // divides. See `near0OverlayClip`.
+        // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
         { occludeAgainstScene: true, clipScale: NEAR0_OVERLAY_CLIP_SCALE },
       ),
   },

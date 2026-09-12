@@ -37,9 +37,7 @@
  * own surface still pass against the depth that surface stamped) but writes
  * NO depth. The shell draws its geometry TWICE — MULTIPLY for per-channel
  * extinction, then ADD for the in-scatter — because one alpha channel cannot
- * attenuate three wavelengths; the `blend: 'over'` this row carries is target-
- * GROUPING metadata (it is what sorts the row into the translucent half),
- * never applied to a pipeline. It is non-pickable (a translucent halo has no
+ * attenuate three wavelengths. It is non-pickable (a translucent halo has no
  * clickable silhouette; clicking Earth hits the opaque surface `earthPass`
  * stamps into the pick pass), so it declares no `drawPick`.
  *
@@ -77,9 +75,6 @@ import { atmosphereDrawList } from '../atmosphereDrawList';
 
 export const atmosphereShellPass: ContentPass = {
   name: 'atmosphere-shell',
-  slab: 'body',
-  target: 'foreground:0',
-  blend: 'over',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;

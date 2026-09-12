@@ -9,12 +9,10 @@
  */
 
 import { createUpsamplePass } from './createUpsamplePass';
-import { COSMO } from '../slabs';
 import { deriveZoneOfAvoidanceLiveness } from '../zoneOfAvoidanceLiveness';
 
 export const zoneOfAvoidanceUpsamplePass = createUpsamplePass({
   name: 'zone-of-avoidance-upsample',
-  slab: COSMO,
   sourceTargetId: 'zoa',
   handleOf: (state) => state.gpu.zoneOfAvoidanceUpsample,
   enabled(state, ctx) {

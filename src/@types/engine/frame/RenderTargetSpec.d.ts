@@ -1,8 +1,8 @@
 /**
- * RenderTargetSpec — the second of the three axes a content layer is
- * positioned on: which texture it draws into (an offscreen, or the swap
- * chain itself). A target is independent of slab/blend: the cosmological
- * slab hosts layers going to both `hdr` (additive) and `swap` (OVER). `id`
+ * RenderTargetSpec — the second of the two axes a content layer is positioned
+ * on (`Slab` is the first): which texture it draws into (an offscreen, or the
+ * swap chain itself). A target is independent of slab: the cosmological slab
+ * hosts layers going to both `hdr` (additive) and `swap` (OVER). `id`
  * is a plain string, not a typed enum, so a new offscreen is a new registry
  * row, not a new literal added everywhere the union is matched. See the
  * renderer unification design's "RenderTarget" section for the concrete

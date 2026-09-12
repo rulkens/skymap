@@ -11,7 +11,7 @@ export type Label2DProjection = {
   readonly vp: Float32Array | Float64Array;
   /**
    * The same matrix narrowed for the renderer upload. NEAR0's is additionally
-   * rescaled to clip metres (`near0OverlayClip`) — NDC-identical to `vp`, but
+   * rescaled to clip metres (`near0OverlayVpF32`) — NDC-identical to `vp`, but
    * NOT interchangeable with it for anything divided by `clip.w`.
    */
   readonly vpF32: Float32Array;

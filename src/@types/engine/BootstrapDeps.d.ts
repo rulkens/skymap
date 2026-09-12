@@ -1,6 +1,7 @@
 import type { EngineCallbacks } from './EngineCallbacks';
 import type { EngineHandle } from './EngineHandle';
-import type { EngineHomeConfig } from './EngineHomeConfig';
+import type { EngineComposition } from './EngineComposition';
+import type { Layer } from './layer/Layer';
 import type { AssetSlot } from '../loading/AssetSlot';
 import type { PhaseLocals } from './PhaseLocals';
 
@@ -18,8 +19,8 @@ export type BootstrapDeps = {
   /** createEngine arg — UI-callback sink. */
   cb: EngineCallbacks;
 
-  /** createEngine arg — the composition's boot-time home; read by `wireInput`. */
-  readonly home: EngineHomeConfig;
+  /** createEngine arg — the app's composition; `wireInput` reads its `home`. */
+  readonly composition: EngineComposition<readonly Layer<string, unknown>[]>;
 
   /**
    * Mutable: forward-declared `frame` binding from `engine.ts`.  The
