@@ -1,6 +1,6 @@
 # Voyager 1/2 and the Mars rovers — implementation plan
 
-Spec: [`docs/superpowers/specs/2026-09-11-voyager-rovers-design.md`](../specs/2026-09-11-voyager-rovers-design.md).
+Spec: [`docs/superpowers/specs/2026-09-11-voyager-rovers-design.md`](../../specs/completed/2026-09-11-voyager-rovers-design.md).
 Read its "Ground preparation", "Rulings" and "Testing" sections before Task 1 —
 this plan is written against them and does not restate them.
 
@@ -690,32 +690,42 @@ check below finds a gap).
 
 Ask the user to check, per body:
 
-- [ ] **Voyager 1** — search "Voyager 1", fly to it. The spacecraft resolves from
+- [x] **Voyager 1** — search "Voyager 1", fly to it. The spacecraft resolves from
       a glint into a mesh on approach; it is **lit, not black** (the constant-
       irradiance ruling); the **high-gain dish points at Earth** — check by
       framing the probe and reading where the dish faces against the Sun's
       direction; the probe does not flicker, jitter or disappear as the camera
       orbits it (the f64/self-hosted-slab path); the caption reads "Voyager 1".
-- [ ] **Voyager 2** — same, and its attitude differs from Voyager 1's (they are
+- [x] **Voyager 2** — same, and its attitude differs from Voyager 1's (they are
       in different directions from Earth, so a shared wrong constant shows here).
-- [ ] **Curiosity** — fly to Mars, then to Curiosity. The rover **stands upright**
+- [x] **Curiosity** — fly to Mars, then to Curiosity. The rover **stands upright**
       on the surface, wheels touching, not buried and not floating; run the clock
       forward a few hours and it **rides the surface around** rather than
       hovering or sliding; at Martian sunrise the lighting **sweeps across it**
       and it goes dark at night.
-- [ ] **Perseverance** — upright, correct hemisphere (northern, Jezero) — a
+- [x] **Perseverance** — upright, correct hemisphere (northern, Jezero) — a
       sign-flipped latitude puts it opposite Curiosity's side.
-- [ ] **Spirit and Opportunity** — both present, both upright, both the same
+- [x] **Spirit and Opportunity** — both present, both upright, both the same
       model, on opposite sides of the planet (Gusev 175°E, Meridiani 354°E).
-- [ ] **Glint handoff** — backing away from each, the mesh hands off to a glint
+- [x] **Glint handoff** — backing away from each, the mesh hands off to a glint
       with no pop and no double-draw.
-- [ ] **InfoCard** — each of the six shows its fact sheet and description, and
+- [x] **InfoCard** — each of the six shows its fact sheet and description, and
       the Wikipedia link resolves.
-- [ ] **Labels & Guides** — the single "Mesh body" checkbox mutes all eight
+- [x] **Labels & Guides** — the single "Mesh body" checkbox mutes all eight
       captions together (ruling 21).
-- [ ] Record the user's verdict on each rover's authored `headingDeg` and each
+- [x] Record the user's verdict on each rover's authored `headingDeg` and each
       asset's `bodyFromSource`; a correction is a data edit in Task 11's files,
       not a code change (ruling 30).
+
+**Attested 2026-09-12** (user, on :5176, after the #692 rename merge): visual gate
+pass on 7dd897503; wheel re-check after Task 16. Voyager framing accepted as
+authored (no `focusDistanceRadii` override). Headings and `bodyFromSource`
+accepted as authored — no data corrections. Findings ruled OUT of this PR and
+backlogged: rover camera regime (+ atmosphere over the rover), mesh-body
+shadows, rover terrain regions. Two unplanned extras landed on the branch from
+the pass: Task 16 (camera-relative analytic-sphere depth — rover wheels sat in
+or above the ground by an angle-dependent metre) and Task 17 (cancellation-free
+ray/sphere roots in the TS and WESL twins).
 
 ---
 
