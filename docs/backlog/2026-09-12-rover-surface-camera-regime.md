@@ -28,14 +28,20 @@ feel is the host-radius regime's, not a metre-scale one.
 - Engaged by data: a `surfaceFixed` position-driver row selects the regime, no
   per-body flag (`PositionDriver` already discriminates it).
 
-## Also seen: the atmosphere draws over the rover
+## Also seen: the atmosphere draws over the rover — stopgapped 2026-09-13
 
-From inside Mars's atmosphere the atmosphere shell composites over the rover
-mesh — the shell pass has no notion of an opaque surface-fixed body between the
-camera and the ground, so the rover reads as behind the haze rather than in it.
-Whatever the regime does for the camera, the same ground-level posture has to
-reach the atmosphere composite (occlusion against the mesh's depth, or the
-in-atmosphere path the Earth surface camera uses).
+From inside Mars's atmosphere the shell abandons its proxy mesh for a
+full-screen pass with `depthCompare: 'always'`, and its ray terminates on the
+analytic ground sphere — so an opaque mesh standing on that ground is invisible
+to it and gets the full camera-to-space in-scatter painted over it wherever it
+is silhouetted against sky.
+
+Stopgapped by moving `mesh-bodies` after `atmosphere-shell` in `FRAME_ORDER`'s
+`bodyPasses`: the shells write no depth, so a mesh drawn last still occludes
+correctly against every opaque sphere. It costs mesh bodies all aerial
+perspective, which is negligible at rover range. The real fix is
+`2026-09-01-atmosphere-froxel-aerial-perspective.md` — it gives the inside path
+scene depth and lets that line move back. Nothing here is blocked on it.
 
 Adjacent: `docs/backlog/2026-09-12-body-bounds-vs-surface.md` (the bounds/surface
 split this regime would read from).
