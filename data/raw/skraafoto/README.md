@@ -133,15 +133,16 @@ nadir's, and both are being asked to resolve the same box. `scale` never
 exceeds 1: the COG's own pixels are the ceiling. Frames whose window lands
 off-frame, behind the camera, or under 64 px on a side are skipped and counted.
 
-On the two fixture frames, `soendermarken-crop`'s 258 x 183 m box at 200 mm/px
+On the two fixture frames, `soendermarken-crop`'s 258 x 183 m box at 100 mm/px
 comes out as:
 
-| fixture                             | `-srcwin`             | `-outsize` | native mm/px |
-| ----------------------------------- | --------------------- | ---------- | ------------ |
-| `..._1_0049_00002495_100mm` nadir   | `9381 5346 2029 2759` | `973 1323` | ~96          |
-| `..._5_0052_00001969_100mm` oblique | `3667 2666 2826 1861` | `1372 904` | ~97          |
+| fixture                             | `-srcwin`             | `-outsize`  | native mm/px |
+| ----------------------------------- | --------------------- | ----------- | ------------ |
+| `..._1_0049_00002495_100mm` nadir   | `9381 5346 2029 2759` | `1947 2647` | ~96          |
+| `..._5_0052_00001969_100mm` oblique | `3667 2666 2826 1861` | `2744 1807` | ~97          |
 
-Both drop to ~48% of native, against the whole-frame recipe's 9-14%.
+Both keep ~96% of native (the ask sits just under the COG's own GSD), against
+the whole-frame recipe's 9-14%.
 
 Changing a group's `bounds` or `groundMmPerPx` invalidates its harvest.
 `bakeSplats` reads each JPEG's SOF dimensions and refuses to train if they

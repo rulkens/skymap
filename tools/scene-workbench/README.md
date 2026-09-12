@@ -71,28 +71,19 @@ script or `/scene-workbench/` subpath.
    the workdir is cleared per run. OpenMVS writes the atlas as a sidecar PNG,
    which the re-pack folds into the GLB as a JPEG (quality 90; TextureMesh caps
    the atlas at 8192 px).
-   First Søndermarken-crop bake (2026-09-11, 61 frames, Apple Silicon,
-   resolution level 1): **23.3 min end to end** — DensifyPointCloud for
-   1,321,360 dense points, ReconstructMesh 323,985 vertices / 647,898
-   triangles, TextureMesh into one atlas, published `mesh.glb` 19.9 MB.
-   Same box off the 2019 flight (`soendermarken-crop-2019`, 2026-09-11, 106
-   frames at the COGs' native 100 mm/px): **34.5 min** — DensifyPointCloud
-   25m1s for 3,412,071 dense points, ReconstructMesh 1m20s for 1,059,243
-   vertices / 2,118,416 triangles, TextureMesh 7m46s into one 8192 px atlas,
-   `mesh.glb` 66.3 MB. The same frames harvested at 200 mm/px took 16.5 min for
-   2,186,705 dense points and 924,720 triangles in a 4096 px atlas (29.6 MB) —
-   kept beside it as the `mesh-200mm` asset, so the two are comparable in the
-   viewer.
-   The full-res refined bake, now the only path, over that same 2019 crop
-   (2026-09-11): **142.9 min** —
-   DensifyPointCloud 1h43m12s for 11,901,244 dense points (3.5x the level-1
-   run), ReconstructMesh 14m45s for 2,054,545 vertices / 4,107,225 faces,
-   RefineMesh 17m17s, TextureMesh 5m57s into one 8192 px atlas, `mesh.glb`
-   26.8 MB. RefineMesh is the catch: it decimates its input down to what its
-   own `--resolution-level` can support — 4,098,829 faces in, 660,051 out — so
-   a full-res refined bake publishes a _coarser_ mesh than the plain level-1
-   one. That level-1 result (2,118,416 triangles, 66.3 MB) is kept beside it as
-   the `mesh-halfres` asset for the comparison.
+   Measured bakes (Apple Silicon), both crops at the COGs' native 100 mm/px:
+   `soendermarken-crop` (2026-09-12, 61 frames) **54.6 min** — DensifyPointCloud
+   48m0s for 7,749,874 dense points, ReconstructMesh 1m48s for 2,997,611 faces,
+   RefineMesh 3m34s, TextureMesh 51s into one 4096 px atlas, `mesh.glb`
+   17.8 MB. `soendermarken-crop-2019` (2026-09-11, 106 frames) **142.9 min** —
+   DensifyPointCloud 1h43m for 11,901,244 dense points, ReconstructMesh 14m45s
+   for 4,107,225 faces, RefineMesh 17m17s, TextureMesh 5m57s into one 8192 px
+   atlas, `mesh.glb` 26.8 MB. RefineMesh is the catch: it decimates its input
+   to what its own `--resolution-level` can support before refining —
+   2,997,611 faces in, 482,384 out; 4,098,829 in, 660,051 out — so the
+   published mesh has far fewer triangles than the raw reconstruction. The
+   level-1 densify, 200 mm/px harvest and ReconstructMesh-smoothing variants
+   this path was judged against are in the git log of this section.
 7. `npm run scene-workbench`
 
 Every fetch/bake CLI above takes `--group <id>` (default `soendermarken`);
