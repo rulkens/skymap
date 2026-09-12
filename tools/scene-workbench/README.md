@@ -54,8 +54,8 @@ script or `/scene-workbench/` subpath.
    — reconstructs a textured mesh from the same frames and writes the `mesh`
    asset into `public/data/geo3d/`. The stages and their flags are spec §6 of
    `docs/superpowers/specs/2026-09-11-scene-workbench-3-mesh-design.md`; in
-   short, `--full-res` densifies at resolution level 0 instead of 1, `--refine`
-   adds OpenMVS's RefineMesh, and `--reuse-glb` re-packs the last OpenMVS
+   short, the bake densifies at full resolution and runs RefineMesh, and
+   `--reuse-glb` re-packs the last OpenMVS
    export instead of reconstructing, carrying the manifest's colmap/openmvs
    stamps forward exactly as `--reuse-ply` does. Needs COLMAP and OpenMVS (next
    section) and PROJ's `cct` on PATH (plus `gdal_translate`, but only for harvests
@@ -83,7 +83,8 @@ script or `/scene-workbench/` subpath.
    2,186,705 dense points and 924,720 triangles in a 4096 px atlas (29.6 MB) —
    kept beside it as the `mesh-200mm` asset, so the two are comparable in the
    viewer.
-   `--full-res --refine` over that same 2019 crop (2026-09-11): **142.9 min** —
+   The full-res refined bake, now the only path, over that same 2019 crop
+   (2026-09-11): **142.9 min** —
    DensifyPointCloud 1h43m12s for 11,901,244 dense points (3.5x the level-1
    run), ReconstructMesh 14m45s for 2,054,545 vertices / 4,107,225 faces,
    RefineMesh 17m17s, TextureMesh 5m57s into one 8192 px atlas, `mesh.glb`

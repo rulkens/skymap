@@ -48,7 +48,7 @@ and the draw-order table (§3, P2), and the overlay's design is what fixes the
 
 - The reconstruction toolchain install and its provenance record (§6.1).
 - `bakeMesh.ts` and its stages: COLMAP known-pose triangulation, OpenMVS densify →
-  mesh → (optional) refine → texture, the GLB re-pack, `manifest.json` upsert
+  mesh → refine → texture, the GLB re-pack, `manifest.json` upsert
   (§6.2–6.4).
 - `TexturedMeshAsset`, `MeshGpuAsset`, `readMeshGlb`/`packMeshGlb`, the
   `loadTexturedMesh` loader row, `assetCount`'s row, `texturedMeshRenderer` +
@@ -266,15 +266,11 @@ export async function bakeMesh(
     readonly colmapVersion: () => string;
     readonly openMvsVersion: () => string;
   },
-  options: {
-    readonly fullRes?: boolean;
-    readonly refine?: boolean;
-    readonly reuseGlb?: boolean;
-  } = {},
+  options: { readonly reuseGlb?: boolean } = {},
 ): Promise<TexturedMeshAsset>;
 ```
 
-CLI: `npm run bake-mesh -- [--group <id>] [--full-res] [--refine] [--reuse-glb]`,
+CLI: `npm run bake-mesh -- [--group <id>] [--reuse-glb]`,
 `sceneGroupFromArgv` (#685) picking the group.
 
 1. **Preconditions** — the group's `points.bin` exists (`bakeSplats.ts:68-75`'s
@@ -301,15 +297,14 @@ NO -b 1 -b 2 -b 3 -of JPEG -co QUALITY=95` (plus `--config GDAL_PAM_ENABLED NO`,
 5. **OpenMVS**, `runOpenMvs(tool, args)` per stage, cwd = workdir:
    - `InterfaceCOLMAP -i dense -o scene.mvs --image-folder images` (`--image-folder`
      is joined onto `-i`, so `dense/images` would become `dense/dense/images`)
-   - `DensifyPointCloud scene.mvs --resolution-level <1 | 0 with --full-res> --number-views 0
+   - `DensifyPointCloud scene.mvs --resolution-level 0 --number-views 0
 --remove-dmaps 1`, with every `*.dmap` in the workdir deleted first: OpenMVS caches
      depth maps by image _index_ and silently reuses stale ones, aborting mid-fusion
    - `ReconstructMesh scene_dense.mvs` (defaults: `--decimate 1`,
      `--remove-spurious 20`, `--smooth 2`) → `scene_dense_mesh.ply`
    - `RefineMesh scene_dense.mvs --mesh-file scene_dense_mesh.ply --resolution-level 1
--o scene_dense_mesh_refine.ply` **only with `--refine`** (the texture stage then
-     reads that mesh)
-   - `TextureMesh scene_dense.mvs --mesh-file <mesh>.ply --export-type glb
+-o scene_dense_mesh_refine.ply` (the texture stage reads that mesh)
+   - `TextureMesh scene_dense.mvs --mesh-file scene_dense_mesh_refine.ply --export-type glb
 --max-texture-size 8192 --global-seam-leveling 0 --local-seam-leveling 0
 --empty-color 4210752 -o scene_dense_texture.glb` → that GLB **plus** a sidecar
      `scene_dense_texture_0.png`
@@ -320,7 +315,7 @@ NO -b 1 -b 2 -b 3 -of JPEG -co QUALITY=95` (plus `--config GDAL_PAM_ENABLED NO`,
      beside the LiDAR and splat layers
 
    Both `-o` are pinned because v2.4.0 names an output after its _input's_ stem, so
-   `--refine` would otherwise move the GLB the re-pack reads.
+   RefineMesh would otherwise move the GLB the re-pack reads.
 
 6. **Re-pack** — `meshGlbGeometry` over a `NodeIO` document (the only IO that resolves
    the sidecar URI; it refuses > 1 primitive/texture) → `sharp` JPEG q90 on the
@@ -338,12 +333,11 @@ next stage's missing-input error, never by shipping a previous run's file.
 
 ### 6.3 Resolution and time budget
 
-`--resolution-level 1` is the first-bake default: OpenMVS's own default, and ~650 ×
-450 px per view is where a CPU densify of ~100 crop frames is an afternoon, not a day.
-Estimates for the crop group on the M1 Max (10 cores), **to be measured in 3a's
-operator task and recorded in the README, not asserted**: COLMAP ≈ 10 min, densify
-≈ 30–60 min, mesh ≈ 5 min, texture ≈ 15 min; `--full-res` ≈ 3–5 h; `--refine` at
-level 1 adds hours and is judged only against a first bake's visible defects.
+`--resolution-level 0` densifies every view at its full harvested size, and RefineMesh
+follows it: that is the only bake worth producing, so it is the only path. Expect the
+measured cost — the 2019 crop group (106 frames) on the M1 Max (10 cores) took
+**142.9 min** end to end, densify dominating at 1h43m; the per-stage numbers are in
+`tools/scene-workbench/README.md`.
 
 ### 6.4 `package.json`
 
@@ -577,9 +571,8 @@ Judged by `docs/superpowers/conventions/testing.md`'s one question.
   `bakeSplats.test.ts` (stubbed runners, tmpdir cwd, `forks` pool): the stage order
   and pinned argv (both seam-levelling flags off, `--remove-dmaps 1`) and that the
   `.dmap` cache is cleared before densifying; the four-band staging transcode's
-  `gdal_translate` argv, with the three-channel frames left alone; `--full-res`
-  → `--resolution-level 0`; `--refine` inserts `RefineMesh` and texture reads its
-  output; the sidecar-URI export re-packs; a fabricated OpenMVS GLB with two textures
+  `gdal_translate` argv, with the three-channel frames left alone; the sidecar-URI
+  export re-packs; a fabricated OpenMVS GLB with two textures
   fails the bake with the flag hint; `--reuse-glb` runs no runner and keeps the
   manifest's version stamps; the published asset's `triangleCount` matches the
   fabricated geometry.

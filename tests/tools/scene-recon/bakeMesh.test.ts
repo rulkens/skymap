@@ -223,18 +223,29 @@ const DENSIFY_ARGV = [
   'DensifyPointCloud',
   'scene.mvs',
   '--resolution-level',
-  '1',
+  '0',
   '--number-views',
   '0',
   '--remove-dmaps',
   '1',
 ];
 
+const REFINE_ARGV = [
+  'RefineMesh',
+  'scene_dense.mvs',
+  '--mesh-file',
+  'scene_dense_mesh.ply',
+  '--resolution-level',
+  '1',
+  '-o',
+  'scene_dense_mesh_refine.ply',
+];
+
 const TEXTURE_MESH_ARGV = [
   'TextureMesh',
   'scene_dense.mvs',
   '--mesh-file',
-  'scene_dense_mesh.ply',
+  'scene_dense_mesh_refine.ply',
   '--export-type',
   'glb',
   '--max-texture-size',
@@ -269,42 +280,8 @@ describe('bakeMesh', () => {
       ['InterfaceCOLMAP', '-i', 'dense', '-o', 'scene.mvs', '--image-folder', 'images'],
       DENSIFY_ARGV,
       ['ReconstructMesh', 'scene_dense.mvs'],
+      REFINE_ARGV,
       TEXTURE_MESH_ARGV,
-    ]);
-  });
-
-  it('--full-res selects resolution level 0', async () => {
-    await bakeMesh(SOENDERMARKEN, DEPS(boxGlb), { fullRes: true });
-
-    expect(calls).toContainEqual([
-      'DensifyPointCloud',
-      'scene.mvs',
-      '--resolution-level',
-      '0',
-      '--number-views',
-      '0',
-      '--remove-dmaps',
-      '1',
-    ]);
-  });
-
-  it('--refine inserts RefineMesh and textures its output', async () => {
-    await bakeMesh(SOENDERMARKEN, DEPS(boxGlb), { refine: true });
-
-    expect(calls.slice(-2)).toEqual([
-      [
-        'RefineMesh',
-        'scene_dense.mvs',
-        '--mesh-file',
-        'scene_dense_mesh.ply',
-        '--resolution-level',
-        '1',
-        '-o',
-        'scene_dense_mesh_refine.ply',
-      ],
-      TEXTURE_MESH_ARGV.map((arg) =>
-        arg === 'scene_dense_mesh.ply' ? 'scene_dense_mesh_refine.ply' : arg,
-      ),
     ]);
   });
 

@@ -3,9 +3,9 @@
  * bakeMesh — one scene group's textured MVS mesh (`--group <id>`): the LiDAR
  * cloud projected into the known poses *is* the sparse model, so COLMAP never
  * matches a feature and only lays the workspace out for OpenMVS, which then
- * densifies, meshes, [refines,] textures it into a re-packed `mesh.glb` + the
+ * densifies, meshes, refines, textures it into a re-packed `mesh.glb` + the
  * manifest (spec §6.2). Both OpenMVS stages that write a file get an explicit
- * `-o`: v2.4.0 names an output after its *input's* stem, so `--refine` would
+ * `-o`: v2.4.0 names an output after its *input's* stem, so RefineMesh would
  * otherwise move the GLB the re-pack reads. The runners are injected so a
  * re-pack runs with neither toolchain installed; `main()` wires the real ones.
  */
@@ -91,7 +91,7 @@ function meshWorkDir(group: SceneGroupDefinition): string {
   return join(skraafotoHarvestDir(rawDataPath('skraafoto.dir'), group), `mvs-${group.id}`);
 }
 
-function bakeStages(options: { fullRes?: boolean; refine?: boolean }): readonly Stage[] {
+function bakeStages(): readonly Stage[] {
   return [
     {
       tool: 'colmap',
@@ -119,34 +119,22 @@ function bakeStages(options: { fullRes?: boolean; refine?: boolean }): readonly 
       tool: 'DensifyPointCloud',
       output: 'scene_dense.mvs',
       clears: '.dmap',
-      args: [
-        'scene.mvs',
-        '--resolution-level',
-        options.fullRes ? '0' : '1',
-        '--number-views',
-        '0',
-        '--remove-dmaps',
-        '1',
-      ],
+      args: ['scene.mvs', '--resolution-level', '0', '--number-views', '0', '--remove-dmaps', '1'],
     },
     { tool: 'ReconstructMesh', output: MESH_PLY, args: ['scene_dense.mvs'] },
-    ...(options.refine
-      ? [
-          {
-            tool: 'RefineMesh',
-            output: REFINED_PLY,
-            args: [
-              'scene_dense.mvs',
-              '--mesh-file',
-              MESH_PLY,
-              '--resolution-level',
-              '1',
-              '-o',
-              REFINED_PLY,
-            ],
-          },
-        ]
-      : []),
+    {
+      tool: 'RefineMesh',
+      output: REFINED_PLY,
+      args: [
+        'scene_dense.mvs',
+        '--mesh-file',
+        MESH_PLY,
+        '--resolution-level',
+        '1',
+        '-o',
+        REFINED_PLY,
+      ],
+    },
     {
       tool: 'TextureMesh',
       output: TEXTURED_GLB,
@@ -159,7 +147,7 @@ function bakeStages(options: { fullRes?: boolean; refine?: boolean }): readonly 
       args: [
         'scene_dense.mvs',
         '--mesh-file',
-        options.refine ? REFINED_PLY : MESH_PLY,
+        REFINED_PLY,
         '--export-type',
         'glb',
         '--max-texture-size',
@@ -191,11 +179,7 @@ export async function bakeMesh(
    *  again, carrying the manifest's stamps so the asset never credits its
    *  geometry to whatever version happens to be installed (`--reuse-ply`'s
    *  contract, `bakeSplats.ts`). */
-  options: {
-    readonly fullRes?: boolean;
-    readonly refine?: boolean;
-    readonly reuseGlb?: boolean;
-  } = {},
+  options: { readonly reuseGlb?: boolean } = {},
 ): Promise<TexturedMeshAsset> {
   const pointsBinPath = join(groupAssetDir(group.id, LIDAR_ASSET_ID), 'points.bin');
   if (!existsSync(pointsBinPath)) {
@@ -258,7 +242,7 @@ export async function bakeMesh(
     process.stderr.write(
       `bakeMesh: reconstructing ${harvest.poses.length} frame(s) in ${workDir}…\n`,
     );
-    for (const stage of bakeStages(options)) {
+    for (const stage of bakeStages()) {
       // A stage that exits 0 without writing must fail the next stage's
       // missing-input check, never ship the previous run's file.
       await rm(join(workDir, stage.output), { recursive: true, force: true });
@@ -409,11 +393,7 @@ async function main(): Promise<void> {
       colmapVersion,
       openMvsVersion,
     },
-    {
-      fullRes: process.argv.includes('--full-res'),
-      refine: process.argv.includes('--refine'),
-      reuseGlb: process.argv.includes('--reuse-glb'),
-    },
+    { reuseGlb: process.argv.includes('--reuse-glb') },
   );
   const minutes = ((Date.now() - start) / 60000).toFixed(1);
   process.stderr.write(
