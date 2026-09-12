@@ -33,6 +33,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 }));
 
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
+import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
 function stubSlot(name: string): AssetSlot<unknown, unknown> {
   return {
@@ -60,11 +61,15 @@ function makeState(): EngineState {
   const bodyTextures = new Map<string, AssetSlot<unknown, unknown>>([
     ['earth', stubSlot('earth-texture')],
   ]);
+  const meshBodies = new Map<string, AssetSlot<unknown, unknown>>([
+    ['whale', stubSlot('whale-mesh')],
+  ]);
   return {
     assetSlots: {
       points,
       starCatalogs,
       bodyTextures,
+      meshBodies,
       filaments: stubSlot('filaments'),
       famousGalaxiesMeta: stubSlot('famous-galaxies-meta'),
       structureCatalog: stubSlot('structure-catalog'),
@@ -84,7 +89,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: {} as HTMLCanvasElement,
     cb: { store: { dispatch: vi.fn() } } as unknown as BootstrapDeps['cb'],
-    home: { focus: null, seedSelection: false },
+    composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },
@@ -114,6 +119,9 @@ describe('installLoadProgress', () => {
     // Body-texture family slots ride the same registry (gathered from the keyed
     // bodyTextures map, not a named field).
     expect(names.has('earth-texture')).toBe(true);
+    // Mesh-body family slots ride the same registry (gathered from the keyed
+    // meshBodies map, not a named field).
+    expect(names.has('whale-mesh')).toBe(true);
     expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);

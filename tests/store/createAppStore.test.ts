@@ -3,22 +3,22 @@ import { describe, it, expect } from 'vitest';
 import { createAppStore } from '../../src/store/createAppStore';
 import { NOOP_SAGA_CONTEXT } from '../support/createTestStore';
 import { setBrightness } from '../../src/state/settings/settingsSlice';
-import { buildInitialSettings } from '../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 import { settingsRoute, tierRoute, uiRoute } from '../../src/store/constants';
 import type { UiState } from '../../src/@types/ui/UiState';
 
 describe('createAppStore', () => {
   it('returns a store seeded with settings initialState', () => {
     const { store } = createAppStore();
-    // The slice seeds from `buildInitialSettings()`; an unpreloaded store must
+    // The slice seeds from `INITIAL_SETTINGS`; an unpreloaded store must
     // surface exactly that.
-    expect(store.getState().settings).toEqual(buildInitialSettings());
+    expect(store.getState().settings).toEqual(INITIAL_SETTINGS);
   });
 
   it('honours preloadedState', () => {
     // A settings field round-trips through `preloadedState`: seed a distinctive
     // brightness and assert the slice surfaces it rather than the default.
-    const seeded = buildInitialSettings();
+    const seeded = INITIAL_SETTINGS;
     const { store } = createAppStore({
       [settingsRoute]: {
         ...seeded,
@@ -73,7 +73,7 @@ describe('createAppStore', () => {
       splash: { visible: false, dismissedVersion: 3 },
     };
     const { store } = createAppStore({
-      [settingsRoute]: buildInitialSettings(),
+      [settingsRoute]: INITIAL_SETTINGS,
       [uiRoute]: preloadedUi,
     });
     expect(store.getState().ui).toEqual(preloadedUi);

@@ -13,7 +13,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
-const CTX = {} as unknown as ReadyFrameContext;
+const CTX = { renderedTargets: new Set<string>() } as unknown as ReadyFrameContext;
 const VIEW_STUB = {} as unknown as SlabView;
 
 // A minimal stand-in for the shared selection-ring renderer handle.
@@ -130,7 +130,10 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
     const trueCamDist = Math.hypot(3e-5, 4e-5, 0); // 5e-5 Mpc
     const farMpc = 1e-6; // far below the anchor distance ⇒ would clip un-clamped
     const view = farClippingView(farMpc);
-    const ctx = { drawPxPerRad: 1000 } as unknown as ReadyFrameContext;
+    const ctx = {
+      drawPxPerRad: 1000,
+      renderedTargets: new Set<string>(),
+    } as unknown as ReadyFrameContext;
 
     const pass = {} as unknown as GPURenderPassEncoder;
     near0SelectionRingPass.draw(pass, view, ctx, state);
@@ -152,7 +155,7 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
       trueCamDist,
       1000,
       state.settings.galaxyCatalogs.sizePx,
-    );
+    ).ringRadiusPx;
     expect(opts.ringRadiusPx).toBeCloseTo(expectedPx, 12);
   });
 });
@@ -176,13 +179,16 @@ describe('near0SelectionRingPass.draw — live body position', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [1e-6, 0, 0],
-      radiusM: 6371000,
     };
 
     const renderer = makeRendererSpy();
     const state = stateWith(staleRow, renderer);
     const view = farClippingView(1); // farMpc 1 Mpc ⇒ no clamp at this scale
-    const ctx = { simDays, drawPxPerRad: 1000 } as unknown as ReadyFrameContext;
+    const ctx = {
+      simDays,
+      drawPxPerRad: 1000,
+      renderedTargets: new Set<string>(),
+    } as unknown as ReadyFrameContext;
 
     near0SelectionRingPass.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
 

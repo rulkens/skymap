@@ -23,9 +23,14 @@
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
+import type { FadeBand } from '../../../@types/math/FadeBand';
 import type { CaptionKind } from './captionPriority';
 
 export type ForegroundCaption = Label2D &
   Required<Pick<Label2D, 'color' | 'worldEmMpc' | 'minPixelSize' | 'maxPixelSize'>> & {
     readonly kind: CaptionKind;
+    /** Per-caption approach reveal, in Mpc of anchor-to-camera distance,
+     *  multiplied on top of the kind's `CAPTION_FADE_RULES` band. Any kind may
+     *  carry one; a caption without it rides its kind's reach alone. */
+    readonly revealBand?: FadeBand;
   };

@@ -14,7 +14,7 @@ hand-edited sites per knob:
 | --- | --------------------------------------------------------------------------------------------------------------------- |
 | 1   | `data/defaults.ts` — the default constant                                                                             |
 | 2   | `@types/settings/EngineSettingsState.d.ts` — the field                                                                |
-| 3   | `state/settings/initialState.ts` — the seed (plus its import)                                                         |
+| 3   | `state/settings/coreInitialSettings.ts` — the boot value (plus its import)                                            |
 | 4   | `state/settings/settingsSlice.ts` — the reducer                                                                       |
 | 5   | `state/settings/settingsSlice.ts` — the action export list                                                            |
 | 6   | `state/settings/selectors.ts` — the selector                                                                          |

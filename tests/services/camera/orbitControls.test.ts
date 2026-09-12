@@ -1,28 +1,12 @@
 /**
  * orbitControls — the gesture recognizer's DOM contract.
  *
- * ### Why this test exists
- *
- * iOS Safari (WebKit) mishandles an *explicit* `setPointerCapture()` on a
- * touch pointer: touch already gets *implicit* capture on `pointerdown`,
- * and layering an explicit capture on top makes WebKit stop delivering
- * `pointermove` / `pointerup` — so single-finger orbit and two-finger
- * pinch both die, while mouse (no implicit capture) is unaffected.  See
- * https://github.com/openseadragon/openseadragon/issues/1962.
- *
- * The fix is the reference pattern used by every major touch-gesture lib:
- * do NOT call `setPointerCapture`; instead bind the *move* / *up* /
- * *cancel* listeners to `window` so they fire regardless of WebKit's
- * broken capture and regardless of where the pointer travels.  These
- * tests lock that contract in, plus the gesture-boundary emissions the
- * frame's drain turns into Redux edges.
- *
- * The camera math is no longer here — it moved to `applyInputToCamera`,
- * driven once per frame by `drainInput`.
- *
- * Vitest runs in `node` here (no jsdom), so — matching
- * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
- * canvas and a stubbed `window`.
+ * iOS Safari mishandles an *explicit* `setPointerCapture()` on a touch
+ * pointer: implicit capture from `pointerdown` already applies, so layering
+ * explicit capture on top kills touch `pointermove`/`pointerup`
+ * (https://github.com/openseadragon/openseadragon/issues/1962). The fix —
+ * used by major touch-gesture libs — is to never call `setPointerCapture`
+ * and bind move/up/cancel to `window` instead; these tests lock that in.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -146,7 +130,7 @@ describe('attachOrbitControls — listener targets (iOS touch capture fix)', () 
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
     rec.fire('pointerdown', touchDown(1, 100, 100));
-    // The move arrives on window — the path that was dead on iOS before.
+    // The move arrives on window, not the canvas WebKit's broken capture would strand it on.
     win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
 
     expect(sink.events).toContainEqual({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
@@ -170,7 +154,6 @@ describe('attachOrbitControls — listener targets (iOS touch capture fix)', () 
       clientY: 0,
     });
 
-    // Second, fresh mouse-down + move should orbit normally.
     rec.fire('pointerdown', {
       pointerId: 1,
       pointerType: 'mouse',
@@ -194,7 +177,6 @@ describe('attachOrbitControls — listener targets (iOS touch capture fix)', () 
     expect(rec.listeners).toHaveLength(0);
     expect(win.listeners).toHaveLength(0);
 
-    // A post-detach gesture must emit nothing.
     rec.fire('pointerdown', touchDown(1, 100, 100));
     win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
     expect(sink.events).toHaveLength(0);
@@ -241,12 +223,26 @@ describe('attachOrbitControls — gesture boundaries', () => {
     const sink = makeSink();
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
 
-    rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
-    expect(sink.events).toContainEqual({ kind: 'wheel', deltaY: 100, duringGesture: false });
+    // The pixel rides along on both: at rest it is the only cursor position
+    // the surface arm has to aim its zoom at (spec §12-R4).
+    rec.fire('wheel', { deltaY: 100, clientX: 640, clientY: 360, preventDefault: vi.fn() });
+    expect(sink.events).toContainEqual({
+      kind: 'wheel',
+      deltaY: 100,
+      duringGesture: false,
+      xPx: 640,
+      yPx: 360,
+    });
 
     rec.fire('pointerdown', touchDown(1, 100, 100));
-    rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
-    expect(sink.events).toContainEqual({ kind: 'wheel', deltaY: 100, duringGesture: true });
+    rec.fire('wheel', { deltaY: 100, clientX: 641, clientY: 361, preventDefault: vi.fn() });
+    expect(sink.events).toContainEqual({
+      kind: 'wheel',
+      deltaY: 100,
+      duringGesture: true,
+      xPx: 641,
+      yPx: 361,
+    });
   });
 
   it('emits pinch samples only while two contacts are down', () => {

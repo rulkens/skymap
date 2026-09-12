@@ -70,15 +70,12 @@ import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';
-import { starPickId } from './starPickId';
+import { starPickId } from '../../../../utils/picking/starPickId';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
 export const starSpheresPass: ContentPass = {
   name: 'star-spheres',
-  slab: NEAR0,
-  target: 'foreground:0',
-  blend: 'opaque',
 
   enabled(state, ctx, _view) {
     // Handle first, distance second, partition last — see the module
@@ -145,8 +142,7 @@ export const starSpheresPass: ContentPass = {
   // `oblateness` the same way `draw` does, so the pick silhouette matches.
   //
   // This row self-binds its own @group(0) pick camera inside `drawSphere` (the
-  // sphere pick's per-draw uniform); on NEAR0 there is no shared point-pick
-  // prefix to inherit or restore — that contract is a COSMO-pass fact.
+  // sphere pick's per-draw uniform), like every other pickable row.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;

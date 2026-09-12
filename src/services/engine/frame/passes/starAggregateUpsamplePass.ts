@@ -16,7 +16,6 @@ import { starCatalogVisible } from './starCatalogPass';
 
 export const starAggregateUpsamplePass = createUpsamplePass({
   name: 'star-upsample',
-  slab: NEAR0,
   sourceTargetId: 'star-aggregates',
   handleOf: (state) => state.gpu.starAggregateUpsample,
   enabled: starCatalogVisible,

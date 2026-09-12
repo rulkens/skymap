@@ -3,7 +3,7 @@
  * user-controllable setting's INITIAL value (sliders, toggles, mode
  * selectors, the visible-source bitmask).
  *
- * `buildInitialSettings` (`state/settings/initialState.ts`) assembles these
+ * `INITIAL_SETTINGS` (`state/settings/initialSettings.ts`) assembles these
  * into the Redux `EngineSettingsState` the settings slice seeds; a handful of
  * other sites import a constant directly when they need the same default
  * outside the store. Out of scope: per-source astrophysics constants

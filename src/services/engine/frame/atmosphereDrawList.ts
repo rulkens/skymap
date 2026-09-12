@@ -10,7 +10,7 @@
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
@@ -20,7 +20,7 @@ import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function atmosphereDrawList(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): readonly AtmosphereDrawEntry[] {
   // One scalar for the frame, so the near-field cull short-circuits the whole list.

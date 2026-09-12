@@ -80,7 +80,7 @@ export const selectOrientation = (state: RootState): OrientationFrameId =>
 /**
  * Vertical field of view, in degrees — the "Field of view" knob. A primitive
  * read, so no memoization. `runFrame` converts it to radians and writes it onto
- * `cameraRuntime.projection.fovYRad` once per frame.
+ * `cameraRuntime.outputs.projection.fovYRad` once per frame.
  */
 export const selectFovDeg = (state: RootState): number => selectSettings(state).camera.fovDeg;
 

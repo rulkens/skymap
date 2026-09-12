@@ -33,7 +33,7 @@ closed unmerged, branch kept). User ruling: not now.
   Weak-field first version popped at the rim because 2/b keeps the secondary
   bright to the photon sphere.
 - `src/services/engine/frame/sStarLensedImages.ts` + `passes/sStarLensedImagesPass.ts`
-  — hdr / NEAR0 / additive / `hdrPostLensing: true` (must draw AFTER the lens
+  — hdr / NEAR0 / additive / `hdrPhase: 'post-lens'` (must draw AFTER the lens
   `over` blend or the disc wipes it). Own `StarPointRenderer` instance: `setStars`
   is a `writeBuffer`, last write wins per submit. `starPointsPass` drops the
   S-stars while band alpha > 0 (hard swap; at 500 AU the primary is hundredths

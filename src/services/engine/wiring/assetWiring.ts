@@ -27,6 +27,7 @@ import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
+import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
@@ -34,6 +35,8 @@ import { hostBodyId } from '../../../utils/scene/hostBodyId';
 import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
+import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
+import { meshBodySlotKey } from '../../../utils/scene/meshBodySlotKey';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
@@ -43,6 +46,7 @@ import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
 import type { TextureKind } from '../../../@types/data/TextureKind';
 import type { Tier } from '../../../@types/data/Tier';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { MeshBody } from '../../../@types/scene/MeshBody';
 
 /**
  * The categories backed by the bulk `.ccat` — their visibility gates its fetch.
@@ -158,6 +162,34 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
       distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) >
       2 * loadRadiusMpc(entry.bodyId),
     priority: 10, // one rank for the family; they are rarely co-demanded with each other
+  };
+}
+
+/**
+ * One demand+release row per mesh body. Same proximity hysteresis as
+ * `bodyTextureRow` (demanded inside `loadRadiusMpc`, released past twice it),
+ * SIMPLER: a mesh body is in the body-state snapshot whatever drives it, so its
+ * position comes straight off `deriveBodyStates`, no `bodyPosOf`/`hostBodyId`
+ * indirection for a ring-style host.
+ */
+function meshBodyRow(body: MeshBody): AssetWiringRow {
+  const bodyPos = (simDays: number): Readonly<Vec3> => {
+    const state = deriveBodyStates(simDays).get(body.id);
+    if (state === undefined) {
+      throw new Error(`meshBodyRow: '${body.id}' has no derived body state`);
+    }
+    return state.positionMpc;
+  };
+  return {
+    key: meshBodySlotKey(body.id),
+    built: 'external',
+    factory: externalFactory,
+    req: () => ({ meshKey: body.meshKey }),
+    demand: (ctx) =>
+      distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
+    release: (ctx) =>
+      distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) > 2 * meshBodyLoadRadiusMpc(body.id),
+    priority: 10, // same rank as body textures — rarely co-demanded with the planet family
   };
 }
 
@@ -337,6 +369,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── Body-surface textures (proximity-demanded + released) ────────
   ...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow),
+
+  // ── Mesh bodies (whale, petunias, …) ─────────────────────────────
+  ...SCENE_MESH_BODIES.map(meshBodyRow),
 
   // ── Survey star catalogs ─────────────────────────────────────────
   // One row per `type: 'starCatalog'` entry, so a new catalog joins with no edit here.

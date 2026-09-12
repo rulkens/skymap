@@ -80,7 +80,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { BodyRegionId } from '../../../../@types/data/BodyRegionId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
@@ -90,7 +90,7 @@ import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { starPickId } from './starPickId';
+import { starPickId } from '../../../../utils/picking/starPickId';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
@@ -129,16 +129,13 @@ const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
  * The shared foreground gate rides alongside it: past that the whole NEAR0 group
  * is skipped, so a stamp there could never be rasterised anyway.
  */
-function sgrAStarCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
+function sgrAStarCaptionPickable(state: PassState, ctx: ReadyFrameContext): boolean {
   if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
   return sgrAStarCaptionTarget(state.settings, ctx.drawCamPos, ctx.cam.distance) > 0;
 }
 
 export const starPointsPass: ContentPass = {
   name: 'star-points',
-  slab: NEAR0,
-  target: 'hdr',
-  blend: 'additive',
   // Deliberately OFF the sky-cubemap capture roster: the capture face pose
   // carries a placeholder `distance: 1` Mpc (`skyCubemapFaceContext.ts`)
   // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew

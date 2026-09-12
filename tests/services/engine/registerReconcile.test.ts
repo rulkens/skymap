@@ -32,6 +32,7 @@ import { createAppStore } from '../../../src/store/createAppStore';
 import { makeSettingsFixture } from '../../state/settings/makeSettingsFixture';
 import type { SetSagaContext } from '../../../src/store/types';
 import type { EngineCallbacks } from '../../../src/@types/engine/EngineCallbacks';
+import { STUB_COMPOSITION } from '../../helpers/engine/stubComposition';
 
 describe('createEngine — saga context registration', () => {
   it('registers runTierTransition and reconcile in one setSagaContext call', () => {
@@ -56,9 +57,9 @@ describe('createEngine — saga context registration', () => {
     // Call createEngine — runs the synchronous prefix, which calls setSagaContext,
     // then launches the async GPU bootstrap IIFE (which will fail in Node, caught
     // internally and forwarded to onStatusChange above). The synchronous prefix
-    // never reads `home` (that's `wireInput`, inside the async IIFE), so a minimal
-    // stub stands in for the real composition value.
-    createEngine(canvas, cb, { focus: null, seedSelection: false });
+    // never reads the composition (that's `wireInput`, inside the async IIFE), so
+    // the stub stands in for the real one.
+    createEngine(canvas, cb, STUB_COMPOSITION);
 
     // The registration is synchronous — assert immediately after the call.
     expect(setSagaContext).toHaveBeenCalledTimes(1);

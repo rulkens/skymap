@@ -41,17 +41,18 @@ const newRenderer = () =>
   );
 
 describe('LabelRenderer effect-field pack layout', () => {
-  it('per-label storage record is 16 f32 slots (64 bytes)', () => {
+  it('per-label storage record is 20 f32 slots (80-byte stride)', () => {
     const r = newRenderer();
     r.setLabels([
       { id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 0, font: 'cormorant' },
       { id: 'b', worldPos: [7, 8, 9], text: 'A', pixelSize: 0, font: 'cormorant' },
     ]);
     const buf = (r as unknown as { __debugLabelBuf(): Float32Array }).__debugLabelBuf();
-    // Second label's worldPos starts at slot 16 (= 64-byte stride / 4).
-    expect(buf[16]).toBe(7);
-    expect(buf[17]).toBe(8);
-    expect(buf[18]).toBe(9);
+    // Second label's worldPos starts at slot 20 (= 80-byte stride / 4): the
+    // struct's 68 written bytes round up to 80 on its vec4 alignment.
+    expect(buf[20]).toBe(7);
+    expect(buf[21]).toBe(8);
+    expect(buf[22]).toBe(9);
   });
 
   it('writes outlineColor (premultiplied) at slots 12..15', () => {

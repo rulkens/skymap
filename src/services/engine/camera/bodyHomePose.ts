@@ -40,8 +40,8 @@
  * ### Why the distance is `bodyLikeFraming`'s, not a bespoke home distance
  *
  * This is forced by the follow mechanics, not taste. When home focus lands on
- * a body the follow driver takes over, and `followElapsed` (`cameraClock.ts`)
- * nulls `followDistanceTarget` on every focus-row change; the driver then
+ * a body the follow driver takes over, and `runFrame` drops the follow memory
+ * on every focus-row change; the driver then
  * re-seeds it to the body's framing distance (`bodyFocusDistance`, via
  * `bodyLikeFraming`). Any other landing distance would be glided away from the
  * instant the tween ends — a visible lurch. Ending the pose at the framing
@@ -58,6 +58,7 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { bodyLikeFraming } from './bodyLikeFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 
@@ -73,7 +74,7 @@ export function bodyHomePose(
   fovYRad: number,
   frameBasis?: Mat3,
 ): CameraPose {
-  const { radiusM } = findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyHomePose');
+  const radiusM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyHomePose'));
   const state = deriveBodyStates(simDays).get(bodyId);
   if (!state) throw new Error(`bodyHomePose: no derived state for id '${bodyId}'`);
   const bodyPos = state.positionMpc;

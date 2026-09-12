@@ -7,9 +7,13 @@ import type { Vec2 } from '../math/Vec2';
  * always f32.
  */
 export type Label2DProjection = {
-  /** Placement matrix — f64 where the slab has one (NEAR0). */
+  /** Placement matrix, in Mpc clip units — f64 where the slab has one (NEAR0). */
   readonly vp: Float32Array | Float64Array;
-  /** The same matrix narrowed for the renderer upload. */
+  /**
+   * The same matrix narrowed for the renderer upload. NEAR0's is additionally
+   * rescaled to clip metres (`near0OverlayVpF32`) — NDC-identical to `vp`, but
+   * NOT interchangeable with it for anything divided by `clip.w`.
+   */
   readonly vpF32: Float32Array;
   readonly viewportPx: Vec2;
 };

@@ -10,6 +10,7 @@ import { SCENE_PLANETS } from './scenePlanets';
 import { SCENE_STARS } from './sceneStars';
 import { SGR_A_STAR } from './sceneSgrAStar';
 import { SCENE_S_STARS } from './sceneSStars';
+import { SCENE_MESH_BODIES } from './sceneMeshBodies';
 import type { BodyId } from '../../@types/data/body/BodyId';
 
 export const BODY_PICK_ROWS: Readonly<Record<BodyId, readonly { readonly id: string }[]>> = {
@@ -18,4 +19,5 @@ export const BODY_PICK_ROWS: Readonly<Record<BodyId, readonly { readonly id: str
   sun: SCENE_STARS,
   'sgr-a-star': [SGR_A_STAR],
   's-star': SCENE_S_STARS,
+  'mesh-body': SCENE_MESH_BODIES,
 };

@@ -41,6 +41,9 @@
 import { galaxyFocusDistance } from './galaxyFocusDistance';
 import { structureFocusDistance } from './structureFocusDistance';
 import { bodyLikeFraming } from './bodyLikeFraming';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
@@ -105,8 +108,16 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
     // a discrete near-field object sized on its physical radius. Both delegate
     // to the shared bodyLikeFraming; the star's radius is the extractor-stamped
     // nominal solar radius (the bin has no per-star size).
-    case 'body':
-      return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad, row.focusDistanceRadii);
+    case 'body': {
+      // The row carries identity only; the size it frames on comes from the seed.
+      const body = findByIdOrThrow(SCENE_BODIES, row.id, 'focusFraming');
+      return bodyLikeFraming(
+        row.positionMpc,
+        bodyFootprintRadiusM(body),
+        fovYRad,
+        'focusDistanceRadii' in body ? body.focusDistanceRadii : undefined,
+      );
+    }
     case 'star':
       return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad);
     // The band carries no x/y/z (a line-of-sight effect, not a point), so it

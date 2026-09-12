@@ -111,5 +111,13 @@ fn vs(input: VsIn) -> VsOut {
   //   widthInSdfUnits = (frac * ATLAS_EM_PX) / DISTANCE_RANGE_PX
   let outlineSdf = outlineEmFrac * ATLAS_EM_PX / DISTANCE_RANGE_PX;
 
-  return VsOut(outPos, uv, outColor, input.fontIndex, outOutlineColor, outlineSdf);
+  return VsOut(
+    outPos,
+    uv,
+    outColor,
+    input.fontIndex,
+    outOutlineColor,
+    outlineSdf,
+    label.occludeWeight,
+  );
 }

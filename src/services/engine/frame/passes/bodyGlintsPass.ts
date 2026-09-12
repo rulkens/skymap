@@ -70,7 +70,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyState } from '../../../../@types/scene/BodyState';
@@ -83,9 +83,10 @@ import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { seedIndexOfBody } from './seedIndexOfBody';
-import { glintBandClass } from './glintBandClass';
+import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
+import { glintBandClass } from '../../../../utils/picking/glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
+import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
 import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { regionById } from '../../../../utils/scene/regionById';
@@ -136,7 +137,7 @@ const SGR_A_STAR_GLINT_BASE_INTENSITY = 0.8;
  * gate then can't make the two diverge (admit-the-row-but-emit-no-stamp, a dead
  * pick frame, or the reverse).
  */
-function earthCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
+function earthCaptionPickable(state: PassState, ctx: ReadyFrameContext): boolean {
   return state.data.bodies.earth !== null && ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
 }
 
@@ -159,14 +160,6 @@ function sgrAStarGlintBrightness(
 
 export const bodyGlintsPass: ContentPass = {
   name: 'body-glints',
-  slab: NEAR0,
-  target: 'hdr',
-  blend: 'additive',
-  // Opts into the black-hole lens's `'post'` split half (Task 14b) so this
-  // layer's own Sgr A* far-field marker (and any solar-system glint
-  // that happens to overlap it on screen) draws unwarped ON TOP of the lens
-  // rather than being sampled by it — see frameProgram.ts's step-split doc.
-  hdrPostLensing: true,
 
   enabled(state, ctx, _view) {
     // Handle first (short-circuits before any ctx / state.data read — matches
@@ -253,7 +246,7 @@ export const bodyGlintsPass: ContentPass = {
       const positionMpc = states.get(body.id)!.positionMpc;
       const diameterPx = bodyApparentDiameterPx({
         positionMpc,
-        radiusM: body.radiusM,
+        radiusM: bodyFootprintRadiusM(body),
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
         fovYRad: ctx.fovYRad,
@@ -447,7 +440,7 @@ export const bodyGlintsPass: ContentPass = {
       // drawn set and beyond it they match.
       const diameterPx = bodyApparentDiameterPx({
         positionMpc,
-        radiusM: body.radiusM,
+        radiusM: bodyFootprintRadiusM(body),
         camPosMpc: camPos,
         viewportHeightPx: view.viewportPx[1],
         fovYRad: ctx.fovYRad,

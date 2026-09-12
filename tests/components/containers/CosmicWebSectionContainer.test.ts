@@ -114,7 +114,7 @@ describe('CosmicWebSectionContainer', () => {
 
     it('renders a real cf4-density row when volumesEnabled is true and items are seeded', () => {
       const { store } = createAppStore();
-      // cf4-density is seeded by buildInitialSettings via seedVolumeFields.
+      // cf4-density is seeded by INITIAL_SETTINGS via seedVolumeFields.
       // Enable it and enable the volumes master so the section renders the rows.
       store.dispatch(setVolumesEnabled(true));
 

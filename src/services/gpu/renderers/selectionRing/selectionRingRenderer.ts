@@ -20,8 +20,8 @@
  *
  * ## Why two uniform bindings
  *
- * Camera prefix is 80 bytes; selection tail is 16. Combining would force
- * a 96-byte writeBuffer every frame even when the selection hasn't
+ * Camera prefix is 80 bytes; selection tail is 32. Combining would force
+ * one writeBuffer of both every frame even when the selection hasn't
  * moved. Split bindings keep the two concerns separable. The selection
  * is not renderer-held state — the caller passes it to `draw`, and the
  * pass already gates `draw` to frames where something is selected, so
@@ -51,8 +51,12 @@ import {
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 
-/** SelectionRingUniforms: vec3<f32> worldPos + f32 ringRadiusPx. */
-const SELECTION_UNIFORM_BYTES = 16;
+/**
+ * SelectionRingUniforms: vec3<f32> worldPos + f32 ringRadiusPx + f32 alpha.
+ * 32, not 20: the struct's vec3 gives it 16-byte alignment, so WGSL rounds its
+ * size up and a short buffer would fail validation (see io.wesl's byte table).
+ */
+const SELECTION_UNIFORM_BYTES = 32;
 
 /**
  * Construct a `SelectionRingRenderer`. `targetFormat` is the colour-attachment
@@ -177,7 +181,7 @@ export function createSelectionRingRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number } | null,
+    selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number; alpha: number } | null,
     sceneColorView?: GPUTextureView,
   ): void {
     if (!device || !plainPipeline || !bindGroup || !cameraBuffer || !selectionBuffer) return;
@@ -194,6 +198,7 @@ export function createSelectionRingRenderer(
     selUni[1] = selection.worldPos[1];
     selUni[2] = selection.worldPos[2];
     selUni[3] = selection.ringRadiusPx;
+    selUni[4] = selection.alpha;
     device.queue.writeBuffer(selectionBuffer, 0, selUni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion

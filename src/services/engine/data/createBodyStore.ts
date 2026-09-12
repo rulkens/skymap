@@ -1,6 +1,7 @@
 import type { BodyStore } from '../../../@types/engine/data/BodyStore';
 import type { StarBody } from '../../../@types/scene/StarBody';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
+import type { MeshBody } from '../../../@types/scene/MeshBody';
 import type { EarthBody } from '../../../@types/scene/EarthBody';
 
 /**
@@ -21,6 +22,7 @@ import type { EarthBody } from '../../../@types/scene/EarthBody';
 export function createBodyStore(): BodyStore {
   let stars: readonly StarBody[] = [];
   let planets: readonly PlanetBody[] = [];
+  let meshBodies: readonly MeshBody[] = [];
   let earth: EarthBody | null = null;
 
   return Object.freeze({
@@ -30,6 +32,9 @@ export function createBodyStore(): BodyStore {
     get planets(): readonly PlanetBody[] {
       return planets;
     },
+    get meshBodies(): readonly MeshBody[] {
+      return meshBodies;
+    },
     get earth(): EarthBody | null {
       return earth;
     },
@@ -38,6 +43,9 @@ export function createBodyStore(): BodyStore {
     },
     setPlanets(p: readonly PlanetBody[]): void {
       planets = p;
+    },
+    setMeshBodies(m: readonly MeshBody[]): void {
+      meshBodies = m;
     },
     setEarth(e: EarthBody | null): void {
       earth = e;

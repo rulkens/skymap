@@ -54,7 +54,7 @@ describe('clampDistance — floor at the absolute minimum (no pivot: empty space
   });
 
   it('returns an in-bounds value unchanged', () => {
-    const mid = 10; // 10 Mpc — squarely inside [1e-17, 30000]
+    const mid = 10; // 10 Mpc — squarely inside [MIN_DISTANCE_MPC, 30000]
     expect(clampDistance(mid, MIN_DISTANCE_MPC)).toBe(mid);
   });
 });

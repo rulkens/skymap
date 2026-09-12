@@ -18,20 +18,22 @@
 
 import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
 import type { VisibilityLayerArg } from '../../@types/animation/VisibilityLayerArg';
+import { VISIBILITY_LAYER_ROWS } from '../../data/animation/visibilityLayerRows';
 
 /**
  * Authoring aggregate → the atomic layer keys it stands for, in reveal order
  * (cosmological outward-in: survey names, structure names, the YOU-ARE-HERE
- * pin, then the near-field star-map and scene-body captions).
- *
- * `labels` is TOTAL over the label-layer keys, which is the whole promise of
- * writing `hide(['labels'])` instead of listing them: a caption left out here
- * survives a cue that says it hid every label, and nothing in the type system
- * catches the omission. So a new label-layer `VisibilityLayerKey` belongs in
- * this list.
+ * pin, then the near-field star-map and scene-body captions). Derived from
+ * `VISIBILITY_LAYER_ROWS`, whose `satisfies Record<VisibilityLayerKey, …>`
+ * makes membership total: a new label key fails to compile until it is
+ * classified there, rather than silently missing this filter.
  */
+const rows: Record<VisibilityLayerKey, { readonly aggregate?: 'labels' }> = VISIBILITY_LAYER_ROWS;
+
 const LAYER_GROUPS = {
-  labels: ['surveyLabel', 'structureLabel', 'milkyWayLabel', 'starCatalogLabel', 'bodyLabel'],
+  labels: (Object.keys(rows) as VisibilityLayerKey[]).filter(
+    (key) => rows[key].aggregate === 'labels',
+  ),
 } as const satisfies Record<string, readonly VisibilityLayerKey[]>;
 
 export function expandVisibilityLayers(args: readonly VisibilityLayerArg[]): VisibilityLayerKey[] {

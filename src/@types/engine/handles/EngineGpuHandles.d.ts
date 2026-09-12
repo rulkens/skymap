@@ -44,6 +44,7 @@ import type { EarthSurfaceTileRenderer } from '../../rendering/EarthSurfaceTileR
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
+import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
 import type { RingRenderer } from '../../rendering/RingRenderer';
 import type { CloudShellRenderer } from '../../rendering/CloudShellRenderer';
 import type { AtmosphereShellRenderer } from '../../rendering/AtmosphereShellRenderer';
@@ -505,6 +506,17 @@ export type EngineGpuHandles = {
    * (see `renderTargetFormats.ts`); excluded from `isEngineReady`.
    */
   texturedBodyRenderer: TexturedBodyRenderer | null;
+  /**
+   * The shared lit triangle-mesh renderer for every mesh body — real authored
+   * geometry in metres, per-mesh buffers/textures/uniform behind a `Map` keyed by
+   * mesh id. `meshBodiesPass` draws the resident mesh bodies attached to the
+   * current body slab's host through it; the mesh slot family's commit routes a
+   * decoded `MeshAsset` to `setMesh` and its onRelease to `clearMesh`. Same
+   * `foreground:0` format invariant as the sphere bodies (see
+   * `renderTargetFormats.ts`); excluded from `isEngineReady` and null-checked at
+   * use. Null until `initGpu` constructs it; released and re-nulled by `destroy()`.
+   */
+  meshBodyRenderer: MeshBodyRenderer | null;
   /**
    * The translucent planetary-ring renderer (Saturn's rings) — the overlay half
    * of the ring system, drawn LAST in the `(foreground:0, NEAR0)` group as a

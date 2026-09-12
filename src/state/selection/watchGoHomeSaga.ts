@@ -19,9 +19,10 @@
  * Earth focus row here plants no competing tween. This saga's `startCameraTween`
  * is the sole mover. On tween end the follow driver activates, captures the
  * tween's end pose as its `from`, and re-seeds its distance target to the exact
- * framing distance the pose already carries (`followElapsed` in cameraClock.ts
- * nulls `followDistanceTarget` on every focus-row change; the driver re-seeds it
- * to `bodyLikeFraming`'s distance — the same one `bodyHomePose` used). Because
+ * framing distance the pose already carries (the memory drops when the follow
+ * EPOCH's ref changes, which advances only on a frame a follow row wins; the
+ * driver then re-seeds its distance target to `bodyLikeFraming`'s distance —
+ * the same one `bodyHomePose` used). Because
  * the pose already sits at that distance, the tween→follow handoff is seamless:
  * the driver takes over a camera already at rest.
  *

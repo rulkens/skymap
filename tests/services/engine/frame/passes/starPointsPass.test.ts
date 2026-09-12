@@ -25,6 +25,7 @@ import { mat4 } from 'wgpu-matrix';
 
 import { starPointsPass } from '../../../../../src/services/engine/frame/passes/starPointsPass';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
+import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
@@ -35,7 +36,7 @@ import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { SGR_A_STAR_ANCHOR } from '../../../../../src/data/bodies/sceneSgrAStar';
 import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
-import { starPickId } from '../../../../../src/services/engine/frame/passes/starPickId';
+import { starPickId } from '../../../../../src/utils/picking/starPickId';
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/data/famousStarPickRadiusPx';
@@ -288,9 +289,14 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
+    // The (hdr, NEAR0) roster, read off the order lines that draw it — three
+    // of them since the lens and the body composite split the roster.
+    const hdrNear0 = FRAME_ORDER.flatMap((step) =>
+      step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0 ? step.passes : [],
+    );
     const groupAt = (ctx: ReadyFrameContext) =>
       CONTENT_PASSES.filter(
-        (l) => l.target === 'hdr' && l.slab === NEAR0 && l.enabled(state, ctx, VIEW_STUB),
+        (pass) => hdrNear0.includes(pass.name) && pass.enabled(state, ctx, VIEW_STUB),
       );
 
     // Below the gate: the point backdrop + the rings both draw. Uses

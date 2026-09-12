@@ -35,7 +35,14 @@
  * the descent's aim point — it must out-rank every other caption, so a
  * declutter collision essentially cannot drop it.
  */
-export type CaptionKind = 'sun' | 'earth' | 'planet' | 'star' | 'sgrAStar' | 'constellation';
+export type CaptionKind =
+  | 'sun'
+  | 'earth'
+  | 'planet'
+  | 'star'
+  | 'sgrAStar'
+  | 'meshBody'
+  | 'constellation';
 
 /**
  * Tier dominance factor for the composed declutter score. Apparent size is
@@ -55,6 +62,9 @@ export const CAPTION_PRIORITY = {
   // within-tier size tiebreak is a Schwarzschild radius at 8 kpc, i.e. 0, so it
   // would lose every collision on size alone.
   sgrAStar: 15,
+  // Below Sgr A* because a decluttered mesh body still shows as geometry, above
+  // the star map because it is a near-field object the camera is beside.
+  meshBody: 12,
   star: 10,
   // Below every scene body: a figure name always yields to a body caption.
   constellation: 5,

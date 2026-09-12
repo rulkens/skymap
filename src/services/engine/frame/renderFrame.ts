@@ -5,8 +5,8 @@
  * Before the renderer unification, ~140 lines of imperative GPU plumbing
  * sprawled here: a two-way HDR-encoder branch, a tone-map blit, and a
  * post-tone-map UI overlay, each a hand-wired call whose order was implicit
- * in which function called which. That order is now DATA — `frameProgram(tone)`
- * returns the ordered
+ * in which function called which. That order is now DATA — `FRAME_ORDER`, whose
+ * expansion is the ordered
  * `FrameStep[]`, and `executeFrame` is the single imperative site that walks
  * it into one encoder. This module shrank to three responsibilities: the
  * once-per-frame focus-uniform write, the encoder lifecycle (create + swap-view
@@ -20,9 +20,9 @@
  *      `'perLayerTimed'` when timing is enabled (one pass per layer so each can
  *      carry its own `timestampWrites`), else `'merged'` (one pass per target
  *      group — the tile-local production path OVER blends need).
- *   4. `executeFrame` walks `frameProgram(tone)` over `CONTENT_PASSES`: the flow
- *      compute, the scalar-volume render, the HDR render, the `hdr→swap`
- *      tone-map composite, then the swap-chain overlay render.
+ *   4. `executeFrame` walks `expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, …)`:
+ *      the flow compute, the scalar-volume render, the HDR render, the
+ *      `hdr→swap` tone-map composite, then the swap-chain overlay render.
  *   5. Record the timing resolve/copy (`endFrame`) and submit.
  *
  * The strategy fork, the tile-local coherency rationale, the first-touch clear,
@@ -53,7 +53,8 @@ import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { executeFrame } from './executeFrame';
-import { frameProgram } from './frameProgram';
+import { expandFrameOrder } from './expandFrameOrder';
+import { FRAME_ORDER } from './frameOrder';
 import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_PASSES } from './passes';
@@ -75,9 +76,9 @@ const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
- * has the buffer queued. Order of operations is the `frameProgram` step list
- * walked by `executeFrame`; the visual output is identical to the pre-unification
- * inline body.
+ * has the buffer queued. Order of operations is `FRAME_ORDER`'s expansion,
+ * walked by `executeFrame`; the visual output is identical to the
+ * pre-unification inline body.
  */
 export function renderFrame(input: RenderFrameInput): void {
   const { ctx, state, device, context, timingService } = input;
@@ -155,8 +156,8 @@ export function renderFrame(input: RenderFrameInput): void {
   // accepted.
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
   let skyCubemapFacesToCapture: readonly CubeFace[] = [];
-  // Sgr A*'s own body-m slab row this frame: `frameProgram` emits the
-  // (hdr, BODY[k]) lens step off it. Resolved here, not in `frameProgram`,
+  // Sgr A*'s own body-m slab row this frame: the `lens` line expands to the
+  // (hdr, BODY[k]) step off it. Resolved here, not in the expansion,
   // because the row's painter-order index comes from `deriveSlabs` (computed
   // upstream of this function) — the same "resolve here, hand data down"
   // split `earthSlab` in `runFrame.ts` already follows for the identical
@@ -204,23 +205,22 @@ export function renderFrame(input: RenderFrameInput): void {
     encoder,
     ctx,
     state,
-    program: frameProgram(
-      {
+    program: expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+      tone: {
         exposure: state.settings.tonemap.exposure,
         curve: state.settings.tonemap.curve,
         hdrKnee: hdrOn ? state.settings.hdr.knee : 0,
         hdrHeadroom: hdrOn ? state.settings.hdr.headroom : 0,
       },
       // The master bloom toggle is the ONLY bloom value that shapes the step
-      // list; strength/threshold are read live by the bloom layers each draw.
-      state.settings.bloom.enabled,
+      // list; strength/threshold are read live by the bloom passes each draw.
+      bloomEnabled: state.settings.bloom.enabled,
       // Painter-ordered NEAR0 + body-row indices — the chain the
-      // foreground:0 render expands into, one step per entry.
-      foregroundChainOrder(ctx.slabs),
+      // foreground:0 line expands over, one step per entry.
+      foregroundChain: foregroundChainOrder(ctx.slabs),
       skyCubemapFacesToCapture,
-      sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
-    ),
-    passes: CONTENT_PASSES,
+      lensBodySlabs: sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
+    }),
     strategy,
     timing: timingService,
     swapView,

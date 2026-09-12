@@ -6,17 +6,15 @@
  * at the hardcoded CONST_J2000 epoch (see its header), so a row read long
  * after selection can sit years off the pose it's dumped next to. Every other
  * arm already carries a live-resolved position. Identity fields
- * (type/id/label/radiusM) pass through unchanged.
+ * (type/id/label) pass through unchanged.
  */
 
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
+import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { liveBodyPosition } from '../camera/liveBodyPosition';
 
-export function liveFocusRow(
-  focusRow: SelectionRow | null,
-  simDays: number,
-): SelectionRow | null {
+export function liveFocusRow(focusRow: SelectionRow | null, simDays: number): SelectionRow | null {
   if (focusRow === null || focusRow.type !== 'body') return focusRow;
-  const positionMpc = liveBodyPosition(focusRow, simDays);
+  const positionMpc = liveBodyPosition(focusRow, deriveBodyStates(simDays));
   return positionMpc === null ? focusRow : { ...focusRow, positionMpc };
 }
