@@ -53,7 +53,7 @@ script or `/scene-workbench/` subpath.
 6. `OPENMVS_BIN=$HOME/.local/opt/openmvs/bin/OpenMVS npm run bake-mesh -- --group <id>`
    — reconstructs a textured mesh from the same frames and writes the `mesh`
    asset into `public/data/geo3d/`. The stages and their flags are spec §6 of
-   `docs/superpowers/specs/2026-09-11-scene-workbench-3-mesh-design.md`; in
+   `docs/superpowers/specs/completed/2026-09-11-scene-workbench-3-mesh-design.md`; in
    short, the bake densifies at full resolution and runs RefineMesh, and
    `--reuse-glb` re-packs the last OpenMVS
    export instead of reconstructing, carrying the manifest's colmap/openmvs
