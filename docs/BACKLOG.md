@@ -73,7 +73,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **f32 half-ulp sightline nudge at the body-arm flip** `needs-verification` — ~4 mas, in two narrow `h/R` windows. → [details](backlog/2026-09-11-camera-f32-half-ulp-sightline-nudge-at-arm-flip.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
-- [ ] **Surface-fixed mesh bodies need their own camera regime** `needs-design` — a rover's orbit rolls the horizon and dips under the ground, and the atmosphere composites over the rover; local-radial up, terrain floor, metre-scale drag. → [details](backlog/2026-09-12-rover-surface-camera-regime.md)
+- [ ] **Surface-fixed mesh bodies need their own camera regime** `needs-design` — a rover's orbit rolls the horizon and dips under the ground; local-radial up, terrain floor, metre-scale drag. → [details](backlog/2026-09-12-rover-surface-camera-regime.md)
 - [ ] **Body shape split: bounds vs surface** `needs-design` — one `radiusM` still means two things across the arms. → [details](backlog/2026-09-12-body-bounds-vs-surface.md)
 
 ## Rendering

@@ -29,9 +29,13 @@
  * ### Why it draws LAST, OVER not opaque (spec §8.3)
  *
  * The atmosphere is the outermost translucent member of the `(foreground:0,
- * 'body')` group — registered LAST in `CONTENT_PASSES`, after the opaque
- * bodies, the rings, AND Earth's cloud shell, so it draws once every opaque
- * sphere has stamped its depth. Its pipeline depth-TESTS against them
+ * 'body')` group — ordered after the opaque spheres, the rings, AND Earth's
+ * cloud shell in `FRAME_ORDER`'s `bodyPasses` (the authored list
+ * `expandFrameOrder` resolves in order; `CONTENT_PASSES` is a registry, not an
+ * order), so it draws once every opaque sphere has stamped its depth. The one
+ * row AFTER it is `mesh-bodies`, which the inside path cannot see — that
+ * ordering and its cost are argued at the `bodyPasses` line itself. Its
+ * pipeline depth-TESTS against them
  * (`depthCompare: 'greater-equal'`, the body-m slab's reversed-Z convention —
  * clear `0.0`, greater-z-wins; the EQUAL half lets the shell hugging a body's
  * own surface still pass against the depth that surface stamped) but writes
