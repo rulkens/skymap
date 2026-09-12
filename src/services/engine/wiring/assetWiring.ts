@@ -272,8 +272,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── Volume overlays: mcpm / cf4Density / polyphorm2Mrs / mcpmWorkbench ──
   // All four are load-once and deliberately declare no `release`: adding one
-  // requires wiring `onRelease` to `unloadVolumeField`, or the four GPU
-  // resources it frees (volumeFieldRenderer.ts:340-344) leak on evict.
+  // requires an `onRelease` that calls `volumeFieldRenderer.unload(id)`, or the
+  // four GPU resources it frees (volumeFieldRenderer.ts:340-344) leak on evict.
   // Optional-chained `demand` because `settings.volumes.items` has no entry
   // for a field until it is seeded.
 

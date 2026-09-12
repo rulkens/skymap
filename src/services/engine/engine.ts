@@ -73,10 +73,6 @@ import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from './subsystems/earthTileSubsystem';
-import { uploadVolumeField } from './volume/uploadVolumeField';
-import { unloadVolumeField } from './volume/unloadVolumeField';
-import { listVolumeFields } from './handles/listVolumeFields';
-import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
@@ -582,12 +578,6 @@ export function createEngine(
       getCloud,
       getCloudObjIds,
       getStructures,
-    },
-    volumes: {
-      add: (fieldId, cube) => uploadVolumeField(state, store, fieldId, cube),
-      remove: (fieldId) => unloadVolumeField(state, store, fieldId),
-      list: () => listVolumeFields(state),
-      getState: () => getVolumeFieldsState(state),
     },
     debug: {
       // A getter, not a copied reference: initGpu assigns `state.gpu.timingService`

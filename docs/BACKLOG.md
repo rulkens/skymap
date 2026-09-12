@@ -78,6 +78,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Deselecting a volume field never frees its VRAM** `needs-design` — untick fades but keeps the cube resident; polyphorm-2mrs strands 217 MB until reload. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
 - [ ] **S-stars are not lensed by Sgr A\*** `needs-design` — never enter the cubemap (capture-pose gate), and at-infinity is wrong for them anyway; analytic finite-distance images prototyped on branch worktree-s-star-analytic-lensing, parked on look (adaptive exposure needed). → [details](backlog/2026-09-03-s-star-analytic-lensing.md)
 - [ ] **Sky-cubemap face seams where Gaia aggregates draw** `ready` — aggregate splats spilling across a 90° face edge are culled on the neighbour face; add the angular floor to the cull radius or skip the cull in capture. → [details](backlog/2026-09-03-sky-cubemap-face-seams-star-aggregates.md)
 - [ ] **Black-hole lens crossfade shows subtle duplicate points** `ready` — direct sky + lensed cubemap both partially visible across the band ramp; fade the direct roster inversely. → [details](backlog/2026-09-02-lens-crossfade-duplicate-points.md)

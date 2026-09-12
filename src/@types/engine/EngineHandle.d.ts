@@ -21,7 +21,6 @@ import type { AssetSlot } from '../loading/AssetSlot';
 import type { EngineCameraHandle } from './handles/EngineCameraHandle';
 import type { EngineSelectionHandle } from './handles/EngineSelectionHandle';
 import type { EngineSourcesHandle } from './handles/EngineSourcesHandle';
-import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
 import type { EngineDebugHandle } from './handles/EngineDebugHandle';
 
 /**
@@ -36,7 +35,6 @@ export type EngineHandle = {
   camera: EngineCameraHandle;
   selection: EngineSelectionHandle;
   sources: EngineSourcesHandle;
-  volumes: EngineVolumesHandle;
   debug: EngineDebugHandle;
 
   /**
