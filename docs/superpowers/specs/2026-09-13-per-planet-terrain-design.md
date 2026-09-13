@@ -43,10 +43,13 @@ horizon cull, lat/lon picking, the atmosphere's ground radius, the orbit-trail
 occluder spheres, and the cloud deck's clearance. Today all seven read one scalar
 mean radius per body, and they round in opposite directions.
 
-**Earth terrain works to the deepest tile level (z19).** Not by inventing data —
-real DEM resolution saturates well above z19 — but by the pyramid inheriting
-heights from its deepest baked level while geometry keeps refining, with
-displacement continuous and crack-free at every level by construction (§6, §7).
+**Earth terrain works to the deepest tile level (z19), with real data there.** Every
+height band is baked to its own source's ceiling, matching the albedo band over it
+level for level: 2,446 m posts globally from ETOPO 30″, and **0.597 m posts over
+Søndermarken from DHM/Terræn's 0.4 m LiDAR**, under the 0.149 m GeoDanmark ortho.
+On Earth the height pyramid mirrors the albedo pyramid tile for tile — 19,701 each,
+no interpolated band anywhere. Displacement is continuous and crack-free at every
+level by construction (§6, §7).
 
 ## 2. Scope
 
@@ -220,19 +223,25 @@ wide and half that tall, `2^z` columns × `2^(z-1)` rows of 512 px albedo tiles
 (`EarthTileId.d.ts`). A source's matching level is where its native ground sample
 distance equals one texel.
 
-| source                           | native GSD     | matching albedo level |
-| -------------------------------- | -------------- | --------------------- |
-| NASA BMNG (Earth, in use)        | 611 m at z7    | z7 (baked ceiling)    |
-| EOX S2 cloudless (Earth, in use) | 9.6 m at z13   | z13 (baked ceiling)   |
-| GeoDanmark ortho (Earth, in use) | 0.149 m at z19 | z19 (baked ceiling)   |
-| ETOPO 2022 30″                   | 926 m          | z6.4                  |
-| GEBCO 2024 15″                   | 463 m          | z7.4                  |
-| SRTM / Copernicus GLO-30 1″      | 30 m           | z11.3                 |
-| DHM/Terræn (Denmark)             | 0.4 m          | z17.6                 |
-| MOLA–HRSC blend (Mars)           | 200 m          | z7.7                  |
-| Viking MDIM21 (Mars)             | 232 m          | z7.5                  |
-| HiRISE DTM (Mars sites)          | 1 m            | z15.3                 |
-| HiRISE ortho (Mars sites)        | 0.25 m         | z17.3                 |
+| source                           | native GSD     | matching albedo level | matching height level |
+| -------------------------------- | -------------- | --------------------- | --------------------- |
+| NASA BMNG (Earth, in use)        | 611 m at z7    | z7 (baked ceiling)    | —                     |
+| EOX S2 cloudless (Earth, in use) | 9.6 m at z13   | z13 (baked ceiling)   | —                     |
+| GeoDanmark ortho (Earth, in use) | 0.149 m at z19 | z19 (baked ceiling)   | —                     |
+| ETOPO 2022 30″                   | 926 m          | z6.4                  | z8.4                  |
+| GEBCO 2024 15″                   | 463 m          | z7.4                  | z9.4                  |
+| SRTM / Copernicus GLO-30 1″      | 30 m           | z11.3                 | **z13.3**             |
+| DHM/Terræn (Denmark)             | 0.4 m          | z17.6                 | **z19.6**             |
+| MOLA–HRSC blend (Mars)           | 200 m          | z7.7                  | z9.7                  |
+| Viking MDIM21 (Mars)             | 232 m          | z7.5                  | —                     |
+| HiRISE DTM (Mars sites)          | 1 m            | z15.3                 | z17.3                 |
+| HiRISE ortho (Mars sites)        | 0.25 m         | z17.3                 | —                     |
+
+A height level reaches **two levels deeper** than the albedo level from the same
+source, because a height tile carries 129 posts where an albedo tile carries 512
+texels (§5.1) — so a post spans four texels. That headroom is why every Earth height
+band can be baked to its albedo band's own ceiling: GLO-30/skadi supports z13.3
+against the EOX boxes' z13, and DHM supports z19.6 against GeoDanmark's z19.
 
 ### 4.2 Acquisition
 
@@ -445,10 +454,13 @@ slot in as a one-texel ridge along every patch edge regardless of format.
    an ocean trench) and must still get a cut.
 
 **Drawability.** A patch draws when both products resolve to some resident ancestor.
-Because height's ceiling is shallow — z6 globally, z11 in the EOX boxes — a height
-tile is shared by up to 256 albedo patches, so the chain a deep patch needs is
-resident long before the camera descends into it. Gating on height residency is
-therefore cheap and buys exact crack-freedom. A patch with no albedo ancestor stays
+On Earth every height band is baked to its albedo band's own ceiling (§10), so the
+target level is normally `z` itself and inheritance covers only the streaming case —
+a deeper tile in flight — plus the base-level boundary. On Mars the rover-site DTMs
+stop two levels below their orthoimages (z15 against z17), where one height tile
+serves 16 albedo patches; that ancestor is resident long before the camera descends
+into it. Gating drawability on height residency is therefore cheap in every case,
+and buys exact crack-freedom. A patch with no albedo ancestor stays
 dropped from the cut; the base globe covers it, exactly as today.
 
 ## 7. Displaced geometry
@@ -639,10 +651,11 @@ Mars needs the imagery path it does not have: today it is one whole-globe
 `mars-8192.jpg` at 2.6 km/texel, no tiles, no DEM, no normal map.
 
 - **Global albedo:** Viking MDIM21 → z3–z7, mirroring Earth's BMNG band.
-- **Global height:** MOLA–HRSC 200 m → z3–z6 (2.6 km posts). Mars relief is ±21 km
-  on a 3,390 km radius — 0.6 %, four times Earth's — so Olympus Mons and Valles
-  Marineris are visible from orbit in a way Earth's relief is not. z6 resolves both
-  amply; deeper is a data change.
+- **Global height:** MOLA–HRSC 200 m → z3–z7 (1,300 m posts), matching the albedo
+  band level for level. Mars relief is ±21 km on a 3,390 km radius — 0.6 %, four
+  times Earth's — so Olympus Mons and Valles Marineris are visible from orbit in a
+  way Earth's relief is not, which is the case for matching rather than trailing the
+  imagery. The source supports z9.7, so z7 is a re-bake away from deeper if wanted.
 - **Rover sites:** four bands at Gale, Jezero, Gusev and Meridiani — HiRISE ortho
   (25 cm → z17) over HiRISE DTM (1 m → z15). These are the small boxes that make
   the rovers stand somewhere real, and they are what the consumed
@@ -658,24 +671,36 @@ Mars needs the imagery path it does not have: today it is one whole-globe
 Height bytes are 66,596 per tile (§5.3); a full pyramid to level `L` costs roughly
 `(4/3) × (2^L × 128)² / 2 × 4` bytes.
 
-| band                               | levels  | tiles  | bytes       |
-| ---------------------------------- | ------- | ------ | ----------- |
-| Earth global height                | z3–z6   | 2,720  | 181 MB      |
-| Earth EOX boxes height             | z8–z11  | ~470   | 31 MB       |
-| Søndermarken height                | z12–z18 | ~1,025 | 68 MB       |
-| **Earth height total**             |         | ~4,215 | **~280 MB** |
-| Mars global albedo                 | z3–z7   | 10,912 | ~360 MB     |
-| Mars global height                 | z3–z6   | 2,720  | 181 MB      |
-| Mars rover sites (4×, ortho + DTM) | z10–z17 | ~6,000 | ~250 MB     |
+| band                               | levels  | tiles  | post spacing | bytes        |
+| ---------------------------------- | ------- | ------ | ------------ | ------------ |
+| Earth global height                | z3–z7   | 10,912 | 2,446 m      | 727 MB       |
+| Earth EOX boxes height             | z8–z13  | 4,694  | 38.2 m       | 313 MB       |
+| Søndermarken height                | z14–z19 | 4,095  | 0.597 m      | 273 MB       |
+| **Earth height total**             |         | 19,701 |              | **~1.31 GB** |
+| Mars global albedo                 | z3–z7   | 10,912 | —            | ~360 MB      |
+| Mars global height                 | z3–z7   | 10,912 | 1,300 m      | 727 MB       |
+| Mars rover sites (4×, ortho + DTM) | z10–z17 | ~6,000 | 2.5 m        | ~250 MB      |
 
-Against the existing 425 MB / 19,701-tile Earth albedo set and `public/data`'s
-2.3 GB. R2 storage at 0.015 USD/GB-month makes ~1 GB of new tiles ≈ 0.015 USD/month;
-per the parent spec, storage is not the constraint and acquisition effort is.
+**Every height band is baked to its source's own ceiling, which on Earth is exactly
+its albedo band's ceiling — so the height pyramid mirrors the albedo pyramid tile
+for tile, 19,701 each.** Each ceiling is source-clean, not interpolated: global z7's
+2,446 m posts sit inside ETOPO 30″'s 926 m; the EOX boxes' z13 38.2 m posts inside
+skadi 1″'s 30 m; Søndermarken's z19 0.597 m posts inside DHM's 0.4 m. (Height posts
+are a quarter the albedo texel density, §5.1, so a level's post spacing is four
+texels.) Nothing is invented anywhere real data exists — the requirement in §1, and
+the reason these ceilings are not a byte-budget trade.
 
-Why the global height ceiling is z6 and not z7: z7 alone is 8,192 tiles = 546 MB, and
-at the 50–150 km altitudes where z7 albedo draws, one screen pixel is ~109 m, so
-4.9 km posts are ~45 px — blocky only for mountain-scale silhouette, which is 0.14 %
-of Earth's radius. z7 is a re-bake away if the eye-check wants it.
+Total against the existing 425 MB / 19,701-tile Earth albedo set and `public/data`'s
+2.3 GB: ~3.0 GB of new tiles, ≈ 0.045 USD/month of R2 at 0.015 USD/GB-month. Per the
+parent spec, storage is not the constraint — **acquisition wall-clock is**, and it is
+where this lands: a ~1.9 GB ETOPO download plus ~30 skadi cells for Earth, ~11 GB of
+MOLA–HRSC for Mars, and the bake's own read-back-per-level pass over ~20k tiles per
+body. Object count is the second constraint, which is why the tile edge is 512.
+
+At z19 the height data (0.597 m) is finer than the geometry posts (1.19 m at `n = 64`,
+§7). That is not waste: the surplus reaches the picture through the fragment-stage
+normal, which samples the height texture at full resolution (§7.2). Raising `n`
+further is a constant, not a re-bake, if the eye-check wants the geometry to carry it.
 
 GPU: albedo atlas 268 MB (unchanged), height atlas 16.8 MB, per-patch instance
 records 64 B × ~250 = 16 KB, geometry buffers one shared 65×65 template. The
