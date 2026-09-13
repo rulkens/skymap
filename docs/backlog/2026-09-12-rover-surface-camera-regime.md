@@ -22,7 +22,9 @@ feel is the host-radius regime's, not a metre-scale one.
 - **Up = local radial** at the site (`rotationSurfaceLocked`'s +Z), held fixed
   through the orbit: yaw around it, pitch clamped to stay above the ground.
 - **Pivot at the body**, floor at the terrain: the camera never goes below
-  `groundOffsetM` under the pivot.
+  `groundOffsetM` under the pivot. The terrain half of that floor is designed in
+  [`docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`](../superpowers/specs/2026-09-13-per-planet-terrain-design.md)
+  §8 (`ceilingHeightM`) — this item owns only the regime that reads it.
 - **Metre-scale drag/zoom**: `orbitRadPerPixel` and the `zoomedDistance` taper
   keyed on the mesh's `boundingRadiusM`, not the host's radius.
 - Engaged by data: a `surfaceFixed` position-driver row selects the regime, no
@@ -43,5 +45,5 @@ perspective, which is negligible at rover range. The real fix is
 `2026-09-01-atmosphere-froxel-aerial-perspective.md` — it gives the inside path
 scene depth and lets that line move back. Nothing here is blocked on it.
 
-Adjacent: `docs/backlog/2026-09-12-body-bounds-vs-surface.md` (the bounds/surface
-split this regime would read from).
+Adjacent: the per-planet-terrain spec's §3.5 P1 (the bounds/surface split this
+regime would read from — it consumed the standalone backlog item).
