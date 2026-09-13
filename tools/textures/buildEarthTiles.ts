@@ -515,7 +515,10 @@ async function main(): Promise<void> {
       [
         { source: bmng, minLevel: BAKE_MIN_LEVEL },
         {
-          source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
+          source: await eoxTileSource({
+            coverageDir: rawDataPath('eox.dir'),
+            waterMaskPath: rawDataPath('textures.earthWaterMask'),
+          }),
           minLevel: EOX_MIN_LEVEL,
           underfill: bmng,
         },
