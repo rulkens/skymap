@@ -124,7 +124,7 @@ const TILE_ROOT = 'earth-tiles';
  * manifest for up to a day — mismatched, not merely stale. A new version is
  * new keys, which cost nothing extra and need no purge.
  */
-export const TILE_PREFIX = `${TILE_ROOT}/v5`;
+export const TILE_PREFIX = `${TILE_ROOT}/v6`;
 
 /** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
  *  raster's own north-first row order. */
@@ -515,7 +515,10 @@ async function main(): Promise<void> {
       [
         { source: bmng, minLevel: BAKE_MIN_LEVEL },
         {
-          source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
+          source: await eoxTileSource({
+            coverageDir: rawDataPath('eox.dir'),
+            waterMaskPath: rawDataPath('textures.earthWaterMask'),
+          }),
           minLevel: EOX_MIN_LEVEL,
           underfill: bmng,
         },

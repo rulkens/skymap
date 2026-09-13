@@ -4,11 +4,10 @@
  * service over a caller-supplied bbox (grid math, throttle/backoff shape,
  * and resume model are in `data/raw/eox/README.md`).
  *
- * Layer is hardcoded to `s2cloudless` 2016 — the only CC BY 4.0 vintage
- * (2018+ is CC BY-NC-SA, prohibited for this repo); no CLI flag selects a
- * different layer. URL path is `{z}/{row}/{col}` — row before col. A
- * non-image response (a throttled origin serving HTML) throws and stops
- * the run rather than writing HTML bytes to disk as a `.jpg`.
+ * Layer is pinned to `s2cloudless-2025` — CC BY-NC-SA 4.0 upstream, used
+ * under written permission from EOX (`data/raw/eox/README.md`); no CLI
+ * flag picks another layer — row before col in `{z}/{row}/{col}`; a
+ * non-image response (throttled HTML) throws rather than writing `.jpg`.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -23,7 +22,7 @@ const DEFAULT_MAX_ATTEMPTS = 8;
 const DEFAULT_BASE_DELAY_MS = 1000;
 const DEFAULT_THROTTLE_MS = 250; // ~4 req/s — polite to the EOX tile service.
 
-const EOX_LAYER = 's2cloudless'; // 2016 layer ONLY — see module header, licence.
+const EOX_LAYER = 's2cloudless-2025';
 
 export type EoxBbox = {
   readonly west: number;

@@ -50,6 +50,20 @@ function boundsForRect(
   return { west: nw.west, north: nw.north, east: se.east, south: se.south };
 }
 
+/** An all-land mask keeps the sea-colour step a no-op in these tests. */
+let allLandMask: Promise<string> | undefined;
+function allLandMaskPath(): Promise<string> {
+  allLandMask ??= (async () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'eox-water-mask-')), 'mask.png');
+    await sharp({ create: { width: 360, height: 180, channels: 3, background: '#fff' } })
+      .greyscale()
+      .png()
+      .toFile(path);
+    return path;
+  })();
+  return allLandMask;
+}
+
 async function writeEoxTile(
   coverageDir: string,
   region: string,
@@ -98,9 +112,6 @@ function expectPixelNear(
 describe('eoxTileSource', () => {
   const RED = [255, 0, 0] as const;
   const GREEN = [0, 255, 0] as const;
-  // Not a saturated blue: that would score as water and get recoloured by
-  // matchEoxSeaColour, entangling this quadrant-compositing test with the
-  // sea-colour bake step.
   const CYAN = [0, 255, 255] as const;
   const WHITE = [255, 255, 255] as const;
 
@@ -113,7 +124,7 @@ describe('eoxTileSource', () => {
     await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, CYAN); // SW
     await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW + 1, WHITE); // SE
 
-    const source = await eoxTileSource({ coverageDir });
+    const source = await eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() });
     const box = boxForBlock(rowNW, colNW);
     const rgba = await source.readBox(box, 512, 512);
     expect(rgba).not.toBeNull();
@@ -136,7 +147,7 @@ describe('eoxTileSource', () => {
     await writeEoxTile(coverageDir, 'testregion', 101, 200, CYAN);
     await writeEoxTile(coverageDir, 'testregion', 101, 201, WHITE);
 
-    const source = await eoxTileSource({ coverageDir });
+    const source = await eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() });
     // Nowhere near row 100/col 200 — none of this box's four children exist.
     const box = boxForBlock(5000, 9000);
     const rgba = await source.readBox(box, 512, 512);
@@ -157,7 +168,7 @@ describe('eoxTileSource', () => {
     await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, CYAN); // SW
     await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW + 1, WHITE); // SE
 
-    const source = await eoxTileSource({ coverageDir });
+    const source = await eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() });
     rmSync(
       join(coverageDir, 'testregion', String(EOX_MAX_LEVEL), String(rowNW + 1), `${colNW + 1}.jpg`),
     );
@@ -181,7 +192,9 @@ describe('eoxTileSource', () => {
     await writeEoxTile(coverageDir, 'testregion', 100, 200, RED);
     await writeEoxTile(coverageDir, 'testregion', 5000, 9000, GREEN);
 
-    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(/incomplete|gap/);
+    await expect(
+      eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() }),
+    ).rejects.toThrow(/incomplete|gap/);
   });
 
   it('derives coverage from the harvested row/col rectangle on disk', async () => {
@@ -196,7 +209,7 @@ describe('eoxTileSource', () => {
       }
     }
 
-    const source = await eoxTileSource({ coverageDir });
+    const source = await eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() });
 
     // Literal decimal expectations, NOT `colMin * EOX_TILE_DEG - 180` etc. —
     // that would be the same formula `boundsForRowColRect` runs, token for
@@ -223,7 +236,7 @@ describe('eoxTileSource', () => {
     await writeEoxTile(coverageDir, 'alpha', 5000, 9000, GREEN);
     await writeEoxTile(coverageDir, 'alpha', 5001, 9000, GREEN);
 
-    const source = await eoxTileSource({ coverageDir });
+    const source = await eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() });
 
     // Sorted by region name ("alpha" < "zulu"), not insertion order — each
     // box matches only its OWN region's rect, not a bounding box over both.
@@ -247,7 +260,7 @@ describe('eoxTileSource', () => {
     await writeEoxTile(coverageDir, 'region-b', bRowNW + 1, bColNW, GREEN);
     await writeEoxTile(coverageDir, 'region-b', bRowNW + 1, bColNW + 1, GREEN);
 
-    const source = await eoxTileSource({ coverageDir });
+    const source = await eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() });
     const box = boxForBlock(bRowNW, bColNW);
     const rgba = await source.readBox(box, 512, 512);
     expect(rgba).not.toBeNull();
@@ -262,7 +275,9 @@ describe('eoxTileSource', () => {
     mkdirSync(dirname(flatPath), { recursive: true });
     writeFileSync(flatPath, 'not a real jpeg, just needs to exist');
 
-    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(/README/);
+    await expect(
+      eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() }),
+    ).rejects.toThrow(/README/);
   });
 
   it('throws when there are no region subdirectories at all', async () => {
@@ -271,6 +286,8 @@ describe('eoxTileSource', () => {
     // mistaken for a region — leaving zero actual regions here.
     writeFileSync(join(coverageDir, 'README.md'), 'provenance notes');
 
-    await expect(eoxTileSource({ coverageDir })).rejects.toThrow(/no region subdirectories/);
+    await expect(
+      eoxTileSource({ coverageDir, waterMaskPath: await allLandMaskPath() }),
+    ).rejects.toThrow(/no region subdirectories/);
   });
 });

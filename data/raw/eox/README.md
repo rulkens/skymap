@@ -1,11 +1,11 @@
 # EOX s2cloudless — WMTS z13 tile harvest
 
-| Field        | Value                                                                                |
-| ------------ | ------------------------------------------------------------------------------------ |
-| Layer        | `s2cloudless`, **2016 edition only**                                                 |
-| Licence      | CC BY 4.0 — [EOX Maps terms](https://maps.eox.at/#data)                              |
-| Upstream URL | `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless/default/WGS84/{z}/{row}/{col}.jpg` |
-| Grid         | WGS84 TMS — `columns(z) = 2^(z+1)`, `rows(z) = 2^z`, 256px tiles                     |
+| Field        | Value                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| Layer        | `s2cloudless-2025`                                                                        |
+| Licence      | CC BY-NC-SA 4.0 upstream — used with written permission from EOX (see below)              |
+| Upstream URL | `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025/default/WGS84/{z}/{row}/{col}.jpg` |
+| Grid         | WGS84 TMS — `columns(z) = 2^(z+1)`, `rows(z) = 2^z`, 256px tiles                          |
 
 ## Harvested regions
 
@@ -14,14 +14,26 @@ single source of truth for every region name → bbox. This table only records
 what has actually been harvested and when, one row per `npm run fetch-eox
 -- --region <name>` run that has landed tiles in this tree.
 
-The 2026-08-20 multi-region harvest supersedes the earlier flat, single-patch
-tree (`data/raw/eox/13/…`, no region subdirectory) — see "Per-region layout"
-below. Copenhagen's row predates the move; no other region's harvest date is
-recorded here yet.
-
-| Region     | Harvested  | z13 tiles   |
-| ---------- | ---------- | ----------- |
-| Copenhagen | 2026-08-19 | 24×15 = 360 |
+| Region             | Harvested  | z13 tiles |
+| ------------------ | ---------- | --------- |
+| Copenhagen         | 2026-09-03 | 2184      |
+| Amsterdam          | 2026-09-03 | 435       |
+| Paris              | 2026-09-03 | 360       |
+| Chicago            | 2026-09-03 | 441       |
+| Sydney             | 2026-09-03 | 456       |
+| Hong Kong          | 2026-09-03 | 494       |
+| New York           | 2026-09-03 | 588       |
+| Buenos Aires       | 2026-09-03 | 285       |
+| Cape Town          | 2026-09-03 | 560       |
+| Tokyo              | 2026-09-03 | 323       |
+| Rio de Janeiro     | 2026-09-03 | 255       |
+| Grand Canyon       | 2026-09-03 | 532       |
+| Great Barrier Reef | 2026-09-03 | 672       |
+| Bora Bora          | 2026-09-03 | 168       |
+| Sossusvlei         | 2026-09-03 | 361       |
+| Everest            | 2026-09-03 | 280       |
+| Giza               | 2026-09-03 | 360       |
+| Sjælland           | 2026-09-03 | 3472      |
 
 ## Per-region layout
 
@@ -33,13 +45,14 @@ subdirectory of the coverage dir holding a `13/` tree as one region and
 declares one `coverage` box per region; a region's own harvest tree must
 still be one contiguous rectangle of tiles (no gaps within it).
 
-## Layer year — hard constraint
+## Layer year and licence
 
-Only the **2016** `s2cloudless` layer is CC BY 4.0. The 2018+ layer is
-CC BY-NC-SA (ShareAlike would contaminate this JOSS-bound repo — rejected
-outright, not a tradeoff), and the 2017 layer is broken upstream. The layer
-name is hardcoded in `tools/fetch/fetchEoxTiles.ts`; there is no CLI flag to
-select a different one.
+The harvest uses the **2025** `s2cloudless-2025` layer. Upstream, it is
+CC BY-NC-SA 4.0; EOX IT Services GmbH granted the maintainer written
+permission by email in September 2026 for skymap to use the newest
+vintages, so this repo runs under that permission rather than the licence's
+own ShareAlike terms. The layer id is pinned in `tools/fetch/fetchEoxTiles.ts`;
+there is no CLI flag to select a different one.
 
 ## Tile-index convention
 

@@ -19,6 +19,7 @@ import sharp from 'sharp';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { matchEoxSeaColour } from './matchEoxSeaColour';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { GreyRaster } from '../utils/image/GreyRaster';
 
 /** EOX only ever harvests z13 (`fetchEoxTiles.ts`'s header) — coarser levels
  *  are derived at bake time by the existing 2x2 average, same as BMNG. */
@@ -34,12 +35,13 @@ const NATIVE_EDGE_PX = EOX_TILE_PX * 2;
 /** Verbatim from spec §4 — this source's own identity, carried into the
  *  manifest's `builtFrom` for every band `bakeAll` builds from it. */
 const EOX_PROVENANCE = {
-  sourceId: 'eox-s2cloudless-2016',
+  sourceId: 'eox-s2cloudless-2025',
   attribution:
     'EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH ' +
-    '(Contains modified Copernicus Sentinel data 2016) released under ' +
-    'Creative Commons Attribution 4.0 International License.',
-  vintage: '2016',
+    '(Contains modified Copernicus Sentinel data 2025). Published under ' +
+    'CC BY-NC-SA 4.0; used in skymap with written permission from EOX IT ' +
+    'Services GmbH.',
+  vintage: '2025',
 } as const;
 
 /** Degrees spanned by one EOX tile at `z`, in both axes (`180 / rows` —
@@ -171,6 +173,7 @@ function rectContains(rect: RegionRect, row: number, col: number): boolean {
 
 export async function eoxTileSource(opts: {
   readonly coverageDir: string; // rawDataPath('eox.dir')
+  readonly waterMaskPath: string; // rawDataPath('textures.earthWaterMask')
 }): Promise<EarthImagerySource> {
   // Regions sorted by name (see `discoverRegionDirs`), so `regions` below —
   // and thus `coverage` and readBox's first-by-name-wins tile lookup — are
@@ -193,6 +196,16 @@ export async function eoxTileSource(opts: {
     return { name, rect };
   });
   const coverage = regions.map(({ rect }) => boundsForRowColRect(rect));
+  // Lazy: the 233 MB decode is paid only by a bake that reads a tile.
+  let waterMask: Promise<GreyRaster> | undefined;
+  const loadWaterMask = async (): Promise<GreyRaster> => {
+    const { data, info } = await sharp(opts.waterMaskPath, { limitInputPixels: false })
+      .greyscale()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const pixels = new Uint8Array(data.buffer, data.byteOffset, data.length);
+    return { data: pixels, width: info.width, height: info.height };
+  };
 
   return {
     id: EOX_PROVENANCE.sourceId,
@@ -268,7 +281,14 @@ export async function eoxTileSource(opts: {
 
       // Sea colour match runs here, at z13 (the only level this source ever
       // reads at) — coarser levels inherit it via the bake's own 2x2 average.
-      return matchEoxSeaColour(new Uint8Array(composited), NATIVE_EDGE_PX, NATIVE_EDGE_PX);
+      waterMask ??= loadWaterMask();
+      return matchEoxSeaColour(
+        new Uint8Array(composited),
+        NATIVE_EDGE_PX,
+        NATIVE_EDGE_PX,
+        box,
+        await waterMask,
+      );
     },
   };
 }

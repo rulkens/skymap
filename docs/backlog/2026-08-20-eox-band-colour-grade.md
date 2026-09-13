@@ -18,7 +18,7 @@ crossfade softening transitions.
   per-band uniform table indexed by it.
 - A full 3D LUT only if the parametric grade proves insufficient.
 - Once dialed: optionally fold the settled values into the bake
-  (`--only eox-s2cloudless-2016`) and drop the runtime path.
+  (`--only eox-s2cloudless-2025`) and drop the runtime path.
 
 **Touchpoints:** `earthSurfaceTile/{io,fragment}.wesl`,
 `earthSurfaceTileLayout.ts` (+ parity test), band provenance through

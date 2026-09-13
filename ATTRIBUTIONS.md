@@ -405,14 +405,13 @@ All public domain; NASA asks that credit go to the named observatory / program.
   top of the whole-globe Blue Marble band above — flying down over one of
   those regions resolves Sentinel-2 detail instead of stopping at Blue
   Marble's z7 floor.
-- **Source:** <https://cloudless.eox.at>, EOX IT Services GmbH. Only the
-  **2016** `s2cloudless` layer is used — the one release under CC BY 4.0
-  (2018+ is CC BY-NC-SA, incompatible with this repo's licence; 2017 is
-  broken upstream).
-- **Licence:** CC BY 4.0. Attribution: "EOxCloudless
+- **Source:** <https://cloudless.eox.at>, EOX IT Services GmbH. The
+  `s2cloudless-2025` layer is used.
+- **Licence:** CC BY-NC-SA 4.0 upstream; used with written permission from
+  EOX IT Services GmbH (email, September 2026). Attribution: "EOxCloudless
   https://cloudless.eox.at by EOX IT Services GmbH (Contains modified
-  Copernicus Sentinel data 2016) released under Creative Commons
-  Attribution 4.0 International License."
+  Copernicus Sentinel data 2025). Published under CC BY-NC-SA 4.0; used in
+  skymap with written permission from EOX IT Services GmbH."
 
 #### GeoDanmark / Klimadatastyrelsen — orthophoto (Søndermarken)
 
