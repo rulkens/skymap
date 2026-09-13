@@ -176,7 +176,7 @@ main {
 }
 .rung.hidden { display: none; }
 
-/* The visitor rung — the pivot of the whole ladder. */
+/* Chris's rung — the pivot of the whole ladder. */
 .rung.pivot {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   box-shadow:

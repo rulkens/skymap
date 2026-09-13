@@ -56,7 +56,7 @@ function render() {
     const st = STATUS[r.status];
     const hidden = active.has(r.status) ? "" : " hidden";
     const pivot = r.pivot ? " pivot" : "";
-    const flag = r.pivot ? `<div class="youarehere">◆ You are here</div>` : "";
+    const flag = r.pivot ? `<div class="youarehere">◆ Chris, looking up</div>` : "";
     return `
       <section class="rung${hidden}${pivot} ${st.cls}" style="--accent:${zone.color}" data-status="${r.status}">
         <div class="scale">
