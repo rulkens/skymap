@@ -17,6 +17,7 @@ import package::atmosphere::scattering::ScatteringParams;
 import package::atmosphere::scattering::scatterStep;
 import package::atmosphere::skyViewLut::SkyViewParams;
 import package::lib::sphere::AtmosphereUniforms;
+import package::lib::util::raySphere;
 
 // The volume's DIMENSIONS are not restated here — they derive from
 // 'textureDimensions(outInScatter)', so the renderer's createTexture size is
@@ -49,6 +50,12 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // Constant along the ray, so it is hoisted out of the slice loop.
   let cosTheta = dot(dir, u.sunDirLocal);
 
+  // Ground hit in LOCAL units, same frame as near/far/maxDistance. ground.x < 0
+  // covers both a miss and a camera already under bottomRadius (terrain
+  // relief) — either way there is no clamp.
+  let ground = raySphere(u.camPosLocal, dir, vec3<f32>(0.0), u.bottomRadius);
+  let tGround = select(maxDistance, ground.x, ground.x > 0.0);
+
   // Slice 0 is the identity, written rather than left to the loop: the apply
   // trilinearly interpolates, and at the metre-to-kilometre ranges a rover is
   // framed at every lookup lands between slice 0 and slice 1. A slice 0 holding
@@ -65,19 +72,16 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   loop {
     if (i >= dims.z) { break; }
     let far = froxelSliceDistance(f32(i), sliceCount, maxDistance);
-    let posKm = camKm + dir * ((near + far) * 0.5 * kmPerLocal);
-    // The ground is opaque, so the integral must stop there rather than keep
-    // growing through it: 'accumulateMedium' floors altitude at zero, which
-    // would otherwise fog every remaining slice at full ground density, and the
-    // apply's trilinear filter would bleed that slab back onto the last
-    // above-ground slice. This is 'raymarchInScatter's own ground clamp,
-    // expressed per slice. Per SAMPLE, not a latch — a ray that re-emerged
-    // would resume, though no seeded body can reach that (D is far short of the
-    // chord through the planet).
-    if (length(posKm) >= params.planetRadiusKm) {
+    // The ground is opaque: each slab integrates only to the ground hit, the
+    // sky-view bake's own clamp (raymarchInScatter) applied per slab rather
+    // than once per ray. A whole-slab skip at the midpoint instead would step
+    // the stored value by half a slab and draw iso-distance rings on the ground.
+    let end = min(far, tGround);
+    if (near < end) {
+      let posKm = camKm + dir * ((near + end) * 0.5 * kmPerLocal);
       let s = scatterStep(
         params, transmittanceLut, multiScatterLut, lutSamp,
-        posKm, u.sunDirLocal, cosTheta, (far - near) * kmPerLocal,
+        posKm, u.sunDirLocal, cosTheta, (end - near) * kmPerLocal,
         view.twilightSoftness, view.twilightIntensity,
       );
       inScatter = inScatter + throughput * s.inScatter;
