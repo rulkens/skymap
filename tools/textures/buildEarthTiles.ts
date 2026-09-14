@@ -37,12 +37,12 @@ import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
-import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
 import { earthTilePath } from '../../src/utils/scene/earthTilePath';
 import { parseFlags } from '../utils/cli/args';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../utils/io/bmngVintage';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { earthTileBounds } from '../utils/scene/earthTileBounds';
 import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
 import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import { colourMatchedImagerySource } from './colourMatchedImagerySource';
@@ -133,21 +133,6 @@ const TILE_ROOT = 'earth-tiles';
  */
 export const TILE_PREFIX = `${TILE_ROOT}/v7`;
 
-/** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
- *  raster's own north-first row order. */
-function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBounds {
-  const columns = earthTileColumns(z, tilePx);
-  const rows = columns / 2;
-  const lonStep = 360 / columns;
-  const latStep = 180 / rows;
-  return {
-    west: -180 + x * lonStep,
-    east: -180 + (x + 1) * lonStep,
-    north: 90 - y * latStep,
-    south: 90 - (y + 1) * latStep,
-  };
-}
-
 /**
  * Encode one RGBA raster as a surface tile, creating its `z/x` directories.
  *
@@ -180,7 +165,7 @@ async function bakeDeepestLevel(
   const written: string[] = [];
 
   for (const { x, y } of candidateTileIndices(source.coverage, z, tilePx)) {
-    const rgba = await source.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx);
+    const rgba = await source.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx);
     if (rgba === null) continue;
     const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
     await writeTile(rgba, tilePx, join(outDir, relPath));
@@ -263,7 +248,7 @@ export async function bakeCoarserLevel(
     // practice) falls back to the transparent canvas, no worse than today.
     const fillerRaster =
       underfill && childPaths.length < 4
-        ? await underfill.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx)
+        ? await underfill.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx)
         : null;
     const canvas = fillerRaster
       ? sharp(Buffer.from(fillerRaster), { raw: { width: tilePx, height: tilePx, channels: 4 } })

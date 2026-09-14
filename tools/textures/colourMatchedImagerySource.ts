@@ -3,24 +3,25 @@
  * matches the coarser REFERENCE band below `sigmaDeg`, its finer detail left
  * alone. Identity fields are `primary`'s verbatim; only `readBox` changes.
  *
- * Per coverage box, both sources are resampled onto one canvas at
- * `reference.maxLevel + 1`, `colourOffsetFields` measures the local difference
- * per land/water class there, and output pixels get `land * D_land +
- * (1 - land) * D_water` added.
+ * Per contiguous group of coverage boxes, both sources are resampled onto one
+ * canvas at `reference.maxLevel + 1`, `colourOffsetFields` measures the local
+ * difference per land/water class there, and output pixels get
+ * `land * D_land + (1 - land) * D_water` added.
  */
 
 import sharp from 'sharp';
 
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
-import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
 import type { GreyRaster } from '../utils/image/GreyRaster';
+import { earthTileBounds } from '../utils/scene/earthTileBounds';
 import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
+import type { TileIndexRect } from '../utils/scene/TileIndexRect';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { colourOffsetFields } from './colourOffsetFields';
 
-/** Canvas-space offset fields for one of `primary`'s coverage boxes, plus the
- *  geo-referencing needed to sample them at an output pixel's lon/lat. */
+/** Canvas-space offset fields for one contiguous group of `primary`'s coverage,
+ *  plus the geo-referencing needed to sample them at an output pixel's lon/lat. */
 type OffsetField = {
   readonly width: number;
   readonly height: number;
@@ -31,20 +32,12 @@ type OffsetField = {
   readonly water: Float32Array;
 };
 
-/** Degrees spanned by one tile at `z`, in BOTH axes — the equirect raster is
- *  twice as wide as tall, so `180 / rows` equals `360 / columns`. */
-function tileStepDeg(z: number): number {
-  return 360 / earthTileColumns(z, EARTH_TILE_PX);
-}
-
-function tileBounds(z: number, x: number, y: number): LonLatBounds {
-  const step = tileStepDeg(z);
-  return {
-    west: x * step - 180,
-    east: (x + 1) * step - 180,
-    north: 90 - y * step,
-    south: 90 - (y + 1) * step,
-  };
+/** Overlapping OR neighbouring canvas rects: separate fields would meet at a
+ *  tile boundary with different support each side, so the grown rect merges them. */
+function rectsAbut(a: TileIndexRect, b: TileIndexRect): boolean {
+  return (
+    a.xMin - 1 <= b.xMax && a.xMax + 1 >= b.xMin && a.yMin - 1 <= b.yMax && a.yMax + 1 >= b.yMin
+  );
 }
 
 function intersects(a: LonLatBounds, b: LonLatBounds): boolean {
@@ -71,8 +64,14 @@ function landFractionAt(mask: GreyRaster, lon: number, lat: number): number {
 
 export function colourMatchedImagerySource(
   primary: EarthImagerySource,
+  /** Must resample an ARBITRARY box; a fixed-grid source that snaps to its own
+   *  tiling (`eoxTileSource`) misregisters the canvas silently. */
   reference: EarthImagerySource,
-  opts: { readonly sigmaDeg: number; readonly waterMaskPath: string },
+  opts: {
+    readonly sigmaDeg: number;
+    /** Whole-globe equirect mask, land 255 and water 0 — inverted swaps the classes silently. */
+    readonly waterMaskPath: string;
+  },
 ): EarthImagerySource {
   const canvasLevel = reference.maxLevel + 1;
   if (primary.maxLevel < canvasLevel) {
@@ -81,6 +80,57 @@ export function colourMatchedImagerySource(
         `the level-${canvasLevel} canvas ${reference.id} implies — nothing to correct.`,
     );
   }
+  // Canvas pixels one primary tile spans. Past a 9-level gap (512 px tiles)
+  // the shift floors to zero, which would zero every offset in silence.
+  const canvasPxPerTile = EARTH_TILE_PX >> (primary.maxLevel - canvasLevel);
+  if (canvasPxPerTile < 1) {
+    throw new Error(
+      `colourMatchedImagerySource: ${primary.id} (maxLevel ${primary.maxLevel}) is more than ` +
+        `${Math.log2(EARTH_TILE_PX)} levels finer than the level-${canvasLevel} canvas ` +
+        `${reference.id} implies — a primary tile would not fill one canvas pixel.`,
+    );
+  }
+  const block = EARTH_TILE_PX / canvasPxPerTile;
+
+  // One field per CONTIGUOUS run of coverage: two boxes sharing a canvas tile
+  // would otherwise get a field each, and the shared column would be corrected
+  // by whichever box `fieldFor` matched — a seam on a tile boundary. The
+  // group's envelope costs nothing; the primary declines outside real coverage.
+  const rects = primary.coverage.map((box) =>
+    earthTileIndicesForBounds(box, canvasLevel, EARTH_TILE_PX),
+  );
+  const groupOfCoverage = primary.coverage.map((_, index) => index);
+  let merged = true;
+  while (merged) {
+    merged = false;
+    for (let i = 0; i < rects.length; i++) {
+      for (let j = i + 1; j < rects.length; j++) {
+        if (groupOfCoverage[i] === groupOfCoverage[j] || !rectsAbut(rects[i]!, rects[j]!)) continue;
+        const from = groupOfCoverage[j]!;
+        const to = groupOfCoverage[i]!;
+        for (let k = 0; k < groupOfCoverage.length; k++) {
+          if (groupOfCoverage[k] === from) groupOfCoverage[k] = to;
+        }
+        merged = true;
+      }
+    }
+  }
+  const groupBounds = new Map<number, LonLatBounds>();
+  primary.coverage.forEach((box, index) => {
+    const group = groupOfCoverage[index]!;
+    const grown = groupBounds.get(group);
+    groupBounds.set(
+      group,
+      grown === undefined
+        ? box
+        : {
+            west: Math.min(grown.west, box.west),
+            east: Math.max(grown.east, box.east),
+            south: Math.min(grown.south, box.south),
+            north: Math.max(grown.north, box.north),
+          },
+    );
+  });
 
   // Lazy, because `bakeDeepestLevel` probes every box on the globe and the
   // decline path below must stay as cheap as `primary.readBox` makes it.
@@ -102,17 +152,17 @@ export function colourMatchedImagerySource(
     const width = (rect.xMax - rect.xMin + 1) * EARTH_TILE_PX;
     const height = (rect.yMax - rect.yMin + 1) * EARTH_TILE_PX;
     const pixels = width * height;
-    const step = tileStepDeg(canvasLevel);
-    const pxDeg = step / EARTH_TILE_PX;
-    const west = rect.xMin * step - 180;
-    const north = 90 - rect.yMin * step;
+    const origin = earthTileBounds(canvasLevel, rect.xMin, rect.yMin, EARTH_TILE_PX);
+    const pxDeg = (origin.east - origin.west) / EARTH_TILE_PX;
+    const west = origin.west;
+    const north = origin.north;
 
     const referenceRgb = new Float32Array(pixels * 3);
     const referenceWeight = new Float32Array(pixels);
     for (let ty = rect.yMin; ty <= rect.yMax; ty++) {
       for (let tx = rect.xMin; tx <= rect.xMax; tx++) {
         const raster = await reference.readBox(
-          tileBounds(canvasLevel, tx, ty),
+          earthTileBounds(canvasLevel, tx, ty, EARTH_TILE_PX),
           EARTH_TILE_PX,
           EARTH_TILE_PX,
         );
@@ -136,13 +186,11 @@ export function colourMatchedImagerySource(
     // every harvested pixel contributes to the difference exactly once.
     const primaryRgb = new Float32Array(pixels * 3);
     const primaryWeight = new Float32Array(pixels);
-    const canvasPxPerTile = EARTH_TILE_PX >> (primary.maxLevel - canvasLevel);
-    const block = EARTH_TILE_PX / canvasPxPerTile;
     const primaryRect = earthTileIndicesForBounds(coverage, primary.maxLevel, EARTH_TILE_PX);
     for (let ty = primaryRect.yMin; ty <= primaryRect.yMax; ty++) {
       for (let tx = primaryRect.xMin; tx <= primaryRect.xMax; tx++) {
         const raster = await primary.readBox(
-          tileBounds(primary.maxLevel, tx, ty),
+          earthTileBounds(primary.maxLevel, tx, ty, EARTH_TILE_PX),
           EARTH_TILE_PX,
           EARTH_TILE_PX,
         );
@@ -208,10 +256,11 @@ export function colourMatchedImagerySource(
   function fieldFor(box: LonLatBounds): Promise<OffsetField> | null {
     const index = primary.coverage.findIndex((coverage) => intersects(coverage, box));
     if (index < 0) return null;
-    let field = fields.get(index);
+    const group = groupOfCoverage[index]!;
+    let field = fields.get(group);
     if (field === undefined) {
-      field = buildField(primary.coverage[index]!);
-      fields.set(index, field);
+      field = buildField(groupBounds.get(group)!);
+      fields.set(group, field);
     }
     return field;
   }
