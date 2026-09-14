@@ -1,8 +1,8 @@
 /**
  * AerialPerspectiveRenderer — the camera-frustum froxel volume that gives the
  * inside-the-atmosphere path scene depth: in-scatter and per-channel
- * transmittance integrated to each of 32 distance slices along every screen
- * texel's own ray (`froxelLut.wesl`). Second half of Hillaire's split: the
+ * transmittance integrated to each distance slice along every screen texel's
+ * own ray (`froxelLut.wesl`). Second half of Hillaire's split: the
  * sky-view LUT it complements is indexed by DIRECTION alone, so it answers a
  * geometry ray with the whole atmosphere regardless of where that ray stops.
  * Owned by `atmosphereShellRenderer`, over that renderer's own bundles.

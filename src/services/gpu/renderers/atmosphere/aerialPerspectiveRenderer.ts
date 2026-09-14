@@ -205,10 +205,10 @@ export function createAerialPerspectiveRenderer(
         { binding: 1, resource: sampler },
         { binding: 2, resource: bundle.skyViewTex.createView() },
         { binding: 3, resource: bundle.transmittanceTex.createView() },
-        // ALWAYS the placeholder strip, never the body's real ring: inside the
-        // shell `tNear` is 0, so `sampleShellRay`'s ring-in-front branch
-        // (`tRing > 0 && tRing < tNear`) is unreachable. That is what lets this
-        // group be keyed on the depth view alone.
+        // ALWAYS the placeholder strip, never the body's real ring: in the handoff
+        // band `tNear` is at most ~0.1, far short of any seeded ring's `tRing`, so
+        // `sampleShellRay`'s ring-in-front branch (`tRing > 0 && tRing < tNear`)
+        // is unreachable, keeping this group keyed on the depth view alone.
         { binding: 4, resource: placeholderRingView },
         { binding: 5, resource: inScatterView },
         { binding: 6, resource: transmittanceView },

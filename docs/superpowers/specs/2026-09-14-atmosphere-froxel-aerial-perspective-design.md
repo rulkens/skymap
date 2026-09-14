@@ -578,8 +578,8 @@ and the shared sampler; `AtmosphereShellRenderer`'s two new methods are its
 delegation to it. The ring binding it receives is the shared 1x1 placeholder
 view rather than a per-body strip: inside the shell `tNear` is 0, so the
 ring-in-front branch is unreachable and no real strip can matter. The
-aerial-perspective fragment reuses the existing full-screen `insideVs` vertex
-entry point.
+aerial-perspective fragment declares its own local `@vertex fn vs`, which
+delegates to the shared `fullscreenVertex` helper.
 
 **Deleted:** `src/@types/engine/frame/LensStepSpec.d.ts` (prep 5),
 `docs/backlog/2026-09-01-atmosphere-froxel-aerial-perspective.md` (§8).
