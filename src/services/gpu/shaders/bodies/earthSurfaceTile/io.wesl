@@ -11,9 +11,9 @@
 // cross-check: a field reorder on one side alone scrambles every drawn
 // patch with no compiler signal.
 //
-// The declaration order below is load-bearing. 'fadeWeight' sits in the
-// vec3's alignment pad and both vec4s come last; move 'fadeWeight' after
-// 'dLatRad' and WGSL pushes 'albedoRect' to 48 and the record to 80 bytes.
+// The two vec4s must stay last and adjacent. Reordering the five scalars
+// keeps the 64-byte stride but re-maps offsets 12..31 with no compiler
+// signal -- the layout test's per-field assertions are the only guard.
 //
 // 'datumRadiusM' is deliberately absent: it is the per-draw uniform
 // 'SurfaceTileUniforms.radiusM' (offset 76), since one body is engaged per
@@ -80,14 +80,14 @@ struct VSOut {
 // 'orientation' rather than a 'mat3x3<f32>' field: WGSL's uniform-address-
 // space mat3x3 pads each column to a vec4, which is easy to get byte-wrong
 // by hand; three explicit vec3 columns sidestep that trap entirely (see
-// the wesl-shaders skill's alignment landmines). The vertex
-// stage applies 'rot' to a tile-local delta ('rotCol0*x + rotCol1*y +
-// rotCol2*z'); the fragment applies its transpose ('dot' against each
-// column) to invert it -- valid because a rotation's inverse is its
-// transpose. Under the body-slab frame the CPU side always packs the
-// IDENTITY here (see the renderer's module header): the pose seam already
-// expresses every position in the body's fixed axes, so this rotation is a
-// no-op kept only so the struct's byte layout (below) doesn't move.
+// the wesl-shaders skill's alignment landmines). 'rotCol0/1/2' are
+// inverted ('dot' per column) in the vertex stage for 'normalLocal' and
+// 'viewDirLocal' only; the position path is composed directly from the
+// anchor in body-local space and needs no rotation. Under the body-slab
+// frame the CPU side always packs the IDENTITY here (see the renderer's
+// module header): the pose seam already expresses every position in the
+// body's fixed axes, so this rotation is a no-op kept only so the
+// struct's byte layout (below) doesn't move.
 //
 // 'camPosRelBodyM' (metres, camera minus Earth-centre in the body's fixed
 // axes -- the body-slab pose seam's own 'eyeRelBodyM', f64-composed and

@@ -18,9 +18,10 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
  * Bytes of one `PatchInstance` element: `originRelEyeM` vec3 (0..11) +
  * `fadeWeight` f32 (12..15, filling the vec3's alignment pad) + `lon0Rad`
  * / `lat0Rad` / `dLonRad` / `dLatRad` f32 (16..31) + `albedoRect` vec4
- * (32..47) + `fallbackRect` vec4 (48..63). No padding at all — but only in
- * this field order: move `fadeWeight` past `dLatRad` and WGSL pushes the
- * first vec4 to 48 and the record to 80 bytes.
+ * (32..47) + `fallbackRect` vec4 (48..63). The two vec4s must stay last
+ * and adjacent. Reordering the five scalars keeps the 64-byte stride but
+ * re-maps offsets 12..31 with no compiler signal -- the layout test's
+ * per-field assertions are the only guard.
  */
 export const PATCH_INSTANCE_BYTES = 64;
 
