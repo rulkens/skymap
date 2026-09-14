@@ -1,51 +1,14 @@
 /**
- * renderFrame — owns the per-frame WebGPU command-encoder lifecycle, and
- * runs the FRAME program into it.
+ * renderFrame — the per-frame WebGPU command-encoder lifecycle: the
+ * once-per-frame focus-uniform write, encoder create + swap-view acquire +
+ * submit, the timing frame window, and the lens capture's cross-frame
+ * bookkeeping on `state.cubemapCaptures`.
  *
- * Before the renderer unification, ~140 lines of imperative GPU plumbing
- * sprawled here: a two-way HDR-encoder branch, a tone-map blit, and a
- * post-tone-map UI overlay, each a hand-wired call whose order was implicit
- * in which function called which. That order is now DATA — `FRAME_ORDER`, whose
- * expansion is the ordered
- * `FrameStep[]`, and `executeFrame` is the single imperative site that walks
- * it into one encoder. This module shrank to three responsibilities: the
- * once-per-frame focus-uniform write, the encoder lifecycle (create + swap-view
- * acquire + submit), and the timing frame window.
- *
- * ### What this function does, in order
- *
- *   1. Write the shared cluster-focus uniform once, before any pass reads it.
- *   2. Create the frame's single command encoder + acquire the swap-chain view.
- *   3. Open the timing frame (`beginFrame`) and pick the render strategy:
- *      `'perLayerTimed'` when timing is enabled (one pass per layer so each can
- *      carry its own `timestampWrites`), else `'merged'` (one pass per target
- *      group — the tile-local production path OVER blends need).
- *   4. `executeFrame` walks `expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, …)`:
- *      the flow compute, the scalar-volume render, the HDR render, the
- *      `hdr→swap` tone-map composite, then the swap-chain overlay render.
- *   5. Record the timing resolve/copy (`endFrame`) and submit.
- *
- * The strategy fork, the tile-local coherency rationale, the first-touch clear,
- * and the single slab resolution per render step all now live in `executeFrame`
- * — see its module header. `renderFrame` no longer knows about individual
- * passes; adding, removing, or reordering one is a registry / program edit.
- *
- * ### Why pass an explicit input bag instead of capturing closure?
- *
- * This module owns no cross-frame state of its OWN — every local value it
- * computes is recomputed each frame. It DOES read/write one Resource,
- * `state.cubemapCaptures` (the black-hole lens's amortized sky-capture
- * bookkeeping). A free function taking a struct of inputs bounds the encoder
- * lifetime to the function body.
- *
- * ### What stays in `runFrame()` (NOT here)
- *
- *   - `drawPickDebugOverlay` — composites the pick-buffer debug overlay over the
- *     swap chain using its own encoder/submit (AFTER this function's submit); it
- *     rebuilds the pick uniform bytes at pick time from the slab view (see
- *     `pickUniformBytesOf`).
- *   - The render-on-demand scheduler decision.
- *   - Camera state mutation (resize, tween advance, auto-rotate yaw bump).
+ * Order of operations is DATA (`FRAME_ORDER`, expanded by `expandFrameOrder`)
+ * walked by `executeFrame`, so this module knows no individual pass; the
+ * strategy fork, the first-touch clear and per-step slab resolution live
+ * there. The pick-debug overlay, the render-on-demand decision and camera
+ * mutation stay in `runFrame`.
  */
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
@@ -61,10 +24,10 @@ import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
+import { lensBodySlabs } from './lensBodySlabs';
 import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
-import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -148,19 +111,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // accepted.
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
   let skyCubemapFacesToCapture: readonly CubeFace[] = [];
-  // Sgr A*'s own body-m slab row this frame: the `lens` line expands to the
-  // (hdr, BODY[k]) step off it. Resolved here, not in the expansion,
-  // because the row's painter-order index comes from `deriveSlabs` (computed
-  // upstream of this function) — the same "resolve here, hand data down"
-  // split `earthSlab` in `runFrame.ts` already follows for the identical
-  // `frame.kind === 'body-m'` lookup. Stays `null` when the row isn't in
-  // `ctx.slabs` this frame (e.g. frustum-culled despite the distance band).
-  let sgrAStarBodySlab: number | null = null;
   if (bandActive) {
-    sgrAStarBodySlab =
-      ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
-        ?.index ?? null;
-
     // Two roster inputs move without a settings write: a source-visibility
     // ramp (settings write fires once, at the ramp's START), and a
     // famous-galaxy thumbnail's atlas upload + 400 ms load fade (arrives
@@ -211,7 +162,7 @@ export function renderFrame(input: RenderFrameInput): void {
       // foreground:0 line expands over, one step per entry.
       foregroundChain: foregroundChainOrder(ctx.slabs),
       skyCubemapFacesToCapture,
-      lensBodySlabs: sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
+      lensBodySlabs: lensBodySlabs(state, ctx),
     }),
     strategy,
     timing: timingService,
