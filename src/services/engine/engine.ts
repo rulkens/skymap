@@ -326,7 +326,8 @@ export function createEngine(
       structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
-      // Tier-aware (unlike cf4Density): setTier reloads on tier change.
+      // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
+      // when the tier changes.
       mcpm: null,
       flow: null,
       // Tier-aware like mcpm.

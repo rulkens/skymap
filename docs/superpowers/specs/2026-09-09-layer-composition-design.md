@@ -911,8 +911,9 @@ from, which still carried a `handle?(runtime)` hook.
    differs from `row.req(tier)` reloads in place, and never releases, because a fetch still in
    flight when the tier flips must be superseded rather than allowed to finish at the old tier. That generalises `staleTierEvict` (`reevaluateDemand.ts:97,182`),
    which does exactly this today but only for body-texture keys. A slot keeps serving its last
-   committed value across the reload — `loading` and `committing` carry the previous value, so
-   `current()` and `slotReady` stay non-null — and `release()` narrows to distance eviction. The
+   committed value across the reload — the previous value lives in `lastReady` and is read through
+   `AssetSlot.committed()` (and `current()`), never off the transient states, so `current()` and
+   `slotReady` stay non-null — and `release()` narrows to distance eviction. The
    galaxy row's `req` yields the resolved tier target, which folds `willSourceReload` into the row;
    companions ride their parent's request; the hi-res famous texture becomes a slot row whose
    fetcher allocates and whose commit binds. Deletes `makeRunTierTransition`,
@@ -1181,6 +1182,58 @@ this plan ships, unless promoted into a PR.
 - `GalaxyRow` is not a complete projection of what anyone asks about a galaxy: the famous
   `calibration` field lives only on the meta, which `diskRadiusRingPass` re-indexes. Harmless inside
   the Layer.
+
+#### Demand-loop rationale (from `reevaluateDemand.ts`)
+
+Why `evaluateRows` has the shape it has. The module header carries the invariant and points here.
+
+**Why an enqueue rather than a direct `slot.load()`.** A cold boot demands roughly a hundred
+megabytes across a dozen rows. Firing every `load()` at once splits one HTTP/2 connection every way
+at once, so array order becomes trigger order and completion order is whatever the network decides.
+The queue bounds concurrency (`ASSET_QUEUE_CONCURRENCY`) and orders the rest by each row's authored
+`priority`, so the assets the boot view actually draws land first. The queue's own dedup semantics
+(in-flight key ⇒ no-op, pending key ⇒ replaced) make the loop's per-frame re-run safe with no extra
+bookkeeping in the loop.
+
+**Why there are four edges, not two.** Enqueueing splits the load edge in half. A row that is
+demanded enqueues; a row that is NOT demanded has to DROP whatever it left pending, and that cannot
+ride the evict edge. A queued-but-unstarted slot is still `idle`, so `release()` is never called for
+it and the evict branch cannot see it at all. Without the drop, a body texture queued as the camera
+approached would still fetch minutes after the camera left. A genuine `release()` reaches the same
+drop on the next pass, since releasing returns the slot to `idle` with demand false — one drop site,
+two ways of arriving at it.
+
+The fourth edge covers a slot that is past `idle` but whose last request is one the row no longer
+asks for — a tier swap, a resolution ceiling change. It reloads, it never releases, so the resident
+payload keeps drawing until the new one commits. The call is direct rather than queued because the
+queue would swallow it either way: for a slot mid-fetch the queue refuses a key it already has in
+flight (`PriorityQueue.admit`), and for a slot that is not fetching the enqueued closure's own
+`idle` re-check drops it before it ever calls `load()`.
+
+**Why the idle-guard lives in the loop, not in `slot.load()`.** `slot.load()` is deliberately a
+re-fetch primitive: the DebugPanel's `forceReload()` and the drift edge both call it expecting a
+fresh fetch. A request-equality short-circuit inside `load()` would break both, so `load()` is
+non-idempotent — it always aborts any in-flight load and re-fetches.
+
+The loop's semantic is narrower: "start loading what should be loading but isn't", which is exactly
+an idle-check. Because the loop re-runs every frame, calling `load()` on every demanded row
+unconditionally would abort + re-fetch + re-upload every already-`ready` galaxy catalog, every
+frame. Guarding on `slot.state().kind === 'idle'` here, rather than trusting `load()` to be a no-op,
+prevents that without weakening the re-fetch primitive; a legitimate request-changing reload is not
+blocked by it, because the drift edge is gated on the slot being non-idle rather than idle.
+
+**Why each row is guarded.** A demand predicate is policy that reads settings, slot states and
+request flags — a buggy one can throw. Without a per-row guard, one bad predicate would abort the
+loop and silently starve every row after it of its load trigger (a tier swap that loads SDSS but not
+GLADE, say). Catching + warning per row contains the blast radius to the offending asset; the rest
+of the table still evaluates. The guard also covers a sync throw from `slot.release()` and from the
+`req(tier)` + `slot.load()` the drift edge runs directly; the enqueued closure's copies of those two
+throw inside the queue instead, which turns the rejection into an `onResult(null)` and keeps
+scheduling. Either way such a bug (real fetch errors flow to the slot's `error` state, not a sync
+throw) costs one asset rather than a dead load loop.
+
+`evaluateRows` is exported alongside `reevaluateDemand` so tests can drive the loop with a stub row
+array, exercising the loop logic without the full `ASSET_WIRING` registry.
 
 **Backlog consumption.** `2026-08-20-point-source-double-registration.md` (B) and
 `2026-07-24-companion-asset-relation-three-homes.md` (C) are deleted with PR-C, index line and

@@ -4,16 +4,16 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 
 /**
- * Categorisation of a registry row.  Drives behaviour in the two places
- * that would otherwise hardcode their own per-source lists:
+ * Categorisation of a registry row.  Drives the synthetic-fallback gate, which
+ * would otherwise hardcode its own per-source lists:
  *
- *  - `survey`    — a large-N tier-fetched catalog (SDSS, 2MRS, GLADE,
- *                  Milliquas, DESI Deep).  Reloads on tier change.  Counts toward
- *                  the "real galaxy catalog ready" signal that gates the
- *                  synthetic-data fallback at boot.
+ *  - `survey`    — a large-N catalog (SDSS, 2MRS, GLADE, Milliquas,
+ *                  DESI Deep).  Counts toward the "real galaxy catalog
+ *                  ready" signal that gates the synthetic-data fallback
+ *                  at boot.
  *  - `curated`   — a hand-picked auxiliary set whose absence is
- *                  acceptable (Famous).  Reloads on tier change but
- *                  does NOT count toward the galaxy-catalog-ready gate.
+ *                  acceptable (Famous).  Does NOT count toward the
+ *                  galaxy-catalog-ready gate.
  *  - `synthetic` — the procedural fallback (Synthetic).  Loaded only
  *                  when no `survey` row reaches a ready state.
  */
@@ -41,9 +41,10 @@ export type GalaxyCatalogSourceConfig = {
    */
   fetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq>;
   /**
-   * How this row interacts with the synthetic-fallback gate and the
-   * tier-change loop.  See `GalaxyCatalogSourceCategory` for the
-   * per-value semantics.
+   * How this row interacts with the synthetic-fallback gate.  See
+   * `GalaxyCatalogSourceCategory` for the per-value semantics.  It says nothing
+   * about reloading across a tier change: that is the demand loop's drift edge,
+   * and only sources with `shipsTierVariants` tier targets ever drift.
    */
   category: GalaxyCatalogSourceCategory;
 };

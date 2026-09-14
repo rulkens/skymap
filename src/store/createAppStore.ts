@@ -9,9 +9,8 @@
  * bleed.
  *
  * The saga middleware is wired and `mainSaga` is run at construction — see
- * `rootSaga`, which now forks its first feature saga (the tier watcher). Running
- * the root here means the seam's later phases add feature sagas without touching
- * this factory.
+ * `rootSaga`, which composes the feature watchers. Running the root here means
+ * a new feature saga is added without touching this factory.
  *
  * The factory ALSO hands back a `setSagaContext` setter, delegating to
  * redux-saga's `sagaMiddleware.setContext`. The store is a state container;

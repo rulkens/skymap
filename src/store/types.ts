@@ -9,16 +9,15 @@
  * a component or hook annotates against one import rather than re-deriving
  * `ReturnType<typeof rootReducer>` at every selector.
  *
- * `AppStore` now indexes `['store']` because the factory no longer returns the
- * bare store: it returns `{ store, setSagaContext }`, keeping the state container
- * and the saga-context setter as two distinct values (see `createAppStore`).
- * Indexing the `store` member keeps `AppStore` (and the `AppDispatch` derived from
- * it) pointed at the container, unchanged for every consumer.
+ * `AppStore` indexes `['store']`: the factory returns `{ store, setSagaContext }`,
+ * keeping the state container and the saga-context setter as two distinct values
+ * (see `createAppStore`). Indexing the `store` member keeps `AppStore` (and the
+ * `AppDispatch` derived from it) pointed at the container, unchanged for every
+ * consumer.
  *
  * The saga-context types describe the engine capabilities that cross into
- * store-land:
- * `ReconcileEffects` (see `./effects/ReconcileEffects`) is the bag of render-wake /
- * fade / reseed / bias closures the reconcile sagas invoke; `resolveDeps` is
+ * store-land: `ReconcileEffects` (see `./effects/ReconcileEffects`) is the bag of
+ * render-wake / fade / reseed / bias closures the reconcile sagas invoke; `resolveDeps` is
  * the lazy live-resource read the selection reconciler uses to turn a `SelectionRef`
  * into a `SelectionRow` (read lazily each call so the reconciler always sees the
  * current catalog and structure state — render-wake is reused from

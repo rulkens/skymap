@@ -4,8 +4,8 @@
  *
  * The galaxy-catalog source slots (SDSS, 2MRS, GLADE, Famous,
  * Milliquas, DESI Deep, DESI Wedge, DESI SGW, Synthetic) all share one slot construction shape:
- * name = `${shortName}-points`, upload-on-commit, `onCatalogReady`
- * echo on the `ready` transition.  The per-source variance lives in a
+ * name = `${shortName}-points`, upload-on-commit, source-count dispatch
+ * on the `ready` transition.  The per-source variance lives in a
  * declarative `GALAXY_CATALOG_SOURCE_REGISTRY`; `wireGalaxyCatalogSourceSlot`
  * is called once per row.
  *
@@ -14,12 +14,14 @@
  *   - each `wireGalaxyCatalogSourceSlot` call mints a slot, subscribes
  *     to it, and stores it in `state.assetSlots.points` keyed by
  *     `Source`;
- *   - the subscriber fires `cb.onCatalogReady(source, count)` on the
- *     `ready` transition, and is silent on the loading / committing /
+ *   - the subscriber dispatches `engineSourceCountReported(source, count)`
+ *     on the `ready` transition, and is silent on the loading / committing /
  *     error transitions (the render wake is covered generically by
  *     `installSlotReadyWake.test.ts`);
  *   - the commit step uploads to the renderer and mutates
  *     `state.sources.catalogs`;
+ *   - the commit drives the row's fade-in through the SCOPED single-item
+ *     bridge, after the upload, on a first load and on a re-commit;
  *   - multiple sources wired in succession produce independent slots
  *     keyed correctly — no cross-talk between SDSS and GLADE;
  *   - `GALAXY_CATALOG_SOURCE_REGISTRY` declares the expected sources

@@ -1,15 +1,11 @@
 /**
  * watchWakeSaga — request a render frame on every write to a WAKE_ROUTE.
  *
- * The render-on-demand scheduler is passive; something must poke it after
- * state changes that affect the drawn scene. A single route-membership check
- * covers every write to a listed slice by construction, without per-action
- * `did we remember requestRender?` audits — new actions in a wake-route slice
- * wake the renderer automatically.
- *
- * The worker reaches the engine via getContext — the ReconcileEffects closure
- * registered by the engine after construction. This keeps the store layer free
- * of engine imports while still letting the saga trigger the render effect.
+ * The render-on-demand scheduler is passive; something must poke it after state
+ * changes that affect the drawn scene. The worker reaches the engine via
+ * getContext — the `ReconcileEffects` closure the engine registers after
+ * construction — which keeps the store layer free of engine imports while still
+ * letting the saga trigger the render effect.
  */
 
 import { takeEvery, getContext } from 'typed-redux-saga';
@@ -25,10 +21,9 @@ import type { ReconcileEffects } from './ReconcileEffects';
 // remember requestRender?` audit.
 //
 // `tierRoute` is load-bearing, not belt-and-suspenders: the catalog reload after
-// a tier change starts from a FRAME (the demand loop notices each slot's
-// committed request drifting from the new tier's). A `tier/` write seen while
-// the loop is asleep would otherwise never produce that frame, and the scene
-// would keep drawing the old tier until some unrelated wake happened by.
+// a tier change starts from a FRAME (the demand loop notices each slot's last
+// request drifting from the new tier's). A `tier/` write seen while the loop is
+// asleep would otherwise never produce that frame.
 //
 // `timeRoute` is a wake route so a clock intent seen while the scene is at rest
 // (loop asleep) redraws immediately: pressing Play must produce the first

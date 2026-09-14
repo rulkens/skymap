@@ -1,6 +1,6 @@
 /**
  * galaxyCatalogSourceRegistry — declarative wiring for per-source galaxy-catalog
- * asset slots: CONSTRUCTION and tier reload, not demand.
+ * asset slots: CONSTRUCTION, not demand.
  *
  * WHEN each asset loads (boot, visibility toggle, settings flip) belongs to the
  * `ASSET_WIRING` demand table, where the point sources appear as
@@ -27,8 +27,8 @@ import {
 } from '../../../state/engine/engineSlice';
 import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';
 
-// In Source enum order: the slot-mint loop, the tier reload loop and the
-// synthetic-fallback gate all iterate this list and want stable per-source logs.
+// In Source enum order: the slot-mint loop and the synthetic-fallback gate's
+// derived lists both iterate this list and want stable per-source logs.
 export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[] = [
   { source: Source.SDSS, shortName: 'sdss', fetcher: galaxyCatalogFetcher, category: 'survey' },
   { source: Source.TwoMRS, shortName: '2mrs', fetcher: galaxyCatalogFetcher, category: 'survey' },

@@ -1,30 +1,12 @@
 /**
- * captureGalaxyFocusIds — read the durable focus id of each galaxy-arm selection
- * ref BEFORE a tier swap evicts the old clouds. A galaxy ref is positional
- * (source+index), so after eviction the same index points at a different galaxy
- * (or none); encoding to the durable id here (while the OLD cloud is still
- * present) lets the saga re-resolve to the NEW index once the new tier loads.
+ * captureGalaxyFocusIds — snapshot each galaxy-arm selection ref's durable focus
+ * id while the OLD cloud is still present: a galaxy ref is positional
+ * (source+index), so a tier reload repoints that index at a different galaxy.
  *
- * Only refs whose source's request actually drifts across the swap are
- * captured. Tier-agnostic sources (2MRS, Famous, the DESI cuts, Synthetic)
- * name the same request for every tier, so capturing them would cause the
- * consumer's `take(catalogLoaded for source)` to block forever — the demand
- * loop never reloads a request that hasn't changed. Capture and the loop
- * compute the request from the same `galaxyCatalogRequest` and compare it
- * with `sameRequest`, so the two cannot drift out of agreement.
- *
- * Hover is NOT captured: `watchTierSaga` clears the hover slot unconditionally
- * across the swap (a stale hover over an evicted cloud would resolve to a
- * different galaxy). Capturing hover and then clearing it would fight; the clear
- * wins, so only select + focus flow through here.
- *
- * Structure / milkyWay refs are already durable by their id / singleton tag;
- * they survive the swap untouched and are skipped.
- *
- * Returns null from `focusIdOf` only when the cloud is absent or the ref has no
- * deep-link representation (Milky Way). The Milky Way guard above already skips
- * that arm, but the null guard below is the belt-and-suspenders safety that
- * keeps the return type `GalaxyReanchor[]` (string focusId, never null).
+ * LANDMINE: capture only sources whose request drifts across the swap — a
+ * tier-agnostic source keeps its request, never reloads, and would block the
+ * consumer's `take(catalogLoaded)` forever. Capture and the demand loop both
+ * derive the request from `galaxyCatalogRequest`, so they cannot disagree.
  */
 
 import { focusIdOf } from '../../services/url/focusIdOf';

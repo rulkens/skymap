@@ -6,8 +6,8 @@
  * express intent; `setTier` is the write this saga issues once it decides
  * the change is real — keeping them separate means the store's tier only
  * flips on the saga's own terms, never optimistically. The write is all the
- * data transition needs: the demand loop reloads each slot whose committed
- * request drifts from the new tier's. `prev` is read BEFORE the write so the
+ * data transition needs: the demand loop reloads each slot whose last request
+ * drifts from the new tier's. `prev` is read BEFORE the write so the
  * re-anchor capture's per-source diff stays honest (it needs the tier the data
  * was loaded AT); the `prev === payload` guard makes re-selecting the current
  * tier a no-op.
@@ -20,7 +20,7 @@
  * actually regenerates the cloud; this saga only owns the seed.
  *
  * A galaxy `SelectionRef` is POSITIONAL (source + index), so when a tier swap
- * evicts and reloads a source's cloud the same index points at a different
+ * replaces a source's cloud in place the same index points at a different
  * galaxy (or none). To preserve intent: capture each affected ref's durable
  * focus id BEFORE the write (old cloud still present), clear hover
  * unconditionally (a stale hover is meaningless), then after each source's
@@ -61,7 +61,7 @@ export function* watchTierSaga() {
       ? captureGalaxyFocusIds(state, resolveDeps(), prev, action.payload)
       : [];
 
-    // Clear hover across the swap: a stale hover ref over an evicted cloud
+    // Clear hover across the swap: a stale hover ref over a replaced cloud
     // would resolve to a different galaxy. (Select / focus are re-anchored below.)
     yield* put(updateSelectionHover(null));
 

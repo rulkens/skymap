@@ -2,7 +2,7 @@
  * captureGalaxyFocusIds — unit tests.
  *
  * The function's job is to snapshot durable focus ids for the select and focus
- * slots BEFORE a tier swap evicts the old clouds, but ONLY for sources whose
+ * slots BEFORE a tier swap replaces the old clouds, but ONLY for sources whose
  * `galaxyCatalogRequest` actually drifts across the given prev→next transition
  * AND are enabled. A source that doesn't drift, or isn't enabled, must be
  * skipped to avoid a hanging `take(catalogLoaded)`.
