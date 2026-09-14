@@ -12,11 +12,9 @@ import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { IDENTITY_MAT3 } from '../math/identityMat3';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
-import { decodeBodyFixedChannels } from './decodeBodyFixedChannels';
 import { orbitAnglesLookingAlong } from './orbitAnglesLookingAlong';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
 import { toBodyArm } from '../../services/engine/camera/poseFrameConversion';
-import { foldToWorld } from '../../services/engine/camera/rungs/foldToWorld';
 import { hostOrThrow } from '../../services/engine/camera/rungs/hostOrThrow';
 
 /** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */
@@ -48,17 +46,4 @@ export function toBodyFixedChannels(
     pitch,
     distance: Math.hypot(eyeM[0] - target[0], eyeM[1] - target[1], eyeM[2] - target[2]),
   };
-}
-
-/** Body-fixed metre channels → absolute Mpc channels. */
-export function fromBodyFixedChannels(
-  channels: CameraPose,
-  bodyId: BodyId,
-  bodies: ReadonlyMap<BodyId, BodyState>,
-  basis: Readonly<Mat3>,
-): CameraPose {
-  return foldToWorld(
-    { frame: { body: bodyId }, pose: decodeBodyFixedChannels(channels, bodyId) },
-    { bodies, poseBasis: basis, upBasis: basis },
-  );
 }

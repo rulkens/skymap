@@ -113,10 +113,8 @@ import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { lerp } from '../../../utils/math/lerp';
-import {
-  toBodyFixedChannels,
-  fromBodyFixedChannels,
-} from '../../../utils/camera/toBodyFixedChannels';
+import { foldToWorld } from './rungs/foldToWorld';
+import { rowFor } from './rungs/rowFor';
 import { sameFrame } from './rungs/sameFrame';
 
 // ---------------------------------------------------------------------------
@@ -547,11 +545,11 @@ function convertChannels(
   deps: FrameDeps,
 ): CameraPose {
   if (sameFrame(from, to)) return channels;
-  const world =
-    from === 'absolute'
-      ? channels
-      : fromBodyFixedChannels(channels, from.body, deps.bodies, deps.basis);
-  return to === 'absolute' ? world : toBodyFixedChannels(world, to.body, deps.bodies, deps.basis);
+  // The clip's one steady basis serves as BOTH rung bases: its absolute angles
+  // were authored through it, and a leg start has no separate up to read.
+  const ctx = { bodies: deps.bodies, poseBasis: deps.basis, upBasis: deps.basis };
+  const world = foldToWorld(rowFor(from).channels.decode(channels, from, ctx), ctx);
+  return rowFor(to).channels.encode(world, to, ctx);
 }
 
 function originOfLeg(

@@ -17,6 +17,8 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
+import { rowFor } from '../../../../src/services/engine/camera/rungs/rowFor';
 import { decodeBodyFixedChannels } from '../../../../src/utils/camera/decodeBodyFixedChannels';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
@@ -39,15 +41,18 @@ vi.mock('../../../../src/utils/camera/toBodyFixedChannels', async (importOrigina
     await importOriginal<typeof import('../../../../src/utils/camera/toBodyFixedChannels')>();
   return { ...actual, toBodyFixedChannels: vi.fn(actual.toBodyFixedChannels) };
 });
-import {
-  fromBodyFixedChannels,
-  toBodyFixedChannels,
-} from '../../../../src/utils/camera/toBodyFixedChannels';
+import { toBodyFixedChannels } from '../../../../src/utils/camera/toBodyFixedChannels';
 
 const EARTH = { body: 'earth' as BodyId };
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
 const BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const START: CameraPose = { target: [0, 0, 0], yaw: 0.5, pitch: 0.2, distance: 10 };
+const CTX = { bodies: BODIES, poseBasis: BASIS, upBasis: BASIS };
+
+/** The body rung's `decode` folded back out — the inverse `toBodyFixedChannels` no longer ships. */
+function fromBodyFixedChannels(channels: CameraPose, frame: typeof EARTH): CameraPose {
+  return foldToWorld(rowFor(frame).channels.decode(channels, frame, CTX), CTX);
+}
 
 function opts(playback: object = {}) {
   return { bodies: BODIES, frameBasis: BASIS, playback };
@@ -132,9 +137,7 @@ describe('frame-tagged keyframes', () => {
         pitch: openingAngles.pitch,
         distance: 3e6,
       },
-      'earth',
-      BODIES,
-      BASIS,
+      EARTH,
     );
 
     const framed = evaluateFramedClip(data, 4, opts());
@@ -151,12 +154,7 @@ describe('frame-tagged keyframes', () => {
       distance: 3e-10,
     };
 
-    const back = fromBodyFixedChannels(
-      toBodyFixedChannels(pose, 'earth', BODIES, BASIS),
-      'earth',
-      BODIES,
-      BASIS,
-    );
+    const back = fromBodyFixedChannels(toBodyFixedChannels(pose, 'earth', BODIES, BASIS), EARTH);
 
     const [ex, ey, ez] = eyeMpcOf(pose, BASIS);
     const [bx, by, bz] = eyeMpcOf(back, BASIS);
