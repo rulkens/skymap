@@ -16,10 +16,14 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import { createFamousGalaxiesMetaSlot } from '../../../../src/services/loading/slots/famousGalaxiesMetaSlot';
 import { engineFamousGalaxiesMetaReported } from '../../../../src/state/engine/engineSlice';
+import { Source } from '../../../../src/data/sources';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 // The slot touches nothing on EngineState — it reports through `cb.store`.
 const fakeState = {} as EngineState;
+
+/** The fetcher ignores the request; any well-typed `GalaxyCatalogReq` will do. */
+const REQ = { source: Source.FamousGalaxy, tier: 'medium' as const };
 
 function fakeCb(): { cb: EngineCallbacks; dispatch: ReturnType<typeof vi.fn> } {
   const dispatch = vi.fn();
@@ -45,7 +49,7 @@ describe('createFamousGalaxiesMetaSlot', () => {
     );
     const { cb, dispatch } = fakeCb();
     const slot = createFamousGalaxiesMetaSlot(fakeState, cb);
-    await slot.load({ tier: 'medium' });
+    await slot.load(REQ);
 
     expect(dispatch).toHaveBeenCalledWith(
       engineFamousGalaxiesMetaReported(
@@ -58,7 +62,7 @@ describe('createFamousGalaxiesMetaSlot', () => {
     fetch.mock.mockResolvedValue(new Response('not found', { status: 404 }));
     const { cb, dispatch } = fakeCb();
     const slot = createFamousGalaxiesMetaSlot(fakeState, cb);
-    await slot.load({ tier: 'medium' }).catch(() => {});
+    await slot.load(REQ).catch(() => {});
 
     expect(dispatch).toHaveBeenCalledWith(engineFamousGalaxiesMetaReported([]));
   });

@@ -242,22 +242,26 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── Famous-galaxy meta sidecar ───────────────────────────────────
   // Companion join: loads once the Famous slot leaves `idle`, so the InfoCard text
-  // rides in alongside the binary rather than racing ahead of it.
+  // rides in alongside the binary rather than racing ahead of it. The request is
+  // the identical call the Famous point row makes, so the two cannot disagree by
+  // construction. D11 (PR-C) replaces this shared call with `companionOf` on the
+  // row, from which core derives the companion's demand, priority and request.
   {
     key: 'famousGalaxiesMeta',
     factory: (deps) => createFamousGalaxiesMetaSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
+    req: (tier) => galaxyCatalogRequest(Source.FamousGalaxy, tier),
     demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle',
     priority: 21, // immediately behind its .bin (20), never overtaking it
   },
 
   // ── Famous-star meta sidecar ──────────────────────────────────────
   // Unconditional rather than a companion join: the famous stars are a seeded
-  // catalog compiled into the bundle, so there is no sibling `.bin` to key demand off.
+  // catalog compiled into the bundle, so there is no sibling `.bin` to key demand off,
+  // and no tier to embed in the request either.
   {
     key: 'famousStarsMeta',
     factory: (deps) => createFamousStarsMetaSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
+    req: () => undefined,
     demand: () => true,
     priority: 22, // right behind famousGalaxiesMeta; both are tiny and wanted early
   },

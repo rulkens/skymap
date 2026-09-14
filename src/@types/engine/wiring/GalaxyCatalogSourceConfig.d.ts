@@ -66,10 +66,10 @@ export type GalaxyCatalogSourceConfig = {
    * demand row instead.)
    *
    * Pure data: the resolver in `loadCompanionAssets` indexes
-   * `state.assetSlots` by the ref string and dispatches a uniform
-   * `CompanionAssetReq` — no per-key switch.  Adding a new companion
-   * type is one new `GalaxyCatalogCompanionRef` member plus one slot
-   * minted on `state.assetSlots` with a matching key.
+   * `state.assetSlots` by the ref string and dispatches the row's own
+   * `galaxyCatalogRequest(cfg.source, tier)` — no per-key switch. Adding a
+   * new companion type is one new `GalaxyCatalogCompanionRef` member plus
+   * one slot minted on `state.assetSlots` with a matching key.
    */
   companions?: readonly GalaxyCatalogCompanionRef[];
 };

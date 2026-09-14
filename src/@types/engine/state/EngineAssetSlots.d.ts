@@ -21,7 +21,6 @@ import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { Polyphorm2MRSReq } from '../../loading/Polyphorm2MRSReq';
-import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
 import type { ConstellationsArtifact } from '../../loading/ConstellationsArtifact';
@@ -44,10 +43,14 @@ export type EngineAssetSlots = {
   starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
   /** Two files across the three tiers, so it reloads only across the small boundary. */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
-  /** Eager at boot; no `commit` — the subscriber dispatches the parsed array into the `engine` slice. */
-  famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, CompanionAssetReq> | null;
-  /** Eager because famous stars are a seeded catalog — no sibling `.bin` fetch to key demand off. */
-  famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null;
+  /**
+   * Eager at boot; no `commit` — the subscriber dispatches the parsed array into
+   * the `engine` slice. Its request is the Famous point row's request (see
+   * `assetWiring.ts`), so the two slots cannot disagree about which tier is live.
+   */
+  famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, GalaxyCatalogReq> | null;
+  /** Eager because famous stars are a seeded catalog — no sibling `.bin`, and no tier, to key demand off. */
+  famousStarsMeta: AssetSlot<FamousStarsPayload, void> | null;
   /** Eager at boot; `wireStructureProjection` turns the ready value into structure-store records. */
   structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
   /** ~1.7 MB and lazy: only the public handle's `loadPgcAliases()` calls `.load()`, on first palette open. */

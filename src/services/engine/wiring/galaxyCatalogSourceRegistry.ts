@@ -18,6 +18,7 @@ import type { GalaxyCatalogSourceConfig } from '../../../@types/engine/wiring/Ga
 import type { Tier } from '../../../@types/data/Tier';
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { createAssetSlot } from '../../loading/AssetSlot';
+import { galaxyCatalogRequest } from './galaxyCatalogRequest';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 import { syncVisibilityFadeItem } from './syncVisibilityFades';
@@ -98,8 +99,10 @@ export const TIER_FETCHED_POINT_SOURCES: readonly SourceType[] =
  * Called from `setTier`'s reload loop only — at boot and on visibility toggle,
  * companions load through their own `ASSET_WIRING` demand rows.
  *
- * Every companion slot accepts the same `{ tier }` request (tier-agnostic ones
- * ignore it), so dispatch is a plain index with no per-key switch. `.load()`
+ * The only companion ref today (`famousGalaxiesMeta`) rides its parent's own
+ * request — `galaxyCatalogRequest(cfg.source, tier)`, the identical call the
+ * `ASSET_WIRING` row makes — so a tier-change reload cannot disagree with the
+ * demand loop about what the companion should be fetching. `.load()`
  * re-fetches unconditionally, which is exactly what a tier change wants.
  */
 export function loadCompanionAssets(
@@ -108,7 +111,8 @@ export function loadCompanionAssets(
   tier: Tier,
 ): void {
   if (!cfg.companions) return;
-  for (const ref of cfg.companions) void state.assetSlots[ref]?.load({ tier });
+  const req = galaxyCatalogRequest(cfg.source, tier);
+  for (const ref of cfg.companions) void state.assetSlots[ref]?.load(req);
 }
 
 /**

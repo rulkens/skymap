@@ -421,10 +421,23 @@ describe('ASSET_WIRING req builders', () => {
   });
 
   it('tier-aware sidecars carry { tier }', () => {
-    expect(rowFor('famousGalaxiesMeta').req('small')).toEqual({ tier: 'small' });
-    expect(rowFor('famousStarsMeta').req('small')).toEqual({ tier: 'small' });
     expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
     expect(rowFor('polyphorm2Mrs').req('large')).toEqual({ tier: 'large' });
+  });
+
+  it("the famous-meta row's request equals the famous point row's request at every tier", () => {
+    const meta = rowFor('famousGalaxiesMeta');
+    const point = rowFor(Source.FamousGalaxy);
+    for (const tier of ['small', 'medium', 'large'] as const) {
+      expect(sameRequest(meta.req(tier), point.req(tier)), `drifted at ${tier}`).toBe(true);
+    }
+  });
+
+  it("the famous-stars-meta row's request is undefined at every tier", () => {
+    const row = rowFor('famousStarsMeta');
+    for (const tier of ['small', 'medium', 'large'] as const) {
+      expect(row.req(tier)).toBeUndefined();
+    }
   });
 
   it('structureCatalog req is the empty request', () => {
