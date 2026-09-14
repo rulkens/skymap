@@ -1,6 +1,6 @@
 # Keyed cubemap captures (PBR prep P1)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 ## Goal
 
@@ -211,42 +211,42 @@ typecheck error and lets `CUBEMAP_CAPTURES[key]` be total. `cubemapCaptures` is
 `Readonly<Record<…>>` of mutable entries: single-writer in-place mutation,
 exactly as the singleton is today.
 
-- [ ] Rename the runtime type file:
+- [x] Rename the runtime type file:
       `npm run move-files -- --dry src/@types/engine/state/SkyCubemapCaptureRuntime.d.ts src/@types/engine/state/CubemapCaptureRuntime.d.ts`,
       then without `--dry`. Then
       `npm run refactor -- rename SkyCubemapCaptureRuntime CubemapCaptureRuntime`
       and `npm run refactor -- rename lastGcDistanceMpc lastAnchorDistanceMpc`.
       Rewrite the type's header for one capture row, not "the black-hole lens's".
-- [ ] Add `CubemapCaptureKey` and `CubemapCapture`. The `nearMpc` doc carries the
+- [x] Add `CubemapCaptureKey` and `CubemapCapture`. The `nearMpc` doc carries the
       landmine currently in `skyCubemapFaceContext.ts` — it is NOT the live cosmo
       near plane (0.01 Mpc); the captured content sits at hundreds of au, inside
       it, and reusing it clips every S-star away.
-- [ ] Add `src/data/rendering/cubemapCaptures.ts` with `ALL_CUBE_FACES` and the
+- [x] Add `src/data/rendering/cubemapCaptures.ts` with `ALL_CUBE_FACES` and the
       single `sgrAStar` row: `target: 'sky-cubemap'`,
       `anchor: regionById('galactic-centre')` (resolved at module load — the hoist
       `renderFrame.ts` documents today), `band: SCALE_FADE_BANDS.sgrAStarLensing`,
       `nearMpc: 0.1 * SCALE_UNITS.AU_TO_MPC`, `viewSlotBase: 1`. Record on the
       module header that slot 0 is the main view and that a row's six slots must
       fit under `VIEW_SLOT_COUNT` (`src/utils/gpu/createViewSlotUniformRing.ts`).
-- [ ] `EngineState.skyCubemapCapture` → `cubemapCaptures`; `engine.ts` seeds one
+- [x] `EngineState.skyCubemapCapture` → `cubemapCaptures`; `engine.ts` seeds one
       entry per table key (`lastBandActive: false`,
       `lastAnchorDistanceMpc: Number.POSITIVE_INFINITY`, `bakedSettings: null`) by
       mapping over `CUBEMAP_CAPTURES`, not by hand. Update `PassState`'s docstring
       (it names the refused field).
-- [ ] `renderTargets.ts`: the `sky-cubemap` row's `allocateWhen` reads
+- [x] `renderTargets.ts`: the `sky-cubemap` row's `allocateWhen` reads
       `state.cubemapCaptures.get('sgrAStar')` and takes its release margin off
       `CUBEMAP_CAPTURES.sgrAStar.band.goneAt` instead of importing
       `SCALE_FADE_BANDS` for it — same number, one home. `renderFrame.ts` reads the
       map entry at its existing call site (interim; Task 3 removes the read).
-- [ ] Add `tests/data/rendering/cubemapCaptures.test.ts`: - `describe('CUBEMAP_CAPTURES')` - `it('claims six disjoint view slots per row, all inside VIEW_SLOT_COUNT')` —
+- [x] Add `tests/data/rendering/cubemapCaptures.test.ts`: - `describe('CUBEMAP_CAPTURES')` - `it('claims six disjoint view slots per row, all inside VIEW_SLOT_COUNT')` —
       every row's `[viewSlotBase, viewSlotBase + 5]` lies in `1 … VIEW_SLOT_COUNT - 1`
       and no two rows' ranges intersect. Catches the silent
       `queue.writeBuffer` clobber (docs/RENDERER.md #1) a second row would hit. - `it('names a declared render-target row as its capture target')` — each
       row's `target` is among `renderTargetRows(<any swap format>)`'s ids.
-- [ ] Update the state fixtures in the five test files listed above (mechanical:
+- [x] Update the state fixtures in the five test files listed above (mechanical:
       `skyCubemapCapture: { … }` → `cubemapCaptures: new Map([['sgrAStar', { … }]])`).
-- [ ] `npm test -- cubemapCaptures renderTargets renderFrame` green; `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- cubemapCaptures renderTargets renderFrame` green; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -277,24 +277,24 @@ The spec sketches this positionally (`cubemapFaceContext(eye, face, size, near,
 viewSlotBase)`); the named bag is kept — `state` and `nowMs` are also required and
 the existing call site already passes a bag.
 
-- [ ] `npm run move-files -- --dry src/services/engine/frame/skyCubemapFaceContext.ts src/services/engine/frame/cubemapFaceContext.ts`,
+- [x] `npm run move-files -- --dry src/services/engine/frame/skyCubemapFaceContext.ts src/services/engine/frame/cubemapFaceContext.ts`,
       then without `--dry` (it drags the `tests/` mirror). Then
       `npm run refactor -- rename skyCubemapFaceContext cubemapFaceContext`.
-- [ ] Delete the module-level `SKY_CAPTURE_NEAR_MPC` (its value and its landmine
+- [x] Delete the module-level `SKY_CAPTURE_NEAR_MPC` (its value and its landmine
       comment now live on the table row) and take `nearMpc` from the input.
-- [ ] Replace the `viewSlot: face + 1` stamp with `viewSlotBase + face`; the
+- [x] Replace the `viewSlot: face + 1` stamp with `viewSlotBase + face`; the
       existing comment about slot 0 being the main view moves to the new param's doc.
-- [ ] Drop `frame/skyCubemapFaceContext` from `ALLOWED` and add
+- [x] Drop `frame/skyCubemapFaceContext` from `ALLOWED` and add
       `'frame/cubemapFaceContext': 4` — the file loses one stray
       (`SKY_CAPTURE_NEAR_MPC`), leaving `FACE_FORWARD`, `FACE_UP`, `FACE_BASES`,
       `flipClipY`. The row is exact; a wrong number fails the ratchet either way.
-- [ ] In the renamed test file, add
+- [x] In the renamed test file, add
       `it('stamps viewSlot from the given base, so a second capture cannot share the first's slots')` —
       `viewSlotBase: 7`, `face: 2` ⇒ `ctx.viewSlot === 9`. Re-point the existing
       `clips well below the S-star scale…` test at the explicit `nearMpc` argument
       rather than the deleted constant; the other four tests keep their names.
-- [ ] `npm test -- cubemapFaceContext frameFilePurity` green.
-- [ ] Commit.
+- [x] `npm test -- cubemapFaceContext frameFilePurity` green.
+- [x] Commit.
 
 ---
 
@@ -337,7 +337,7 @@ it is the single writer of each row's `CubemapCaptureRuntime`, and it calls
 `ctx.renderTargets.reconcile(state, ctx.canvasSize)` on a band edge — the row's
 50 MB must exist on the band-entry frame, which is the frame that sweeps.
 
-- [ ] Move the whole capture block out of `renderFrame.ts` into the new file, as a
+- [x] Move the whole capture block out of `renderFrame.ts` into the new file, as a
       loop over `CUBEMAP_CAPTURES` entries: per row, distance to `row.anchor`
       (recorded unconditionally), `fadeBand(row.band, …) > 0`, the band edge
       (reconcile; clear `bakedSettings` on close), and — in band, when
@@ -346,17 +346,17 @@ it is the single writer of each row's `CubemapCaptureRuntime`, and it calls
       `faceSizePx: ctx.renderTargets.sizeOf(row.target).width`, `row.nearMpc`,
       `row.viewSlotBase`. `sceneBodyStates(state, ctx)` is evaluated once, outside
       the loop, as today.
-- [ ] Shorten the moved commentary to the budget. What earns its place on the new
+- [x] Shorten the moved commentary to the budget. What earns its place on the new
       module: the texel-exactness derivation for one bake per band, what is
       deliberately absent from the re-bake key (`tier`, `faceSizePx`, `selection`)
       and why, the two roster inputs that move without a settings write, and the
       reconcile-on-edge reason. What does not: the per-field restatements.
-- [ ] `renderFrame.ts` calls it and derives the expansion's face lists from the
+- [x] `renderFrame.ts` calls it and derives the expansion's face lists from the
       one map inline, so there is no second list to drift:
       `captureFaces: new Map([...captureContexts].map(([key, faces]) => [key, [...faces.keys()]]))`
       (the `FrameInputs` field lands in Task 4; until then keep feeding
       `skyCubemapFacesToCapture` off the same expression).
-- [ ] `starAggregatesPass.ts` stops hard-coding the capture target for its
+- [x] `starAggregatesPass.ts` stops hard-coding the capture target for its
       viewport: on a capture face (`ctx.viewSlot !== 0`) the destination size IS
       `ctx.canvasSize` — `cubemapFaceContext` builds the synthetic ctx from the
       row's `faceSizePx` — so
@@ -364,14 +364,14 @@ it is the single writer of each row's `CubemapCaptureRuntime`, and it calls
       is identical today and stays right for a second capture at a different face
       size. Keep the `STAR_GLOW_MIN_PX`-floor rationale comment; drop the
       `'sky-cubemap'` half of it.
-- [ ] `npm run move-files -- tests/services/engine/frame/renderFrame.skyCubemapHandOff.test.ts tests/services/engine/frame/renderFrame.cubemapCaptures.test.ts`.
+- [x] `npm run move-files -- tests/services/engine/frame/renderFrame.skyCubemapHandOff.test.ts tests/services/engine/frame/renderFrame.cubemapCaptures.test.ts`.
       The file keeps driving `renderFrame` with `executeFrame` and the face-context
       factory mocked — it is the end-to-end wiring test and all nine of its
       assertions are the acceptance criteria for this task, unchanged in meaning.
       Update the mocked module path to `cubemapFaceContext` and the argument
       assertions to the new keyed shape. No new test: this task moves code.
-- [ ] `npm test -- renderFrame frameFilePurity` green; `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test -- renderFrame frameFilePurity` green; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -432,46 +432,46 @@ The roster stays on the `FRAME_ORDER` line rather than moving onto the table row
 order and roster are the same artifact, so a second capture that draws a different
 roster is a second `capture` **line**, expanded against its own key.
 
-- [ ] `FrameStep`'s render arm: delete `face`, add the two-arm destination union
+- [x] `FrameStep`'s render arm: delete `face`, add the two-arm destination union
       and `capture`. Keep the union inline in the file (one exported type per
       `@types` file). The `capture?: undefined` member is what lets
       `step.capture === undefined ? step.target : step.capture.key` narrow to
       `string` in both directions.
-- [ ] `slabs.ts`: `groupKeyOf(target, slab)` → `groupKeyOf(step)`, deriving its
+- [x] `slabs.ts`: `groupKeyOf(target, slab)` → `groupKeyOf(step)`, deriving its
       base name from that same ternary. Three call sites (`executeFrame`,
       `timedSlotRowsOf`, `plainPassGroupKeys`) then cannot disagree about a capture
       step's group key — which is the reason the current signature is shared at all.
       `slabs.ts`'s `ALLOWED` row is unchanged (18).
-- [ ] `expandFrameOrder`'s `capture` arm: expand
+- [x] `expandFrameOrder`'s `capture` arm: expand
       `frame.captureFaces.get(spec.capture) ?? []` into the COSMO + NEAR0 step pair
       per face, each carrying `capture: { key: spec.capture, face }` and
       `target: CUBEMAP_CAPTURES[spec.capture].target`. (Task 5 drops the `target`.)
       `sameGroup` compares `capture?.key` and `capture?.face` alongside `target`.
-- [ ] `frameOrder.ts`: the capture line becomes `capture: 'sgrAStar'`. Its comment
+- [x] `frameOrder.ts`: the capture line becomes `capture: 'sgrAStar'`. Its comment
       keeps the two-roster and ordering rationale, loses "the black-hole lens's
       sky-cubemap bake" as the line's identity — the row is.
-- [ ] `checkFrameOrder`'s capture arm returns
+- [x] `checkFrameOrder`'s capture arm returns
       `targets: [CUBEMAP_CAPTURES[spec.capture].target]`, so the boot check still
       proves the capture lands in a declared render-target row. A bogus key is a
       typecheck error, so no runtime key check is added.
-- [ ] `timedSlotRowsOf` / `plainPassGroupKeys` / `passTimingSlotName` /
+- [x] `timedSlotRowsOf` / `plainPassGroupKeys` / `passTimingSlotName` /
       `renderStepTimingSlotName` take `step.capture?.face` where they took
       `step.face`. `passGroupTitles`' two rows become `'sgrAStar·COSMO'` /
       `'sgrAStar·NEAR0'` (still titled `'Sky capture'`). **Named delta:** GPU-timing
       slot names change from `sky-cubemap·…` to `sgrAStar·…` — DebugPanel and perf
       harness row labels, not render behaviour.
-- [ ] `MAX_FRAME_INPUTS.captureFaces` is built from the table
+- [x] `MAX_FRAME_INPUTS.captureFaces` is built from the table
       (`Object.keys(CUBEMAP_CAPTURES)` → `ALL_CUBE_FACES`), sized off the registry
       the way `foregroundChain` is off `BODY_SLAB_CAPACITY`, so a second row gets
       its timing slots without an edit here.
-- [ ] Existing tests keep their names; update fixtures. In
+- [x] Existing tests keep their names; update fixtures. In
       `expandFrameOrder.test.ts` the two capture assertions —
       `emits a COSMO capture step alongside NEAR0 per requested face` and
       `emits no capture steps when no faces are requested (Q6 zero-dispatch)` —
       now drive `captureFaces` and assert `step.capture`.
-- [ ] `npm test -- expandFrameOrder checkFrameOrder timedSlot renderFrame` green;
+- [x] `npm test -- expandFrameOrder checkFrameOrder timedSlot renderFrame` green;
       `npm run typecheck`.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -504,10 +504,10 @@ resolves `layerViewOf(row.target, face)` plus `specOf(row.target).clearValue`;
 a per-body probe later resolves that body's own cube texture from the same key,
 in this function and nowhere else.
 
-- [ ] Add `captureFaceAttachment`. `expandFrameOrder`'s capture arm stops setting
+- [x] Add `captureFaceAttachment`. `expandFrameOrder`'s capture arm stops setting
       `target` (and stops importing `CUBEMAP_CAPTURES`); `FrameStep`'s union is
       already shaped for it.
-- [ ] `executeFrame`'s render arm resolves the destination once:
+- [x] `executeFrame`'s render arm resolves the destination once:
       `step.capture === undefined` ⇒ `{ view: viewFor(step.target, ctx, swapView), clearValue: ctx.renderTargets.specOf(step.target).clearValue }`,
       else `captureFaceAttachment(step.capture, ctx.renderTargets)`. `viewFor`
       loses its `face` parameter and the paragraph about it. `colorAttachment` takes
@@ -516,26 +516,26 @@ in this function and nowhere else.
       the resolved `dest` plus an optional `depthTarget` (absent for capture steps —
       capture rows are depthless) and no longer takes `swapView`.
       `executeFrame`'s `ALLOWED` row stays **7**.
-- [ ] Per-face first touch keys on the capture: `` `${step.capture.key}:${step.capture.face}` ``.
+- [x] Per-face first touch keys on the capture: `` `${step.capture.key}:${step.capture.face}` ``.
       With one row this is byte-identical to today's `` `${target}:${face}` ``;
       it is what keeps two captures' face 0 apart.
-- [ ] Capture steps no longer add to `touched` / `ctx.renderedTargets`, and no
+- [x] Capture steps no longer add to `touched` / `ctx.renderedTargets`, and no
       longer consult `depthLoadOpFor`. **Named delta, unobservable:** the only
       reader of `renderedTargets` is the `'foreground:0'` guard in four overlay
       passes, and no composite step sources a capture target — so `'sky-cubemap'`'s
       membership was never read. State this in the code comment where the branch is.
-- [ ] `ExecuteFrameArgs.skyCubemapFaceContexts` → `captureContexts`; the lookup
+- [x] `ExecuteFrameArgs.skyCubemapFaceContexts` → `captureContexts`; the lookup
       becomes `captureContexts?.get(step.capture.key)?.get(step.capture.face)`, and
       a missing entry still skips the step cleanly. `renderFrame` passes the map
       from Task 3 straight through.
-- [ ] `executeFrame.test.ts`: the six capture fixtures become
+- [x] `executeFrame.test.ts`: the six capture fixtures become
       `capture: { key: 'sgrAStar', face: N }` with no `target`. The four existing
       capture tests keep their names and meaning. Rewrite the attachment one as
       `it('resolves each capture face through the capture row's target layer view, never viewOf')` —
       six faces, six distinct views, none equal to `viewOf('sky-cubemap')`.
-- [ ] `npm test -- executeFrame expandFrameOrder renderFrame frameFilePurity` green;
+- [x] `npm test -- executeFrame expandFrameOrder renderFrame frameFilePurity` green;
       `npm run typecheck`.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -570,30 +570,30 @@ The gate must stay: outside the band the `lens` line has to expand to nothing, o
 `mergeAdjacent` can no longer fold the two `(hdr, NEAR0)` lines and every
 out-of-band frame pays an extra `rgba16float` pass boundary.
 
-- [ ] Extract `bandAlphaFor` and `GALACTIC_CENTRE_REGION` out of
+- [x] Extract `bandAlphaFor` and `GALACTIC_CENTRE_REGION` out of
       `sgrAStarLensingPass.ts` into `sgrAStarBandAlpha.ts`; the pass imports it.
       Lower its `ALLOWED` row from 5 to **3**.
-- [ ] The pass's own cube read becomes
+- [x] The pass's own cube read becomes
       `ctx.renderTargets.cubeViewOf(CUBEMAP_CAPTURES.sgrAStar.target)` — the lens
       knows WHICH capture it samples, not which texture that capture happens to own.
-- [ ] Add `lensBodySlabs.ts` — `sgrAStarBandAlpha(...) > 0` then the
+- [x] Add `lensBodySlabs.ts` — `sgrAStarBandAlpha(...) > 0` then the
       `ctx.slabs.find(slab => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)`
       lookup, returning `[]` or `[index]`. Keep the "resolve here, hand data down"
       note (the row's painter-order index comes from `deriveSlabs`).
-- [ ] `renderFrame.ts` calls it; delete `GALACTIC_CENTRE_REGION` and
+- [x] `renderFrame.ts` calls it; delete `GALACTIC_CENTRE_REGION` and
       `ALL_CUBE_FACES` from the file, and **delete** its `ALLOWED` row (now 0).
       Trim the module header: the `state.skyCubemapCapture` paragraph is stale, and
       the file's remaining job is the focus write, the encoder lifecycle and the
       timing window.
-- [ ] `tests/services/engine/frame/lensBodySlabs.test.ts`: - `it('resolves Sgr A*'s body-m slab index inside the lensing band')` - `it('resolves nothing outside the band, so the two hdr·NEAR0 lines still merge')` —
+- [x] `tests/services/engine/frame/lensBodySlabs.test.ts`: - `it('resolves Sgr A*'s body-m slab index inside the lensing band')` - `it('resolves nothing outside the band, so the two hdr·NEAR0 lines still merge')` —
       assert `[]`, and that `expandFrameOrder` with that empty list yields ONE
       `(hdr, NEAR0)` render step.
-- [ ] Refresh `docs/backlog/2026-09-09-sky-cubemap-band-memory-derived.md` to the
+- [x] Refresh `docs/backlog/2026-09-09-sky-cubemap-band-memory-derived.md` to the
       new names (`cubemapCaptures`, `lastAnchorDistanceMpc`,
       `scheduleCubemapCaptures`). The item is **not** consumed by P1 — the
       last-frame memory is still stored, just per capture row.
-- [ ] `npm test` (full) green; `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test` (full) green; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
