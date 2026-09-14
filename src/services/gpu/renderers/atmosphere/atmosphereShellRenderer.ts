@@ -25,6 +25,7 @@ import {
   SCATTERING_PARAMS_BYTES,
 } from '../../../../utils/gpu/packScatteringParams';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createAerialPerspectiveRenderer } from './aerialPerspectiveRenderer';
 import transmittanceCode from '../../shaders/atmosphere/transmittanceLut.wesl?static';
 import multiScatterCode from '../../shaders/atmosphere/multiScatterLut.wesl?static';
 import skyViewCode from '../../shaders/atmosphere/skyViewLut.wesl?static';
@@ -556,6 +557,17 @@ export function createAtmosphereShellRenderer(
     bundles.set(bodyId, createBundle(bodyId, params));
   }
 
+  // The froxel volume rides these same bundles — one atmosphere, two consumers
+  // (`aerialPerspectiveRenderer`'s header). Constructed AFTER the loop because
+  // it binds every bundle's uniform buffers and startup LUTs.
+  const aerialPerspective = createAerialPerspectiveRenderer(
+    device,
+    targetFormat,
+    sampler,
+    placeholderRing.createView(),
+    bundles,
+  );
+
   // ── Startup bake: transmittance THEN multi-scatter, per body, ONE encoder ──
   //
   // Every body's two view-independent LUTs bake here into a SINGLE construction-
@@ -704,6 +716,7 @@ export function createAtmosphereShellRenderer(
       bundle.shellUniformBuffer.destroy();
     }
     bundles.clear();
+    aerialPerspective.destroy();
     placeholderRing.destroy();
     positionBuffer.destroy();
     indexBuffer.destroy();
@@ -712,6 +725,7 @@ export function createAtmosphereShellRenderer(
   const renderer: AtmosphereShellRenderer = {
     label: 'atmosphereShellRenderer',
     encodeSkyView,
+    encodeFroxel: aerialPerspective.encodeFroxel,
     setRingTexture,
     draw,
     destroy,

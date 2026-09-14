@@ -81,16 +81,16 @@ import { slabViewOf, groupKeyOf, passTimingSlotName, renderStepTimingSlotName } 
 import { captureFaceAttachment } from './captureFaceAttachment';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
+import { encodeAtmosphereFroxel } from './encodeAtmosphereFroxel';
 import { runBloom } from './runBloom';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 
 /**
- * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
- * today (`'flow'` and `'atmosphereSkyView'`); a new compute pre-pass is a new
- * row, not a new branch. Every row takes the uniform `(encoder, ctx, state)`
- * shape — `flow` reads `ctx.nowMs` as its real-time advection clock, while
- * `atmosphereSkyView` reads the rendered pose off it so its baked LUT matches
- * what the shell fragment samples.
+ * COMPUTE — the name→fn table a `'compute'` step dispatches through; a new
+ * compute pre-pass is a new row, not a new branch. Every row takes the uniform
+ * `(encoder, ctx, state)` shape — `flow` reads `ctx.nowMs` as its real-time
+ * advection clock, while the two atmosphere bakes read the rendered pose off it
+ * so what they bake matches what the shell fragment samples.
  */
 const COMPUTE: Record<
   string,
@@ -98,6 +98,7 @@ const COMPUTE: Record<
 > = {
   flow: (encoder, ctx, state) => encodeFlowCompute(encoder, state, ctx.nowMs),
   atmosphereSkyView: (encoder, ctx, state) => encodeAtmosphereSkyView(encoder, ctx, state),
+  atmosphereFroxel: (encoder, ctx, state) => encodeAtmosphereFroxel(encoder, ctx, state),
 };
 
 /**

@@ -20,8 +20,13 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // `foreground:0` render so the atmosphere shell samples this frame's table —
   // WebGPU orders the compute write before the later fragment read. A compute
   // step contributes no timing slot.
+  //
+  // `atmosphereFroxel`'s order relative to `atmosphereSkyView` is a LISTING
+  // choice: one encoder, one submit, and a `queue.writeBuffer` lands before any
+  // command buffer submitted after it — both bakes see this frame's params.
   { kind: 'compute', name: 'flow' },
   { kind: 'compute', name: 'atmosphereSkyView' },
+  { kind: 'compute', name: 'atmosphereFroxel' },
   // The `sgrAStar` capture, in the compute prelude's wake and ahead of every
   // other render step so a same-frame lensing draw can sample a cubemap this
   // frame actually wrote. The frame's face list for this key is empty most

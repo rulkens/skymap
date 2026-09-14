@@ -172,7 +172,8 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // sample a cubemap this frame actually wrote.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'atmosphereSkyView' });
-    expect(steps[2]).toBe(capture[0]);
+    expect(steps[2]).toEqual({ kind: 'compute', name: 'atmosphereFroxel' });
+    expect(steps[3]).toBe(capture[0]);
   });
 
   it('emits no capture steps when no faces are requested (Q6 zero-dispatch)', () => {

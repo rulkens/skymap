@@ -100,6 +100,14 @@ export type AtmosphereShellRenderer = Renderer & {
   encodeSkyView(encoder: GPUCommandEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
 
   /**
+   * Bake body `bodyId`'s aerial-perspective froxel volume into the same frame
+   * `encoder` — delegated verbatim to the `AerialPerspectiveRenderer` this
+   * renderer owns, where the contract (the 176-byte `AtmosphereUniforms`
+   * record, the throw on an unknown id) is documented.
+   */
+  encodeFroxel(encoder: GPUCommandEncoder, bodyId: string, uniforms: Float32Array): void;
+
+  /**
    * Upload the host body's ring-alpha strip and rebind it at the shell's
    * binding 4, replacing the shared 1×1 transparent placeholder. The shell
    * fragment samples it to keep a ring that sits IN FRONT of the atmosphere
