@@ -29,6 +29,7 @@ import { dirname, resolve } from 'node:path';
 import {
   PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
+  writePatchInstance,
 } from '../../../../../src/services/gpu/renderers/bodies/earthSurfaceTileLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -184,6 +185,41 @@ describe('PatchInstance CPU/WESL layout parity', () => {
   it('PATCH_INSTANCE_BYTES stride equals the struct size', () => {
     const { structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
     expect(PATCH_INSTANCE_BYTES).toBe(structSize);
+  });
+
+  // fieldForExpr maps all four lanes of albedoRect/fallbackRect to one field
+  // name, so the offset/kind/field check above can't see an origin<->scale
+  // swap inside a rect -- asymmetric fixture values per lane close that gap.
+  it('albedoRect / fallbackRect land origin then scale, lane by lane', () => {
+    const view = new DataView(new ArrayBuffer(PATCH_INSTANCE_BYTES));
+    writePatchInstance(
+      view,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0.11,
+      0.22,
+      0.33,
+      0.44,
+      0.55,
+      0.66,
+      0.77,
+      0.88,
+    );
+    expect(view.getFloat32(32, true)).toBeCloseTo(0.11); // albedoUvOriginX
+    expect(view.getFloat32(36, true)).toBeCloseTo(0.22); // albedoUvOriginY
+    expect(view.getFloat32(40, true)).toBeCloseTo(0.33); // albedoUvScaleX
+    expect(view.getFloat32(44, true)).toBeCloseTo(0.44); // albedoUvScaleY
+    expect(view.getFloat32(48, true)).toBeCloseTo(0.55); // fallbackUvOriginX
+    expect(view.getFloat32(52, true)).toBeCloseTo(0.66); // fallbackUvOriginY
+    expect(view.getFloat32(56, true)).toBeCloseTo(0.77); // fallbackUvScaleX
+    expect(view.getFloat32(60, true)).toBeCloseTo(0.88); // fallbackUvScaleY
   });
 });
 

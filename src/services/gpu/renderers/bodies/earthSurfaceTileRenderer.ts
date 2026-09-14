@@ -71,7 +71,7 @@ export function createEarthSurfaceTileRenderer(
 
   // ── Shared template index buffer (every patch, every level) ──────────
   const indices = surfacePatchIndices(resolution);
-  const indexCount = resolution * resolution * 6;
+  const indexCount = indices.length;
   const indexBuffer = device.createBuffer({
     label: 'earth-surface-tile-index-buffer',
     size: indices.byteLength,

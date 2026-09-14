@@ -1,8 +1,7 @@
 // earthSurfaceTile/vertex.wesl — every patch's geometry from nothing but a
 // 64-byte 'PatchInstance' and the two draw builtins: '@builtin(instance_index)'
-// picks the patch, '@builtin(vertex_index)' is the shared template's vertex id
-// (under an indexed draw that builtin carries the INDEX BUFFER's value), split
-// into (i, j) over the (n+1)^2 grid by 'u.meshResolution'.
+// picks the patch, '@builtin(vertex_index)' is the shared template's vertex id,
+// split into (i, j) over the (n+1)^2 grid by 'u.meshResolution'.
 //
 // 'patchVertexOffset' is the twin of src/utils/scene/patchVertexOffsetM.ts --
 // same names, same order, changed together; the f64 ground truth is tested
