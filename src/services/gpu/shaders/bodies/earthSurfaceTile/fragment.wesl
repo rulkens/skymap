@@ -50,9 +50,11 @@ const EARTH_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_ATLAS_SIDE;
 const EARTH_TILE_PX: f32 = 512.0;
 const TILE_SLOT_SCALE: f32 = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
 
-// Inverse of 'equirectUvToDirection', bakeSurfaceTileMesh.ts's CPU twin --
-// duplicated from earth/fragment.wesl rather than imported: it lives
-// inline there, not in 'lib/', and this task creates new files only.
+// Inverse of 'equirectUvToDirection'; its CPU twin is now
+// 'patchVertexOffsetM.ts' (lon/lat -> body-frame offset, the forward
+// direction 'vertex.wesl' draws from). Duplicated from earth/fragment.wesl
+// rather than imported: it lives inline there, not in 'lib/', and this
+// task creates new files only.
 fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
   let u_uv = fract(atan2(dir.y, dir.x) / TAU + 0.5);
   let v_uv = asin(clamp(dir.z, -1.0, 1.0)) / PI + 0.5;
