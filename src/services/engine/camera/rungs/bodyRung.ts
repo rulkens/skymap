@@ -9,9 +9,12 @@
  */
 
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
-import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../camera/surfaceStep';
+import { EMPTY_SURFACE_GESTURE_MEMORY, surfaceStep } from '../../../camera/surfaceStep';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { eyeMpcOf } from '../../../../utils/camera/eyeMpcOf';
+import { frameUp } from '../../../../utils/camera/frameUp';
+import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
+import { surfaceGestureEdge } from '../../../../utils/camera/surfaceGestureEdge';
 import { hOverR } from '../hOverR';
 import { nearestBodyHR } from '../nearestBodyHR';
 import { toBodyArm, toWorldArm } from '../poseFrameConversion';
@@ -28,6 +31,28 @@ export const bodyRung: ClimbRow<'body'> = {
     const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === frame.body);
     if (state === undefined || body === undefined) return null;
     return { id: frame.body, state, radiusM: body.radiusM };
+  },
+
+  step(memory, tilt, framed, input, ctx) {
+    // The pointer edge is the only thing that latches or drops a surface gesture,
+    // and it moves no pose — so it answers with its input pose by reference.
+    if (input.kind === 'gestureStart' || input.kind === 'gestureEnd') {
+      return {
+        pose: framed.pose,
+        memory: surfaceGestureEdge(input.kind === 'gestureStart'),
+        tilt,
+      };
+    }
+    const host = hostOrThrow(framed.frame, ctx);
+    const stepped = surfaceStep(memory, tilt, framed.pose, input, {
+      viewportPx: ctx.viewportPx,
+      fovYRad: ctx.fovYRad,
+      bodyRadiusM: host.radiusM,
+      // The body rotates under the scene frame, so this is resampled per drain.
+      sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
+      tuning: ctx.tuning,
+    });
+    return { pose: stepped.pose, memory: stepped.gesture, tilt: stepped.tilt };
   },
 
   toParent(framed, ctx) {

@@ -5,4 +5,6 @@ export const absoluteRung: RungRow<'absolute'> = {
   kind: 'absolute',
   host: () => null,
   emptyMemory: null,
+  /** Identity while the drain still owns the world arm's register; it moves here next. */
+  step: (_memory, tilt, framed) => ({ pose: framed.pose, memory: null, tilt }),
 };

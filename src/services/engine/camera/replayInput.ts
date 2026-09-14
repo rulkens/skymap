@@ -12,11 +12,10 @@
 import type { UnknownAction } from '@reduxjs/toolkit';
 
 import { applyInputToCamera } from '../../camera/applyInputToCamera';
-import { surfaceStep } from '../../camera/surfaceStep';
-import { surfaceGestureEdge } from '../../../utils/camera/surfaceGestureEdge';
 import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
+import { bodyRung } from './rungs/bodyRung';
 import { foldToWorld } from './rungs/foldToWorld';
 import { hostOf } from './rungs/hostOf';
 import { isWorldArm } from './rungs/isWorldArm';
@@ -24,9 +23,7 @@ import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { frameUp } from '../../../utils/camera/frameUp';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
-import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 
@@ -38,7 +35,6 @@ import type { InputStep } from '../../../@types/camera/InputStep';
 import type { RungCtx } from '../../../@types/camera/RungCtx';
 import type { SurfaceGestureMemory } from '../../../@types/camera/SurfaceGestureMemory';
 import type { TiltMemory } from '../../../@types/camera/TiltMemory';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import type { RootState } from '../../../store/types';
 
 export function replayInput(
@@ -90,38 +86,39 @@ export function replayInput(
   };
 
   /**
-   * The engaged arm's input owner (spec §6). The GATE is the stored regime
-   * (`base.frame`); the POSE is the live register, because the fold commits on
-   * a regime EDGE only — mid-tween `base` holds the last crossing pose while the
-   * register tracks the animation (FW-G).
+   * Which rung owns this step, and the arbitration around it. The GATE is the
+   * stored regime (`base.frame`); the POSE is the live register, because the
+   * fold commits on a regime EDGE only — mid-tween `base` holds the last
+   * crossing pose while the register tracks the animation (FW-G).
    */
-  const routeToSurface = (step: InputStep): boolean => {
+  const stepBodyRung = (step: InputStep): boolean => {
     const base = camera.base;
-    if (base.frame === 'absolute') return false;
-    // A playing clip owns the camera in both arms (the driver table's rule).
-    if (camera.clip !== null) return true;
-    const host = hostOf(base.frame, ctx);
-    if (host === null) return true;
+    if (isWorldArm(base)) return false;
+    // A pose-moving step is swallowed while a clip owns the camera (the driver
+    // table's rule, both arms) or while the host is unresolved — the cell's
+    // `hostOrThrow` would throw. The pointer edges still reach the rung: the
+    // latch tracks the POINTER, and they re-tag nothing.
+    const moves = step.kind === 'drag' || step.kind === 'zoom';
+    if (moves && (camera.clip !== null || hostOf(base.frame, ctx) === null)) return true;
     const from =
       register.frame !== 'absolute' && register.frame.body === base.frame.body
         ? register.pose
         : base.pose;
-    const sceneUpLocal: Vec3 = rotateVec3ByTightMat3T(frameUp(upBasis), host.state.orientation);
-    const stepped = surfaceStep(gestureMemory, tilt, from, step, {
-      viewportPx: ctx.viewportPx,
-      fovYRad: ctx.fovYRad,
-      bodyRadiusM: host.radiusM,
-      sceneUpLocal,
-      tuning,
-    });
-    const next = stepped.pose;
-    gestureMemory = stepped.gesture;
+    const stepped = bodyRung.step(
+      gestureMemory,
+      tilt,
+      { frame: base.frame, pose: from },
+      step,
+      ctx,
+    );
+    gestureMemory = stepped.memory;
     tilt = stepped.tilt;
-    register = { frame: base.frame, pose: next };
+    if (!moves) return true;
+    register = { frame: base.frame, pose: stepped.pose };
     // An at-rest notch is its own atomic gesture, so its commit is its gesture
     // end (the resting driver renders `base`, not the register). Identity, not
     // equality: a declined step returns its input by reference.
-    if (step.kind === 'zoom' && !step.duringGesture && next !== from) {
+    if (step.kind === 'zoom' && !step.duringGesture && stepped.pose !== from) {
       emit(commitCameraPose(register));
     }
     return true;
@@ -167,9 +164,9 @@ export function replayInput(
   for (const step of steps) {
     switch (step.kind) {
       case 'gestureStart':
-        // The gesture boundaries are the memory's only 'down' writes; the latch
-        // is taken by the first drag step, which carries the press pixel.
-        gestureMemory = surfaceGestureEdge(true);
+        // The latch itself is the rung's; the first drag step takes it, carrying
+        // the press pixel. The world arm keeps no gesture register at all.
+        stepBodyRung(step);
         break;
 
       case 'gestureEnd': {
@@ -179,13 +176,13 @@ export function replayInput(
         if (camera.clip === null && sameFrame(register.frame, camera.base.frame)) {
           emit(commitCameraPose(register));
         }
-        gestureMemory = surfaceGestureEdge(false);
+        stepBodyRung(step);
         emit(endDrag());
         break;
       }
 
       case 'drag':
-        if (!routeToSurface(step)) applyWorldStep(step);
+        if (!stepBodyRung(step)) applyWorldStep(step);
         break;
 
       case 'zoom': {
@@ -193,7 +190,7 @@ export function replayInput(
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
         const logZoom = Math.abs(Math.log(step.factor));
         // In a body arm both zoom owners route to the anchored step (§7).
-        if (routeToSurface(step)) break;
+        if (stepBodyRung(step)) break;
         if (step.duringGesture) {
           applyWorldStep(step);
           break;
