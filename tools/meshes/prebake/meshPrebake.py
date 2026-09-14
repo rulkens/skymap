@@ -20,10 +20,71 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 
 ATLAS_PX = 2048
 
-# (name, `bpy.ops.object.bake` kwargs, atlas colourspace) — one atlas per row,
-# `bake_pass` runs a row start to finish.
+EMISSION_COLOUR = "Emission Color"
+EMISSION_STRENGTH = "Emission Strength"
+
+
+def socket_state(socket):
+    source = socket.links[0].from_socket if socket.links else None
+    value = socket.default_value
+    return source, tuple(value) if hasattr(value, "__len__") else value
+
+
+def swap_metallic_to_emission(materials):
+    """Cycles has no metallic bake, so this row borrows the emission output:
+    every Principled node's Metallic — a constant as the grey `(m, m, m)`, an
+    image re-linked socket to socket — drives Emission Color at strength 1 for
+    the duration of the bake. `use_pass_direct`/`use_pass_indirect` are off, so
+    EMIT returns that value unlit. The returned undo is what keeps the swap from
+    leaking into the atlases baked after it."""
+    undo = []
+    plain = 0
+    for mat in materials:
+        if mat is None or not mat.use_nodes:
+            continue
+        tree = mat.node_tree
+        principled = [n for n in tree.nodes if n.type == "BSDF_PRINCIPLED"]
+        plain += len(principled) == 0
+        for node in principled:
+            colour = node.inputs[EMISSION_COLOUR]
+            strength = node.inputs[EMISSION_STRENGTH]
+            undo.append((tree, node, socket_state(colour), socket_state(strength)))
+            for link in list(colour.links) + list(strength.links):
+                tree.links.remove(link)
+            metallic = node.inputs["Metallic"]
+            if metallic.links:
+                tree.links.new(colour, metallic.links[0].from_socket)
+            else:
+                m = metallic.default_value
+                colour.default_value = (m, m, m, 1.0)
+            strength.default_value = 1.0
+    if plain:
+        log("metallic pass: %d materials have no Principled node — whatever they emit "
+            "bakes as their metallic" % plain)
+    return lambda: restore_emission(undo)
+
+
+def restore_emission(undo):
+    for tree, node, colour_state, strength_state in undo:
+        for socket, (source, value) in ((node.inputs[EMISSION_COLOUR], colour_state),
+                                        (node.inputs[EMISSION_STRENGTH], strength_state)):
+            for link in list(socket.links):
+                tree.links.remove(link)
+            socket.default_value = value
+            if source is not None:
+                tree.links.new(socket, source)
+
+
+# (name, `bpy.ops.object.bake` kwargs, atlas colourspace, optional material
+# preparation returning its own undo) — one atlas per row, `bake_pass` runs a
+# row start to finish. Every row but albedo is DATA: an atlas of slopes or
+# material values saved through the sRGB view transform comes out gamma-bent,
+# and the runtime decodes `_normal` and `_mr` linearly.
 BAKE_PASSES = [
-    ("albedo", dict(type="DIFFUSE", pass_filter={"COLOR"}), "sRGB"),
+    ("albedo", dict(type="DIFFUSE", pass_filter={"COLOR"}), "sRGB", None),
+    ("normal", dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None),
+    ("roughness", dict(type="ROUGHNESS"), "Non-Color", None),
+    ("metallic", dict(type="EMIT"), "Non-Color", swap_metallic_to_emission),
 ]
 
 
@@ -180,6 +241,23 @@ def unify_source_uvs(meshes):
             layers.remove(other)
         layers[0].name = SOURCE_UV
         layers[0].active_render = True
+    log("re-pointed %d uv references at '%s'" % (repoint_uv_references(), SOURCE_UV))
+
+
+def repoint_uv_references():
+    """Shader nodes that name a UV map by STRING — every glTF-imported Normal
+    Map node does — go dangling when the rename above lands, and a Normal Map
+    node whose name resolves to nothing bakes FLAT without a word of complaint.
+    The renamed layer is the only one left, so every such reference is it."""
+    repointed = 0
+    for mat in bpy.data.materials:
+        if not mat.use_nodes:
+            continue
+        for node in mat.node_tree.nodes:
+            if getattr(node, "uv_map", "") not in ("", SOURCE_UV):
+                node.uv_map = SOURCE_UV
+                repointed += 1
+    return repointed
 
 
 def join_meshes(scene, meshes):
@@ -256,9 +334,11 @@ def arm_materials(obj):
         mat.node_tree.nodes.active = node
 
 
-def bake_pass(obj, uv_name, cfg, name, settings, colourspace):
+def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare):
     """One BAKE_PASSES row start to finish: its atlas image, the bake, the save."""
-    image = bpy.data.images.new("%s_%s" % (cfg["key"], name), ATLAS_PX, ATLAS_PX, alpha=False)
+    is_data = colourspace != "sRGB"
+    image = bpy.data.images.new("%s_%s" % (cfg["key"], name), ATLAS_PX, ATLAS_PX,
+                                alpha=False, is_data=is_data)
     image.generated_color = (0, 0, 0, 1)
     image.colorspace_settings.name = colourspace
     for slot in obj.material_slots:
@@ -278,7 +358,10 @@ def bake_pass(obj, uv_name, cfg, name, settings, colourspace):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
+    restore = prepare([s.material for s in obj.material_slots]) if prepare else None
     bpy.ops.object.bake(uv_layer=uv_name, use_clear=True, **settings)
+    if restore is not None:
+        restore()
 
     image.filepath_raw = atlas_path(cfg, name)
     image.file_format = "PNG"
@@ -286,21 +369,31 @@ def bake_pass(obj, uv_name, cfg, name, settings, colourspace):
     return image
 
 
+def atlas_node(tree, image):
+    node = tree.nodes.new("ShaderNodeTexImage")
+    node.image = image
+    return node
+
+
 def flatten_materials(obj, key, images):
-    """One material sampling the baked atlases, replacing the whole stack."""
+    """One material sampling the baked atlases, replacing the whole stack.
+    Roughness and Metallic are linked as separate images on purpose: the glTF
+    exporter is what packs them into the single `metallicRoughnessTexture`
+    (roughness G, metallic B) the runtime samples."""
     obj.data.materials.clear()
     mat = bpy.data.materials.new(key)
     mat.use_nodes = True
-    bsdf = mat.node_tree.nodes["Principled BSDF"]
-    # The channels no BAKE_PASSES row bakes. These two reach the GLB as material
-    # factors, which buildMeshes turns into the 1x1 _mr.png the runtime samples;
-    # Blender's own default roughness is 0.5, so dropping them would relight the
-    # rovers. They go with the rows that supersede them.
-    bsdf.inputs["Metallic"].default_value = 0.0
-    bsdf.inputs["Roughness"].default_value = 0.7
-    tex = mat.node_tree.nodes.new("ShaderNodeTexImage")
-    tex.image = images["albedo"]
-    mat.node_tree.links.new(bsdf.inputs["Base Color"], tex.outputs["Color"])
+    tree = mat.node_tree
+    bsdf = tree.nodes["Principled BSDF"]
+    for name, socket in (("albedo", "Base Color"), ("roughness", "Roughness"),
+                         ("metallic", "Metallic")):
+        tree.links.new(bsdf.inputs[socket], atlas_node(tree, images[name]).outputs["Color"])
+    # The Normal Map node is how the exporter learns the atlas is tangent space;
+    # an image wired straight into Normal exports as nothing at all.
+    normal_map = tree.nodes.new("ShaderNodeNormalMap")
+    normal_map.space = "TANGENT"
+    tree.links.new(normal_map.inputs["Color"], atlas_node(tree, images["normal"]).outputs["Color"])
+    tree.links.new(bsdf.inputs["Normal"], normal_map.outputs["Normal"])
     obj.data.materials.append(mat)
 
 
@@ -375,8 +468,8 @@ def main():
     log("smart-projected uv '%s' (%.0fs elapsed)" % (uv_name, time.time() - started))
     arm_materials(obj)
     images = {}
-    for name, settings, colourspace in BAKE_PASSES:
-        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace)
+    for name, settings, colourspace, prepare in BAKE_PASSES:
+        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare)
         log("baked %d^2 %s atlas -> %s (%.0fs elapsed)"
             % (ATLAS_PX, name, images[name].filepath_raw, time.time() - started))
 

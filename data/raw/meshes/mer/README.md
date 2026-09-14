@@ -43,11 +43,12 @@ npm run prebake-mesh -- mer    # Blender 5.2 LTS; ~10 s, not run in CI
 `tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 1325**,
 leaves the 21 material-less marker cubes behind, joins the 40 remaining parts,
 smart-UV-projects and bakes all nine materials into one 2048² atlas per
-`BAKE_PASSES` row — today a single albedo row. Its output and the loose
-`mer.prebaked.albedo.png` beside it are gitignored build products — regenerate
-them, don't archive them. Having no normal or metallicRoughness map is
-expected: `buildMeshes` substitutes 1×1 constants and lists them
-under `substituted`.
+`BAKE_PASSES` row — albedo, normal, roughness and metallic. Its output and the
+four loose `mer.prebaked.*.png` atlases beside it are gitignored build
+products — regenerate them, don't archive them. The GLB carries the normal
+atlas and the metallicRoughness pair the glTF exporter packs from the last two,
+so `buildMeshes` substitutes nothing: `substituted: []`. Every material here
+authors metallic 0 and roughness 0.5, so those two atlases bake near-flat.
 
 Two things about this file bite:
 
@@ -77,8 +78,8 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 
 Blender 4.02 file: 61 mesh objects, 32,814 tris, nine materials, 13 packed
 textures (1024²/512²/256²), 38 animation actions. No armature. Normal maps are
-packed in the file but wired into nothing, so nothing carries them; the
-pre-bake bakes albedo only.
+packed in the file but wired into nothing, so nothing carries them and the
+normal atlas bakes flat.
 
 **Units: metres, +Z up.** The scene's unit system reads `NONE`, but at frame
 1325 the deployed solar array spans 2.28 m against the real 2.3 m and the

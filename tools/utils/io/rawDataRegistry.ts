@@ -1093,7 +1093,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'The Voyager model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.voyager actually points at. Regenerate with `npm run prebake-mesh -- voyager` (Blender, not CI), never by hand.',
+      'The Voyager model flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.voyager actually points at. Regenerate with `npm run prebake-mesh -- voyager` (Blender, not CI), never by hand.',
     upstream: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
     fetcher: 'tools/meshes/prebake/meshPrebake.py',
     readme: 'meshes.voyager.readme',
@@ -1119,7 +1119,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'The Perseverance model posed mast-up, decimated to 100k tris and flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.perseverance actually points at. Regenerate with `npm run prebake-mesh -- perseverance` (Blender, not CI), never by hand.',
+      'The Perseverance model posed mast-up, decimated to 100k tris and flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.perseverance actually points at. Regenerate with `npm run prebake-mesh -- perseverance` (Blender, not CI), never by hand.',
     upstream: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     fetcher: 'tools/meshes/prebake/meshPrebake.py',
     readme: 'meshes.perseverance.readme',
@@ -1154,7 +1154,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'The Curiosity model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.curiosity actually points at. Regenerate with `npm run prebake-mesh -- curiosity` (Blender, not CI), never by hand.',
+      'The Curiosity model flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.curiosity actually points at. Regenerate with `npm run prebake-mesh -- curiosity` (Blender, not CI), never by hand.',
     upstream: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
     fetcher: 'tools/meshes/prebake/meshPrebake.py',
     readme: 'meshes.curiosity.readme',
@@ -1181,7 +1181,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'The MER model posed deployed (panels out, mast up) and flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.mer actually points at. Regenerate with `npm run prebake-mesh -- mer` (Blender, not CI), never by hand.',
+      'The MER model posed deployed (panels out, mast up) and flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.mer actually points at. Regenerate with `npm run prebake-mesh -- mer` (Blender, not CI), never by hand.',
     upstream:
       'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
     fetcher: 'tools/meshes/prebake/meshPrebake.py',

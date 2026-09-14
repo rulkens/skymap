@@ -57,7 +57,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 4.791086139044178,
     meanAlbedo: [0.094881, 0.091128, 0.086404],
     triangleCount: 20378,
-    substituted: ['metalRough', 'normalMap'],
+    substituted: [],
     source: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
     licence: 'Public domain (NASA)',
     attribution:
@@ -70,7 +70,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 0.9125953290707832,
     meanAlbedo: [0.029306, 0.028947, 0.02882],
     triangleCount: 100000,
-    substituted: ['metalRough', 'normalMap'],
+    substituted: [],
     source: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     licence: 'Public domain (NASA)',
     attribution:
@@ -83,7 +83,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 0.8980751155787591,
     meanAlbedo: [0.07534, 0.073796, 0.072482],
     triangleCount: 48384,
-    substituted: ['metalRough', 'normalMap'],
+    substituted: [],
     source: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
     licence: 'Public domain (NASA)',
     attribution:
@@ -96,7 +96,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 0.574356440144803,
     meanAlbedo: [0.109407, 0.091606, 0.06557],
     triangleCount: 32562,
-    substituted: ['metalRough', 'normalMap'],
+    substituted: [],
     source: 'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
     licence: 'Public domain (NASA)',
     attribution:
