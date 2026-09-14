@@ -64,17 +64,19 @@ export type TexturedDiskSubsystem = Destroyable & {
   hasInFlightWork(): boolean;
 
   /**
-   * Swap the hi-res LOD-3 planner read per frame. Called by
-   * `engine.setTier`: the hi-res texture is sized to
-   * `HI_RES_LAYER_SIDE_BY_TIER[tier]`, so a tier flip destroys + rebuilds
-   * the texture + planner pair, and this subsystem must retarget its
-   * closure-captured planner reference at the new instance (otherwise it
-   * dereferences a torn-down planner's `lastOutput.byFamousIdx`).
+   * Swap the hi-res LOD-3 planner read per frame. The pair lives behind
+   * the `hi-res-famous` asset slot (`wireHiResFamousSlot.ts`): its
+   * `commit` binds the new texture view and calls this BEFORE destroying
+   * the previous pair, so the renderer keeps drawing the old pair until
+   * commit hands over the new one — no frame samples a torn-down
+   * planner's `lastOutput.byFamousIdx`. A tier flip changes the desired
+   * `layerSide`; the demand loop's request-drift edge detects the
+   * mismatch and reloads the slot in place.
    *
    * Swapping just the planner — rather than rebuilding the whole
    * texturedDiskSubsystem — keeps the per-key load-fade timestamps and
    * sticky disk maps for SDSS / 2MRS / GLADE galaxies intact; only the
-   * famous hi-res state is invalidated.
+   * famous hi-res state changes.
    *
    * Pass `undefined` to detach. Every Famous-source disk then emits
    * `hiResLayerIdx: -1, hiResCrossfadeAlpha: 0` until a new planner is
