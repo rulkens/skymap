@@ -11,14 +11,13 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 
-import { applyInputToCamera } from '../../camera/applyInputToCamera';
 import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
-import { bodyRung } from './rungs/bodyRung';
 import { foldToWorld } from './rungs/foldToWorld';
 import { hostOf } from './rungs/hostOf';
 import { isWorldArm } from './rungs/isWorldArm';
+import { rowFor } from './rungs/rowFor';
 import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -31,16 +30,18 @@ import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { Epoch } from '../../../@types/engine/camera/Epoch';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
+import type { FramedPose } from '../../../@types/camera/FramedPose';
 import type { InputStep } from '../../../@types/camera/InputStep';
+import type { MemOf } from '../../../@types/camera/MemOf';
 import type { RungCtx } from '../../../@types/camera/RungCtx';
-import type { SurfaceGestureMemory } from '../../../@types/camera/SurfaceGestureMemory';
+import type { RungKind } from '../../../@types/camera/RungKind';
 import type { TiltMemory } from '../../../@types/camera/TiltMemory';
 import type { RootState } from '../../../store/types';
 
 export function replayInput(
   prev: {
     readonly register: FramedCameraPose;
-    readonly gesture: SurfaceGestureMemory;
+    readonly gesture: MemOf[RungKind];
     readonly tilt: TiltMemory;
     readonly follow: FollowMemory | null;
   },
@@ -54,7 +55,7 @@ export function replayInput(
   },
 ): {
   readonly register: FramedCameraPose;
-  readonly gesture: SurfaceGestureMemory;
+  readonly gesture: MemOf[RungKind];
   readonly tilt: TiltMemory;
   readonly follow: FollowMemory | null;
   readonly followDistanceTarget: number | null;
@@ -62,7 +63,6 @@ export function replayInput(
 } {
   const { ctx, rootState, nowMs, winnerLastFrame } = args;
   const { bodies, poseBasis, upBasis, pivot, tuning } = ctx;
-  const cssHeight = ctx.viewportPx[1];
   // Only camera actions are emitted mid-drain, so every other slice is the
   // snapshot's; the focus row is read once.
   const focus = selectFocusRow(rootState);
@@ -86,79 +86,90 @@ export function replayInput(
   };
 
   /**
+   * The table read, generic over the rung: a frame tag and its pose shape stay
+   * correlated only under one `K`. The rung's own memory and the host-keyed
+   * tilt ride out through the accumulator, which spans both arms.
+   */
+  const stepRow = <K extends RungKind>(
+    framed: FramedPose<K>,
+    memory: MemOf[K],
+    input: InputStep,
+  ): FramedPose<K> => {
+    const stepped = rowFor<K>(framed.frame).step(memory, tilt, framed, input, ctx);
+    gestureMemory = stepped.memory;
+    tilt = stepped.tilt;
+    return { frame: framed.frame, pose: stepped.pose };
+  };
+
+  /**
    * Which rung owns this step, and the arbitration around it. The GATE is the
    * stored regime (`base.frame`); the POSE is the live register, because the
    * fold commits on a regime EDGE only — mid-tween `base` holds the last
-   * crossing pose while the register tracks the animation (FW-G).
+   * crossing pose while the register tracks the animation (FW-G). `false` hands
+   * the step to the world arm's at-rest notch lanes below.
    */
-  const stepBodyRung = (step: InputStep): boolean => {
+  const stepRegister = (step: InputStep): boolean => {
     const base = camera.base;
-    if (isWorldArm(base)) return false;
+    const worldArm = isWorldArm(base);
+    // At rest the world arm's zoom owner is the store `base`, not the register,
+    // so that notch is a lane below; in a body arm both owners route here (§7).
+    if (worldArm && step.kind === 'zoom' && !step.duringGesture) return false;
     // A pose-moving step is swallowed while a clip owns the camera (the driver
-    // table's rule, both arms) or while the host is unresolved — the cell's
-    // `hostOrThrow` would throw. The pointer edges still reach the rung: the
-    // latch tracks the POINTER, and they re-tag nothing.
+    // table's rule, both arms) or while a body arm's host is unresolved — the
+    // cell's `hostOrThrow` would throw. The pointer edges still reach the rung:
+    // the latch tracks the POINTER, and they re-tag nothing.
     const moves = step.kind === 'drag' || step.kind === 'zoom';
-    if (moves && (camera.clip !== null || hostOf(base.frame, ctx) === null)) return true;
-    const from =
-      register.frame !== 'absolute' && register.frame.body === base.frame.body
-        ? register.pose
-        : base.pose;
-    const stepped = bodyRung.step(
-      gestureMemory,
-      tilt,
-      { frame: base.frame, pose: from },
-      step,
-      ctx,
-    );
-    gestureMemory = stepped.memory;
-    tilt = stepped.tilt;
+    if (moves && (camera.clip !== null || (!worldArm && hostOf(base.frame, ctx) === null))) {
+      return true;
+    }
+    // Which pose to step is arbitration, not rung arithmetic: an edge moves none
+    // (and so never pays the fold), the world arm steps the live register folded
+    // down — AUTHORED, not displayed (R12b-1), so a drag composes below the tilt
+    // — and the body arm steps it only while it speaks the arm's own frame.
+    const from: FramedCameraPose = !moves
+      ? base
+      : worldArm
+        ? { frame: base.frame, pose: foldToWorld(register, ctx) }
+        : {
+            frame: base.frame,
+            pose:
+              register.frame !== 'absolute' && register.frame.body === base.frame.body
+                ? register.pose
+                : base.pose,
+          };
+    let stepped: FramedCameraPose;
+    if (isWorldArm(from)) {
+      const next = stepRow(from, null, step);
+      if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
+        // Followed-body strafe: the pivot-pin owns the target (`bodyPosition +
+        // panOffset`), so the pan's own delta goes to the offset the pin reads.
+        // A driver memory, outliving the rung that produced the delta.
+        const off = follow?.panOffset ?? [0, 0, 0];
+        follow = {
+          from: follow?.from ?? null,
+          distanceTarget: follow?.distanceTarget ?? null,
+          panOffset: [
+            off[0] + next.pose.target[0] - from.pose.target[0],
+            off[1] + next.pose.target[1] - from.pose.target[1],
+            off[2] + next.pose.target[2] - from.pose.target[2],
+          ],
+          saturated: follow?.saturated ?? false,
+        };
+      }
+      stepped = next;
+    } else {
+      // A memory taken on another rung is not this one's: it enters as its empty.
+      stepped = stepRow(from, gestureMemory ?? rowFor<'body'>(from.frame).emptyMemory, step);
+    }
     if (!moves) return true;
-    register = { frame: base.frame, pose: stepped.pose };
+    register = stepped;
     // An at-rest notch is its own atomic gesture, so its commit is its gesture
     // end (the resting driver renders `base`, not the register). Identity, not
     // equality: a declined step returns its input by reference.
-    if (step.kind === 'zoom' && !step.duringGesture && stepped.pose !== from) {
+    if (step.kind === 'zoom' && !step.duringGesture && stepped.pose !== from.pose) {
       emit(commitCameraPose(register));
     }
     return true;
-  };
-
-  const applyWorldStep = (step: Extract<InputStep, { kind: 'drag' } | { kind: 'zoom' }>): void => {
-    // A playing clip is not gesture-interruptible: swallowed, not folded under it.
-    if (camera.clip !== null) return;
-    // AUTHORED, not displayed (R12b-1): the drag composes below the tilt.
-    const world = foldToWorld(register, ctx);
-    let next = applyInputToCamera(world, step, cssHeight, pivot, ctx.fovYRad, poseBasis, upBasis);
-    if (step.kind === 'zoom') {
-      // The roll ride runs on every driven zoom path, gesture-held included.
-      const roll = frameAlignedRoll(
-        world,
-        next,
-        bodies,
-        poseBasis,
-        upBasis,
-        Math.abs(Math.log(step.factor)),
-        tuning,
-      );
-      next = { ...next, roll };
-    }
-    if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
-      // Followed-body strafe: the pivot-pin owns the target (`bodyPosition +
-      // panOffset`), so the pan's own delta goes to the offset the pin reads.
-      const off = follow?.panOffset ?? [0, 0, 0];
-      follow = {
-        from: follow?.from ?? null,
-        distanceTarget: follow?.distanceTarget ?? null,
-        panOffset: [
-          off[0] + next.target[0] - world.target[0],
-          off[1] + next.target[1] - world.target[1],
-          off[2] + next.target[2] - world.target[2],
-        ],
-        saturated: follow?.saturated ?? false,
-      };
-    }
-    register = absoluteArm(next);
   };
 
   for (const step of steps) {
@@ -166,7 +177,7 @@ export function replayInput(
       case 'gestureStart':
         // The latch itself is the rung's; the first drag step takes it, carrying
         // the press pixel. The world arm keeps no gesture register at all.
-        stepBodyRung(step);
+        stepRegister(step);
         break;
 
       case 'gestureEnd': {
@@ -176,25 +187,20 @@ export function replayInput(
         if (camera.clip === null && sameFrame(register.frame, camera.base.frame)) {
           emit(commitCameraPose(register));
         }
-        stepBodyRung(step);
+        stepRegister(step);
         emit(endDrag());
         break;
       }
 
       case 'drag':
-        if (!stepBodyRung(step)) applyWorldStep(step);
+        stepRegister(step);
         break;
 
       case 'zoom': {
         // The settles are priced per unit of zoom, not per step (user ruling
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
         const logZoom = Math.abs(Math.log(step.factor));
-        // In a body arm both zoom owners route to the anchored step (§7).
-        if (stepBodyRung(step)) break;
-        if (step.duringGesture) {
-          applyWorldStep(step);
-          break;
-        }
+        if (stepRegister(step)) break;
         // A follow row re-asserts its own target every frame and would swallow
         // a committed base, so its notch is resolved to a distance the driver
         // adopts; a second notch in the same drain resolves off the first.

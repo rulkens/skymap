@@ -28,7 +28,6 @@ import { foldToWorld } from './rungs/foldToWorld';
 import { frameKey } from './rungs/frameKey';
 import { rowFor } from './rungs/rowFor';
 import { resolveFrameBasis } from './resolveFrameBasis';
-import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../camera/surfaceStep';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
@@ -95,9 +94,7 @@ export function stepCameraRuntime(
   const drained = replayInput(
     {
       register: prev.register.pose,
-      // The world arm's empty memory is `null`, and the drain's gesture edges
-      // are arm-agnostic: a wiped memory enters as idle, not as an absent one.
-      gesture: prev.gesture.value ?? EMPTY_SURFACE_GESTURE_MEMORY,
+      gesture: prev.gesture.value,
       tilt: prev.tilt,
       follow: prev.follow,
     },
