@@ -13,6 +13,10 @@ import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveS
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
+import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
+import { rotYMat3 } from '../../../../src/utils/math/rotYMat3';
+import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
@@ -180,14 +184,17 @@ describe('cubemapFaceContext', () => {
     expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state).draw);
   });
 
-  it('renders a world direction to the exact (s,t) the WGSL cube sampler computes for it', () => {
+  it('renders a cube-axis direction to the exact (s,t) the WGSL cube sampler computes for it, under world and host axes', () => {
     // Capture↔sample identity (audit-cubemap-alignment.md): a star at world
     // direction d must land, under the face camera's vp + WebGPU's top-left
     // viewport transform, on the SAME (u,v) the GL/Vulkan/WGSL cube-face
     // table derives from d. Independently implements both sides; fails as
     // v = 1 − t if the capture's clip-Y mirror is ever dropped. One
     // direction per face, all with t well away from the flip-invariant 0.5.
+    // Under a host frame the fragment samples along host-axis d, so the face
+    // must capture world direction axes·d there, or the probe spins with the host.
     const state = makeState();
+    const hostAxes = multiply3x3(rotXMat3(0.4), rotYMat3(1.1));
     const directions: readonly Vec3[] = [
       [0.9, 0.1, 0.3], // +X
       [-0.9, 0.2, 0.15], // −X
@@ -197,7 +204,8 @@ describe('cubemapFaceContext', () => {
       [0.3, 0.2, -0.93], // −Z
     ];
 
-    for (const d of directions) {
+    const cases = [undefined, hostAxes].flatMap((axes) => directions.map((d) => ({ axes, d })));
+    for (const { axes, d } of cases) {
       // Cube-face selection + (s,t) per the GL table 8.19 / WGSL rules.
       const [x, y, z] = d;
       const ax = Math.abs(x);
@@ -231,16 +239,20 @@ describe('cubemapFaceContext', () => {
         eyeMpc: EYE_MPC,
         face: face as CubeFace,
         faceSizePx: 256,
-        nearMpc: CAPTURE_NEAR_MPC,
+        // Not CAPTURE_NEAR_MPC: at a 66 Mpc eye a rotated basis rounds its
+        // sub-AU eye-to-target offset past this 5-place check.
+        nearMpc: 0.01,
         viewSlotBase: VIEW_SLOT_BASE,
         nowMs: 0,
+        axes,
       });
       expect(ctx).not.toBeNull();
       if (ctx === null) continue;
 
-      // World point 1 Mpc out along d, through the face's cosmo vp
+      const w = rotateVec3ByTightMat3(d as Vec3, axes);
+      // World point 1 Mpc out along axes·d, through the face's cosmo vp
       // (column-major, clip = vp · [p, 1]).
-      const p: Vec3 = [EYE_MPC[0] + d[0], EYE_MPC[1] + d[1], EYE_MPC[2] + d[2]];
+      const p: Vec3 = [EYE_MPC[0] + w[0], EYE_MPC[1] + w[1], EYE_MPC[2] + w[2]];
       const vp = ctx.vp;
       const cx = vp[0]! * p[0] + vp[4]! * p[1] + vp[8]! * p[2] + vp[12]!;
       const cy = vp[1]! * p[0] + vp[5]! * p[1] + vp[9]! * p[2] + vp[13]!;

@@ -8,6 +8,8 @@
 // that 'utils/camera/sunDirLocal.ts' returns. 'u.model' is the body's tumble
 // rotation only (for rotating normal/tangent); the view rotation lives in
 // 'u.mvp' alone.
+// The reflection probe is CAPTURED in these host axes too ('scheduleProbeCapture'
+// hands the host orientation to the face cameras), so 'n'/'r' index it as-is.
 //
 // One authoritative inter-stage struct so a '@location' drift between the two
 // stages is structurally impossible, and it is the module's ONLY

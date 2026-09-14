@@ -45,8 +45,11 @@ export function scheduleProbeCapture(input: {
   if (subject === null || ctx.nowMs - refreshedAtMs < PROBE_REFRESH_INTERVAL_MS) return null;
 
   const row = CUBEMAP_CAPTURES.probe;
-  const eyeMpc = sceneBodyStates(state, ctx).get(subject.id)!.positionMpc;
+  const bodyStates = sceneBodyStates(state, ctx);
+  const eyeMpc = bodyStates.get(subject.id)!.positionMpc;
   const hostId = meshBodySlabHostId(subject);
+  // Cube axes = the host axes `meshBodiesPass` shades in (io.wesl's contract).
+  const axes = bodyStates.get(hostId)!.orientation;
   const faces = new Map<CubeFace, CaptureFace>();
   for (const face of ALL_CUBE_FACES) {
     const faceCtx = cubemapFaceContext({
@@ -57,6 +60,7 @@ export function scheduleProbeCapture(input: {
       nearMpc: row.nearMpc,
       viewSlotBase: row.viewSlotBase,
       nowMs: ctx.nowMs,
+      axes,
     });
     // Null only pre-bootstrap: nothing is recorded, so the next frame retries.
     if (faceCtx === null) return null;

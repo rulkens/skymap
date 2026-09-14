@@ -17,6 +17,8 @@ import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { cross3 } from '../../../utils/math/cross3';
+import { multiply3x3 } from '../../../utils/math/multiply3x3';
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 
 /**
  * Forward axis per `CubeFace` (±X/±Y/±Z) and the `texture_cube` convention's
@@ -75,10 +77,15 @@ export function cubemapFaceContext(input: {
   /** The FRAME's clock, so a `nowMs`-animated roster layer ticks identically
    *  on a captured face and in the direct view. */
   readonly nowMs: number;
+  /** World-from-cube axes; omitted = world axes. A probe passes its shading
+   *  host's orientation, because the fragment samples the cube along host-axis
+   *  `n`/`r` — a world-axis probe reads back rotated by the host's spin. */
+  readonly axes?: Readonly<Mat3>;
 }): ReadyFrameContext | null {
-  const { state, eyeMpc, face, faceSizePx, nearMpc, viewSlotBase, nowMs } = input;
-  const forward = FACE_FORWARD[face]!;
-  const basis = FACE_BASES[face]!;
+  const { state, eyeMpc, face, faceSizePx, nearMpc, viewSlotBase, nowMs, axes } = input;
+  const forward = rotateVec3ByTightMat3(FACE_FORWARD[face]!, axes);
+  const basis =
+    axes === undefined ? FACE_BASES[face]! : multiply3x3(axes as Mat3, FACE_BASES[face]!);
   // A target `nearMpc` ahead at that same distance puts the derived eye back on
   // `eyeMpc` exactly, on every face. The distance is the row's near plane, not
   // 1 Mpc, because body passes gate on `ctx.cam.distance` against the

@@ -124,6 +124,8 @@ describe('scheduleProbeCapture', () => {
         nearMpc: row.nearMpc,
         viewSlotBase: row.viewSlotBase,
         nowMs: NOW_MS,
+        // The cube is captured in the axes the host row shades in.
+        axes: deriveBodyStates(SIM_DAYS).get('mars')!.orientation,
       });
     }
     for (const face of ALL_CUBE_FACES) {
