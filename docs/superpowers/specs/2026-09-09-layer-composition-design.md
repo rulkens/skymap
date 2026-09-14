@@ -907,8 +907,9 @@ from, which still carried a `handle?(runtime)` hook.
    separate `liveness` hook and no `frame` method on `ContentPass`.
 
 3. **D3 — no `tier` hook: tier is an input to the demand loop.** Every asset row gains a generic
-   request-drift edge: a `ready` slot whose last request differs from `row.req(tier)` reloads in
-   place, and never releases. That generalises `staleTierEvict` (`reevaluateDemand.ts:97,182`),
+   request-drift edge: a NON-IDLE slot — loading, committing, ready or error — whose last request
+   differs from `row.req(tier)` reloads in place, and never releases, because a fetch still in
+   flight when the tier flips must be superseded rather than allowed to finish at the old tier. That generalises `staleTierEvict` (`reevaluateDemand.ts:97,182`),
    which does exactly this today but only for body-texture keys. A slot keeps serving its last
    committed value across the reload — `loading` and `committing` carry the previous value, so
    `current()` and `slotReady` stay non-null — and `release()` narrows to distance eviction. The
