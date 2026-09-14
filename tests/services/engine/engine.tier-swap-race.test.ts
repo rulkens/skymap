@@ -125,6 +125,7 @@ describe('AssetSlot tier-swap race', () => {
     // The user-visible side-effect ordering: medium first, then large,
     // then medium again — ending on medium, not large.
     expect(writes).toEqual(['MEDIUM-DATA', 'LARGE-DATA', 'MEDIUM-DATA']);
-    expect(slot.current()).toBe('MEDIUM-DATA');
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    expect(slot.committed()?.req.tier).toBe('medium');
   });
 });

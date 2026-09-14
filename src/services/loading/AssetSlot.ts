@@ -48,11 +48,6 @@
  * `reduceLoadState`), a Set of subscribers, and the commit-chain head.
  * Everything that can be a pure function is — retry decisions, state
  * transitions, console output.
- *
- * Mutable state is intentionally a thin shell: a generation counter, an
- * AbortController reference, the current LoadState (computed via the pure
- * `reduceLoadState`), and a Set of subscribers.  Everything that can be a
- * pure function is — retry decisions, state transitions, console output.
  */
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { LoadEvent } from '../../@types/loading/LoadEvent';
@@ -238,7 +233,7 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       // slot's work is done" instead of guessing from state transitions.
       return runLoad(req, myGen, controller);
     },
-    committed() {
+    committed(): (LoadState<T> & { kind: 'ready'; req: Req }) | null {
       return lastReady;
     },
     current(): T | null {
