@@ -12,7 +12,8 @@ import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge
 import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { CameraSimHarness } from './CameraSimHarness';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
-import type { SurfaceMemory } from '../../../src/@types/camera/SurfaceMemory';
+import type { SurfaceGestureMemory } from '../../../src/@types/camera/SurfaceGestureMemory';
+import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
@@ -29,35 +30,40 @@ export function seedRememberedTilt(
   options: { readonly targetRad?: number; readonly guard?: number; readonly pxStep?: number } = {},
 ): void {
   const { targetRad = 0.35, guard = 6, pxStep = 2 } = options;
-  let mem: SurfaceMemory = h.state.cameraRuntime.surface;
+  let mem: SurfaceGestureMemory = h.state.cameraRuntime.gesture;
+  let tilt: TiltMemory = h.state.cameraRuntime.tilt;
   let p: BodyFixedPose = {
     bodyId: 'earth',
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [0, 0, 1.15],
     basisLocal: NADIR,
   };
-  mem = surfaceGestureEdge(mem, true);
+  mem = surfaceGestureEdge(true);
   const unlatch = surfaceStep(
     mem,
+    tilt,
     p,
     { kind: 'drag', mode: 'pan', startPx: [50, 50], endPx: [50, 30] },
     CTX,
   );
   p = unlatch.pose;
-  mem = surfaceGestureEdge(unlatch.next, false);
-  for (let g = 0; g < guard && mem.rememberedTiltRad < targetRad; g += 1) {
-    mem = surfaceGestureEdge(mem, true);
-    for (let px = 5; px < 90 && mem.rememberedTiltRad < targetRad; px += pxStep) {
+  tilt = unlatch.tilt;
+  mem = surfaceGestureEdge(false);
+  for (let g = 0; g < guard && tilt.rememberedTiltRad < targetRad; g += 1) {
+    mem = surfaceGestureEdge(true);
+    for (let px = 5; px < 90 && tilt.rememberedTiltRad < targetRad; px += pxStep) {
       const out = surfaceStep(
         mem,
+        tilt,
         p,
         { kind: 'drag', mode: 'orbit', startPx: [50, px], endPx: [50, px + pxStep] },
         CTX,
       );
       p = out.pose;
-      mem = out.next;
+      mem = out.gesture;
+      tilt = out.tilt;
     }
-    mem = surfaceGestureEdge(mem, false);
+    mem = surfaceGestureEdge(false);
   }
-  h.state.cameraRuntime = { ...h.state.cameraRuntime, surface: mem };
+  h.state.cameraRuntime = { ...h.state.cameraRuntime, gesture: mem, tilt };
 }

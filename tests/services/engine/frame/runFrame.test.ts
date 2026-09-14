@@ -119,7 +119,8 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/so
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { EMPTY_SURFACE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
@@ -245,7 +246,8 @@ function makeState(): EngineState {
       },
       epochs: UNSTARTED_EPOCHS,
       follow: null,
-      surface: EMPTY_SURFACE_MEMORY,
+      gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+      tilt: EMPTY_TILT_MEMORY,
       outputs: {
         displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         simDays: 0,

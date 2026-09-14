@@ -7,17 +7,23 @@
  * `SCENE_BODIES`.
  */
 
-import { surfaceStep, EMPTY_SURFACE_MEMORY } from '../../../src/services/camera/surfaceStep';
+import {
+  surfaceStep,
+  EMPTY_SURFACE_GESTURE_MEMORY,
+} from '../../../src/services/camera/surfaceStep';
 import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../../src/@types/camera/CameraTuning';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
-import type { SurfaceMemory } from '../../../src/@types/camera/SurfaceMemory';
+import { EMPTY_TILT_MEMORY } from '../../../src/data/camera/emptyTiltMemory';
+import type { SurfaceGestureMemory } from '../../../src/@types/camera/SurfaceGestureMemory';
+import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
-export function makeSurfaceDriver(seed: SurfaceMemory = EMPTY_SURFACE_MEMORY) {
-  let memory = seed;
+export function makeSurfaceDriver() {
+  let memory: SurfaceGestureMemory = EMPTY_SURFACE_GESTURE_MEMORY;
+  let tilt: TiltMemory = EMPTY_TILT_MEMORY;
   return {
     apply: (
       arm: BodyFixedPose,
@@ -28,22 +34,23 @@ export function makeSurfaceDriver(seed: SurfaceMemory = EMPTY_SURFACE_MEMORY) {
       sceneUpLocal: Readonly<Vec3>,
       tuning: CameraTuning,
     ): BodyFixedPose => {
-      const out = surfaceStep(memory, arm, step, {
+      const out = surfaceStep(memory, tilt, arm, step, {
         viewportPx,
         fovYRad,
         bodyRadiusM,
         sceneUpLocal,
         tuning,
       });
-      memory = out.next;
+      memory = out.gesture;
+      tilt = out.tilt;
       return out.pose;
     },
     onGestureStart: (): void => {
-      memory = surfaceGestureEdge(memory, true);
+      memory = surfaceGestureEdge(true);
     },
     onGestureEnd: (): void => {
-      memory = surfaceGestureEdge(memory, false);
+      memory = surfaceGestureEdge(false);
     },
-    rememberedTiltRad: (): number => memory.rememberedTiltRad,
+    rememberedTiltRad: (): number => tilt.rememberedTiltRad,
   };
 }

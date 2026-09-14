@@ -90,7 +90,7 @@ export function stepCameraRuntime(
   const replayCtx: RungCtx = { ...rungFields, upBasis: prev.outputs.upBasis };
 
   const drained = replayInput(
-    { register: prev.register.pose, surface: prev.surface, follow: prev.follow },
+    { register: prev.register.pose, gesture: prev.gesture, tilt: prev.tilt, follow: prev.follow },
     steps,
     {
       ctx: replayCtx,
@@ -191,7 +191,7 @@ export function stepCameraRuntime(
     pivotsOnFocusedBody: winner.pivotsOnFocusedBody ?? false,
     focus,
     follow: memory,
-    surface: drained.surface,
+    tilt: drained.tilt,
     intent: rootState.camera,
     ctx: foldCtx,
   });
@@ -202,7 +202,8 @@ export function stepCameraRuntime(
       register: { pose: projected.register, winner: winnerId },
       epochs,
       follow: memory,
-      surface: projected.surface,
+      gesture: drained.gesture,
+      tilt: projected.tilt,
       outputs: {
         displayed: projected.displayed,
         simDays,

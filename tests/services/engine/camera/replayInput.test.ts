@@ -10,7 +10,8 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { replayInput } from '../../../../src/services/engine/camera/replayInput';
 import * as surfaceStepModule from '../../../../src/services/camera/surfaceStep';
-import { EMPTY_SURFACE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import {
@@ -113,7 +114,8 @@ describe('replayInput', () => {
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
     const prev = deepFreeze({
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-      surface: { ...EMPTY_SURFACE_MEMORY },
+      gesture: { ...EMPTY_SURFACE_GESTURE_MEMORY },
+      tilt: { ...EMPTY_TILT_MEMORY },
       follow: { from: null, distanceTarget: 42, panOffset: [1, 2, 3] as Vec3, saturated: false },
     });
     const steps = deepFreeze<readonly InputStep[]>([
@@ -144,7 +146,8 @@ describe('replayInput', () => {
     );
     const prev = {
       register: store.getState().camera.base,
-      surface: EMPTY_SURFACE_MEMORY,
+      gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+      tilt: EMPTY_TILT_MEMORY,
       follow: null,
     };
 
@@ -175,7 +178,12 @@ describe('replayInput', () => {
     const arm = earthArm(2);
     store.dispatch(commitCameraPose(arm));
     const body = replayInput(
-      { register: arm, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: arm,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [
         atRestZoom(Math.exp(-0.1)),
         { kind: 'gestureStart' },
@@ -191,7 +199,7 @@ describe('replayInput', () => {
     ]);
     expect(body.actions[0]!.payload).not.toBe(arm);
     expect(body.actions[1]!.payload).toBe(body.register);
-    expect(body.surface.gesture).toBe(null);
+    expect(body.gesture.gesture).toBe(null);
 
     // The follow roll ride: the notch is resolved to a distance for the driver
     // to adopt and its commit carries only the ridden roll.
@@ -213,7 +221,12 @@ describe('replayInput', () => {
       saturated: false,
     };
     const ride = replayInput(
-      { register: nearEarth, surface: EMPTY_SURFACE_MEMORY, follow },
+      {
+        register: nearEarth,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow,
+      },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(followStore, { winnerLastFrame: 'followHold' }),
     );
@@ -237,13 +250,19 @@ describe('replayInput', () => {
     const store = makeStore();
     const arm = earthArm(2);
     store.dispatch(commitCameraPose(arm));
-    vi.spyOn(surfaceStepModule, 'surfaceStep').mockImplementation((prev, pose) => ({
+    vi.spyOn(surfaceStepModule, 'surfaceStep').mockImplementation((prev, tilt, pose) => ({
       pose,
-      next: prev,
+      gesture: prev,
+      tilt,
     }));
 
     const next = replayInput(
-      { register: arm, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: arm,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [atRestZoom(Math.exp(-0.1))],
       ctxOf(store),
     );
@@ -278,7 +297,12 @@ describe('replayInput', () => {
     const f = Math.exp(-0.1);
 
     const next = replayInput(
-      { register: arm, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: arm,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [{ kind: 'zoom', factor: f, duringGesture: false, cursorPx: [700, 500] }],
       ctxOf(store),
     );
@@ -308,7 +332,12 @@ describe('replayInput', () => {
     store.dispatch(commitCameraPose(stale));
 
     const next = replayInput(
-      { register: onScreen, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: onScreen,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [
         { kind: 'gestureStart' },
         { kind: 'drag', mode: 'orbit', startPx: [500, 500], endPx: [560, 500] },
@@ -335,7 +364,12 @@ describe('replayInput', () => {
     );
 
     const next = replayInput(
-      { register: arm, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: arm,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [
         { kind: 'gestureStart' },
         { kind: 'drag', mode: 'orbit', startPx: [500, 500], endPx: [560, 500] },
@@ -360,7 +394,12 @@ describe('replayInput', () => {
     const yawBefore = worldArmOf(base).yaw;
 
     const next = replayInput(
-      { register: base, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: base,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [atRestZoom(Math.exp(0.1))],
       {
         ...ctxOf(store, { winnerLastFrame: 'autoRotate', nowMs: 500 }),
@@ -380,7 +419,8 @@ describe('replayInput', () => {
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
     const prev = {
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-      surface: EMPTY_SURFACE_MEMORY,
+      gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+      tilt: EMPTY_TILT_MEMORY,
       follow: null,
     };
 
@@ -415,7 +455,12 @@ describe('replayInput', () => {
     store.dispatch(commitCameraPose(arm));
 
     const next = replayInput(
-      { register: arm, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: arm,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [
         atRestZoom(Math.exp(0.24)),
         { kind: 'gestureStart' },
@@ -444,7 +489,12 @@ describe('replayInput', () => {
     store.dispatch(commitCameraPose(nearEarth));
 
     const next = replayInput(
-      { register: nearEarth, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: nearEarth,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(store),
     );
@@ -464,7 +514,12 @@ describe('replayInput', () => {
     const base = store.getState().camera.base;
 
     const next = replayInput(
-      { register: base, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: base,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(store, { winnerLastFrame: 'followHold' }),
     );
@@ -498,7 +553,12 @@ describe('replayInput', () => {
 
     // A dive steep enough to blow through the surface in one notch.
     const next = replayInput(
-      { register: nearEarth, surface: EMPTY_SURFACE_MEMORY, follow },
+      {
+        register: nearEarth,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow,
+      },
       [atRestZoom(Math.exp(-10))],
       ctxOf(store, { winnerLastFrame: 'followHold' }),
     );
@@ -540,7 +600,8 @@ describe('replayInput', () => {
       const next = replayInput(
         {
           register,
-          surface: EMPTY_SURFACE_MEMORY,
+          gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+          tilt: EMPTY_TILT_MEMORY,
           follow: { from: null, distanceTarget: target, panOffset: [0, 0, 0], saturated: false },
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
@@ -590,7 +651,12 @@ describe('replayInput', () => {
     store.dispatch(commitCameraPose(inBand));
 
     const next = replayInput(
-      { register: inBand, surface: EMPTY_SURFACE_MEMORY, follow: null },
+      {
+        register: inBand,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [
         { kind: 'gestureStart' },
         { kind: 'zoom', factor: Math.exp(0.1), duringGesture: true, cursorPx: [500, 500] },
@@ -614,7 +680,8 @@ describe('replayInput', () => {
           pitch: 0,
           distance: 4 * EARTH_RADIUS_MPC,
         }),
-        surface: EMPTY_SURFACE_MEMORY,
+        gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+        tilt: EMPTY_TILT_MEMORY,
         follow: null,
       },
       [

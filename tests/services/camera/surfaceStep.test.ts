@@ -10,10 +10,10 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-  noteBody,
   surfaceStep,
-  EMPTY_SURFACE_MEMORY,
+  EMPTY_SURFACE_GESTURE_MEMORY,
 } from '../../../src/services/camera/surfaceStep';
+import { EMPTY_TILT_MEMORY } from '../../../src/data/camera/emptyTiltMemory';
 import { makeSurfaceDriver } from '../../helpers/camera/makeSurfaceDriver';
 import { bodyUpWeight } from '../../../src/utils/camera/bodyUpWeight';
 import { ORIENT_DECAY } from '../../../src/data/camera/orientDecay';
@@ -27,7 +27,7 @@ import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../../src/@types/camera/CameraTuning';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { SurfaceMemory } from '../../../src/@types/camera/SurfaceMemory';
+import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { TILT_GAIN } from '../../../src/data/camera/tiltGain';
@@ -1084,68 +1084,50 @@ describe('surfaceStep', () => {
 
   it('a drag with the pointer up is declined', () => {
     // FW-C: a trackpad burst can deliver a drag run after the pointerup.
-    const up = surfaceStep(EMPTY_SURFACE_MEMORY, IN_BAND, tiltDrag(15), CTX);
-    expect(up.pose).toBe(IN_BAND);
-    expect(up.next).toBe(EMPTY_SURFACE_MEMORY);
-
-    const down = surfaceStep(
-      { ...EMPTY_SURFACE_MEMORY, gesture: 'down' },
+    const up = surfaceStep(
+      EMPTY_SURFACE_GESTURE_MEMORY,
+      EMPTY_TILT_MEMORY,
       IN_BAND,
       tiltDrag(15),
       CTX,
     );
+    expect(up.pose).toBe(IN_BAND);
+    expect(up.gesture).toBe(EMPTY_SURFACE_GESTURE_MEMORY);
+
+    const down = surfaceStep({ gesture: 'down' }, EMPTY_TILT_MEMORY, IN_BAND, tiltDrag(15), CTX);
     expect(tiltOf(down.pose)).toBeGreaterThan(0.1);
   });
 
   it('a tilt drag writes the un-mapped memory and returns a new object', () => {
-    const prev = Object.freeze({
-      ...EMPTY_SURFACE_MEMORY,
-      gesture: 'down' as const,
-      memoryBodyId: 'earth',
-    });
-    const { pose, next } = surfaceStep(prev, IN_BAND, tiltDrag(15), CTX);
+    const prev = Object.freeze({ gesture: 'down' as const });
+    const prevTilt: TiltMemory = { hostId: 'earth', rememberedTiltRad: 0 };
+    const { pose, gesture, tilt } = surfaceStep(prev, prevTilt, IN_BAND, tiltDrag(15), CTX);
 
-    expect(next).not.toBe(prev);
-    expect(prev.rememberedTiltRad).toBe(0);
+    expect(gesture).not.toBe(prev);
+    expect(prevTilt.rememberedTiltRad).toBe(0);
     // Ruling 12: the memory is the display tilt un-mapped through the band
     // weight, so it is strictly LARGER than what the drag put on screen.
     const w = bodyUpWeight(hrOf(pose), TUNING);
     expect(w).toBeGreaterThan(0);
     expect(w).toBeLessThan(1);
-    expect(next.rememberedTiltRad).toBeCloseTo(tiltOf(pose) / w, 9);
-    expect(next.gesture).toMatchObject({ mode: 'tilt', prevPixel: [50, 35] });
-  });
-
-  it('noteBody wipes the tilt on a different body and keeps it on null', () => {
-    const seeded: SurfaceMemory = {
-      ...EMPTY_SURFACE_MEMORY,
-      rememberedTiltRad: 0.4,
-      memoryBodyId: 'earth',
-    };
-
-    expect(noteBody(seeded, null)).toEqual(seeded);
-    expect(noteBody(seeded, 'earth').rememberedTiltRad).toBe(0.4);
-    // Ruling 18: a body SWITCH wipes the memory, never restores it per body.
-    expect(noteBody(seeded, 'mars')).toEqual({
-      ...seeded,
-      rememberedTiltRad: 0,
-      memoryBodyId: 'mars',
-    });
-    // Nothing noted yet is not a switch: the first note adopts the body.
-    expect(noteBody({ ...seeded, memoryBodyId: null }, 'mars').rememberedTiltRad).toBe(0.4);
+    expect(tilt.rememberedTiltRad).toBeCloseTo(tiltOf(pose) / w, 9);
+    expect(gesture.gesture).toMatchObject({ mode: 'tilt', prevPixel: [50, 35] });
   });
 
   it('a zoom step never authors tilt', () => {
-    const prev: SurfaceMemory = {
-      ...EMPTY_SURFACE_MEMORY,
-      rememberedTiltRad: 0.4,
-      memoryBodyId: 'earth',
-    };
+    const prevTilt: TiltMemory = { hostId: 'earth', rememberedTiltRad: 0.4 };
     const step: InputStep = { kind: 'zoom', factor: 0.5, duringGesture: false, cursorPx: null };
-    const { pose, next } = surfaceStep(prev, IN_BAND, step, CTX);
+    const { pose, gesture, tilt } = surfaceStep(
+      EMPTY_SURFACE_GESTURE_MEMORY,
+      prevTilt,
+      IN_BAND,
+      step,
+      CTX,
+    );
 
     expect(hrOf(pose)).toBeLessThan(hrOf(IN_BAND));
-    expect(next).toEqual(prev);
+    expect(gesture).toBe(EMPTY_SURFACE_GESTURE_MEMORY);
+    expect(tilt).toEqual(prevTilt);
   });
 });
 

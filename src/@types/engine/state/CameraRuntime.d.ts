@@ -9,7 +9,8 @@ import type { CameraEpochs } from '../camera/CameraEpochs';
 import type { DriverId } from '../camera/DriverId';
 import type { FollowMemory } from '../camera/FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
-import type { SurfaceMemory } from '../../camera/SurfaceMemory';
+import type { SurfaceGestureMemory } from '../../camera/SurfaceGestureMemory';
+import type { TiltMemory } from '../../camera/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
 
 export type CameraRuntime = {
@@ -18,6 +19,7 @@ export type CameraRuntime = {
   readonly register: { readonly pose: FramedCameraPose; readonly winner: DriverId };
   readonly epochs: CameraEpochs;
   readonly follow: FollowMemory | null;
-  readonly surface: SurfaceMemory;
+  readonly gesture: SurfaceGestureMemory;
+  readonly tilt: TiltMemory;
   readonly outputs: FrameOutputs;
 };

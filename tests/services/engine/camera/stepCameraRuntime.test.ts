@@ -22,7 +22,7 @@ import { stepCameraRuntime } from '../../../../src/services/engine/camera/stepCa
 import { projectFramePose } from '../../../../src/services/engine/frame/projectFramePose';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/camera/cameraFraming';
-import { EMPTY_SURFACE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
@@ -95,22 +95,23 @@ describe('stepCameraRuntime', () => {
     expect(next.follow?.panOffset).not.toEqual([0, 0, 0]);
   });
 
-  it('an idle frame returns the epochs, surface and follow groups by identity', () => {
+  it('an idle frame returns the epochs, gesture, tilt and follow groups by identity', () => {
     // A body arm: the follow driver is inert there, so its memory rides
-    // through unchanged and `noteBody` sees the body it already remembers.
-    // `toBe` on all three — a group re-spread on a steady frame breaks every
-    // between-frame memo keyed on it.
+    // through unchanged and `notedTiltMemory` sees the host it already
+    // remembers. `toBe` on all four — a group re-spread on a steady frame
+    // breaks every between-frame memo keyed on it.
     const h = makeCameraSimHarness({ bootHR: 0.1 });
     h.frame(3);
     const prev = h.state.cameraRuntime;
     expect(prev.register.pose.frame).toEqual({ body: 'earth' });
     expect(prev.follow).not.toBeNull();
-    expect(prev.surface.memoryBodyId).toBe('earth');
+    expect(prev.tilt.hostId).toBe('earth');
 
     const { next } = stepCameraRuntime(prev, inputsFor(h, 64));
 
     expect(next.epochs).toBe(prev.epochs);
-    expect(next.surface).toBe(prev.surface);
+    expect(next.gesture).toBe(prev.gesture);
+    expect(next.tilt).toBe(prev.tilt);
     expect(next.follow).toBe(prev.follow);
   });
 
@@ -132,7 +133,7 @@ describe('stepCameraRuntime', () => {
         pivotsOnFocusedBody: true,
         focus: EARTH_ROW,
         follow: null,
-        surface: { ...EMPTY_SURFACE_MEMORY, rememberedTiltRad, memoryBodyId: 'earth' },
+        tilt: { ...EMPTY_TILT_MEMORY, rememberedTiltRad, hostId: 'earth' },
         intent,
         ctx: {
           bodies: BODIES,

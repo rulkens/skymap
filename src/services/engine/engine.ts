@@ -622,7 +622,7 @@ export function createEngine(
       cameraDebug: () => {
         const rootState = store.getState();
         const time = selectTimeState(rootState);
-        const { register, surface, outputs } = state.cameraRuntime;
+        const { register, gesture, tilt, outputs } = state.cameraRuntime;
         const bodyStates = deriveBodyStates(outputs.simDays) as ReadonlyMap<BodyId, BodyState>;
         return cameraDebugSnapshotOf({
           storedFrame: rootState.camera.base.frame,
@@ -636,8 +636,8 @@ export function createEngine(
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          gesture: surface.gesture,
-          rememberedTiltRad: surface.rememberedTiltRad,
+          gesture: gesture.gesture,
+          rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
         });

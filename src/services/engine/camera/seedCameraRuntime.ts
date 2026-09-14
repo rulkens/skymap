@@ -9,7 +9,8 @@ import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import { UNSTARTED_EPOCHS } from './cameraEpochs';
-import { EMPTY_SURFACE_MEMORY } from '../../camera/surfaceStep';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../camera/surfaceStep';
+import { EMPTY_TILT_MEMORY } from '../../../data/camera/emptyTiltMemory';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../data/defaults';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
@@ -25,7 +26,8 @@ export function seedCameraRuntime(args: {
     register: { pose, winner: 'resting' },
     epochs: UNSTARTED_EPOCHS,
     follow: null,
-    surface: EMPTY_SURFACE_MEMORY,
+    gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+    tilt: EMPTY_TILT_MEMORY,
     outputs: {
       displayed: pose,
       simDays: CONST_J2000,

@@ -63,7 +63,7 @@ describe('tilt lerp round trip (ruling 13)', () => {
       h.wheel(30);
       h.wheel(-30);
     }
-    const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
+    const remembered = h.state.cameraRuntime.tilt.rememberedTiltRad;
     expect(remembered).toBeGreaterThan(0.3);
     expect(Math.abs(tiltOverBody(h.state, EARTH) - remembered)).toBeLessThan(0.03); // converged
 

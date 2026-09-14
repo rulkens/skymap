@@ -1,6 +1,6 @@
 /**
  * replayInput — one frame's input steps folded over the camera runtime, pure:
- * the new register/surface/follow memories plus the actions the drain would
+ * the new register/gesture/tilt/follow memories plus the actions the drain would
  * have dispatched, in order. Each step reads the EFFECTIVE intent — the frame's
  * store snapshot with the actions emitted so far folded through the real camera
  * reducer — so a step sees the commit the step before it made, exactly as the
@@ -36,14 +36,16 @@ import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { RungCtx } from '../../../@types/camera/RungCtx';
-import type { SurfaceMemory } from '../../../@types/camera/SurfaceMemory';
+import type { SurfaceGestureMemory } from '../../../@types/camera/SurfaceGestureMemory';
+import type { TiltMemory } from '../../../@types/camera/TiltMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { RootState } from '../../../store/types';
 
 export function replayInput(
   prev: {
     readonly register: FramedCameraPose;
-    readonly surface: SurfaceMemory;
+    readonly gesture: SurfaceGestureMemory;
+    readonly tilt: TiltMemory;
     readonly follow: FollowMemory | null;
   },
   steps: readonly InputStep[],
@@ -56,7 +58,8 @@ export function replayInput(
   },
 ): {
   readonly register: FramedCameraPose;
-  readonly surface: SurfaceMemory;
+  readonly gesture: SurfaceGestureMemory;
+  readonly tilt: TiltMemory;
   readonly follow: FollowMemory | null;
   readonly followDistanceTarget: number | null;
   readonly actions: readonly UnknownAction[];
@@ -72,7 +75,8 @@ export function replayInput(
   // drain chains from it — an at-rest notch left out of it would be folded over
   // and silently discarded by a drag arriving in the same frame window.
   let register = prev.register;
-  let surface = prev.surface;
+  let gestureMemory = prev.gesture;
+  let tilt = prev.tilt;
   let follow = prev.follow;
   let followDistanceTarget: number | null = null;
   // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
@@ -103,14 +107,16 @@ export function replayInput(
         ? register.pose
         : base.pose;
     const sceneUpLocal: Vec3 = rotateVec3ByTightMat3T(frameUp(upBasis), host.state.orientation);
-    const { pose: next, next: memory } = surfaceStep(surface, from, step, {
+    const stepped = surfaceStep(gestureMemory, tilt, from, step, {
       viewportPx: ctx.viewportPx,
       fovYRad: ctx.fovYRad,
       bodyRadiusM: host.radiusM,
       sceneUpLocal,
       tuning,
     });
-    surface = memory;
+    const next = stepped.pose;
+    gestureMemory = stepped.gesture;
+    tilt = stepped.tilt;
     register = { frame: base.frame, pose: next };
     // An at-rest notch is its own atomic gesture, so its commit is its gesture
     // end (the resting driver renders `base`, not the register). Identity, not
@@ -163,7 +169,7 @@ export function replayInput(
       case 'gestureStart':
         // The gesture boundaries are the memory's only 'down' writes; the latch
         // is taken by the first drag step, which carries the press pixel.
-        surface = surfaceGestureEdge(surface, true);
+        gestureMemory = surfaceGestureEdge(true);
         break;
 
       case 'gestureEnd': {
@@ -173,7 +179,7 @@ export function replayInput(
         if (camera.clip === null && sameFrame(register.frame, camera.base.frame)) {
           emit(commitCameraPose(register));
         }
-        surface = surfaceGestureEdge(surface, false);
+        gestureMemory = surfaceGestureEdge(false);
         emit(endDrag());
         break;
       }
@@ -253,7 +259,8 @@ export function replayInput(
 
   return {
     register,
-    surface,
+    gesture: gestureMemory,
+    tilt,
     follow,
     followDistanceTarget,
     actions,

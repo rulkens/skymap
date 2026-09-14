@@ -1,6 +1,6 @@
 /**
  * projectFramePose — the produced pose projected for the draw, and THE FOLD.
- * ORDER IS THE CONTRACT (spec §7 steps 5-6, FW-G): pin → `noteBody` → tilt
+ * ORDER IS THE CONTRACT (spec §7 steps 5-6, FW-G): pin → `notedTiltMemory` → tilt
  * projection → world arm → regime flip → crossing commit. The fold sits below
  * every pose writer because a fold above one is discarded by whatever writes
  * after it; the tilt projection sits between the pin and the fold so the
@@ -17,18 +17,19 @@ import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { RungCtx } from '../../../@types/camera/RungCtx';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { SurfaceMemory } from '../../../@types/camera/SurfaceMemory';
+import type { TiltMemory } from '../../../@types/camera/TiltMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
-import { noteBody } from '../../camera/surfaceStep';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { toBodyArm } from '../camera/poseFrameConversion';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
+import { hostOf } from '../camera/rungs/hostOf';
 import { hostOrThrow } from '../camera/rungs/hostOrThrow';
 import { regimeArmFor } from '../camera/regimeArmFor';
 import { sameFrame } from '../camera/rungs/sameFrame';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
+import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
 
@@ -41,21 +42,20 @@ export function projectFramePose(args: {
   readonly pivotsOnFocusedBody: boolean;
   readonly focus: SelectionRow | null;
   readonly follow: FollowMemory | null;
-  readonly surface: SurfaceMemory;
+  readonly tilt: TiltMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime, `dragging` skips the fold. */
   readonly intent: CameraState;
   readonly ctx: RungCtx;
 }): {
   readonly register: FramedCameraPose;
   readonly displayed: FramedCameraPose;
-  readonly surface: SurfaceMemory;
+  readonly tilt: TiltMemory;
   /** The world arm the frame draws — pre-flip on a crossing frame. */
   readonly world: CameraPose;
   readonly actions: readonly UnknownAction[];
   readonly requestRender: boolean;
 } {
-  const { render, authoredOverride, pivotsOnFocusedBody, focus, follow, surface, intent, ctx } =
-    args;
+  const { render, authoredOverride, pivotsOnFocusedBody, focus, follow, tilt, intent, ctx } = args;
   const { bodies, poseBasis, upBasis, tuning } = ctx;
 
   // The pin SETS the target (never adds), so baking the displayed pose into
@@ -71,10 +71,10 @@ export function projectFramePose(args: {
   );
   // Post-pin, PRE-projection (R12b-1).
   let register = authoredOverride ?? displayed;
-  // The body the tilt memory belongs to: the ENGAGED one while a body arm holds
-  // (a differing focus has already released it), else the FOCUSED one.
+  // The body the tilt memory belongs to: the ENGAGED rung's host while a body
+  // arm holds (a differing focus has already released it), else the FOCUSED body.
   const regime = intent.base.frame;
-  const noted = noteBody(surface, regime !== 'absolute' ? regime.body : ctx.focusBodyId);
+  const noted = notedTiltMemory(tilt, hostOf(regime, ctx)?.id ?? ctx.focusBodyId);
   displayed = approachTiltedPose(
     displayed,
     pivotsOnFocusedBody,
@@ -128,5 +128,5 @@ export function projectFramePose(args: {
     }
   }
 
-  return { register, displayed, surface: noted, world, actions, requestRender };
+  return { register, displayed, tilt: noted, world, actions, requestRender };
 }
