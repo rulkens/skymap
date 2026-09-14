@@ -22,6 +22,8 @@ and Meridiani with real relief and metre-scale imagery around the site.
 - The rover's `altitudeM` then reads the DTM height at the site, not the mean
   sphere (`SURFACE_FIXED_SITES` notes the areoid gap today).
 
-Pairs with `docs/backlog/2026-09-12-rover-surface-camera-regime.md` (the camera
-that would look at it) and `docs/backlog/2026-09-12-mesh-body-shadows.md` (the
-shadow that would fall on it).
+Pairs with
+`docs/superpowers/specs/2026-09-14-camera-frame-ladder-site-rung.md` (the camera
+that would look at it — its site rung floors on the mean sphere and would floor
+on a DTM instead) and `docs/backlog/2026-09-12-mesh-body-shadows.md` (the shadow
+that would fall on it).
