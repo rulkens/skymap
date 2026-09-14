@@ -7,6 +7,7 @@
  * — the row's texture must exist on the band-entry frame, the frame that sweeps.
  */
 
+import type { CaptureFace } from '../../../@types/engine/frame/CaptureFace';
 import type { CaptureFaceContexts } from '../../../@types/engine/frame/CaptureFaceContexts';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
@@ -34,7 +35,7 @@ export function scheduleSkyCaptures(input: {
     state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
     (state.subsystems.texturedDisks?.hasInFlightWork() ?? false);
 
-  const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, ReadyFrameContext>>();
+  const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>();
   for (const key of SKY_CAPTURE_KEYS) {
     const row = CUBEMAP_CAPTURES[key];
     const runtime = state.cubemapCaptures[key];
@@ -67,7 +68,7 @@ export function scheduleSkyCaptures(input: {
     // dissolves through `fades.fadeTo`, which `rosterSettling` catches),
     // `faceSizePx` (its knob IS a settings write, reconciled above first),
     // `selection` (a stale halo in the lensed sky is accepted).
-    const faces = new Map<CubeFace, ReadyFrameContext>();
+    const faces = new Map<CubeFace, CaptureFace>();
     const faceSizePx = ctx.renderTargets.sizeOf(row.target).width;
     for (const face of ALL_CUBE_FACES) {
       const faceCtx = cubemapFaceContext({
@@ -79,7 +80,8 @@ export function scheduleSkyCaptures(input: {
         viewSlotBase: row.viewSlotBase,
         nowMs: ctx.nowMs,
       });
-      if (faceCtx !== null) faces.set(face, faceCtx);
+      // A sky face draws no body: the roster is the sky alone.
+      if (faceCtx !== null) faces.set(face, { ctx: faceCtx, bodySlabs: [] });
     }
     // A face's context comes back null pre-bootstrap: schedule nothing and leave
     // `bakedSettings` untouched, so the next frame retries the whole sweep.

@@ -47,6 +47,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     captures: ['sgrAStar', 'solarSystem'],
     cosmoPasses: ['point-sprites', 'textured-disks'],
     near0Passes: ['star-aggregates', 'star-catalog'],
+    bodyPasses: [],
   },
   // The half-res scalar-volume raymarch into its own offscreen. It is merged
   // into HDR by the `volume-upsample` LAYER inside the hdr COSMO step below,

@@ -1,8 +1,10 @@
 /**
  * CaptureStepSpec — an authored `FRAME_ORDER` line re-drawing part of the sky
- * into one `CUBEMAP_CAPTURES` row. TWO rosters because the captured content
- * spans both slabs and a render step is the unit of pass encoding: one roster
- * alone leaves the other slab's half permanently unreachable.
+ * into one `CUBEMAP_CAPTURES` row. THREE rosters because the captured content
+ * spans the slabs and a render step is the unit of pass encoding: one roster
+ * alone leaves the other slabs' share permanently unreachable. `bodyPasses`
+ * draws once per body row the face schedules (`CaptureFace.bodySlabs`), so a
+ * sky face — which schedules none — never opens a body pass.
  *
  * The roster stays on the line rather than on the table row: order and roster
  * are the same artifact, so a capture drawing a different roster is a second
@@ -17,4 +19,6 @@ export type CaptureStepSpec = {
   readonly captures: readonly CubemapCaptureKey[];
   readonly cosmoPasses: readonly string[];
   readonly near0Passes: readonly string[];
+  /** Drawn per face per `bodySlabs` entry, each step clearing the row's depth. */
+  readonly bodyPasses: readonly string[];
 };

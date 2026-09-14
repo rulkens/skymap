@@ -10,8 +10,11 @@ import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFr
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
+import type { CaptureFaceInput } from '../../../../src/@types/engine/frame/CaptureFaceInput';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
+import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
+import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameStepSpec';
 import type { FrameInputs } from '../../../../src/services/engine/frame/expandFrameOrder';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -26,6 +29,11 @@ function namesOf(step: FrameStep | undefined): readonly string[] {
 /** The authored timing-slot suffix a step carries, if any. */
 function slotOf(step: FrameStep | undefined): string | undefined {
   return step !== undefined && step.kind === 'render' ? step.slot : 'no step';
+}
+
+/** A sky row's face: no body row to draw. */
+function skyFace(face: CubeFace): CaptureFaceInput {
+  return { face, bodySlabs: [] };
 }
 
 /** A fake row is enough: expansion reads only `name`. */
@@ -159,8 +167,8 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // after the other in the order named.
     const steps = program({
       captureFaces: new Map([
-        ['sgrAStar', [0, 2]],
-        ['solarSystem', [1]],
+        ['sgrAStar', [skyFace(0), skyFace(2)]],
+        ['solarSystem', [skyFace(1)]],
       ]),
     });
     const capture = steps.filter((step) => step.kind === 'render' && step.capture !== undefined);
@@ -181,6 +189,63 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'atmosphereSkyView' });
     expect(steps[2]).toBe(capture[0]);
+  });
+
+  it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {
+    // A probe face sees its subject's host: after the sky pair, one step per
+    // body row the face schedules, each restarting depth the way the foreground
+    // chain does — a nearer row must not test against a farther row's depth.
+    const order: FrameStepSpec[] = [
+      {
+        kind: 'capture',
+        captures: ['probe'],
+        cosmoPasses: ['sky'],
+        near0Passes: ['stars'],
+        bodyPasses: ['mesh'],
+      },
+    ];
+    const steps = expandFrameOrder(order, [fakePass('sky'), fakePass('stars'), fakePass('mesh')], {
+      tone: TONE,
+      bloomEnabled: false,
+      foregroundChain: [],
+      captureFaces: new Map([['probe', [{ face: 4, bodySlabs: [3, 2] }]]]),
+      lensBodySlabs: [],
+    });
+    expect(
+      steps.map((step) =>
+        step.kind === 'render'
+          ? [step.slab, step.capture?.face, step.depthLoad, namesOf(step)]
+          : null,
+      ),
+    ).toEqual([
+      [COSMO, 4, undefined, ['sky']],
+      [NEAR0, 4, undefined, ['stars']],
+      [3, 4, 'clear', ['mesh']],
+      [2, 4, 'clear', ['mesh']],
+    ]);
+  });
+
+  it('a face with no body slabs expands to the COSMO/NEAR0 pair only', () => {
+    const order: FrameStepSpec[] = [
+      {
+        kind: 'capture',
+        captures: ['sgrAStar'],
+        cosmoPasses: ['sky'],
+        near0Passes: ['stars'],
+        bodyPasses: ['mesh'],
+      },
+    ];
+    const steps = expandFrameOrder(order, [fakePass('sky'), fakePass('stars'), fakePass('mesh')], {
+      tone: TONE,
+      bloomEnabled: false,
+      foregroundChain: [],
+      captureFaces: new Map([['sgrAStar', [skyFace(0)]]]),
+      lensBodySlabs: [],
+    });
+    expect(steps.map((step) => (step.kind === 'render' ? step.slab : null))).toEqual([
+      COSMO,
+      NEAR0,
+    ]);
   });
 
   it('emits no capture steps when no faces are requested (Q6 zero-dispatch)', () => {

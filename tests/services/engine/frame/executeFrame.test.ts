@@ -32,6 +32,7 @@ import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
+import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
 
 // ── Encoder / pass recorder ──────────────────────────────────────────────────
 //
@@ -249,6 +250,8 @@ type StateInit = {
   flowFieldRenderer?: unknown;
   flowEnabled?: boolean;
   flowSlot?: unknown;
+  /** The probe row's subject this frame, and the renderer holding its probe. */
+  probe?: { subject: string; probeOf: (id: string) => unknown };
 };
 
 function makeState(init: StateInit = {}): EngineState {
@@ -260,8 +263,10 @@ function makeState(init: StateInit = {}): EngineState {
     gpu: {
       compositor: init.compositor ?? { draw: vi.fn() },
       flowFieldRenderer: init.flowFieldRenderer ?? null,
+      meshBodyRenderer: init.probe ? { probeOf: init.probe.probeOf } : null,
     },
     assetSlots: { flow: init.flowSlot ?? null },
+    cubemapCaptures: { probe: { subject: init.probe?.subject ?? null } },
   } as unknown as EngineState;
 }
 
@@ -274,8 +279,10 @@ function makeArgs(over: {
   state?: EngineState;
   env?: ReturnType<typeof makeEncoderEnv>;
   ctx?: ReadyFrameContext;
-  /** The `sgrAStar` row's faces — wrapped into the keyed `captureContexts`. */
+  /** The `sgrAStar` row's faces, body-less — wrapped into the keyed `captureContexts`. */
   faceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
+  /** The whole keyed map, for a row whose faces draw body rows. */
+  captureContexts?: CaptureFaceContexts;
 }): { args: ExecuteFrameArgs; env: ReturnType<typeof makeEncoderEnv> } {
   const env = over.env ?? makeEncoderEnv();
   const args: ExecuteFrameArgs = {
@@ -286,7 +293,15 @@ function makeArgs(over: {
     strategy: over.strategy ?? 'merged',
     timing: over.timing ?? makeNoTiming(),
     swapView: SWAP_VIEW,
-    captureContexts: over.faceContexts && new Map([['sgrAStar', over.faceContexts]]),
+    captureContexts:
+      over.captureContexts ??
+      (over.faceContexts &&
+        new Map([
+          [
+            'sgrAStar',
+            new Map([...over.faceContexts].map(([face, ctx]) => [face, { ctx, bodySlabs: [] }])),
+          ],
+        ])),
   };
   return { args, env };
 }
@@ -857,6 +872,55 @@ describe('executeFrame', () => {
 
       expect(attachmentOfDraw(env, contentPass, 0).loadOp).toBe('clear');
       expect(attachmentOfDraw(env, contentPass, 1).loadOp).toBe('clear');
+    });
+
+    it("attaches the capture row's depth on a body-slab capture step and none on its COSMO step", () => {
+      // A probe face draws the sky (COSMO, depthless) and then its subject's
+      // host body on that body's row — the one step that needs the probe's
+      // own depth, cleared, so the host occludes the sky behind it and nothing
+      // a previous face wrote leaks in.
+      const PROBE_FACE_VIEW = { __id: 'probe-face-view' } as unknown as GPUTextureView;
+      const PROBE_DEPTH_VIEW = { __id: 'probe-depth-view' } as unknown as GPUTextureView;
+      const cube = { createView: vi.fn(() => PROBE_FACE_VIEW) };
+      const depth = { createView: vi.fn(() => PROBE_DEPTH_VIEW) };
+      const probeOf = vi.fn((id: string) => (id === 'voyager-1' ? { cube, depth } : null));
+      const sky = makeContentPass({ name: 'sky' });
+      const mesh = makeContentPass({ name: 'mesh' });
+      const program: FrameStep[] = [
+        { kind: 'render', slab: COSMO, capture: { key: 'probe', face: 2 }, passes: [sky] },
+        {
+          kind: 'render',
+          slab: 2,
+          capture: { key: 'probe', face: 2 },
+          depthLoad: 'clear',
+          passes: [mesh],
+        },
+      ];
+      const faceCtx = makeBodyCtx(['earth']);
+      const { args, env } = makeArgs({
+        program,
+        state: makeState({ probe: { subject: 'voyager-1', probeOf } }),
+        captureContexts: new Map([['probe', new Map([[2, { ctx: faceCtx, bodySlabs: [2] }]])]]),
+      });
+      executeFrame(args);
+
+      type DepthDesc = {
+        depthStencilAttachment?: { view: GPUTextureView; depthLoadOp: string };
+      };
+      const descOf = (pass: SpyPass): DepthDesc =>
+        env.passes.find((p) => p.pass === pass.draw.mock.calls[0]![0])!.desc as DepthDesc;
+      expect('depthStencilAttachment' in descOf(sky)).toBe(false);
+      expect(descOf(mesh).depthStencilAttachment).toMatchObject({
+        view: PROBE_DEPTH_VIEW,
+        depthLoadOp: 'clear',
+      });
+      // Both steps write the same face of the subject's cube — mip 0, one layer.
+      expect(attachmentOfDraw(env, sky).view).toBe(PROBE_FACE_VIEW);
+      expect(attachmentOfDraw(env, mesh).view).toBe(PROBE_FACE_VIEW);
+      expect(cube.createView).toHaveBeenCalledWith(
+        expect.objectContaining({ baseMipLevel: 0, mipLevelCount: 1, baseArrayLayer: 2 }),
+      );
+      expect(attachmentOfDraw(env, mesh).loadOp).toBe('load');
     });
   });
 });

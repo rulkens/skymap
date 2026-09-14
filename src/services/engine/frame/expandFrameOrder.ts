@@ -9,8 +9,8 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
+import type { CaptureFaceInput } from '../../../@types/engine/frame/CaptureFaceInput';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
-import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
@@ -25,7 +25,7 @@ export type FrameInputs = {
    * the per-face context map because `MAX_FRAME_INPUTS` must enumerate every
    * face a frame could ever step with no camera to derive one from.
    */
-  readonly captureFaces: ReadonlyMap<CubemapCaptureKey, readonly CubeFace[]>;
+  readonly captureFaces: ReadonlyMap<CubemapCaptureKey, readonly CaptureFaceInput[]>;
   readonly lensBodySlabs: readonly number[];
 };
 
@@ -60,7 +60,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   compute: (spec) => [{ kind: 'compute', name: spec.name }],
   capture: (spec, passes, frame) =>
     spec.captures.flatMap((key) =>
-      (frame.captureFaces.get(key) ?? []).flatMap((face): readonly FrameStep[] => [
+      (frame.captureFaces.get(key) ?? []).flatMap(({ face, bodySlabs }): readonly FrameStep[] => [
         {
           kind: 'render',
           slab: COSMO,
@@ -73,6 +73,16 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
           capture: { key, face },
           passes: resolve(spec.near0Passes, passes),
         },
+        // The foreground line's painter-chain rule: every body row restarts depth.
+        ...bodySlabs.map(
+          (slab): FrameStep => ({
+            kind: 'render',
+            slab,
+            capture: { key, face },
+            depthLoad: 'clear',
+            passes: resolve(spec.bodyPasses, passes),
+          }),
+        ),
       ]),
     ),
   render: (spec, passes) => [

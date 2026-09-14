@@ -65,8 +65,9 @@
  * the NEAR0 `foreground:0` row's reversed-Z convention) on first touch and `'load'` after — one
  * first-touch fact, two attachments — so a second render step or a
  * `perLayerTimed` pass reloads the depth already written and inter-layer
- * occlusion is preserved. Composite and capture steps never attach depth (their
- * destination rows are depthless).
+ * occlusion is preserved. Composite steps never attach depth (their destination
+ * rows are depthless); a capture step attaches its ROW's depth only on a
+ * body-slab step — the probe's host body — never on its COSMO/NEAR0 pair.
  */
 
 import type { ExecuteFrameArgs } from '../../../@types/engine/frame/ExecuteFrameArgs';
@@ -77,7 +78,13 @@ import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
-import { slabViewOf, groupKeyOf, passTimingSlotName, renderStepTimingSlotName } from './slabs';
+import {
+  slabViewOf,
+  groupKeyOf,
+  isBodySlabIndex,
+  passTimingSlotName,
+  renderStepTimingSlotName,
+} from './slabs';
 import { captureFaceAttachment } from './captureFaceAttachment';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
@@ -135,35 +142,31 @@ function depthLoadOpFor(depthLoad: 'clear' | 'load' | undefined, touched: boolea
   return touched ? 'load' : 'clear';
 }
 
-/**
- * Depth attachment for a target row that declares `depth`, spread into the
- * pass descriptor — `{}` (no key) for depthless rows. Composite and capture
- * steps never call this — their destination rows are depthless — so the depth
- * budget is confined to the opaque render passes that own it.
- *
- * `specOf` throws for an unknown target, but that's unreachable here: resolving
- * the step's destination throws first, before `renderGroup` is called.
- */
+/** The depth attachment a step's destination resolved — a target row's or a capture row's. */
 function depthAttachment(
-  ctx: ReadyFrameContext,
-  target: string,
+  view: GPUTextureView,
   depthLoadOp: GPULoadOp,
   reversedZ: boolean,
-): { depthStencilAttachment?: GPURenderPassDepthStencilAttachment } {
-  const spec = ctx.renderTargets.specOf(target);
-  if (!spec.depth) return {};
+): GPURenderPassDepthStencilAttachment {
   return {
-    depthStencilAttachment: {
-      view: ctx.renderTargets.depthViewOf(target),
-      // Clear to the far-plane depth for THIS slab's convention, single-sourced
-      // in depthClearValueFor so the clear and the depthCompare direction can
-      // never disagree (a mismatch fights every fragment of the first draw).
-      depthClearValue: depthClearValueFor(reversedZ),
-      depthLoadOp,
-      depthStoreOp: 'store',
-    },
+    view,
+    // Clear to the far-plane depth for THIS slab's convention, single-sourced
+    // in depthClearValueFor so the clear and the depthCompare direction can
+    // never disagree (a mismatch fights every fragment of the first draw).
+    depthClearValue: depthClearValueFor(reversedZ),
+    depthLoadOp,
+    depthStoreOp: 'store',
   };
 }
+
+/** A render step's resolved destination: the shape `renderGroup` draws into, plus its first-touch key. */
+type Destination = {
+  readonly label: string;
+  readonly dest: { readonly view: GPUTextureView; readonly clearValue: GPUColor };
+  readonly depth: { readonly view: GPUTextureView; readonly loadOp: GPULoadOp } | undefined;
+  readonly touchSet: Set<string>;
+  readonly touchKey: string;
+};
 
 /** Spread-if idiom: attach `timestampWrites` only when the service returns one. */
 function timestampSpread(
@@ -213,7 +216,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const stepCtx =
           step.capture === undefined
             ? ctx
-            : captureContexts?.get(step.capture.key)?.get(step.capture.face);
+            : captureContexts?.get(step.capture.key)?.get(step.capture.face)?.ctx;
         if (stepCtx === undefined) break;
         // The DebugPanel renderer-toggle override is one-way: it hides a pass
         // whose own `enabled()` gate returned true, and can never force-enable
@@ -242,32 +245,44 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // The destination, resolved once — the executor's only branch on what a
         // step writes into. An ordinary step names a render-target row; a
         // capture step names a capture ROW, which owns the texture its faces are
-        // layers of, is depthless, and takes its first touch per FACE rather
-        // than from `touched` (the object layers read as `ctx.renderedTargets`).
-        // Leaving capture rows out of that set is unobservable: every read of it
-        // guards on `'foreground:0'`, and no composite sources a capture row.
-        const destination =
-          step.capture === undefined
-            ? {
-                label: step.target,
-                dest: {
-                  view: viewFor(step.target, ctx, swapView),
-                  clearValue: ctx.renderTargets.specOf(step.target).clearValue,
-                },
-                depth: {
-                  target: step.target,
+        // layers of and takes its first touch per FACE rather than from
+        // `touched` (the object layers read as `ctx.renderedTargets`). Leaving
+        // capture rows out of that set is unobservable: every read of it guards
+        // on `'foreground:0'`, and no composite sources a capture row.
+        let destination: Destination;
+        if (step.capture === undefined) {
+          const spec = ctx.renderTargets.specOf(step.target);
+          destination = {
+            label: step.target,
+            dest: { view: viewFor(step.target, ctx, swapView), clearValue: spec.clearValue },
+            depth: spec.depth
+              ? {
+                  view: ctx.renderTargets.depthViewOf(step.target),
                   loadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
-                },
-                touchSet: touched,
-                touchKey: step.target,
-              }
-            : {
-                label: step.capture.key,
-                dest: captureFaceAttachment(step.capture, ctx.renderTargets),
-                depth: undefined,
-                touchSet: touchedFaces,
-                touchKey: `${step.capture.key}:${step.capture.face}`,
-              };
+                }
+              : undefined,
+            touchSet: touched,
+            touchKey: step.target,
+          };
+        } else {
+          const face = captureFaceAttachment(step.capture, ctx, state);
+          const touchKey = `${step.capture.key}:${step.capture.face}`;
+          destination = {
+            label: step.capture.key,
+            dest: face,
+            // The row's depth is for its body-slab steps alone: the COSMO/NEAR0
+            // pair draws the depthless sky the body then stands in front of.
+            depth:
+              face.depthView !== null && isBodySlabIndex(step.slab)
+                ? {
+                    view: face.depthView,
+                    loadOp: depthLoadOpFor(step.depthLoad, touchedFaces.has(touchKey)),
+                  }
+                : undefined,
+            touchSet: touchedFaces,
+            touchKey,
+          };
+        }
         renderGroup(strategy, {
           encoder,
           ctx: stepCtx,
@@ -350,8 +365,8 @@ function renderGroup(
     label: string;
     /** Where this step's passes write, already resolved. */
     dest: { readonly view: GPUTextureView; readonly clearValue: GPUColor };
-    /** The depth-bearing target and its load-op; absent for a depthless destination. */
-    depth?: { readonly target: string; readonly loadOp: GPULoadOp };
+    /** The destination's depth view and its load-op; absent for a depthless destination. */
+    depth?: { readonly view: GPUTextureView; readonly loadOp: GPULoadOp };
     /** The face this step writes, when it is a capture step — it keys the slot names. */
     capture?: CaptureFaceRef;
     group: readonly ContentPass[];
@@ -381,7 +396,9 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${label}`,
       colorAttachments: [colorAttachment(dest.view, dest.clearValue, alreadyTouched)],
-      ...(depth ? depthAttachment(ctx, depth.target, depth.loadOp, view.slab.reversedZ) : {}),
+      ...(depth
+        ? { depthStencilAttachment: depthAttachment(depth.view, depth.loadOp, view.slab.reversedZ) }
+        : {}),
       // Bill the whole group against its per-step group slot — the one honest
       // timing a single-pass shape can give (per-layer slots are the
       // `perLayerTimed` path's alone). A no-op timing service returns undefined,
@@ -412,7 +429,13 @@ function renderGroup(
       label: `render-${label}-${slot}`,
       colorAttachments: [colorAttachment(dest.view, dest.clearValue, touchedBefore)],
       ...(depth
-        ? depthAttachment(ctx, depth.target, i === 0 ? depth.loadOp : 'load', view.slab.reversedZ)
+        ? {
+            depthStencilAttachment: depthAttachment(
+              depth.view,
+              i === 0 ? depth.loadOp : 'load',
+              view.slab.reversedZ,
+            ),
+          }
         : {}),
       ...timestampSpread(timing, slot),
     });

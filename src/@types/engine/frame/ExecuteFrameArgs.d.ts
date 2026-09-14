@@ -3,9 +3,9 @@
  * strategy-parameterized site that walks a `FrameStep[]` program into one
  * GPU command encoder.
  *
- * `captureContexts` is the per-capture, per-face camera override: a step
- * carrying `capture` resolves its `SlabView`/`ctx` from THIS map, not the
- * frame-wide `ctx`. `scheduleCubemapCaptures` derives it on a bake;
+ * `captureContexts` is the per-capture, per-face override: a step carrying
+ * `capture` resolves its `SlabView`/`ctx` from THIS map's `CaptureFace.ctx`,
+ * not the frame-wide `ctx`. `scheduleCubemapCaptures` derives it on a bake;
  * `FRAME_ORDER` stays static and never sees it. Absent/missing-face ⇒ the step
  * is skipped cleanly, as when `cubemapFaceContext` returns `null` pre-bootstrap.
  */
@@ -32,6 +32,6 @@ export type ExecuteFrameArgs = {
   timing: GpuTimingService;
   /** This frame's swap-chain view — the `'swap'` target's texture view. */
   swapView: GPUTextureView;
-  /** Per-face camera override for this frame's capture steps; see above. */
+  /** Per-face override for this frame's capture steps; see above. */
   captureContexts?: CaptureFaceContexts;
 };
