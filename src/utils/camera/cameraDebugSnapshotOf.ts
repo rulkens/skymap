@@ -19,10 +19,10 @@ import type { OrientDeltas } from '../../@types/camera/OrientDeltas';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
 import type { TimeState } from '../../@types/time/TimeState';
-import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
 import { deriveSimDays } from '../time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
+import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { sameFrame } from '../../services/engine/camera/rungs/sameFrame';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
@@ -75,7 +75,9 @@ export function cameraDebugSnapshotOf(input: {
   });
   const { bodyId, hOverR: hr } = dofs;
   const radiusM =
-    bodyId !== null ? SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId)?.radiusM : undefined;
+    bodyId !== null
+      ? hostOf({ body: bodyId }, { bodies: bodyStates, poseBasis, upBasis })?.radiusM
+      : undefined;
 
   const engagedPose = renderedFrame !== 'absolute' ? renderedPose.pose : null;
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;

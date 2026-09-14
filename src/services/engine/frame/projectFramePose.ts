@@ -25,6 +25,7 @@ import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { toBodyArm } from '../camera/poseFrameConversion';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
+import { hostOrThrow } from '../camera/rungs/hostOrThrow';
 import { regimeArmFor } from '../camera/regimeArmFor';
 import { sameFrame } from '../camera/rungs/sameFrame';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
@@ -102,17 +103,17 @@ export function projectFramePose(args: {
     if (arm === 'absolute') {
       if (displayed.frame !== 'absolute') {
         // Disengage normalization (pop-2 fix) — see `centreLookingArm`.
-        const centreMpc = bodies.get(displayed.frame.body)!.positionMpc;
+        const centreMpc = hostOrThrow(displayed.frame, ctx).state.positionMpc;
         displayed = centreLookingArm(eyeMpc, centreMpc, poseBasis, world.roll ?? 0);
         // Centre-looking, so authored and displayed coincide.
         register = displayed;
       }
     } else if (displayed.frame === 'absolute') {
       // Total: `regimeArmFor` only names a body it resolved out of THIS map.
-      const bodyState = bodies.get(arm.body)!;
+      const host = hostOrThrow(arm, ctx);
       displayed = {
         frame: arm,
-        pose: toBodyArm(world, poseBasis, upBasis, arm.body, bodyState),
+        pose: toBodyArm(world, poseBasis, upBasis, arm.body, host.state),
       };
       // Engage converts the DISPLAYED pose (ruling 13); on the body arm the
       // tilt is geometry, not a projection, so the register holds it too.

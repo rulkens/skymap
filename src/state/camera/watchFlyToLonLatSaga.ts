@@ -21,6 +21,7 @@ import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
 import { eyeFrameOf } from '../../utils/camera/eyeFrameOf';
 import { toBodyArm } from '../../services/engine/camera/poseFrameConversion';
 import { foldToWorld } from '../../services/engine/camera/rungs/foldToWorld';
+import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
@@ -36,21 +37,16 @@ export function* watchFlyToLonLatSaga() {
     const frameBasis = ORIENTATION_FRAMES[yield* select(selectOrientation)];
     const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
     const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
-    const earthState = bodyStates.get(bodyId);
-    if (earthState === undefined) return;
+    const rungCtx = { bodies: bodyStates, poseBasis: frameBasis, upBasis: frameBasis };
+    const host = hostOf({ body: bodyId }, rungCtx);
+    if (host === null) return;
 
     // Where the camera stands now, in Earth's fixed metres — one reading for
     // both halves of "same altitude, same heading". The resolved arm's
     // `distance` cannot serve: it is a sightline range in a body arm but an
     // orbit radius to an arbitrary target in the absolute one. This is an idle
     // instrument, so the steady frame basis serves as both bases.
-    const here = toBodyArm(
-      foldToWorld(base, { bodies: bodyStates, poseBasis: frameBasis, upBasis: frameBasis }),
-      frameBasis,
-      frameBasis,
-      bodyId,
-      earthState,
-    );
+    const here = toBodyArm(foldToWorld(base, rungCtx), frameBasis, frameBasis, bodyId, host.state);
     const rangeM = Math.hypot(...bodyFixedEyeM(here)) - SCENE_EARTH.radiusM;
     const headingRad = eyeFrameOf(here, 1, BODY_LOCAL_FRAME.pole)?.azimuthRad ?? 0;
 

@@ -21,6 +21,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 import { bodyRelativePose } from './bodyRelativePose';
 import { toBodyArm } from './poseFrameConversion';
 import { foldToWorld } from './rungs/foldToWorld';
+import { hostOrThrow } from './rungs/hostOrThrow';
 
 /** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */
 export function toBodyFixedChannels(
@@ -29,10 +30,10 @@ export function toBodyFixedChannels(
   bodies: ReadonlyMap<BodyId, BodyState>,
   basis: Readonly<Mat3>,
 ): CameraPose {
-  const bodyState = bodies.get(bodyId);
-  if (bodyState === undefined) {
-    throw new Error(`toBodyFixedChannels: body '${bodyId}' is unresolved this instant`);
-  }
+  const bodyState = hostOrThrow(
+    { body: bodyId },
+    { bodies, poseBasis: basis, upBasis: basis },
+  ).state;
   const eyeArm = toBodyArm(pose, basis, basis, bodyId, bodyState);
   const eyeM = bodyFixedEyeM(eyeArm);
   // The target is a POINT in the same world frame as the eye, so it crosses to

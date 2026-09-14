@@ -18,11 +18,11 @@ import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
 import { hOverR } from '../../services/engine/camera/hOverR';
 import { nearestBodyHR } from '../../services/engine/camera/nearestBodyHR';
 import { bandRollTarget } from '../../services/engine/camera/frameAlignedRoll';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
+import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { blendedEnuAt } from './blendedEnuAt';
 import { bodyUpWeight } from './bodyUpWeight';
 import { eyeMpcOf } from './eyeMpcOf';
@@ -63,9 +63,8 @@ export function cameraDofAnglesOf(input: {
   let bodyId: BodyId | null = storedFrame !== 'absolute' ? storedFrame.body : null;
   let hr: number | null = null;
   if (bodyId !== null) {
-    const engaged = bodyStates.get(bodyId);
-    const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId);
-    if (engaged !== undefined && body !== undefined) hr = hOverR(eyeMpc, engaged, body.radiusM);
+    const host = hostOf({ body: bodyId }, { bodies: bodyStates, poseBasis, upBasis });
+    if (host !== null) hr = hOverR(eyeMpc, host.state, host.radiusM);
   } else {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);
     if (nearest !== null) {

@@ -18,6 +18,7 @@ import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
 import { foldToWorld } from './rungs/foldToWorld';
+import { hostOf } from './rungs/hostOf';
 import { isWorldArm } from './rungs/isWorldArm';
 import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
@@ -28,7 +29,6 @@ import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
-import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { Epoch } from '../../../@types/engine/camera/Epoch';
@@ -96,22 +96,17 @@ export function replayInput(
     if (base.frame === 'absolute') return false;
     // A playing clip owns the camera in both arms (the driver table's rule).
     if (camera.clip !== null) return true;
-    const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === base.frame.body);
-    if (body === undefined) return true;
+    const host = hostOf(base.frame, ctx);
+    if (host === null) return true;
     const from =
       register.frame !== 'absolute' && register.frame.body === base.frame.body
         ? register.pose
         : base.pose;
-    // Scene up in the body's fixed axes for the settle's band blend; a missing
-    // body degrades to the pole (the blend collapses to the body ENU).
-    const bodyState = bodies.get(base.frame.body);
-    const sceneUpLocal: Vec3 = bodyState
-      ? rotateVec3ByTightMat3T(frameUp(upBasis), bodyState.orientation)
-      : [0, 0, 1];
+    const sceneUpLocal: Vec3 = rotateVec3ByTightMat3T(frameUp(upBasis), host.state.orientation);
     const { pose: next, next: memory } = surfaceStep(surface, from, step, {
       viewportPx: ctx.viewportPx,
       fovYRad: ctx.fovYRad,
-      bodyRadiusM: body.radiusM,
+      bodyRadiusM: host.radiusM,
       sceneUpLocal,
       tuning,
     });
