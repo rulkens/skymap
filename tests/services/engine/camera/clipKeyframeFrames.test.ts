@@ -34,17 +34,15 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { RootState } from '../../../../src/store/types';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-vi.mock('../../../../src/services/engine/camera/clipFrameChannels', async (importOriginal) => {
+vi.mock('../../../../src/utils/camera/toBodyFixedChannels', async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import('../../../../src/services/engine/camera/clipFrameChannels')
-    >();
+    await importOriginal<typeof import('../../../../src/utils/camera/toBodyFixedChannels')>();
   return { ...actual, toBodyFixedChannels: vi.fn(actual.toBodyFixedChannels) };
 });
 import {
   fromBodyFixedChannels,
   toBodyFixedChannels,
-} from '../../../../src/services/engine/camera/clipFrameChannels';
+} from '../../../../src/utils/camera/toBodyFixedChannels';
 
 const EARTH = { body: 'earth' as BodyId };
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;

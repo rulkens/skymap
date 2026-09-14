@@ -9,6 +9,8 @@
  * orbit terms — which is why the follow HOLD sits below autoRotate and the drag.
  */
 
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
@@ -26,7 +28,6 @@ import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
-import { decodeBodyFixedChannels } from '../../../utils/camera/decodeBodyFixedChannels';
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -40,6 +41,7 @@ import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
+import { rowFor } from './rungs/rowFor';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -169,19 +171,26 @@ function followPose(
 }
 
 /**
- * The exit both keyframe rows share: an absolute evaluation is re-encoded from
- * the clip's pinned basis into the CURRENT one (by reference when they match),
- * a body-framed one is DECODED (spec §8) — its angles are about the body's own
- * axes, which no orientation frame touches, so the re-encode must not run.
+ * The exit both keyframe rows share: the rung's own `decode` reads the channels
+ * (spec §8), then an absolute reading is re-encoded from the clip's pinned basis
+ * into the CURRENT one (by reference when they match). The re-encode stays
+ * OUTSIDE the cell: neither basis is a rung fact, and a body arm's angles are
+ * about the body's own axes, which no orientation frame touches.
  */
 function framedClipArm(
   evaluated: FramedClipPose,
   from: Readonly<Mat3>,
   to: Readonly<Mat3>,
+  bodies: ReadonlyMap<BodyId, BodyState>,
 ): FramedCameraPose {
   const { frame, channels } = evaluated;
-  if (frame === 'absolute') return absoluteArm(reencodePose(channels, from, to));
-  return { frame, pose: decodeBodyFixedChannels(channels, frame.body) };
+  // Neither decode cell reads a basis, so the current one stands in for both.
+  const decoded = rowFor(frame).channels.decode(channels, frame, {
+    bodies,
+    poseBasis: to,
+    upBasis: to,
+  });
+  return isWorldArm(decoded) ? absoluteArm(reencodePose(decoded.pose, from, to)) : decoded;
 }
 
 /** The seven rows. Constant data: a driver sees the frame only through its `ctx`. */
@@ -211,7 +220,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         playback: clip,
       });
       return {
-        pose: framedClipArm(evaluated, pinned, ctx.poseBasis),
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
         memory: mem,
       };
     },
@@ -279,7 +288,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         playback: tween,
       });
       return {
-        pose: framedClipArm(evaluated, pinned, ctx.poseBasis),
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
         memory: mem,
       };
     },

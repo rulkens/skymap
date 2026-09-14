@@ -113,7 +113,10 @@ import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { lerp } from '../../../utils/math/lerp';
-import { toBodyFixedChannels, fromBodyFixedChannels } from './clipFrameChannels';
+import {
+  toBodyFixedChannels,
+  fromBodyFixedChannels,
+} from '../../../utils/camera/toBodyFixedChannels';
 import { sameFrame } from './rungs/sameFrame';
 
 // ---------------------------------------------------------------------------

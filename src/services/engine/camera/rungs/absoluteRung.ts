@@ -1,5 +1,6 @@
 /** The world arm's row — the ladder's floor: nothing to climb to, and no host body its numbers hang off. */
 import type { RungRow } from '../../../../@types/camera/RungRow';
+import { absoluteArm } from '../../../../utils/camera/absoluteArm';
 import { applyInputToCamera } from '../../../camera/applyInputToCamera';
 import { frameAlignedRoll } from '../frameAlignedRoll';
 
@@ -7,6 +8,12 @@ export const absoluteRung: RungRow<'absolute'> = {
   kind: 'absolute',
   host: () => null,
   emptyMemory: null,
+
+  // This arm's channels ARE its pose, so both cells hand theirs back by reference.
+  channels: {
+    encode: (world) => world,
+    decode: (channels) => absoluteArm(channels),
+  },
 
   step(_memory, tilt, framed, input, ctx) {
     // A pointer edge moves no pose and this arm keeps no gesture register, so

@@ -4,8 +4,8 @@
  */
 
 import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedPose } from '../../@types/camera/FramedPose';
 
-export function absoluteArm(pose: CameraPose): FramedCameraPose {
+export function absoluteArm(pose: CameraPose): FramedPose<'absolute'> {
   return { frame: 'absolute', pose };
 }

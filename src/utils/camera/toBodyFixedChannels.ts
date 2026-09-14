@@ -1,27 +1,23 @@
 /**
- * clipFrameChannels — move a keyframe leg's START between frames, through the
- * §5.1 pair in `poseFrameConversion`. Called ONCE per leg, never per frame:
- * re-converting each frame would walk the start along with the body. The pair is
- * lossless in the EYE and the basis but carries no orbit pivot, so the target
- * crosses as a POINT and `toWorldArm`'s graze rule re-derives the pivot coming
- * back: a round trip keeps eye and aim exactly, and may slide the target along
- * the unchanged sightline. Nothing here converts Mpc↔metres — that stays the
- * seam's alone (spec §10, `oneMpcSeam`).
+ * Move a keyframe leg's START into a body's frame, through the §5.1 pair in
+ * `poseFrameConversion`; the body rung's `channels` cell owns the once-per-leg
+ * landmine. Nothing here converts Mpc↔metres — that stays the seam's alone
+ * (spec §10, `oneMpcSeam`).
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
-import type { BodyState } from '../../../@types/scene/BodyState';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
-import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
-import { decodeBodyFixedChannels } from '../../../utils/camera/decodeBodyFixedChannels';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { bodyRelativePose } from './bodyRelativePose';
-import { toBodyArm } from './poseFrameConversion';
-import { foldToWorld } from './rungs/foldToWorld';
-import { hostOrThrow } from './rungs/hostOrThrow';
+import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyState } from '../../@types/scene/BodyState';
+import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { Mat3 } from '../../@types/math/Mat3';
+import type { Vec3 } from '../../@types/math/Vec3';
+import { IDENTITY_MAT3 } from '../math/identityMat3';
+import { bodyFixedEyeM } from './bodyFixedEyeM';
+import { decodeBodyFixedChannels } from './decodeBodyFixedChannels';
+import { orbitAnglesLookingAlong } from './orbitAnglesLookingAlong';
+import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
+import { toBodyArm } from '../../services/engine/camera/poseFrameConversion';
+import { foldToWorld } from '../../services/engine/camera/rungs/foldToWorld';
+import { hostOrThrow } from '../../services/engine/camera/rungs/hostOrThrow';
 
 /** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */
 export function toBodyFixedChannels(

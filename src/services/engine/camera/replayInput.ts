@@ -139,7 +139,7 @@ export function replayInput(
           };
     let stepped: FramedCameraPose;
     if (isWorldArm(from)) {
-      const next = stepRow(from, null, step);
+      const next = stepRow<'absolute'>(from, null, step);
       if (step.kind === 'drag' && step.mode === 'pan' && bodyMovesThisFrame(focus)) {
         // Followed-body strafe: the pivot-pin owns the target (`bodyPosition +
         // panOffset`), so the pan's own delta goes to the offset the pin reads.
@@ -159,7 +159,11 @@ export function replayInput(
       stepped = next;
     } else {
       // A memory taken on another rung is not this one's: it enters as its empty.
-      stepped = stepRow(from, gestureMemory ?? rowFor<'body'>(from.frame).emptyMemory, step);
+      stepped = stepRow<'body'>(
+        from,
+        gestureMemory ?? rowFor<'body'>(from.frame).emptyMemory,
+        step,
+      );
     }
     if (!moves) return true;
     register = stepped;

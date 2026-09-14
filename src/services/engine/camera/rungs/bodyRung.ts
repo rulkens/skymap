@@ -11,8 +11,10 @@
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
 import { EMPTY_SURFACE_GESTURE_MEMORY, surfaceStep } from '../../../camera/surfaceStep';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
+import { decodeBodyFixedChannels } from '../../../../utils/camera/decodeBodyFixedChannels';
 import { eyeMpcOf } from '../../../../utils/camera/eyeMpcOf';
 import { frameUp } from '../../../../utils/camera/frameUp';
+import { toBodyFixedChannels } from '../../../../utils/camera/toBodyFixedChannels';
 import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
 import { surfaceGestureEdge } from '../../../../utils/camera/surfaceGestureEdge';
 import { hOverR } from '../hOverR';
@@ -25,6 +27,21 @@ export const bodyRung: ClimbRow<'body'> = {
   kind: 'body',
   parent: 'absolute',
   emptyMemory: EMPTY_SURFACE_GESTURE_MEMORY,
+
+  /**
+   * A clip leg's channels in this body's FIXED axes, crossed ONCE per leg and
+   * never per frame — re-crossing each frame would walk the leg's start along
+   * with the body. The pair is lossless in the eye and the basis but carries no
+   * orbit pivot, so a round trip may slide the target along the sightline.
+   */
+  channels: {
+    encode: (world, frame, ctx) =>
+      toBodyFixedChannels(world, frame.body, ctx.bodies, ctx.poseBasis),
+    decode: (channels, frame) => ({
+      frame,
+      pose: decodeBodyFixedChannels(channels, frame.body),
+    }),
+  },
 
   host(frame, ctx) {
     const state = ctx.bodies.get(frame.body);
