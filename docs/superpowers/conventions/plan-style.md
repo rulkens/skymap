@@ -50,6 +50,47 @@ These four kinds of code are the contract. Include them, exactly.
    subagent, since they never load project skills. See
    `.claude/skills/refactor/SKILL.md`.
 
+## Every task carries `Files:` and, when it earns it, `review: yes`
+
+`**Files:**` lists every file the task creates or modifies — the controller
+groups tasks into dispatches by cognitive locality, and that grouping reads the
+file sets.
+
+`**review: yes**` marks a task whose bug class CI cannot see, and buys it one
+mid-branch review (see [`sdd-execution.md`](sdd-execution.md)). Tag it when the
+task touches any of:
+
+- shaders, and any TS↔WGSL contract;
+- camera or pose maths;
+- Redux state and sagas;
+- binary formats and parsers;
+- any file a landmine memory names.
+
+Tagging happens at authoring time, so the controller never decides it ad hoc.
+
+## A task is self-contained
+
+An implementer must be able to work a task from the task alone — contract code,
+`Files:`, the test (if it earns one), and done criteria. Never write a task that
+says "see the spec for the rules": carry the values the implementer needs into
+the task. The spec is the _reviewer's_ document — it is what a review checks
+fidelity against — and every implementer read of it is a read the task should
+have made unnecessary.
+
+## Tests: only what can fail
+
+A plan writes a test only for a behaviour that can fail on a real bug the
+compiler and the existing suite would miss — [`testing.md`](testing.md)'s
+criterion, which here **overrides the upstream skill's "failing test per step"
+default**. Type sweeps, routing changes, deletions and constant plumbing get no
+new test; say so in the task rather than inventing one.
+
+Deleting a test that cannot fail is a valid task deliverable.
+
+No numeric budget applies to plan length or test count — a word budget on a plan
+cuts its test content and its quality with it. Verbosity is judged by the bans
+below, not by a line count.
+
 ## What doesn't
 
 These produce plan bloat and rot. Cut them.

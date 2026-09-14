@@ -26,8 +26,12 @@ fewer and better, not more.
 
 ## The budget
 
-- **Module header ≤ 10 lines.**
+- **Module header ≤ 5 lines.**
 - **Comment lines ≤ half the code lines in the file.**
+- **No cross-file line-number citations.** Name the file and the symbol —
+  `packEarthSurfaceUniforms`, not `packEarthSurfaceUniforms.ts:112-140`. Line
+  numbers in another file rot on the next edit there, silently, and every
+  comment fix round of the 2026-09-14 terrain run was a stale one.
 
 Not a lint gate — a default you should be able to justify departing from in a
 sentence. Two kinds of file legitimately run over, and both should say so in
