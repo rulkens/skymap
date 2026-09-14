@@ -133,7 +133,7 @@ function runScript(northUp: boolean): Trace {
     });
     // The script must exercise the mode it names, or the trace is silently
     // pinning a different gesture.
-    expect(state.cameraRuntime.gesture.gesture).toMatchObject({ mode: expectMode });
+    expect(state.cameraRuntime.gesture.value?.gesture).toMatchObject({ mode: expectMode });
     push({ kind: 'gestureEnd' });
     frame();
     record(`${label} end`);

@@ -23,6 +23,7 @@ import { projectFramePose } from '../../../../src/services/engine/frame/projectF
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/camera/cameraFraming';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
@@ -113,6 +114,26 @@ describe('stepCameraRuntime', () => {
     expect(next.gesture).toBe(prev.gesture);
     expect(next.tilt).toBe(prev.tilt);
     expect(next.follow).toBe(prev.follow);
+  });
+
+  it('the rung memory is wiped when the frame key changes and kept when it does not', () => {
+    // The gesture register belongs to the arm it was taken on, so the engage
+    // voids it. The same-key half asserts IDENTITY: an envelope that re-wrapped
+    // the memory every frame would hand the drain a fresh object each time and
+    // silently break every `!==` the surface step decides a decline by.
+    const h = makeCameraSimHarness({ bootHR: 0.1 });
+    const prev = {
+      ...h.state.cameraRuntime,
+      gesture: { key: 'absolute', value: { gesture: 'down' as const } },
+    };
+
+    const crossing = stepCameraRuntime(prev, inputsFor(h, 16));
+    const held = stepCameraRuntime(crossing.next, inputsFor(h, 32));
+
+    expect(crossing.next.register.pose.frame).toEqual({ body: 'earth' });
+    expect(crossing.next.gesture.key).toBe('body:earth');
+    expect(crossing.next.gesture.value).toBe(EMPTY_SURFACE_GESTURE_MEMORY);
+    expect(held.next.gesture.value).toBe(crossing.next.gesture.value);
   });
 
   it('the fold runs after the pin and the tilt projection', () => {

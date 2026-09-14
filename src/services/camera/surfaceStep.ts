@@ -36,7 +36,7 @@ type SurfaceStepCtx = {
   readonly tuning: CameraTuning;
 };
 
-/** The engine's boot value; immutable, so one shared object is fine. */
+/** The body rung's empty memory; immutable, so one shared object is fine. */
 export const EMPTY_SURFACE_GESTURE_MEMORY: SurfaceGestureMemory = { gesture: null };
 
 export function surfaceStep(

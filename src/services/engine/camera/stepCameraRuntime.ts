@@ -25,7 +25,10 @@ import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
 import { foldToWorld } from './rungs/foldToWorld';
+import { frameKey } from './rungs/frameKey';
+import { rowFor } from './rungs/rowFor';
 import { resolveFrameBasis } from './resolveFrameBasis';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../camera/surfaceStep';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
@@ -90,7 +93,14 @@ export function stepCameraRuntime(
   const replayCtx: RungCtx = { ...rungFields, upBasis: prev.outputs.upBasis };
 
   const drained = replayInput(
-    { register: prev.register.pose, gesture: prev.gesture, tilt: prev.tilt, follow: prev.follow },
+    {
+      register: prev.register.pose,
+      // The world arm's empty memory is `null`, and the drain's gesture edges
+      // are arm-agnostic: a wiped memory enters as idle, not as an absent one.
+      gesture: prev.gesture.value ?? EMPTY_SURFACE_GESTURE_MEMORY,
+      tilt: prev.tilt,
+      follow: prev.follow,
+    },
     steps,
     {
       ctx: replayCtx,
@@ -197,12 +207,27 @@ export function stepCameraRuntime(
   });
   actions.push(...projected.actions);
 
+  // The gesture memory belongs to the arm it was taken on, so a crossing voids
+  // it — inert today, because only the fold re-keys the register and it is
+  // skipped whole while `intent.dragging`, never between a latch and its
+  // release. The identity keep needs BOTH halves: an already-empty value under
+  // a changed key must still re-key, or the wipe re-fires every frame.
+  const gestureKey = frameKey(projected.register.frame);
+  const gestureValue =
+    gestureKey === prev.gesture.key
+      ? drained.gesture
+      : rowFor(projected.register.frame).emptyMemory;
+  const gesture =
+    gestureKey === prev.gesture.key && gestureValue === prev.gesture.value
+      ? prev.gesture
+      : { key: gestureKey, value: gestureValue };
+
   return {
     next: {
       register: { pose: projected.register, winner: winnerId },
       epochs,
       follow: memory,
-      gesture: drained.gesture,
+      gesture,
       tilt: projected.tilt,
       outputs: {
         displayed: projected.displayed,

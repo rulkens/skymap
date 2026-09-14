@@ -9,6 +9,7 @@
  */
 
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../camera/surfaceStep';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { eyeMpcOf } from '../../../../utils/camera/eyeMpcOf';
 import { hOverR } from '../hOverR';
@@ -20,6 +21,7 @@ import { hostOrThrow } from './hostOrThrow';
 export const bodyRung: ClimbRow<'body'> = {
   kind: 'body',
   parent: 'absolute',
+  emptyMemory: EMPTY_SURFACE_GESTURE_MEMORY,
 
   host(frame, ctx) {
     const state = ctx.bodies.get(frame.body);

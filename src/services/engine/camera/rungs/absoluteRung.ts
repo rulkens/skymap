@@ -4,4 +4,5 @@ import type { RungRow } from '../../../../@types/camera/RungRow';
 export const absoluteRung: RungRow<'absolute'> = {
   kind: 'absolute',
   host: () => null,
+  emptyMemory: null,
 };

@@ -7,7 +7,11 @@
  * blend band, where the handles write the memory (w > 0).
  */
 
-import { surfaceStep } from '../../../src/services/camera/surfaceStep';
+import {
+  EMPTY_SURFACE_GESTURE_MEMORY,
+  surfaceStep,
+} from '../../../src/services/camera/surfaceStep';
+import { frameKey } from '../../../src/services/engine/camera/rungs/frameKey';
 import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
 import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { CameraSimHarness } from './CameraSimHarness';
@@ -30,7 +34,8 @@ export function seedRememberedTilt(
   options: { readonly targetRad?: number; readonly guard?: number; readonly pxStep?: number } = {},
 ): void {
   const { targetRad = 0.35, guard = 6, pxStep = 2 } = options;
-  let mem: SurfaceGestureMemory = h.state.cameraRuntime.gesture;
+  let mem: SurfaceGestureMemory =
+    h.state.cameraRuntime.gesture.value ?? EMPTY_SURFACE_GESTURE_MEMORY;
   let tilt: TiltMemory = h.state.cameraRuntime.tilt;
   let p: BodyFixedPose = {
     bodyId: 'earth',
@@ -65,5 +70,10 @@ export function seedRememberedTilt(
     }
     mem = surfaceGestureEdge(false);
   }
-  h.state.cameraRuntime = { ...h.state.cameraRuntime, gesture: mem, tilt };
+  const runtime = h.state.cameraRuntime;
+  h.state.cameraRuntime = {
+    ...runtime,
+    gesture: { key: frameKey(runtime.register.pose.frame), value: mem },
+    tilt,
+  };
 }

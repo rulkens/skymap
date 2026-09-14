@@ -9,7 +9,7 @@ import type { CameraEpochs } from '../camera/CameraEpochs';
 import type { DriverId } from '../camera/DriverId';
 import type { FollowMemory } from '../camera/FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
-import type { SurfaceGestureMemory } from '../../camera/SurfaceGestureMemory';
+import type { RungMemory } from '../../camera/RungMemory';
 import type { TiltMemory } from '../../camera/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
 
@@ -19,7 +19,8 @@ export type CameraRuntime = {
   readonly register: { readonly pose: FramedCameraPose; readonly winner: DriverId };
   readonly epochs: CameraEpochs;
   readonly follow: FollowMemory | null;
-  readonly gesture: SurfaceGestureMemory;
+  /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */
+  readonly gesture: RungMemory;
   readonly tilt: TiltMemory;
   readonly outputs: FrameOutputs;
 };
