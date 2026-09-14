@@ -43,7 +43,9 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // ARGUMENTS the layer feeds them, and lets packAtmosphereUniforms run for
 // real so the packed bottomRadius reveals which ATMOSPHERE_PARAMS row fed it.
 const MOCK_MVP = new Float64Array(16);
-const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
+// Length 2 in the shell's own frame, i.e. comfortably OUTSIDE the atmosphere
+// top — this pass gates on that, an enclosed camera being `aerial-perspective`'s.
+const MOCK_CAM_LOCAL: Vec3 = [0, 0, 2];
 vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));

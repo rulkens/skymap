@@ -43,6 +43,7 @@ import { constellationsPass } from './constellationsPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { atmosphereShellPass } from './atmosphereShellPass';
+import { aerialPerspectivePass } from './aerialPerspectivePass';
 import { sgrAStarLensingPass } from './sgrAStarLensingPass';
 
 /**
@@ -88,4 +89,5 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   foregroundLabelsPass,
   clipPathDebugPass,
   atmosphereShellPass,
+  aerialPerspectivePass,
 ];

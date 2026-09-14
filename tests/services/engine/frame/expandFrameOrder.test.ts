@@ -262,6 +262,40 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     ).toEqual([3, 2]);
   });
 
+  it('the aerial-perspective step is emitted only when bodyRowSlabs.insideAtmosphere is non-empty', () => {
+    // The chain step for row 3 sits immediately before this one and shares its
+    // target AND slab, so `sameGroup`'s `depth` key is the only thing keeping
+    // them apart — a merge would hand the apply the depth attachment it must
+    // not have (it binds that same depth as a texture).
+    const aerialOf = (steps: readonly FrameStep[]): readonly FrameStep[] =>
+      steps.filter(
+        (step) =>
+          step.kind === 'render' && step.target === 'foreground:0' && step.depth === 'sample',
+      );
+
+    expect(aerialOf(program({ foregroundChain: [NEAR0, 3] }))).toHaveLength(0);
+
+    const steps = program({
+      foregroundChain: [NEAR0, 3],
+      bodyRowSlabs: { lens: [], insideAtmosphere: [3] },
+    });
+    const aerial = aerialOf(steps);
+    expect(aerial).toHaveLength(1);
+    expect(aerial[0]).toMatchObject({ slab: 3, depth: 'sample', slot: 'AERIAL' });
+    expect(namesOf(aerial[0])).toEqual(['aerial-perspective']);
+
+    // After every depth-stamping chain row, before the composite: the apply
+    // reads the depth those rows wrote, and its fog must ride the one tone curve.
+    const aerialAt = steps.indexOf(aerial[0]!);
+    const chainAt = steps
+      .map((step, i) => (step.kind === 'render' && step.depth === 'clear' ? i : -1))
+      .filter((i) => i >= 0);
+    expect(Math.max(...chainAt)).toBeLessThan(aerialAt);
+    expect(aerialAt).toBeLessThan(
+      steps.findIndex((step) => step.kind === 'composite' && step.step.source === 'foreground:0'),
+    );
+  });
+
   it('exactly one composite is tone-mapped', () => {
     // The frame has a SINGLE tone-map. The foreground:0→hdr composite runs in
     // LINEAR space (tone: null) so the bodies join HDR before the curve; the

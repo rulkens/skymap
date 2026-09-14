@@ -120,12 +120,18 @@ describe('TIMED_SLOTS — body slot pool', () => {
     // BODY_SLAB_CAPACITY body slots regardless of what any one frame's chain
     // contains — the query-set size is a registry fact, not a per-frame one.
     // Asserting the endpoints + count (not the full literal run) means a new
-    // SCENE_PLANETS row moves the count without rewriting this test.
-    const bodySlots = TIMED_SLOTS.filter((name) => name.startsWith('foreground:0·BODY['));
+    // SCENE_PLANETS row moves the count without rewriting this test. The regex
+    // is anchored because the aerial-perspective line bills the same group key
+    // under an `·AERIAL` suffix — a second pool of the same width, asserted below.
+    const bodySlots = TIMED_SLOTS.filter((name) => /^foreground:0·BODY\[\d+\]$/.test(name));
     expect(bodySlots).toHaveLength(BODY_SLAB_CAPACITY);
     expect(bodySlots[0]).toBe('foreground:0·BODY[0]');
     expect(bodySlots[bodySlots.length - 1]).toBe(`foreground:0·BODY[${BODY_SLAB_CAPACITY - 1}]`);
     expect(TIMED_SLOTS).not.toContain(`foreground:0·BODY[${BODY_SLAB_CAPACITY}]`);
+    // The aerial apply's own pool: the enclosing body's painter row moves with
+    // the live bodies too, so an under-sized MAX_FRAME_INPUTS row silently
+    // strands its DebugPanel / perf entry on whichever row it lands.
+    expect(TIMED_SLOTS.filter((name) => name.endsWith('·AERIAL'))).toHaveLength(BODY_SLAB_CAPACITY);
   });
 
   it('puts every body slot under the Foreground bodies group', () => {

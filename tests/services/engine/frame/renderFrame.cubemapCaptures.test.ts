@@ -92,6 +92,9 @@ function makeCtx(
   return {
     isReady: true,
     drawCamPos,
+    // Well past FOREGROUND_MAX_DISTANCE_MPC (~0.23), so `bodyRowSlabs`'s
+    // atmosphere read short-circuits: this fixture frames Sgr A*, not a planet.
+    cam: { distance: 1 },
     simDays: 0,
     nowMs: 1000,
     focus: {},
