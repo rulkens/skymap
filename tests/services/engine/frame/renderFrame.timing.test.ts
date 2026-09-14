@@ -375,13 +375,18 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         },
         clipPlayer: { clipOpacityOf: () => 1 },
       },
-      // The sky-cubemap capture bookkeeping — see the matching fixture
-      // comment in renderFrame.test.ts.
-      skyCubemapCapture: {
-        lastBandActive: false,
-        lastGcDistanceMpc: Number.POSITIVE_INFINITY,
-        bakedSettings: null,
-      },
+      // The cubemap-capture bookkeeping — see the matching fixture comment in
+      // renderFrame.test.ts.
+      cubemapCaptures: new Map([
+        [
+          'sgrAStar',
+          {
+            lastBandActive: false,
+            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
+            bakedSettings: null,
+          },
+        ],
+      ]),
     } as never,
     device,
     context,

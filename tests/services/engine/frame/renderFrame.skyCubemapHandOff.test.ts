@@ -36,11 +36,11 @@ import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 
 const ALL_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
-/** A fresh, never-baked `skyCubemapCapture` Resource. */
+/** A fresh, never-baked `cubemapCaptures` entry for the `sgrAStar` row. */
 function makeCaptureRuntime() {
   return {
     lastBandActive: false,
-    lastGcDistanceMpc: Number.POSITIVE_INFINITY,
+    lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
     bakedSettings: null,
   };
 }
@@ -60,7 +60,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
       fades: { isAnyAnimating: () => false },
       texturedDisks: { hasInFlightWork: () => false },
     },
-    skyCubemapCapture: makeCaptureRuntime(),
+    cubemapCaptures: new Map([['sgrAStar', makeCaptureRuntime()]]),
     ...overrides,
   } as unknown as EngineState;
 }
@@ -167,7 +167,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
       ReadyFrameContext
     >;
     expect(handedOff.size).toBe(0);
-    expect(state.skyCubemapCapture.bakedSettings).toBeNull();
+    expect(state.cubemapCaptures.get('sgrAStar')!.bakedSettings).toBeNull();
 
     // Next frame retries the full sweep, since nothing was ever baked.
     skyCubemapFaceContextMock.mockClear();
@@ -197,7 +197,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     const inBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
     renderFrame(makeInput(inBand, state));
     expect(inBand.renderTargets.reconcile).toHaveBeenCalledTimes(1);
-    expect(state.skyCubemapCapture.lastBandActive).toBe(true);
+    expect(state.cubemapCaptures.get('sgrAStar')!.lastBandActive).toBe(true);
 
     // Still in-band: nothing about the row's existence changed.
     const stillInBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
@@ -207,7 +207,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     const outOfBand = makeCtx([1000, 0, 0]);
     renderFrame(makeInput(outOfBand, state));
     expect(outOfBand.renderTargets.reconcile).toHaveBeenCalledTimes(1);
-    expect(state.skyCubemapCapture.lastBandActive).toBe(false);
+    expect(state.cubemapCaptures.get('sgrAStar')!.lastBandActive).toBe(false);
   });
 
   it('a second in-band frame with the same state and a moved camera captures nothing', () => {

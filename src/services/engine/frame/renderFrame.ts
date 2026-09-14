@@ -34,7 +34,7 @@
  *
  * This module owns no cross-frame state of its OWN — every local value it
  * computes is recomputed each frame. It DOES read/write one Resource,
- * `state.skyCubemapCapture` (the black-hole lens's amortized sky-capture
+ * `state.cubemapCaptures` (the black-hole lens's amortized sky-capture
  * bookkeeping). A free function taking a struct of inputs bounds the encoder
  * lifetime to the function body.
  *
@@ -61,18 +61,10 @@ import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
-import { regionById } from '../../../utils/scene/regionById';
 import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
+import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
-
-// Hoisted rather than resolved per frame (a linear `.find` over `BODY_REGIONS`),
-// matching the other two consumers of the same lookup — `sgrAStarLensingPass`
-// and `bodyGlintsPass`.
-const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
-
-const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
@@ -113,20 +105,20 @@ export function renderFrame(input: RenderFrameInput): void {
   const hdrOn = hdrActive && state.settings.hdr.enabled;
 
   // The black-hole lens's sky-cubemap bake. The band keys on the CAMERA's
-  // distance from the galactic-centre anchor, the same quantity + region
-  // every `sgrAStarLensing`-band consumer reads. See
-  // `SkyCubemapCaptureRuntime`.
-  const captureRuntime = state.skyCubemapCapture;
-  const gcDistanceMpc = regionRelativeDistanceMpc(
+  // distance from the row's anchor, the same quantity + region every
+  // `sgrAStarLensing`-band consumer reads. See `CubemapCaptureRuntime`.
+  const capture = CUBEMAP_CAPTURES.sgrAStar;
+  const captureRuntime = state.cubemapCaptures.get('sgrAStar')!;
+  const anchorDistanceMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
-    GALACTIC_CENTRE_REGION,
+    capture.anchor,
     sceneBodyStates(state, ctx),
   );
   // Recorded unconditionally (not just while the band is active) — the
   // `sky-cubemap` row's release-margin check needs the distance on the very
   // frame the band closes, not one frame later.
-  captureRuntime.lastGcDistanceMpc = gcDistanceMpc;
-  const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
+  captureRuntime.lastAnchorDistanceMpc = anchorDistanceMpc;
+  const bandActive = fadeBand(capture.band, anchorDistanceMpc) > 0;
 
   // The `sky-cubemap` row's 50 MB exists only while the band does (its
   // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`

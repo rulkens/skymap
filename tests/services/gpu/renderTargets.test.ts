@@ -37,23 +37,23 @@ const MW_DIVISOR = 2;
 const SKY_CUBEMAP_RESOLUTION_PX = 256;
 
 // The production `sky-cubemap` row is lazy: its `allocateWhen` reads the
-// lensing band flag `renderFrame` maintains, so every state fixture carries
-// one. Default `true` keeps the row present for the tests that count textures.
-// `lastGcDistanceMpc` defaults far outside the release margin so the pre-existing
-// band-closed tests (written before the row grew hysteresis) keep their
-// original "closes immediately" behaviour.
+// `sgrAStar` capture's band flag `renderFrame` maintains, so every state
+// fixture carries one. Default `true` keeps the row present for the tests that
+// count textures. `lastAnchorDistanceMpc` defaults far outside the release
+// margin so the pre-existing band-closed tests (written before the row grew
+// hysteresis) keep their original "closes immediately" behaviour.
 function stateWithDivisor(
   aggregateDivisor: number,
   cubemapResolutionPx: number = SKY_CUBEMAP_RESOLUTION_PX,
   lastBandActive = true,
-  lastGcDistanceMpc = Number.POSITIVE_INFINITY,
+  lastAnchorDistanceMpc = Number.POSITIVE_INFINITY,
 ): EngineState {
   return {
     settings: {
       milkyWay: { aggregateDivisor },
       sgrAStarLensingTuning: { cubemapResolutionPx },
     },
-    skyCubemapCapture: { lastBandActive, lastGcDistanceMpc },
+    cubemapCaptures: new Map([['sgrAStar', { lastBandActive, lastAnchorDistanceMpc }]]),
   } as unknown as EngineState;
 }
 

@@ -146,7 +146,7 @@ import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
-import { SCALE_FADE_BANDS } from '../engine/presentation/scaleFadeBands';
+import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
 
 /**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
@@ -295,12 +295,13 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: (state, isAllocated) => {
-        const capture = state.skyCubemapCapture;
+        // Total over the key union: `engine.ts` seeds one entry per table row.
+        const capture = state.cubemapCaptures.get('sgrAStar')!;
         if (capture.lastBandActive) return true;
         return (
           isAllocated &&
-          capture.lastGcDistanceMpc <=
-            SKY_CUBEMAP_ROW_RELEASE_MARGIN * SCALE_FADE_BANDS.sgrAStarLensing.goneAt
+          capture.lastAnchorDistanceMpc <=
+            SKY_CUBEMAP_ROW_RELEASE_MARGIN * CUBEMAP_CAPTURES.sgrAStar.band.goneAt
         );
       },
       // `size` is a live setting (the DebugPanel resolution knob,

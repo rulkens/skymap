@@ -33,7 +33,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/partitionStarsByResolution': 1,
   'frame/pickProgram': 5,
   'frame/projectFramePose': 1,
-  'frame/renderFrame': 2,
   'frame/runBloom': 1,
   'frame/runFrame': 3,
   'frame/sceneOccluderSpheres': 1,
