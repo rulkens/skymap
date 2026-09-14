@@ -45,7 +45,7 @@ describe('checkFrameOrder', () => {
     const order: FrameStepSpec[] = [
       {
         kind: 'capture',
-        target: 'sky-cubemap',
+        capture: 'sgrAStar',
         cosmoPasses: ['a'],
         near0Passes: ['not-drawn'],
       },

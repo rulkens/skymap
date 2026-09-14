@@ -10,6 +10,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { mat4d } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
@@ -56,9 +57,11 @@ export function slabName(index: number): string {
 
 // The ONE definition of a merged group-timing slot key: allocation and lookup must
 // produce byte-identical keys, so the middle-dot separator (U+00B7) is part of the
-// wire format — do not vary it.
-export function groupKeyOf(target: string, slab: number): string {
-  return `${target}·${slabName(slab)}`;
+// wire format — do not vary it. A capture step keys off its capture, not its render
+// target: two captures sharing a target would otherwise bill one slot.
+export function groupKeyOf(step: Extract<FrameStep, { kind: 'render' }>): string {
+  const base = step.capture === undefined ? step.target : step.capture.key;
+  return `${base}·${slabName(step.slab)}`;
 }
 
 // Body rows and capture faces are appended because both draw the same pass more

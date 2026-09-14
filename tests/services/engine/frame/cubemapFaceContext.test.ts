@@ -1,6 +1,5 @@
 /**
- * skyCubemapFaceContext — unit tests for the black-hole sky cubemap's
- * per-face capture camera.
+ * cubemapFaceContext — unit tests for a cubemap capture's per-face camera.
  *
  * Mirrors `pickFrameContext.test.ts`'s fixture shape (same bootstrap-gate
  * handles, same `settings`/`subsystems` shape `deriveSourceMasks` reads) —
@@ -9,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { skyCubemapFaceContext } from '../../../../src/services/engine/frame/skyCubemapFaceContext';
+import { cubemapFaceContext } from '../../../../src/services/engine/frame/cubemapFaceContext';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
@@ -25,6 +24,9 @@ const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distanc
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
 const LAST_SIM_DAYS = 2460000.0;
 const EYE_MPC: Readonly<Vec3> = [12, -34, 56];
+// Stands in for a capture row's `nearMpc`/`viewSlotBase` (CUBEMAP_CAPTURES.sgrAStar).
+const CAPTURE_NEAR_MPC = 0.1 * SCALE_UNITS.AU_TO_MPC;
+const VIEW_SLOT_BASE = 1;
 
 // Index order matches `CubeFace`'s doc comment: ±X, ±Y, ±Z.
 const EXPECTED_AXIS: readonly Vec3[] = [
@@ -40,7 +42,7 @@ const EXPECTED_AXIS: readonly Vec3[] = [
  * Build an `EngineState`-shaped fixture with every bootstrap-gate handle
  * populated (so `isEngineReady` passes by default) and a `cameraRuntime`
  * carrying the live projection + last-frame epoch that
- * `skyCubemapFaceContext` reads for near/far and `simDays`.
+ * `cubemapFaceContext` reads for far and `simDays`.
  */
 function makeState(
   overrides: {
@@ -91,25 +93,24 @@ function makeState(
   } as unknown as EngineState;
 }
 
-describe('skyCubemapFaceContext', () => {
+describe('cubemapFaceContext', () => {
   it('derives a ReadyFrameContext with the eye at the anchor position, looking along the requested face axis', () => {
     const state = makeState();
     for (let face = 0; face < 6; face++) {
-      const ctx = skyCubemapFaceContext({
+      const ctx = cubemapFaceContext({
         state,
         eyeMpc: EYE_MPC,
         face: face as CubeFace,
         faceSizePx: 256,
+        nearMpc: CAPTURE_NEAR_MPC,
+        viewSlotBase: VIEW_SLOT_BASE,
         nowMs: 0,
       });
       expect(ctx).not.toBeNull();
       if (ctx === null) continue;
 
       expect(ctx.drawCamPos).toEqual(EYE_MPC);
-      // viewSlot = face + 1 (Task 13b) — slot 0 is reserved for the main
-      // view, so a roster renderer's view-slot buffer never confuses this
-      // face's write with the real frame's.
-      expect(ctx.viewSlot).toBe(face + 1);
+      expect(ctx.viewSlot).toBe(VIEW_SLOT_BASE + face);
 
       // Independent geometric check: the forward direction (target − eye,
       // read off the assembled camera, not re-derived from yaw/pitch) must
@@ -129,29 +130,35 @@ describe('skyCubemapFaceContext', () => {
 
   it('returns null before bootstrap', () => {
     expect(
-      skyCubemapFaceContext({
+      cubemapFaceContext({
         state: makeState({ booted: false }),
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,
+        nearMpc: CAPTURE_NEAR_MPC,
+        viewSlotBase: VIEW_SLOT_BASE,
         nowMs: 0,
       }),
     ).toBeNull();
     expect(
-      skyCubemapFaceContext({
+      cubemapFaceContext({
         state: makeState({ galaxyPointRenderer: null }),
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,
+        nearMpc: CAPTURE_NEAR_MPC,
+        viewSlotBase: VIEW_SLOT_BASE,
         nowMs: 0,
       }),
     ).toBeNull();
     expect(
-      skyCubemapFaceContext({
+      cubemapFaceContext({
         state: makeState({ galaxyPickRenderer: null }),
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,
+        nearMpc: CAPTURE_NEAR_MPC,
+        viewSlotBase: VIEW_SLOT_BASE,
         nowMs: 0,
       }),
     ).toBeNull();
@@ -159,11 +166,13 @@ describe('skyCubemapFaceContext', () => {
 
   it('carries the draw mask, not the pick mask, as visibleSourceMask', () => {
     const state = makeState();
-    const ctx = skyCubemapFaceContext({
+    const ctx = cubemapFaceContext({
       state,
       eyeMpc: EYE_MPC,
       face: 0,
       faceSizePx: 256,
+      nearMpc: CAPTURE_NEAR_MPC,
+      viewSlotBase: VIEW_SLOT_BASE,
       nowMs: 0,
     });
     expect(ctx).not.toBeNull();
@@ -217,11 +226,13 @@ describe('skyCubemapFaceContext', () => {
       const s = (sc / ma + 1) / 2;
       const t = (tc / ma + 1) / 2;
 
-      const ctx = skyCubemapFaceContext({
+      const ctx = cubemapFaceContext({
         state,
         eyeMpc: EYE_MPC,
         face: face as CubeFace,
         faceSizePx: 256,
+        nearMpc: CAPTURE_NEAR_MPC,
+        viewSlotBase: VIEW_SLOT_BASE,
         nowMs: 0,
       });
       expect(ctx).not.toBeNull();
@@ -246,19 +257,35 @@ describe('skyCubemapFaceContext', () => {
   it("clips well below the S-star scale, not the live cosmo camera's 10-kpc near plane", () => {
     // The capture's actual content (S-stars, the field around Sgr A*) sits
     // at hundreds of AU — reusing the live projection's near (0.01 Mpc /
-    // 10 kpc, PROJECTION above) would clip it all invisible. This is the
-    // regression the fix addresses; see skyCubemapFaceContext's
-    // SKY_CAPTURE_NEAR_MPC docblock.
+    // 10 kpc, PROJECTION above) would clip it all invisible, so the given
+    // `nearMpc` has to reach the camera rather than the live one.
     const state = makeState();
-    const ctx = skyCubemapFaceContext({
+    const ctx = cubemapFaceContext({
       state,
       eyeMpc: EYE_MPC,
       face: 0,
       faceSizePx: 256,
+      nearMpc: CAPTURE_NEAR_MPC,
+      viewSlotBase: VIEW_SLOT_BASE,
       nowMs: 0,
     });
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
-    expect(ctx.cam.near).toBeLessThan(100 * SCALE_UNITS.AU_TO_MPC);
+    expect(ctx.cam.near).toBe(CAPTURE_NEAR_MPC);
+  });
+
+  it("stamps viewSlot from the given base, so a second capture cannot share the first's slots", () => {
+    const ctx = cubemapFaceContext({
+      state: makeState(),
+      eyeMpc: EYE_MPC,
+      face: 2,
+      faceSizePx: 256,
+      nearMpc: CAPTURE_NEAR_MPC,
+      viewSlotBase: 7,
+      nowMs: 0,
+    });
+    expect(ctx).not.toBeNull();
+    if (ctx === null) return;
+    expect(ctx.viewSlot).toBe(9);
   });
 });

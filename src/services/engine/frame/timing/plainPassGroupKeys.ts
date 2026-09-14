@@ -15,7 +15,7 @@ export function plainPassGroupKeys(program: readonly FrameStep[]): ReadonlyMap<s
   const map = new Map<string, string>();
   for (const step of program) {
     if (step.kind !== 'render') continue;
-    const groupKey = groupKeyOf(step.target, step.slab);
+    const groupKey = groupKeyOf(step);
     for (const contentPass of step.passes) map.set(contentPass.name, groupKey);
   }
   return map;

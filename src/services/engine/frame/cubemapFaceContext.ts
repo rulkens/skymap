@@ -1,9 +1,9 @@
 /**
- * skyCubemapFaceContext — one face of the black-hole sky cubemap's capture
- * camera, as a value. Mirrors `pickFrameContext.ts`: roster layers read
- * `ctx.fovYRad`/`canvasSize`/`drawPxPerRad` as frame-globals, not just
- * `viewProj`, so a whole synthetic `ReadyFrameContext` is cheaper than
- * threading a swapped vp through every consumer.
+ * cubemapFaceContext — one face of a cubemap capture's camera, as a value.
+ * Mirrors `pickFrameContext.ts`: roster layers read `ctx.fovYRad`/
+ * `canvasSize`/`drawPxPerRad` as frame-globals, not just `viewProj`, so a
+ * whole synthetic `ReadyFrameContext` is cheaper than threading a swapped
+ * vp through every consumer.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -16,11 +16,6 @@ import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { cross3 } from '../../../utils/math/cross3';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-
-// NOT the live cosmo near plane (0.01 Mpc): the capture's content sits at
-// hundreds of AU, inside it, so reusing it clips every S-star away.
-const SKY_CAPTURE_NEAR_MPC = 0.1 * SCALE_UNITS.AU_TO_MPC;
 
 /**
  * Forward axis per `CubeFace` (±X/±Y/±Z) and the `texture_cube` convention's
@@ -67,16 +62,20 @@ function flipClipY(vp: Float32Array | Float64Array): void {
   vp[13] = -vp[13]!;
 }
 
-export function skyCubemapFaceContext(input: {
+export function cubemapFaceContext(input: {
   readonly state: EngineState;
   readonly eyeMpc: Readonly<Vec3>;
   readonly face: CubeFace;
   readonly faceSizePx: number;
+  /** Capture-camera near plane, Mpc — `CubemapCapture.nearMpc`. */
+  readonly nearMpc: number;
+  /** This capture's first view slot; the face stamps `viewSlotBase + face`. */
+  readonly viewSlotBase: number;
   /** The FRAME's clock, so a `nowMs`-animated roster layer ticks identically
    *  on a captured face and in the direct view. */
   readonly nowMs: number;
 }): ReadyFrameContext | null {
-  const { state, eyeMpc, face, faceSizePx, nowMs } = input;
+  const { state, eyeMpc, face, faceSizePx, nearMpc, viewSlotBase, nowMs } = input;
   const forward = FACE_FORWARD[face]!;
   const basis = FACE_BASES[face]!;
   // A target one unit ahead at distance 1 puts the derived eye back on
@@ -97,7 +96,7 @@ export function skyCubemapFaceContext(input: {
     {
       fovYRad: Math.PI / 2,
       aspect: 1,
-      near: SKY_CAPTURE_NEAR_MPC,
+      near: nearMpc,
       far: state.cameraRuntime.outputs.projection.far,
     },
     basis,
@@ -111,6 +110,5 @@ export function skyCubemapFaceContext(input: {
   // In place is safe: `deriveFrameContext` freshly allocated these arrays.
   flipClipY(ctx.vp);
   for (const slab of ctx.slabs) flipClipY(slab.vp);
-  // Slot 0 is the main view, so this call's ring writes stay off the real frame's.
-  return { ...ctx, viewSlot: face + 1 };
+  return { ...ctx, viewSlot: viewSlotBase + face };
 }

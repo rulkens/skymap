@@ -45,7 +45,7 @@ describe('timedSlotGroupsOf', () => {
         tone: TONE,
         bloomEnabled: false,
         foregroundChain: [NEAR0, 2, 3],
-        skyCubemapFacesToCapture: [],
+        captureFaces: new Map(),
         lensBodySlabs: [],
       }),
     );

@@ -8,15 +8,14 @@
  * per-step model cannot express — `runBloom` opens its ten in strict order.
  */
 
+import type { CaptureFaceRef } from './CaptureFaceRef';
 import type { CompositeStep } from './CompositeStep';
 import type { ContentPass } from './ContentPass';
-import type { CubeFace } from '../../rendering/CubeFace';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
-  | {
+  | ({
       kind: 'render';
-      target: string;
       slab: number;
       /** The passes this step draws, in draw order. */
       passes: readonly ContentPass[];
@@ -29,20 +28,22 @@ export type FrameStep =
        */
       depthLoad?: 'clear' | 'load';
       /**
-       * Which array layer of a `fixedSizePx` target this step writes — today
-       * only the black-hole lens's 6-face sky-cubemap capture. Absent for every
-       * ordinary render step. Its sole job is disambiguating several
-       * `(target, slab)` steps that would otherwise collide: all six faces
-       * share `('sky-cubemap', NEAR0)`, unlike a body row (which gets its own
-       * `slab` index and so is unique without help).
-       */
-      face?: CubeFace;
-      /**
        * Authored GPU-timing slot suffix (`RenderStepSpec.slot`), carried
        * through expansion so a merged step keeps the FIRST line's slot name.
-       * Absent ⇒ this step bills the bare `groupKeyOf(target, slab)`.
+       * Absent ⇒ this step bills the bare `groupKeyOf(step)`.
        */
       slot?: string;
-    }
+    } & (
+      | /** A render-target row by id. */ { target: string; capture?: undefined }
+      /**
+       * A capture row + one of its array layers, exclusive of `target`: the
+       * ROW owns the texture, so the executor resolves the face's attachment
+       * from the key alone. It also disambiguates steps that would otherwise
+       * collide on `(target, slab)` — all six faces share one `(row, NEAR0)`,
+       * unlike a body row, unique by `slab` alone — and names the face's
+       * synthetic camera.
+       */
+      | { target?: undefined; capture: CaptureFaceRef }
+    ))
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };

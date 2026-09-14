@@ -3,19 +3,19 @@
  * strategy-parameterized site that walks a `FrameStep[]` program into one
  * GPU command encoder.
  *
- * `skyCubemapFaceContexts` is the black-hole lens's per-face camera override:
- * a step carrying `face` resolves its `SlabView`/`ctx` from THIS map, not the
- * frame-wide `ctx`. `renderFrame` derives it on a bake; `FRAME_ORDER` stays
- * static and never sees it. Absent/missing-face ⇒ the step is skipped cleanly,
- * as when `skyCubemapFaceContext` itself returns `null` pre-bootstrap.
+ * `captureContexts` is the per-capture, per-face camera override: a step
+ * carrying `capture` resolves its `SlabView`/`ctx` from THIS map, not the
+ * frame-wide `ctx`. `scheduleCubemapCaptures` derives it on a bake;
+ * `FRAME_ORDER` stays static and never sees it. Absent/missing-face ⇒ the step
+ * is skipped cleanly, as when `cubemapFaceContext` returns `null` pre-bootstrap.
  */
 
+import type { CaptureFaceContexts } from './CaptureFaceContexts';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { FrameStep } from './FrameStep';
 import type { RenderStrategy } from './RenderStrategy';
 import type { EngineState } from '../state/EngineState';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
-import type { CubeFace } from '../../rendering/CubeFace';
 
 export type ExecuteFrameArgs = {
   /** The single per-frame command encoder every step records into. */
@@ -32,6 +32,6 @@ export type ExecuteFrameArgs = {
   timing: GpuTimingService;
   /** This frame's swap-chain view — the `'swap'` target's texture view. */
   swapView: GPUTextureView;
-  /** Per-face camera override for sky-cubemap capture steps; see above. */
-  skyCubemapFaceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
+  /** Per-face camera override for this frame's capture steps; see above. */
+  captureContexts?: CaptureFaceContexts;
 };

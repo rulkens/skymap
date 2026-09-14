@@ -43,7 +43,7 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
     tone: TONE,
     bloomEnabled: false,
     foregroundChain: [NEAR0],
-    skyCubemapFacesToCapture: [],
+    captureFaces: new Map(),
     lensBodySlabs: [],
     ...over,
   });
@@ -69,7 +69,7 @@ describe('expandFrameOrder', () => {
       tone: TONE,
       bloomEnabled: true,
       foregroundChain: [NEAR0],
-      skyCubemapFacesToCapture: [],
+      captureFaces: new Map(),
       lensBodySlabs: [],
     });
 
@@ -105,7 +105,7 @@ describe('expandFrameOrder', () => {
       tone: TONE,
       bloomEnabled: true,
       foregroundChain: [NEAR0],
-      skyCubemapFacesToCapture: [],
+      captureFaces: new Map(),
       lensBodySlabs: [2],
     });
 
@@ -121,7 +121,7 @@ describe('expandFrameOrder', () => {
       tone: TONE,
       bloomEnabled: true,
       foregroundChain: [NEAR0],
-      skyCubemapFacesToCapture: [],
+      captureFaces: new Map(),
       lensBodySlabs: [],
     });
 
@@ -140,7 +140,7 @@ describe('expandFrameOrder', () => {
         tone: TONE,
         bloomEnabled: false,
         foregroundChain: [],
-        skyCubemapFacesToCapture: [],
+        captureFaces: new Map(),
         lensBodySlabs: [],
       },
     );
@@ -156,16 +156,18 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // render step is the unit of pass encoding, so each requested face must get
     // ONE step per slab. A NEAR0-only step would leave the COSMO half of the
     // roster permanently undrawn.
-    const steps = program({ skyCubemapFacesToCapture: [0, 2] });
-    const capture = steps.filter((step) => step.kind === 'render' && step.target === 'sky-cubemap');
-    expect(capture.map((step) => (step.kind === 'render' ? [step.slab, step.face] : null))).toEqual(
-      [
-        [COSMO, 0],
-        [NEAR0, 0],
-        [COSMO, 2],
-        [NEAR0, 2],
-      ],
-    );
+    const steps = program({ captureFaces: new Map([['sgrAStar', [0, 2]]]) });
+    const capture = steps.filter((step) => step.kind === 'render' && step.capture !== undefined);
+    expect(
+      capture.map((step) =>
+        step.kind === 'render' ? [step.slab, step.capture?.key, step.capture?.face] : null,
+      ),
+    ).toEqual([
+      [COSMO, 'sgrAStar', 0],
+      [NEAR0, 'sgrAStar', 0],
+      [COSMO, 'sgrAStar', 2],
+      [NEAR0, 'sgrAStar', 2],
+    ]);
     // Ahead of every other render step, so a same-frame lensing draw can
     // sample a cubemap this frame actually wrote.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
@@ -174,9 +176,13 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   });
 
   it('emits no capture steps when no faces are requested (Q6 zero-dispatch)', () => {
-    expect(program().some((step) => step.kind === 'render' && step.target === 'sky-cubemap')).toBe(
+    expect(program().some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(
       false,
     );
+    // An entry present but empty is the same nothing: `renderFrame` always keys
+    // the map, whether or not this frame bakes.
+    const empty = program({ captureFaces: new Map([['sgrAStar', []]]) });
+    expect(empty.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
   });
 
   it('expands the foreground chain in painter order', () => {
