@@ -262,3 +262,15 @@ f9081dd24 → cherry-picked as 4c9cb8a6f (9 files, +23/−156, net −133: S1–
 
 DoD audit at 4c9cb8a6f: tests PASS (9150, baseline 9135 at 223145f68; +15 net after the deletion commit, every difference reconciled in task-13-report.md + deletion-audit.md) · typecheck PASS · checkboxes 92/92 (DoD PRESENT) · spec Ground preparation PRESENT (§9) · modified-vs-plan: 107 files, every out-of-list edit ruled forced in a task review · new TODOs 0 · comment smells: swept by the fix wave · test parity: tests net −37 lines, all reconciled · smoke: user-attested this session · deferred: plan "Out of scope" (companionOf, watchTierSaga Layer leaks, P1/P3–P7, registry double registration, ReadyFrameContext, rebuildOnSwapFormat rows, volume release predicate) · leanness: −133 applied as 4c9cb8a6f.
 OVERALL: READY. Moves: plan → completed/ (git mv), ledger archived as completed/2026-09-14-layer-composition-04a-demand-loop.ledger.md; SPEC NOT MOVED (shared by 04b–04d, deliberate). Completion commit next, then push + PR body + ready.
+
+## LANDED ON THE PR — 2026-09-14
+
+Completion commit 2048f47b1 (plan → completed/ + ledger archive). Pushed 44e4506ab..2048f47b1 to origin/worktree-layer-galaxy-catalog (19 commits). PR #703 title + body set, marked READY. Dev server :5175 left running (convention). Squash-merge is the user's call; never merge from the worktree. After merge: /wt-close (worktree removal, main ff), then plan 04b in a fresh worktree.
+
+## PR CONFLICTING with main — merge in flight — 2026-09-14
+
+After marking #703 ready: mergeable=CONFLICTING. origin/main advanced 44e4506ab → f480efd25 (14 merges incl. #702 froxel prep, #697 captures, #698, #695). Dry-run merge-tree: conflicts in src/services/engine/engine.ts and src/services/engine/frame/renderFrame.ts; assetWiring.ts + executeFrame.test.ts auto-merge. Merge agent (opus, isolation worktree re-pointed at 2048f47b1) merges origin/main, resolves, full test + typecheck + build, commits the merge; controller then `git merge --ff-only <agent-branch>` onto worktree-layer-galaxy-catalog, pushes, removes the agent worktree. Never rebase (open PR).
+
+## Main merged — 2026-09-14
+
+Merge agent (a3767a6766abe81f8): b03147c0a = merge of origin/main f480efd25 into 2048f47b1. engine.ts: both sides' import deletions taken (main's four volume imports from #695, ours makeRunTierTransition). renderFrame.ts: main's extracted `scheduleCubemapCaptures({ state, ctx })` taken; our only change there (a comment with a dead dissolveCatalogBuffer reference) carried into scheduleCubemapCaptures.ts. assetWiring.ts + executeFrame.test.ts auto-merges coherent. Forbidden-symbol rg empty; frameFilePurity 105; typecheck clean; full suite 1340 files / 9279 tests; build clean. Fast-forwarded onto worktree-layer-galaxy-catalog, pushed; agent worktree removed. PR #703 READY, merge is the user's call.
