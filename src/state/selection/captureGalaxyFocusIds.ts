@@ -5,13 +5,13 @@
  * (or none); encoding to the durable id here (while the OLD cloud is still
  * present) lets the saga re-resolve to the NEW index once the new tier loads.
  *
- * Only refs whose source actually reloads on the given swap are captured. Tier-
- * agnostic sources (2MRS, Famous) never emit a `catalogLoaded` on a tier swap,
- * so capturing them would cause the consumer's `take(catalogLoaded for source)`
- * to block forever. The reload decision is delegated to the shared
- * `willSourceReload` predicate — the same one `makeRunTierTransition` consults
- * before firing a load — so capture and the transition runner cannot drift and
- * leave the re-anchor `take` waiting on a source that never reloads.
+ * Only refs whose source's request actually drifts across the swap are
+ * captured. Tier-agnostic sources (2MRS, Famous, the DESI cuts, Synthetic)
+ * name the same request for every tier, so capturing them would cause the
+ * consumer's `take(catalogLoaded for source)` to block forever — the demand
+ * loop never reloads a request that hasn't changed. Capture and the loop
+ * compute the request from the same `galaxyCatalogRequest` and compare it
+ * with `sameRequest`, so the two cannot drift out of agreement.
  *
  * Hover is NOT captured: `watchTierSaga` clears the hover slot unconditionally
  * across the swap (a stale hover over an evicted cloud would resolve to a
@@ -29,7 +29,9 @@
 
 import { focusIdOf } from '../../services/url/focusIdOf';
 import { selectSelectedRef, selectFocusRef } from './selectors';
-import { willSourceReload } from '../../services/engine/wiring/willSourceReload';
+import { galaxyCatalogRequest } from '../../services/engine/wiring/galaxyCatalogRequest';
+import { sameRequest } from '../../utils/loading/sameRequest';
+import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { RootState } from '../../store/types';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
@@ -60,10 +62,16 @@ export function captureGalaxyFocusIds(
   const out: GalaxyReanchor[] = [];
   for (const { slot, ref } of slots) {
     if (!ref || ref.type !== 'galaxyCatalog') continue;
-    // Capture only sources the transition runner will actually reload — the
-    // shared `willSourceReload` predicate. A source it skips emits no
-    // `catalogLoaded`, so capturing it would hang the consumer's `take`.
-    if (!willSourceReload(ref.source, prevTier, nextTier, state.settings)) continue;
+    // Capture only when the demand loop will actually reload this source: its
+    // request drifts across the swap, and the catalog is enabled (a disabled
+    // source's slot is never demanded, so no `catalogLoaded` fires for it).
+    const drifts = !sameRequest(
+      galaxyCatalogRequest(ref.source, prevTier),
+      galaxyCatalogRequest(ref.source, nextTier),
+    );
+    const enabled =
+      state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(ref.source)]?.enabled === true;
+    if (!drifts || !enabled) continue;
     // focusIdOf returns null when the cloud is absent or the ref has no durable
     // representation (Milky Way, already guarded above). Skip nulls so the
     // return type carries only resolvable ids.

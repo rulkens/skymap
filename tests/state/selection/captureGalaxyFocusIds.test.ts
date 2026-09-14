@@ -2,17 +2,17 @@
  * captureGalaxyFocusIds — unit tests.
  *
  * The function's job is to snapshot durable focus ids for the select and focus
- * slots BEFORE a tier swap evicts the old clouds, but ONLY for sources that
- * actually reload on the given prev→next transition. Tier-agnostic sources and
- * same-target swaps must be skipped to avoid a hanging `take(catalogLoaded)`.
+ * slots BEFORE a tier swap evicts the old clouds, but ONLY for sources whose
+ * `galaxyCatalogRequest` actually drifts across the given prev→next transition
+ * AND are enabled. A source that doesn't drift, or isn't enabled, must be
+ * skipped to avoid a hanging `take(catalogLoaded)`.
  *
- * SDSS: tierTargets = { small: 0, medium: 156_000 } — the `large` key is absent
- * (undefined), meaning "uncapped". So `medium→large` differs: 156_000 vs undefined.
- * Verifying `medium→large` captures and `large→large` (same target: both undefined)
- * does not covers the predicate.
+ * SDSS ships tier variants, so its request carries the tier name: `medium`
+ * differs from `large`, but `large` matches `large`.
  *
- * 2MRS: tierTargets = {} — all tiers return undefined (tier-agnostic, never reloads).
- * Any prev→next should be skipped.
+ * 2MRS, Famous, the DESI cuts, and Synthetic have empty `tierTargets`, so
+ * `galaxyCatalogRequest` drops the tier and names the same request for every
+ * swap — they never drift.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -68,13 +68,13 @@ function buildStore() {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-// SDSS: tierTarget(medium) = 156_000, tierTarget(large) = undefined → different.
+// SDSS ships tier variants, so its request names `medium` vs `large` — different.
 // Used throughout as the "source that reloads on medium→large" test case.
 const SDSS_OBJ_ID = 1237668393006604288n;
 const SDSS_REF = { type: 'galaxyCatalog' as const, source: Source.SDSS, index: 0 };
 
 describe('captureGalaxyFocusIds', () => {
-  it('captures a galaxy select ref when the source reloads on this swap', () => {
+  it('a tiered enabled source is captured with its durable id', () => {
     const store = buildStore();
     store.dispatch(updateSelectionSelect(SDSS_REF));
 
@@ -108,8 +108,8 @@ describe('captureGalaxyFocusIds', () => {
     expect(result[0]).toMatchObject({ slot: 'focus', source: Source.SDSS });
   });
 
-  it('does NOT capture a galaxy ref when tierTarget is the same across prev→next', () => {
-    // SDSS: tierTarget(large) = undefined, tierTarget(large) = undefined → same → skip.
+  it('does NOT capture a galaxy ref when the request does not drift across prev→next', () => {
+    // SDSS ships tier variants, but large→large names the same request both sides.
     const store = buildStore();
     store.dispatch(updateSelectionSelect(SDSS_REF));
 
@@ -123,12 +123,37 @@ describe('captureGalaxyFocusIds', () => {
     expect(result).toHaveLength(0);
   });
 
-  it('does NOT capture a tier-agnostic source (2MRS has empty tierTargets)', () => {
-    // 2MRS: tierTargets = {} → tierTarget returns undefined for every tier.
-    // medium→large: undefined === undefined → skipped.
+  it('a tier-agnostic source is not captured', () => {
+    // 2MRS and Famous have empty tierTargets, so galaxyCatalogRequest names the
+    // same request for every tier — every swap, not just one pair, must skip.
+    const resolveDeps: ResolveDeps = {
+      catalogs: { get: () => undefined },
+      famousGalaxiesMeta: [],
+      structures: { byId: () => null },
+      stars: { current: () => null },
+    };
+
+    for (const source of [Source.TwoMRS, Source.FamousGalaxy]) {
+      for (const [prevTier, nextTier] of [
+        ['small', 'large'],
+        ['medium', 'large'],
+      ] as const) {
+        const store = buildStore();
+        store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source, index: 0 }));
+
+        const result = captureGalaxyFocusIds(store.getState(), resolveDeps, prevTier, nextTier);
+
+        expect(result).toHaveLength(0);
+      }
+    }
+  });
+
+  it('synthetic is never captured', () => {
+    // Synthetic's tierTargets is {}, same as the other tier-agnostic sources —
+    // its request never drifts, so it is never captured on any swap.
     const store = buildStore();
     store.dispatch(
-      updateSelectionSelect({ type: 'galaxyCatalog', source: Source.TwoMRS, index: 0 }),
+      updateSelectionSelect({ type: 'galaxyCatalog', source: Source.Synthetic, index: 0 }),
     );
 
     const resolveDeps: ResolveDeps = {
@@ -189,11 +214,11 @@ describe('captureGalaxyFocusIds', () => {
     expect(result).toHaveLength(0);
   });
 
-  it('does NOT capture a galaxy ref on a DISABLED source even when its tierTarget changes', () => {
-    // SDSS's tierTarget differs across medium→large, so the tierTarget guard alone
-    // would capture it. But `makeRunTierTransition` also skips disabled sources —
-    // no `catalogLoaded` fires for them — so we must not capture them either or the
-    // consumer's `take` blocks forever.
+  it('a disabled source is not captured', () => {
+    // SDSS's request differs across medium→large, so the drift check alone would
+    // capture it. But the demand loop only reloads a slot it demands, and a
+    // disabled catalog is never demanded — no `catalogLoaded` fires for it — so
+    // capture must not wait on it either, or the consumer's `take` blocks forever.
     const store = buildStore();
     store.dispatch(updateSelectionSelect(SDSS_REF));
     store.dispatch(setGalaxyCatalogVisible({ id: 'sdss', enabled: false }));
