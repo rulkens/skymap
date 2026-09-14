@@ -1,17 +1,18 @@
-import type { Vec3 } from '../math/Vec3';
+import type { SurfacePatchAnchor } from './SurfacePatchAnchor';
 
 /**
  * SurfaceCutTile — one leaf of `cutSurfaceTiles`'s walk that is actually
  * resident this frame (a leaf with no resident tile anywhere in its
- * ancestor chain is dropped; the base globe covers it instead — see the
- * Task 2 brief). `originLocal` is the direction of the tile's uv-origin
- * corner — `originLocal = equirectUvToDirection([u0, v0])`, `[u0, v0]` the
- * tile's uv footprint origin — a binding cross-task contract Task 3's mesh
- * baker shares.
+ * ancestor chain is dropped; the base globe covers it instead).
+ *
+ * `anchor` carries the leaf's angular footprint, not a corner DIRECTION: the
+ * direction is derivable from it via `patchOriginRelEyeM`, and two parallel
+ * statements of the same corner — one f32-rounded, one not — is exactly the
+ * per-patch drift spec §7.1 warns about.
  */
 export type SurfaceCutTile = {
   readonly id: { readonly z: number; readonly x: number; readonly y: number };
-  readonly originLocal: Vec3;
+  readonly anchor: SurfacePatchAnchor;
   readonly resident: {
     readonly slot: number;
     /** This leaf's OWN atlas rect, already flattened by

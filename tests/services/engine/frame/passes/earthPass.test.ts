@@ -594,7 +594,7 @@ describe('earthPass.draw — detail tiles', () => {
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
-      originLocal: [1, 0, 0],
+      anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
       resident: {
         slot: 0,
         atlasUvOrigin: [0, 0],
@@ -632,7 +632,6 @@ describe('earthPass.draw — detail tiles', () => {
     expect(pass).toBe(PASS_STUB);
     expect(args.tiles).toBe(STUB_CUT);
     expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
-    expect(typeof args.frame).toBe('number');
     // No rebase: the tile draw's vp is the slab's own already-eye-relative
     // f32 view (view.vp), never a freshly narrowed/rebased copy.
     expect(args.vp).toBe(view.vp);
@@ -705,7 +704,7 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
-      originLocal: [1, 0, 0],
+      anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
       resident: {
         slot: 0,
         atlasUvOrigin: [0, 0],

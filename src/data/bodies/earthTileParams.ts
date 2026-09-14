@@ -47,23 +47,11 @@ export const EARTH_EQUATORIAL_CIRCUMFERENCE_M = 40075016.686;
  */
 export const EARTH_TILE_LOD_BIAS = 1;
 
-/** `bakeSurfaceTileMesh`'s grid subdivision per tile edge (Task 5, replacing
- *  the page-table window as the constant this file owns for the tile-detail
- *  path). 8 -> 64 quads / 384 corner-expanded vertices per tile: enough that
- *  the baked curvature doesn't facet at typical viewing distance (the normal
- *  map supplies fine relief on top), cheap enough that a frame's worth of
- *  cut tiles re-uploads in full every draw (see earthSurfaceTileRenderer.ts). */
+/** Subdivision `n` per patch edge of the shared vertex-shader template.
+ *  Independent of the height data's post spacing -- surplus height detail
+ *  reaches the picture through the fragment-stage normal -- so raising this
+ *  to 64 for displacement is a constant change, not a re-bake (spec §7). */
 export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 8;
-
-/** `createSurfaceTileMeshCache`'s LRU capacity, in distinct tile ids. Sized
- *  off the atlas's own slot count rather than picked independently: several
- *  leaves at different pyramid depths can share one resident ANCESTOR's
- *  atlas slot (the fallback `cutSurfaceTiles` resolves), so a frame's `cut`
- *  can list more distinct (z,x,y) meshes than the atlas has slots. 2x the
- *  atlas capacity is headroom against that fan-out while staying cheap --
- *  each entry is a handful of small typed arrays, not GPU memory. */
-export const EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY =
-  2 * (EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX) ** 2;
 
 /**
  * Base-globe descent-fade band, in camera altitude above the surface (km).
