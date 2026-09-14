@@ -19,7 +19,8 @@ import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { lonLatFocusPose } from '../../utils/camera/lonLatFocusPose';
 import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
 import { eyeFrameOf } from '../../utils/camera/eyeFrameOf';
-import { resolveWorldArm, toBodyArm } from '../../services/engine/camera/poseFrameConversion';
+import { toBodyArm } from '../../services/engine/camera/poseFrameConversion';
+import { foldToWorld } from '../../services/engine/camera/rungs/foldToWorld';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
@@ -44,7 +45,7 @@ export function* watchFlyToLonLatSaga() {
     // orbit radius to an arbitrary target in the absolute one. This is an idle
     // instrument, so the steady frame basis serves as both bases.
     const here = toBodyArm(
-      resolveWorldArm(base, bodyStates, frameBasis, frameBasis),
+      foldToWorld(base, { bodies: bodyStates, poseBasis: frameBasis, upBasis: frameBasis }),
       frameBasis,
       frameBasis,
       bodyId,

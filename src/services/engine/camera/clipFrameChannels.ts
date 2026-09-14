@@ -19,7 +19,8 @@ import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { decodeBodyFixedChannels } from '../../../utils/camera/decodeBodyFixedChannels';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { bodyRelativePose } from './bodyRelativePose';
-import { toBodyArm, resolveWorldArm } from './poseFrameConversion';
+import { toBodyArm } from './poseFrameConversion';
+import { foldToWorld } from './rungs/foldToWorld';
 
 /** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */
 export function toBodyFixedChannels(
@@ -59,10 +60,8 @@ export function fromBodyFixedChannels(
   bodies: ReadonlyMap<BodyId, BodyState>,
   basis: Readonly<Mat3>,
 ): CameraPose {
-  return resolveWorldArm(
+  return foldToWorld(
     { frame: { body: bodyId }, pose: decodeBodyFixedChannels(channels, bodyId) },
-    bodies,
-    basis,
-    basis,
+    { bodies, poseBasis: basis, upBasis: basis },
   );
 }

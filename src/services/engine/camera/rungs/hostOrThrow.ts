@@ -1,7 +1,7 @@
 /**
  * The ladder's single thrower. A rung is only ever entered for a body the
  * roster resolved, so an unresolved host is unreachable by construction and a
- * silent fallback would teleport the camera (today's `resolveWorldArm` throw).
+ * silent fallback would teleport the camera.
  */
 
 import type { HostBody } from '../../../../@types/camera/HostBody';

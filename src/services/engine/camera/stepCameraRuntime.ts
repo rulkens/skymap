@@ -11,9 +11,11 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 
+import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
+import type { RungCtx } from '../../../@types/camera/RungCtx';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
@@ -21,7 +23,8 @@ import { replayInput } from './replayInput';
 import { pickWinner, elapsedForWinner } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
-import { resolveWorldArm } from './poseFrameConversion';
+import { pivotFraming } from './pivotRadiusMpc';
+import { foldToWorld } from './rungs/foldToWorld';
 import { resolveFrameBasis } from './resolveFrameBasis';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
@@ -72,21 +75,29 @@ export function stepCameraRuntime(
   // `stored`, not the post-replay snapshot: the replay runs before that exists,
   // and no action it emits writes `tuning`, so the two readings are identical.
   const tuning = stored.camera.tuning;
+  // Every rung field but the up-basis. The replay and the produce run BEFORE
+  // this frame's basis resolves, so they read the previous frame's; the fold
+  // reads this frame's. One shared value would move the settle trace.
+  const rungFields = {
+    bodies,
+    poseBasis,
+    focusBodyId: focus?.type === 'body' ? (focus.id as BodyId) : null,
+    pivot: pivotFraming(focus),
+    viewportPx: canvasPx,
+    fovYRad: projection.fovYRad,
+    tuning,
+  };
+  const replayCtx: RungCtx = { ...rungFields, upBasis: prev.outputs.upBasis };
 
   const drained = replayInput(
     { register: prev.register.pose, surface: prev.surface, follow: prev.follow },
     steps,
     {
+      ctx: replayCtx,
       rootState: stored,
       nowMs,
-      canvasPx,
-      projection,
-      upBasis: prev.outputs.upBasis,
-      poseBasis,
-      bodies,
       winnerLastFrame: prev.register.winner,
       autoRotateEpoch: prev.epochs.autoRotate,
-      tuning,
     },
   );
   const actions: UnknownAction[] = [...drained.actions];
@@ -124,8 +135,7 @@ export function stepCameraRuntime(
       state: rootState,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
       register: drained.register,
-      // Against the PREVIOUS frame's up-basis: produce precedes the basis resolve.
-      authoredWorld: resolveWorldArm(drained.register, bodies, poseBasis, prev.outputs.upBasis),
+      authoredWorld: foldToWorld(drained.register, replayCtx),
       winnerLastFrame: prev.register.winner,
       poseBasis,
       simDays,
@@ -172,6 +182,7 @@ export function stepCameraRuntime(
     drivers,
   });
   actions.push(...edge.actions);
+  const foldCtx: RungCtx = { ...rungFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
   const projected = projectFramePose({
@@ -182,10 +193,7 @@ export function stepCameraRuntime(
     follow: memory,
     surface: drained.surface,
     intent: rootState.camera,
-    bodies,
-    poseBasis,
-    upBasis,
-    tuning,
+    ctx: foldCtx,
   });
   actions.push(...projected.actions);
 

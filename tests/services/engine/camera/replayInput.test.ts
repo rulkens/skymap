@@ -19,6 +19,7 @@ import {
   setAutoRotate,
 } from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
+import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { cursorRayBodyLocal } from '../../../../src/utils/camera/cursorRayBodyLocal';
 import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
@@ -58,17 +59,22 @@ function ctxOf(
   store: ReturnType<typeof makeStore>,
   overrides: { readonly winnerLastFrame?: DriverId; readonly nowMs?: number } = {},
 ) {
+  const focus = store.getState().selectionRows.focus;
   return {
+    ctx: {
+      bodies: BODIES,
+      poseBasis: B,
+      upBasis: B,
+      focusBodyId: focus?.type === 'body' ? (focus.id as BodyId) : null,
+      pivot: pivotFraming(focus),
+      viewportPx: [1000, 1000] as const,
+      fovYRad: Math.PI / 3,
+      tuning: store.getState().camera.tuning,
+    },
     rootState: store.getState(),
     nowMs: overrides.nowMs ?? 0,
-    canvasPx: [1000, 1000] as const,
-    projection: { fovYRad: Math.PI / 3, aspect: 1, near: 0.01, far: 50000 },
-    upBasis: B,
-    poseBasis: B,
-    bodies: BODIES,
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     autoRotateEpoch: { ref: null, startMs: null },
-    tuning: store.getState().camera.tuning,
   };
 }
 

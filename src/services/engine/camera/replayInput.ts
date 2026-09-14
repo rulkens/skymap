@@ -17,8 +17,7 @@ import { surfaceGestureEdge } from '../../../utils/camera/surfaceGestureEdge';
 import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
-import { pivotFraming } from './pivotRadiusMpc';
-import { resolveWorldArm } from './poseFrameConversion';
+import { foldToWorld } from './rungs/foldToWorld';
 import { isWorldArm } from './rungs/isWorldArm';
 import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
@@ -31,18 +30,13 @@ import { selectFocusRow } from '../../../state/selection/selectors';
 import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
-import type { BodyState } from '../../../@types/scene/BodyState';
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
-import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { Epoch } from '../../../@types/engine/camera/Epoch';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { InputStep } from '../../../@types/camera/InputStep';
-import type { Mat3 } from '../../../@types/math/Mat3';
+import type { RungCtx } from '../../../@types/camera/RungCtx';
 import type { SurfaceMemory } from '../../../@types/camera/SurfaceMemory';
-import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { RootState } from '../../../store/types';
 
@@ -53,17 +47,12 @@ export function replayInput(
     readonly follow: FollowMemory | null;
   },
   steps: readonly InputStep[],
-  ctx: {
+  args: {
+    readonly ctx: RungCtx;
     readonly rootState: RootState;
     readonly nowMs: number;
-    readonly canvasPx: Readonly<Vec2>;
-    readonly projection: CameraProjection;
-    readonly upBasis: Readonly<Mat3>;
-    readonly poseBasis: Readonly<Mat3>;
-    readonly bodies: ReadonlyMap<BodyId, BodyState>;
     readonly winnerLastFrame: DriverId;
     readonly autoRotateEpoch: Epoch<FramedCameraPose>;
-    readonly tuning: CameraTuning;
   },
 ): {
   readonly register: FramedCameraPose;
@@ -72,22 +61,12 @@ export function replayInput(
   readonly followDistanceTarget: number | null;
   readonly actions: readonly UnknownAction[];
 } {
-  const {
-    rootState,
-    nowMs,
-    canvasPx,
-    projection,
-    upBasis,
-    poseBasis,
-    bodies,
-    winnerLastFrame,
-    tuning,
-  } = ctx;
-  const cssHeight = canvasPx[1];
+  const { ctx, rootState, nowMs, winnerLastFrame } = args;
+  const { bodies, poseBasis, upBasis, pivot, tuning } = ctx;
+  const cssHeight = ctx.viewportPx[1];
   // Only camera actions are emitted mid-drain, so every other slice is the
   // snapshot's; the focus row is read once.
   const focus = selectFocusRow(rootState);
-  const pivot = pivotFraming(focus);
 
   // The accumulator. EVERY step writes the register so a later step in the same
   // drain chains from it — an at-rest notch left out of it would be folded over
@@ -98,7 +77,7 @@ export function replayInput(
   let followDistanceTarget: number | null = null;
   // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
   // `advanceEpochs` would keep a fold-time reset when another driver wins.
-  let autoRotateEpoch = ctx.autoRotateEpoch;
+  let autoRotateEpoch = args.autoRotateEpoch;
   let camera = rootState.camera;
   const actions: UnknownAction[] = [];
   const emit = (action: UnknownAction): void => {
@@ -130,8 +109,8 @@ export function replayInput(
       ? rotateVec3ByTightMat3T(frameUp(upBasis), bodyState.orientation)
       : [0, 0, 1];
     const { pose: next, next: memory } = surfaceStep(surface, from, step, {
-      viewportPx: canvasPx,
-      fovYRad: projection.fovYRad,
+      viewportPx: ctx.viewportPx,
+      fovYRad: ctx.fovYRad,
       bodyRadiusM: body.radiusM,
       sceneUpLocal,
       tuning,
@@ -151,16 +130,8 @@ export function replayInput(
     // A playing clip is not gesture-interruptible: swallowed, not folded under it.
     if (camera.clip !== null) return;
     // AUTHORED, not displayed (R12b-1): the drag composes below the tilt.
-    const world = resolveWorldArm(register, bodies, poseBasis, upBasis);
-    let next = applyInputToCamera(
-      world,
-      step,
-      cssHeight,
-      pivot,
-      projection.fovYRad,
-      poseBasis,
-      upBasis,
-    );
+    const world = foldToWorld(register, ctx);
+    let next = applyInputToCamera(world, step, cssHeight, pivot, ctx.fovYRad, poseBasis, upBasis);
     if (step.kind === 'zoom') {
       // The roll ride runs on every driven zoom path, gesture-held included.
       const roll = frameAlignedRoll(
@@ -240,7 +211,7 @@ export function replayInput(
           // the live pose twice gave a zero delta and froze the band roll. It
           // lands on `base.roll`, the term the follow pose lerps toward.
           const basePose = camera.base.pose;
-          const live = resolveWorldArm(register, bodies, poseBasis, upBasis);
+          const live = foldToWorld(register, ctx);
           const roll = frameAlignedRoll(
             { ...live, distance: followTargetBefore },
             { ...live, distance: followDistanceTarget },

@@ -14,7 +14,7 @@ import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
 
 // The FRAMED base (spec §9): world-arm readers resolve it through
-// `resolveWorldArm` / `liveWorldPose` rather than assuming the absolute arm.
+// `foldToWorld` / `liveWorldPose` rather than assuming the absolute arm.
 export const selectCameraBase = (state: RootState): FramedCameraPose =>
   selectCameraIntent(state).base;
 

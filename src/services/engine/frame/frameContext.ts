@@ -54,7 +54,7 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByR
  * or scrubbed, and `nowMs` being threaded rather than sampled per consumer is
  * the seam a frame-by-frame recorder needs to step time deterministically.
  *
- * `arm` is the SAME framed pose `pose` was resolved from (`resolveWorldArm`,
+ * `arm` is the SAME framed pose `pose` was resolved from (`foldToWorld`,
  * called once by the caller) and serves only the pose-provider seam below
  * (spec §5.2).
  */

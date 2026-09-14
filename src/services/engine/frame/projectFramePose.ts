@@ -11,14 +11,11 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
-import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraState } from '../../../@types/camera/CameraState';
-import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
-import type { Mat3 } from '../../../@types/math/Mat3';
+import type { RungCtx } from '../../../@types/camera/RungCtx';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { SurfaceMemory } from '../../../@types/camera/SurfaceMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -26,7 +23,8 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { noteBody } from '../../camera/surfaceStep';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
-import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
+import { toBodyArm } from '../camera/poseFrameConversion';
+import { foldToWorld } from '../camera/rungs/foldToWorld';
 import { regimeArmFor } from '../camera/regimeArmFor';
 import { sameFrame } from '../camera/rungs/sameFrame';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
@@ -45,10 +43,7 @@ export function projectFramePose(args: {
   readonly surface: SurfaceMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime, `dragging` skips the fold. */
   readonly intent: CameraState;
-  readonly bodies: ReadonlyMap<BodyId, BodyState>;
-  readonly poseBasis: Mat3;
-  readonly upBasis: Mat3;
-  readonly tuning: CameraTuning;
+  readonly ctx: RungCtx;
 }): {
   readonly register: FramedCameraPose;
   readonly displayed: FramedCameraPose;
@@ -58,19 +53,9 @@ export function projectFramePose(args: {
   readonly actions: readonly UnknownAction[];
   readonly requestRender: boolean;
 } {
-  const {
-    render,
-    authoredOverride,
-    pivotsOnFocusedBody,
-    focus,
-    follow,
-    surface,
-    intent,
-    bodies,
-    poseBasis,
-    upBasis,
-    tuning,
-  } = args;
+  const { render, authoredOverride, pivotsOnFocusedBody, focus, follow, surface, intent, ctx } =
+    args;
+  const { bodies, poseBasis, upBasis, tuning } = ctx;
 
   // The pin SETS the target (never adds), so baking the displayed pose into
   // `base` on the next edge cannot double-apply the body translation. A pan
@@ -88,10 +73,7 @@ export function projectFramePose(args: {
   // The body the tilt memory belongs to: the ENGAGED one while a body arm holds
   // (a differing focus has already released it), else the FOCUSED one.
   const regime = intent.base.frame;
-  const noted = noteBody(
-    surface,
-    regime !== 'absolute' ? regime.body : focus?.type === 'body' ? focus.id : null,
-  );
+  const noted = noteBody(surface, regime !== 'absolute' ? regime.body : ctx.focusBodyId);
   displayed = approachTiltedPose(
     displayed,
     pivotsOnFocusedBody,
@@ -104,7 +86,7 @@ export function projectFramePose(args: {
   );
 
   // The register stays FRAMED; every world-Mpc reader takes this value.
-  const world = resolveWorldArm(displayed, bodies, poseBasis, upBasis);
+  const world = foldToWorld(displayed, ctx);
 
   const actions: UnknownAction[] = [];
   let requestRender = false;
@@ -116,13 +98,7 @@ export function projectFramePose(args: {
     // would re-engage every frame of an animation inside the band.
     const eyeMpc = eyeMpcOf(world, poseBasis);
     // The focused body constrains the regime (round 10).
-    const arm = regimeArmFor(
-      regime,
-      eyeMpc,
-      bodies,
-      focus?.type === 'body' ? focus.id : null,
-      tuning,
-    );
+    const arm = regimeArmFor(regime, eyeMpc, bodies, ctx.focusBodyId, tuning);
     if (arm === 'absolute') {
       if (displayed.frame !== 'absolute') {
         // Disengage normalization (pop-2 fix) — see `centreLookingArm`.
