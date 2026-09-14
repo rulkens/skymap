@@ -137,7 +137,7 @@ moment after `setMesh` at which a probe view arrives and needs re-binding, and
 a `bindProbe` entry would have no caller once the feature lands. J3's real
 blocker is the global group, which this task creates.
 
-- [ ] Add `tests/services/gpu/renderers/bodies/meshBodyRenderer.test.ts` on
+- [x] Add `tests/services/gpu/renderers/bodies/meshBodyRenderer.test.ts` on
       the `texturedBodyRenderer.test.ts` mock-device pattern (record
       `createBindGroupLayout` / `createBindGroup` / `createBuffer` descriptors):
   - `it('mints two bind-group layouts: the per-body one carries the uniform + MESH_TEXTURE_SLOTS bindings and no sampler; the global one carries only the sampler')`
@@ -148,20 +148,20 @@ blocker is the global group, which this task creates.
     — after `setMesh('a', asset)` and `setMesh('b', asset)`, `draw(pass, 'b', …)`
     calls `setBindGroup(0, <b's group>)` and `setBindGroup(1, <the global group>)`;
     the global group object is the same across both bodies' draws.
-- [ ] Split `bindGroupLayout` into `bodyBindGroupLayout` (binding 0 uniform +
+- [x] Split `bindGroupLayout` into `bodyBindGroupLayout` (binding 0 uniform +
       the slot textures) and `globalBindGroupLayout` (binding 0 sampler);
       `bindGroupLayouts: [bodyBindGroupLayout, globalBindGroupLayout]`. Mint
       `globalBindGroup` once at factory time. `setMesh`'s group drops the
       sampler entry. `draw` sets both groups.
-- [ ] `fragment.wesl`: move `meshSampler` to `@group(1) @binding(0)`; leave
+- [x] `fragment.wesl`: move `meshSampler` to `@group(1) @binding(0)`; leave
       every other line untouched.
-- [ ] `MeshBodyRenderer.d.ts` header: one sentence that group 1 is the
+- [x] `MeshBodyRenderer.d.ts` header: one sentence that group 1 is the
       renderer-wide material sampler and group 0 the body's own resources.
-- [ ] `npm test -- meshBodyRenderer` green; `npm run typecheck`.
-- [ ] **USER-RUN visual check:** dev server, fly to Curiosity (or the whale);
+- [x] `npm test -- meshBodyRenderer` green; `npm run typecheck`.
+- [x] **USER-RUN visual check:** dev server, fly to Curiosity (or the whale);
       the rover renders exactly as before; the dev console shows no
       `meshBody.fragment` compile error and no bind-group validation error.
-- [ ] Commit: `refactor(mesh-bodies): per-body group(0) + global group(1) in meshBodyRenderer (PBR prep P2)`.
+- [x] Commit: `refactor(mesh-bodies): per-body group(0) + global group(1) in meshBodyRenderer (PBR prep P2)`.
 
 ---
 
@@ -186,28 +186,28 @@ fn pbrDirect(
 `(diffuse + specular) * NoL` is otherwise unchanged. For every present caller
 `f0` is a splatted scalar, so the arithmetic is identical per channel.
 
-- [ ] Change the two signatures; `let specular = (D * G) * F / max(4.0 * NoV * NoL, 1e-4);`
+- [x] Change the two signatures; `let specular = (D * G) * F / max(4.0 * NoV * NoL, 1e-4);`
       with `F: vec3<f32>`; return `(diffuse + specular) * NoL` — no
       `vec3<f32>(specular)` wrap any more.
-- [ ] Callers: `pbrDirect(n, v, l, albedo, roughness, vec3<f32>(u.f0))` in both
+- [x] Callers: `pbrDirect(n, v, l, albedo, roughness, vec3<f32>(u.f0))` in both
       Earth fragments; `vec3<f32>(DIELECTRIC_F0)` in the mesh fragment. Its
       header sentence "A metal/dielectric blend, if ever wanted, is built HERE,
       not inside pbrDirect" now reads: the blend is built here, `pbrDirect`
       takes the blended `f0`.
-- [ ] `pbr.wesl` header: delete the "No metalness … a scalar is the honest
+- [x] `pbr.wesl` header: delete the "No metalness … a scalar is the honest
       representation" bullet (it is now false) and shorten the `fresnelSchlick`
       docblock's scalar wording. Leave the rest of the file's commentary alone —
       it is over budget, but this task is not the sweep.
-- [ ] `npm run build` (links every `?static` shader — a WESL syntax slip fails
+- [x] `npm run build` (links every `?static` shader — a WESL syntax slip fails
       here; a WGSL type error does NOT, see the next step).
-- [ ] **USER-RUN Earth ocean-glint parity:** dev server, `earth-surface`
+- [x] **USER-RUN Earth ocean-glint parity:** dev server, `earth-surface`
       pose (`tools/perf/perfScenarios.ts`; reach it via the `?perf` hook's
       `setPose`, or fly there). Before/after screenshots of the sun glint on the
       ocean must be indistinguishable — same extent, same brightness, same
       terminator rim. Also check one rover and Voyager unchanged, and that the
       dev console logs no compile error for `earth`, `earthSurfaceTile` or
       `meshBody` fragments (WGSL type errors surface only in the browser).
-- [ ] Commit: `refactor(shaders): pbrDirect takes an RGB f0 (PBR prep P3)`.
+- [x] Commit: `refactor(shaders): pbrDirect takes an RGB f0 (PBR prep P3)`.
 
 ---
 
@@ -258,23 +258,23 @@ export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[];
 export function serializeMeshAssets(rows: readonly MeshAssetRow[]): string;
 ```
 
-- [ ] Add `MeshTextureField`; type `MeshAsset`'s three bitmap fields through it
+- [x] Add `MeshTextureField`; type `MeshAsset`'s three bitmap fields through it
       (`readonly [K in MeshTextureField]: ImageBitmap` intersected with the
       geometry fields, or the three explicit lines — either, as long as
       `MESH_TEXTURE_SLOTS[number]['field']` is assignable to it).
-- [ ] `meshTextureSlots.ts`: add `suffix` per row (values above — these are the
+- [x] `meshTextureSlots.ts`: add `suffix` per row (values above — these are the
       file names already on R2, so they cannot change).
-- [ ] `meshFetcher.ts`: fetch `MESH_TEXTURE_SLOTS.map(slot => fetchTexture(dataUrl(`${prefix}${slot.suffix}.png`), signal, !slot.format.endsWith('-srgb')))`
+- [x] `meshFetcher.ts`: fetch `MESH_TEXTURE_SLOTS.map(slot => fetchTexture(dataUrl(`${prefix}${slot.suffix}.png`), signal, !slot.format.endsWith('-srgb')))`
       and assemble the asset by `slot.field`. The header's "three fixed roles"
       sentence goes; the colour-space rationale stays (one sentence).
-- [ ] `buildMeshes.ts`: build a per-field `{ texture: Texture | null; fallback }`
+- [x] `buildMeshes.ts`: build a per-field `{ texture: Texture | null; fallback }`
       source map once (`albedo` ← base colour texture / `srgbByte(factor)`,
       `metalRough` ← MR texture / `{ r: 0, g: roughness, b: metallic }`,
       `normalMap` ← normal texture / `FLAT_NORMAL`), then write every slot in
       one loop over `MESH_TEXTURE_SLOTS` using `slot.suffix`. `substituted` =
       the slot fields whose source texture is `null`, in slot order. The two
       `console.warn`s become one loop over the substituted list.
-- [ ] `meshAssetRowFields.ts`: one entry per row field in emitted order (`key`,
+- [x] `meshAssetRowFields.ts`: one entry per row field in emitted order (`key`,
       `path`, `boundingRadiusM`, `groundOffsetM`, `meanAlbedo`, `triangleCount`,
       `substituted`, `source`, `licence`, `attribution`), carrying the docblock
       lines that today live in the hand-written type text (`groundOffsetM`'s
@@ -283,28 +283,28 @@ export function serializeMeshAssets(rows: readonly MeshAssetRow[]): string;
       each row's body from this list; the banner, the `Vec3` +
       `MeshTextureField` imports and the `MESH_ASSETS` wrapper stay literal.
       `field()`'s prettier-width break and `quote()` are unchanged.
-- [ ] Regenerate `meshAssets.generated.ts` BY HAND to exactly what the new
+- [x] Regenerate `meshAssets.generated.ts` BY HAND to exactly what the new
       serializer emits (the round-trip test below is the check):
       `substituted: ['metalRough', 'normalMap']` for the five rows that carried
       `normalMapSubstituted: true` (their READMEs record no MR map either),
       `substituted: []` for `whale`. The real bake in Task 4 overwrites this
       file; any difference it produces is committed there.
-- [ ] `tests/tools/meshes/meshAssetsRoundTrip.test.ts`:
+- [x] `tests/tools/meshes/meshAssetsRoundTrip.test.ts`:
       `it('the committed generated table is exactly what serializeMeshAssets emits for its own rows')`
       — `serializeMeshAssets(Object.values(MESH_ASSETS)) === readFileSync('src/data/bodies/meshAssets.generated.ts', 'utf8')`.
       This is a generator↔artifact contract (the format keep-rule), not a
       source grep: it fails when the file is hand-edited or the serializer
       changes without a rebake.
-- [ ] `buildMeshes.test.ts`: the fixtures that asserted `normalMapSubstituted`
+- [x] `buildMeshes.test.ts`: the fixtures that asserted `normalMapSubstituted`
       now assert `substituted` (`[]` for a source with all three maps;
       `['metalRough', 'normalMap']` for one with base colour only). Add
       `it('writes every MESH_TEXTURE_SLOTS suffix, so a slot added to the table lands on disk')`
       — the out dir contains `<key>${slot.suffix}.png` for every slot.
-- [ ] `grep -rn normalMapSubstituted src tests tools docs` → only the ledger
+- [x] `grep -rn normalMapSubstituted src tests tools docs` → only the ledger
       under `plans/completed/` may still say it.
-- [ ] `npm test -- meshes meshFetcher` green; `npm run typecheck` (both
+- [x] `npm test -- meshes meshFetcher` green; `npm run typecheck` (both
       projects — `tools/` imports `src/data/mesh/meshTextureSlots`).
-- [ ] Commit: `refactor(meshes): texture slots drive fetcher + bake; one row descriptor; substituted list (PBR prep P5)`.
+- [x] Commit: `refactor(meshes): texture slots drive fetcher + bake; one row descriptor; substituted list (PBR prep P5)`.
 
 ---
 
@@ -341,7 +341,7 @@ re-points `node.image` per row; `bake` becomes the per-row body
 (`scene.render.bake.*` settings are per row where they differ — `use_pass_color`
 is the DIFFUSE row's, not global). `source()` loses `atlas_path`.
 
-- [ ] **USER-RUN baseline, BEFORE editing the script.** In the worktree, link
+- [x] **USER-RUN baseline, BEFORE editing the script.** In the worktree, link
       every raw file `MESH_SOURCES` resolves from the main checkout (the
       worktree owns only the READMEs):
       `for f in "Voyager Probe (B).glb" …` — one `ln -s "/Users/rulkens/Development/js/skymap/data/raw/meshes/<key>/<file>" data/raw/meshes/<key>/` per source named in `tools/utils/io/rawDataRegistry.ts` (`meshes.*Source`, `meshes.whale`, `meshes.petunias`, the curiosity `.blend`), so the prebaked OUTPUTS land in the worktree's own dirs. Then
@@ -350,22 +350,22 @@ is the DIFFUSE row's, not global). `source()` loses `atlas_path`.
       `shasum -a 256 data/raw/meshes/*/*.prebaked.glb data/raw/meshes/*/*.prebaked.albedo.png > .superpowers/pbr-p4-baseline.sha256`.
       (Cycles at one sample with no lights is deterministic; so is the
       unwrap. A later mismatch is a lifecycle bug, not noise.)
-- [ ] Refactor the script to the shape above. The `image.filepath_raw` /
+- [x] Refactor the script to the shape above. The `image.filepath_raw` /
       `file_format` / `save()` trio and the `colorspace_settings` line move into
       `bake_pass`; `main` loops `BAKE_PASSES` and passes the `{name: image}`
       dict to `flatten_materials`.
-- [ ] Refresh the four READMEs' "bakes all three materials into one 2048²
+- [x] Refresh the four READMEs' "bakes all three materials into one 2048²
       albedo atlas" sentence to name `BAKE_PASSES` as the list of atlases
       (still one row); no other README change.
-- [ ] **USER-RUN gate.** Rerun the four prebakes with the refactored script;
+- [x] **USER-RUN gate.** Rerun the four prebakes with the refactored script;
       `shasum -a 256 -c .superpowers/pbr-p4-baseline.sha256` must report every
       file OK. Then `npm run build-meshes` and `git status`: the only diffs
       allowed are `meshAssets.generated.ts`'s `substituted` entries if Task 3's
       hand edit guessed a slot wrong (commit the regenerated file as truth;
       `public/data/meshes/` is gitignored and needs no action).
-- [ ] `npm test -- meshes` green (the round-trip test now proves the
+- [x] `npm test -- meshes` green (the round-trip test now proves the
       regenerated table).
-- [ ] Commit: `refactor(prebake): BAKE_PASSES table + per-pass image lifecycle (PBR prep P4)`.
+- [x] Commit: `refactor(prebake): BAKE_PASSES table + per-pass image lifecycle (PBR prep P4)`.
 
 ---
 
