@@ -22,13 +22,6 @@
  * by the total uploaded count.  Fractions like "10% of GLADE" would shift
  * if GLADE itself grew (e.g. v2.4 release), and the mobile-GPU budget is
  * an absolute number of points, not a percentage.
- *
- * ### Why filename suffixes for subsampled sources only
- *
- * Tier-agnostic galaxy catalogs (2MRS, Famous) keep their bare filenames
- * (`2mrs.bin`, `famous.bin`) and live in one place on the static host.
- * Tiered galaxy catalogs (SDSS, GLADE, Milliquas) get a `-small`, `-medium`,
- * `-large` suffix because each tier's cut is a different file.
  */
 
 import { SOURCE_REGISTRY } from './sources';

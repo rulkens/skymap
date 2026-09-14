@@ -389,7 +389,7 @@ describe('ASSET_WIRING demand predicates', () => {
 });
 
 describe('ASSET_WIRING req builders', () => {
-  it('galaxy catalog rows carry { source, tier }', () => {
+  it('a tiered row carries its tier; an untiered one carries only its source', () => {
     expect(rowFor(Source.SDSS).req('medium')).toEqual({ source: Source.SDSS, tier: 'medium' });
     expect(rowFor(Source.Synthetic).req('large')).toEqual({ source: Source.Synthetic });
   });
@@ -412,6 +412,10 @@ describe('ASSET_WIRING req builders', () => {
 
   it('the filaments request drifts only across the small boundary', () => {
     const row = rowFor('filaments');
+    // Polarity, not just drift: a flipped flag would fetch the wrong file at
+    // every tier while keeping the drift assertions below green.
+    expect(row.req('small')).toEqual({ small: true });
+    expect(row.req('large')).toEqual({ small: false });
     expect(sameRequest(row.req('medium'), row.req('large'))).toBe(true);
     expect(sameRequest(row.req('small'), row.req('medium'))).toBe(false);
   });

@@ -49,7 +49,7 @@ export type GalaxyCatalogSourceConfig = {
    * Fetcher used to materialise the slot's request into a GalaxyCatalog.
    * The real galaxy catalogs + Famous share `galaxyCatalogFetcher` (which
    * dispatches on `req.source` to pick the right .bin URL); Synthetic
-   * uses `syntheticPointFetcher` (procedural, ignores `req.tier`).
+   * uses `syntheticPointFetcher` (procedural, ignores the request).
    */
   fetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq>;
   /**
