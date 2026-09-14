@@ -230,14 +230,14 @@ describe('atmosphereShellPass.draw', () => {
   it('dispatches inside=true / inside=false off the camLocal magnitude (atmosphere-top units)', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const state = makeState({ draw: drawSpy });
-    const ctx = makeCtx();
 
     // camLocal is in atmosphere-top-radius units, so |camLocal| < 1 is the
-    // inside test — drive it through the mocked bodySlabCamLocal per case.
+    // inside test — drive it through the mocked bodySlabCamLocal per case. A ctx
+    // apiece because the draw list is memoised per ctx: two poses are two frames.
     camLocalMock.mockReturnValueOnce([0.1, 0, 0]);
-    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), ctx, state);
+    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), makeCtx(), state);
     camLocalMock.mockReturnValueOnce([5, 0, 0]);
-    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), ctx, state);
+    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), makeCtx(), state);
 
     expect(drawSpy).toHaveBeenCalledTimes(2);
     expect(drawSpy.mock.calls[0]![3]).toBe(true);

@@ -1,12 +1,12 @@
 /**
- * atmosphereDrawList — the ONE per-frame derivation of which seeded bodies draw an
- * atmosphere shell, each paired with its `ATMOSPHERE_PARAMS` row and the pose-
- * dependent values its consumers march along: `encodeAtmosphereSkyView`'s LUT bake
- * and `atmosphereShellPass`'s draw. Derived separately they could disagree and the
- * draw would render a body whose LUT the bake skipped — a stale table sampled with
- * no error anywhere. The sub-pixel cull measures the body's SURFACE diameter, NOT
- * the atmosphere-TOP one: culling on the top holds the limb a hair past the disc's
- * own vanishing, so limb and disc vanish together only on the surface.
+ * atmosphereDrawList — ONE derivation per frame context of which seeded bodies draw
+ * an atmosphere shell, paired with its `ATMOSPHERE_PARAMS` row and the pose-dependent
+ * values its consumers march along. `encodeAtmosphereSkyView`'s LUT bake and
+ * `atmosphereShellPass`'s draw both read that one memoised list, so neither can work
+ * off a body the other skipped — a stale table sampled with no error anywhere. The
+ * memo keys on `ctx`, the object a frame IS; `state` is a live getter read through.
+ * The sub-pixel cull measures the body's SURFACE diameter, NOT the atmosphere-TOP
+ * one: culling on the top would hold the limb past the disc's own vanishing.
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
@@ -23,13 +23,23 @@ import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from './foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
 import { sceneBodyStates } from './sceneBodyStates';
+import { atmosphereDrawListCache } from './atmosphereDrawListCache';
 
 export function atmosphereDrawList(
   state: PassState,
   ctx: ReadyFrameContext,
 ): readonly AtmosphereDrawEntry[] {
+  const cached = atmosphereDrawListCache.get(ctx);
+  if (cached !== undefined) return cached;
+
+  // Cached before it is filled: every exit returns this same array, so one `set`
+  // covers them all — the near-field short-circuit below included, whose empty
+  // list is this frame's answer like any other.
+  const entries: AtmosphereDrawEntry[] = [];
+  atmosphereDrawListCache.set(ctx, entries);
+
   // One scalar for the frame, so the near-field cull short-circuits the whole list.
-  if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return [];
+  if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return entries;
 
   const earth = state.data.bodies.earth;
   const candidates =
@@ -39,7 +49,6 @@ export function atmosphereDrawList(
   // fields; each entry carries its pairing so both consumers read one position.
   const states = sceneBodyStates(state, ctx);
 
-  const entries: AtmosphereDrawEntry[] = [];
   for (const body of candidates) {
     const params = ATMOSPHERE_PARAMS[body.id];
     if (params === undefined) continue; // the data-gate

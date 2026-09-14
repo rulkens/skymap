@@ -194,6 +194,18 @@ describe('atmosphereDrawList', () => {
     expect(far[0]!.inside).toBe(false);
   });
 
+  it('derives one list per frame context, and re-derives for the next', () => {
+    const state = makeState({});
+    const ctxA = makeCtx(camRadiiOut(SEEDED_EARTH, 5));
+    // The identity every consumer leans on: they walk the SAME array, so a memo
+    // keyed on anything per-call would hand them separate answers.
+    expect(atmosphereDrawList(state, ctxA)).toBe(atmosphereDrawList(state, ctxA));
+    // A key outliving the frame would serve ctxA's answer to the next frame — a
+    // body the camera has since left behind, baked into that frame's LUT.
+    const ctxB = makeCtx(camRadiiOut(SEEDED_EARTH, 3000));
+    expect(atmosphereDrawList(state, ctxB)).toEqual([]);
+  });
+
   it('excludes a body with no pose this frame', () => {
     // The derived fields all hang off the pose, so a poseless body cannot be an
     // entry at all — which is what lets both consumers drop their own guard.
