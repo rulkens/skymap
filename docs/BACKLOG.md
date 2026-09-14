@@ -90,7 +90,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`CaptionKind` shadows the label-bearing registry** `deferred` — the union is still hand-typed, but it was never 1:1 with `bearsLabel`, so deriving it needs a new registry flag rather than a filter. → [details](backlog/2026-07-29-caption-kind-shadow-registry.md)
 - [ ] **Multi-star sphere presence** `deferred` — the field-star sphere is one-at-a-time (nearest wins); a Gaia-resolved double a few AU apart would leave the companion sprite-retired with no body. → [details](backlog/2026-07-21-multi-star-sphere-presence.md)
 - [ ] **Mesh bodies: self-shadowing and a ground shadow** `needs-design` — no shadow term at all; a rover lights its own deck and casts nothing on Mars. → [details](backlog/2026-09-12-mesh-body-shadows.md)
-- [ ] **Rover landing sites as 3D terrain with high-res textures** `needs-design` — a rover stands on the blurred global equirect; HiRISE DTM + ortho patch per site. → [details](backlog/2026-09-12-rover-terrain-region.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
 - [ ] **`foreground:0`'s alpha is doing three jobs** `needs-design` — the shell and ring write premultiplied rgb into a straight-alpha composite, and one alpha cannot dim the starfield chromatically. → [details](backlog/2026-08-18-foreground-alpha-overloaded.md)
 - [ ] **Body seed albedos are authored, not measured** `needs-design` — one field serves surface reflectance and the atmosphere's ground bounce, which want different quantities; Pluto's is 0.49 vs a measured 0.72. → [details](backlog/2026-08-18-body-seed-albedos-vs-measured.md)
@@ -104,7 +103,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (equirect-uv mirror, setMap kind table, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
 - [ ] **Earth tile polar refinement clamp** `deferred` — plate-carrée refinement over-selects near the poles (~17x vs equator in one simulation); masked until Phase E deepens the pyramid. → [details](backlog/2026-07-30-earth-tile-polar-refinement-clamp.md)
 - [ ] **Earth tile uv-conversion functions have no production caller** `needs-design` — `earthTileXyForUv`/`earthTileCentreUv` are referenced only by each other's test; the flip and wrap are re-implemented inline at six live sites instead. → [details](backlog/2026-07-30-earth-tile-uv-conversion-dead-home.md)
-- [ ] **`EarthTileKind`'s plumbing assumes there is only one kind** `needs-design` — bake, planner, decode and the uniform window all silently break or double up the moment a second kind (normal maps) is added. → [details](backlog/2026-07-30-earth-tile-kind-singularity.md)
 - [ ] **Søndermarken z14–19 tiles from the 2019 skråfoto frames** `needs-design` — GeoDanmark forår-2025 reads bright/hazy next to corrected EOX; source from the 2019 leaf-on skråfoto instead. → [details](backlog/2026-09-14-soendermarken-tiles-from-2019-frames.md)
 - [ ] **Earth tile crossfade on zoom-out** `needs-design` — the load crossfade only runs zoom-in; coarsening still pops at band boundaries; agreed shape = retiring set + blended pipeline variant. → [details](backlog/2026-08-20-earth-tile-zoom-out-crossfade.md)
 - [ ] **Earth tile descent "island in stars"** `needs-debug` — below the base-globe fade only the deepest resident tiles render; planner + projection exonerated with hard evidence; shipped known-issue with #617, re-check after Plan 2. → [details](backlog/2026-08-21-earth-tile-descent-island.md)
@@ -217,6 +215,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Saga-context boot-ordering argument told nine times** `ready` — one causal chain restated across nine docblocks; keep it in `sagaContextRegistered.ts` and point the rest there. → [details](backlog/2026-07-30-boot-ordering-argument-nine-copies.md)
 - [ ] **Plan `Needs:` lines for wave dispatch** `needs-design` — SDD serializes plans; mined dependency graphs from completed plans understate real depth, so the DAG must be authored, not mined. → [details](backlog/2026-07-31-plan-needs-lines-wave-dispatch.md)
 - [ ] **CLAUDE.md compaction pass** `ready` — the file has grown; tighten it without losing load-bearing content.
+- [ ] **Test-suite prune** `ready` — repo-wide sweep deleting tests that cannot fail on a real bug. → [details](backlog/2026-09-15-test-suite-prune.md)
+- [ ] **Comment prune to the 5-line budget** `ready` — script-listed files only; landmine memories + RENDERER.md protected. → [details](backlog/2026-09-15-comment-prune.md)
 
 ## External / blocked
 
