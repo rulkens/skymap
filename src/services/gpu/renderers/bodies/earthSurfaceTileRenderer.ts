@@ -1,36 +1,12 @@
 /**
- * earthSurfaceTileRenderer — instanced draw of the resident virtual-texture
- * surface patches (Task 2's `SurfaceCutTile` cut), drawn directly over the
- * base globe at the same nominal unit-sphere radius. Byte layout + f64
- * precision derivation carry a longer header on that basis (see io.wesl /
- * vertex.wesl, which this file is the CPU twin of).
+ * earthSurfaceTileRenderer — one instanced indexed draw of the resident
+ * virtual-texture surface patches (`cutSurfaceTiles`'s cut) over the base
+ * globe: one shared template index buffer, one 64-byte `PatchInstance` per
+ * patch, all geometry derived in `vertex.wesl`.
  *
- * Different tiles' baked meshes are topologically identical but
- * geometrically distinct, so — unlike `starCatalogRenderer`'s billboards —
- * they cannot share one vertex buffer via real instancing. Each cut tile's
- * mesh is instead EXPANDED (through its own `indices`, never drawn indexed)
- * into a flat, per-frame `array<TileVertex>`, concatenated at `tileSlot *
- * VERTS_PER_TILE`; a parallel `array<NodeParams>` carries placement +
- * resolved atlas rect. One `pass.draw(VERTS_PER_TILE * tileCount)` reads
- * both via `@builtin(vertex_index)` alone — see `vertex.wesl`.
- *
- * `originRelCamM` is composed in native JS `number` (f64) arithmetic here and
- * narrowed to f32 only at the final `DataView` write, mirroring
- * `composeBodySlabMvp`'s discipline; `camPosRelBodyM` is the pose seam's own
- * `eyeRelBodyM`, already in that same frame -- no further compose needed.
- * `vertex.wesl` derives why that keeps the reconstructed local normal
- * f32-safe with no separate origin-direction field. Both are body-fixed-axes
- * quantities now, not world-axes: the body-slab pose seam (`bodyRelativePose`)
- * already rotated the camera into Earth's own fixed frame, the SAME frame
- * the tile anchor/the baked mesh live in, so no orientation rotation is
- * applied here -- `SurfaceTileUniforms.rotCol0/1/2` are fed the identity
- * (kept only for the struct's parity-tested byte layout).
- *
- * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline
- * shares the base globe's nominal radius, so ties must resolve in ITS
- * favour (Task 5 draws it after the base globe).
- *
- * Owns neither the tile atlas nor the base globe's material/night/normal/
+ * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline shares
+ * the base globe's nominal radius, so ties must resolve in ITS favour. It
+ * owns neither the tile atlas nor the base globe's material/night/normal/
  * cloud maps — both arrive as views on every `draw` call.
  *
  * @module
@@ -41,28 +17,25 @@ import type {
   EarthSurfaceTileRenderer,
   EarthSurfaceTileDrawArgs,
 } from '../../../../@types/rendering/EarthSurfaceTileRenderer';
-import type { SurfaceTileMeshCache } from '../../resources/surfaceTileMeshCache';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
+import { patchOriginRelEyeM } from '../../../../utils/scene/patchOriginRelEyeM';
+import { surfacePatchIndices } from '../../../../utils/scene/surfacePatchIndices';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/earthSurfaceTile/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earthSurfaceTile/fragment.wesl?static';
 import {
-  NODE_PARAMS_BYTES,
-  TILE_VERTEX_BYTES,
+  PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
-  writeSurfaceTileNodeParams,
-  writeTileVertex,
+  writePatchInstance,
   writeSurfaceTileUniforms,
 } from './earthSurfaceTileLayout';
 import { EARTH_TILE_CROSSFADE_MS } from '../../../../data/bodies/earthTileParams';
 
 /**
- * @param resolution The mesh grid resolution `meshCache` bakes at — MUST
- *   equal the value `meshCache` was constructed with (`(resolution+1)^2`
- *   unique vertices / `resolution^2*6` indices per tile). Fixes
- *   `VERTS_PER_TILE`; never independently hardcoded (Task 5 owns the one
- *   shared constant both call sites read).
+ * @param resolution The template's `n`: it sizes the shared index buffer and
+ *   reaches the vertex shader as `SurfaceTileUniforms.meshResolution`, which
+ *   splits `vertex_index` into `(i, j)`. The two must be the same number.
  * @param reversedZ selects this slab's depth convention, resolved through
  *   `resolveDepthCompare` with intent `'nearer-or-equal'` (see the module header).
  */
@@ -71,11 +44,8 @@ export function createEarthSurfaceTileRenderer(
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
   reversedZ: boolean,
-  meshCache: SurfaceTileMeshCache,
   resolution: number,
 ): EarthSurfaceTileRenderer {
-  const vertsPerTile = resolution * resolution * 6;
-
   // ── Samplers ──────────────────────────────────────────────────────────
   // baseSampler mirrors earthRenderer's whole-globe sampler (repeat u,
   // clamp v, trilinear — these views carry the base globe's own mip chain).
@@ -99,7 +69,20 @@ export function createEarthSurfaceTileRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
+  // ── Shared template index buffer (every patch, every level) ──────────
+  const indices = surfacePatchIndices(resolution);
+  const indexCount = resolution * resolution * 6;
+  const indexBuffer = device.createBuffer({
+    label: 'earth-surface-tile-index-buffer',
+    size: indices.byteLength,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(indexBuffer, 0, indices);
+
   // ── Bind group layout (explicit, not 'auto') ─────────────────────────
+  // Binding 2 was the per-corner vertex array and is gone; 3–9 keep their
+  // numbers so the fragment's bindings don't move (they need not be
+  // contiguous).
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-surface-tile-bgl',
     entries: [
@@ -111,12 +94,7 @@ export function createEarthSurfaceTileRenderer(
       {
         binding: 1,
         visibility: GPUShaderStage.VERTEX,
-        buffer: { type: 'read-only-storage', minBindingSize: NODE_PARAMS_BYTES },
-      },
-      {
-        binding: 2,
-        visibility: GPUShaderStage.VERTEX,
-        buffer: { type: 'read-only-storage', minBindingSize: TILE_VERTEX_BYTES },
+        buffer: { type: 'read-only-storage', minBindingSize: PATCH_INSTANCE_BYTES },
       },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
@@ -137,7 +115,7 @@ export function createEarthSurfaceTileRenderer(
       label: 'earth-surface-tile-pipeline-layout',
       bindGroupLayouts: [bindGroupLayout],
     }),
-    // Records vertex-pulled from storage buffers — no vertex buffers.
+    // Positions are derived from the instance record — no vertex buffers.
     vertex: { module: vsModule, entryPoint: 'vs' },
     fragment: {
       module: fsModule,
@@ -146,7 +124,7 @@ export function createEarthSurfaceTileRenderer(
     },
     primitive: {
       topology: 'triangle-list',
-      frontFace: 'ccw', // matches bakeSurfaceTileMesh's east x north = outward winding
+      frontFace: 'ccw', // matches surfacePatchIndices' east x north = outward winding
       cullMode: 'back',
     },
     depthStencil: {
@@ -167,45 +145,22 @@ export function createEarthSurfaceTileRenderer(
   const uniformScratch = new ArrayBuffer(SURFACE_TILE_UNIFORM_BYTES);
   const uniformView = new DataView(uniformScratch);
 
-  // ── Per-frame storage buffers (grow-only capacity, in TILE count) ────
-  let nodeParamsBuffer: GPUBuffer | null = null;
-  let tileVertsBuffer: GPUBuffer | null = null;
-  let tileCapacity = 0;
+  // ── Per-frame instance records (grow-only, in TILE count) ────────────
+  let patchBuffer: GPUBuffer | null = null;
+  let patchScratch = new ArrayBuffer(0);
+  let patchScratchView = new DataView(patchScratch);
 
-  function ensureDrawBuffers(tileCount: number): void {
-    if (nodeParamsBuffer !== null && tileCapacity >= tileCount) return;
-    nodeParamsBuffer?.destroy();
-    tileVertsBuffer?.destroy();
-    tileCapacity = tileCount;
-    nodeParamsBuffer = device.createBuffer({
-      label: 'earth-surface-tile-node-params',
-      size: tileCount * NODE_PARAMS_BYTES,
+  function ensureCapacity(tileCount: number): void {
+    const bytes = tileCount * PATCH_INSTANCE_BYTES;
+    if (patchBuffer !== null && patchScratch.byteLength >= bytes) return;
+    patchBuffer?.destroy();
+    patchBuffer = device.createBuffer({
+      label: 'earth-surface-tile-patch-instances',
+      size: bytes,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    tileVertsBuffer = device.createBuffer({
-      label: 'earth-surface-tile-verts',
-      size: tileCount * vertsPerTile * TILE_VERTEX_BYTES,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-  }
-
-  // ── CPU pack scratch (reused, grown as the frame's tile count grows) ─
-  let nodeScratch = new ArrayBuffer(0);
-  let nodeScratchView = new DataView(nodeScratch);
-  let vertexScratch = new ArrayBuffer(0);
-  let vertexScratchView = new DataView(vertexScratch);
-
-  function ensureScratch(tileCount: number): void {
-    const nodeBytes = tileCount * NODE_PARAMS_BYTES;
-    if (nodeScratch.byteLength < nodeBytes) {
-      nodeScratch = new ArrayBuffer(nodeBytes);
-      nodeScratchView = new DataView(nodeScratch);
-    }
-    const vertexBytes = tileCount * vertsPerTile * TILE_VERTEX_BYTES;
-    if (vertexScratch.byteLength < vertexBytes) {
-      vertexScratch = new ArrayBuffer(vertexBytes);
-      vertexScratchView = new DataView(vertexScratch);
-    }
+    patchScratch = new ArrayBuffer(bytes);
+    patchScratchView = new DataView(patchScratch);
   }
 
   /**
@@ -219,7 +174,6 @@ export function createEarthSurfaceTileRenderer(
   function draw(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs): void {
     const {
       tiles,
-      frame,
       eyeRelBodyM,
       radiusM,
       vp,
@@ -241,7 +195,7 @@ export function createEarthSurfaceTileRenderer(
     const tileCount = tiles.length;
     if (tileCount === 0) return;
 
-    ensureScratch(tileCount);
+    ensureCapacity(tileCount);
 
     // Sampled ONCE per draw call (== once per frame; `earthPass` calls
     // `draw` at most once), never per tile — every tile's fade weight must
@@ -252,12 +206,10 @@ export function createEarthSurfaceTileRenderer(
 
     for (let i = 0; i < tileCount; i++) {
       const tile = tiles[i]!;
-      const mesh = meshCache.get(tile.id, frame);
-      const vertexBase = i * vertsPerTile;
 
       // `fallback === null` means no deeper resident ancestor: the CPU-side
       // encoding is fadeWeight forced to 1 with the fallback rect aliased to
-      // the primary one (see io.wesl's `NodeParams` doc) — mix() at weight 1
+      // the primary one (see io.wesl's `PatchInstance` doc) — mix() at weight 1
       // returns the primary sample exactly, so the fragment never needs to
       // branch on "is there a fallback".
       const fallback = tile.resident.fallback ?? tile.resident;
@@ -266,24 +218,18 @@ export function createEarthSurfaceTileRenderer(
           ? 1
           : Math.min(1, Math.max(0, (nowMs - tile.resident.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
 
-      // Body-fixed axes throughout (no orientation rotation): the anchor's
-      // corner is already the frame composeBodySlabMvp's model factor places
-      // bodies in, so the tile origin relative to the eye is a direct
-      // radius-scale-then-subtract, mirroring that same model.
-      //
-      // Spelled out here rather than through `patchOriginRelEyeM` on purpose:
-      // that util f32-rounds the anchor first (spec §7.1), and the baked
-      // meshes this path still draws are rooted at the UNROUNDED corner —
-      // rounding only one of the pair would open ~0.13 m cracks. The two move
-      // together when task 7 retires the bake.
-      const cosLat0 = Math.cos(tile.anchor.lat0Rad);
-      writeSurfaceTileNodeParams(
-        nodeScratchView,
-        i * NODE_PARAMS_BYTES,
-        radiusM * (cosLat0 * Math.cos(tile.anchor.lon0Rad)) - eyeRelBodyM[0],
-        radiusM * (cosLat0 * Math.sin(tile.anchor.lon0Rad)) - eyeRelBodyM[1],
-        radiusM * Math.sin(tile.anchor.lat0Rad) - eyeRelBodyM[2],
-        vertexBase,
+      const origin = patchOriginRelEyeM(tile.anchor, radiusM, eyeRelBodyM);
+      writePatchInstance(
+        patchScratchView,
+        i * PATCH_INSTANCE_BYTES,
+        origin[0],
+        origin[1],
+        origin[2],
+        fadeWeight,
+        tile.anchor.lon0Rad,
+        tile.anchor.lat0Rad,
+        tile.anchor.dLonRad,
+        tile.anchor.dLatRad,
         tile.resident.atlasUvOrigin[0],
         tile.resident.atlasUvOrigin[1],
         tile.resident.atlasUvScale[0],
@@ -292,49 +238,19 @@ export function createEarthSurfaceTileRenderer(
         fallback.atlasUvOrigin[1],
         fallback.atlasUvScale[0],
         fallback.atlasUvScale[1],
-        fadeWeight,
       );
-
-      // Expand the tile's indexed mesh into VERTS_PER_TILE per-corner
-      // records — see the module header for why this isn't drawn indexed.
-      for (let k = 0; k < vertsPerTile; k++) {
-        const vi = mesh.indices[k]!;
-        const p = vi * 3;
-        const t = vi * 2;
-        writeTileVertex(
-          vertexScratchView,
-          (vertexBase + k) * TILE_VERTEX_BYTES,
-          mesh.positions[p]!,
-          mesh.positions[p + 1]!,
-          mesh.positions[p + 2]!,
-          mesh.uvs[t]!,
-          mesh.uvs[t + 1]!,
-          mesh.tangents[p]!,
-          mesh.tangents[p + 1]!,
-          mesh.tangents[p + 2]!,
-        );
-      }
     }
 
-    ensureDrawBuffers(tileCount);
-    device.queue.writeBuffer(nodeParamsBuffer!, 0, nodeScratch, 0, tileCount * NODE_PARAMS_BYTES);
-    device.queue.writeBuffer(
-      tileVertsBuffer!,
-      0,
-      vertexScratch,
-      0,
-      tileCount * vertsPerTile * TILE_VERTEX_BYTES,
-    );
+    device.queue.writeBuffer(patchBuffer!, 0, patchScratch, 0, tileCount * PATCH_INSTANCE_BYTES);
 
     writeSurfaceTileUniforms(
       uniformView,
       vp,
-      // Body-fixed frame throughout (see the module header) — the shader's
-      // rotCol0/1/2 slots are inert at identity, kept only for the struct's
-      // parity-tested byte layout.
+      // Body-fixed frame throughout — the shader's rotCol0/1/2 slots are
+      // inert at identity, kept only for the struct's parity-tested layout.
       IDENTITY_MAT3,
       radiusM,
-      vertsPerTile,
+      resolution,
       eyeRelBodyM,
       sunDirLocal,
       roughnessBase,
@@ -348,7 +264,7 @@ export function createEarthSurfaceTileRenderer(
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
-    // Bind group rebuilt every draw: the storage buffers may have grown,
+    // Bind group rebuilt every draw: the storage buffer may have grown,
     // and the texture views are supplied fresh per call (this renderer owns
     // neither the atlas nor the base globe's other maps — see the header).
     const bindGroup = device.createBindGroup({
@@ -358,14 +274,7 @@ export function createEarthSurfaceTileRenderer(
         { binding: 0, resource: { buffer: uniformBuffer } },
         {
           binding: 1,
-          resource: { buffer: nodeParamsBuffer!, size: tileCount * NODE_PARAMS_BYTES },
-        },
-        {
-          binding: 2,
-          resource: {
-            buffer: tileVertsBuffer!,
-            size: tileCount * vertsPerTile * TILE_VERTEX_BYTES,
-          },
+          resource: { buffer: patchBuffer!, size: tileCount * PATCH_INSTANCE_BYTES },
         },
         { binding: 3, resource: baseSampler },
         { binding: 4, resource: atlasSampler },
@@ -379,12 +288,13 @@ export function createEarthSurfaceTileRenderer(
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.draw(vertsPerTile * tileCount);
+    pass.setIndexBuffer(indexBuffer, 'uint16');
+    pass.drawIndexed(indexCount, tileCount);
   }
 
   function destroy(): void {
-    nodeParamsBuffer?.destroy();
-    tileVertsBuffer?.destroy();
+    patchBuffer?.destroy();
+    indexBuffer.destroy();
     uniformBuffer.destroy();
   }
 

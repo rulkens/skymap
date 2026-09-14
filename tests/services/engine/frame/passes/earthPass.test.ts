@@ -632,7 +632,6 @@ describe('earthPass.draw — detail tiles', () => {
     expect(pass).toBe(PASS_STUB);
     expect(args.tiles).toBe(STUB_CUT);
     expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
-    expect(typeof args.frame).toBe('number');
     // No rebase: the tile draw's vp is the slab's own already-eye-relative
     // f32 view (view.vp), never a freshly narrowed/rebased copy.
     expect(args.vp).toBe(view.vp);

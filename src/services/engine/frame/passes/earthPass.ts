@@ -99,14 +99,6 @@ const preparedByCtx = new WeakMap<
   Map<BodyId, PreparedBodySurfaceFrame | null>
 >();
 
-// The tile mesh cache's LRU stamp — an integer index rather than `ctx.nowMs`
-// so a stepped/paused clock (tests, a recorder) can't collapse two frames'
-// stamps onto the same value. Advanced once per real tile draw, not memoised
-// alongside `PreparedBodySurfaceFrame` (unlike the old per-ctx frame field):
-// it has nothing to do with the pose derivation and would otherwise stay
-// stale across a (ctx, bodyId) cache hit.
-let earthFrameCounter = 0;
-
 export function prepareBodySurfaceFrame(
   state: PassState,
   ctx: ReadyFrameContext,
@@ -238,7 +230,6 @@ export const earthPass: ContentPass = {
     if (tilesLive) {
       tileRenderer!.draw(pass, {
         tiles,
-        frame: ++earthFrameCounter,
         // The slab vp is already eye-relative by construction (body-m rows
         // build vp about the eye) — no rebase, unlike the old NEAR0 path.
         vp: view.vp,

@@ -6,8 +6,9 @@
 //
 // 'patchVertexOffset' is the twin of src/utils/scene/patchVertexOffsetM.ts --
 // same names, same order, changed together; the f64 ground truth is tested
-// there. 'patch.originRelEyeM' was differenced in f64 CPU-side from the SAME
+// there. 'originRelEyeM' was differenced in f64 CPU-side from the SAME
 // f32-rounded anchor read here, so s = t = 0 lands on it exactly: no cracks.
+// The record is 'inst', never 'patch' -- 'patch' is a WGSL RESERVED WORD.
 
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::PatchInstance;
@@ -20,11 +21,11 @@ import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
 // '2*sin^2(x/2)' is algebraically '1 - cos x' and NOT interchangeable with it:
 // at a z19 patch's dlon of 1.2e-5 rad, '1 - cos' cancels away every
 // significant f32 bit while this form keeps them all. Do not 'simplify' it.
-fn patchVertexOffset(patch: PatchInstance, radiusM: f32, s: f32, t: f32) -> vec3<f32> {
-  let lon0Rad = patch.lon0Rad;
-  let lat0Rad = patch.lat0Rad;
-  let dlon = s * patch.dLonRad;
-  let dlat = t * patch.dLatRad;
+fn patchVertexOffset(anchor: PatchInstance, radiusM: f32, s: f32, t: f32) -> vec3<f32> {
+  let lon0Rad = anchor.lon0Rad;
+  let lat0Rad = anchor.lat0Rad;
+  let dlon = s * anchor.dLonRad;
+  let dlat = t * anchor.dLatRad;
   let lat = lat0Rad + dlat;
 
   let sinHalfLon = sin(dlon / 2.0);
@@ -58,14 +59,14 @@ fn vs(
   @builtin(vertex_index) vertexIndex: u32,
   @builtin(instance_index) instanceIndex: u32,
 ) -> VSOut {
-  let patch = patches[instanceIndex];
+  let inst = patches[instanceIndex];
   let row = u.meshResolution + 1u;
   let i = vertexIndex % row;
   let j = vertexIndex / row;
   let s = f32(i) / f32(u.meshResolution);
   let t = f32(j) / f32(u.meshResolution);
 
-  let worldPosRelCam = patch.originRelEyeM + patchVertexOffset(patch, u.radiusM, s, t);
+  let worldPosRelCam = inst.originRelEyeM + patchVertexOffset(inst, u.radiusM, s, t);
 
   var out: VSOut;
   out.clip = u.vp * vec4<f32>(worldPosRelCam, 1.0);
@@ -84,13 +85,13 @@ fn vs(
   );
   // The latitude-independent unit-east tangent the bake used to write per
   // vertex, now derived.
-  let lon = patch.lon0Rad + s * patch.dLonRad;
+  let lon = inst.lon0Rad + s * inst.dLonRad;
   out.tangent = vec3<f32>(-sin(lon), cos(lon), 0.0);
-  out.atlasUvOrigin = patch.albedoRect.xy;
-  out.atlasUvScale = patch.albedoRect.zw;
-  out.fallbackUvOrigin = patch.fallbackRect.xy;
-  out.fallbackUvScale = patch.fallbackRect.zw;
-  out.fadeWeight = patch.fadeWeight;
+  out.atlasUvOrigin = inst.albedoRect.xy;
+  out.atlasUvScale = inst.albedoRect.zw;
+  out.fallbackUvOrigin = inst.fallbackRect.xy;
+  out.fallbackUvScale = inst.fallbackRect.zw;
+  out.fadeWeight = inst.fadeWeight;
   // Camera minus vertex, inverted through the same rotation and scaled into
   // body-radius units. Cancellation-free at metre scale, unlike the
   // 'camPosLocal - Ng' this replaced (two near-unit f32 vectors).
