@@ -20,14 +20,20 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 
 ATLAS_PX = 2048
 
+# (name, `bpy.ops.object.bake` kwargs, atlas colourspace) — one atlas per row,
+# `bake_pass` runs a row start to finish.
+BAKE_PASSES = [
+    ("albedo", dict(type="DIFFUSE", pass_filter={"COLOR"}), "sRGB"),
+]
+
 
 def source(key, filename, frame=None, triangles=None, drop_materials=()):
     d = os.path.join(REPO, "data/raw/meshes", key)
     return {
         "key": key,
+        "dir": d,
         "src": os.path.join(d, filename),
         "out": os.path.join(d, "%s.prebaked.glb" % key),
-        "atlas_path": os.path.join(d, "%s.prebaked.albedo.png" % key),
         # None = the file's saved transforms; an int = that animation frame. The
         # deploy animations park the rover STOWED at their own frame 0, so a
         # source with actions must name a frame or risk baking a folded rover.
@@ -38,6 +44,10 @@ def source(key, filename, frame=None, triangles=None, drop_materials=()):
         # against the name drifting upstream and the marker silently shipping.
         "drop_materials": set(drop_materials),
     }
+
+
+def atlas_path(cfg, name):
+    return os.path.join(cfg["dir"], "%s.prebaked.%s.png" % (cfg["key"], name))
 
 
 SOURCES = {
@@ -232,21 +242,29 @@ def unwrap(obj):
     return uv_name
 
 
-def arm_materials(obj, image):
+def arm_materials(obj):
     """Cycles bakes into whichever Image Texture node is ACTIVE in each material
-    the object draws with — every one of them, or the bake refuses."""
+    the object draws with — every one of them, or the bake refuses. The node is
+    made once here; `bake_pass` re-points it at each row's own atlas."""
     for slot in obj.material_slots:
         mat = slot.material
         if mat is None:
             continue
         mat.use_nodes = True
         node = mat.node_tree.nodes.new("ShaderNodeTexImage")
-        node.image = image
         node.select = True
         mat.node_tree.nodes.active = node
 
 
-def bake(obj, uv_name):
+def bake_pass(obj, uv_name, cfg, name, settings, colourspace):
+    """One BAKE_PASSES row start to finish: its atlas image, the bake, the save."""
+    image = bpy.data.images.new("%s_%s" % (cfg["key"], name), ATLAS_PX, ATLAS_PX, alpha=False)
+    image.generated_color = (0, 0, 0, 1)
+    image.colorspace_settings.name = colourspace
+    for slot in obj.material_slots:
+        if slot.material is not None:
+            slot.material.node_tree.nodes.active.image = image
+
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
@@ -260,19 +278,28 @@ def bake(obj, uv_name):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, uv_layer=uv_name, use_clear=True)
+    bpy.ops.object.bake(uv_layer=uv_name, use_clear=True, **settings)
+
+    image.filepath_raw = atlas_path(cfg, name)
+    image.file_format = "PNG"
+    image.save()
+    return image
 
 
-def flatten_materials(obj, key, image):
-    """One material sampling the atlas, replacing the whole stack."""
+def flatten_materials(obj, key, images):
+    """One material sampling the baked atlases, replacing the whole stack."""
     obj.data.materials.clear()
     mat = bpy.data.materials.new(key)
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes["Principled BSDF"]
+    # The channels no BAKE_PASSES row bakes. These two reach the GLB as material
+    # factors, which buildMeshes turns into the 1x1 _mr.png the runtime samples;
+    # Blender's own default roughness is 0.5, so dropping them would relight the
+    # rovers. They go with the rows that supersede them.
     bsdf.inputs["Metallic"].default_value = 0.0
     bsdf.inputs["Roughness"].default_value = 0.7
     tex = mat.node_tree.nodes.new("ShaderNodeTexImage")
-    tex.image = image
+    tex.image = images["albedo"]
     mat.node_tree.links.new(bsdf.inputs["Base Color"], tex.outputs["Color"])
     obj.data.materials.append(mat)
 
@@ -346,17 +373,14 @@ def main():
 
     uv_name = unwrap(obj)
     log("smart-projected uv '%s' (%.0fs elapsed)" % (uv_name, time.time() - started))
-    image = bpy.data.images.new("%s_atlas" % key, ATLAS_PX, ATLAS_PX, alpha=False)
-    image.generated_color = (0, 0, 0, 1)
-    arm_materials(obj, image)
-    bake(obj, uv_name)
-    image.filepath_raw = cfg["atlas_path"]
-    image.file_format = "PNG"
-    image.save()
-    log("baked %d^2 albedo atlas -> %s (%.0fs elapsed)"
-        % (ATLAS_PX, cfg["atlas_path"], time.time() - started))
+    arm_materials(obj)
+    images = {}
+    for name, settings, colourspace in BAKE_PASSES:
+        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace)
+        log("baked %d^2 %s atlas -> %s (%.0fs elapsed)"
+            % (ATLAS_PX, name, atlas_path(cfg, name), time.time() - started))
 
-    flatten_materials(obj, key, image)
+    flatten_materials(obj, key, images)
     keep_only_bake_uv(obj, uv_name)
     export(obj, cfg["out"])
     log("wrote %s (%d tris, %d verts, %.0fs total)"
