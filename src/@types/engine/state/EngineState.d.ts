@@ -48,10 +48,10 @@ export type EngineState = {
   /**
    * Per-`CUBEMAP_CAPTURES`-row bake bookkeeping — render state, not camera
    * state; written by `renderFrame`, read by each row's target's
-   * `allocateWhen`. Total over the key union, seeded in `engine.ts`; the map
-   * itself is read-only, its entries are mutated in place by the single writer.
+   * `allocateWhen`. Total over the key union (seeded in `engine.ts`), so every
+   * read is a plain property access; entries are mutated in place.
    */
-  cubemapCaptures: ReadonlyMap<CubemapCaptureKey, CubemapCaptureRuntime>;
+  cubemapCaptures: Readonly<Record<CubemapCaptureKey, CubemapCaptureRuntime>>;
   assetSlots: EngineAssetSlots;
   /**
    * One-shot transient request flags read by demand predicates via

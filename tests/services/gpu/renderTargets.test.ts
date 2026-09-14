@@ -53,7 +53,7 @@ function stateWithDivisor(
       milkyWay: { aggregateDivisor },
       sgrAStarLensingTuning: { cubemapResolutionPx },
     },
-    cubemapCaptures: new Map([['sgrAStar', { lastBandActive, lastAnchorDistanceMpc }]]),
+    cubemapCaptures: { sgrAStar: { lastBandActive, lastAnchorDistanceMpc } },
   } as unknown as EngineState;
 }
 

@@ -125,7 +125,7 @@ export function createEngine(
   // first frame its band goes active; `renderFrame` is the sole writer
   // thereafter. Infinity, not 0: far outside every band pre-boot, so a row's
   // hysteresis margin can't mistake "never measured" for "just closed".
-  const cubemapCaptures = new Map<CubemapCaptureKey, CubemapCaptureRuntime>(
+  const cubemapCaptures = Object.fromEntries(
     (Object.keys(CUBEMAP_CAPTURES) as CubemapCaptureKey[]).map((key) => [
       key,
       {
@@ -134,7 +134,7 @@ export function createEngine(
         bakedSettings: null,
       },
     ]),
-  );
+  ) as Record<CubemapCaptureKey, CubemapCaptureRuntime>;
 
   const store = cb.store;
 

@@ -71,7 +71,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // distance from the row's anchor, the same quantity + region every
   // `sgrAStarLensing`-band consumer reads. See `CubemapCaptureRuntime`.
   const capture = CUBEMAP_CAPTURES.sgrAStar;
-  const captureRuntime = state.cubemapCaptures.get('sgrAStar')!;
+  const captureRuntime = state.cubemapCaptures.sgrAStar;
   const anchorDistanceMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
     capture.anchor,

@@ -503,16 +503,13 @@ describe('renderFrame visual baseline', () => {
         },
         // The cubemap-capture bookkeeping — see the matching fixture comment
         // in renderFrame.test.ts.
-        cubemapCaptures: new Map([
-          [
-            'sgrAStar',
-            {
-              lastBandActive: false,
-              lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-              bakedSettings: null,
-            },
-          ],
-        ]),
+        cubemapCaptures: {
+          sgrAStar: {
+            lastBandActive: false,
+            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
+            bakedSettings: null,
+          },
+        },
       } as never,
       device,
       context,

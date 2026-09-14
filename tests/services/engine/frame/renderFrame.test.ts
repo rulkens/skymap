@@ -575,16 +575,13 @@ function makeInput(
         // active. The fixture camera sits Mpc-scale away from Sgr A*, so the
         // band stays closed and `facesToCapture` stays empty; see
         // `renderFrame.ts`'s in-band block.
-        cubemapCaptures: new Map([
-          [
-            'sgrAStar',
-            {
-              lastBandActive: false,
-              lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-              bakedSettings: null,
-            },
-          ],
-        ]),
+        cubemapCaptures: {
+          sgrAStar: {
+            lastBandActive: false,
+            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
+            bakedSettings: null,
+          },
+        },
       } as never,
       device,
       context,

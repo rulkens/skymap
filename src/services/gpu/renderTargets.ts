@@ -295,8 +295,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: (state, isAllocated) => {
-        // Total over the key union: `engine.ts` seeds one entry per table row.
-        const capture = state.cubemapCaptures.get('sgrAStar')!;
+        const capture = state.cubemapCaptures.sgrAStar;
         if (capture.lastBandActive) return true;
         return (
           isAllocated &&
