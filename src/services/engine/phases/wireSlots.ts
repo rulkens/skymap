@@ -120,8 +120,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     state.assetSlots.syntheticVolumes = createSyntheticVolumeSlots(state, cb);
   }
 
-  // Build and wire the five impostor subsystems (galaxy atlas, textured
-  // disks, procedural disks, hi-res Famous texture + planner). Absent is
+  // Build and wire the four impostor subsystems (galaxy atlas, textured disks,
+  // procedural disks, disk-planner walk), then mint the LOD-3 slot — whose pair
+  // is not built here but appears on the demand loop's first commit. Absent is
   // legal: a composition that never runs `initGpu`'s disk renderers skips
   // this cluster and `state.subsystems.texturedDisks` stays null.
   const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;

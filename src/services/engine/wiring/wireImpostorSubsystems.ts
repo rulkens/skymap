@@ -39,11 +39,8 @@ export function wireImpostorSubsystems(
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
 
-  // The LOD-3 planner arrives later, through the `hiResFamous` asset slot: its
-  // texture is sized per tier and WebGPU textures are immutable in shape, so its
-  // lifetime belongs to the demand loop.  Until that slot's first commit — a frame
-  // or two after boot — every Famous-source disk carries the -1 / 0 sentinel and
-  // the fragment shader takes the atlas-tile-only path.
+  // The LOD-3 planner belongs to the `hiResFamous` slot; without one, every
+  // Famous-source disk carries the -1 / 0 sentinel (atlas-tile-only).
   const texturedDisks = createTexturedDiskSubsystem({
     device,
     atlas: galaxyAtlas,
@@ -65,10 +62,8 @@ export function wireImpostorSubsystems(
 
   // ── Renderer bind wires ───────────────────────────────────────────────
   //
-  // Bind the atlas view into the LOD-2 disk renderer.  The atlas owns the
-  // view; proceduralDiskRenderer doesn't sample it.  The renderer's
-  // `composeAtlasBindGroup()` gate also waits on `bindHiResArray`, which the
-  // `hiResFamous` slot's commit fires — until both have landed the textured-disk
+  // Half of the renderer's `composeAtlasBindGroup()` gate — the `hiResFamous`
+  // slot's commit fires the other half, and until both land the textured-disk
   // pipeline has no bind group and skips every draw call.
   texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
 

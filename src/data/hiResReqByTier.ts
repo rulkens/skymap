@@ -1,8 +1,7 @@
 /**
- * One request object per tier, allocated once. The demand loop compares a row's
- * `req(tier)` against the slot's committed request; a fresh object per call would
- * still compare equal field-wise, but a shared constant makes the compare an
- * identity hit and keeps the per-tier sides stated in exactly one place.
+ * One request object per tier, allocated once, so the demand loop's compare of
+ * `req(tier)` against the slot's committed request takes `sameRequest`'s `Object.is`
+ * fast path.
  */
 
 import { HI_RES_LAYER_SIDE_BY_TIER } from './sources';
