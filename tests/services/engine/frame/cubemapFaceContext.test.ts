@@ -13,6 +13,8 @@ import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveS
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
 import { rotYMat3 } from '../../../../src/utils/math/rotYMat3';
@@ -23,6 +25,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { FadeId } from '../../../../src/@types/animation/FadeId';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -338,6 +341,33 @@ describe('cubemapFaceContext', () => {
     if (focused === null || unfocused === null) return;
     expect(focused.slabs[0]!.near).toBe(unfocused.slabs[0]!.near);
     expect(focused.slabs[0]!.far).toBe(unfocused.slabs[0]!.far);
+  });
+
+  it("aims a metre-near probe face exactly along its axis at Voyager's eye", () => {
+    // Voyager's eye (~1e-7 Mpc) has an f64 ULP within a few orders of 1 m, so a
+    // forward recovered as target − eye over the 1 m probe near is skewed by
+    // rounding (to zero, NaN vp, further out). In the host's own frame the
+    // face's forward is the bare cube axis.
+    const bodyStates = deriveBodyStates(LAST_SIM_DAYS);
+    const voyager = bodyStates.get('voyager1')!;
+    const ctx = cubemapFaceContext({
+      state: makeState(),
+      eyeMpc: voyager.positionMpc,
+      face: 4,
+      faceSizePx: 256,
+      nearMpc: CUBEMAP_CAPTURES.probe.nearMpc,
+      viewSlotBase: VIEW_SLOT_BASE,
+      nowMs: 0,
+      axes: voyager.orientation,
+    });
+    expect(ctx).not.toBeNull();
+    if (ctx === null) return;
+    expect(Array.from(ctx.vp).every(Number.isFinite)).toBe(true);
+    expect(Array.from(ctx.slabs[0]!.vp).every(Number.isFinite)).toBe(true);
+    const { basisM } = ctx.bodyPose('voyager1' as BodyId)!;
+    expect(basisM[6]).toBeCloseTo(0, 9);
+    expect(basisM[7]).toBeCloseTo(0, 9);
+    expect(basisM[8]).toBeCloseTo(1, 9);
   });
 
   it("stamps viewSlot from the given base, so a second capture cannot share the first's slots", () => {

@@ -38,6 +38,7 @@ import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { imagePlaneBasis } from './imagePlaneBasis';
 import { frameUp } from './frameUp';
+import { orbitForwardOf } from './orbitForwardOf';
 
 // The reference up rolled about the view direction is the frame pole. Module
 // scratch reused each call — `imagePlaneBasis` only reads it, never retains it.
@@ -51,12 +52,7 @@ const upRefScratch: Vec3 = [0, 0, 0];
  *          both orthogonal to the camera's forward (view) direction.
  */
 export function cameraBillboardBasis(cam: OrbitCamera): { right: Vec3; up: Vec3 } {
-  // ── forward: unit vector from the camera toward its target ─────────────
-  const fx = cam.target[0] - cam.position[0];
-  const fy = cam.target[1] - cam.position[1];
-  const fz = cam.target[2] - cam.position[2];
-  const flen = Math.hypot(fx, fy, fz) || 1;
-  const forward: Vec3 = [fx / flen, fy / flen, fz / flen];
+  const forward = orbitForwardOf(cam);
 
   // `imagePlaneBasis` rolls the frame pole (`frameUp(cam.upBasis)`; world +Y
   // absent a basis) about `forward` and derives the screen right/up axes. Reads

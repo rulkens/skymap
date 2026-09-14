@@ -20,7 +20,7 @@ import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
-import { normalize3 } from '../../../utils/math/normalize3';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { starSphereRangeM } from '../../../utils/scene/starSphereRangeM';
 import { isEngineReady } from '../helpers/engineReady';
@@ -93,11 +93,7 @@ export function deriveFrameContext(
   // frame returns this SAME Map by reference — no second cache, no drift.
   const bodyStates = deriveBodyStates(simDays);
 
-  const camForward = normalize3([
-    cam.target[0] - cam.position[0],
-    cam.target[1] - cam.position[1],
-    cam.target[2] - cam.position[2],
-  ]);
+  const camForward = orbitForwardOf(cam);
 
   const { earth, planets, meshBodies } = state.data.bodies;
   // A mesh body whose driver hangs off something with no row of its own gets

@@ -3,8 +3,10 @@
  * Mirrors `pickFrameContext.ts`: roster layers read `ctx.fovYRad`/
  * `canvasSize`/`drawPxPerRad` as frame-globals, not just `viewProj`, so a
  * whole synthetic `ReadyFrameContext` is cheaper than threading a swapped
- * vp through every consumer. The row's `nearMpc` is also the pose distance and
- * the altitude NEAR0's bracket is sized from, so it sets the NEAR0 near plane.
+ * vp through every consumer. The row's `nearMpc` is the near plane and the
+ * altitude NEAR0's bracket is sized from. The face's forward is its basis,
+ * decoded by `orbitForwardOf` — never `target − eye`, which a 1 m probe near
+ * rounds away at a far eye.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -86,10 +88,8 @@ export function cubemapFaceContext(input: {
   const forward = rotateVec3ByTightMat3(FACE_FORWARD[face]!, axes);
   const basis =
     axes === undefined ? FACE_BASES[face]! : multiply3x3(axes as Mat3, FACE_BASES[face]!);
-  // A target `nearMpc` ahead at that same distance puts the derived eye back on
-  // `eyeMpc` exactly, on every face. The distance is the row's near plane, not
-  // 1 Mpc, because body passes gate on `ctx.cam.distance` against the
-  // foreground reach: a capture at 1 Mpc would show a face no body at all.
+  // The distance stays under the foreground reach body passes gate
+  // `ctx.cam.distance` on: a capture posed 1 Mpc out would draw no body at all.
   const target: Vec3 = [
     eyeMpc[0] + forward[0] * nearMpc,
     eyeMpc[1] + forward[1] * nearMpc,

@@ -36,6 +36,7 @@ import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { nearestSphereFaceM } from '../../../utils/scene/nearestSphereFaceM';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
 export const NEAR0 = 0;
@@ -261,13 +262,7 @@ export function deriveSlabs(input: {
   const { cam, cosmoVp, altitudeMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
     input;
   const { near, far } = foregroundFrustum(altitudeMpc);
-  const fx = cam.target[0] - cam.position[0];
-  const fy = cam.target[1] - cam.position[1];
-  const fz = cam.target[2] - cam.position[2];
-  const flen = Math.hypot(fx, fy, fz) || 1;
-  forwardScratch[0] = fx / flen;
-  forwardScratch[1] = fy / flen;
-  forwardScratch[2] = fz / flen;
+  orbitForwardOf(cam, forwardScratch);
   const { rolledUp } = imagePlaneBasis(
     forwardScratch,
     cam.roll ?? 0,
@@ -276,7 +271,12 @@ export function deriveSlabs(input: {
   );
   const nearFieldVp = computeForegroundViewProj({
     eyeMpc: cam.position,
-    targetMpc: cam.target,
+    // Aimed along the decoded forward, not at `cam.target` — see `orbitForwardOf`.
+    targetMpc: [
+      cam.position[0] + forwardScratch[0],
+      cam.position[1] + forwardScratch[1],
+      cam.position[2] + forwardScratch[2],
+    ],
     up: rolledUp,
     renderOrigin: RENDER_ORIGIN_MPC,
     fovYRad: cam.fovYRad,
