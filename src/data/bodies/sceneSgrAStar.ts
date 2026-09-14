@@ -39,7 +39,7 @@ export const SGR_A_STAR: AnchorPointBody = {
   id: SGR_A_STAR_ENTRY.id,
   label: SGR_A_STAR_ENTRY.label,
   // schwarzschildRadiusM returns metres directly.
-  radiusM: schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR),
+  surface: { datumRadiusM: schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR), reliefM: [0, 0] },
   // Q10's descent floor: the camera may approach to 2 r_s, well inside the
   // Earth-tuned global SURFACE_STANDOFF_RADII (~1.0000024).
   standoffRadii: 2.0,

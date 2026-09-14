@@ -10,6 +10,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { mat4d } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
@@ -56,9 +57,11 @@ export function slabName(index: number): string {
 
 // The ONE definition of a merged group-timing slot key: allocation and lookup must
 // produce byte-identical keys, so the middle-dot separator (U+00B7) is part of the
-// wire format — do not vary it.
-export function groupKeyOf(target: string, slab: number): string {
-  return `${target}·${slabName(slab)}`;
+// wire format — do not vary it. A capture step keys off its capture, not its render
+// target: two captures sharing a target would otherwise bill one slot.
+export function groupKeyOf(step: Extract<FrameStep, { kind: 'render' }>): string {
+  const base = step.capture === undefined ? step.target : step.capture.key;
+  return `${base}·${slabName(step.slab)}`;
 }
 
 // Body rows and capture faces are appended because both draw the same pass more
@@ -144,6 +147,7 @@ export function bodySlabRow(input: {
     readonly distanceRangeM: readonly [number, number];
   };
   readonly chainRow: Omit<ChainRow, 'index'>;
+  readonly signedNearM: number; // dM − rMaxM, UNCLAMPED (negative inside the drawn radius)
 } | null {
   const { body, pose, fovYRad, aspect, viewportPx, attachedBodies } = input;
   const relPose = pose(body.id as BodyId);
@@ -218,6 +222,7 @@ export function bodySlabRow(input: {
       reversedZ,
     },
     chainRow: { distanceRangeM, centrePx, radiusPx },
+    signedNearM: dM - rMaxM,
   };
 }
 
@@ -316,7 +321,12 @@ export function deriveSlabs(input: {
       }),
     )
     .filter((row): row is NonNullable<typeof row> => row !== null)
-    .sort((a, b) => b.slab.distanceRangeM[0] - a.slab.distanceRangeM[0]);
+    // Rows the camera is inside tie at 0 on the primary key; the unclamped
+    // signedNearM (descending too) then sorts the deepest-inside row last.
+    .sort(
+      (a, b) =>
+        b.slab.distanceRangeM[0] - a.slab.distanceRangeM[0] || b.signedNearM - a.signedNearM,
+    );
   const bodyRows: Slab[] = sortedBodyRows.map((row, i) => ({ ...row.slab, index: i + 2 }));
 
   // Spec §7.2: screen-overlapping body rows must have disjoint distance intervals,
@@ -338,6 +348,8 @@ export function deriveSlabs(input: {
 // NEAR0 plus every body row by `distanceRangeM[0]` descending — the same key body
 // rows are stored by, so NEAR0 merges in with no `frame.kind` special case. COSMO
 // never appears; it is not a `foreground:0` target.
+// `slabs` arrives in index order (index = painter ordinal) and this sort is
+// stable, so ties keep `deriveSlabs`' order — reordering `slabs` first drops it.
 export function foregroundChainOrder(slabs: readonly Slab[]): readonly number[] {
   return slabs
     .filter((slab) => slab.index === NEAR0 || slab.frame.kind === 'body-m')

@@ -45,7 +45,7 @@ function poseAtHR(hr: number, roll: number, yaw = 0.7, pitch = 0.3): CameraPose 
     target: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
     yaw,
     pitch,
-    distance: SCENE_EARTH.radiusM * (1 + hr) * SCALE_UNITS.M_TO_MPC,
+    distance: SCENE_EARTH.surface.datumRadiusM * (1 + hr) * SCALE_UNITS.M_TO_MPC,
     roll,
   };
 }

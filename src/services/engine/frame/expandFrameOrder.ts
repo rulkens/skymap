@@ -1,16 +1,18 @@
 /**
  * expandFrameOrder — `FRAME_ORDER` plus this frame's own lists into the step
- * sequence the executor walks. The three expanding kinds (`capture`,
- * `foreground`, `lens`) are what the frame used to pass as separate program
- * parameters; each can expand to nothing, which is the lens's zero-dispatch
+ * sequence the executor walks. The two expanding kinds (`capture`,
+ * `foreground`) and a `render` line whose `slab` names a per-frame list each
+ * expand to nothing on an empty list, which is the lens's zero-dispatch
  * guarantee.
  */
 
+import type { BodyRowSource } from '../../../@types/engine/frame/BodyRowSource';
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
 
@@ -18,8 +20,14 @@ export type FrameInputs = {
   readonly tone: ToneMap;
   readonly bloomEnabled: boolean;
   readonly foregroundChain: readonly number[];
-  readonly skyCubemapFacesToCapture: readonly CubeFace[];
-  readonly lensBodySlabs: readonly number[];
+  /**
+   * Faces each capture re-bakes this frame — empty or absent for a capture
+   * that stays cold, which is its zero-dispatch guarantee. Kept separate from
+   * the per-face context map because `MAX_FRAME_INPUTS` must enumerate every
+   * face a frame could ever step with no camera to derive one from.
+   */
+  readonly captureFaces: ReadonlyMap<CubemapCaptureKey, readonly CubeFace[]>;
+  readonly bodyRowSlabs: Record<BodyRowSource, readonly number[]>;
 };
 
 type ExpandStep<K extends FrameStepSpec['kind']> = (
@@ -52,45 +60,36 @@ function merge(
 const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   compute: (spec) => [{ kind: 'compute', name: spec.name }],
   capture: (spec, passes, frame) =>
-    frame.skyCubemapFacesToCapture.flatMap((face): readonly FrameStep[] => [
+    (frame.captureFaces.get(spec.capture) ?? []).flatMap((face): readonly FrameStep[] => [
       {
         kind: 'render',
-        target: spec.target,
         slab: COSMO,
-        face,
+        capture: { key: spec.capture, face },
         passes: resolve(spec.cosmoPasses, passes),
       },
       {
         kind: 'render',
-        target: spec.target,
         slab: NEAR0,
-        face,
+        capture: { key: spec.capture, face },
         passes: resolve(spec.near0Passes, passes),
       },
     ]),
-  render: (spec, passes) => [
-    {
+  render: (spec, passes, frame) =>
+    (typeof spec.slab === 'number' ? [spec.slab] : frame.bodyRowSlabs[spec.slab]).map((slab) => ({
       kind: 'render',
       target: spec.target,
-      slab: spec.slab,
+      slab,
       passes: resolve(spec.passes, passes),
+      ...(spec.depth === undefined ? {} : { depth: spec.depth }),
       ...(spec.slot === undefined ? {} : { slot: spec.slot }),
-    },
-  ],
+    })),
   foreground: (spec, passes, frame) =>
     frame.foregroundChain.map((slab) => ({
       kind: 'render',
       target: spec.target,
       slab,
-      depthLoad: 'clear',
+      depth: 'clear',
       passes: resolve(isBodySlabIndex(slab) ? spec.bodyPasses : spec.near0Passes, passes),
-    })),
-  lens: (spec, passes, frame) =>
-    frame.lensBodySlabs.map((slab) => ({
-      kind: 'render',
-      target: spec.target,
-      slab,
-      passes: resolve(spec.passes, passes),
     })),
   composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
@@ -104,8 +103,9 @@ function draws(step: FrameStep): boolean {
 
 /**
  * Two render steps a merge may fold together: everything the pass descriptor is
- * built from must agree, so only the roster differs. `depthLoad` is in the key
- * because folding two depth-CLEARING foreground rows would drop a clear.
+ * built from must agree, so only the roster differs. `depth` is in the key
+ * because folding two depth-CLEARING foreground rows would drop a clear, and
+ * folding across `'sample'` would attach a depth the step must not have.
  */
 function sameGroup(a: FrameStep, b: FrameStep): boolean {
   return (
@@ -113,8 +113,9 @@ function sameGroup(a: FrameStep, b: FrameStep): boolean {
     b.kind === 'render' &&
     a.target === b.target &&
     a.slab === b.slab &&
-    a.face === b.face &&
-    a.depthLoad === b.depthLoad
+    a.capture?.key === b.capture?.key &&
+    a.capture?.face === b.capture?.face &&
+    a.depth === b.depth
   );
 }
 

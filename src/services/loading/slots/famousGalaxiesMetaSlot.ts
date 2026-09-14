@@ -28,10 +28,10 @@ import { createAssetSlot } from '../AssetSlot';
 import { famousGalaxiesMetaFetcher } from '../fetchers/famousGalaxiesMetaFetcher';
 import { engineFamousGalaxiesMetaReported } from '../../../state/engine/engineSlice';
 import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
-import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
+import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createFamousGalaxiesMetaSlot: SlotFactory<FamousGalaxiesPayload, CompanionAssetReq> = (
+export const createFamousGalaxiesMetaSlot: SlotFactory<FamousGalaxiesPayload, GalaxyCatalogReq> = (
   _state,
   cb,
 ) => {

@@ -16,7 +16,8 @@ import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
 import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
 import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';
-import type { SkyCubemapCaptureRuntime } from './SkyCubemapCaptureRuntime';
+import type { CubemapCaptureRuntime } from './CubemapCaptureRuntime';
+import type { CubemapCaptureKey } from '../../rendering/CubemapCaptureKey';
 import type { SelectionState } from '../../store/SelectionState';
 import type { SelectionRowsState } from '../../store/SelectionRowsState';
 import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
@@ -45,11 +46,12 @@ export type EngineState = {
    */
   cameraRuntime: CameraRuntime;
   /**
-   * The black-hole lens's sky-cubemap bake bookkeeping — render state, not
-   * camera state; written by `renderFrame`, read by the `sky-cubemap`
-   * render-target row's `allocateWhen`.
+   * Per-`CUBEMAP_CAPTURES`-row bake bookkeeping — render state, not camera
+   * state; written by `scheduleCubemapCaptures`, read by each row's target's
+   * `allocateWhen`. Total over the key union (seeded in `engine.ts`), so every
+   * read is a plain property access; entries are mutated in place.
    */
-  skyCubemapCapture: SkyCubemapCaptureRuntime;
+  cubemapCaptures: Readonly<Record<CubemapCaptureKey, CubemapCaptureRuntime>>;
   assetSlots: EngineAssetSlots;
   /**
    * One-shot transient request flags read by demand predicates via

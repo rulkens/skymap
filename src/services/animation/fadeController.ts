@@ -106,6 +106,9 @@ export function createFadeController(
     durationMs: number,
     now: number = performance.now(),
   ): Promise<void> {
+    // No unchanged-target early return: `renderFrame`'s sky-cubemap bake key
+    // reads `isAnyAnimating` to see a re-commit's fade at an opacity it already held.
+    //
     // Capture the current opacity BEFORE updating the source, so mid-
     // flight retargeting picks up from wherever the previous ramp reached
     // rather than snapping back to the previous source.

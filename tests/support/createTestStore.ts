@@ -71,10 +71,9 @@ const EMPTY_RESOLVE_DEPS: ResolveDeps = {
  * `getContext` call site, an inert one is a saga that no-ops or defers.
  *
  * Exported so a test needing ONE real capability spreads this and overrides it,
- * instead of hand-assembling five no-ops around it.
+ * instead of hand-assembling the rest of the no-ops around it.
  */
 export const NOOP_SAGA_CONTEXT: SagaContext = {
-  runTierTransition: () => {},
   reconcile: NOOP_RECONCILE,
   resolveDeps: () => EMPTY_RESOLVE_DEPS,
   // Null is the same answer the engine gives pre-bootstrap and post-destroy, and

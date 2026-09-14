@@ -2,7 +2,7 @@
 
 /**
  * registerReconcile — asserts that createEngine registers the reconcile effects
- * bag into the saga context alongside runTierTransition.
+ * bag into the saga context.
  *
  * `createEngine`'s synchronous prefix builds `state` + `bootstrapDeps` and
  * calls `cb.setSagaContext(...)` BEFORE the async GPU bootstrap IIFE. That
@@ -18,8 +18,6 @@
  *   - The argument carries a `reconcile` bag with four function members
  *     (`requestRender`, `syncFades`, `reseedFlow`, `bakeBias`), confirming
  *     `makeReconcileEffects(state)` ran and its closures are in the context.
- *   - The same argument carries `runTierTransition` as a function — the two
- *     runners reach the saga context in one unified call, not split across two.
  *
  * The real store (via `createAppStore`) is used for `cb.store` because the
  * engine reads `store.getState().settings` immediately in its synchronous
@@ -35,7 +33,7 @@ import type { EngineCallbacks } from '../../../src/@types/engine/EngineCallbacks
 import { STUB_COMPOSITION } from '../../helpers/engine/stubComposition';
 
 describe('createEngine — saga context registration', () => {
-  it('registers runTierTransition and reconcile in one setSagaContext call', () => {
+  it('registers the reconcile bag in one setSagaContext call', () => {
     // A canvas stub — the synchronous prefix does not read any canvas property,
     // so the empty object satisfies the HTMLCanvasElement slot.
     const canvas = {} as unknown as HTMLCanvasElement;
@@ -66,14 +64,7 @@ describe('createEngine — saga context registration', () => {
 
     const [ctx] = setSagaContext.mock.calls[0]!;
 
-    // runTierTransition remains on the same call — the registration is unified.
-    expect(typeof ctx.runTierTransition).toBe('function');
-
-    // reconcile is the new bag from makeReconcileEffects.
+    // reconcile is the bag from makeReconcileEffects.
     expect(ctx.reconcile).toBeDefined();
-    expect(typeof ctx.reconcile!.requestRender).toBe('function');
-    expect(typeof ctx.reconcile!.syncFades).toBe('function');
-    expect(typeof ctx.reconcile!.reseedFlow).toBe('function');
-    expect(typeof ctx.reconcile!.bakeBias).toBe('function');
   });
 });

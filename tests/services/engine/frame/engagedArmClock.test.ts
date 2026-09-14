@@ -131,7 +131,7 @@ describe('engaged-arm clock invariance (spec §14)', () => {
     // per-frame zoom-out notch crosses it a few frames in, clock racing
     // underneath throughout (Earth moves ~a month per frame at this rate).
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
-    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.35);
+    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.35);
     const armed = {
       frame: EARTH_ARM,
       pose: toBodyArm(NEAR_EDGE, B, B, EARTH_ARM.body, EARTH),

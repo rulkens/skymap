@@ -79,9 +79,9 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     }
     // The ground radius, so `SCENE_CELESTIAL_BODIES`: a site is pinned to a
     // surface, which is exactly what a mesh body's hull is not.
-    const { radiusM } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
+    const { surface } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
     const offsetM = rotateVec3ByTightMat3(
-      surfacePointBodyFixed(site.latDeg, site.lonDeg, radiusM + site.altitudeM),
+      surfacePointBodyFixed(site.latDeg, site.lonDeg, surface.datumRadiusM + site.altitudeM),
       orientationForBody(site.hostId, simDays, positions),
     );
     // Metres → Mpc BEFORE the host's heliocentric position joins in: adding

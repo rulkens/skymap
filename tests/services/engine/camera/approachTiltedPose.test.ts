@@ -30,7 +30,7 @@ const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
 const EARTH = BODIES.get('earth')! as BodyState;
-const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 
 const FOCUS_EARTH: SelectionRow = {
   type: 'body',

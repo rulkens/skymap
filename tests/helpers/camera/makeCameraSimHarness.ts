@@ -55,7 +55,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
 
   const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
   const radiusM = (id: SimBodyId): number =>
-    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.radiusM;
+    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
 
   const neutralPose: CameraPose = {
     target: [0, 0, 0],
@@ -77,10 +77,12 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       committed: absoluteArm(neutralPose),
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
     }),
-    skyCubemapCapture: {
-      lastBandActive: false,
-      lastGcDistanceMpc: Number.POSITIVE_INFINITY,
-      bakedSettings: null,
+    cubemapCaptures: {
+      sgrAStar: {
+        lastBandActive: false,
+        lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
+        bakedSettings: null,
+      },
     },
   } as unknown as EngineState;
   if (realClipPlayer) {

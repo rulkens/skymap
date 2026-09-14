@@ -30,9 +30,9 @@
  * and `setSagaContext` — the store factory's saga-context setter.  Both
  * are obtained from context seams symmetrically: `store` via `useAppStore`
  * (the redux `<Provider>`), `setSagaContext` via `useSetSagaContext` (the
- * `<SagaContextProvider>`).  The engine uses the setter to register its
- * `runTierTransition` runner so the tier saga can reach the engine; this
- * hook just forwards it, it neither owns nor reads it.
+ * `<SagaContextProvider>`).  The engine uses the setter to register the
+ * closures its sagas call into; this hook just forwards it, it neither owns
+ * nor reads it.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why empty `useEffect` deps?
@@ -63,8 +63,8 @@ export function useEngine(): UseEngineReturn {
   // The store factory's saga-context setter — its sibling, carried to this seam
   // by the `<SagaContextProvider>` symmetrically with how `useAppStore` carries
   // the store. Forwarded into `createEngine` so the engine can register its saga
-  // runners (`runTierTransition` + the `ReconcileEffects` closures); this hook
-  // neither owns nor reads it.
+  // runners (the `ReconcileEffects` closures among them); this hook neither owns
+  // nor reads it.
   const setSagaContext = useSetSagaContext();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);

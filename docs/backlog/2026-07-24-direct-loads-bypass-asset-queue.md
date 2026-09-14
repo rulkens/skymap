@@ -6,10 +6,9 @@
 
 `ASSET_QUEUE_CONCURRENCY = 2` reads as "at most two boot fetches in
 flight", and its docblock argues the number from HTTP/2 pipe-splitting.
-It is not that bound. It bounds only the fetches that go through
-`evaluateRows`; five other call sites still invoke `slot.load()`
-directly and start a download the queue never sees, at no rank and
-against no limit.
+It is not that bound. It bounds only the fetches `evaluateRows`
+enqueues; other call sites invoke `slot.load()` directly and start a
+download the queue never sees, at no rank and against no limit.
 
 The boot-load-priority spec scoped these out deliberately (spec §1
 scope boundary) — they are not boot-path calls, so the feature's own
@@ -21,12 +20,12 @@ policy with a hole in it.
 
 Direct `.load()` sites outside the queue:
 
-- `src/services/engine/wiring/makeRunTierTransition.ts:65,72,84` — the
-  tier-transition reload loop (points, MCPM, star catalogs). At a tier
-  switch this can start every enabled catalog at once, which is the
-  exact pattern the queue exists to prevent, just not at boot.
-- `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts:160` —
-  `loadCompanionAssets`, reached from the tier transition above.
+- `src/services/engine/wiring/reevaluateDemand.ts:99` — the demand
+  loop's request-drift edge, which reloads a non-idle slot whose last
+  request no longer matches the row's. Deliberately direct (see the
+  first direction below). At a tier switch this can start every
+  enabled catalog at once, which is the exact pattern the queue exists
+  to prevent, just not at boot.
 - `src/services/loading/AssetSlot.ts` `forceReload` — debug-panel
   Reload button.
 - `src/services/engine/volume/maybeLazyLoadDebugVolume.ts:31` — dev
@@ -38,11 +37,15 @@ the gap is ordering and concurrency, not correctness.
 
 ## Directions to explore (design decides)
 
-- Route the tier-transition reloads through the queue with the row's
-  own `priority`. It is the site that most resembles a boot: many
-  large payloads, one trigger, an ordering that matters. Needs a
-  decision on whether a tier switch should drop whatever the previous
-  tier left pending.
+- Routing the drift reloads through the queue is blocked on the queue
+  itself: `admit` refuses a key it already has in flight
+  (`src/utils/concurrency/priorityQueue.ts:130`), so an enqueued reload
+  of a mid-fetch slot is silently dropped rather than superseding it —
+  and a drift reload of a `ready` slot is dropped by the enqueued
+  closure's own `idle` re-check. The queue would first need supersede
+  semantics (cancel the in-flight entry, run the new one) before it
+  could host this site at all. That, and a decision on whether a tier
+  switch should drop whatever the previous tier left pending.
 - Leave `forceReload` and the debug volume out — both are explicit
   one-shot user actions where a queue delay is a worse experience than
   a third concurrent fetch.

@@ -21,6 +21,7 @@ import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../src/data/camera/camera
 import { cursorRayBodyLocal } from '../../../src/utils/camera/cursorRayBodyLocal';
 import { eyeFrameOf } from '../../../src/utils/camera/eyeFrameOf';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import { raySphereRoots } from '../../../src/utils/math/raySphereRoots';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
@@ -43,6 +44,7 @@ const CTX = {
   viewportPx: VIEWPORT,
   fovYRad: FOV,
   bodyRadiusM: R,
+  standoffRadii: SURFACE_STANDOFF_RADII,
   sceneUpLocal: POLE,
   tuning: TUNING,
 };
@@ -339,7 +341,7 @@ describe('surfaceStep', () => {
     c.onGestureStart();
     const tilted = apply(c, poseAt([0, 0, 1.05], NADIR), drag('pan', [50, 50], [50, -83.3]));
 
-    expect(Math.hypot(...eyeOf(tilted))).toBeCloseTo(surfaceFloorM(R), 12);
+    expect(Math.hypot(...eyeOf(tilted))).toBeCloseTo(surfaceFloorM(R, SURFACE_STANDOFF_RADII), 12);
     // Radial push, so the view direction is untouched — no jerk to rotate out.
     expect(tilted.basisLocal).not.toEqual(NADIR);
   });

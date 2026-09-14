@@ -44,6 +44,7 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
+import { innerBoundRadiusM } from '../../../../../src/utils/scene/innerBoundRadiusM';
 
 // Mock composeOrbitConic so the test can (a) assert which vp it consumed by
 // object identity and (b) hand each conic recognisable Float32Arrays. The real
@@ -373,7 +374,7 @@ describe('orbitTrailsPass.draw', () => {
     expect(staging[36]).toBeCloseTo((first.centerMpc[2] - cam[2]) * kmPerMpc, 0);
 
     expect(occluders.count).toBe(1);
-    const sunRadiusM = findByIdOrThrow(SCENE_STARS, 'sun', 'test').radiusM;
+    const sunRadiusM = innerBoundRadiusM(findByIdOrThrow(SCENE_STARS, 'sun', 'test').surface);
     expect(occluders.spheresKm[0]).toBeCloseTo(-cam[0] * kmPerMpc, 0);
     expect(occluders.spheresKm[1]).toBeCloseTo(0, 3);
     expect(occluders.spheresKm[2]).toBeCloseTo(0, 3);

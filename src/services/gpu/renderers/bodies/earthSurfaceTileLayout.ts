@@ -1,12 +1,10 @@
 /**
  * earthSurfaceTileLayout — the CPU-side byte layout for every GPU-visible
- * record `earthSurfaceTileRenderer` writes: the two per-frame storage
- * arrays it vertex-pulls from (`array<NodeParams>`, one 64-byte record per
- * cut tile; `array<TileVertex>`, one 48-byte record per drawn CORNER — the
- * mesh is expanded, not indexed; see the renderer's module header) and the
- * 160-byte per-draw `SurfaceTileUniforms` uniform block. The authoritative
+ * record `earthSurfaceTileRenderer` writes: the per-frame
+ * `array<PatchInstance>` storage buffer (one 64-byte record per cut patch)
+ * and the per-draw `SurfaceTileUniforms` uniform block. The authoritative
  * layout is each WESL struct in `shaders/earthSurfaceTile/io.wesl`; this
- * module is the CPU's single matching statement of all three, in the shape
+ * module is the CPU's single matching statement of both, in the shape
  * `starCatalogLayout.ts` set for the star pipeline — see
  * `earthSurfaceTileLayout.test.ts` for the parity guard between the two.
  *
@@ -17,88 +15,59 @@ import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
- * Bytes of one `NodeParams` element: `originRelCamM` vec3 (0..11) +
- * `vertexBase` u32 (12..15) + `atlasUvOrigin` vec2 (16..23) + `atlasUvScale`
- * vec2 (24..31) + `fallbackUvOrigin` vec2 (32..39) + `fallbackUvScale` vec2
- * (40..47) + `fadeWeight` f32 (48..51), rounded up to the vec3's 16-byte
- * alignment = 64 (bytes 52..63 are true padding).
+ * Bytes of one `PatchInstance` element: `originRelEyeM` vec3 (0..11) +
+ * `fadeWeight` f32 (12..15, filling the vec3's alignment pad) + `lon0Rad`
+ * / `lat0Rad` / `dLonRad` / `dLatRad` f32 (16..31) + `albedoRect` vec4
+ * (32..47) + `fallbackRect` vec4 (48..63). The two vec4s must stay last
+ * and adjacent. Reordering the five scalars keeps the 64-byte stride but
+ * re-maps offsets 12..31 with no compiler signal -- the layout test's
+ * per-field assertions are the only guard.
  */
-export const NODE_PARAMS_BYTES = 64;
+export const PATCH_INSTANCE_BYTES = 64;
 
 /**
- * Bytes of one `TileVertex` element: `position` vec3 (0..11) + `uv` vec2
- * (16..23, after the vec3's 4-byte pad) + `tangent` vec3 (32..43, after
- * the vec2's 8-byte pad), rounded up to the vec3's 16-byte alignment = 48.
+ * Pack one `PatchInstance` block at byte `base` of `view`, in the field
+ * order the WESL `struct PatchInstance` declares. `originRelEyeM` must come
+ * from `patchOriginRelEyeM` — the shader rebuilds the patch frame from the
+ * f32 words written here, so the origin has to be derived from the same
+ * rounded anchor (spec §7.1) or every patch shifts by ~0.13 m of its own.
  */
-export const TILE_VERTEX_BYTES = 48;
-
-/**
- * Pack one `NodeParams` block at byte `base` of `view`, in the field order
- * the WESL `struct NodeParams` declares. `vertexBase` addresses this tile's
- * first corner in the SAME frame's `array<TileVertex>` — always
- * `tileSlot * VERTS_PER_TILE` for a contiguous, unculled pack (see the
- * renderer), carried explicitly rather than re-derived in-shader from
- * `vertex_index` alone.
- */
-export function writeSurfaceTileNodeParams(
+export function writePatchInstance(
   view: DataView,
   base: number,
-  originRelCamMX: number,
-  originRelCamMY: number,
-  originRelCamMZ: number,
-  vertexBase: number,
-  atlasUvOriginX: number,
-  atlasUvOriginY: number,
-  atlasUvScaleX: number,
-  atlasUvScaleY: number,
+  originRelEyeMX: number,
+  originRelEyeMY: number,
+  originRelEyeMZ: number,
+  fadeWeight: number,
+  lon0Rad: number,
+  lat0Rad: number,
+  dLonRad: number,
+  dLatRad: number,
+  albedoUvOriginX: number,
+  albedoUvOriginY: number,
+  albedoUvScaleX: number,
+  albedoUvScaleY: number,
   fallbackUvOriginX: number,
   fallbackUvOriginY: number,
   fallbackUvScaleX: number,
   fallbackUvScaleY: number,
-  fadeWeight: number,
 ): void {
-  view.setFloat32(base + 0, originRelCamMX, true);
-  view.setFloat32(base + 4, originRelCamMY, true);
-  view.setFloat32(base + 8, originRelCamMZ, true);
-  view.setUint32(base + 12, vertexBase >>> 0, true);
-  view.setFloat32(base + 16, atlasUvOriginX, true);
-  view.setFloat32(base + 20, atlasUvOriginY, true);
-  view.setFloat32(base + 24, atlasUvScaleX, true);
-  view.setFloat32(base + 28, atlasUvScaleY, true);
-  view.setFloat32(base + 32, fallbackUvOriginX, true);
-  view.setFloat32(base + 36, fallbackUvOriginY, true);
-  view.setFloat32(base + 40, fallbackUvScaleX, true);
-  view.setFloat32(base + 44, fallbackUvScaleY, true);
-  view.setFloat32(base + 48, fadeWeight, true);
-}
-
-/**
- * Pack one `TileVertex` block at byte `base` of `view`, in the field order
- * the WESL `struct TileVertex` declares. One corner of a baked
- * `SurfaceTileMesh` (`bakeSurfaceTileMesh.ts`), expanded through its own
- * `indices` at pack time — see the renderer's module header for why the
- * mesh is expanded rather than drawn indexed.
- */
-export function writeTileVertex(
-  view: DataView,
-  base: number,
-  positionX: number,
-  positionY: number,
-  positionZ: number,
-  uvX: number,
-  uvY: number,
-  tangentX: number,
-  tangentY: number,
-  tangentZ: number,
-): void {
-  view.setFloat32(base + 0, positionX, true);
-  view.setFloat32(base + 4, positionY, true);
-  view.setFloat32(base + 8, positionZ, true);
-  view.setFloat32(base + 16, uvX, true);
-  view.setFloat32(base + 20, uvY, true);
-  view.setFloat32(base + 32, tangentX, true);
-  view.setFloat32(base + 36, tangentY, true);
-  view.setFloat32(base + 40, tangentZ, true);
+  view.setFloat32(base + 0, originRelEyeMX, true);
+  view.setFloat32(base + 4, originRelEyeMY, true);
+  view.setFloat32(base + 8, originRelEyeMZ, true);
+  view.setFloat32(base + 12, fadeWeight, true);
+  view.setFloat32(base + 16, lon0Rad, true);
+  view.setFloat32(base + 20, lat0Rad, true);
+  view.setFloat32(base + 24, dLonRad, true);
+  view.setFloat32(base + 28, dLatRad, true);
+  view.setFloat32(base + 32, albedoUvOriginX, true);
+  view.setFloat32(base + 36, albedoUvOriginY, true);
+  view.setFloat32(base + 40, albedoUvScaleX, true);
+  view.setFloat32(base + 44, albedoUvScaleY, true);
+  view.setFloat32(base + 48, fallbackUvOriginX, true);
+  view.setFloat32(base + 52, fallbackUvOriginY, true);
+  view.setFloat32(base + 56, fallbackUvScaleX, true);
+  view.setFloat32(base + 60, fallbackUvScaleY, true);
 }
 
 /**
@@ -114,8 +83,8 @@ export const SURFACE_TILE_UNIFORM_BYTES = 176;
  * Earth), so offsets are absolute literals rather than `base +` — no array
  * stride to parameterize. Every write is a literal, hand-listed call
  * (including `vp`'s 16 floats, not a loop) so `earthSurfaceTileLayout.test.ts`
- * can parse this function the same mechanical way it parses the two
- * array-element writers above.
+ * can parse this function the same mechanical way it parses the
+ * array-element writer above.
  */
 export function writeSurfaceTileUniforms(
   view: DataView,
@@ -125,7 +94,8 @@ export function writeSurfaceTileUniforms(
    *  in here) so this function stays a pure statement of the byte layout. */
   orientation: Readonly<Mat3>,
   radiusM: number,
-  vertsPerTile: number,
+  /** The template's `n` — the vertex stage's `(i, j)` divisor. */
+  meshResolution: number,
   camPosRelBodyM: Readonly<Vec3>,
   sunDirLocal: Readonly<Vec3>,
   roughnessBase: number,
@@ -160,7 +130,7 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(80, orientation[3], true);
   view.setFloat32(84, orientation[4], true);
   view.setFloat32(88, orientation[5], true);
-  view.setUint32(92, vertsPerTile >>> 0, true);
+  view.setUint32(92, meshResolution >>> 0, true);
   view.setFloat32(96, orientation[6], true);
   view.setFloat32(100, orientation[7], true);
   view.setFloat32(104, orientation[8], true);

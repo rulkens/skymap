@@ -31,9 +31,9 @@ function flowStub(over: Partial<FlowSettings> = {}): FlowSettings {
   };
 }
 
-/** A ready asset slot — `slotReady` reads `state().kind === 'ready'`. */
+/** A ready asset slot — `slotReady` reads `committed() !== null`. */
 function readySlot() {
-  return { state: () => ({ kind: 'ready' }) };
+  return { committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }) };
 }
 
 /**

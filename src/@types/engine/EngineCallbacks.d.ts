@@ -23,10 +23,8 @@ export type EngineCallbacks = {
    * Registers the engine's saga runners into the store's saga context.  The
    * engine builds its closures over the live `EngineState` and hands them to the
    * running root saga through this setter, which the store factory exposes
-   * alongside the store: `runTierTransition` (the tier saga's
-   * `getContext('runTierTransition')` target — without it a tier change never
-   * reaches the engine's GPU resources) and the `ReconcileEffects` bag (the
-   * render-wake / fade / reseed / bias closures the reconcile sagas invoke).
+   * alongside the store — the `ReconcileEffects` bag (the render-wake / fade /
+   * reseed / bias closures the reconcile sagas invoke) among them.
    *
    * Sourced from `<SagaContextProvider>` in `useEngine`, mirroring how `store`
    * rides here from `<Provider>` — both are sibling returns of `createAppStore`,

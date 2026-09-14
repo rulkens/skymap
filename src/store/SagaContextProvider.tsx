@@ -20,8 +20,8 @@
  *
  * The `null` default plus the throwing consumer hook makes a missing provider
  * a loud failure at first use rather than a silent no-op (the engine would
- * never register its `runTierTransition` runner, and tier transitions would
- * quietly do nothing).
+ * never register its runners, and every saga reaching for a capability would
+ * find nothing there).
  */
 
 import { createContext, useContext, type ReactNode } from 'react';

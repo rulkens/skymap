@@ -146,7 +146,7 @@ import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
-import { SCALE_FADE_BANDS } from '../engine/presentation/scaleFadeBands';
+import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
 
 /**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
@@ -281,9 +281,9 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     //
     // The one row with an `allocateWhen`: 1024² × 6 × 8 B is 50 MB, and the
     // lens draws only within ~500 AU of Sgr A*, so the texture exists only
-    // while the band does. `renderFrame` writes the band flag and reconciles
-    // on its edge, so the row is there on the band-entry frame — the frame
-    // that sweeps all six faces. Once allocated it outlives a brief close by
+    // while the band does. `scheduleCubemapCaptures` writes the band flag and
+    // reconciles on its edge, so the row is there on the band-entry frame —
+    // the frame that sweeps all six faces. Once allocated it outlives a brief close by
     // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (a camera dithering across the band
     // edge would otherwise destroy + reallocate the row every frame); a row
     // never allocated does not spring into existence from proximity alone —
@@ -295,12 +295,12 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: (state, isAllocated) => {
-        const capture = state.skyCubemapCapture;
+        const capture = state.cubemapCaptures.sgrAStar;
         if (capture.lastBandActive) return true;
         return (
           isAllocated &&
-          capture.lastGcDistanceMpc <=
-            SKY_CUBEMAP_ROW_RELEASE_MARGIN * SCALE_FADE_BANDS.sgrAStarLensing.goneAt
+          capture.lastAnchorDistanceMpc <=
+            SKY_CUBEMAP_ROW_RELEASE_MARGIN * CUBEMAP_CAPTURES.sgrAStar.band.goneAt
         );
       },
       // `size` is a live setting (the DebugPanel resolution knob,
@@ -418,14 +418,13 @@ export function createRenderTargets(
         format: spec.depth,
         dimension: '2d',
         size: { width, height, depthOrArrayLayers: spec.fixedSizePx?.layers ?? 1 },
-        // RENDER_ATTACHMENT only: this feeds the depth-test while the
-        // foreground pass draws opaque geometry, and nothing samples it
-        // downstream any more. The caption occlusion pass (lib/sceneDepth.wesl)
-        // reads the COLOUR texture's alpha instead (see the colour texture's
-        // own TEXTURE_BINDING comment above) — each painter-chain row clears
-        // its own depth (spec §7.3), so the depth buffer only ever holds the
-        // LAST row's value and can't back a coverage test.
-        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        // Each painter-chain row clears its own depth (spec §7.3), so this
+        // buffer only ever holds the LAST row's value — which is why the
+        // caption occlusion pass (lib/sceneDepth.wesl) reads the COLOUR
+        // texture's alpha instead (see the colour texture's own
+        // TEXTURE_BINDING comment above), and why any sampler bound to this
+        // texture can only ever be asking about that last row.
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
       });
       depthTextures.set(spec.id, depthTexture);
       depthViews.set(spec.id, depthTexture.createView());

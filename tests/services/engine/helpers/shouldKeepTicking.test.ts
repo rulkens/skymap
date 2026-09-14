@@ -77,9 +77,11 @@ function makeState(over: {
 }): EngineState {
   const flowSlot =
     over.flowReady === true
-      ? ({ state: () => ({ kind: 'ready' }) } as unknown)
+      ? ({
+          committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
+        } as unknown)
       : over.flowReady === false
-        ? ({ state: () => ({ kind: 'idle' }) } as unknown)
+        ? ({ committed: () => null } as unknown)
         : null;
 
   return {

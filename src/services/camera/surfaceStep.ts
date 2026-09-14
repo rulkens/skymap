@@ -30,6 +30,8 @@ type SurfaceStepCtx = {
   readonly viewportPx: Readonly<Vec2>;
   readonly fovYRad: number;
   readonly bodyRadiusM: number;
+  /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */
+  readonly standoffRadii: number;
   /** Scene-frame up in BODY-FIXED axes (unit); the body rotates under it, so resample per drain. */
   readonly sceneUpLocal: Readonly<Vec3>;
   readonly tuning: CameraTuning;
@@ -55,7 +57,7 @@ export function surfaceStep(
   step: InputStep,
   ctx: SurfaceStepCtx,
 ): { readonly pose: BodyFixedPose; readonly next: SurfaceMemory } {
-  const { viewportPx, fovYRad, bodyRadiusM, sceneUpLocal, tuning } = ctx;
+  const { viewportPx, fovYRad, bodyRadiusM, standoffRadii, sceneUpLocal, tuning } = ctx;
   if (step.kind === 'zoom') {
     return {
       pose: surfaceZoomStep(
@@ -66,6 +68,7 @@ export function surfaceStep(
         viewportPx,
         fovYRad,
         bodyRadiusM,
+        standoffRadii,
         sceneUpLocal,
         prev.rememberedTiltRad,
         tuning,
@@ -90,7 +93,7 @@ export function surfaceStep(
   // its own, so the zoom arm above is already floored. The level runs on the
   // FLOORED pose: the floor moves the eye radially, and the ENU it settles
   // against has to be the final standpoint.
-  const floored = flooredBodyPose(pose, bodyRadiusM);
+  const floored = flooredBodyPose(pose, bodyRadiusM, standoffRadii);
   // Drags stay heading-free (ruled) — only zoom walks north up — but no drag
   // may ROLL: pan and orbit hold their entry heading (the transport that makes
   // holonomy unrepresentable), look and tilt level around the heading they

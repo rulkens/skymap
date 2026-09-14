@@ -22,9 +22,9 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // step contributes no timing slot.
   { kind: 'compute', name: 'flow' },
   { kind: 'compute', name: 'atmosphereSkyView' },
-  // The black-hole lens's sky-cubemap bake, in the compute prelude's wake and
-  // ahead of every other render step so a same-frame lensing draw can sample a
-  // cubemap this frame actually wrote. The frame's face list is empty most
+  // The `sgrAStar` capture, in the compute prelude's wake and ahead of every
+  // other render step so a same-frame lensing draw can sample a cubemap this
+  // frame actually wrote. The frame's face list for this key is empty most
   // frames (outside the fade band, and in-band on every frame except the one
   // that re-bakes), and then this line emits nothing at all — the lens's
   // zero-dispatch guarantee, of which this is the capture half.
@@ -40,7 +40,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // a SYNTHETIC per-face ctx, never the frame's real camera.
   {
     kind: 'capture',
-    target: 'sky-cubemap',
+    capture: 'sgrAStar',
     cosmoPasses: ['point-sprites', 'textured-disks'],
     near0Passes: ['star-aggregates', 'star-catalog'],
   },
@@ -133,7 +133,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // wrote; and BEFORE the line below, so those stay unwarped on top of it.
   // Outside the fade band the frame resolves no lensing row and this emits
   // nothing.
-  { kind: 'lens', target: 'hdr', passes: ['sgr-a-star-lensing'] },
+  { kind: 'render', target: 'hdr', slab: 'lens', passes: ['sgr-a-star-lensing'] },
   // The roster slice that draws unwarped ON TOP of the lens: the sub-pixel
   // bodies (the glints branch of the body partition) as brightness-scaled
   // additive points, sibling of `star-points`. Outside the band the lens line

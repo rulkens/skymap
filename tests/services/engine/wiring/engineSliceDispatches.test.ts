@@ -172,6 +172,7 @@ function makeProgressState(): EngineState {
     name,
     load: vi.fn(),
     current: () => null,
+    committed: () => null,
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
     lastRequest: () => null,
@@ -255,6 +256,7 @@ function makeSyntheticFallbackState(): {
       name: `${src}-points`,
       load: load as unknown as AssetSlot<GalaxyCatalog, unknown>['load'],
       current: () => null,
+      committed: () => null,
       state: () => ({ kind: 'idle' }),
       subscribe: (fn) => {
         listeners.add(fn);

@@ -12,9 +12,10 @@ import type { RingTextureId } from '../../../@types/data/RingTextureId';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
+import { outerBoundRadiusM } from '../../../utils/scene/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 export function loadRadiusMpc(id: BodyTextureId | RingTextureId): number {
   const body = findByIdOrThrow(SCENE_CELESTIAL_BODIES, hostBodyId(id), 'bodyTextureLoadRadius');
-  return body.radiusM * SCALE_UNITS.M_TO_MPC * 1e4;
+  return outerBoundRadiusM(body.surface) * SCALE_UNITS.M_TO_MPC * 1e4;
 }

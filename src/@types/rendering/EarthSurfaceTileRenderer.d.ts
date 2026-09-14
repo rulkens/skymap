@@ -19,8 +19,6 @@ import type { Vec3 } from '../math/Vec3';
  */
 export type EarthSurfaceTileDrawArgs = {
   readonly tiles: readonly SurfaceCutTile[];
-  /** Engine frame counter, forwarded to `meshCache.get` for its LRU stamp. */
-  readonly frame: number;
   /** Eye − body centre, in the body's fixed axes, metres, f64 —
    *  `PreparedBodySurfaceFrame.pose.eyeRelBodyM`. */
   readonly eyeRelBodyM: Readonly<Vec3>;
@@ -54,9 +52,8 @@ export type EarthSurfaceTileDrawArgs = {
 
 export type EarthSurfaceTileRenderer = Renderer & {
   /**
-   * Rebuild both per-frame storage buffers from `args.tiles` (via the
-   * construction-time `meshCache`) and issue one draw. No-op if `tiles` is
-   * empty.
+   * Rebuild the per-frame `PatchInstance` buffer from `args.tiles` and issue
+   * one instanced indexed draw. No-op if `tiles` is empty.
    */
   draw(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs): void;
 };

@@ -13,7 +13,9 @@
  *      (`wireGalaxyCatalogSourceSlot`), the keyed `bodyTextures` family
  *      (`wireBodyTextureSlots`), and the keyed `meshBodies` family
  *      (`wireMeshBodySlots`) — minted here, not by `buildSlotsFromRegistry`
- *      (their `ASSET_WIRING` rows carry `built: 'external'`).
+ *      (their `ASSET_WIRING` rows carry `built: 'external'`), plus the
+ *      `hiResFamous` LOD-3 pair, external for the same reason: it needs the
+ *      device.
  *   4. DEV synthetic-volume fixtures — minted + installed here (not a wiring
  *      row; tree-shaken from production).
  *   5. `wireImpostorSubsystems` / `createEarthTileSubsystem` / `seedFades` /
@@ -79,6 +81,7 @@ import {
 } from '../wiring/galaxyCatalogSourceRegistry';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
+import { wireHiResFamousSlot } from '../wiring/wireHiResFamousSlot';
 import { createEarthTileSubsystem } from '../subsystems/earthTileSubsystem';
 import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
@@ -117,8 +120,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     state.assetSlots.syntheticVolumes = createSyntheticVolumeSlots(state, cb);
   }
 
-  // Build and wire the five impostor subsystems (galaxy atlas, textured
-  // disks, procedural disks, hi-res Famous texture + planner). Absent is
+  // Build and wire the four impostor subsystems (galaxy atlas, textured disks,
+  // procedural disks, disk-planner walk), then mint the LOD-3 slot — whose pair
+  // is not built here but appears on the demand loop's first commit. Absent is
   // legal: a composition that never runs `initGpu`'s disk renderers skips
   // this cluster and `state.subsystems.texturedDisks` stays null.
   const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
@@ -126,6 +130,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     wireImpostorSubsystems(state, deps.phaseLocals!.device, {
       texturedDiskRenderer,
     });
+    // The LOD-3 pair is minted here rather than by `buildSlotsFromRegistry`
+    // because its allocation needs the device, which `SlotDeps` does not carry.
+    // A composition without the disk renderers mints no slot, so `slotFor`
+    // returns undefined and the demand loop skips the row.
+    wireHiResFamousSlot(state, deps.phaseLocals!.device, texturedDiskRenderer);
   }
 
   // Earth's surface virtual texture. A subsystem, not a renderer — it owns

@@ -4,9 +4,9 @@
  * Rather than driving the generator by hand (which couples the test to the
  * exact effect sequence), these tests run the watcher inside an actual store
  * wired with `redux-saga`, dispatch the `requestTier` command, and assert on
- * the observable outcome: the store's tier and whether the injected
- * `runTierTransition` runner fired. That keeps the tests honest about the
- * command/write split and the same-tier no-op without freezing the saga's
+ * the observable store outcome: the tier write, the Milky-Way re-seed, the
+ * hover clear and the re-anchored selection. That keeps the tests honest about
+ * the command/write split and the same-tier no-op without freezing the saga's
  * internal steps.
  *
  * Each test builds a FRESH store, because `takeLatest` carries per-store
@@ -26,7 +26,7 @@
  * via the durable id rather than preserving the stale positional index.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
@@ -37,13 +37,13 @@ import { selectTier } from '../../../src/state/tier/selectors';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
+  updateSelectionHover,
 } from '../../../src/state/selection/selectionSlice';
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import type { RunTierTransition } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -73,7 +73,6 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
 
 describe('watchTierSaga', () => {
   let store: ReturnType<typeof buildStore>;
-  let runner: ReturnType<typeof vi.fn<RunTierTransition>>;
 
   function buildStore(resolveDeps?: () => ResolveDeps) {
     const sagaMiddleware = createSagaMiddleware();
@@ -82,8 +81,6 @@ describe('watchTierSaga', () => {
       middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
     });
     sagaMiddleware.run(watchTierSaga);
-    runner = vi.fn<RunTierTransition>();
-    sagaMiddleware.setContext({ runTierTransition: runner });
     if (resolveDeps) sagaMiddleware.setContext({ resolveDeps });
     return built;
   }
@@ -92,15 +89,11 @@ describe('watchTierSaga', () => {
     store = buildStore();
   });
 
-  it('writes the new tier and runs the transition once', async () => {
+  it('turns the request command into the tier write', async () => {
     store.dispatch(requestTier('large'));
     await flush();
 
     expect(selectTier(store.getState())).toBe('large');
-    expect(runner).toHaveBeenCalledTimes(1);
-    // 'medium' is the boot default the tier slice seeds; the runner sees the
-    // PREVIOUS tier first so its per-source diff stays honest.
-    expect(runner).toHaveBeenCalledWith('medium', 'large');
   });
 
   it('re-seeds the Milky-Way star count from the new tier budget', async () => {
@@ -120,12 +113,16 @@ describe('watchTierSaga', () => {
   it('is a no-op for a same-tier request', async () => {
     store.dispatch(requestTier('large'));
     await flush();
-    runner.mockClear();
+    // Hover is the observable of the worker having run: the saga clears it
+    // unconditionally on a real swap, so a surviving hover proves the
+    // `prev === payload` guard returned before any of the swap duties.
+    const hover = { type: 'galaxyCatalog' as const, source: Source.SDSS, index: 0 };
+    store.dispatch(updateSelectionHover(hover));
 
     store.dispatch(requestTier('large')); // already 'large'
     await flush();
 
-    expect(runner).not.toHaveBeenCalled();
+    expect(store.getState()[selectionRoute].hover).toEqual(hover);
     expect(selectTier(store.getState())).toBe('large');
   });
 
@@ -253,10 +250,8 @@ describe('watchTierSaga', () => {
   });
 
   it('clears hover unconditionally across the swap', async () => {
-    // hover is cleared by the saga before the transition, regardless of whether
-    // the hovered source reloads or not.
-    const { updateSelectionHover } = await import('../../../src/state/selection/selectionSlice');
-
+    // hover is cleared by the saga across the swap, regardless of whether the
+    // hovered source reloads or not.
     store = buildStore();
     store.dispatch(updateSelectionHover({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
 
