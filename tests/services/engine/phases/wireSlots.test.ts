@@ -640,16 +640,17 @@ describe('wireSlots', () => {
   });
 
   it('assigns all five impostor subsystems onto state.subsystems', async () => {
-    // wireImpostorSubsystems builds the LOD-1/2/3 GPU subsystems and writes
-    // each onto `state.subsystems.*`.  The downstream frame loop reads these
-    // five by name; a missed assignment is a silent "thumbnails never draw"
-    // bug.  The factories are mocked at module scope to hollow objects, so
-    // each assignment is merely truthy here — the contract under test is
-    // "all five slots are populated", not their internals.
+    // The downstream frame loop reads these five by name; a missed assignment
+    // is a silent "thumbnails never draw" bug.  The factories are mocked at
+    // module scope to hollow objects, so each assignment is merely truthy here
+    // — the contract under test is "all five slots are populated", not their
+    // internals.  Four come straight from `wireImpostorSubsystems`; the hi-res
+    // pair lands on the demand loop's first commit, hence the drain.
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
 
     await wireSlots(state, deps);
+    await state.subsystems.assetQueue.drain();
 
     expect(state.subsystems.galaxyAtlas).not.toBeNull();
     expect(state.subsystems.proceduralDisks).not.toBeNull();

@@ -341,6 +341,9 @@ export function createEngine(
       // One boot fetch seeding every body's placeholder, so no body ever draws
       // untextured while its own map loads.
       bodyTextureAtlas: null,
+      // Stays null in a composition without the disk renderers — `wireSlots`
+      // mints it only inside that guard.
+      hiResFamous: null,
     },
     // Edge-triggered UI events driving demand predicates. The wiring layer sets a
     // key and leaves it set — the demand loop's idle-guard prevents a re-fetch.

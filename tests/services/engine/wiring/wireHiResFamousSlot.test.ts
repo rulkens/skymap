@@ -1,0 +1,136 @@
+/**
+ * wireHiResFamousSlot — the hi-res famous pair as a demand-loop slot.
+ *
+ * The load is a GPU allocation rather than a fetch, so the whole contract is in
+ * `commit`'s ORDER: bind the new view, hand the new planner to the textured-disk
+ * subsystem, and only then destroy the pair that was live. Reversing any of that
+ * drops every visible famous galaxy to its atlas tile for the frames between —
+ * precisely what a tier flip must not do.
+ *
+ * Factory stubs stand in for the two GPU-bearing constructors; the ordering
+ * assertions read a shared call log the stubs append to.
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { HI_RES_REQ_BY_TIER } from '../../../../src/data/hiResReqByTier';
+import { HI_RES_LAYER_COUNT } from '../../../../src/data/sources';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { TexturedDiskRenderer } from '../../../../src/@types/rendering/TexturedDiskRenderer';
+
+/** Hoisted so the `vi.mock` factories (evaluated before this module's body) can reach it. */
+const shared = vi.hoisted(() => ({ calls: [] as string[], textureSeq: 0, subsystemSeq: 0 }));
+
+vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
+  createHiResFamousTexture: vi.fn(() => {
+    const id = `texture#${shared.textureSeq++}`;
+    return {
+      initTexture: vi.fn(),
+      getTextureView: vi.fn(() => ({ __view: id }) as unknown as GPUTextureView),
+      destroy: vi.fn(() => shared.calls.push(`destroy ${id}`)),
+      __id: id,
+    };
+  }),
+}));
+
+vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () => ({
+  createHiResFamousSubsystem: vi.fn(() => {
+    const id = `subsystem#${shared.subsystemSeq++}`;
+    return {
+      runFrame: vi.fn(),
+      lastOutput: { byFamousIdx: new Map() },
+      destroy: vi.fn(() => shared.calls.push(`destroy ${id}`)),
+      __id: id,
+    };
+  }),
+}));
+
+// Imported AFTER the mocks so the module under test resolves the stubs.
+import { wireHiResFamousSlot } from '../../../../src/services/engine/wiring/wireHiResFamousSlot';
+import { createHiResFamousTexture } from '../../../../src/services/gpu/resources/hiResFamousTexture';
+
+function makeState(): EngineState {
+  return {
+    tier: 'medium',
+    assetSlots: {},
+    subsystems: {
+      scheduler: { requestRender: vi.fn() },
+      texturedDisks: {
+        setHiResFamous: vi.fn((s: { __id?: string } | undefined) =>
+          shared.calls.push(`setHiResFamous ${s?.__id}`),
+        ),
+      },
+      hiResFamous: null,
+      hiResFamousTexture: null,
+    },
+  } as unknown as EngineState;
+}
+
+function makeRenderer(): Pick<TexturedDiskRenderer, 'bindHiResArray'> {
+  return {
+    bindHiResArray: vi.fn((v: GPUTextureView) =>
+      shared.calls.push(`bind ${(v as unknown as { __view: string }).__view}`),
+    ),
+  };
+}
+
+describe('wireHiResFamousSlot', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    shared.calls.length = 0;
+    shared.textureSeq = 0;
+    shared.subsystemSeq = 0;
+  });
+
+  it('allocates the array at the requested layerSide', async () => {
+    const state = makeState();
+    wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
+
+    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.small);
+    expect(createHiResFamousTexture).toHaveBeenLastCalledWith(
+      expect.objectContaining({ layerSide: 512, layerCount: HI_RES_LAYER_COUNT }),
+    );
+
+    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.medium);
+    expect(createHiResFamousTexture).toHaveBeenLastCalledWith(
+      expect.objectContaining({ layerSide: 1024, layerCount: HI_RES_LAYER_COUNT }),
+    );
+  });
+
+  it('binds the new view and hands over the new planner before destroying the old pair', async () => {
+    const state = makeState();
+    wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
+
+    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.small);
+    shared.calls.length = 0;
+    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.medium);
+
+    // Subsystem before texture on the teardown half: the planner holds the
+    // texture's evict-handler subscription.
+    expect(shared.calls).toEqual([
+      'bind texture#1',
+      'setHiResFamous subsystem#1',
+      'destroy subsystem#0',
+      'destroy texture#0',
+    ]);
+  });
+
+  it('destroys nothing on the first commit', async () => {
+    const state = makeState();
+    wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
+
+    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.medium);
+
+    expect(shared.calls.filter((c) => c.startsWith('destroy'))).toEqual([]);
+  });
+
+  it('publishes the new pair on both state.subsystems fields', async () => {
+    const state = makeState();
+    wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
+
+    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.medium);
+
+    const committed = state.assetSlots.hiResFamous!.current()!;
+    expect(state.subsystems.hiResFamous).toBe(committed.subsystem);
+    expect(state.subsystems.hiResFamousTexture).toBe(committed.texture);
+  });
+});

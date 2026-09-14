@@ -25,5 +25,6 @@ export type AssetKey =
   | 'mcpmWorkbench'
   | 'constellations'
   | 'bodyTextureAtlas'
+  | 'hiResFamous' // a GPU allocation rather than a fetch, but tier-keyed like any other, so the demand loop owns its lifetime
   | BodyTextureSlotKey // keyed family; `slotFor` routes these through `assetSlots.bodyTextures` via `isBodyTextureKey`
   | `mesh:${string}`; // meshBodies family: one slot per body id, `slotFor` routes via `isMeshBodyKey`. Prefixed (unlike the plain-string `meshBodies` Map key) so this member stays a template literal type rather than widening the whole union to bare `string`.

@@ -104,6 +104,7 @@ describe('ASSET_WIRING membership', () => {
       'structureCatalog',
       'pgcAlias',
       'bodyTextureAtlas',
+      'hiResFamous',
       ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),
       ...SCENE_MESH_BODIES.map((b) => meshBodySlotKey(b.id)),
       Source.GaiaStars,

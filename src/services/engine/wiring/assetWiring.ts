@@ -30,6 +30,7 @@ import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
 import { galaxyCatalogRequest } from './galaxyCatalogRequest';
+import { HI_RES_REQ_BY_TIER } from '../../../data/hiResReqByTier';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
@@ -381,4 +382,18 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   // ── Survey star catalogs ─────────────────────────────────────────
   // One row per `type: 'starCatalog'` entry, so a new catalog joins with no edit here.
   ...STAR_CATALOG_SOURCES.map(starCatalogRow),
+
+  // ── LOD-3 hi-res famous-galaxy array ─────────────────────────────
+  // Externally built: the allocation needs a GPUDevice, which `SlotDeps` does not
+  // carry. `priority: 1` puts a synchronous allocation at the head of the bounded
+  // queue ahead of every download — it holds its pipe for microseconds, and the
+  // alternative is a second "allocate outside the queue" mechanism for one row.
+  {
+    key: 'hiResFamous',
+    built: 'external',
+    factory: externalFactory,
+    req: (tier) => HI_RES_REQ_BY_TIER[tier],
+    demand: () => true,
+    priority: 1,
+  },
 ];

@@ -31,6 +31,8 @@ import type { BodyTextureReq } from '../../loading/BodyTextureReq';
 import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
 import type { MeshAsset } from '../../data/mesh/MeshAsset';
 import type { MeshReq } from '../../loading/MeshReq';
+import type { HiResFamousPair } from '../subsystems/HiResFamousPair';
+import type { HiResFamousReq } from '../../loading/HiResFamousReq';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
@@ -103,6 +105,13 @@ export type EngineAssetSlots = {
    * in either order with no check.
    */
   bodyTextureAtlas: AssetSlot<ImageBitmap, void> | null;
+  /**
+   * The LOD-3 hi-res famous-galaxy `texture_2d_array` + its planner, held as one pair
+   * because the planner subscribes to the texture's evict handler. No network: the
+   * "fetch" is the GPU allocation, whose shape is the request. Null until `wireSlots`
+   * runs, and absent entirely in a composition without the disk renderers.
+   */
+  hiResFamous: AssetSlot<HiResFamousPair, HiResFamousReq> | null;
   /**
    * Dev-only synthetic test cubes, keyed by the in-engine handle the commit
    * registers. `undefined` rather than null in production: `wireSlots` mints them
