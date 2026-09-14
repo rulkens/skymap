@@ -7,6 +7,7 @@
  */
 
 import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
+import { quote } from '../utils/codegen/quote';
 
 export type MeshAssetRowField = {
   readonly name: keyof MeshAssetRow & string;
@@ -15,11 +16,6 @@ export type MeshAssetRowField = {
   readonly doc?: readonly string[];
   readonly emit: (row: MeshAssetRow) => string;
 };
-
-/** Prettier's `quoteProps: as-needed` / `singleQuote` output, reproduced. */
-export function quote(s: string): string {
-  return s.includes("'") || s.includes('\\') ? JSON.stringify(s) : `'${s}'`;
-}
 
 export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
   { name: 'key', tsType: 'string', emit: (row) => quote(row.key) },

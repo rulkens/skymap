@@ -43,9 +43,9 @@ export function createMeshBodyRenderer(
   });
 
   // Group 0 holds what a body owns, group 1 what the renderer owns. Binding 1
-  // of group 0 is vacant on purpose: the sampler moved to group 1 and
-  // renumbering the texture bindings would desync this layout from
-  // `MESH_TEXTURE_SLOTS`, which the shader's decorations mirror by hand.
+  // of group 0 is vacant: the sampler lives in group 1, and renumbering the
+  // texture bindings would desync this layout from `MESH_TEXTURE_SLOTS`, which
+  // the shader's decorations mirror by hand.
   const bodyBindGroupLayout = device.createBindGroupLayout({
     label: 'meshBody-body-bgl',
     entries: [

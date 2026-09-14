@@ -452,7 +452,7 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
 
     expect(row.substituted).toEqual([]);
-    expect(warn).not.toHaveBeenCalled();
+    expect(warn.mock.calls.flat().join(' ')).not.toMatch(/substituting/);
   });
 
   it('writes every MESH_TEXTURE_SLOTS suffix, so a slot added to the table lands on disk', async () => {

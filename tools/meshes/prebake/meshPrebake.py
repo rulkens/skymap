@@ -378,7 +378,7 @@ def main():
     for name, settings, colourspace in BAKE_PASSES:
         images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace)
         log("baked %d^2 %s atlas -> %s (%.0fs elapsed)"
-            % (ATLAS_PX, name, atlas_path(cfg, name), time.time() - started))
+            % (ATLAS_PX, name, images[name].filepath_raw, time.time() - started))
 
     flatten_materials(obj, key, images)
     keep_only_bake_uv(obj, uv_name)

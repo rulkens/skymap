@@ -15,7 +15,7 @@
 //   - SPECULAR — light that reflects off the microscopic facets of the surface
 //     without entering it. Modelled with the Cook-Torrance microfacet BRDF
 //     'D * G * F / (4 * NoV * NoL)'. Tinted by the caller's 'f0', never by
-//     'albedo' — the two are independent inputs.
+//     'albedo'.
 //
 // Both terms are true BRDF values (units of 1/steradian): the diffuse carries
 // its '1 / PI' and the specular carries its '1 / (4 NoV NoL)', so the two are on

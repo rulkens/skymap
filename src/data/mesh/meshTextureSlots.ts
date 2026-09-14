@@ -3,8 +3,7 @@
  * binding the shader reads each at, and the `<key><suffix>.png` the bake writes
  * and the fetcher asks for (those file names are already on R2, so they are
  * fixed). Only albedo is sRGB: a metal-rough or normal map decoded through sRGB
- * returns wrong roughness and wrong slopes — which makes "format is not
- * `-srgb`" the linear-decode test rather than a second flag to keep in step.
+ * returns wrong roughness and wrong slopes.
  */
 
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';

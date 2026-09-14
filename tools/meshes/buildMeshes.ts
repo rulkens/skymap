@@ -25,7 +25,8 @@ import type { Vec3 } from '../../src/@types/math/Vec3';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
-import { MESH_ASSET_ROW_FIELDS, quote } from './meshAssetRowFields';
+import { quote } from '../utils/codegen/quote';
+import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
 import { generateTangents } from './generateTangents';
 import { meanAlbedo } from './meanAlbedo';
 import { writeMeshBinary } from './writeMeshBinary';
@@ -414,10 +415,10 @@ type TextureSource = {
 };
 
 /**
- * Write one texture slot, resized into the budget. `_albedo.png` is sRGB;
- * `_normal.png` and `_mr.png` are LINEAR data and must not be colour-managed —
- * sharp neither converts colourspace nor embeds an ICC profile by default, and
- * the fetcher's `colorSpaceConversion: 'none'` is the matching half.
+ * Write one texture slot, resized into the budget. The sRGB slot is
+ * colour-managed, the others are LINEAR data that must not be — sharp neither
+ * converts colourspace nor embeds an ICC profile by default, and the fetcher's
+ * `colorSpaceConversion: 'none'` is the matching half.
  */
 async function writeTexture(
   texture: Texture | null,
@@ -482,9 +483,14 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     normalMap: { texture: material.getNormalTexture(), fallback: FLAT_NORMAL },
   };
 
+  // Captured from the loop so the read-back below is never a second spelling
+  // of the albedo suffix.
+  let albedoPath = '';
   for (const slot of MESH_TEXTURE_SLOTS) {
     const { texture, fallback } = sources[slot.field];
-    await writeTexture(texture, fallback, join(outDir, `${key}${slot.suffix}.png`));
+    const path = join(outDir, `${key}${slot.suffix}.png`);
+    if (slot.field === 'albedo') albedoPath = path;
+    await writeTexture(texture, fallback, path);
   }
 
   const substituted = MESH_TEXTURE_SLOTS.filter((slot) => sources[slot.field].texture === null).map(
@@ -497,11 +503,6 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     );
   }
 
-  // Back through the slot table rather than a second '_albedo' literal to drift.
-  const albedoPath = join(
-    outDir,
-    `${key}${MESH_TEXTURE_SLOTS.find((slot) => slot.field === 'albedo')!.suffix}.png`,
-  );
   const { data, info } = await sharp(albedoPath).raw().toBuffer({ resolveWithObject: true });
   // glTF's base colour is factor x texture, so the glint's colour is too. The
   // 1x1 substitute already carries the factor, hence the guard.

@@ -48,7 +48,6 @@ function mockDevice(recorders?: {
       beginRenderPass: vi.fn(() => ({
         setPipeline: vi.fn(),
         setBindGroup: vi.fn(),
-        setVertexBuffer: vi.fn(),
         draw: vi.fn(),
         end: vi.fn(),
       })),
