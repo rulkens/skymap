@@ -3,7 +3,7 @@
 Spec: [`docs/superpowers/specs/2026-09-09-layer-composition-design.md`](../specs/2026-09-09-layer-composition-design.md)
 §9(d), ruling **D3** and prep item **P2**, with §4.7 (source rows) and §10(d) for the sequence.
 Read §9(d)'s D3 paragraph and the "Open at plan time" list before starting — the second is
-scheduled here as Task 5 and its findings are already recorded below, to be verified rather than
+scheduled here as Task 4 and its findings are already recorded below, to be verified rather than
 rediscovered.
 
 Plan 04a of the layer-composition sequence; follows plan 03 (the contract PR,
@@ -11,12 +11,12 @@ Plan 04a of the layer-composition sequence; follows plan 03 (the contract PR,
 First of the four stacked PRs §9(d) D14 packages (d) into: **PR-A (this plan)**, PR-B (the
 contract over the empty tuple), PR-C (the galaxy-side un-braids), PR-D (the Layer itself).
 
-Branch: `worktree-layer-galaxy-catalog` (off `223145f68`). One PR, 14 tasks, every commit green.
+Branch: `worktree-layer-galaxy-catalog` (off `223145f68`). One PR, 13 tasks, every commit green.
 
-**Parallelism 2.** Chain A (the slot state machine) is 2→3→4; chain B (requests) is 1, then 6→7,
-then 8 and 9 in either order. Task 5 (the audit) runs any time after 4 and gates 7. Task 10 is
-independent of both chains. Deletions 11→12→13 follow the tasks that land their replacements
-(11 after 7, 12 after 10, 13 after 9). Task 14 gates.
+**Parallelism 2.** Chain A (the slot state machine) is 2→3; chain B (requests) is 1, then 5→6,
+then 7 and 8 in either order. Task 4 (the audit) runs any time after 3 and gates 6. Task 9 is
+independent of both chains. Deletions 10→11→12 follow the tasks that land their replacements
+(10 after 6, 11 after 9, 12 after 8). Task 13 gates.
 
 ## Goal
 
@@ -42,24 +42,36 @@ remaining reason.
 — galaxy catalogs, body textures, star bins, volumes, the hi-res famous texture — replaces in
 place, one way, for every family.
 
+Two consequences of "one way, for every family" are behaviour changes in their own right, named
+here and nowhere else: a galaxy-catalog tier swap stops fading the old buffer out first (Ruling 3),
+and **filaments start swapping** — the skeleton ships two files (`filaments-small.bin` vs
+`filaments.bin`), so its request drifts across the small boundary and the fetcher's frozen "don't
+swap on tier flip" policy (`filamentFetcher.ts:9-13`) is superseded by D3. A medium↔large flip
+still fetches no filament data, because that request does not drift.
+
 ## Architecture
 
 - **The drift edge** (`reevaluateDemand.ts`). The per-row edge chain gains a fourth arm. A row is
   drifted when its slot is non-idle, has a `lastRequest()`, is still demanded, and
-  `sameRequest(slot.lastRequest(), row.req(tier))` is false. Drift enqueues a reload onto the same
-  bounded priority queue as a cold load — not a direct `slot.load()` — so a tier swap's four or
-  five concurrent re-fetches are ordered by the same `priority` ranks as boot instead of splitting
-  one HTTP/2 pipe five ways.
-- **The slot serves through a reload** (`AssetSlot.ts`, `reduceLoadState.ts`, `LoadState`). The
-  `loading` / `committing` / `error` states gain an optional `held` — the last committed value and
-  its timestamp — carried forward from `ready` by the reducer. `current()` and `slotReady` read
-  the held value through one helper, so "this slot has a committed value" has a single expression.
-  `release()` is the only path that drops it.
+  `sameRequest(slot.lastRequest(), row.req(tier))` is false. A drifted row is re-loaded by calling
+  `slot.load(req)` **directly**, not through the bounded queue: the queue refuses a key that is
+  already in flight (`priorityQueue.ts:130`), so a queued reload could never supersede a slot that
+  is still `loading` — the case the drift edge exists for (Ruling 6). `slot.load` aborts the
+  in-flight controller (`AssetSlot.ts:227`), which is exactly the concurrency a tier swap has today.
+- **The slot serves through a reload** (`AssetSlot.ts`). The slot already holds its last `ready`
+  state in `lastReady` (declared `AssetSlot.ts:75`, written at `:114`, cleared only by `release()`
+  at `:292`); it gains one accessor, `committed()`, that exposes it. `current()` and `slotReady`
+  read that accessor, so "this slot has a committed value" has a single expression. No new field on
+  `LoadState` and no reducer change: this is the call `AssetSlot.d.ts:48-53` already made for
+  `startedAtMs` — a property of the load history, not of any one state, lives beside the other
+  attempt-scoped cells.
 - **Requests state what is fetched, not what the store's tier is.** Six of the nine galaxy
   catalogs ship one file for every tier (`tierTargets: {}` — 2MRS, Famous, the three DESI cuts,
   Synthetic), so `{ source, tier }` makes them look different at every tier when the bytes are
-  identical. `fetchTierFor(source, tier)` collapses an untiered source to one canonical tier, which
-  is exactly the fold of `willSourceReload` D3 asks for: a source drifts iff its file changes.
+  identical. An untiered source's request therefore carries **no `tier` key at all** — the honest
+  request names the file, never a tier the user is not on — and that is exactly the fold of
+  `willSourceReload` D3 asks for: a source drifts iff its file changes. One predicate decides both
+  the request and the filename (`shipsTierVariants`), so they cannot disagree.
 - **Companions ride the parent's request** by construction: the `famousGalaxiesMeta` row calls the
   same `galaxyCatalogRequest(Source.FamousGalaxy, tier)` the Famous point row does. D11 (PR-C)
   replaces this with `companionOf` on the row, from which core derives the request; until then the
@@ -100,7 +112,7 @@ From CLAUDE.md and the spec, binding on every task:
 - **`src/data/` never imports `services/`**; `src/utils/` never imports `services/`.
 - **Not behaviour-neutral, deliberately.** Every behaviour difference must be one of the ones this
   plan names. An unnamed one is a bug, not a bonus.
-- **`npm run perf` is a REQUIRED paired gate** (Task 14) because the drift check runs per frame.
+- **`npm run perf` is a REQUIRED paired gate** (Task 13) because the drift check runs per frame.
 - Commit after every task.
 
 ## Findings at HEAD `223145f68`
@@ -108,20 +120,20 @@ From CLAUDE.md and the spec, binding on every task:
 Verified in this worktree while writing the plan. Re-derive rather than trust, but these are the
 premises the tasks are written against.
 
-| Fact                                                                                                                                                                                                                                           | Where                                                                       | What it means                                                                                                                                                                                          |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `loadCompanionAssets` is **unreachable today**. Its only caller guards on `willSourceReload`, and the only source with `companions` is `FamousGalaxy`, whose `tierTargets` is `{}` — so the predicate is false for it at every swap.           | `makeRunTierTransition.ts:56-68`, `willSourceReload.ts:38`, registry `:46`  | The deletion costs nothing and Task 9's "companions ride the parent request" is a structural guarantee for a future tiered parent, not a behaviour restoration.                                        |
-| `loadCompanionAssets` is **not its own file** — it is a second export of `galaxyCatalogSourceRegistry.ts:105-112`.                                                                                                                             | `galaxyCatalogSourceRegistry.ts`                                            | Task 13 deletes a function and an import, not a file. The brief's "`loadCompanionAssets.ts`" does not exist.                                                                                           |
-| A disabled galaxy catalog that was once loaded stays `ready` forever (point rows declare no `release`). A tier swap skips it (`willSourceReload`'s third clause); re-enabling it finds the slot non-idle, so the demand loop never re-fetches. | `assetWiring.ts:78-92`, `reevaluateDemand.ts:137`, `willSourceReload.ts:42` | **Latent bug**: a catalog toggled off, tier changed, toggled back on draws the OLD tier's data for the rest of the session. The drift edge fixes it — the re-enable makes demand true and drift fires. |
-| Star catalogs reload on a tier flip whenever the slot is non-idle, INCLUDING when toggled off; galaxy catalogs do not. Two families, two rules.                                                                                                | `makeRunTierTransition.ts:86-90` vs `willSourceReload.ts:42`                | The drift edge picks the galaxy rule for everyone (Ruling 2) — no network work for a row whose demand is false.                                                                                        |
-| `dissolvePrevious` is set at exactly one site and read at exactly one site.                                                                                                                                                                    | `makeRunTierTransition.ts:65`, `galaxyCatalogSourceRegistry.ts:145`         | Ruling 3 deletes both, plus `dissolveCatalogBuffer.ts`, `GalaxyCatalogReq.dissolvePrevious` and two test files.                                                                                        |
-| `SDSS`'s `small` tier target is `0` — "exclude this source from this tier", a deliberate runtime 404.                                                                                                                                          | `src/data/sources/sdss.ts:29`                                               | A medium→small swap puts the SDSS slot in `error`. With `held` on `error` the old buffer keeps drawing, which is what happens today too (the commit never runs, so the GPU buffer is untouched).       |
-| `reevaluateDemand` runs **per frame**, not per state change, despite the docblock's "on every state change".                                                                                                                                   | `runFrame.ts:76`                                                            | The drift check's cost is a per-frame cost. Task 7's ordering and Task 14's perf pairing both exist for this.                                                                                          |
-| `slotReady` has three consumers, all flow-field; `flow`'s `req` is `() => undefined` and can never drift.                                                                                                                                      | `flowFieldPass.ts:16`, `encodeFlowCompute.ts:53`, `shouldKeepTicking.ts:45` | The serve-through-reload change is invisible to them today. It must still be correct, because PR-D and (e) will give other families `slotReady` readers.                                               |
-| Two consumers read a slot's value through `state().kind === 'ready'` directly and WOULD blank during a reload.                                                                                                                                 | `earthSurfaceTier.ts:23`, `produceConstellationCaptions.ts:55`              | Task 4 re-points both at the held-value helper. `earthSurfaceTier` is the live one — it reports the Earth surface tier during a body-texture reload.                                                   |
-| `createSyntheticFallback`'s settle gate is once-only (`counted` + `unsub()` before the increment), so a reload's second `ready` cannot re-arm it.                                                                                              | `createSyntheticFallback.ts:104-127`                                        | No change needed. Verify in Task 5, do not "fix".                                                                                                                                                      |
-| Every commit path already overwrites in place: `renderer.upload(id, …)` (galaxy, star), `setMap` / `setRingTexture` / `setPlaceholderMap` (body), `uploadVolumeField` → `renderer.upload(id, cube)` (volumes).                                 | Task 5's file list                                                          | The only commit that does NOT is the galaxy one, and only because `dissolvePrevious` makes it fade to zero first. Ruling 3.                                                                            |
-| The device is not reachable from `EngineState`; registry-built slot factories get `SlotDeps = { state, cb }` only.                                                                                                                             | `SlotDeps.d.ts`, `rebuildHiResFamousForTier.ts:129`                         | The hi-res row must be `built: 'external'` and minted in `wireSlots`, beside the point and body-texture families (Task 10).                                                                            |
+| Fact                                                                                                                                                                                                                                           | Where                                                                       | What it means                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `loadCompanionAssets` is **unreachable today**. Its only caller guards on `willSourceReload`, and the only source with `companions` is `FamousGalaxy`, whose `tierTargets` is `{}` — so the predicate is false for it at every swap.           | `makeRunTierTransition.ts:56-68`, `willSourceReload.ts:41`, registry `:46`  | The deletion costs nothing and Task 8's "companions ride the parent request" is a structural guarantee for a future tiered parent, not a behaviour restoration.                                                                                                                                                                                                                    |
+| `loadCompanionAssets` is **not its own file** — it is a second export of `galaxyCatalogSourceRegistry.ts:105-112`.                                                                                                                             | `galaxyCatalogSourceRegistry.ts`                                            | Task 12 deletes a function and an import, not a file. The brief's "`loadCompanionAssets.ts`" does not exist.                                                                                                                                                                                                                                                                       |
+| A disabled galaxy catalog that was once loaded stays `ready` forever (point rows declare no `release`). A tier swap skips it (`willSourceReload`'s third clause); re-enabling it finds the slot non-idle, so the demand loop never re-fetches. | `assetWiring.ts:78-92`, `reevaluateDemand.ts:137`, `willSourceReload.ts:43` | **Latent bug**: a catalog toggled off, tier changed, toggled back on draws the OLD tier's data for the rest of the session. The drift edge fixes it — the re-enable makes demand true and drift fires.                                                                                                                                                                             |
+| Star catalogs reload on a tier flip whenever the slot is non-idle, INCLUDING when toggled off; galaxy catalogs do not. Two families, two rules.                                                                                                | `makeRunTierTransition.ts:86-90` vs `willSourceReload.ts:43`                | The drift edge picks the galaxy rule for everyone (Ruling 2) — no network work for a row whose demand is false.                                                                                                                                                                                                                                                                    |
+| `dissolvePrevious` is set at exactly one site and read at exactly one site.                                                                                                                                                                    | `makeRunTierTransition.ts:65`, `galaxyCatalogSourceRegistry.ts:145`         | Ruling 3 deletes both, plus `dissolveCatalogBuffer.ts`, `GalaxyCatalogReq.dissolvePrevious` and two test files (Task 12).                                                                                                                                                                                                                                                          |
+| `SDSS`'s `small` tier target is `0` — "exclude this source from this tier". `galaxyCatalogFetcher` short-circuits a `0` target to `emptyGalaxyCatalog()` rather than fetching a file that was never written.                                   | `src/data/sources/sdss.ts:29`, `galaxyCatalogFetcher.ts:50-55`              | A medium→small swap does NOT error: the slot goes `ready` with an empty catalog and the commit uploads it, so SDSS is absent at `small` by construction. A genuinely failed reload is the separate case, and it keeps serving `lastReady` by construction — the commit never runs, so the GPU buffer is untouched. That is today's behaviour; no held-on-error decision is needed. |
+| `reevaluateDemand` runs **per frame**, not per state change, despite the docblock's "on every state change".                                                                                                                                   | `runFrame.ts:76`                                                            | The drift check's cost is a per-frame cost. Task 6's ordering and Task 13's perf pairing both exist for this.                                                                                                                                                                                                                                                                      |
+| `slotReady` has three consumers, all flow-field; `flow`'s `req` is `() => undefined` and can never drift.                                                                                                                                      | `flowFieldPass.ts:16`, `encodeFlowCompute.ts:53`, `shouldKeepTicking.ts:45` | The serve-through-reload change is invisible to them today. It must still be correct, because PR-D and (e) will give other families `slotReady` readers.                                                                                                                                                                                                                           |
+| Two consumers read a slot's value through `state().kind === 'ready'` directly and WOULD blank during a reload.                                                                                                                                 | `earthSurfaceTier.ts:23`, `produceConstellationCaptions.ts:55`              | Task 3 re-points both at `slot.committed()`. `earthSurfaceTier` is the live one — it reports the Earth surface tier during a body-texture reload.                                                                                                                                                                                                                                  |
+| `createSyntheticFallback`'s settle gate is once-only (`counted` + `unsub()` before the increment), so a reload's second `ready` cannot re-arm it.                                                                                              | `createSyntheticFallback.ts:104-127`                                        | No change needed. Verify in Task 4, do not "fix".                                                                                                                                                                                                                                                                                                                                  |
+| Every commit path already overwrites in place: `renderer.upload(id, …)` (galaxy, star), `setMap` / `setRingTexture` / `setPlaceholderMap` (body), `uploadVolumeField` → `renderer.upload(id, cube)` (volumes).                                 | Task 4's file list                                                          | The only commit that does NOT is the galaxy one, and only because `dissolvePrevious` makes it fade to zero first. Ruling 3.                                                                                                                                                                                                                                                        |
+| The device is not reachable from `EngineState`; registry-built slot factories get `SlotDeps = { state, cb }` only.                                                                                                                             | `SlotDeps.d.ts`, `rebuildHiResFamousForTier.ts:129`                         | The hi-res row must be `built: 'external'` and minted in `wireSlots`, beside the point and body-texture families (Task 9).                                                                                                                                                                                                                                                         |
 
 ## Rulings
 
@@ -153,8 +165,8 @@ cannot know whether this load is a tier swap, and re-deriving "is this a tier sw
 demand loop reinstates the bespoke transition this PR deletes. Inferring it from "the slot already
 had a value" is the alternative `GalaxyCatalogReq`'s own docblock rejects, because re-enable and
 `forceReload` would then dissolve too. So: `dissolvePrevious`, `dissolveCatalogBuffer.ts` and
-their two test files go (Task 13). **The user sees this**: a tier swap stops fading the old
-catalog out and instead replaces it on the frame the new buffer lands. Task 14 attests it.
+their two test files go (Task 12). **The user sees this**: a tier swap stops fading the old
+catalog out and instead replaces it on the frame the new buffer lands. Task 13 attests it.
 
 **Ruling 4 — `sameRequest` is a SHALLOW structural compare, and a flat-request invariant test
 guards it.** `req(tier)` allocates a fresh object per call, so identity comparison always drifts
@@ -170,17 +182,20 @@ stubbed with `lastRequest: () => null` (which is how `demandTable.test.ts:107` a
 `reevaluateDemand.test.ts` build theirs) would drift on the first frame, and the boot set the spec
 requires unchanged would change.
 
-**Ruling 6 — the reload goes through the QUEUE, not a direct `slot.load()`.** `makeRunTierTransition`
-calls `load()` directly on every reloading source in one synchronous loop — the exact
-all-at-once pattern the bounded queue exists to prevent, applied to the largest payloads the app
-has. Routing drift through `queue.enqueueMany` costs one closure per drifted row and buys a tier
-swap the same priority ordering boot gets. The enqueued closure re-checks the drift at run time
-(the same predicate at the other moment that matters), mirroring the idle edge's re-check at
-`reevaluateDemand.ts:154`.
+**Ruling 6 — the reload is a DIRECT `slot.load()`, not a queue entry.** The queue cannot do the job:
+`admit` drops a key that is already in flight (`priorityQueue.ts:130`, and the docblock above it
+records why — re-admitting was a double-fetch bug), so a queued reload for a slot the queue is
+currently loading would be silently discarded and Ruling 1 would be dead on its commonest case, a
+flip while the fetch is still running. Drift therefore calls `slot.load(req)` directly; `load`
+aborts the in-flight controller (`AssetSlot.ts:227`) and bumps the generation, which is the
+supersede semantics `makeRunTierTransition` relies on today. One path, no re-check closure. The
+price is that a tier swap's four or five re-fetches are not priority-ordered against each other the
+way boot's are — accepted, because the alternative is a second, queue-shaped reload path that
+cannot supersede, i.e. two mechanisms where the whole plan is about having one.
 
 **Ruling 7 — `CompanionAssetReq` dies with `loadCompanionAssets`.** It exists, by its own
 docblock, so `loadCompanionAssets` could dispatch `{ tier }` generically. `famousGalaxiesMeta`
-takes its parent's `GalaxyCatalogReq` (Task 9); `famousStarsMeta` has no parent and its fetcher
+takes its parent's `GalaxyCatalogReq` (Task 8); `famousStarsMeta` has no parent and its fetcher
 ignores the tier, so its request becomes `undefined`, like `cf4Density`'s. Phantom tier fields in
 a request are what made the six untiered galaxy catalogs look drifted in the first place.
 
@@ -192,19 +207,20 @@ current. A hook with no caller is liability.
 **Ruling 9 — `watchTierSaga` keeps its other two duties.** The Milky-Way `starCount` re-seed and
 the galaxy focus-id re-anchor stay exactly as they are; only the `getContext('runTierTransition')`
 read and the `run?.(prev, next)` call go. Both are recorded in spec §9(d)'s adjacent findings as
-Layer leaks and belong to (e)/PR-D, not here.
+Layer leaks and belong to (e)/PR-D, not here. One thing does change around them: after this PR the
+reload starts from a FRAME, so `tier/` must be a wake route in its own right (Task 10) rather than
+riding the incidental `setMilkyWayTuning` put at `watchTierSaga.ts:73` — a `settings/` write that
+(e) moves out of this saga, taking the wake with it.
 
 ## File structure
 
 **Created**
 
 ```
-src/@types/loading/HeldValue.d.ts                the value a slot keeps serving through a reload
 src/@types/loading/HiResFamousReq.d.ts           { layerSide }
 src/@types/engine/subsystems/HiResFamousPair.d.ts   the texture + planner the slot commits as one
-src/utils/loading/committedValue.ts              LoadState → the committed value, ready or held
 src/utils/loading/sameRequest.ts                 shallow structural request equality
-src/data/fetchTierFor.ts                         the tier whose variant a source actually fetches
+src/utils/loading/shipsTierVariants.ts           does this source ship per-tier files at all
 src/services/engine/wiring/galaxyCatalogRequest.ts  the one point-source request builder
 src/services/engine/wiring/requestDrifted.ts     the drift predicate the loop's fourth edge reads
 src/services/engine/wiring/wireHiResFamousSlot.ts   mints the externally-built hi-res slot
@@ -214,30 +230,33 @@ tests/…                                          mirrors, listed per task
 **Modified**
 
 ```
-src/@types/loading/LoadState.d.ts:11-16          loading/committing/error gain `held?`
-src/@types/loading/AssetSlot.d.ts                lastRequest() docblock: drift, not stale-tier evict
-src/@types/loading/GalaxyCatalogReq.d.ts         −dissolvePrevious (T13)
-src/@types/loading/Committer.d.ts:12             the dissolve sentence goes (T13)
+src/@types/loading/AssetSlot.d.ts                +committed(); lastRequest() docblock: drift, not stale-tier evict
+src/@types/loading/GalaxyCatalogReq.d.ts         tier becomes optional (T5); −dissolvePrevious (T12)
+src/@types/loading/FilamentReq.d.ts              the file variant, not the tier (T5)
+src/@types/loading/Committer.d.ts:12             the dissolve sentence goes (T12)
 src/@types/engine/state/EngineAssetSlots.d.ts:48-50  famousGalaxiesMeta/famousStarsMeta Req types; +hiResFamous
-src/@types/engine/wiring/GalaxyCatalogSourceConfig.d.ts:10,63,68  the loadCompanionAssets prose (T13)
-src/@types/engine/EngineCallbacks.d.ts:26-27     the runTierTransition sentence (T11)
-src/services/loading/reduceLoadState.ts:32-80    load-started/committing/gave-up carry `held`
-src/services/loading/AssetSlot.ts:112-117,237-240,267-300  dispatch, current(), release()
-src/services/loading/slotReady.ts:17             reads committedValue
-src/services/engine/frame/earthSurfaceTier.ts:23 ready-only read → committedValue
-src/services/engine/presentation/produceConstellationCaptions.ts:55  same
+src/@types/engine/wiring/GalaxyCatalogSourceConfig.d.ts:10,63,68  the loadCompanionAssets prose (T12)
+src/@types/engine/EngineCallbacks.d.ts:26-27     the runTierTransition sentence (T10)
+src/data/tierTargets.ts:48,90-99                 both helpers take an optional tier; the predicate moves out
+src/services/loading/AssetSlot.ts:237-239,278-300  +committed(), current(), release()
+src/services/loading/slotReady.ts:17             reads slot.committed()
+src/services/loading/fetchers/galaxyCatalogFetcher.ts:53,56  the optional tier
+src/services/loading/fetchers/filamentFetcher.ts:1-22,34  the file-variant request; −the frozen policy
+src/services/engine/frame/earthSurfaceTier.ts:23-24  ready-only read → slot.committed()
+src/services/engine/presentation/produceConstellationCaptions.ts:53-55  same
 src/services/engine/wiring/reevaluateDemand.ts:78,88-110,113-197  −staleTierEvict, +the drift edge
-src/services/engine/wiring/assetWiring.ts:78-92,106-116,246-263   point/star/companion req
+src/services/engine/wiring/assetWiring.ts:85,112,246-263,268  point/star/companion/filaments req
 src/services/engine/wiring/galaxyCatalogSourceRegistry.ts:24,105-112,132-145  −companions, −dissolve
-src/services/engine/wiring/wireImpostorSubsystems.ts:52-62,105-106  the hi-res pair leaves (T10)
+src/services/engine/wiring/wireImpostorSubsystems.ts:52-62,105-106  the hi-res pair leaves (T9)
 src/services/engine/phases/wireSlots.ts:124-129  wireHiResFamousSlot joins the external mints
 src/services/engine/engine.ts:443                −runTierTransition
 src/store/types.ts:69,127                        −RunTierTransition, −the SagaContext entry
+src/store/effects/watchWakeSaga.ts:47            WAKE_ROUTES gains tierRoute (T10)
 src/state/tier/watchTierSaga.ts:68,75            −the context read and the run call
 src/state/selection/captureGalaxyFocusIds.ts:33,66  willSourceReload → request drift
-src/services/engine/frame/renderFrame.ts:151     the dissolve comment (T13)
-tests/support/createTestStore.ts:77              −runTierTransition (T11)
-docs/RENDERER.md                                 the tier-swap paragraph (T12/T13 riders, swept in T12)
+src/services/engine/frame/renderFrame.ts:151     the dissolve comment (T12)
+tests/support/createTestStore.ts:77              −runTierTransition (T10)
+docs/RENDERER.md                                 the tier-swap paragraph (T11/T12 riders, swept in T11)
 ```
 
 **Deleted**
@@ -288,121 +307,92 @@ counts and `Object.is`-equal values at every own key; anything else is false.
 - [ ] Test `a nested object value is never equal across allocations` — asserts the known
       limitation explicitly so the invariant test below reads as its guard, not as trivia.
 - [ ] Test (`assetWiringRequestShape.test.ts`) `every ASSET_WIRING row's req is undefined or a flat
-    record of primitives, at every tier` — iterate the real `ASSET_WIRING` × `['small','medium','large']`,
+  record of primitives, at every tier` — iterate the real `ASSET_WIRING` × `['small','medium','large']`,
       assert each result is `undefined` or an object whose every own value is a `string | number |
-    boolean`. Failing message must name the offending row key.
+  boolean`. Failing message must name the offending row key.
 - [ ] Test `every ASSET_WIRING row's req is stable across two calls at the same tier` — for each row
       and tier, `sameRequest(row.req(t), row.req(t))` is true. This is the reload-storm guard stated
       as the property the loop actually depends on.
 - [ ] `npm test -- sameRequest assetWiringRequestShape` green. Commit.
 
-## Task 2 — `LoadState` carries the held value
+## Task 2 — the slot serves its committed value
 
-**Files:** `src/@types/loading/HeldValue.d.ts`, `src/utils/loading/committedValue.ts` (new);
-`src/@types/loading/LoadState.d.ts`, `src/services/loading/reduceLoadState.ts` (modify);
-`tests/utils/loading/committedValue.test.ts` (new), `tests/services/loading/reduceLoadState.test.ts` (modify).
+**Files:** `src/services/loading/AssetSlot.ts:237-239,278-300`,
+`src/@types/loading/AssetSlot.d.ts` (modify); `tests/services/loading/AssetSlot.test.ts` (modify).
 
 **Produces:**
 
 ```ts
-// src/@types/loading/HeldValue.d.ts
-/** The last committed value a slot keeps serving while it reloads. Dropped only by release(). */
-export type HeldValue<T> = { readonly value: T; readonly loadedAtMs: number };
-
-// src/@types/loading/LoadState.d.ts — the three non-terminal states gain it
-export type LoadState<T> =
-  | { kind: 'idle' }
-  | {
-      kind: 'loading';
-      req: unknown;
-      loaded: number;
-      total: number;
-      attempt: number;
-      held?: HeldValue<T>;
-    }
-  | { kind: 'committing'; req: unknown; held?: HeldValue<T> }
-  | { kind: 'ready'; req: unknown; value: T; loadedAtMs: number }
-  | { kind: 'error'; req: unknown; error: Error; finalAttempt: number; held?: HeldValue<T> };
-
-// src/utils/loading/committedValue.ts — the ONE reading of "this slot has a committed value"
-export function committedValue<T>(state: LoadState<T>): HeldValue<T> | null;
+// src/@types/loading/AssetSlot.d.ts — one new accessor on the type
+/**
+ * The slot's committed state: the current one when `ready`, else the last `ready`
+ * state it reached. The ONE reading of "this slot has a committed value" — a slot
+ * reloading, committing or erroring over a previous commit still has one, which is
+ * what lets a tier swap replace data in place. `release()` is the only thing that
+ * clears it.
+ */
+committed(): (LoadState<T> & { kind: 'ready'; req: Req }) | null;
 ```
 
-**Behaviour:** `reduceLoadState` carries `held` forward — `load-started` from `ready` seeds it from
-that state's `value` / `loadedAtMs`, from `loading` / `committing` / `error` it copies the existing
-`held`, from `idle` it is absent; `committing` and `gave-up` copy the incoming state's `held`;
-`committed` replaces the state with a fresh `ready` and the held value is gone with it (the new
-value IS the committed one). `committedValue` returns `{ value, loadedAtMs }` for `ready` and
-`state.held ?? null` otherwise, so no caller writes the two-arm read twice.
+**Behaviour:** the accessor reads the `lastReady` cell that already exists (`AssetSlot.ts:75`,
+written on every `ready` dispatch at `:114`, cleared by `release()` at `:292`) — no new cell, no
+`LoadState` field, no reducer change. The `req: Req` in the intersection narrows `LoadState`'s
+`req: unknown` for the caller; without it Task 3's `committed()?.req.tier` cannot typecheck and
+would need a cast, which is the thing this accessor exists to avoid.
 
-- [ ] Test `load-started from ready carries the previous value as held` — reduce
-      `{ kind: 'ready', req: 'a', value: 7, loadedAtMs: 100 }` with `{ kind: 'load-started', req: 'b' }`;
-      expect `{ kind: 'loading', req: 'b', loaded: 0, total: 0, attempt: 0, held: { value: 7, loadedAtMs: 100 } }`.
-- [ ] Test `load-started from idle holds nothing` — `held` is `undefined`.
-- [ ] Test `committing and gave-up preserve held` — drive `ready → loading → committing` and
-      `ready → loading → gave-up`, asserting `held.value === 7` at each step.
-- [ ] Test `committed replaces the held value with the new one` — `committing` (with `held`) +
-      `{ kind: 'committed', value: 9, nowMs: 200 }` → `{ kind: 'ready', value: 9, loadedAtMs: 200 }`
-      with no `held` key.
-- [ ] Test `bytes and retry-scheduled preserve held` — the two `{ ...state }` spreads; one assertion
-      each, because a hand-written rebuild in either arm would silently drop it.
-- [ ] Test (`committedValue.test.ts`) `ready yields its own value`, `a reloading slot yields the
-    held value`, `idle yields null`, `a first-ever error yields null`.
-- [ ] `npm test -- reduceLoadState committedValue` green. Commit.
-
-## Task 3 — the slot serves the held value
-
-**Files:** `src/services/loading/AssetSlot.ts:112-117,237-240,259-300` (modify),
-`src/@types/loading/AssetSlot.d.ts` (docblocks); `tests/services/loading/AssetSlot.test.ts` (modify).
-
-**Behaviour:** `current()` returns `committedValue(state)?.value ?? null`. `release()` keeps its
-exact semantics — the `onRelease` hook still fires exactly once, gated on a committed value
-existing (now read through `committedValue`, so it also fires for a slot released mid-reload, which
-today leaks the previous commit's resources). `cancel()` keeps rolling back to `lastReady` as
-today. Nothing else in the file changes; do not touch the generation counter, the commit chain or
-the three race-checks.
+`current()` returns `committed()?.value ?? null`. `release()` keeps its exact semantics — the
+`onRelease` hook still fires exactly once, gated on a committed value existing (now read through
+`committed()`, so it also fires for a slot released mid-reload, which today leaks the previous
+commit's resources). `cancel()` keeps rolling back to `lastReady` as today. Nothing else in the
+file changes; do not touch the generation counter, the commit chain or the three race-checks.
 
 The `AssetSlot.d.ts` docblocks for `lastRequest()` and `release()` state the stale-tier evict edge
-as their reason; rewrite both to name the drift edge and "release is distance eviction only". Keep
-them shorter than they are now.
+as their reason; rewrite both to name the drift edge and "release is distance eviction only". The
+`lastRequest()` one must also say what now separates it from `committed().req`: it is the request
+of the last load ATTEMPT, so during a reload it is already the NEW one.
 
-- [ ] Test `current() returns the previous value while a reload is in flight` — a slot with a
-      never-resolving second fetch: load → resolve → `current()` is the first value; load again;
-      `state().kind` is `'loading'` and `current()` is STILL the first value.
-- [ ] Test `current() returns the new value once the reload commits` — resolve the second fetch;
-      `current()` is the second value, `state().kind` is `'ready'`.
-- [ ] Test `a failed reload keeps serving the last committed value` — second fetch rejects to
-      exhaustion; `state().kind` is `'error'` and `current()` is the first value.
-- [ ] Test `release() during a reload runs onRelease once with the held value` — the leak this
+- [ ] Test `committed() returns the ready state itself` — including its `req`.
+- [ ] Test `committed() returns the previous ready state while a reload is in flight` — a slot with
+      a never-resolving second fetch; the returned `req` is the PREVIOUS request, not the new one.
+- [ ] Test `committed() is null before a slot has ever committed` — idle, and a first-ever load that
+      errors to exhaustion.
+- [ ] Test `committed() survives a failed reload` — second fetch rejects to exhaustion;
+      `state().kind` is `'error'` and `committed()` is the first ready state.
+- [ ] Test `current() returns the previous value while a reload is in flight`, and
+      `current() returns the new value once the reload commits`.
+- [ ] Test `release() during a reload runs onRelease once with the committed value` — the leak this
       change closes; assert the hook's argument is the first value and the call count is 1.
-- [ ] Test `release() drops the held value` — after release, `current()` is null and `state().kind`
-      is `'idle'`.
+- [ ] Test `release() drops the committed value` — after release, `committed()` and `current()` are
+      null and `state().kind` is `'idle'`.
 - [ ] Existing `AssetSlot.test.ts` cases stay green unedited except where they assert
       `current() === null` mid-load on a slot that had committed before — adapt those and say so in
       the task report; a case asserting the blank is asserting the behaviour this PR changes.
 - [ ] `npm test -- AssetSlot` green. Commit.
 
-## Task 4 — `slotReady` and the two direct readers
+## Task 3 — `slotReady` and the two direct readers
 
-**Files:** `src/services/loading/slotReady.ts`, `src/services/engine/frame/earthSurfaceTier.ts:23`,
-`src/services/engine/presentation/produceConstellationCaptions.ts:55` (modify);
+**Files:** `src/services/loading/slotReady.ts`, `src/services/engine/frame/earthSurfaceTier.ts:23-24`,
+`src/services/engine/presentation/produceConstellationCaptions.ts:53-55` (modify);
 `tests/services/loading/slotReady.test.ts` (modify).
 
-**Behaviour:** `slotReady(slot)` becomes `slot != null && committedValue(slot.state()) !== null` —
-"has a committed value", which is what its own docblock already claims it means and what every
-consumer wants. `earthSurfaceTier` and `produceConstellationCaptions` each read a slot's value
-behind a `kind === 'ready'` test; both re-point at `committedValue(...)` so a reload does not flip
-the reported Earth surface tier or drop the constellation captions for the duration of a fetch.
+**Behaviour:** `slotReady(slot)` becomes `slot != null && slot.committed() !== null` — "has a
+committed value", which is what its own docblock already claims it means and what every consumer
+wants. `earthSurfaceTier` returns `slot.committed()?.req.tier ?? state.tier`: the tier of the
+COMMITTED request, **not** `lastRequest()`, which is set at the top of `load()`
+(`AssetSlot.ts:219`) and so already reports the NEW tier the instant a reload starts — the exact
+lie this function exists to prevent. `produceConstellationCaptions` reads `slot.committed()?.value`
+so a reload does not drop the constellation captions for the duration of a fetch.
 
 - [ ] Test `slotReady is true for a slot reloading with a previous commit` — the new leg, the one
       the whole PR turns on.
 - [ ] Test `slotReady is false for a slot loading for the first time` — the existing
       `'committing'` case keeps its meaning for a never-committed slot; keep both.
 - [ ] `earthSurfaceTier` test: add `a body-texture slot reloading at a new tier keeps reporting the
-    committed tier` (the existing test file pins the ready and absent arms).
+  committed tier` — drive the slot so `lastRequest()` and `committed().req` disagree, or the test
+      passes against either read (the existing test file pins the ready and absent arms).
 - [ ] `npm test -- slotReady earthSurfaceTier produceConstellationCaptions` green. Commit.
 
-## Task 5 — the audit the spec schedules (no code)
+## Task 4 — the audit the spec schedules (no code)
 
 **Files:** none. Output is a markdown report under the SDD workspace, quoted into the PR body.
 
@@ -416,67 +406,96 @@ finding is the interesting outcome and stops the task for a ruling.
       the overwrite), the body texture family (`bodyTextureSlotRegistry.ts:35-55` — `setMap`,
       `setRingTexture`, `setTexture`), the body atlas (`bodyTextureAtlasSlot.ts:23-46` —
       `setPlaceholderMap`), the star upload (`starCatalogSlot.ts:48-55` — `renderer.upload(source,
-    catalog)`), and the four volume slots through `uploadVolumeField.ts:17-29` —
+  catalog)`), and the four volume slots through `uploadVolumeField.ts:17-29` —
       `renderer.upload(id, cube)` plus an `addVolumeField` dispatch that is idempotent per id.
       For each: does a second commit for the same id replace, or append/leak?
 - [ ] **Every `slotReady` / `current()` / `state().kind === 'ready'` consumer tolerates a ready
       slot that is reloading.** `rg -n "slotReady|\.current\(\)|state\(\)\.kind" src` and classify
-      every hit: re-pointed in Task 4, cosmetic (the DebugPanel rows), or unaffected. Expected
+      every hit: re-pointed in Task 3, cosmetic (the DebugPanel rows), or unaffected. Expected
       unaffected-but-worth-stating: `createSyntheticFallback.ts:104-127` (once-only gate),
       `installSlotReadyWake.ts:32` (wakes again on the reload's commit, which is correct),
       `awaitSlotReady.ts:121-126` (resolves on the first `ready`; a reload cannot un-resolve a
       settled promise).
 - [ ] **`demandTable.test.ts`'s boot set is unchanged by this PR** — read the `firedKeys`
       expectation and confirm no stub slot in the fixtures reaches the drift edge, given Ruling 5
-      (`lastRequest: () => null` at `demandTable.test.ts:107`). State the conclusion; Task 7 proves
+      (`lastRequest: () => null` at `demandTable.test.ts:107`). State the conclusion; Task 6 proves
       it by running the suite.
 - [ ] Report findings. No commit (or a docs-only commit if a finding lands in the PR body).
 
-## Task 6 — requests state what is fetched
+## Task 5 — requests state what is fetched
 
-**Files:** `src/data/fetchTierFor.ts`, `src/services/engine/wiring/galaxyCatalogRequest.ts` (new);
-`src/services/engine/wiring/assetWiring.ts:78-92,106-116` (modify);
-`tests/data/fetchTierFor.test.ts` (new), `tests/services/engine/wiring/assetWiring.test.ts` (modify).
+**Files:** `src/utils/loading/shipsTierVariants.ts`,
+`src/services/engine/wiring/galaxyCatalogRequest.ts` (new); `src/data/tierTargets.ts:48,90-99`,
+`src/@types/loading/GalaxyCatalogReq.d.ts`, `src/@types/loading/FilamentReq.d.ts`,
+`src/services/loading/fetchers/galaxyCatalogFetcher.ts:53,56`,
+`src/services/loading/fetchers/filamentFetcher.ts:1-22,34`,
+`src/services/engine/wiring/assetWiring.ts:85,268` (modify);
+`tests/utils/loading/shipsTierVariants.test.ts`,
+`tests/services/engine/wiring/galaxyCatalogRequest.test.ts` (new),
+`tests/services/engine/wiring/assetWiring.test.ts`,
+`tests/services/loading/fetchers/filamentFetcher.test.ts` (modify).
 
 **Produces:**
 
 ```ts
-// src/data/fetchTierFor.ts
+// src/utils/loading/shipsTierVariants.ts
 /**
- * The tier whose file this source actually fetches. A source that ships one file for
- * every tier collapses to a single value, so a tier change produces no request drift
- * and no re-download of bytes that did not change. This is the fold of the deleted
- * `willSourceReload`: a source reloads iff its request drifts.
+ * A galaxy catalog ships per-tier `.bin` variants iff it carries any per-tier cap.
+ * ONE site: `tierFilenameForSource` picks `<base>-<tier>.bin` vs `<base>.bin` with it and
+ * `galaxyCatalogRequest` decides whether the request names a tier with it, so a request
+ * and the file it names cannot disagree.
  */
-export function fetchTierFor(source: SourceType, tier: Tier): Tier;
+export function shipsTierVariants(tierTargets: Partial<Record<Tier, number>>): boolean;
 
 // src/services/engine/wiring/galaxyCatalogRequest.ts
 /** The ONE point-source request. The famous-meta companion row calls it too (D11 will derive it). */
 export function galaxyCatalogRequest(source: SourceType, tier: Tier): GalaxyCatalogReq;
+
+// src/@types/loading/GalaxyCatalogReq.d.ts — the tier is now optional: absent means
+// "this source ships one file for every tier", which is what the fetcher needs to know.
+export type GalaxyCatalogReq = { source: SourceType; tier?: Tier; dissolvePrevious?: boolean };
+
+// src/@types/loading/FilamentReq.d.ts — the file variant, not the store's tier
+export type FilamentReq = { small: boolean };
 ```
 
-**Behaviour:** `fetchTierFor` reads `SOURCE_REGISTRY[source]`: a `galaxyCatalog` entry is tiered iff
-`Object.keys(entry.tierTargets).length > 0` (the same test `tierFilenameForSource` uses to decide
-between `<base>-<tier>.bin` and `<base>.bin`, so the two cannot disagree); a `starCatalog` entry is
-tiered iff `entry.tiered`; anything else is tier-agnostic. Untiered returns one module-level
-canonical tier; tiered returns `tier` unchanged. `galaxyCatalogRequest` is
-`{ source, tier: fetchTierFor(source, tier) }`. `pointRow.req` and `starCatalogRow.req` both route
-through them.
+**Behaviour:** `galaxyCatalogRequest` returns `{ source, tier }` when the registry entry is a galaxy
+catalog whose `tierTargets` ships variants, and `{ source }` otherwise — no phantom tier. The
+predicate is lifted out of `tierFilenameForSource` (`tierTargets.ts:95-99`) so both call it.
+`tierTarget` and `tierFilenameForSource` take `tier?: Tier` to accept the optional; an absent tier
+is only legal for a source that ships no variants, and `tierFilenameForSource` throws otherwise,
+beside its existing `binBaseName` throw. `galaxyCatalogFetcher:53,56` then passes `req.tier` through
+untouched: an untiered source's `tierTarget` is `undefined` (never `0`, so the empty-catalog
+short-circuit is unaffected) and its filename is the bare one.
 
-- [ ] Test `a tiered galaxy catalog fetches its own tier` — SDSS/GLADE/Milliquas: `fetchTierFor(src, t) === t`
-      for all three tiers.
-- [ ] Test `an untiered galaxy catalog collapses to one tier` — 2MRS, Famous and the three DESI
-      cuts return the SAME value at every tier. Assert the collapse, not the literal value.
-- [ ] Test `the collapse agrees with the filename` — for every galaxy-catalog source with a
-      `binBaseName`, `tierFilenameForSource(src, a) === tierFilenameForSource(src, b)` implies
-      `fetchTierFor(src, a) === fetchTierFor(src, b)`. This is the invariant the drift edge rests
-      on; derive both sides from the registry, do not restate a table.
-- [ ] Test `a tiered star catalog fetches its own tier` — Gaia.
-- [ ] `assetWiring.test.ts`: add `an untiered point source's request is identical across tiers` and
+The star row does NOT change: Gaia is the only star catalog that ships a `.bin`
+(`gaia-stars.ts:34`, `tiered: true`), so `{ source, tier }` already names its file honestly.
+
+**Filaments.** The `filaments` row's `req: (tier) => ({ tier })` (`assetWiring.ts:268`) drifts on
+every flip, but the fetcher is two-file (`filamentFetcher.ts:34`). Its request becomes the file
+variant — `{ small: tier === 'small' }` — so it drifts only across the small boundary, and the
+fetcher reads the flag instead of re-deriving it from a tier. Delete the fetcher docblock's
+"Filaments don't swap on tier flip" policy paragraph (`filamentFetcher.ts:9-13`): D3 supersedes it,
+and the swap is a named behaviour change of this plan (Goal, Task 13, DoD).
+
+- [ ] Test `an untiered galaxy catalog's request names no tier` — 2MRS, Famous and the three DESI
+      cuts: `'tier' in req` is false, and `sameRequest(req(small), req(large))` is true.
+- [ ] Test `a tiered galaxy catalog's request carries its tier` — SDSS/GLADE/Milliquas: the request
+      differs across all three tiers, via `sameRequest`.
+- [ ] Test `the request agrees with the filename` — for every galaxy-catalog source with a
+      `binBaseName` and every tier pair: `tierFilenameForSource(src, a) === tierFilenameForSource(src, b)`
+      iff `sameRequest(galaxyCatalogRequest(src, a), galaxyCatalogRequest(src, b))`. The invariant
+      the whole drift edge rests on; derive both sides from the registry, do not restate a table.
+- [ ] `assetWiring.test.ts`: `an untiered point source's request is identical across tiers` and
       `a tiered point source's request differs across tiers`, both via `sameRequest`.
-- [ ] `npm test -- fetchTierFor assetWiring` green. Commit.
+- [ ] Test `the filaments request drifts only across the small boundary` — `sameRequest` true for
+      medium vs large, false for small vs medium.
+- [ ] Test `the filament fetcher picks its file from the request flag` — the existing per-tier
+      filename cases re-point at `{ small: true/false }`.
+- [ ] `npm test -- shipsTierVariants galaxyCatalogRequest assetWiring filamentFetcher tierTargets`
+      green. Commit.
 
-## Task 7 — the drift edge
+## Task 6 — the drift edge
 
 **Files:** `src/services/engine/wiring/requestDrifted.ts` (new);
 `src/services/engine/wiring/reevaluateDemand.ts:78,88-110,113-197` (modify);
@@ -505,16 +524,20 @@ edges, in this order, still inside the existing per-row `try`:
 2. `idle`, not demanded → `queue.drop`, unchanged (`:168-171`).
 3. `ready` + `row.release?.(ctx)` → `slot.release()`. The distance edge alone now (Ruling 3 of the
    spec's own §5.4 unification survives; the stale-tier reason is gone).
-4. non-idle + `row.demand(ctx)` + `requestDrifted(slot, row, tier)` → enqueue a RELOAD entry:
-   same `key` and `-row.priority`, whose fetcher rebuilds `row.req(state.tier)` at run time,
-   returns early if the drift has since closed, and otherwise `await slot.load(req)`.
+4. non-idle + `row.demand(ctx)` + `requestDrifted(slot, row, tier)` → `void slot.load(row.req(state.tier))`,
+   called DIRECTLY, no queue entry (Ruling 6). The queue would drop it (`priorityQueue.ts:130`) for
+   the one case this edge exists for, and `slot.load` already aborts the in-flight controller
+   (`AssetSlot.ts:227`). No run-time re-check closure: decision and action are the same moment.
 
 Order the fourth edge's conjuncts so `row.req(tier)` is reached last — non-idle, then
 `lastRequest() !== null`, then `demand`, then the compare. It runs every frame for every row.
 
 The module docblock's "Why there are THREE edges, not two" section becomes four and must state the
 new invariant in one place: **drift reloads, it never releases; `release()` is distance eviction
-only.** Delete `staleTierEvict`'s docblock with the function — do not re-home it.
+only.** Its claim that "a throw out of `req(tier)` or `slot.load()` no longer lands here, because
+both now run inside the enqueued closure" (`reevaluateDemand.ts:63-68`) stops being true — the
+drift edge calls both directly, inside the per-row `try` — so correct that paragraph in the same
+commit. Delete `staleTierEvict`'s docblock with the function; do not re-home it.
 
 - [ ] Test (`requestDrifted.test.ts`) `a null lastRequest is never drift` (Ruling 5).
 - [ ] Test `an equal request is not drift` and `a differing request is drift` — built from the real
@@ -522,25 +545,26 @@ only.** Delete `staleTierEvict`'s docblock with the function — do not re-home 
 - [ ] `reevaluateDemand.test.ts`: `a ready slot whose request drifted is re-loaded, not released` —
       assert `slot.load` called once with the new request AND `slot.release` never called. This is
       the headline assertion of the PR.
-- [ ] Test `a loading slot whose request drifted is re-loaded` (Ruling 1).
 - [ ] Test `an errored slot whose request drifted is re-loaded` (Ruling 1).
 - [ ] Test `a drifted slot whose demand is false is left alone` (Ruling 2) — no `load`, no
       `release`, no queue entry.
 - [ ] Test `a ready slot whose release predicate fires is released, not reloaded` — the distance
       edge still wins over drift for a row that has both.
-- [ ] Test `the reload is enqueued, not loaded directly` (Ruling 6) — with a stub queue that does
-      not run its fetchers, `slot.load` is NOT called and one entry with key and `-priority` is in
-      the batch; then run the fetcher and assert the load.
-- [ ] Test `the enqueued reload is a no-op if the drift closed while it waited` — set
-      `lastRequest()` to the current request before running the fetcher; `slot.load` not called.
+- [ ] Test `a drifted loading slot is superseded by a direct load` (Rulings 1 and 6) — with a stub
+      queue, `slot.load` is called once with the new request and NO entry reaches the batch.
+- [ ] Test `a superseded queued fetch does not surface as a queue error or retry` — a slot whose
+      first load came from the idle edge's enqueued closure (`await slot.load(...)`), then aborted
+      by the drift edge's direct load. Verify how that `await` actually resolves against
+      `AssetSlot.ts`'s `runLoad` before writing the assertion, and pin it: the queue must see one
+      completed entry, not a rejection it re-schedules. If it rejects, stop and report.
 - [ ] Test `a body-texture slot at a stale tier reloads in place` — the generalisation of the
       deleted `staleTierEvict`; the old evict-then-reload assertions in this file are REPLACED, and
       the task report says which.
 - [ ] `npm test -- reevaluateDemand requestDrifted demandTable` green, `demandTable.test.ts`
-      **unedited** (Task 5's conclusion; if it needs an edit, stop and report).
+      **unedited** (Task 4's conclusion; if it needs an edit, stop and report).
 - [ ] Commit.
 
-## Task 8 — the re-anchor capture asks the row, not a second predicate
+## Task 7 — the re-anchor capture asks the row, not a second predicate
 
 **Files:** `src/state/selection/captureGalaxyFocusIds.ts:33,66` (modify);
 `tests/state/selection/captureGalaxyFocusIds.test.ts` (modify).
@@ -565,14 +589,14 @@ losing the guarantee silently would hang a `take`.
 - [ ] Test `a tiered enabled source is captured with its durable id`.
 - [ ] `npm test -- captureGalaxyFocusIds` green. Commit.
 
-## Task 9 — the companion rides its parent's request
+## Task 8 — the companion rides its parent's request
 
 **Files:** `src/services/engine/wiring/assetWiring.ts:246-263`,
 `src/@types/engine/state/EngineAssetSlots.d.ts:48-50`,
 `src/services/loading/fetchers/famousGalaxiesMetaFetcher.ts`,
 `src/services/loading/fetchers/famousStarsMetaFetcher.ts`,
 `src/services/loading/slots/famousGalaxiesMetaSlot.ts`, `src/services/loading/slots/famousStarsMetaSlot.ts`
-(modify); `src/@types/loading/CompanionAssetReq.d.ts` (delete, Task 13);
+(modify); `src/@types/loading/CompanionAssetReq.d.ts` (delete, Task 12);
 `tests/services/engine/wiring/assetWiring.test.ts` (modify).
 
 **Behaviour:** the `famousGalaxiesMeta` row's `req` becomes
@@ -594,7 +618,7 @@ add any core machinery that reads one.
 - [ ] `npm run typecheck` — the `Req` type changes are the check; no cast may appear.
 - [ ] `npm test -- assetWiring famousGalaxiesMeta famousStarsMeta` green. Commit.
 
-## Task 10 — the hi-res famous texture becomes a slot row
+## Task 9 — the hi-res famous texture becomes a slot row
 
 **Files:** `src/@types/loading/HiResFamousReq.d.ts`,
 `src/@types/engine/subsystems/HiResFamousPair.d.ts`,
@@ -664,10 +688,15 @@ boot). `wireSlots` calls `wireHiResFamousSlot` inside the existing
 hand. A composition without those renderers mints no slot, `slotFor` returns undefined, and the row
 is skipped — the same absence contract the point rows have.
 
+`priority: 1` puts a synchronous GPU allocation at the head of the bounded NETWORK queue, ahead of
+every download. That is acceptable because it occupies its pipe for microseconds, not for a
+multi-megabyte fetch; the alternative — a parallel "allocate now, outside the queue" path for one
+row — is the second mechanism this plan exists to remove.
+
 - [ ] Test `the slot allocates at the requested layerSide` — inject factory stubs; assert
       `createHiResFamousTexture` saw `layerSide: 512` for `small` and `1024` for `medium`.
 - [ ] Test `commit binds the new view and hands over the new planner BEFORE destroying the old
-    pair` — the ordering contract; record call order and assert the previous texture's `destroy`
+  pair` — the ordering contract; record call order and assert the previous texture's `destroy`
       runs after `bindHiResArray`.
 - [ ] Test `commit destroys the previous subsystem before the previous texture`.
 - [ ] Test `a first commit destroys nothing` — boot, no previous pair.
@@ -678,13 +707,14 @@ is skipped — the same absence contract the point rows have.
       that fixture, so `slotFor` skips it. Confirm; if the boot set changes, stop and report.
 - [ ] `npm test -- wireHiResFamousSlot wireImpostorSubsystems demandTable` green. Commit.
 
-## Task 11 — delete `makeRunTierTransition` and the saga-context entry
+## Task 10 — delete `makeRunTierTransition`, and wake on `tier/`
 
 **Files:** delete `src/services/engine/wiring/makeRunTierTransition.ts` and
 `tests/services/engine/wiring/makeRunTierTransition.test.ts`; modify
 `src/services/engine/engine.ts:443`, `src/store/types.ts:69,127`,
 `src/state/tier/watchTierSaga.ts:46,68,75`, `src/@types/engine/EngineCallbacks.d.ts:26-27`,
-`tests/support/createTestStore.ts:77`, `tests/state/tier/watchTierSaga.test.ts`,
+`src/store/effects/watchWakeSaga.ts:47`, `tests/support/createTestStore.ts:77`,
+`tests/state/tier/watchTierSaga.test.ts`, `tests/store/effects/watchWakeSaga.test.ts`,
 `tests/services/engine/registerReconcile.test.ts`.
 
 ```bash
@@ -700,6 +730,15 @@ runner in `main.tsx:44`, `SagaContextProvider.tsx:23`, `createAppStore.ts:22`, `
 `watchFocusTweenSaga.ts:5` and `watchSelectionRowsSaga.ts:24` are corrected in the same commit —
 name the demand loop, or drop the clause.
 
+`WAKE_ROUTES` (`watchWakeSaga.ts:47`) gains `tierRoute` (`src/store/constants.ts:25`) in this same
+commit, and it is load-bearing from here on: until now the reload started from the saga's own
+fire-and-forget `run?.()`, but after this task it starts from a FRAME. A `tier/` write must
+therefore wake the render loop in its own right rather than riding the incidental
+`setMilkyWayTuning` put at `watchTierSaga.ts:73` — a `settings/` write that (e) moves out of this
+saga, which would take the wake with it.
+
+- [ ] Test (`watchWakeSaga.test.ts`) `a tier write wakes the render loop` — the same shape as the
+      existing settings/camera/time cases.
 - [ ] `rg -n "runTierTransition|RunTierTransition" src tests` returns nothing.
 - [ ] `watchTierSaga.test.ts` keeps its coverage of the surviving duties and loses only the runner
       assertions; `registerReconcile.test.ts`'s "the two ride one call" case narrows to `reconcile`
@@ -708,7 +747,7 @@ name the demand loop, or drop the clause.
       reload (the drift edge is now the only path). Attest in the task report, not as a gate.
 - [ ] `npm test`, `npm run typecheck` green. Commit.
 
-## Task 12 — delete `rebuildHiResFamousForTier`
+## Task 11 — delete `rebuildHiResFamousForTier`
 
 **Files:** delete `src/services/engine/helpers/rebuildHiResFamousForTier.ts` and
 `tests/services/engine/helpers/rebuildHiResFamousForTier.test.ts`; sweep
@@ -725,7 +764,7 @@ git rm src/services/engine/helpers/rebuildHiResFamousForTier.ts \
       whose commit hands over a new planner; the renderer keeps drawing the old one until then.
 - [ ] `npm test`, `npm run typecheck` green. Commit.
 
-## Task 13 — delete `willSourceReload`, `loadCompanionAssets`, `CompanionAssetReq` and the dissolve
+## Task 12 — delete `willSourceReload`, `loadCompanionAssets`, `CompanionAssetReq` and the dissolve
 
 **Files:** delete `src/services/engine/wiring/willSourceReload.ts`,
 `src/services/engine/wiring/dissolveCatalogBuffer.ts`,
@@ -765,13 +804,13 @@ rather than dying.
       a test — moved, not re-invented.
 - [ ] `npm test`, `npm run typecheck` green. Commit.
 
-## Task 14 — gate: paired perf, and the visual pass the user attests
+## Task 13 — gate: paired perf, and the visual pass the user attests
 
 - [ ] `npm run typecheck` (both projects) — green.
 - [ ] `npm run build` — green.
 - [ ] `npm test` — green. **No pre-committed number.** Five test files die and several are adapted;
-      report the ACTUAL delta with a reason for every difference, reconciled against Tasks 3, 7, 10,
-      11 and 13's reports of which assertions moved where. An unexplained drop means coverage was
+      report the ACTUAL delta with a reason for every difference, reconciled against Tasks 2, 6, 9,
+      10 and 12's reports of which assertions moved where. An unexplained drop means coverage was
       deleted where it should have moved.
 - [ ] **Paired `npm run perf`, REQUIRED.** Read `.claude/skills/perf/SKILL.md` first. Start this
       worktree's dev server and take the port from ITS `Local:` line — in a worktree Vite
@@ -808,7 +847,10 @@ rather than dying.
   - **No spurious re-fetches** — with the network panel open, a tier flip must request only the
     tiered assets: `sdss-*`, `glade-*`, `milliquas-*`, the Gaia bin, the MCPM and Polyphorm `.scfd`.
     NOT `2mrs.bin`, `famous.bin`, the three DESI files, or `famous_galaxies_meta.json`. This is
-    Task 6's whole point and the check that the request really states what is fetched.
+    Task 5's whole point and the check that the request really states what is fetched.
+  - **Filaments** — with filaments enabled, a medium↔large flip must fetch NO filament file at all,
+    and a small↔medium flip must fetch the other one (`filaments.bin` / `filaments-small.bin`)
+    exactly once. The skeleton must not blank while it does.
   - **The re-enable case** — disable a tiered catalog, flip the tier, re-enable it. It must come
     back at the NEW tier. On `main` it comes back at the old one (Findings row 3).
 
@@ -827,8 +869,10 @@ not escalated.
       returns nothing.
 - [ ] `reevaluateDemand.ts` is the ONE place a tier change starts work, and its module docblock
       states the invariant once: drift reloads in place, `release()` is distance eviction only.
-- [ ] `slotReady` and `AssetSlot.current()` both read `committedValue`; no consumer re-writes the
-      ready-or-held two-arm test.
+- [ ] `slotReady` and `AssetSlot.current()` both read `committed()`; no consumer re-writes the
+      ready-or-last-ready two-arm test, and no `held` field was added to `LoadState`.
+- [ ] An untiered galaxy catalog's request carries no `tier` key, and one predicate
+      (`shipsTierVariants`) decides both that and the filename.
 - [ ] `src/@types/engine/state/EngineAssetSlots.d.ts` carries `hiResFamous`, and the LOD-3 pair is
       allocated in exactly one place — the slot's fetch.
 - [ ] The `famousGalaxiesMeta` row's `req` is the identical call the Famous point row makes, with a
@@ -838,7 +882,7 @@ not escalated.
       a test over the real registry.
 - [ ] `demandTable.test.ts`'s boot `firedKeys` set is byte-identical to `main`.
 
-**Named observable behaviours** (Task 14's pass, user-attested)
+**Named observable behaviours** (Task 13's pass, user-attested)
 
 - [ ] A galaxy-catalog tier swap replaces the points in place — no fade-out, no gap.
 - [ ] An Earth close-approach tier swap never shows the low-res atlas placeholder.
@@ -848,6 +892,7 @@ not escalated.
 - [ ] A tier flip re-fetches only the assets whose file actually differs — not 2MRS, Famous, DESI
       or the famous-meta sidecar.
 - [ ] A catalog disabled across a tier flip comes back at the NEW tier when re-enabled.
+- [ ] A small↔medium flip swaps the filament skeleton file; a medium↔large flip fetches none.
 
 **The deferral boundary** — nothing else. No `Layer` value, no `companionOf`, no source row moved,
 no settings type touched, no renderer moved, no change to `watchTierSaga`'s re-anchor or Milky-Way
@@ -858,10 +903,10 @@ duties.
 - **`companionOf` (PR-C / D11).** The companion relation stays authored as two `req`s that call the
   same function. D11 makes it one field on the companion's asset row, from which core derives
   demand (parent not idle), priority (parent + 1) and request (the parent's, riding this PR's drift
-  edge). Task 9 is written so that lands as a substitution, not a rework.
+  edge). Task 8 is written so that lands as a substitution, not a rework.
 - **`watchTierSaga`'s two Layer leaks** (spec §9(d) adjacent findings): `captureGalaxyFocusIds`
   re-anchoring is galaxy knowledge and `setMilkyWayTuning`'s per-tier `starCount` is Milky Way
-  knowledge, both held in a core saga. Task 8 re-points the first onto the new request authority and
+  knowledge, both held in a core saga. Task 7 re-points the first onto the new request authority and
   changes nothing about where it lives. They move with their Layers, (d) PR-D and (e).
 - **P1 and P3–P7** — the contract types, effects-into-`frame`, selection and focus-id composition,
   facts and the handle deletion, `createLayers`, and the galaxy-side un-braids. PR-B and PR-C.
