@@ -5,7 +5,9 @@
  * index buffers, three material textures, a uniform buffer and a bind group
  * each — so `draw` writes a body's uniforms immediately before its own draw,
  * with no shared buffer for a later `writeBuffer` to race against the pending
- * `submit`. No placeholder posture: an id with no asset resident draws NOTHING,
+ * `submit`. Those per-body resources are bind group 0; group 1 is the
+ * renderer-wide material sampler, bound once for every body.
+ * No placeholder posture: an id with no asset resident draws NOTHING,
  * so a body in range but not yet loaded is absent rather than a wrong shape.
  */
 

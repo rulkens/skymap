@@ -16,10 +16,10 @@ import package::lib::math::saturate;
 import package::lib::pbr::pbrDirect;
 
 @group(0) @binding(0) var<uniform> u: MeshBodyUniforms;
-@group(0) @binding(1) var meshSampler: sampler;
 @group(0) @binding(2) var albedoTexture: texture_2d<f32>;
 @group(0) @binding(3) var metalRoughTexture: texture_2d<f32>;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
+@group(1) @binding(0) var meshSampler: sampler;
 
 // Normal-incidence reflectance of a non-metal (~4%), 'lib/pbr.wesl's rock value.
 const DIELECTRIC_F0: f32 = 0.04;
