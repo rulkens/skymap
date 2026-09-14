@@ -35,14 +35,13 @@
  * `.d.ts` and mis-packing silently mis-indexes the LUT (the GPU would not report
  * it; on iOS it would drop the frame). Four live fields:
  *
- *   - `viewHeightKm` = |camLocal| × atmosphereTopKm. `camLocal` is the camera in
- *     atmosphere-top-radius units, built by `bodySlabCamLocal` from the SAME
- *     `ctx.bodyPose(body.id)` seam `atmosphereShellPass`'s fragment marches
- *     along, with the SAME atmosphere-top scale, so scaling its length by
- *     `atmosphereTopKm` recovers the camera radius in km — and the km-baked LUT
+ *   - `viewHeightKm` = |camLocal| × atmosphereTopKm. The entry's `camLocal` is the
+ *     camera in atmosphere-top-radius units — the very vector
+ *     `atmosphereShellPass`'s fragment marches along — so scaling its length by
+ *     `atmosphereTopKm` recovers the camera radius in km, and the km-baked LUT
  *     and the local-unit fragment then agree, as the ratio-based LUT
  *     parametrisation requires.
- *   - `sunZenithCos` = dot(normalize(camLocal), sunDirLocal) — the cosine of
+ *   - `sunZenithCos` = dot(normalize(camLocal), sunLocal) — the cosine of
  *     the sun's zenith angle at the camera, `localUp` being the camera's radial
  *     direction in the body frame.
  *   - `twilightSoftness` — the night-limb fade width. This rides the per-frame
@@ -55,20 +54,14 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
-import type { BodyId } from '../../../@types/data/body/BodyId';
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
-import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { atmosphereDrawList } from './atmosphereDrawList';
 
 /**
  * Bake this frame's sky-view LUT into the atmosphere renderer's own texture for
  * each body in `atmosphereDrawList` — the shared derivation the shell draw walks
- * too — reading the camera altitude off `ctx.bodyPose`, the same body-slab pose
- * seam every other body consumer reads (spec §5). When the list is empty (Earth
- * out of view, sub-pixel, or the handle absent) this is a no-op, the common path
- * away from the near field.
+ * too, camera altitude and sun direction included (spec §5). When the list is
+ * empty (Earth out of view, sub-pixel, poseless, or the handle absent) this is a
+ * no-op, the common path away from the near field.
  */
 export function encodeAtmosphereSkyView(
   encoder: GPUCommandEncoder,
@@ -78,23 +71,11 @@ export function encodeAtmosphereSkyView(
   const renderer = state.gpu.atmosphereShellRenderer;
   if (renderer === null) return;
 
-  for (const { body, params, positionMpc, orientation } of atmosphereDrawList(state, ctx)) {
-    // The SAME pose-provider closure `deriveSlabs` built this body's row from —
-    // NOT a second Mpc-side re-derivation (`camPosLocal`, `ctx.drawCamPos`).
-    // `atmosphereShellPass.draw` composes its MVP from this identical
-    // `pose.eyeRelBodyM`, so the bake and the fragment can never read two
-    // different cameras. `pose` is null only when `bodyId` has no entry in this
-    // frame's body-state map — `atmosphereDrawList` resolves from the SAME map
-    // (`sceneBodyStates`), so this never actually fires; the guard exists so a
-    // future decoupling of the two derivations fails safe rather than crashing.
-    const pose = ctx.bodyPose(body.id as BodyId);
-    if (pose === null) continue;
-    const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
-    // The camera in atmosphere-top-radius units — same util, same scale as the
-    // shell fragment's own `camLocal` (`atmosphereShellPass.ts`).
-    const camLocal = bodySlabCamLocal(pose.eyeRelBodyM, atmosphereTopM);
-    const sun = sunDirLocal(positionMpc, RENDER_ORIGIN_MPC, orientation);
-
+  // `camLocal` and `sunLocal` are the entry's own, derived off the body-slab pose
+  // seam `atmosphereShellPass.draw` composes its MVP from — NOT a second Mpc-side
+  // re-derivation (`camPosLocal`, `ctx.drawCamPos`) — so the bake and the fragment
+  // can never read two different cameras or two different suns.
+  for (const { body, params, camLocal, sunLocal } of atmosphereDrawList(state, ctx)) {
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
     // |camLocal| × atmosphereTopKm recovers the camera radius in km (camLocal is
     // in atmosphere-top-radius units), matching the km-baked LUT parametrisation.
@@ -104,7 +85,8 @@ export function encodeAtmosphereSkyView(
     // guard the divide so a degenerate centre pose bakes a defined (nadir) value.
     const sunZenithCos =
       radius > 0
-        ? (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius
+        ? (camLocal[0] * sunLocal[0] + camLocal[1] * sunLocal[1] + camLocal[2] * sunLocal[2]) /
+          radius
         : 0;
 
     // The twilight fade width + band gain come from the body's `AtmosphereParams`

@@ -59,20 +59,15 @@
  * shared sub-pixel disc cull) — filtered to THIS row's `bodyId`. Because the
  * sky-view bake (`encodeAtmosphereSkyView`) reads the SAME unfiltered list,
  * bake↔draw is equality by construction: a frame can never draw the shell
- * against a LUT it skipped baking. `positionMpc`/`orientation` come from that
- * SAME resolved entry (one `sceneBodyStates` read, shared with the bake), so
- * `sunDirLocal` cannot drift from the sky-view LUT's own sun direction.
+ * against a LUT it skipped baking. The entry also carries the pose-dependent
+ * values (`atmosphereTopM`, `camLocal`, `sunLocal`, `inside`), so the fragment
+ * cannot march a camera or a sun the LUT was not baked from.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { mat4d } from 'wgpu-matrix';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
-import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
-import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
-import { isInsideAtmosphereShell } from '../../../../utils/camera/isInsideAtmosphereShell';
 import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { atmosphereDrawList } from '../atmosphereDrawList';
@@ -100,24 +95,17 @@ export const atmosphereShellPass: ContentPass = {
     // keeps this layer's eyeRelBodyM from ever drifting off that basis.
     const pose = ctx.bodyPose(bodyId);
     if (pose === null) return;
-    const { body, params, positionMpc, orientation } = entry;
+    const { body, params, atmosphereTopM, camLocal, sunLocal, inside } = entry;
 
-    // Scale the unit proxy sphere to the ATMOSPHERE-TOP radius (the shell's
-    // outer extent), in metres — the body-m slab frame's own unit.
-    const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
+    // Scaling the unit proxy sphere by the entry's ATMOSPHERE-TOP radius (the
+    // shell's outer extent, in metres) is what puts the mesh in the body-m slab
+    // frame's own unit, and in the same units as `camLocal`.
     const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, atmosphereTopM);
     // Inverted from the UN-narrowed f64 mvp (dst-last, fresh Float64Array) for
     // the inside-shell entry points' screen→local unproject. Narrowing mvp to
     // f32 first would reintroduce the per-element rounding the slab seam exists
     // to avoid, here for a different consumer.
     const invMvp = mat4d.inverse(mvp);
-    // Sun rotated into the body's local frame (its resolved orientation carries
-    // the axial tilt), co-framed with the in-scatter integral's sun direction.
-    const sun = sunDirLocal(positionMpc, RENDER_ORIGIN_MPC, orientation);
-    // The camera in atmosphere-top-radius units — the view vector the in-scatter
-    // fragment marches along. Matches the altitude `encodeAtmosphereSkyView`
-    // bakes the sky-view LUT from (same pose, same atmosphere-top scale).
-    const camLocal = bodySlabCamLocal(pose.eyeRelBodyM, atmosphereTopM);
     // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
     // atmosphere top is the unit sphere and the ground sphere has this radius.
     const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
@@ -135,10 +123,6 @@ export const atmosphereShellPass: ContentPass = {
     const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
     const ringInnerRatio = ring === undefined ? 0 : ring.innerRadiusKm / params.atmosphereTopKm;
     const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;
-    // camLocal is already atmosphere-top-radius units, so this is the one
-    // comparison spec §4.1 calls for — no new per-frame derivation. The handoff
-    // sits slightly OUTSIDE the top (margin rationale lives in the util).
-    const inside = isInsideAtmosphereShell(camLocal);
     renderer.draw(
       pass,
       body.id,
@@ -146,7 +130,7 @@ export const atmosphereShellPass: ContentPass = {
         // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
         narrowMat4(mvp),
         narrowMat4(invMvp),
-        sun,
+        sunLocal,
         camLocal,
         bottomRadius,
         exposure,

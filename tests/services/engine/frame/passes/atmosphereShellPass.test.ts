@@ -186,7 +186,7 @@ describe('atmosphereShellPass.draw', () => {
     const expectedTopM = ATMOSPHERE_PARAMS.earth!.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     expect(call[2]).toBeCloseTo(expectedTopM);
 
-    expect(camLocalMock).toHaveBeenCalledTimes(1);
+    // The camLocal call is the draw list's now, off this same pose seam.
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
     expect(camLocalMock.mock.calls[0]![1]).toBeCloseTo(expectedTopM);
   });

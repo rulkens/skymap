@@ -14,12 +14,11 @@
  * every body.
  *
  * The other load-bearing assertion is the SOURCE of the camera altitude (the
- * M1 fix): the bake must derive `camLocal` via `bodySlabCamLocal` from
- * `ctx.bodyPose(body.id)` — the SAME body-slab pose seam `atmosphereShellPass`
- * reads for its fragment — NOT a second Mpc-side re-derivation off
- * `ctx.drawCamPos`/`state.cam.position`. The packing test recomputes from the
- * pose fixture directly, and a dedicated test proves a null pose is a per-body
- * skip rather than a crash or a silent fall-back to some other source.
+ * M1 fix): the bake packs the `camLocal` the draw list derived via
+ * `bodySlabCamLocal` from `ctx.bodyPose(body.id)` — the SAME body-slab pose seam
+ * `atmosphereShellPass` reads for its fragment — NOT a second Mpc-side
+ * re-derivation off `ctx.drawCamPos`/`state.cam.position`. The packing test
+ * recomputes it from the pose fixture directly, so any other source fails here.
  *
  * The bake iterates the SAME `atmosphereDrawList` the shell draw walks, so
  * bake↔draw is equality — the shell bakes iff it draws. The bake fixture is
@@ -110,11 +109,9 @@ function makeState(init: { renderer: unknown; earth?: EarthBody | null }): Engin
 }
 
 /** A `BodyPoseProvider` stub returning one fixed pose for 'earth', null otherwise. */
-function makeBodyPose(eyeRelBodyM: Vec3 | null): BodyPoseProvider {
+function makeBodyPose(eyeRelBodyM: Vec3): BodyPoseProvider {
   return (bodyId) =>
-    bodyId === 'earth' && eyeRelBodyM !== null
-      ? { eyeRelBodyM, basisM: [...IDENTITY_MAT3] as Mat3 }
-      : null;
+    bodyId === 'earth' ? { eyeRelBodyM, basisM: [...IDENTITY_MAT3] as Mat3 } : null;
 }
 
 /**
@@ -185,19 +182,6 @@ describe('encodeAtmosphereSkyView', () => {
       encoder,
       makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
       makeState({ renderer, earth: null }),
-    );
-    expect(renderer.encodeSkyView).not.toHaveBeenCalled();
-  });
-
-  it('skips a body whose ctx.bodyPose resolves null this frame, rather than crashing (fail-safe guard)', () => {
-    // `atmosphereDrawList` and `ctx.bodyPose` share one body-state map in
-    // production, so this never actually fires there — but the bake must not
-    // assume it, since the two are two independent reads of that map.
-    const renderer = spyRenderer();
-    encodeAtmosphereSkyView(
-      encoder,
-      makeCtx({ bodyPose: makeBodyPose(null) }),
-      makeState({ renderer }),
     );
     expect(renderer.encodeSkyView).not.toHaveBeenCalled();
   });
