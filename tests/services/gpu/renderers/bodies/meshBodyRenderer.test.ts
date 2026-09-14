@@ -119,7 +119,7 @@ function stubPass(): GPURenderPassEncoder & { setBindGroup: ReturnType<typeof vi
 }
 
 describe('createMeshBodyRenderer', () => {
-  it('mints two bind-group layouts: the per-body one carries the uniform + MESH_TEXTURE_SLOTS bindings and no sampler; the global one carries no per-body resource', () => {
+  it('mints two bind-group layouts: the per-body one carries the uniform, MESH_TEXTURE_SLOTS and probe-cube bindings and no sampler', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
     makeRenderer(mockDevice({ bindGroupLayouts }));
     expect(bindGroupLayouts).toHaveLength(2);
@@ -133,10 +133,6 @@ describe('createMeshBodyRenderer', () => {
     ]);
     expect(bodyEntries[bodyEntries.length - 1]!.texture!.viewDimension).toBe('cube');
     expect(bodyEntries.some((e) => e.sampler !== undefined)).toBe(false);
-
-    const globalEntries = Array.from(bindGroupLayouts[1]!.entries);
-    expect(globalEntries[0]!.binding).toBe(0);
-    expect(globalEntries[0]!.sampler).toBeDefined();
   });
 
   it('binds the LUT and its clamp sampler in the global group', () => {

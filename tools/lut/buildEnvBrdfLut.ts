@@ -41,5 +41,4 @@ function main(): void {
   process.stderr.write(`wrote ${SIZE}x${SIZE} env-BRDF LUT (${texels.byteLength} bytes)\n`);
 }
 
-// Allow the script to be both executed (CLI) and imported (tests).
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

@@ -44,15 +44,16 @@ npm run prebake-mesh -- mer    # Blender 5.2 LTS; ~10 s, not run in CI
 leaves the 21 material-less marker cubes behind, joins the 40 remaining parts,
 smart-UV-projects and bakes all nine materials into one 2048² atlas per
 `BAKE_PASSES` row — albedo, normal, roughness and metallic. Its output and the
-four loose `mer.prebaked.*.png` atlases beside it are gitignored build
-products — regenerate them, don't archive them. The GLB carries the normal
-atlas and the metallicRoughness pair the glTF exporter packs from the last two,
-so `buildMeshes` substitutes nothing: `substituted: []`. Every material here
-authors metallic 0 and roughness 0.5, so those two atlases bake near-flat.
-Two materials carry a SECOND Material Output targeted at Cycles and fed by a
-bare Diffuse BSDF; that output wins over the Principled the file renders with,
-so the pre-bake drops it — left in, those parts bake black albedo (a Diffuse
-node emits nothing) and roughness 1.
+four loose `mer.prebaked.*.png` atlases beside it are gitignored build products
+— regenerate them, don't archive them. The GLB carries the normal atlas and the
+metallicRoughness pair the glTF exporter packs from the last two;
+`substituted: []` on the generated row is the check that the exporter still
+packs them. Every material authors metallic 0, so that atlas bakes flat black.
+Roughness is 0.5 over 90 % of the baked texels and 0.1–0.4 over the rest. Two
+rival Material Output nodes, targeted at Cycles and each fed by a bare Diffuse
+BSDF, win over the Principled the file renders with, so the pre-bake drops them
+— left in, those parts bake black albedo (a Diffuse node emits nothing) and
+roughness 1.
 
 Two things about this file bite:
 

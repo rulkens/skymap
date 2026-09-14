@@ -188,10 +188,10 @@ export function createEngine(
       compositor: null,
       filamentRenderer: null,
       constellationRenderer: null,
+      envBrdfLut: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
       // format change without re-threading bootstrap deps.
       fontAtlases: null,
-      envBrdfLut: null,
       uiCtx: null,
       labelRenderer: null,
       markerLineRenderer: null,

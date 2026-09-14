@@ -19,7 +19,6 @@ type EnvBrdfLutMeta = {
 
 const LUT_BASE = '/lut';
 
-// rg16float: two channels × two bytes.
 const BYTES_PER_TEXEL = 4;
 
 async function fetchLutAsset(file: string): Promise<Response> {

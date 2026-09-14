@@ -37,11 +37,12 @@ npm run prebake-mesh -- voyager    # Blender 5.2 LTS; ~10 s, not run in CI
 
 `tools/meshes/prebake/meshPrebake.py` drops the `_root` placeholder cube, joins
 the three parts, smart-UV-projects and bakes all three materials into one 2048²
-atlas per `BAKE_PASSES` row — albedo, normal, roughness and metallic. Its
-output and the four loose `voyager.prebaked.*.png` atlases beside it are
-gitignored build products — regenerate them, don't archive them. The GLB
-carries the normal atlas and the metallicRoughness pair the glTF exporter packs
-from the last two, so `buildMeshes` substitutes nothing: `substituted: []`.
+atlas per `BAKE_PASSES` row — albedo, normal, roughness and metallic. Its output
+and the four loose `voyager.prebaked.*.png` atlases beside it are gitignored
+build products — regenerate them, don't archive them. The GLB carries the normal
+atlas and the metallicRoughness pair the glTF exporter packs from the last two;
+`substituted: []` on the generated row is the check that the exporter still
+packs them.
 
 ## Attribution
 

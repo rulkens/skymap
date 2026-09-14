@@ -36,8 +36,8 @@ def swap_to_emission(socket_name):
     output instead: the named socket (a scalar as the grey `(v, v, v)`, an image
     re-linked socket to socket) drives Emission Color at strength 1 for the
     duration of the bake. `use_pass_direct`/`use_pass_indirect` are off, so EMIT
-    returns that value unlit. The returned undo is what keeps the swap from
-    leaking into the atlases baked after it."""
+    returns that value unlit. The returned undo runs before the next row bakes,
+    so no swap outlives its own row whatever order BAKE_PASSES lists them in."""
 
     def prepare(materials):
         undo = []
@@ -64,8 +64,8 @@ def swap_to_emission(socket_name):
                     colour.default_value = (v, v, v, 1.0)
                 strength.default_value = 1.0
         if plain:
-            log("%s pass: %d materials have no Principled node — whatever they emit "
-                "bakes as their %s" % (socket_name, plain, socket_name))
+            log("%s pass: %d materials have no Principled node — they bake their own "
+                "emission as %s, black unless they emit" % (socket_name, plain, socket_name))
         return lambda: restore_emission(undo)
 
     return prepare
@@ -200,7 +200,10 @@ def unify_shader_outputs():
         outputs = [n for n in tree.nodes if n.type == "OUTPUT_MATERIAL"]
         if len(outputs) < 2:
             continue
-        keep = next((n for n in outputs if n.is_active_output), outputs[0])
+        active = [n for n in outputs if n.is_active_output]
+        keep = active[0] if active else outputs[0]
+        log("%s: kept output '%s' of %d (%d flagged active)"
+            % (mat.name, keep.name, len(outputs), len(active)))
         keep.target = "ALL"
         for node in [n for n in outputs if n is not keep]:
             tree.nodes.remove(node)
@@ -271,14 +274,17 @@ def unify_source_uvs(meshes):
             layers.remove(other)
         layers[0].name = SOURCE_UV
         layers[0].active_render = True
-    log("re-pointed %d uv references at '%s'" % (repoint_uv_references(), SOURCE_UV))
+    repointed = repoint_uv_references()
+    log("re-pointed %d uv references at '%s'" % (repointed, SOURCE_UV))
 
 
 def repoint_uv_references():
     """Shader nodes that name a UV map by STRING — every glTF-imported Normal
     Map node does — go dangling when the rename above lands, and a Normal Map
     node whose name resolves to nothing bakes FLAT without a word of complaint.
-    The renamed layer is the only one left, so every such reference is it."""
+    The sweep covers every material in the file, not just the kept meshes': on
+    anything that bakes the renamed layer is the only one left, and a node on a
+    dropped object never renders."""
     repointed = 0
     for mat in bpy.data.materials:
         if not mat.use_nodes:
