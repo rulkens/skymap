@@ -114,6 +114,7 @@ import { EASE } from '../animation/ease';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { lerp } from '../../../utils/math/lerp';
 import { toBodyFixedChannels, fromBodyFixedChannels } from './clipFrameChannels';
+import { sameFrame } from './rungs/sameFrame';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.
@@ -483,10 +484,6 @@ type FrameLeg = {
   readonly anchor: BaseSegment | null;
 };
 
-function frameKeyOf(frame: PoseFrame): string {
-  return frame === 'absolute' ? 'absolute' : frame.body;
-}
-
 const legsCache = new WeakMap<CompiledClip, readonly FrameLeg[]>();
 
 // Keyed on the PLAYBACK, not the compiled clip: replaying the same `ClipData`
@@ -506,7 +503,7 @@ function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
   const legs: FrameLeg[] = [{ frame: 'absolute', startSec: -Infinity, anchor: null }];
   for (const seg of segments) {
     const frame = seg.frame ?? 'absolute';
-    if (frameKeyOf(frame) !== frameKeyOf(legs[legs.length - 1]!.frame)) {
+    if (!sameFrame(frame, legs[legs.length - 1]!.frame)) {
       legs.push({ frame, startSec: seg.startSec, anchor: seg });
     }
   }
@@ -546,7 +543,7 @@ function convertChannels(
   to: PoseFrame,
   deps: FrameDeps,
 ): CameraPose {
-  if (frameKeyOf(from) === frameKeyOf(to)) return channels;
+  if (sameFrame(from, to)) return channels;
   const world =
     from === 'absolute'
       ? channels

@@ -201,7 +201,7 @@ describe('logCameraState', () => {
     logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, bodyArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
-    expect(out.frame).toBe('earth');
+    expect(out.frame).toBe('body:earth');
     // Metres, at full precision: the 50 m standoff must survive the print.
     expect(out.bodyArmMetres.eyeRelAnchorM).toEqual([0, 0, EARTH_RADIUS_M + 50]);
     expect(out.bodyArmMetres.eyeFromCentreM).toBe(EARTH_RADIUS_M + 50);

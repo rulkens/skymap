@@ -28,6 +28,7 @@ import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
 import { regimeArmFor } from '../camera/regimeArmFor';
+import { sameFrame } from '../camera/rungs/sameFrame';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
@@ -164,7 +165,7 @@ export function projectFramePose(args: {
     // Once per crossing. The wake is the fold's own: `shouldKeepTicking` reads
     // the pre-fold snapshot, so a flip that quiets the last live term would
     // otherwise park the loop.
-    if ((arm === 'absolute' ? null : arm.body) !== (regime === 'absolute' ? null : regime.body)) {
+    if (!sameFrame(arm, regime)) {
       actions.push(commitCameraPose(displayed));
       requestRender = true;
     }

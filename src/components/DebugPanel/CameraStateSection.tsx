@@ -14,8 +14,8 @@ import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapsho
 import type { CameraDofRow } from '../../@types/camera/CameraDofRow';
 import type { OrientDofDelta } from '../../@types/camera/OrientDofDelta';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
-import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camera/orientDeltas';
+import { frameKey } from '../../services/engine/camera/rungs/frameKey';
 import { selectCameraTuning } from '../../state/camera/selectors';
 import { useAppSelector } from '../../store/hooks';
 import DebugSection from './DebugSection';
@@ -49,10 +49,6 @@ type PanelModel = {
   readonly raw: readonly RawRow[];
 };
 
-function frameLabel(frame: PoseFrame): string {
-  return frame === 'absolute' ? 'absolute' : `body:${frame.body}`;
-}
-
 /** Full JS precision (shortest round-trip form); em-dash for absent values. */
 function num(n: number | null | undefined): string {
   return n === null || n === undefined ? '—' : String(n);
@@ -66,7 +62,7 @@ function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
   const { dofs, deltas } = snap;
   const off = !tuning.northUp;
   return {
-    header: `${frameLabel(snap.renderedFrame)} · ${snap.activeDriverId} · gesture: ${snap.gestureMode ?? 'none'}`,
+    header: `${frameKey(snap.renderedFrame)} · ${snap.activeDriverId} · gesture: ${snap.gestureMode ?? 'none'}`,
     badge: snap.armMismatch ? 'ARM MISMATCH' : snap.epochMismatch ? 'EPOCH MISMATCH' : null,
     dofs: [
       { name: 'heading', off, row: dofs.heading, delta: deltas.heading },
@@ -94,8 +90,8 @@ function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
     weightReadout: snap.bandUpWeight === null ? '—' : snap.bandUpWeight.toFixed(3),
     rememberedTiltReadout: deg(snap.rememberedTiltRad),
     raw: [
-      { key: 'stored_regime', value: frameLabel(snap.storedFrame) },
-      { key: 'rendered_arm', value: frameLabel(snap.renderedFrame) },
+      { key: 'stored_regime', value: frameKey(snap.storedFrame) },
+      { key: 'rendered_arm', value: frameKey(snap.renderedFrame) },
       { key: 'scene_frame', value: snap.orientationFrame },
       { key: 'distance_mpc', value: num(snap.distanceMpc) },
       {

@@ -19,6 +19,7 @@ import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
 import { pivotFraming } from './pivotRadiusMpc';
 import { resolveWorldArm } from './poseFrameConversion';
+import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
@@ -202,11 +203,9 @@ export function replayInput(
         // ONE commit site for both arms: bake the register into `base` before
         // `endDrag`. Skipped while a clip owns the camera and across an arm
         // mismatch — the fold owns regime edges; a commit here must never flip one.
-        const sameArm =
-          register.frame === 'absolute'
-            ? camera.base.frame === 'absolute'
-            : camera.base.frame !== 'absolute' && register.frame.body === camera.base.frame.body;
-        if (camera.clip === null && sameArm) emit(commitCameraPose(register));
+        if (camera.clip === null && sameFrame(register.frame, camera.base.frame)) {
+          emit(commitCameraPose(register));
+        }
         surface = surfaceGestureEdge(surface, false);
         emit(endDrag());
         break;

@@ -23,13 +23,9 @@ import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
 import { deriveSimDays } from '../time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
+import { sameFrame } from '../../services/engine/camera/rungs/sameFrame';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
-
-function sameFrame(a: PoseFrame, b: PoseFrame): boolean {
-  if (a === 'absolute' || b === 'absolute') return a === b;
-  return a.body === b.body;
-}
 
 export function cameraDebugSnapshotOf(input: {
   readonly storedFrame: PoseFrame;

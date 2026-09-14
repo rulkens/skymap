@@ -21,6 +21,7 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebugSnapshot';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { frameKey } from '../camera/rungs/frameKey';
 import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -61,7 +62,7 @@ export function logCameraState(
   const bodyArm = framed !== null && framed.frame !== 'absolute' ? framed.pose : null;
 
   const out = {
-    frame: bodyArm === null ? 'absolute' : bodyArm.bodyId,
+    frame: framed === null ? 'absolute' : frameKey(framed.frame),
     bodyArmMetres:
       bodyArm === null
         ? null
