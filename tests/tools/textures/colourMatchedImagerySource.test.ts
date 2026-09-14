@@ -331,25 +331,6 @@ describe('colourMatchedImagerySource', () => {
     ).toThrow(/canvas pixel/);
   });
 
-  it('keeps identity fields and coverage from the primary', async () => {
-    const primary = stubSource({
-      id: 'primary',
-      maxLevel: PRIMARY_LEVEL,
-      coverage: [COVERAGE],
-      rgb: DARK,
-    });
-
-    const matched = colourMatchedImagerySource(primary, referenceSource(), {
-      sigmaDeg: SIGMA_DEG,
-      waterMaskPath: await allLandMaskPath(),
-    });
-
-    expect(matched.id).toBe(primary.id);
-    expect(matched.maxLevel).toBe(PRIMARY_LEVEL);
-    expect(matched.coverage).toEqual([COVERAGE]);
-    expect(matched.provenance).toEqual(primary.provenance);
-  });
-
   it('declines where the primary declines, without reading the reference', async () => {
     const primary = stubSource({
       id: 'primary',

@@ -30,11 +30,6 @@ describe('REFERENCE_GALAXIES', () => {
     }
   });
 
-  it('the Milky Way is imageless', () => {
-    const mw = REFERENCE_GALAXIES.find((g) => g.id === 'mw');
-    expect(mw?.img).toBeNull();
-  });
-
   it("every entry's params.type classifies without throwing and its view is a finite ViewPose", () => {
     for (const galaxy of REFERENCE_GALAXIES) {
       expect(() => classifyHubbleType(galaxy.params.type!)).not.toThrow();

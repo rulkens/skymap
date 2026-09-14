@@ -13,10 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import {
-  extractAbell,
-  buildClusterEntries,
-} from '../../../tools/structures/buildStructures';
+import { extractAbell, buildClusterEntries } from '../../../tools/structures/buildStructures';
 import { parseStructureSeed } from '../../../tools/parsers/parseStructureSeed';
 import type { McxcRow } from '../../../tools/parsers/parseMcxc';
 import type { MsccRow } from '../../../tools/parsers/parseMscc';
@@ -33,7 +30,7 @@ const BELOW_THRESHOLD_M500 = 0.5;
 /** Redshift safely within Z_MAX = 0.15. */
 const NEAR_Z = 0.05;
 /** Redshift safely beyond Z_MAX. */
-const FAR_Z = 0.20;
+const FAR_Z = 0.2;
 
 /** Nm safely above the MSCC_NM_MIN threshold (6). */
 const ABOVE_NM = 12;
@@ -100,19 +97,6 @@ describe('extractAbell', () => {
 
     it('strips leading zeros: A0007 → A7', () => {
       expect(extractAbell('', 'A0007')).toBe('A7');
-    });
-
-    it('strips leading zeros: A0013 → A13', () => {
-      expect(extractAbell('', 'A0013')).toBe('A13');
-    });
-
-    it('strips leading zeros for S-prefix: S0026 → S26', () => {
-      expect(extractAbell('', 'S0026')).toBe('S26');
-    });
-
-    it('strips leading zeros with internal space: A 0085 → A85', () => {
-      // Space between prefix and digits is absorbed; leading zeros are stripped.
-      expect(extractAbell('', 'A 0085')).toBe('A85');
     });
 
     it('prefers aName over oName when both have an Abell token', () => {

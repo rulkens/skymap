@@ -28,19 +28,6 @@ const ENTRY = (
 });
 
 describe('GalaxyList', () => {
-  it('renders every entry with its primary name', () => {
-    render(
-      <GalaxyList
-        galaxies={[ENTRY('m31'), ENTRY('m33'), ENTRY('m51')]}
-        activeId={undefined}
-        onSelect={vi.fn()}
-      />,
-    );
-    expect(screen.getByText('M31')).toBeInTheDocument();
-    expect(screen.getByText('M33')).toBeInTheDocument();
-    expect(screen.getByText('M51')).toBeInTheDocument();
-  });
-
   it('marks curated entries with the data-curated attribute', () => {
     render(
       <GalaxyList

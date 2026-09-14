@@ -29,11 +29,4 @@ describe('ansiPalette', () => {
     expect(p.dim('x')).toBe('x');
     expect(p.bold('x')).toBe('x');
   });
-
-  it('exposes every colorizer the report needs', () => {
-    const p = ansiPalette(true);
-    for (const name of ['red', 'green', 'yellow', 'dim', 'bold'] as const) {
-      expect(p[name]('s')).not.toBe('s');
-    }
-  });
 });

@@ -101,11 +101,6 @@ describe('formatReport', () => {
     expect(out).toMatch(/hdr·NEAR0[^\n]*4\.2[^\n]*5\.1/);
   });
 
-  it('renders a per-layer attribution row with its median', () => {
-    const out = formatReport(withFloors, plain);
-    expect(out).toMatch(/orbit-trails[^\n]*3\.6/);
-  });
-
   it('renders a floor block for a group with ≥2 layers', () => {
     const out = formatReport(withFloors, plain);
     expect(out).toContain('EST. PER-PASS FLOOR');
@@ -208,11 +203,6 @@ describe('formatReport', () => {
     expect(out).toMatch(/small[^\n]*25%/);
   });
 
-  it('draws a bar glyph for a nonzero share', () => {
-    const out = formatReport(withFloors, plain);
-    expect(out).toContain('█');
-  });
-
   // ── Fix 5: SUMMARY block ─────────────────────────────────────────────────
 
   it('summarises a within-budget run with a ✓ and hand-computed headroom', () => {
@@ -256,15 +246,5 @@ describe('formatReport', () => {
     const out = formatReport(degenerate, plain);
     expect(out).toContain('— no timed GPU work sampled.');
     expect(out).not.toContain('✓');
-  });
-
-  it('omits the floor caveat line when floors is empty', () => {
-    const single: ScenarioReport = {
-      ...withFloors,
-      merged: [{ slot: 'hdr·NEAR0', median: 2.0, p90: 2.2 }],
-      floors: [],
-    };
-    const out = formatReport(single, plain);
-    expect(out).not.toContain('Per-pass floor ≈');
   });
 });

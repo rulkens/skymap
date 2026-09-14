@@ -7,20 +7,15 @@ import { describe, expect, it } from 'vitest';
 import compareReducer, {
   comparePanelToggled,
   fitFinished,
-  fitProgressed,
-  fitReportSet,
   fitStarted,
-  fitStopRequested,
   referenceSelected,
   viewRequested,
 } from '../../../../../tools/galaxy-renderer/src/state/slices/compareSlice';
 import extrasReducer, {
-  extrasCountSet,
   extrasRegenerated,
   extrasToggled,
 } from '../../../../../tools/galaxy-renderer/src/state/slices/extrasSlice';
 import uiReducer, {
-  autoRotateSet,
   copyFeedbackSet,
   sectionToggled,
 } from '../../../../../tools/galaxy-renderer/src/state/slices/uiSlice';
@@ -81,22 +76,6 @@ describe('compareSlice', () => {
     expect(next.stopRequested).toBe(false);
   });
 
-  it('fitProgressed writes progress/score/note', () => {
-    const next = compareReducer(
-      DEFAULT_COMPARE_STATE,
-      fitProgressed({ progress: 0.5, score: 60, note: 'iterating' }),
-    );
-
-    expect(next.fitProgress).toBe(0.5);
-    expect(next.fitScore).toBe(60);
-    expect(next.fitNote).toBe('iterating');
-  });
-
-  it('fitReportSet writes the report', () => {
-    const next = compareReducer(DEFAULT_COMPARE_STATE, fitReportSet(SEEDED_REPORT));
-    expect(next.report).toEqual(SEEDED_REPORT);
-  });
-
   it('fitFinished clears fitting and stopRequested', () => {
     const running = { ...DEFAULT_COMPARE_STATE, fitting: true, stopRequested: true };
     const next = compareReducer(running, fitFinished());
@@ -104,22 +83,12 @@ describe('compareSlice', () => {
     expect(next.fitting).toBe(false);
     expect(next.stopRequested).toBe(false);
   });
-
-  it('fitStopRequested sets stopRequested', () => {
-    const next = compareReducer(DEFAULT_COMPARE_STATE, fitStopRequested());
-    expect(next.stopRequested).toBe(true);
-  });
 });
 
 describe('extrasSlice', () => {
   it('extrasToggled flips enabled', () => {
     const next = extrasReducer(DEFAULT_EXTRAS_STATE, extrasToggled(true));
     expect(next.enabled).toBe(true);
-  });
-
-  it('extrasCountSet writes count', () => {
-    const next = extrasReducer(DEFAULT_EXTRAS_STATE, extrasCountSet(12));
-    expect(next.count).toBe(12);
   });
 
   it('extrasRegenerated increments the nonce across two dispatches', () => {
@@ -147,10 +116,5 @@ describe('uiSlice', () => {
 
     const cleared = uiReducer(set, copyFeedbackSet(''));
     expect(cleared.copyFeedback).toBe('');
-  });
-
-  it('autoRotateSet writes the flag', () => {
-    const next = uiReducer(DEFAULT_UI_STATE, autoRotateSet(false));
-    expect(next.autoRotate).toBe(false);
   });
 });

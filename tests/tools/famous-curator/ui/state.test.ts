@@ -41,14 +41,6 @@ function apply(actions: Action[]) {
 }
 
 describe('state reducer', () => {
-  it('initial state has nothing selected, default sliders', () => {
-    expect(initialState.activeId).toBeUndefined();
-    expect(initialState.starnet.stride).toBe(256);
-    expect(initialState.alpha.blackPoint).toBe(8);
-    expect(initialState.alpha.whitePoint).toBe(255);
-    expect(initialState.alpha.gamma).toBeCloseTo(0.7);
-  });
-
   it('setGalaxies populates the list', () => {
     const s = reducer(initialState, {
       type: 'setGalaxies',

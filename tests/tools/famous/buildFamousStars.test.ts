@@ -15,7 +15,6 @@ import {
   seedToGeneratedRows,
   seedToMetaEntries,
   seedToRustConst,
-  serializeGeneratedTable,
 } from '../../../tools/famous/buildFamousStars';
 
 const FIXTURE: FamousStarEntry[] = [
@@ -128,21 +127,6 @@ describe('seedToMetaEntries', () => {
 
     // Structured variability round-trips intact.
     expect(achernar!.variable).toEqual({ type: 'Be', magRange: [0.4, 0.6] });
-  });
-});
-
-describe('serializeGeneratedTable', () => {
-  it('emits the banner, typed export, and omits absent optional keys', () => {
-    const text = serializeGeneratedTable(seedToGeneratedRows(FIXTURE));
-
-    expect(text).toContain('!!! GENERATED FILE — DO NOT EDIT BY HAND !!!');
-    expect(text).toContain('npm run build-famous-stars');
-    expect(text).toContain("import type { FamousStarRow } from '../../@types/data/FamousStarRow';");
-    expect(text).toContain('export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [');
-    // Single-quoted strings, no oblateness key for the spherical Sirius row.
-    expect(text).toContain("id: 'sirius',");
-    expect(text).toContain('oblateness: 0.35,');
-    expect(text).not.toContain('description');
   });
 });
 

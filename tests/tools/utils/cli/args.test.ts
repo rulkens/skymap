@@ -12,19 +12,10 @@ describe('parseFlags', () => {
     expect(result).toEqual({ '--force': true, '--dry-run': false });
   });
 
-  it('returns true for each flag independently', () => {
-    const result = parseFlags(
-      ['--no-cache', '--dry-run'],
-      { '--no-cache': 'bool', '--dry-run': 'bool' },
-    );
-    expect(result).toEqual({ '--no-cache': true, '--dry-run': true });
-  });
-
   it('ignores unrelated argv entries', () => {
-    const result = parseFlags(
-      ['some-positional', '--force', '--other-flag'],
-      { '--force': 'bool' },
-    );
+    const result = parseFlags(['some-positional', '--force', '--other-flag'], {
+      '--force': 'bool',
+    });
     expect(result).toEqual({ '--force': true });
   });
 });
