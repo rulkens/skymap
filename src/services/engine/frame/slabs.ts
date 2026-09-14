@@ -144,6 +144,7 @@ export function bodySlabRow(input: {
     readonly distanceRangeM: readonly [number, number];
   };
   readonly chainRow: Omit<ChainRow, 'index'>;
+  readonly signedNearM: number; // dM − rMaxM, UNCLAMPED (negative inside the drawn radius)
 } | null {
   const { body, pose, fovYRad, aspect, viewportPx, attachedBodies } = input;
   const relPose = pose(body.id as BodyId);
@@ -218,6 +219,7 @@ export function bodySlabRow(input: {
       reversedZ,
     },
     chainRow: { distanceRangeM, centrePx, radiusPx },
+    signedNearM: dM - rMaxM,
   };
 }
 
@@ -316,7 +318,12 @@ export function deriveSlabs(input: {
       }),
     )
     .filter((row): row is NonNullable<typeof row> => row !== null)
-    .sort((a, b) => b.slab.distanceRangeM[0] - a.slab.distanceRangeM[0]);
+    // Rows the camera is inside tie at 0 on the primary key; the unclamped
+    // signedNearM (descending too) then sorts the deepest-inside row last.
+    .sort(
+      (a, b) =>
+        b.slab.distanceRangeM[0] - a.slab.distanceRangeM[0] || b.signedNearM - a.signedNearM,
+    );
   const bodyRows: Slab[] = sortedBodyRows.map((row, i) => ({ ...row.slab, index: i + 2 }));
 
   // Spec §7.2: screen-overlapping body rows must have disjoint distance intervals,
@@ -338,6 +345,8 @@ export function deriveSlabs(input: {
 // NEAR0 plus every body row by `distanceRangeM[0]` descending — the same key body
 // rows are stored by, so NEAR0 merges in with no `frame.kind` special case. COSMO
 // never appears; it is not a `foreground:0` target.
+// `slabs` arrives in index order (index = painter ordinal) and this sort is
+// stable, so ties keep `deriveSlabs`' order — reordering `slabs` first drops it.
 export function foregroundChainOrder(slabs: readonly Slab[]): readonly number[] {
   return slabs
     .filter((slab) => slab.index === NEAR0 || slab.frame.kind === 'body-m')

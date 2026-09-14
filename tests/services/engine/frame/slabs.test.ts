@@ -567,6 +567,26 @@ describe('foregroundChainOrder', () => {
     const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body], starSphereRangeM: null }));
     expect(foregroundChainOrder(slabs)).toEqual([NEAR0, 2]);
   });
+
+  it('the body the camera is inside is the last foreground chain row', () => {
+    const deeplyInside = makePlanet({ id: 'deeply-inside', radiusM: 1e7 });
+    const barelyInside = makePlanet({ id: 'barely-inside', radiusM: 1.1e6 });
+    const poseByBody = new Map<string, BodyRelativePose>([
+      ['deeply-inside', { eyeRelBodyM: [1e4, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
+      ['barely-inside', { eyeRelBodyM: [1e6, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
+    ]);
+    const pose: BodyPoseProvider = (bodyId) => poseByBody.get(bodyId) ?? null;
+
+    // Both rows clamp to distanceRangeM[0] === 0 (the camera is inside both), so
+    // the primary sort key alone ties — deeply-inside is listed first to prove
+    // the secondary key, not input order, decides the outcome.
+    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [deeplyInside, barelyInside] }));
+    const chain = foregroundChainOrder(slabs);
+
+    expect(chain).toHaveLength(3);
+    const lastSlab = slabs[chain[chain.length - 1]!];
+    expect(lastSlab?.frame).toEqual({ kind: 'body-m', bodyId: 'deeply-inside' });
+  });
 });
 
 describe('slabViewOf', () => {
