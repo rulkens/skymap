@@ -98,9 +98,6 @@ function expectPixelNear(
 describe('eoxTileSource', () => {
   const RED = [255, 0, 0] as const;
   const GREEN = [0, 255, 0] as const;
-  // Not a saturated blue: that would score as water and get recoloured by
-  // matchEoxSeaColour, entangling this quadrant-compositing test with the
-  // sea-colour bake step.
   const CYAN = [0, 255, 255] as const;
   const WHITE = [255, 255, 255] as const;
 
