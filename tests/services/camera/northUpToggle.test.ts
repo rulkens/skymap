@@ -94,7 +94,7 @@ describe('north-up toggle', () => {
       target: [earth.positionMpc[0]!, earth.positionMpc[1]!, earth.positionMpc[2]!],
       yaw: 0.7,
       pitch: 0.3,
-      distance: SCENE_EARTH.radiusM * (1 + hr) * SCALE_UNITS.M_TO_MPC,
+      distance: SCENE_EARTH.surface.datumRadiusM * (1 + hr) * SCALE_UNITS.M_TO_MPC,
       roll: 0.7,
     });
     expect(frameAlignedRoll(poseAtHR(2.0), poseAtHR(2.2), bodies, B, B, 0.1, NORTH_UP_OFF)).toBe(

@@ -24,6 +24,8 @@ const SGR_A_STAR_ROW: SelectionRow = {
 
 describe('surfaceFloorM', () => {
   it('the descent floor at Sgr A* matches pivotFraming’s zoom floor', () => {
+    // Exact equality holds because Sgr A*'s standoff is 2.0: a power of two makes
+    // (r·2)·M_TO_MPC and (r·M_TO_MPC)·2 bit-identical, so the two orderings agree.
     expect(
       surfaceFloorM(SGR_A_STAR.surface.datumRadiusM, bodyStandoffRadii(SGR_A_STAR)) *
         SCALE_UNITS.M_TO_MPC,

@@ -41,7 +41,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
 const EARTH = deriveBodyStates(SIM).get('earth')! as BodyState;
-const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../fixtures/camera/settleGoldenTrace.json', import.meta.url),
 );

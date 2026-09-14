@@ -82,7 +82,7 @@ function saturnBody(): SeededPlanet {
     id: SATURN_RING.bodyId,
     label: 'Saturn',
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
-    radiusM,
+    surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.8, 0.7, 0.5],
     orientation: IDENTITY_MAT3,
   };
@@ -94,7 +94,7 @@ function earthBody(): SeededPlanet {
     id: 'earth',
     label: 'Earth',
     positionMpc: [1, 0, 0],
-    radiusM: 6371000,
+    surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
     albedo: [0.3, 0.4, 0.6],
     orientation: IDENTITY_MAT3,
   };
@@ -225,7 +225,7 @@ describe('ringsPass.draw', () => {
     // NOT the ring's outer radius — the fragment's in-front-of-planet test
     // wants "planet radii", the same frame texturedBodiesPass's Minnaert
     // term uses.
-    expect(camLocalMock.mock.calls[0]![1]).toBe(saturn.radiusM);
+    expect(camLocalMock.mock.calls[0]![1]).toBe(saturn.surface.datumRadiusM);
     expect(camLocalMock.mock.calls[0]![1]).not.toBeCloseTo(
       SATURN_RING.outerRadiusKm * SCALE_UNITS.KM_TO_M,
     );
@@ -248,7 +248,9 @@ describe('ringsPass.draw', () => {
     expect(u[16]).toBeCloseTo(expectedSun[0]);
     expect(u[17]).toBeCloseTo(expectedSun[1]);
     expect(u[18]).toBeCloseTo(expectedSun[2]);
-    expect(u[19]).toBeCloseTo((saturn.radiusM * SCALE_UNITS.M_TO_KM) / SATURN_RING.outerRadiusKm);
+    expect(u[19]).toBeCloseTo(
+      (saturn.surface.datumRadiusM * SCALE_UNITS.M_TO_KM) / SATURN_RING.outerRadiusKm,
+    );
     // camPosLocal is mocked — pin the PACKED value to the mock's return, the
     // pairing/frame invariant is covered by the dedicated test above.
     expect(u[20]).toBe(Math.fround(MOCK_CAM_LOCAL[0]));

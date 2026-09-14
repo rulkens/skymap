@@ -23,6 +23,7 @@ import { frameUp } from '../../../utils/camera/frameUp';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { starSphereRangeM } from '../../../utils/scene/starSphereRangeM';
+import { outerBoundRadiusM } from '../../../utils/scene/outerBoundRadiusM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
@@ -185,7 +186,15 @@ export function deriveFrameContext(
     viewportHeightPx: canvasSize.height,
     fovYRad: cam.fovYRad,
   });
-  const starRangeM = starSphereRangeM({ spheres, camPosMpc: cam.position });
+  const starRangeM = starSphereRangeM({
+    // Outer: NEAR0's slab has to contain every sphere it draws, and a bracket
+    // that under-reaches clips geometry while over-reaching costs nothing.
+    spheres: spheres.map((star) => ({
+      positionMpc: star.positionMpc,
+      radiusM: outerBoundRadiusM(star.surface),
+    })),
+    camPosMpc: cam.position,
+  });
 
   // Frame-aware, so an engaged body arm's eye→ground range is not decremented a
   // second time — see `slabs.ts: deriveSlabs`.

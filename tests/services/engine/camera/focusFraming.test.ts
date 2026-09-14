@@ -159,7 +159,7 @@ describe('focusFraming', () => {
     // FOV-dependent viewport fraction — this pins that the override replaces
     // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it. The
     // multiple rides the SEED, so the row no longer carries it.
-    const radiusMpc = SGR_A_STAR.radiusM * SCALE_UNITS.M_TO_MPC;
+    const radiusMpc = bodyFootprintRadiusM(SGR_A_STAR) * SCALE_UNITS.M_TO_MPC;
     const row = bodyRow({ id: SGR_A_STAR.id, label: SGR_A_STAR.label });
     const result = focusFraming(row, FOVY);
     expect(result.distance).toBe(radiusMpc * SGR_A_STAR.focusDistanceRadii!);

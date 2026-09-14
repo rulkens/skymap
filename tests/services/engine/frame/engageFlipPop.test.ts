@@ -61,7 +61,7 @@ function sampleOf(state: EngineState, tuning: CameraTuning): FrameSample {
   return {
     arm: state.cameraRuntime.register.pose.frame === 'absolute' ? 'abs' : 'body',
     up: [...up] as Vec3,
-    w: bodyUpWeight(hrOfPose(eye, EARTH, SCENE_EARTH.radiusM), tuning),
+    w: bodyUpWeight(hrOfPose(eye, EARTH, SCENE_EARTH.surface.datumRadiusM), tuning),
   };
 }
 

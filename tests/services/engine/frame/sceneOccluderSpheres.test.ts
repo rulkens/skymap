@@ -16,6 +16,7 @@ import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { innerBoundRadiusM } from '../../../../src/utils/scene/innerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -58,7 +59,8 @@ function occluderRadiiKm(ctx: ReadyFrameContext, state: EngineState = STATE): nu
 }
 
 function has(radiiKm: readonly number[], bodyId: string): boolean {
-  const radiusKm = findByIdOrThrow(SCENE_PLANETS, bodyId, 'test').radiusM * SCALE_UNITS.M_TO_KM;
+  const radiusKm =
+    innerBoundRadiusM(findByIdOrThrow(SCENE_PLANETS, bodyId, 'test').surface) * SCALE_UNITS.M_TO_KM;
   return radiiKm.some((r) => Math.abs(r - radiusKm) < 1);
 }
 
@@ -98,7 +100,8 @@ describe('sceneOccluderSpheres', () => {
   it('drops the Sun once it demotes to a point at Jupiter-range', () => {
     // The Sun subtends ~1.6 px from Jupiter: drawn as an additive point by
     // starPointsPass, so it is no longer an opaque sphere.
-    const sunRadiusKm = findByIdOrThrow(SCENE_STARS, 'sun', 'test').radiusM * SCALE_UNITS.M_TO_KM;
+    const sunRadiusKm =
+      innerBoundRadiusM(findByIdOrThrow(SCENE_STARS, 'sun', 'test').surface) * SCALE_UNITS.M_TO_KM;
     const radii = occluderRadiiKm(makeCtx('jupiter', 1e7));
     expect(radii.some((r) => Math.abs(r - sunRadiusKm) < 1)).toBe(false);
     expect(has(radii, 'jupiter')).toBe(true);

@@ -64,7 +64,18 @@ function makeCosmoVp(): Mat4 {
 const NO_POSE: BodyPoseProvider = () => null;
 
 function makePlanet(overrides: Partial<PlanetBody> = {}): PlanetBody {
-  return { id: 'test-planet', label: 'Test Planet', radiusM: 1e5, albedo: [1, 1, 1], ...overrides };
+  return {
+    id: 'test-planet',
+    label: 'Test Planet',
+    surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
+    albedo: [1, 1, 1],
+    ...overrides,
+  };
+}
+
+/** `makePlanet` override for a body of the given datum radius (no relief in P1). */
+function withRadius(datumRadiusM: number): Partial<PlanetBody> {
+  return { surface: { datumRadiusM, reliefM: [0, 0] } };
 }
 
 /**
@@ -230,7 +241,7 @@ describe('deriveSlabs', () => {
   });
 
   it('brackets a body row around its drawn radius — dM=1e9 m, rMaxM=1e5 m', () => {
-    const body = makePlanet({ id: 'bracket-body', radiusM: 1e5 });
+    const body = makePlanet({ id: 'bracket-body', ...withRadius(1e5) });
     // ON-AXIS: eyeRelBodyM points along -forward ([0,0,1]), so viewZ === dM
     // and this test exercises the "outside the shell" bracket in isolation
     // from the off-axis correction the two tests below cover.
@@ -263,7 +274,7 @@ describe('deriveSlabs', () => {
     // matrix from the same util this test rebuilds by hand for the body row
     // (no shared "foreground" util exists for body rows, so the two mat4d
     // calls are inlined here).
-    const body = makePlanet({ id: 'flip-body', radiusM: 1e5 });
+    const body = makePlanet({ id: 'flip-body', ...withRadius(1e5) });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [0, 0, -1e9],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -297,7 +308,7 @@ describe('deriveSlabs', () => {
     const thetaRad = (33.8 * Math.PI) / 180;
     const radiusM = 58_232_000;
     const ringOuterM = 140_220_000;
-    const body = makePlanet({ id: 'saturn', radiusM });
+    const body = makePlanet({ id: 'saturn', ...withRadius(radiusM) });
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
     // forward=[0,0,-1]; bodyRelEye = dM*(cosθ·forward + sinθ·right) =
     // [dM sinθ, 0, -dM cosθ]. eyeRelBodyM = -bodyRelEye (bodyRelativePose.ts:
@@ -335,7 +346,7 @@ describe('deriveSlabs', () => {
     const dM = 2e8;
     const thetaRad = (20 * Math.PI) / 180;
     const radiusM = 5e6;
-    const body = makePlanet({ id: 'ringless-off-axis-body', radiusM });
+    const body = makePlanet({ id: 'ringless-off-axis-body', ...withRadius(radiusM) });
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
     // Same derivation as the Saturn test above: forward=[0,0,-1], so
     // bodyRelEye = dM*(cosθ·forward + sinθ·right) = [dM sinθ, 0, -dM cosθ].
@@ -352,7 +363,7 @@ describe('deriveSlabs', () => {
   });
 
   it("floors a body row's near plane at MIN_NEAR_M when the camera is inside the drawn radius", () => {
-    const body = makePlanet({ id: 'inside-body', radiusM: 1000 });
+    const body = makePlanet({ id: 'inside-body', ...withRadius(1000) });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [100, 0, 0], // dM = 100 m < rMaxM = 1000 m
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -372,7 +383,7 @@ describe('deriveSlabs', () => {
     // a naive `max(dM - rMaxM, MIN_NEAR_M)` formula would collapse near to 1e-6 m.
     const radiusM = 6.371e6;
     const dM = 6.449e6; // altitude = dM - radiusM = 78,000 m
-    const body = makePlanet({ id: 'earth', radiusM });
+    const body = makePlanet({ id: 'earth', ...withRadius(radiusM) });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [dM, 0, 0],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -444,7 +455,7 @@ describe('deriveSlabs', () => {
   });
 
   it("builds a body row's vp about the eye — RTC-native, no translation, body centre projects to screen centre", () => {
-    const body = makePlanet({ id: 'eye-body', radiusM: 1e5 });
+    const body = makePlanet({ id: 'eye-body', ...withRadius(1e5) });
     // right=[1,0,0], up=[0,1,0], forward=[0,0,-1] — an orthonormal basis
     // satisfying right×up=−forward (this codebase's camera-basis handedness,
     // per `imagePlaneBasis`), with the camera looking straight down −Z.
@@ -495,7 +506,7 @@ describe('bodySlabRow attachedBodies widening', () => {
   const BASIS_M: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
   function hostRow(attachedBodies?: Parameters<typeof bodySlabRow>[0]['attachedBodies']) {
-    const body = makePlanet({ id: 'host-body', radiusM: HOST_RADIUS_M });
+    const body = makePlanet({ id: 'host-body', ...withRadius(HOST_RADIUS_M) });
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM: EYE_REL_BODY_M, basisM: BASIS_M });
     return bodySlabRow({
       body,
@@ -569,8 +580,14 @@ describe('foregroundChainOrder', () => {
   });
 
   it('the body the camera is inside is the last foreground chain row', () => {
-    const deeplyInside = makePlanet({ id: 'deeply-inside', radiusM: 1e7 });
-    const barelyInside = makePlanet({ id: 'barely-inside', radiusM: 1.1e6 });
+    const deeplyInside = makePlanet({
+      id: 'deeply-inside',
+      surface: { datumRadiusM: 1e7, reliefM: [0, 0] },
+    });
+    const barelyInside = makePlanet({
+      id: 'barely-inside',
+      surface: { datumRadiusM: 1.1e6, reliefM: [0, 0] },
+    });
     const poseByBody = new Map<string, BodyRelativePose>([
       ['deeply-inside', { eyeRelBodyM: [1e4, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
       ['barely-inside', { eyeRelBodyM: [1e6, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],

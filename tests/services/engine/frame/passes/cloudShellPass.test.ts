@@ -77,7 +77,7 @@ const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orien
 const EARTH: SeededEarth = {
   id: 'earth',
   label: 'Earth',
-  radiusM: 6371000,
+  surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
   positionMpc: [0, 0, 0],
   orientation: IDENTITY_MAT3,
 };
@@ -108,7 +108,7 @@ function makeBodyView(bodyId: BodyId): SlabView {
  * every test here isolates the descent-fade gate from the OTHER gates.
  */
 function ctxAtAltitude(altitudeRadii: number): ReadyFrameContext {
-  const radiusMpc = EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+  const radiusMpc = EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
   const distanceMpc = radiusMpc * (1 + altitudeRadii);
   return {
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
@@ -232,9 +232,9 @@ describe('cloudShellPass.draw', () => {
     // Second arg is the pose's eyeRelBodyM, forwarded by reference — proof the
     // layer read ctx.bodyPose rather than re-deriving a pose of its own.
     expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
-    // Third arg is the shell radius in METRES — earth.radiusM is already
-    // metres, so no Mpc conversion crosses this seam (the removed M_TO_MPC).
-    expect(call[2]).toBe(EARTH.radiusM * CLOUD_SHELL_PARAMS.radiusRatio);
+    // Third arg is the shell radius in METRES — the datum is already metres, so
+    // no Mpc conversion crosses this seam (the removed M_TO_MPC).
+    expect(call[2]).toBe(EARTH.surface.datumRadiusM * CLOUD_SHELL_PARAMS.radiusRatio);
   });
 
   it('is a no-op for a body-m row that is not Earth’s own', () => {

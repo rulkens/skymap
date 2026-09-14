@@ -28,12 +28,12 @@ import { packMeshBodyUniforms } from '../../../../utils/gpu/packMeshBodyUniforms
 import { bodyStateInHostFrame } from '../../../../utils/scene/bodyStateInHostFrame';
 import { hostSkyFraction } from '../../../../utils/scene/hostSkyFraction';
 import { innerBoundRadiusM } from '../../../../utils/scene/innerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../../utils/scene/outerBoundRadiusM';
 import { sunVisibleFraction } from '../../../../utils/scene/sunVisibleFraction';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { drawableMeshBodies } from '../drawableMeshBodies';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
-import { outerBoundRadiusM } from '../../../../utils/scene/outerBoundRadiusM';
 
 export const meshBodiesPass: ContentPass = {
   name: 'mesh-bodies',
