@@ -11,8 +11,6 @@
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
-import type { CubeFace } from '../../../@types/rendering/CubeFace';
-import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import { executeFrame } from './executeFrame';
 import { expandFrameOrder } from './expandFrameOrder';
 import { FRAME_ORDER } from './frameOrder';
@@ -82,10 +80,7 @@ export function renderFrame(input: RenderFrameInput): void {
       // Derived from the one map, so the step list and the per-face cameras
       // cannot drift: a face is expanded iff it has a context.
       captureFaces: new Map(
-        [...captureContexts].map(([key, faces]): [CubemapCaptureKey, readonly CubeFace[]] => [
-          key,
-          [...faces.keys()],
-        ]),
+        [...captureContexts].map(([key, faces]) => [key, [...faces.keys()]] as const),
       ),
       lensBodySlabs: lensBodySlabs(state, ctx),
     }),

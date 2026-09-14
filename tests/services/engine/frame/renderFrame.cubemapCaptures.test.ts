@@ -29,14 +29,12 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
 import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
-
-const ALL_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
 /** The `sgrAStar` row's per-face contexts as handed to `executeFrame`. */
 function handedOffContexts(): ReadonlyMap<CubeFace, ReadyFrameContext> {
@@ -168,14 +166,16 @@ describe('renderFrame — cubemap-capture hand-off', () => {
         viewSlotBase: CUBEMAP_CAPTURES.sgrAStar.viewSlotBase,
       });
     }
-    expect(cubemapFaceContextMock.mock.calls.map((c) => c[0].face).sort()).toEqual([...ALL_FACES]);
+    expect(cubemapFaceContextMock.mock.calls.map((c) => c[0].face).sort()).toEqual([
+      ...ALL_CUBE_FACES,
+    ]);
 
     expect(executeFrameMock).toHaveBeenCalledTimes(1);
     const handedOff = handedOffContexts();
     expect(handedOff.size).toBe(6);
-    for (const face of ALL_FACES) expect(handedOff.get(face)).toBe(faceCtxByFace.get(face));
+    for (const face of ALL_CUBE_FACES) expect(handedOff.get(face)).toBe(faceCtxByFace.get(face));
     // The same six faces reach the program, off the one map.
-    expect(programFaces()).toEqual([...ALL_FACES]);
+    expect(programFaces()).toEqual([...ALL_CUBE_FACES]);
   });
 
   it('omits a face from the hand-off map when cubemapFaceContext returns null, and leaves bakedSettings unset so the next frame retries', () => {

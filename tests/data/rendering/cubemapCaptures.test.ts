@@ -18,8 +18,6 @@ describe('CUBEMAP_CAPTURES', () => {
     for (const row of ROWS) {
       for (let i = 0; i < ALL_CUBE_FACES.length; i++) {
         const slot = row.viewSlotBase + i;
-        // Slot 0 is the main view; two rows sharing a slot would clobber each
-        // other's writes into the uniform ring.
         expect(slot).toBeGreaterThanOrEqual(1);
         expect(slot).toBeLessThan(VIEW_SLOT_COUNT);
         expect(claimed.has(slot)).toBe(false);

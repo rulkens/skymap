@@ -13,10 +13,7 @@ import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 export type CubemapCaptureRuntime = {
   /** Whether the row's band was open. */
   lastBandActive: boolean;
-  /**
-   * Camera distance from the row's anchor, Mpc — recorded regardless of the
-   * band so the release-margin check sees it the frame the band closes.
-   */
+  /** Camera distance from the row's anchor, Mpc. */
   lastAnchorDistanceMpc: number;
   /**
    * The settings slice reference the faces were baked under. `null` = nothing

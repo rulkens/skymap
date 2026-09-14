@@ -69,9 +69,7 @@ export function cubemapFaceContext(input: {
   readonly faceSizePx: number;
   /** Capture-camera near plane, Mpc — `CubemapCapture.nearMpc`. */
   readonly nearMpc: number;
-  /** This capture's first view slot; the face stamps `viewSlotBase + face`.
-   *  Slot 0 is the main view, so a capture's ring writes stay off the real
-   *  frame's. */
+  /** This capture's first view slot; the face stamps `viewSlotBase + face`. */
   readonly viewSlotBase: number;
   /** The FRAME's clock, so a `nowMs`-animated roster layer ticks identically
    *  on a captured face and in the direct view. */

@@ -110,9 +110,6 @@ describe('cubemapFaceContext', () => {
       if (ctx === null) continue;
 
       expect(ctx.drawCamPos).toEqual(EYE_MPC);
-      // Slot 0 is reserved for the main view, so a roster renderer's
-      // view-slot buffer never confuses this face's write with the real
-      // frame's.
       expect(ctx.viewSlot).toBe(VIEW_SLOT_BASE + face);
 
       // Independent geometric check: the forward direction (target − eye,

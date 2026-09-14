@@ -37,7 +37,7 @@ const MW_DIVISOR = 2;
 const SKY_CUBEMAP_RESOLUTION_PX = 256;
 
 // The production `sky-cubemap` row is lazy: its `allocateWhen` reads the
-// `sgrAStar` capture's band flag `renderFrame` maintains, so every state
+// `sgrAStar` capture's band flag `scheduleCubemapCaptures` maintains, so every state
 // fixture carries one. Default `true` keeps the row present for the tests that
 // count textures. `lastAnchorDistanceMpc` defaults far outside the release
 // margin so the pre-existing band-closed tests (written before the row grew
