@@ -51,8 +51,8 @@ and bakes all 16 surviving materials into one 2048² atlas per `BAKE_PASSES`
 row — today a single albedo row. Its output and the loose
 `curiosity.prebaked.albedo.png` beside it are gitignored build products —
 regenerate them, don't archive them. Having no normal or metallicRoughness map
-is expected: `buildMeshes` substitutes 1×1 constants and records
-`normalMapSubstituted: true`.
+is expected: `buildMeshes` substitutes 1×1 constants and lists them
+under `substituted`.
 
 Three things about this file bite:
 

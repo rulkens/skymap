@@ -43,7 +43,7 @@ drops the `Icosphere` ground helper, joins the 68 remaining parts, decimates
 the loose `perseverance.prebaked.albedo.png` beside it are gitignored build
 products — regenerate them, don't archive them. Having no normal or
 metallicRoughness map is expected: `buildMeshes` substitutes 1×1 constants and
-records `normalMapSubstituted: true`.
+lists them under `substituted`.
 
 **The frame is load-bearing.** The file's saved transforms park the rover with
 its remote-sensing mast folded flat on the deck (bbox tops out at 1.85 m). The
