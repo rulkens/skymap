@@ -3,8 +3,8 @@
  * hand-off" step; rewritten for the one-shot static bake — see
  * `docs/backlog/2026-09-03-sky-cubemap-static-bake.md`, now removed).
  *
- * `executeFrame` and `skyCubemapFaceContext` are both mocked: this file
- * is about the WIRING — renderFrame calling `skyCubemapFaceContext` once per
+ * `executeFrame` and `cubemapFaceContext` are both mocked: this file
+ * is about the WIRING — renderFrame calling `cubemapFaceContext` once per
  * face on a bake, with the live camera eye and the row-declared size, and
  * threading the resulting map into `executeFrame`'s `skyCubemapFaceContexts`
  * — not the GPU pass machinery `renderFrame.test.ts` already covers.
@@ -15,15 +15,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // `vi.mock` factories are hoisted above imports (and above plain top-level
 // `const`s) — `vi.hoisted` is the sanctioned escape hatch for a mock fn both
 // the factory AND the test body need to reference.
-const { executeFrameMock, skyCubemapFaceContextMock } = vi.hoisted(() => ({
+const { executeFrameMock, cubemapFaceContextMock } = vi.hoisted(() => ({
   executeFrameMock: vi.fn(),
-  skyCubemapFaceContextMock: vi.fn(),
+  cubemapFaceContextMock: vi.fn(),
 }));
 vi.mock('../../../../src/services/engine/frame/executeFrame', () => ({
   executeFrame: executeFrameMock,
 }));
-vi.mock('../../../../src/services/engine/frame/skyCubemapFaceContext', () => ({
-  skyCubemapFaceContext: skyCubemapFaceContextMock,
+vi.mock('../../../../src/services/engine/frame/cubemapFaceContext', () => ({
+  cubemapFaceContext: cubemapFaceContextMock,
 }));
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
@@ -116,19 +116,18 @@ function makeInput(ctx: ReadyFrameContext, state: EngineState) {
 describe('renderFrame — sky-cubemap runtime hand-off', () => {
   beforeEach(() => {
     executeFrameMock.mockClear();
-    skyCubemapFaceContextMock.mockClear();
+    cubemapFaceContextMock.mockClear();
   });
 
-  it('derives each face via skyCubemapFaceContext(eye=camera, faceSizePx=row size) and threads the map into executeFrame', () => {
+  it('derives each face via cubemapFaceContext(eye=camera, faceSizePx=row size) and threads the map into executeFrame', () => {
     const faceCtxByFace = new Map<CubeFace, ReadyFrameContext>();
-    skyCubemapFaceContextMock.mockImplementation((input: { face: CubeFace }) => {
+    cubemapFaceContextMock.mockImplementation((input: { face: CubeFace }) => {
       const ctx = { __face: input.face } as unknown as ReadyFrameContext;
       faceCtxByFace.set(input.face, ctx);
       return ctx;
     });
 
-    // Offset 50 AU from the anchor — inside the lensing band (fullAt = 100
-    // AU), well inside `SKY_CAPTURE_NEAR_MPC`'s complement.
+    // Offset 50 AU from the anchor — inside the lensing band (fullAt = 100 AU).
     const camPos: readonly [number, number, number] = [
       SGR_A_STAR_ANCHOR.positionMpc[0] + 50 * SCALE_UNITS.AU_TO_MPC,
       SGR_A_STAR_ANCHOR.positionMpc[1],
@@ -138,13 +137,11 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     renderFrame(makeInput(ctx, makeState()));
 
     // First frame ever ⇒ nothing baked yet ⇒ full sweep.
-    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
-    for (const call of skyCubemapFaceContextMock.mock.calls) {
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    for (const call of cubemapFaceContextMock.mock.calls) {
       expect(call[0]).toMatchObject({ eyeMpc: camPos, faceSizePx: 256 });
     }
-    expect(skyCubemapFaceContextMock.mock.calls.map((c) => c[0].face).sort()).toEqual([
-      ...ALL_FACES,
-    ]);
+    expect(cubemapFaceContextMock.mock.calls.map((c) => c[0].face).sort()).toEqual([...ALL_FACES]);
 
     expect(executeFrameMock).toHaveBeenCalledTimes(1);
     const handedOff = executeFrameMock.mock.calls[0]![0].skyCubemapFaceContexts as Map<
@@ -155,13 +152,13 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     for (const face of ALL_FACES) expect(handedOff.get(face)).toBe(faceCtxByFace.get(face));
   });
 
-  it('omits a face from the hand-off map when skyCubemapFaceContext returns null, and leaves bakedSettings unset so the next frame retries', () => {
-    skyCubemapFaceContextMock.mockReturnValue(null);
+  it('omits a face from the hand-off map when cubemapFaceContext returns null, and leaves bakedSettings unset so the next frame retries', () => {
+    cubemapFaceContextMock.mockReturnValue(null);
     const state = makeState();
     const ctx = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
     renderFrame(makeInput(ctx, state));
 
-    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
     const handedOff = executeFrameMock.mock.calls[0]![0].skyCubemapFaceContexts as Map<
       CubeFace,
       ReadyFrameContext
@@ -170,17 +167,17 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     expect(state.cubemapCaptures.get('sgrAStar')!.bakedSettings).toBeNull();
 
     // Next frame retries the full sweep, since nothing was ever baked.
-    skyCubemapFaceContextMock.mockClear();
+    cubemapFaceContextMock.mockClear();
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
-    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
   });
 
-  it('never calls skyCubemapFaceContext while the lensing band is inactive', () => {
+  it('never calls cubemapFaceContext while the lensing band is inactive', () => {
     // Mpc-scale, orders of magnitude past the band's AU-scale goneAt edge.
     const ctx = makeCtx([1000, 0, 0]);
     renderFrame(makeInput(ctx, makeState()));
 
-    expect(skyCubemapFaceContextMock).not.toHaveBeenCalled();
+    expect(cubemapFaceContextMock).not.toHaveBeenCalled();
     const handedOff = executeFrameMock.mock.calls[0]![0].skyCubemapFaceContexts as Map<
       CubeFace,
       ReadyFrameContext
@@ -211,7 +208,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
   });
 
   it('a second in-band frame with the same state and a moved camera captures nothing', () => {
-    skyCubemapFaceContextMock.mockImplementation(
+    cubemapFaceContextMock.mockImplementation(
       (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
     );
 
@@ -222,7 +219,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
       SGR_A_STAR_ANCHOR.positionMpc[2],
     ];
     renderFrame(makeInput(makeCtx(firstEye), state)); // band entry ⇒ full sweep, bakes.
-    skyCubemapFaceContextMock.mockClear();
+    cubemapFaceContextMock.mockClear();
     executeFrameMock.mockClear();
 
     // Any camera displacement, however large — the content is at infinity,
@@ -234,7 +231,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     ];
     renderFrame(makeInput(makeCtx(movedEye), state));
 
-    expect(skyCubemapFaceContextMock).not.toHaveBeenCalled();
+    expect(cubemapFaceContextMock).not.toHaveBeenCalled();
     const handedOff = executeFrameMock.mock.calls[0]![0].skyCubemapFaceContexts as Map<
       CubeFace,
       ReadyFrameContext
@@ -243,7 +240,7 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
   });
 
   it('roster settling (fades animating) forces a sweep every frame, one more on the settle edge, then none once settled', () => {
-    skyCubemapFaceContextMock.mockImplementation(
+    cubemapFaceContextMock.mockImplementation(
       (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
     );
 
@@ -256,26 +253,26 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
     } as Partial<EngineState>);
 
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes (settling).
-    skyCubemapFaceContextMock.mockClear();
+    cubemapFaceContextMock.mockClear();
 
     // Still settling, same settings ref ⇒ sweeps again.
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
-    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
-    skyCubemapFaceContextMock.mockClear();
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    cubemapFaceContextMock.mockClear();
 
     // Settles THIS frame ⇒ one more sweep (the settled bake `bakedSettings` records).
     fadesAnimating = false;
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
-    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
-    skyCubemapFaceContextMock.mockClear();
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    cubemapFaceContextMock.mockClear();
 
     // Settled, same settings ref ⇒ no further sweep.
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
-    expect(skyCubemapFaceContextMock).not.toHaveBeenCalled();
+    expect(cubemapFaceContextMock).not.toHaveBeenCalled();
   });
 
   it('a thumbnail alone still in flight (fades settled) forces a sweep on an otherwise unchanged frame', () => {
-    skyCubemapFaceContextMock.mockImplementation(
+    cubemapFaceContextMock.mockImplementation(
       (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
     );
 
@@ -286,42 +283,42 @@ describe('renderFrame — sky-cubemap runtime hand-off', () => {
       },
     } as Partial<EngineState>);
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes.
-    skyCubemapFaceContextMock.mockClear();
+    cubemapFaceContextMock.mockClear();
 
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
 
-    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
   });
 
   it('replacing settings with a new (same-content) object triggers a full six-face sweep', () => {
-    skyCubemapFaceContextMock.mockImplementation(
+    cubemapFaceContextMock.mockImplementation(
       (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
     );
 
     const state = makeState();
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
-    skyCubemapFaceContextMock.mockClear();
+    cubemapFaceContextMock.mockClear();
 
     // Same contents, new reference — mirrors a real store write replacing
     // the settings slice wholesale.
     state.settings = { ...state.settings };
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
 
-    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
   });
 
   it('band close then re-entry triggers a full six-face sweep', () => {
-    skyCubemapFaceContextMock.mockImplementation(
+    cubemapFaceContextMock.mockImplementation(
       (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
     );
 
     const state = makeState();
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes.
     renderFrame(makeInput(makeCtx([1000, 0, 0]), state)); // band close ⇒ resets bakedSettings.
-    skyCubemapFaceContextMock.mockClear();
+    cubemapFaceContextMock.mockClear();
 
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // re-entry.
 
-    expect(skyCubemapFaceContextMock).toHaveBeenCalledTimes(6);
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
   });
 });

@@ -22,7 +22,7 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import { skyCubemapFaceContext } from './skyCubemapFaceContext';
+import { cubemapFaceContext } from './cubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
 import { lensBodySlabs } from './lensBodySlabs';
 import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
@@ -122,11 +122,13 @@ export function renderFrame(input: RenderFrameInput): void {
     if (rosterSettling || captureRuntime.bakedSettings !== state.settings) {
       const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
       for (const face of ALL_CUBE_FACES) {
-        const faceCtx = skyCubemapFaceContext({
+        const faceCtx = cubemapFaceContext({
           state,
           eyeMpc: ctx.drawCamPos,
           face,
           faceSizePx,
+          nearMpc: capture.nearMpc,
+          viewSlotBase: capture.viewSlotBase,
           nowMs: ctx.nowMs,
         });
         if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);

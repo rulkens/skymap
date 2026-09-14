@@ -691,7 +691,7 @@ describe('executeFrame', () => {
   describe('sky-cubemap capture hand-off (Task 12)', () => {
     // A step carrying `face` must resolve its OWN camera (`enabled`/`draw`'s
     // `ctx`), not the frame-wide `args.ctx` — the runtime hand-off `renderFrame`
-    // derives per scheduled face via `skyCubemapFaceContext` and threads in as
+    // derives per scheduled face via `cubemapFaceContext` and threads in as
     // `skyCubemapFaceContexts`. Two distinct fixture contexts stand in for two
     // faces' synthetic cameras; identity (`toBe`), not content, is what proves
     // routing, since a real face ctx and the frame ctx share the same shape.
@@ -734,7 +734,7 @@ describe('executeFrame', () => {
       expect(contentPass.draw.mock.calls[1]![2]).not.toBe(args.ctx);
     });
 
-    it('skips a capture step cleanly when its face has no context (skyCubemapFaceContext returned null)', () => {
+    it('skips a capture step cleanly when its face has no context (cubemapFaceContext returned null)', () => {
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
         {
@@ -746,7 +746,7 @@ describe('executeFrame', () => {
         },
       ];
       // Map has no entry for face 2 — mirrors renderFrame omitting a face whose
-      // skyCubemapFaceContext call returned null (pre-bootstrap frame).
+      // cubemapFaceContext call returned null (pre-bootstrap frame).
       const { args } = makeArgs({ program, skyCubemapFaceContexts: new Map() });
       expect(() => executeFrame(args)).not.toThrow();
       expect(contentPass.enabled).not.toHaveBeenCalled();

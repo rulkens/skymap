@@ -7,7 +7,7 @@
  * a step carrying `face` resolves its `SlabView`/`ctx` from THIS map, not the
  * frame-wide `ctx`. `renderFrame` derives it on a bake; `FRAME_ORDER` stays
  * static and never sees it. Absent/missing-face ⇒ the step is skipped cleanly,
- * as when `skyCubemapFaceContext` itself returns `null` pre-bootstrap.
+ * as when `cubemapFaceContext` itself returns `null` pre-bootstrap.
  */
 
 import type { ReadyFrameContext } from './ReadyFrameContext';

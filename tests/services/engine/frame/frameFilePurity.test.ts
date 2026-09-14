@@ -23,6 +23,7 @@ const FRAME_DIR = fileURLToPath(new URL('../../../../src/services/engine/frame/'
 const ALLOWED: Readonly<Record<string, number>> = {
   'frame/checkFrameOrder': 2,
   'frame/cosmoLabelProjection': 1,
+  'frame/cubemapFaceContext': 4,
   'frame/deriveBodyStates': 3,
   'frame/executeFrame': 7,
   'frame/expandFrameOrder': 6,
@@ -36,7 +37,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/runBloom': 1,
   'frame/runFrame': 3,
   'frame/sceneOccluderSpheres': 1,
-  'frame/skyCubemapFaceContext': 5,
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 3,
   'frame/visibleStars': 1,

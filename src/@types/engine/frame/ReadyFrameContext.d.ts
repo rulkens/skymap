@@ -109,15 +109,16 @@ export type ReadyFrameContext = {
   fovYRad: number;
   /**
    * Which physical GPU destination this frame's draws land in: `0` = the
-   * main view, `1..6` = a black-hole sky-cubemap capture face (`face + 1`,
-   * `skyCubemapFaceContext`). A capture sweep records several `draw()` calls
+   * main view, and a capture row's six faces claim
+   * `viewSlotBase … viewSlotBase + 5` (`cubemapFaceContext`, keyed per row in
+   * `src/data/rendering/cubemapCaptures.ts`). A capture sweep records several `draw()` calls
    * against DIFFERENT synthetic contexts before one `submit()` — the
    * `queue.writeBuffer`-before-`submit` landmine (docs/RENDERER.md #1) means a
    * renderer-owned buffer shared across those calls would keep only the LAST
    * write. A roster renderer keys its per-frame writes on this field (via a
    * view-slot buffer helper, `src/utils/gpu/`) instead of overwriting one
    * shared destination, so each call's bytes survive to its own draw.
-   * `deriveFrameContext` stamps `0`; only `skyCubemapFaceContext` stamps a
+   * `deriveFrameContext` stamps `0`; only `cubemapFaceContext` stamps a
    * face slot.
    */
   viewSlot: number;

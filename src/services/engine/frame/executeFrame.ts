@@ -220,9 +220,9 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // The runtime hand-off: a step carrying `capture` (the
         // black-hole lens's sky-cubemap capture) resolves EVERY per-step value
         // below — slab view, enable gate, draw ctx — from ITS OWN camera
-        // (`renderFrame`'s per-face `skyCubemapFaceContext` derivation), not
+        // (`renderFrame`'s per-face `cubemapFaceContext` derivation), not
         // the frame-wide `ctx`. A missing map entry (that face's
-        // `skyCubemapFaceContext` returned null — e.g. a pre-bootstrap frame)
+        // `cubemapFaceContext` returned null — e.g. a pre-bootstrap frame)
         // skips the step cleanly, the same outcome an empty group already
         // produces below. For every ordinary step `step.capture` is undefined and
         // `stepCtx` is just `ctx` — a no-op passthrough.
