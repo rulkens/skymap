@@ -12,7 +12,7 @@
  * (`CLOUD_SHELL_PARAMS.radiusRatio` is one shared constant, not a per-body
  * table — the lean choice while Earth is the only textured cloud deck). The
  * seeded `bodies.earth` record is composed as a unit sphere scaled to
- * `earth.radiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface)
+ * `earth.surface.datumRadiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface)
  * in the body's own eye-relative frame, with the orientation resolved this
  * frame from the `BodyState` snapshot. The shared `cloudShellRenderer`
  * textures that sphere with Earth's equirectangular cloud map (RGB colour +

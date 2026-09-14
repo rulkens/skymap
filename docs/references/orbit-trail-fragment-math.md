@@ -95,7 +95,10 @@ Opaque, not drawn: the set is the flat ∪ textured branches of
 `sceneBodyPartition`, the resolved branch of `partitionStarsByResolution`, and
 Earth — the bodies the `foreground:0` sphere layers actually paint. A body in
 the 1–3 px glint band is drawn, as an additive sprite, and occludes nothing.
-Radii are `innerBoundRadiusM` (datum + min relief) — under-occluding is the safe failure, so a trail only peeks through at the limb instead of vanishing behind terrain that isn't there; an atmosphere, ring or lens quad is not opaque.
+Radii are `innerBoundRadiusM` (datum + min relief) — under-occluding is the
+safe failure, so a trail only peeks through at the limb instead of vanishing
+behind terrain that isn't there; an atmosphere, ring or lens quad is not
+opaque.
 
 The test is the SEGMENT eye→`x`, not the infinite ray: the closest-point
 parameter is clamped to `[0, 1]`. That clamp is the whole near/far split — a
