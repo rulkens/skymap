@@ -10,6 +10,10 @@
 
 export type BodySurface = {
   readonly datumRadiusM: number; // metres; tiles and heights are defined against this sphere
-  /** [min, max] metres vs the datum. `[0, 0]` until F1 compiles real extremes (spec §3.4e). */
+  /**
+   * [min, max] metres against the datum. `[0, 0]` for every body in P1 — a
+   * placeholder until F1 compiles each body's real extremes from its compiled
+   * height grid (spec §3.4e).
+   */
   readonly reliefM: readonly [number, number];
 };
