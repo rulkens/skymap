@@ -30,20 +30,18 @@
  * the registry, the helper, and `state.assetSlots.points`.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
-// The commit's first-load fade-in routes through the bridge; mock it to a typed
-// no-op so these slot-plumbing tests (upload + onCatalogReady) don't have to
-// stand up full settings/sources state for the real per-row fade walk.
+// The commit's fade-in routes through the bridge; a typed spy lets the fade
+// block below assert the call without standing up full settings/sources state
+// for the real per-row fade walk. The per-row fade itself is covered by
+// syncVisibilityFades.test.ts.
 vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
   syncVisibilityFades:
     vi.fn<
       typeof import('../../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFades
     >(),
-  // The slot commit drives its fade-in through the single-item entry; mock it
-  // too so the commit's bridge call is a no-op here (this file tests upload /
-  // commit mechanics, not the fade — that lives in the sibling Fade test).
   syncVisibilityFadeItem:
     vi.fn<
       typeof import('../../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFadeItem
@@ -59,6 +57,8 @@ import {
 import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { syncVisibilityFadeItem } from '../../../../src/services/engine/wiring/syncVisibilityFades';
+import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { engineSourceCountReported } from '../../../../src/state/engine/engineSlice';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -299,5 +299,68 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
     // sources.catalogs NOT populated — the upload was skipped.
     expect(state.data.galaxies.catalogs.has(Source.TwoMRS)).toBe(false);
+  });
+});
+
+describe('wireGalaxyCatalogSourceSlot — fade-in bridge', () => {
+  const bridge = vi.mocked(syncVisibilityFadeItem);
+
+  beforeEach(() => bridge.mockClear());
+
+  function makeDeps(): WirePointSourceDeps {
+    return { cb: { store: { dispatch: vi.fn() } } as unknown as EngineCallbacks };
+  }
+
+  it('drives the fade-in through the scoped bridge after upload', async () => {
+    const upload = vi.fn().mockResolvedValue(undefined);
+    const state = makeState({ rendererUpload: upload });
+    const cfg: GalaxyCatalogSourceConfig = {
+      source: Source.SDSS,
+      shortName: 'sdss',
+      fetcher: async () => fakeCloud(5),
+      category: 'survey',
+    };
+
+    wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());
+    const slot = state.assetSlots.points.get(Source.SDSS)!;
+    slot.load({ source: Source.SDSS, tier: 'medium' });
+
+    await vi.waitFor(() => {
+      expect(slot.state().kind).toBe('ready');
+    });
+
+    // The scoped single-item entry, applying the survey row's intent to ONLY
+    // this catalog rather than every survey id.
+    expect(bridge).toHaveBeenCalledTimes(1);
+    expect(bridge).toHaveBeenCalledWith(state, 'survey', galaxyCatalogIdOf(Source.SDSS));
+    // The fade-in fires AFTER the renderer upload (commit order).
+    expect(upload.mock.invocationCallOrder[0]!).toBeLessThan(
+      bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
+    );
+  });
+
+  it('drives the fade-in again when an already-loaded source re-commits', async () => {
+    const state = makeState({ rendererUpload: vi.fn().mockResolvedValue(undefined) });
+    // The source is already in the data store: a reload replaces the buffer
+    // straight through, and the row's intent must still reach the fade.
+    state.data.galaxies.setCatalog(Source.SDSS, fakeCloud(99));
+
+    const cfg: GalaxyCatalogSourceConfig = {
+      source: Source.SDSS,
+      shortName: 'sdss',
+      fetcher: async () => fakeCloud(7),
+      category: 'survey',
+    };
+
+    wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());
+    const slot = state.assetSlots.points.get(Source.SDSS)!;
+    slot.load({ source: Source.SDSS, tier: 'medium' });
+
+    await vi.waitFor(() => {
+      expect(slot.state().kind).toBe('ready');
+    });
+
+    expect(bridge).toHaveBeenCalledTimes(1);
+    expect(bridge).toHaveBeenCalledWith(state, 'survey', galaxyCatalogIdOf(Source.SDSS));
   });
 });

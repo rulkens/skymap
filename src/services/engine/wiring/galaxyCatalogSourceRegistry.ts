@@ -5,8 +5,7 @@
  * WHEN each asset loads (boot, visibility toggle, settings flip) belongs to the
  * `ASSET_WIRING` demand table, where the point sources appear as
  * `built: 'external'` rows. So a new galaxy catalog needs one row HERE and one
- * point row THERE; a new companion type needs a `GalaxyCatalogCompanionRef`
- * member plus a slot minted on `state.assetSlots` under the matching key.
+ * point row THERE.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -15,14 +14,11 @@ import { Source } from '../../../data/sources';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyCatalogSourceConfig } from '../../../@types/engine/wiring/GalaxyCatalogSourceConfig';
-import type { Tier } from '../../../@types/data/Tier';
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { createAssetSlot } from '../../loading/AssetSlot';
-import { galaxyCatalogRequest } from './galaxyCatalogRequest';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 import { syncVisibilityFadeItem } from './syncVisibilityFades';
-import { dissolveCatalogBuffer } from './dissolveCatalogBuffer';
 import type { SourceType } from '../../../@types/data/SourceType';
 import { dispatchCatalogLoaded } from './dispatchCatalogLoaded';
 import {
@@ -42,9 +38,6 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
     shortName: 'famous',
     fetcher: galaxyCatalogFetcher,
     category: 'curated',
-    // Carries the InfoCard text, CommandPalette entries and URL-focus resolution
-    // for hand-picked entries; tier-agnostic, so one load per session.
-    companions: ['famousGalaxiesMeta'],
   },
   {
     source: Source.Milliquas,
@@ -96,26 +89,6 @@ export const TIER_FETCHED_POINT_SOURCES: readonly SourceType[] =
   GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category !== 'synthetic').map((c) => c.source);
 
 /**
- * Called from `setTier`'s reload loop only — at boot and on visibility toggle,
- * companions load through their own `ASSET_WIRING` demand rows.
- *
- * The only companion ref today (`famousGalaxiesMeta`) rides its parent's own
- * request — `galaxyCatalogRequest(cfg.source, tier)`, the identical call the
- * `ASSET_WIRING` row makes — so a tier-change reload cannot disagree with the
- * demand loop about what the companion should be fetching. `.load()`
- * re-fetches unconditionally, which is exactly what a tier change wants.
- */
-export function loadCompanionAssets(
-  state: EngineState,
-  cfg: GalaxyCatalogSourceConfig,
-  tier: Tier,
-): void {
-  if (!cfg.companions) return;
-  const req = galaxyCatalogRequest(cfg.source, tier);
-  for (const ref of cfg.companions) void state.assetSlots[ref]?.load(req);
-}
-
-/**
  * Must run before `createSyntheticFallback`, `installLoadProgress` and
  * `reevaluateDemand`, which subscribe to and enumerate the minted slots. Renderer
  * construction order does NOT matter — `commit` re-reads the renderer at call time.
@@ -133,20 +106,13 @@ export function wireGalaxyCatalogSourceSlot(
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
     fetch: fetcher,
-    commit: async (cloud, _signal, req) => {
+    commit: async (cloud) => {
       // Null mid-bootstrap or after teardown: drop the upload silently, the slot
       // still transitions to `ready`. Checked directly rather than through
       // `isEngineReady`, which also waits on handles populated LATER in bootstrap
       // and would reject this upload during the legitimate wireSlots window.
       if (state.gpu.galaxyPointRenderer === null) return;
       const catalogId = galaxyCatalogIdOf(source);
-
-      // The trigger is EXPLICIT, set only by `setTier` — inferring it from
-      // data-store membership would let any second commit (re-enable, forceReload,
-      // a dev double-bootstrap) trip a spurious dissolve. The await is
-      // load-bearing: one buffer per catalog means the tiers cannot cross-fade, so
-      // the dissolve must finish before `upload()` destroys the buffer.
-      if (req.dissolvePrevious) await dissolveCatalogBuffer(state, catalogId);
 
       const t0 = performance.now();
       console.log(`[engine] upload start ${shortName} count=${cloud.count}`);

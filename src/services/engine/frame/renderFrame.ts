@@ -148,8 +148,8 @@ export function renderFrame(input: RenderFrameInput): void {
   // cubemap as at-infinity, so there is no pinned-eye tracking to do.
   //
   // A settings-reference change re-bakes. Dropped from the key on purpose:
-  // `tier` — a tier swap dissolves through `fades.fadeTo` (`dissolveCatalogBuffer.ts`),
-  // so `rosterSettling` already catches it; `faceSizePx` — the resolution
+  // `tier` — a tier swap re-commits every visible catalog, and each commit's
+  // fade-in keeps `rosterSettling` true across the swap; `faceSizePx` — the resolution
   // knob is a settings write, and `reconcile` (above) reallocates the row
   // earlier in the same `runFrame`, so the settings-ref bake lands in the
   // new texture; `selection` — a stale selection halo in the lensed sky is

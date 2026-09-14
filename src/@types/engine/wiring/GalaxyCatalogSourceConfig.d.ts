@@ -4,18 +4,6 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 
 /**
- * Names of the asset slots that may live alongside a galaxy-catalog
- * `.bin`.  Each value corresponds to a key on `state.assetSlots`.  At
- * boot and on visibility toggle the companion loads via its own
- * `ASSET_WIRING` demand row; on tier change `loadCompanionAssets`
- * reloads it in lockstep with the new-tier bin.
- *
- *   - `famousGalaxiesMeta` — Famous-galaxy meta JSON sidecar
- *                    (tier-agnostic; one load per session).
- */
-export type GalaxyCatalogCompanionRef = 'famousGalaxiesMeta';
-
-/**
  * Categorisation of a registry row.  Drives behaviour in the two places
  * that would otherwise hardcode their own per-source lists:
  *
@@ -58,18 +46,4 @@ export type GalaxyCatalogSourceConfig = {
    * per-value semantics.
    */
   category: GalaxyCatalogSourceCategory;
-  /**
-   * Names of asset slots that live alongside the main `.bin` and must
-   * stay in lockstep with it on tier change — `loadCompanionAssets`
-   * reloads each when `setTier` re-fetches this row.  (At boot and on
-   * visibility toggle the companion loads via its own `ASSET_WIRING`
-   * demand row instead.)
-   *
-   * Pure data: the resolver in `loadCompanionAssets` indexes
-   * `state.assetSlots` by the ref string and dispatches the row's own
-   * `galaxyCatalogRequest(cfg.source, tier)` — no per-key switch. Adding a
-   * new companion type is one new `GalaxyCatalogCompanionRef` member plus
-   * one slot minted on `state.assetSlots` with a matching key.
-   */
-  companions?: readonly GalaxyCatalogCompanionRef[];
 };

@@ -8,11 +8,9 @@
  * the structural fix, the signal is the cooperative one).
  *
  * It also receives the originating `req`, so a commit can vary by what was
- * asked for — e.g. the galaxy-catalog commit dissolves the old buffer first
- * only when `setTier` flagged the request a tier swap (`dissolvePrevious`),
- * rather than guessing the swap from data-store membership.  Committers that
- * don't need it simply omit the parameter (fewer args stays assignable);
- * `Req` defaults to `unknown` so `Committer<T>` still type-checks.
+ * asked for.  Committers that don't need it simply omit the parameter (fewer
+ * args stays assignable); `Req` defaults to `unknown` so `Committer<T>` still
+ * type-checks.
  */
 export type Committer<T, Req = unknown> = (
   value: T,
