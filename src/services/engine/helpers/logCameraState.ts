@@ -3,12 +3,10 @@
  * as ONE lossless JSON blob for reconstructing a failing pose. `cam` and
  * `focusRow` must be the LIVE values the caller assembled this frame
  * (`liveRenderCamera` / `liveFocusRow`) — this module trusts them as-is.
- *
  * `JSON.stringify`'s default formatting only — no `toFixed`/`toPrecision` —
  * because scales span ~1e2 Mpc down to a body's surface (a 50 m altitude at
  * Earth's radius is a ~1e-6 relative offset on `distance`), which digit-limited
- * formatting rounds to zero. `earthSubCamera` is the tile subsystem's own
- * last-plan readout, so it is null whenever Earth's virtual texture is idle.
+ * formatting rounds to zero.
  */
 
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';

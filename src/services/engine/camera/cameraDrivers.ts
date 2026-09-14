@@ -184,7 +184,8 @@ function framedClipArm(
   bodies: ReadonlyMap<BodyId, BodyState>,
 ): FramedCameraPose {
   const { frame, channels } = evaluated;
-  // Neither decode cell reads a basis, so the current one stands in for both.
+  // No decode cell reads a basis TODAY. The day one does — a site row reading
+  // `upBasis` — it silently gets the current basis `to` where the clip pinned `from`.
   const decoded = rowFor(frame).channels.decode(channels, frame, {
     bodies,
     poseBasis: to,

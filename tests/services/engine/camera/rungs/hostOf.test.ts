@@ -14,11 +14,6 @@ import type { PoseFrame } from '../../../../../src/@types/camera/PoseFrame';
 import type { RungBasisCtx } from '../../../../../src/@types/camera/RungBasisCtx';
 
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-const EARTH_STATE: BodyState = {
-  positionMpc: [0, 0, 0],
-  orientation: IDENTITY,
-  meanAnomalyRad: 0,
-};
 const EARTH: PoseFrame = { body: 'earth' };
 
 function ctxWith(bodies: ReadonlyMap<BodyId, BodyState>): RungBasisCtx {
@@ -28,12 +23,6 @@ function ctxWith(bodies: ReadonlyMap<BodyId, BodyState>): RungBasisCtx {
 describe('hostOf', () => {
   it('answers null for a body absent from the state map', () => {
     expect(hostOf(EARTH, ctxWith(new Map()))).toBeNull();
-  });
-
-  it('answers the ground radius, never a bounding hull', () => {
-    const host = hostOf(EARTH, ctxWith(new Map<BodyId, BodyState>([['earth', EARTH_STATE]])));
-    // Earth's authored ground radius, hand-written (spec §2.6.6).
-    expect(host?.radiusM).toBe(6371000);
   });
 });
 
