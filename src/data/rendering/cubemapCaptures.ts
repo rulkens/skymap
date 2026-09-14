@@ -1,13 +1,10 @@
 /**
  * cubemapCaptures — the frame's environment bakes, AS DATA: one row per
- * six-face capture. A `sky` row bakes the surrounding sky into a render-target
- * row while its anchor band is open; the `probe` row bakes a body's
- * surroundings into that body's own cube.
+ * six-face capture. A `sky` row bakes the sky into a render-target row while its
+ * anchor band is open; the `probe` row bakes a body's surroundings into its cube.
  *
- * Slot 0 is the main view, so a row's six faces claim
- * `viewSlotBase … viewSlotBase + 5`. Every row's range must fit under
- * `VIEW_SLOT_COUNT` (`src/utils/gpu/createViewSlotUniformRing.ts`) and stay
- * disjoint from every other row's: two rows sharing a slot overwrite each
+ * A row's faces claim view slots `viewSlotBase … +5`, under `VIEW_SLOT_COUNT`
+ * and disjoint from every other row's: two rows sharing a slot overwrite each
  * other's per-view uniform writes, with no error anywhere.
  */
 

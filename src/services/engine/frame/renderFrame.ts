@@ -1,15 +1,12 @@
 /**
- * renderFrame — the per-frame WebGPU command-encoder lifecycle: the
- * once-per-frame focus-uniform write, encoder create + swap-view acquire +
- * submit, the timing frame window, and the one call into
- * `scheduleCubemapCaptures`.
- *
- * Each scheduled capture face submits its OWN command buffer ahead of the
- * frame's: a body renderer rewrites its per-body uniform buffer per draw, so
- * a body drawn for a face and again for the view can only share a submission
- * by handing both draws the last write (`docs/RENDERER.md`, landmine #1).
- * Order of operations is DATA (`FRAME_ORDER` walked by `executeFrame`), so
+ * renderFrame — the per-frame WebGPU command-encoder lifecycle: focus-uniform
+ * write, encoder create + submit, the timing window, and the one call into
+ * `scheduleCubemapCaptures`. Order of operations is DATA (`FRAME_ORDER`), so
  * this module knows no individual pass.
+ *
+ * Each capture face submits its OWN command buffer ahead of the frame's: a body
+ * renderer rewrites its per-body uniform buffer per draw, so a body drawn for a
+ * face and for the view cannot share a submission (`docs/RENDERER.md` #1).
  */
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';

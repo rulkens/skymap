@@ -239,12 +239,12 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     expect(facesOf(second!)).toEqual([5]);
     expect(frame!.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
     expect(frame!.length).toBeGreaterThan(0);
-    // Each executeFrame call recorded into the encoder submitted right after it.
-    const encoders = (input.device.createCommandEncoder as unknown as ReturnType<typeof vi.fn>).mock
-      .results;
-    executeFrameMock.mock.calls.forEach((call, i) => {
-      expect(call[0].encoder).toBe(encoders[i]!.value);
-    });
+    // Every buffer submitted is one executeFrame call's own encoder, finished.
+    const recorded = executeFrameMock.mock.calls.map(
+      (call) => (call[0].encoder.finish as ReturnType<typeof vi.fn>).mock.results[0]!.value,
+    );
+    expect(new Set(recorded).size).toBe(3);
+    submit.mock.calls.forEach((call, i) => expect(call[0][0]).toBe(recorded[i]));
   });
 
   it('runs finishCubemapCapture once per row that had faces this frame, after its faces', () => {

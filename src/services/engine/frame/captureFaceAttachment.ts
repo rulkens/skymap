@@ -5,17 +5,22 @@
  * 0 of its subject body's own cube, paired with that probe's depth.
  */
 
-import type { CaptureFaceAttachment } from '../../../@types/engine/frame/CaptureFaceAttachment';
 import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
+import { subjectProbe } from './subjectProbe';
 
 export function captureFaceAttachment(
   capture: CaptureFaceRef,
   ctx: ReadyFrameContext,
   state: EngineState,
-): CaptureFaceAttachment {
+): {
+  readonly view: GPUTextureView;
+  readonly clearValue: GPUColor;
+  /** Null for a row that draws no body; attached only on the face's body-slab steps. */
+  readonly depthView: GPUTextureView | null;
+} {
   const row = CUBEMAP_CAPTURES[capture.key];
   if (row.kind === 'sky') {
     return {
@@ -25,13 +30,7 @@ export function captureFaceAttachment(
       depthView: null,
     };
   }
-  // The scheduler picked a resident body for this frame's probe faces, so a
-  // missing probe here is a wiring bug, not a frame to skip.
-  const subject = state.cubemapCaptures.probe.subject;
-  const probe = subject === null ? null : state.gpu.meshBodyRenderer?.probeOf(subject);
-  if (!probe) {
-    throw new Error(`captureFaceAttachment: no probe for subject '${subject}'`);
-  }
+  const probe = subjectProbe(state);
   return {
     view: probe.cube.createView({
       dimension: '2d',

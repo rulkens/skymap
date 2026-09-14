@@ -46,9 +46,9 @@ export type EngineState = {
   cameraRuntime: CameraRuntime;
   /**
    * Per-`CUBEMAP_CAPTURES`-row bake bookkeeping — render state, not camera
-   * state; written by `scheduleCubemapCaptures`, read by each sky row's
-   * target's `allocateWhen`. Seeded in `engine.ts`; entries are mutated in
-   * place.
+   * state; written by `scheduleSkyCaptures` and `scheduleProbeCapture`, read
+   * by each sky row's target's `allocateWhen`. Seeded in `engine.ts`; entries
+   * are mutated in place.
    */
   cubemapCaptures: CubemapCaptureRuntimes;
   assetSlots: EngineAssetSlots;

@@ -9,6 +9,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { prefilterCubeGgx } from '../../gpu/lib/prefilterCubeGgx';
+import { subjectProbe } from './subjectProbe';
 
 export function finishCubemapCapture(
   key: CubemapCaptureKey,
@@ -16,10 +17,5 @@ export function finishCubemapCapture(
   device: GPUDevice,
 ): void {
   if (CUBEMAP_CAPTURES[key].kind !== 'probe') return;
-  const subject = state.cubemapCaptures.probe.subject;
-  const probe = subject === null ? null : state.gpu.meshBodyRenderer?.probeOf(subject);
-  if (!probe) {
-    throw new Error(`finishCubemapCapture: no probe for subject '${subject}'`);
-  }
-  prefilterCubeGgx(device, probe.cube);
+  prefilterCubeGgx(device, subjectProbe(state).cube);
 }

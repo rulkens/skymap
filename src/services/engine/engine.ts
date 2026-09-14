@@ -116,10 +116,10 @@ export function createEngine(
     projection: { fovYRad: 0, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
   });
 
-  // One bake-bookkeeping entry per capture row, seeded per kind;
-  // `scheduleCubemapCaptures` is the sole writer thereafter. A sky row starts
-  // at Infinity, not 0: far outside every band pre-boot, so a row's hysteresis
-  // margin can't mistake "never measured" for "just closed".
+  // One bake-bookkeeping entry per capture row, seeded per kind; that kind's
+  // scheduler is the sole writer thereafter. A sky row starts at Infinity, not
+  // 0: far outside every band pre-boot, so a row's hysteresis margin can't
+  // mistake "never measured" for "just closed".
   const cubemapCaptures = Object.fromEntries(
     Object.entries(CUBEMAP_CAPTURES).map(([key, row]) => [
       key,

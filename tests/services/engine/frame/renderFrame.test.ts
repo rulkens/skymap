@@ -599,12 +599,12 @@ describe('renderFrame', () => {
     fx = makeInput();
   });
 
-  it('creates exactly one command encoder per frame', () => {
+  it('creates exactly one command encoder on a frame with no capture faces', () => {
     renderFrame(fx.input);
     expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
   });
 
-  it('submits exactly once with the encoder.finish() output', () => {
+  it('submits exactly once, with the encoder.finish() output, on a frame with no capture faces', () => {
     renderFrame(fx.input);
     const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
     expect(submit).toHaveBeenCalledTimes(1);

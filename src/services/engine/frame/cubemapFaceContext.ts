@@ -3,7 +3,8 @@
  * Mirrors `pickFrameContext.ts`: roster layers read `ctx.fovYRad`/
  * `canvasSize`/`drawPxPerRad` as frame-globals, not just `viewProj`, so a
  * whole synthetic `ReadyFrameContext` is cheaper than threading a swapped
- * vp through every consumer.
+ * vp through every consumer. The row's `nearMpc` is also the pose distance and
+ * the altitude NEAR0's bracket is sized from, so it sets the NEAR0 near plane.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
