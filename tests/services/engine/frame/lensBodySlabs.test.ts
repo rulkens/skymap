@@ -65,7 +65,7 @@ describe('lensBodySlabs', () => {
       tone,
       bloomEnabled: true,
       foregroundChain: [NEAR0],
-      skyCubemapFacesToCapture: [],
+      captureFaces: new Map([['sgrAStar', []]]),
       lensBodySlabs: slabs,
     });
     const foregroundAt = program.findIndex(
