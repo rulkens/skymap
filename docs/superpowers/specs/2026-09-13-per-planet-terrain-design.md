@@ -159,7 +159,7 @@ never pushed — only ever permitted lower as finer data lands.
 | a   | **Delete the name `radiusM`.** Every one of the 215 sites fails to compile and picks one of five currencies, legibly, in the diff | one mechanical PR over ~10 hubs. The alternative — keeping `radiusM` as the datum with bounds beside it — leaves R1/R4/R5 silently holding the wrong currency and removes the compiler from the loop, which is the entire value                                                                                                                                                            |
 | b   | **Break the manifest shape** (`levels` → `bands`)                                                                                 | `fetchEarthTileManifest`'s guard rejects unknown shapes, so tiles are OFF in production between merge and R2 sync (`docs/DEPLOY.md:47`). Accepted: the bake must re-run for height anyway, and `prefix` versioning already isolates the CDN. Compat — both keys read forever — was rejected                                                                                                |
 | c   | **Nested point decimation** for the height pyramid, not filtering                                                                 | coarse levels are point-sampled, so a peak can survive into a level where its neighbours averaged away. Bought: level _L_ is a bit-identical subset of _L+1_, making cross-level cracks structurally zero instead of skirt-hidden. Softened by choosing, among each coarse post's four candidates, the one nearest the local mean — still nested                                           |
-| d   | **Procedural vertex-shader geometry** (user's choice at the checkpoint)                                                           | replaces exact f64 CPU-baked positions with f32 small-angle trig on the _existing_ Earth path. Bought: deletes three modules and the per-frame vertex upload, and makes real instancing possible for the first time — one draw call, 64 B per patch. Requires a numeric test against f64 ground truth and its own perf measurement (P6)                                                    |
+| d   | **Procedural vertex-shader geometry** (user's choice at the checkpoint)                                                           | replaces exact f64 CPU-baked positions with f32 small-angle trig on the _existing_ Earth path. Bought: deletes three modules and the per-frame vertex upload, and makes real instancing possible for the first time — one draw call, ≤ 80 B per patch. Requires a numeric test against f64 ground truth and its own perf measurement (P6)                                                  |
 | e   | **A compiled coarse min/max height grid** (64×32 int16 pairs, 8 KB/body) in the bundle                                            | 8 KB of bundle per body. Bought: `ceilingHeightM` has a bound at boot with zero network, so the floor never steps _up_ when the first tiles land — which happens on close approach, exactly when the camera is near the ground. It is the z6 layer of the bound the tile headers carry, and it is the one compiled home for relief: `reliefM` is its extremes, not a second compiled tuple |
 | f   | **One shared atlas, at most one engaged body**                                                                                    | a hypothetical pose close to two planets at once gets tiles on neither. Bought: 268 MB instead of 536 MB. Tiles engage only on close approach, and no pose is close to two planets                                                                                                                                                                                                         |
 
@@ -438,7 +438,7 @@ base globe covers it, exactly as today.
 ## 7. Displaced geometry
 
 **One shared template mesh, positions in the vertex shader, normals in the fragment
-shader, nothing per-patch uploaded but a 64-byte instance record.** This replaces
+shader, nothing per-patch uploaded but an 80-byte instance record.** This replaces
 `bakeSurfaceTileMesh`, `surfaceTileMeshCache` and the `TileVertex` storage buffer
 that is rewritten in full every frame.
 
@@ -461,18 +461,23 @@ that is rewritten in full every frame.
 
 ```wgsl
 struct PatchInstance {
-  originRelEyeM  : vec3f,   // f64-differenced on the CPU: f64(origin) − f64(eye)
-  datumRadiusM   : f32,     // fround'd; the CPU used THIS value for originRelEyeM
-  lon0Rad        : f32,     // fround'd
-  lat0Rad        : f32,     // fround'd
-  dLonRad        : f32,
-  dLatRad        : f32,
-  albedoRect     : vec4f,   // at offset 32: the vec4 must precede the vec2u or
-  heightSlotOrigin : vec2u, // WGSL alignment pads the record to 80 B
-  edgeCoarser    : u32,     // 4 × 1 bit
-  fadeWeight     : f32,     // the existing crossfade
-}                           // 64 B
+  originRelEyeM    : vec3f, // f64-differenced on the CPU: f64(origin) − f64(eye)
+  fadeWeight       : f32,   // the existing crossfade; fills the vec3's alignment pad
+  lon0Rad          : f32,   // fround'd — the CPU derived originRelEyeM from THIS value
+  lat0Rad          : f32,   // fround'd
+  dLonRad          : f32,
+  dLatRad          : f32,
+  albedoRect       : vec4f, // at offset 32: every vec4 must precede the vec2u or
+  fallbackRect     : vec4f, // WGSL alignment pads the record past 80 B
+  heightSlotOrigin : vec2u, // F2
+  edgeCoarser      : u32,   // F2: 4 × 1 bit
+}                           // 80 B; P6 lands the first 64 B
 ```
+
+`fallbackRect` is the crossfade's ancestor rect the shipped fragment already samples
+(`fragment.wesl:102-106`). `datumRadiusM` is not in the record: it is the per-draw
+uniform `radiusM` — one engaged body per draw (§3.4f) — and the CPU `fround`s it
+before deriving `originRelEyeM`, so the uniform carries the identical f32 word.
 
 ### 7.1 Position derivation
 
@@ -700,7 +705,7 @@ normal, which samples the height texture at full resolution (§7.2). Raising `n`
 further is a constant, not a re-bake, if the eye-check wants the geometry to carry it.
 
 GPU: albedo atlas 268 MB (unchanged), height atlas 17.0 MB, per-patch instance
-records 64 B × ~250 = 16 KB, geometry buffers one shared 65×65 template. The
+records 80 B × ~250 = 20 KB, geometry buffers one shared 65×65 template. The
 per-frame vertex upload of 3–5 MB **goes away**.
 
 ## 11. Testing
@@ -714,7 +719,8 @@ fail on a real bug nothing else catches.
   posts are identical to the matching child posts. These are the two properties §7.3
   rests on, and both are silent when broken.
 - **Position derivation against f64 ground truth**: the haversine form vs a
-  `mat4d`-grade reference at z7 and z19, asserting sub-millimetre agreement, and
+  plain-f64 absolute-direction reference at z7 and z19 (≤ 1e-6 m and ≤ 1e-7 m —
+  ~70× the reference's own cancellation floor, far below the f32 budget), and
   asserting the `s = t = 0` corner is exactly `originRelEyeM`. This is the test that
   makes P6's numerics reviewable.
 - **`ceilingHeightM` monotonicity**: feed a scripted residency sequence and assert
