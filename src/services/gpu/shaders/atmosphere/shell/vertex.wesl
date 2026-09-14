@@ -67,10 +67,13 @@ fn vs(@location(0) position: vec3<f32>) -> VsOut {
   return out;
 }
 
-// The inside-shell full-screen pass: no proxy
-// mesh, no vertex buffer -- just the covering triangle. The fragment
-// reconstructs the view ray by unprojecting through 'u.invMvp' instead of
-// reading an interpolated local position.
+// The vertex stage of the full-screen aerial-perspective pass
+// ('aerialPerspective/fragment.wesl', a different module -- a pipeline may take
+// its two stages from different modules): no proxy mesh, no vertex buffer, just
+// the covering triangle. That fragment reconstructs the view ray by
+// unprojecting through 'u.invMvp' instead of reading an interpolated local
+// position, so nothing is forwarded but the uv. 'u' above is unread by this
+// entry point, hence absent from its pipeline's bind-group visibility.
 @vertex
 fn insideVs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
   return fullscreenVertex(vi);

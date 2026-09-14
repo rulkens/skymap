@@ -25,12 +25,12 @@
 // both: a nearer body occludes the disc haze via the near wall's depth and the
 // limb via the far wall's.
 //
-// Case analysis: camera OUTSIDE the shell -> disc = near wall, limb = far wall.
-// Camera INSIDE the shell -> only back faces are geometrically visible, so the
-// sky/limb still renders and down-looking (ground) rays lose their haze
-// (acceptable: the in-atmosphere descent regime is the deferred froxel's job).
-// In practice this proxy never reaches that regime: the layer hands off to the
-// full-screen inside path slightly above the top (see 'isInsideAtmosphereShell').
+// This proxy runs only from OUTSIDE the shell -> disc = near wall, limb = far
+// wall. Inside, the layer hands off slightly above the top (see
+// 'isInsideAtmosphereShell') to the full-screen aerial-perspective pass, which
+// keys each pixel on scene depth and has no wall split
+// ('aerialPerspective/fragment.wesl'). 'sampleShellRay' is that pass's sky
+// branch, which is why it is exported.
 //
 // ## The analytic march bound (WESL mirror of 'atmosphereShellBound')
 //
@@ -91,7 +91,6 @@ import package::lib::sphere::AtmosphereUniforms;
 import package::lib::util::raySphere;
 import package::atmosphere::scattering::sampleTransmittanceToTop;
 import package::atmosphere::scattering::skyViewLutParamsToUv;
-import package::lib::fullscreenTri::FullscreenOut;
 
 @group(0) @binding(0) var<uniform> u: AtmosphereUniforms;
 @group(0) @binding(1) var lutSamp: sampler;
@@ -134,7 +133,7 @@ struct ShellSample {
   hit: bool,
   // Does this ray hit the ground sphere ahead of the shell entry? Carried out
   // so callers can run their OWN wall-duty test against it -- the outside path
-  // needs the front_facing split below; the inside full-screen pass has no
+  // needs the front_facing split below; the aerial-perspective pass has no
   // "wrong wall" and skips it entirely.
   intersectsGround: bool,
 };
@@ -314,55 +313,6 @@ fn fsMultiply(in: FsIn) -> @location(0) vec4<f32> {
 @fragment
 fn fsAdd(in: FsIn) -> @location(0) vec4<f32> {
   let s = sampleShell(in);
-  if (!s.hit) {
-    discard;
-  }
-  return vec4<f32>(s.emission, s.coverage);
-}
-
-// ── Inside-shell path (full-screen pass) ────────────────────────────────
-//
-// Camera inside the atmosphere shell: there is no proxy mesh to interpolate a
-// local position from, so the view ray is reconstructed by unprojecting the
-// full-screen triangle's screen position through 'u.invMvp'. No wall split --
-// a full-screen pass has no "wrong wall" (spec §4.2).
-
-// Recover the view ray for 'uv' by inverting fullscreenVertex's own mapping
-// ('uv = ((xy+1)*0.5, (1-xy)*0.5)') back to clip-space xy, unprojecting
-// through 'u.invMvp', and renormalizing (the house trap after a non-uniformly
-// scaled model transform -- same reason 'sampleShell's dir derivation does).
-fn insideRayDir(uv: vec2<f32>) -> vec3<f32> {
-  let xy = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-  // Homogeneous far-point form -- never divide by w, never subtract camPos
-  // from a divided point. Under reversed-Z, z = 0 is the FAR plane: dividing
-  // there blows up (w -> 0, the uniform grey veil), and any finite z puts the
-  // unprojected point a few near-plane distances from the camera, so
-  // 'p - camPosLocal' is a metres-scale difference of unit-scale f32 vectors
-  // that shimmers as the near plane shrinks on descent. Algebra instead:
-  // p - cam = (P.xyz - cam * P.w) / P.w for P = invMvp * clip, so the
-  // direction is normalize(P.xyz - cam * P.w) with P.w's sign folded in --
-  // and at w -> 0 it degrades gracefully to normalize(P.xyz), the ray's own
-  // point at infinity.
-  let hp = u.invMvp * vec4<f32>(xy, 0.0, 1.0);
-  var v = hp.xyz - u.camPosLocal * hp.w;
-  if (hp.w < 0.0) { v = -v; }
-  return normalize(v);
-}
-
-@fragment
-fn fsInsideMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
-  let dir = insideRayDir(in.uv);
-  let s = sampleShellRay(dir);
-  if (!s.hit) {
-    discard;
-  }
-  return vec4<f32>(s.transmit, 1.0 - s.coverage);
-}
-
-@fragment
-fn fsInsideAdd(in: FullscreenOut) -> @location(0) vec4<f32> {
-  let dir = insideRayDir(in.uv);
-  let s = sampleShellRay(dir);
   if (!s.hit) {
     discard;
   }
