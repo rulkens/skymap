@@ -27,6 +27,7 @@ export function scheduleProbeCapture(input: {
   const { state, ctx } = input;
   const runtime = state.cubemapCaptures.probe;
   runtime.subject = null;
+  runtime.due = false;
   const renderer = state.gpu.meshBodyRenderer;
   if (renderer === null) return null;
 
@@ -34,9 +35,11 @@ export function scheduleProbeCapture(input: {
   // resolving at once cycle through the one in-flight probe in turn.
   let subject: MeshBody | null = null;
   let refreshedAtMs = Number.POSITIVE_INFINITY;
+  let dueCount = 0;
   for (const body of sceneBodyPartition(state, ctx).meshes) {
     if (!renderer.hasMesh(body.id)) continue;
     const at = runtime.refreshedAtMs.get(body.id) ?? Number.NEGATIVE_INFINITY;
+    if (ctx.nowMs - at >= PROBE_REFRESH_INTERVAL_MS) dueCount++;
     if (at < refreshedAtMs) {
       refreshedAtMs = at;
       subject = body;
@@ -78,5 +81,6 @@ export function scheduleProbeCapture(input: {
   }
   runtime.subject = subject.id;
   runtime.refreshedAtMs.set(subject.id, ctx.nowMs);
+  runtime.due = dueCount > 1;
   return faces;
 }

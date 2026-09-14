@@ -31,6 +31,8 @@ const NOW_MS = 100_000;
 // A hosted rover (rides Mars's row) and a hostless probe (owns its row).
 const CURIOSITY = SCENE_MESH_BODIES.find((body) => body.id === 'curiosity')!;
 const VOYAGER = SCENE_MESH_BODIES.find((body) => body.id === 'voyager1')!;
+const WHALE = SCENE_MESH_BODIES.find((body) => body.id === 'whale')!;
+const PETUNIAS = SCENE_MESH_BODIES.find((body) => body.id === 'petunias')!;
 
 /** The camera parked at a body: the partition then resolves it as a mesh. */
 function ctxAt(bodyId: string, nowMs = NOW_MS): ReadyFrameContext {
@@ -92,6 +94,22 @@ describe('scheduleProbeCapture', () => {
     expect(scheduleProbeCapture({ state, ctx: ctxAt('voyager1') })).not.toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBe('voyager1');
     expect(cubemapFaceContextMock).toHaveBeenCalledTimes(12);
+  });
+
+  it('votes to keep ticking while a second body resolved in the same tick is still due', () => {
+    // A paused, still scene wakes for nothing else, so the loser of the tie
+    // would sit on a zero cube until the next input.
+    const state = makeState(['whale', 'petunias']);
+    (state.data.bodies as { meshBodies: unknown }).meshBodies = [WHALE, PETUNIAS];
+    const probe = state.cubemapCaptures.probe;
+
+    expect(scheduleProbeCapture({ state, ctx: ctxAt('whale') })).not.toBeNull();
+    const first = probe.subject;
+    expect(probe.due).toBe(true);
+
+    expect(scheduleProbeCapture({ state, ctx: ctxAt('whale', NOW_MS + 16) })).not.toBeNull();
+    expect(probe.subject).not.toBe(first);
+    expect(probe.due).toBe(false);
   });
 
   it('refreshes nothing while every candidate is inside PROBE_REFRESH_INTERVAL_MS', () => {

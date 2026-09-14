@@ -56,7 +56,12 @@ function rootWithCamera(
 const restingRoot = rootWithCamera();
 
 /** No in-frame animation vote — the default for every case but the vote ones. */
-const NO_ANIM = { starFadeAnimating: false, earthTilesAnimating: false, labelsAnimating: false };
+const NO_ANIM = {
+  starFadeAnimating: false,
+  earthTilesAnimating: false,
+  labelsAnimating: false,
+  probeDue: false,
+};
 
 /**
  * Minimal state covering every term shouldKeepTicking reads. All terms default

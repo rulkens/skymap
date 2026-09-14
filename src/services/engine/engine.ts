@@ -129,7 +129,7 @@ export function createEngine(
             lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
             bakedSettings: null,
           }
-        : { subject: null, refreshedAtMs: new Map<string, number>() },
+        : { subject: null, refreshedAtMs: new Map<string, number>(), due: false },
     ]),
   ) as CubemapCaptureRuntimes;
 

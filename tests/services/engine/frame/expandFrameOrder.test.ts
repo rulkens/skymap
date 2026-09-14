@@ -155,6 +155,16 @@ describe('expandFrameOrder', () => {
 
     expect(namesOf(program[0])).toEqual(['b', 'a']);
   });
+
+  it('every capture-line pass name is a CONTENT_PASSES name', () => {
+    // `resolve` drops unknown names silently, and no render line counts a
+    // capture-only pass, so a rename missed on a capture line fails nowhere else.
+    const known = new Set(CONTENT_PASSES.map((p) => p.name));
+    const captureNames = FRAME_ORDER.flatMap((line) =>
+      line.kind === 'capture' ? [...line.cosmoPasses, ...line.near0Passes, ...line.bodyPasses] : [],
+    );
+    expect(captureNames.filter((name) => !known.has(name))).toEqual([]);
+  });
 });
 
 describe('expandFrameOrder — the per-frame fan-outs', () => {

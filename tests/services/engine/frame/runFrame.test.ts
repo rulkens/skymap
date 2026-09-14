@@ -126,6 +126,7 @@ import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { earthArm } from '../../../fixtures/earthArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
+import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
 
@@ -1037,6 +1038,8 @@ describe('runFrame — the label-director wake fold', () => {
       },
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
+      // Read past the (mocked) renderFrame for the probe's wake vote.
+      cubemapCaptures: makeCubemapCaptureRuntimes(),
       gpu: {
         ...base.gpu,
         galaxyPointRenderer: {},

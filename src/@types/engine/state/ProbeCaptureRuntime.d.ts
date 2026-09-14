@@ -9,4 +9,7 @@ export type ProbeCaptureRuntime = {
   subject: string | null;
   /** Per body, `ctx.nowMs` of its last completed refresh. */
   refreshedAtMs: Map<string, number>;
+  /** A second body was also due this frame: `shouldKeepTicking`'s vote, since
+   *  nothing else wakes a paused, still scene for it. */
+  due: boolean;
 };

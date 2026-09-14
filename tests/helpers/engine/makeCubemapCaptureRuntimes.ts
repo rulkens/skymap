@@ -24,5 +24,5 @@ export function makeCubemapCaptureRuntimes(
       },
     ]),
   ) as Record<SkyCaptureKey, SkyCaptureRuntime>;
-  return { ...sky, probe: { subject: null, refreshedAtMs: new Map<string, number>() } };
+  return { ...sky, probe: { subject: null, refreshedAtMs: new Map<string, number>(), due: false } };
 }
