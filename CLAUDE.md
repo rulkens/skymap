@@ -92,6 +92,7 @@ npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/
 npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
+npm run session-tokens  # where a session's tokens went: per turn, skill, subagent
 ```
 
 `typecheck:fast` is the inner-loop typecheck: TypeScript 7 (`tsgo`, the Go port) over the same two tsconfigs, 13.2s → 1.8s. It's an **exact-pinned dev build**, so `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug and confirm against `tsc` before acting on it.
