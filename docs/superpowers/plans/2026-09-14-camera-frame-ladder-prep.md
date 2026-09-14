@@ -238,13 +238,13 @@ plan are read from #707's branch (`worktree-fix-on-planet-body-camera`), and no
 doc file is carried onto, or edited from, the prep branch. Every commit below
 lands on the code branch.
 
-- [ ] `npm run typecheck` — clean (tsc, both projects; not only `:fast`).
-- [ ] `npm test` — full pass. Record the **suite and file counts** verbatim in
+- [x] `npm run typecheck` — clean (tsc, both projects; not only `:fast`).
+- [x] `npm test` — full pass. Record the **suite and file counts** verbatim in
       the SDD ledger under `Task 0 gate`; every later task compares against it,
       and a task that changes the count without adding a test named in this plan
       is a review failure.
-- [ ] `git status --porcelain tests/fixtures/camera/` — empty.
-- [ ] No commit.
+- [x] `git status --porcelain tests/fixtures/camera/` — empty.
+- [x] No commit.
 
 ---
 
