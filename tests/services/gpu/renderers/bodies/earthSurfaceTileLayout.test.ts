@@ -2,18 +2,19 @@
  * earthSurfaceTile layout parity — the CPU packer and the WESL structs must
  * agree byte-for-byte, the `NodeParams` case `nodeParamsLayout.test.ts`
  * guards for the star pipeline, adapted here for `earthSurfaceTileLayout.ts`'s
- * three structs (`NodeParams`, `TileVertex`, `SurfaceTileUniforms`).
+ * two structs (`PatchInstance`, `SurfaceTileUniforms`).
  *
- * The WESL `struct NodeParams` / `TileVertex` / `SurfaceTileUniforms`
+ * The WESL `struct PatchInstance` / `SurfaceTileUniforms`
  * (`shaders/bodies/earthSurfaceTile/io.wesl`) declare the field order + types
  * the GPU uses to address bytes; `earthSurfaceTileLayout.ts`'s
- * `writeSurfaceTileNodeParams` / `writeTileVertex` / `writeSurfaceTileUniforms`
+ * `writePatchInstance` / `writeSurfaceTileUniforms`
  * restate those same offsets as hand-literal `view.set{Float32,Uint32}(N,
- * expr, true)` calls (array-element writers add a `base +`; the singleton
+ * expr, true)` calls (the array-element writer adds a `base +`; the singleton
  * uniform writer doesn't). Nothing but this test cross-checks the two: a
  * WGSL field reorder without a matching TS move would silently scramble
- * every drawn tile's origin/uv/addressing, or its shading uniforms, with no
- * compiler signal.
+ * every drawn patch's origin/frame/rects, or its shading uniforms, with no
+ * compiler signal — and WebKit rejects a mislaid layout that Tint tolerates,
+ * so the failure mode is "iOS presents nothing, no error".
  *
  * We read both files as TEXT (rather than importing the linked `?static`
  * WGSL) because the layout contract lives in the WESL struct's DECLARATION
@@ -26,8 +27,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import {
-  NODE_PARAMS_BYTES,
-  TILE_VERTEX_BYTES,
+  PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
 } from '../../../../../src/services/gpu/renderers/bodies/earthSurfaceTileLayout';
 
@@ -45,6 +45,7 @@ const WESL_TYPES: Record<string, { align: number; size: number; kind: Kind; lane
   u32: { align: 4, size: 4, kind: 'uint', lanes: 1 },
   'vec2<f32>': { align: 8, size: 8, kind: 'float', lanes: 2 },
   'vec3<f32>': { align: 16, size: 12, kind: 'float', lanes: 3 },
+  'vec4<f32>': { align: 16, size: 16, kind: 'float', lanes: 4 },
   'mat4x4<f32>': { align: 16, size: 64, kind: 'float', lanes: 16 },
 };
 
@@ -112,16 +113,14 @@ function structLayout(fields: Array<{ name: string; type: string }>): {
  * (`orientation[N]`) can't distinguish them without the index.
  */
 function fieldForExpr(expr: string): string {
-  if (/originRelCamM/.test(expr)) return 'originRelCamM';
-  if (/vertexBase/.test(expr)) return 'vertexBase';
-  if (/fallbackUvOrigin/.test(expr)) return 'fallbackUvOrigin';
-  if (/fallbackUvScale/.test(expr)) return 'fallbackUvScale';
+  if (/^originRelEyeM[XYZ]$/.test(expr)) return 'originRelEyeM';
   if (/^fadeWeight$/.test(expr)) return 'fadeWeight';
-  if (/atlasUvOrigin/.test(expr)) return 'atlasUvOrigin';
-  if (/atlasUvScale/.test(expr)) return 'atlasUvScale';
-  if (/^position[XYZ]$/.test(expr)) return 'position';
-  if (/^uv[XY]$/.test(expr)) return 'uv';
-  if (/^tangent[XYZ]$/.test(expr)) return 'tangent';
+  if (/^lon0Rad$/.test(expr)) return 'lon0Rad';
+  if (/^lat0Rad$/.test(expr)) return 'lat0Rad';
+  if (/^dLonRad$/.test(expr)) return 'dLonRad';
+  if (/^dLatRad$/.test(expr)) return 'dLatRad';
+  if (/^albedoUv(Origin|Scale)[XY]$/.test(expr)) return 'albedoRect';
+  if (/^fallbackUv(Origin|Scale)[XY]$/.test(expr)) return 'fallbackRect';
   if (/^vp\[/.test(expr)) return 'vp';
   const orientationIndex = expr.match(/^orientation\[(\d+)\]/);
   if (orientationIndex) {
@@ -129,7 +128,7 @@ function fieldForExpr(expr: string): string {
     return idx < 3 ? 'rotCol0' : idx < 6 ? 'rotCol1' : 'rotCol2';
   }
   if (/^radiusM$/.test(expr)) return 'radiusM';
-  if (/^vertsPerTile\b/.test(expr)) return 'vertsPerTile';
+  if (/^meshResolution\b/.test(expr)) return 'meshResolution';
   if (/^roughnessBase$/.test(expr)) return 'roughnessBase';
   if (/^camPosRelBodyM\[/.test(expr)) return 'camPosRelBodyM';
   if (/^f0$/.test(expr)) return 'f0';
@@ -145,10 +144,10 @@ function fieldForExpr(expr: string): string {
 
 /**
  * Parse a writer function body's `view.set{Float32,Uint32}(N, expr, ...)`
- * calls, in order. Array-element writers (`writeSurfaceTileNodeParams`,
- * `writeTileVertex`) offset by `base + N`; the singleton
- * `writeSurfaceTileUniforms` writes bare literal `N` (no array to stride
- * over) -- the `(?:base \+ )?` group covers both without two regexes.
+ * calls, in order. The array-element writer (`writePatchInstance`) offsets
+ * by `base + N`; the singleton `writeSurfaceTileUniforms` writes bare
+ * literal `N` (no array to stride over) -- the `(?:base \+ )?` group covers
+ * both without two regexes.
  */
 function writerLayout(source: string, fnName: string): ScalarWrite[] {
   const fnBody = source.match(
@@ -172,35 +171,19 @@ function writerLayout(source: string, fnName: string): ScalarWrite[] {
 
 const byOffset = (a: ScalarWrite, b: ScalarWrite): number => a.offset - b.offset;
 
-describe('NodeParams CPU/WESL layout parity', () => {
+describe('PatchInstance CPU/WESL layout parity', () => {
   const ioWesl = readFileSync(ioWeslPath, 'utf8');
   const layout = readFileSync(layoutPath, 'utf8');
 
   it('writer offsets + kinds match the struct layout, field by field', () => {
-    const { writes: expected } = structLayout(structFields(ioWesl, 'NodeParams'));
-    const actual = writerLayout(layout, 'writeSurfaceTileNodeParams');
+    const { writes: expected } = structLayout(structFields(ioWesl, 'PatchInstance'));
+    const actual = writerLayout(layout, 'writePatchInstance');
     expect([...actual].sort(byOffset)).toEqual([...expected].sort(byOffset));
   });
 
-  it('NODE_PARAMS_BYTES stride equals the struct size', () => {
-    const { structSize } = structLayout(structFields(ioWesl, 'NodeParams'));
-    expect(NODE_PARAMS_BYTES).toBe(structSize);
-  });
-});
-
-describe('TileVertex CPU/WESL layout parity', () => {
-  const ioWesl = readFileSync(ioWeslPath, 'utf8');
-  const layout = readFileSync(layoutPath, 'utf8');
-
-  it('writer offsets + kinds match the struct layout, field by field', () => {
-    const { writes: expected } = structLayout(structFields(ioWesl, 'TileVertex'));
-    const actual = writerLayout(layout, 'writeTileVertex');
-    expect([...actual].sort(byOffset)).toEqual([...expected].sort(byOffset));
-  });
-
-  it('TILE_VERTEX_BYTES stride equals the struct size', () => {
-    const { structSize } = structLayout(structFields(ioWesl, 'TileVertex'));
-    expect(TILE_VERTEX_BYTES).toBe(structSize);
+  it('PATCH_INSTANCE_BYTES stride equals the struct size', () => {
+    const { structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
+    expect(PATCH_INSTANCE_BYTES).toBe(structSize);
   });
 });
 
