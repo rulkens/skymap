@@ -19,11 +19,8 @@ import { SCALE_UNITS } from '../scaleUnits';
 export const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
 export const CUBEMAP_CAPTURES: Readonly<Record<CubemapCaptureKey, CubemapCapture>> = {
-  // The black-hole lens's sky.
   sgrAStar: {
     target: 'sky-cubemap',
-    // Resolved at module load rather than per frame — a linear `.find` over
-    // `BODY_REGIONS`, same as the pass-side consumers of the lookup.
     anchor: regionById('galactic-centre'),
     band: SCALE_FADE_BANDS.sgrAStarLensing,
     nearMpc: 0.1 * SCALE_UNITS.AU_TO_MPC,

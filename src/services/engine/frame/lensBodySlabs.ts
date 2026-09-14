@@ -1,9 +1,7 @@
 /**
  * lensBodySlabs — the rows `FRAME_ORDER`'s `lens` line expands over: Sgr A*'s
  * `body-m` row while the lensing band is open, nothing outside it. Resolved
- * here because the row's painter-order index comes from `deriveSlabs`; empty
- * outside the band lets `mergeAdjacent` fold the two `(hdr, NEAR0)` lines back
- * into one render step.
+ * here because the row's painter-order index comes from `deriveSlabs`.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

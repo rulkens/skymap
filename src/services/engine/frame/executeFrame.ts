@@ -54,11 +54,10 @@
  * steps therefore take their first-touch fact from a private
  * `<capture key>:<face>`-keyed set instead, rather than growing the public
  * `renderedTargets` surface to that granularity. That granularity is
- * load-bearing in BOTH directions: the
- * roster spans two slabs, so the capture line expands to TWO steps per face
- * (COSMO then NEAR0) — a blanket always-clear made the NEAR0 step wipe the
- * COSMO step's galaxy points and textured disks off the face it had just drawn
- * them into.
+ * load-bearing in BOTH directions: the roster spans two slabs, so the
+ * capture line expands to TWO steps per face (COSMO then NEAR0) — a
+ * blanket always-clear made the NEAR0 step wipe the COSMO step's galaxy
+ * points and textured disks off the face it had just drawn them into.
  *
  * The same `touched` fact drives depth: a render step whose target row declares
  * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is

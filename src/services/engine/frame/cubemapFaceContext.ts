@@ -1,9 +1,9 @@
 /**
  * cubemapFaceContext — one face of a cubemap capture's camera, as a value.
- * Mirrors `pickFrameContext.ts`: roster layers read
- * `ctx.fovYRad`/`canvasSize`/`drawPxPerRad` as frame-globals, not just
- * `viewProj`, so a whole synthetic `ReadyFrameContext` is cheaper than
- * threading a swapped vp through every consumer.
+ * Mirrors `pickFrameContext.ts`: roster layers read `ctx.fovYRad`/
+ * `canvasSize`/`drawPxPerRad` as frame-globals, not just `viewProj`, so a
+ * whole synthetic `ReadyFrameContext` is cheaper than threading a swapped
+ * vp through every consumer.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

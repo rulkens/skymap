@@ -118,7 +118,7 @@ src/@types/engine/frame/FrameStep.d.ts          render arm: face → capture, ta
 src/@types/engine/frame/CaptureStepSpec.d.ts    target → capture key
 src/@types/engine/frame/ExecuteFrameArgs.d.ts   skyCubemapFaceContexts → captureContexts
 src/@types/engine/frame/PassState.d.ts          docstring: names the new field
-src/@types/engine/state/EngineState.d.ts        skyCubemapCapture → cubemapCaptures (Map)
+src/@types/engine/state/EngineState.d.ts        skyCubemapCapture → cubemapCaptures (Record)
 src/services/engine/engine.ts                   seeds the map from the table
 src/services/gpu/renderTargets.ts               allocateWhen reads the map + the row's band
 src/services/engine/frame/renderFrame.ts        capture block → two calls
@@ -203,13 +203,13 @@ export type CubemapCaptureRuntime = {
 };
 
 // src/@types/engine/state/EngineState.d.ts
-cubemapCaptures: ReadonlyMap<CubemapCaptureKey, CubemapCaptureRuntime>;
+cubemapCaptures: Readonly<Record<CubemapCaptureKey, CubemapCaptureRuntime>>;
 ```
 
 `Record<CubemapCaptureKey, …>` (not an array) is what makes a missing row a
-typecheck error and lets `CUBEMAP_CAPTURES[key]` be total. The map is
-`ReadonlyMap` of mutable entries: single-writer in-place mutation, exactly as the
-singleton is today.
+typecheck error and lets `CUBEMAP_CAPTURES[key]` be total. `cubemapCaptures` is
+`Readonly<Record<…>>` of mutable entries: single-writer in-place mutation,
+exactly as the singleton is today.
 
 - [ ] Rename the runtime type file:
       `npm run move-files -- --dry src/@types/engine/state/SkyCubemapCaptureRuntime.d.ts src/@types/engine/state/CubemapCaptureRuntime.d.ts`,
@@ -629,7 +629,7 @@ out-of-band frame pays an extra `rgba16float` pass boundary.
 
 - `src/data/rendering/cubemapCaptures.ts` exports `CUBEMAP_CAPTURES` (a
   `Record<CubemapCaptureKey, CubemapCapture>`, one `sgrAStar` row) and `ALL_CUBE_FACES`.
-- `EngineState.cubemapCaptures` is a `ReadonlyMap<CubemapCaptureKey, CubemapCaptureRuntime>`;
+- `EngineState.cubemapCaptures` is a `Readonly<Record<CubemapCaptureKey, CubemapCaptureRuntime>>`;
   `EngineState.skyCubemapCapture` and `SkyCubemapCaptureRuntime` no longer exist
   anywhere in `src/` or `tests/`.
 - `scheduleCubemapCaptures`, `captureFaceAttachment`, `cubemapFaceContext`,
