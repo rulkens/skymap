@@ -45,6 +45,7 @@ import { BMNG_VINTAGE } from '../utils/io/bmngVintage';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
 import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
+import { colourMatchedImagerySource } from './colourMatchedImagerySource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import { eoxTileSource } from './eoxTileSource';
@@ -103,6 +104,12 @@ const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
  * band's own tier-derived floor.
  */
 const EOX_MIN_LEVEL = 8;
+
+/** Scale below which EOX's colour is pulled onto Blue Marble's, in degrees
+ *  along a meridian: 2 km is about one Blue Marble texel, so the seam is
+ *  matched at the finest scale the band underneath can resolve and everything
+ *  finer stays EOX's own. */
+const EOX_COLOUR_MATCH_SIGMA_DEG = 0.018;
 
 /** GeoDanmark's own floor: one level deeper than EOX's own max (z13), same
  *  "pick up where the shallower band stops" rule as `EOX_MIN_LEVEL` — also
@@ -515,10 +522,14 @@ async function main(): Promise<void> {
       [
         { source: bmng, minLevel: BAKE_MIN_LEVEL },
         {
-          source: await eoxTileSource({
-            coverageDir: rawDataPath('eox.dir'),
-            waterMaskPath: rawDataPath('textures.earthWaterMask'),
-          }),
+          source: colourMatchedImagerySource(
+            await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
+            bmng,
+            {
+              sigmaDeg: EOX_COLOUR_MATCH_SIGMA_DEG,
+              waterMaskPath: rawDataPath('textures.earthWaterMask'),
+            },
+          ),
           minLevel: EOX_MIN_LEVEL,
           underfill: bmng,
         },

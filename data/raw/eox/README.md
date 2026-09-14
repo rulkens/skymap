@@ -45,6 +45,15 @@ subdirectory of the coverage dir holding a `13/` tree as one region and
 declares one `coverage` box per region; a region's own harvest tree must
 still be one contiguous rectangle of tiles (no gaps within it).
 
+## Colour match
+
+Sentinel-2 water and vegetation are nothing like Blue Marble's, so the bake
+pulls this band's colour onto the band beneath it below a 2 km scale, land and
+water measured separately against the NASA water mask
+(`tools/textures/colourMatchedImagerySource.ts`). Everything finer than that
+stays EOX's own, and the raw tiles here are untouched — the correction is
+measured and applied at bake time.
+
 ## Layer year and licence
 
 The harvest uses the **2025** `s2cloudless-2025` layer. Upstream, it is
