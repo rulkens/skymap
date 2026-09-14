@@ -43,11 +43,12 @@ struct Uniforms {
 // Two-buffer vertex layout matching filaments': location 0 is
 // per-quad-vertex (the unit-quad UV), locations 1..3 are per-instance.
 // The CPU writer in `markerLineRenderer.ts` packs each instance into
-// 48 bytes (three vec4s):
+// 52 bytes (three vec4s + a scalar):
 //
-//   [0..15]  fromAndWidth  vec4<f32>  (fromWorld.xyz, pixelWidth)
-//   [16..31] toAndAlpha    vec4<f32>  (toWorld.xyz, fadeAlpha)
-//   [32..47] color         vec4<f32>  (rgba premultiplied)
+//   [0..15]  fromAndWidth   vec4<f32>  (fromWorld.xyz, pixelWidth)
+//   [16..31] toAndAlpha     vec4<f32>  (toWorld.xyz, fadeAlpha)
+//   [32..47] color          vec4<f32>  (rgba premultiplied)
+//   [48..51] occludeWeight  f32
 //
 // Packing pixelWidth and fadeAlpha into the trailing slot of the
 // world-position vec3s saves 16 bytes per instance versus carrying
@@ -69,6 +70,10 @@ struct VsIn {
   // Premultiplied rgba — colour is constant along the line; the
   // fragment stage multiplies in fadeAlpha and the soft-edge falloff.
   @location(3) color: vec4<f32>,
+  // How much per-pixel scene attenuation the occlusion fragment variant
+  // applies (1 = fully, 0 = draw over the bodies).  Mirrors the owning
+  // caption's weight so connector and text agree.
+  @location(4) occludeWeight: f32,
 };
 
 // ── vertex-to-fragment interface ──────────────────────────────────
@@ -84,4 +89,5 @@ struct VsOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
+  @location(2) occludeWeight: f32,
 };

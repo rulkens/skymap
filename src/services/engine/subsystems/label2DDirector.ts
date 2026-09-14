@@ -83,7 +83,7 @@
  *
  * Renderers attach asynchronously (after the font atlas fetch); the
  * director silently no-ops until both are present.  This mirrors the
- * existing pattern at point-of-use in `filamentsLayer`.
+ * existing pattern at point-of-use in `filamentsPass`.
  */
 
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
@@ -381,6 +381,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         pixelWidth: leader.pixelWidth,
         color: leader.color,
         fadeAlpha: label.fadeAlpha ?? 1,
+        // Same subject, same depth verdict: a connector must not fade into a
+        // disc its caption is allowed to paint over.
+        occludeWeight: label.occludeWeight,
       });
     }
     return lines;

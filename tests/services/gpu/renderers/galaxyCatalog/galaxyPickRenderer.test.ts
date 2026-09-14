@@ -85,7 +85,7 @@ describe('createGalaxyPickRenderer', () => {
   it('constructs from device + BGLs + focus bind group only, exposing the draw surface', () => {
     // The picker owns its own pickUniformBuffer; callers pass the packed
     // bytes per `drawPoints` call.  The public surface is the slimmed
-    // point-pick draw provider: `drawPoints`, `bindCamera`, `destroy`.
+    // point-pick draw provider: `drawPoints`, `destroy`.
     const { device } = makeStubDevice();
     const galaxyPickRenderer = createGalaxyPickRenderer(
       device,
@@ -98,7 +98,6 @@ describe('createGalaxyPickRenderer', () => {
 
     expect(galaxyPickRenderer).toBeDefined();
     expect(typeof galaxyPickRenderer.drawPoints).toBe('function');
-    expect(typeof galaxyPickRenderer.bindCamera).toBe('function');
     expect(typeof galaxyPickRenderer.destroy).toBe('function');
   });
 
@@ -145,92 +144,6 @@ describe('createGalaxyPickRenderer', () => {
     expect(writeBufferCalls[0]!.offset).toBe(0);
     expect(writeBufferCalls[0]!.buffer).toBe(ownPickBuffer);
     expect(writeBufferCalls[0]!.data).toBe(uniformBytes);
-  });
-
-  it('bindCamera re-binds @group(0) to the pick uniform bind group', () => {
-    // bindCamera is the narrow restore surface a disk/ring drawPick calls
-    // after clobbering slot 0: it must bind the SAME @group(0) bind group the
-    // factory built against pickUniformBuffer (labelled 'pick-uniform-bg').
-    const createBindGroupByLabel = new Map<string, unknown>();
-    const device = {
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createPipelineLayout: vi.fn(() => ({})),
-      createBindGroupLayout: vi.fn(() => ({})),
-      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
-      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
-      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
-      queue: { writeBuffer: vi.fn(), submit: vi.fn() },
-      createBindGroup: vi.fn((desc: { label?: string }) => {
-        const bg = { __label: desc.label };
-        createBindGroupByLabel.set(desc.label ?? '', bg);
-        return bg;
-      }),
-    } as unknown as GPUDevice;
-
-    const galaxyPickRenderer = createGalaxyPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-      false,
-    );
-
-    const pickUniformBindGroup = createBindGroupByLabel.get('pick-uniform-bg');
-    expect(pickUniformBindGroup).toBeDefined();
-
-    const setBindGroup = vi.fn();
-    const pass = { setBindGroup } as unknown as GPURenderPassEncoder;
-    galaxyPickRenderer.bindCamera(pass);
-
-    expect(setBindGroup).toHaveBeenCalledTimes(1);
-    expect(setBindGroup).toHaveBeenCalledWith(0, pickUniformBindGroup);
-  });
-
-  it('drawPoints uploads the camera uniform and binds @group(0) even with zero sources', () => {
-    // Load-bearing prefix contract: a sibling drawPick that reads the point
-    // pick uniform via the @group(0) CameraUniforms prefix relies on this draw
-    // binding it.  So drawPoints MUST upload the camera uniform and bind
-    // @group(0) even when there are ZERO galaxy sources to draw — otherwise a
-    // galaxy-empty scene would leave slot 0 unbound (or stale) for the
-    // fold-ins that follow.
-    const { device, writeBufferCalls, getOwnPickBuffer } = makeStubDevice();
-    const galaxyPickRenderer = createGalaxyPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-      false,
-    );
-
-    const ownPickBuffer = getOwnPickBuffer();
-    expect(ownPickBuffer).not.toBeNull();
-
-    writeBufferCalls.length = 0; // clear construction calls
-
-    const bindGroupCalls: Array<{ index: number; group: unknown }> = [];
-    const pass = {
-      setPipeline: vi.fn(),
-      setBindGroup: vi.fn((index: number, group: unknown) => bindGroupCalls.push({ index, group })),
-      setVertexBuffer: vi.fn(),
-      draw: vi.fn(),
-    } as unknown as GPURenderPassEncoder;
-
-    galaxyPickRenderer.drawPoints(pass, [], makeUniformBytes());
-
-    // Camera uniform uploaded at offset 0 to the OWN buffer — no sources needed.
-    const fullUpload = writeBufferCalls.find((c) => c.offset === 0);
-    expect(fullUpload).toBeDefined();
-    expect(fullUpload!.buffer).toBe(ownPickBuffer);
-
-    // @group(0) bound — the prefix a sibling drawPick depends on.
-    expect(bindGroupCalls.some((c) => c.index === 0)).toBe(true);
-
-    // Zero sources → no per-source draws.
-    expect(pass.draw as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('builds @group(2) source bind groups against the CANONICAL sourceBgl layout (regression: cross-pipeline auto-layout incompatibility)', () => {

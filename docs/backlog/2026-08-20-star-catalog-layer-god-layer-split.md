@@ -1,16 +1,16 @@
-# `starCatalogLayer` god-layer split (three owned concerns, layer-imports-layer)
+# `starCatalogPass` god-layer split (three owned concerns, layer-imports-layer)
 
 Surfaced by the 2026-08-17 renderer/layer sweep
 ([`renderer-layer-outliers.md`](../research/engine/renderer-layer-outliers.md):74,
 "God-layers" table, and :206, ladder-assignments table). `ORPHAN` in the
 2026-08-20 carry-forward audit: explicitly ruled "worthwhile but not
 contract-blocking … backlog" but no `docs/backlog/` file or `BACKLOG.md` line
-was ever filed for it — distinct from `foregroundLabelsLayer`'s 812-LoC split,
+was ever filed for it — distinct from `foregroundLabelsPass`'s 812-LoC split,
 which rung 8 does own.
 
 ## What it is
 
-`starCatalogLayer` is 983 LoC and owns three separable concerns in one file:
+`starCatalogPass` is 983 LoC and owns three separable concerns in one file:
 
 - `starCatalogVisible` — the layer's own visibility/liveness gate.
 - `prepareStarCut` — the shared octree walk hoisted to `runFrame` and
@@ -20,7 +20,7 @@ which rung 8 does own.
   catalog (Gaia survey)").
 - The stream SoA (structure-of-arrays) bookkeeping for the crossfade.
 
-Two sibling layers import `starCatalogLayer`'s `enabled` directly — a layer
+Two sibling layers import `starCatalogPass`'s `enabled` directly — a layer
 importing another layer's internals, rather than each layer deriving its own
 gate from a shared function. The renderer sweep's median layer size is ~100
 LoC; this one is roughly 10× that.
@@ -51,7 +51,7 @@ points to weigh:
 - Whether the SoA stream bookkeeping is cleanly separable from the layer's
   `draw`/`drawPick`, or whether it's load-bearing enough to stay put.
 
-Sequencing note: `foregroundLabelsLayer`'s god-layer split (the sibling
+Sequencing note: `foregroundLabelsPass`'s god-layer split (the sibling
 finding in the same table row) falls out of rung 8 (label/marker-mechanism
 unification) as a side effect. This item does not ride rung 8 — nothing in
 the ladder currently owns it.

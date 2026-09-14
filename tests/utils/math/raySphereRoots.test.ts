@@ -52,6 +52,18 @@ describe('raySphereRoots', () => {
     expect(roots![0]).toBeCloseTo(3, 12);
   });
 
+  it('keeps the near root precise when b² ≫ c', () => {
+    // An eye 15 m above Earth (metres, the pickOnBody regime) looking 53° off
+    // nadir. b ≈ -5.1e6 against c = 1.9e8, so `-b - s` subtracts two 5.1e6
+    // numbers to get 18.75 and keeps barely 7 digits; `c / q` keeps all 16.
+    //   m=[0,0,6371015]; b=-5096812; c=6371015²-6371000²=191130225
+    // Reference from exact rational b, c and a 60-digit sqrt.
+    const roots = raySphereRoots([0, 0, 6371015], [0.6, 0, -0.8], ORIGIN, 6371000);
+    expect(roots).not.toBeNull();
+    expect(roots![0]).toBeCloseTo(18.750012415895033, 11);
+    expect(roots![1]).toBeCloseTo(10193605.249987585, 6);
+  });
+
   it('miss returns null', () => {
     // Ray passes two units off-axis, never reaching the unit sphere:
     // ro=[-3,2,0], rd=+x.

@@ -6,6 +6,7 @@ import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_S_STARS } from '../../../data/bodies/sceneSStars';
+import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 
 /**
  * createEngineData — assemble the per-type stores into the `EngineData` bag
@@ -33,6 +34,7 @@ export function createEngineData(): EngineData {
   // there is a single drawn set, and `visibleStars` gates the two halves apart.
   bodies.setStars([...SCENE_STARS, ...SCENE_S_STARS]);
   bodies.setPlanets(SCENE_PLANETS);
+  bodies.setMeshBodies(SCENE_MESH_BODIES);
   return {
     galaxies: createGalaxyStore(),
     structures: createStructureStore(),

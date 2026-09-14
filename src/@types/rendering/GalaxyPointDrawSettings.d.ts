@@ -56,7 +56,7 @@ export type GalaxyPointDrawSettings = {
    * once per visible source per frame from the points draw loop;
    * the renderer writes the returned value into the per-source
    * fade ring's `viewSlot` slot. The renderer passes the numeric source code;
-   * the `galaxyPointSpritesLayer` closure resolves it to the catalog's string
+   * the `galaxyPointSpritesPass` closure resolves it to the catalog's string
    * id and reads `state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, now)`.
    */
   readonly fadeOpacityOf: (source: SourceType) => number;

@@ -28,6 +28,7 @@
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { ASSET_WIRING } from './assetWiring';
 import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
 import { engineLoadProgressChanged } from '../../../state/engine/engineSlice';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
@@ -61,15 +62,25 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
     allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }
 
+  // Mesh-body slots (minted in wireSlots, keyed in the meshBodies map like
+  // bodyTextures). Their ASSET_WIRING rows carry `mesh:`-prefixed string keys
+  // but live in this keyed map rather than a named field, so they are
+  // gathered here and skipped in the string-keyed sidecar walk below.
+  for (const [, slot] of state.assetSlots.meshBodies) {
+    allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
+  }
+
   // Named sidecar slots (installed by installSlots): the ASSET_WIRING rows
   // with string keys (point rows carry numeric Source keys, included above;
-  // body-texture rows are the keyed family gathered above). pgcAlias is lazy
-  // but still registered so its eventual load shows in the bar + dev panel. The
-  // absence of a cast IS the drift protection: a row key with no matching
-  // assetSlots field fails to compile — the `isBodyTextureKey` guard narrows the
-  // family keys out so only true named-field keys reach the index.
+  // body-texture and mesh-body rows are the keyed families gathered above).
+  // pgcAlias is lazy but still registered so its eventual load shows in the
+  // bar + dev panel. The absence of a cast IS the drift protection: a row key
+  // with no matching assetSlots field fails to compile — the `isBodyTextureKey`
+  // / `isMeshBodyKey` guards narrow the family keys out so only true
+  // named-field keys reach the index.
   for (const row of ASSET_WIRING) {
-    if (typeof row.key !== 'string' || isBodyTextureKey(row.key)) continue;
+    if (typeof row.key !== 'string' || isBodyTextureKey(row.key) || isMeshBodyKey(row.key))
+      continue;
     const slot = state.assetSlots[row.key];
     if (slot) allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }

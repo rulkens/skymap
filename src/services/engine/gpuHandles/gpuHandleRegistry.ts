@@ -36,6 +36,7 @@ import {
   EARTH_SURFACE_TILE_MESH_RESOLUTION,
 } from '../../../data/bodies/earthTileParams';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
+import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
 import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
 import { createCloudShellRenderer } from '../../gpu/renderers/bodies/cloudShellRenderer';
 import { createAtmosphereShellRenderer } from '../../gpu/renderers/atmosphere/atmosphereShellRenderer';
@@ -52,6 +53,7 @@ import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailR
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
+import { NEAR0_OVERLAY_CLIP_SCALE } from '../frame/near0OverlayClipScale';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createLabelPickRenderer } from '../../gpu/renderers/labels/labelPickRenderer';
@@ -63,7 +65,7 @@ import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
-import { CONTENT_LAYERS } from '../frame/passes';
+import { CONTENT_PASSES } from '../frame/passes';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
 
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
@@ -172,7 +174,10 @@ export const GPU_HANDLE_ROWS = [
         deps.fontAtlases,
         FOREGROUND_LABEL_CAPACITY,
         undefined,
-        { occludeAgainstScene: true },
+        // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
+        // packs must be in those clip units too — the pair the vertex stage
+        // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
+        { occludeAgainstScene: true, clipScale: NEAR0_OVERLAY_CLIP_SCALE },
       ),
   },
   {
@@ -355,7 +360,7 @@ export const GPU_HANDLE_ROWS = [
           ...star,
           positionMpc: bootBodyStates.get(star.id)!.positionMpc,
         })),
-        // Boot seed, no frame yet — the main view's slot. `starPointsLayer`
+        // Boot seed, no frame yet — the main view's slot. `starPointsPass`
         // re-uploads every real frame (its own module header), so this is
         // overwritten before the first draw.
         0,
@@ -444,6 +449,18 @@ export const GPU_HANDLE_ROWS = [
       ),
   },
   {
+    // Mesh bodies ride their host's NEAR0 body slab, so they share the sphere
+    // bodies' foreground:0 formats and depth convention exactly.
+    key: 'meshBodyRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createMeshBodyRenderer(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
+        SLAB_REVERSED_Z[NEAR0]!,
+      ),
+  },
+  {
     key: 'ringRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createRingRenderer(
@@ -502,7 +519,7 @@ export const GPU_HANDLE_ROWS = [
         device: deps.ctx.device,
         canvas: deps.ctx.canvas,
         state,
-        layers: CONTENT_LAYERS,
+        passes: CONTENT_PASSES,
       }),
   },
 ] as const satisfies readonly GpuHandleRow[];

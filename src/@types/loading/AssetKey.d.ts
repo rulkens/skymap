@@ -25,4 +25,5 @@ export type AssetKey =
   | 'mcpmWorkbench'
   | 'constellations'
   | 'bodyTextureAtlas'
-  | BodyTextureSlotKey; // keyed family; `slotFor` routes these through `assetSlots.bodyTextures` via `isBodyTextureKey`
+  | BodyTextureSlotKey // keyed family; `slotFor` routes these through `assetSlots.bodyTextures` via `isBodyTextureKey`
+  | `mesh:${string}`; // meshBodies family: one slot per body id, `slotFor` routes via `isMeshBodyKey`. Prefixed (unlike the plain-string `meshBodies` Map key) so this member stays a template literal type rather than widening the whole union to bare `string`.

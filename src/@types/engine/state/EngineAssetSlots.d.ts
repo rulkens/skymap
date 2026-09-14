@@ -30,6 +30,8 @@ import type { StarCatalogReq } from '../../loading/StarCatalogReq';
 import type { SourceType } from '../../data/SourceType';
 import type { BodyTextureReq } from '../../loading/BodyTextureReq';
 import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
+import type { MeshAsset } from '../../data/mesh/MeshAsset';
+import type { MeshReq } from '../../loading/MeshReq';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
@@ -83,6 +85,13 @@ export type EngineAssetSlots = {
    * it — and re-fetched at the clamped tier on a data-volume tier change.
    */
   bodyTextures: Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
+  /**
+   * One slot per `SCENE_MESH_BODIES` entry, keyed by the body's own id —
+   * un-keyed unlike `bodyTextures`, since one fetch resolves the whole
+   * `MeshAsset` rather than a per-kind map. Proximity-gated the same way:
+   * demanded inside `meshBodyLoadRadius`'s radius, released past twice it.
+   */
+  meshBodies: Map<string, AssetSlot<MeshAsset, MeshReq>>;
   /**
    * All-bodies atlas (`body-atlas.webp`): one 512×256 tile per textured body in a
    * single ~180 KB image, fetched first (`priority: 0`). One asset for the whole set —

@@ -1,0 +1,90 @@
+/*
+ * CameraStateSection — a six-column DOF table over the panel's mono face, plus
+ * the key/value grid the collapsed `raw` block reuses. `.dofRow` and `.row` are
+ * `display: contents` so their cells join the parent grid and the columns line
+ * up across rows; opacity therefore lives on the grid, which has a box.
+ */
+
+.headerLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+}
+
+.badge {
+  color: #f66;
+  font-weight: bold;
+}
+
+.dofGrid {
+  display: grid;
+  grid-template-columns: max-content repeat(5, 1fr);
+  column-gap: 8px;
+  margin-top: 6px;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  opacity: 0.85;
+  text-align: right;
+}
+
+.colHead {
+  opacity: 0.6;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dofRow {
+  display: contents;
+}
+
+.dofName {
+  text-align: left;
+  opacity: 0.75;
+}
+
+.offMark {
+  opacity: 0.55;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 10px;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.row {
+  display: contents;
+}
+
+.key {
+  opacity: 0.75;
+}
+
+.rawBlock {
+  margin-top: 6px;
+}
+
+.rawSummary {
+  composes: summary from './debugSection.module.css';
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.smallButton {
+  composes: button from './debugSection.module.css';
+  align-self: flex-end;
+  font-size: 10px;
+  padding: 0 6px;
+}
+
+.copyButton {
+  composes: button from './debugSection.module.css';
+  align-self: flex-start;
+}

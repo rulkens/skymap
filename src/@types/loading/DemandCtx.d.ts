@@ -56,7 +56,7 @@
  *      and releases it on retreat, both measured as `distanceMpc(cameraPosMpc,
  *      bodyPos)`. It reads the LAST produced pose because `reevaluateDemand` runs
  *      at the frame top, before this frame's camera is derived; the boxed
- *      `lastPose` is the live cross-driver position (wheel-zoom, tour clips, and
+ *      `cameraRuntime.register.pose` is the live cross-driver position (wheel-zoom, tour clips, and
  *      the fly-to-Earth tween all converge to `CameraPose`), and a
  *      one-frame-stale position is immaterial for a multi-frame async fetch.
  *
@@ -102,7 +102,7 @@ export type DemandCtx = {
   cameraPosMpc: Readonly<Vec3>;
   /**
    * The sim instant (Julian days) the last frame derived its bodies at — the
-   * clock's live position, read from `cameraRuntime.lastRenderedSimDays`. The
+   * clock's live position, read from `cameraRuntime.outputs.simDays`. The
    * proximity gate needs it because a host body MOVES: its world position is
    * `deriveBodyStates(simDays)`, not a fixed epoch, so the body-texture family's
    * `distanceMpc(cameraPosMpc, bodyPos)` must measure against where the body sits

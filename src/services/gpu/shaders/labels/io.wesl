@@ -64,6 +64,11 @@ struct LabelData {
   // Outside-stroke outline colour — premultiplied rgba.  Zero alpha
   // collapses the outline band regardless of outlineEmFrac.
   outlineColor: vec4<f32>,
+  // How much per-pixel scene attenuation the occlusion fragment variant
+  // applies (1 = fully, 0 = draw over the bodies).  Bytes 64..67; the array
+  // element stride rounds UP to 80 on the struct's vec4 alignment, so
+  // 'LABEL_DATA_BYTES' in labelRenderer.ts is 80, not 68.
+  occludeWeight: f32,
 };
 
 struct VsIn {
@@ -104,4 +109,8 @@ struct VsOut {
   // Converted CPU-side at the vertex stage so the fragment shader has
   // the value ready without re-deriving from per-label data.
   @location(4) outlineSdf: f32,
+  // Per-label share of the scene attenuation, forwarded from LabelData
+  // because labels[] is bound to the VERTEX stage only.  Constant per
+  // label, so interpolating it is exact.
+  @location(5) occludeWeight: f32,
 };

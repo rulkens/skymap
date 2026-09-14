@@ -54,7 +54,7 @@ export function makeEarthLoop(opts: {
     const earth = deriveBodyStates(simDays).get(SCENE_EARTH.id)!.positionMpc;
     const target: Vec3 = [earth[0], earth[1], earth[2]];
 
-    // The Sun sits at the render origin (see earthHomePose), so `earth` itself
+    // The Sun sits at the render origin (see bodyHomePose), so `earth` itself
     // IS the sun→Earth direction once normalised — aiming along it looks at Earth's day side.
     const sMag = Math.hypot(earth[0], earth[1], earth[2]);
     const sunward: Vec3 = [earth[0] / sMag, earth[1] / sMag, earth[2] / sMag];

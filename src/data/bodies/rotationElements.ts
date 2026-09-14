@@ -1,19 +1,19 @@
 /**
- * rotationElements — J2000 rotation elements for the fifteen textured bodies:
+ * rotationElements — J2000 rotation elements for bodies with a modelled facing:
  * pole (α₀, δ₀), prime meridian W₀ and spin rate Ẇ, all degrees. `orbitalElements`
- * places a body; this aims it. An untextured body is rotation-invariant, carries no
- * row, and falls back to `IDENTITY_MAT3`. Only Ẇ is live: the published pole rates
+ * places a body; this aims it. A body with no row is rotation-invariant and
+ * falls back to `IDENTITY_MAT3`. Only Ẇ is live: the published pole rates
  * α̇/δ̇ and the periodic nutation/libration terms (Neptune's `N`, the Moon's `E1…`,
  * the Galileans' `Jn`) are dropped — they move the pole under an arcminute over 250
  * years, below a textured sphere's resolution. Source: the constant terms of
  * Archinal et al. (2018), Cel. Mech. Dyn. Astron. 130:22, Tables 1 and 2/3.
  */
 
-import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { RotationElements } from '../../@types/scene/RotationElements';
+import { MESH_BODY_PERIOD_DAYS } from './orbitalElements';
 
-export function rotationById(id: string): RotationElements {
-  return findByIdOrThrow(ROTATION_ELEMENTS, id, 'rotationElements');
+export function rotationRowById(id: string): RotationElements | null {
+  return ROTATION_ELEMENTS.find((el) => el.id === id) ?? null;
 }
 
 export const ROTATION_ELEMENTS: readonly RotationElements[] = [
@@ -46,4 +46,22 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // 360°/6.387222 d, Charon's period in `orbitalElements.ts`; 56.3625225 × 6.387222 =
   // 359.99994°, the residual being their rounding).
   { id: 'charon', poleRaDeg: 132.993, poleDecDeg: -6.163, primeMeridianDeg: 122.695, spinRateDegPerDay: 56.3625225 },
+  // Whale and petunias (Hitchhiker's Guide easter egg). The whale is ORBIT-LOCKED: one turn
+  // per orbit about the orbit pole (Earth's own, so α₀/δ₀ match the 'earth' row), holding its
+  // head along the velocity and its belly Earthward in the body frame the bake's
+  // `bodyFromSource` remap sets (+X nose, -Y dorsal); W₀ phases that to the M = 0 epoch. The
+  // pot's pole stays DECORATIVE — off-axis and quick, a turn per 90 s, so its tumble wobbles.
+  { id: 'whale', poleRaDeg: 0.0, poleDecDeg: 90.0, primeMeridianDeg: 90.0, spinRateDegPerDay: 360 / MESH_BODY_PERIOD_DAYS },
+  { id: 'petunias', poleRaDeg: 198.6, poleDecDeg: -37.2, primeMeridianDeg: 0.0, spinRateDegPerDay: 345600 },
+  // Both probes keep the high-gain dish on Earth — the real pointing constraint,
+  // and the only one that stays true at any epoch as the geometry opens up.
+  { kind: 'lookAt', id: 'voyager1', targetId: 'earth' },
+  { kind: 'lookAt', id: 'voyager2', targetId: 'earth' },
+  // Rover headings are AUTHORED presentation, not surveyed landing azimuths:
+  // they only spread the four so no two face the same way, and the visual pass
+  // is their only gate.
+  { kind: 'surfaceLocked', id: 'curiosity', headingDeg: 90 },
+  { kind: 'surfaceLocked', id: 'perseverance', headingDeg: 0 },
+  { kind: 'surfaceLocked', id: 'spirit', headingDeg: 180 },
+  { kind: 'surfaceLocked', id: 'opportunity', headingDeg: 270 },
 ];

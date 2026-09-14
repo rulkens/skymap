@@ -4,7 +4,7 @@
  * plane (no screen position). Screen +Y points DOWN, matching the caption
  * declutter's separation metric (pure pixel distance, orientation-agnostic).
  *
- * Its one caller is `starPointsLayer`'s pick. The forward-projection
+ * Its one caller is `starPointsPass`'s pick. The forward-projection
  * arithmetic itself lives in `forwardProjectPoint`, shared with
  * `label2DDirector` and `labelLeaderLine` — this wrapper just adapts that
  * primitive's mutable-out shape to the `Vec2 | null` callers here expect.

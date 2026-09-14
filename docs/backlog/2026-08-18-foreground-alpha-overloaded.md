@@ -29,7 +29,7 @@ jump.
 ## 2. One alpha cannot attenuate the background chromatically
 
 After #574 the shell attenuates per channel, but only what lives in
-`foreground:0` with it — i.e. the planet. Anything in the `hdr` target *behind*
+`foreground:0` with it — i.e. the planet. Anything in the `hdr` target _behind_
 the planet (starfield, galaxies, filaments) is weighted by the single alpha
 channel, which stays luminance-collapsed by necessity. So a star occulted by
 Earth's limb still dims **achromatically** while the limb beside it reddens
@@ -52,6 +52,6 @@ vs premultiplied, and what the channel is allowed to mean — is the design work
 the two fixes fall out of that decision and should not be attempted separately.
 
 Prior art in the same area: `docs/backlog/2026-07-31-layer-blend-declared-twice.md`
-(`ContentLayer.blend` restating the pipeline's `GPUBlendState`) — the atmosphere
+(`ContentPass.blend` restating the pipeline's `GPUBlendState`) — the atmosphere
 shell is now the case that breaks that correspondence outright, since it draws
 two pipelines with two different blends under one `blend: 'over'` row.

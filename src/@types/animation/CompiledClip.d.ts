@@ -46,6 +46,7 @@ import type { Ease } from './Ease';
 import type { Space } from './Space';
 import type { SceneEffect } from './SceneEffect';
 import type { CameraPose } from '../camera/CameraPose';
+import type { PoseFrame } from '../camera/PoseFrame';
 import type { Vec3 } from '../math/Vec3';
 
 // ---------------------------------------------------------------------------
@@ -84,6 +85,9 @@ export type BaseSegment = {
   readonly to: number | Vec3;
   readonly ease: Ease;
   readonly space: Space;
+  /** Carried from the `set`/`setVec` endpoint; absent ⇒ `'absolute'`. A `spin`
+   *  is a relative writer and never carries one. */
+  readonly frame?: PoseFrame;
   /** Only meaningful for `spin`-kind segments: when true, the spin repeats
    *  its `by`-delta sweep after `endSec` (the perpetual looping orbit idiom).
    *  The evaluator (Task 6) reads this to gate completion logic. */

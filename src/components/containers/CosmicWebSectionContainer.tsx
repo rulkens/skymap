@@ -14,9 +14,9 @@
  * field is actually added, removed, or modified. The `useMemo` projection
  * (filter + shape) is keyed on that stable `volumeFieldItems` reference:
  * the projected array is rebuilt only when the items Record changes, not on
- * every unrelated store write. `debug-*` synthetic fixtures are excluded so
- * the panel shows only real science volumes; the dev console and
- * `handle.volumes.getState()` still see them.
+ * every unrelated store write. `debug-*` synthetic fixtures are excluded here
+ * rather than inside the projection, so the panel shows only real science
+ * volumes while the items Record itself stays complete.
  *
  * ### Handler stability
  *

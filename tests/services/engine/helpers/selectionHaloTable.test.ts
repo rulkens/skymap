@@ -57,7 +57,6 @@ describe('selectionHalo', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [4.8481e-12, 0, 0],
-      radiusM: 6371000,
     };
     const halo = selectionHalo(bodyRow);
     expect(halo).not.toBeNull();

@@ -9,7 +9,7 @@
  *   1. Boolean correctness — false for any of the six handles
  *      being null, true only when all six are populated.
  *   2. Type narrowing — after `if (isEngineReady(state))`, the
- *      compiler treats `state.cam`, `state.gpu.galaxyPointRenderer`,
+ *      compiler treats `state.gpu.galaxyPointRenderer`,
  *      `state.gpu.renderTargets`, `state.gpu.galaxyPickRenderer`,
  *      `state.gpu.compositor`, and
  *      `state.subsystems.texturedDisks` as non-null without `!` or
@@ -36,7 +36,6 @@ import { describe, it, expect } from 'vitest';
 import { isEngineReady } from '../../../../src/services/engine/helpers/engineReady';
 import type { ReadyEngineState } from '../../../../src/@types/engine/ReadyEngineState';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
 /**
  * Build an `EngineState`-shaped fixture with the six guard fields
@@ -50,7 +49,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
  */
 function makeState(
   overrides: {
-    cam?: OrbitCamera | null;
+    booted?: boolean;
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     compositor?: unknown;
@@ -58,7 +57,6 @@ function makeState(
     texturedDisks?: unknown;
   } = {},
 ): EngineState {
-  const cam = overrides.cam === undefined ? ({} as unknown as OrbitCamera) : overrides.cam;
   const galaxyPointRenderer =
     overrides.galaxyPointRenderer === undefined ? ({} as unknown) : overrides.galaxyPointRenderer;
   const renderTargets =
@@ -69,15 +67,15 @@ function makeState(
   const texturedDisks =
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
-    cam,
+    booted: overrides.booted ?? true,
     gpu: { galaxyPointRenderer, renderTargets, compositor, galaxyPickRenderer },
     subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
 
 describe('isEngineReady — false branch', () => {
-  it('returns false when state.cam is null', () => {
-    expect(isEngineReady(makeState({ cam: null }))).toBe(false);
+  it('returns false before boot', () => {
+    expect(isEngineReady(makeState({ booted: false }))).toBe(false);
   });
 
   it('returns false when state.gpu.galaxyPointRenderer is null', () => {
@@ -126,23 +124,21 @@ describe('isEngineReady — true branch', () => {
 });
 
 describe('isEngineReady — type narrowing', () => {
-  it('narrows state.cam, gpu handles, and texturedDisks to non-null', () => {
+  it('narrows gpu handles and texturedDisks to non-null', () => {
     const state = makeState();
 
-    // Pre-narrowing, `state.cam` is `OrbitCamera | null`, so reading
-    // a property off it without a guard should be a tsc error.  The
-    // `@ts-expect-error` directive asserts that — if a future change
-    // to `EngineState` makes `cam` non-null at the canonical type
-    // level, this directive will start failing and force a re-think.
-    // @ts-expect-error: state.cam is OrbitCamera | null pre-narrowing
-    void state.cam.target;
+    // Pre-narrowing, `galaxyPointRenderer` is nullable, so reading a property
+    // off it without a guard is a tsc error. The `@ts-expect-error` asserts
+    // that — a future change making it non-null at the canonical type level
+    // starts failing here and forces a re-think.
+    // @ts-expect-error: galaxyPointRenderer is nullable pre-narrowing
+    void state.gpu.galaxyPointRenderer.totalCount;
 
     if (isEngineReady(state)) {
       // Post-narrowing, every guarded field is non-null.  These reads
       // must compile without `!` or `?.`.  The `void` operator
       // suppresses the unused-expression lint warning while still
       // forcing tsc to type-check the property access.
-      void state.cam.target;
       void state.gpu.galaxyPointRenderer.totalCount;
       void state.gpu.renderTargets.viewOf;
       void state.gpu.compositor.draw;

@@ -53,7 +53,7 @@
  *     against the pinned `clip.frame`, re-encoded into the CURRENT
  *     `settings.orientation` — so `base` is not what's on screen and is not
  *     what commit-on-edge reads either: it bakes the driver's own
- *     already-current-frame pose (`lastPose`) when the clip ends, never a
+ *     already-current-frame pose (the register) when the clip ends, never a
  *     stale `base`. The interactive path needs the explicit re-encode because
  *     THERE `base` (or a driver derived from it) is what renders immediately;
  *     inside a clip it never is until the clip is already gone. Re-derive

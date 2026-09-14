@@ -15,7 +15,7 @@ export const ZONE_OF_AVOIDANCE_ENTRY = {
   // internal consistency with the row it mirrors.
   visible: true,
   // The curved "Zone of Avoidance" lettering rides the band's own toggle
-  // and fade layer (zoneOfAvoidanceLayer.ts), not the label subsystem — so
+  // and fade layer (zoneOfAvoidancePass.ts), not the label subsystem — so
   // this row does not register as label-bearing.
   bearsLabel: false,
   // The curved "Zone of Avoidance" lettering has no ring/halo marker —

@@ -15,10 +15,10 @@
 
 import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Tier } from '../../../@types/data/Tier';
 
-export function earthSurfaceTier(state: EngineState): Tier {
+export function earthSurfaceTier(state: PassState): Tier {
   const slot = state.assetSlots.bodyTextures.get(bodyTextureSlotKey('earth', 'surface'));
   if (slot === undefined || slot.state().kind !== 'ready') return state.tier;
   return slot.lastRequest()?.tier ?? state.tier;

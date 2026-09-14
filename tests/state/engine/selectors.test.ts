@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
-import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import {
   engineStatusChanged,
   engineScaleChanged,
@@ -17,7 +17,7 @@ import {
   selectLoadProgress,
 } from '../../../src/state/engine/selectors';
 
-const baseSettings = buildInitialSettings();
+const baseSettings = INITIAL_SETTINGS;
 
 describe('engine selectors', () => {
   it('selectEngineStatus returns the current engine status', () => {

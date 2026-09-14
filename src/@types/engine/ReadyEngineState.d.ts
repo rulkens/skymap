@@ -13,7 +13,6 @@
  */
 
 import type { EngineState } from './state/EngineState';
-import type { OrbitCamera } from '../camera/OrbitCamera';
 import type { GalaxyPointRenderer } from '../rendering/GalaxyPointRenderer';
 import type { GalaxyPickRenderer } from '../rendering/GalaxyPickRenderer';
 import type { Compositor } from '../rendering/Compositor';
@@ -21,7 +20,6 @@ import type { RenderTargets } from '../rendering/RenderTargets';
 import type { TexturedDiskSubsystem } from './subsystems/TexturedDiskSubsystem';
 
 export type ReadyEngineState = EngineState & {
-  cam: OrbitCamera;
   gpu: EngineState['gpu'] & {
     galaxyPointRenderer: GalaxyPointRenderer;
     galaxyPickRenderer: GalaxyPickRenderer;

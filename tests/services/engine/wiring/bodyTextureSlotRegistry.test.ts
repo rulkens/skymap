@@ -34,7 +34,7 @@ type Gpu = {
 function makeState(gpu: Gpu): EngineState {
   return {
     gpu,
-    assetSlots: { bodyTextures: new Map() },
+    assetSlots: { bodyTextures: new Map(), meshBodies: new Map() },
   } as unknown as EngineState;
 }
 

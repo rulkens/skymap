@@ -5,8 +5,8 @@
  * Before the renderer unification, ~140 lines of imperative GPU plumbing
  * sprawled here: a two-way HDR-encoder branch, a tone-map blit, and a
  * post-tone-map UI overlay, each a hand-wired call whose order was implicit
- * in which function called which. That order is now DATA — `frameProgram(tone)`
- * returns the ordered
+ * in which function called which. That order is now DATA — `FRAME_ORDER`, whose
+ * expansion is the ordered
  * `FrameStep[]`, and `executeFrame` is the single imperative site that walks
  * it into one encoder. This module shrank to three responsibilities: the
  * once-per-frame focus-uniform write, the encoder lifecycle (create + swap-view
@@ -20,9 +20,9 @@
  *      `'perLayerTimed'` when timing is enabled (one pass per layer so each can
  *      carry its own `timestampWrites`), else `'merged'` (one pass per target
  *      group — the tile-local production path OVER blends need).
- *   4. `executeFrame` walks `frameProgram(tone)` over `CONTENT_LAYERS`: the flow
- *      compute, the scalar-volume render, the HDR render, the `hdr→swap`
- *      tone-map composite, then the swap-chain overlay render.
+ *   4. `executeFrame` walks `expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, …)`:
+ *      the flow compute, the scalar-volume render, the HDR render, the
+ *      `hdr→swap` tone-map composite, then the swap-chain overlay render.
  *   5. Record the timing resolve/copy (`endFrame`) and submit.
  *
  * The strategy fork, the tile-local coherency rationale, the first-touch clear,
@@ -34,10 +34,9 @@
  *
  * This module owns no cross-frame state of its OWN — every local value it
  * computes is recomputed each frame. It DOES read/write one Resource,
- * `state.cameraRuntime.skyCubemapCapture` (the black-hole lens's amortized
- * sky-capture bookkeeping), the same amortized-Resources shape
- * `cameraRuntime`'s other fields already carry. A free function taking a
- * struct of inputs bounds the encoder lifetime to the function body.
+ * `state.skyCubemapCapture` (the black-hole lens's amortized sky-capture
+ * bookkeeping). A free function taking a struct of inputs bounds the encoder
+ * lifetime to the function body.
  *
  * ### What stays in `runFrame()` (NOT here)
  *
@@ -54,31 +53,32 @@ import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { executeFrame } from './executeFrame';
-import { frameProgram } from './frameProgram';
+import { expandFrameOrder } from './expandFrameOrder';
+import { FRAME_ORDER } from './frameOrder';
 import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
-import { CONTENT_LAYERS } from './passes';
+import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import { skyCubemapCaptureSchedule } from './skyCubemapCaptureSchedule';
 import { skyCubemapFaceContext } from './skyCubemapFaceContext';
 import { sceneBodyStates } from './sceneBodyStates';
 import { regionById } from '../../../utils/scene/regionById';
 import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
-import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 
 // Hoisted rather than resolved per frame (a linear `.find` over `BODY_REGIONS`),
-// matching the other two consumers of the same lookup — `sgrAStarLensingLayer`
-// and `bodyGlintsLayer`.
+// matching the other two consumers of the same lookup — `sgrAStarLensingPass`
+// and `bodyGlintsPass`.
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
+
+const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
- * has the buffer queued. Order of operations is the `frameProgram` step list
- * walked by `executeFrame`; the visual output is identical to the pre-unification
- * inline body.
+ * has the buffer queued. Order of operations is `FRAME_ORDER`'s expansion,
+ * walked by `executeFrame`; the visual output is identical to the
+ * pre-unification inline body.
  */
 export function renderFrame(input: RenderFrameInput): void {
   const { ctx, state, device, context, timingService } = input;
@@ -112,11 +112,11 @@ export function renderFrame(input: RenderFrameInput): void {
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
 
-  // The black-hole lens's amortized sky-cubemap capture schedule. The band
-  // keys on the CAMERA's distance from the galactic-centre anchor, the same
-  // quantity + region every `sgrAStarLensing`-band consumer reads. The
-  // bookkeeping lives on `cameraRuntime` — see `SkyCubemapCaptureRuntime`.
-  const captureRuntime = state.cameraRuntime.skyCubemapCapture;
+  // The black-hole lens's sky-cubemap bake. The band keys on the CAMERA's
+  // distance from the galactic-centre anchor, the same quantity + region
+  // every `sgrAStarLensing`-band consumer reads. See
+  // `SkyCubemapCaptureRuntime`.
+  const captureRuntime = state.skyCubemapCapture;
   const gcDistanceMpc = regionRelativeDistanceMpc(
     ctx.drawCamPos,
     GALACTIC_CENTRE_REGION,
@@ -125,32 +125,39 @@ export function renderFrame(input: RenderFrameInput): void {
   // Recorded unconditionally (not just while the band is active) — the
   // `sky-cubemap` row's release-margin check needs the distance on the very
   // frame the band closes, not one frame later.
-  captureRuntime.gcDistanceMpc = gcDistanceMpc;
+  captureRuntime.lastGcDistanceMpc = gcDistanceMpc;
   const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
 
-  const bandJustEngaged = bandActive && !captureRuntime.bandActive;
   // The `sky-cubemap` row's 50 MB exists only while the band does (its
   // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`
   // runs BEFORE this frame's camera pose is produced, so it cannot see the
-  // band open; the edge reconciles here instead, because the entry frame is
-  // also the frame that sweeps all six faces and would otherwise read a row
-  // that does not exist yet.
-  if (bandActive !== captureRuntime.bandActive) {
-    captureRuntime.bandActive = bandActive;
+  // band open; the edge reconciles here instead. `bakedSettings` is `null`
+  // whenever the band is inactive (seeded null, reset null on close below),
+  // so the band-entry frame always finds nothing baked and sweeps all six
+  // faces — it needs the row to already exist.
+  if (bandActive !== captureRuntime.lastBandActive) {
+    captureRuntime.lastBandActive = bandActive;
     ctx.renderTargets.reconcile(state, ctx.canvasSize);
+    if (!bandActive) captureRuntime.bakedSettings = null;
   }
 
-  // `frameProgram` only knows WHICH faces to capture; each face's own
-  // synthetic camera is resolved here, fresh every frame, since the face LIST
-  // changes frame to frame. `faceSizePx` reads the row's ALLOCATED size, not
-  // `specOf().fixedSizePx.size`: that field is a live setting (a function of
-  // state), so the resolved allocation is the authoritative answer. A face
-  // whose context comes back null (pre-bootstrap) is omitted — `executeFrame`
-  // treats a missing map entry as "skip this step cleanly".
+  // The captured "sky" is kpc away and static: a 1024² face covers 90°, so
+  // one texel is ~1.5 mrad, and shifting content at 8 kpc by a texel needs
+  // ~12 pc of camera travel — the whole lens band is 500 AU. One bake is
+  // texel-exact for the entire band; the lens shader already samples the
+  // cubemap as at-infinity, so there is no pinned-eye tracking to do.
+  //
+  // A settings-reference change re-bakes. Dropped from the key on purpose:
+  // `tier` — a tier swap dissolves through `fades.fadeTo` (`dissolveCatalogBuffer.ts`),
+  // so `rosterSettling` already catches it; `faceSizePx` — the resolution
+  // knob is a settings write, and `reconcile` (above) reallocates the row
+  // earlier in the same `runFrame`, so the settings-ref bake lands in the
+  // new texture; `selection` — a stale selection halo in the lensed sky is
+  // accepted.
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
   let skyCubemapFacesToCapture: readonly CubeFace[] = [];
-  // Sgr A*'s own body-m slab row this frame: `frameProgram` emits the
-  // (hdr, BODY[k]) lens step off it. Resolved here, not in `frameProgram`,
+  // Sgr A*'s own body-m slab row this frame: the `lens` line expands to the
+  // (hdr, BODY[k]) step off it. Resolved here, not in the expansion,
   // because the row's painter-order index comes from `deriveSlabs` (computed
   // upstream of this function) — the same "resolve here, hand data down"
   // split `earthSlab` in `runFrame.ts` already follows for the identical
@@ -161,53 +168,35 @@ export function renderFrame(input: RenderFrameInput): void {
     sgrAStarBodySlab =
       ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
         ?.index ?? null;
-    // Measured against the PINNED eye, not the live camera each frame: a
-    // fresh live eye per round-robin face made adjacent faces disagree at
-    // their shared border and the whole cubemap flicker as the camera moved.
-    // Threshold is a FRACTION of `gcDistanceMpc` — see
-    // `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`'s own docblock for why a
-    // fixed AU distance is wrong here. Read off settings (the DebugPanel
-    // knob), not the module constant — which stays this value's real owner
-    // (`initialState.ts` seeds from it).
-    const cameraMovedBeyondThreshold =
-      captureRuntime.pinnedEyeMpc !== null &&
-      distanceMpc(ctx.drawCamPos, captureRuntime.pinnedEyeMpc) >
-        state.settings.sgrAStarLensingTuning.skyCubemapRecaptureCameraMoveFraction * gcDistanceMpc;
-    const fullSweepTriggered = bandJustEngaged || cameraMovedBeyondThreshold;
-    // Re-pin BEFORE scheduling so a triggered full sweep — including this
-    // frame's own faces — samples the eye it was triggered by, not the eye it
-    // just moved past.
-    if (fullSweepTriggered) {
-      captureRuntime.pinnedEyeMpc = ctx.drawCamPos;
-    }
-    skyCubemapFacesToCapture = skyCubemapCaptureSchedule({
-      fullSweepTriggered,
-      frameIndex: captureRuntime.frameIndex,
-      lastCapturedAtMs: captureRuntime.lastCapturedAtMs,
-      nowMs: ctx.nowMs,
-    }).facesToCapture;
-    for (const face of skyCubemapFacesToCapture) {
-      captureRuntime.lastCapturedAtMs.set(face, ctx.nowMs);
-    }
-    captureRuntime.frameIndex += 1;
 
-    const pinnedEyeMpc = captureRuntime.pinnedEyeMpc;
-    if (skyCubemapFacesToCapture.length > 0 && pinnedEyeMpc !== null) {
+    // Two roster inputs move without a settings write: a source-visibility
+    // ramp (settings write fires once, at the ramp's START), and a
+    // famous-galaxy thumbnail's atlas upload + 400 ms load fade (arrives
+    // async, after the ramp has already settled).
+    const rosterSettling =
+      state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
+      (state.subsystems.texturedDisks?.hasInFlightWork() ?? false);
+    if (rosterSettling || captureRuntime.bakedSettings !== state.settings) {
       const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
-      for (const face of skyCubemapFacesToCapture) {
+      for (const face of ALL_CUBE_FACES) {
         const faceCtx = skyCubemapFaceContext({
           state,
-          // The PINNED eye (see `pinnedEyeMpc`'s docblock), not the live
-          // camera: all six faces must share one eye or they disagree at
-          // their shared border. Still camera-relative overall, not the
-          // hole's — a hole-centred eye put the capture's own boundary seam
-          // where the lens magnifies it most.
-          eyeMpc: pinnedEyeMpc,
+          eyeMpc: ctx.drawCamPos,
           face,
           faceSizePx,
           nowMs: ctx.nowMs,
         });
         if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
+      }
+      // Pre-bootstrap: a face's context can come back null before the first
+      // real camera pose exists. Leave `bakedSettings` untouched so the next
+      // frame retries the full sweep rather than caching a partial bake.
+      if (skyCubemapFaceContexts.size === ALL_CUBE_FACES.length) {
+        skyCubemapFacesToCapture = ALL_CUBE_FACES;
+        // Recorded only for a settled bake: while the roster is still moving,
+        // null keeps the next frame baking, and the first settled frame
+        // bakes once more.
+        captureRuntime.bakedSettings = rosterSettling ? null : state.settings;
       }
     }
   }
@@ -216,23 +205,22 @@ export function renderFrame(input: RenderFrameInput): void {
     encoder,
     ctx,
     state,
-    program: frameProgram(
-      {
+    program: expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+      tone: {
         exposure: state.settings.tonemap.exposure,
         curve: state.settings.tonemap.curve,
         hdrKnee: hdrOn ? state.settings.hdr.knee : 0,
         hdrHeadroom: hdrOn ? state.settings.hdr.headroom : 0,
       },
       // The master bloom toggle is the ONLY bloom value that shapes the step
-      // list; strength/threshold are read live by the bloom layers each draw.
-      state.settings.bloom.enabled,
+      // list; strength/threshold are read live by the bloom passes each draw.
+      bloomEnabled: state.settings.bloom.enabled,
       // Painter-ordered NEAR0 + body-row indices — the chain the
-      // foreground:0 render expands into, one step per entry.
-      foregroundChainOrder(ctx.slabs),
+      // foreground:0 line expands over, one step per entry.
+      foregroundChain: foregroundChainOrder(ctx.slabs),
       skyCubemapFacesToCapture,
-      sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
-    ),
-    layers: CONTENT_LAYERS,
+      lensBodySlabs: sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
+    }),
     strategy,
     timing: timingService,
     swapView,

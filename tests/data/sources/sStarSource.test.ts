@@ -13,7 +13,7 @@ import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { S_STAR_ENTRY } from '../../../src/data/sources/s-star';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
-import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
 
 describe('the S-star source row', () => {
@@ -21,9 +21,8 @@ describe('the S-star source row', () => {
     // `visibleStars` gates all 39 on `bodies.items['s-star'].enabled`. The row is
     // derived, not authored, so the failure mode is an ABSENT key — an undefined
     // read that throws on the first frame rather than a wrong boolean.
-    const settings = buildInitialSettings();
     expect(BODY_IDS).toContain(S_STAR_ENTRY.id);
-    expect(settings.bodies.items[S_STAR_ENTRY.id]?.enabled).toBe(S_STAR_ENTRY.visible);
+    expect(INITIAL_SETTINGS.bodies.items[S_STAR_ENTRY.id]?.enabled).toBe(S_STAR_ENTRY.visible);
   });
 
   it('stays out of the label domain, so nothing budgets it a caption', () => {

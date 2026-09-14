@@ -16,10 +16,12 @@
  * blob exists to debug THAT feature.
  */
 
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebugSnapshot';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
@@ -29,6 +31,7 @@ export function logCameraState(
   focusRow: SelectionRow | null,
   simDays: number,
   earthSubCamera: EarthTileDebugSnapshot['subCamera'] = null,
+  framed: FramedCameraPose | null = null,
 ): void {
   if (!cam) {
     console.log('[engine] logCameraState: camera not ready yet');
@@ -52,7 +55,22 @@ export function logCameraState(
     };
   }
 
+  // The stored arm, named (spec §8): a body arm's numbers are body-FIXED
+  // metres, so reading the Mpc rows above as the whole truth would mislead.
+  // Absent ⇒ absolute, the same rule untagged serialized input parses under.
+  const bodyArm = framed !== null && framed.frame !== 'absolute' ? framed.pose : null;
+
   const out = {
+    frame: bodyArm === null ? 'absolute' : bodyArm.bodyId,
+    bodyArmMetres:
+      bodyArm === null
+        ? null
+        : {
+            anchorLocalM: bodyArm.anchorLocalM,
+            eyeRelAnchorM: bodyArm.eyeRelAnchorM,
+            eyeFromCentreM: Math.hypot(...bodyFixedEyeM(bodyArm)),
+            basisLocal: bodyArm.basisLocal,
+          },
     target: cam.target,
     yaw: cam.yaw,
     pitch: cam.pitch,

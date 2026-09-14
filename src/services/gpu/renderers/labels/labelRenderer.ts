@@ -105,13 +105,15 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
  *   bytes 16..31  color         vec4<f32>  — premultiplied rgba (fill)
  *   bytes 32..47  sizing        vec4<f32>  — outlineEmFrac, minPx, maxPx, fadeAlpha
  *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)
+ *   bytes 64..67  occludeWeight f32        — share of the scene attenuation
  *
- * 4 × 16 bytes = 64 bytes/label.  `sizing.x` repurposes the legacy
- * `pixelSize` slot (ignored by the shader since the worldEmMpc
- * migration) to carry `outlineEmFrac`, sparing a fresh vec4 for one
- * scalar.
+ * The struct's vec4 members give it 16-byte alignment, so the array element
+ * stride rounds 68 UP to 80 — the 12 trailing bytes are padding the CPU never
+ * writes.  `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the
+ * shader since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a
+ * fresh vec4 for one scalar.
  */
-const LABEL_DATA_BYTES = 64;
+const LABEL_DATA_BYTES = 80;
 
 /**
  * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
@@ -160,6 +162,10 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
  * consumes a per-frame scene colour view.  The default (opts omitted) keeps
  * the plain single-BGL pipeline — byte-for-byte unchanged.
+ *
+ * `opts.clipScale` states the clip units of the matrices this instance will be
+ * drawn with, so the em it packs is divisible by their `clip.w` — the NEAR0
+ * overlays rescale theirs (`near0OverlayVpF32`). Default 1 = matrix in Mpc.
  */
 export function createLabelRenderer(
   ctx: GpuContext,
@@ -167,8 +173,9 @@ export function createLabelRenderer(
   atlases: LoadedFontAtlases,
   maxLabels = 64,
   maxGlyphsPerLabel = 64,
-  opts?: { occludeAgainstScene?: boolean },
+  opts?: { occludeAgainstScene?: boolean; clipScale?: number },
 ): LabelRenderer {
+  const clipScale = opts?.clipScale ?? 1;
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
   // factory's call site.  Runtime code below null-checks before each use.
@@ -481,8 +488,8 @@ export function createLabelRenderer(
         label.alignY ?? 'baseline',
       );
 
-      // Write per-label storage record (96 bytes, 24 floats) unconditionally
-      // — even when `quads` is empty.  Keeping the per-label index stable
+      // Write the per-label storage record unconditionally — even when
+      // `quads` is empty.  Keeping the per-label index stable
       // across the outer loop matters because each glyph carries its
       // labelIndex by position; if we skipped a label whose text produced
       // no known glyphs, every subsequent glyph would point to the wrong
@@ -493,11 +500,16 @@ export function createLabelRenderer(
       //   [4..7]   color        (r*a, g*a, b*a, a — premultiplied)
       //   [8..11]  sizing       (outlineEmFrac, minPx, maxPx, fadeAlpha)
       //   [12..15] outlineColor (r*a, g*a, b*a, a)
+      //   [16]     occludeWeight        ([17..19] are struct padding)
       const labelBase = li * (LABEL_DATA_BYTES / 4);
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
       labelBuf[labelBase + 2] = label.worldPos[2];
-      labelBuf[labelBase + 3] = label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT;
+      // The em rides the same clip units as the matrix `draw` is handed: the
+      // vertex stage sizes glyphs as `worldEmMpc / clip.w`. `currentLabels`
+      // keeps the unscaled rows — the CPU pick path projects those through the
+      // unscaled `Label2DProjection.vp`.
+      labelBuf[labelBase + 3] = (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * clipScale;
 
       // Public colour API is STRAIGHT RGBA — producers write the natural
       // form (`[1, 0, 0, 0.5]` is "half-transparent red"); the fragment
@@ -523,6 +535,10 @@ export function createLabelRenderer(
       labelBuf[labelBase + 13] = outlineColor[1]! * oa;
       labelBuf[labelBase + 14] = outlineColor[2]! * oa;
       labelBuf[labelBase + 15] = oa;
+
+      // Default 1 = today's per-pixel rule, so a producer that says nothing
+      // about its subject's depth keeps the behaviour it had.
+      labelBuf[labelBase + 16] = label.occludeWeight ?? 1;
 
       // Resolve the label's font to its GPU texture-array layer index
       // ONCE per label, outside the inner glyph loop — every glyph in

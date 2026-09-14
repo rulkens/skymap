@@ -81,14 +81,14 @@ function makeStore() {
  * cue-by-cue during real playback.
  *
  * The `cameraRuntime` stub only needs to satisfy `frameTo`'s
- * `liveUpBasisQuat` read (`upBasis.current`, an identity Mat3 is fine —
+ * `liveUpBasisQuat` read (`outputs.upBasis`, an identity Mat3 is fine —
  * the roll's seed quaternion is not under test here).
  */
 function fireFrameToCues(store: ReturnType<typeof makeStore>, clip: ClipData | undefined): void {
   if (clip === undefined) return;
   const state = {
     settings: store.getState().settings,
-    cameraRuntime: { upBasis: { current: [1, 0, 0, 0, 1, 0, 0, 0, 1] } },
+    cameraRuntime: { outputs: { upBasis: [1, 0, 0, 0, 1, 0, 0, 0, 1] } },
   } as unknown as EngineState;
   for (const effect of collectFrameToEffects(clip.timeline)) {
     applySceneEffect(effect, { state, store });

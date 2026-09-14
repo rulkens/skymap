@@ -110,12 +110,10 @@ describe('milkyWayPickRenderer (stub device)', () => {
   });
 
   it('pickMilkyWay self-binds @group(0): uploads the caller bytes to its OWN camera buffer', () => {
-    // The NEAR0 pick pass carries no shared point-sprites slot-0 prefix (that
-    // is a COSMO-pass contract), so pickMilkyWay must upload the caller's
-    // complete pick image to its own buffer and bind @group(0) itself rather
-    // than inherit a camera. Reverting to an inherited-camera pattern (no
-    // upload, no slot-0 bind) leaves the pass with an unbound camera group —
-    // a validation error that silently drops the whole pick submit.
+    // pickMilkyWay must upload the caller's complete pick image to its own
+    // buffer and bind @group(0) itself. Dropping the upload + slot-0 bind
+    // leaves the pass with an unbound camera group — a validation error that
+    // silently drops the whole pick submit.
     const { device, writeBufferCalls } = makeStubDevice();
     const ctx = {
       device,

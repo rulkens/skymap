@@ -2,8 +2,8 @@
  * BodyDetailCard — rich panel for a focused scene body (a famous star, Earth, a
  * planet/moon, an S-star).
  *
- * The engine hands React a lean `BodyInfo` (id + label + position + radius) so a
- * body is always immediately selectable.  The card then branches on the body's
+ * The engine hands React a lean `BodyInfo` (id + label + position) so a body is
+ * always immediately selectable.  The card then branches on the body's
  * kind, keyed by `FAMOUS_STAR_IDS.has(target.id)`:
  *
  *   - A famous star gets the rich stellar panel: its narrative/physical rows live
@@ -48,9 +48,12 @@ import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatRadiusM } from '../../../utils/format/formatRadiusM';
 import { formatScalar } from '../../../utils/format/formatScalar';
 import { FAMOUS_STAR_IDS } from '../../../data/bodies/famousStarsIndex';
 import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { isMeshBody } from '../../../utils/scene/isMeshBody';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
@@ -99,6 +102,10 @@ function BodyDetailCard({
   // A planet/moon's curated fact sheet — compiled in, no fetch. Absent ⇒ the
   // lean panel (radius alone). Never consulted on the famous-star branch.
   const facts = isFamousStar ? undefined : BODY_FACTS[target.id];
+  // The card is handed identity only, so the seed is resolved here: its arm
+  // decides whether a radius row means anything at all. A miss just drops the
+  // row (the absent-row pattern below), not a render-time throw.
+  const seed = SCENE_BODIES.find((b) => b.id === target.id);
 
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
   const aliases = entry ? entry.names.slice(1) : [];
@@ -116,8 +123,8 @@ function BodyDetailCard({
       {aliases.length > 0 && <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>}
 
       {/*
-        Non-star body (Earth, a planet, a moon): the physical radius straight off
-        the BodyInfo, then the live camera-distance row (time-dependent, off the
+        Non-star body (Earth, a planet, a moon): the physical radius resolved
+        off the seed, then the live camera-distance row (time-dependent, off the
         pub; dropped when no distance is published, e.g. the initial null
         report), then — when a fact-sheet entry exists — the full planetary
         card.  With no entry this stays the lean panel (radius alone).  The
@@ -127,10 +134,14 @@ function BodyDetailCard({
       {!isFamousStar && (
         <>
           <div className={styles.cardSection}>
-            <CardRow
-              label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
-              value={`${(target.radiusM * SCALE_UNITS.M_TO_KM).toLocaleString()} km`}
-            />
+            {/* A mesh body's only radius is its bake hull, not a physical
+                fact about the object — so it gets no radius row at all. */}
+            {seed !== undefined && !isMeshBody(seed) && (
+              <CardRow
+                label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
+                value={formatRadiusM(seed.radiusM)}
+              />
+            )}
             {distanceMpc != null && (
               <CardRow label="Distance" value={formatDistance(distanceMpc)} />
             )}

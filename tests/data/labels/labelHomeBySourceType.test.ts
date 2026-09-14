@@ -10,7 +10,7 @@ import { LABEL_HOME_BY_SOURCE_TYPE } from '../../../src/data/labels/labelHomeByS
 import { SOURCE_REGISTRY } from '../../../src/data/sources';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import settingsReducer from '../../../src/state/settings/settingsSlice';
-import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';
 import type { LabelHomes } from '../../../src/@types/settings/LabelHomes';
@@ -36,7 +36,7 @@ describe('LABEL_HOME_BY_SOURCE_TYPE', () => {
       const home = homeFor(cat);
       expect(home, `no label home for '${cat}'`).toBeDefined();
 
-      const off = settingsReducer(buildInitialSettings(), home.write(cat, false));
+      const off = settingsReducer(INITIAL_SETTINGS, home.write(cat, false));
       expect(home.read(homesOf(off), cat), `'${cat}' should read false`).toBe(false);
 
       const on = settingsReducer(off, home.write(cat, true));

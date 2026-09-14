@@ -13,7 +13,7 @@ import { starPickLeafDraws } from '../../../../../src/services/gpu/renderers/sta
 import type {
   PreparedStarCut,
   StarNodeStream,
-} from '../../../../../src/services/engine/frame/passes/starCatalogLayer';
+} from '../../../../../src/services/engine/frame/passes/starCatalogPass';
 import type { StarNodeDraw } from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 import { Source } from '../../../../../src/data/sources';
 

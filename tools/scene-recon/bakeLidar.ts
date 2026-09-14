@@ -1,0 +1,204 @@
+#!/usr/bin/env node
+/**
+ * bakeLidar — orchestrates one scene group's LiDAR bake (`--group <id>`,
+ * default `soendermarken`): DHM tiles + the GeoDanmark ortho → one
+ * `pdal pipeline` run → `points.bin` + the group's `manifest.json` + the
+ * `scenes.json` registry (spec §§4-6).
+ *
+ * `runPdal` is injected so `bakeLidar()` is exercisable without PDAL
+ * installed (the stage graph, the CSV reader and the packer are tested in
+ * isolation); `main()` wires up the real subprocess.
+ */
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { sceneGroupFromArgv } from './groups/sceneGroupFromArgv';
+import { lidarPipelineStages } from './lidar/lidarPipelineStages';
+import { readPdalCsv } from './lidar/readPdalCsv';
+import { orthoVrtXml } from './ortho/orthoVrtXml';
+import { packPoints, type ScenePoint } from './pack/packPoints';
+import { assetArtifactUrl, groupAssetDir } from './manifest/geo3dLayout';
+import { publishAsset } from './manifest/publishAsset';
+import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import type { BoundsM } from '../scene-workbench/@types/BoundsM';
+import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
+import type { PointCloudAsset } from '../scene-workbench/@types/PointCloudAsset';
+
+/** The GeoDanmark harvest is z19-only (see `geodanmarkTileSource.ts`) — the
+ *  only level with a tile tree to colorize from. */
+const GEODANMARK_LEVEL = 19;
+/** Stable across re-runs, so a re-bake upserts the one asset rather than
+ *  accumulating siblings under a fresh id. */
+const ASSET_ID = 'lidar';
+
+/**
+ * DHM Punktsky flight date. The LAS headers' own `creation_year`/`creation_doy`
+ * fields are unset (0); this is the date all 8 Søndermarken tiles' point
+ * `GpsTime` (Adjusted Standard GPS Time) decodes to — see
+ * `data/raw/dhm/README.md` "Flight date" for the derivation.
+ */
+const DHM_FLIGHT_DATE = '2011-09-20';
+
+export type PdalRunner = (pipelineJsonPath: string) => Promise<void>;
+
+export async function bakeLidar(
+  group: SceneGroupDefinition,
+  deps: { readonly runPdal: PdalRunner; readonly pdalVersion: () => string },
+): Promise<PointCloudAsset> {
+  const dhmDir = rawDataPath('dhm.dir');
+  const lasFiles = group.dhmTiles.map((tile) => join(dhmDir, `${tile}.las`));
+  const missing = lasFiles.filter((path) => !existsSync(path));
+  if (missing.length > 0) {
+    throw new Error(
+      `bakeLidar: ${missing.length}/${lasFiles.length} DHM tile(s) missing from ${dhmDir} ` +
+        `— run \`npm run fetch-dhm\` first:\n${missing.map((path) => `  ${path}`).join('\n')}`,
+    );
+  }
+
+  const workDir = join(dhmDir, '.bake');
+  await mkdir(workDir, { recursive: true });
+
+  const rect = earthTileIndicesForBounds(group.bounds, GEODANMARK_LEVEL, EARTH_TILE_PX);
+  const levelDir = join(rawDataPath('geodanmark.dir'), String(GEODANMARK_LEVEL));
+  // GDAL reads a VRT whose sources are missing as all-zero, so without this
+  // check an absent tile tree bakes every point black and reports success.
+  if (!existsSync(levelDir)) {
+    throw new Error(
+      `bakeLidar: GeoDanmark ortho tree missing at ${levelDir} — see data/raw/geodanmark/README.md for the harvest`,
+    );
+  }
+  const vrtPath = join(workDir, `${group.id}-ortho.vrt`);
+  await writeFile(
+    vrtPath,
+    orthoVrtXml({ levelDir, rect, level: GEODANMARK_LEVEL, tilePx: EARTH_TILE_PX }),
+  );
+
+  const csvPath = join(workDir, `${group.id}.csv`);
+  const stages = lidarPipelineStages({
+    lasFiles,
+    bounds: group.bounds,
+    orthoVrtPath: vrtPath,
+    anchor: group.anchor,
+    minPointSpacingM: group.minPointSpacingM,
+    dropClassifications: group.dropClassifications,
+    outCsvPath: csvPath,
+    defaultSrs: group.sourceSrs,
+  });
+  const pipelineJsonPath = join(workDir, `${group.id}-pipeline.json`);
+  await writeFile(pipelineJsonPath, JSON.stringify({ pipeline: stages }, null, 2));
+
+  process.stderr.write(`bakeLidar: running pdal pipeline for "${group.id}"…\n`);
+  await deps.runPdal(pipelineJsonPath);
+
+  // readPdalCsv streams the CSV off disk one line at a time; the points array
+  // below still buffers the full run in memory — packPoints' contract needs
+  // the count up front to size points.bin's header, so there is no further
+  // streaming past this point.
+  const points: ScenePoint[] = [];
+  try {
+    for await (const point of readPdalCsv(csvPath)) {
+      points.push(point);
+    }
+  } finally {
+    await rm(csvPath, { force: true });
+  }
+
+  if (points.length === 0) {
+    throw new Error(`bakeLidar: pdal pipeline produced zero points for group "${group.id}"`);
+  }
+
+  const assetDir = groupAssetDir(group.id, ASSET_ID);
+  await mkdir(assetDir, { recursive: true });
+  await writeFile(join(assetDir, 'points.bin'), packPoints(points));
+
+  const asset: PointCloudAsset = {
+    kind: 'pointCloud',
+    id: ASSET_ID,
+    label: `${group.name} — DHM Punktsky LiDAR`,
+    transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
+    provenance: {
+      source: 'nationalGeodataApi',
+      sourceVintage: DHM_FLIGHT_DATE,
+      pipeline: [{ step: 'pdal', version: deps.pdalVersion() }],
+    },
+    pointCount: points.length,
+    artifactUrl: assetArtifactUrl(group.id, ASSET_ID, 'points.bin'),
+  };
+
+  await publishAsset(group, asset, pointsBoundsM(points));
+
+  return asset;
+}
+
+/** The group frame's extent as actually cut — `group.bounds` is geodetic and
+ *  pre-thinning, so only the written points answer where the scene is. */
+function pointsBoundsM(points: readonly ScenePoint[]): BoundsM {
+  let minX = Infinity;
+  let minY = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxZ = -Infinity;
+  for (const point of points) {
+    minX = Math.min(minX, point.xM);
+    minY = Math.min(minY, point.yM);
+    minZ = Math.min(minZ, point.zM);
+    maxX = Math.max(maxX, point.xM);
+    maxY = Math.max(maxY, point.yM);
+    maxZ = Math.max(maxZ, point.zM);
+  }
+  return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
+}
+
+function spawnPdal(pipelineJsonPath: string): Promise<void> {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn('pdal', ['pipeline', pipelineJsonPath], {
+      stdio: ['ignore', 'inherit', 'inherit'],
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolvePromise();
+      else reject(new Error(`bakeLidar: \`pdal pipeline\` exited with code ${code}`));
+    });
+  });
+}
+
+function pdalVersion(): string {
+  const result = spawnSync('pdal', ['--version'], { encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new Error(
+      'bakeLidar: `pdal --version` failed — is PDAL installed and on PATH? ' +
+        '(Homebrew: `brew install pdal`.)',
+    );
+  }
+  const match = result.stdout.match(/pdal (\S+)/);
+  if (!match) {
+    throw new Error(`bakeLidar: could not parse \`pdal --version\` output: ${result.stdout}`);
+  }
+  return match[1]!;
+}
+
+async function main(): Promise<void> {
+  const start = Date.now();
+  const asset = await bakeLidar(sceneGroupFromArgv(process.argv), {
+    runPdal: spawnPdal,
+    pdalVersion,
+  });
+  const seconds = ((Date.now() - start) / 1000).toFixed(1);
+  process.stderr.write(
+    `bakeLidar: done in ${seconds}s — ${asset.pointCount.toLocaleString()} points → ${asset.artifactUrl}\n`,
+  );
+}
+
+const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);
+if (invokedDirectly) {
+  main().catch((err) => {
+    process.stderr.write(`error: ${(err as Error).stack ?? (err as Error).message}\n`);
+    process.exit(1);
+  });
+}

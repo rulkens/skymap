@@ -51,11 +51,9 @@ import {
   BUBBLE_RECORD_FLOATS,
   packBubbleInstances,
 } from '../../../../../src/services/gpu/renderers/galaxyField/field/packBubbleInstances';
-import type {
-  GalaxyFieldExtra,
-  GalaxyFieldMixtureInput,
-  GalaxyFieldRenderer,
-} from '../../../../../src/services/gpu/renderers/galaxyField/createGalaxyFieldRenderer';
+import type { GalaxyFieldRenderer } from '../../../../../src/@types/galaxy/GalaxyFieldRenderer';
+import type { GalaxyFieldExtra } from '../../../../../src/@types/galaxy/GalaxyFieldExtra';
+import type { GalaxyFieldMixtureInput } from '../../../../../src/@types/galaxy/GalaxyFieldMixtureInput';
 
 /**
  * A single generated extra galaxy. The UBO is retained rather than destroyed

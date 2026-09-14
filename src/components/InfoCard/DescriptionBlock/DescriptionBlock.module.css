@@ -6,3 +6,8 @@
 .root {
   composes: descBlock from '../cardChrome.module.css';
 }
+
+/* pre-line survives alongside -webkit-line-clamp's -webkit-box display. */
+.text {
+  white-space: pre-line;
+}

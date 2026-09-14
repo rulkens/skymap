@@ -24,6 +24,8 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { hostBodyId } from '../../../../src/utils/scene/hostBodyId';
 import { bodyTextureSlotKey } from '../../../../src/utils/scene/bodyTextureSlotKey';
+import { meshBodySlotKey } from '../../../../src/utils/scene/meshBodySlotKey';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -102,6 +104,7 @@ describe('ASSET_WIRING membership', () => {
       'pgcAlias',
       'bodyTextureAtlas',
       ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),
+      ...SCENE_MESH_BODIES.map((b) => meshBodySlotKey(b.id)),
       Source.GaiaStars,
     ];
     expect(new Set(keys)).toEqual(new Set(expected));

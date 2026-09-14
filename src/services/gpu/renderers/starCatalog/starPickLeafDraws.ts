@@ -1,6 +1,6 @@
 /**
  * starPickLeafDraws — turn the per-frame prepared star cut into the pick pass's
- * leaf draw-list, the pure (unit-testable) half of `starCatalogLayer.drawPick`.
+ * leaf draw-list, the pure (unit-testable) half of `starCatalogPass.drawPick`.
  *
  * ### Why leaf-only, and why opacity > 0
  *
@@ -32,14 +32,14 @@
  * already-partitioned leaf arrays and never itself walks the octree or advances
  * the LOD fades. Building that cut is `prepareStarCut`'s job — memoised per
  * frame for the visual pass, and recomputed on the pick path's fresh `ctx` at
- * pick time (see `starCatalogLayer.drawPick`) — so whatever traversal a pick
+ * pick time (see `starCatalogPass.drawPick`) — so whatever traversal a pick
  * costs happens there, not here. A source whose leaf stream is entirely
  * opacity-0 (or empty) is omitted from the result, so the pick draw issues no
  * work for it.
  */
 
 import type { SourceType } from '../../../../@types/data/SourceType';
-import type { PreparedStarCut } from '../../../engine/frame/passes/starCatalogLayer';
+import type { PreparedStarCut } from '../../../engine/frame/passes/starCatalogPass';
 
 /**
  * One source's pick draw: the compacted flat leaf arrays the pick renderer packs

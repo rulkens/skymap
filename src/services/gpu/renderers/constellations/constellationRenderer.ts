@@ -17,7 +17,7 @@
  *     AND the camera position every frame. The renderer re-expresses each cached
  *     absolute endpoint as `pos − camPos` into a scratch buffer and re-uploads
  *     it, so the f32 shader multiplies a well-conditioned camera-relative
- *     position by a rebased vp — the `starPointsLayer` precision seam (no
+ *     position by a rebased vp — the `starPointsPass` precision seam (no
  *     catastrophic cancellation on close approach). The per-frame re-write is
  *     ~743 segments × 32 B, trivially cheap.
  *
@@ -243,12 +243,12 @@ export function createConstellationRenderer(
     /**
      * The NEAR0-origin camera position (world Mpc). Subtracted from each cached
      * absolute endpoint to re-express the segment set camera-relative, pairing
-     * with the caller's f64-rebased `viewProj` — the `starPointsLayer` seam.
+     * with the caller's f64-rebased `viewProj` — the `starPointsPass` seam.
      */
     camPos: Vec3,
     /**
      * The steel-blue tone every figure emits (RGB). Defined once in
-     * `constellationsLayer.ts` (`CONSTELLATION_LINE_COLOR`) and packed into the
+     * `constellationsPass.ts` (`CONSTELLATION_LINE_COLOR`) and packed into the
      * uniform's `lineColor` slot; the fragment reads it directly.
      */
     lineColor: Vec3,

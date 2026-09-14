@@ -4,6 +4,7 @@ import { SGR_A_STAR_ANCHOR } from '../../../src/data/bodies/sceneSgrAStar';
 import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { regionById } from '../../../src/utils/scene/regionById';
 import { regionRelativeDistanceMpc } from '../../../src/utils/scene/regionRelativeDistanceMpc';
@@ -67,6 +68,20 @@ describe('BODY_REGIONS', () => {
 
     expect(galacticCentre.memberIds).toContain('s85');
     expect(galacticCentre.extentMpc).toBeGreaterThan(s2ApoapsisMpc * 10);
+  });
+
+  it('the solar-system extent ignores the hyperbolic rows', () => {
+    // A hyperbola has no envelope, so `max |member − anchor|` at J2000 is a
+    // clock reading rather than a scale: Voyager 1 sat 76 au out at the epoch
+    // and is 172 au out today, against Pluto's ~30. The rows stay MEMBERS —
+    // `regionOfBody` and the palette chip still say "Solar System" — but are
+    // excluded from the extent, which `scaleFadeBands.bodyGlintBackdrop` reads.
+    // Pluto's aphelion is 49 au and Voyager 2's J2000 distance 60 au, so a
+    // bound between the two fails on either probe joining the max.
+    const solarSystem = regionById('solar-system');
+
+    expect(solarSystem.memberIds).toContain('voyager1');
+    expect(solarSystem.extentMpc).toBeLessThan(55 * SCALE_UNITS.AU_TO_MPC);
   });
 
   it('a Galactic-Centre camera keys the region at parsec scale, not 8 kpc', () => {

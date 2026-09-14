@@ -1,10 +1,9 @@
 /**
  * resolveFrameBasis — unit tests for the per-frame resolved basis B(t).
  *
- * The resolver is pure over (orientation, frameTween, clock, nowMs): given the
- * same inputs and clock state it yields the same Mat3. Elapsed comes from the
- * injected `nowMs` through the clock, so no real wall-clock is involved — the
- * tests prime the clock with a first call, then advance `nowMs`.
+ * The resolver is pure over (orientation, frameTween, elapsedMs): the same
+ * inputs yield the same Mat3, and elapsed is handed in, so no real wall-clock
+ * is involved.
  *
  * 'linear' easing is used wherever the assertion needs a maths-clean parameter
  * (endpoints and orthonormality): with linear ease the slerp parameter equals
@@ -17,7 +16,6 @@ import {
   ORIENTATION_FRAMES,
   ORIENTATION_FRAME_QUATERNIONS,
 } from '../../../../src/data/orientation/orientationFrames';
-import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import type { FrameTween } from '../../../../src/@types/camera/FrameTween';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 
@@ -48,31 +46,24 @@ const equatorialToGalactic: FrameTween = {
 
 describe('resolveFrameBasis', () => {
   it('at elapsed 0 the basis equals the fromQuat basis', () => {
-    const clock = createCameraClock();
-    // A fresh FrameTween reference returns elapsed 0 on its arrival frame, so
-    // this single call slerps at t=0 → the fromQuat (equatorial) basis.
-    const basis = resolveFrameBasis('galactic', equatorialToGalactic, clock, 1000);
+    // Elapsed 0 slerps at t=0 → the fromQuat (equatorial) basis.
+    const basis = resolveFrameBasis('galactic', equatorialToGalactic, 0);
     expectMat3Close(basis, ORIENTATION_FRAMES.equatorial);
   });
 
   it('at elapsed >= durationMs the basis equals the destination frame', () => {
-    const clock = createCameraClock();
-    resolveFrameBasis('galactic', equatorialToGalactic, clock, 1000); // prime start
-    // Advance past the duration: eased t clamps to 1 → destination (galactic).
-    const basis = resolveFrameBasis('galactic', equatorialToGalactic, clock, 1000 + 700);
+    // Past the duration: eased t clamps to 1 → destination (galactic).
+    const basis = resolveFrameBasis('galactic', equatorialToGalactic, 700);
     expectMat3Close(basis, ORIENTATION_FRAMES.galactic);
   });
 
   it('every sampled midpoint basis is orthonormal', () => {
-    const clock = createCameraClock();
-    resolveFrameBasis('galactic', equatorialToGalactic, clock, 1000); // prime start
     // Linear easing → the slerp parameter equals each interior time fraction.
     for (const f of [0.1, 0.25, 0.5, 0.75, 0.9]) {
       const basis = resolveFrameBasis(
         'galactic',
         equatorialToGalactic,
-        clock,
-        1000 + f * equatorialToGalactic.durationMs,
+        f * equatorialToGalactic.durationMs,
       );
       const c0 = col(basis, 0);
       const c1 = col(basis, 1);
@@ -89,8 +80,7 @@ describe('resolveFrameBasis', () => {
   });
 
   it('a null frameTween returns the steady registry basis', () => {
-    const clock = createCameraClock();
-    const basis = resolveFrameBasis('galactic', null, clock, 1000);
+    const basis = resolveFrameBasis('galactic', null, 0);
     expectMat3Close(basis, ORIENTATION_FRAMES.galactic);
   });
 });

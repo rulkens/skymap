@@ -24,7 +24,6 @@ describe('liveFocusRow', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [stalePositionMpc[0], stalePositionMpc[1], stalePositionMpc[2]],
-      radiusM: 6371000,
     };
 
     const out = liveFocusRow(focus, LIVE_SIM_DAYS);
@@ -34,18 +33,17 @@ describe('liveFocusRow', () => {
     expect(livePositionMpc).not.toEqual(stalePositionMpc);
   });
 
-  it('keeps identity fields (type/id/label/radiusM) untouched', () => {
+  it('keeps identity fields (type/id/label) untouched', () => {
     const focus: SelectionRow = {
       type: 'body',
       id: 'earth',
       label: 'Earth',
       positionMpc: [0, 0, 0],
-      radiusM: 6371000,
     };
 
     const out = liveFocusRow(focus, LIVE_SIM_DAYS);
 
-    expect(out).toMatchObject({ type: 'body', id: 'earth', label: 'Earth', radiusM: 6371000 });
+    expect(out).toMatchObject({ type: 'body', id: 'earth', label: 'Earth' });
   });
 
   it('passes a non-body row through unchanged (already live-resolved)', () => {
@@ -63,7 +61,6 @@ describe('liveFocusRow', () => {
       id: 'not-a-real-body',
       label: 'Ghost',
       positionMpc: [1, 2, 3],
-      radiusM: 1000,
     };
     expect(liveFocusRow(focus, LIVE_SIM_DAYS)).toBe(focus);
   });

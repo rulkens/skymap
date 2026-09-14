@@ -48,7 +48,6 @@ const starRow: SelectionRow = {
   id: 'sirius',
   label: 'Sirius',
   positionMpc: [1e-6, 2e-6, 3e-6],
-  radiusM: 1192000000,
 };
 
 const earthRow: SelectionRow = {
@@ -56,7 +55,6 @@ const earthRow: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusM: 6371000,
 };
 
 const jupiterRow: SelectionRow = {
@@ -64,7 +62,6 @@ const jupiterRow: SelectionRow = {
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [4e-14, 0, 0],
-  radiusM: 69911000,
 };
 
 describe('buildFocusable', () => {
@@ -86,26 +83,23 @@ describe('buildFocusable', () => {
       id: 'sirius',
       label: 'Sirius',
       positionMpc: [1e-6, 2e-6, 3e-6],
-      radiusM: 1192000000,
     });
   });
   it('resolves Earth and a planet now the star-only guard is lifted', () => {
     // Behaviour change (spec §8.4): the body arm used to gate on FAMOUS_STAR_IDS,
     // so Earth and the planets mapped to null — body-unaware. Bodies are pickable
-    // now, so every body row builds a BodyInfo carrying its own label + radius.
+    // now, so every body row builds a BodyInfo carrying its own label.
     expect(buildFocusable(earthRow)).toEqual({
       type: 'body',
       id: 'earth',
       label: 'Earth',
       positionMpc: [0, 0, 0],
-      radiusM: 6371000,
     });
     expect(buildFocusable(jupiterRow)).toEqual({
       type: 'body',
       id: 'jupiter',
       label: 'Jupiter',
       positionMpc: [4e-14, 0, 0],
-      radiusM: 69911000,
     });
   });
 

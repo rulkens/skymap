@@ -2,7 +2,7 @@
  * atmosphereDrawList — the ONE per-frame derivation of which seeded bodies draw an
  * atmosphere shell, each paired with its `ATMOSPHERE_PARAMS` row. Two consumers
  * need that answer: the sky-view LUT bake (`encodeAtmosphereSkyView`) and the shell
- * draw (`atmosphereShellLayer`). Derived separately they could disagree, and the
+ * draw (`atmosphereShellPass`). Derived separately they could disagree, and the
  * draw would render a body whose LUT the bake skipped — a stale table sampled with
  * no error anywhere. The sub-pixel cull below measures the body's SURFACE diameter,
  * NOT the atmosphere-TOP diameter: culling on the top holds the limb a hair past the
@@ -10,7 +10,7 @@
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
@@ -20,7 +20,7 @@ import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function atmosphereDrawList(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): readonly AtmosphereDrawEntry[] {
   // One scalar for the frame, so the near-field cull short-circuits the whole list.

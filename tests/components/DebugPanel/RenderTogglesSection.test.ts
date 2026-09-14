@@ -7,7 +7,7 @@
  *
  * The section is presentational — it imports nothing from `store/` or `state/`.
  * Props drive rendering and the `onTogglePass` typed spy captures dispatch-like
- * calls. Grouping is derived from `frameProgram.groupPassNames`, so the row
+ * calls. Grouping is derived from `timedSlots.groupPassNames`, so the row
  * order here is the GROUPED order (matching GpuTimingsSection), not the raw
  * `passNames` draw order.
  *
@@ -50,7 +50,12 @@ describe('RenderTogglesSection', () => {
       }),
     );
     const text = container.textContent ?? '';
-    const titles = ['Volumes & aggregates', 'Cosmos · HDR', 'Foreground bodies · depth', 'Overlays'];
+    const titles = [
+      'Volumes & aggregates',
+      'Cosmos · HDR',
+      'Foreground bodies · depth',
+      'Overlays',
+    ];
     for (const t of titles) expect(text).toContain(t);
     // Headers appear in title order.
     const positions = titles.map((t) => text.indexOf(t));
@@ -93,7 +98,8 @@ describe('RenderTogglesSection', () => {
       }),
     );
     const boxByName = (name: string) =>
-      [...container.querySelectorAll('label')].find((l) => l.textContent === name)!
+      [...container.querySelectorAll('label')]
+        .find((l) => l.textContent === name)!
         .querySelector<HTMLInputElement>('input')!;
     expect(boxByName('point-sprites').checked).toBe(true);
     expect(boxByName('earth').checked).toBe(false);
@@ -125,7 +131,8 @@ describe('RenderTogglesSection', () => {
       }),
     );
     const box = () =>
-      [...container.querySelectorAll('label')].find((l) => l.textContent === 'labels')!
+      [...container.querySelectorAll('label')]
+        .find((l) => l.textContent === 'labels')!
         .querySelector<HTMLInputElement>('input')!;
     expect(box().checked).toBe(true);
     rerender(

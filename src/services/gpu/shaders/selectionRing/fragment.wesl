@@ -50,8 +50,12 @@ fn shadeRing(input: VsOut) -> vec4<f32> {
   let outEdge  = 1.0 - smoothstep(1.0 - edgeFade, 1.0, r);
   let alpha    = inEdge * outEdge;
 
-  // Premultiplied-alpha OVER blend (set on the JS pipeline descriptor).
-  return vec4<f32>(alpha, alpha, alpha, alpha);
+  // Premultiplied-alpha OVER blend (set on the JS pipeline descriptor), so the
+  // layer's own 'input.alpha' is one scalar dimming colour and coverage
+  // together.  Applied HERE rather than in each entry: 'fragmentOcclude'
+  // scales this same result, so both variants inherit the dim.
+  let dimmed = alpha * input.alpha;
+  return vec4<f32>(dimmed, dimmed, dimmed, dimmed);
 }
 
 @fragment

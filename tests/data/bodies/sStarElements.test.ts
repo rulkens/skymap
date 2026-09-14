@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { S_STAR_SEEDS } from '../../../src/data/bodies/sStarElements';
 
 /**
- * Three structural invariants of a 39-row hand transcription. The element VALUES
+ * Three structural invariants of a 40-row hand transcription. The element VALUES
  * are verified against VizieR once, by the diff recorded with the commit, not
  * re-asserted here — restating them would only mirror the table. A row count is
  * likewise excluded: it restates an authored literal and catches nothing the

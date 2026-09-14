@@ -16,7 +16,7 @@
 // pick-shaped, and the camera facts this projection reads (camPosWorld,
 // pxPerRad) are the same ones that sized the glow the user sees.  The CPU
 // keeps only the visibility gate — the pick program's 'enabled' filter,
-// i.e. 'milkyWayLayer.enabled' against the pick-time camera.  The
+// i.e. 'milkyWayPass.enabled' against the pick-time camera.  The
 // 'u.pointSizePx' floor is already the pick-widened value — the pick pack
 // bakes (sizePx + PICK_PADDING_PX) into that slot (pickUniformBytesOf) — so
 // the MW floor matches the padded floor every pick point gets.
@@ -39,10 +39,8 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::pickDepthBands::PICK_BAND_BACKDROP_EPS;
 
 // @group(0) points-pick uniform mirror — bound by pickMilkyWay itself
-// from its own buffer (the MW is the sole pickable in the NEAR0 pick
-// pass, so there is no prior draw to inherit a camera from). Reads extend
-// through 'pxPerRad' at byte 108 of the points pick image — see io.wesl
-// for the mirrored prefix layout.
+// from its own buffer. Reads extend through 'pxPerRad' at byte 108 of the
+// points pick image — see io.wesl for the mirrored prefix layout.
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 // @group(2) MilkyWayPickUniforms — world centre + source code + disc

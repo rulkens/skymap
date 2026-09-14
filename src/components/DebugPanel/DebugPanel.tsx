@@ -1,43 +1,11 @@
 /**
- * DebugPanel — the umbrella for the dev panel.
+ * DebugPanel — the umbrella for the dev panel, mounted by `App.tsx` on the `d`
+ * shortcut. Every section that touches the store owns its own container, so this
+ * component takes only the engine-handle props App reads off `handleRef`, and
+ * section-level visibility is each section's own concern.
  *
- * Sections: `AssetLoadingSection` (slot-progress rows),
- * `GpuTimingsSection` (per-pass GPU timing live readout),
- * `RenderTogglesSectionContainer` (per-pass on/off checkboxes for visual
- * debugging), `FlowTuningSectionContainer`, `MilkyWayTuningSectionContainer`
- * (the Milky-Way star cloud's look knobs),
- * `ZoneOfAvoidanceTuningSectionContainer` (the galactic-plane guide band's
- * look knobs), `SgrAStarLensingTuningSectionContainer` (the Sgr A* lens
- * pass's tuning knobs), `DebugOverlaysSectionContainer`
- * (pick-buffer / disk-radius-ring toggles), `EarthTileAtlasSectionContainer`
- * (textual atlas-residency readout — slot pressure, per-level resident/pending
- * counts, last plan shape), `GalaxyProvenanceSectionContainer`
- * (a per-axis table of missing / highlight / show controls over measured-vs-
- * estimated tallies), and `ClipTriggersSectionContainer` (play/stop a registered clip
- * + launch a guided tour) / `ClipPathInspectorSectionContainer` (precompute +
- * scrub a clip's debug camera path) — every section that touches the store
- * owns its own container, so DebugPanel itself receives only the engine-handle
- * props (`slots`, `timingService`, `frameStats`, `passNames`, `engineHandleRef`)
- * that App reads off `handleRef`. Mount is owned by `App.tsx` (toggled by the `d` keyboard
- * shortcut); when this component renders, all sections always render —
- * section-level visibility (e.g. "GPU timings unavailable") is each section's
- * own concern.
- *
- * `memo` is load-bearing here: this is App's memo boundary for the panel, so
- * an unrelated App re-render doesn't cascade into every section's store reads.
- *
- * ### Why collapsible sections
- *
- * The asset-loading rows churn during startup (every catalog,
- * filaments, the font atlas, etc.), but go quiet once everything
- * is `ready` — a collapsed `<details>` keeps the panel compact
- * during steady-state runs.  GPU timings is the opposite (always
- * live), but the user might want to focus on one or the other.
- * `RenderTogglesSection`, `DebugOverlaysSection`, and
- * `GalaxyProvenanceSection` all default to closed (most sessions won't
- * need to flip a renderer off, a raw overlay, or audit orientation/size
- * provenance); the other two default to open because their data
- * is the primary reason for opening the panel.
+ * `memo` is load-bearing: this is App's memo boundary for the panel, so an
+ * unrelated App re-render doesn't cascade into every section's store reads.
  */
 
 import { memo } from 'react';
@@ -50,6 +18,7 @@ import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import EarthTileAtlasSectionContainer from '../containers/EarthTileAtlasSectionContainer';
+import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
 import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
@@ -94,6 +63,7 @@ function DebugPanel({
           GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />
       <GpuTimingsSection service={timingService} />
+      <CameraStateSectionContainer engineHandleRef={engineHandleRef} />
       <RenderTogglesSectionContainer passNames={passNames} />
       <FlowTuningSectionContainer />
       <MilkyWayTuningSectionContainer />

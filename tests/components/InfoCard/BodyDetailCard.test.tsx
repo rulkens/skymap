@@ -18,23 +18,26 @@ import { SGR_A_STAR_ENTRY } from '../../../src/data/sources/sgr-a-star';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
+import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
+import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
 
 const rigelTarget: BodyInfo = {
   type: 'body',
   id: 'rigel',
   label: 'Rigel',
   positionMpc: [0, 0, 0],
-  radiusM: 55000000000,
 };
 
 // Jupiter is a non-star body: its id misses FAMOUS_STAR_IDS, so the card takes
 // the lean branch (name + physical radius, no star-sidecar lookup).
+const JUPITER_RADIUS_M = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'jupiter', 'test'));
+
 const jupiterTarget: BodyInfo = {
   type: 'body',
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [0, 0, 0],
-  radiusM: 69911000,
 };
 
 const rigelMeta: FamousStarMetaEntry = {
@@ -91,7 +94,7 @@ describe('BodyDetailCard', () => {
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
     // Radius stays first (straight off BodyInfo).
     expect(
-      screen.getByText(`${(jupiterTarget.radiusM * SCALE_UNITS.M_TO_KM).toLocaleString()} km`),
+      screen.getByText(`${(JUPITER_RADIUS_M * SCALE_UNITS.M_TO_KM).toLocaleString()} km`),
     ).toBeInTheDocument();
     // A few fact-sheet rows from BODY_FACTS.jupiter.
     expect(screen.getByText('317.8 M⊕')).toBeInTheDocument();
@@ -128,7 +131,6 @@ describe('BodyDetailCard', () => {
       id: 's2',
       label: 'S2',
       positionMpc: [0, 0, 0],
-      radiusM: 1000000000,
     }) as BodyInfo;
 
     const { container } = render(createElement(BodyDetailCard, { target, famousStarsMeta: [] }));

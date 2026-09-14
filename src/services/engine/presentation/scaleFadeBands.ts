@@ -93,7 +93,7 @@ export const SCALE_FADE_BANDS = {
 
   // Keyed on: CAMERA distance from the render origin, Mpc (the Sun sits there,
   // so this IS the caption's own distance). A fade-IN toward the solar system;
-  // `goneAt` equals `foregroundLabelsLayer`'s enable gate BY IMPORT so the
+  // `goneAt` equals `foregroundLabelsPass`'s enable gate BY IMPORT so the
   // fade-in cannot pop; `fullAt` = half the gate is the taste knob.
   sunCaption: {
     fullAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC / 2,
@@ -102,7 +102,7 @@ export const SCALE_FADE_BANDS = {
 
   // Keyed on: the CAPTION's own distance from the camera, Mpc — the only reach
   // the caption has (no layer-gate term; see `captionFadeRules`); the pick
-  // stamp in `starPointsLayer` reads this band rather than restating its edges.
+  // stamp in `starPointsPass` reads this band rather than restating its edges.
   // `fullAt` = R₀, full from Earth all the way in; `goneAt` a disc DIAMETER
   // out, tied to the galaxy's own size. NOT derived from
   // `galactic-centre.extentMpc`: that measures the S-star orbits, five orders

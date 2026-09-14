@@ -8,7 +8,7 @@ review record.
    `rotationElements.ts:81` author the same IAU pole as two literals, pinned by
    a parity test rather than derived. Defensible (Mars/Jupiter frames use
    deliberately rounded independent poles); derive Saturn's frame from
-   `rotationById('saturn')` if either site is next touched.
+   `rotationRowById('saturn')` if either site is next touched.
 2. **@types runtime type-shape tests** — a few Plan 01 tests assert type shapes
    at runtime; judge against `testing.md` ("will it fail on a real bug?") and
    delete the ones that can't.

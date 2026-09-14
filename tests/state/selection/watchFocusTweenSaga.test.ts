@@ -182,7 +182,7 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
-  // A scene body is FOLLOWED by the camera's `followBody` driver, not tweened —
+  // A scene body is FOLLOWED by the camera's follow rows, not tweened —
   // the tween compiles fixed vec3 endpoints and cannot track a body the sim clock
   // moves. The saga must return before planting a tween for a body row, while a
   // non-body focus (here the Milky Way) still tweens as before.

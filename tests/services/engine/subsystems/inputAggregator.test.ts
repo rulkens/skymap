@@ -53,7 +53,7 @@ describe('inputAggregator', () => {
     const agg = createInputAggregator();
     agg.push({ kind: 'dragAnchor', xPx: 0, yPx: 0 });
     agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 10, yPx: 0 });
-    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: true });
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: true, xPx: 400, yPx: 300 });
     agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 30, yPx: 0 });
 
     const steps = agg.drain();
@@ -63,13 +63,26 @@ describe('inputAggregator', () => {
 
   it('multiplies consecutive wheel ticks into one factor', () => {
     const agg = createInputAggregator();
-    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false });
-    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false });
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 400, yPx: 300 });
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 400, yPx: 300 });
 
     const steps = agg.drain();
     expect(steps).toHaveLength(1);
     expect(steps[0]).toMatchObject({ kind: 'zoom', duringGesture: false });
     expect((steps[0] as { factor: number }).factor).toBeCloseTo(Math.exp(0.2), 10);
+  });
+
+  it('carries the wheel’s cursor pixel, keeping the last of a folded run', () => {
+    // The surface arm picks its zoom anchor through this pixel, so a fold has
+    // to end where the pointer ended — the same rule the drag runs use for
+    // `endPx`, not the pixel the run opened at.
+    const agg = createInputAggregator();
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 10, yPx: 20 });
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 30, yPx: 40 });
+
+    const steps = agg.drain();
+    expect(steps).toHaveLength(1);
+    expect(steps[0]).toMatchObject({ kind: 'zoom', cursorPx: [30, 40] });
   });
 
   it('telescopes pinch samples into the first/last distance ratio', () => {
@@ -86,8 +99,8 @@ describe('inputAggregator', () => {
 
   it('splits at-rest and in-gesture zoom into separate steps (different owners)', () => {
     const agg = createInputAggregator();
-    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false });
-    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: true });
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 400, yPx: 300 });
+    agg.push({ kind: 'wheel', deltaY: 100, duringGesture: true, xPx: 400, yPx: 300 });
 
     expect(agg.drain()).toHaveLength(2);
   });

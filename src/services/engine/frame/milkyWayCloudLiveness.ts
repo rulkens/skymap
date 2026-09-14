@@ -9,7 +9,7 @@
  * into a FRACTION of the canvas, so `view.viewportPx` would split the three gates.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { milkyWayVisible } from '../helpers/milkyWayVisible';
 import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
@@ -22,10 +22,7 @@ import { regionById } from '../../../utils/scene/regionById';
 
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
-export function deriveMilkyWayCloudAlpha(
-  state: EngineState,
-  ctx: ReadyFrameContext,
-): number | null {
+export function deriveMilkyWayCloudAlpha(state: PassState, ctx: ReadyFrameContext): number | null {
   if (!milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height, ctx.nowMs)) {
     return null;
   }

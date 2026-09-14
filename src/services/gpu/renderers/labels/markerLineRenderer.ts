@@ -89,14 +89,17 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
  *   bytes  0..15  fromAndWidth  vec4<f32> — fromWorld.xyz, pixelWidth
  *   bytes 16..31  toAndAlpha    vec4<f32> — toWorld.xyz, fadeAlpha
  *   bytes 32..47  color         vec4<f32> — rgba premultiplied
+ *   bytes 48..51  occludeWeight f32       — share of the scene attenuation
  *
- * 3 × vec4 = 3 × 16 bytes = 48 bytes/instance.
+ * 3 × vec4 + a scalar = 52 bytes/instance.  A vertex-buffer stride only has to
+ * be a multiple of 4, so the scalar rides alone rather than costing a padded
+ * vec4.
  *
  * Packing pixelWidth and fadeAlpha into the trailing slot of the world-position
  * vec3s saves 16 bytes per instance versus carrying them as separate vec4
  * attributes — same trick as the filament renderer's density field.
  */
-const LINE_INSTANCE_BYTES = 48;
+const LINE_INSTANCE_BYTES = 52;
 
 // ─── corner buffer ────────────────────────────────────────────────────────
 
@@ -147,7 +150,7 @@ export function createMarkerLineRenderer(
 
   // ── CPU scratch buffer — always allocated, safe to use with null device ──
   //
-  // 12 floats per instance × 4 bytes = 48 bytes = LINE_INSTANCE_BYTES.
+  // 13 floats per instance × 4 bytes = 52 bytes = LINE_INSTANCE_BYTES.
   // All fields are f32 so a single Float32Array suffices — no u32 fields
   // unlike the label renderer's glyph instance buffer.
   const instanceBuf = new Float32Array(maxLines * (LINE_INSTANCE_BYTES / 4));
@@ -222,14 +225,15 @@ export function createMarkerLineRenderer(
       // uv.x selects endpoint (from vs to); uv.y selects side (±half-width).
       UNIT_QUAD_VERTEX_LAYOUT,
       // Buffer 1: per-instance line data, stepMode 'instance'.
-      // Provides fromAndWidth, toAndAlpha, color to locations 1–3.
+      // Provides fromAndWidth, toAndAlpha, color, occludeWeight to locations 1–4.
       {
-        arrayStride: LINE_INSTANCE_BYTES, // 48 bytes = 3 × vec4
+        arrayStride: LINE_INSTANCE_BYTES, // 52 bytes = 3 × vec4 + f32
         stepMode: 'instance',
         attributes: [
           { shaderLocation: 1, offset: 0, format: 'float32x4' }, // fromAndWidth
           { shaderLocation: 2, offset: 16, format: 'float32x4' }, // toAndAlpha
           { shaderLocation: 3, offset: 32, format: 'float32x4' }, // color
+          { shaderLocation: 4, offset: 48, format: 'float32' }, // occludeWeight
         ],
       },
     ];
@@ -314,18 +318,19 @@ export function createMarkerLineRenderer(
     for (let i = 0; i < count; i++) {
       const line = lines[i]!;
 
-      // Pack 12 floats into the CPU scratch buffer at stride 12 (48 bytes):
+      // Pack 13 floats into the CPU scratch buffer at stride 13 (52 bytes):
       //
       //   [0..2]  fromWorld.xyz  — line start in world Mpc
       //   [3]     pixelWidth     — full line width in CSS pixels
       //   [4..6]  toWorld.xyz    — line end in world Mpc
       //   [7]     fadeAlpha      — multiplied into colour by vertex stage
       //   [8..11] color          — premultiplied rgba
+      //   [12]    occludeWeight  — 1 = take the per-pixel scene attenuation
       //
       // All fields are f32 so we write directly through the Float32Array —
       // no Uint32Array aliasing needed (unlike labelRenderer's glyph buffer
       // which carries a u32 labelIndex at offset 8).
-      const base = i * (LINE_INSTANCE_BYTES / 4); // 12 f32s per instance
+      const base = i * (LINE_INSTANCE_BYTES / 4); // 13 f32s per instance
       instanceBuf[base + 0] = line.fromWorld[0];
       instanceBuf[base + 1] = line.fromWorld[1];
       instanceBuf[base + 2] = line.fromWorld[2];
@@ -338,6 +343,7 @@ export function createMarkerLineRenderer(
       instanceBuf[base + 9] = line.color[1]!;
       instanceBuf[base + 10] = line.color[2]!;
       instanceBuf[base + 11] = line.color[3]!;
+      instanceBuf[base + 12] = line.occludeWeight ?? 1;
 
       currentLineCount++;
     }

@@ -9,19 +9,18 @@
  */
 import type { Vec2 } from '../../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
-import type { DebugViewWeights } from '../../../../../@types/galaxy/DebugViewWeights';
 import type { DustHeaderLanes } from '../../../../../@types/galaxy/DustHeaderLanes';
 import type { FieldCamera } from '../../../../../@types/galaxy/FieldCamera';
-import type { FieldDustSlices } from '../../../../../@types/galaxy/FieldDustSlices';
 import type { FieldHeaderInput } from '../../../../../@types/galaxy/FieldHeaderInput';
 import type { FieldSliceCounts } from '../../../../../@types/galaxy/FieldSliceCounts';
 import type { HiiTextureLanes } from '../../../../../@types/galaxy/HiiTextureLanes';
 import type { HiiTier } from '../../../../../@types/galaxy/HiiTier';
-import type { IsmMapChannelWeights } from '../../../../../@types/galaxy/IsmMapChannelWeights';
 import type { IsmMapSeedingLanes } from '../../../../../@types/galaxy/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../../../../../@types/galaxy/YoungStarsLanes';
 
 import { mapHiiTiers } from '../../../../../data/hiiTiers';
+import type { FieldHeaderFrameLanes } from '../../../../../@types/galaxy/FieldHeaderFrameLanes';
+import type { FieldHeaderRenderLanes } from '../../../../../@types/galaxy/FieldHeaderRenderLanes';
 
 /**
  * The lanes no `render`/`frame` value can supply — one snapshot per frame.
@@ -48,27 +47,6 @@ export type FieldHeaderTargetSizes = {
   readonly hii: Vec2;
   readonly tiers: Readonly<Record<HiiTier, Vec2>>;
 };
-
-/** The per-frame view lanes this builder reads — a structural subset of the tool's FrameView. */
-export type FieldHeaderFrameLanes = {
-  readonly view: Float32Array; // deriveFrameView.ts:53 — a raw mat4, not a Mat4 alias
-  readonly aspect: number;
-  readonly analyticExposure: number;
-  readonly debugViews: DebugViewWeights;
-  readonly galaxyWeight: number;
-  readonly ismMapChannels: IsmMapChannelWeights;
-  readonly dustSlices: FieldDustSlices;
-  readonly starGrainFeatureScale: number;
-};
-
-/** The render knobs this builder reads — a structural subset of the tool's RenderSettings. */
-export type FieldHeaderRenderLanes = {
-  readonly hiiNearFadeStart: number;
-  readonly hiiNearFadeEnd: number;
-  readonly starGrainWarpAmp: number;
-  readonly hiiQuadCap: number;
-};
-
 export type FieldHeaderInputsDeps = {
   readonly eye: Vec3;
   readonly fov: number;

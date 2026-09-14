@@ -5,7 +5,7 @@ PR #625, not merging) — stereo rendering made a latent mono bug visible.
 
 ## What it is
 
-`prepareStarCut` (`src/services/engine/frame/passes/starCatalogLayer.ts:659`)
+`prepareStarCut` (`src/services/engine/frame/passes/starCatalogPass.ts:659`)
 bakes every octree node's position relative to a single camera position taken
 once, at prepare time:
 
@@ -58,4 +58,4 @@ with their origin at the type level (e.g. a `RebasedView` the function
 produces and every consumer accepts), so a future call site can't
 accidentally supply a `vp`/origin pair from two different sources. Worth
 doing only if a second load-bearing call site of this pattern shows up;
-`starCatalogLayer` is the only one today.
+`starCatalogPass` is the only one today.

@@ -12,7 +12,7 @@ turn up in unrelated backlog files.
 ## What it is
 
 Three shared per-frame derivations for the solar-system-bodies subsystem (12
-`ContentLayer` rows: earth, cloud-shell, atmosphere-shell, star-spheres,
+`ContentPass` rows: earth, cloud-shell, atmosphere-shell, star-spheres,
 field-star-sphere, planets, textured-bodies, rings, star-points, body-glints,
 orbit-trails, foreground-labels) are recomputed independently at every call
 site instead of hoisted to `runFrame` and memoised once:
@@ -21,7 +21,7 @@ site instead of hoisted to `runFrame` and memoised once:
 - `partitionStarsByResolution` — shared by 2 layers (spheres/points split).
 - `atmosphereDrawList` — own derivation.
 
-(`ringsLayer`'s rings derivation was hoisted since this item was filed —
+(`ringsPass`'s rings derivation was hoisted since this item was filed —
 `enabled()` and `draw()` now share one `ringDrawForBody` call — so it drops
 off this list.)
 
@@ -57,7 +57,7 @@ implementation as the template. Shape:
 2. Update every consuming layer's `enabled()` and `draw()` to read the
    memoised result off `ctx` instead of recomputing.
 3. Sequencing: `sceneBodyPartition` and `partitionStarsByResolution` touch
-   the same layer files `starCatalogLayer`'s god-layer split
+   the same layer files `starCatalogPass`'s god-layer split
    ([companion orphan item](2026-08-20-star-catalog-layer-god-layer-split.md))
    would also touch — worth checking whether either lands first to avoid
    re-doing the other's diff.
@@ -69,7 +69,7 @@ implementation as the template. Shape:
 The [inside-atmosphere-rendering spec](../superpowers/specs/2026-08-24-inside-atmosphere-rendering-design.md)
 (§5a) hoisted a fifth, closely-related pair onto `AtmosphereDrawEntry`
 (551f62357) — but #634's body-slab restructure superseded that hoist with its
-own pose seam: at HEAD, `atmosphereShellLayer.ts` and
+own pose seam: at HEAD, `atmosphereShellPass.ts` and
 `encodeAtmosphereSkyView.ts` each derive `camLocal`/`sunDirLocal`
 independently from `ctx.bodyPose` via the `bodySlabCamLocal`/`sunDirLocal`
 utils, not from a shared `AtmosphereDrawEntry` field. The atmosphere pair is

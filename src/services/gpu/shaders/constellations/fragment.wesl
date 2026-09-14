@@ -3,7 +3,7 @@
 //
 // A single dim steel-blue tone for every figure (grill Q5 — no per-constellation
 // hue). The tone is 'u.lineColor', a uniform the CPU packs from
-// 'CONSTELLATION_LINE_COLOR' in 'constellationsLayer.ts' (the one home for the
+// 'CONSTELLATION_LINE_COLOR' in 'constellationsPass.ts' (the one home for the
 // layer's tint). Three scalars shape the emitted alpha:
 //
 //   - edgeBandMask(uv.y, ...) — a two-tailed smoothstep giving a soft edge

@@ -2,7 +2,7 @@
  * earthSurfaceParams — the named tunable constants for Earth's photoreal PBR
  * surface pass (spec §11).
  *
- * These are the CPU-side knobs the `earthLayer` packs into `EarthSurfaceUniforms`
+ * These are the CPU-side knobs the `earthPass` packs into `EarthSurfaceUniforms`
  * every frame. They live in one object here — rather than as scattered literals
  * at the pack site — so the surface's look is tuned in a single place, and the
  * BRDF constants that belong to the shading MODEL (`MIN_ROUGHNESS`,

@@ -13,14 +13,14 @@
  * missing anchor into a star silently drawn at the Sun.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { PositionedStar } from '../../../@types/scene/PositionedStar';
 import { sceneBodyStates } from './sceneBodyStates';
 import { visibleStars } from './visibleStars';
 
 export function positionedVisibleStars(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): readonly PositionedStar[] {
   const states = sceneBodyStates(state, ctx);

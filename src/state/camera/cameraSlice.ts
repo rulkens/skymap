@@ -1,86 +1,50 @@
 /**
- * cameraSlice — the camera's full Intent state as a single Redux Toolkit slice,
- * authored with inline Immer case reducers.
+ * cameraSlice — the camera's Intent state as one RTK slice.
  *
- * Camera Intent belongs in the store because everything that needs to read or
- * write camera position (orbit controls, tour storyboard, auto-rotate, sagas)
- * should share a single authoritative source rather than coordinating via
- * callbacks or ref-passing. The slice owns three independent concerns:
- *
- *   `base`        — the committed resting orbit pose (target, yaw, pitch,
- *                   distance). Per-frame pose is DERIVED from `base` by the
- *                   CameraDriver table (`runCameraDrivers`) — never written directly by renderers.
- *                   Bootstrap dispatches `commitCameraPose` once to overwrite
- *                   the placeholder initial value with the real computed pose.
- *
- *   `tween`       — an optional timeless from→to descriptor. Null when the
- *                   camera is at rest. The animation clock lives in the engine
- *                   as a Resource, not here — the descriptor is wall-clock-free
- *                   so it remains valid across serialisation and replay.
- *
- *   `autoRotate`  — the active flag plus the per-frame yaw-delta rate. Both
- *                   live here as the single home for auto-rotate config; the
- *                   `spinAutoRotate` pure function reads the rate from the slice
- *                   rather than from a scattered engine constant.
- *
- *   `dragging`    — transient gesture flag set by orbit-controls on
- *                   pointerdown/pointerup. Suppresses auto-rotate while the
- *                   user holds a drag.
- *
- * Inline Immer gives structural sharing for free: mutating `camera.base`
- * produces a new `base` reference (selectors over it re-run) while `tween`,
- * `autoRotate`, and `dragging` keep their prior references (their selectors
- * skip) — the same guarantee the old copy-on-write spreads hand-maintained,
- * with none of the nesting overhead.
- *
- *   `clip`        — an optional in-flight animation clip descriptor. Null when
- *                   no clip is active. The clip@95 driver owns the camera during
- *                   playback; `clip.data` is the serializable authored form. A
- *                   FRESH `{ data }` wrapper is stored on each `clipStarted` — the
- *                   Task 8 clock keys on this reference identity to detect a new
- *                   clip (same pattern as `tween` reference equality in tweenSaga).
- *
- *   `frameTween`  — an optional in-flight orientation-frame roll descriptor.
- *                   Null when no frame roll is in flight. The up-basis is
- *                   DERIVED per frame by a resolver while the slerp runs; the
- *                   descriptor is wall-clock-free so it stays valid across
- *                   serialisation and replay, like `tween`.
+ * `base` carries the committed resting pose AND the arm it lives in: the arm tag
+ * IS the regime, so nothing stores a separate flag. The per-frame pose is DERIVED
+ * from `base` by the CameraDriver table (`pickWinner`) — never written
+ * directly by renderers. The `tween`, `clip` and `frameTween` descriptors are
+ * wall-clock-free, so they stay valid across serialisation and replay.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
+import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
+import { absoluteArm } from '../../utils/camera/absoluteArm';
+import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
 import type { CameraState } from '../../@types/camera/CameraState';
+import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { FrameTween } from '../../@types/camera/FrameTween';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 
-// `base` is a placeholder; bootstrap overwrites via `commitCameraPose` once
-// `computeInitialCamera` has run. 0.43 mirrors `cameraFraming.INITIAL_DISTANCE_MPC`,
-// the value the engine boots with, so any frame rendered before bootstrap is
-// at least in the right ballpark.
+// `base` is a placeholder bootstrap overwrites via `commitCameraPose`; 0.43 Mpc
+// mirrors `cameraFraming.INITIAL_DISTANCE_MPC` so a pre-bootstrap frame is in the
+// right ballpark.
 const initialState: CameraState = {
-  base: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
+  base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 }),
   tween: null,
   autoRotate: {
     active: DEFAULT_AUTO_ROTATE,
-    // rate = per-frame yaw advance at an assumed 60 fps (~0.05°/frame), the
-    // unit `spinAutoRotate` expects. The slice is its single home; do not
-    // import from the engine — that would couple state→engine the wrong way.
+    // Per-frame yaw advance in radians at an assumed 60 fps (~0.05°/frame), the
+    // unit `spinAutoRotate` expects.
     rate: 0.000873,
   },
   dragging: false,
   clip: null,
   frameTween: null,
+  tuning: DEFAULT_CAMERA_TUNING,
 };
 
 const cameraSlice = createSlice({
   name: 'camera',
   initialState,
   reducers: {
-    // ── gesture state ───────────────────────────────────────────────────────
     beginDrag: (camera) => {
       camera.dragging = true;
     },
@@ -88,14 +52,17 @@ const cameraSlice = createSlice({
       camera.dragging = false;
     },
 
-    // ── committed resting pose ──────────────────────────────────────────────
-    // Called once at bootstrap (after `computeInitialCamera`) and on every
-    // orbit-controls pointerup to bake the user's new resting pose.
-    commitCameraPose: (camera, action: PayloadAction<CameraPose>) => {
+    // INVARIANT (R12b-3): every committed ABSOLUTE pose is centre-looking. The
+    // pivot pin re-reads an absolute `target` as the pivot and re-derives the eye
+    // from yaw/pitch/distance one frame later, so a pose aimed anywhere else
+    // teleports the eye by d·2sin(τ/2) (R12-1, up to ~24,000 km). Held by
+    // CONSTRUCTION at three sites — the pin's stamp (projectFramePose), the gesture
+    // folds (replayInput), and the fold's disengage retarget — never by a bake
+    // here. Break any of them and the teleport re-enters through this reducer.
+    commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
     },
 
-    // ── tween lifecycle ─────────────────────────────────────────────────────
     startCameraTween: (camera, action: PayloadAction<CameraTweenDescriptor>) => {
       camera.tween = action.payload;
     },
@@ -103,40 +70,25 @@ const cameraSlice = createSlice({
       camera.tween = null;
     },
 
-    // ── clip lifecycle ──────────────────────────────────────────────────────
-    // `clipStarted` stores a FRESH `{ data, frame }` wrapper so Task 8's clock
-    // saga can detect a new clip by reference inequality (`prev !== next`)
-    // without comparing deep descriptor equality. `data` must already be
-    // resolved (no `start: 'live'` sentinel) — call `resolveClipStart` at the
-    // dispatch site before putting this action, mirroring `focusTweenSaga`'s
-    // pattern of baking the tween `from` before `put(startCameraTween)`. `frame`
-    // is the orientation frame live at dispatch time — the driver evaluates and
-    // holds the clip against THIS frame for its whole run, then re-encodes into
-    // the current one each tick (see cameraDrivers.ts's clip row).
-    //
-    // Past-tense `clipStarted`/`clipEnded` (not `startClip`/`endClip`): these are
-    // the low-level lifecycle WRITES. The user-facing request action that names a
-    // clip to play is `startClip(id)` in `clipActions.ts` — the saga resolves it
-    // and dispatches `clipStarted` here.
+    // A FRESH `{ data, frame }` wrapper each time: the clip clock detects a new
+    // clip by reference inequality, not deep descriptor equality. `data` must
+    // already be resolved (no `start: 'live'` sentinel) — `resolveClipStart` runs
+    // at the dispatch site. `frame` is the orientation frame live at dispatch time;
+    // the driver holds the clip against THIS frame for its whole run.
     clipStarted: (camera, action: PayloadAction<{ data: ClipData; frame: OrientationFrameId }>) => {
       camera.clip = action.payload;
     },
-    // `clipEnded` clears BOTH `clip` and `tween`. A tween planted before or
-    // during the clip (e.g. by a focus saga) is dormant while the clip@95
-    // driver wins priority, but once the clip deactivates an un-cleared @60
-    // tween would outrank `resting`@0 and snap the camera to a stale target.
-    // Mirroring `cancelCameraTween`, this is the teardown contract.
+    // Clears BOTH `clip` and `tween`: a tween planted before or during the clip is
+    // dormant while the clip@95 driver wins, but once the clip deactivates an
+    // un-cleared @60 tween outranks `resting`@0 and snaps to a stale target.
     clipEnded: (camera) => {
       camera.clip = null;
       camera.tween = null;
     },
 
-    // ── frame-tween lifecycle ───────────────────────────────────────────────
-    // The orientation-frame roll is orthogonal to `setOrientation`: the latter
-    // snaps the committed target frame, this starts the up-basis slerp toward
-    // it. Keeping them separate lets a URL-boot apply or a tour cue set the
-    // frame without an animation they don't want. A resolver derives the basis
-    // per frame while `frameTween` is non-null.
+    // Orthogonal to `setOrientation`: that snaps the committed target frame, this
+    // starts the up-basis slerp toward it — so a URL boot or a tour cue can set the
+    // frame without an animation.
     startFrameTween: (camera, action: PayloadAction<FrameTween>) => {
       camera.frameTween = action.payload;
     },
@@ -144,11 +96,14 @@ const cameraSlice = createSlice({
       camera.frameTween = null;
     },
 
-    // ── auto-rotate ─────────────────────────────────────────────────────────
-    // Replaces the whole sub-object so both `active` and `rate` can be
-    // updated atomically (e.g. a settings panel that exposes a rate slider).
     setAutoRotate: (camera, action: PayloadAction<{ active: boolean; rate: number }>) => {
       camera.autoRotate = action.payload;
+    },
+
+    // A WHOLE new record, never a leaf write: the panel's sliders read it back
+    // through a selector, and an in-place edit leaves that render stale.
+    setCameraTuning: (camera, action: PayloadAction<Partial<CameraTuning>>) => {
+      camera.tuning = clampCameraTuning(action.payload, camera.tuning);
     },
   },
 });
@@ -160,18 +115,16 @@ export const {
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,
+  setCameraTuning,
   clipStarted,
   clipEnded,
   startFrameTween,
   clearFrameTween,
 } = cameraSlice.actions;
 
-// ── pure helper (not a reducer) ──────────────────────────────────────────────
-// Resolution happens at the dispatch site rather than inside the reducer because
-// the reducer is pure and has no access to the live camera pose. This mirrors
-// `focusTweenSaga.ts` baking the tween `from` before `put(startCameraTween)` —
-// the store only ever receives already-concrete values, which keeps reducers
-// testable without engine context and the payload safe to serialise/replay.
+// Resolution happens at the dispatch site, not in the reducer, which is pure and
+// has no access to the live pose — so the store only ever receives concrete,
+// serialisable values.
 export function resolveClipStart(data: ClipData, live: CameraPose): ClipData {
   const start = data.start === 'live' || data.start === undefined ? live : data.start;
   return { ...data, start };

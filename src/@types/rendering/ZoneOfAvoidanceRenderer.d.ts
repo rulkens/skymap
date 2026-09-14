@@ -47,7 +47,7 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
    * Pick twin of `draw` — same args, same uniforms, issued against the
    * r32uint pick pipeline instead. Does not bind `@group(0)`: the COSMO
    * pick pass's shared camera prefix is already bound by the time this
-   * runs (see `ContentLayer.drawPick`'s postcondition).
+   * runs (see `ContentPass.drawPick`'s postcondition).
    */
   drawPick(
     pass: GPURenderPassEncoder,

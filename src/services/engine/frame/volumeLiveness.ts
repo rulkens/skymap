@@ -8,7 +8,7 @@
  * nothing, so the several calls per frame are safe by construction.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
@@ -20,7 +20,7 @@ import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 // `null` = no live volume work: renderer missing, master off AND fully faded, or
 // no field active.
 export function deriveVolumeLiveness(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): {
   settingsOf: (id: VolumeFieldId) => VolumeFieldSettings | undefined;

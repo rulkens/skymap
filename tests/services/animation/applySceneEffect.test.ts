@@ -201,7 +201,7 @@ describe('applySceneEffect — frameTo', () => {
     const liveBasis: Mat3 = [1, 0, 0, 0, 0, 1, 0, -1, 0];
     const state = {
       ...makeEngineState(),
-      cameraRuntime: { upBasis: { current: liveBasis } },
+      cameraRuntime: { outputs: { upBasis: liveBasis } },
     } as unknown as EngineState;
     const { store, dispatch } = makeSpyStore();
 

@@ -145,7 +145,7 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
   // zone-of-avoidance band gate LINE/overlay geometry, not labels, so they
   // have no registry row's label axis to derive from and stay hand-authored
   // here. The band's lettering has no toggle of its own — it rides this same
-  // row (see zoneOfAvoidanceLayer.ts).
+  // row (see zoneOfAvoidancePass.ts).
   const rows: ReadonlyArray<SectionRow> = useMemo(
     () => [
       ...LABEL_CATEGORIES.map((cat) => ({

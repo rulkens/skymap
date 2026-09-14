@@ -113,7 +113,7 @@
  * nothing samples it downstream: each painter-chain row clears its own depth
  * (spec §7.3), so the buffer only ever holds the LAST row's value and can't
  * back a cross-row occlusion test. The caption occlusion pass
- * (`foregroundLabelsLayer` and the other overlay layers, via
+ * (`foregroundLabelsPass` and the other overlay layers, via
  * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
  * accumulates across rows under OVER compositing. It renders at full
  * resolution (`scale: 1`) because opaque geometry has hard edges that the
@@ -123,7 +123,7 @@
  *
  * ### Why the swap row has a spec but no texture
  *
- * The `swap` row completes the target table (a `ContentLayer.target` can
+ * The `swap` row completes the target table (a `ContentPass.target` can
  * name it, and its format is the renderer-profile half of the
  * target↔pipeline invariant), but the swap chain is an ACQUIRED texture —
  * `context.getCurrentTexture()` per frame — not one this owner allocates.
@@ -194,9 +194,9 @@ function resolveFixedSize(
  * (not a module constant) because the swap row's format is runtime-decided —
  * the live swap-chain format (`bgra8unorm` on macOS, `rgba8unorm` elsewhere).
  * Rows per the renderer-unification design's concrete target table; the pick
- * rows arrive in a later plan phase. Exported so `targetParity.test.ts` can
- * cross-check its ids against `CONTENT_LAYERS` and `frameProgram` without a
- * GPU device — see that file's header for why those checks matter.
+ * rows arrive in a later plan phase. Exported so the boot check
+ * (`checkFrameOrder`) and its test can cross-check `FRAME_ORDER`'s target
+ * strings against the declared ids without a GPU device.
  */
 export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
   return [
@@ -287,7 +287,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (a camera dithering across the band
     // edge would otherwise destroy + reallocate the row every frame); a row
     // never allocated does not spring into existence from proximity alone —
-    // only `bandActive` triggers first allocation.
+    // only `lastBandActive` triggers first allocation.
     {
       id: 'sky-cubemap',
       format: HDR_TARGET_FORMAT,
@@ -295,11 +295,11 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: (state, isAllocated) => {
-        const capture = state.cameraRuntime.skyCubemapCapture;
-        if (capture.bandActive) return true;
+        const capture = state.skyCubemapCapture;
+        if (capture.lastBandActive) return true;
         return (
           isAllocated &&
-          capture.gcDistanceMpc <=
+          capture.lastGcDistanceMpc <=
             SKY_CUBEMAP_ROW_RELEASE_MARGIN * SCALE_FADE_BANDS.sgrAStarLensing.goneAt
         );
       },

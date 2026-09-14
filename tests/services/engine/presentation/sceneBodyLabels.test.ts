@@ -8,9 +8,11 @@ import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
 
 // The caller passes the per-frame body snapshot; these tests use the J2000
 // instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
@@ -27,7 +29,9 @@ describe('sceneBodyLabels', () => {
     // producer as well, so a body that joins SCENE_BODIES and DOES want a name
     // still fails here rather than agreeing with itself.
     expect(labels).toHaveLength(SCENE_BODIES.length - SCENE_S_STARS.length);
-    expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length + 1);
+    expect(labels).toHaveLength(
+      1 + SCENE_STARS.length + SCENE_PLANETS.length + 1 + SCENE_MESH_BODIES.length,
+    );
   });
 
   it("gives the Galactic Centre its own caption kind, not the star map's", () => {
@@ -122,5 +126,14 @@ describe('sceneBodyLabels', () => {
     }
     // ids are unique — one caption per body, addressable for future fades.
     expect(new Set(labels.map((label) => label.id)).size).toBe(labels.length);
+  });
+
+  it('captions a seeded mesh body under its own kind', () => {
+    const body = SCENE_MESH_BODIES[0]!;
+    const label = labels.find((l) => l.id === `sceneBody-${body.id}`)!;
+
+    expect(label.kind).toBe('meshBody');
+    expect(label.text).toBe(body.label);
+    expect(label.color).toEqual([...scaleToUnitMax(body.albedo), 1]);
   });
 });

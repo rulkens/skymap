@@ -7,12 +7,12 @@
  * `bodies.items.*.labelEnabled`, `milkyWay.labelEnabled`), these knobs apply
  * across the three COSMO-slab label producers at once — famous galaxies,
  * structures, and the Milky Way singleton, each registered as `produceLabels`
- * on the label director and drawn through `labelsLayer`. They MULTIPLY on top
+ * on the label director and drawn through `labelsPass`. They MULTIPLY on top
  * of those three producers' own layer gates — a layer that is off stays off
  * regardless of the mode here.
  *
  * The star-map and scene-body (Earth / planet / Sun) captions do NOT read
- * this cluster. They draw through `foregroundLabelsLayer`, a separate
+ * this cluster. They draw through `foregroundLabelsPass`, a separate
  * NEAR0-slab pass with its own declutter and temporal envelope, and their
  * visibility is governed entirely by `starCatalogs.items.famousStar.labelEnabled`
  * and `bodies.items.*.labelEnabled` — `focusedOnly` reaches none of them,

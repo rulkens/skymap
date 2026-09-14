@@ -6,7 +6,7 @@
  *   1. Near a pivot's surface, successive zoom-in notches shrink (a taper)
  *      and never overshoot the standoff floor.
  *   2. Far from a pivot (every astronomical viewing distance), the result is
- *      indistinguishable from the old `distance * factor` model — so this
+ *      indistinguishable from the plain `distance * factor` model — so this
  *      change doesn't alter deep-space zoom feel.
  *   3. With no pivot radius, the proportional model applies exactly, not
  *      approximately.
@@ -36,7 +36,7 @@ const NO_PIVOT: PivotFraming = { radiusMpc: null, floorMpc: MIN_DISTANCE_MPC };
 describe('zoomedDistance', () => {
   it('tapers into the standoff floor: zoom-in steps shrink and never overshoot it', () => {
     // Zoom in repeatedly from a comfortable orbital altitude (4 radii) with a
-    // gentle per-notch factor. Under the OLD proportional-in-distance model
+    // gentle per-notch factor. Under a plain proportional-in-distance model
     // this walks distance to zero in a handful of notches; under the taper it
     // should approach the floor with ever-smaller steps and never cross it.
     const factor = 0.9;
@@ -74,7 +74,7 @@ describe('zoomedDistance', () => {
   it('matches the plain proportional model far from the pivot (deep-space feel is unchanged)', () => {
     // At a distance millions of times the pivot's radius, the altitude and the
     // raw distance are the same number to within float precision, so the
-    // taper must degenerate to the old `distance * factor` model.
+    // taper must degenerate to the plain `distance * factor` model.
     const distance = EARTH_RADIUS_MPC * 1e6;
     const factor = 0.87;
     const plainModel = distance * factor;
@@ -86,19 +86,29 @@ describe('zoomedDistance', () => {
 
   it('with no pivot radius, scales distance proportionally with no taper', () => {
     // null means "no surface to taper against" — deep space, a galaxy, a
-    // structure. The taper must not engage; distance scales exactly as it did
-    // before this change existed.
+    // structure. The taper must not engage; distance scales exactly
+    // proportionally, no taper applied.
     expect(zoomedDistance(100, 2, NO_PIVOT)).toBe(200);
     expect(zoomedDistance(100, 0.5, NO_PIVOT)).toBe(50);
   });
 
-  it('falls back to the proportional model (still respecting the floor) if already at or below the surface', () => {
-    // A state the clamp is supposed to prevent, but if it ever occurs, halving
-    // an already-negative-or-zero altitude has no sensible taper — the
-    // fallback should still land the camera on the standoff floor rather than
-    // diverging or returning something below the pivot's surface.
-    const distance = EARTH_RADIUS_MPC * 0.5; // already inside the body
-    const result = zoomedDistance(distance, 0.9, EARTH_PIVOT);
-    expect(result).toBeCloseTo(EARTH_RADIUS_MPC * SURFACE_STANDOFF_RADII, 12);
+  it('never ratchets a distance already inside the pivot floor outward', () => {
+    // Reachable, and not by the camera being inside a body: a pose that left
+    // the surface arm carries a range along its VIEW RAY, and the focused pivot
+    // need not be the body it was engaged on. Disengaging from the Moon at
+    // h/R 3.4 gives 5 907 km — under Earth's 6 371 km floor if Earth is the
+    // focus row. Clamping UP to that floor moved the eye 464 km outward on ONE
+    // notch (`zoomedPose` carries target/yaw/pitch, so |Δeye| = |Δdistance|):
+    // the snap class the ray-target conversion fix exists to remove.
+    const distance = 5907.2 * SCALE_UNITS.KM_TO_MPC;
+    expect(distance).toBeLessThan(EARTH_PIVOT.floorMpc);
+
+    // Zoom IN holds station rather than jumping out …
+    expect(zoomedDistance(distance, 0.9, EARTH_PIVOT)).toBe(distance);
+    // … and zoom OUT steps by the notch, so the pose can climb back out of the
+    // floor under its own power and rejoin the taper.
+    const out = zoomedDistance(distance, 1.1, EARTH_PIVOT);
+    expect(out).toBeCloseTo(distance * 1.1, 12);
+    expect(zoomedDistance(out, 1.1, EARTH_PIVOT)).toBeGreaterThan(out);
   });
 });

@@ -14,8 +14,8 @@
  *
  * `positionMpc` stays a `Vec3` (never a raw tuple) so it speaks the one absolute
  * heliocentric, f64-valued frame every other position site uses, letting the
- * focus button pivot without re-deriving xyz; `radiusM` sets the framing
- * distance.
+ * focus button pivot without re-deriving xyz. Size is NOT here (see
+ * `MeshBody.boundingRadiusM`); the card resolves the seed by `id` instead.
  */
 
 import type { Vec3 } from '../math/Vec3';
@@ -26,6 +26,5 @@ export type BodyInfo = {
   readonly id: string;
   readonly label: string;
   readonly positionMpc: Vec3;
-  readonly radiusM: number;
   readonly orbit?: BodyOrbitInfo;
 };

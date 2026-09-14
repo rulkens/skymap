@@ -50,7 +50,7 @@ export type EarthTileSubsystem = Destroyable & {
   } | null;
 
   /**
-   * Store this frame's `cutSurfaceTiles` cut for `earthLayer.draw` to read —
+   * Store this frame's `cutSurfaceTiles` cut for `earthPass.draw` to read —
    * the "compute in runFrame, consume in draw" seam `plannerParams`/`update`
    * already use, one field further. Call unconditionally alongside
    * `update()`, even on a disengaged frame (an empty cut then), so a stale

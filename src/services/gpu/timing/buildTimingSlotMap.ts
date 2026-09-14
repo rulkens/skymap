@@ -7,7 +7,7 @@
  *
  * The set of timed passes is data-driven, not compile-time-fixed: it's DERIVED
  * from the FRAME program + content-layer registry (`TIMED_SLOTS` in
- * `services/engine/frame/frameProgram.ts`).  Adding a layer to the registry
+ * `services/engine/frame/timing/timedSlots.ts`).  Adding a layer to the registry
  * is the only edit needed — its timing slot is allocated
  * here automatically, and it appears in the DebugPanel without touching
  * any timing-layer file.  Keeping the allocation *mechanism* here (a
@@ -28,7 +28,7 @@
  * Names MUST be unique — a duplicate would collide on its index pair, so
  * every pass sharing the name would overwrite the same two timestamps
  * (whichever pass resolves last "wins", silently). The caller's registry is
- * the place that guarantees uniqueness (`layerTimingSlotName` is what makes a
+ * the place that guarantees uniqueness (`passTimingSlotName` is what makes a
  * body-row layer's name unique per row); this function enforces the
  * precondition rather than trusting it, since a collision here corrupts data
  * rather than throwing on its own.

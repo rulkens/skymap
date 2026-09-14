@@ -3,7 +3,7 @@
  * pass. Tier 1 overrides `BLACK_HOLES` at pack time; Tier 2 + emission
  * strength/tint are `SgrAStarLensingUniforms` fields (the 176-byte tail); the
  * rest are non-uniform CPU-side knobs on the same settings seam. No
- * `glintTint`/`glintIntensity` — see `bodyGlintsLayer.ts`.
+ * `glintTint`/`glintIntensity` — see `bodyGlintsPass.ts`.
  */
 
 import type { Vec3 } from '../math/Vec3';
@@ -30,8 +30,6 @@ export type SgrAStarLensingTuning = {
   emissionTint: Vec3;
 
   // ── Non-uniform, same settings seam ──────────────────────────────────────
-  /** Was `skyCubemapCaptureSchedule.ts`'s `SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION`. */
-  skyCubemapRecaptureCameraMoveFraction: number;
   /**
    * The `sky-cubemap` render-target row's per-axis pixel size (256/512/1024/2048).
    * Read by `renderTargets.ts`'s state-driven `fixedSizePx.size` resolver, so

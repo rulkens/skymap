@@ -14,17 +14,7 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../@types/engine/camera/BodyRelativePose';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-
-// orientationᵀ · v: `orientation` is orthonormal, so its transpose is its
-// inverse, and column c of a transpose is row c of the original — i.e. this
-// is just the three column·v dot products, no separate transpose step needed.
-function rotateByTranspose(orientation: Readonly<Mat3>, v: Readonly<Vec3>): Vec3 {
-  return [
-    orientation[0] * v[0] + orientation[1] * v[1] + orientation[2] * v[2],
-    orientation[3] * v[0] + orientation[4] * v[1] + orientation[5] * v[2],
-    orientation[6] * v[0] + orientation[7] * v[1] + orientation[8] * v[2],
-  ];
-}
+import { rotateByTranspose } from '../../../utils/math/rotateByTranspose';
 
 export function bodyRelativePose(input: {
   readonly camPosMpc: Readonly<Vec3>;

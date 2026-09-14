@@ -9,7 +9,7 @@
  * teardown by call count.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createRenderTargets } from '../../../src/services/gpu/renderTargets';
+import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 
@@ -39,23 +39,34 @@ const SKY_CUBEMAP_RESOLUTION_PX = 256;
 // The production `sky-cubemap` row is lazy: its `allocateWhen` reads the
 // lensing band flag `renderFrame` maintains, so every state fixture carries
 // one. Default `true` keeps the row present for the tests that count textures.
-// `gcDistanceMpc` defaults far outside the release margin so the pre-existing
-// bandActive-false tests (written before the row grew hysteresis) keep their
+// `lastGcDistanceMpc` defaults far outside the release margin so the pre-existing
+// band-closed tests (written before the row grew hysteresis) keep their
 // original "closes immediately" behaviour.
 function stateWithDivisor(
   aggregateDivisor: number,
   cubemapResolutionPx: number = SKY_CUBEMAP_RESOLUTION_PX,
-  bandActive = true,
-  gcDistanceMpc = Number.POSITIVE_INFINITY,
+  lastBandActive = true,
+  lastGcDistanceMpc = Number.POSITIVE_INFINITY,
 ): EngineState {
   return {
     settings: {
       milkyWay: { aggregateDivisor },
       sgrAStarLensingTuning: { cubemapResolutionPx },
     },
-    cameraRuntime: { skyCubemapCapture: { bandActive, gcDistanceMpc } },
+    skyCubemapCapture: { lastBandActive, lastGcDistanceMpc },
   } as unknown as EngineState;
 }
+
+describe('renderTargetRows', () => {
+  it('render-target row ids are unique', () => {
+    // Ids are the wire between three independently maintained artifacts —
+    // `FRAME_ORDER`'s target strings, `checkFrameOrder`'s declared set, and the
+    // per-id texture maps inside `createRenderTargets`. A duplicate would make
+    // the later row silently shadow the earlier one in every one of them.
+    const rows = renderTargetRows(SWAP_FORMAT);
+    expect(new Set(rows.map((row) => row.id)).size).toBe(rows.length);
+  });
+});
 
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
@@ -271,7 +282,7 @@ describe('createRenderTargets', () => {
       create.mock.calls.filter((c) => c[0].label === 'render-target-sky-cubemap').length;
     expect(cubemapCallCount()).toBe(1);
 
-    // Band just closed (bandActive false), but the camera sits just outside
+    // Band just closed (`lastBandActive` false), but the camera sits just outside
     // `goneAt` — still inside the 1.5× margin — so the row must survive.
     targets.reconcile(
       stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false, goneAt * 1.1),

@@ -2,7 +2,7 @@
  * AnchorPointBody — a scene body that is positioned, named and selectable.
  * Today it draws only its caption; a future anchor may also draw a far-field
  * glint and, inside its lensing band, a geodesic pass — both via dedicated
- * `ContentLayer` rows keyed on its id, never via the flat/textured/glint
+ * `ContentPass` rows keyed on its id, never via the flat/textured/glint
  * partition planets use.
  *
  * Identity fields only, so a record cannot carry photometry or a texture it has

@@ -18,8 +18,8 @@
  * WHY near stays strictly positive: a depth buffer's precision is dominated by
  * the near plane, and `near = 0` is a degenerate perspective matrix (the
  * projection divides by the near distance). At the wheel-zoom distance floor
- * of 1e-17 Mpc (`clampDistance.ts: MIN_DISTANCE_MPC`) the pure ratio
- * `distance·1e-4` would be 1e-21 — still positive in f64, but we floor near
+ * of 1e-24 Mpc (`clampDistance.ts: MIN_DISTANCE_MPC`) the pure ratio
+ * `distance·1e-4` would be 1e-28 — still positive in f64, but we floor near
  * at `MIN_NEAR_MPC` to keep it robustly above zero and out of the
  * denormal/underflow neighbourhood regardless of how far the distance clamp
  * is ever lowered.
@@ -39,14 +39,14 @@
  */
 
 /**
- * Floor for the near plane, in Mpc — the wheel-zoom distance floor's own
- * implied minimum (`1e-17·1e-4`, `clampDistance.ts: MIN_DISTANCE_MPC`), so the
- * ratio governs everywhere a body can actually be approached and the floor
- * only guards the perspective matrix against a zero near. It must stay BELOW
+ * Floor for the near plane, in Mpc — ~6 m, a denormal dodge that only guards
+ * the perspective matrix against a zero near. It is NOT derived from the
+ * wheel-zoom distance floor (`clampDistance.ts: MIN_DISTANCE_MPC`, ~3 cm) and
+ * must not be re-derived from it. It must stay BELOW
  * the camera's minimum ALTITUDE over a focused body — `deriveSlabs` (`slabs.ts`)
- * passes altitude (`cam.distance - pivotRadiusMpc`) here in place of raw
- * distance once a pivot is known, so a large body's own radius no longer
- * dominates the bracket. At Earth's ~15 m standoff floor
+ * passes its `altitudeMpc` input here in place of raw distance once a pivot is
+ * known, so a large body's own radius no longer dominates the bracket. At
+ * Earth's ~15 m standoff floor
  * (`clampDistance.ts: SURFACE_STANDOFF_RADII`) the ratio underflows and this
  * floor governs: ~6 m of near against ~15 m of altitude — a wide margin is
  * affordable because NEAR0 is reversed-Z with an infinite far plane
@@ -71,7 +71,7 @@ export const FAR_MIN_MPC = 3e-11;
  * Fraction of the NEAR0 far plane a direction-preserving anchor clamp pulls a
  * beyond-far point to, so the clamped point lands JUST INSIDE the far plane and
  * survives the clip test instead of sitting exactly on (or past) it. Consumed by
- * `near0SelectionRingLayer` (the ring quad) and `foregroundLabelsLayer` (the
+ * `near0SelectionRingPass` (the ring quad) and `foregroundLabelsPass` (the
  * caption lift anchor); each clamps a camera-relative vector to
  * `slab.far * NEAR0_FAR_CLAMP_FRACTION`. 0.99 = 1% inside — comfortably clear
  * of f32 round-off at the plane while the projected screen position is unchanged

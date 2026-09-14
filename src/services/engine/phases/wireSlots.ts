@@ -9,9 +9,10 @@
  *      PGC alias, CF-4 + MCPM volumes). Pure: no state writes, no loads.
  *   2. `installSlots` — the single mutation site that writes each built slot
  *      onto its named `state.assetSlots` field.
- *   3. The two externally-built families — the per-source `points` slots
- *      (`wireGalaxyCatalogSourceSlot`) and the keyed `bodyTextures` family
- *      (`wireBodyTextureSlots`) — minted here, not by `buildSlotsFromRegistry`
+ *   3. The externally-built families — the per-source `points` slots
+ *      (`wireGalaxyCatalogSourceSlot`), the keyed `bodyTextures` family
+ *      (`wireBodyTextureSlots`), and the keyed `meshBodies` family
+ *      (`wireMeshBodySlots`) — minted here, not by `buildSlotsFromRegistry`
  *      (their `ASSET_WIRING` rows carry `built: 'external'`).
  *   4. DEV synthetic-volume fixtures — minted + installed here (not a wiring
  *      row; tree-shaken from production).
@@ -48,7 +49,8 @@
  *   - `state.assetSlots.{filaments,famousGalaxiesMeta,structureCatalog,pgcAlias,
  *     cf4Density,mcpm,flow}` (via `installSlots`) + `.points` (via
  *     `wireGalaxyCatalogSourceSlot`) + `.bodyTextures` (via
- *     `wireBodyTextureSlots`) + `.syntheticVolumes` (DEV).
+ *     `wireBodyTextureSlots`) + `.meshBodies` (via `wireMeshBodySlots`) +
+ *     `.syntheticVolumes` (DEV).
  *   - `state.subsystems.{loadProgress, structures, earthTiles}` + the impostor
  *     subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
@@ -70,6 +72,7 @@ import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
+import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   wireGalaxyCatalogSourceSlot,
@@ -90,16 +93,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb } = deps;
 
-  // Fail-fast precondition: both disk renderers must be non-null before any
-  // slot construction touches EngineState.  The same check is repeated inside
-  // `wireImpostorSubsystems` co-located with the reads it guards — the
-  // redundancy is intentional and cheap.
-  if (state.gpu.texturedDiskRenderer === null || state.gpu.proceduralDiskRenderer === null) {
-    throw new Error(
-      'wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
-    );
-  }
-
   // Build every non-external slot from the wiring registry, then install them
   // in one mutation pass.  Point + body-texture slots are skipped here
   // (built: 'external' — minted below instead).
@@ -115,6 +108,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     wireGalaxyCatalogSourceSlot(state, cfg, { cb });
   }
   wireBodyTextureSlots(state);
+  wireMeshBodySlots(state);
 
   // DEV-only synthetic volume fixtures — axis-verification debug cubes.  Not a
   // wiring row (kept out so Vite tree-shakes the procedural generators from
@@ -124,8 +118,15 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   // Build and wire the five impostor subsystems (galaxy atlas, textured
-  // disks, procedural disks, hi-res Famous texture + planner).
-  wireImpostorSubsystems(state, deps);
+  // disks, procedural disks, hi-res Famous texture + planner). Absent is
+  // legal: a composition that never runs `initGpu`'s disk renderers skips
+  // this cluster and `state.subsystems.texturedDisks` stays null.
+  const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
+  if (texturedDiskRenderer !== null && proceduralDiskRenderer !== null) {
+    wireImpostorSubsystems(state, deps.phaseLocals!.device, {
+      texturedDiskRenderer,
+    });
+  }
 
   // Earth's surface virtual texture. A subsystem, not a renderer — it owns
   // residency and streaming — so it's constructed here, not in `initGpu`.

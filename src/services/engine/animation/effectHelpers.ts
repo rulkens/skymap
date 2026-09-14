@@ -46,6 +46,7 @@ import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
+import type { PoseFrame } from '../../../@types/camera/PoseFrame';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { VisibilityLayerArg } from '../../../@types/animation/VisibilityLayerArg';
 import type { ScopedVisibilityArg } from '../../../@types/animation/ScopedVisibilityArg';
@@ -84,7 +85,7 @@ import {
  */
 export function tween(
   ch: 'distance' | 'yaw' | 'pitch',
-  opts: { to: number; over: number; ease?: Ease; space?: Space },
+  opts: { to: number; over: number; ease?: Ease; space?: Space; frame?: PoseFrame },
 ): CameraAction & { kind: 'set' } {
   return {
     kind: 'set',
@@ -93,6 +94,9 @@ export function tween(
     over: opts.over,
     ease: opts.ease ?? 'easeInOutCubic',
     space: opts.space ?? CHANNEL_SPACE[ch],
+    // Omitted, never `undefined`: an untagged action must stay the object it
+    // has always been (spec §8 — absent ⇒ 'absolute').
+    ...(opts.frame !== undefined ? { frame: opts.frame } : {}),
   };
 }
 
@@ -115,7 +119,12 @@ export function dollyTo(mpc: number, over: number, ease?: Ease): CameraAction & 
  * log-space is undefined for signed values). See `CameraAction.d.ts` for the
  * full rationale on the `setVec` / `set` split.
  */
-export function moveTarget(to: Vec3, over: number, ease?: Ease): CameraAction & { kind: 'setVec' } {
+export function moveTarget(
+  to: Vec3,
+  over: number,
+  ease?: Ease,
+  frame?: PoseFrame,
+): CameraAction & { kind: 'setVec' } {
   return {
     kind: 'setVec',
     ch: 'target',
@@ -123,6 +132,7 @@ export function moveTarget(to: Vec3, over: number, ease?: Ease): CameraAction & 
     over,
     ease: ease ?? 'easeInOutCubic',
     space: 'lin',
+    ...(frame !== undefined ? { frame } : {}),
   };
 }
 

@@ -6,12 +6,12 @@ Three offscreen-producer/consumer pairs share one shape, and the DebugPanel
 renderer-toggle list breaks all three the same way:
 
 - producer `zone-of-avoidance` (target `zoa`) → consumer
-  `zoneOfAvoidanceUpsampleLayer`
-- producer `star-aggregates` → consumer `starAggregateUpsampleLayer`
-- producer `mw-aggregate` → consumer `milkyWayUpsampleLayer`
+  `zoneOfAvoidanceUpsamplePass`
+- producer `star-aggregates` → consumer `starAggregateUpsamplePass`
+- producer `mw-aggregate` → consumer `milkyWayUpsamplePass`
 
 `engine.ts:1002` builds the DebugPanel's toggle list as
-`CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name)` —
+`CONTENT_PASSES.filter((l) => l.target !== 'volume').map((p) => p.name)` —
 every producer layer except the scalar-volume one gets a toggle row.
 `executeFrame.ts:184-192` applies the toggle by dropping a layer from its
 render group when `disabledPasses[l.name] === true`, and

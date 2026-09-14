@@ -27,7 +27,7 @@
  * A planet's MVP + albedo rides in a single-instance vertex-buffer record,
  * stepped by `@builtin(instance_index)`, the same attribute layout
  * `galaxyPointRenderer` uses for its own batched draw. Here the "batch" is
- * one row, but `planetsLayer` calls `draw` once PER BODY-M SLAB ROW, all
+ * one row, but `planetsPass` calls `draw` once PER BODY-M SLAB ROW, all
  * inside ONE submit (Task 7's per-body slabs) — a single shared instance
  * buffer would let a later row's `writeBuffer` clobber an earlier row's bytes
  * before the GPU ran either draw. Fix: each `bodyId` gets its OWN instance
@@ -185,7 +185,7 @@ export function createPlanetRenderer(
   });
 
   // Own instance buffer per `bodyId` — the caller's own per-body-m-slab-row
-  // identity — rather than one shared buffer, because `planetsLayer` calls
+  // identity — rather than one shared buffer, because `planetsPass` calls
   // `draw` once per row, all inside one submit (see the module header's
   // writeBuffer-vs-submit note). A body-m row draws exactly one planet, so
   // each buffer is a fixed one-instance allocation, created once and reused.

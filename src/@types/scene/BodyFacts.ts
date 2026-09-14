@@ -1,6 +1,6 @@
 /**
- * BodyFacts — the curated "planetary fact sheet" row set for a Solar-System
- * body (a planet, the Moon, another moon, or Earth), shown in BodyDetailCard.
+ * BodyFacts — the curated "fact sheet" row set for a Solar-System body (a planet, the Moon, another
+ * moon, or Earth) or a mesh body (whale, petunias), shown in BodyDetailCard.
  *
  * Every field is a pre-formatted display *string*, not a raw number: the values
  * are static curated constants (a planet's mass never changes between builds),

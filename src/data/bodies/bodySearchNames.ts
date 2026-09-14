@@ -22,6 +22,16 @@ const AUTHORED: readonly (readonly [string, readonly string[]])[] = [
     SGR_A_STAR_ENTRY.id,
     [SGR_A_STAR_ENTRY.label, 'Galactic Center', 'Sagittarius A*', 'Sgr A*', 'SgrA*'],
   ],
+  // Petunias' aliases are what a reader who knows the joke will actually type;
+  // the whale needs none — its label alone already scores the match.
+  ['petunias', ['petunias', 'bowl of petunias', 'oh no not again']],
+  // Mission designations and nicknames: what a reader types is rarely the label.
+  ['voyager1', ['Voyager 1', 'Voyager']],
+  ['voyager2', ['Voyager 2', 'Voyager']],
+  ['curiosity', ['Curiosity', 'MSL', 'Mars Science Laboratory']],
+  ['perseverance', ['Perseverance', 'Percy', 'Mars 2020']],
+  ['spirit', ['Spirit', 'MER-A']],
+  ['opportunity', ['Opportunity', 'Oppy', 'MER-B']],
 ];
 
 export const BODY_SEARCH_NAMES: ReadonlyMap<string, readonly string[]> = new Map([

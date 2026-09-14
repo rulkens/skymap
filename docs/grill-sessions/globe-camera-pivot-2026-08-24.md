@@ -413,3 +413,16 @@ cross-check); rulings taken at and after its checkpoint:
   survives narrowed to star spheres (S4 keeps stars out of body slabs).
 
 Spec 1: `docs/superpowers/specs/2026-08-25-body-render-slabs.md`.
+
+## Addendum 2 — spec-review rulings (2026-09-01)
+
+- **T2 RULED: the union.** `camera.base` becomes a framed pose, one arm
+  authoritative, lossless conversion at the fold. Both independently authored
+  spec variants converged on it.
+- **Q4 mechanism revised.** Q4-iii's "heading maps exactly onto yaw" does not
+  hold at nadir — heading surfaces as image roll there. The minimal completion
+  is Q4-ii's field (`roll?` on `CameraPose`, prep P5), whose original
+  rejection premises are stale: no XR path exists; `OrbitCameraInit.roll` +
+  `computeViewProj` already support roll; tours unaffected, optional default 0. Q4-iii's ceiling mechanism stands as the feel/entry-pose half; exactness
+  now comes from the conversion being lossless for any pose.
+- Spec 2 lives at `docs/superpowers/specs/2026-09-01-camera-pivot.md`.

@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { computeSceneEntering } from '../../../src/state/tour/computeSceneEntering';
-import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { captureSettings } from '../../../src/state/tour/captureSettings';
 import {
   all,
@@ -55,13 +55,13 @@ const BEATS: readonly BeatData[] = [
 
 describe('computeSceneEntering', () => {
   it('k=0 is the baseline unchanged', () => {
-    const base = buildInitialSettings();
+    const base = INITIAL_SETTINGS;
     const result = computeSceneEntering(base, BEATS, 0);
     expect(result).toEqual(captureSettings({ settings: base }));
   });
 
   it('folds beat 0’s hide sweep and scene cue into the state entering beat 1', () => {
-    const base = buildInitialSettings();
+    const base = INITIAL_SETTINGS;
     const result = computeSceneEntering(base, BEATS, 1);
 
     expect(result.volumes.enabled).toBe(false);
@@ -74,7 +74,7 @@ describe('computeSceneEntering', () => {
   });
 
   it('applies scoped entries to exactly one item', () => {
-    const base = buildInitialSettings();
+    const base = INITIAL_SETTINGS;
     const result = computeSceneEntering(base, BEATS, 2);
 
     expect(result.galaxyCatalogs.items['2mrs']!.enabled).toBe(true);
@@ -82,7 +82,7 @@ describe('computeSceneEntering', () => {
   });
 
   it('includes dwell-clip cues in the prefix', () => {
-    const base = buildInitialSettings();
+    const base = INITIAL_SETTINGS;
     const result = computeSceneEntering(base, BEATS, 3);
 
     expect(result.filaments.enabled).toBe(true); // beat 2 enter
@@ -90,7 +90,7 @@ describe('computeSceneEntering', () => {
   });
 
   it('collects cues nested inside seq / all / fork', () => {
-    const base = buildInitialSettings();
+    const base = INITIAL_SETTINGS;
     const beats: readonly BeatData[] = [
       {
         caption: null,
@@ -106,7 +106,7 @@ describe('computeSceneEntering', () => {
   });
 
   it('does not mutate the baseline', () => {
-    const base = buildInitialSettings();
+    const base = INITIAL_SETTINGS;
     const before = structuredClone(base);
     computeSceneEntering(base, BEATS, 3);
     expect(base).toEqual(before);

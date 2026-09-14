@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { selectVisibleSourceMask } from '../../../src/state/settings/selectors';
-import { buildInitialSettings } from '../../../src/state/settings/initialState';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { settingsRoute } from '../../../src/store/constants';
 import { deriveSourceMasks } from '../../../src/services/engine/frame/deriveSourceMasks';
 import type { RootState } from '../../../src/store/types';
@@ -12,7 +12,7 @@ import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/Gal
 // settings route, optionally patched. The selectors are RootState-scoped, so
 // they read through `state[settingsRoute]` exactly as the React/engine sides do.
 function makeRoot(patch?: Partial<EngineSettingsState>): RootState {
-  const settings = { ...buildInitialSettings(), ...patch };
+  const settings = { ...INITIAL_SETTINGS, ...patch };
   return { [settingsRoute]: settings } as RootState;
 }
 

@@ -1,67 +1,29 @@
 /**
- * deriveBodyStates — derive every scene body's time-varying `BodyState`
- * (position, orientation, orbital phase) from the anchor table and the one
- * Keplerian element table, keyed by id. The clock-driven half of the bodies,
- * computed instead of baked.
- *
- * ### Why a derive, not baked records
- *
- * The scene bodies used to bake their position + orientation at module load
- * (`SCENE_PLANETS`, `SCENE_EARTH`), freezing the system at J2000 — the only
- * position a body could have was the one computed once, at import. This derive
- * lifts that mutable half out so a clock can move it: given a sim instant it
- * recomputes each body's state from `ORBITAL_ELEMENTS` (the single source of
- * truth both the bodies and their orbit trails already read), exactly the way
- * `heliocentricPlanet` / `satelliteBody` compute it today — same
- * `keplerianPositionMpc` evaluation, same focus composition, same
- * `orientationForBody` gate. `deriveBodyStates(CONST_J2000)` therefore
- * reproduces the current baked values bit-for-bit (the prep zero-change proof):
- * at the epoch `propagateElements` is the identity map, so the propagated
- * elements equal the tabulated ones.
- *
- * ### `simDays` drives both orientation and position
- *
- * The sim-day scalar advances each body along its orbit AND turns it on its
- * axis. Position comes from `keplerianPositionMpc(propagateElements(el,
- * simDays))` — the element table's per-Julian-century rates carry mean anomaly
- * (and the slowly precessing node/apsis) forward to `t` — and orientation from
- * `orientationForBody`. At `CONST_J2000`, zero centuries have elapsed, so
- * propagation leaves the elements untouched and the derived state matches the
- * baked J2000 values; later instants move the body along its ellipse and spin
- * it. `meanAnomalyRad` on the state is the PROPAGATED `M` (the value at `t`, not
- * epoch), because it is the orbit-trail falloff anchor — a trail that fades
- * behind the body must anchor on where the body actually is.
- *
- * ### One instant per frame, memoized
- *
- * A frame reads this snapshot from several passes (draw, pick, labels), so all
- * of them must see the SAME instant — recomputing per reader would let a
- * mid-frame clock tick tear the draw pass from the pick pass. The result is
- * memoized on `simDays`: an unchanged `simDays` (a paused clock, or the repeated
- * reads within one frame) returns the cached Map by reference at no cost, and
- * only a new instant pays for the ~22 Kepler solves. The cache is one deep — the
- * clock advances monotonically, so the last instant is the only one a frame ever
- * re-reads.
- *
- * ### Anchors first, then rows in focus order
- *
- * `SCENE_ANCHORS` seeds the map with the bodies whose position is authored
- * rather than orbited. Every element row then reads its focus back out of that
- * same map and adds its own propagated offset — the composition
- * `heliocentricPlanet` / `satelliteBody` perform — walking the order
- * `focusResolveOrder` computes from the authored graph, so a focus chain of any
- * depth resolves. Taking the focus from the snapshot rather than re-deriving it
- * is what welds a body to the exact focus instant every reader of this map sees.
+ * deriveBodyStates — derives every scene body's time-varying `BodyState` from
+ * the three authored position tables — anchors, Keplerian elements, surface
+ * sites (`positionDrivers.ts` reads the same three as a union) — keyed by id.
+ * `meanAnomalyRad` is the PROPAGATED `M` at `t` (not epoch) — the
+ * orbit-trail falloff anchor, so a trail fading behind the body must
+ * track where it actually is. Memoized on `simDays`: every pass (draw,
+ * pick, labels) reads the same snapshot each frame, so recomputing per
+ * reader would tear a mid-frame clock tick between passes.
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../data/bodies/sceneAnchors';
+import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
+import { SURFACE_FIXED_SITES } from '../../../data/bodies/surfaceFixedSites';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
 import { propagateElements } from '../../../utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
+import { surfacePointBodyFixed } from '../../../utils/scene/surfacePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 
 // The focus graph is authored, static data, so its order is resolved once at
 // module load and replayed every instant: the per-frame cost stays one linear
@@ -80,31 +42,67 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     return cachedStates;
   }
 
-  const states = new Map<string, BodyState>();
+  // Phase 1 — positions only, so phase 2 can orient a body against where the
+  // *other* bodies ended up rather than against iteration order.
+  const positions = new Map<string, Vec3>();
+  const meanAnomalies = new Map<string, number>();
 
-  // The roots: position authored, not orbited. They still go through
-  // `orientationForBody` so the texture-keyed facing gate stays one gate for
-  // every body, and carry M = 0 — an anchor has no orbit for a trail to fade
-  // along. The authored position is shared by reference rather than copied: it
-  // is never mutated, and a copy would allocate per instant for nothing.
+  // 1a — the roots: position authored, not orbited, and M = 0: an anchor has
+  // no orbit for a trail to fade along. The authored position is shared by
+  // reference rather than copied: it is never mutated, and a copy would
+  // allocate per instant for nothing.
   for (const anchor of SCENE_ANCHORS) {
-    states.set(anchor.id, {
-      positionMpc: anchor.positionMpc,
-      orientation: orientationForBody(anchor.id, simDays),
-      meanAnomalyRad: 0,
-    });
+    positions.set(anchor.id, anchor.positionMpc);
+    meanAnomalies.set(anchor.id, 0);
   }
 
-  // Every element row, focus before dependant. The focus is already in the map
-  // by construction of `FOCUS_ORDER`, which is also where an unknown focus id
-  // throws — so the lookup here is total.
+  // 1b — every element row, focus before dependant. The focus is already in
+  // the map by construction of `FOCUS_ORDER`, which is also where an unknown
+  // focus id throws — so the lookup here is total.
   for (const el of FOCUS_ORDER) {
-    const focus = states.get(el.focusId)!;
+    const focus = positions.get(el.focusId)!;
     const propagated = propagateElements(el, simDays);
-    states.set(el.id, {
-      positionMpc: addVec3(focus.positionMpc, keplerianPositionMpc(propagated)),
-      orientation: orientationForBody(el.id, simDays),
-      meanAnomalyRad: propagated.meanAnomalyRad,
+    positions.set(el.id, addVec3(focus, keplerianPositionMpc(propagated)));
+    meanAnomalies.set(el.id, propagated.meanAnomalyRad);
+  }
+
+  // 1c — sites pinned to a host's surface: the host's own spin carries them, so
+  // the host's orientation is needed HERE, mid-phase-1. Safe because every such
+  // host is an IAU-pole body and that arm ignores `positions`. M = 0, as for an
+  // anchor: no orbit for a trail to fade along.
+  for (const site of SURFACE_FIXED_SITES) {
+    const hostPos = positions.get(site.hostId);
+    if (hostPos === undefined) {
+      throw new Error(
+        `deriveBodyStates: site '${site.id}' names unpositioned host '${site.hostId}'`,
+      );
+    }
+    // The ground radius, so `SCENE_CELESTIAL_BODIES`: a site is pinned to a
+    // surface, which is exactly what a mesh body's hull is not.
+    const { radiusM } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
+    const offsetM = rotateVec3ByTightMat3(
+      surfacePointBodyFixed(site.latDeg, site.lonDeg, radiusM + site.altitudeM),
+      orientationForBody(site.hostId, simDays, positions),
+    );
+    // Metres → Mpc BEFORE the host's heliocentric position joins in: adding
+    // first would round a few-thousand-km offset off an au-scale magnitude.
+    const offsetMpc: Vec3 = [
+      offsetM[0] * SCALE_UNITS.M_TO_MPC,
+      offsetM[1] * SCALE_UNITS.M_TO_MPC,
+      offsetM[2] * SCALE_UNITS.M_TO_MPC,
+    ];
+    positions.set(site.id, addVec3(hostPos, offsetMpc));
+    meanAnomalies.set(site.id, 0);
+  }
+
+  // Phase 2 — orientations over the finished position map. Anchors go through
+  // `orientationForBody` too, so the rotation-row gate stays one gate.
+  const states = new Map<string, BodyState>();
+  for (const [id, positionMpc] of positions) {
+    states.set(id, {
+      positionMpc,
+      orientation: orientationForBody(id, simDays, positions),
+      meanAnomalyRad: meanAnomalies.get(id)!,
     });
   }
 

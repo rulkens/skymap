@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import DescriptionBlock from '../../../src/components/InfoCard/DescriptionBlock/DescriptionBlock';
+import styles from '../../../src/components/InfoCard/DescriptionBlock/DescriptionBlock.module.css';
 
 const PROSE = 'Coma is a rich cluster of over a thousand galaxies in the Coma supercluster.';
 
@@ -18,6 +19,13 @@ describe('DescriptionBlock', () => {
   it('renders the prose text', () => {
     render(createElement(DescriptionBlock, { text: PROSE }));
     expect(screen.getByText(PROSE)).toBeInTheDocument();
+  });
+
+  it('carries the pre-line class so embedded newlines render as breaks', () => {
+    render(createElement(DescriptionBlock, { text: 'First line.\nSecond line.' }));
+    expect(
+      screen.getByText((_, node) => node?.textContent === 'First line.\nSecond line.').className,
+    ).toContain(styles.text);
   });
 
   it('starts collapsed with a "show more" toggle', () => {

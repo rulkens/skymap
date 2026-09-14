@@ -11,7 +11,7 @@
  * Pre-unification this bag also carried `milkyWayCloudRenderer`,
  * `horizonShellRenderer`, `filamentRenderer`, `texturedDiskRenderer`, and
  * `proceduralDiskRenderer` — but `runFrame` only ever forwarded them,
- * unread, into `RenderFrameInput`.  Now that every `ContentLayer` reads its
+ * unread, into `RenderFrameInput`.  Now that every `ContentPass` reads its
  * renderer straight off `state.gpu.*` (see `passes/index.ts`), those fields
  * were dead weight here; they're gone along with the matching
  * `RenderFrameInput` fields.
@@ -37,11 +37,10 @@ export type RunFrameDeps = {
    */
   timingService: GpuTimingService;
   /**
-   * Camera-control drivers, built once at loop start. The resolver
-   * (`runCameraDrivers`) picks the single highest-priority active winner
-   * each frame and is also the source of truth for "is the camera
-   * animating" (render-on-demand gate). Order in this array is not
-   * significant — `priority` decides.
+   * Camera-control drivers (`CAMERA_DRIVERS`, overridable by a fixture).
+   * `pickWinner` picks the single highest-priority active winner each frame and
+   * is also the source of truth for "is the camera animating" (render-on-demand
+   * gate). Order in this array is not significant — `priority` decides.
    */
   readonly drivers: readonly CameraDriver[];
 };

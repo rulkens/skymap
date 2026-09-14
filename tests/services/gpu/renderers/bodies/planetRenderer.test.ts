@@ -13,7 +13,7 @@
  * `bodyPickRenderer.test.ts` carries the load-bearing regression this file's
  * "own buffer per body" tests exist alongside: two same-submit `draw` calls
  * for DIFFERENT bodies must never share a write target (the writeBuffer-vs-
- * submit race `planetsLayer`'s per-row calls resurrected — see the module
+ * submit race `planetsPass`'s per-row calls resurrected — see the module
  * header).
  *
  * The two failures worth pinning here are the silent ones, both cross-file
@@ -141,7 +141,7 @@ describe('createPlanetRenderer', () => {
   });
 
   it('two different bodies drawn in one submit get DISTINCT instance buffers (no clobber)', () => {
-    // The writeBuffer-vs-submit regression: `planetsLayer` calls `draw` once
+    // The writeBuffer-vs-submit regression: `planetsPass` calls `draw` once
     // PER BODY-M SLAB ROW, all inside one encoder + submit. A single shared
     // instance buffer would let mars' writeBuffer clobber mercury's bytes
     // before the GPU ran either draw, so both rows must land in DIFFERENT

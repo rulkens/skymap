@@ -4,8 +4,8 @@
  *
  * ### Why a helper
  *
- * The two remaining NEAR0 sphere-body layers — `starSpheresLayer` and
- * `fieldStarSphereLayer` — end their `drawPick` with the SAME recipe: measure
+ * The two remaining NEAR0 sphere-body layers — `starSpheresPass` and
+ * `fieldStarSpherePass` — end their `drawPick` with the SAME recipe: measure
  * the camera-to-body distance, floor the pick radius to `minPickRadiusMpc` (so
  * a far-edge sphere that projects to a couple of pixels still has a clickable
  * footprint), compose the body MVP in f64 from the slab's view-projection (the
@@ -13,7 +13,7 @@
  * cam-distance → floored-MVP → drawSphere sequence is a single shared
  * mechanism; copied twice, a change to it (a different floor input, a new
  * compose argument) would have to be made in two places. Folding it here makes
- * it one. (`earthLayer` and `planetsLayer` share the SAME recipe against the
+ * it one. (`earthPass` and `planetsPass` share the SAME recipe against the
  * metre-native body-slab primitives instead — `bodySlabFlooredPick`, their
  * `view.slab.vp` being eye-relative metres, not this helper's
  * Mpc/world-relative frame.)

@@ -135,3 +135,88 @@ describe('StructureMarkerRenderer colour target', () => {
     expect(formatByLabel.get('structure-marker-ring-pick-pipeline')).toBe('r32uint');
   });
 });
+
+describe('StructureMarkerRenderer pick camera', () => {
+  it("pickRing uploads the caller's pick camera to its own buffer and binds it at slot 0", () => {
+    const buffersByLabel = new Map<string, GPUBuffer>();
+    const bindGroupsByLabel = new Map<string, GPUBindGroup>();
+    const device = {
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+      createBuffer: vi.fn((desc: GPUBufferDescriptor) => {
+        const buf = { label: desc.label, destroy: vi.fn() } as unknown as GPUBuffer;
+        buffersByLabel.set(desc.label!, buf);
+        return buf;
+      }),
+      createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
+        const bg = { label: desc.label } as unknown as GPUBindGroup;
+        bindGroupsByLabel.set(desc.label!, bg);
+        return bg;
+      }),
+      queue: { writeBuffer: vi.fn() },
+    } as unknown as GPUDevice;
+    const ctx = {
+      device,
+      context: null as unknown as GPUCanvasContext,
+      format: 'bgra8unorm' as GPUTextureFormat,
+      canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
+    };
+    const renderer = createStructureMarkerRenderer(
+      ctx,
+      'rgba16float',
+      {} as unknown as FadeUniformsBgl,
+      false,
+    );
+    renderer.setMarkers([cluster(1)]);
+    (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mockClear();
+
+    const pickBytes = new ArrayBuffer(192);
+    const pickBytesView = new Uint8Array(pickBytes);
+    for (let i = 0; i < pickBytesView.length; i++) pickBytesView[i] = i % 256;
+
+    const passEncoder = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.pickRing(passEncoder, pickBytes);
+
+    const pickCameraBuffer = buffersByLabel.get('structure-marker-pick-camera');
+    const drawTimeBuffer = buffersByLabel.get('structure-marker-uniforms');
+    expect(pickCameraBuffer).toBeDefined();
+    expect(drawTimeBuffer).toBeDefined();
+
+    // The caller's pick-camera bytes land on pickRing's OWN buffer, verbatim —
+    // never on the draw-time `structure-marker-uniforms` buffer, which still
+    // holds the last VISUAL frame's pose. Regression: writing to the
+    // draw-time buffer here reintroduces the stale-pose pick bug.
+    expect(device.queue.writeBuffer).toHaveBeenCalledWith(pickCameraBuffer, 0, pickBytes);
+    expect(device.queue.writeBuffer).not.toHaveBeenCalledWith(
+      drawTimeBuffer,
+      expect.anything(),
+      expect.anything(),
+    );
+
+    const pickCameraBindGroup = bindGroupsByLabel.get('structure-marker-pick-camera-bg');
+    expect(pickCameraBindGroup).toBeDefined();
+
+    const setBindGroupMock = passEncoder.setBindGroup as ReturnType<typeof vi.fn>;
+    const slot0PickCameraCallIndex = setBindGroupMock.mock.calls.findIndex(
+      (args: unknown[]) => args[0] === 0 && args[1] === pickCameraBindGroup,
+    );
+    expect(slot0PickCameraCallIndex).toBeGreaterThanOrEqual(0);
+
+    const drawMock = passEncoder.draw as ReturnType<typeof vi.fn>;
+    expect(drawMock.mock.calls.length).toBeGreaterThan(0);
+    const setBindGroupOrder = setBindGroupMock.mock.invocationCallOrder[slot0PickCameraCallIndex]!;
+    const firstDrawOrder = drawMock.mock.invocationCallOrder[0]!;
+    expect(setBindGroupOrder).toBeLessThan(firstDrawOrder);
+  });
+});

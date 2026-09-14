@@ -8,19 +8,12 @@
  * screen-size-clamped billboard at the galactic centre that stamps the
  * MW identity into the r32uint pick texture.  It draws nothing visible.
  *
- * ### Why it OWNS its @group(0) pick camera (unlike the COSMO pickables)
+ * ### Why it OWNS its @group(0) pick camera
  *
- * The MW layer projects through the NEAR0 slab, and it is the SOLE pickable
- * on that slab — so its pick pass has no earlier draw to inherit a camera
- * from.  The COSMO pickables (rings, disks) reuse the @group(0) the
- * point-sprites pick draw binds first in their shared pass; porting that
- * inherit pattern here would leave slot 0 unbound (a validation error that
- * can silently drop the whole pick submit).  So `pickMilkyWay` takes the
- * complete pick-uniform image as bytes — built by the layer via
- * `pickUniformBytesOf` against the NEAR0 slab view, the SAME packer the
- * points pick uses, so the byte layout has one home — uploads them to its
- * OWN buffer, and binds its own @group(0).  Self-binding also deletes the
- * hidden order coupling the inherit pattern carried.  The billboard's
+ * `pickMilkyWay` takes the complete pick-uniform image as bytes — built by
+ * the layer via `pickUniformBytesOf` against the NEAR0 slab view, the SAME
+ * packer the points pick uses, so the byte layout has one home — uploads
+ * them to its OWN buffer, and binds its own @group(0).  The billboard's
  * apparent on-screen size is computed IN the vertex shader from those
  * camera uniforms — the same derivation galaxy points use — so this
  * renderer's `@group(2)` uniform is fully static: world centre, source
@@ -101,10 +94,7 @@ export function createMilkyWayPickRenderer(
 
   if (device) {
     // @group(0) CameraUniforms BGL — same single-uniform shape the points
-    // pick pipeline declares.  Unlike the COSMO pickables this renderer
-    // binds its OWN group against this BGL (see the module header): the MW
-    // is alone in the NEAR0 pick pass, so there is no caller-bound slot 0
-    // to inherit.
+    // pick pipeline declares.
     const cameraBgl = device.createBindGroupLayout({
       label: 'milky-way-pick-camera-bgl',
       entries: [
@@ -230,11 +220,9 @@ export function createMilkyWayPickRenderer(
     }
     // Upload the caller's complete pick-camera image VERBATIM to the
     // renderer's own buffer (byte-shaping has one home: pickUniformBytesOf)
-    // and bind our own @group(0) — the MW is the sole draw in the NEAR0
-    // pick pass, so there is no earlier-bound camera to inherit (module
-    // header). @group(2) stays static (written once at construction); the
-    // apparent size is derived in the vertex shader from these camera
-    // uniforms.
+    // and bind our own @group(0). @group(2) stays static (written once at
+    // construction); the apparent size is derived in the vertex shader from
+    // these camera uniforms.
     device.queue.writeBuffer(cameraUniformBuffer, 0, uniformBytes);
     pass.setPipeline(pickPipeline);
     pass.setBindGroup(0, cameraBindGroup);

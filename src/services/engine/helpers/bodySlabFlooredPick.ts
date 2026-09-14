@@ -4,7 +4,7 @@
  * minimum, compose the mvp/camPosLocal PAIR from that SAME floored radius
  * (the invariant `drawFlooredSpherePick`'s header names — a mismatched pair
  * would shrink the apparent pick disc back below the floor), and narrow for
- * the GPU upload. `earthLayer` and `planetsLayer` each carried this exact
+ * the GPU upload. `earthPass` and `planetsPass` each carried this exact
  * recipe inline; `view.slab.vp` there is eye-relative metres, not
  * `drawFlooredSpherePick`'s Mpc/world-relative frame, so that helper doesn't
  * apply here — this one composes via `composeBodySlabMvp`/`bodySlabCamLocal`

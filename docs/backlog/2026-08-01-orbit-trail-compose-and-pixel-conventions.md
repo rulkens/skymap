@@ -19,7 +19,7 @@ intermediate (`clipXYW`):
 
 Consequences worth fixing, in order:
 
-- **Wasted work on culled orbits.** `orbitTrailsLayer` calls the whole function,
+- **Wasted work on culled orbits.** `orbitTrailsPass` calls the whole function,
   then culls on `arc[1] <= 0`. An orbit entirely behind the camera has already
   paid an f64 3×3 inverse plus a nine-entry renormalize by the time the cull
   fires. The visible-arc test is a few trig calls and could gate the rest.
@@ -40,7 +40,7 @@ exists is documented in the module header and is load-bearing.
 - `vertex.wesl`'s `clipToPixel` produces **centre-origin, y-up** pixels.
 
 The ribbon is correct only because every quantity the vertex stage derives from
-those pixels is a *distance* or a *perpendicular*, and the two conventions
+those pixels is a _distance_ or a _perpendicular_, and the two conventions
 differ by an isometry (translation + y-flip), which preserves both. As of
 2026-08-01 that invariant is stated in a comment on `clipToPixel`; it is not
 asserted anywhere.

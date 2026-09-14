@@ -39,7 +39,7 @@ import {
 } from '../../../data/galaxyLodBands';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 
 /**
  * Pack the COMPLETE point pick uniform for `view`'s slab from the current
@@ -51,7 +51,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 export function pickUniformBytesOf(
   view: SlabView,
   ctx: ReadyFrameContext,
-  state: EngineState,
+  state: PassState,
 ): ArrayBuffer {
   const g = state.settings.galaxyCatalogs;
   const bias = state.settings.bias;

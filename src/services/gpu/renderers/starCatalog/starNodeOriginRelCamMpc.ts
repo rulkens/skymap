@@ -16,7 +16,7 @@
  * throws away the low bits that carry the difference, and the reconstructed
  * point sprite quantizes onto a coarse grid and visibly jitters as the camera
  * approaches. (This is the same catastrophic-cancellation trap
- * `starPointsLayer` documents for the seeded point anchors.)
+ * `starPointsPass` documents for the seeded point anchors.)
  *
  * The fix is to do the large-minus-large subtraction here, in JS numbers
  * (float64), and hand the renderer only the small result. Neither operand the

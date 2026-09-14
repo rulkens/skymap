@@ -31,6 +31,7 @@
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -56,11 +57,11 @@ export function installSlots(
       // Galaxy point sources self-install into `points` in wireSlots — never here.
       continue;
     }
-    // Body-texture family keys are `built: 'external'` (minted in wireSlots into
-    // the keyed `bodyTextures` map), so the construction pass never hands them
-    // here — the guard is a defensive skip that also narrows `key` off the
-    // family members so the named-field index below typechecks.
-    if (isBodyTextureKey(key)) continue;
+    // Body-texture and mesh-body family keys are `built: 'external'` (minted
+    // in wireSlots into their own keyed maps), so the construction pass never
+    // hands them here — the guards are a defensive skip that also narrows
+    // `key` off the family members so the named-field index below typechecks.
+    if (isBodyTextureKey(key) || isMeshBodyKey(key)) continue;
     state.assetSlots[key] = slot as never;
   }
 }

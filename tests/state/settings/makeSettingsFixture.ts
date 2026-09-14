@@ -5,16 +5,16 @@
  * Every reducer / selector / store / action test needs a full, type-faithful
  * `EngineSettingsState`. Rather than re-inline the ~30-line literal in each
  * file (where it would drift the moment a cluster gains a field), they all
- * build it here. The body mirrors the engine's startup construction
- * (`buildInitialSettings`) so the fixture stays a true shape: defaults
+ * build it here. The body mirrors the engine's boot value
+ * (`INITIAL_SETTINGS`) so the fixture stays a true shape: defaults
  * from `data/defaults.ts`, item rows DERIVED from `GALAXY_CATALOG_IDS` /
  * `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`, volume items from
  * `seedVolumeFields()`.
  * Deriving the item keys (rather than hand-listing them) means adding a
  * catalog or category can't silently leave the fixture stale.
  *
- * One deliberate divergence from the boot seed: every galaxy catalog row is
- * `enabled: true` here, whereas the real seed derives `enabled` from each
+ * One deliberate divergence from the boot value: every galaxy catalog row is
+ * `enabled: true` here, whereas `INITIAL_SETTINGS` derives `enabled` from each
  * registry entry's `visible` field (so default-off catalogs like desiDeep boot
  * disabled). Reducer/selector tests want a uniform all-on baseline they can
  * flip bits off of — a registry-shaped fixture would couple every "toggle X"
@@ -81,7 +81,6 @@ import {
 } from '../../../src/data/defaults';
 import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION } from '../../../src/services/engine/frame/skyCubemapCaptureSchedule';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
@@ -142,11 +141,8 @@ export function makeSettingsFixture(
       enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
       ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
     },
-    // Mirrors initialState.ts's seed.
-    sgrAStarLensingTuning: {
-      ...DEFAULT_SGR_A_STAR_LENSING_TUNING,
-      skyCubemapRecaptureCameraMoveFraction: SKY_CUBEMAP_RECAPTURE_CAMERA_MOVE_FRACTION,
-    },
+    // Mirrors sgrAStarLensingTuningSettings.ts's boot value.
+    sgrAStarLensingTuning: DEFAULT_SGR_A_STAR_LENSING_TUNING,
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
@@ -158,7 +154,7 @@ export function makeSettingsFixture(
     orbitTrails: { enabled: DEFAULT_ORBIT_TRAILS_ENABLED },
     earth: {
       // `earth` is a definitional row in the atmosphere table, so the indexed
-      // read is non-null (see `initialState.ts` — the index signature widens it).
+      // read is non-null (see `earthSettings.ts` — the index signature widens it).
       atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure,
       ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
       oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,

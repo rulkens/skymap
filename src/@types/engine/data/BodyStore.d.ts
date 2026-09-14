@@ -1,5 +1,6 @@
 import type { StarBody } from '../../scene/StarBody';
 import type { PlanetBody } from '../../scene/PlanetBody';
+import type { MeshBody } from '../../scene/MeshBody';
 import type { EarthBody } from '../../scene/EarthBody';
 
 /**
@@ -29,12 +30,16 @@ export type BodyStore = {
   readonly stars: readonly StarBody[];
   /** Seeded planets; empty until the planet seed lands. */
   readonly planets: readonly PlanetBody[];
+  /** Seeded mesh bodies; empty until the mesh seed lands. */
+  readonly meshBodies: readonly MeshBody[];
   /** The descent's landing target; `null` until seeded. */
   readonly earth: EarthBody | null;
   /** Replace the star list wholesale. */
   setStars(s: readonly StarBody[]): void;
   /** Replace the planet list wholesale. */
   setPlanets(p: readonly PlanetBody[]): void;
+  /** Replace the mesh-body list wholesale. */
+  setMeshBodies(m: readonly MeshBody[]): void;
   /** Install (or clear, with `null`) the Earth record. */
   setEarth(e: EarthBody | null): void;
 };

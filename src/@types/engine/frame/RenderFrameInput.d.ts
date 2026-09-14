@@ -16,7 +16,7 @@
  *
  * ### Why no renderer fields
  *
- * Every `ContentLayer` — hdr-target and swap-target alike — reads its
+ * Every `ContentPass` — hdr-target and swap-target alike — reads its
  * renderer straight off `state.gpu.*` (see `passes/index.ts`), so `state`
  * is the only per-frame renderer source this type needs to carry.
  */
@@ -34,7 +34,7 @@ export type RenderFrameInput = {
    */
   ctx: ReadyFrameContext;
   /**
-   * Engine state — forwarded to each `ContentLayer.draw` so per-layer logic
+   * Engine state — forwarded to each `ContentPass.draw` so per-layer logic
    * can read selection / picking / source-state / settings / `state.gpu.*`
    * renderer handles.
    */

@@ -10,7 +10,7 @@
  *
  * It is mirrored here because one CPU-side decision needs the footprint's SIZE:
  * a star closer to its own anchor than this radius is inside the anchor's click
- * target and cannot be aimed at separately, so `starPointsLayer` drops its stamp
+ * target and cannot be aimed at separately, so `starPointsPass` drops its stamp
  * rather than let it steal the anchor's click.
  */
 

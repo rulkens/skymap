@@ -116,7 +116,7 @@ Two rules follow from that:
   consumers.
 
 `renderers/` is also not `passes/`: a renderer draws **world-space content** and appears in
-`CONTENT_LAYERS`; a pass operates on **textures** (compositor, volume upsample, pick-debug
+`CONTENT_PASSES`; a pass operates on **textures** (compositor, volume upsample, pick-debug
 overlay). Draw the geometry → you're a renderer, wherever it feels like it belongs.
 
 ## File anatomy
@@ -316,7 +316,7 @@ resources like the HDR context have to exist first).
 ### Feeding settings: the layer's `draw`, not a setter
 
 A renderer's appearance knobs are **not** pushed in through setters. Each renderer is driven
-by exactly one `ContentLayer` in `src/services/engine/frame/passes/`, whose `draw(pass, view,
+by exactly one `ContentPass` in `src/services/engine/frame/passes/`, whose `draw(pass, view,
 ctx, state)` projects the relevant `state.settings.*` leaves into the renderer's `draw()`
 argument bag each frame:
 
@@ -407,7 +407,7 @@ up as a separate field on `state.gpu`.
 - [ ] Per-asset data goes through explicit `upload` / `set*` / `bind*` methods.
 - [ ] Slot added to `EngineGpuHandles` (nullable until `initGpu`).
 - [ ] Constructed in `initGpu.ts`.
-- [ ] Settings projected in by its `ContentLayer`'s `draw` (not pushed in from components).
+- [ ] Settings projected in by its `ContentPass`'s `draw` (not pushed in from components).
 - [ ] `destroy()` releases every GPU resource the closure captured.
 - [ ] At least one test that exercises construction + a representative call.
 

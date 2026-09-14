@@ -18,26 +18,29 @@
  * differently — a GalaxyRow has flat `x/y/z` while the milkyWay row is a bare
  * singleton tag that looks up `MILKY_WAY_CENTER_WORLD` here. Folding the
  * position into the table lets the caller read it off the (non-null) descriptor
- * without re-narrowing the union. `selectionRingLayer` both gates on and sizes
+ * without re-narrowing the union. `selectionRingPass` both gates on and sizes
  * from this table, so "which kinds get a halo here, and where" lives in one
  * place: a new halo-bearing kind is one table row.
  *
  * The `slab` field is what lets two thin ring layers — a COSMO one and a NEAR0
  * one — share the single `selectionRingRenderer` without racing: each layer
  * draws only the halos tagged with its own slab, so exactly one writes the
- * renderer's shared uniform buffers per frame (see `near0SelectionRingLayer`'s
+ * renderer's shared uniform buffers per frame (see `near0SelectionRingPass`'s
  * header for the full writeBuffer/submit argument). A galaxy or the Milky Way
  * rings through COSMO (Mpc scale); a survey star and the foreground scene bodies
  * (planet / famous star / Earth) ring through NEAR0 (their parsec/AU-scale
  * anchors fall inside COSMO's fixed near plane and outside its far plane once
- * rebased). The slab value reuses the `NEAR0`/`COSMO` index constants a layer's
- * `slab:` field already carries — not a parallel union.
+ * rebased). The slab value reuses the `NEAR0`/`COSMO` index constants
+ * `FRAME_ORDER`'s lines carry — not a parallel union.
  */
 import {
   MILKY_WAY_DISC_RADIUS_KPC,
   MILKY_WAY_CENTER_WORLD,
 } from '../../../data/milkyWay/galacticCenter';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { NEAR0, COSMO } from '../frame/slabs';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
@@ -91,10 +94,12 @@ const SELECTION_HALO_TABLE: {
   // its ring rides its true physical radius — `radiusM` → Mpc — letting the
   // NEAR0 ring layer (§9) wrap the sphere on close approach (far away
   // `near0RingRadiusPx` floors it to a px minimum). The NEAR0 slab tag routes
-  // it through `near0SelectionRingLayer` (not the COSMO layer), so the two
+  // it through `near0SelectionRingPass` (not the COSMO layer), so the two
   // layers stay slab-exclusive on the shared renderer.
   body: (row) => ({
-    radiusMpc: row.radiusM * SCALE_UNITS.M_TO_MPC,
+    radiusMpc:
+      bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, row.id, 'selectionHaloTable')) *
+      SCALE_UNITS.M_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
     slab: NEAR0,
   }),

@@ -1,6 +1,6 @@
 /**
  * makeBodyItems — `settings.bodies.items` for engine fixtures, keyed off
- * `BODY_IDS` (the same registry list `buildInitialSettings` seeds from).
+ * `BODY_IDS` (the same registry list `INITIAL_SETTINGS` derives from).
  *
  * A row a hand-listed fixture omits does NOT fail an assertion: the gates read
  * `items[id].enabled` unguarded, so the suite dies with a `TypeError` the next

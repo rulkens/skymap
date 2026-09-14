@@ -131,6 +131,19 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
   MNRAS 453, 3234** — the floor on the fixture's residuals, and the reason
   the acceptance test allows a few sigma rather than exact closure.
 
+### Abd El Dayem et al. 2026 — S301
+
+- **Use:** One additional row in `src/data/bodies/sStarElements.ts`, the
+  40th bound orbit rendered around Sagittarius A\*. The paper's Extended
+  Data Table 2 gives two degenerate orbital solutions for this star; the
+  transcribed row uses Solution A (the headline values quoted in the
+  paper's abstract), with Solution B recorded in the row's comment.
+- **Reference:** Abd El Dayem, K., Abuter, R., Aimar, N., et al. (GRAVITY
+  Collaboration) 2026, "Discovery of a star sensitive to the spin of
+  Sgr A\*", Nature, doi:10.1038/s41586-026-10894-w
+  ([arXiv:2607.12664](https://arxiv.org/abs/2607.12664)).
+- **Licence:** Published paper; cite it above.
+
 ### GRAVITY Collaboration — the Galactic-Centre distance and black-hole mass
 
 - **Use:** R₀ = 8178 pc, which sets the angular-to-linear scale for every
@@ -464,6 +477,102 @@ All public domain; NASA asks that credit go to the named observatory / program.
   <https://science.nasa.gov/resource/true-colors-of-pluto/>. **Licence:**
   Public domain. **Credit:** NASA/JHUAPL/SwRI/Alex Parker.
 
+### "Livyatan melvillei" — Major
+
+- **Use:** The whale in the pair of mesh bodies orbiting Earth (the
+  Hitchhiker's Guide easter egg). Shipped as a derivative:
+  `npm run build-meshes` de-rigs the model, merges its primitives and resizes
+  its textures into `public/data/meshes/whale.*`. The raw GLB is gitignored;
+  per-file provenance lives in `tools/utils/io/rawDataRegistry.ts` (the
+  `meshes.*` rows) and `data/raw/meshes/whale/README.md`.
+- **Source:**
+  <https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba>,
+  by Major (<https://sketchfab.com/majorgalah>).
+- **Licence:** CC BY 4.0. Required attribution, verbatim:
+
+  > This work is based on "Livyatan melvillei" (https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba) by Major (https://sketchfab.com/majorgalah) licensed under CC-BY-4.0
+
+### "Flowers Petunia White" — Marianne Goudriaan
+
+- **Use:** The bowl of petunias trailing the whale. Shipped as a derivative:
+  a headless Blender pre-bake (`npm run prebake-petunias`) decimates the mesh
+  and bakes the author's six textures into one albedo atlas, which
+  `npm run build-meshes` then bakes to `public/data/meshes/petunias.*`. The raw
+  GLB and the pre-bake output are gitignored; provenance lives in
+  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/petunias/README.md`.
+- **Source:** <https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0>,
+  by Marianne Goudriaan (<https://sketchfab.com/mariannegoudriaan>).
+- **Licence:** CC BY 4.0. Required attribution, verbatim:
+
+  > This work is based on "Flowers Petunia White" (https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by Marianne Goudriaan (https://sketchfab.com/mariannegoudriaan) licensed under CC-BY-4.0
+
+### "Voyager Probe (B)" — NASA / Michael D. Carbajal
+
+- **Use:** The Voyager 1 and Voyager 2 mesh bodies (both `meshKey: 'voyager'`).
+  Shipped as a derivative: a headless Blender pre-bake
+  (`npm run prebake-mesh -- voyager`) flattens the scene to one mesh and one
+  albedo atlas, which `npm run build-meshes` then bakes to
+  `public/data/meshes/voyager.*`. The raw GLB and the pre-bake output are
+  gitignored; provenance and the pre-bake's own steps live in
+  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/voyager/README.md`.
+- **Source:** NASA 3D Resources,
+  <https://science.nasa.gov/3d-resources/voyager-probe-b/> (download served
+  from `assets.science.nasa.gov`).
+- **Licence:** Public domain under NASA's media usage guidelines — see
+  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
+- **Credit:** NASA / Michael D. Carbajal (NASA Headquarters).
+
+### "Mars 2020 Perseverance Rover" — Brian Kumanchik, NASA/JPL-Caltech
+
+- **Use:** The Perseverance mesh body. Shipped as a derivative: a headless
+  Blender pre-bake (`npm run prebake-mesh -- perseverance`) flattens the
+  deployed rig to one mesh and one albedo atlas, which `npm run build-meshes`
+  then bakes to `public/data/meshes/perseverance.*`. The raw GLB and the
+  pre-bake output are gitignored; provenance and the pre-bake's own steps live
+  in `tools/utils/io/rawDataRegistry.ts` and
+  `data/raw/meshes/perseverance/README.md`.
+- **Source:** NASA 3D Resources,
+  <https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/>
+  (download served from `assets.science.nasa.gov`).
+- **Licence:** Public domain under NASA's media usage guidelines — see
+  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
+- **Credit:** Brian Kumanchik, NASA/JPL-Caltech.
+
+### "Curiosity Rover (MSL) (Clean)" — Brian Kumanchik, NASA/JPL-Caltech
+
+- **Use:** The Curiosity mesh body. Shipped as a derivative: a headless
+  Blender pre-bake (`npm run prebake-mesh -- curiosity`) flattens the deployed
+  rig to one mesh and one albedo atlas, which `npm run build-meshes` then bakes
+  to `public/data/meshes/curiosity.*`. The raw archive and the pre-bake output
+  are gitignored; provenance and the pre-bake's own steps live in
+  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/curiosity/README.md`.
+- **Source:** NASA 3D Resources,
+  <https://science.nasa.gov/3d-resources/curiosity-rover-msl/> (download
+  served from `assets.science.nasa.gov`, a zip archive holding one `.blend`
+  file).
+- **Licence:** Public domain under NASA's media usage guidelines — see
+  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
+- **Credit:** Brian Kumanchik, NASA/JPL-Caltech.
+
+### "Mars Exploration Rover - Spirit and Opportunity" — NASA/JPL-Caltech
+
+- **Use:** The Spirit and Opportunity mesh bodies (both `meshKey: 'mer'`) —
+  the same vehicle design, so both bodies draw this one model. Shipped as a
+  derivative: a headless Blender pre-bake (`npm run prebake-mesh -- mer`)
+  flattens the deployed rig to one mesh and one albedo atlas, which
+  `npm run build-meshes` then bakes to `public/data/meshes/mer.*`. The raw
+  `.blend` and the pre-bake output are gitignored; provenance and the
+  pre-bake's own steps live in `tools/utils/io/rawDataRegistry.ts` and
+  `data/raw/meshes/mer/README.md`.
+- **Source:** NASA 3D Resources page
+  <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/>;
+  the page's own download link 404s (verified 2026-09-11), so the file is
+  fetched from NASA's own GitHub mirror of the same collection,
+  <https://github.com/nasa/NASA-3D-Resources>.
+- **Licence:** Public domain under NASA's media usage guidelines — see
+  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
+- **Credit:** NASA/JPL-Caltech.
+
 ## Fonts
 
 ### Cormorant Garamond — display serif
@@ -500,6 +609,40 @@ The volumetric raymarched fragment shader at the heart of
   sanitisation (NaN masking, disk-extent envelope). Display-space
   post-processing (gamma, contrast, vignette) was deleted so the
   engine's HDR tone-map pass can run on a clean linear-light input.
+
+### Atmospheres — Bruneton & Neyret 2008, Hillaire 2020
+
+- **Use:** Method reference, no code reused. The three-LUT atmosphere pipeline
+  (`src/services/gpu/shaders/atmosphere/`) follows Bruneton's transmittance-LUT
+  horizon-packing (r, mu) uv parametrisation (`scattering.wesl`,
+  `transmittanceLut.wesl`) and Hillaire's closed-form single-order
+  approximation of the multiple-scattering series (`multiScatterLut.wesl`);
+  the shell fragment's segment-transmittance ratio (`shell/fragment.wesl`) is
+  Bruneton's ratio identity. `AtmosphereShellRenderer.d.ts` and
+  `atmosphereParams.ts` describe the same three-LUT structure.
+- **Reference:** Bruneton, E. & Neyret, F. 2008, "Precomputed Atmospheric
+  Scattering", EGSR / Computer Graphics Forum 27(4); reference implementation
+  <https://github.com/ebruneton/precomputed_atmospheric_scattering> (BSD-3).
+  Hillaire, S. 2020, "A Scalable and Production Ready Sky and Atmosphere
+  Rendering Technique", EGSR / Computer Graphics Forum 39(4),
+  <https://sebh.github.io/publications/egsr2020.pdf>.
+- **Licence:** Both papers are cited above; no code from either is reused, so
+  no licence obligation applies beyond citation.
+
+### Sgr A\* lens — Bruneton 2020
+
+- **Use:** Reference and audit baseline only — no code reused. The Sgr A\*
+  lens computes its own Schwarzschild bending-angle LUT by quadrature
+  (`src/utils/lensing/buildSchwarzschildDeflectionLut.ts`) and its own march
+  (`src/services/gpu/shaders/bodies/sgrAStarLensing/fragment.wesl`), design
+  descended from an earlier in-repo NFW lens LUT. Bruneton's paper informed
+  the backward-lookup convention (rotate the escape ray toward the hole by
+  the bending angle) and served as the comparison baseline for the
+  emission-disk and LUT math audit during development.
+- **Reference:** Eric Bruneton, "Real-time High-Quality Rendering of
+  Non-Rotating Black Holes," 2020, [arXiv:2010.08735](https://arxiv.org/abs/2010.08735);
+  reference implementation <https://github.com/ebruneton/black_hole_shader>.
+- **Licence:** BSD-3-Clause (reference implementation).
 
 ## Vendored data
 

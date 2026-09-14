@@ -75,7 +75,7 @@ describe('createConstellationRenderer.hasData', () => {
 /**
  * The precision seam (Item 4): `draw` re-expresses each cached ABSOLUTE endpoint
  * camera-relative (`pos − camPos`) into the instance buffer every frame, pairing
- * with the caller's f64-rebased vp — the `starPointsLayer` fix that kills the
+ * with the caller's f64-rebased vp — the `starPointsPass` fix that kills the
  * close-approach cancellation. This pins that the per-frame instance write is the
  * absolute endpoints minus camPos, with the apparent-magnitude slots passed
  * through untouched.

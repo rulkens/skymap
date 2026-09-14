@@ -23,6 +23,8 @@ import type { Vec4 } from '../../../src/@types/math/Vec4';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { LiveCameraRuntime } from '../../../src/store/types';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { worldArmOf } from '../../fixtures/worldArmOf';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -67,6 +69,8 @@ describe('watchOrientationChangeSaga', () => {
     store = build();
   });
 
+  const committedPose = (): CameraPose => worldArmOf(store.getState()[cameraRoute].base);
+
   it('requestOrientationChange dispatches setOrientation then startFrameTween to the target', async () => {
     store.dispatch(requestOrientationChange('galactic'));
     await flush();
@@ -96,7 +100,7 @@ describe('watchOrientationChangeSaga', () => {
 
   it('a steady switch commits a pose whose eye position is unchanged', async () => {
     const from: CameraPose = { target: [1, 2, 3], yaw: 0.4, pitch: -0.2, distance: 7 };
-    store.dispatch(commitCameraPose(from));
+    store.dispatch(commitCameraPose(absoluteArm(from)));
     // Default orientation (see `initialState.ts`) is 'ecliptic' — no prior
     // switch, so this is the outgoing registry frame `base` actually lives in.
     const expectedDir = worldEyeDir(from, ORIENTATION_FRAMES.ecliptic);
@@ -104,8 +108,7 @@ describe('watchOrientationChangeSaga', () => {
     store.dispatch(requestOrientationChange('galactic'));
     await flush();
 
-    const committed = store.getState()[cameraRoute].base;
-    const actualDir = worldEyeDir(committed, ORIENTATION_FRAMES.galactic);
+    const actualDir = worldEyeDir(committedPose(), ORIENTATION_FRAMES.galactic);
     expect(actualDir[0]).toBeCloseTo(expectedDir[0], 6);
     expect(actualDir[1]).toBeCloseTo(expectedDir[1], 6);
     expect(actualDir[2]).toBeCloseTo(expectedDir[2], 6);
@@ -115,10 +118,10 @@ describe('watchOrientationChangeSaga', () => {
     // First switch (ecliptic default -> galactic): steady, lands `base` in the
     // galactic basis and `settings.orientation` at 'galactic'.
     const from: CameraPose = { target: [0, 0, 0], yaw: 1.1, pitch: 0.3, distance: 2 };
-    store.dispatch(commitCameraPose(from));
+    store.dispatch(commitCameraPose(absoluteArm(from)));
     store.dispatch(requestOrientationChange('galactic'));
     await flush();
-    const afterFirstSwitch = store.getState()[cameraRoute].base;
+    const afterFirstSwitch = committedPose();
 
     // Simulate the up-basis still mid-slerp toward galactic when a SECOND
     // switch fires: `cameraRuntime` reports a live basis that is neither the
@@ -143,8 +146,7 @@ describe('watchOrientationChangeSaga', () => {
     store.dispatch(requestOrientationChange('supergalactic'));
     await flush();
 
-    const committed = store.getState()[cameraRoute].base;
-    const actualDir = worldEyeDir(committed, ORIENTATION_FRAMES.supergalactic);
+    const actualDir = worldEyeDir(committedPose(), ORIENTATION_FRAMES.supergalactic);
     expect(actualDir[0]).toBeCloseTo(correctDir[0], 6);
     expect(actualDir[1]).toBeCloseTo(correctDir[1], 6);
     expect(actualDir[2]).toBeCloseTo(correctDir[2], 6);

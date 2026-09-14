@@ -1,6 +1,6 @@
 /**
  * isInsideAtmosphereShell — the render-path selector that switches
- * `atmosphereShellLayer` between the outside proxy-mesh pipelines and the
+ * `atmosphereShellPass` between the outside proxy-mesh pipelines and the
  * inside full-screen pipelines. `camPosLocal` is already in atmosphere-top
  * radius units (1 = the shell's outer extent); the handoff sits slightly
  * outside that boundary (the proxy mesh's facet-sag margin), so probes

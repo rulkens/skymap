@@ -18,8 +18,8 @@ import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
 
 export function reencodePose(
   pose: CameraPose,
-  from: Mat3 | undefined,
-  to: Mat3 | undefined,
+  from: Readonly<Mat3> | undefined,
+  to: Readonly<Mat3> | undefined,
 ): CameraPose {
   // Identity case dominates call volume (most frame switches don't touch every
   // in-flight pose); returning by reference here keeps it allocation-free.

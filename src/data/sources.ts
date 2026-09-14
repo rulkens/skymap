@@ -21,7 +21,8 @@
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
  *   'body'          — true-scale scene bodies (Earth, the Solar-System
- *                     planets, the Sun, Sgr A*, the S-stars). Seeded records drawn by their own
+ *                     planets, the Sun, Sgr A*, the S-stars, the mesh
+ *                     bodies). Seeded records drawn by their own
  *                     content-layer; not persisted (a body's identity is its
  *                     stable seed id) and captioned through the
  *                     foreground-labels layer. Earth and the planets are
@@ -91,6 +92,7 @@ import { EARTH_ENTRY } from './sources/earth';
 import { SUN_ENTRY } from './sources/sun';
 import { SGR_A_STAR_ENTRY } from './sources/sgr-a-star';
 import { S_STAR_ENTRY } from './sources/s-star';
+import { MESH_BODY_ENTRY } from './sources/mesh-body';
 import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
 import { ZONE_OF_AVOIDANCE_ENTRY } from './sources/zone-of-avoidance';
 
@@ -162,6 +164,7 @@ export const SOURCE_REGISTRY = {
   [Source.ZoneOfAvoidance]: ZONE_OF_AVOIDANCE_ENTRY,
   [Source.Polyphorm2MRS]: POLYPHORM_2MRS_ENTRY,
   [Source.McpmWorkbench]: MCPM_WORKBENCH_ENTRY,
+  [Source.MeshBody]: MESH_BODY_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

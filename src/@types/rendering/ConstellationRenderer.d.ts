@@ -9,7 +9,7 @@
  * (the segment set is static — a tier-agnostic `constellations.json`),
  * converting each endpoint's parsecs to world Mpc. `draw` re-expresses that data
  * camera-relative (`pos − camPos`) into the instance buffer each frame and
- * pairs it with the caller's f64-rebased view-projection — the `starPointsLayer`
+ * pairs it with the caller's f64-rebased view-projection — the `starPointsPass`
  * precision seam. `hasData` gates the pass's draw (the slot commit uploads).
  */
 

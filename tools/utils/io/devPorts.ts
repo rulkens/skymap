@@ -9,5 +9,5 @@ export const DEV_PORTS = {
   flowWorkbench: 5300,
   galaxyRenderer: 5400,
   mcpmWorkbench: 5500,
-  sceneWorkbench: 5600, // reserved: docs/superpowers/specs/2026-09-02-scene-workbench-design.md
+  sceneWorkbench: 5600,
 } as const;

@@ -1,7 +1,7 @@
 /**
  * runBloom — the regression guard for the strict-order bloom sub-pipeline.
  *
- * The old ten-`ContentLayer` wiring blew the whole screen white: the executor
+ * The old ten-`ContentPass` wiring blew the whole screen white: the executor
  * re-fired each reused-target upsample layer at its target's DOWNSAMPLE step,
  * reading a level before this frame's clear, so it pulled in last frame's
  * contents and ramped brightness every frame. These tests pin the fix by

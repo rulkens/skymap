@@ -50,7 +50,7 @@ import { App } from './components/App/App';
 import { createAppStore } from './store/createAppStore';
 import { SagaContextProvider } from './store/SagaContextProvider';
 import { settingsRoute, tierRoute, uiRoute } from './store/constants';
-import { buildInitialSettings } from './state/settings/initialState';
+import { INITIAL_SETTINGS } from './state/settings/initialSettings';
 import { buildInitialUiState } from './state/ui/buildInitialUiState';
 import { persistSplashVersion } from './state/ui/persistSplashVersion';
 import { installRecorderHook } from './state/recorder/installRecorderHook';
@@ -88,7 +88,7 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   const initialTier = initialTierFromViewport(window.innerWidth);
   const { store, setSagaContext } = createAppStore({
     [tierRoute]: initialTier,
-    [settingsRoute]: buildInitialSettings(),
+    [settingsRoute]: INITIAL_SETTINGS,
     [uiRoute]: buildInitialUiState(),
   });
   // Store lives for the page lifetime; unsubscribe is intentionally not held.

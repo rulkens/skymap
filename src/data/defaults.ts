@@ -3,7 +3,7 @@
  * user-controllable setting's INITIAL value (sliders, toggles, mode
  * selectors, the visible-source bitmask).
  *
- * `buildInitialSettings` (`state/settings/initialState.ts`) assembles these
+ * `INITIAL_SETTINGS` (`state/settings/initialSettings.ts`) assembles these
  * into the Redux `EngineSettingsState` the settings slice seeds; a handful of
  * other sites import a constant directly when they need the same default
  * outside the store. Out of scope: per-source astrophysics constants
@@ -279,18 +279,9 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_TUNING: ZoneOfAvoidanceTuning = {
  * `cubemapResolutionPx` seeds the `sky-cubemap` render-target row's declared
  * size (`renderTargets.ts`) — 1024, per a live-view judgment; the knob's
  * option set is 256/512/1024/2048.
- *
- * NOT here: `skyCubemapRecaptureCameraMoveFraction`. Its owner is
- * `skyCubemapCaptureSchedule.ts` (a `services/` module `data/` doesn't
- * import from), so `initialState.ts` seeds it straight from there and spreads
- * it in alongside this object — the same "owned by the module it feeds"
- * relationship `DEFAULT_REFINE_THRESHOLD` has to `walkStarOctreeCut`.
  */
 const SGR_A_STAR_BLACK_HOLE_ROW = BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id)!;
-export const DEFAULT_SGR_A_STAR_LENSING_TUNING: Omit<
-  SgrAStarLensingTuning,
-  'skyCubemapRecaptureCameraMoveFraction'
-> = {
+export const DEFAULT_SGR_A_STAR_LENSING_TUNING: SgrAStarLensingTuning = {
   innerRs: SGR_A_STAR_BLACK_HOLE_ROW.emission.innerRs,
   outerRs: SGR_A_STAR_BLACK_HOLE_ROW.emission.outerRs,
   inclinationRad: SGR_A_STAR_BLACK_HOLE_ROW.emission.inclinationRad,
@@ -438,9 +429,9 @@ export const DEFAULT_ABS_MAG_LIMIT = -19;
  * Master toggle for the 3D scalar-field volume overlay defaults ON.
  *
  * The overlay renders additively into the same HDR offscreen target as the
- * galaxy points pass.  At startup no fields are registered yet (a caller
- * must load a cube via `handle.volumes.add` or a volume slot commit), so
- * this default has no visual effect until the first field arrives.
+ * galaxy points pass.  At startup no fields are registered yet (a volume
+ * slot commit must load a cube first), so this default has no visual
+ * effect until the first field arrives.
  * Defaulting to `true` means the overlay is ready to render as soon as the
  * first field is added — the user doesn't have to hunt for a master toggle
  * to see anything.

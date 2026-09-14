@@ -31,8 +31,9 @@ const LATE_BINS: readonly AppearanceBin[] = [
 ];
 const LATE_FAINTEST: AppearanceStep = { temperatureK: 3800, radiusSolar: 12 };
 
-// Two of the 39 rows carry no spectral flag. A neutral, roughly solar
-// representative rather than guessing early or late.
+// Two Gillessen rows carry no spectral flag; S301 (a known late-A/early-F
+// dwarf) also lands here, since neither bin below fits a dwarf that hot. A
+// neutral, roughly solar representative rather than guessing early or late.
 const UNKNOWN_APPEARANCE: AppearanceStep = { temperatureK: 5800, radiusSolar: 1.5 };
 
 function scan(

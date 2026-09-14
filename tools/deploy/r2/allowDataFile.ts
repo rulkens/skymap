@@ -8,16 +8,26 @@
  * by basename, normalized through `logicalDataName`, at any depth except
  * the path-stable `images/` subtree (collected separately).
  */
-import { basename } from 'node:path';
+import { basename, dirname } from 'node:path';
 
 import { logicalDataName } from '../../utils/data/logicalDataName';
+
+// Mesh bake outputs (tools/meshes/buildMeshes.ts) sit flat under meshes/,
+// one .mesh plus three fixed-role PNGs per key — the dir check keeps a
+// same-named stray png elsewhere from matching by basename alone.
+const MESH_FILE = /^[a-z0-9-]+\.mesh$/;
+const MESH_TEXTURE_FILE = /^[a-z0-9-]+_(?:albedo|mr|normal)\.png$/;
 
 export const allowDataFile = (path: string): boolean => {
   const posixPath = path.replace(/\\/g, '/');
   if (posixPath === 'images' || posixPath.startsWith('images/')) return false;
 
   const name = logicalDataName(basename(posixPath));
+  const dir = dirname(posixPath).replace(/\\/g, '/');
+  const inMeshesDir = dir === 'meshes' || dir.endsWith('/meshes');
+
   return (
+    (inMeshesDir && (MESH_FILE.test(name) || MESH_TEXTURE_FILE.test(name))) ||
     /^(sdss|glade)-(small|medium|large)\.bin$/.test(name) ||
     /^milliquas-(small|medium|large)\.bin$/.test(name) ||
     /^stars-(small|medium|large)\.bin$/.test(name) ||

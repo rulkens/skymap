@@ -18,7 +18,7 @@
  * ### The bake reads the SAME list the draw does
  *
  * This runs inside the ready-context gate, so it always has a `ReadyFrameContext`.
- * It iterates the SAME `atmosphereDrawList` the shell draw (`atmosphereShellLayer`)
+ * It iterates the SAME `atmosphereDrawList` the shell draw (`atmosphereShellPass`)
  * walks — the one per-frame derivation of which seeded bodies have a live
  * atmosphere this frame (data-gate, near-field distance cull, sub-pixel disc cull).
  * So bake↔draw is equality by construction: the shell bakes this frame's LUT iff it
@@ -37,7 +37,7 @@
  *
  *   - `viewHeightKm` = |camLocal| × atmosphereTopKm. `camLocal` is the camera in
  *     atmosphere-top-radius units, built by `bodySlabCamLocal` from the SAME
- *     `ctx.bodyPose(body.id)` seam `atmosphereShellLayer`'s fragment marches
+ *     `ctx.bodyPose(body.id)` seam `atmosphereShellPass`'s fragment marches
  *     along, with the SAME atmosphere-top scale, so scaling its length by
  *     `atmosphereTopKm` recovers the camera radius in km — and the km-baked LUT
  *     and the local-unit fragment then agree, as the ratio-based LUT
@@ -81,7 +81,7 @@ export function encodeAtmosphereSkyView(
   for (const { body, params, positionMpc, orientation } of atmosphereDrawList(state, ctx)) {
     // The SAME pose-provider closure `deriveSlabs` built this body's row from —
     // NOT a second Mpc-side re-derivation (`camPosLocal`, `ctx.drawCamPos`).
-    // `atmosphereShellLayer.draw` composes its MVP from this identical
+    // `atmosphereShellPass.draw` composes its MVP from this identical
     // `pose.eyeRelBodyM`, so the bake and the fragment can never read two
     // different cameras. `pose` is null only when `bodyId` has no entry in this
     // frame's body-state map — `atmosphereDrawList` resolves from the SAME map
@@ -91,7 +91,7 @@ export function encodeAtmosphereSkyView(
     if (pose === null) continue;
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     // The camera in atmosphere-top-radius units — same util, same scale as the
-    // shell fragment's own `camLocal` (`atmosphereShellLayer.ts`).
+    // shell fragment's own `camLocal` (`atmosphereShellPass.ts`).
     const camLocal = bodySlabCamLocal(pose.eyeRelBodyM, atmosphereTopM);
     const sun = sunDirLocal(positionMpc, RENDER_ORIGIN_MPC, orientation);
 

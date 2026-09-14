@@ -5,7 +5,7 @@
  *
  * The assertion is the monotonic relation against the seeded radii (Jupiter is
  * the largest textured body, Mercury one of the smallest), not a pinned Mpc
- * value — the exact figure is a product of `KM_TO_MPC` and the selectivity-tuned
+ * value — the exact figure is a product of `SCALE_UNITS.M_TO_MPC` and the selectivity-tuned
  * multiplier, neither of which a test should restate. A regression
  * that decouples the radius from the seed (a hand-typed literal, a swapped
  * lookup) breaks the ordering and fails here.
@@ -38,11 +38,7 @@ describe('loadRadiusMpc', () => {
     const states = deriveBodyStates(CONST_J2000);
     const earth = states.get('earth')!.positionMpc;
     const mars = states.get('mars')!.positionMpc;
-    const earthMarsMpc = Math.hypot(
-      earth[0] - mars[0],
-      earth[1] - mars[1],
-      earth[2] - mars[2],
-    );
+    const earthMarsMpc = Math.hypot(earth[0] - mars[0], earth[1] - mars[1], earth[2] - mars[2]);
 
     expect(loadRadiusMpc('earth')).toBeLessThan(earthMarsMpc);
   });

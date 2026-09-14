@@ -105,6 +105,7 @@ describe('SelectionRingRenderer.draw', () => {
     r.draw(null as unknown as GPURenderPassEncoder, new Float32Array(16), [1280, 720], {
       worldPos: [1, 2, 3],
       ringRadiusPx: 40,
+      alpha: 1,
     });
   });
 
@@ -114,9 +115,11 @@ describe('SelectionRingRenderer.draw', () => {
     renderer.draw(pass, new Float32Array(16), [1280, 720], {
       worldPos: [1, 2, 3],
       ringRadiusPx: 40,
+      alpha: 0.25,
     });
 
-    // The selection buffer write carries ringRadiusPx at float offset 3.
+    // The selection buffer write carries ringRadiusPx at float offset 3 and the
+    // layer's stroke opacity at 4 — the layout vertex.wesl forwards from.
     const selWrite = writeBuffer.mock.calls.find(
       ([buffer]) => (buffer as unknown as { label: string }).label === 'selection-ring-selection',
     );
@@ -126,6 +129,7 @@ describe('SelectionRingRenderer.draw', () => {
     expect(selData[1]).toBe(2);
     expect(selData[2]).toBe(3);
     expect(selData[3]).toBe(40);
+    expect(selData[4]).toBe(0.25);
 
     expect(pass.setPipeline).toHaveBeenCalledOnce();
     expect(pass.draw).toHaveBeenCalledOnce();

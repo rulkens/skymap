@@ -154,6 +154,9 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         to: effect.to,
         ease: effect.ease,
         space: effect.space,
+        // Conditional so an untagged endpoint compiles to the byte-identical
+        // segment it always did — `frame` absent, not `frame: undefined`.
+        ...(effect.frame !== undefined ? { frame: effect.frame } : {}),
       });
       return effect.over;
     }
@@ -168,6 +171,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         to: effect.to,
         ease: effect.ease,
         space: 'lin',
+        ...(effect.frame !== undefined ? { frame: effect.frame } : {}),
       });
       return effect.over;
     }

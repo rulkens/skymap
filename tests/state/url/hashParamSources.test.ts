@@ -51,7 +51,6 @@ const earthRow: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusM: 6371000,
 };
 
 function focusedOn(row: SelectionRow): RootState {

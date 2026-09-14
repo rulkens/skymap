@@ -51,18 +51,14 @@ const EXTRACT_ROW: {
   body: (ref, _deps, simDays) => {
     const body = SCENE_BODIES.find((b) => b.id === ref.id);
     if (!body) return null;
-    // Total: a seed is either an `ORBITAL_ELEMENTS` row or a `SCENE_ANCHORS`
-    // one, and the snapshot holds both.
+    // Total: every seed drives its position off one of the three tables the
+    // snapshot is built from, so none of them misses.
     const p = deriveBodyStates(simDays).get(body.id)!.positionMpc;
     return {
       type: 'body' as const,
       id: body.id,
       label: body.label,
       positionMpc: [p[0], p[1], p[2]],
-      radiusM: body.radiusM,
-      // Only the AnchorPointBody arm of the SceneBody union carries these fields.
-      standoffRadii: 'standoffRadii' in body ? body.standoffRadii : undefined,
-      focusDistanceRadii: 'focusDistanceRadii' in body ? body.focusDistanceRadii : undefined,
     };
   },
   // The star's physical fields are resolved off the LIVE catalog through the

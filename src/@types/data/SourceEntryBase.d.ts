@@ -34,7 +34,7 @@ export type SourceEntryBase = {
    *
    * This is a CAPABILITY, not a routing detail — a source that puts a name on
    * screen sets it, whichever renderer draws that name. The near-field bodies
-   * and the curated star map caption through `foregroundLabelsLayer` on the
+   * and the curated star map caption through `foregroundLabelsPass` on the
    * NEAR0 slab rather than the COSMO label director, and they set the flag all
    * the same; `labelLayer` is where that routing difference is expressed.
    */

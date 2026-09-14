@@ -4,8 +4,8 @@
  * stellar neighbourhood) times the layer's fade-registry toggle opacity.
  *
  * Several sites need this exact product and must move in lock-step: the
- * `constellationsLayer` pass (the stick figures' `draw` alpha) and
- * `foregroundLabelsLayer` (the figure-name captions' per-frame fade TARGET,
+ * `constellationsPass` pass (the stick figures' `draw` alpha) and
+ * `foregroundLabelsPass` (the figure-name captions' per-frame fade TARGET,
  * before its declutter + envelope) both multiply band × toggle, so the names
  * dissolve together with the lines on both the ENABLE/DISABLE toggle and the
  * fly-away recession. Inlined, a tweak to the band lookup or the multiply could

@@ -70,7 +70,7 @@ export function produceStructureLabels(
 
   // Deep-zoom survey fade — keyed on the camera's distance from the
   // heliocentric render origin, the same quantity every other band consumer
-  // uses. Structure labels dissolve with their rings (structureMarkersLayer
+  // uses. Structure labels dissolve with their rings (structureMarkersPass
   // rides the same band) so a cosmic-scale annotation can't linger over the
   // solar-system view. Hoisted once: the factor is spatial, identical for
   // every label this frame. At exactly 0 the producer emits nothing — the

@@ -4,10 +4,10 @@
 
 The band's shape lives across three files with nothing tying them together:
 
-- `src/services/engine/frame/passes/zoneOfAvoidanceLayer.ts:17-20` —
+- `src/services/engine/frame/passes/zoneOfAvoidancePass.ts:17-20` —
   `INNER_RADIUS_MPC = 3`, `OUTER_RADIUS_MPC = 380`, `BULGE_DEG = 10`,
   `ANTICENTER_DEG = 3`.
-- `src/services/engine/frame/passes/zoneOfAvoidanceUpsampleLayer.ts:17` —
+- `src/services/engine/frame/passes/zoneOfAvoidanceUpsamplePass.ts:17` —
   `LABEL_RADIUS_MPC = 40`.
 - `src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer.ts:57` —
   `LABEL_EM_MPC = 2`.
@@ -25,8 +25,8 @@ has already drifted: `defaults.ts:250` documents the shell's radial span as
 "currently ~377 Mpc" (`380 - 3`, correctly derived from the two consts
 above, but restated rather than computed), while
 `zoneOfAvoidanceRenderer.ts:53` cites `LABEL_RADIUS_MPC` as living
-"alongside... in `zoneOfAvoidanceLayer.ts`" — it actually lives in
-`zoneOfAvoidanceUpsampleLayer.ts`. Nothing catches a comment pointing at the
+"alongside... in `zoneOfAvoidancePass.ts`" — it actually lives in
+`zoneOfAvoidanceUpsamplePass.ts`. Nothing catches a comment pointing at the
 wrong file.
 
 ## The label em-height/radius coupling

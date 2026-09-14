@@ -1,12 +1,12 @@
 /**
  * Orbit controls — the DOM gesture recognizer. Recognizes what the pointer /
  * wheel stream means and emits `InputGestureEvent`s, touching no camera and no
- * engine state: `inputAggregator` folds a frame's events and `drainInput`
- * applies them. One apply per frame rather than one per event is what keeps a
+ * engine state: `inputAggregator` folds a frame's events and `runFrame`
+ * replays them. One apply per frame rather than one per event is what keeps a
  * second controller from becoming a second writer of the same register.
  *
- * Pointer events, not mouse events: one handler covers mouse, pen and touch,
- * where `mousedown`/`mousemove` are never dispatched for touch at all.
+ * Pointer events, not mouse events: `mousedown`/`mousemove` are never dispatched
+ * for touch at all.
  */
 
 import type { InputGestureEvent } from '../../@types/camera/InputGestureEvent';
@@ -17,13 +17,11 @@ export function attachOrbitControls(
   emit: (event: InputGestureEvent) => void,
   options?: OrbitControlsOptions,
 ): () => void {
-  // `null` means no drag in progress.
   type DragMode = 'orbit' | 'pan' | 'pinch';
   let dragMode: DragMode | null = null;
 
-  // Every active pointer (id → last x/y), so pinch geometry can come from any
-  // two. Contacts other than `dragPointerId` are tracked only so they tear
-  // down cleanly; they never drive a single-pointer gesture.
+  // Contacts other than `dragPointerId` are tracked only so they tear down
+  // cleanly; they never drive a single-pointer gesture.
   const activePointers = new Map<number, { x: number; y: number }>();
   let dragPointerId: number | null = null;
 
@@ -41,15 +39,12 @@ export function attachOrbitControls(
   let downY = 0;
   const CLICK_THRESHOLD_SQ = 4 * 4;
 
-  // ── Pointer down — begin drag ──────────────────────────────────────────────
-
   const onDown = (e: PointerEvent) => {
-    // A mouse is strictly single-pointer, so a fresh mouse-down always begins a
-    // new gesture. Clearing heals state stranded by a `pointerup` we never saw:
-    // with no pointer capture (the iOS fix below), a button released outside the
-    // viewport fires no `window` pointerup, and the stale entry would promote the
-    // next click to a bogus two-pointer pinch. Touch is left alone — its up /
-    // cancel reach the window listeners via implicit capture.
+    // A mouse is strictly single-pointer, so clearing heals state stranded by a
+    // `pointerup` never seen: with no pointer capture (the iOS fix below), a button
+    // released outside the viewport fires no `window` pointerup, and the stale entry
+    // would promote the next click to a bogus two-pointer pinch. Touch reaches the
+    // window listeners via implicit capture, so it is left alone.
     if (e.pointerType === 'mouse') {
       activePointers.clear();
       dragMode = null;
@@ -77,8 +72,6 @@ export function attachOrbitControls(
     }
     // 3+ pointers change nothing — pinch stays a two-finger gesture.
   };
-
-  // ── Pointer up — end drag (or click) ──────────────────────────────────────
 
   const onUp = (e: PointerEvent) => {
     if (!activePointers.has(e.pointerId)) return;
@@ -108,8 +101,6 @@ export function attachOrbitControls(
     }
   };
 
-  // ── Pointer move ───────────────────────────────────────────────────────────
-
   const onMove = (e: PointerEvent) => {
     // Fires for ALL active pointers: update the map first, decide after.
     const ptr = activePointers.get(e.pointerId);
@@ -133,39 +124,38 @@ export function attachOrbitControls(
     emit({ kind: 'dragMove', mode: dragMode, xPx: e.clientX, yPx: e.clientY });
   };
 
-  // ── Wheel — zoom ───────────────────────────────────────────────────────────
-
   const onWheel = (e: WheelEvent) => {
-    // Suppress page scroll while zooming. Needs `{ passive: false }` below,
-    // since a passive listener may not call preventDefault.
+    // Suppresses page scroll, which needs `{ passive: false }` below: a passive
+    // listener may not call preventDefault.
     e.preventDefault();
-    // With a pointer down the drag register is what renders (`orbitDrag`), so
-    // the zoom folds into it; at rest the store `base` renders instead.
-    emit({ kind: 'wheel', deltaY: e.deltaY, duringGesture: activePointers.size > 0 });
+    // With a pointer down the gesture register is what renders, so the zoom folds
+    // into it; at rest the store `base` renders instead. Client coords match the
+    // drag arms, so the pick ray is built from one pixel space either way.
+    emit({
+      kind: 'wheel',
+      deltaY: e.deltaY,
+      duringGesture: activePointers.size > 0,
+      xPx: e.clientX,
+      yPx: e.clientY,
+    });
   };
 
-  // ── Register listeners ─────────────────────────────────────────────────────
-
-  // `pointerdown` on the canvas (a gesture must START on the drawing surface),
-  // but move / up / cancel on `window`: a drag that leaves the canvas must keep
-  // orbiting, and — load-bearing on iOS — touch pointers get IMPLICIT capture on
-  // pointerdown, which WebKit then mishandles if an explicit
-  // `setPointerCapture()` is layered on top, silently killing `pointermove` /
-  // `pointerup` for single-finger orbit and pinch while desktop mouse is fine.
-  // So: never call `setPointerCapture`, listen on `window` instead.
-  // (`touch-action: none` on the canvas — global.css — still suppresses native
-  // scroll/zoom; that is keyed off the touch's TARGET element.)
+  // `pointerdown` on the canvas (a gesture must START on the drawing surface), but
+  // move / up / cancel on `window`, so a drag that leaves the canvas keeps orbiting
+  // — and, load-bearing on iOS, NEVER call `setPointerCapture`: touch pointers get
+  // IMPLICIT capture on pointerdown, and WebKit mishandles an explicit capture
+  // layered on top, silently killing `pointermove`/`pointerup` for single-finger
+  // orbit and pinch while desktop mouse stays fine.
   // https://github.com/openseadragon/openseadragon/issues/1962
   canvas.addEventListener('pointerdown', onDown);
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointermove', onMove);
-  // `pointercancel` = the system pre-empted the gesture (notification shade,
-  // call, OS gesture shelf). No meaningful end coordinate, so routing it through
-  // the shared teardown simply will not fire the click branch.
+  // `pointercancel` = the system pre-empted the gesture, with no meaningful end
+  // coordinate — routing it through the shared teardown skips the click branch.
   window.addEventListener('pointercancel', onUp);
 
-  // Double-click detection is the browser's: it follows the OS threshold and
-  // the user's accessibility settings, and fires for a touch double-tap.
+  // The browser's own detection follows the OS threshold and the user's
+  // accessibility settings, and fires for a touch double-tap.
   const onDblClick = (e: MouseEvent) => {
     options?.onDoubleClick?.(e.clientX, e.clientY);
   };

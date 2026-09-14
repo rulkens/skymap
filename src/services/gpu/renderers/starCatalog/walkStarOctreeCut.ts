@@ -92,7 +92,7 @@
  * that rotates back into the frustum re-enters the cut as a newcomer (opacity 0)
  * and fades in over `NODE_FADE_MS`, where before it was already in the cut and
  * popped in instantly when the renderer's exact cull stopped dropping it. See
- * `starCatalogLayer`'s frustum note.
+ * `starCatalogPass`'s frustum note.
  *
  * ── Why aggregates for the far / sub-pixel field ───────────────────────────
  *
@@ -181,7 +181,7 @@ export type StarCutSnapshot = {
  * the CAMERA-RELATIVE PARSEC frame the walk already works in (box centre =
  * `boxOriginPc + edge/2 − camPc`), so the cull needs no unit conversion inside
  * the hot loop — the layer bakes the scene-unit → parsec scale into `planesPc`'s
- * distance term once (see `starCatalogLayer`).
+ * distance term once (see `starCatalogPass`).
  *
  * The slack is intentionally generous — this is a coarse pre-filter that must
  * never wrong-drop a node any downstream consumer would still paint, with the

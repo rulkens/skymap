@@ -16,6 +16,10 @@ import { structureFocusDistance } from '../../../../src/services/engine/camera/s
 import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
@@ -119,7 +123,6 @@ describe('focusFraming', () => {
     id: 'earth',
     label: 'Earth',
     positionMpc: [4.8481e-12, 0, 0], // ~1 AU in Mpc
-    radiusM: EARTH_RADIUS_M,
     ...over,
   });
 
@@ -131,18 +134,19 @@ describe('focusFraming', () => {
   });
 
   it('body arm — distance is proportional to the physical radius (no clamp)', () => {
-    // The relation, not a magic number: doubling the radius doubles the
-    // distance, and at Earth scale (~2e-16 Mpc) the result stays proportional
-    // instead of being swallowed by a Mpc-scale minimum like the galaxy /
-    // structure helpers apply.
-    const single = focusFraming(bodyRow({ radiusM: EARTH_RADIUS_M }), FOVY).distance;
-    const double = focusFraming(bodyRow({ radiusM: 2 * EARTH_RADIUS_M }), FOVY).distance;
-    expect(double / single).toBeCloseTo(2, 10);
+    // The relation, not a magic number: the ratio of two bodies' framing
+    // distances is the ratio of their radii, and at Earth scale (~2e-16 Mpc)
+    // the result stays proportional instead of being swallowed by a Mpc-scale
+    // minimum like the galaxy / structure helpers apply.
+    const marsRadiusM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
+    const earth = focusFraming(bodyRow(), FOVY).distance;
+    const mars = focusFraming(bodyRow({ id: 'mars', label: 'Mars' }), FOVY).distance;
+    expect(mars / earth).toBeCloseTo(marsRadiusM / EARTH_RADIUS_M, 10);
     // Sanity of the regime: framing Earth lands within a handful of Earth
     // radii, i.e. far below any Mpc-scale clamp floor.
     const earthRadiusMpc = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
-    expect(single).toBeGreaterThan(earthRadiusMpc);
-    expect(single).toBeLessThan(100 * earthRadiusMpc);
+    expect(earth).toBeGreaterThan(earthRadiusMpc);
+    expect(earth).toBeLessThan(100 * earthRadiusMpc);
   });
 
   it('body arm — radius is the physical radius in Mpc (a real pass-by extent)', () => {
@@ -153,16 +157,17 @@ describe('focusFraming', () => {
   it('body arm — focusDistanceRadii override lands at a fixed radius multiple, bypassing screen-fill', () => {
     // Sgr A*'s arrival distance is an r_s count the user framed live, not a
     // FOV-dependent viewport fraction — this pins that the override replaces
-    // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it.
-    const radiusMpc = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
-    const row = bodyRow({ focusDistanceRadii: 30.4 });
+    // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it. The
+    // multiple rides the SEED, so the row no longer carries it.
+    const radiusMpc = SGR_A_STAR.radiusM * SCALE_UNITS.M_TO_MPC;
+    const row = bodyRow({ id: SGR_A_STAR.id, label: SGR_A_STAR.label });
     const result = focusFraming(row, FOVY);
-    expect(result.distance).toBe(radiusMpc * 30.4);
+    expect(result.distance).toBe(radiusMpc * SGR_A_STAR.focusDistanceRadii!);
     expect(result.distance).not.toBe(bodyFocusDistance(radiusMpc, FOVY));
   });
 
   it('body arm — focusDistanceRadii override is independent of FOV', () => {
-    const row = bodyRow({ focusDistanceRadii: 30.4 });
+    const row = bodyRow({ id: SGR_A_STAR.id, label: SGR_A_STAR.label });
     const atFovA = focusFraming(row, 0.5).distance;
     const atFovB = focusFraming(row, 1.4).distance;
     expect(atFovA).toBe(atFovB);
@@ -183,11 +188,10 @@ describe('focusFraming', () => {
     // Given the same position + physical radius they must yield the same pose —
     // pinning that the two arms share a single framing body, not two drifting copies.
     const positionMpc: Vec3 = [4.8481e-12, 0, 0];
+    // The Sun is the one seeded body whose radius is the star arm's stamped
+    // nominal radius, so the two arms are comparable without a fabricated row.
     const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
-    const bodyResult = focusFraming(
-      { type: 'body', id: 'x', label: 'X', positionMpc, radiusM },
-      FOVY,
-    );
+    const bodyResult = focusFraming({ type: 'body', id: 'sun', label: 'Sun', positionMpc }, FOVY);
     const starResult = focusFraming(
       { type: 'star', index: 3, positionMpc, absMag: 4, bpRp: 0.5, radiusM },
       FOVY,

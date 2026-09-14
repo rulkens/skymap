@@ -166,7 +166,7 @@ fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
   let tailScale = min(u.lutMaxImpactParamRs / max(impactParamRs, 1e-6), 1.0);
   let bendAngle = sampleLut(impactParamRs) * tailScale;
   let captured = bendAngle >= CAPTURE_THRESHOLD_RAD;
-  // Bruneton: delta_prime = delta + deflection — the backward lookup must
+  // Bruneton 2020 (arXiv:2010.08735): delta_prime = delta + deflection — the backward lookup must
   // rotate the ray TOWARD the hole to recover the source's asymptotic
   // direction. The apparent image is displaced outward, so undoing that
   // displacement moves inward; '-bendAngle' bends the wrong way and the

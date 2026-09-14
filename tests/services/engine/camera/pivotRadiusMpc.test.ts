@@ -14,13 +14,18 @@ import { describe, it, expect } from 'vitest';
 import {
   pivotRadiusMpc,
   pivotFraming,
+  SURFACELESS_FLOOR_MPC,
 } from '../../../../src/services/engine/camera/pivotRadiusMpc';
 import {
   MIN_DISTANCE_MPC,
   SURFACE_STANDOFF_RADII,
 } from '../../../../src/utils/camera/clampDistance';
+import { MIN_NEAR_MPC } from '../../../../src/utils/camera/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
+import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 
 const EARTH_ROW: SelectionRow = {
@@ -28,7 +33,6 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
-  radiusM: 6371000,
 };
 
 describe('pivotRadiusMpc', () => {
@@ -76,25 +80,34 @@ describe('pivotFraming', () => {
       id: 'sgr-a-star',
       label: 'Sagittarius A*',
       positionMpc: [0, 0, 0],
-      radiusM: 1.269e10,
-      standoffRadii: 2.0,
     };
-    const radiusMpc = 1.269e10 * SCALE_UNITS.M_TO_MPC;
-    expect(pivotFraming(sgrAStar)).toEqual({ radiusMpc, floorMpc: radiusMpc * 2.0 });
+    const radiusMpc = SGR_A_STAR.radiusM * SCALE_UNITS.M_TO_MPC;
+    expect(pivotFraming(sgrAStar)).toEqual({
+      radiusMpc,
+      floorMpc: radiusMpc * SGR_A_STAR.standoffRadii!,
+    });
+    expect(SGR_A_STAR.standoffRadii).toBe(2.0); // the override, not the shared constant
   });
 
-  it('a body smaller than the absolute floor still gets the absolute floor', () => {
-    // A 10 km moonlet's own standoff (~10.2 km) is far below MIN_DISTANCE_MPC
-    // (~309 km), where the near-plane ratio stops being well conditioned. The
-    // floor is a max of the two, so the absolute floor wins for tiny pivots.
-    const moonlet: SelectionRow = {
+  it('a mesh body reports NO surface radius, and floors on its bounding sphere', () => {
+    // Two halves of one rule. The null is the currency fix: the zoom taper and
+    // the h/R readouts anchor on `radiusMpc`, and a bake hull is not ground to
+    // measure an altitude over. The floor is the wheel-zoom snap regression:
+    // the whale must keep the standoff the fly-to landed against instead of
+    // being flung out to the backstop.
+    const whale: SelectionRow = {
       type: 'body',
-      id: 'moonlet',
-      label: 'Moonlet',
+      id: 'whale',
+      label: 'Whale',
       positionMpc: [0, 0, 0],
-      radiusM: 10000,
     };
-    expect(pivotFraming(moonlet).floorMpc).toBe(MIN_DISTANCE_MPC);
+    const seed = findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test');
+    expect(pivotFraming(whale).radiusMpc).toBeNull();
+    expect(pivotFraming(whale).floorMpc).toBeCloseTo(
+      seed.boundingRadiusM * seed.standoffRadii * SCALE_UNITS.M_TO_MPC,
+      30,
+    );
+    expect(pivotFraming(whale).floorMpc).toBeGreaterThan(MIN_DISTANCE_MPC);
   });
 
   it('falls through to the global ratio for a star, and to the absolute floor for a galaxy / no focus', () => {
@@ -112,8 +125,17 @@ describe('pivotFraming', () => {
     );
     expect(pivotFraming(makeGalaxyRow({ diameterKpc: 30 }))).toEqual({
       radiusMpc: null,
-      floorMpc: MIN_DISTANCE_MPC,
+      floorMpc: SURFACELESS_FLOOR_MPC,
     });
-    expect(pivotFraming(null)).toEqual({ radiusMpc: null, floorMpc: MIN_DISTANCE_MPC });
+    expect(pivotFraming(null)).toEqual({ radiusMpc: null, floorMpc: SURFACELESS_FLOOR_MPC });
+  });
+
+  it('keeps a surfaceless pivot outside the near plane', () => {
+    // A galaxy has no radius to stand off from, so nothing but this floor stops
+    // the wheel pulling the target through `MIN_NEAR_MPC`, where it vanishes.
+    // The metre-scale mesh bodies dragged the absolute floor down to ~3 cm,
+    // which is BELOW the near plane — this is what keeps them apart.
+    expect(pivotFraming(makeGalaxyRow({ diameterKpc: 30 })).floorMpc).toBeGreaterThan(MIN_NEAR_MPC);
+    expect(pivotFraming(null).floorMpc).toBeGreaterThan(MIN_NEAR_MPC);
   });
 });

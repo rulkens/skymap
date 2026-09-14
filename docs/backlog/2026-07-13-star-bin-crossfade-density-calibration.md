@@ -6,7 +6,7 @@
 
 The Gaia star bin (regime "c" — the real-data middle of the continuous
 zoom, decided in the 2026-07-13 star-bin grill session; live via the
-`crossfadePc` band in `starCatalogLayer.ts`) hands off to the procedural
+`crossfadePc` band in `starCatalogPass.ts`) hands off to the procedural
 Milky Way point cloud via a hand-tuned camera-distance crossfade band (star
 bin fades out, procedural cloud fades in, over ~2→5 kpc from the Sun — same
 fade-band mechanism as the MW cloud sprite, `e04ec827`).

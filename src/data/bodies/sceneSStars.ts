@@ -1,5 +1,5 @@
 /**
- * sceneSStars — the 39 bound S-stars as DRAWN records: each seed's identity
+ * sceneSStars — the 40 bound S-stars as DRAWN records: each seed's identity
  * paired with the appearance derived from its apparent K magnitude.
  *
  * The seed table (`sStarElements`) carries astrometry and photometry in

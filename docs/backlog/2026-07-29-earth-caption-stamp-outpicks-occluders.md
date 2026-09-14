@@ -5,13 +5,13 @@ in front of it: the Moon's sphere pick covers Earth correctly, but a small disc
 at Earth's screen centre punches through the Moon and resolves to `Source.Earth`.
 Clicking the Moon anywhere outside that disc selects the Moon.
 
-Pre-existing, and unrelated to the analytic sphere work — `bodyGlintsLayer` and
+Pre-existing, and unrelated to the analytic sphere work — `bodyGlintsPass` and
 the depth bands are untouched by it, and the stamp wins against a fixed band
 regardless of how the sphere's depth is produced.
 
 ## Mechanism
 
-`bodyGlintsLayer.drawPick` (`bodyGlintsLayer.ts:318-330`) emits an ~18 px pick
+`bodyGlintsPass.drawPick` (`bodyGlintsPass.ts:318-330`) emits an ~18 px pick
 point at Earth's centre, forced to `PICK_BAND_EARTH_EPS = 5.0e-4` — the
 shallowest of the three glint priority bands, chosen so Earth out-picks the Moon
 and every planet _at glint scale_.
@@ -38,11 +38,11 @@ a _third_ body sits between the camera and Earth's centre.
 
 The stamp is gated on `earthCaptionPickable` — Earth is seeded, and the camera is
 within `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`. There is no condition on Earth
-actually being at glint scale. The comment at `bodyGlintsLayer.ts:311-314`
+actually being at glint scale. The comment at `bodyGlintsPass.ts:311-314`
 addresses the resolved case and dismisses it:
 
 > when Earth is resolved and large the extra 18 px point overlapping the sphere
-> pick is harmless — it writes the SAME `Source.Earth` id `earthLayer`'s sphere
+> pick is harmless — it writes the SAME `Source.Earth` id `earthPass`'s sphere
 > pick writes
 
 That holds for Earth-point vs Earth-sphere, which is the only overlap it
@@ -72,7 +72,7 @@ choosing.
 
 ## Files
 
-- `src/services/engine/frame/passes/bodyGlintsLayer.ts:297-330` — the stamp, its
+- `src/services/engine/frame/passes/bodyGlintsPass.ts:297-330` — the stamp, its
   gate, and the comment that dismisses the overlap.
 - `src/services/gpu/shaders/lib/pickDepthBands.wesl` — the bands and the
   `~orbitDistance/4` reasoning.

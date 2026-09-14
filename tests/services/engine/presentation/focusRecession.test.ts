@@ -37,7 +37,7 @@ function makeState(fades: FadeRegistry, clipPlayer: ClipPlayer): Pick<EngineStat
  */
 function makeClipPlayer(factor: number): ClipPlayer {
   return {
-    tick: vi.fn<(nowMs: number) => void>(),
+    tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
     stop: vi.fn<() => void>(),
     registerEndResolver: vi.fn<(onEnd: () => void) => void>(),
     clipOpacityOf: vi.fn<(layer: VisibilityLayerKey, nowMs: number) => number>(() => factor),

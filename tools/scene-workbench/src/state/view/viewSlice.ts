@@ -1,0 +1,104 @@
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { BoundsM } from '../../../@types/BoundsM';
+import { clampSceneDistanceM } from '../../scene/clampSceneDistanceM';
+
+export type SceneCamera = { yaw: number; pitch: number; distanceM: number; targetM: Vec3 };
+
+/** ViewSlice — camera pose, per-asset visibility overrides, and the
+ *  device-lost flag. Visibility is an exclusion list (`hiddenAssetIds`), not
+ *  a `Record<string, boolean>`: an asset appears in the manifest before any
+ *  toggle has touched it, and "absent means visible" needs no initialization
+ *  step on every manifest load. */
+export type ViewSlice = {
+  camera: SceneCamera;
+  hiddenAssetIds: readonly string[];
+  deviceLost: boolean;
+  /** Per-render-layer display knobs. `pointSizePx` is device pixels (quad edge).
+   *  `clipBoxM` is group-frame metres; `null` means no clipping, and it is a
+   *  zero-cost path — a box makes the sort skip the splats outside it, so it
+   *  cuts CPU sort work and drawn instances both, not just fragments. */
+  display: {
+    pointCloud: { pointSizePx: number };
+    gaussianSplat: { splatScale: number; opacityScale: number; clipBoxM: BoundsM | null };
+    mesh: { wireframe: boolean };
+  };
+};
+
+/** Pitch ceiling matching `applyInputToCamera.ts`'s: at exactly ±π/2 forward
+ *  is collinear with up and `lookAt` degenerates to an all-NaN view matrix. */
+export const PITCH_LIMIT = Math.PI / 2 - 0.01;
+
+export const defaultViewSlice: ViewSlice = {
+  camera: { yaw: 0, pitch: 0.35, distanceM: 200, targetM: [0, 0, 0] },
+  hiddenAssetIds: [],
+  deviceLost: false,
+  // 2px: closes the gaps a 5cm cloud leaves at building scale without fattening the ground.
+  display: {
+    pointCloud: { pointSizePx: 2 },
+    gaussianSplat: { splatScale: 1, opacityScale: 1, clipBoxM: null },
+    mesh: { wireframe: false },
+  },
+};
+
+export const viewSlice = createSlice({
+  name: 'view',
+  initialState: defaultViewSlice,
+  reducers: {
+    // The gesture-boundary commit (drag/zoom end) is the one write site for
+    // the whole pose, clamped exactly like per-field setters would be.
+    commitCameraPose: (state, action: PayloadAction<SceneCamera>) => {
+      state.camera.yaw = action.payload.yaw;
+      state.camera.pitch = Math.min(PITCH_LIMIT, Math.max(-PITCH_LIMIT, action.payload.pitch));
+      state.camera.distanceM = action.payload.distanceM;
+      state.camera.targetM = action.payload.targetM;
+    },
+    /** Opens a group on its baked extent rather than its anchor, which for the
+     *  crop groups sits a few hundred metres outside the box. 0.9 x the wider
+     *  horizontal extent frames it with margin at the default pitch. */
+    frameCamera: (state, action: PayloadAction<BoundsM>) => {
+      const { min, max } = action.payload;
+      state.camera.targetM = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
+      state.camera.distanceM = clampSceneDistanceM(
+        Math.max(max[0] - min[0], max[1] - min[1]) * 0.9,
+      );
+    },
+    toggleAssetVisibility: (state, action: PayloadAction<string>) => {
+      const hidden = new Set(state.hiddenAssetIds);
+      if (hidden.has(action.payload)) hidden.delete(action.payload);
+      else hidden.add(action.payload);
+      state.hiddenAssetIds = Array.from(hidden);
+    },
+    /** Device-lost watcher only — never dispatched by the UI. */
+    deviceLost: (state) => {
+      state.deviceLost = true;
+    },
+    setPointCloudPointSize: (state, action: PayloadAction<number>) => {
+      state.display.pointCloud.pointSizePx = action.payload;
+    },
+    setSplatScale: (state, action: PayloadAction<number>) => {
+      state.display.gaussianSplat.splatScale = action.payload;
+    },
+    setOpacityScale: (state, action: PayloadAction<number>) => {
+      state.display.gaussianSplat.opacityScale = action.payload;
+    },
+    setSplatClipBox: (state, action: PayloadAction<BoundsM | null>) => {
+      state.display.gaussianSplat.clipBoxM = action.payload;
+    },
+    setMeshWireframe: (state, action: PayloadAction<boolean>) => {
+      state.display.mesh.wireframe = action.payload;
+    },
+  },
+});
+
+export const {
+  commitCameraPose,
+  frameCamera,
+  toggleAssetVisibility,
+  deviceLost,
+  setPointCloudPointSize,
+  setSplatScale,
+  setOpacityScale,
+  setSplatClipBox,
+  setMeshWireframe,
+} = viewSlice.actions;

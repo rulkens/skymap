@@ -248,4 +248,12 @@ export const Source = {
    * renumber the codes below it.
    */
   McpmWorkbench: 31,
+  /**
+   * Mesh-drawn scene bodies (the whale and the basket of petunias) — one code
+   * for the pair, since one registry row governs both. Pickable: the mesh pass
+   * stamps this code into the pick texture itself rather than borrowing a star
+   * layer's, so it spends a pick code. Appended at 32 — after this row, codes
+   * 33..62 remain before the 6-bit pick-source field needs a wider layout.
+   */
+  MeshBody: 32,
 } as const;

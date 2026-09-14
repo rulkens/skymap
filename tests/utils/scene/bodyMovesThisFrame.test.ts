@@ -13,7 +13,7 @@ import { bodyMovesThisFrame } from '../../../src/utils/scene/bodyMovesThisFrame'
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
 function bodyRow(id: string): SelectionRow {
-  return { type: 'body', id, label: id, positionMpc: [0, 0, 0], radiusM: 1000 };
+  return { type: 'body', id, label: id, positionMpc: [0, 0, 0] };
 }
 
 describe('bodyMovesThisFrame', () => {
@@ -27,5 +27,11 @@ describe('bodyMovesThisFrame', () => {
 
   it('the Sun does not move this frame', () => {
     expect(bodyMovesThisFrame(bodyRow('sun'))).toBe(false);
+  });
+
+  // A rover has no orbital row but rides Mars's spin; a table-membership
+  // predicate called it static and the follow driver never engaged.
+  it('a surface-fixed rover moves this frame', () => {
+    expect(bodyMovesThisFrame(bodyRow('curiosity'))).toBe(true);
   });
 });

@@ -42,8 +42,8 @@ anyone noticed).
 ## Partial capture — read before filing more
 
 The sibling finding from this same hygiene basket — "third copy of the
-reduced-res viewport formula" (`renderTargets.ts`, `scalarVolumeLayer.ts`,
-`zoneOfAvoidanceLayer.ts`) — **is already tracked**: `BACKLOG.md:143`,
+reduced-res viewport formula" (`renderTargets.ts`, `scalarVolumePass.ts`,
+`zoneOfAvoidancePass.ts`) — **is already tracked**: `BACKLOG.md:143`,
 proposing `renderTargets.sizeOf(target)` as the consolidation. Do not
 re-file that one; this item covers only the four findings above.
 
