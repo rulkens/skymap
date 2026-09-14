@@ -836,10 +836,9 @@ describe('wireSlots', () => {
     // boot pass already put in flight.
     await state.subsystems.assetQueue.drain();
     expect(synthSlot.load).toHaveBeenCalledTimes(1);
-    expect(synthSlot.load).toHaveBeenCalledWith({
-      source: Source.Synthetic,
-      tier: state.tier,
-    });
+    // No tier: synthetic is generated at runtime, so there is no per-tier file
+    // for the request to name (and nothing for the drift edge to reload).
+    expect(synthSlot.load).toHaveBeenCalledWith({ source: Source.Synthetic });
   });
 
   it('loadProgress emitter is constructed with a slot registry that includes every minted slot name', async () => {

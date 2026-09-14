@@ -33,6 +33,7 @@
 
 import { SOURCE_REGISTRY } from './sources';
 import { GALAXY_CATALOG_DATA_PREFIX } from './galaxyCatalog/galaxyCatalogFormat';
+import { shipsTierVariants } from '../utils/loading/shipsTierVariants';
 import type { Tier } from '../@types/data/Tier';
 import type { SourceType } from '../@types/data/SourceType';
 
@@ -45,9 +46,9 @@ import type { SourceType } from '../@types/data/SourceType';
  *   0          → exclude this source from this tier.
  *   positive N → keep the brightest N.
  */
-export function tierTarget(source: SourceType, tier: Tier): number | undefined {
+export function tierTarget(source: SourceType, tier?: Tier): number | undefined {
   const entry = SOURCE_REGISTRY[source];
-  if (entry.type !== 'galaxyCatalog') return undefined;
+  if (entry.type !== 'galaxyCatalog' || tier === undefined) return undefined;
   // The `as const` on SOURCE_REGISTRY narrows each entry's `tierTargets`
   // to its own literal shape (e.g. `{ small: 0, medium: 156_000 }`),
   // so the union here can't be indexed by a generic `Tier` without
@@ -79,23 +80,26 @@ export function fluxSupplementMagLimitFor(source: SourceType): number | undefine
  * `buildAllBins` (writing to disk) read, which is what keeps the fetch URL
  * and the on-disk layout from diverging.
  *
- * A galaxy catalog is "tiered" — i.e. ships per-tier `.bin` variants — iff it
- * carries any per-tier cap.  Sources with an empty `tierTargets` (2MRS,
- * Famous) reuse a single file across every tier and get the bare name.
+ * An absent `tier` is the request shape of a source that ships one file for every
+ * tier (see `shipsTierVariants`); a variant-shipping source needs one, and throwing
+ * keeps a request that has lost its tier loud instead of building `…-undefined.bin`.
  *
  * Throws on `Source.Synthetic` because synthetic data is generated at runtime
  * and has no filename. Throwing rather than returning a sentinel string keeps
  * a buggy caller loud instead of silently 404-ing.
  */
-export function tierFilenameForSource(source: SourceType, tier: Tier): string {
+export function tierFilenameForSource(source: SourceType, tier?: Tier): string {
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'galaxyCatalog' || entry.binBaseName === null) {
     throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
   }
-  const targets: Partial<Record<Tier, number>> = entry.tierTargets;
-  const filename =
-    Object.keys(targets).length > 0
-      ? `${entry.binBaseName}-${tier}.bin`
-      : `${entry.binBaseName}.bin`;
-  return `${GALAXY_CATALOG_DATA_PREFIX}/${filename}`;
+  if (!shipsTierVariants(entry.tierTargets)) {
+    return `${GALAXY_CATALOG_DATA_PREFIX}/${entry.binBaseName}.bin`;
+  }
+  if (tier === undefined) {
+    throw new Error(
+      `tierFilenameForSource: source ${source} ships per-tier variants, no tier given`,
+    );
+  }
+  return `${GALAXY_CATALOG_DATA_PREFIX}/${entry.binBaseName}-${tier}.bin`;
 }

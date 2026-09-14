@@ -29,6 +29,7 @@ import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
+import { galaxyCatalogRequest } from './galaxyCatalogRequest';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
@@ -83,7 +84,7 @@ function pointRow(source: SourceType, priority: number): AssetWiringRow {
     key: source,
     built: 'external',
     factory: externalFactory,
-    req: (tier) => ({ source, tier }),
+    req: (tier) => galaxyCatalogRequest(source, tier),
     demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
     priority,
   };
@@ -233,7 +234,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     key: Source.Synthetic,
     built: 'external',
     factory: externalFactory,
-    req: (tier) => ({ source: Source.Synthetic, tier }),
+    req: (tier) => galaxyCatalogRequest(Source.Synthetic, tier),
     demand: (ctx) => ctx.request('syntheticFallback'),
     // Ahead of everything real: only demanded when the real catalogs failed.
     priority: 5,
@@ -265,7 +266,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   {
     key: 'filaments',
     factory: (deps) => createFilamentSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
+    req: (tier) => ({ small: tier === 'small' }),
     demand: (ctx) => ctx.settings.filaments.enabled,
     priority: 80, // cosmic-web overlays sit behind the catalogs they are drawn over
   },

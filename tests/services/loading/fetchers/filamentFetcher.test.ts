@@ -23,26 +23,22 @@ const emptyFilamentBuffer = (): ArrayBuffer => {
 };
 
 describe('filamentFetcher (URL routing)', () => {
-  it('uses filaments-small.bin for small tier', async () => {
+  it('the filament fetcher picks its file from the request flag', async () => {
     fetch.mock.mockResolvedValue(new Response(emptyFilamentBuffer(), { status: 200 }));
-    await filamentFetcher({ tier: 'small' }, new AbortController().signal, () => {});
+    await filamentFetcher({ small: true }, new AbortController().signal, () => {});
     expect(fetch.mock.mock.calls[0]?.[0]).toContain('filaments-small.bin');
-  });
 
-  it('uses filaments.bin for medium and large', async () => {
-    for (const tier of ['medium', 'large'] as const) {
-      fetch.mock.mockReset();
-      fetch.mock.mockResolvedValue(new Response(emptyFilamentBuffer(), { status: 200 }));
-      await filamentFetcher({ tier }, new AbortController().signal, () => {});
-      expect(fetch.mock.mock.calls[0]?.[0]).toMatch(/\/filaments\.bin$/);
-    }
+    fetch.mock.mockReset();
+    fetch.mock.mockResolvedValue(new Response(emptyFilamentBuffer(), { status: 200 }));
+    await filamentFetcher({ small: false }, new AbortController().signal, () => {});
+    expect(fetch.mock.mock.calls[0]?.[0]).toMatch(/\/filaments\.bin$/);
   });
 });
 
 describe('filamentFetcher (success path)', () => {
   it('decodes the response body into a FilamentCloud', async () => {
     fetch.mock.mockResolvedValue(new Response(emptyFilamentBuffer(), { status: 200 }));
-    const cloud = await filamentFetcher({ tier: 'small' }, new AbortController().signal, () => {});
+    const cloud = await filamentFetcher({ small: true }, new AbortController().signal, () => {});
     // An empty-cloud round-trip survives encode→fetch→decode.  Specific
     // shape (vertex array layout) is tested in filamentBinaryFormat
     // round-trip tests — here we only need to know the decoder ran
@@ -59,7 +55,7 @@ describe('filamentFetcher (error path)', () => {
   it('propagates a non-2xx HTTP status', async () => {
     fetch.mock.mockResolvedValue(new Response('not found', { status: 404 }));
     await expect(
-      filamentFetcher({ tier: 'small' }, new AbortController().signal, () => {}),
+      filamentFetcher({ small: true }, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 });

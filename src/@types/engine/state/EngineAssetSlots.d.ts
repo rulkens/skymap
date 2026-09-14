@@ -42,7 +42,7 @@ export type EngineAssetSlots = {
    * null-guards `state.gpu.starCatalogRenderer` instead of closing over it.
    */
   starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
-  /** Loaded once at boot and NOT swapped on tier change — see `filamentFetcher.ts`. */
+  /** Two files across the three tiers, so it reloads only across the small boundary. */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
   /** Eager at boot; no `commit` — the subscriber dispatches the parsed array into the `engine` slice. */
   famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, CompanionAssetReq> | null;
