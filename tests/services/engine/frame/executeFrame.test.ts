@@ -593,15 +593,15 @@ describe('executeFrame', () => {
     expect(secondDepth?.depthLoadOp).toBe('load');
   });
 
-  it("a step's explicit depthLoad overrides the first-touch rule in both directions", () => {
+  it("a step's explicit depth overrides the first-touch rule in both directions", () => {
     // Same two-step shape as above, but each step names its own depth op: the
     // first loads where the rule would clear, the second clears where the rule
     // would load (the restart a back-to-front slab run needs mid-frame).
     const env = makeEncoderEnv();
     const a = makeContentPass({ name: 'a' });
     const program: FrameStep[] = [
-      { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'load', passes: [a] },
-      { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'clear', passes: [a] },
+      { kind: 'render', target: 'foreground:0', slab: COSMO, depth: 'load', passes: [a] },
+      { kind: 'render', target: 'foreground:0', slab: COSMO, depth: 'clear', passes: [a] },
     ];
     const { args } = makeArgs({ program, env });
     executeFrame(args);

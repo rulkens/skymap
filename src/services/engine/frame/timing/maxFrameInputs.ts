@@ -18,6 +18,9 @@ export const MAX_FRAME_INPUTS: FrameInputs = {
   foregroundChain: [NEAR0, ...Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2)],
   // All 6 faces, so the capture rows exist even when the lensing band is off.
   skyCubemapFacesToCapture: [0, 1, 2, 3, 4, 5],
-  // Every capacity index: Sgr A*'s painter-order row moves with the live bodies.
-  lensBodySlabs: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
+  bodyRowSlabs: {
+    // Every capacity index: Sgr A*'s painter-order row moves with the live bodies.
+    lens: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
+    insideAtmosphere: [],
+  },
 };

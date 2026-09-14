@@ -156,8 +156,8 @@ export function renderFrame(input: RenderFrameInput): void {
   // accepted.
   const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
   let skyCubemapFacesToCapture: readonly CubeFace[] = [];
-  // Sgr A*'s own body-m slab row this frame: the `lens` line expands to the
-  // (hdr, BODY[k]) step off it. Resolved here, not in the expansion,
+  // Sgr A*'s own body-m slab row this frame: the `slab: 'lens'` line expands
+  // to the (hdr, BODY[k]) step off it. Resolved here, not in the expansion,
   // because the row's painter-order index comes from `deriveSlabs` (computed
   // upstream of this function) — the same "resolve here, hand data down"
   // split `earthSlab` in `runFrame.ts` already follows for the identical
@@ -219,7 +219,10 @@ export function renderFrame(input: RenderFrameInput): void {
       // foreground:0 line expands over, one step per entry.
       foregroundChain: foregroundChainOrder(ctx.slabs),
       skyCubemapFacesToCapture,
-      lensBodySlabs: sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
+      bodyRowSlabs: {
+        lens: sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
+        insideAtmosphere: [],
+      },
     }),
     strategy,
     timing: timingService,

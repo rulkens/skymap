@@ -140,20 +140,27 @@ function colorAttachment(
 }
 
 /**
- * A render step's depth load-op. Absent `depthLoad` ⇒ the SAME first-touch
+ * A render step's depth load-op. `'clear'` and `'load'` pass through — depth is
+ * the only attachment where sharing a target must not imply sharing its
+ * contents. `'sample'` and an absent value fall to the SAME first-touch
  * `touched` fact that flips the colour load-op: the frame's first pass against
  * a depth target clears, later passes load and so preserve the occlusion
- * already written. A step that declares one overrides that — depth is the only
- * attachment where sharing a target must not imply sharing its contents.
+ * already written — `'sample'` falls there rather than getting a case of its
+ * own because it attaches no depth at all, so the op it gets is never read.
  */
-function depthLoadOpFor(depthLoad: 'clear' | 'load' | undefined, touched: boolean): GPULoadOp {
-  if (depthLoad) return depthLoad;
+function depthLoadOpFor(
+  depth: 'clear' | 'load' | 'sample' | undefined,
+  touched: boolean,
+): GPULoadOp {
+  if (depth === 'clear' || depth === 'load') return depth;
   return touched ? 'load' : 'clear';
 }
 
 /**
  * Depth attachment for a target row that declares `depth`, spread into the
- * pass descriptor — `{}` (no key) for depthless rows. Composite steps never
+ * pass descriptor — `{}` (no key) for depthless rows, and for a step declaring
+ * `'sample'`, which binds the row's depth as a texture instead: WebGPU forbids
+ * sampling a view that is attached to the same pass. Composite steps never
  * call this — their dest rows are depthless — so the depth budget is confined
  * to the opaque render passes that own it.
  *
@@ -163,11 +170,12 @@ function depthLoadOpFor(depthLoad: 'clear' | 'load' | undefined, touched: boolea
 function depthAttachment(
   ctx: ReadyFrameContext,
   target: string,
+  depth: 'clear' | 'load' | 'sample' | undefined,
   depthLoadOp: GPULoadOp,
   reversedZ: boolean,
 ): { depthStencilAttachment?: GPURenderPassDepthStencilAttachment } {
   const spec = ctx.renderTargets.specOf(target);
-  if (!spec.depth) return {};
+  if (!spec.depth || depth === 'sample') return {};
   return {
     depthStencilAttachment: {
       view: ctx.renderTargets.depthViewOf(target),
@@ -274,7 +282,8 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           // rendered this frame". Capture steps read the face-keyed set
           // instead. See the module header.
           alreadyTouched: faceKey === null ? touched.has(step.target) : touchedFaces.has(faceKey),
-          depthLoadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
+          depth: step.depth,
+          depthLoadOp: depthLoadOpFor(step.depth, touched.has(step.target)),
         });
         touched.add(step.target);
         if (faceKey !== null) touchedFaces.add(faceKey);
@@ -344,6 +353,7 @@ function renderGroup(
     view: SlabView;
     groupKey: string;
     alreadyTouched: boolean;
+    depth?: 'clear' | 'load' | 'sample';
     depthLoadOp: GPULoadOp;
   },
 ): void {
@@ -359,6 +369,7 @@ function renderGroup(
     view,
     groupKey,
     alreadyTouched,
+    depth,
     depthLoadOp,
   } = p;
   const targetView = viewFor(target, ctx, swapView, face);
@@ -369,7 +380,7 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, alreadyTouched)],
-      ...depthAttachment(ctx, target, depthLoadOp, view.slab.reversedZ),
+      ...depthAttachment(ctx, target, depth, depthLoadOp, view.slab.reversedZ),
       // Bill the whole group against its per-step group slot — the one honest
       // timing a single-pass shape can give (per-layer slots are the
       // `perLayerTimed` path's alone). A no-op timing service returns undefined,
@@ -399,7 +410,7 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${slot}`,
       colorAttachments: [colorAttachment(ctx, target, targetView, touchedBefore)],
-      ...depthAttachment(ctx, target, i === 0 ? depthLoadOp : 'load', view.slab.reversedZ),
+      ...depthAttachment(ctx, target, depth, i === 0 ? depthLoadOp : 'load', view.slab.reversedZ),
       ...timestampSpread(timing, slot),
     });
     contentPass.draw(pass, view, ctx, state);

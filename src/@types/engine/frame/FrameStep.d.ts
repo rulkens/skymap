@@ -21,13 +21,16 @@ export type FrameStep =
       /** The passes this step draws, in draw order. */
       passes: readonly ContentPass[];
       /**
-       * Depth load-op for this step's pass. Absent ⇒ the same first-touch rule
-       * the colour attachment follows (clear on the frame's first pass against
-       * the target, load after). Steps that SHARE a depth target but must not
-       * share its depth — successive slabs drawn back-to-front into one
-       * foreground row — declare `'clear'` to restart depth mid-frame.
+       * How this step's pass treats the target row's depth. Absent ⇒ the same
+       * first-touch rule the colour attachment follows (clear on the frame's
+       * first pass against the target, load after). Steps that SHARE a depth
+       * target but must not share its depth — successive slabs drawn
+       * back-to-front into one foreground row — declare `'clear'` to restart
+       * depth mid-frame. `'sample'` attaches no depth at all: it is how a step
+       * says it BINDS the row's depth as a texture, which WebGPU forbids while
+       * the same view is attached to the pass.
        */
-      depthLoad?: 'clear' | 'load';
+      depth?: 'clear' | 'load' | 'sample';
       /**
        * Which array layer of a `fixedSizePx` target this step writes — today
        * only the black-hole lens's 6-face sky-cubemap capture. Absent for every

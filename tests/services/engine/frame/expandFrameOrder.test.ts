@@ -44,7 +44,7 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
     bloomEnabled: false,
     foregroundChain: [NEAR0],
     skyCubemapFacesToCapture: [],
-    lensBodySlabs: [],
+    bodyRowSlabs: { lens: [], insideAtmosphere: [] },
     ...over,
   });
 }
@@ -70,7 +70,7 @@ describe('expandFrameOrder', () => {
       bloomEnabled: true,
       foregroundChain: [NEAR0],
       skyCubemapFacesToCapture: [],
-      lensBodySlabs: [],
+      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
     });
 
     const foregroundAt = program.findIndex(
@@ -106,7 +106,7 @@ describe('expandFrameOrder', () => {
       bloomEnabled: true,
       foregroundChain: [NEAR0],
       skyCubemapFacesToCapture: [],
-      lensBodySlabs: [2],
+      bodyRowSlabs: { lens: [2], insideAtmosphere: [] },
     });
 
     const slots = program
@@ -122,7 +122,7 @@ describe('expandFrameOrder', () => {
       bloomEnabled: true,
       foregroundChain: [NEAR0],
       skyCubemapFacesToCapture: [],
-      lensBodySlabs: [],
+      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
     });
 
     expect(program.some((step) => step.kind === 'render' && step.target === 'zoa')).toBe(false);
@@ -141,7 +141,7 @@ describe('expandFrameOrder', () => {
         bloomEnabled: false,
         foregroundChain: [],
         skyCubemapFacesToCapture: [],
-        lensBodySlabs: [],
+        bodyRowSlabs: { lens: [], insideAtmosphere: [] },
       },
     );
 
@@ -183,7 +183,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // Chain [NEAR0, 3, 2] — an out-of-numeric-order chain, as a painter-order
     // chain legitimately is (index order is assignment order, not draw order):
     // three consecutive foreground:0 steps in that exact sequence, each
-    // `depthLoad: 'clear'` so a nearer row's depth test starts fresh rather than
+    // `depth: 'clear'` so a nearer row's depth test starts fresh rather than
     // fighting a farther row's. The following composite is unmoved.
     const steps = program({ foregroundChain: [NEAR0, 3, 2] });
     const first = steps.findIndex(
@@ -192,7 +192,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(
       steps
         .slice(first, first + 3)
-        .map((step) => (step.kind === 'render' ? [step.slab, step.depthLoad] : null)),
+        .map((step) => (step.kind === 'render' ? [step.slab, step.depth] : null)),
     ).toEqual([
       [NEAR0, 'clear'],
       [3, 'clear'],
@@ -228,7 +228,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // Positioned so the lens's OVER blend occludes the (hdr, NEAR0) roster
     // already accumulated above it, and so the unwarped POST_LENSING line lands
     // on top of it.
-    const steps = program({ lensBodySlabs: [4] });
+    const steps = program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } });
     const rosterIdx = steps.findIndex(
       (step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0,
     );
@@ -242,6 +242,52 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
 
   it('emits no lens step for an empty lensing list (zero-cost outside the band)', () => {
     expect(program().some((step) => step.kind === 'render' && step.slab >= 2)).toBe(false);
+  });
+
+  it('a render line with a BodyRowSource slab expands once per resolved row', () => {
+    // Painter order is the frame's, not the index's: the rows come out in the
+    // order the list holds them, so a nearer row drawn second stays second.
+    const steps = expandFrameOrder(
+      [
+        { kind: 'render', target: 'hdr', slab: COSMO, passes: ['a'] },
+        { kind: 'render', target: 'foreground:0', slab: 'lens', passes: ['b'] },
+      ],
+      [fakePass('a'), fakePass('b')],
+      {
+        tone: TONE,
+        bloomEnabled: false,
+        foregroundChain: [],
+        skyCubemapFacesToCapture: [],
+        bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [] },
+      },
+    );
+
+    expect(
+      steps
+        .filter((step) => step.kind === 'render' && step.target === 'foreground:0')
+        .map((step) => (step.kind === 'render' ? step.slab : null)),
+    ).toEqual([3, 2]);
+  });
+
+  it('a render line with an empty BodyRowSource list emits no step', () => {
+    const steps = expandFrameOrder(
+      [
+        { kind: 'render', target: 'hdr', slab: COSMO, passes: ['a'] },
+        { kind: 'render', target: 'foreground:0', slab: 'lens', passes: ['b'] },
+      ],
+      [fakePass('a'), fakePass('b')],
+      {
+        tone: TONE,
+        bloomEnabled: false,
+        foregroundChain: [],
+        skyCubemapFacesToCapture: [],
+        bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      },
+    );
+
+    expect(steps.some((step) => step.kind === 'render' && step.target === 'foreground:0')).toBe(
+      false,
+    );
   });
 
   it('exactly one composite is tone-mapped', () => {

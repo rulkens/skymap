@@ -30,7 +30,7 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
     bloomEnabled: false,
     foregroundChain: [NEAR0],
     skyCubemapFacesToCapture: [],
-    lensBodySlabs: [],
+    bodyRowSlabs: { lens: [], insideAtmosphere: [] },
     ...over,
   });
 }

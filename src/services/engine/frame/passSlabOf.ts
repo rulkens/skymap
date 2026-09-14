@@ -14,12 +14,13 @@ export function passSlabOf(order: readonly FrameStepSpec[]): ReadonlyMap<string,
     // A capture line contributes nothing: it RE-draws passes another line
     // already draws, through a cube face rather than a slab (`checkFrameOrder`).
     if (spec.kind === 'render') {
-      for (const name of spec.passes) slabs.set(name, spec.slab);
+      // A `BodyRowSource` slab resolves to body-m rows, so it takes the same
+      // widening — it has no single index for pick to rasterise through.
+      const slab = typeof spec.slab === 'number' ? spec.slab : 'body';
+      for (const name of spec.passes) slabs.set(name, slab);
     } else if (spec.kind === 'foreground') {
       for (const name of spec.near0Passes) slabs.set(name, NEAR0);
       for (const name of spec.bodyPasses) slabs.set(name, 'body');
-    } else if (spec.kind === 'lens') {
-      for (const name of spec.passes) slabs.set(name, 'body');
     }
   }
   return slabs;

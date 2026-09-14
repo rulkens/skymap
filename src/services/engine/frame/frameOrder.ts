@@ -133,7 +133,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // wrote; and BEFORE the line below, so those stay unwarped on top of it.
   // Outside the fade band the frame resolves no lensing row and this emits
   // nothing.
-  { kind: 'lens', target: 'hdr', passes: ['sgr-a-star-lensing'] },
+  { kind: 'render', target: 'hdr', slab: 'lens', passes: ['sgr-a-star-lensing'] },
   // The roster slice that draws unwarped ON TOP of the lens: the sub-pixel
   // bodies (the glints branch of the body partition) as brightness-scaled
   // additive points, sibling of `star-points`. Outside the band the lens line
