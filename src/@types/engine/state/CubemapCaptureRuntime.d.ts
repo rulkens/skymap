@@ -1,6 +1,6 @@
 /**
  * CubemapCaptureRuntime — cross-frame memory for ONE `CUBEMAP_CAPTURES` row's
- * bake. Single-writer: only `renderFrame` writes it, only the row's
+ * bake. Single-writer: only `scheduleCubemapCaptures` writes it, only the row's
  * `allocateWhen` (`renderTargets.ts`) reads it.
  *
  * Both `last…` fields are LAST-frame values, not live ones: `allocateWhen` runs

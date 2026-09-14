@@ -281,9 +281,9 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     //
     // The one row with an `allocateWhen`: 1024² × 6 × 8 B is 50 MB, and the
     // lens draws only within ~500 AU of Sgr A*, so the texture exists only
-    // while the band does. `renderFrame` writes the band flag and reconciles
-    // on its edge, so the row is there on the band-entry frame — the frame
-    // that sweeps all six faces. Once allocated it outlives a brief close by
+    // while the band does. `scheduleCubemapCaptures` writes the band flag and
+    // reconciles on its edge, so the row is there on the band-entry frame —
+    // the frame that sweeps all six faces. Once allocated it outlives a brief close by
     // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (a camera dithering across the band
     // edge would otherwise destroy + reallocate the row every frame); a row
     // never allocated does not spring into existence from proximity alone —

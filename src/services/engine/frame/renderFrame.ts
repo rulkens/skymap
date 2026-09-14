@@ -2,13 +2,12 @@
  * renderFrame — the per-frame WebGPU command-encoder lifecycle: the
  * once-per-frame focus-uniform write, encoder create + swap-view acquire +
  * submit, the timing frame window, and the one call into
- * `scheduleCubemapCaptures` that decides this frame's environment bakes.
+ * `scheduleCubemapCaptures`.
  *
  * Order of operations is DATA (`FRAME_ORDER`, expanded by `expandFrameOrder`)
- * walked by `executeFrame`, so this module knows no individual pass; the
- * strategy fork, the first-touch clear and per-step slab resolution live
- * there. The pick-debug overlay, the render-on-demand decision and camera
- * mutation stay in `runFrame`.
+ * walked by `executeFrame`, so this module knows no individual pass. The
+ * pick-debug overlay, the render-on-demand decision and camera mutation stay
+ * in `runFrame`.
  */
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';

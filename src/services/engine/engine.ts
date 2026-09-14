@@ -122,9 +122,9 @@ export function createEngine(
   });
 
   // One bake-bookkeeping entry per capture row — false/infinity/null until the
-  // first frame its band goes active; `renderFrame` is the sole writer
-  // thereafter. Infinity, not 0: far outside every band pre-boot, so a row's
-  // hysteresis margin can't mistake "never measured" for "just closed".
+  // first frame its band goes active; `scheduleCubemapCaptures` is the sole
+  // writer thereafter. Infinity, not 0: far outside every band pre-boot, so a
+  // row's hysteresis margin can't mistake "never measured" for "just closed".
   const cubemapCaptures = Object.fromEntries(
     (Object.keys(CUBEMAP_CAPTURES) as CubemapCaptureKey[]).map((key) => [
       key,

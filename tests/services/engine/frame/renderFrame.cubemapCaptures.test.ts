@@ -106,9 +106,8 @@ function makeCtx(
         if (id === 'swap') return { format: 'bgra8unorm' };
         throw new Error(`mock renderTargets: no spec row for '${id}'`);
       },
-      // renderFrame reads the ALLOCATED size, not the spec's
-      // `fixedSizePx.size` (a live setting) — see renderFrame.ts's
-      // `faceSizePx` derivation.
+      // The sweep reads the ALLOCATED size, not the spec's `fixedSizePx.size`
+      // (a live setting) — see `scheduleCubemapCaptures`'s `faceSizePx`.
       sizeOf: (id: string) => {
         if (id === 'sky-cubemap') return { width: faceSizePx, height: faceSizePx };
         throw new Error(`mock renderTargets: no allocated size for '${id}'`);

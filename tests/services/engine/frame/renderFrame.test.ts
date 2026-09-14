@@ -573,8 +573,8 @@ function makeInput(
         // The cubemap-capture bake bookkeeping — the two `last*` fields update
         // every frame; `bakedSettings` only changes while the row's band is
         // active. The fixture camera sits Mpc-scale away from Sgr A*, so the
-        // band stays closed and `facesToCapture` stays empty; see
-        // `renderFrame.ts`'s in-band block.
+        // band stays closed and nothing is scheduled; see
+        // `scheduleCubemapCaptures`.
         cubemapCaptures: {
           sgrAStar: {
             lastBandActive: false,

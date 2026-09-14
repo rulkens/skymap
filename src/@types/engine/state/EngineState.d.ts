@@ -47,7 +47,7 @@ export type EngineState = {
   cameraRuntime: CameraRuntime;
   /**
    * Per-`CUBEMAP_CAPTURES`-row bake bookkeeping — render state, not camera
-   * state; written by `renderFrame`, read by each row's target's
+   * state; written by `scheduleCubemapCaptures`, read by each row's target's
    * `allocateWhen`. Total over the key union (seeded in `engine.ts`), so every
    * read is a plain property access; entries are mutated in place.
    */
