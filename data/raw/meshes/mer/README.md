@@ -49,6 +49,10 @@ products — regenerate them, don't archive them. The GLB carries the normal
 atlas and the metallicRoughness pair the glTF exporter packs from the last two,
 so `buildMeshes` substitutes nothing: `substituted: []`. Every material here
 authors metallic 0 and roughness 0.5, so those two atlases bake near-flat.
+Two materials carry a SECOND Material Output targeted at Cycles and fed by a
+bare Diffuse BSDF; that output wins over the Principled the file renders with,
+so the pre-bake drops it — left in, those parts bake black albedo (a Diffuse
+node emits nothing) and roughness 1.
 
 Two things about this file bite:
 

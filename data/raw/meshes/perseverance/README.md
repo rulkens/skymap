@@ -69,9 +69,10 @@ packed textures (1024²/512²/256²), an armature and 23 animation actions
 reach the normal atlas — but only because the pre-bake re-points their Normal
 Map nodes at the renamed UV layer; a dangling name bakes flat in silence.
 Roughness spans 0.2–1.0 and about half the baked surface is fully metallic
-(aluminium, brass, gold foil, gunmetal). Those metal texels come out BLACK in
-the albedo atlas: Cycles' DIFFUSE colour pass of a metal is zero by definition,
-so the metal's own tint lives nowhere in the bake.
+(aluminium, brass, gold foil, gunmetal). Their tint reaches the albedo atlas
+only because that row bakes Base Color through the emission output: Cycles'
+DIFFUSE colour pass of a metal is zero by definition, and baked that way 100 %
+of the metal texels came out black.
 
 **Units: metres, +Z up (Blender frame).** Wheels measure 0.526 m across against
 the real 0.525 m, so the model feeds the bake in native metres with no rescale.

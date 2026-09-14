@@ -30,38 +30,45 @@ def socket_state(socket):
     return source, tuple(value) if hasattr(value, "__len__") else value
 
 
-def swap_metallic_to_emission(materials):
-    """Cycles has no metallic bake, so this row borrows the emission output:
-    every Principled node's Metallic — a constant as the grey `(m, m, m)`, an
-    image re-linked socket to socket — drives Emission Color at strength 1 for
-    the duration of the bake. `use_pass_direct`/`use_pass_indirect` are off, so
-    EMIT returns that value unlit. The returned undo is what keeps the swap from
+def swap_to_emission(socket_name):
+    """Cycles has no metallic bake, and its DIFFUSE colour pass of a metal is
+    zero — so both rows that need a raw Principled input borrow the emission
+    output instead: the named socket (a scalar as the grey `(v, v, v)`, an image
+    re-linked socket to socket) drives Emission Color at strength 1 for the
+    duration of the bake. `use_pass_direct`/`use_pass_indirect` are off, so EMIT
+    returns that value unlit. The returned undo is what keeps the swap from
     leaking into the atlases baked after it."""
-    undo = []
-    plain = 0
-    for mat in materials:
-        if mat is None or not mat.use_nodes:
-            continue
-        tree = mat.node_tree
-        principled = [n for n in tree.nodes if n.type == "BSDF_PRINCIPLED"]
-        plain += len(principled) == 0
-        for node in principled:
-            colour = node.inputs[EMISSION_COLOUR]
-            strength = node.inputs[EMISSION_STRENGTH]
-            undo.append((tree, node, socket_state(colour), socket_state(strength)))
-            for link in list(colour.links) + list(strength.links):
-                tree.links.remove(link)
-            metallic = node.inputs["Metallic"]
-            if metallic.links:
-                tree.links.new(colour, metallic.links[0].from_socket)
-            else:
-                m = metallic.default_value
-                colour.default_value = (m, m, m, 1.0)
-            strength.default_value = 1.0
-    if plain:
-        log("metallic pass: %d materials have no Principled node — whatever they emit "
-            "bakes as their metallic" % plain)
-    return lambda: restore_emission(undo)
+
+    def prepare(materials):
+        undo = []
+        plain = 0
+        for mat in materials:
+            if mat is None or not mat.use_nodes:
+                continue
+            tree = mat.node_tree
+            principled = [n for n in tree.nodes if n.type == "BSDF_PRINCIPLED"]
+            plain += len(principled) == 0
+            for node in principled:
+                colour = node.inputs[EMISSION_COLOUR]
+                strength = node.inputs[EMISSION_STRENGTH]
+                undo.append((tree, node, socket_state(colour), socket_state(strength)))
+                for link in list(colour.links) + list(strength.links):
+                    tree.links.remove(link)
+                socket = node.inputs[socket_name]
+                if socket.links:
+                    tree.links.new(colour, socket.links[0].from_socket)
+                elif hasattr(socket.default_value, "__len__"):
+                    colour.default_value = tuple(socket.default_value)
+                else:
+                    v = socket.default_value
+                    colour.default_value = (v, v, v, 1.0)
+                strength.default_value = 1.0
+        if plain:
+            log("%s pass: %d materials have no Principled node — whatever they emit "
+                "bakes as their %s" % (socket_name, plain, socket_name))
+        return lambda: restore_emission(undo)
+
+    return prepare
 
 
 def restore_emission(undo):
@@ -81,10 +88,10 @@ def restore_emission(undo):
 # material values saved through the sRGB view transform comes out gamma-bent,
 # and the runtime decodes `_normal` and `_mr` linearly.
 BAKE_PASSES = [
-    ("albedo", dict(type="DIFFUSE", pass_filter={"COLOR"}), "sRGB", None),
+    ("albedo", dict(type="EMIT"), "sRGB", swap_to_emission("Base Color")),
     ("normal", dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None),
     ("roughness", dict(type="ROUGHNESS"), "Non-Color", None),
-    ("metallic", dict(type="EMIT"), "Non-Color", swap_metallic_to_emission),
+    ("metallic", dict(type="EMIT"), "Non-Color", swap_to_emission("Metallic")),
 ]
 
 
@@ -176,6 +183,29 @@ def fix_colour_management():
                 node.image.colorspace_settings.name = "sRGB"
                 fixed += 1
     return fixed, relinked
+
+
+def unify_shader_outputs():
+    """Both .blend rovers keep a SECOND Material Output, targeted at Cycles and
+    fed by a bare Diffuse BSDF beside the Principled the file renders with. A
+    Cycles-targeted output wins, so the bake reads that node and never sees the
+    Principled every PBR row samples — albedo emits nothing (black), roughness
+    is the Diffuse node's. Keeping the active output, retargeted at ALL, is what
+    puts every row on one shader."""
+    dropped = 0
+    for mat in bpy.data.materials:
+        if not mat.use_nodes:
+            continue
+        tree = mat.node_tree
+        outputs = [n for n in tree.nodes if n.type == "OUTPUT_MATERIAL"]
+        if len(outputs) < 2:
+            continue
+        keep = next((n for n in outputs if n.is_active_output), outputs[0])
+        keep.target = "ALL"
+        for node in [n for n in outputs if n is not keep]:
+            tree.nodes.remove(node)
+            dropped += 1
+    return dropped
 
 
 def keepers(cfg, scene):
@@ -452,6 +482,7 @@ def main():
     scene = load(cfg)
     log("%s: loaded %s at frame %s" % (key, os.path.basename(cfg["src"]), cfg["frame"]))
     log("colour management: %d images decoded as sRGB, %d relinked" % fix_colour_management())
+    log("dropped %d rival material outputs" % unify_shader_outputs())
     keep, dropped, marked = keepers(cfg, scene)
     log("keeping %d meshes; left behind %d face-less/matless and %d marker objects"
         % (len(keep), dropped, marked))
