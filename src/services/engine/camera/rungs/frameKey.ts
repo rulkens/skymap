@@ -1,8 +1,4 @@
-/**
- * The frame's debug/log grammar (`CameraStateSection.tsx`'s `frameLabel`,
- * `logCameraState` from Task 2 on): the world arm bare, a body arm prefixed
- * so a body id that collides with 'absolute' cannot alias it.
- */
+/** The frame's debug/log grammar; the `body:` prefix exists so a body id 'absolute' can't collide with the world arm. */
 import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
 
 export function frameKey(frame: PoseFrame): string {

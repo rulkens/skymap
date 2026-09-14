@@ -1,6 +1,2 @@
-/**
- * The two camera-pose rungs: the world arm ('absolute') and a body-fixed arm
- * ('body') (spec §2.1). One kind per storage representation — `FrameOf` and
- * `PoseOf` key off this, so a third rung starts here.
- */
+/** The rung kind IS the camera regime; a new rung is a new key here plus a row in CAMERA_RUNGS — spec §2.1. */
 export type RungKind = 'absolute' | 'body';
