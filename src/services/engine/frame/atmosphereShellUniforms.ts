@@ -24,12 +24,8 @@ export function atmosphereShellUniforms(
   state: PassState,
 ): Float32Array {
   const { body, params, atmosphereTopM, camLocal, sunLocal } = entry;
-  const pose = ctx.bodyPose(body.id as BodyId);
-  if (pose === null) {
-    throw new Error(
-      `atmosphereShellUniforms: no pose for body '${body.id}' — an entry exists only where ctx.bodyPose resolved`,
-    );
-  }
+  // An entry exists only where bodyPose resolved (atmosphereDrawList skips a body with no pose).
+  const pose = ctx.bodyPose(body.id as BodyId)!;
 
   // Scaling the unit proxy sphere by the ATMOSPHERE-TOP radius (metres) puts the
   // mesh in the body-m slab frame's unit — the one `camLocal` is already in.

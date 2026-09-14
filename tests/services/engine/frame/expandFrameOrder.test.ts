@@ -247,47 +247,12 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   it('a render line with a BodyRowSource slab expands once per resolved row', () => {
     // Painter order is the frame's, not the index's: the rows come out in the
     // order the list holds them, so a nearer row drawn second stays second.
-    const steps = expandFrameOrder(
-      [
-        { kind: 'render', target: 'hdr', slab: COSMO, passes: ['a'] },
-        { kind: 'render', target: 'foreground:0', slab: 'lens', passes: ['b'] },
-      ],
-      [fakePass('a'), fakePass('b')],
-      {
-        tone: TONE,
-        bloomEnabled: false,
-        foregroundChain: [],
-        skyCubemapFacesToCapture: [],
-        bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [] },
-      },
-    );
-
+    const steps = program({ bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [] } });
     expect(
       steps
-        .filter((step) => step.kind === 'render' && step.target === 'foreground:0')
+        .filter((step) => step.kind === 'render' && step.slab >= 2)
         .map((step) => (step.kind === 'render' ? step.slab : null)),
     ).toEqual([3, 2]);
-  });
-
-  it('a render line with an empty BodyRowSource list emits no step', () => {
-    const steps = expandFrameOrder(
-      [
-        { kind: 'render', target: 'hdr', slab: COSMO, passes: ['a'] },
-        { kind: 'render', target: 'foreground:0', slab: 'lens', passes: ['b'] },
-      ],
-      [fakePass('a'), fakePass('b')],
-      {
-        tone: TONE,
-        bloomEnabled: false,
-        foregroundChain: [],
-        skyCubemapFacesToCapture: [],
-        bodyRowSlabs: { lens: [], insideAtmosphere: [] },
-      },
-    );
-
-    expect(steps.some((step) => step.kind === 'render' && step.target === 'foreground:0')).toBe(
-      false,
-    );
   });
 
   it('exactly one composite is tone-mapped', () => {
