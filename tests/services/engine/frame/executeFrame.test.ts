@@ -274,7 +274,8 @@ function makeArgs(over: {
   state?: EngineState;
   env?: ReturnType<typeof makeEncoderEnv>;
   ctx?: ReadyFrameContext;
-  skyCubemapFaceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
+  /** The `sgrAStar` row's faces — wrapped into the keyed `captureContexts`. */
+  faceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
 }): { args: ExecuteFrameArgs; env: ReturnType<typeof makeEncoderEnv> } {
   const env = over.env ?? makeEncoderEnv();
   const args: ExecuteFrameArgs = {
@@ -285,7 +286,7 @@ function makeArgs(over: {
     strategy: over.strategy ?? 'merged',
     timing: over.timing ?? makeNoTiming(),
     swapView: SWAP_VIEW,
-    skyCubemapFaceContexts: over.skyCubemapFaceContexts,
+    captureContexts: over.faceContexts && new Map([['sgrAStar', over.faceContexts]]),
   };
   return { args, env };
 }
@@ -692,7 +693,7 @@ describe('executeFrame', () => {
     // A step carrying `face` must resolve its OWN camera (`enabled`/`draw`'s
     // `ctx`), not the frame-wide `args.ctx` — the runtime hand-off `renderFrame`
     // derives per scheduled face via `cubemapFaceContext` and threads in as
-    // `skyCubemapFaceContexts`. Two distinct fixture contexts stand in for two
+    // `faceContexts`. Two distinct fixture contexts stand in for two
     // faces' synthetic cameras; identity (`toBe`), not content, is what proves
     // routing, since a real face ctx and the frame ctx share the same shape.
     it("resolves each capture step's own face ctx, never the frame-wide ctx", () => {
@@ -715,11 +716,11 @@ describe('executeFrame', () => {
           passes: [contentPass],
         },
       ];
-      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
+      const faceContexts = new Map<CubeFace, ReadyFrameContext>([
         [0, face0Ctx],
         [1, face1Ctx],
       ]);
-      const { args } = makeArgs({ program, skyCubemapFaceContexts });
+      const { args } = makeArgs({ program, faceContexts });
       executeFrame(args);
 
       expect(contentPass.enabled).toHaveBeenCalledTimes(2);
@@ -747,13 +748,13 @@ describe('executeFrame', () => {
       ];
       // Map has no entry for face 2 — mirrors renderFrame omitting a face whose
       // cubemapFaceContext call returned null (pre-bootstrap frame).
-      const { args } = makeArgs({ program, skyCubemapFaceContexts: new Map() });
+      const { args } = makeArgs({ program, faceContexts: new Map() });
       expect(() => executeFrame(args)).not.toThrow();
       expect(contentPass.enabled).not.toHaveBeenCalled();
       expect(contentPass.draw).not.toHaveBeenCalled();
     });
 
-    it('an ordinary (non-face) render step is unaffected by an absent skyCubemapFaceContexts map', () => {
+    it('an ordinary (non-face) render step is unaffected by an absent faceContexts map', () => {
       const contentPass = makeContentPass({ name: 'a' });
       const program: FrameStep[] = [
         { kind: 'render', target: 'hdr', slab: COSMO, passes: [contentPass] },
@@ -778,10 +779,10 @@ describe('executeFrame', () => {
         }),
       );
       const faceCtx = makeCtx();
-      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>(
+      const faceContexts = new Map<CubeFace, ReadyFrameContext>(
         [0, 1, 2, 3, 4, 5].map((face) => [face as CubeFace, faceCtx]),
       );
-      const { args, env } = makeArgs({ program, skyCubemapFaceContexts });
+      const { args, env } = makeArgs({ program, faceContexts });
       executeFrame(args);
 
       expect(contentPass.draw).toHaveBeenCalledTimes(6);
@@ -819,7 +820,7 @@ describe('executeFrame', () => {
       const faceCtx = makeCtx();
       const { args, env } = makeArgs({
         program,
-        skyCubemapFaceContexts: new Map([[0, faceCtx]]),
+        faceContexts: new Map([[0, faceCtx]]),
       });
       executeFrame(args);
 
@@ -851,11 +852,11 @@ describe('executeFrame', () => {
         },
       ];
       const faceCtx = makeCtx();
-      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
+      const faceContexts = new Map<CubeFace, ReadyFrameContext>([
         [0, faceCtx],
         [1, faceCtx],
       ]);
-      const { args, env } = makeArgs({ program, skyCubemapFaceContexts });
+      const { args, env } = makeArgs({ program, faceContexts });
       executeFrame(args);
 
       expect(attachmentOfDraw(env, contentPass, 0).loadOp).toBe('clear');

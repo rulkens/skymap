@@ -1,8 +1,8 @@
 /**
  * renderFrame — the per-frame WebGPU command-encoder lifecycle: the
  * once-per-frame focus-uniform write, encoder create + swap-view acquire +
- * submit, the timing frame window, and the lens capture's cross-frame
- * bookkeeping on `state.cubemapCaptures`.
+ * submit, the timing frame window, and the one call into
+ * `scheduleCubemapCaptures` that decides this frame's environment bakes.
  *
  * Order of operations is DATA (`FRAME_ORDER`, expanded by `expandFrameOrder`)
  * walked by `executeFrame`, so this module knows no individual pass; the
@@ -14,7 +14,7 @@
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import { executeFrame } from './executeFrame';
 import { expandFrameOrder } from './expandFrameOrder';
 import { FRAME_ORDER } from './frameOrder';
@@ -22,18 +22,13 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import { cubemapFaceContext } from './cubemapFaceContext';
-import { sceneBodyStates } from './sceneBodyStates';
 import { lensBodySlabs } from './lensBodySlabs';
-import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
-import { fadeBand } from '../../../utils/math/fadeBand';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
+import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
  * has the buffer queued. Order of operations is `FRAME_ORDER`'s expansion,
- * walked by `executeFrame`; the visual output is identical to the
- * pre-unification inline body.
+ * walked by `executeFrame`.
  */
 export function renderFrame(input: RenderFrameInput): void {
   const { ctx, state, device, context, timingService } = input;
@@ -67,84 +62,7 @@ export function renderFrame(input: RenderFrameInput): void {
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
 
-  // The black-hole lens's sky-cubemap bake. The band keys on the CAMERA's
-  // distance from the row's anchor, the same quantity + region every
-  // `sgrAStarLensing`-band consumer reads. See `CubemapCaptureRuntime`.
-  const capture = CUBEMAP_CAPTURES.sgrAStar;
-  const captureRuntime = state.cubemapCaptures.sgrAStar;
-  const anchorDistanceMpc = regionRelativeDistanceMpc(
-    ctx.drawCamPos,
-    capture.anchor,
-    sceneBodyStates(state, ctx),
-  );
-  // Recorded unconditionally (not just while the band is active) — the
-  // `sky-cubemap` row's release-margin check needs the distance on the very
-  // frame the band closes, not one frame later.
-  captureRuntime.lastAnchorDistanceMpc = anchorDistanceMpc;
-  const bandActive = fadeBand(capture.band, anchorDistanceMpc) > 0;
-
-  // The `sky-cubemap` row's 50 MB exists only while the band does (its
-  // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`
-  // runs BEFORE this frame's camera pose is produced, so it cannot see the
-  // band open; the edge reconciles here instead. `bakedSettings` is `null`
-  // whenever the band is inactive (seeded null, reset null on close below),
-  // so the band-entry frame always finds nothing baked and sweeps all six
-  // faces — it needs the row to already exist.
-  if (bandActive !== captureRuntime.lastBandActive) {
-    captureRuntime.lastBandActive = bandActive;
-    ctx.renderTargets.reconcile(state, ctx.canvasSize);
-    if (!bandActive) captureRuntime.bakedSettings = null;
-  }
-
-  // The captured "sky" is kpc away and static: a 1024² face covers 90°, so
-  // one texel is ~1.5 mrad, and shifting content at 8 kpc by a texel needs
-  // ~12 pc of camera travel — the whole lens band is 500 AU. One bake is
-  // texel-exact for the entire band; the lens shader already samples the
-  // cubemap as at-infinity, so there is no pinned-eye tracking to do.
-  //
-  // A settings-reference change re-bakes. Dropped from the key on purpose:
-  // `tier` — a tier swap dissolves through `fades.fadeTo` (`dissolveCatalogBuffer.ts`),
-  // so `rosterSettling` already catches it; `faceSizePx` — the resolution
-  // knob is a settings write, and `reconcile` (above) reallocates the row
-  // earlier in the same `runFrame`, so the settings-ref bake lands in the
-  // new texture; `selection` — a stale selection halo in the lensed sky is
-  // accepted.
-  const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
-  let skyCubemapFacesToCapture: readonly CubeFace[] = [];
-  if (bandActive) {
-    // Two roster inputs move without a settings write: a source-visibility
-    // ramp (settings write fires once, at the ramp's START), and a
-    // famous-galaxy thumbnail's atlas upload + 400 ms load fade (arrives
-    // async, after the ramp has already settled).
-    const rosterSettling =
-      state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
-      (state.subsystems.texturedDisks?.hasInFlightWork() ?? false);
-    if (rosterSettling || captureRuntime.bakedSettings !== state.settings) {
-      const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
-      for (const face of ALL_CUBE_FACES) {
-        const faceCtx = cubemapFaceContext({
-          state,
-          eyeMpc: ctx.drawCamPos,
-          face,
-          faceSizePx,
-          nearMpc: capture.nearMpc,
-          viewSlotBase: capture.viewSlotBase,
-          nowMs: ctx.nowMs,
-        });
-        if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
-      }
-      // Pre-bootstrap: a face's context can come back null before the first
-      // real camera pose exists. Leave `bakedSettings` untouched so the next
-      // frame retries the full sweep rather than caching a partial bake.
-      if (skyCubemapFaceContexts.size === ALL_CUBE_FACES.length) {
-        skyCubemapFacesToCapture = ALL_CUBE_FACES;
-        // Recorded only for a settled bake: while the roster is still moving,
-        // null keeps the next frame baking, and the first settled frame
-        // bakes once more.
-        captureRuntime.bakedSettings = rosterSettling ? null : state.settings;
-      }
-    }
-  }
+  const captureContexts = scheduleCubemapCaptures({ state, ctx });
 
   executeFrame({
     encoder,
@@ -163,13 +81,20 @@ export function renderFrame(input: RenderFrameInput): void {
       // Painter-ordered NEAR0 + body-row indices — the chain the
       // foreground:0 line expands over, one step per entry.
       foregroundChain: foregroundChainOrder(ctx.slabs),
-      captureFaces: new Map([['sgrAStar', skyCubemapFacesToCapture]]),
+      // Derived from the one map, so the step list and the per-face cameras
+      // cannot drift: a face is expanded iff it has a context.
+      captureFaces: new Map(
+        [...captureContexts].map(([key, faces]): [CubemapCaptureKey, readonly CubeFace[]] => [
+          key,
+          [...faces.keys()],
+        ]),
+      ),
       lensBodySlabs: lensBodySlabs(state, ctx),
     }),
     strategy,
     timing: timingService,
     swapView,
-    skyCubemapFaceContexts,
+    captureContexts,
   });
   timingService.endFrame(timingCtx, encoder);
 

@@ -191,7 +191,7 @@ function timestampSpread(
 }
 
 export function executeFrame(args: ExecuteFrameArgs): void {
-  const { encoder, ctx, state, program, strategy, timing, swapView, skyCubemapFaceContexts } = args;
+  const { encoder, ctx, state, program, strategy, timing, swapView, captureContexts } = args;
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
   // first time a pass is opened against it, flipping subsequent passes from
@@ -217,17 +217,18 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         break;
       }
       case 'render': {
-        // The runtime hand-off: a step carrying `capture` (the
-        // black-hole lens's sky-cubemap capture) resolves EVERY per-step value
-        // below — slab view, enable gate, draw ctx — from ITS OWN camera
-        // (`renderFrame`'s per-face `cubemapFaceContext` derivation), not
+        // The runtime hand-off: a step carrying `capture` resolves EVERY
+        // per-step value below — slab view, enable gate, draw ctx — from ITS
+        // OWN camera (`scheduleCubemapCaptures`'s per-face derivation), not
         // the frame-wide `ctx`. A missing map entry (that face's
         // `cubemapFaceContext` returned null — e.g. a pre-bootstrap frame)
         // skips the step cleanly, the same outcome an empty group already
         // produces below. For every ordinary step `step.capture` is undefined and
         // `stepCtx` is just `ctx` — a no-op passthrough.
         const stepCtx =
-          step.capture === undefined ? ctx : skyCubemapFaceContexts?.get(step.capture.face);
+          step.capture === undefined
+            ? ctx
+            : captureContexts?.get(step.capture.key)?.get(step.capture.face);
         if (stepCtx === undefined) break;
         // The DebugPanel renderer-toggle override is one-way: it hides a pass
         // whose own `enabled()` gate returned true, and can never force-enable
