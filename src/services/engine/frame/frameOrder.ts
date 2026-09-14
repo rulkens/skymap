@@ -57,7 +57,9 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // (a sub-pixel Sun would smear through the prefilter into a false highlight);
   // `body-glints` / `orbit-trails` because neither is environment a surface
   // reflects. The NEAR0 roster is empty on purpose — the blit rides COSMO — so
-  // a probe face opens two steps, not three.
+  // a probe face opens two steps, not three. `atmosphere-shell` here reads the
+  // sky-view LUT the prelude baked for the MAIN camera last frame (compute steps
+  // submit after the faces): near-identical geometry, so leave the order be.
   {
     kind: 'capture',
     captures: ['probe'],

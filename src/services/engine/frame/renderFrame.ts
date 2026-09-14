@@ -23,18 +23,11 @@ import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import { lensBodySlabs } from './lensBodySlabs';
 import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 
-/**
- * Encode and submit one frame. Synchronous: by the time it returns, the GPU
- * has the buffers queued. Order of operations is `FRAME_ORDER`'s expansion,
- * walked by `executeFrame`.
- */
 export function renderFrame(input: RenderFrameInput): void {
   const { ctx, state, device, context, timingService } = input;
 
-  // Write the single shared cluster-focus uniform once per frame, before any
-  // pass (points, impostor disks, and the later pick submit) reads it.
-  // blend=0 at rest makes the per-vertex multiplier a no-op. `ctx.focus` is the
-  // per-frame FocusUniformsValue derived in deriveFrameContext.
+  // The shared cluster-focus uniform, before any pass or the later pick submit
+  // reads it; blend=0 at rest makes the per-vertex multiplier a no-op.
   state.gpu.focusUniform?.write(ctx.focus);
 
   const swapView = context.getCurrentTexture().createView();
@@ -43,22 +36,15 @@ export function renderFrame(input: RenderFrameInput): void {
   // set is shared and `endFrame` resolves the whole of it, so a face pass's
   // timestamps land in the same readback as the frame's.
   const timingCtx = timingService.beginFrame();
-  // The frame's pass shape: `settings.debug.renderStrategy` overrides it, defaulting
-  // to 'auto' — per-layer timed passes when timing is enabled (each carries its own
-  // `timestampWrites`), else the merged tile-local passes OVER blends need on Apple
-  // Silicon. `resolveStrategy` decouples that shape from the timing flag (Joint 1);
-  // `executeFrame` applies the result uniformly across every render step.
+  // 'auto' = per-layer timed passes when timing is on, else the merged
+  // tile-local passes OVER blends need on Apple Silicon.
   const strategy: RenderStrategy = resolveStrategy(
     state.settings.debug.renderStrategy,
     timingService.enabled,
   );
-  // Zeroed unless BOTH conjuncts hold. `hdrActive` mirrors the swap chain's
-  // live format (`hdrActiveOf`); `hdr.enabled` is the visitor's toggle. The
-  // saga that reconfigures the swap format and the settings write it's
-  // reacting to land in separate frames, so a frame can be caught with the
-  // surface already `rgba16float` while `enabled` is still false, or vice
-  // versa. Headroom 0 is exactly the SDR result, so gating on both conjuncts
-  // makes that in-between frame correct, not just a safe fallback.
+  // Both conjuncts: the swap-format saga and the settings write it reacts to
+  // land in separate frames, and headroom 0 is exactly SDR, so gating on both
+  // keeps that in-between frame correct.
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
 
