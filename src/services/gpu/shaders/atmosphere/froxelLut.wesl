@@ -13,8 +13,6 @@
 // Per-channel transmittance, never a grey scalar: a luminance-collapsed factor
 // adds blue to the ground without removing blue from it (the cyan wash
 // 'atmosphereShellRenderer's header records).
-//
-// Comments single-quoted, never backticks. Literal 'package::' imports.
 
 import package::atmosphere::froxelSlices::froxelMaxDistance;
 import package::atmosphere::froxelSlices::froxelRayDir;
@@ -72,12 +70,14 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (i >= dims.z) { break; }
     let far = froxelSliceDistance(f32(i), sliceCount, maxDistance);
     let posKm = camKm + dir * ((near + far) * 0.5 * kmPerLocal);
-    // Below the opaque ground the exponential density profile has no floor: a
-    // slice a few hundred km under the surface overflows f32 and the
-    // accumulators go NaN, which the apply's filtering would then smear back
-    // onto the slice in FRONT of it. Freeze the integral instead of marching on
-    // — the ground clamp 'raymarchInScatter' applies to its own bound, per
-    // slice.
+    // The ground is opaque, so the integral must stop there rather than keep
+    // growing through it: 'accumulateMedium' floors altitude at zero, which
+    // would otherwise fog every remaining slice at full ground density, and the
+    // apply's trilinear filter would bleed that slab back onto the last
+    // above-ground slice. This is 'raymarchInScatter's own ground clamp,
+    // expressed per slice. Per SAMPLE, not a latch — a ray that re-emerged
+    // would resume, though no seeded body can reach that (D is far short of the
+    // chord through the planet).
     if (length(posKm) >= params.planetRadiusKm) {
       let s = scatterStep(
         params, transmittanceLut, multiScatterLut, lutSamp,
