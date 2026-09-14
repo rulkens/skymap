@@ -22,14 +22,11 @@
  * something to look at when no real data is available"; making the
  * count user-tunable would expand surface area for no real-world need.
  *
- * ### Why this fetcher ignores `req.source` and `req.tier`
+ * ### Why this fetcher ignores its request
  *
- * The slot's typed `Req = GalaxyCatalogReq = { source, tier }` because the
- * `state.assetSlots.points` Map is uniformly typed across every entry.
- * For the synthetic slot specifically, the request fields carry no
- * information — the catalog is pure procedural.  We accept the standard
- * shape so the slot wiring at the engine boot site is uniform with
- * every other source's `slot.load({ source, tier })` call.
+ * It takes `GalaxyCatalogReq` because the `state.assetSlots.points` Map is
+ * uniformly typed across every entry; for the synthetic slot the request
+ * carries no information, since the catalog is pure procedural.
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';

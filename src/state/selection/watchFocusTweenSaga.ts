@@ -2,7 +2,7 @@
  * watchFocusTweenSaga — the camera-tween EFFECT of a focus gesture. A focus writes
  * the focus ref (updateSelectionFocus); the camera flying to that target is an
  * effect of that Intent, so it lives here as a saga — symmetric with
- * watchSelectionWakeSaga (render-wake) and watchTierSaga's runTierTransition.
+ * watchSelectionWakeSaga (render-wake).
  *
  * The saga is a thin resolve→build→dispatch shell:
  *   1. re-resolve the ref to a row via the live `resolveDeps` (firing on the REF,

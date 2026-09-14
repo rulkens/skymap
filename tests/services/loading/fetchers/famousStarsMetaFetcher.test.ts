@@ -23,25 +23,21 @@ describe('famousStarsMetaFetcher', () => {
 
   it('fetches famous_stars_meta.json and returns the parsed payload', async () => {
     fetch.mock.mockResolvedValueOnce(new Response('[]', { status: 200 }));
-    const payload = await famousStarsMetaFetcher(
-      { tier: 'medium' },
-      new AbortController().signal,
-      () => {},
-    );
+    const payload = await famousStarsMetaFetcher(undefined, new AbortController().signal, () => {});
     expect(payload).toEqual({ meta: [] });
   });
 
   it('rejects on a non-2xx HTTP status', async () => {
     fetch.mock.mockResolvedValue(new Response('boom', { status: 500 }));
     await expect(
-      famousStarsMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
+      famousStarsMetaFetcher(undefined, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
   it('rejects when the JSON body is malformed', async () => {
     fetch.mock.mockResolvedValueOnce(new Response('not-json', { status: 200 }));
     await expect(
-      famousStarsMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
+      famousStarsMetaFetcher(undefined, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
@@ -59,8 +55,6 @@ describe('famousStarsMetaFetcher', () => {
       }
       return Promise.resolve(new Response('[]', { status: 200 }));
     });
-    await expect(
-      famousStarsMetaFetcher({ tier: 'medium' }, controller.signal, () => {}),
-    ).rejects.toThrow();
+    await expect(famousStarsMetaFetcher(undefined, controller.signal, () => {})).rejects.toThrow();
   });
 });

@@ -14,7 +14,7 @@
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
-import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
+import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import { HttpError, dataUrl } from '../fetchWithProgress';
 
 /**
@@ -29,11 +29,10 @@ export function parseFamousGalaxiesMeta(rawJson: string): FamousGalaxyMetaEntry[
   return parsed as FamousGalaxyMetaEntry[];
 }
 
-// The `tier` field on the request is ignored — famous_galaxies_meta.json is a
-// tier-agnostic resource. The uniform `CompanionAssetReq` shape lets
-// `loadCompanionAssets` dispatch generically across every companion
-// slot without a per-key switch.
-export const famousGalaxiesMetaFetcher: Fetcher<FamousGalaxiesPayload, CompanionAssetReq> = async (
+// The request is the Famous point row's request (so the two slots re-fetch
+// together) but famous_galaxies_meta.json is itself a tier-agnostic resource —
+// the fetcher ignores it.
+export const famousGalaxiesMetaFetcher: Fetcher<FamousGalaxiesPayload, GalaxyCatalogReq> = async (
   _req,
   signal,
 ) => {

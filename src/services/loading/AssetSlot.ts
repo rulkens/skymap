@@ -48,11 +48,6 @@
  * `reduceLoadState`), a Set of subscribers, and the commit-chain head.
  * Everything that can be a pure function is — retry decisions, state
  * transitions, console output.
- *
- * Mutable state is intentionally a thin shell: a generation counter, an
- * AbortController reference, the current LoadState (computed via the pure
- * `reduceLoadState`), and a Set of subscribers.  Everything that can be a
- * pure function is — retry decisions, state transitions, console output.
  */
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { LoadEvent } from '../../@types/loading/LoadEvent';
@@ -72,7 +67,9 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
   const subscribers = new Set<(s: LoadState<T>) => void>();
   let lastRequest: Req | null = null;
   let startedAtMs: number | null = null; // wall clock of the last load() call
-  let lastReady: LoadState<T> | null = null; // for cancel() rollback
+  // The committed value: what the slot serves through a reload and what
+  // cancel() rolls back to.  Only release() clears it.
+  let lastReady: (LoadState<T> & { kind: 'ready'; req: Req }) | null = null;
   // ── Commit serialization chain ────────────────────────────────────────
   // Holds the in-flight commit's resolve-promise, or null when no commit
   // is running.  Each runLoad's commit phase awaits this promise before
@@ -111,7 +108,9 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
 
   function dispatch(event: LoadEvent): void {
     state = reduceLoadState(state, event);
-    if (state.kind === 'ready') lastReady = state;
+    // LoadState carries `req: unknown` (it is generic over the value, not the
+    // request); the request it holds came from this slot's own load(req).
+    if (state.kind === 'ready') lastReady = state as LoadState<T> & { kind: 'ready'; req: Req };
     for (const sub of subscribers) sub(state);
   }
 
@@ -193,7 +192,7 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
 
       if (commit) {
         try {
-          await commit(value, ctrl.signal, req);
+          await commit(value, ctrl.signal);
         } catch (err) {
           if ((err as Error).name === 'AbortError') return;
           dispatch({ kind: 'gave-up', error: err as Error, attempt });
@@ -234,8 +233,11 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       // slot's work is done" instead of guessing from state transitions.
       return runLoad(req, myGen, controller);
     },
+    committed(): (LoadState<T> & { kind: 'ready'; req: Req }) | null {
+      return lastReady;
+    },
     current(): T | null {
-      return state.kind === 'ready' ? state.value : null;
+      return lastReady?.value ?? null;
     },
     state(): LoadState<T> {
       return state;
@@ -265,35 +267,26 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       for (const sub of subscribers) sub(state);
     },
     release(): void {
-      // The evict edge of two-way demand — the inverse of load().
+      // The evict edge of two-way demand — distance eviction only; a request
+      // that drifts reloads the slot in place instead.
       //
-      // Like cancel(), it bumps the generation and aborts the controller: the
-      // generation bump is what composes with the slot's race machinery, so a
-      // fetch or commit that resolves after this call fails its race-check and
-      // is discarded (a late commit must not resurrect a released slot). The
-      // abort unwinds any in-flight fetch promptly rather than leaving it to run
-      // to completion behind a dead generation.
+      // The generation bump composes with the slot's race machinery: a fetch or
+      // commit that resolves after this call fails its race-check and is
+      // discarded, so a late commit cannot resurrect a released slot. The abort
+      // unwinds any in-flight fetch rather than leaving it to run to completion
+      // behind a dead generation.
       //
-      // Unlike cancel() — which rolls back to `lastReady` — release() drops to
-      // idle unconditionally and runs the un-commit hook. We snapshot whether a
-      // payload was committed BEFORE transitioning, so `onRelease` fires exactly
-      // once with the committed value only when one existed (state 'ready'), and
-      // never when we merely aborted a still-loading fetch (nothing to free).
-      // Clearing `lastReady` means a subsequent cancel() can't resurrect the
-      // released value, and a second release() finds nothing to release — the
-      // exactly-once guarantee holds across repeated calls.
-      //
-      // Gating on the `ready` discriminant rather than a non-null `current()`
-      // keeps the hook correct for a slot whose committed payload is itself null.
-      const releasing = state.kind === 'ready' ? { value: state.value } : null;
+      // Gating on the committed value rather than the `ready` discriminant is
+      // what frees a slot released mid-reload; clearing it keeps `onRelease`
+      // exactly-once across repeated calls, and the wrapper object keeps the
+      // gate correct for a committed payload that is itself null.
+      const releasing = lastReady ? { value: lastReady.value } : null;
       generation += 1;
       controller?.abort();
       controller = null;
       lastReady = null;
-      // Clear the committed request too: a released slot holds nothing, so the
-      // stale-tier check reads `null` and `forceReload()` is a no-op until the
-      // demand loop re-loads it at the current tier. The start stamp goes with
-      // it: a released slot has no live load attempt to have started.
+      // A released slot holds nothing: `forceReload()` stays a no-op until the
+      // demand loop loads it again, and there is no live attempt to have started.
       lastRequest = null;
       startedAtMs = null;
       state = { kind: 'idle' };

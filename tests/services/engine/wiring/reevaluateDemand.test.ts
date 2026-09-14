@@ -10,6 +10,7 @@
  *   - a row whose demand is false does not load,
  *   - a row whose slot is already loading/ready is left alone (the idle-guard
  *     that prevents a re-fetch storm when the loop re-runs on every toggle),
+ *   - a non-idle slot whose request drifted reloads in place, never releases,
  *   - a throwing demand predicate is caught and does not stop later rows.
  *
  * Mocking strategy: stub slots live in `state.assetSlots.points` keyed by a
@@ -19,6 +20,8 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { evaluateRows } from '../../../../src/services/engine/wiring/reevaluateDemand';
+import { galaxyCatalogRequest } from '../../../../src/services/engine/wiring/galaxyCatalogRequest';
+import { createAssetSlot } from '../../../../src/services/loading/AssetSlot';
 import { Source } from '../../../../src/data/sources';
 import { clampTier } from '../../../../src/utils/math/clampTier';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -49,6 +52,9 @@ type StubSlot = AssetSlot<unknown, unknown> & {
 function stubSlot(
   initialKind: LoadState<unknown>['kind'] = 'idle',
   lastReq: unknown = null,
+  // Non-null by default: the evict edge gates on a payload being resident, and
+  // every kind this file drives past `idle` models a slot that has one.
+  committedValue: unknown = {},
 ): StubSlot {
   const load = vi.fn();
   const release = vi.fn();
@@ -57,10 +63,11 @@ function stubSlot(
     name: 'stub',
     load: load as unknown as StubSlot['load'],
     current: () => null,
+    committed: () => committedValue as ReturnType<AssetSlot<unknown, unknown>['committed']>,
     state: () => ({ kind }) as LoadState<unknown>,
     subscribe: () => () => {},
-    // The request the slot last committed with — the stale-tier evict edge reads
-    // its tier. Seeded per stub so a test can model a slot resident at a tier.
+    // The request of the slot's last load ATTEMPT — what the drift edge compares
+    // against. Seeded per stub so a test can model a slot loaded at another tier.
     lastRequest: () => lastReq,
     startedAtMs: () => null,
     forceReload: () => {},
@@ -85,13 +92,16 @@ function stubSlot(
  * `expect(slot.load).toHaveBeenCalled()` in this file into a silent failure
  * instead of a visible crash.
  */
-function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): EngineState {
+function makeState(
+  points: Map<SourceType, AssetSlot<unknown, unknown>>,
+  assetQueue: unknown = new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
+): EngineState {
   return {
     tier: 'medium',
     settings: {},
     requests: new Set(),
     assetSlots: { points },
-    subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
+    subsystems: { assetQueue },
     // buildDemandCtx assembles the camera eye from pose + projection, so both
     // must be present. A far resting pose keeps the proximity-gated body-texture
     // rows out of the demand set.
@@ -117,6 +127,12 @@ function row(
   // `priority` is required on the row type but irrelevant to the edges under
   // test here (fetch order is the queue's concern), so every stub row shares 0.
   return { key, factory: () => stubSlot(), req, demand, release: opts.release, priority: 0 };
+}
+
+/** A queue whose calls are assertable — for the edges that must reach it with
+ *  nothing, where a real queue would swallow the distinction. */
+function stubQueue() {
+  return { enqueueMany: vi.fn(), drop: vi.fn() };
 }
 
 /** A demanded row carrying a real rank — for the fetch-order test, where
@@ -216,6 +232,16 @@ describe('evaluateRows', () => {
     expect(slot.load).not.toHaveBeenCalled();
   });
 
+  it('an errored slot holding a committed value is released when its release predicate fires', () => {
+    // A reload that exhausts its retries leaves the slot `error` with the OLD
+    // payload still committed and drawing. Nothing but this edge frees it, so a
+    // `ready`-only gate pins a whole-globe texture in VRAM for the session.
+    const slot = stubSlot('error');
+    const state = makeState(new Map([[Source.SDSS, slot]]));
+    evaluateRows(state, [row(Source.SDSS, () => false, { release: () => true })]);
+    expect(slot.release).toHaveBeenCalledTimes(1);
+  });
+
   it('does not release a ready slot whose release predicate returns false', () => {
     const slot = stubSlot('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
@@ -232,8 +258,7 @@ describe('evaluateRows', () => {
   });
 
   it('does not release an idle slot even when the release predicate is true', () => {
-    // The evict edge is guarded on `ready` — an idle slot has nothing committed
-    // to release, and the load edge owns the idle state.
+    // The drop edge claims every idle slot before the evict edge is reached.
     const slot = stubSlot('idle');
     const state = makeState(new Map([[Source.SDSS, slot]]));
     evaluateRows(state, [row(Source.SDSS, () => false, { release: () => true })]);
@@ -303,14 +328,128 @@ describe('evaluateRows', () => {
   });
 });
 
-describe('evaluateRows — bodyTextures stale-tier evict', () => {
+describe('evaluateRows — drift edge', () => {
+  /** A slot loaded at 'small' while `makeState` sits at 'medium' ⇒ drifted. */
+  const drifted = (kind: LoadState<unknown>['kind']) =>
+    stubSlot(kind, { source: Source.SDSS, tier: 'small' });
+
+  it('a ready slot whose request drifted is re-loaded, not released', () => {
+    // The headline of the drift edge: a tier swap replaces the resident payload
+    // in place. Releasing would blank the catalog for the length of the refetch.
+    const slot = drifted('ready');
+    const state = makeState(new Map([[Source.SDSS, slot]]));
+    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    expect(slot.load).toHaveBeenCalledTimes(1);
+    expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
+    expect(slot.release).not.toHaveBeenCalled();
+  });
+
+  it('an errored slot whose request drifted is re-loaded', () => {
+    // A slot that gave up at the old request is not stuck: the new request is a
+    // different fetch, so the edge is not gated on `ready`.
+    const slot = drifted('error');
+    const state = makeState(new Map([[Source.SDSS, slot]]));
+    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    expect(slot.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('a drifted slot whose demand is false is left alone', () => {
+    // Drift answers WHICH request, never WHETHER — an undemanded row stays put.
+    const slot = drifted('ready');
+    const queue = stubQueue();
+    evaluateRows(makeState(new Map([[Source.SDSS, slot]]), queue), [row(Source.SDSS, () => false)]);
+    expect(slot.load).not.toHaveBeenCalled();
+    expect(slot.release).not.toHaveBeenCalled();
+    expect(queue.enqueueMany).toHaveBeenCalledWith([]);
+  });
+
+  it('a ready slot whose release predicate fires is released, not reloaded', () => {
+    // Both reasons apply; the distance edge wins, and the released slot comes
+    // back through the idle edges rather than reloading at the old distance.
+    const slot = drifted('ready');
+    const state = makeState(new Map([[Source.SDSS, slot]]));
+    evaluateRows(state, [row(Source.SDSS, () => true, { release: () => true })]);
+    expect(slot.release).toHaveBeenCalledTimes(1);
+    expect(slot.load).not.toHaveBeenCalled();
+  });
+
+  it('a drifted loading slot is superseded by a direct load', () => {
+    // Direct, not queued: the queue refuses a key it already has in flight
+    // (`PriorityQueue.admit`), which is precisely this case, so an enqueue would
+    // be dropped on the floor. `load()` aborts the superseded attempt itself.
+    const slot = drifted('loading');
+    const queue = stubQueue();
+    evaluateRows(makeState(new Map([[Source.SDSS, slot]]), queue), [row(Source.SDSS, () => true)]);
+    expect(slot.load).toHaveBeenCalledTimes(1);
+    expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
+    expect(queue.enqueueMany).toHaveBeenCalledWith([]);
+  });
+
+  it('a superseded queued fetch does not surface as a queue error or retry', async () => {
+    // End-to-end over the REAL slot and queue: pass one enqueues and the queue's
+    // closure awaits `slot.load`; pass two finds it loading at the wrong tier and
+    // aborts it with a direct load. `runLoad` turns the abort into a silent
+    // return, so the queue's entry RESOLVES — a rejection would take the
+    // `onResult(null)` arm and, for any caller that retries on it, re-fetch the
+    // tier the user just left.
+    const aborted = () => Object.assign(new Error('aborted'), { name: 'AbortError' });
+    const real = createAssetSlot<number, unknown>({
+      name: 'sdss',
+      // Never settles on its own — only supersession ends it.
+      fetch: (_req, signal) =>
+        new Promise<number>((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(aborted()), { once: true });
+        }),
+    });
+    const attempts: Promise<void>[] = [];
+    const slot: AssetSlot<unknown, unknown> = {
+      ...(real as unknown as AssetSlot<unknown, unknown>),
+      load: (req) => {
+        const p = real.load(req);
+        attempts.push(p);
+        return p;
+      },
+    };
+
+    const queue = new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY);
+    const state = makeState(new Map([[Source.SDSS, slot]]), queue);
+    const rows = [
+      row(Source.SDSS, () => true, { req: (tier) => galaxyCatalogRequest(Source.SDSS, tier) }),
+    ];
+
+    evaluateRows(state, rows);
+    const [queued] = attempts;
+    if (!queued) throw new Error('the queue did not start the enqueued load');
+    const settled: string[] = [];
+    void queued.then(
+      () => settled.push('resolved'),
+      () => settled.push('rejected'),
+    );
+
+    (state as { tier: Tier }).tier = 'small';
+    evaluateRows(state, rows);
+    expect(attempts).toHaveLength(2);
+
+    await queue.drain();
+    expect(settled).toEqual(['resolved']);
+    expect(queue.inFlightCount()).toBe(0);
+    // The slot is loading the NEW request; the aborted attempt left no error
+    // state behind for a retry policy to act on.
+    expect(slot.state()).toMatchObject({
+      kind: 'loading',
+      req: galaxyCatalogRequest(Source.SDSS, 'small'),
+    });
+  });
+});
+
+describe('evaluateRows — bodyTextures at a stale tier', () => {
   /** A body-texture row (key routes through the bodyTextures map) whose req
    *  clamps the tier to Earth's 'large' ceiling — so req('small').tier === 'small'. */
   const earthRow: AssetWiringRow = {
     key: 'earth:surface',
     factory: () => stubSlot(),
     req: (tier) => ({ bodyId: 'earth', kind: 'surface', tier: clampTier(tier, 'large') }),
-    demand: () => false,
+    demand: () => true,
     priority: 0,
   };
 
@@ -319,7 +458,7 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     key: 'uranus:surface',
     factory: () => stubSlot(),
     req: (tier) => ({ bodyId: 'uranus', kind: 'surface', tier: clampTier(tier, 'small') }),
-    demand: () => false,
+    demand: () => true,
     priority: 0,
   };
 
@@ -344,28 +483,32 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     } as unknown as EngineState;
   }
 
-  it('releases a ready slot whose committed tier no longer matches the current tier', () => {
-    // Resident at 'medium', current tier 'small' ⇒ clamped req tier 'small' ≠
-    // 'medium' ⇒ release so it re-fetches at the new tier.
-    const slot = stubSlot('ready', { bodyId: 'earth', tier: 'medium' });
+  it('reloads a ready slot in place when its tier no longer matches the current one', () => {
+    // Loaded at 'medium', current tier 'small' ⇒ clamped req tier 'small' ≠
+    // 'medium' ⇒ the drift edge re-fetches at the new tier. The texture on the
+    // GPU stays bound meanwhile; releasing it would show an untextured body.
+    const slot = stubSlot('ready', { bodyId: 'earth', kind: 'surface', tier: 'medium' });
     evaluateRows(makeBodyState('earth:surface', slot, 'small'), [earthRow]);
-    expect(slot.release).toHaveBeenCalledTimes(1);
+    expect(slot.load).toHaveBeenCalledTimes(1);
+    expect(slot.load).toHaveBeenCalledWith({ bodyId: 'earth', kind: 'surface', tier: 'small' });
+    expect(slot.release).not.toHaveBeenCalled();
   });
 
-  it('leaves a ready slot whose committed tier already matches alone', () => {
-    const slot = stubSlot('ready', { bodyId: 'earth', tier: 'small' });
+  it('leaves a ready slot whose tier already matches alone', () => {
+    const slot = stubSlot('ready', { bodyId: 'earth', kind: 'surface', tier: 'small' });
     evaluateRows(makeBodyState('earth:surface', slot, 'small'), [earthRow]);
+    expect(slot.load).not.toHaveBeenCalled();
     expect(slot.release).not.toHaveBeenCalled();
   });
 
   it('does NOT thrash a slot resident at its ceiling while the tier sits above it', () => {
     // Uranus tops out at 'small'. Resident at 'small' with the data-volume tier
     // at 'large': the comparison must be against the CLAMPED req tier
-    // (clampTier('large','small') === 'small'), so committed === wanted and the
-    // slot is left alone. Comparing against the raw tier ('large') would release
-    // and re-load every re-evaluation forever — the bug the clamp prevents.
-    const slot = stubSlot('ready', { bodyId: 'uranus', tier: 'small' });
+    // (clampTier('large','small') === 'small'), so loaded === wanted and the slot
+    // is left alone. Comparing against the raw tier ('large') would re-load every
+    // re-evaluation forever — the bug the clamp prevents.
+    const slot = stubSlot('ready', { bodyId: 'uranus', kind: 'surface', tier: 'small' });
     evaluateRows(makeBodyState('uranus:surface', slot, 'large'), [uranusRow]);
-    expect(slot.release).not.toHaveBeenCalled();
+    expect(slot.load).not.toHaveBeenCalled();
   });
 });

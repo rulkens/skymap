@@ -21,7 +21,6 @@ import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { Polyphorm2MRSReq } from '../../loading/Polyphorm2MRSReq';
-import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
 import type { ConstellationsArtifact } from '../../loading/ConstellationsArtifact';
@@ -32,6 +31,8 @@ import type { BodyTextureReq } from '../../loading/BodyTextureReq';
 import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
 import type { MeshAsset } from '../../data/mesh/MeshAsset';
 import type { MeshReq } from '../../loading/MeshReq';
+import type { HiResFamousPair } from '../subsystems/HiResFamousPair';
+import type { HiResFamousReq } from '../../loading/HiResFamousReq';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
@@ -42,12 +43,12 @@ export type EngineAssetSlots = {
    * null-guards `state.gpu.starCatalogRenderer` instead of closing over it.
    */
   starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
-  /** Loaded once at boot and NOT swapped on tier change — see `filamentFetcher.ts`. */
+  /** Two files across the three tiers, so it reloads only across the small boundary. */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
   /** Eager at boot; no `commit` — the subscriber dispatches the parsed array into the `engine` slice. */
-  famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, CompanionAssetReq> | null;
-  /** Eager because famous stars are a seeded catalog — no sibling `.bin` fetch to key demand off. */
-  famousStarsMeta: AssetSlot<FamousStarsPayload, CompanionAssetReq> | null;
+  famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, GalaxyCatalogReq> | null;
+  /** Eager because famous stars are a seeded catalog — no sibling `.bin`, and no tier, to key demand off. */
+  famousStarsMeta: AssetSlot<FamousStarsPayload, void> | null;
   /** Eager at boot; `wireStructureProjection` turns the ready value into structure-store records. */
   structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
   /** ~1.7 MB and lazy: only the public handle's `loadPgcAliases()` calls `.load()`, on first palette open. */
@@ -100,6 +101,13 @@ export type EngineAssetSlots = {
    * in either order with no check.
    */
   bodyTextureAtlas: AssetSlot<ImageBitmap, void> | null;
+  /**
+   * The LOD-3 hi-res famous-galaxy `texture_2d_array` + its planner, held as one pair
+   * because the planner subscribes to the texture's evict handler. No network: the
+   * "fetch" is the GPU allocation, whose shape is the request. Null until `wireSlots`
+   * runs, and absent entirely in a composition without the disk renderers.
+   */
+  hiResFamous: AssetSlot<HiResFamousPair, HiResFamousReq> | null;
   /**
    * Dev-only synthetic test cubes, keyed by the in-engine handle the commit
    * registers. `undefined` rather than null in production: `wireSlots` mints them

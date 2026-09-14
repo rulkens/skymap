@@ -1,31 +1,29 @@
 /**
  * watchWakeSaga — request a render frame on every write to a WAKE_ROUTE.
  *
- * The render-on-demand scheduler is passive; something must poke it after
- * state changes that affect the drawn scene. A single route-membership check
- * covers all writes to settings and camera by construction, without per-action
- * `did we remember requestRender?` audits.
- *
- * WAKE_ROUTES centralises the wake 'by construction': membership (settings and
- * camera) covers every action that affects the drawn scene. New actions in any
- * wake-route slice wake the renderer automatically.
- *
- * The worker reaches the engine via getContext — the ReconcileEffects closure
- * registered by the engine after construction. This keeps the store layer free
- * of engine imports while still letting the saga trigger the render effect.
+ * The render-on-demand scheduler is passive; something must poke it after state
+ * changes that affect the drawn scene. The worker reaches the engine via
+ * getContext — the `ReconcileEffects` closure the engine registers after
+ * construction — which keeps the store layer free of engine imports while still
+ * letting the saga trigger the render effect.
  */
 
 import { takeEvery, getContext } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
-import { settingsRoute, cameraRoute, timeRoute } from '../constants';
+import { settingsRoute, cameraRoute, timeRoute, tierRoute } from '../constants';
 import type { ReconcileEffects } from './ReconcileEffects';
 
 // WAKE_ROUTES — the registry of store routes whose writes affect the drawn
 // scene and must poke the passive render-on-demand scheduler. Settings, camera,
-// and the sim clock. Membership by route means new actions within any listed
-// slice wake the renderer by construction, with no per-action `did we remember
-// requestRender?` audit.
+// the sim clock, and the tier. Membership by route means new actions within any
+// listed slice wake the renderer by construction, with no per-action `did we
+// remember requestRender?` audit.
+//
+// `tierRoute` is load-bearing, not belt-and-suspenders: the catalog reload after
+// a tier change starts from a FRAME (the demand loop notices each slot's last
+// request drifting from the new tier's). A `tier/` write seen while the loop is
+// asleep would otherwise never produce that frame.
 //
 // `timeRoute` is a wake route so a clock intent seen while the scene is at rest
 // (loop asleep) redraws immediately: pressing Play must produce the first
@@ -44,7 +42,7 @@ import type { ReconcileEffects } from './ReconcileEffects';
 // selection slice — including `updateSelectionHover`, which has no GPU
 // consequence (it only feeds the React InfoCard) and must stay wake-free. The
 // per-action saga draws that line; a route membership can't.
-const WAKE_ROUTES = new Set<string>([settingsRoute, cameraRoute, timeRoute]);
+const WAKE_ROUTES = new Set<string>([settingsRoute, cameraRoute, timeRoute, tierRoute]);
 const isWakeWrite = (a: Action): boolean =>
   typeof a.type === 'string' && WAKE_ROUTES.has(a.type.split('/')[0]!);
 

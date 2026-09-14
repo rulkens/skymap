@@ -21,8 +21,8 @@
  * goes stale — a clear that the UI never sees.
  *
  * It reaches the live engine cloud/structures via getContext('resolveDeps'),
- * the same seam watchTierSaga uses for runTierTransition. The reducers stay free of
- * engine references; only this saga crosses the boundary.
+ * the same seam watchTierSaga reads for its re-anchor capture. The reducers
+ * stay free of engine references; only this saga crosses the boundary.
  */
 import { takeEvery, select, put, getContext } from 'typed-redux-saga';
 
