@@ -27,22 +27,17 @@ export function atmosphereShellUniforms(
   // An entry exists only where bodyPose resolved (atmosphereDrawList skips a body with no pose).
   const pose = ctx.bodyPose(body.id as BodyId)!;
 
-  // Scaling the unit proxy sphere by the ATMOSPHERE-TOP radius (metres) puts the
-  // mesh in the body-m slab frame's unit — the one `camLocal` is already in.
+  // radiusM scales the unit proxy sphere — see composeBodySlabMvp's header.
   const mvp = composeBodySlabMvp(slab.vp, pose.eyeRelBodyM, atmosphereTopM);
-  // Inverted from the UN-narrowed f64 mvp (dst-last, fresh Float64Array) for the
-  // inside-shell entry points' screen→local unproject. Narrowing first would
-  // reintroduce the per-element rounding the slab seam exists to avoid.
+  // Inverted before narrowing — see narrowMat4's header for why narrowing waits.
   const invMvp = mat4d.inverse(mvp);
   // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
   // atmosphere top is the unit sphere and the ground sphere has this radius.
   const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
-  // The one Earth-keyed branch: Earth alone carries a live Settings slider, read
-  // from the store each frame so a drag overrides the limb without a reload.
+  // Earth alone carries a live Settings slider, read each frame so a drag overrides the limb without a reload.
   const exposure = body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
-  // The host's ring annulus in LOCAL units (atmosphere top = 1), so the fragment
-  // can keep a ring in FRONT of the shell from being darkened by its over-blend.
-  // No `SCENE_RINGS` row ⇒ both ratios 0, the no-ring sentinel.
+  // Ring annulus in LOCAL units (atmosphere top = 1); no `SCENE_RINGS` row ⇒ both
+  // ratios 0, the no-ring sentinel — keeps a ring in front of the shell unblended.
   const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
   const ringInnerRatio = ring === undefined ? 0 : ring.innerRadiusKm / params.atmosphereTopKm;
   const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;

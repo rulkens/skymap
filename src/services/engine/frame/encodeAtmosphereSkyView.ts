@@ -21,30 +21,20 @@ export function encodeAtmosphereSkyView(
   const renderer = state.gpu.atmosphereShellRenderer;
   if (renderer === null) return;
 
-  // The entry's OWN `camLocal`/`sunLocal`, off the body-slab pose seam the shell's
-  // MVP is composed from — never a second Mpc-side re-derivation, or bake and
-  // fragment read two different cameras.
   for (const { body, params, camLocal, sunLocal } of atmosphereDrawList(state, ctx)) {
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
-    // camLocal is in atmosphere-top-radius units, so this is the camera radius in
-    // km — the km-baked LUT's parametrisation.
     const viewHeightKm = radius * params.atmosphereTopKm;
-    // cos of the sun's zenith angle at the camera; the guard keeps a degenerate
-    // centre pose (radius 0) from baking a NaN.
     const sunZenithCos =
       radius > 0
         ? (camLocal[0] * sunLocal[0] + camLocal[1] * sunLocal[1] + camLocal[2] * sunLocal[2]) /
           radius
         : 0;
 
-    // These ride the per-frame SkyViewParams rather than the construction-written
-    // ScatteringParams, which is what keeps the rebake self-contained.
     const twilight = params.twilightSoftness;
     const twilightIntensity = params.twilightIntensity;
 
-    // f32 [viewHeightKm, sunZenithCos, twilightSoftness, twilightIntensity] — the
-    // 16-byte SkyViewParams record the renderer writes VERBATIM, layout fixed by
-    // AtmosphereShellRenderer.d.ts (a mis-pack mis-indexes the LUT silently).
+    // f32 [viewHeightKm, sunZenithCos, twilightSoftness, twilightIntensity], written
+    // VERBATIM by the renderer — a mis-pack mis-indexes the LUT silently.
     renderer.encodeSkyView(
       encoder,
       body.id,

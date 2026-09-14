@@ -89,8 +89,8 @@ struct SkyViewParams {
 
 // raymarchInScatter — the single-plus-multi-scatter integral along one view ray
 // from 'p0' (at the camera radius) toward 'dir', with the sun at 'sunDir'. The
-// per-step integrand is 'scatterStep' (scattering.wesl), shared with the froxel
-// bake; this function owns only the march bound and the accumulators.
+// per-step integrand is 'scatterStep' (scattering.wesl); this function owns
+// only the march bound and the accumulators.
 //
 // The march is confined to the ray's IN-ATMOSPHERE segment [tNear, tFar] — the
 // entry/exit of the top-of-atmosphere sphere, clamped to a ground hit — NOT to
@@ -126,13 +126,13 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
     if (f32(i) >= SKY_VIEW_STEPS) { break; }
     let t = tNear + (f32(i) + 0.5) * dt;
     let pos = p0 + dir * t;
-    let step = scatterStep(
+    let s = scatterStep(
       params, transmittanceLut, multiScatterLut, lutSamp,
       pos, sunDir, cosTheta, dt,
       view.twilightSoftness, view.twilightIntensity,
     );
-    L = L + throughput * step.inScatter;
-    throughput = throughput * step.transmittance;
+    L = L + throughput * s.inScatter;
+    throughput = throughput * s.transmittance;
     i = i + 1u;
   }
   return L;

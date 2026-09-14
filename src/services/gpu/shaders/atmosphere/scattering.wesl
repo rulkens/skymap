@@ -337,12 +337,12 @@ fn sampleMultiScatter(
 
 // ── the per-step scattering integrand ────────────────────────────────
 //
-// One march step's contribution, split from whatever accumulates it so the
-// sky-view march and the froxel bake integrate ONE integrand rather than two
-// that agree only by inspection. The single-scatter source is weighted by the
-// REAL Rayleigh + Mie phases (this is a directional lookup, unlike the
-// isotropic multi-scatter bake); the precomputed multi-scatter is added with
-// the total scattering coefficient (it is already isotropic).
+// One march step's contribution, split from whatever accumulates it, so every
+// integrator shares ONE integrand rather than agreeing only by inspection.
+// The single-scatter source is weighted by the REAL Rayleigh + Mie phases
+// (this is a directional lookup, unlike the isotropic multi-scatter bake);
+// the precomputed multi-scatter is added with the total scattering
+// coefficient (it is already isotropic).
 struct ScatterStep {
   // The step's source integral '(S - S*T)/extinction', BEFORE the running
   // throughput is applied. The caller accumulates 'L += throughput * inScatter'.
