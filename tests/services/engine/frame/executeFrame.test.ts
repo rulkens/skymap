@@ -703,14 +703,12 @@ describe('executeFrame', () => {
       const program: FrameStep[] = [
         {
           kind: 'render',
-          target: 'sky-cubemap',
           slab: NEAR0,
           capture: { key: 'sgrAStar', face: 0 },
           passes: [contentPass],
         },
         {
           kind: 'render',
-          target: 'sky-cubemap',
           slab: NEAR0,
           capture: { key: 'sgrAStar', face: 1 },
           passes: [contentPass],
@@ -740,7 +738,6 @@ describe('executeFrame', () => {
       const program: FrameStep[] = [
         {
           kind: 'render',
-          target: 'sky-cubemap',
           slab: NEAR0,
           capture: { key: 'sgrAStar', face: 2 },
           passes: [contentPass],
@@ -764,15 +761,15 @@ describe('executeFrame', () => {
       expect(contentPass.draw.mock.calls[0]![2]).toBe(args.ctx);
     });
 
-    it('resolves EACH capture face to its OWN colour-attachment view, distinct per face and from viewOf', () => {
-      // Pins the real bug: before the fix, every capture step resolved the
-      // same multi-layer `viewOf('sky-cubemap')` regardless of the step's face,
-      // so all 6 faces wrote the same texture layer.
+    it("resolves each capture face through the capture row's target layer view, never viewOf", () => {
+      // The step names only its capture key: the row it names owns the texture,
+      // and the face is one of its array layers. `viewOf`'s multi-layer view is
+      // the failure mode — WebGPU rejects it as a colour attachment, and taking
+      // it for all six faces would write one layer six times.
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [0, 1, 2, 3, 4, 5].map(
         (face): FrameStep => ({
           kind: 'render',
-          target: 'sky-cubemap',
           slab: NEAR0,
           capture: { key: 'sgrAStar', face: face as CubeFace },
           passes: [contentPass],
@@ -791,6 +788,9 @@ describe('executeFrame', () => {
       );
       for (const view of viewsPerFace) expect(view).not.toBe(SKY_CUBEMAP_VIEW);
       expect(new Set(viewsPerFace).size).toBe(6);
+      // The mock answers `layerViewOf` for 'sky-cubemap' alone, so matching it
+      // face-for-face is what pins the key→row→target resolution.
+      expect(viewsPerFace).toEqual(SKY_CUBEMAP_FACE_VIEWS);
     });
 
     it("the SECOND capture step for the SAME face loads — it must not wipe the first slab's draws", () => {
@@ -804,14 +804,12 @@ describe('executeFrame', () => {
       const program: FrameStep[] = [
         {
           kind: 'render',
-          target: 'sky-cubemap',
           slab: COSMO,
           capture: { key: 'sgrAStar', face: 0 },
           passes: [cosmoPass],
         },
         {
           kind: 'render',
-          target: 'sky-cubemap',
           slab: NEAR0,
           capture: { key: 'sgrAStar', face: 0 },
           passes: [near0Pass],
@@ -838,14 +836,12 @@ describe('executeFrame', () => {
       const program: FrameStep[] = [
         {
           kind: 'render',
-          target: 'sky-cubemap',
           slab: NEAR0,
           capture: { key: 'sgrAStar', face: 0 },
           passes: [contentPass],
         },
         {
           kind: 'render',
-          target: 'sky-cubemap',
           slab: NEAR0,
           capture: { key: 'sgrAStar', face: 1 },
           passes: [contentPass],

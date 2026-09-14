@@ -13,7 +13,6 @@ import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
-import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
 
 export type FrameInputs = {
@@ -63,14 +62,12 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
     (frame.captureFaces.get(spec.capture) ?? []).flatMap((face): readonly FrameStep[] => [
       {
         kind: 'render',
-        target: CUBEMAP_CAPTURES[spec.capture].target,
         slab: COSMO,
         capture: { key: spec.capture, face },
         passes: resolve(spec.cosmoPasses, passes),
       },
       {
         kind: 'render',
-        target: CUBEMAP_CAPTURES[spec.capture].target,
         slab: NEAR0,
         capture: { key: spec.capture, face },
         passes: resolve(spec.near0Passes, passes),

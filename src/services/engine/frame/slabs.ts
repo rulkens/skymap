@@ -60,7 +60,8 @@ export function slabName(index: number): string {
 // wire format — do not vary it. A capture step keys off its capture, not its render
 // target: two captures sharing a target would otherwise bill one slot.
 export function groupKeyOf(step: Extract<FrameStep, { kind: 'render' }>): string {
-  return `${step.capture?.key ?? step.target}·${slabName(step.slab)}`;
+  const base = step.capture === undefined ? step.target : step.capture.key;
+  return `${base}·${slabName(step.slab)}`;
 }
 
 // Body rows and capture faces are appended because both draw the same pass more

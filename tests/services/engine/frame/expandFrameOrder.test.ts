@@ -168,11 +168,6 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [COSMO, 'sgrAStar', 2],
       [NEAR0, 'sgrAStar', 2],
     ]);
-    // The key resolves to the table row's render target — the capture line no
-    // longer names one.
-    expect(capture.every((step) => step.kind === 'render' && step.target === 'sky-cubemap')).toBe(
-      true,
-    );
     // Ahead of every other render step, so a same-frame lensing draw can
     // sample a cubemap this frame actually wrote.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });

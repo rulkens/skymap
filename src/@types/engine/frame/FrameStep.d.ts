@@ -14,9 +14,8 @@ import type { ContentPass } from './ContentPass';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
-  | {
+  | ({
       kind: 'render';
-      target: string;
       slab: number;
       /** The passes this step draws, in draw order. */
       passes: readonly ContentPass[];
@@ -29,19 +28,22 @@ export type FrameStep =
        */
       depthLoad?: 'clear' | 'load';
       /**
-       * The capture row + array layer this step writes, when it is a capture
-       * step; absent for every ordinary render step. It disambiguates steps
-       * that would otherwise collide on `(target, slab)` — all six faces share
-       * `('sky-cubemap', NEAR0)`, unlike a body row, unique by `slab` alone —
-       * and names the face's synthetic camera for the executor.
-       */
-      capture?: CaptureFaceRef;
-      /**
        * Authored GPU-timing slot suffix (`RenderStepSpec.slot`), carried
        * through expansion so a merged step keeps the FIRST line's slot name.
        * Absent ⇒ this step bills the bare `groupKeyOf(step)`.
        */
       slot?: string;
-    }
+    } & (
+      | /** A render-target row by id. */ { target: string; capture?: undefined }
+      /**
+       * A capture row + one of its array layers, exclusive of `target`: the
+       * ROW owns the texture, so the executor resolves the face's attachment
+       * from the key alone. It also disambiguates steps that would otherwise
+       * collide on `(target, slab)` — all six faces share one `(row, NEAR0)`,
+       * unlike a body row, unique by `slab` alone — and names the face's
+       * synthetic camera.
+       */
+      | { target?: undefined; capture: CaptureFaceRef }
+    ))
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' };
