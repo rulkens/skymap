@@ -10,7 +10,7 @@ vi.mock('../../../../src/data/bodies/meshAssets.generated', () => ({
       boundingRadiusM: 12345,
       meanAlbedo: [0.1, 0.2, 0.3],
       triangleCount: 100,
-      normalMapSubstituted: false,
+      substituted: [],
       source: 'fixture',
       licence: 'CC0',
       attribution: '',

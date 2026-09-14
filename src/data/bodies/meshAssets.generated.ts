@@ -3,6 +3,7 @@
 // Regenerate with:  npm run build-meshes
 // Source of truth:  data/raw/meshes/**
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
 
 export type MeshAssetRow = {
   readonly key: string;
@@ -14,10 +15,12 @@ export type MeshAssetRow = {
   readonly groundOffsetM: number;
   readonly meanAlbedo: Vec3;
   readonly triangleCount: number;
-  readonly normalMapSubstituted: boolean;
+  /** Slots `buildMeshes` filled with a 1×1 constant because the source had no map. */
+  readonly substituted: readonly MeshTextureField[];
   readonly source: string;
   readonly licence: string;
-  readonly attribution: string; // author + URL; empty string for CC0
+  /** author + URL; empty string for CC0 */
+  readonly attribution: string;
 };
 
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
@@ -28,7 +31,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 2.135997295379639,
     meanAlbedo: [0.09916, 0.092641, 0.087149],
     triangleCount: 5598,
-    normalMapSubstituted: false,
+    substituted: [],
     source: 'https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba',
     licence: 'CC BY 4.0',
     attribution:
@@ -41,7 +44,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 0.26998730477355426,
     meanAlbedo: [0.094601, 0.106771, 0.066824],
     triangleCount: 150000,
-    normalMapSubstituted: true,
+    substituted: ['metalRough', 'normalMap'],
     source: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
     licence: 'CC BY 4.0',
     attribution:
@@ -54,7 +57,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 4.791086139044178,
     meanAlbedo: [0.094881, 0.091128, 0.086404],
     triangleCount: 20378,
-    normalMapSubstituted: true,
+    substituted: ['metalRough', 'normalMap'],
     source: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
     licence: 'Public domain (NASA)',
     attribution:
@@ -67,7 +70,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 0.9125953290707832,
     meanAlbedo: [0.029306, 0.028947, 0.02882],
     triangleCount: 100000,
-    normalMapSubstituted: true,
+    substituted: ['metalRough', 'normalMap'],
     source: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     licence: 'Public domain (NASA)',
     attribution:
@@ -80,7 +83,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 0.8980751155787591,
     meanAlbedo: [0.07534, 0.073796, 0.072482],
     triangleCount: 48384,
-    normalMapSubstituted: true,
+    substituted: ['metalRough', 'normalMap'],
     source: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
     licence: 'Public domain (NASA)',
     attribution:
@@ -93,7 +96,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     groundOffsetM: 0.574356440144803,
     meanAlbedo: [0.109407, 0.091606, 0.06557],
     triangleCount: 32562,
-    normalMapSubstituted: true,
+    substituted: ['metalRough', 'normalMap'],
     source: 'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
     licence: 'Public domain (NASA)',
     attribution:
